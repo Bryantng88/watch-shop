@@ -636,15 +636,7 @@ function executionIsDone(execution: any) {
   return Boolean(execution?.isBusinessDone);
 }
 
-function subtaskIsDone(item: any) {
-  const executions = item.executions ?? [];
 
-  if (executions.length > 0) {
-    return executions.every(executionIsDone);
-  }
-
-  return Boolean(item.isDone) || String(item.status ?? "").toUpperCase() === "DONE";
-}
 
 function subtaskHasProgress(item: any) {
   const executions = item.executions ?? [];
@@ -1313,10 +1305,13 @@ export async function syncTaskStatusFromChecklistRepo(db: DB, taskId: string) {
 
   for (const item of items) {
     const executions = item.executions ?? [];
+    const tracking = trackingExecutions(item);
+    if (!tracking.length) continue;
 
+    const isDone = tracking.every(executionIsDone);
     if (!executions.length) continue;
 
-    const isDone = executions.every(executionIsDone);
+
 
     await client.taskChecklistItem.update({
       where: { id: item.id },
@@ -1367,4 +1362,22 @@ export async function syncTaskStatusFromChecklistRepo(db: DB, taskId: string) {
   }
 
   return task;
+}
+
+function isTrackingExecution(execution: any) {
+  return execution?.metadataJson?.linkMode === "TRACKING";
+}
+
+function trackingExecutions(item: any) {
+  return (item.executions ?? []).filter(isTrackingExecution);
+}
+
+function subtaskIsDone(item: any) {
+  const tracking = trackingExecutions(item);
+
+  if (tracking.length > 0) {
+    return tracking.every(executionIsDone);
+  }
+
+  return Boolean(item.isDone) || String(item.status ?? "").toUpperCase() === "DONE";
 }

@@ -22,6 +22,7 @@ export async function linkTaskExecutionAction(input: {
   targetType: TaskExecutionTargetType;
   targetId: string;
   note?: string | null;
+  metadataJson?: any;
 }) {
   const auth = await requirePermission("TASK_VIEW");
 
@@ -39,8 +40,9 @@ export async function linkTaskExecutionAction(input: {
       targetId,
       actionType: TaskExecutionActionType.LINKED,
       note: input.note || null,
+      metadataJson: input.metadataJson ?? null,
       createdByUserId: auth?.user?.id ?? auth?.id ?? auth?.userId ?? null,
-    },
+    } as any,
   });
 
   revalidatePath("/admin/tasks");

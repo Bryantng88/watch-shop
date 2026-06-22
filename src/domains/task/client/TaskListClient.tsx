@@ -20,6 +20,8 @@ import TaskListToolbar from "../ui/list/TaskListToolbar";
 import TaskListViewTabs, {
   normalizeTaskView,
 } from "../ui/list/TaskListViewTabs";
+import { updateTaskChecklistItemAction } from "@/domains/task/actions/task.actions";
+
 type Props = {
   items: TaskWithRelations[];
   total: number;
@@ -102,6 +104,22 @@ export default function TaskListClient(props: Props) {
 
   function setView(view: TaskViewKey) {
     navigate({ view: view === "all" ? null : view, page: "1" });
+  }
+  async function handleUpdateChecklistItem(input: {
+    itemId: string;
+    title: string;
+    assignedToUserId?: string | null;
+    priority?: string | null;
+    dueAt?: string | null;
+  }) {
+    await updateTaskChecklistItemAction(input.itemId, {
+      title: input.title,
+      assignedToUserId: input.assignedToUserId ?? null,
+      priority: input.priority as any,
+      dueAt: input.dueAt || null,
+    });
+
+    router.refresh();
   }
   async function toggleChecklistItem(itemId: string, isDone: boolean) {
     try {
@@ -186,7 +204,7 @@ export default function TaskListClient(props: Props) {
     taskId: string;
     title: string;
     assignedToUserId?: string | null;
-    priority?: string | null;
+    priority?: TaskPriority | null;
     dueAt?: string | null;
   }) {
     try {
@@ -256,11 +274,11 @@ export default function TaskListClient(props: Props) {
         onPage={(page) => navigate({ page: String(page) })}
         onStatus={changeStatus}
         onEdit={openEdit}
-        onOpen={toggleExpand}
         onAddChecklistItem={addChecklistItem}
         onCreateRelatedTask={createRelatedTask}
         onToggleChecklistItem={toggleChecklistItem}
         onDeleteChecklistItem={deleteChecklistItem}
+        onUpdateChecklistItem={handleUpdateChecklistItem}
       />
       <TaskQuickCreateModal
         open={modalOpen}

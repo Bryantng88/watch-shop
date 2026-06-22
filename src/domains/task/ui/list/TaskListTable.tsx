@@ -25,7 +25,7 @@ import {
   useBusinessEntityPreview,
 } from "@/domains/shared/ui/business/BusinessEntityPreview";
 import type { BusinessEntityPreview } from "@/domains/shared/business/business-entity.types";
-
+import { cn } from "@/lib/utils";
 type UserOption = {
   id: string;
   name?: string | null;
@@ -68,19 +68,66 @@ function canExpand(_row: any) {
   return true;
 }
 
+function TaskProgressCell({
+  progress,
+}: {
+  progress: { done: number; total: number; percent: number };
+}) {
+  const segments = progress.total > 0 ? progress.total : 4;
+
+  return (
+    <div className="w-[100px]">
+      <div className="mb-1 flex items-center gap-1 text-xs font-semibold text-slate-700">
+        <span>{progress.done}</span>
+        <span className="text-slate-400">/</span>
+        <span>{progress.total}</span>
+      </div>
+
+      <div className="flex h-2 overflow-hidden rounded-full bg-slate-100">
+        {Array.from({ length: segments }).map((_, index) => {
+          const filled = progress.total > 0 && index < progress.done;
+
+          return (
+            <span
+              key={index}
+              className={cn(
+                "h-full flex-1",
+                filled ? "bg-slate-950" : "bg-slate-200",
+                index > 0 ? "ml-0.5" : "",
+              )}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+function isTrackingExecution(execution: any) {
+  return execution?.metadataJson?.linkMode === "TRACKING";
+}
+
+function isExecutionDone(execution: any) {
+  return Boolean(execution?.isBusinessDone);
+}
+
+function isChecklistItemDone(item: any) {
+  const executions = item.executions ?? [];
+  const trackingExecutions = executions.filter(isTrackingExecution);
+
+  if (trackingExecutions.length > 0) {
+    return trackingExecutions.every(isExecutionDone);
+  }
+
+  return (
+    Boolean(item.isDone) ||
+    String(item.status ?? "").toUpperCase() === "DONE"
+  );
+}
 
 function taskProgress(row: TaskWithRelations) {
   const items = ((row as any).checklistItems ?? []) as any[];
   const total = items.length;
-
-  const done = items.filter((item) => {
-    const executions = item.executions ?? [];
-    if (executions.length) {
-      return executions.every((x: any) => Boolean(x.isBusinessDone));
-    }
-    return Boolean(item.isDone);
-  }).length;
-
+  const done = items.filter(isChecklistItemDone).length;
   const percent = total > 0 ? Math.round((done / total) * 100) : 0;
 
   return { done, total, percent };
@@ -124,6 +171,7 @@ export default function TaskListTable({
   onCreateRelatedTask,
   onToggleChecklistItem,
   onDeleteChecklistItem,
+  onUpdateChecklistItem
 }: {
   items: TaskWithRelations[];
   users?: UserOption[];
@@ -138,6 +186,13 @@ export default function TaskListTable({
   onDeleteChecklistItem?: (itemId: string) => Promise<void> | void;
   onAddChecklistItem?: (input: AddSubtaskInput) => Promise<void> | void;
   onCreateRelatedTask?: (row: TaskWithRelations) => void;
+  onUpdateChecklistItem?: (input: {
+    itemId: string;
+    title: string;
+    assignedToUserId?: string | null;
+    priority?: string | null;
+    dueAt?: string | null;
+  }) => Promise<void> | void;
 }) {
   const previewState = useBusinessEntityPreview();
 
@@ -150,7 +205,6 @@ export default function TaskListTable({
               <th className="px-4 py-3">Nội dung</th>
               <th className="px-4 py-3">Ngữ cảnh</th>
               <th className="px-4 py-3">Loại</th>
-              <th className="px-4 py-3 text-center">Trạng thái</th>
               <th className="px-4 py-3">Tiến độ</th>
               <th className="px-4 py-3 text-center">Ưu tiên</th>
               <th className="px-4 py-3">Người nhận</th>
@@ -232,22 +286,8 @@ export default function TaskListTable({
                             : "Business"}
                         </div>
                       </td>
-
-                      <td className="px-4 py-3 text-center">
-                        <TaskStatusSignal status={row.status} />
-                      </td>
                       <td className="px-4 py-3">
-                        <div className="w-[90px]">
-                          <div className="text-xs font-semibold text-slate-700">
-                            {progress.done}/{progress.total}
-                          </div>
-                          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
-                            <div
-                              className="h-full rounded-full bg-slate-950"
-                              style={{ width: `${progress.percent}%` }}
-                            />
-                          </div>
-                        </div>
+                        <TaskProgressCell progress={progress} />
                       </td>
                       <td className="px-4 py-3 text-center">
                         <PrioritySignal priority={row.priority} />
@@ -334,7 +374,7 @@ export default function TaskListTable({
                     {expanded ? (
                       <tr>
                         <td
-                          colSpan={9}
+                          colSpan={8}
                           className="bg-slate-50 px-4 py-0"
                           onClick={(event) => event.stopPropagation()}
                         >
@@ -345,6 +385,7 @@ export default function TaskListTable({
                             executions={(row as any).executions ?? []}
                             canAddChecklistItem={!isSubtaskAssignee}
                             canCancelChecklistItem={!isSubtaskAssignee}
+                            onUpdateChecklistItem={onUpdateChecklistItem}
                             onAddChecklistItem={onAddChecklistItem}
                             onToggleChecklistItem={onToggleChecklistItem}
                             onDeleteChecklistItem={onDeleteChecklistItem}

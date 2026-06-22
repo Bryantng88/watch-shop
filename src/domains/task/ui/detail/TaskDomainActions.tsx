@@ -30,6 +30,7 @@ export default function TaskDomainActions({
   defaultTargetType,
   defaultTargetId,
   onDone,
+  linkMode = "CONTEXT",
 }: {
   task: any;
   checklistItemId?: string | null;
@@ -37,6 +38,8 @@ export default function TaskDomainActions({
   defaultTargetType?: TaskExecutionTargetType;
   defaultTargetId?: string;
   onDone?: () => void;
+  linkMode?: "CONTEXT" | "TRACKING";
+
 }) {
   const notify = useNotify();
   const [isPending, startTransition] = useTransition();
@@ -64,6 +67,9 @@ export default function TaskDomainActions({
           taskId: task.id,
           checklistItemId: checklistItemId || null,
           targetType,
+          metadataJson: {
+            linkMode,
+          },
           targetId: cleanTargetId,
           note: note.trim() || null,
         });

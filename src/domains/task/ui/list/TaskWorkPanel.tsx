@@ -1,36 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import {
+    Ban,
     Check,
-    ChevronDown,
-    ExternalLink,
     PackageCheck,
-    Trash2,
+    Settings2,
     Wrench,
-    AlertTriangle, Ban
 } from "lucide-react";
+import { TaskPriority } from "@prisma/client";
 import { cn } from "@/lib/utils";
-import TaskDomainActions from "../detail/TaskDomainActions";
-import EntityLinkPicker from "@/domains/shared/ui/pickers/EntityLinkPicker";
-import { searchWorkCaseLinkTargetsAction } from "@/domains/work-case/actions/work-case.actions";
-import { requestSubtaskSupportAction } from "../../actions/task-support.actions";
-type TaskLinkTargetType = "WATCH" | "ORDER" | "SHIPMENT" | "SERVICE";
-
-const TASK_LINK_TARGET_MAP = {
-    WATCH: "WATCH",
-    ORDER: "ORDER",
-    SHIPMENT: "SHIPMENT",
-    SERVICE: "SERVICE_REQUEST",
-} as const;
-
-function taskLinkTargetLabel(type: TaskLinkTargetType) {
-    if (type === "WATCH") return "Watch";
-    if (type === "ORDER") return "Đơn hàng";
-    if (type === "SHIPMENT") return "Vận đơn";
-    return "Phiếu service";
-}
+import SubtaskManageModal from "./SubtaskManageModal";
+import {
+    BusinessEntityPreviewModal,
+    useBusinessEntityPreview,
+} from "@/domains/shared/ui/business/BusinessEntityPreview";
+import type { BusinessEntityPreview } from "@/domains/shared/business/business-entity.types";
 
 function targetLabel(type: string) {
     if (type === "SERVICE_REQUEST") return "Service Request";
@@ -86,25 +71,11 @@ function getExecutionTitle(item: any) {
     );
 }
 
-function getTechnicalIssueTitle(item: any) {
-    return (
-        item.technicalIssue?.summary ||
-        item.targetTitle ||
-        item.targetRefNo ||
-        item.targetCode ||
-        item.targetId
-    );
-}
-
 function businessStageTone(tone?: string | null) {
     if (tone === "done") return "bg-emerald-50 text-emerald-700 ring-emerald-100";
     if (tone === "progress") return "bg-blue-50 text-blue-700 ring-blue-100";
     if (tone === "cancelled") return "bg-slate-100 text-slate-500 ring-slate-200";
     return "bg-amber-50 text-amber-700 ring-amber-100";
-}
-
-function getTechnicalIssueArea(item: any) {
-    return item.technicalIssue?.area || "-";
 }
 
 function getBusinessStatus(item: any) {
@@ -169,6 +140,7 @@ function groupByTarget(items: any[]) {
             group.status = item.status;
             group.serviceRequest = item.serviceRequest ?? group.serviceRequest;
             group.technicalIssue = item.technicalIssue ?? group.technicalIssue;
+            group.metadataJson = item.metadataJson ?? group.metadataJson;
         }
     }
 
@@ -189,8 +161,39 @@ function splitExecutions(executions: any[]) {
         ),
     };
 }
-function ExecutionMiniInline({ item }: { item: any }) {
-    const href = targetHref(item.targetType, item.targetId);
+
+function isTrackingExecution(execution: any) {
+    return execution?.metadataJson?.linkMode === "TRACKING";
+}
+
+function executionModeLabel(execution: any) {
+    return isTrackingExecution(execution) ? "Theo dõi" : "Thông tin";
+}
+
+function executionPreviewType(targetType: string): BusinessEntityPreview["type"] {
+    if (targetType === "SERVICE_REQUEST") return "SERVICE";
+    return targetType as BusinessEntityPreview["type"];
+}
+
+function executionToPreview(item: any): BusinessEntityPreview {
+    return {
+        type: executionPreviewType(item.targetType),
+        id: item.targetId,
+        refNo: item.targetRefNo || null,
+        title: getExecutionTitle(item),
+        subtitle: `${executionModeLabel(item)} · ${targetLabel(item.targetType)}`,
+        status: item.targetStatus || item.businessStage || null,
+        href: targetHref(item.targetType, item.targetId),
+    } as BusinessEntityPreview;
+}
+
+function ExecutionMiniInline({
+    item,
+    onPreview,
+}: {
+    item: any;
+    onPreview: (preview: BusinessEntityPreview) => void;
+}) {
     const status = getBusinessStatus(item);
 
     return (
@@ -205,11 +208,16 @@ function ExecutionMiniInline({ item }: { item: any }) {
                 </span>
 
                 <div className="min-w-0">
-                    <div className="line-clamp-1 text-xs font-semibold text-slate-800">
-                        {getExecutionTitle(item)}
+                    <div className="flex items-center gap-1.5">
+                        <div className="line-clamp-1 text-xs font-semibold text-slate-800">
+                            {getExecutionTitle(item)}
+                        </div>
+
+
                     </div>
+
                     <div className="text-[11px] text-slate-400">
-                        Nghiệp vụ · {targetLabel(item.targetType)}
+                        {targetLabel(item.targetType)}
                     </div>
                 </div>
             </div>
@@ -226,73 +234,49 @@ function ExecutionMiniInline({ item }: { item: any }) {
                     {status}
                 </span>
 
-                {href ? (
-                    <Link
-                        href={href}
-                        onClick={(event) => event.stopPropagation()}
-                        className="text-xs font-semibold text-blue-600 hover:underline"
-                    >
-                        Mở
-                    </Link>
-                ) : null}
+                <button
+                    type="button"
+                    onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        onPreview(executionToPreview(item));
+                    }}
+                    className="text-xs font-semibold text-blue-600 hover:underline"
+                >
+                    Mở
+                </button>
             </div>
         </div>
     );
 }
+
 function ChecklistRow({
     item,
-    active,
     task,
     canCancel = true,
-    onToggleActive,
+    onManage,
     onToggle,
     onDelete,
+    onPreview,
 }: {
     item: any;
-    active: boolean;
     task: any;
     canCancel?: boolean;
-    onToggleActive: (item: any) => void;
+    onManage: (item: any) => void;
     onToggle: (item: any) => Promise<void>;
     onDelete: (item: any) => Promise<void>;
+    onPreview: (preview: BusinessEntityPreview) => void;
 }) {
-    const [linkTargetType, setLinkTargetType] = useState<TaskLinkTargetType>("ORDER");
-    const [linkTargetId, setLinkTargetId] = useState("");
-    const [supportOpen, setSupportOpen] = useState(false);
-    const [supportReason, setSupportReason] = useState("");
-    const [supportPending, setSupportPending] = useState(false);
     const itemExecutions = splitExecutions(item.executions ?? []);
     const hasExecutions = itemExecutions.grouped.length > 0;
-    const canManualToggle = !hasExecutions;
-    const done = hasExecutions
-        ? itemExecutions.grouped.every(isBusinessDone)
+    const trackingExecutions = itemExecutions.grouped.filter(isTrackingExecution);
+
+    const done = trackingExecutions.length
+        ? trackingExecutions.every(isBusinessDone)
         : Boolean(item.isDone);
-    const ownerUserId = task.assignedToUserId || task.createdByUserId || null;
-    const assigneeUserId = item.assignedToUserId || null;
 
-    const canRequestSupport =
-        Boolean(assigneeUserId) && Boolean(ownerUserId) && assigneeUserId !== ownerUserId;
-    async function submitSupport() {
-        const clean = supportReason.trim();
-        if (!clean || supportPending) return;
-
-        try {
-            setSupportPending(true);
-
-            await requestSubtaskSupportAction({
-                taskId: task.id,
-                checklistItemId: item.id,
-                reason: clean,
-            });
-
-            setSupportReason("");
-            setSupportOpen(false);
-        } finally {
-            setSupportPending(false);
-        }
-    }
     return (
-        <div className="rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-100">
+        <div className="rounded-2xl bg-white px-4 py-3 shadow-sm ring-1 ring-slate-200/70">
             <div className="flex items-center justify-between gap-4">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                     <button
@@ -300,43 +284,62 @@ function ChecklistRow({
                         onClick={async (event) => {
                             event.preventDefault();
                             event.stopPropagation();
-                            if (!canManualToggle) return;
+
+                            if (trackingExecutions.length) return;
                             await onToggle(item);
                         }}
                         className={cn(
                             "flex h-5 w-5 shrink-0 items-center justify-center rounded-full ring-1",
                             done
                                 ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                                : hasExecutions
+                                : trackingExecutions.length
                                     ? "bg-blue-50 text-blue-700 ring-blue-200"
                                     : "bg-white text-slate-300 ring-slate-300",
-                            !canManualToggle ? "cursor-not-allowed" : "",
+                            trackingExecutions.length ? "cursor-not-allowed" : "",
                         )}
                         title={
-                            hasExecutions
-                                ? "Dòng nghiệp vụ tự hoàn tất theo trạng thái nghiệp vụ"
-                                : "Tick hoàn tất dòng xử lý"
+                            trackingExecutions.length
+                                ? "Dòng này tự hoàn tất theo nghiệp vụ đang theo dõi"
+                                : done
+                                    ? "Bỏ hoàn thành"
+                                    : "Tick hoàn tất dòng xử lý"
                         }
                     >
                         {done ? <Check className="h-3.5 w-3.5" /> : null}
                     </button>
 
                     <div className="min-w-0 w-[280px] shrink-0">
-                        <div className={cn(
-                            "line-clamp-1 text-sm font-semibold",
-                            done ? "text-slate-400 line-through" : "text-slate-950",
-                        )}>
+                        <div
+                            className={cn(
+                                "line-clamp-1 text-sm font-semibold",
+                                done ? "text-slate-400 line-through" : "text-slate-950",
+                            )}
+                        >
                             {item.title}
                         </div>
 
                         <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400">
                             <span>
                                 {hasExecutions
-                                    ? `${itemExecutions.grouped.length} link nghiệp vụ · ${done ? "Đã xong" : "Đang theo dõi"}`
+                                    ? `${itemExecutions.grouped.length} link nghiệp vụ`
                                     : item.assignedToUser
                                         ? `Giao cho ${item.assignedToUser.name || item.assignedToUser.email}`
                                         : "Dòng xử lý"}
                             </span>
+
+                            {hasExecutions ? (
+                                <>
+                                    <span>·</span>
+                                    <span
+                                        className={cn(
+                                            "font-semibold",
+                                            trackingExecutions.length ? "text-blue-500" : "text-slate-500",
+                                        )}
+                                    >
+                                        {trackingExecutions.length ? "Theo dõi" : "Thông tin"}
+                                    </span>
+                                </>
+                            ) : null}
 
                             {item.dueAt ? (
                                 <>
@@ -348,160 +351,60 @@ function ChecklistRow({
                     </div>
 
                     {hasExecutions ? (
-                        <div className="min-w-0 flex-1 border-l border-slate-200 pl-4">
-                            <ExecutionMiniInline item={itemExecutions.grouped[0]} />
-                        </div>
-                    ) : null}
-
-                </div>
-
-                <div className="flex shrink-0 items-center gap-2">
-                    <div className="flex shrink-0 items-center gap-1">
-                        {!hasExecutions ? (
-                            <button
-                                type="button"
-                                title="Link nghiệp vụ"
-                                onClick={(event) => {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    onToggleActive(item);
-                                }}
-                                className={cn(
-                                    "inline-flex h-8 w-8 items-center justify-center rounded-full",
-                                    active ? "bg-slate-950 text-white" : "text-blue-600 hover:bg-blue-50",
-                                )}
-                            >
-                                <ChevronDown
-                                    className={cn("h-4 w-4 transition-transform", active ? "rotate-180" : "")}
-                                />
-                            </button>
-                        ) : null}
-
-                        {canRequestSupport ? (
-                            <button
-                                type="button"
-                                title="Cần hỗ trợ"
-                                onClick={(event) => {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    setSupportOpen((value) => !value);
-                                }}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-amber-600 hover:bg-amber-50"
-                            >
-                                <AlertTriangle className="h-4 w-4" />
-                            </button>
-                        ) : null}
-
-                        {canCancel ? (
-                            <button
-                                type="button"
-                                title="Hủy subtask"
-                                onClick={async (event) => {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    await onDelete(item);
-                                }}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-rose-600 hover:bg-rose-50"
-                            >
-                                <Ban className="h-4 w-4" />
-                            </button>
-                        ) : null}
-                    </div>
-
-                </div>
-            </div>
-
-            {
-                active && !hasExecutions ? (
-                    <div className="mt-3 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
-                        <div className="grid gap-2 md:grid-cols-[180px_minmax(0,1fr)]">
-                            <select
-                                value={linkTargetType}
-                                onChange={(event) => {
-                                    setLinkTargetType(event.target.value as TaskLinkTargetType);
-                                    setLinkTargetId("");
-                                }}
-                                className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
-                            >
-                                <option value="WATCH">Watch</option>
-                                <option value="ORDER">Đơn hàng</option>
-                                <option value="SHIPMENT">Vận đơn</option>
-                                <option value="SERVICE">Phiếu service</option>
-                            </select>
-
-                            <EntityLinkPicker
-                                type={linkTargetType}
-                                label={taskLinkTargetLabel(linkTargetType)}
-                                value={linkTargetId}
-                                onChange={(id) => setLinkTargetId(id ?? "")}
-                                search={searchWorkCaseLinkTargetsAction}
+                        <div className="min-w-0 flex-1 border-l border-slate-200 pl-3">
+                            <ExecutionMiniInline
+                                item={itemExecutions.grouped[0]}
+                                onPreview={onPreview}
                             />
                         </div>
+                    ) : null}
+                </div>
 
-                        {linkTargetId ? (
-                            <div className="mt-3">
-                                <TaskDomainActions
-                                    task={task}
-                                    checklistItemId={item.id}
-                                    mode="LINK_ONLY"
-                                    defaultTargetType={TASK_LINK_TARGET_MAP[linkTargetType]}
-                                    defaultTargetId={linkTargetId}
-                                    onDone={() => {
-                                        setLinkTargetId("");
-                                        onToggleActive(item);
-                                    }}
-                                />
-                            </div>
-                        ) : null}
-                    </div>
-                ) : null
-            }
-            {supportOpen ? (
-                <div className="mt-3 rounded-2xl bg-amber-50/60 p-3 ring-1 ring-amber-100">
-                    <textarea
-                        value={supportReason}
-                        onChange={(event) => setSupportReason(event.target.value)}
-                        rows={3}
-                        placeholder="Mô tả lý do cần hỗ trợ hoặc cần người khác xử lý..."
-                        className="w-full rounded-2xl border border-amber-100 bg-white px-3 py-2 text-sm outline-none focus:border-amber-300"
-                    />
+                <div className="flex shrink-0 items-center gap-1">
+                    <button
+                        type="button"
+                        title="Quản lý subtask"
+                        onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            onManage(item);
+                        }}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-blue-600 hover:bg-blue-50"
+                    >
+                        <Settings2 className="h-4 w-4" />
+                    </button>
 
-                    <div className="mt-2 flex justify-end gap-2">
+                    {canCancel ? (
                         <button
                             type="button"
-                            onClick={(event) => {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                setSupportOpen(false);
-                                setSupportReason("");
-                            }}
-                            className="rounded-xl px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-white"
-                        >
-                            Đóng
-                        </button>
-
-                        <button
-                            type="button"
-                            disabled={supportPending || !supportReason.trim()}
+                            title="Hủy subtask"
                             onClick={async (event) => {
                                 event.preventDefault();
                                 event.stopPropagation();
-                                await submitSupport();
+                                await onDelete(item);
                             }}
-                            className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-rose-600 hover:bg-rose-50"
                         >
-                            {supportPending ? "Đang gửi..." : "Gửi hỗ trợ"}
+                            <Ban className="h-4 w-4" />
                         </button>
-                    </div>
+                    ) : null}
                 </div>
-            ) : null}
-        </div >
+            </div>
+        </div>
     );
 }
 
-function ExecutionRow({ item, children }: { item: any; children?: React.ReactNode }) {
-    const href = targetHref(item.targetType, item.targetId);
+function ExecutionRow({
+    item,
+    children,
+    onPreview,
+}: {
+    item: any;
+    children?: React.ReactNode;
+    onPreview: (preview: BusinessEntityPreview) => void;
+}) {
     const status = getBusinessStatus(item);
+    const tracking = isTrackingExecution(item);
 
     return (
         <div className="rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-100">
@@ -523,6 +426,17 @@ function ExecutionRow({ item, children }: { item: any; children?: React.ReactNod
 
                             <span
                                 className={cn(
+                                    "rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1",
+                                    tracking
+                                        ? "bg-blue-50 text-blue-700 ring-blue-100"
+                                        : "bg-slate-50 text-slate-500 ring-slate-200",
+                                )}
+                            >
+                                {tracking ? "Theo dõi" : "Thông tin"}
+                            </span>
+
+                            <span
+                                className={cn(
                                     "rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1",
                                     item.businessStageTone
                                         ? businessStageTone(item.businessStageTone)
@@ -534,21 +448,22 @@ function ExecutionRow({ item, children }: { item: any; children?: React.ReactNod
                         </div>
 
                         <div className="mt-1 text-xs text-slate-400">
-                            Nghiệp vụ · {targetLabel(item.targetType)}
+                            {targetLabel(item.targetType)}
                         </div>
                     </div>
                 </div>
 
-                {href ? (
-                    <Link
-                        href={href}
-                        onClick={(event) => event.stopPropagation()}
-                        className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50"
-                    >
-                        Mở
-                        <ExternalLink className="h-3.5 w-3.5" />
-                    </Link>
-                ) : null}
+                <button
+                    type="button"
+                    onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        onPreview(executionToPreview(item));
+                    }}
+                    className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50"
+                >
+                    Mở
+                </button>
             </div>
 
             {children ? <div className="mt-3">{children}</div> : null}
@@ -571,12 +486,13 @@ function TechnicalIssueChildList({ items }: { items: any[] }) {
                     >
                         <div className="min-w-0">
                             <div className="truncate text-sm font-semibold text-slate-800">
-                                {getTechnicalIssueTitle(ti)}
+                                {getExecutionTitle(ti)}
                             </div>
                             <div className="mt-0.5 text-xs text-slate-400">
                                 Khu vực: {ti.technicalIssue?.area || "-"}
                             </div>
                         </div>
+
                         <span
                             className={cn(
                                 "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1",
@@ -598,15 +514,21 @@ function ExecutionGroup({
     serviceRequests,
     technicalIssues,
     otherExecutions,
+    onPreview,
 }: {
     serviceRequests: any[];
     technicalIssues: any[];
     otherExecutions: any[];
+    onPreview: (preview: BusinessEntityPreview) => void;
 }) {
     return (
         <>
             {serviceRequests.map((sr) => (
-                <ExecutionRow key={`${sr.targetType}:${sr.targetId}`} item={sr}>
+                <ExecutionRow
+                    key={`${sr.targetType}:${sr.targetId}`}
+                    item={sr}
+                    onPreview={onPreview}
+                >
                     <TechnicalIssueChildList items={technicalIssues} />
                 </ExecutionRow>
             ))}
@@ -618,14 +540,20 @@ function ExecutionGroup({
                         targetId: "technical-issues",
                         targetTitle: "Technical Issues",
                         targetStatus: "UPDATED",
+                        metadataJson: { linkMode: "TRACKING" },
                     }}
+                    onPreview={onPreview}
                 >
                     <TechnicalIssueChildList items={technicalIssues} />
                 </ExecutionRow>
             ) : null}
 
             {otherExecutions.map((item) => (
-                <ExecutionRow key={`${item.targetType}:${item.targetId}`} item={item} />
+                <ExecutionRow
+                    key={`${item.targetType}:${item.targetId}`}
+                    item={item}
+                    onPreview={onPreview}
+                />
             ))}
         </>
     );
@@ -638,6 +566,7 @@ export default function TaskWorkPanel({
     onAddChecklistItem,
     onToggleChecklistItem,
     onDeleteChecklistItem,
+    onUpdateChecklistItem,
     users = [],
     canAddChecklistItem = true,
     canCancelChecklistItem = true,
@@ -646,26 +575,34 @@ export default function TaskWorkPanel({
     checklistItems?: any[];
     executions?: any[];
     users?: Array<{ id: string; name?: string | null; email?: string | null }>;
+    canAddChecklistItem?: boolean;
+    canCancelChecklistItem?: boolean;
     onAddChecklistItem?: (input: {
         taskId: string;
         title: string;
         assignedToUserId?: string | null;
-        priority?: string | null;
+        priority?: TaskPriority | null;
+        dueAt?: string | null;
+    }) => Promise<void> | void;
+    onUpdateChecklistItem?: (input: {
+        itemId: string;
+        title: string;
+        assignedToUserId?: string | null;
+        priority?: TaskPriority | null;
         dueAt?: string | null;
     }) => Promise<void> | void;
     onToggleChecklistItem?: (itemId: string, isDone: boolean) => Promise<void> | void;
     onDeleteChecklistItem?: (itemId: string) => Promise<void> | void;
-    canAddChecklistItem?: boolean;
-    canCancelChecklistItem?: boolean;
-
 }) {
+    const previewState = useBusinessEntityPreview();
+
     const [title, setTitle] = useState("");
     const [pending, setPending] = useState(false);
     const [localItems, setLocalItems] = useState(checklistItems);
     const [selectedUserId, setSelectedUserId] = useState("");
-    const [priority, setPriority] = useState("MEDIUM");
+    const [priority, setPriority] = useState<TaskPriority>(TaskPriority.MEDIUM);
     const [dueAt, setDueAt] = useState("");
-    const [activeChecklistItemId, setActiveChecklistItemId] = useState<string | null>(null);
+    const [managingItem, setManagingItem] = useState<any | null>(null);
 
     useEffect(() => {
         setLocalItems(checklistItems);
@@ -687,17 +624,14 @@ export default function TaskWorkPanel({
                 taskId: task.id,
                 title: clean,
                 assignedToUserId:
-                    selectedUserId ||
-                    task.assignedToUserId ||
-                    task.createdByUserId ||
-                    null,
+                    selectedUserId || task.assignedToUserId || task.createdByUserId || null,
                 priority,
                 dueAt: dueAt || null,
             });
 
             setTitle("");
             setSelectedUserId("");
-            setPriority("MEDIUM");
+            setPriority(TaskPriority.MEDIUM);
             setDueAt("");
         } finally {
             setPending(false);
@@ -717,20 +651,40 @@ export default function TaskWorkPanel({
     async function deleteItem(item: any) {
         setLocalItems((prev) => prev.filter((x) => x.id !== item.id));
 
-        if (activeChecklistItemId === item.id) {
-            setActiveChecklistItemId(null);
+        if (managingItem?.id === item.id) {
+            setManagingItem(null);
         }
 
         await onDeleteChecklistItem?.(item.id);
     }
 
-    function toggleActiveChecklist(item: any) {
-        setActiveChecklistItemId((current) => (current === item.id ? null : item.id));
+    async function updateItem(input: {
+        itemId: string;
+        title: string;
+        assignedToUserId?: string | null;
+        priority?: TaskPriority | null;
+        dueAt?: string | null;
+    }) {
+        setLocalItems((prev) =>
+            prev.map((item) =>
+                item.id === input.itemId
+                    ? {
+                        ...item,
+                        title: input.title,
+                        assignedToUserId: input.assignedToUserId ?? null,
+                        priority: input.priority ?? item.priority,
+                        dueAt: input.dueAt ?? null,
+                    }
+                    : item,
+            ),
+        );
+
+        await onUpdateChecklistItem?.(input);
     }
 
     return (
         <section
-            className="border-y border-slate-100 bg-slate-50 px-3 py-4"
+            className="border-y border-l-4 border-slate-200 border-l-slate-400 bg-slate-100 px-4 py-4"
             onClick={(event) => event.stopPropagation()}
         >
             {canAddChecklistItem ? (
@@ -746,13 +700,13 @@ export default function TaskWorkPanel({
                             }
                         }}
                         placeholder="Thêm subtask..."
-                        className="h-10 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-slate-400"
+                        className="h-10 rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none focus:border-slate-400"
                     />
 
                     <select
                         value={selectedUserId}
                         onChange={(e) => setSelectedUserId(e.target.value)}
-                        className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
+                        className="h-10 rounded-2xl border border-slate-300 bg-white px-3 text-sm outline-none focus:border-slate-400"
                     >
                         <option value="">Tự giao</option>
                         {users.map((user) => (
@@ -764,20 +718,20 @@ export default function TaskWorkPanel({
 
                     <select
                         value={priority}
-                        onChange={(e) => setPriority(e.target.value)}
-                        className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
+                        onChange={(e) => setPriority(e.target.value as TaskPriority)}
+                        className="h-10 rounded-2xl border border-slate-300 bg-white px-3 text-sm outline-none focus:border-slate-400"
                     >
-                        <option value="LOW">Thấp</option>
-                        <option value="MEDIUM">Vừa</option>
-                        <option value="HIGH">Cao</option>
-                        <option value="URGENT">Gấp</option>
+                        <option value={TaskPriority.LOW}>Thấp</option>
+                        <option value={TaskPriority.MEDIUM}>Vừa</option>
+                        <option value={TaskPriority.HIGH}>Cao</option>
+                        <option value={TaskPriority.URGENT}>Gấp</option>
                     </select>
 
                     <input
                         type="date"
                         value={dueAt}
                         onChange={(e) => setDueAt(e.target.value)}
-                        className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
+                        className="h-10 rounded-2xl border border-slate-300 bg-white px-3 text-sm outline-none focus:border-slate-400"
                     />
 
                     <button
@@ -801,11 +755,11 @@ export default function TaskWorkPanel({
                         key={item.id}
                         item={item}
                         task={task}
-                        active={activeChecklistItemId === item.id}
                         canCancel={canCancelChecklistItem}
-                        onToggleActive={toggleActiveChecklist}
+                        onManage={setManagingItem}
                         onToggle={toggleItem}
                         onDelete={deleteItem}
+                        onPreview={previewState.openPreview}
                     />
                 ))}
 
@@ -813,17 +767,37 @@ export default function TaskWorkPanel({
                     serviceRequests={orphanExecutions.serviceRequests}
                     technicalIssues={orphanExecutions.technicalIssues}
                     otherExecutions={orphanExecutions.otherExecutions}
+                    onPreview={previewState.openPreview}
                 />
 
                 {!localItems.length &&
                     !orphanExecutions.serviceRequests.length &&
                     !orphanExecutions.technicalIssues.length &&
                     !orphanExecutions.otherExecutions.length ? (
-                    <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-4 text-sm text-slate-400">
+                    <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-4 text-sm text-slate-400">
                         Chưa có dòng xử lý hoặc nghiệp vụ nào.
                     </div>
                 ) : null}
             </div>
+
+            <SubtaskManageModal
+                open={Boolean(managingItem)}
+                task={task}
+                item={managingItem}
+                users={users}
+                canEdit={canAddChecklistItem}
+                onClose={() => setManagingItem(null)}
+                onSave={updateItem}
+                onLinked={() => setManagingItem(null)}
+            />
+
+            <BusinessEntityPreviewModal
+                open={previewState.open}
+                preview={previewState.preview}
+                loading={previewState.loading}
+                error={previewState.error}
+                onClose={previewState.closePreview}
+            />
         </section>
     );
 }
