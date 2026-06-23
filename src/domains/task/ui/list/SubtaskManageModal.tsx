@@ -1,14 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { X } from "lucide-react";
+import { Info, Lock, X } from "lucide-react";
 import { TaskExecutionTargetType, TaskPriority } from "@prisma/client";
 import EntityLinkPicker, {
     type EntityLinkType,
 } from "@/domains/shared/ui/pickers/EntityLinkPicker";
 import { searchWorkCaseLinkTargetsAction } from "@/domains/work-case/actions/work-case.actions";
 import { linkTaskExecutionsAction } from "../../actions/task-execution.actions";
-
+import { ExecutionMiniInlineList } from "../execution";
+import {
+    BusinessEntityPreviewModal,
+    useBusinessEntityPreview,
+} from "@/domains/shared/ui/business/BusinessEntityPreview";
 type LinkMode = "CONTEXT" | "TRACKING";
 type LinkTargetType = "WATCH" | "ORDER" | "SHIPMENT" | "SERVICE";
 
@@ -31,6 +35,40 @@ function toDateInput(value?: Date | string | null) {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "";
     return date.toISOString().slice(0, 10);
+}
+
+function normalizeTargetType(value?: string | null): LinkTargetType | null {
+    if (!value) return null;
+
+    if (value === "WATCH") return "WATCH";
+    if (value === "ORDER") return "ORDER";
+    if (value === "SHIPMENT") return "SHIPMENT";
+    if (value === "SERVICE" || value === "SERVICE_REQUEST") return "SERVICE";
+
+    return null;
+}
+
+function getExistingTargetType(item: any): LinkTargetType | null {
+    const first = item?.executions?.[0];
+    return normalizeTargetType(first?.targetType);
+}
+
+function getExistingLinkMode(item: any): LinkMode | null {
+    const first = item?.executions?.[0];
+    const mode = first?.metadataJson?.linkMode;
+
+    if (mode === "TRACKING") return "TRACKING";
+    if (mode === "CONTEXT") return "CONTEXT";
+
+    return null;
+}
+
+function existingTargetIds(item: any) {
+    return new Set(
+        (item?.executions ?? [])
+            .map((execution: any) => String(execution?.targetId ?? "").trim())
+            .filter(Boolean),
+    );
 }
 
 export default function SubtaskManageModal({
@@ -69,6 +107,12 @@ export default function SubtaskManageModal({
     const [linkTargetType, setLinkTargetType] = useState<LinkTargetType>("WATCH");
     const [linkTargetIds, setLinkTargetIds] = useState<string[]>([]);
 
+    const existingType = useMemo(() => getExistingTargetType(item), [item]);
+    const existingMode = useMemo(() => getExistingLinkMode(item), [item]);
+    const lockedTargetType = Boolean(existingType);
+    const linkedIds = useMemo(() => existingTargetIds(item), [item]);
+    const previewState = useBusinessEntityPreview();
+    const existingExecutions = item?.executions ?? [];
     useEffect(() => {
         if (!open || !item) return;
 
@@ -77,14 +121,10 @@ export default function SubtaskManageModal({
         setDueAt(toDateInput(item.dueAt));
         setPriority((item.priority as TaskPriority) || TaskPriority.MEDIUM);
 
-        setLinkMode("CONTEXT");
-        setLinkTargetType("WATCH");
+        setLinkTargetType(existingType || "WATCH");
+        setLinkMode(existingMode || "CONTEXT");
         setLinkTargetIds([]);
-    }, [open, item]);
-
-    const hasExistingLink = useMemo(() => {
-        return Boolean((item?.executions ?? []).length);
-    }, [item]);
+    }, [open, item, existingType, existingMode]);
 
     if (!open || !item) return null;
 
@@ -105,12 +145,19 @@ export default function SubtaskManageModal({
     function submitBatchLink() {
         if (!item || !linkTargetIds.length) return;
 
+        const targetIds = linkTargetIds.filter((id) => !linkedIds.has(id));
+
+        if (!targetIds.length) {
+            setLinkTargetIds([]);
+            return;
+        }
+
         startTransition(async () => {
             await linkTaskExecutionsAction({
                 taskId: task.id,
                 checklistItemId: item.id,
                 targetType: TARGET_MAP[linkTargetType],
-                targetIds: linkTargetIds,
+                targetIds,
                 metadataJson: {
                     linkMode,
                 },
@@ -121,6 +168,8 @@ export default function SubtaskManageModal({
             onClose();
         });
     }
+
+    const newTargetIds = linkTargetIds.filter((id) => !linkedIds.has(id));
 
     return (
         <div
@@ -214,68 +263,111 @@ export default function SubtaskManageModal({
                                 Link nghiệp vụ
                             </div>
                             <div className="mt-0.5 text-xs text-slate-500">
-                                Một subtask có thể link nhiều nghiệp vụ, nhưng phải cùng một loại.
+                                Một subtask có thể link nhiều nghiệp vụ, nhưng tất cả phải cùng một loại.
                             </div>
                         </div>
 
-                        {hasExistingLink ? (
-                            <div className="rounded-2xl bg-white px-3 py-2 text-sm text-slate-500 ring-1 ring-slate-100">
-                                Subtask này đã có nghiệp vụ được link. Nếu gán sai, hãy hủy subtask và tạo lại dòng xử lý mới.
+                        {lockedTargetType ? (
+                            <div className="mb-3 flex items-start gap-2 rounded-2xl bg-blue-50 px-3 py-2 text-xs text-blue-700 ring-1 ring-blue-100">
+                                <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                                <div>
+                                    Subtask này đã có link loại{" "}
+                                    <b>{targetLabel(existingType!)}</b>, nên chỉ có thể link thêm cùng loại.
+                                    {existingMode ? (
+                                        <>
+                                            {" "}Mode hiện tại:{" "}
+                                            <b>{existingMode === "TRACKING" ? "Theo dõi trạng thái" : "Chỉ gắn thông tin"}</b>.
+                                        </>
+                                    ) : null}
+                                </div>
                             </div>
                         ) : (
-                            <div className="space-y-3">
-                                <div className="grid gap-2 md:grid-cols-2">
-                                    <select
-                                        value={linkMode}
-                                        onChange={(event) => setLinkMode(event.target.value as LinkMode)}
-                                        className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm"
-                                    >
-                                        <option value="CONTEXT">Chỉ gắn thông tin</option>
-                                        <option value="TRACKING">Theo dõi trạng thái</option>
-                                    </select>
-
-                                    <select
-                                        value={linkTargetType}
-                                        onChange={(event) => {
-                                            setLinkTargetType(event.target.value as LinkTargetType);
-                                            setLinkTargetIds([]);
-                                        }}
-                                        className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm"
-                                    >
-                                        <option value="WATCH">Watch</option>
-                                        <option value="ORDER">Đơn hàng</option>
-                                        <option value="SHIPMENT">Vận đơn</option>
-                                        <option value="SERVICE">Phiếu service</option>
-                                    </select>
+                            <div className="mb-3 flex items-start gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-xs text-slate-500 ring-1 ring-slate-100">
+                                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                                <div>
+                                    Chọn mode link trước khi gán. Sau khi đã có link, loại nghiệp vụ sẽ được khóa để tránh trộn domain.
                                 </div>
-
-                                <div className="-mt-3">
-                                    <EntityLinkPicker
-                                        multiple
-                                        type={linkTargetType as EntityLinkType}
-                                        label={targetLabel(linkTargetType)}
-                                        values={linkTargetIds}
-                                        onValuesChange={setLinkTargetIds}
-                                        search={searchWorkCaseLinkTargetsAction}
-                                    />
-                                </div>
-
-                                {linkTargetIds.length ? (
-                                    <div className="flex justify-end">
-                                        <button
-                                            type="button"
-                                            disabled={pending}
-                                            onClick={submitBatchLink}
-                                            className="inline-flex h-10 items-center justify-center rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
-                                        >
-                                            {pending
-                                                ? "Đang link..."
-                                                : `Link ${linkTargetIds.length} nghiệp vụ`}
-                                        </button>
-                                    </div>
-                                ) : null}
                             </div>
                         )}
+
+                        <div className="space-y-3">
+                            <div className="grid gap-2 md:grid-cols-2">
+                                <select
+                                    value={linkMode}
+                                    disabled={lockedTargetType}
+                                    onChange={(event) => setLinkMode(event.target.value as LinkMode)}
+                                    className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm disabled:bg-slate-100 disabled:text-slate-400"
+                                >
+                                    <option value="CONTEXT">Chỉ gắn thông tin</option>
+                                    <option value="TRACKING">Theo dõi trạng thái</option>
+                                </select>
+
+                                <select
+                                    value={linkTargetType}
+                                    disabled={lockedTargetType}
+                                    onChange={(event) => {
+                                        setLinkTargetType(event.target.value as LinkTargetType);
+                                        setLinkTargetIds([]);
+                                    }}
+                                    className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm disabled:bg-slate-100 disabled:text-slate-400"
+                                >
+                                    <option value="WATCH">Watch</option>
+                                    <option value="ORDER">Đơn hàng</option>
+                                    <option value="SHIPMENT">Vận đơn</option>
+                                    <option value="SERVICE">Phiếu service</option>
+                                </select>
+                            </div>
+                            {existingExecutions.length ? (
+                                <div className="mb-3 rounded-2xl bg-white p-3 ring-1 ring-slate-100">
+                                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                        Đã link {existingExecutions.length} nghiệp vụ
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {existingExecutions.map((execution: any) => (
+                                            <ExecutionMiniInlineList
+                                                key={`${execution.targetType}:${execution.targetId}`}
+                                                items={[execution]}
+                                                onPreview={previewState.openPreview}
+                                                limit={1}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : null}
+                            <EntityLinkPicker
+                                multiple
+                                type={linkTargetType as EntityLinkType}
+                                label={targetLabel(linkTargetType)}
+                                values={linkTargetIds}
+                                onValuesChange={setLinkTargetIds}
+                                search={searchWorkCaseLinkTargetsAction}
+                            />
+
+                            {linkTargetIds.length ? (
+                                <div className="rounded-2xl bg-white px-3 py-2 text-xs text-slate-500 ring-1 ring-slate-100">
+                                    Đã chọn {linkTargetIds.length} nghiệp vụ
+                                    {newTargetIds.length !== linkTargetIds.length ? (
+                                        <>
+                                            {" "}· {linkTargetIds.length - newTargetIds.length} nghiệp vụ đã link trước đó sẽ được bỏ qua.
+                                        </>
+                                    ) : null}
+                                </div>
+                            ) : null}
+
+                            <button
+                                type="button"
+                                disabled={pending || !newTargetIds.length}
+                                onClick={submitBatchLink}
+                                className="inline-flex h-10 items-center justify-center rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-40"
+                            >
+                                {pending
+                                    ? "Đang link..."
+                                    : newTargetIds.length
+                                        ? `Link thêm ${newTargetIds.length} nghiệp vụ`
+                                        : "Chọn nghiệp vụ để link"}
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -300,6 +392,13 @@ export default function SubtaskManageModal({
                     ) : null}
                 </div>
             </div>
+            <BusinessEntityPreviewModal
+                open={previewState.open}
+                preview={previewState.preview}
+                loading={previewState.loading}
+                error={previewState.error}
+                onClose={previewState.closePreview}
+            />
         </div>
     );
 }

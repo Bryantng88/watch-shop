@@ -16,103 +16,31 @@ import {
     useBusinessEntityPreview,
 } from "@/domains/shared/ui/business/BusinessEntityPreview";
 import type { BusinessEntityPreview } from "@/domains/shared/business/business-entity.types";
+import {
+    ExecutionMiniInlineList,
+    businessStageTone,
+    getBusinessStatus,
+    getExecutionTitle,
+    isTrackingExecution,
+    statusTone,
+    targetHref,
+    targetLabel,
+} from "../execution";
 
-function targetLabel(type: string) {
-    if (type === "SERVICE_REQUEST") return "Service Request";
-    if (type === "TECHNICAL_ISSUE") return "Technical Issue";
-    if (type === "ORDER") return "Order";
-    if (type === "SHIPMENT") return "Shipment";
-    if (type === "PAYMENT") return "Payment";
-    if (type === "WATCH") return "Watch";
-    if (type === "WORK_CASE") return "Phiếu xử lý";
-    if (type === "ACQUISITION") return "Acquisition";
-    return type || "Nghiệp vụ";
-}
-
-function targetHref(type: string, id: string) {
-    if (type === "SERVICE_REQUEST") return `/admin/service/${id}`;
-    if (type === "TECHNICAL_ISSUE") return `/admin/service/issues?issueId=${id}`;
-    if (type === "ORDER") return `/admin/orders/${id}`;
-    if (type === "SHIPMENT") return `/admin/shipments/${id}`;
-    if (type === "PAYMENT") return `/admin/payments`;
-    if (type === "WATCH") return `/admin/watches/${id}`;
-    if (type === "WORK_CASE") return `/admin/work-cases/${id}`;
-    if (type === "ACQUISITION") return `/admin/acquisitions/${id}`;
-    return null;
-}
-
-function getExecutionTitle(item: any) {
-    if (item.targetType === "TECHNICAL_ISSUE") {
-        return (
-            item.technicalIssue?.summary ||
-            item.targetTitle ||
-            item.targetRefNo ||
-            item.targetCode ||
-            item.targetId
-        );
-    }
-
-    if (item.targetType === "SERVICE_REQUEST") {
-        return (
-            item.serviceRequest?.refNo ||
-            item.targetRefNo ||
-            item.targetCode ||
-            item.targetTitle ||
-            item.targetId
-        );
-    }
-
-    return (
-        item.targetRefNo ||
-        item.targetCode ||
-        item.targetTitle ||
-        item.refNo ||
-        item.targetId
-    );
-}
-
-function businessStageTone(tone?: string | null) {
-    if (tone === "done") return "bg-emerald-50 text-emerald-700 ring-emerald-100";
-    if (tone === "progress") return "bg-blue-50 text-blue-700 ring-blue-100";
-    if (tone === "cancelled") return "bg-slate-100 text-slate-500 ring-slate-200";
-    return "bg-amber-50 text-amber-700 ring-amber-100";
-}
-
-function getBusinessStatus(item: any) {
-    return (
-        item.businessStageLabel ||
-        item.targetStatus ||
-        item.status ||
-        item.actionType ||
-        "-"
-    );
-}
 
 function isBusinessDone(item: any) {
     return Boolean(item.isBusinessDone);
 }
+function cleanBusinessStatusLabel(status: string, targetType?: string) {
+    const raw = String(status || "").trim();
+    const type = targetLabel(String(targetType || ""));
 
-function statusTone(status: string) {
-    const value = String(status || "").toUpperCase();
+    const prefix = `${type} · `;
+    if (raw.startsWith(prefix)) return raw.slice(prefix.length);
 
-    if (["DONE", "COMPLETED", "DELIVERED", "PAID", "CREATED"].includes(value)) {
-        return "bg-emerald-50 text-emerald-700 ring-emerald-100";
-    }
-
-    if (["IN_PROGRESS", "PROCESSING", "LINKED", "UPDATED"].includes(value)) {
-        return "bg-blue-50 text-blue-700 ring-blue-100";
-    }
-
-    if (["CONFIRMED", "READY", "OPEN"].includes(value)) {
-        return "bg-amber-50 text-amber-700 ring-amber-100";
-    }
-
-    if (["CANCELLED", "CANCELED"].includes(value)) {
-        return "bg-slate-100 text-slate-500 ring-slate-200";
-    }
-
-    return "bg-slate-50 text-slate-600 ring-slate-200";
+    return raw;
 }
+
 
 function groupByTarget(items: any[]) {
     const map = new Map<string, any>();
@@ -162,9 +90,7 @@ function splitExecutions(executions: any[]) {
     };
 }
 
-function isTrackingExecution(execution: any) {
-    return execution?.metadataJson?.linkMode === "TRACKING";
-}
+
 
 function executionModeLabel(execution: any) {
     return isTrackingExecution(execution) ? "Theo dõi" : "Thông tin";
@@ -187,68 +113,6 @@ function executionToPreview(item: any): BusinessEntityPreview {
     } as BusinessEntityPreview;
 }
 
-function ExecutionMiniInline({
-    item,
-    onPreview,
-}: {
-    item: any;
-    onPreview: (preview: BusinessEntityPreview) => void;
-}) {
-    const status = getBusinessStatus(item);
-
-    return (
-        <div className="flex h-11 items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 px-3">
-            <div className="flex min-w-0 items-center gap-2">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-700 ring-1 ring-blue-100">
-                    {item.targetType === "SERVICE_REQUEST" || item.targetType === "TECHNICAL_ISSUE" ? (
-                        <Wrench className="h-3.5 w-3.5" />
-                    ) : (
-                        <PackageCheck className="h-3.5 w-3.5" />
-                    )}
-                </span>
-
-                <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                        <div className="line-clamp-1 text-xs font-semibold text-slate-800">
-                            {getExecutionTitle(item)}
-                        </div>
-
-
-                    </div>
-
-                    <div className="text-[11px] text-slate-400">
-                        {targetLabel(item.targetType)}
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex shrink-0 items-center gap-2">
-                <span
-                    className={cn(
-                        "rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1",
-                        item.businessStageTone
-                            ? businessStageTone(item.businessStageTone)
-                            : statusTone(status),
-                    )}
-                >
-                    {status}
-                </span>
-
-                <button
-                    type="button"
-                    onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        onPreview(executionToPreview(item));
-                    }}
-                    className="text-xs font-semibold text-blue-600 hover:underline"
-                >
-                    Mở
-                </button>
-            </div>
-        </div>
-    );
-}
 
 function ChecklistRow({
     item,
@@ -352,9 +216,10 @@ function ChecklistRow({
 
                     {hasExecutions ? (
                         <div className="min-w-0 flex-1 border-l border-slate-200 pl-3">
-                            <ExecutionMiniInline
-                                item={itemExecutions.grouped[0]}
+                            <ExecutionMiniInlineList
+                                items={itemExecutions.grouped}
                                 onPreview={onPreview}
+                                onMore={() => onManage(item)}
                             />
                         </div>
                     ) : null}

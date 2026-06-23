@@ -9,14 +9,28 @@ import type {
 function mediaUrl(value?: string | null) {
     const raw = String(value ?? "").trim();
     if (!raw) return null;
-    if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
-    if (raw.startsWith("/")) return raw;
-    return `/api/media/${raw}`;
+
+    if (
+        raw.startsWith("http://") ||
+        raw.startsWith("https://") ||
+        raw.startsWith("/")
+    ) {
+        return raw;
+    }
+
+    return `/api/media/sign?key=${encodeURIComponent(raw)}`;
 }
 
 function imageUrlFromProduct(product: any) {
-    const img = product?.productImage?.[0] ?? product?.productImages?.[0];
-    return mediaUrl(img?.fileKey || product?.primaryImageUrl || null);
+    const img = product?.productImage?.[0];
+
+    const key =
+        img?.fileKey ||
+        product?.primaryImageUrl ||
+        product?.storefrontImageKey ||
+        null;
+
+    return mediaUrl(key);
 }
 
 function compactId(id: string) {
@@ -37,11 +51,22 @@ export async function getBusinessEntityPreviewAction(input: {
             where: { id },
             include: {
                 product: {
-                    include: {
-                        brand: true,
+                    select: {
+                        id: true,
+                        title: true,
+                        sku: true,
+                        status: true,
+                        primaryImageUrl: true,
+                        storefrontImageKey: true,
+                        brand: { select: { name: true } },
                         productImage: {
+                            where: { role: "INLINE" as any },
                             orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
                             take: 1,
+                            select: {
+                                id: true,
+                                fileKey: true,
+                            },
                         },
                     },
                 },
