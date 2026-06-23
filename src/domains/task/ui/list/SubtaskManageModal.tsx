@@ -100,7 +100,7 @@ export default function SubtaskManageModal({
         dueAt?: string | null;
         priority?: TaskPriority | null;
     }) => Promise<void> | void;
-    onLinked?: () => void;
+    onLinked?: (payload?: any) => void;
 }) {
     const [pending, startTransition] = useTransition();
 
@@ -136,7 +136,12 @@ export default function SubtaskManageModal({
     async function unlinkExecution(executionId: string) {
         startTransition(async () => {
             await deleteTaskExecutionAction({ executionId });
-            onLinked?.();
+
+            onLinked?.({
+                taskItemId: item.id,
+                removedExecutionId: executionId,
+            });
+
             onClose();
         });
     }
@@ -165,9 +170,9 @@ export default function SubtaskManageModal({
         }
 
         startTransition(async () => {
-            await linkTaskExecutionsAction({
+            const result = await linkTaskExecutionsAction({
                 taskId: task.id,
-                checklistItemId: item.id,
+                taskItemId: item.id,
                 targetType: TARGET_MAP[linkTargetType],
                 targetIds,
                 metadataJson: {
@@ -176,7 +181,12 @@ export default function SubtaskManageModal({
             });
 
             setLinkTargetIds([]);
-            onLinked?.();
+
+            onLinked?.({
+                taskItemId: item.id,
+                executions: result?.executions ?? result?.items ?? result?.data ?? [],
+            });
+
             onClose();
         });
     }

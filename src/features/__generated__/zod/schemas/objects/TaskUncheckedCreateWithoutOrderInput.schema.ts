@@ -4,7 +4,8 @@ import { TaskSourceSchema } from '../enums/TaskSource.schema';
 import { TaskStatusSchema } from '../enums/TaskStatus.schema';
 import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
 import { TaskKindSchema } from '../enums/TaskKind.schema';
-import { TaskChecklistItemUncheckedCreateNestedManyWithoutTaskInputObjectSchema as TaskChecklistItemUncheckedCreateNestedManyWithoutTaskInputObjectSchema } from './TaskChecklistItemUncheckedCreateNestedManyWithoutTaskInput.schema';
+import { TaskItemChecklistUncheckedCreateNestedManyWithoutTaskInputObjectSchema as TaskItemChecklistUncheckedCreateNestedManyWithoutTaskInputObjectSchema } from './TaskItemChecklistUncheckedCreateNestedManyWithoutTaskInput.schema';
+import { TaskItemUncheckedCreateNestedManyWithoutTaskInputObjectSchema as TaskItemUncheckedCreateNestedManyWithoutTaskInputObjectSchema } from './TaskItemUncheckedCreateNestedManyWithoutTaskInput.schema';
 import { TaskExecutionUncheckedCreateNestedManyWithoutTaskInputObjectSchema as TaskExecutionUncheckedCreateNestedManyWithoutTaskInputObjectSchema } from './TaskExecutionUncheckedCreateNestedManyWithoutTaskInput.schema';
 import { NotificationUncheckedCreateNestedManyWithoutTaskInputObjectSchema as NotificationUncheckedCreateNestedManyWithoutTaskInputObjectSchema } from './NotificationUncheckedCreateNestedManyWithoutTaskInput.schema'
 
@@ -35,7 +36,8 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   taskActionId: z.string().optional().nullable(),
-  checklistItems: z.lazy(() => TaskChecklistItemUncheckedCreateNestedManyWithoutTaskInputObjectSchema).optional(),
+  checklistItems: z.lazy(() => TaskItemChecklistUncheckedCreateNestedManyWithoutTaskInputObjectSchema).optional(),
+  taskItems: z.lazy(() => TaskItemUncheckedCreateNestedManyWithoutTaskInputObjectSchema).optional(),
   executions: z.lazy(() => TaskExecutionUncheckedCreateNestedManyWithoutTaskInputObjectSchema).optional(),
   notifications: z.lazy(() => NotificationUncheckedCreateNestedManyWithoutTaskInputObjectSchema).optional()
 }).strict();

@@ -2,7 +2,7 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { TaskArgsObjectSchema as TaskArgsObjectSchema } from './TaskArgs.schema';
 import { UserArgsObjectSchema as UserArgsObjectSchema } from './UserArgs.schema';
-import { TaskChecklistItemArgsObjectSchema as TaskChecklistItemArgsObjectSchema } from './TaskChecklistItemArgs.schema';
+import { TaskItemArgsObjectSchema as TaskItemArgsObjectSchema } from './TaskItemArgs.schema';
 import { ServiceRequestArgsObjectSchema as ServiceRequestArgsObjectSchema } from './ServiceRequestArgs.schema';
 import { TechnicalIssueArgsObjectSchema as TechnicalIssueArgsObjectSchema } from './TechnicalIssueArgs.schema'
 
@@ -19,9 +19,10 @@ const makeSchema = () => z.object({
   checklistItemId: z.boolean().optional(),
   serviceRequestId: z.boolean().optional(),
   technicalIssueId: z.boolean().optional(),
+  taskItemId: z.boolean().optional(),
   task: z.union([z.boolean(), z.lazy(() => TaskArgsObjectSchema)]).optional(),
   createdByUser: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
-  checklistItem: z.union([z.boolean(), z.lazy(() => TaskChecklistItemArgsObjectSchema)]).optional(),
+  taskItem: z.union([z.boolean(), z.lazy(() => TaskItemArgsObjectSchema)]).optional(),
   serviceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestArgsObjectSchema)]).optional(),
   technicalIssue: z.union([z.boolean(), z.lazy(() => TechnicalIssueArgsObjectSchema)]).optional()
 }).strict();

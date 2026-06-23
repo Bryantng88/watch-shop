@@ -18,7 +18,7 @@ export async function listTaskExecutionsAction(taskId: string) {
 
 export async function linkTaskExecutionAction(input: {
   taskId: string;
-  checklistItemId?: string | null;
+  taskItemId?: string | null;
   targetType: TaskExecutionTargetType;
   targetId: string;
   note?: string | null;
@@ -35,7 +35,7 @@ export async function linkTaskExecutionAction(input: {
   const execution = await prisma.taskExecution.create({
     data: {
       taskId,
-      checklistItemId: input.checklistItemId || null,
+      taskItemId: input.taskItemId || null,
       targetType: input.targetType,
       targetId,
       actionType: TaskExecutionActionType.LINKED,
@@ -45,14 +45,13 @@ export async function linkTaskExecutionAction(input: {
     } as any,
   });
 
-  revalidatePath("/admin/tasks");
-  revalidatePath(`/admin/tasks/${taskId}`);
+
 
   return { ok: true, execution };
 }
 export async function linkTaskExecutionsAction(input: {
   taskId: string;
-  checklistItemId?: string | null;
+  taskItemId?: string | null;
   targetType: TaskExecutionTargetType;
   targetIds: string[];
   note?: string | null;
@@ -72,13 +71,13 @@ export async function linkTaskExecutionsAction(input: {
   if (!taskId) throw new Error("Missing taskId");
   if (!targetIds.length) throw new Error("Missing targetIds");
 
-  const checklistItemId = input.checklistItemId || null;
+  const taskItemId = input.taskItemId || null;
   const createdByUserId = auth?.user?.id ?? auth?.id ?? auth?.userId ?? null;
 
   const existing = await prisma.taskExecution.findMany({
     where: {
       taskId,
-      checklistItemId,
+      taskItemId,
       targetType: input.targetType,
       targetId: { in: targetIds },
       actionType: TaskExecutionActionType.LINKED,
@@ -104,7 +103,7 @@ export async function linkTaskExecutionsAction(input: {
       prisma.taskExecution.create({
         data: {
           taskId,
-          checklistItemId,
+          taskItemId,
           targetType: input.targetType,
           targetId,
           actionType: TaskExecutionActionType.LINKED,
@@ -116,8 +115,7 @@ export async function linkTaskExecutionsAction(input: {
     ),
   );
 
-  revalidatePath("/admin/tasks");
-  revalidatePath(`/admin/tasks/${taskId}`);
+
 
   return {
     ok: true,

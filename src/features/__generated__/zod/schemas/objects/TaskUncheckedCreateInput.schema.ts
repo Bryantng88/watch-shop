@@ -4,7 +4,8 @@ import { TaskSourceSchema } from '../enums/TaskSource.schema';
 import { TaskStatusSchema } from '../enums/TaskStatus.schema';
 import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
 import { TaskKindSchema } from '../enums/TaskKind.schema';
-import { TaskChecklistItemUncheckedCreateNestedManyWithoutTaskInputObjectSchema as TaskChecklistItemUncheckedCreateNestedManyWithoutTaskInputObjectSchema } from './TaskChecklistItemUncheckedCreateNestedManyWithoutTaskInput.schema';
+import { TaskItemChecklistUncheckedCreateNestedManyWithoutTaskInputObjectSchema as TaskItemChecklistUncheckedCreateNestedManyWithoutTaskInputObjectSchema } from './TaskItemChecklistUncheckedCreateNestedManyWithoutTaskInput.schema';
+import { TaskItemUncheckedCreateNestedManyWithoutTaskInputObjectSchema as TaskItemUncheckedCreateNestedManyWithoutTaskInputObjectSchema } from './TaskItemUncheckedCreateNestedManyWithoutTaskInput.schema';
 import { TaskExecutionUncheckedCreateNestedManyWithoutTaskInputObjectSchema as TaskExecutionUncheckedCreateNestedManyWithoutTaskInputObjectSchema } from './TaskExecutionUncheckedCreateNestedManyWithoutTaskInput.schema';
 import { NotificationUncheckedCreateNestedManyWithoutTaskInputObjectSchema as NotificationUncheckedCreateNestedManyWithoutTaskInputObjectSchema } from './NotificationUncheckedCreateNestedManyWithoutTaskInput.schema'
 
@@ -35,7 +36,8 @@ const makeSchema = () => z.object({
   workCaseId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   taskActionId: z.string().optional().nullable(),
-  checklistItems: z.lazy(() => TaskChecklistItemUncheckedCreateNestedManyWithoutTaskInputObjectSchema),
+  checklistItems: z.lazy(() => TaskItemChecklistUncheckedCreateNestedManyWithoutTaskInputObjectSchema),
+  taskItems: z.lazy(() => TaskItemUncheckedCreateNestedManyWithoutTaskInputObjectSchema),
   executions: z.lazy(() => TaskExecutionUncheckedCreateNestedManyWithoutTaskInputObjectSchema),
   notifications: z.lazy(() => NotificationUncheckedCreateNestedManyWithoutTaskInputObjectSchema)
 }).strict();

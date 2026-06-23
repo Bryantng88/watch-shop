@@ -7,7 +7,8 @@ import { TaskKindSchema } from '../enums/TaskKind.schema';
 import { UserCreateNestedOneWithoutCreatedTasksInputObjectSchema as UserCreateNestedOneWithoutCreatedTasksInputObjectSchema } from './UserCreateNestedOneWithoutCreatedTasksInput.schema';
 import { UserCreateNestedOneWithoutAssignedTasksInputObjectSchema as UserCreateNestedOneWithoutAssignedTasksInputObjectSchema } from './UserCreateNestedOneWithoutAssignedTasksInput.schema';
 import { UserCreateNestedOneWithoutCompletedTasksInputObjectSchema as UserCreateNestedOneWithoutCompletedTasksInputObjectSchema } from './UserCreateNestedOneWithoutCompletedTasksInput.schema';
-import { TaskChecklistItemCreateNestedManyWithoutTaskInputObjectSchema as TaskChecklistItemCreateNestedManyWithoutTaskInputObjectSchema } from './TaskChecklistItemCreateNestedManyWithoutTaskInput.schema';
+import { TaskItemChecklistCreateNestedManyWithoutTaskInputObjectSchema as TaskItemChecklistCreateNestedManyWithoutTaskInputObjectSchema } from './TaskItemChecklistCreateNestedManyWithoutTaskInput.schema';
+import { TaskItemCreateNestedManyWithoutTaskInputObjectSchema as TaskItemCreateNestedManyWithoutTaskInputObjectSchema } from './TaskItemCreateNestedManyWithoutTaskInput.schema';
 import { WatchCreateNestedOneWithoutTasksInputObjectSchema as WatchCreateNestedOneWithoutTasksInputObjectSchema } from './WatchCreateNestedOneWithoutTasksInput.schema';
 import { OrderCreateNestedOneWithoutTaskInputObjectSchema as OrderCreateNestedOneWithoutTaskInputObjectSchema } from './OrderCreateNestedOneWithoutTaskInput.schema';
 import { ShipmentCreateNestedOneWithoutTaskInputObjectSchema as ShipmentCreateNestedOneWithoutTaskInputObjectSchema } from './ShipmentCreateNestedOneWithoutTaskInput.schema';
@@ -38,7 +39,8 @@ const makeSchema = () => z.object({
   createdByUser: z.lazy(() => UserCreateNestedOneWithoutCreatedTasksInputObjectSchema).optional(),
   assignedToUser: z.lazy(() => UserCreateNestedOneWithoutAssignedTasksInputObjectSchema).optional(),
   completedByUser: z.lazy(() => UserCreateNestedOneWithoutCompletedTasksInputObjectSchema).optional(),
-  checklistItems: z.lazy(() => TaskChecklistItemCreateNestedManyWithoutTaskInputObjectSchema).optional(),
+  checklistItems: z.lazy(() => TaskItemChecklistCreateNestedManyWithoutTaskInputObjectSchema).optional(),
+  taskItems: z.lazy(() => TaskItemCreateNestedManyWithoutTaskInputObjectSchema).optional(),
   watch: z.lazy(() => WatchCreateNestedOneWithoutTasksInputObjectSchema).optional(),
   order: z.lazy(() => OrderCreateNestedOneWithoutTaskInputObjectSchema).optional(),
   shipment: z.lazy(() => ShipmentCreateNestedOneWithoutTaskInputObjectSchema).optional(),

@@ -6,7 +6,7 @@ export type CreateTaskExecutionInput = {
   targetId: string;
   actionType?: TaskExecutionActionType;
   note?: string | null;
-  checklistItemId?: string | null;
+  taskItemId?: string | null;
 };
 
 export type LinkTaskExecutionInput = CreateTaskExecutionInput & {

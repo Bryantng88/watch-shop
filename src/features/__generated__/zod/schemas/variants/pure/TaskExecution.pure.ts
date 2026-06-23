@@ -16,9 +16,10 @@ export const TaskExecutionModelSchema = z.object({
     checklistItemId: z.string().nullable(),
     serviceRequestId: z.string().nullable(),
     technicalIssueId: z.string().nullable(),
+    taskItemId: z.string().nullable(),
     task: z.unknown(),
     createdByUser: z.unknown().nullable(),
-    checklistItem: z.unknown().nullable(),
+    taskItem: z.unknown().nullable(),
     serviceRequest: z.unknown().nullable(),
     technicalIssue: z.unknown().nullable()
 }).strict();

@@ -25,8 +25,8 @@ export const UserModelSchema = z.object({
     assignedWorkCases: z.array(z.unknown()),
     workCaseActivities: z.array(z.unknown()),
     taskExecution: z.array(z.unknown()),
-    assignedChecklistItems: z.array(z.unknown()),
-    taskChecklistItem: z.array(z.unknown())
+    assignedTaskItems: z.array(z.unknown()),
+    taskItems: z.array(z.unknown())
 }).strict();
 
 export type UserPureType = z.infer<typeof UserModelSchema>;

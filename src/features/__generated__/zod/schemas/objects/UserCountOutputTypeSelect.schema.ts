@@ -16,8 +16,8 @@ const makeSchema = () => z.object({
   assignedWorkCases: z.boolean().optional(),
   workCaseActivities: z.boolean().optional(),
   taskExecution: z.boolean().optional(),
-  assignedChecklistItems: z.boolean().optional(),
-  taskChecklistItem: z.boolean().optional()
+  assignedTaskItems: z.boolean().optional(),
+  taskItems: z.boolean().optional()
 }).strict();
 export const UserCountOutputTypeSelectObjectSchema: z.ZodType<Prisma.UserCountOutputTypeSelect> = makeSchema() as unknown as z.ZodType<Prisma.UserCountOutputTypeSelect>;
 export const UserCountOutputTypeSelectObjectZodSchema = makeSchema();

@@ -25,7 +25,7 @@ function targetOptionLabel(value?: string | null) {
 
 export default function TaskDomainActions({
   task,
-  checklistItemId,
+  taskItemId,
   mode = "FULL",
   defaultTargetType,
   defaultTargetId,
@@ -33,7 +33,7 @@ export default function TaskDomainActions({
   linkMode = "CONTEXT",
 }: {
   task: any;
-  checklistItemId?: string | null;
+  taskItemId?: string | null;
   mode?: "FULL" | "LINK_ONLY";
   defaultTargetType?: TaskExecutionTargetType;
   defaultTargetId?: string;
@@ -65,7 +65,7 @@ export default function TaskDomainActions({
       try {
         await linkTaskExecutionAction({
           taskId: task.id,
-          checklistItemId: checklistItemId || null,
+          taskItemId: taskItemId || null,
           targetType,
           metadataJson: {
             linkMode,

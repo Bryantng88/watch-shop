@@ -4,7 +4,7 @@ import { SortOrderSchema } from '../enums/SortOrder.schema';
 import { SortOrderInputObjectSchema as SortOrderInputObjectSchema } from './SortOrderInput.schema';
 import { TaskOrderByWithRelationInputObjectSchema as TaskOrderByWithRelationInputObjectSchema } from './TaskOrderByWithRelationInput.schema';
 import { UserOrderByWithRelationInputObjectSchema as UserOrderByWithRelationInputObjectSchema } from './UserOrderByWithRelationInput.schema';
-import { TaskChecklistItemOrderByWithRelationInputObjectSchema as TaskChecklistItemOrderByWithRelationInputObjectSchema } from './TaskChecklistItemOrderByWithRelationInput.schema';
+import { TaskItemOrderByWithRelationInputObjectSchema as TaskItemOrderByWithRelationInputObjectSchema } from './TaskItemOrderByWithRelationInput.schema';
 import { ServiceRequestOrderByWithRelationInputObjectSchema as ServiceRequestOrderByWithRelationInputObjectSchema } from './ServiceRequestOrderByWithRelationInput.schema';
 import { TechnicalIssueOrderByWithRelationInputObjectSchema as TechnicalIssueOrderByWithRelationInputObjectSchema } from './TechnicalIssueOrderByWithRelationInput.schema'
 
@@ -21,9 +21,10 @@ const makeSchema = () => z.object({
   checklistItemId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   serviceRequestId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   technicalIssueId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  taskItemId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   task: z.lazy(() => TaskOrderByWithRelationInputObjectSchema).optional(),
   createdByUser: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
-  checklistItem: z.lazy(() => TaskChecklistItemOrderByWithRelationInputObjectSchema).optional(),
+  taskItem: z.lazy(() => TaskItemOrderByWithRelationInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestOrderByWithRelationInputObjectSchema).optional(),
   technicalIssue: z.lazy(() => TechnicalIssueOrderByWithRelationInputObjectSchema).optional()
 }).strict();

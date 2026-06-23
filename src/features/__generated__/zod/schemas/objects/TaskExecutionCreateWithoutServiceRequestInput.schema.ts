@@ -5,7 +5,7 @@ import { TaskExecutionActionTypeSchema } from '../enums/TaskExecutionActionType.
 import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema';
 import { TaskCreateNestedOneWithoutExecutionsInputObjectSchema as TaskCreateNestedOneWithoutExecutionsInputObjectSchema } from './TaskCreateNestedOneWithoutExecutionsInput.schema';
 import { UserCreateNestedOneWithoutTaskExecutionInputObjectSchema as UserCreateNestedOneWithoutTaskExecutionInputObjectSchema } from './UserCreateNestedOneWithoutTaskExecutionInput.schema';
-import { TaskChecklistItemCreateNestedOneWithoutExecutionsInputObjectSchema as TaskChecklistItemCreateNestedOneWithoutExecutionsInputObjectSchema } from './TaskChecklistItemCreateNestedOneWithoutExecutionsInput.schema';
+import { TaskItemCreateNestedOneWithoutExecutionsInputObjectSchema as TaskItemCreateNestedOneWithoutExecutionsInputObjectSchema } from './TaskItemCreateNestedOneWithoutExecutionsInput.schema';
 import { TechnicalIssueCreateNestedOneWithoutTaskExecutionInputObjectSchema as TechnicalIssueCreateNestedOneWithoutTaskExecutionInputObjectSchema } from './TechnicalIssueCreateNestedOneWithoutTaskExecutionInput.schema'
 
 import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
@@ -18,9 +18,10 @@ const makeSchema = () => z.object({
   metadataJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   note: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
+  checklistItemId: z.string().optional().nullable(),
   task: z.lazy(() => TaskCreateNestedOneWithoutExecutionsInputObjectSchema),
   createdByUser: z.lazy(() => UserCreateNestedOneWithoutTaskExecutionInputObjectSchema).optional(),
-  checklistItem: z.lazy(() => TaskChecklistItemCreateNestedOneWithoutExecutionsInputObjectSchema).optional(),
+  taskItem: z.lazy(() => TaskItemCreateNestedOneWithoutExecutionsInputObjectSchema).optional(),
   technicalIssue: z.lazy(() => TechnicalIssueCreateNestedOneWithoutTaskExecutionInputObjectSchema).optional()
 }).strict();
 export const TaskExecutionCreateWithoutServiceRequestInputObjectSchema: z.ZodType<Prisma.TaskExecutionCreateWithoutServiceRequestInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskExecutionCreateWithoutServiceRequestInput>;

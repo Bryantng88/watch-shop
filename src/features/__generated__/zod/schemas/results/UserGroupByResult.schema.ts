@@ -33,8 +33,8 @@ export const UserGroupByResultSchema = z.array(z.object({
     assignedWorkCases: z.number(),
     workCaseActivities: z.number(),
     taskExecution: z.number(),
-    assignedChecklistItems: z.number(),
-    taskChecklistItem: z.number()
+    assignedTaskItems: z.number(),
+    taskItems: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),

@@ -18,7 +18,7 @@ import {
   TaskStatusSignal,
   PrioritySignal,
 } from "@/domains/shared/ui/signals/StatePrioritySignal";
-import TaskWorkPanel from "./TaskWorkPanel";
+import TaskWorkPanel from "../task-work/TaskWorkPanel";
 import TaskPagination from "./TaskPagination";
 import {
   BusinessEntityMiniCard,
@@ -51,11 +51,15 @@ function formatDate(value?: Date | string | null) {
   }).format(new Date(value));
 }
 
-function userLabel(user?: { name?: string | null; email?: string | null } | null) {
+function userLabel(
+  user?: { name?: string | null; email?: string | null } | null,
+) {
   return user?.name || user?.email || "—";
 }
 
-function userInitial(user?: { name?: string | null; email?: string | null } | null) {
+function userInitial(
+  user?: { name?: string | null; email?: string | null } | null,
+) {
   const label = userLabel(user);
   if (!label || label === "—") return "?";
   return label.trim().slice(0, 1).toUpperCase();
@@ -83,13 +87,12 @@ function dueTone(dueAt?: Date | string | null) {
   now.setHours(0, 0, 0, 0);
 
   const diffDays = Math.floor(
-    (due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    (due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
   );
 
   if (diffDays < 0) {
     return {
-      className:
-        "text-rose-600 font-semibold bg-rose-50 ring-1 ring-rose-100",
+      className: "text-rose-600 font-semibold bg-rose-50 ring-1 ring-rose-100",
       label: formatDate(dueAt),
     };
   }
@@ -104,15 +107,13 @@ function dueTone(dueAt?: Date | string | null) {
 
   if (diffDays <= 3) {
     return {
-      className:
-        "text-sky-700 bg-sky-50 ring-1 ring-sky-100",
+      className: "text-sky-700 bg-sky-50 ring-1 ring-sky-100",
       label: formatDate(dueAt),
     };
   }
 
   return {
-    className:
-      "text-slate-600 bg-slate-50 ring-1 ring-slate-100",
+    className: "text-slate-600 bg-slate-50 ring-1 ring-slate-100",
     label: formatDate(dueAt),
   };
 }
@@ -156,7 +157,7 @@ function isExecutionDone(execution: any) {
   return Boolean(execution?.isBusinessDone);
 }
 
-function isChecklistItemDone(item: any) {
+function isTaskItemDone(item: any) {
   const executions = item.executions ?? [];
   const trackingExecutions = executions.filter(isTrackingExecution);
 
@@ -165,15 +166,14 @@ function isChecklistItemDone(item: any) {
   }
 
   return (
-    Boolean(item.isDone) ||
-    String(item.status ?? "").toUpperCase() === "DONE"
+    Boolean(item.isDone) || String(item.status ?? "").toUpperCase() === "DONE"
   );
 }
 
 function taskProgress(row: TaskWithRelations) {
-  const items = ((row as any).checklistItems ?? []) as any[];
+  const items = ((row as any).taskItems ?? []) as any[];
   const total = items.length;
-  const done = items.filter(isChecklistItemDone).length;
+  const done = items.filter(isTaskItemDone).length;
   const percent = total > 0 ? Math.round((done / total) * 100) : 0;
 
   return { done, total, percent };
@@ -183,11 +183,7 @@ function TaskContextCell({ row }: { row: TaskWithRelations }) {
   const workCase = (row as any).workCase;
 
   if (!workCase) {
-    return (
-      <span className="text-xs text-slate-400">
-        —
-      </span>
-    );
+    return <span className="text-xs text-slate-400">—</span>;
   }
 
   return (
@@ -213,11 +209,13 @@ export default function TaskListTable({
   onEdit,
   expandedTaskId,
   onToggleExpand,
-  onAddChecklistItem,
+  onAddTaskItem,
   onCreateRelatedTask,
-  onToggleChecklistItem,
-  onDeleteChecklistItem,
-  onUpdateChecklistItem
+  onToggleTaskItem,
+  onDeleteTaskItem,
+  onUpdateTaskItem,
+  onAddTaskItemChecklist,
+  onToggleTaskItemChecklist,
 }: {
   items: TaskWithRelations[];
   users?: UserOption[];
@@ -228,17 +226,28 @@ export default function TaskListTable({
   onEdit: (row: TaskWithRelations) => void;
   expandedTaskId?: string | null;
   onToggleExpand?: (row: TaskWithRelations) => void;
-  onToggleChecklistItem?: (itemId: string, isDone: boolean) => Promise<void> | void;
-  onDeleteChecklistItem?: (itemId: string) => Promise<void> | void;
-  onAddChecklistItem?: (input: AddSubtaskInput) => Promise<void> | void;
+  onToggleTaskItem?: (
+    itemId: string,
+    isDone: boolean,
+  ) => Promise<void> | void;
+  onDeleteTaskItem?: (itemId: string) => Promise<void> | void;
+  onAddTaskItem?: (input: AddSubtaskInput) => Promise<void> | void;
   onCreateRelatedTask?: (row: TaskWithRelations) => void;
-  onUpdateChecklistItem?: (input: {
+  onUpdateTaskItem?: (input: {
     itemId: string;
     title: string;
     assignedToUserId?: string | null;
     priority?: string | null;
     dueAt?: string | null;
   }) => Promise<void> | void;
+  onAddTaskItemChecklist?: (
+    taskItemId: string,
+    title: string,
+  ) => Promise<void> | void;
+  onToggleTaskItemChecklist?: (
+    checklistId: string,
+    isDone: boolean,
+  ) => Promise<void> | void;
 }) {
   const previewState = useBusinessEntityPreview();
 
@@ -262,7 +271,10 @@ export default function TaskListTable({
           <tbody className="divide-y divide-slate-100">
             {items.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-12 text-center text-sm text-slate-500">
+                <td
+                  colSpan={8}
+                  className="px-4 py-12 text-center text-sm text-slate-500"
+                >
                   Chưa có task phù hợp.
                 </td>
               </tr>
@@ -272,12 +284,18 @@ export default function TaskListTable({
                 const expandable = canExpand(row);
                 const progress = taskProgress(row);
                 const rowAccess = String((row as any).rowAccess || "OWNER");
-                const visibleChecklistItemIds = (row as any).visibleChecklistItemIds ?? null;
-                const checklistItems = ((row as any).checklistItems ?? []) as any[];
+                const visibleTaskItemIds =
+                  (row as any).visibleTaskItemIds ?? null;
+                const taskItems = ((row as any).taskItems ??
+                  []) as any[];
 
-                const visibleChecklistItems = Array.isArray(visibleChecklistItemIds)
-                  ? checklistItems.filter((item) => visibleChecklistItemIds.includes(item.id))
-                  : checklistItems;
+                const visibleTaskItems = Array.isArray(
+                  visibleTaskItemIds,
+                )
+                  ? taskItems.filter((item) =>
+                    visibleTaskItemIds.includes(item.id),
+                  )
+                  : taskItems;
 
                 const isSubtaskAssignee = rowAccess === "SUBTASK_ASSIGNEE";
                 return (
@@ -301,7 +319,9 @@ export default function TaskListTable({
                               onToggleExpand?.(row);
                             }}
                             className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                            aria-label={expanded ? "Thu gọn task" : "Mở rộng task"}
+                            aria-label={
+                              expanded ? "Thu gọn task" : "Mở rộng task"
+                            }
                           >
                             {expanded ? (
                               <ChevronDown className="h-4 w-4" />
@@ -327,7 +347,8 @@ export default function TaskListTable({
 
                       <td className="px-4 py-3 text-slate-600">
                         <div className="font-medium text-slate-800">
-                          {String((row as any).kind ?? "BUSINESS") === "PERSONAL"
+                          {String((row as any).kind ?? "BUSINESS") ===
+                            "PERSONAL"
                             ? "Personal"
                             : "Business"}
                         </div>
@@ -397,7 +418,8 @@ export default function TaskListTable({
                                 key: "start",
                                 label: "Bắt đầu",
                                 icon: <CirclePlay className="h-4 w-4" />,
-                                onClick: (r) => onStatus(r, TaskStatus.IN_PROGRESS),
+                                onClick: (r) =>
+                                  onStatus(r, TaskStatus.IN_PROGRESS),
                               }
                               : null,
                             row.status !== "DONE"
@@ -423,7 +445,8 @@ export default function TaskListTable({
                                 icon: <XCircle className="h-4 w-4" />,
                                 tone: "danger",
                                 separatorBefore: true,
-                                onClick: (r) => onStatus(r, TaskStatus.CANCELLED),
+                                onClick: (r) =>
+                                  onStatus(r, TaskStatus.CANCELLED),
                               }
                               : null,
                           ]}
@@ -441,14 +464,19 @@ export default function TaskListTable({
                           <TaskWorkPanel
                             task={row}
                             users={users}
-                            checklistItems={visibleChecklistItems}
+                            taskItems={visibleTaskItems}
                             executions={(row as any).executions ?? []}
-                            canAddChecklistItem={!isSubtaskAssignee}
-                            canCancelChecklistItem={!isSubtaskAssignee}
-                            onUpdateChecklistItem={onUpdateChecklistItem}
-                            onAddChecklistItem={onAddChecklistItem}
-                            onToggleChecklistItem={onToggleChecklistItem}
-                            onDeleteChecklistItem={onDeleteChecklistItem}
+                            canAddTaskItem={!isSubtaskAssignee}
+                            canCancelTaskItem={!isSubtaskAssignee}
+                            onUpdateTaskItem={onUpdateTaskItem}
+                            onAddTaskItem={onAddTaskItem}
+                            onToggleTaskItem={onToggleTaskItem}
+                            onDeleteTaskItem={onDeleteTaskItem}
+                            onUpdateTaskItem={onUpdateTaskItem}
+                            onAddTaskItemChecklist={onAddTaskItemChecklist}
+                            onToggleTaskItemChecklist={
+                              onToggleTaskItemChecklist
+                            }
                           />
                         </td>
                       </tr>

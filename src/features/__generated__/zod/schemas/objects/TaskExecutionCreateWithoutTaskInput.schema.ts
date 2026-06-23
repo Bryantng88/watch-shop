@@ -4,7 +4,7 @@ import { TaskExecutionTargetTypeSchema } from '../enums/TaskExecutionTargetType.
 import { TaskExecutionActionTypeSchema } from '../enums/TaskExecutionActionType.schema';
 import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema';
 import { UserCreateNestedOneWithoutTaskExecutionInputObjectSchema as UserCreateNestedOneWithoutTaskExecutionInputObjectSchema } from './UserCreateNestedOneWithoutTaskExecutionInput.schema';
-import { TaskChecklistItemCreateNestedOneWithoutExecutionsInputObjectSchema as TaskChecklistItemCreateNestedOneWithoutExecutionsInputObjectSchema } from './TaskChecklistItemCreateNestedOneWithoutExecutionsInput.schema';
+import { TaskItemCreateNestedOneWithoutExecutionsInputObjectSchema as TaskItemCreateNestedOneWithoutExecutionsInputObjectSchema } from './TaskItemCreateNestedOneWithoutExecutionsInput.schema';
 import { ServiceRequestCreateNestedOneWithoutTaskExecutionInputObjectSchema as ServiceRequestCreateNestedOneWithoutTaskExecutionInputObjectSchema } from './ServiceRequestCreateNestedOneWithoutTaskExecutionInput.schema';
 import { TechnicalIssueCreateNestedOneWithoutTaskExecutionInputObjectSchema as TechnicalIssueCreateNestedOneWithoutTaskExecutionInputObjectSchema } from './TechnicalIssueCreateNestedOneWithoutTaskExecutionInput.schema'
 
@@ -18,8 +18,9 @@ const makeSchema = () => z.object({
   metadataJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   note: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
+  checklistItemId: z.string().optional().nullable(),
   createdByUser: z.lazy(() => UserCreateNestedOneWithoutTaskExecutionInputObjectSchema).optional(),
-  checklistItem: z.lazy(() => TaskChecklistItemCreateNestedOneWithoutExecutionsInputObjectSchema).optional(),
+  taskItem: z.lazy(() => TaskItemCreateNestedOneWithoutExecutionsInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestCreateNestedOneWithoutTaskExecutionInputObjectSchema).optional(),
   technicalIssue: z.lazy(() => TechnicalIssueCreateNestedOneWithoutTaskExecutionInputObjectSchema).optional()
 }).strict();

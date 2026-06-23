@@ -1,0 +1,5 @@
+import * as z from 'zod';
+
+export const TaskItemScalarFieldEnumSchema = z.enum(['id', 'taskId', 'title', 'note', 'status', 'priority', 'dueAt', 'assignedToUserId', 'startedAt', 'completedAt', 'cancelledAt', 'isDone', 'sortOrder', 'createdAt', 'updatedAt', 'userId'])
+
+export type TaskItemScalarFieldEnum = z.infer<typeof TaskItemScalarFieldEnumSchema>;

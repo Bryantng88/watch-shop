@@ -5,7 +5,7 @@ import { prisma } from "@/server/db/client";
 
 export async function requestSubtaskSupportAction(input: {
     taskId: string;
-    checklistItemId: string;
+    taskItemId: string;
     reason: string;
     suggestedAssigneeId?: string | null;
 }) {
@@ -26,7 +26,7 @@ export async function requestSubtaskSupportAction(input: {
     await prisma.taskExecution.create({
         data: {
             taskId: input.taskId,
-            checklistItemId: input.checklistItemId,
+            taskItemId: input.taskItemId,
             targetType: "WORK_CASE",
             targetId: task.workCaseId || input.taskId,
             actionType: "UPDATED",
@@ -47,7 +47,7 @@ export async function requestSubtaskSupportAction(input: {
                 note: reason,
                 metadata: {
                     taskId: input.taskId,
-                    checklistItemId: input.checklistItemId,
+                    taskItemId: input.taskItemId,
                     suggestedAssigneeId: input.suggestedAssigneeId || null,
                 },
             },

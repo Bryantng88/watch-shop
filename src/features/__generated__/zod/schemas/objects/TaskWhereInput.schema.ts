@@ -15,7 +15,8 @@ import { UuidNullableFilterObjectSchema as UuidNullableFilterObjectSchema } from
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { UserNullableScalarRelationFilterObjectSchema as UserNullableScalarRelationFilterObjectSchema } from './UserNullableScalarRelationFilter.schema';
 import { UserWhereInputObjectSchema as UserWhereInputObjectSchema } from './UserWhereInput.schema';
-import { TaskChecklistItemListRelationFilterObjectSchema as TaskChecklistItemListRelationFilterObjectSchema } from './TaskChecklistItemListRelationFilter.schema';
+import { TaskItemChecklistListRelationFilterObjectSchema as TaskItemChecklistListRelationFilterObjectSchema } from './TaskItemChecklistListRelationFilter.schema';
+import { TaskItemListRelationFilterObjectSchema as TaskItemListRelationFilterObjectSchema } from './TaskItemListRelationFilter.schema';
 import { WatchNullableScalarRelationFilterObjectSchema as WatchNullableScalarRelationFilterObjectSchema } from './WatchNullableScalarRelationFilter.schema';
 import { WatchWhereInputObjectSchema as WatchWhereInputObjectSchema } from './WatchWhereInput.schema';
 import { OrderNullableScalarRelationFilterObjectSchema as OrderNullableScalarRelationFilterObjectSchema } from './OrderNullableScalarRelationFilter.schema';
@@ -70,7 +71,8 @@ const taskwhereinputSchema = z.object({
   assignedToUser: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional(),
   completedByUser: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional(),
   cancelledByUser: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional(),
-  checklistItems: z.lazy(() => TaskChecklistItemListRelationFilterObjectSchema).optional(),
+  checklistItems: z.lazy(() => TaskItemChecklistListRelationFilterObjectSchema).optional(),
+  taskItems: z.lazy(() => TaskItemListRelationFilterObjectSchema).optional(),
   watch: z.union([z.lazy(() => WatchNullableScalarRelationFilterObjectSchema), z.lazy(() => WatchWhereInputObjectSchema)]).optional(),
   order: z.union([z.lazy(() => OrderNullableScalarRelationFilterObjectSchema), z.lazy(() => OrderWhereInputObjectSchema)]).optional(),
   shipment: z.union([z.lazy(() => ShipmentNullableScalarRelationFilterObjectSchema), z.lazy(() => ShipmentWhereInputObjectSchema)]).optional(),

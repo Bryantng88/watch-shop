@@ -8,7 +8,7 @@ import {
 import { dbOrTx, type DB } from "@/server/db/client";
 import type {
   CompleteRelatedTasksInput,
-  CreateTaskChecklistItemInput,
+  CreateTaskItemInput,
   CreateTaskInput,
   EnsureSystemTaskInput,
   EnsureSystemTaskResult,
@@ -16,7 +16,7 @@ import type {
   TaskDueKey,
   TaskListFilters,
   TaskViewKey,
-  UpdateTaskChecklistItemInput,
+  UpdateTaskItemInput,
   UpdateTaskInput,
 } from "./task.types";
 
@@ -57,7 +57,11 @@ const CHECKLIST_ITEM_INCLUDE = {
     orderBy: { createdAt: "desc" },
     include: TASK_EXECUTION_INCLUDE,
   },
-} satisfies Prisma.TaskChecklistItemInclude;
+  checklists: {
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+
+  },
+} satisfies Prisma.TaskItemInclude;
 
 export const TASK_INCLUDE = {
   createdByUser: { select: USER_SELECT },
@@ -106,7 +110,7 @@ export const TASK_INCLUDE = {
     },
   },
 
-  checklistItems: {
+  taskItems: {
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     include: CHECKLIST_ITEM_INCLUDE,
   },
@@ -251,7 +255,7 @@ function isUuid(value: string) {
 
 function assignedSubtaskWhere(userId: string): Prisma.TaskWhereInput {
   return {
-    checklistItems: {
+    taskItems: {
       some: {
         assignedToUserId: userId,
       },
@@ -259,7 +263,11 @@ function assignedSubtaskWhere(userId: string): Prisma.TaskWhereInput {
   };
 }
 
-function applyTaskRowAccess(task: any, currentUserId: string, canViewAll = false) {
+function applyTaskRowAccess(
+  task: any,
+  currentUserId: string,
+  canViewAll = false,
+) {
   const isOwner =
     canViewAll ||
     task.assignedToUserId === currentUserId ||
@@ -269,22 +277,25 @@ function applyTaskRowAccess(task: any, currentUserId: string, canViewAll = false
     return {
       ...task,
       rowAccess: "OWNER",
-      visibleChecklistItemIds: null,
+      visibleTaskItemIds: null,
     };
   }
 
-  const visibleChecklistItems = (task.checklistItems ?? []).filter(
+  const visibleTaskItems = (task.taskItems ?? []).filter(
     (item: any) => item.assignedToUserId === currentUserId,
   );
 
   return {
     ...task,
     rowAccess: "SUBTASK_ASSIGNEE",
-    visibleChecklistItemIds: visibleChecklistItems.map((item: any) => item.id),
+    visibleTaskItemIds: visibleTaskItems.map((item: any) => item.id),
   };
 }
 
-function normalizeBusinessStage(targetType: string, row: any): {
+function normalizeBusinessStage(
+  targetType: string,
+  row: any,
+): {
   businessStage: string;
   businessStageLabel: string;
   businessStageTone: BusinessStageTone;
@@ -323,14 +334,13 @@ function normalizeBusinessStage(targetType: string, row: any): {
     return {
       businessStage: stage,
       businessStageLabel: `SR · ${stage}`,
-      businessStageTone:
-        ["COMPLETED", "DELIVERED"].includes(stage)
-          ? "done"
-          : stage === "CANCELED"
-            ? "cancelled"
-            : ["DIAGNOSING", "WAIT_APPROVAL", "IN_PROGRESS"].includes(stage)
-              ? "progress"
-              : "todo",
+      businessStageTone: ["COMPLETED", "DELIVERED"].includes(stage)
+        ? "done"
+        : stage === "CANCELED"
+          ? "cancelled"
+          : ["DIAGNOSING", "WAIT_APPROVAL", "IN_PROGRESS"].includes(stage)
+            ? "progress"
+            : "todo",
       isBusinessDone: ["COMPLETED", "DELIVERED"].includes(stage),
     };
   }
@@ -359,12 +369,11 @@ function normalizeBusinessStage(targetType: string, row: any): {
     return {
       businessStage: stage,
       businessStageLabel: `Payment · ${stage}`,
-      businessStageTone:
-        ["PAID", "COLLECTED"].includes(stage)
-          ? "done"
-          : ["CANCELED", "REFUNDED"].includes(stage)
-            ? "cancelled"
-            : "todo",
+      businessStageTone: ["PAID", "COLLECTED"].includes(stage)
+        ? "done"
+        : ["CANCELED", "REFUNDED"].includes(stage)
+          ? "cancelled"
+          : "todo",
       isBusinessDone: ["PAID", "COLLECTED"].includes(stage),
     };
   }
@@ -457,7 +466,8 @@ async function getExecutionTargetSnapshot(client: any, execution: any) {
       select: { id: true, refNo: true, status: true, customerName: true },
     });
 
-    if (!row) return { ...execution, ...normalizeBusinessStage(type, execution) };
+    if (!row)
+      return { ...execution, ...normalizeBusinessStage(type, execution) };
 
     return {
       ...execution,
@@ -475,7 +485,8 @@ async function getExecutionTargetSnapshot(client: any, execution: any) {
       select: { id: true, refNo: true, status: true },
     });
 
-    if (!row) return { ...execution, ...normalizeBusinessStage(type, execution) };
+    if (!row)
+      return { ...execution, ...normalizeBusinessStage(type, execution) };
 
     return {
       ...execution,
@@ -492,7 +503,8 @@ async function getExecutionTargetSnapshot(client: any, execution: any) {
       select: { id: true, summary: true, area: true, executionStatus: true },
     });
 
-    if (!row) return { ...execution, ...normalizeBusinessStage(type, execution) };
+    if (!row)
+      return { ...execution, ...normalizeBusinessStage(type, execution) };
 
     return {
       ...execution,
@@ -510,7 +522,8 @@ async function getExecutionTargetSnapshot(client: any, execution: any) {
       select: { id: true, refNo: true, status: true },
     });
 
-    if (!row) return { ...execution, ...normalizeBusinessStage(type, execution) };
+    if (!row)
+      return { ...execution, ...normalizeBusinessStage(type, execution) };
 
     return {
       ...execution,
@@ -533,7 +546,8 @@ async function getExecutionTargetSnapshot(client: any, execution: any) {
       select: { id: true, refNo: true, trackingCode: true, status: true },
     });
 
-    if (!row) return { ...execution, ...normalizeBusinessStage(type, execution) };
+    if (!row)
+      return { ...execution, ...normalizeBusinessStage(type, execution) };
 
     return {
       ...execution,
@@ -550,7 +564,8 @@ async function getExecutionTargetSnapshot(client: any, execution: any) {
       select: { id: true, refNo: true, accquisitionStt: true },
     });
 
-    if (!row) return { ...execution, ...normalizeBusinessStage(type, execution) };
+    if (!row)
+      return { ...execution, ...normalizeBusinessStage(type, execution) };
 
     return {
       ...execution,
@@ -567,7 +582,8 @@ async function getExecutionTargetSnapshot(client: any, execution: any) {
       select: { id: true, refNo: true, title: true, status: true },
     });
 
-    if (!row) return { ...execution, ...normalizeBusinessStage(type, execution) };
+    if (!row)
+      return { ...execution, ...normalizeBusinessStage(type, execution) };
 
     return {
       ...execution,
@@ -592,7 +608,8 @@ async function getExecutionTargetSnapshot(client: any, execution: any) {
       },
     });
 
-    if (!row) return { ...execution, ...normalizeBusinessStage(type, execution) };
+    if (!row)
+      return { ...execution, ...normalizeBusinessStage(type, execution) };
 
     return {
       ...execution,
@@ -618,8 +635,8 @@ export async function hydrateTaskBusinessLinks(db: DB, task: any) {
 
   const executions = await hydrateList(task.executions ?? []);
 
-  const checklistItems = await Promise.all(
-    (task.checklistItems ?? []).map(async (item: any) => ({
+  const taskItems = await Promise.all(
+    (task.taskItems ?? []).map(async (item: any) => ({
       ...item,
       executions: await hydrateList(item.executions ?? []),
     })),
@@ -628,15 +645,13 @@ export async function hydrateTaskBusinessLinks(db: DB, task: any) {
   return {
     ...task,
     executions,
-    checklistItems,
+    taskItems,
   };
 }
 
 function executionIsDone(execution: any) {
   return Boolean(execution?.isBusinessDone);
 }
-
-
 
 function subtaskHasProgress(item: any) {
   const executions = item.executions ?? [];
@@ -687,7 +702,11 @@ function buildViewWhere(
 
   if (view === "mine") {
     return {
-      OR: [{ createdByUserId: userId }, { assignedToUserId: userId }, subtaskWhere],
+      OR: [
+        { createdByUserId: userId },
+        { assignedToUserId: userId },
+        subtaskWhere,
+      ],
     };
   }
 
@@ -716,7 +735,8 @@ function buildDueWhere(due?: TaskDueKey): Prisma.TaskWhereInput {
   }
 
   if (due === "TODAY") return { dueAt: { gte: today, lt: tomorrow } };
-  if (due === "THIS_WEEK") return { dueAt: { gte: today, lt: endOfThisWeek() } };
+  if (due === "THIS_WEEK")
+    return { dueAt: { gte: today, lt: endOfThisWeek() } };
   if (due === "NO_DUE") return { dueAt: null };
 
   return {};
@@ -739,7 +759,7 @@ function buildFilterWhere(filters: TaskListFilters): Prisma.TaskWhereInput {
       { workCase: { refNo: { contains: q, mode: "insensitive" } } },
       { workCase: { title: { contains: q, mode: "insensitive" } } },
       {
-        checklistItems: {
+        taskItems: {
           some: {
             OR: [
               { title: { contains: q, mode: "insensitive" } },
@@ -772,7 +792,9 @@ function buildFilterWhere(filters: TaskListFilters): Prisma.TaskWhereInput {
 }
 
 function createLinkData(
-  input: Partial<CreateTaskInput | EnsureSystemTaskInput | CreateTaskChecklistItemInput>,
+  input: Partial<
+    CreateTaskInput | EnsureSystemTaskInput | CreateTaskItemInput
+  >,
 ) {
   return {
     watchId: input.watchId ?? null,
@@ -807,7 +829,9 @@ function updateLinkData(input: Partial<UpdateTaskInput>) {
   return data;
 }
 
-function systemTaskIdentityWhere(input: EnsureSystemTaskInput): Prisma.TaskWhereInput {
+function systemTaskIdentityWhere(
+  input: EnsureSystemTaskInput,
+): Prisma.TaskWhereInput {
   return {
     source: TaskSource.SYSTEM,
     title: input.title.trim(),
@@ -845,8 +869,12 @@ function relatedTaskWhere(
     ...(input.orderId ? { orderId: input.orderId } : {}),
     ...(input.shipmentId ? { shipmentId: input.shipmentId } : {}),
     ...(input.acquisitionId ? { acquisitionId: input.acquisitionId } : {}),
-    ...(input.serviceRequestId ? { serviceRequestId: input.serviceRequestId } : {}),
-    ...(input.technicalIssueId ? { technicalIssueId: input.technicalIssueId } : {}),
+    ...(input.serviceRequestId
+      ? { serviceRequestId: input.serviceRequestId }
+      : {}),
+    ...(input.technicalIssueId
+      ? { technicalIssueId: input.technicalIssueId }
+      : {}),
     ...(input.paymentId ? { paymentId: input.paymentId } : {}),
     ...(input.workCaseId ? { workCaseId: input.workCaseId } : {}),
   };
@@ -858,7 +886,10 @@ export async function listTasksRepo(
 ) {
   const client = dbOrTx(db);
   const page = Math.max(1, Number(input.filters.page || 1));
-  const pageSize = Math.min(100, Math.max(10, Number(input.filters.pageSize || 25)));
+  const pageSize = Math.min(
+    100,
+    Math.max(10, Number(input.filters.pageSize || 25)),
+  );
   const view = input.filters.view || "mine";
   const canViewAll = Boolean(input.canViewAll);
 
@@ -919,10 +950,14 @@ export async function countTaskViewsRepo(
       where: { AND: [buildViewWhere("mine", userId, canViewAll), openWhere] },
     }),
     client.task.count({
-      where: { AND: [buildViewWhere("assigned", userId, canViewAll), openWhere] },
+      where: {
+        AND: [buildViewWhere("assigned", userId, canViewAll), openWhere],
+      },
     }),
     client.task.count({
-      where: { AND: [buildViewWhere("delegated", userId, canViewAll), openWhere] },
+      where: {
+        AND: [buildViewWhere("delegated", userId, canViewAll), openWhere],
+      },
     }),
     client.task.count({
       where: { AND: [buildViewWhere("all", userId, canViewAll), openWhere] },
@@ -940,7 +975,11 @@ export async function countTaskDueBucketsRepo(
 
   const base: Prisma.TaskWhereInput = {
     AND: [
-      buildViewWhere(input.view || "mine", input.userId, Boolean(input.canViewAll)),
+      buildViewWhere(
+        input.view || "mine",
+        input.userId,
+        Boolean(input.canViewAll),
+      ),
       { status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] } },
     ],
   };
@@ -951,8 +990,12 @@ export async function countTaskDueBucketsRepo(
 
   const [overdue, todayCount, thisWeek, noDue] = await Promise.all([
     client.task.count({ where: { AND: [base, { dueAt: { lt: today } }] } }),
-    client.task.count({ where: { AND: [base, { dueAt: { gte: today, lt: tomorrow } }] } }),
-    client.task.count({ where: { AND: [base, { dueAt: { gte: today, lt: weekEnd } }] } }),
+    client.task.count({
+      where: { AND: [base, { dueAt: { gte: today, lt: tomorrow } }] },
+    }),
+    client.task.count({
+      where: { AND: [base, { dueAt: { gte: today, lt: weekEnd } }] },
+    }),
     client.task.count({ where: { AND: [base, { dueAt: null }] } }),
   ]);
 
@@ -1010,7 +1053,8 @@ export async function ensureSystemTaskRepo(
         priority: input.priority ?? "MEDIUM",
         dueAt,
         createdByUserId: input.createdByUserId ?? null,
-        assignedToUserId: input.assignedToUserId ?? input.createdByUserId ?? null,
+        assignedToUserId:
+          input.assignedToUserId ?? input.createdByUserId ?? null,
         ...createLinkData(input),
       },
       select: { id: true },
@@ -1020,7 +1064,8 @@ export async function ensureSystemTaskRepo(
   }
 
   const reopened =
-    existing.status === TaskStatus.DONE || existing.status === TaskStatus.CANCELLED;
+    existing.status === TaskStatus.DONE ||
+    existing.status === TaskStatus.CANCELLED;
 
   await client.task.update({
     where: { id: existing.id },
@@ -1045,7 +1090,11 @@ export async function ensureSystemTaskRepo(
   return { id: existing.id, created: false, reopened };
 }
 
-export async function updateTaskRepo(db: DB, id: string, input: UpdateTaskInput) {
+export async function updateTaskRepo(
+  db: DB,
+  id: string,
+  input: UpdateTaskInput,
+) {
   const client = dbOrTx(db);
 
   return client.task.update({
@@ -1163,7 +1212,7 @@ export async function findOpenRelatedTasksRepo(
 ) {
   const client = dbOrTx(db);
 
-  if (!input.kind && !hasAnyLink(input) && !input.checklistItemId) {
+  if (!input.kind && !hasAnyLink(input) && !input.taskItemId) {
     return [];
   }
 
@@ -1173,11 +1222,11 @@ export async function findOpenRelatedTasksRepo(
       status: {
         in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS],
       },
-      ...(input.checklistItemId
+      ...(input.taskItemId
         ? {
           executions: {
             some: {
-              checklistItemId: input.checklistItemId,
+              taskItemId: input.taskItemId,
             },
           },
         }
@@ -1199,19 +1248,19 @@ export async function findOpenRelatedTasksRepo(
   });
 }
 
-export async function createTaskChecklistItemRepo(
+export async function createTaskItemRepo(
   db: DB,
-  input: CreateTaskChecklistItemInput,
+  input: CreateTaskItemInput,
 ) {
   const client = dbOrTx(db);
 
-  const last = await client.taskChecklistItem.findFirst({
+  const last = await client.taskItem.findFirst({
     where: { taskId: input.taskId },
     orderBy: { sortOrder: "desc" },
     select: { sortOrder: true },
   });
 
-  return client.taskChecklistItem.create({
+  return client.taskItem.create({
     data: {
       taskId: input.taskId,
       title: input.title.trim(),
@@ -1226,14 +1275,14 @@ export async function createTaskChecklistItemRepo(
   });
 }
 
-export async function updateTaskChecklistItemRepo(
+export async function updateTaskItemRepo(
   db: DB,
   itemId: string,
-  input: UpdateTaskChecklistItemInput,
+  input: UpdateTaskItemInput,
 ) {
   const client = dbOrTx(db);
 
-  return client.taskChecklistItem.update({
+  return client.taskItem.update({
     where: { id: itemId },
     data: {
       ...(input.title !== undefined ? { title: input.title.trim() } : {}),
@@ -1249,14 +1298,14 @@ export async function updateTaskChecklistItemRepo(
   });
 }
 
-export async function setTaskChecklistItemDoneRepo(
+export async function setTaskItemDoneRepo(
   db: DB,
   input: { itemId: string; isDone: boolean },
 ) {
   const client = dbOrTx(db);
   const now = new Date();
 
-  return client.taskChecklistItem.update({
+  return client.taskItem.update({
     where: { id: input.itemId },
     data: input.isDone
       ? {
@@ -1274,15 +1323,15 @@ export async function setTaskChecklistItemDoneRepo(
   });
 }
 
-export async function deleteTaskChecklistItemRepo(db: DB, itemId: string) {
+export async function deleteTaskItemRepo(db: DB, itemId: string) {
   const client = dbOrTx(db);
 
   await client.taskExecution.updateMany({
-    where: { checklistItemId: itemId },
-    data: { checklistItemId: null },
+    where: { taskItemId: itemId },
+    data: { taskItemId: null },
   });
 
-  return client.taskChecklistItem.delete({
+  return client.taskItem.delete({
     where: { id: itemId },
   });
 }
@@ -1299,7 +1348,7 @@ export async function syncTaskStatusFromChecklistRepo(db: DB, taskId: string) {
   if (rawTask.status === TaskStatus.CANCELLED) return rawTask;
 
   const task = await hydrateTaskBusinessLinks(db, rawTask);
-  const items = task.checklistItems ?? [];
+  const items = task.taskItems ?? [];
 
   if (!items.length) return task;
 
@@ -1311,9 +1360,7 @@ export async function syncTaskStatusFromChecklistRepo(db: DB, taskId: string) {
     const isDone = tracking.every(executionIsDone);
     if (!executions.length) continue;
 
-
-
-    await client.taskChecklistItem.update({
+    await client.taskItem.update({
       where: { id: item.id },
       data: isDone
         ? {
@@ -1379,5 +1426,119 @@ function subtaskIsDone(item: any) {
     return tracking.every(executionIsDone);
   }
 
-  return Boolean(item.isDone) || String(item.status ?? "").toUpperCase() === "DONE";
+  return (
+    Boolean(item.isDone) || String(item.status ?? "").toUpperCase() === "DONE"
+  );
+}
+
+export async function createTaskItemChecklistRepo(
+  db: DB,
+  input: CreateTaskItemChecklistInput,
+) {
+  const client = dbOrTx(db);
+
+  const taskItem = await client.taskItem.findUnique({
+    where: { id: input.taskItemId },
+    select: { id: true },
+  });
+
+  if (!taskItem) throw new Error("Task item không tồn tại.");
+
+  const last = await client.taskItemChecklist.findFirst({
+    where: { taskItemId: input.taskItemId },
+    orderBy: { sortOrder: "desc" },
+    select: { sortOrder: true },
+  });
+
+  return client.taskItemChecklist.create({
+    data: {
+      taskItemId: input.taskItemId,
+      title: input.title.trim(),
+      note: input.note?.trim() || null,
+      sortOrder: (last?.sortOrder ?? -1) + 1,
+    },
+
+  });
+}
+
+export async function updateTaskItemChecklistRepo(
+  db: DB,
+  checklistId: string,
+  input: UpdateTaskItemChecklistInput & { actorUserId?: string | null },
+) {
+  const client = dbOrTx(db);
+  const doneChanged = input.isDone !== undefined;
+
+  return client.taskItemChecklist.update({
+    where: { id: checklistId },
+    data: {
+      ...(input.title !== undefined ? { title: input.title.trim() } : {}),
+      ...(input.note !== undefined ? { note: input.note?.trim() || null } : {}),
+      ...(input.dueAt !== undefined ? { dueAt: toDate(input.dueAt) } : {}),
+      ...(doneChanged
+        ? input.isDone
+          ? {
+            isDone: true,
+            doneAt: new Date(),
+          }
+          : {
+            isDone: false,
+            doneAt: null,
+          }
+        : {}),
+    },
+
+  });
+}
+
+export async function deleteTaskItemChecklistRepo(db: DB, checklistId: string) {
+  const client = dbOrTx(db);
+  return client.taskItemChecklist.delete({ where: { id: checklistId } });
+}
+
+export async function syncTaskItemStatusFromChecklistRepo(
+  db: DB,
+  taskItemId: string,
+  actorUserId?: string | null,
+) {
+  const client = dbOrTx(db);
+
+  const item = await client.taskItem.findUnique({
+    where: { id: taskItemId },
+    include: { checklists: true },
+  });
+
+  if (!item) return null;
+  if (item.status === TaskStatus.CANCELLED) return item;
+
+  const checklists = item.checklists ?? [];
+  if (!checklists.length) return item;
+
+  const allDone = checklists.every((x: any) => x.isDone);
+  const hasProgress = checklists.some((x: any) => x.isDone);
+
+  return client.taskItem.update({
+    where: { id: taskItemId },
+    data: allDone
+      ? {
+        isDone: true,
+        status: TaskStatus.DONE,
+        completedAt: new Date(),
+        cancelledAt: null,
+        ...(actorUserId ? { userId: actorUserId } : {}),
+      }
+      : hasProgress
+        ? {
+          isDone: false,
+          status: TaskStatus.IN_PROGRESS,
+          startedAt: item.startedAt ?? new Date(),
+          completedAt: null,
+        }
+        : {
+          isDone: false,
+          status: TaskStatus.TODO,
+          completedAt: null,
+        },
+    include: CHECKLIST_ITEM_INCLUDE,
+  });
 }

@@ -10,7 +10,7 @@ import {
 
 type ExecuteTaskActionActionInput = {
   taskId: string;
-  checklistItemId?: string | null;
+  taskItemId?: string | null;
   serviceMode?: "SR_ONLY" | "SR_WITH_TECHNICAL_ISSUE";
 };
 
@@ -31,12 +31,12 @@ export async function executeTaskActionAction(
       ? {
         taskId: inputOrTaskId,
         serviceMode,
-        checklistItemId: null,
+        taskItemId: null,
       }
       : {
         taskId: inputOrTaskId.taskId,
         serviceMode: inputOrTaskId.serviceMode,
-        checklistItemId: inputOrTaskId.checklistItemId ?? null,
+        taskItemId: inputOrTaskId.taskItemId ?? null,
       };
 
   const result = await executeTaskAction(
@@ -80,7 +80,7 @@ export async function deleteTaskExecutionAction(input: {
     select: {
       id: true,
       taskId: true,
-      checklistItemId: true,
+      taskItemId: true,
     },
   });
 
@@ -97,30 +97,30 @@ export async function deleteTaskExecutionAction(input: {
 }
 export async function moveTaskExecutionAction(input: {
   executionId: string;
-  toChecklistItemId: string;
+  toTaskItemId: string;
 }) {
   await requirePermission("TASK_UPDATE");
 
   const executionId = String(input.executionId || "").trim();
-  const toChecklistItemId = String(input.toChecklistItemId || "").trim();
+  const toTaskItemId = String(input.toTaskItemId || "").trim();
 
   if (!executionId) throw new Error("Missing executionId");
-  if (!toChecklistItemId) throw new Error("Missing toChecklistItemId");
+  if (!toTaskItemId) throw new Error("Missing toTaskItemId");
 
   const execution = await prisma.taskExecution.findUnique({
     where: { id: executionId },
     select: {
       id: true,
       taskId: true,
-      checklistItemId: true,
+      taskItemId: true,
       targetType: true,
     },
   });
 
   if (!execution) throw new Error("Không tìm thấy link nghiệp vụ.");
 
-  const targetItem = await prisma.taskChecklistItem.findUnique({
-    where: { id: toChecklistItemId },
+  const targetItem = await prisma.taskItem.findUnique({
+    where: { id: toTaskItemId },
     select: {
       id: true,
       taskId: true,
@@ -148,7 +148,7 @@ export async function moveTaskExecutionAction(input: {
   await prisma.taskExecution.update({
     where: { id: execution.id },
     data: {
-      checklistItemId: targetItem.id,
+      taskItemId: targetItem.id,
     },
   });
 

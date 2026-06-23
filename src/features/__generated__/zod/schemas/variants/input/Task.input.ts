@@ -37,6 +37,7 @@ export const TaskInputSchema = z.object({
     completedByUser: z.unknown().optional().nullable(),
     cancelledByUser: z.unknown().optional().nullable(),
     checklistItems: z.array(z.unknown()),
+    taskItems: z.array(z.unknown()),
     watch: z.unknown().optional().nullable(),
     order: z.unknown().optional().nullable(),
     shipment: z.unknown().optional().nullable(),

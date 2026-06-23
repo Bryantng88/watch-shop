@@ -10,6 +10,7 @@ export const TaskExecutionGroupByResultSchema = z.array(z.object({
   checklistItemId: z.string(),
   serviceRequestId: z.string(),
   technicalIssueId: z.string(),
+  taskItemId: z.string(),
   _count: z.object({
     id: z.number(),
     taskId: z.number(),
@@ -23,9 +24,10 @@ export const TaskExecutionGroupByResultSchema = z.array(z.object({
     checklistItemId: z.number(),
     serviceRequestId: z.number(),
     technicalIssueId: z.number(),
+    taskItemId: z.number(),
     task: z.number(),
     createdByUser: z.number(),
-    checklistItem: z.number(),
+    taskItem: z.number(),
     serviceRequest: z.number(),
     technicalIssue: z.number()
   }).optional(),
@@ -38,7 +40,8 @@ export const TaskExecutionGroupByResultSchema = z.array(z.object({
     createdAt: z.date().nullable(),
     checklistItemId: z.string().nullable(),
     serviceRequestId: z.string().nullable(),
-    technicalIssueId: z.string().nullable()
+    technicalIssueId: z.string().nullable(),
+    taskItemId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -49,6 +52,7 @@ export const TaskExecutionGroupByResultSchema = z.array(z.object({
     createdAt: z.date().nullable(),
     checklistItemId: z.string().nullable(),
     serviceRequestId: z.string().nullable(),
-    technicalIssueId: z.string().nullable()
+    technicalIssueId: z.string().nullable(),
+    taskItemId: z.string().nullable()
   }).nullable().optional()
 }));

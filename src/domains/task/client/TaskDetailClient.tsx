@@ -14,10 +14,12 @@ import { TaskStatus } from "@prisma/client";
 import AdminBreadcrumbs from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import {
-  changeTaskChecklistItemDoneAction,
+  changeTaskItemDoneAction,
   changeTaskStatusAction,
-  createTaskChecklistItemAction,
-  deleteTaskChecklistItemAction,
+  createTaskItemAction,
+  createTaskItemChecklistAction,
+  changeTaskItemChecklistDoneAction,
+  deleteTaskItemAction,
 } from "../actions/task.actions";
 import TaskWorkPanel from "../ui/list/TaskWorkPanel";
 
@@ -27,7 +29,9 @@ type UserOption = {
   email: string | null;
 };
 
-function userLabel(user?: { name?: string | null; email?: string | null } | null) {
+function userLabel(
+  user?: { name?: string | null; email?: string | null } | null,
+) {
   return user?.name || user?.email || "-";
 }
 
@@ -54,9 +58,11 @@ function isSubtaskDone(item: any) {
 }
 
 function checklistStats(task: any) {
-  const items = task.checklistItems ?? [];
+  const items = task.taskItems ?? [];
   const done = items.filter(isSubtaskDone).length;
-  const business = items.filter((x: any) => (x.executions?.length ?? 0) > 0).length;
+  const business = items.filter(
+    (x: any) => (x.executions?.length ?? 0) > 0,
+  ).length;
   return { total: items.length, done, business };
 }
 
@@ -88,7 +94,7 @@ export default function TaskDetailClient({
     }
   }
 
-  async function addChecklistItem(input: {
+  async function addTaskItem(input: {
     taskId: string;
     title: string;
     assignedToUserId?: string | null;
@@ -96,7 +102,7 @@ export default function TaskDetailClient({
     dueAt?: string | null;
   }) {
     try {
-      await createTaskChecklistItemAction(input);
+      await createTaskItemAction(input);
       notify.success("Đã thêm subtask");
       router.refresh();
     } catch (error: any) {
@@ -104,23 +110,41 @@ export default function TaskDetailClient({
     }
   }
 
-  async function toggleChecklistItem(itemId: string, isDone: boolean) {
+  async function toggleTaskItem(itemId: string, isDone: boolean) {
     try {
-      await changeTaskChecklistItemDoneAction(itemId, isDone);
+      await changeTaskItemDoneAction(itemId, isDone);
       router.refresh();
     } catch (error: any) {
       notify.error(error?.message || "Không cập nhật được subtask");
     }
   }
 
-  async function deleteChecklistItem(itemId: string) {
+  async function deleteTaskItem(itemId: string) {
     if (!window.confirm("Xóa subtask này?")) return;
 
     try {
-      await deleteTaskChecklistItemAction(itemId);
+      await deleteTaskItemAction(itemId);
       router.refresh();
     } catch (error: any) {
       notify.error(error?.message || "Không xóa được subtask");
+    }
+  }
+
+  async function addTaskItemChecklist(taskItemId: string, title: string) {
+    try {
+      await createTaskItemChecklistAction({ taskItemId, title });
+      router.refresh();
+    } catch (error: any) {
+      notify.error(error?.message || "Không thể thêm checklist");
+    }
+  }
+
+  async function toggleTaskItemChecklist(checklistId: string, isDone: boolean) {
+    try {
+      await changeTaskItemChecklistDoneAction(checklistId, isDone);
+      router.refresh();
+    } catch (error: any) {
+      notify.error(error?.message || "Không thể cập nhật checklist");
     }
   }
 
@@ -190,7 +214,8 @@ export default function TaskDetailClient({
                 </button>
               ) : null}
 
-              {task.status === TaskStatus.DONE || task.status === TaskStatus.CANCELLED ? (
+              {task.status === TaskStatus.DONE ||
+              task.status === TaskStatus.CANCELLED ? (
                 <button
                   type="button"
                   disabled={pending}
@@ -293,21 +318,24 @@ export default function TaskDetailClient({
       <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-100 px-5 py-4">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
-            Subtask
+            Task item
           </p>
           <h2 className="mt-1 text-lg font-semibold text-slate-950">
-            Người nhận task chia nhỏ việc, assign người xử lý và link nghiệp vụ nếu cần
+            Người nhận task chia nhỏ việc, assign người xử lý và link nghiệp vụ
+            nếu cần
           </h2>
         </div>
 
         <TaskWorkPanel
           task={task}
           users={users}
-          checklistItems={task.checklistItems ?? []}
+          taskItems={task.taskItems ?? []}
           executions={task.executions ?? []}
-          onAddChecklistItem={addChecklistItem}
-          onToggleChecklistItem={toggleChecklistItem}
-          onDeleteChecklistItem={deleteChecklistItem}
+          onAddTaskItem={addTaskItem}
+          onToggleTaskItem={toggleTaskItem}
+          onDeleteTaskItem={deleteTaskItem}
+          onAddTaskItemChecklist={addTaskItemChecklist}
+          onToggleTaskItemChecklist={toggleTaskItemChecklist}
         />
       </section>
     </div>

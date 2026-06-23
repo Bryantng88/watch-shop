@@ -12,9 +12,10 @@ export const TaskExecutionDeleteResultSchema = z.nullable(z.object({
   checklistItemId: z.string().optional(),
   serviceRequestId: z.string().optional(),
   technicalIssueId: z.string().optional(),
+  taskItemId: z.string().optional(),
   task: z.unknown(),
   createdByUser: z.unknown().optional(),
-  checklistItem: z.unknown().optional(),
+  taskItem: z.unknown().optional(),
   serviceRequest: z.unknown().optional(),
   technicalIssue: z.unknown().optional()
 }));

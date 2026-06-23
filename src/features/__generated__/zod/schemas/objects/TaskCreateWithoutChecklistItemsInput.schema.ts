@@ -8,6 +8,7 @@ import { UserCreateNestedOneWithoutCreatedTasksInputObjectSchema as UserCreateNe
 import { UserCreateNestedOneWithoutAssignedTasksInputObjectSchema as UserCreateNestedOneWithoutAssignedTasksInputObjectSchema } from './UserCreateNestedOneWithoutAssignedTasksInput.schema';
 import { UserCreateNestedOneWithoutCompletedTasksInputObjectSchema as UserCreateNestedOneWithoutCompletedTasksInputObjectSchema } from './UserCreateNestedOneWithoutCompletedTasksInput.schema';
 import { UserCreateNestedOneWithoutCancelledTasksInputObjectSchema as UserCreateNestedOneWithoutCancelledTasksInputObjectSchema } from './UserCreateNestedOneWithoutCancelledTasksInput.schema';
+import { TaskItemCreateNestedManyWithoutTaskInputObjectSchema as TaskItemCreateNestedManyWithoutTaskInputObjectSchema } from './TaskItemCreateNestedManyWithoutTaskInput.schema';
 import { WatchCreateNestedOneWithoutTasksInputObjectSchema as WatchCreateNestedOneWithoutTasksInputObjectSchema } from './WatchCreateNestedOneWithoutTasksInput.schema';
 import { OrderCreateNestedOneWithoutTaskInputObjectSchema as OrderCreateNestedOneWithoutTaskInputObjectSchema } from './OrderCreateNestedOneWithoutTaskInput.schema';
 import { ShipmentCreateNestedOneWithoutTaskInputObjectSchema as ShipmentCreateNestedOneWithoutTaskInputObjectSchema } from './ShipmentCreateNestedOneWithoutTaskInput.schema';
@@ -39,6 +40,7 @@ const makeSchema = () => z.object({
   assignedToUser: z.lazy(() => UserCreateNestedOneWithoutAssignedTasksInputObjectSchema).optional(),
   completedByUser: z.lazy(() => UserCreateNestedOneWithoutCompletedTasksInputObjectSchema).optional(),
   cancelledByUser: z.lazy(() => UserCreateNestedOneWithoutCancelledTasksInputObjectSchema).optional(),
+  taskItems: z.lazy(() => TaskItemCreateNestedManyWithoutTaskInputObjectSchema).optional(),
   watch: z.lazy(() => WatchCreateNestedOneWithoutTasksInputObjectSchema).optional(),
   order: z.lazy(() => OrderCreateNestedOneWithoutTaskInputObjectSchema).optional(),
   shipment: z.lazy(() => ShipmentCreateNestedOneWithoutTaskInputObjectSchema).optional(),

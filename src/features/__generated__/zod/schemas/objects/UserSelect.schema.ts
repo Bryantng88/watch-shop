@@ -10,7 +10,7 @@ import { TaskFindManySchema as TaskFindManySchema } from '../findManyTask.schema
 import { WorkCaseFindManySchema as WorkCaseFindManySchema } from '../findManyWorkCase.schema';
 import { WorkCaseActivityFindManySchema as WorkCaseActivityFindManySchema } from '../findManyWorkCaseActivity.schema';
 import { TaskExecutionFindManySchema as TaskExecutionFindManySchema } from '../findManyTaskExecution.schema';
-import { TaskChecklistItemFindManySchema as TaskChecklistItemFindManySchema } from '../findManyTaskChecklistItem.schema';
+import { TaskItemFindManySchema as TaskItemFindManySchema } from '../findManyTaskItem.schema';
 import { UserCountOutputTypeArgsObjectSchema as UserCountOutputTypeArgsObjectSchema } from './UserCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -37,8 +37,8 @@ const makeSchema = () => z.object({
   assignedWorkCases: z.union([z.boolean(), z.lazy(() => WorkCaseFindManySchema)]).optional(),
   workCaseActivities: z.union([z.boolean(), z.lazy(() => WorkCaseActivityFindManySchema)]).optional(),
   taskExecution: z.union([z.boolean(), z.lazy(() => TaskExecutionFindManySchema)]).optional(),
-  assignedChecklistItems: z.union([z.boolean(), z.lazy(() => TaskChecklistItemFindManySchema)]).optional(),
-  taskChecklistItem: z.union([z.boolean(), z.lazy(() => TaskChecklistItemFindManySchema)]).optional(),
+  assignedTaskItems: z.union([z.boolean(), z.lazy(() => TaskItemFindManySchema)]).optional(),
+  taskItems: z.union([z.boolean(), z.lazy(() => TaskItemFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => UserCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const UserSelectObjectSchema: z.ZodType<Prisma.UserSelect> = makeSchema() as unknown as z.ZodType<Prisma.UserSelect>;

@@ -24,7 +24,8 @@ const taskexecutionscalarwherewithaggregatesinputSchema = z.object({
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
   checklistItemId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   serviceRequestId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
-  technicalIssueId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
+  technicalIssueId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  taskItemId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const TaskExecutionScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.TaskExecutionScalarWhereWithAggregatesInput> = taskexecutionscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.TaskExecutionScalarWhereWithAggregatesInput>;
 export const TaskExecutionScalarWhereWithAggregatesInputObjectZodSchema = taskexecutionscalarwherewithaggregatesinputSchema;

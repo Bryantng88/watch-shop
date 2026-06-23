@@ -71,7 +71,7 @@ export type EnsureSystemTaskResult = {
 
 export type FindOpenRelatedTasksInput = TaskDomainLinksInput & {
   kind?: TaskKind;
-  checklistItemId?: string | null;
+  taskItemId?: string | null;
   limit?: number;
 };
 
@@ -89,7 +89,7 @@ export type RelatedTaskSuggestion = {
   } | null;
 };
 
-export type CreateTaskChecklistItemInput = {
+export type CreateTaskItemInput = {
   taskId: string;
   title: string;
   note?: string | null;
@@ -98,11 +98,25 @@ export type CreateTaskChecklistItemInput = {
   dueAt?: Date | string | null;
 };
 
-export type UpdateTaskChecklistItemInput = {
+export type UpdateTaskItemInput = {
   title?: string;
   note?: string | null;
   assignedToUserId?: string | null;
   priority?: TaskPriority;
   dueAt?: Date | string | null;
   status?: TaskStatus;
+};
+
+export type CreateTaskItemChecklistInput = {
+  taskItemId: string;
+  title: string;
+  note?: string | null;
+  dueAt?: Date | string | null;
+};
+
+export type UpdateTaskItemChecklistInput = {
+  title?: string;
+  note?: string | null;
+  dueAt?: Date | string | null;
+  isDone?: boolean;
 };

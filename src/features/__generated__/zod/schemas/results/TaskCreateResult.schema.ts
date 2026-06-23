@@ -31,6 +31,7 @@ export const TaskCreateResultSchema = z.object({
   completedByUser: z.unknown().optional(),
   cancelledByUser: z.unknown().optional(),
   checklistItems: z.array(z.unknown()),
+  taskItems: z.array(z.unknown()),
   watch: z.unknown().optional(),
   order: z.unknown().optional(),
   shipment: z.unknown().optional(),

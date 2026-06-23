@@ -14,18 +14,22 @@ import {
   updateTask,
 } from "../server/task.service";
 import type {
-  CreateTaskChecklistItemInput,
+  CreateTaskItemInput,
   CreateTaskInput,
   FindOpenRelatedTasksInput,
-  UpdateTaskChecklistItemInput,
+  UpdateTaskItemInput,
   UpdateTaskInput,
 } from "../server/task.types";
 import {
-  createTaskChecklistItemRepo,
-  deleteTaskChecklistItemRepo,
-  setTaskChecklistItemDoneRepo,
+  createTaskItemRepo,
+  deleteTaskItemRepo,
+  setTaskItemDoneRepo,
   syncTaskStatusFromChecklistRepo,
-  updateTaskChecklistItemRepo,
+  updateTaskItemRepo,
+  createTaskItemChecklistRepo,
+  updateTaskItemChecklistRepo,
+  deleteTaskItemChecklistRepo,
+  syncTaskItemStatusFromChecklistRepo,
 } from "../server/task.repo";
 
 async function getTaskAuth() {
@@ -66,7 +70,9 @@ export async function changeTaskStatusAction(id: string, status: TaskStatus) {
   return { ok: true, task };
 }
 
-export async function findOpenRelatedTasksAction(input: FindOpenRelatedTasksInput) {
+export async function findOpenRelatedTasksAction(
+  input: FindOpenRelatedTasksInput,
+) {
   await getTaskAuth();
   const items = await findOpenRelatedTasks(prisma, input);
   return { ok: true, items };
@@ -79,7 +85,7 @@ export async function completeTasksByIdsAction(ids: string[]) {
   return { ok: true, count: result.count };
 }
 
-export async function createTaskChecklistItemAction(input: {
+export async function createTaskItemAction(input: {
   taskId: string;
   title: string;
   assignedToUserId?: string | null;
@@ -94,7 +100,7 @@ export async function createTaskChecklistItemAction(input: {
   if (!cleanTaskId) throw new Error("Missing taskId");
   if (!cleanTitle) throw new Error("Vui lòng nhập nội dung subtask.");
 
-  const item = await createTaskChecklistItemRepo(prisma, {
+  const item = await createTaskItemRepo(prisma, {
     taskId: cleanTaskId,
     title: cleanTitle,
     assignedToUserId: input.assignedToUserId || null,
@@ -102,26 +108,28 @@ export async function createTaskChecklistItemAction(input: {
     dueAt: input.dueAt || null,
   });
 
-  revalidatePath("/admin/tasks");
-  revalidatePath(`/admin/tasks/${cleanTaskId}`);
+
 
   return { ok: true, item };
 }
-// Backward-compatible alias if old UI still calls createTaskChecklistItemAction(taskId, title).
-export async function createTaskChecklistItemLegacyAction(taskId: string, title: string) {
-  return createTaskChecklistItemAction({ taskId, title });
+// Backward-compatible alias if old UI still calls createTaskItemAction(taskId, title).
+export async function createTaskItemLegacyAction(
+  taskId: string,
+  title: string,
+) {
+  return createTaskItemAction({ taskId, title });
 }
 
-export async function updateTaskChecklistItemAction(
+export async function updateTaskItemAction(
   itemId: string,
-  input: UpdateTaskChecklistItemInput,
+  input: UpdateTaskItemInput,
 ) {
   await getTaskAuth();
 
   const cleanItemId = String(itemId || "").trim();
   if (!cleanItemId) throw new Error("Missing checklist item id");
 
-  const item = await updateTaskChecklistItemRepo(prisma, cleanItemId, input);
+  const item = await updateTaskItemRepo(prisma, cleanItemId, input);
   await syncTaskStatusFromChecklistRepo(prisma, item.taskId);
 
   revalidatePath("/admin/tasks");
@@ -130,14 +138,14 @@ export async function updateTaskChecklistItemAction(
   return { ok: true, item };
 }
 
-export async function changeTaskChecklistItemStatusAction(
+export async function changeTaskItemStatusAction(
   itemId: string,
   status: TaskStatus,
 ) {
-  return updateTaskChecklistItemAction(itemId, { status });
+  return updateTaskItemAction(itemId, { status });
 }
 
-export async function changeTaskChecklistItemDoneAction(
+export async function changeTaskItemDoneAction(
   itemId: string,
   isDone: boolean,
 ) {
@@ -146,31 +154,27 @@ export async function changeTaskChecklistItemDoneAction(
   const cleanItemId = String(itemId || "").trim();
   if (!cleanItemId) throw new Error("Missing checklist item id");
 
-  const item = await setTaskChecklistItemDoneRepo(prisma, {
+  const item = await setTaskItemDoneRepo(prisma, {
     itemId: cleanItemId,
     isDone,
   });
 
   await syncTaskStatusFromChecklistRepo(prisma, item.taskId);
-
-  revalidatePath("/admin/tasks");
-  revalidatePath(`/admin/tasks/${item.taskId}`);
-
   return { ok: true, item };
 }
 
-export async function deleteTaskChecklistItemAction(itemId: string) {
+export async function deleteTaskItemAction(itemId: string) {
   await getTaskAuth();
 
   const cleanItemId = String(itemId || "").trim();
   if (!cleanItemId) throw new Error("Missing checklist item id");
 
-  const taskItem = await prisma.taskChecklistItem.findUnique({
+  const taskItem = await prisma.taskItem.findUnique({
     where: { id: cleanItemId },
     select: { taskId: true },
   });
 
-  const item = await deleteTaskChecklistItemRepo(prisma, cleanItemId);
+  const item = await deleteTaskItemRepo(prisma, cleanItemId);
 
   if (taskItem?.taskId) {
     await syncTaskStatusFromChecklistRepo(prisma, taskItem.taskId);
@@ -180,4 +184,81 @@ export async function deleteTaskChecklistItemAction(itemId: string) {
   revalidatePath("/admin/tasks");
 
   return { ok: true, item };
+}
+
+export async function createTaskItemChecklistAction(input: {
+  taskItemId: string;
+  title: string;
+  note?: string | null;
+}) {
+  await getTaskAuth();
+
+  const taskItemId = String(input.taskItemId || "").trim();
+  const title = String(input.title || "").trim();
+
+  if (!taskItemId) throw new Error("Missing taskItemId");
+  if (!title) throw new Error("Vui lòng nhập checklist.");
+
+  const checklist = await createTaskItemChecklistRepo(prisma, {
+    taskItemId,
+    title,
+    note: input.note || null,
+  });
+
+  return { ok: true, checklist };
+}
+
+export async function changeTaskItemChecklistDoneAction(
+  checklistId: string,
+  isDone: boolean,
+) {
+  const auth = await getTaskAuth();
+
+  const cleanId = String(checklistId || "").trim();
+  if (!cleanId) throw new Error("Missing checklist id");
+
+  const row = await prisma.taskItemChecklist.findUnique({
+    where: { id: cleanId },
+    select: { taskItemId: true, taskItem: { select: { taskId: true } } },
+  });
+
+  if (!row) throw new Error("Checklist không tồn tại.");
+
+  const checklist = await updateTaskItemChecklistRepo(prisma, cleanId, {
+    isDone,
+    actorUserId: auth.userId,
+  });
+
+  await syncTaskItemStatusFromChecklistRepo(
+    prisma,
+    row.taskItemId,
+    auth.userId,
+  );
+  await syncTaskStatusFromChecklistRepo(prisma, row.taskItem.taskId);
+
+  return { ok: true, checklist };
+}
+
+export async function deleteTaskItemChecklistAction(checklistId: string) {
+  await getTaskAuth();
+
+  const cleanId = String(checklistId || "").trim();
+  if (!cleanId) throw new Error("Missing checklist id");
+
+  const row = await prisma.taskItemChecklist.findUnique({
+    where: { id: cleanId },
+    select: { taskItemId: true, taskItem: { select: { taskId: true } } },
+  });
+
+  if (!row) throw new Error("Checklist không tồn tại.");
+
+  const checklist = await deleteTaskItemChecklistRepo(prisma, cleanId);
+
+  await syncTaskItemStatusFromChecklistRepo(prisma, row.taskItemId);
+  await syncTaskStatusFromChecklistRepo(prisma, row.taskItem.taskId);
+
+  revalidatePath("/admin/tasks");
+  revalidatePath(`/admin/tasks/${row.taskItem.taskId}`);
+
+  return { ok: true, checklist };
 }

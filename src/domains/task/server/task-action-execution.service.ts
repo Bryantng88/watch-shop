@@ -300,7 +300,7 @@ async function createExecutionIfMissing(
   client: any,
   input: {
     taskId: string;
-    checklistItemId?: string | null;
+    taskItemId?: string | null;
     targetType: TaskExecutionTargetType;
     targetId: string;
     actionType: TaskExecutionActionType;
@@ -312,7 +312,7 @@ async function createExecutionIfMissing(
   const existing = await client.taskExecution.findFirst({
     where: {
       taskId: input.taskId,
-      checklistItemId: input.checklistItemId ?? null,
+      taskItemId: input.taskItemId ?? null,
       targetType: input.targetType,
       targetId: input.targetId,
       actionType: input.actionType,
@@ -325,7 +325,7 @@ async function createExecutionIfMissing(
   return client.taskExecution.create({
     data: {
       taskId: input.taskId,
-      checklistItemId: input.checklistItemId ?? null,
+      taskItemId: input.taskItemId ?? null,
       targetType: input.targetType,
       targetId: input.targetId,
       actionType: input.actionType,
@@ -338,14 +338,14 @@ async function createExecutionIfMissing(
   });
 }
 
-async function completeChecklistItemIfNeeded(
+async function completeTaskItemIfNeeded(
   client: any,
-  checklistItemId?: string | null,
+  taskItemId?: string | null,
 ) {
-  const id = clean(checklistItemId);
+  const id = clean(taskItemId);
   if (!id) return;
 
-  await client.taskChecklistItem
+  await client.taskItem
     .update({
       where: { id },
       data: { isDone: true },
@@ -357,7 +357,7 @@ export async function executeTaskAction(
   db: DB,
   input: {
     taskId: string;
-    checklistItemId?: string | null;
+    taskItemId?: string | null;
     serviceMode?: ServiceTaskExecutionMode;
     mode?: ServiceTaskExecutionMode;
   },
@@ -386,7 +386,7 @@ export async function executeTaskAction(
   }
 
   const selectedMode = input.serviceMode ?? input.mode ?? "SR_ONLY";
-  const checklistItemId = input.checklistItemId ?? null;
+  const taskItemId = input.taskItemId ?? null;
 
   const { serviceRequest, created: srCreated } =
     await ensureActiveServiceRequest(client as any, {
@@ -400,7 +400,7 @@ export async function executeTaskAction(
 
   await createExecutionIfMissing(client as any, {
     taskId: task.id,
-    checklistItemId,
+    taskItemId,
     targetType: TaskExecutionTargetType.SERVICE_REQUEST,
     targetId: serviceRequest.id,
     actionType: srCreated
@@ -421,7 +421,7 @@ export async function executeTaskAction(
       } as any,
     });
 
-    await completeChecklistItemIfNeeded(client as any, checklistItemId);
+    await completeTaskItemIfNeeded(client as any, taskItemId);
 
     return {
       ok: true,
@@ -445,7 +445,7 @@ export async function executeTaskAction(
 
   await createExecutionIfMissing(client as any, {
     taskId: task.id,
-    checklistItemId,
+    taskItemId,
     targetType: TaskExecutionTargetType.TECHNICAL_ISSUE,
     targetId: issue.id,
     actionType: TaskExecutionActionType.CREATED,
@@ -477,7 +477,7 @@ export async function executeTaskAction(
     })
     .catch(() => null);
 
-  await completeChecklistItemIfNeeded(client as any, checklistItemId);
+  await completeTaskItemIfNeeded(client as any, taskItemId);
 
   return {
     ok: true,

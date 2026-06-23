@@ -1,0 +1,15 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { TaskItemWhereInputObjectSchema as TaskItemWhereInputObjectSchema } from './objects/TaskItemWhereInput.schema';
+import { TaskItemOrderByWithAggregationInputObjectSchema as TaskItemOrderByWithAggregationInputObjectSchema } from './objects/TaskItemOrderByWithAggregationInput.schema';
+import { TaskItemScalarWhereWithAggregatesInputObjectSchema as TaskItemScalarWhereWithAggregatesInputObjectSchema } from './objects/TaskItemScalarWhereWithAggregatesInput.schema';
+import { TaskItemScalarFieldEnumSchema } from './enums/TaskItemScalarFieldEnum.schema';
+import { TaskItemCountAggregateInputObjectSchema as TaskItemCountAggregateInputObjectSchema } from './objects/TaskItemCountAggregateInput.schema';
+import { TaskItemMinAggregateInputObjectSchema as TaskItemMinAggregateInputObjectSchema } from './objects/TaskItemMinAggregateInput.schema';
+import { TaskItemMaxAggregateInputObjectSchema as TaskItemMaxAggregateInputObjectSchema } from './objects/TaskItemMaxAggregateInput.schema';
+import { TaskItemAvgAggregateInputObjectSchema as TaskItemAvgAggregateInputObjectSchema } from './objects/TaskItemAvgAggregateInput.schema';
+import { TaskItemSumAggregateInputObjectSchema as TaskItemSumAggregateInputObjectSchema } from './objects/TaskItemSumAggregateInput.schema';
+
+export const TaskItemGroupBySchema: z.ZodType<Prisma.TaskItemGroupByArgs> = z.object({ where: TaskItemWhereInputObjectSchema.optional(), orderBy: z.union([TaskItemOrderByWithAggregationInputObjectSchema, TaskItemOrderByWithAggregationInputObjectSchema.array()]).optional(), having: TaskItemScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(TaskItemScalarFieldEnumSchema), _count: z.union([ z.literal(true), TaskItemCountAggregateInputObjectSchema ]).optional(), _min: TaskItemMinAggregateInputObjectSchema.optional(), _max: TaskItemMaxAggregateInputObjectSchema.optional(), _avg: TaskItemAvgAggregateInputObjectSchema.optional(), _sum: TaskItemSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.TaskItemGroupByArgs>;
+
+export const TaskItemGroupByZodSchema = z.object({ where: TaskItemWhereInputObjectSchema.optional(), orderBy: z.union([TaskItemOrderByWithAggregationInputObjectSchema, TaskItemOrderByWithAggregationInputObjectSchema.array()]).optional(), having: TaskItemScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(TaskItemScalarFieldEnumSchema), _count: z.union([ z.literal(true), TaskItemCountAggregateInputObjectSchema ]).optional(), _min: TaskItemMinAggregateInputObjectSchema.optional(), _max: TaskItemMaxAggregateInputObjectSchema.optional(), _avg: TaskItemAvgAggregateInputObjectSchema.optional(), _sum: TaskItemSumAggregateInputObjectSchema.optional() }).strict();

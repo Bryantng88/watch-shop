@@ -5,7 +5,14 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { TaskKind, TaskPriority, TaskStatus } from "@prisma/client";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
-import { changeTaskStatusAction, createTaskChecklistItemAction, changeTaskChecklistItemDoneAction, deleteTaskChecklistItemAction } from "../actions/task.actions";
+import {
+  changeTaskItemChecklistDoneAction,
+  changeTaskStatusAction,
+  changeTaskItemDoneAction,
+  createTaskItemAction,
+  createTaskItemChecklistAction,
+  deleteTaskItemAction,
+} from "../actions/task.actions";
 import type { TaskWithRelations } from "../server/task.repo";
 import type { TaskViewKey } from "../server/task.types";
 import TaskQuickCreateModal, {
@@ -20,7 +27,7 @@ import TaskListToolbar from "../ui/list/TaskListToolbar";
 import TaskListViewTabs, {
   normalizeTaskView,
 } from "../ui/list/TaskListViewTabs";
-import { updateTaskChecklistItemAction } from "@/domains/task/actions/task.actions";
+import { updateTaskItemAction } from "@/domains/task/actions/task.actions";
 
 type Props = {
   items: TaskWithRelations[];
@@ -71,7 +78,8 @@ export default function TaskListClient(props: Props) {
   const [filters, setFilters] = useState<TaskListFiltersValue>({
     q: firstRaw(props.rawSearchParams?.q),
     status: (firstRaw(props.rawSearchParams?.status, "OPEN") || "OPEN") as any,
-    priority: (firstRaw(props.rawSearchParams?.priority, "ALL") || "ALL") as any,
+    priority: (firstRaw(props.rawSearchParams?.priority, "ALL") ||
+      "ALL") as any,
     kind: (firstRaw(props.rawSearchParams?.kind, "ALL") || "ALL") as any,
     pageSize: String(props.pageSize),
   });
@@ -105,14 +113,14 @@ export default function TaskListClient(props: Props) {
   function setView(view: TaskViewKey) {
     navigate({ view: view === "all" ? null : view, page: "1" });
   }
-  async function handleUpdateChecklistItem(input: {
+  async function handleUpdateTaskItem(input: {
     itemId: string;
     title: string;
     assignedToUserId?: string | null;
     priority?: string | null;
     dueAt?: string | null;
   }) {
-    await updateTaskChecklistItemAction(input.itemId, {
+    await updateTaskItemAction(input.itemId, {
       title: input.title,
       assignedToUserId: input.assignedToUserId ?? null,
       priority: input.priority as any,
@@ -121,9 +129,9 @@ export default function TaskListClient(props: Props) {
 
     router.refresh();
   }
-  async function toggleChecklistItem(itemId: string, isDone: boolean) {
+  async function toggleTaskItem(itemId: string, isDone: boolean) {
     try {
-      const result = await changeTaskChecklistItemDoneAction(itemId, isDone);
+      const result = await changeTaskItemDoneAction(itemId, isDone);
 
       if (!result?.ok) {
         throw new Error("Không cập nhật được dòng xử lý.");
@@ -137,11 +145,11 @@ export default function TaskListClient(props: Props) {
       });
     }
   }
-  async function deleteChecklistItem(itemId: string) {
+  async function deleteTaskItem(itemId: string) {
     if (!window.confirm("Xóa dòng xử lý này?")) return;
 
     try {
-      const result = await deleteTaskChecklistItemAction(itemId);
+      const result = await deleteTaskItemAction(itemId);
 
       if (!result?.ok) {
         throw new Error("Không xóa được dòng xử lý.");
@@ -155,6 +163,25 @@ export default function TaskListClient(props: Props) {
       });
     }
   }
+
+  async function addTaskItemChecklist(taskItemId: string, title: string) {
+    try {
+      await createTaskItemChecklistAction({ taskItemId, title });
+      router.refresh();
+    } catch (error: any) {
+      notify.error(error?.message || "Không thể thêm checklist");
+    }
+  }
+
+  async function toggleTaskItemChecklist(checklistId: string, isDone: boolean) {
+    try {
+      await changeTaskItemChecklistDoneAction(checklistId, isDone);
+      router.refresh();
+    } catch (error: any) {
+      notify.error(error?.message || "Không thể cập nhật checklist");
+    }
+  }
+
   function applyFilters() {
     navigate({
       q: filters.q.trim() || null,
@@ -200,7 +227,7 @@ export default function TaskListClient(props: Props) {
     setExpandedTaskId((current) => (current === row.id ? null : row.id));
   }
 
-  async function addChecklistItem(input: {
+  async function addTaskItem(input: {
     taskId: string;
     title: string;
     assignedToUserId?: string | null;
@@ -208,7 +235,7 @@ export default function TaskListClient(props: Props) {
     dueAt?: string | null;
   }) {
     try {
-      await createTaskChecklistItemAction(input);
+      await createTaskItemAction(input);
       notify.success("Đã thêm subtask");
       router.refresh();
     } catch (error: any) {
@@ -255,9 +282,7 @@ export default function TaskListClient(props: Props) {
         <div className="pt-4">
           <TaskListFilters
             filters={filters}
-            onChange={(patch) =>
-              setFilters((prev) => ({ ...prev, ...patch }))
-            }
+            onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
             onApply={applyFilters}
             onClear={clearFilters}
           />
@@ -274,11 +299,13 @@ export default function TaskListClient(props: Props) {
         onPage={(page) => navigate({ page: String(page) })}
         onStatus={changeStatus}
         onEdit={openEdit}
-        onAddChecklistItem={addChecklistItem}
+        onAddTaskItem={addTaskItem}
         onCreateRelatedTask={createRelatedTask}
-        onToggleChecklistItem={toggleChecklistItem}
-        onDeleteChecklistItem={deleteChecklistItem}
-        onUpdateChecklistItem={handleUpdateChecklistItem}
+        onToggleTaskItem={toggleTaskItem}
+        onDeleteTaskItem={deleteTaskItem}
+        onUpdateTaskItem={handleUpdateTaskItem}
+        onAddTaskItemChecklist={addTaskItemChecklist}
+        onToggleTaskItemChecklist={toggleTaskItemChecklist}
       />
       <TaskQuickCreateModal
         open={modalOpen}

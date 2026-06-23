@@ -31,6 +31,7 @@ export const TaskAggregateResultSchema = z.object({  _count: z.object({
     completedByUser: z.number(),
     cancelledByUser: z.number(),
     checklistItems: z.number(),
+    taskItems: z.number(),
     watch: z.number(),
     order: z.number(),
     shipment: z.number(),

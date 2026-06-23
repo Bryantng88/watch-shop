@@ -78,7 +78,7 @@ export async function createTaskExecutionRepo(
       targetType: input.targetType,
       targetId,
       actionType,
-      checklistItemId: input.checklistItemId ?? null,
+      taskItemId: input.taskItemId ?? null,
     },
     select: { id: true },
   });
@@ -90,7 +90,7 @@ export async function createTaskExecutionRepo(
   const execution = await client.taskExecution.create({
     data: {
       taskId,
-      checklistItemId: input.checklistItemId ?? null,
+      taskItemId: input.taskItemId ?? null,
       targetType: input.targetType,
       targetId,
       actionType,

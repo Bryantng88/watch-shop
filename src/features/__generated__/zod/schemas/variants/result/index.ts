@@ -61,5 +61,6 @@ export { WorkCaseCategoryResultSchema } from './WorkCaseCategory.result';
 export { WorkCaseResultSchema } from './WorkCase.result';
 export { WorkCaseActivityResultSchema } from './WorkCaseActivity.result';
 export { TaskResultSchema } from './Task.result';
-export { TaskChecklistItemResultSchema } from './TaskChecklistItem.result';
+export { TaskItemResultSchema } from './TaskItem.result';
+export { TaskItemChecklistResultSchema } from './TaskItemChecklist.result';
 export { TaskExecutionResultSchema } from './TaskExecution.result';

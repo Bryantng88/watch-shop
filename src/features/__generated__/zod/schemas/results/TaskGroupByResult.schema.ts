@@ -55,6 +55,7 @@ export const TaskGroupByResultSchema = z.array(z.object({
     completedByUser: z.number(),
     cancelledByUser: z.number(),
     checklistItems: z.number(),
+    taskItems: z.number(),
     watch: z.number(),
     order: z.number(),
     shipment: z.number(),

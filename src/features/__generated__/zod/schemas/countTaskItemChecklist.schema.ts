@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { TaskItemChecklistOrderByWithRelationInputObjectSchema as TaskItemChecklistOrderByWithRelationInputObjectSchema } from './objects/TaskItemChecklistOrderByWithRelationInput.schema';
+import { TaskItemChecklistWhereInputObjectSchema as TaskItemChecklistWhereInputObjectSchema } from './objects/TaskItemChecklistWhereInput.schema';
+import { TaskItemChecklistWhereUniqueInputObjectSchema as TaskItemChecklistWhereUniqueInputObjectSchema } from './objects/TaskItemChecklistWhereUniqueInput.schema';
+import { TaskItemChecklistCountAggregateInputObjectSchema as TaskItemChecklistCountAggregateInputObjectSchema } from './objects/TaskItemChecklistCountAggregateInput.schema';
+
+export const TaskItemChecklistCountSchema: z.ZodType<Prisma.TaskItemChecklistCountArgs> = z.object({ orderBy: z.union([TaskItemChecklistOrderByWithRelationInputObjectSchema, TaskItemChecklistOrderByWithRelationInputObjectSchema.array()]).optional(), where: TaskItemChecklistWhereInputObjectSchema.optional(), cursor: TaskItemChecklistWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), TaskItemChecklistCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.TaskItemChecklistCountArgs>;
+
+export const TaskItemChecklistCountZodSchema = z.object({ orderBy: z.union([TaskItemChecklistOrderByWithRelationInputObjectSchema, TaskItemChecklistOrderByWithRelationInputObjectSchema.array()]).optional(), where: TaskItemChecklistWhereInputObjectSchema.optional(), cursor: TaskItemChecklistWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), TaskItemChecklistCountAggregateInputObjectSchema ]).optional() }).strict();

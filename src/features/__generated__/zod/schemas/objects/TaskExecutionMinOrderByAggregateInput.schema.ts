@@ -13,7 +13,8 @@ const makeSchema = () => z.object({
   createdAt: SortOrderSchema.optional(),
   checklistItemId: SortOrderSchema.optional(),
   serviceRequestId: SortOrderSchema.optional(),
-  technicalIssueId: SortOrderSchema.optional()
+  technicalIssueId: SortOrderSchema.optional(),
+  taskItemId: SortOrderSchema.optional()
 }).strict();
 export const TaskExecutionMinOrderByAggregateInputObjectSchema: z.ZodType<Prisma.TaskExecutionMinOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskExecutionMinOrderByAggregateInput>;
 export const TaskExecutionMinOrderByAggregateInputObjectZodSchema = makeSchema();

@@ -61,5 +61,6 @@ export { WorkCaseCategoryInputSchema } from './WorkCaseCategory.input';
 export { WorkCaseInputSchema } from './WorkCase.input';
 export { WorkCaseActivityInputSchema } from './WorkCaseActivity.input';
 export { TaskInputSchema } from './Task.input';
-export { TaskChecklistItemInputSchema } from './TaskChecklistItem.input';
+export { TaskItemInputSchema } from './TaskItem.input';
+export { TaskItemChecklistInputSchema } from './TaskItemChecklist.input';
 export { TaskExecutionInputSchema } from './TaskExecution.input';

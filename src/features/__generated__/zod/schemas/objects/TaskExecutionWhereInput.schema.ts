@@ -12,8 +12,8 @@ import { TaskScalarRelationFilterObjectSchema as TaskScalarRelationFilterObjectS
 import { TaskWhereInputObjectSchema as TaskWhereInputObjectSchema } from './TaskWhereInput.schema';
 import { UserNullableScalarRelationFilterObjectSchema as UserNullableScalarRelationFilterObjectSchema } from './UserNullableScalarRelationFilter.schema';
 import { UserWhereInputObjectSchema as UserWhereInputObjectSchema } from './UserWhereInput.schema';
-import { TaskChecklistItemNullableScalarRelationFilterObjectSchema as TaskChecklistItemNullableScalarRelationFilterObjectSchema } from './TaskChecklistItemNullableScalarRelationFilter.schema';
-import { TaskChecklistItemWhereInputObjectSchema as TaskChecklistItemWhereInputObjectSchema } from './TaskChecklistItemWhereInput.schema';
+import { TaskItemNullableScalarRelationFilterObjectSchema as TaskItemNullableScalarRelationFilterObjectSchema } from './TaskItemNullableScalarRelationFilter.schema';
+import { TaskItemWhereInputObjectSchema as TaskItemWhereInputObjectSchema } from './TaskItemWhereInput.schema';
 import { ServiceRequestNullableScalarRelationFilterObjectSchema as ServiceRequestNullableScalarRelationFilterObjectSchema } from './ServiceRequestNullableScalarRelationFilter.schema';
 import { ServiceRequestWhereInputObjectSchema as ServiceRequestWhereInputObjectSchema } from './ServiceRequestWhereInput.schema';
 import { TechnicalIssueNullableScalarRelationFilterObjectSchema as TechnicalIssueNullableScalarRelationFilterObjectSchema } from './TechnicalIssueNullableScalarRelationFilter.schema';
@@ -35,9 +35,10 @@ const taskexecutionwhereinputSchema = z.object({
   checklistItemId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   serviceRequestId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   technicalIssueId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  taskItemId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   task: z.union([z.lazy(() => TaskScalarRelationFilterObjectSchema), z.lazy(() => TaskWhereInputObjectSchema)]).optional(),
   createdByUser: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional(),
-  checklistItem: z.union([z.lazy(() => TaskChecklistItemNullableScalarRelationFilterObjectSchema), z.lazy(() => TaskChecklistItemWhereInputObjectSchema)]).optional(),
+  taskItem: z.union([z.lazy(() => TaskItemNullableScalarRelationFilterObjectSchema), z.lazy(() => TaskItemWhereInputObjectSchema)]).optional(),
   serviceRequest: z.union([z.lazy(() => ServiceRequestNullableScalarRelationFilterObjectSchema), z.lazy(() => ServiceRequestWhereInputObjectSchema)]).optional(),
   technicalIssue: z.union([z.lazy(() => TechnicalIssueNullableScalarRelationFilterObjectSchema), z.lazy(() => TechnicalIssueWhereInputObjectSchema)]).optional()
 }).strict();

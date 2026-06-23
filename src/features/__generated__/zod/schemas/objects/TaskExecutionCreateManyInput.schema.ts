@@ -18,7 +18,8 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   checklistItemId: z.string().optional().nullable(),
   serviceRequestId: z.string().optional().nullable(),
-  technicalIssueId: z.string().optional().nullable()
+  technicalIssueId: z.string().optional().nullable(),
+  taskItemId: z.string().optional().nullable()
 }).strict();
 export const TaskExecutionCreateManyInputObjectSchema: z.ZodType<Prisma.TaskExecutionCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskExecutionCreateManyInput>;
 export const TaskExecutionCreateManyInputObjectZodSchema = makeSchema();

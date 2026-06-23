@@ -1,0 +1,31 @@
+import * as z from 'zod';
+import type { Prisma } from '@prisma/client';
+import { TaskStatusSchema } from '../enums/TaskStatus.schema';
+import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
+import { TaskCreateNestedOneWithoutTaskItemsInputObjectSchema as TaskCreateNestedOneWithoutTaskItemsInputObjectSchema } from './TaskCreateNestedOneWithoutTaskItemsInput.schema';
+import { UserCreateNestedOneWithoutAssignedTaskItemsInputObjectSchema as UserCreateNestedOneWithoutAssignedTaskItemsInputObjectSchema } from './UserCreateNestedOneWithoutAssignedTaskItemsInput.schema';
+import { TaskExecutionCreateNestedManyWithoutTaskItemInputObjectSchema as TaskExecutionCreateNestedManyWithoutTaskItemInputObjectSchema } from './TaskExecutionCreateNestedManyWithoutTaskItemInput.schema';
+import { TaskItemChecklistCreateNestedManyWithoutTaskItemInputObjectSchema as TaskItemChecklistCreateNestedManyWithoutTaskItemInputObjectSchema } from './TaskItemChecklistCreateNestedManyWithoutTaskItemInput.schema';
+import { UserCreateNestedOneWithoutTaskItemsInputObjectSchema as UserCreateNestedOneWithoutTaskItemsInputObjectSchema } from './UserCreateNestedOneWithoutTaskItemsInput.schema'
+
+const makeSchema = () => z.object({
+  id: z.string().optional(),
+  title: z.string(),
+  note: z.string().optional().nullable(),
+  status: TaskStatusSchema.optional(),
+  priority: TaskPrioritySchema.optional(),
+  dueAt: z.coerce.date().optional().nullable(),
+  startedAt: z.coerce.date().optional().nullable(),
+  completedAt: z.coerce.date().optional().nullable(),
+  cancelledAt: z.coerce.date().optional().nullable(),
+  isDone: z.boolean().optional(),
+  sortOrder: z.number().int().optional(),
+  createdAt: z.coerce.date().optional(),
+  task: z.lazy(() => TaskCreateNestedOneWithoutTaskItemsInputObjectSchema),
+  assignedToUser: z.lazy(() => UserCreateNestedOneWithoutAssignedTaskItemsInputObjectSchema).optional(),
+  executions: z.lazy(() => TaskExecutionCreateNestedManyWithoutTaskItemInputObjectSchema),
+  checklists: z.lazy(() => TaskItemChecklistCreateNestedManyWithoutTaskItemInputObjectSchema),
+  User: z.lazy(() => UserCreateNestedOneWithoutTaskItemsInputObjectSchema).optional()
+}).strict();
+export const TaskItemCreateInputObjectSchema: z.ZodType<Prisma.TaskItemCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskItemCreateInput>;
+export const TaskItemCreateInputObjectZodSchema = makeSchema();

@@ -16,7 +16,8 @@ import { UserUpdateOneWithoutCreatedTasksNestedInputObjectSchema as UserUpdateOn
 import { UserUpdateOneWithoutAssignedTasksNestedInputObjectSchema as UserUpdateOneWithoutAssignedTasksNestedInputObjectSchema } from './UserUpdateOneWithoutAssignedTasksNestedInput.schema';
 import { UserUpdateOneWithoutCompletedTasksNestedInputObjectSchema as UserUpdateOneWithoutCompletedTasksNestedInputObjectSchema } from './UserUpdateOneWithoutCompletedTasksNestedInput.schema';
 import { UserUpdateOneWithoutCancelledTasksNestedInputObjectSchema as UserUpdateOneWithoutCancelledTasksNestedInputObjectSchema } from './UserUpdateOneWithoutCancelledTasksNestedInput.schema';
-import { TaskChecklistItemUpdateManyWithoutTaskNestedInputObjectSchema as TaskChecklistItemUpdateManyWithoutTaskNestedInputObjectSchema } from './TaskChecklistItemUpdateManyWithoutTaskNestedInput.schema';
+import { TaskItemChecklistUpdateManyWithoutTaskNestedInputObjectSchema as TaskItemChecklistUpdateManyWithoutTaskNestedInputObjectSchema } from './TaskItemChecklistUpdateManyWithoutTaskNestedInput.schema';
+import { TaskItemUpdateManyWithoutTaskNestedInputObjectSchema as TaskItemUpdateManyWithoutTaskNestedInputObjectSchema } from './TaskItemUpdateManyWithoutTaskNestedInput.schema';
 import { WatchUpdateOneWithoutTasksNestedInputObjectSchema as WatchUpdateOneWithoutTasksNestedInputObjectSchema } from './WatchUpdateOneWithoutTasksNestedInput.schema';
 import { OrderUpdateOneWithoutTaskNestedInputObjectSchema as OrderUpdateOneWithoutTaskNestedInputObjectSchema } from './OrderUpdateOneWithoutTaskNestedInput.schema';
 import { AcquisitionUpdateOneWithoutTaskNestedInputObjectSchema as AcquisitionUpdateOneWithoutTaskNestedInputObjectSchema } from './AcquisitionUpdateOneWithoutTaskNestedInput.schema';
@@ -47,7 +48,8 @@ const makeSchema = () => z.object({
   assignedToUser: z.lazy(() => UserUpdateOneWithoutAssignedTasksNestedInputObjectSchema).optional(),
   completedByUser: z.lazy(() => UserUpdateOneWithoutCompletedTasksNestedInputObjectSchema).optional(),
   cancelledByUser: z.lazy(() => UserUpdateOneWithoutCancelledTasksNestedInputObjectSchema).optional(),
-  checklistItems: z.lazy(() => TaskChecklistItemUpdateManyWithoutTaskNestedInputObjectSchema).optional(),
+  checklistItems: z.lazy(() => TaskItemChecklistUpdateManyWithoutTaskNestedInputObjectSchema).optional(),
+  taskItems: z.lazy(() => TaskItemUpdateManyWithoutTaskNestedInputObjectSchema).optional(),
   watch: z.lazy(() => WatchUpdateOneWithoutTasksNestedInputObjectSchema).optional(),
   order: z.lazy(() => OrderUpdateOneWithoutTaskNestedInputObjectSchema).optional(),
   acquisition: z.lazy(() => AcquisitionUpdateOneWithoutTaskNestedInputObjectSchema).optional(),

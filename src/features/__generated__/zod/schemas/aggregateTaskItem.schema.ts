@@ -1,0 +1,14 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { TaskItemOrderByWithRelationInputObjectSchema as TaskItemOrderByWithRelationInputObjectSchema } from './objects/TaskItemOrderByWithRelationInput.schema';
+import { TaskItemWhereInputObjectSchema as TaskItemWhereInputObjectSchema } from './objects/TaskItemWhereInput.schema';
+import { TaskItemWhereUniqueInputObjectSchema as TaskItemWhereUniqueInputObjectSchema } from './objects/TaskItemWhereUniqueInput.schema';
+import { TaskItemCountAggregateInputObjectSchema as TaskItemCountAggregateInputObjectSchema } from './objects/TaskItemCountAggregateInput.schema';
+import { TaskItemMinAggregateInputObjectSchema as TaskItemMinAggregateInputObjectSchema } from './objects/TaskItemMinAggregateInput.schema';
+import { TaskItemMaxAggregateInputObjectSchema as TaskItemMaxAggregateInputObjectSchema } from './objects/TaskItemMaxAggregateInput.schema';
+import { TaskItemAvgAggregateInputObjectSchema as TaskItemAvgAggregateInputObjectSchema } from './objects/TaskItemAvgAggregateInput.schema';
+import { TaskItemSumAggregateInputObjectSchema as TaskItemSumAggregateInputObjectSchema } from './objects/TaskItemSumAggregateInput.schema';
+
+export const TaskItemAggregateSchema: z.ZodType<Prisma.TaskItemAggregateArgs> = z.object({ orderBy: z.union([TaskItemOrderByWithRelationInputObjectSchema, TaskItemOrderByWithRelationInputObjectSchema.array()]).optional(), where: TaskItemWhereInputObjectSchema.optional(), cursor: TaskItemWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), TaskItemCountAggregateInputObjectSchema ]).optional(), _min: TaskItemMinAggregateInputObjectSchema.optional(), _max: TaskItemMaxAggregateInputObjectSchema.optional(), _avg: TaskItemAvgAggregateInputObjectSchema.optional(), _sum: TaskItemSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.TaskItemAggregateArgs>;
+
+export const TaskItemAggregateZodSchema = z.object({ orderBy: z.union([TaskItemOrderByWithRelationInputObjectSchema, TaskItemOrderByWithRelationInputObjectSchema.array()]).optional(), where: TaskItemWhereInputObjectSchema.optional(), cursor: TaskItemWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), TaskItemCountAggregateInputObjectSchema ]).optional(), _min: TaskItemMinAggregateInputObjectSchema.optional(), _max: TaskItemMaxAggregateInputObjectSchema.optional(), _avg: TaskItemAvgAggregateInputObjectSchema.optional(), _sum: TaskItemSumAggregateInputObjectSchema.optional() }).strict();

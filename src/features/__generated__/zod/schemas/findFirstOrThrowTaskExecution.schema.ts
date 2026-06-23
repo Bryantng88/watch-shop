@@ -22,9 +22,10 @@ export const TaskExecutionFindFirstOrThrowSelectSchema: z.ZodType<Prisma.TaskExe
     checklistItemId: z.boolean().optional(),
     serviceRequestId: z.boolean().optional(),
     technicalIssueId: z.boolean().optional(),
+    taskItemId: z.boolean().optional(),
     task: z.boolean().optional(),
     createdByUser: z.boolean().optional(),
-    checklistItem: z.boolean().optional(),
+    taskItem: z.boolean().optional(),
     serviceRequest: z.boolean().optional(),
     technicalIssue: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.TaskExecutionSelect>;
@@ -42,9 +43,10 @@ export const TaskExecutionFindFirstOrThrowSelectZodSchema = z.object({
     checklistItemId: z.boolean().optional(),
     serviceRequestId: z.boolean().optional(),
     technicalIssueId: z.boolean().optional(),
+    taskItemId: z.boolean().optional(),
     task: z.boolean().optional(),
     createdByUser: z.boolean().optional(),
-    checklistItem: z.boolean().optional(),
+    taskItem: z.boolean().optional(),
     serviceRequest: z.boolean().optional(),
     technicalIssue: z.boolean().optional()
   }).strict();

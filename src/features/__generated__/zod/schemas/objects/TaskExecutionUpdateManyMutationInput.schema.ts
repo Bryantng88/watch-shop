@@ -18,7 +18,8 @@ const makeSchema = () => z.object({
   actionType: z.union([TaskExecutionActionTypeSchema, z.lazy(() => EnumTaskExecutionActionTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
   metadataJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   note: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  checklistItemId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
 }).strict();
 export const TaskExecutionUpdateManyMutationInputObjectSchema: z.ZodType<Prisma.TaskExecutionUpdateManyMutationInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskExecutionUpdateManyMutationInput>;
 export const TaskExecutionUpdateManyMutationInputObjectZodSchema = makeSchema();
