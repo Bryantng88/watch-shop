@@ -8,11 +8,17 @@ import EntityLinkPicker, {
 } from "@/domains/shared/ui/pickers/EntityLinkPicker";
 import { searchWorkCaseLinkTargetsAction } from "@/domains/work-case/actions/work-case.actions";
 import { linkTaskExecutionsAction } from "../../actions/task-execution.actions";
-import { ExecutionMiniInlineList } from "../execution";
+import {
+    ExecutionMiniInline,
+    ExecutionMiniInlineList,
+} from "../execution";
 import {
     BusinessEntityPreviewModal,
     useBusinessEntityPreview,
 } from "@/domains/shared/ui/business/BusinessEntityPreview";
+
+import { deleteTaskExecutionAction } from "../../actions/task-action-execution.actions";
+
 type LinkMode = "CONTEXT" | "TRACKING";
 type LinkTargetType = "WATCH" | "ORDER" | "SHIPMENT" | "SERVICE";
 
@@ -127,7 +133,13 @@ export default function SubtaskManageModal({
     }, [open, item, existingType, existingMode]);
 
     if (!open || !item) return null;
-
+    async function unlinkExecution(executionId: string) {
+        startTransition(async () => {
+            await deleteTaskExecutionAction({ executionId });
+            onLinked?.();
+            onClose();
+        });
+    }
     function save() {
         startTransition(async () => {
             await onSave?.({
@@ -319,18 +331,38 @@ export default function SubtaskManageModal({
                             </div>
                             {existingExecutions.length ? (
                                 <div className="mb-3 rounded-2xl bg-white p-3 ring-1 ring-slate-100">
-                                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                                        Đã link {existingExecutions.length} nghiệp vụ
+                                    <div className="mb-2 flex items-center justify-between gap-3">
+                                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                            Đã link {existingExecutions.length} nghiệp vụ
+                                        </div>
                                     </div>
 
-                                    <div className="flex flex-wrap gap-1.5">
+                                    <div className="space-y-2">
                                         {existingExecutions.map((execution: any) => (
-                                            <ExecutionMiniInlineList
-                                                key={`${execution.targetType}:${execution.targetId}`}
-                                                items={[execution]}
-                                                onPreview={previewState.openPreview}
-                                                limit={1}
-                                            />
+                                            <div
+                                                key={execution.id || `${execution.targetType}:${execution.targetId}`}
+                                                className="flex items-center justify-between gap-2 rounded-2xl bg-slate-50 px-2 py-2 ring-1 ring-slate-100"
+                                            >
+                                                <div className="min-w-0 flex-1">
+                                                    <ExecutionMiniInline
+                                                        item={execution}
+                                                        onPreview={previewState.openPreview}
+                                                    />
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    disabled={pending}
+                                                    onClick={(event) => {
+                                                        event.preventDefault();
+                                                        event.stopPropagation();
+                                                        unlinkExecution(execution.id);
+                                                    }}
+                                                    className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                                                >
+                                                    Gỡ
+                                                </button>
+                                            </div>
                                         ))}
                                     </div>
                                 </div>

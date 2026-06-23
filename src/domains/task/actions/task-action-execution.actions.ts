@@ -66,3 +66,94 @@ function serialize<T>(value: T): T {
     }),
   );
 }
+
+export async function deleteTaskExecutionAction(input: {
+  executionId: string;
+}) {
+  await requirePermission("TASK_UPDATE");
+
+  const executionId = String(input.executionId || "").trim();
+  if (!executionId) throw new Error("Missing executionId");
+
+  const execution = await prisma.taskExecution.findUnique({
+    where: { id: executionId },
+    select: {
+      id: true,
+      taskId: true,
+      checklistItemId: true,
+    },
+  });
+
+  if (!execution) throw new Error("Không tìm thấy link nghiệp vụ.");
+
+  await prisma.taskExecution.delete({
+    where: { id: execution.id },
+  });
+
+  revalidatePath("/admin/tasks");
+  revalidatePath(`/admin/tasks/${execution.taskId}`);
+
+  return { ok: true };
+}
+export async function moveTaskExecutionAction(input: {
+  executionId: string;
+  toChecklistItemId: string;
+}) {
+  await requirePermission("TASK_UPDATE");
+
+  const executionId = String(input.executionId || "").trim();
+  const toChecklistItemId = String(input.toChecklistItemId || "").trim();
+
+  if (!executionId) throw new Error("Missing executionId");
+  if (!toChecklistItemId) throw new Error("Missing toChecklistItemId");
+
+  const execution = await prisma.taskExecution.findUnique({
+    where: { id: executionId },
+    select: {
+      id: true,
+      taskId: true,
+      checklistItemId: true,
+      targetType: true,
+    },
+  });
+
+  if (!execution) throw new Error("Không tìm thấy link nghiệp vụ.");
+
+  const targetItem = await prisma.taskChecklistItem.findUnique({
+    where: { id: toChecklistItemId },
+    select: {
+      id: true,
+      taskId: true,
+      executions: {
+        select: {
+          id: true,
+          targetType: true,
+        },
+      },
+    },
+  });
+
+  if (!targetItem) throw new Error("Không tìm thấy subtask nhận link.");
+
+  if (targetItem.taskId !== execution.taskId) {
+    throw new Error("Chỉ được chuyển link trong cùng task mẹ.");
+  }
+
+  const existingType = targetItem.executions?.[0]?.targetType;
+
+  if (existingType && existingType !== execution.targetType) {
+    throw new Error("Subtask nhận đã có loại nghiệp vụ khác.");
+  }
+
+  await prisma.taskExecution.update({
+    where: { id: execution.id },
+    data: {
+      checklistItemId: targetItem.id,
+    },
+  });
+
+  revalidatePath("/admin/tasks");
+  revalidatePath(`/admin/tasks/${execution.taskId}`);
+
+  return { ok: true };
+}
