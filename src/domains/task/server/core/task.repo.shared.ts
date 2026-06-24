@@ -263,19 +263,7 @@ export function buildAccessWhere(
   canViewAll: boolean,
 ): Prisma.TaskWhereInput {
   if (canViewAll) {
-    return {
-      OR: [
-        { kind: TaskKind.BUSINESS },
-        {
-          kind: TaskKind.PERSONAL,
-          OR: [
-            { createdByUserId: userId },
-            { assignedToUserId: userId },
-            assignedTaskItemWhere(userId),
-          ],
-        },
-      ],
-    };
+    return {};
   }
 
   return {
@@ -373,6 +361,14 @@ export function buildFilterWhere(filters: TaskListFilters): Prisma.TaskWhereInpu
 
   if (filters.kind && filters.kind !== "ALL") {
     where.kind = filters.kind;
+  }
+
+  if (filters.periodType && filters.periodType !== "ALL") {
+    where.periodType = filters.periodType;
+  }
+
+  if (filters.periodKey) {
+    where.periodKey = filters.periodKey;
   }
 
   const dueWhere = buildDueWhere(filters.due);

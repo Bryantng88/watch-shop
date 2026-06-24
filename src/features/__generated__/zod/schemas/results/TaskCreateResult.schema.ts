@@ -8,6 +8,8 @@ export const TaskCreateResultSchema = z.object({
   status: z.unknown(),
   priority: z.unknown(),
   kind: z.unknown(),
+  periodType: z.unknown().optional(),
+  periodKey: z.string().optional(),
   dueAt: z.date().optional(),
   startedAt: z.date().optional(),
   completedAt: z.date().optional(),

@@ -11,6 +11,8 @@ const makeSchema = () => z.object({
   status: SortOrderSchema.optional(),
   priority: SortOrderSchema.optional(),
   kind: SortOrderSchema.optional(),
+  periodType: SortOrderSchema.optional(),
+  periodKey: SortOrderSchema.optional(),
   dueAt: SortOrderSchema.optional(),
   startedAt: SortOrderSchema.optional(),
   completedAt: SortOrderSchema.optional(),

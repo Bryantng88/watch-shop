@@ -10,6 +10,8 @@ import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
 import { EnumTaskPriorityFieldUpdateOperationsInputObjectSchema as EnumTaskPriorityFieldUpdateOperationsInputObjectSchema } from './EnumTaskPriorityFieldUpdateOperationsInput.schema';
 import { TaskKindSchema } from '../enums/TaskKind.schema';
 import { EnumTaskKindFieldUpdateOperationsInputObjectSchema as EnumTaskKindFieldUpdateOperationsInputObjectSchema } from './EnumTaskKindFieldUpdateOperationsInput.schema';
+import { TaskPeriodSchema } from '../enums/TaskPeriod.schema';
+import { NullableEnumTaskPeriodFieldUpdateOperationsInputObjectSchema as NullableEnumTaskPeriodFieldUpdateOperationsInputObjectSchema } from './NullableEnumTaskPeriodFieldUpdateOperationsInput.schema';
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { TaskItemChecklistUncheckedUpdateManyWithoutTaskNestedInputObjectSchema as TaskItemChecklistUncheckedUpdateManyWithoutTaskNestedInputObjectSchema } from './TaskItemChecklistUncheckedUpdateManyWithoutTaskNestedInput.schema';
@@ -25,6 +27,8 @@ const makeSchema = () => z.object({
   status: z.union([TaskStatusSchema, z.lazy(() => EnumTaskStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
   priority: z.union([TaskPrioritySchema, z.lazy(() => EnumTaskPriorityFieldUpdateOperationsInputObjectSchema)]).optional(),
   kind: z.union([TaskKindSchema, z.lazy(() => EnumTaskKindFieldUpdateOperationsInputObjectSchema)]).optional(),
+  periodType: z.union([TaskPeriodSchema, z.lazy(() => NullableEnumTaskPeriodFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  periodKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   dueAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   startedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   completedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),

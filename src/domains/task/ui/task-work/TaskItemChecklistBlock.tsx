@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check } from "lucide-react";
+import { Check, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function TaskItemChecklistBlock({
@@ -13,6 +13,7 @@ export default function TaskItemChecklistBlock({
   cancel,
   onToggleChecklist,
   onUpdateChecklistTitle,
+  onDeleteChecklist,
 }: {
   item: any;
   isAdding: boolean;
@@ -22,10 +23,12 @@ export default function TaskItemChecklistBlock({
   cancel: () => void;
   onToggleChecklist?: (checklistId: string, isDone: boolean) => Promise<void> | void;
   onUpdateChecklistTitle?: (checklistId: string, title: string) => Promise<void> | void;
+  onDeleteChecklist?: (checklistId: string) => Promise<void> | void;
 }) {
   const checklists = item.checklists ?? [];
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   if (!checklists.length && !isAdding) return null;
 
@@ -43,15 +46,28 @@ export default function TaskItemChecklistBlock({
     setEditingTitle("");
   }
 
+  async function deleteRow(row: any) {
+    if (deletingId) return;
+
+    setDeletingId(row.id);
+
+    try {
+      await onDeleteChecklist?.(row.id);
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white">
       {checklists.map((row: any) => {
         const editing = editingId === row.id;
+        const deleting = deletingId === row.id;
 
         return (
           <div
             key={row.id}
-            className="flex min-h-9 items-center gap-3 border-b border-slate-100 px-3 py-1.5 last:border-b-0"
+            className="group flex min-h-9 items-center gap-3 border-b border-slate-100 px-3 py-1.5 last:border-b-0"
           >
             <button
               type="button"
@@ -102,6 +118,20 @@ export default function TaskItemChecklistBlock({
                 {row.title}
               </button>
             )}
+
+            <button
+              type="button"
+              disabled={deleting}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                deleteRow(row);
+              }}
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-300 opacity-0 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50 group-hover:opacity-100"
+              title="Xóa checklist"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
           </div>
         );
       })}

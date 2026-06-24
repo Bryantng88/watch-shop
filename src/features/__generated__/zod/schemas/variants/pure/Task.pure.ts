@@ -4,6 +4,7 @@ import { TaskSourceSchema } from '../../enums/TaskSource.schema';
 import { TaskStatusSchema } from '../../enums/TaskStatus.schema';
 import { TaskPrioritySchema } from '../../enums/TaskPriority.schema';
 import { TaskKindSchema } from '../../enums/TaskKind.schema';
+import { TaskPeriodSchema } from '../../enums/TaskPeriod.schema';
 // prettier-ignore
 export const TaskModelSchema = z.object({
     id: z.string(),
@@ -14,6 +15,8 @@ export const TaskModelSchema = z.object({
     status: TaskStatusSchema,
     priority: TaskPrioritySchema,
     kind: TaskKindSchema,
+    periodType: TaskPeriodSchema.nullable(),
+    periodKey: z.string().nullable(),
     dueAt: z.date().nullable(),
     startedAt: z.date().nullable(),
     completedAt: z.date().nullable(),

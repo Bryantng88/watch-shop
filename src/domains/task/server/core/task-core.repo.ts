@@ -1,4 +1,4 @@
-import { Prisma, TaskKind, TaskSource, TaskStatus } from "@prisma/client";
+import { Prisma, TaskKind, TaskPeriod, TaskSource, TaskStatus } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
 import type {
   CompleteRelatedTasksInput,
@@ -7,7 +7,7 @@ import type {
   EnsureSystemTaskResult,
   FindOpenRelatedTasksInput,
   UpdateTaskInput,
-} from "./task.types";
+} from "../task.types";
 import {
   TASK_INCLUDE,
   USER_SELECT,
@@ -34,6 +34,8 @@ export async function createTaskRepo(
       description: input.description?.trim() || null,
       source: input.source ?? "MANUAL",
       kind: input.kind ?? TaskKind.BUSINESS,
+      periodType: input.periodType ?? null,
+      periodKey: input.periodKey?.trim() || null,
       priority: input.priority ?? "MEDIUM",
       dueAt: toDate(input.dueAt),
       createdByUserId,
@@ -63,6 +65,8 @@ export async function ensureSystemTaskRepo(
         description: input.description?.trim() || null,
         source: TaskSource.SYSTEM,
         kind: TaskKind.BUSINESS,
+        periodType: null,
+        periodKey: null,
         priority: input.priority ?? "MEDIUM",
         dueAt,
         createdByUserId: input.createdByUserId ?? null,
@@ -87,12 +91,12 @@ export async function ensureSystemTaskRepo(
       assignedToUserId: input.assignedToUserId ?? input.createdByUserId ?? null,
       ...(reopened
         ? {
-            status: TaskStatus.TODO,
-            completedAt: null,
-            cancelledAt: null,
-            completedByUserId: null,
-            cancelledByUserId: null,
-          }
+          status: TaskStatus.TODO,
+          completedAt: null,
+          cancelledAt: null,
+          completedByUserId: null,
+          cancelledByUserId: null,
+        }
         : {}),
     },
   });
@@ -108,6 +112,8 @@ export async function updateTaskRepo(db: DB, id: string, input: UpdateTaskInput)
       ...(input.title !== undefined ? { title: input.title.trim() } : {}),
       ...(input.description !== undefined ? { description: input.description?.trim() || null } : {}),
       ...(input.kind !== undefined ? { kind: input.kind } : {}),
+      ...(input.periodType !== undefined ? { periodType: input.periodType } : {}),
+      ...(input.periodKey !== undefined ? { periodKey: input.periodKey?.trim() || null } : {}),
       ...(input.priority !== undefined ? { priority: input.priority } : {}),
       ...(input.dueAt !== undefined ? { dueAt: toDate(input.dueAt) } : {}),
       ...(input.assignedToUserId !== undefined ? { assignedToUserId: input.assignedToUserId || null } : {}),
@@ -175,10 +181,10 @@ export async function findOpenRelatedTasksRepo(db: DB, input: FindOpenRelatedTas
       status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] },
       ...(input.taskItemId
         ? {
-            executions: {
-              some: { taskItemId: input.taskItemId },
-            },
-          }
+          executions: {
+            some: { taskItemId: input.taskItemId },
+          },
+        }
         : {}),
     },
     select: {
@@ -192,5 +198,29 @@ export async function findOpenRelatedTasksRepo(db: DB, input: FindOpenRelatedTas
     },
     orderBy: [{ createdAt: "desc" }],
     take: input.limit ?? 10,
+  });
+}
+
+export async function findActivePeriodTaskRepo(
+  db: DB,
+  input: {
+    kind: TaskKind;
+    periodType: TaskPeriod;
+    periodKey: string;
+  },
+) {
+  const client = dbOrTx(db);
+
+  return client.task.findFirst({
+    where: {
+      kind: input.kind,
+      periodType: input.periodType,
+      periodKey: input.periodKey,
+      status: {
+        notIn: [TaskStatus.DONE, TaskStatus.CANCELLED],
+      },
+    },
+    include: TASK_INCLUDE,
+    orderBy: [{ createdAt: "asc" }],
   });
 }

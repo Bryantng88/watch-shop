@@ -21,6 +21,23 @@ export const TASK_SOURCE_LABEL: Record<TaskSource, string> = {
 };
 
 export const TASK_KIND_LABEL: Record<TaskKind, string> = {
+  BUSINESS: "Kinh doanh",
+  OPERATION: "Vận hành",
+  SERVICE: "Kỹ thuật",
   PERSONAL: "Cá nhân",
-  BUSINESS: "Công việc",
+  FREE: "Tự do",
 };
+
+export function taskPeriodLabel(periodType?: string | null, periodKey?: string | null) {
+  if (!periodType || !periodKey) return "—";
+
+  if (periodType === "WEEKLY") {
+    const match = String(periodKey).match(/^(\d{4})-W(\d{1,2})$/);
+    if (match) return `Tuần ${Number(match[2])}/${match[1]}`;
+  }
+
+  if (periodType === "DAILY") return `Ngày ${periodKey}`;
+  if (periodType === "MONTHLY") return `Tháng ${periodKey}`;
+
+  return periodKey;
+}

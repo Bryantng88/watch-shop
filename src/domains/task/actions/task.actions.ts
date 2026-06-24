@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { TaskStatus, TaskPriority } from "@prisma/client";
+import { TaskStatus, TaskPriority, TaskKind } from "@prisma/client";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
 import {
@@ -12,6 +12,7 @@ import {
   getTaskDetail,
   getTaskQuickCreateData,
   updateTask,
+  quickCreateTaskItem
 } from "../server/core/task.service";
 import type {
   CreateTaskItemInput,
@@ -30,6 +31,7 @@ import {
   updateTaskItemChecklistRepo,
   deleteTaskItemChecklistRepo,
   syncTaskItemStatusFromChecklistRepo,
+
 } from "../server/core/task.repo";
 
 async function getTaskAuth() {
@@ -49,9 +51,16 @@ export async function getTaskDetailAction(id: string) {
 
 export async function createTaskAction(input: CreateTaskInput) {
   const auth = await getTaskAuth();
-  const task = await createTask(prisma, input, auth);
+
+  const result = await createTask(prisma, input, auth);
+
   revalidatePath("/admin/tasks");
-  return { ok: true, task };
+
+  return {
+    ok: true,
+    task: result.task,
+    wasExistingPeriodTask: result.wasExistingPeriodTask,
+  };
 }
 
 export async function updateTaskAction(id: string, input: UpdateTaskInput) {
@@ -108,7 +117,8 @@ export async function createTaskItemAction(input: {
     dueAt: input.dueAt || null,
   });
 
-
+  revalidatePath("/admin/tasks");
+  revalidatePath(`/admin/tasks/${cleanTaskId}`);
 
   return { ok: true, item };
 }
@@ -160,6 +170,10 @@ export async function changeTaskItemDoneAction(
   });
 
   await syncTaskStatusFromChecklistRepo(prisma, item.taskId);
+
+  revalidatePath("/admin/tasks");
+  revalidatePath(`/admin/tasks/${item.taskId}`);
+
   return { ok: true, item };
 }
 
@@ -236,6 +250,9 @@ export async function changeTaskItemChecklistDoneAction(
   );
   await syncTaskStatusFromChecklistRepo(prisma, row.taskItem.taskId);
 
+  revalidatePath("/admin/tasks");
+  revalidatePath(`/admin/tasks/${row.taskItem.taskId}`);
+
   return { ok: true, checklist };
 }
 
@@ -245,42 +262,53 @@ export async function deleteTaskItemChecklistAction(checklistId: string) {
   const cleanId = String(checklistId || "").trim();
   if (!cleanId) throw new Error("Missing checklist id");
 
-  const row = await prisma.taskItemChecklist.findUnique({
-    where: { id: cleanId },
-    select: { taskItemId: true, taskItem: { select: { taskId: true } } },
-  });
-
-  if (!row) throw new Error("Checklist không tồn tại.");
-
   const checklist = await deleteTaskItemChecklistRepo(prisma, cleanId);
-
-  await syncTaskItemStatusFromChecklistRepo(prisma, row.taskItemId);
-  await syncTaskStatusFromChecklistRepo(prisma, row.taskItem.taskId);
-
-  revalidatePath("/admin/tasks");
-  revalidatePath(`/admin/tasks/${row.taskItem.taskId}`);
 
   return { ok: true, checklist };
 }
+export async function quickCreateTaskItemAction(
+  input: {
+    kind: TaskKind;
+    title: string;
 
-export async function updateTaskItemChecklistTitleAction(input: {
-  checklistId: string;
-  title: string;
-}) {
+    assignedToUserId?: string | null;
+    priority?: TaskPriority;
+    dueAt?: string | null;
+  },
+) {
+  const auth = await getTaskAuth();
+
+  const result = await quickCreateTaskItem(
+    prisma,
+    input,
+    auth,
+  );
+
+  revalidatePath("/admin/tasks");
+
+  return {
+    ok: true,
+    ...result,
+  };
+}
+export async function updateTaskItemChecklistTitleAction(
+  checklistId: string,
+  title: string,
+) {
   await getTaskAuth();
 
-  const checklistId = String(input.checklistId || "").trim();
-  const title = String(input.title || "").trim();
+  const cleanId = String(checklistId || "").trim();
+  const cleanTitle = String(title || "").trim();
 
-  if (!checklistId) throw new Error("Missing checklistId");
-  if (!title) throw new Error("Vui lòng nhập checklist.");
+  if (!cleanId) throw new Error("Missing checklist id");
+  if (!cleanTitle) throw new Error("Vui lòng nhập nội dung checklist.");
 
-  const checklist = await updateTaskItemChecklistRepo(
-    prisma,
-    checklistId,
-    {
-      title,
-    },
-  );
-  return { ok: true, checklist };
+  const checklist = await updateTaskItemChecklistRepo(prisma, cleanId, {
+    title: cleanTitle,
+  });
+
+  return {
+    ok: true,
+    checklist,
+  };
 }

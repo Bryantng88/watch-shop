@@ -24,6 +24,8 @@ const makeSchema = () => z.object({
   status: z.boolean().optional(),
   priority: z.boolean().optional(),
   kind: z.boolean().optional(),
+  periodType: z.boolean().optional(),
+  periodKey: z.boolean().optional(),
   dueAt: z.boolean().optional(),
   startedAt: z.boolean().optional(),
   completedAt: z.boolean().optional(),

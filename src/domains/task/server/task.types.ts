@@ -1,5 +1,6 @@
 import type {
   TaskKind,
+  TaskPeriod,
   TaskPriority,
   TaskSource,
   TaskStatus,
@@ -14,6 +15,8 @@ export type TaskListFilters = {
   status?: TaskStatus | "OPEN" | "ALL";
   priority?: TaskPriority | "ALL";
   kind?: TaskKind | "ALL";
+  periodType?: TaskPeriod | "ALL";
+  periodKey?: string | null;
   due?: TaskDueKey;
   page?: number;
   pageSize?: number;
@@ -31,11 +34,13 @@ export type TaskDomainLinksInput = {
 };
 
 export type CreateTaskInput = TaskDomainLinksInput & {
-  title: string;
+  title?: string | null;
   description?: string | null;
-  source?: TaskSource;
-  kind?: TaskKind;
-  priority?: TaskPriority;
+  source?: TaskSource | null;
+  kind?: TaskKind | null;
+  periodType?: TaskPeriod | null;
+  periodKey?: string | null;
+  priority?: TaskPriority | null;
   dueAt?: Date | string | null;
   assignedToUserId?: string | null;
 };
@@ -44,6 +49,8 @@ export type UpdateTaskInput = TaskDomainLinksInput & {
   title?: string;
   description?: string | null;
   kind?: TaskKind;
+  periodType?: TaskPeriod | null;
+  periodKey?: string | null;
   priority?: TaskPriority;
   dueAt?: Date | string | null;
   assignedToUserId?: string | null;

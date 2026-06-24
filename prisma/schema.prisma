@@ -1465,9 +1465,18 @@ enum TaskSource {
   SYSTEM
 }
 
+enum TaskPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
 enum TaskKind {
-  PERSONAL
   BUSINESS
+  OPERATION
+  SERVICE
+  PERSONAL
+  FREE
 }
 
 enum TaskExecutionTargetType {
@@ -1584,6 +1593,8 @@ model Task {
   status      TaskStatus   @default(TODO)
   priority    TaskPriority @default(MEDIUM)
   kind        TaskKind     @default(BUSINESS)
+  periodType  TaskPeriod?
+  periodKey   String?
   dueAt       DateTime?
   startedAt   DateTime?
   completedAt DateTime?

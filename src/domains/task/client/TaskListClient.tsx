@@ -29,7 +29,7 @@ import TaskListViewTabs, {
   normalizeTaskView,
 } from "../ui/list/TaskListViewTabs";
 import { updateTaskItemAction } from "@/domains/task/actions/task.actions";
-
+import { deleteTaskItemChecklistAction } from "../actions/task.actions";
 type Props = {
   items: TaskWithRelations[];
   total: number;
@@ -135,7 +135,7 @@ export default function TaskListClient(props: Props) {
     title: string,
   ) {
     try {
-      await updateTaskItemChecklistTitleAction({ checklistId, title });
+      await updateTaskItemChecklistTitleAction(checklistId, title);
     } catch (error: any) {
       notify.error(error?.message || "Không thể cập nhật checklist");
     }
@@ -275,7 +275,13 @@ export default function TaskListClient(props: Props) {
       });
     }
   }
-
+  async function deleteTaskItemChecklist(checklistId: string) {
+    try {
+      await deleteTaskItemChecklistAction(checklistId);
+    } catch (error: any) {
+      notify.error(error?.message || "Không thể xóa checklist");
+    }
+  }
   return (
     <div className="mx-auto w-full max-w-[1360px] min-w-0 space-y-5 px-4 py-6 lg:px-5 xl:px-6">
       <TaskListToolbar total={props.total} onCreate={() => openCreate()} />
@@ -316,6 +322,7 @@ export default function TaskListClient(props: Props) {
         onAddTaskItemChecklist={addTaskItemChecklist}
         onToggleTaskItemChecklist={toggleTaskItemChecklist}
         onUpdateTaskItemChecklistTitle={updateTaskItemChecklistTitle}
+        onDeleteTaskItemChecklist={deleteTaskItemChecklist}
       />
       <TaskQuickCreateModal
         open={modalOpen}

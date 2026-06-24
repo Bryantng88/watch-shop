@@ -4,6 +4,7 @@ import { TaskSourceSchema } from '../enums/TaskSource.schema';
 import { TaskStatusSchema } from '../enums/TaskStatus.schema';
 import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
 import { TaskKindSchema } from '../enums/TaskKind.schema';
+import { TaskPeriodSchema } from '../enums/TaskPeriod.schema';
 import { UserCreateNestedOneWithoutCreatedTasksInputObjectSchema as UserCreateNestedOneWithoutCreatedTasksInputObjectSchema } from './UserCreateNestedOneWithoutCreatedTasksInput.schema';
 import { UserCreateNestedOneWithoutAssignedTasksInputObjectSchema as UserCreateNestedOneWithoutAssignedTasksInputObjectSchema } from './UserCreateNestedOneWithoutAssignedTasksInput.schema';
 import { UserCreateNestedOneWithoutCompletedTasksInputObjectSchema as UserCreateNestedOneWithoutCompletedTasksInputObjectSchema } from './UserCreateNestedOneWithoutCompletedTasksInput.schema';
@@ -30,6 +31,8 @@ const makeSchema = () => z.object({
   status: TaskStatusSchema.optional(),
   priority: TaskPrioritySchema.optional(),
   kind: TaskKindSchema.optional(),
+  periodType: TaskPeriodSchema.optional().nullable(),
+  periodKey: z.string().optional().nullable(),
   dueAt: z.coerce.date().optional().nullable(),
   startedAt: z.coerce.date().optional().nullable(),
   completedAt: z.coerce.date().optional().nullable(),

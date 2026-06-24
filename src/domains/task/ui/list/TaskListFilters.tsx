@@ -10,7 +10,7 @@ export type TaskListFiltersValue = {
   kind: TaskKind | "ALL";
   pageSize: string;
 };
-const TASK_KIND_OPTIONS = ["PERSONAL", "BUSINESS"] as const;
+const TASK_KIND_OPTIONS = ["BUSINESS", "OPERATION", "SERVICE", "PERSONAL", "FREE"] as const;
 export default function TaskListFilters({
   filters,
   onChange,

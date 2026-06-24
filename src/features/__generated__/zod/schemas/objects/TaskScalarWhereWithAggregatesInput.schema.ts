@@ -10,6 +10,8 @@ import { EnumTaskPriorityWithAggregatesFilterObjectSchema as EnumTaskPriorityWit
 import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
 import { EnumTaskKindWithAggregatesFilterObjectSchema as EnumTaskKindWithAggregatesFilterObjectSchema } from './EnumTaskKindWithAggregatesFilter.schema';
 import { TaskKindSchema } from '../enums/TaskKind.schema';
+import { EnumTaskPeriodNullableWithAggregatesFilterObjectSchema as EnumTaskPeriodNullableWithAggregatesFilterObjectSchema } from './EnumTaskPeriodNullableWithAggregatesFilter.schema';
+import { TaskPeriodSchema } from '../enums/TaskPeriod.schema';
 import { DateTimeNullableWithAggregatesFilterObjectSchema as DateTimeNullableWithAggregatesFilterObjectSchema } from './DateTimeNullableWithAggregatesFilter.schema';
 import { UuidNullableWithAggregatesFilterObjectSchema as UuidNullableWithAggregatesFilterObjectSchema } from './UuidNullableWithAggregatesFilter.schema';
 import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema'
@@ -26,6 +28,8 @@ const taskscalarwherewithaggregatesinputSchema = z.object({
   status: z.union([z.lazy(() => EnumTaskStatusWithAggregatesFilterObjectSchema), TaskStatusSchema]).optional(),
   priority: z.union([z.lazy(() => EnumTaskPriorityWithAggregatesFilterObjectSchema), TaskPrioritySchema]).optional(),
   kind: z.union([z.lazy(() => EnumTaskKindWithAggregatesFilterObjectSchema), TaskKindSchema]).optional(),
+  periodType: z.union([z.lazy(() => EnumTaskPeriodNullableWithAggregatesFilterObjectSchema), TaskPeriodSchema]).optional().nullable(),
+  periodKey: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   dueAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   startedAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   completedAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),

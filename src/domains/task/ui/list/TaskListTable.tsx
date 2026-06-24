@@ -1,32 +1,26 @@
 "use client";
 
-import { Fragment, useMemo } from "react";
+import { Fragment } from "react";
 import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
   CirclePlay,
-  Link2,
-  Clock3,
   RotateCcw,
   XCircle,
 } from "lucide-react";
 import { TaskStatus } from "@prisma/client";
 import RowActions from "@/domains/shared/ui/list/RowActions";
 import type { TaskWithRelations } from "../../server/core/task.repo";
-import {
-  TaskStatusSignal,
-  PrioritySignal,
-} from "@/domains/shared/ui/signals/StatePrioritySignal";
 import TaskWorkPanel from "../task-work/TaskWorkPanel";
 import TaskPagination from "./TaskPagination";
 import {
-  BusinessEntityMiniCard,
   BusinessEntityPreviewModal,
   useBusinessEntityPreview,
 } from "@/domains/shared/ui/business/BusinessEntityPreview";
-import type { BusinessEntityPreview } from "@/domains/shared/business/business-entity.types";
 import { cn } from "@/lib/utils";
+import { TASK_KIND_LABEL } from "../../utils/task-labels";
+
 type UserOption = {
   id: string;
   name?: string | null;
@@ -41,82 +35,45 @@ type AddSubtaskInput = {
   dueAt?: string | null;
 };
 
-function formatDate(value?: Date | string | null) {
-  if (!value) return "—";
-
-  return new Intl.DateTimeFormat("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(value));
-}
-
 function userLabel(
   user?: { name?: string | null; email?: string | null } | null,
 ) {
   return user?.name || user?.email || "—";
 }
 
-function userInitial(
-  user?: { name?: string | null; email?: string | null } | null,
-) {
-  const label = userLabel(user);
-  if (!label || label === "—") return "?";
-  return label.trim().slice(0, 1).toUpperCase();
-}
-
-function taskText(row: TaskWithRelations) {
-  return row.description?.trim() || row.title?.trim() || "Không có mô tả";
-}
-
 function canExpand(_row: any) {
   return true;
 }
-function dueTone(dueAt?: Date | string | null) {
-  if (!dueAt) {
-    return {
-      className: "text-slate-400",
-      label: "—",
-    };
-  }
 
-  const due = new Date(dueAt);
-  const now = new Date();
+function buildPeriodLabel(periodKey?: string | null) {
+  if (!periodKey) return null;
 
-  due.setHours(0, 0, 0, 0);
-  now.setHours(0, 0, 0, 0);
+  const match = periodKey.match(/^(\d{4})-W(\d{2})$/);
+  if (!match) return periodKey;
 
-  const diffDays = Math.floor(
-    (due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-  );
+  const year = Number(match[1]);
+  const week = Number(match[2]);
 
-  if (diffDays < 0) {
-    return {
-      className: "text-rose-600 font-semibold bg-rose-50 ring-1 ring-rose-100",
-      label: formatDate(dueAt),
-    };
-  }
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4Day = jan4.getUTCDay() || 7;
 
-  if (diffDays === 0) {
-    return {
-      className:
-        "text-amber-700 font-semibold bg-amber-50 ring-1 ring-amber-100",
-      label: "Hôm nay",
-    };
-  }
+  const week1Monday = new Date(jan4);
+  week1Monday.setUTCDate(jan4.getUTCDate() - jan4Day + 1);
 
-  if (diffDays <= 3) {
-    return {
-      className: "text-sky-700 bg-sky-50 ring-1 ring-sky-100",
-      label: formatDate(dueAt),
-    };
-  }
+  const start = new Date(week1Monday);
+  start.setUTCDate(start.getUTCDate() + (week - 1) * 7);
 
-  return {
-    className: "text-slate-600 bg-slate-50 ring-1 ring-slate-100",
-    label: formatDate(dueAt),
-  };
+  const end = new Date(start);
+  end.setUTCDate(start.getUTCDate() + 6);
+
+  const format = (d: Date) =>
+    `${String(d.getUTCDate()).padStart(2, "0")}/${String(
+      d.getUTCMonth() + 1,
+    ).padStart(2, "0")}/${d.getUTCFullYear()}`;
+
+  return `${format(start)} - ${format(end)}`;
 }
+
 function TaskProgressCell({
   progress,
 }: {
@@ -149,6 +106,7 @@ function TaskProgressCell({
     </div>
   );
 }
+
 function isTrackingExecution(execution: any) {
   return execution?.metadataJson?.linkMode === "TRACKING";
 }
@@ -179,26 +137,6 @@ function taskProgress(row: TaskWithRelations) {
   return { done, total, percent };
 }
 
-function TaskContextCell({ row }: { row: TaskWithRelations }) {
-  const workCase = (row as any).workCase;
-
-  if (!workCase) {
-    return <span className="text-xs text-slate-400">—</span>;
-  }
-
-  return (
-    <div className="min-w-[160px] max-w-[220px]">
-      <div className="line-clamp-1 text-xs font-semibold text-slate-700">
-        {workCase.refNo || "Phiếu xử lý"}
-      </div>
-
-      <div className="mt-0.5 line-clamp-1 text-[11px] text-slate-400">
-        {workCase.title || workCase.description || "WorkCase"}
-      </div>
-    </div>
-  );
-}
-
 export default function TaskListTable({
   items,
   users = [],
@@ -216,7 +154,7 @@ export default function TaskListTable({
   onUpdateTaskItem,
   onAddTaskItemChecklist,
   onToggleTaskItemChecklist,
-  onUpdateTaskItemChecklistTitle
+  onUpdateTaskItemChecklistTitle,
 }: {
   items: TaskWithRelations[];
   users?: UserOption[];
@@ -262,13 +200,10 @@ export default function TaskListTable({
         <table className="min-w-full divide-y divide-slate-100 text-sm">
           <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="px-4 py-3">Nội dung</th>
-              <th className="px-4 py-3">Ngữ cảnh</th>
-              <th className="px-4 py-3">Loại</th>
+              <th className="px-4 py-3">Task</th>
+              <th className="px-4 py-3">Nhóm</th>
+              <th className="px-4 py-3">Người tạo</th>
               <th className="px-4 py-3">Tiến độ</th>
-              <th className="px-4 py-3 text-center">Ưu tiên</th>
-              <th className="px-4 py-3">Người nhận</th>
-              <th className="px-4 py-3">Due</th>
               <th className="px-4 py-3 text-right">Action</th>
             </tr>
           </thead>
@@ -277,7 +212,7 @@ export default function TaskListTable({
             {items.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={5}
                   className="px-4 py-12 text-center text-sm text-slate-500"
                 >
                   Chưa có task phù hợp.
@@ -289,20 +224,16 @@ export default function TaskListTable({
                 const expandable = canExpand(row);
                 const progress = taskProgress(row);
                 const rowAccess = String((row as any).rowAccess || "OWNER");
-                const visibleTaskItemIds =
-                  (row as any).visibleTaskItemIds ?? null;
-                const taskItems = ((row as any).taskItems ??
-                  []) as any[];
+                const visibleTaskItemIds = (row as any).visibleTaskItemIds ?? null;
+                const taskItems = ((row as any).taskItems ?? []) as any[];
 
-                const visibleTaskItems = Array.isArray(
-                  visibleTaskItemIds,
-                )
-                  ? taskItems.filter((item) =>
-                    visibleTaskItemIds.includes(item.id),
-                  )
+                const visibleTaskItems = Array.isArray(visibleTaskItemIds)
+                  ? taskItems.filter((item) => visibleTaskItemIds.includes(item.id))
                   : taskItems;
 
                 const isSubtaskAssignee = rowAccess === "SUBTASK_ASSIGNEE";
+                const periodLabel = buildPeriodLabel((row as any).periodKey);
+
                 return (
                   <Fragment key={row.id}>
                     <tr
@@ -315,7 +246,7 @@ export default function TaskListTable({
                           : "hover:bg-slate-50/70"
                       }
                     >
-                      <td className="max-w-[380px] px-4 py-3">
+                      <td className="max-w-[520px] px-4 py-3">
                         <div className="flex items-start gap-2">
                           <button
                             type="button"
@@ -324,9 +255,7 @@ export default function TaskListTable({
                               onToggleExpand?.(row);
                             }}
                             className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                            aria-label={
-                              expanded ? "Thu gọn task" : "Mở rộng task"
-                            }
+                            aria-label={expanded ? "Thu gọn task" : "Mở rộng task"}
                           >
                             {expanded ? (
                               <ChevronDown className="h-4 w-4" />
@@ -336,62 +265,39 @@ export default function TaskListTable({
                           </button>
 
                           <div className="min-w-0">
-                            <div className="line-clamp-2 font-semibold leading-5 text-slate-950">
-                              {taskText(row)}
+                            <div className="line-clamp-1 font-semibold leading-5 text-slate-950">
+                              {row.title}
                             </div>
+
+                            {periodLabel ? (
+                              <div className="mt-0.5 text-xs font-medium text-slate-400">
+                                {periodLabel}
+                              </div>
+                            ) : null}
+
+                            {row.description ? (
+                              <div className="mt-0.5 line-clamp-1 text-xs text-slate-400">
+                                {row.description}
+                              </div>
+                            ) : null}
                           </div>
                         </div>
                       </td>
 
-                      <td
-                        className="px-4 py-3 align-top"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        <TaskContextCell row={row} />
+                      <td className="px-4 py-3 text-slate-600">
+                        <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                          {TASK_KIND_LABEL[
+                            (row as any).kind as keyof typeof TASK_KIND_LABEL
+                          ] ?? "Công việc"}
+                        </span>
                       </td>
 
-                      <td className="px-4 py-3 text-slate-600">
-                        <div className="font-medium text-slate-800">
-                          {String((row as any).kind ?? "BUSINESS") ===
-                            "PERSONAL"
-                            ? "Personal"
-                            : "Business"}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <TaskProgressCell progress={progress} />
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <PrioritySignal priority={row.priority} />
-                      </td>
-
-                      <td className="px-4 py-3 text-slate-600">
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600 ring-1 ring-slate-200">
-                            {userInitial(row.assignedToUser)}
-                          </span>
-                          <span className="font-medium text-slate-700">
-                            {userLabel(row.assignedToUser)}
-                          </span>
-                        </div>
+                      <td className="px-4 py-3 text-sm font-medium text-slate-600">
+                        {userLabel((row as any).createdByUser)}
                       </td>
 
                       <td className="px-4 py-3">
-                        {(() => {
-                          const due = dueTone(row.dueAt);
-
-                          return (
-                            <span
-                              className={cn(
-                                "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs",
-                                due.className,
-                              )}
-                            >
-                              <Clock3 className="h-3 w-3" />
-                              {due.label}
-                            </span>
-                          );
-                        })()}
+                        <TaskProgressCell progress={progress} />
                       </td>
 
                       <td
@@ -462,7 +368,7 @@ export default function TaskListTable({
                     {expanded ? (
                       <tr>
                         <td
-                          colSpan={8}
+                          colSpan={5}
                           className="bg-slate-50 px-4 py-0"
                           onClick={(event) => event.stopPropagation()}
                         >
@@ -473,16 +379,15 @@ export default function TaskListTable({
                             executions={(row as any).executions ?? []}
                             canAddTaskItem={!isSubtaskAssignee}
                             canCancelTaskItem={!isSubtaskAssignee}
-                            onUpdateTaskItem={onUpdateTaskItem}
                             onAddTaskItem={onAddTaskItem}
                             onToggleTaskItem={onToggleTaskItem}
                             onDeleteTaskItem={onDeleteTaskItem}
                             onUpdateTaskItem={onUpdateTaskItem}
                             onAddTaskItemChecklist={onAddTaskItemChecklist}
-                            onToggleTaskItemChecklist={
-                              onToggleTaskItemChecklist
+                            onToggleTaskItemChecklist={onToggleTaskItemChecklist}
+                            onUpdateTaskItemChecklistTitle={
+                              onUpdateTaskItemChecklistTitle
                             }
-                            onUpdateTaskItemChecklistTitle={onUpdateTaskItemChecklistTitle}
                           />
                         </td>
                       </tr>

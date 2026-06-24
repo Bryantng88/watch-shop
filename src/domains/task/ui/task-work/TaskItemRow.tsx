@@ -88,6 +88,7 @@ export default function TaskItemRow({
   onAddTaskItemChecklist,
   onToggleTaskItemChecklist,
   onUpdateTaskItemChecklistTitle,
+  onDeleteTaskItemChecklist
 }: {
   item: any;
   canCancel?: boolean;
@@ -100,6 +101,7 @@ export default function TaskItemRow({
   onAddTaskItemChecklist?: (taskItemId: string, title: string) => Promise<void> | void;
   onToggleTaskItemChecklist?: (checklistId: string, isDone: boolean) => Promise<void> | void;
   onUpdateTaskItemChecklistTitle?: (checklistId: string, title: string) => Promise<void> | void;
+  onDeleteTaskItemChecklist?: (checklistId: string) => Promise<void> | void;
 }) {
   const itemExecutions = splitExecutions(item.executions ?? []);
   const hasExecutions = itemExecutions.grouped.length > 0;
@@ -203,6 +205,7 @@ export default function TaskItemRow({
         <div className="min-w-0 w-[250px] shrink-0">
           <button
             type="button"
+            title={item.title}
             onClick={() => {
               if (hasChecklists) onToggleExpand(item);
             }}
@@ -336,6 +339,18 @@ export default function TaskItemRow({
           title={checklistTitle}
           setTitle={setChecklistTitle}
           submit={submitChecklist}
+          onDeleteChecklist={async (checklistId) => {
+            const snapshot = localChecklists;
+
+            setLocalChecklists((prev) => prev.filter((x) => x.id !== checklistId));
+
+            try {
+              await onDeleteTaskItemChecklist?.(checklistId);
+            } catch (error) {
+              setLocalChecklists(snapshot);
+              throw error;
+            }
+          }}
           cancel={() => {
             setChecklistTitle("");
             setIsAddingChecklist(false);

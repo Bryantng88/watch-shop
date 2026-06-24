@@ -3,7 +3,8 @@ import type { Prisma } from '@prisma/client';
 import { TaskSourceSchema } from '../enums/TaskSource.schema';
 import { TaskStatusSchema } from '../enums/TaskStatus.schema';
 import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
-import { TaskKindSchema } from '../enums/TaskKind.schema'
+import { TaskKindSchema } from '../enums/TaskKind.schema';
+import { TaskPeriodSchema } from '../enums/TaskPeriod.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -14,6 +15,8 @@ const makeSchema = () => z.object({
   status: TaskStatusSchema.optional(),
   priority: TaskPrioritySchema.optional(),
   kind: TaskKindSchema.optional(),
+  periodType: TaskPeriodSchema.optional().nullable(),
+  periodKey: z.string().optional().nullable(),
   dueAt: z.coerce.date().optional().nullable(),
   startedAt: z.coerce.date().optional().nullable(),
   completedAt: z.coerce.date().optional().nullable(),

@@ -10,6 +10,8 @@ import { EnumTaskPriorityFilterObjectSchema as EnumTaskPriorityFilterObjectSchem
 import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
 import { EnumTaskKindFilterObjectSchema as EnumTaskKindFilterObjectSchema } from './EnumTaskKindFilter.schema';
 import { TaskKindSchema } from '../enums/TaskKind.schema';
+import { EnumTaskPeriodNullableFilterObjectSchema as EnumTaskPeriodNullableFilterObjectSchema } from './EnumTaskPeriodNullableFilter.schema';
+import { TaskPeriodSchema } from '../enums/TaskPeriod.schema';
 import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
 import { UuidNullableFilterObjectSchema as UuidNullableFilterObjectSchema } from './UuidNullableFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema'
@@ -26,6 +28,8 @@ const taskscalarwhereinputSchema = z.object({
   status: z.union([z.lazy(() => EnumTaskStatusFilterObjectSchema), TaskStatusSchema]).optional(),
   priority: z.union([z.lazy(() => EnumTaskPriorityFilterObjectSchema), TaskPrioritySchema]).optional(),
   kind: z.union([z.lazy(() => EnumTaskKindFilterObjectSchema), TaskKindSchema]).optional(),
+  periodType: z.union([z.lazy(() => EnumTaskPeriodNullableFilterObjectSchema), TaskPeriodSchema]).optional().nullable(),
+  periodKey: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   dueAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   startedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   completedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
