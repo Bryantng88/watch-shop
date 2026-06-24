@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
 import { createOrderFromTask } from "../server/task-execution/order-from-task.service";
-import { syncTaskStatusFromChecklistRepo } from "@/domains/task/server/task.repo";
+import { syncTaskStatusFromChecklistRepo } from "@/domains/task/server/core/task.repo";
 
 function serialize<T>(obj: T): T {
   return JSON.parse(

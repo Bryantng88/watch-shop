@@ -12,8 +12,9 @@ import {
   createTaskItemAction,
   createTaskItemChecklistAction,
   deleteTaskItemAction,
+  updateTaskItemChecklistTitleAction,
 } from "../actions/task.actions";
-import type { TaskWithRelations } from "../server/task.repo";
+import type { TaskWithRelations } from "../server/core/task.repo";
 import type { TaskViewKey } from "../server/task.types";
 import TaskQuickCreateModal, {
   type TaskQuickCreateContext,
@@ -129,6 +130,16 @@ export default function TaskListClient(props: Props) {
 
     router.refresh();
   }
+  async function updateTaskItemChecklistTitle(
+    checklistId: string,
+    title: string,
+  ) {
+    try {
+      await updateTaskItemChecklistTitleAction({ checklistId, title });
+    } catch (error: any) {
+      notify.error(error?.message || "Không thể cập nhật checklist");
+    }
+  }
   async function toggleTaskItem(itemId: string, isDone: boolean) {
     try {
       const result = await changeTaskItemDoneAction(itemId, isDone);
@@ -167,7 +178,6 @@ export default function TaskListClient(props: Props) {
   async function addTaskItemChecklist(taskItemId: string, title: string) {
     try {
       await createTaskItemChecklistAction({ taskItemId, title });
-      router.refresh();
     } catch (error: any) {
       notify.error(error?.message || "Không thể thêm checklist");
     }
@@ -176,7 +186,6 @@ export default function TaskListClient(props: Props) {
   async function toggleTaskItemChecklist(checklistId: string, isDone: boolean) {
     try {
       await changeTaskItemChecklistDoneAction(checklistId, isDone);
-      router.refresh();
     } catch (error: any) {
       notify.error(error?.message || "Không thể cập nhật checklist");
     }
@@ -306,6 +315,7 @@ export default function TaskListClient(props: Props) {
         onUpdateTaskItem={handleUpdateTaskItem}
         onAddTaskItemChecklist={addTaskItemChecklist}
         onToggleTaskItemChecklist={toggleTaskItemChecklist}
+        onUpdateTaskItemChecklistTitle={updateTaskItemChecklistTitle}
       />
       <TaskQuickCreateModal
         open={modalOpen}

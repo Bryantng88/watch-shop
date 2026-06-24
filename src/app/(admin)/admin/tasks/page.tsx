@@ -1,7 +1,7 @@
 import { TaskKind, TaskPriority, TaskStatus } from "@prisma/client";
 
 import TaskListClient from "@/domains/task/client/TaskListClient";
-import { getTaskListPageData } from "@/domains/task/server/task.service";
+import { getTaskListPageData } from "@/domains/task/server/core/task.service";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
 import type { TaskViewKey } from "@/domains/task/server/task.types";

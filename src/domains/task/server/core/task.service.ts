@@ -20,7 +20,7 @@ import type {
   FindOpenRelatedTasksInput,
   TaskListFilters,
   UpdateTaskInput,
-} from "./task.types";
+} from "../task.types";
 
 export function getAuthUserId(auth: any): string | null {
   return auth?.user?.id ?? auth?.id ?? auth?.userId ?? null;

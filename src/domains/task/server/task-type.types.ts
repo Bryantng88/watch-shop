@@ -1,5 +1,5 @@
 import type { TaskCompletionMode, TaskDomain, TaskPriority } from "@prisma/client";
-import type { TaskActionOption } from "./task-action.types";
+import type { TaskActionOption } from "./action/task-action.types";
 
 export type TaskTypeListFilters = {
   q?: string;

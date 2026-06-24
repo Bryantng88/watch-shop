@@ -1,6 +1,6 @@
 import { TaskStatus } from "@prisma/client";
 import type { DB } from "@/server/db/client";
-import { authCanViewAllTasks, getAuthUserId } from "./task.service";
+import { authCanViewAllTasks, getAuthUserId } from "../core/task.service";
 import { createTaskExecutionRepo, listTaskExecutionsRepo } from "./task-execution.repo";
 import type { LinkTaskExecutionInput } from "./task-execution.types";
 

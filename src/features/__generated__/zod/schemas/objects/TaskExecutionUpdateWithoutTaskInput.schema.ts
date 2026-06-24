@@ -23,7 +23,6 @@ const makeSchema = () => z.object({
   metadataJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   note: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  checklistItemId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdByUser: z.lazy(() => UserUpdateOneWithoutTaskExecutionNestedInputObjectSchema).optional(),
   taskItem: z.lazy(() => TaskItemUpdateOneWithoutExecutionsNestedInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestUpdateOneWithoutTaskExecutionNestedInputObjectSchema).optional(),

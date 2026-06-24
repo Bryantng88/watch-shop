@@ -6,7 +6,7 @@ import { requirePermission } from "@/server/auth/requirePermission";
 import {
   executeTaskAction,
   previewTaskAction,
-} from "../server/task-action-execution.service";
+} from "../server/action/task-action-execution.service";
 
 type ExecuteTaskActionActionInput = {
   taskId: string;

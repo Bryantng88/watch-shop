@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Settings2, Zap } from "lucide-react";
 import { TaskDomain } from "@prisma/client";
 import type { TaskTypeOption } from "../server/task-type.types";
-import type { TaskActionOption } from "../server/task-action.types";
+import type { TaskActionOption } from "../server/action/task-action.types";
 import { getTaskCompletionRuleLabel } from "../server/task-rule-keys";
 import {
   TASK_COMPLETION_MODE_LABEL,

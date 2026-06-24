@@ -1,6 +1,6 @@
 import { TaskExecutionActionType, TaskExecutionTargetType, TaskStatus } from "@prisma/client";
 import type { DB } from "@/server/db/client";
-import { createTaskExecutionRepo } from "@/domains/task/server/task-execution.repo";
+import { createTaskExecutionRepo } from "@/domains/task/server/execution/task-execution.repo";
 
 export async function createServiceRequestFromTask(
     db: DB,

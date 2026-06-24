@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import TaskDetailClient from "@/domains/task/client/TaskDetailClient";
-import { getTaskDetail } from "@/domains/task/server/task.service";
-import { listAssignableUsersRepo } from "@/domains/task/server/task.repo";
+import { getTaskDetail } from "@/domains/task/server/core/task.service";
+import { listAssignableUsersRepo } from "@/domains/task/server/core/task.repo";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
 

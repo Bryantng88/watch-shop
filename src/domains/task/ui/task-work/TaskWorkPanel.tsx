@@ -52,6 +52,7 @@ function TaskItemCreateBar({
   users: UserOption[];
   pending: boolean;
   onSubmit: (input: TaskItemInput) => Promise<void> | void;
+
 }) {
   const [title, setTitle] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");
@@ -153,6 +154,7 @@ export default function TaskWorkPanel({
   users = [],
   canAddTaskItem = true,
   canCancelTaskItem = true,
+  onUpdateTaskItemChecklistTitle
 }: {
   task: any;
   taskItems?: any[];
@@ -168,6 +170,10 @@ export default function TaskWorkPanel({
   onToggleTaskItemChecklist?: (
     checklistId: string,
     isDone: boolean,
+  ) => Promise<void> | void;
+  onUpdateTaskItemChecklistTitle?: (
+    checklistId: string,
+    title: string,
   ) => Promise<void> | void;
 }) {
   const previewState = useBusinessEntityPreview();
@@ -227,7 +233,35 @@ export default function TaskWorkPanel({
       setPending(false);
     }
   }
+  async function updateChecklistTitle(checklistId: string, title: string) {
+    let oldTitle = "";
 
+    setLocalItems((prev) =>
+      prev.map((item) => ({
+        ...item,
+        checklists: (item.checklists ?? []).map((row: any) => {
+          if (row.id !== checklistId) return row;
+          oldTitle = row.title;
+          return { ...row, title };
+        }),
+      })),
+    );
+
+    try {
+      await onUpdateTaskItemChecklistTitle?.(checklistId, title);
+    } catch (error) {
+      setLocalItems((prev) =>
+        prev.map((item) => ({
+          ...item,
+          checklists: (item.checklists ?? []).map((row: any) =>
+            row.id === checklistId ? { ...row, title: oldTitle } : row,
+          ),
+        })),
+      );
+
+      throw error;
+    }
+  }
   async function toggleItem(item: any) {
     const nextDone = !Boolean(item.isDone || item.status === "DONE");
     const prevItem = item;
@@ -426,6 +460,7 @@ export default function TaskWorkPanel({
             }
             onAddTaskItemChecklist={addChecklist}
             onToggleTaskItemChecklist={toggleChecklist}
+            onUpdateTaskItemChecklistTitle={updateChecklistTitle}
           />
         ))}
 

@@ -5,7 +5,7 @@ import {
   TaskStatus,
 } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
-import { authCanViewAllTasks, getAuthUserId } from "./task.service";
+import { authCanViewAllTasks, getAuthUserId } from "../core/task.service";
 
 export type ServiceTaskExecutionMode =
   | "SR_ONLY"

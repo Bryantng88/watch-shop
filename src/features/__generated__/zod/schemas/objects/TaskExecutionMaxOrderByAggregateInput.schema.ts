@@ -11,7 +11,6 @@ const makeSchema = () => z.object({
   note: SortOrderSchema.optional(),
   createdByUserId: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
-  checklistItemId: SortOrderSchema.optional(),
   serviceRequestId: SortOrderSchema.optional(),
   technicalIssueId: SortOrderSchema.optional(),
   taskItemId: SortOrderSchema.optional()

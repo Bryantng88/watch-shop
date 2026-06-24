@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/server/db/client";
 import { requirePermission } from "@/server/auth/requirePermission";
-import { syncTaskStatusFromChecklistRepo } from "@/domains/task/server/task.repo";
+import { syncTaskStatusFromChecklistRepo } from "@/domains/task/server/core/task.repo";
 import {
     createOrLinkServiceRequestFromTask,
     getServiceRequestFromTaskPreview,

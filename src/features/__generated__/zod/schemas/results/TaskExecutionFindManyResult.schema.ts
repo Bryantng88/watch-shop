@@ -10,7 +10,6 @@ export const TaskExecutionFindManyResultSchema = z.object({
   note: z.string().optional(),
   createdByUserId: z.string().optional(),
   createdAt: z.date(),
-  checklistItemId: z.string().optional(),
   serviceRequestId: z.string().optional(),
   technicalIssueId: z.string().optional(),
   taskItemId: z.string().optional(),

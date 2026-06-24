@@ -13,7 +13,6 @@ export const TaskExecutionResultSchema = z.object({
     note: z.string().nullable(),
     createdByUserId: z.string().nullable(),
     createdAt: z.date(),
-    checklistItemId: z.string().nullable(),
     serviceRequestId: z.string().nullable(),
     technicalIssueId: z.string().nullable(),
     taskItemId: z.string().nullable(),

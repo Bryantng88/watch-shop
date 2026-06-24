@@ -15,7 +15,6 @@ const makeSchema = () => z.object({
   metadataJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   note: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  checklistItemId: z.string().optional().nullable(),
   serviceRequestId: z.string().optional().nullable(),
   technicalIssueId: z.string().optional().nullable(),
   taskItemId: z.string().optional().nullable()

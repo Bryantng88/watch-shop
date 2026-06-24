@@ -9,7 +9,6 @@ export const TaskExecutionAggregateResultSchema = z.object({  _count: z.object({
     note: z.number(),
     createdByUserId: z.number(),
     createdAt: z.number(),
-    checklistItemId: z.number(),
     serviceRequestId: z.number(),
     technicalIssueId: z.number(),
     taskItemId: z.number(),
@@ -26,7 +25,6 @@ export const TaskExecutionAggregateResultSchema = z.object({  _count: z.object({
     note: z.string().nullable(),
     createdByUserId: z.string().nullable(),
     createdAt: z.date().nullable(),
-    checklistItemId: z.string().nullable(),
     serviceRequestId: z.string().nullable(),
     technicalIssueId: z.string().nullable(),
     taskItemId: z.string().nullable()
@@ -38,7 +36,6 @@ export const TaskExecutionAggregateResultSchema = z.object({  _count: z.object({
     note: z.string().nullable(),
     createdByUserId: z.string().nullable(),
     createdAt: z.date().nullable(),
-    checklistItemId: z.string().nullable(),
     serviceRequestId: z.string().nullable(),
     technicalIssueId: z.string().nullable(),
     taskItemId: z.string().nullable()

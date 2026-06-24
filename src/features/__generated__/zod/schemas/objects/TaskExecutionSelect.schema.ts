@@ -16,7 +16,6 @@ const makeSchema = () => z.object({
   note: z.boolean().optional(),
   createdByUserId: z.boolean().optional(),
   createdAt: z.boolean().optional(),
-  checklistItemId: z.boolean().optional(),
   serviceRequestId: z.boolean().optional(),
   technicalIssueId: z.boolean().optional(),
   taskItemId: z.boolean().optional(),

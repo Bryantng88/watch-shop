@@ -12,7 +12,7 @@ import {
   getTaskDetail,
   getTaskQuickCreateData,
   updateTask,
-} from "../server/task.service";
+} from "../server/core/task.service";
 import type {
   CreateTaskItemInput,
   CreateTaskInput,
@@ -30,7 +30,7 @@ import {
   updateTaskItemChecklistRepo,
   deleteTaskItemChecklistRepo,
   syncTaskItemStatusFromChecklistRepo,
-} from "../server/task.repo";
+} from "../server/core/task.repo";
 
 async function getTaskAuth() {
   return requirePermission("TASK_VIEW");
@@ -260,5 +260,27 @@ export async function deleteTaskItemChecklistAction(checklistId: string) {
   revalidatePath("/admin/tasks");
   revalidatePath(`/admin/tasks/${row.taskItem.taskId}`);
 
+  return { ok: true, checklist };
+}
+
+export async function updateTaskItemChecklistTitleAction(input: {
+  checklistId: string;
+  title: string;
+}) {
+  await getTaskAuth();
+
+  const checklistId = String(input.checklistId || "").trim();
+  const title = String(input.title || "").trim();
+
+  if (!checklistId) throw new Error("Missing checklistId");
+  if (!title) throw new Error("Vui lòng nhập checklist.");
+
+  const checklist = await updateTaskItemChecklistRepo(
+    prisma,
+    checklistId,
+    {
+      title,
+    },
+  );
   return { ok: true, checklist };
 }

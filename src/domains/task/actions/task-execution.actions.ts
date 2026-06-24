@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
-import { linkTaskExecution, listTaskExecutions } from "../server/task-execution.service";
-import type { LinkTaskExecutionInput } from "../server/task-execution.types";
+import { linkTaskExecution, listTaskExecutions } from "../server/execution/task-execution.service";
+import type { LinkTaskExecutionInput } from "../server/execution/task-execution.types";
 import { TaskExecutionActionType, TaskExecutionTargetType } from "@prisma/client";
 async function getTaskAuth() {
   return requirePermission("TASK_VIEW");

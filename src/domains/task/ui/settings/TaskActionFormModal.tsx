@@ -7,7 +7,7 @@ import {
   TechnicalActionMode,
 } from "@prisma/client";
 import { createTaskActionSettingAction, updateTaskActionSettingAction } from "../../actions/task-action.actions";
-import type { TaskActionOption, UpsertTaskActionInput } from "../../server/task-action.types";
+import type { TaskActionOption, UpsertTaskActionInput } from "../../server/action/task-action.types";
 import type { TaskTypeOption } from "../../server/task-type.types";
 import { listTaskCompletionRuleOptions } from "../../server/task-rule-keys";
 import { TASK_COMPLETION_MODE_LABEL } from "../../utils/task-labels";

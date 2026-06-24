@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { TaskKind, TaskPriority } from "@prisma/client";
 import { createTaskAction, updateTaskAction } from "../../actions/task.actions";
-import type { TaskWithRelations } from "../../server/task.repo";
+import type { TaskWithRelations } from "../../server/core/task.repo";
 import type { CreateTaskInput, TaskDomainLinksInput } from "../../server/task.types";
 import { TASK_KIND_LABEL, TASK_PRIORITY_LABEL } from "../../utils/task-labels";
 

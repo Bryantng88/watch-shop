@@ -184,7 +184,7 @@ export default function SubtaskManageModal({
 
             onLinked?.({
                 taskItemId: item.id,
-                executions: result?.executions ?? result?.items ?? result?.data ?? [],
+                executions: result?.executions ?? [],
             });
 
             onClose();

@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { TaskStatus } from "@prisma/client";
 import RowActions from "@/domains/shared/ui/list/RowActions";
-import type { TaskWithRelations } from "../../server/task.repo";
+import type { TaskWithRelations } from "../../server/core/task.repo";
 import {
   TaskStatusSignal,
   PrioritySignal,
@@ -216,6 +216,7 @@ export default function TaskListTable({
   onUpdateTaskItem,
   onAddTaskItemChecklist,
   onToggleTaskItemChecklist,
+  onUpdateTaskItemChecklistTitle
 }: {
   items: TaskWithRelations[];
   users?: UserOption[];
@@ -247,6 +248,10 @@ export default function TaskListTable({
   onToggleTaskItemChecklist?: (
     checklistId: string,
     isDone: boolean,
+  ) => Promise<void> | void;
+  onUpdateTaskItemChecklistTitle?: (
+    checklistId: string,
+    title: string,
   ) => Promise<void> | void;
 }) {
   const previewState = useBusinessEntityPreview();
@@ -477,6 +482,7 @@ export default function TaskListTable({
                             onToggleTaskItemChecklist={
                               onToggleTaskItemChecklist
                             }
+                            onUpdateTaskItemChecklistTitle={onUpdateTaskItemChecklistTitle}
                           />
                         </td>
                       </tr>
