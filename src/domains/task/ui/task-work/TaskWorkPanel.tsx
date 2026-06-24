@@ -154,7 +154,8 @@ export default function TaskWorkPanel({
   users = [],
   canAddTaskItem = true,
   canCancelTaskItem = true,
-  onUpdateTaskItemChecklistTitle
+  onUpdateTaskItemChecklistTitle,
+  onDeleteTaskItemChecklist,
 }: {
   task: any;
   taskItems?: any[];
@@ -175,6 +176,7 @@ export default function TaskWorkPanel({
     checklistId: string,
     title: string,
   ) => Promise<void> | void;
+  onDeleteTaskItemChecklist?: (checklistId: string) => Promise<void> | void;
 }) {
   const previewState = useBusinessEntityPreview();
 
@@ -461,6 +463,7 @@ export default function TaskWorkPanel({
             onAddTaskItemChecklist={addChecklist}
             onToggleTaskItemChecklist={toggleChecklist}
             onUpdateTaskItemChecklistTitle={updateChecklistTitle}
+            onDeleteTaskItemChecklist={onDeleteTaskItemChecklist}
           />
         ))}
 

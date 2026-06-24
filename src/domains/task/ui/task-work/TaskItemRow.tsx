@@ -120,11 +120,20 @@ export default function TaskItemRow({
   const hasChecklists = checklistTotal > 0;
   const checklistProgress = checklistTotal ? checklistDone / checklistTotal : 0;
   const isChecklistOpen = Boolean(expanded) || isAddingChecklist;
+  const checklistDoneState =
+    hasChecklists &&
+    checklistTotal > 0 &&
+    checklistDone === checklistTotal;
 
-  const done = trackingExecutions.length
-    ? trackingExecutions.every(isBusinessDone)
-    : Boolean(item.isDone || item.status === "DONE");
+  const executionDoneState =
+    trackingExecutions.length > 0 &&
+    trackingExecutions.every(isBusinessDone);
 
+  const done =
+    Boolean(item.isDone) ||
+    String(item.status ?? "").toUpperCase() === "DONE" ||
+    checklistDoneState ||
+    executionDoneState;
   async function submitChecklist() {
     const clean = checklistTitle.trim();
     if (!clean) return;
@@ -355,8 +364,24 @@ export default function TaskItemRow({
             setChecklistTitle("");
             setIsAddingChecklist(false);
           }}
-          onToggleChecklist={onToggleTaskItemChecklist}
-          onUpdateChecklistTitle={onUpdateTaskItemChecklistTitle}
+          onToggleChecklist={async (checklistId, isDone) => {
+            const snapshot = localChecklists;
+
+            setLocalChecklists((prev) =>
+              prev.map((x) =>
+                x.id === checklistId
+                  ? { ...x, isDone }
+                  : x,
+              ),
+            );
+
+            try {
+              await onToggleTaskItemChecklist?.(checklistId, isDone);
+            } catch (error) {
+              setLocalChecklists(snapshot);
+              throw error;
+            }
+          }} onUpdateChecklistTitle={onUpdateTaskItemChecklistTitle}
         />
       ) : null}
     </div>
