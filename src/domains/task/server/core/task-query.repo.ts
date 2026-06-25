@@ -1,4 +1,4 @@
-import { Prisma, TaskStatus } from "@prisma/client";
+import { Prisma, TaskKind, TaskStatus } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
 import type { TaskListFilters, TaskViewKey } from "../task.types";
 import {
@@ -67,32 +67,67 @@ export async function listTasksRepo(
 }
 export async function countTaskViewsRepo(
   db: DB,
-  input: { userId: string; canViewAll?: boolean },
+  input: { userId: string; canViewAll?: boolean; kind?: TaskKind | "ALL" },
 ) {
   const client = dbOrTx(db);
-  const canViewAll = Boolean(input.canViewAll);
   const userId = input.userId;
 
   const openWhere: Prisma.TaskWhereInput = {
     status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] },
   };
 
+  const kindWhere: Prisma.TaskWhereInput =
+    input.kind && input.kind !== "ALL" ? { kind: input.kind } : {};
+
   const [mine, assigned, delegated, all] = await Promise.all([
     client.task.count({
-      where: { AND: [buildViewWhere("mine", userId), openWhere] },
+      where: { AND: [buildViewWhere("mine", userId), openWhere, kindWhere] },
     }),
     client.task.count({
-      where: { AND: [buildViewWhere("assigned", userId), openWhere] },
+      where: { AND: [buildViewWhere("assigned", userId), openWhere, kindWhere] },
     }),
     client.task.count({
-      where: { AND: [buildViewWhere("delegated", userId), openWhere] },
+      where: { AND: [buildViewWhere("delegated", userId), openWhere, kindWhere] },
     }),
     client.task.count({
-      where: { AND: [buildViewWhere("all", userId), openWhere] },
+      where: { AND: [buildViewWhere("all", userId), openWhere, kindWhere] },
     }),
   ]);
 
   return { mine, assigned, delegated, all };
+}
+
+export async function countTaskKindsRepo(
+  db: DB,
+  input: { userId: string; canViewAll?: boolean; view?: TaskViewKey },
+) {
+  const client = dbOrTx(db);
+  const userId = input.userId;
+
+  const baseWhere: Prisma.TaskWhereInput = {
+    AND: [
+      buildViewWhere(input.view || "all", userId),
+      { status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] } },
+    ],
+  };
+
+  const [all, operation, business, service, personal, free] = await Promise.all([
+    client.task.count({ where: baseWhere }),
+    client.task.count({ where: { AND: [baseWhere, { kind: TaskKind.OPERATION }] } }),
+    client.task.count({ where: { AND: [baseWhere, { kind: TaskKind.BUSINESS }] } }),
+    client.task.count({ where: { AND: [baseWhere, { kind: TaskKind.SERVICE }] } }),
+    client.task.count({ where: { AND: [baseWhere, { kind: TaskKind.PERSONAL }] } }),
+    client.task.count({ where: { AND: [baseWhere, { kind: TaskKind.FREE }] } }),
+  ]);
+
+  return {
+    kind_ALL: all,
+    kind_OPERATION: operation,
+    kind_BUSINESS: business,
+    kind_SERVICE: service,
+    kind_PERSONAL: personal,
+    kind_FREE: free,
+  };
 }
 
 export async function countTaskDueBucketsRepo(

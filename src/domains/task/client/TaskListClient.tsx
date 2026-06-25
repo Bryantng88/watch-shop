@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { TaskKind, TaskPriority, TaskStatus } from "@prisma/client";
+import SegmentTabs from "@/domains/shared/ui/list/SegmentTabs";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import {
@@ -25,11 +26,10 @@ import TaskListFilters, {
 } from "../ui/list/TaskListFilters";
 import TaskListTable from "../ui/list/TaskListTable";
 import TaskListToolbar from "../ui/list/TaskListToolbar";
-import TaskListViewTabs, {
-  normalizeTaskView,
-} from "../ui/list/TaskListViewTabs";
+import { normalizeTaskView } from "../ui/list/TaskListViewTabs";
 import { updateTaskItemAction } from "@/domains/task/actions/task.actions";
 import { deleteTaskItemChecklistAction } from "../actions/task.actions";
+import { TASK_KIND_LABEL } from "../utils/task-labels";
 type Props = {
   items: TaskWithRelations[];
   total: number;
@@ -48,6 +48,27 @@ function firstRaw(value: string | string[] | undefined, fallback = "") {
     ? String(value[0] ?? fallback)
     : String(value ?? fallback);
 }
+
+
+type TaskKindFilterKey = "ALL" | TaskKind;
+
+function normalizeTaskKind(value?: string | null): TaskKindFilterKey {
+  if (value === TaskKind.OPERATION) return TaskKind.OPERATION;
+  if (value === TaskKind.BUSINESS) return TaskKind.BUSINESS;
+  if (value === TaskKind.SERVICE) return TaskKind.SERVICE;
+  if (value === TaskKind.PERSONAL) return TaskKind.PERSONAL;
+  if (value === TaskKind.FREE) return TaskKind.FREE;
+  return "ALL";
+}
+
+const TASK_KIND_TAB_ITEMS: Array<{ key: TaskKindFilterKey; label: string; countKey: string }> = [
+  { key: "ALL", label: "Tất cả", countKey: "kind_ALL" },
+  { key: TaskKind.OPERATION, label: TASK_KIND_LABEL.OPERATION, countKey: "kind_OPERATION" },
+  { key: TaskKind.BUSINESS, label: TASK_KIND_LABEL.BUSINESS, countKey: "kind_BUSINESS" },
+  { key: TaskKind.SERVICE, label: TASK_KIND_LABEL.SERVICE, countKey: "kind_SERVICE" },
+  { key: TaskKind.PERSONAL, label: TASK_KIND_LABEL.PERSONAL, countKey: "kind_PERSONAL" },
+  { key: TaskKind.FREE, label: TASK_KIND_LABEL.FREE, countKey: "kind_FREE" },
+];
 
 function buildHref(
   pathname: string,
@@ -74,6 +95,9 @@ export default function TaskListClient(props: Props) {
 
   const currentView = normalizeTaskView(
     sp.get("view") || firstRaw(props.rawSearchParams?.view, "all"),
+  );
+  const currentKind = normalizeTaskKind(
+    sp.get("kind") || firstRaw(props.rawSearchParams?.kind, "ALL"),
   );
 
   const [filters, setFilters] = useState<TaskListFiltersValue>({
@@ -113,6 +137,11 @@ export default function TaskListClient(props: Props) {
 
   function setView(view: TaskViewKey) {
     navigate({ view: view === "all" ? null : view, page: "1" });
+  }
+
+  function setTaskKind(kind: TaskKindFilterKey) {
+    setFilters((prev) => ({ ...prev, kind }));
+    navigate({ kind: kind === "ALL" ? null : kind, page: "1" });
   }
   async function handleUpdateTaskItem(input: {
     itemId: string;
@@ -291,11 +320,14 @@ export default function TaskListClient(props: Props) {
       <TaskListToolbar total={props.total} onCreate={() => openCreate()} />
 
       <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
-        <TaskListViewTabs
-          value={currentView}
-          counts={props.counts}
-          canViewAll={props.canViewAll}
-          onChange={setView}
+        <SegmentTabs<TaskKindFilterKey>
+          value={currentKind}
+          onChange={setTaskKind}
+          items={TASK_KIND_TAB_ITEMS.map((item) => ({
+            key: item.key,
+            label: item.label,
+            count: props.counts[item.countKey] ?? 0,
+          }))}
         />
 
         <div className="pt-4">
@@ -315,6 +347,10 @@ export default function TaskListClient(props: Props) {
         totalPages={props.totalPages}
         expandedTaskId={expandedTaskId}
         onToggleExpand={toggleExpand}
+        currentView={currentView}
+        counts={props.counts}
+        canViewAll={props.canViewAll}
+        onViewChange={setView}
         onPage={(page) => navigate({ page: String(page) })}
         onStatus={changeStatus}
         onEdit={openEdit}

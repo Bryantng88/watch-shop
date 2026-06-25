@@ -28,5 +28,5 @@ export default function TaskListViewTabs({
     { key: "delegated" as TaskViewKey, label: "Tôi đã giao", count: counts.delegated ?? 0 },
   ];
 
-  return <SegmentTabs<TaskViewKey> value={value} onChange={onChange} items={items} />;
+  return <SegmentTabs<TaskViewKey> value={value} onChange={onChange} items={items} variant="chips" />;
 }

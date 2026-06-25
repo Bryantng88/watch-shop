@@ -6,6 +6,7 @@ import { prisma } from "@/server/db/client";
 import { linkTaskExecution, listTaskExecutions } from "../server/execution/task-execution.service";
 import type { LinkTaskExecutionInput } from "../server/execution/task-execution.types";
 import { TaskExecutionActionType, TaskExecutionTargetType } from "@prisma/client";
+import { TASK_EXECUTION_INCLUDE } from "../server/core/task.repo.shared";
 async function getTaskAuth() {
   return requirePermission("TASK_VIEW");
 }
@@ -82,9 +83,7 @@ export async function linkTaskExecutionsAction(input: {
       targetId: { in: targetIds },
       actionType: TaskExecutionActionType.LINKED,
     },
-    select: {
-      targetId: true,
-    },
+    select: { targetId: true },
   });
 
   const existingIds = new Set(existing.map((item) => item.targetId));
@@ -95,10 +94,11 @@ export async function linkTaskExecutionsAction(input: {
       ok: true,
       count: 0,
       skipped: targetIds.length,
+      executions: [],
     };
   }
 
-  const executions = await prisma.$transaction(
+  const createdRows = await prisma.$transaction(
     nextTargetIds.map((targetId) =>
       prisma.taskExecution.create({
         data: {
@@ -111,11 +111,17 @@ export async function linkTaskExecutionsAction(input: {
           metadataJson: input.metadataJson ?? null,
           createdByUserId,
         } as any,
+        select: { id: true },
       }),
     ),
   );
 
-
+  const executions = await prisma.taskExecution.findMany({
+    where: {
+      id: { in: createdRows.map((row) => row.id) },
+    },
+    include: TASK_EXECUTION_INCLUDE,
+  });
 
   return {
     ok: true,

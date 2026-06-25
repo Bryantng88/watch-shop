@@ -3,6 +3,7 @@ import type { DB } from "@/server/db/client";
 import {
   completeRelatedTasksRepo,
   countTaskDueBucketsRepo,
+  countTaskKindsRepo,
   countTaskViewsRepo,
   createTaskRepo,
   ensureSystemTaskRepo,
@@ -162,18 +163,23 @@ export async function getTaskListPageData(
   assertUser(userId);
 
   const canViewAll = authCanViewAllTasks(input.auth);
-  const view = input.filters.view || "mine";
+  const view = input.filters.view || "all";
+  const kind = input.filters.kind || "ALL";
 
-  const [list, counts, dueCounts, users] = await Promise.all([
+  const [list, viewCounts, kindCounts, dueCounts, users] = await Promise.all([
     listTasksRepo(db, { userId, canViewAll, filters: input.filters }),
-    countTaskViewsRepo(db, { userId, canViewAll }),
+    countTaskViewsRepo(db, { userId, canViewAll, kind }),
+    countTaskKindsRepo(db, { userId, canViewAll, view }),
     countTaskDueBucketsRepo(db, { userId, canViewAll, view }),
     listAssignableUsersRepo(db),
   ]);
 
   return {
     ...list,
-    counts,
+    counts: {
+      ...viewCounts,
+      ...kindCounts,
+    },
     dueCounts,
     users,
     currentUserId: userId,

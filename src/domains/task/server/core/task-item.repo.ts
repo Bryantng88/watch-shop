@@ -83,14 +83,14 @@ export async function setTaskItemDoneRepo(
 export async function deleteTaskItemRepo(db: DB, itemId: string) {
   const client = dbOrTx(db);
 
-  await client.taskExecution.updateMany({
+  await client.taskExecution.deleteMany({
     where: { taskItemId: itemId },
-    data: { taskItemId: null },
   });
 
-  return client.taskItem.delete({ where: { id: itemId } });
+  return client.taskItem.delete({
+    where: { id: itemId },
+  });
 }
-
 export async function createTaskItemChecklistRepo(
   db: DB,
   input: CreateTaskItemChecklistInput,

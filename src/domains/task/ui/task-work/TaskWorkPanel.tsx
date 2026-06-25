@@ -11,6 +11,10 @@ import TaskItemRow from "./TaskItemRow";
 import TaskExecutionGroup from "./TaskExecutionGroup";
 import { splitExecutions } from "./taskWorkPanel.helpers";
 
+import TaskItemFilterBar, {
+  type TaskItemChecklistFilter,
+} from "./TaskItemFilterBar";
+
 type UserOption = {
   id: string;
   name?: string | null;
@@ -33,6 +37,11 @@ type UpdateTaskItemInput = {
   dueAt?: string | null;
 };
 
+
+
+const INITIAL_VISIBLE_LIMIT = 5;
+const LOAD_MORE_STEP = 5;
+
 function tempId(prefix: string) {
   return `temp-${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -44,6 +53,18 @@ function findUser(users: UserOption[], id?: string | null) {
 
 function isTempId(id?: string | null) {
   return String(id || "").startsWith("temp-");
+}
+
+function userLabel(user?: UserOption | null) {
+  return user?.name || user?.email || "Không rõ";
+}
+
+function priorityLabel(priority?: TaskPriority | null) {
+  if (priority === TaskPriority.LOW) return "Thấp";
+  if (priority === TaskPriority.MEDIUM) return "Vừa";
+  if (priority === TaskPriority.HIGH) return "Cao";
+  if (priority === TaskPriority.URGENT) return "Gấp";
+  return "Không rõ";
 }
 
 function TaskItemCreateBar({
@@ -144,6 +165,8 @@ function TaskItemCreateBar({
   );
 }
 
+
+
 export default function TaskWorkPanel({
   task,
   taskItems = [],
@@ -187,15 +210,28 @@ export default function TaskWorkPanel({
   onTaskItemsChange?: (taskId: string, items: any[]) => void;
 }) {
   const previewState = useBusinessEntityPreview();
-
   const [pending, setPending] = useState(false);
   const [localItems, setLocalItems] = useState<any[]>(taskItems ?? []);
   const [managingItem, setManagingItem] = useState<any | null>(null);
-  const [expandedItemIds, setExpandedItemIds] = useState<Record<string, boolean>>({});
+  const [expandedItemIds, setExpandedItemIds] = useState<
+    Record<string, boolean>
+  >({});
 
+  const [assigneeFilter, setAssigneeFilter] = useState("ALL");
+  const [priorityFilter, setPriorityFilter] = useState<TaskPriority | "ALL">(
+    "ALL",
+  );
+  const [checklistFilter, setChecklistFilter] =
+    useState<TaskItemChecklistFilter>("ALL");
+  const [visibleLimit, setVisibleLimit] = useState(INITIAL_VISIBLE_LIMIT);
+  const [showCreateBar, setShowCreateBar] = useState(false);
   useEffect(() => {
     setLocalItems(taskItems ?? []);
   }, [taskItems]);
+
+  useEffect(() => {
+    setVisibleLimit(INITIAL_VISIBLE_LIMIT);
+  }, [assigneeFilter, priorityFilter, checklistFilter]);
 
   function commitLocalItems(updater: (prev: any[]) => any[]) {
     setLocalItems((prev) => {
@@ -205,10 +241,55 @@ export default function TaskWorkPanel({
     });
   }
 
+  const filteredItems = useMemo(() => {
+    return localItems.filter((item) => {
+      if (assigneeFilter === "UNASSIGNED") {
+        if (item.assignedToUserId) return false;
+      } else if (assigneeFilter !== "ALL") {
+        if (item.assignedToUserId !== assigneeFilter) return false;
+      }
+
+      if (priorityFilter !== "ALL" && item.priority !== priorityFilter) {
+        return false;
+      }
+
+      const checklistCount = Array.isArray(item.checklists)
+        ? item.checklists.length
+        : 0;
+
+      if (checklistFilter === "HAS_CHECKLIST" && checklistCount <= 0) {
+        return false;
+      }
+
+      if (checklistFilter === "NO_CHECKLIST" && checklistCount > 0) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [localItems, assigneeFilter, priorityFilter, checklistFilter]);
+
+  const visibleItems = useMemo(
+    () => filteredItems.slice(0, visibleLimit),
+    [filteredItems, visibleLimit],
+  );
+
+  const hasMoreItems = visibleLimit < filteredItems.length;
+  const hasCollapsedItems =
+    visibleLimit > INITIAL_VISIBLE_LIMIT &&
+    filteredItems.length > INITIAL_VISIBLE_LIMIT;
+
   const orphanExecutions = useMemo(
     () => splitExecutions(executions.filter((x) => !x.taskItemId)),
     [executions],
   );
+
+  function resetTaskItemFilters() {
+    setAssigneeFilter("ALL");
+    setPriorityFilter("ALL");
+    setChecklistFilter("ALL");
+    setVisibleLimit(INITIAL_VISIBLE_LIMIT);
+  }
 
   async function addTaskItem(input: TaskItemInput) {
     const id = tempId("task-item");
@@ -598,57 +679,89 @@ export default function TaskWorkPanel({
 
   return (
     <section
-      className="border-y border-l-4 border-slate-200 border-l-slate-400 bg-slate-100 px-4 py-4"
+      className="border-y border-slate-200 bg-slate-100 px-4 py-4"
       onClick={(event) => event.stopPropagation()}
     >
-      {canAddTaskItem ? (
-        <TaskItemCreateBar
-          task={task}
+      <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
+        <TaskItemFilterBar
           users={users}
-          pending={pending}
-          onSubmit={addTaskItem}
-        />
-      ) : null}
-
-      <div className="space-y-2">
-        {localItems.map((item) => (
-          <TaskItemRow
-            key={item.id}
-            item={item}
-            canCancel={canCancelTaskItem}
-            onManage={setManagingItem}
-            onToggle={toggleItem}
-            onDelete={deleteItem}
-            onPreview={previewState.openPreview}
-            expanded={Boolean(expandedItemIds[item.id])}
-            onToggleExpand={(row) =>
-              setExpandedItemIds((prev) => ({
-                ...prev,
-                [row.id]: !prev[row.id],
-              }))
-            }
-            onAddTaskItemChecklist={addChecklist}
-            onToggleTaskItemChecklist={toggleChecklist}
-            onUpdateTaskItemChecklistTitle={updateChecklistTitle}
-            onDeleteTaskItemChecklist={deleteChecklist}
-          />
-        ))}
-
-        <TaskExecutionGroup
-          serviceRequests={orphanExecutions.serviceRequests}
-          technicalIssues={orphanExecutions.technicalIssues}
-          otherExecutions={orphanExecutions.otherExecutions}
-          onPreview={previewState.openPreview}
+          assigneeFilter={assigneeFilter}
+          priorityFilter={priorityFilter}
+          checklistFilter={checklistFilter}
+          total={localItems.length}
+          filteredTotal={filteredItems.length}
+          visibleCount={filteredItems.length}
+          canAddTaskItem={canAddTaskItem}
+          showCreateBar={showCreateBar}
+          onToggleCreateBar={() => setShowCreateBar((prev) => !prev)}
+          onAssigneeChange={setAssigneeFilter}
+          onPriorityChange={setPriorityFilter}
+          onChecklistChange={setChecklistFilter}
+          onReset={resetTaskItemFilters}
         />
 
-        {!localItems.length &&
-          !orphanExecutions.serviceRequests.length &&
-          !orphanExecutions.technicalIssues.length &&
-          !orphanExecutions.otherExecutions.length ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-4 text-sm text-slate-400">
-            Chưa có task item hoặc nghiệp vụ nào.
+        {showCreateBar ? (
+          <div className="border-b border-slate-100 bg-slate-50 px-4 pt-3">
+            <TaskItemCreateBar
+              task={task}
+              users={users}
+              pending={pending}
+              onSubmit={async (input) => {
+                await addTaskItem(input);
+                setShowCreateBar(false);
+              }}
+            />
           </div>
         ) : null}
+
+        <div className="max-h-[430px] overflow-y-auto bg-slate-50/70 px-4 py-3">
+          <div className="space-y-2">
+            {filteredItems.map((item) => (
+              <TaskItemRow
+                key={item.id}
+                item={item}
+                canCancel={canCancelTaskItem}
+                onManage={setManagingItem}
+                onToggle={toggleItem}
+                onDelete={deleteItem}
+                onPreview={previewState.openPreview}
+                expanded={Boolean(expandedItemIds[item.id])}
+                onToggleExpand={(row) =>
+                  setExpandedItemIds((prev) => ({
+                    ...prev,
+                    [row.id]: !prev[row.id],
+                  }))
+                }
+                onAddTaskItemChecklist={addChecklist}
+                onToggleTaskItemChecklist={toggleChecklist}
+                onUpdateTaskItemChecklistTitle={updateChecklistTitle}
+                onDeleteTaskItemChecklist={deleteChecklist}
+              />
+            ))}
+
+            {localItems.length > 0 && filteredItems.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-4 text-sm text-slate-400">
+                Không có task item phù hợp với bộ lọc.
+              </div>
+            ) : null}
+
+            <TaskExecutionGroup
+              serviceRequests={orphanExecutions.serviceRequests}
+              technicalIssues={orphanExecutions.technicalIssues}
+              otherExecutions={orphanExecutions.otherExecutions}
+              onPreview={previewState.openPreview}
+            />
+
+            {!localItems.length &&
+              !orphanExecutions.serviceRequests.length &&
+              !orphanExecutions.technicalIssues.length &&
+              !orphanExecutions.otherExecutions.length ? (
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-4 text-sm text-slate-400">
+                Chưa có task item hoặc nghiệp vụ nào.
+              </div>
+            ) : null}
+          </div>
+        </div>
       </div>
 
       <SubtaskManageModal
@@ -659,14 +772,53 @@ export default function TaskWorkPanel({
         canEdit={canAddTaskItem}
         onClose={() => setManagingItem(null)}
         onSave={updateItem}
-        onLinked={(execution) => {
-          if (execution?.taskItemId) {
+        onLinked={(payload) => {
+          const taskItemId = payload?.taskItemId;
+          const executions = Array.isArray(payload?.executions)
+            ? payload.executions
+            : payload?.id
+              ? [payload]
+              : [];
+
+          if (!taskItemId) {
+            setManagingItem(null);
+            return;
+          }
+
+          if (payload?.removedExecutionId) {
             commitLocalItems((prev) =>
               prev.map((item) =>
-                item.id === execution.taskItemId
+                item.id === taskItemId
                   ? {
                     ...item,
-                    executions: [...(item.executions ?? []), execution],
+                    executions: (item.executions ?? []).filter(
+                      (execution: any) =>
+                        execution.id !== payload.removedExecutionId,
+                    ),
+                  }
+                  : item,
+              ),
+            );
+
+            setManagingItem(null);
+            return;
+          }
+
+          if (executions.length) {
+            commitLocalItems((prev) =>
+              prev.map((item) =>
+                item.id === taskItemId
+                  ? {
+                    ...item,
+                    executions: [
+                      ...(item.executions ?? []),
+                      ...executions.filter(
+                        (next: any) =>
+                          !(item.executions ?? []).some(
+                            (old: any) => old.id === next.id,
+                          ),
+                      ),
+                    ],
                   }
                   : item,
               ),

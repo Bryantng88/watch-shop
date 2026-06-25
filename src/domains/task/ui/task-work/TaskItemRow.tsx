@@ -179,6 +179,7 @@ export default function TaskItemRow({
 
     await onAddTaskItemChecklist?.(item.id, clean);
   }
+
   function openAddChecklist() {
     if (isPending) return;
 
@@ -193,12 +194,15 @@ export default function TaskItemRow({
 
   return (
     <div
+      onClick={() => {
+        if (!isPending) onManage(item);
+      }}
       className={cn(
-        "relative rounded-[24px] border border-slate-200/80 bg-white px-4 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)]",
-        isPending && "opacity-75",
+        "relative w-full min-w-0 max-w-full cursor-pointer rounded-[24px] border border-slate-200/80 bg-white px-4 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)] hover:border-slate-300 hover:shadow-[0_10px_28px_rgba(15,23,42,0.07)]",
+        isPending && "cursor-not-allowed opacity-75",
       )}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex w-full min-w-0 items-center gap-3">
         <button
           type="button"
           disabled={isPending}
@@ -248,7 +252,7 @@ export default function TaskItemRow({
           )}
         </button>
 
-        <div className="min-w-0 w-[250px] shrink-0">
+        <div className="w-[250px] min-w-0 shrink-0">
           <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
@@ -311,7 +315,7 @@ export default function TaskItemRow({
         </div>
 
         {hasExecutions ? (
-          <div className="ml-auto min-w-0 flex-1 border-l border-slate-200 pl-3">
+          <div className="ml-auto min-w-0 flex-1 overflow-hidden border-l border-slate-200 pl-3">
             <ExecutionMiniInlineList
               items={itemExecutions.grouped}
               onPreview={onPreview}
@@ -321,7 +325,7 @@ export default function TaskItemRow({
             />
           </div>
         ) : (
-          <div className="ml-auto min-w-0 flex-1" />
+          <div className="ml-auto min-w-0 flex-1 overflow-hidden" />
         )}
 
         <div className="relative shrink-0">

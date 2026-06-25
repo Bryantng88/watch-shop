@@ -14,6 +14,8 @@ import RowActions from "@/domains/shared/ui/list/RowActions";
 import type { TaskWithRelations } from "../../server/core/task.repo";
 import TaskWorkPanel from "../task-work/TaskWorkPanel";
 import TaskPagination from "./TaskPagination";
+import TaskListViewTabs from "./TaskListViewTabs";
+import type { TaskViewKey } from "../../server/task.types";
 import {
   BusinessEntityPreviewModal,
   useBusinessEntityPreview,
@@ -155,12 +157,20 @@ export default function TaskListTable({
   onAddTaskItemChecklist,
   onToggleTaskItemChecklist,
   onUpdateTaskItemChecklistTitle,
+  currentView,
+  counts,
+  canViewAll,
+  onViewChange,
 
 }: {
   items: TaskWithRelations[];
   users?: UserOption[];
   page: number;
   totalPages: number;
+  currentView: TaskViewKey;
+  counts: Record<string, number>;
+  canViewAll?: boolean;
+  onViewChange: (value: TaskViewKey) => void;
   onPage: (page: number) => void;
   onStatus: (row: TaskWithRelations, status: TaskStatus) => void;
   onEdit: (row: TaskWithRelations) => void;
@@ -213,6 +223,24 @@ export default function TaskListTable({
   }, [items]);
   return (
     <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-100 px-4 py-3 sm:px-5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="text-sm font-semibold text-slate-950">Danh sách task</div>
+            <div className="mt-1 text-xs text-slate-500">
+              Lọc theo góc nhìn xử lý task.
+            </div>
+          </div>
+
+          <TaskListViewTabs
+            value={currentView}
+            counts={counts}
+            canViewAll={canViewAll}
+            onChange={onViewChange}
+          />
+        </div>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-100 text-sm">
           <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
