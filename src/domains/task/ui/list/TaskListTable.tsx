@@ -116,15 +116,24 @@ function isExecutionDone(execution: any) {
 }
 
 function isTaskItemDone(item: any) {
-  const executions = item.executions ?? [];
-  const trackingExecutions = executions.filter(isTrackingExecution);
+  const checklists = item.checklists ?? [];
 
-  if (trackingExecutions.length > 0) {
-    return trackingExecutions.every(isExecutionDone);
-  }
+  const checklistDone =
+    checklists.length > 0 &&
+    checklists.every((x: any) => Boolean(x.isDone));
+
+  const trackingExecutions = (item.executions ?? []).filter(isTrackingExecution);
+
+  const executionDone =
+    trackingExecutions.length > 0 &&
+    trackingExecutions.every(isExecutionDone);
 
   return (
-    Boolean(item.isDone) || String(item.status ?? "").toUpperCase() === "DONE"
+    Boolean(item.isDone) ||
+    String(item.status ?? "").toUpperCase() === "DONE" ||
+    String(item.status ?? "").toUpperCase() === "COMPLETED" ||
+    checklistDone ||
+    executionDone
   );
 }
 
@@ -155,6 +164,7 @@ export default function TaskListTable({
   onAddTaskItemChecklist,
   onToggleTaskItemChecklist,
   onUpdateTaskItemChecklistTitle,
+  onDeleteTaskItemChecklist,
 }: {
   items: TaskWithRelations[];
   users?: UserOption[];
@@ -191,6 +201,7 @@ export default function TaskListTable({
     checklistId: string,
     title: string,
   ) => Promise<void> | void;
+  onDeleteTaskItemChecklist?: (checklistId: string) => Promise<void> | void;
 }) {
   const previewState = useBusinessEntityPreview();
 
@@ -388,6 +399,7 @@ export default function TaskListTable({
                             onUpdateTaskItemChecklistTitle={
                               onUpdateTaskItemChecklistTitle
                             }
+                            onDeleteTaskItemChecklist={onDeleteTaskItemChecklist}
                           />
                         </td>
                       </tr>

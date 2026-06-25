@@ -20,11 +20,17 @@ export async function listTasksRepo(
   const client = dbOrTx(db);
   const page = Math.max(1, Number(input.filters.page || 1));
   const pageSize = Math.min(100, Math.max(10, Number(input.filters.pageSize || 25)));
-  const view = input.filters.view || "mine";
+
+  // Quan trọng: default phải là all, không phải mine
+  const view = input.filters.view || "all";
+
   const canViewAll = Boolean(input.canViewAll);
 
   const where: Prisma.TaskWhereInput = {
-    AND: [buildViewWhere(view, input.userId, canViewAll), buildFilterWhere(input.filters)],
+    AND: [
+      buildViewWhere(view, input.userId),
+      buildFilterWhere(input.filters),
+    ],
   };
 
   const [items, total] = await Promise.all([
@@ -43,8 +49,13 @@ export async function listTasksRepo(
     client.task.count({ where }),
   ]);
 
-  const hydratedItems = await Promise.all(items.map((item) => hydrateTaskBusinessLinks(db, item)));
-  const finalItems = hydratedItems.map((item) => applyTaskRowAccess(item, input.userId, canViewAll));
+  const hydratedItems = await Promise.all(
+    items.map((item) => hydrateTaskBusinessLinks(db, item)),
+  );
+
+  const finalItems = hydratedItems.map((item) =>
+    applyTaskRowAccess(item, input.userId, canViewAll),
+  );
 
   return {
     items: finalItems,
@@ -54,7 +65,6 @@ export async function listTasksRepo(
     totalPages: Math.max(1, Math.ceil(total / pageSize)),
   };
 }
-
 export async function countTaskViewsRepo(
   db: DB,
   input: { userId: string; canViewAll?: boolean },
@@ -68,10 +78,18 @@ export async function countTaskViewsRepo(
   };
 
   const [mine, assigned, delegated, all] = await Promise.all([
-    client.task.count({ where: { AND: [buildViewWhere("mine", userId, canViewAll), openWhere] } }),
-    client.task.count({ where: { AND: [buildViewWhere("assigned", userId, canViewAll), openWhere] } }),
-    client.task.count({ where: { AND: [buildViewWhere("delegated", userId, canViewAll), openWhere] } }),
-    client.task.count({ where: { AND: [buildViewWhere("all", userId, canViewAll), openWhere] } }),
+    client.task.count({
+      where: { AND: [buildViewWhere("mine", userId), openWhere] },
+    }),
+    client.task.count({
+      where: { AND: [buildViewWhere("assigned", userId), openWhere] },
+    }),
+    client.task.count({
+      where: { AND: [buildViewWhere("delegated", userId), openWhere] },
+    }),
+    client.task.count({
+      where: { AND: [buildViewWhere("all", userId), openWhere] },
+    }),
   ]);
 
   return { mine, assigned, delegated, all };
@@ -84,11 +102,10 @@ export async function countTaskDueBucketsRepo(
   const client = dbOrTx(db);
   const base: Prisma.TaskWhereInput = {
     AND: [
-      buildViewWhere(input.view || "mine", input.userId, Boolean(input.canViewAll)),
+      buildViewWhere(input.view || "all", input.userId),
       { status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] } },
     ],
   };
-
   const today = startOfToday();
   const tomorrow = startOfTomorrow();
   const weekEnd = endOfThisWeek();

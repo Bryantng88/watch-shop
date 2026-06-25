@@ -262,9 +262,18 @@ export async function deleteTaskItemChecklistAction(checklistId: string) {
   const cleanId = String(checklistId || "").trim();
   if (!cleanId) throw new Error("Missing checklist id");
 
+  const existing = await prisma.taskItemChecklist.findUnique({
+    where: { id: cleanId },
+    select: { id: true },
+  });
+
+  if (!existing) {
+    return { ok: true, checklist: null, alreadyDeleted: true };
+  }
+
   const checklist = await deleteTaskItemChecklistRepo(prisma, cleanId);
 
-  return { ok: true, checklist };
+  return { ok: true, checklist, alreadyDeleted: false };
 }
 export async function quickCreateTaskItemAction(
   input: {

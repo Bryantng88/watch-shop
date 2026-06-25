@@ -23,6 +23,17 @@ export const USER_SELECT = {
   email: true,
 } satisfies Prisma.UserSelect;
 
+
+const SHARED_TASK_KINDS: TaskKind[] = [
+  TaskKind.OPERATION,
+  TaskKind.BUSINESS,
+  TaskKind.SERVICE,
+];
+
+export function isSharedTaskKind(kind?: TaskKind | null) {
+  return kind ? SHARED_TASK_KINDS.includes(kind) : false;
+}
+
 export const TASK_EXECUTION_INCLUDE = {
   createdByUser: { select: USER_SELECT },
   serviceRequest: {
@@ -238,11 +249,17 @@ export function applyTaskRowAccess(
   currentUserId: string,
   canViewAll = false,
 ) {
+  const isSharedTask = [
+    TaskKind.OPERATION,
+    TaskKind.BUSINESS,
+    TaskKind.SERVICE,
+  ].includes(task.kind);
+
   const isOwner =
     canViewAll ||
+    isSharedTask ||
     task.assignedToUserId === currentUserId ||
     task.createdByUserId === currentUserId;
-
   if (isOwner) {
     return { ...task, rowAccess: "OWNER", visibleTaskItemIds: null };
   }
@@ -268,35 +285,33 @@ export function buildAccessWhere(
 
   return {
     OR: [
+      { kind: { in: SHARED_TASK_KINDS } },
       { createdByUserId: userId },
       { assignedToUserId: userId },
       assignedTaskItemWhere(userId),
     ],
   };
 }
-
 export function buildViewWhere(
-  view: TaskViewKey,
+  view: string,
   userId: string,
-  canViewAll: boolean,
 ): Prisma.TaskWhereInput {
-  const taskItemWhere = assignedTaskItemWhere(userId);
-
-  if (view === "all") return buildAccessWhere(userId, canViewAll);
-
   if (view === "mine") {
-    return {
-      OR: [{ createdByUserId: userId }, { assignedToUserId: userId }, taskItemWhere],
-    };
+    return { createdByUserId: userId };
   }
 
   if (view === "assigned") {
-    return { OR: [{ assignedToUserId: userId }, taskItemWhere] };
+    return { assignedToUserId: userId };
   }
 
-  if (view === "delegated") return { createdByUserId: userId };
+  if (view === "delegated") {
+    return {
+      createdByUserId: userId,
+      assignedToUserId: { not: userId },
+    };
+  }
 
-  return buildAccessWhere(userId, canViewAll);
+  return {};
 }
 
 export function buildDueWhere(due?: TaskDueKey): Prisma.TaskWhereInput {
@@ -320,59 +335,47 @@ export function buildDueWhere(due?: TaskDueKey): Prisma.TaskWhereInput {
 }
 
 export function buildFilterWhere(filters: TaskListFilters): Prisma.TaskWhereInput {
-  const where: Prisma.TaskWhereInput = {};
-  const q = filters.q?.trim();
+  const AND: Prisma.TaskWhereInput[] = [];
 
+  const q = String(filters.q || "").trim();
   if (q) {
-    where.OR = [
-      { title: { contains: q, mode: "insensitive" } },
-      { description: { contains: q, mode: "insensitive" } },
-      { order: { refNo: { contains: q, mode: "insensitive" } } },
-      { shipment: { refNo: { contains: q, mode: "insensitive" } } },
-      { serviceRequest: { refNo: { contains: q, mode: "insensitive" } } },
-      { payment: { refNo: { contains: q, mode: "insensitive" } } },
-      { watch: { product: { title: { contains: q, mode: "insensitive" } } } },
-      { watch: { product: { sku: { contains: q, mode: "insensitive" } } } },
-      { workCase: { refNo: { contains: q, mode: "insensitive" } } },
-      { workCase: { title: { contains: q, mode: "insensitive" } } },
-      {
-        taskItems: {
-          some: {
-            OR: [
-              { title: { contains: q, mode: "insensitive" } },
-              { note: { contains: q, mode: "insensitive" } },
-            ],
-          },
-        },
+    AND.push({
+      OR: [
+        { title: { contains: q, mode: "insensitive" } },
+        { description: { contains: q, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  const status = String(filters.status || "OPEN").toUpperCase();
+
+  if (status === "OPEN") {
+    AND.push({
+      status: {
+        in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS],
       },
-    ];
+    });
+  } else if (status && status !== "ALL") {
+    AND.push({
+      status: status as TaskStatus,
+    });
   }
 
-  if (filters.status && filters.status !== "ALL") {
-    where.status =
-      filters.status === "OPEN"
-        ? { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] }
-        : filters.status;
+  const priority = String(filters.priority || "ALL").toUpperCase();
+  if (priority && priority !== "ALL") {
+    AND.push({
+      priority: priority as TaskPriority,
+    });
   }
 
-  if (filters.priority && filters.priority !== "ALL") {
-    where.priority = filters.priority as TaskPriority;
+  const kind = String(filters.kind || "ALL").toUpperCase();
+  if (kind && kind !== "ALL") {
+    AND.push({
+      kind: kind as TaskKind,
+    });
   }
 
-  if (filters.kind && filters.kind !== "ALL") {
-    where.kind = filters.kind;
-  }
-
-  if (filters.periodType && filters.periodType !== "ALL") {
-    where.periodType = filters.periodType;
-  }
-
-  if (filters.periodKey) {
-    where.periodKey = filters.periodKey;
-  }
-
-  const dueWhere = buildDueWhere(filters.due);
-  return Object.keys(dueWhere).length ? { AND: [where, dueWhere] } : where;
+  return AND.length ? { AND } : {};
 }
 
 export function createLinkData(

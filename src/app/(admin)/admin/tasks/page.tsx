@@ -28,7 +28,7 @@ export default async function AdminTasksPage(props: PageProps) {
     const data = await getTaskListPageData(prisma, {
         auth,
         filters: {
-            view: (first(searchParams.view) || "mine") as TaskViewKey,
+            view: (first(searchParams.view) || "all") as TaskViewKey,
             q: first(searchParams.q) || "",
             status: (first(searchParams.status) || "OPEN") as
                 | TaskStatus
