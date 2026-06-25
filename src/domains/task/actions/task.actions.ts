@@ -221,7 +221,6 @@ export async function createTaskItemChecklistAction(input: {
 
   return { ok: true, checklist };
 }
-
 export async function changeTaskItemChecklistDoneAction(
   checklistId: string,
   isDone: boolean,
@@ -256,25 +255,7 @@ export async function changeTaskItemChecklistDoneAction(
   return { ok: true, checklist };
 }
 
-export async function deleteTaskItemChecklistAction(checklistId: string) {
-  await getTaskAuth();
 
-  const cleanId = String(checklistId || "").trim();
-  if (!cleanId) throw new Error("Missing checklist id");
-
-  const existing = await prisma.taskItemChecklist.findUnique({
-    where: { id: cleanId },
-    select: { id: true },
-  });
-
-  if (!existing) {
-    return { ok: true, checklist: null, alreadyDeleted: true };
-  }
-
-  const checklist = await deleteTaskItemChecklistRepo(prisma, cleanId);
-
-  return { ok: true, checklist, alreadyDeleted: false };
-}
 export async function quickCreateTaskItemAction(
   input: {
     kind: TaskKind;
@@ -312,12 +293,38 @@ export async function updateTaskItemChecklistTitleAction(
   if (!cleanId) throw new Error("Missing checklist id");
   if (!cleanTitle) throw new Error("Vui lòng nhập nội dung checklist.");
 
+  const existing = await prisma.taskItemChecklist.findUnique({
+    where: { id: cleanId },
+    select: { id: true },
+  });
+
+  if (!existing) {
+    return { ok: true, checklist: null, alreadyDeleted: true };
+  }
+
   const checklist = await updateTaskItemChecklistRepo(prisma, cleanId, {
     title: cleanTitle,
   });
 
-  return {
-    ok: true,
-    checklist,
-  };
+  return { ok: true, checklist, alreadyDeleted: false };
+}
+
+export async function deleteTaskItemChecklistAction(checklistId: string) {
+  await getTaskAuth();
+
+  const cleanId = String(checklistId || "").trim();
+  if (!cleanId) throw new Error("Missing checklist id");
+
+  const existing = await prisma.taskItemChecklist.findUnique({
+    where: { id: cleanId },
+    select: { id: true },
+  });
+
+  if (!existing) {
+    return { ok: true, checklist: null, alreadyDeleted: true };
+  }
+
+  const checklist = await deleteTaskItemChecklistRepo(prisma, cleanId);
+
+  return { ok: true, checklist, alreadyDeleted: false };
 }

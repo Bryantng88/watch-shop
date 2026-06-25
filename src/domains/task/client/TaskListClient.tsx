@@ -177,9 +177,13 @@ export default function TaskListClient(props: Props) {
 
   async function addTaskItemChecklist(taskItemId: string, title: string) {
     try {
-      await createTaskItemChecklistAction({ taskItemId, title });
+      return await createTaskItemChecklistAction({
+        taskItemId,
+        title,
+      });
     } catch (error: any) {
       notify.error(error?.message || "Không thể thêm checklist");
+      throw error;
     }
   }
 
@@ -246,7 +250,7 @@ export default function TaskListClient(props: Props) {
     try {
       await createTaskItemAction(input);
       notify.success("Đã thêm subtask");
-      router.refresh();
+
     } catch (error: any) {
       notify.error(error?.message || "Không thể thêm subtask");
     }

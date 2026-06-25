@@ -34,12 +34,16 @@ type UpdateTaskItemInput = {
 };
 
 function tempId(prefix: string) {
-  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `temp-${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function findUser(users: UserOption[], id?: string | null) {
   if (!id) return null;
   return users.find((x) => x.id === id) ?? null;
+}
+
+function isTempId(id?: string | null) {
+  return String(id || "").startsWith("temp-");
 }
 
 function TaskItemCreateBar({
@@ -52,7 +56,6 @@ function TaskItemCreateBar({
   users: UserOption[];
   pending: boolean;
   onSubmit: (input: TaskItemInput) => Promise<void> | void;
-
 }) {
   const [title, setTitle] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");
@@ -156,6 +159,7 @@ export default function TaskWorkPanel({
   canCancelTaskItem = true,
   onUpdateTaskItemChecklistTitle,
   onDeleteTaskItemChecklist,
+  onTaskItemsChange,
 }: {
   task: any;
   taskItems?: any[];
@@ -167,7 +171,10 @@ export default function TaskWorkPanel({
   onUpdateTaskItem?: (input: UpdateTaskItemInput) => Promise<void> | void;
   onToggleTaskItem?: (itemId: string, isDone: boolean) => Promise<void> | void;
   onDeleteTaskItem?: (itemId: string) => Promise<void> | void;
-  onAddTaskItemChecklist?: (taskItemId: string, title: string) => Promise<any> | any;
+  onAddTaskItemChecklist?: (
+    taskItemId: string,
+    title: string,
+  ) => Promise<any> | any;
   onToggleTaskItemChecklist?: (
     checklistId: string,
     isDone: boolean,
@@ -177,19 +184,26 @@ export default function TaskWorkPanel({
     title: string,
   ) => Promise<void> | void;
   onDeleteTaskItemChecklist?: (checklistId: string) => Promise<void> | void;
+  onTaskItemsChange?: (taskId: string, items: any[]) => void;
 }) {
   const previewState = useBusinessEntityPreview();
 
   const [pending, setPending] = useState(false);
-  const [localItems, setLocalItems] = useState<any[]>(taskItems);
+  const [localItems, setLocalItems] = useState<any[]>(taskItems ?? []);
   const [managingItem, setManagingItem] = useState<any | null>(null);
-  const [expandedItemIds, setExpandedItemIds] = useState<Record<string, boolean>>(
-    {},
-  );
+  const [expandedItemIds, setExpandedItemIds] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    setLocalItems(taskItems);
+    setLocalItems(taskItems ?? []);
   }, [taskItems]);
+
+  function commitLocalItems(updater: (prev: any[]) => any[]) {
+    setLocalItems((prev) => {
+      const next = updater(prev);
+      onTaskItemsChange?.(task.id, next);
+      return next;
+    });
+  }
 
   const orphanExecutions = useMemo(
     () => splitExecutions(executions.filter((x) => !x.taskItemId)),
@@ -213,62 +227,49 @@ export default function TaskWorkPanel({
       assignedToUser,
       executions: [],
       checklists: [],
-      __optimistic: true,
+      _pending: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
-    setLocalItems((prev) => [...prev, optimisticItem]);
+    commitLocalItems((prev) => [optimisticItem, ...prev]);
 
     try {
       setPending(true);
+
       const result = await onAddTaskItem?.(input);
       const created = result?.item ?? result?.taskItem ?? result?.data ?? null;
 
-      if (created?.id) {
-        setLocalItems((prev) =>
-          prev.map((x) => (x.id === id ? { ...optimisticItem, ...created } : x)),
-        );
+      if (!created?.id) {
+        throw new Error("Server chưa trả task item đã tạo.");
       }
+
+      commitLocalItems((prev) =>
+        prev.map((x) =>
+          x.id === id
+            ? {
+              ...optimisticItem,
+              ...created,
+              _pending: false,
+            }
+            : x,
+        ),
+      );
     } catch (error) {
-      setLocalItems((prev) => prev.filter((x) => x.id !== id));
+      commitLocalItems((prev) => prev.filter((x) => x.id !== id));
       throw error;
     } finally {
       setPending(false);
     }
   }
-  async function updateChecklistTitle(checklistId: string, title: string) {
-    let oldTitle = "";
 
-    setLocalItems((prev) =>
-      prev.map((item) => ({
-        ...item,
-        checklists: (item.checklists ?? []).map((row: any) => {
-          if (row.id !== checklistId) return row;
-          oldTitle = row.title;
-          return { ...row, title };
-        }),
-      })),
-    );
-
-    try {
-      await onUpdateTaskItemChecklistTitle?.(checklistId, title);
-    } catch (error) {
-      setLocalItems((prev) =>
-        prev.map((item) => ({
-          ...item,
-          checklists: (item.checklists ?? []).map((row: any) =>
-            row.id === checklistId ? { ...row, title: oldTitle } : row,
-          ),
-        })),
-      );
-
-      throw error;
-    }
-  }
   async function toggleItem(item: any) {
-    const nextDone = !Boolean(item.isDone || item.status === "DONE");
-    const prevItem = item;
+    if (item._pending || isTempId(item.id)) return;
 
-    setLocalItems((prev) =>
+    const nextDone = !Boolean(item.isDone || item.status === "DONE");
+    const oldItem = item;
+
+    commitLocalItems((prev) =>
       prev.map((x) =>
         x.id === item.id
           ? {
@@ -283,17 +284,17 @@ export default function TaskWorkPanel({
     try {
       await onToggleTaskItem?.(item.id, nextDone);
     } catch (error) {
-      setLocalItems((prev) =>
-        prev.map((x) => (x.id === item.id ? prevItem : x)),
+      commitLocalItems((prev) =>
+        prev.map((x) => (x.id === item.id ? oldItem : x)),
       );
       throw error;
     }
   }
 
   async function deleteItem(item: any) {
-    const oldItems = localItems;
+    if (item._pending || isTempId(item.id)) return;
 
-    setLocalItems((prev) => prev.filter((x) => x.id !== item.id));
+    commitLocalItems((prev) => prev.filter((x) => x.id !== item.id));
 
     if (managingItem?.id === item.id) {
       setManagingItem(null);
@@ -302,56 +303,70 @@ export default function TaskWorkPanel({
     try {
       await onDeleteTaskItem?.(item.id);
     } catch (error) {
-      setLocalItems(oldItems);
+      commitLocalItems((prev) => [...prev, item]);
       throw error;
     }
   }
 
   async function updateItem(input: UpdateTaskItemInput) {
-    const oldItems = localItems;
+    let oldItem: any = null;
 
-    setLocalItems((prev) =>
-      prev.map((item) =>
-        item.id === input.itemId
-          ? {
-            ...item,
-            title: input.title,
-            assignedToUserId: input.assignedToUserId ?? null,
-            assignedToUser: findUser(users, input.assignedToUserId),
-            priority: input.priority ?? item.priority,
-            dueAt: input.dueAt ?? null,
-          }
-          : item,
-      ),
+    commitLocalItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== input.itemId) return item;
+
+        oldItem = item;
+
+        return {
+          ...item,
+          title: input.title,
+          assignedToUserId: input.assignedToUserId ?? null,
+          assignedToUser: findUser(users, input.assignedToUserId),
+          priority: input.priority ?? item.priority,
+          dueAt: input.dueAt ?? null,
+        };
+      }),
     );
 
     try {
       await onUpdateTaskItem?.(input);
     } catch (error) {
-      setLocalItems(oldItems);
+      if (oldItem) {
+        commitLocalItems((prev) =>
+          prev.map((item) => (item.id === input.itemId ? oldItem : item)),
+        );
+      }
+
       throw error;
     }
   }
 
   async function addChecklist(taskItemId: string, title: string) {
-    const id = tempId("checklist");
+    if (isTempId(taskItemId)) return;
 
-    const optimisticChecklist = {
-      id,
+    const clean = title.trim();
+    if (!clean) return;
+
+    const tempChecklistId = tempId("checklist");
+
+    const pendingChecklist = {
+      id: tempChecklistId,
       taskItemId,
-      title,
+      title: clean,
       note: null,
       isDone: false,
       doneAt: null,
-      __optimistic: true,
+      _uiState: "creating",
     };
 
-    setLocalItems((prev) =>
+    commitLocalItems((prev) =>
       prev.map((item) =>
         item.id === taskItemId
           ? {
             ...item,
-            checklists: [...(item.checklists ?? []), optimisticChecklist],
+            status: "TODO",
+            isDone: false,
+            checklists: [...(item.checklists ?? []), pendingChecklist],
           }
           : item,
       ),
@@ -360,53 +375,70 @@ export default function TaskWorkPanel({
     setExpandedItemIds((prev) => ({ ...prev, [taskItemId]: true }));
 
     try {
-      const result = await onAddTaskItemChecklist?.(taskItemId, title);
+      const result = await onAddTaskItemChecklist?.(taskItemId, clean);
       const created = result?.checklist ?? result?.data ?? null;
 
-      if (created?.id) {
-        setLocalItems((prev) =>
-          prev.map((item) =>
-            item.id === taskItemId
-              ? {
-                ...item,
-                checklists: (item.checklists ?? []).map((row: any) =>
-                  row.id === id ? created : row,
-                ),
-              }
-              : item,
-          ),
-        );
+      if (!created?.id) {
+        throw new Error("Server chưa trả checklist đã tạo.");
       }
-    } catch (error) {
-      setLocalItems((prev) =>
+
+      commitLocalItems((prev) =>
         prev.map((item) =>
           item.id === taskItemId
             ? {
               ...item,
-              checklists: (item.checklists ?? []).filter(
-                (row: any) => row.id !== id,
+              status: "TODO",
+              isDone: false,
+              checklists: (item.checklists ?? []).map((row: any) =>
+                row.id === tempChecklistId
+                  ? {
+                    ...created,
+                    _uiState: null,
+                  }
+                  : row,
               ),
             }
             : item,
         ),
       );
+
+      return result;
+    } catch (error) {
+      commitLocalItems((prev) =>
+        prev.map((item) =>
+          item.id === taskItemId
+            ? {
+              ...item,
+              checklists: (item.checklists ?? []).filter(
+                (row: any) => row.id !== tempChecklistId,
+              ),
+            }
+            : item,
+        ),
+      );
+
       throw error;
     }
   }
 
   async function toggleChecklist(checklistId: string, isDone: boolean) {
+    if (isTempId(checklistId)) return;
+
     let oldRow: any = null;
 
-    setLocalItems((prev) =>
+    commitLocalItems((prev) =>
       prev.map((item) => ({
         ...item,
         checklists: (item.checklists ?? []).map((row: any) => {
           if (row.id !== checklistId) return row;
+
           oldRow = row;
+
           return {
             ...row,
             isDone,
             doneAt: isDone ? new Date().toISOString() : null,
+            _uiState: "updating",
           };
         }),
       })),
@@ -414,9 +446,23 @@ export default function TaskWorkPanel({
 
     try {
       await onToggleTaskItemChecklist?.(checklistId, isDone);
+
+      commitLocalItems((prev) =>
+        prev.map((item) => ({
+          ...item,
+          checklists: (item.checklists ?? []).map((row: any) =>
+            row.id === checklistId
+              ? {
+                ...row,
+                _uiState: null,
+              }
+              : row,
+          ),
+        })),
+      );
     } catch (error) {
       if (oldRow) {
-        setLocalItems((prev) =>
+        commitLocalItems((prev) =>
           prev.map((item) => ({
             ...item,
             checklists: (item.checklists ?? []).map((row: any) =>
@@ -425,6 +471,127 @@ export default function TaskWorkPanel({
           })),
         );
       }
+
+      throw error;
+    }
+  }
+
+  async function updateChecklistTitle(checklistId: string, title: string) {
+    if (isTempId(checklistId)) return;
+
+    const clean = title.trim();
+    if (!clean) return;
+
+    let oldRow: any = null;
+
+    commitLocalItems((prev) =>
+      prev.map((item) => ({
+        ...item,
+        checklists: (item.checklists ?? []).map((row: any) => {
+          if (row.id !== checklistId) return row;
+
+          oldRow = row;
+
+          return {
+            ...row,
+            title: clean,
+            _uiState: "updating",
+          };
+        }),
+      })),
+    );
+
+    try {
+      await onUpdateTaskItemChecklistTitle?.(checklistId, clean);
+
+      commitLocalItems((prev) =>
+        prev.map((item) => ({
+          ...item,
+          checklists: (item.checklists ?? []).map((row: any) =>
+            row.id === checklistId
+              ? {
+                ...row,
+                _uiState: null,
+              }
+              : row,
+          ),
+        })),
+      );
+    } catch (error) {
+      if (oldRow) {
+        commitLocalItems((prev) =>
+          prev.map((item) => ({
+            ...item,
+            checklists: (item.checklists ?? []).map((row: any) =>
+              row.id === checklistId ? oldRow : row,
+            ),
+          })),
+        );
+      }
+
+      throw error;
+    }
+  }
+
+  async function deleteChecklist(checklistId: string) {
+    if (isTempId(checklistId)) return;
+
+    let deletedRow: any = null;
+    let deletedTaskItemId: string | null = null;
+
+    commitLocalItems((prev) =>
+      prev.map((item) => ({
+        ...item,
+        checklists: (item.checklists ?? []).map((row: any) => {
+          if (row.id !== checklistId) return row;
+
+          deletedRow = row;
+          deletedTaskItemId = item.id;
+
+          return {
+            ...row,
+            _uiState: "deleting",
+          };
+        }),
+      })),
+    );
+
+    try {
+      await onDeleteTaskItemChecklist?.(checklistId);
+
+      commitLocalItems((prev) =>
+        prev.map((item) =>
+          item.id === deletedTaskItemId
+            ? {
+              ...item,
+              checklists: (item.checklists ?? []).filter(
+                (row: any) => row.id !== checklistId,
+              ),
+            }
+            : item,
+        ),
+      );
+    } catch (error) {
+      if (deletedRow && deletedTaskItemId) {
+        commitLocalItems((prev) =>
+          prev.map((item) =>
+            item.id === deletedTaskItemId
+              ? {
+                ...item,
+                checklists: (item.checklists ?? []).map((row: any) =>
+                  row.id === checklistId
+                    ? {
+                      ...deletedRow,
+                      _uiState: null,
+                    }
+                    : row,
+                ),
+              }
+              : item,
+          ),
+        );
+      }
+
       throw error;
     }
   }
@@ -463,7 +630,7 @@ export default function TaskWorkPanel({
             onAddTaskItemChecklist={addChecklist}
             onToggleTaskItemChecklist={toggleChecklist}
             onUpdateTaskItemChecklistTitle={updateChecklistTitle}
-            onDeleteTaskItemChecklist={onDeleteTaskItemChecklist}
+            onDeleteTaskItemChecklist={deleteChecklist}
           />
         ))}
 
@@ -494,7 +661,7 @@ export default function TaskWorkPanel({
         onSave={updateItem}
         onLinked={(execution) => {
           if (execution?.taskItemId) {
-            setLocalItems((prev) =>
+            commitLocalItems((prev) =>
               prev.map((item) =>
                 item.id === execution.taskItemId
                   ? {

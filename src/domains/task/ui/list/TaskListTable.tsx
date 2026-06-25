@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+
 import {
   CheckCircle2,
   ChevronDown,
@@ -20,7 +20,7 @@ import {
 } from "@/domains/shared/ui/business/BusinessEntityPreview";
 import { cn } from "@/lib/utils";
 import { TASK_KIND_LABEL } from "../../utils/task-labels";
-
+import { Fragment, useEffect, useState } from "react";
 type UserOption = {
   id: string;
   name?: string | null;
@@ -116,24 +116,15 @@ function isExecutionDone(execution: any) {
 }
 
 function isTaskItemDone(item: any) {
-  const checklists = item.checklists ?? [];
+  const executions = item.executions ?? [];
+  const trackingExecutions = executions.filter(isTrackingExecution);
 
-  const checklistDone =
-    checklists.length > 0 &&
-    checklists.every((x: any) => Boolean(x.isDone));
-
-  const trackingExecutions = (item.executions ?? []).filter(isTrackingExecution);
-
-  const executionDone =
-    trackingExecutions.length > 0 &&
-    trackingExecutions.every(isExecutionDone);
+  if (trackingExecutions.length > 0) {
+    return trackingExecutions.every(isExecutionDone);
+  }
 
   return (
-    Boolean(item.isDone) ||
-    String(item.status ?? "").toUpperCase() === "DONE" ||
-    String(item.status ?? "").toUpperCase() === "COMPLETED" ||
-    checklistDone ||
-    executionDone
+    Boolean(item.isDone) || String(item.status ?? "").toUpperCase() === "DONE"
   );
 }
 
@@ -164,7 +155,7 @@ export default function TaskListTable({
   onAddTaskItemChecklist,
   onToggleTaskItemChecklist,
   onUpdateTaskItemChecklistTitle,
-  onDeleteTaskItemChecklist,
+
 }: {
   items: TaskWithRelations[];
   users?: UserOption[];
@@ -192,7 +183,7 @@ export default function TaskListTable({
   onAddTaskItemChecklist?: (
     taskItemId: string,
     title: string,
-  ) => Promise<void> | void;
+  ) => Promise<any> | any;
   onToggleTaskItemChecklist?: (
     checklistId: string,
     isDone: boolean,
@@ -204,7 +195,22 @@ export default function TaskListTable({
   onDeleteTaskItemChecklist?: (checklistId: string) => Promise<void> | void;
 }) {
   const previewState = useBusinessEntityPreview();
-
+  const [localItems, setLocalItems] = useState(items);
+  function handleTaskItemsChange(taskId: string, nextTaskItems: any[]) {
+    setLocalItems((prev) =>
+      prev.map((task) =>
+        task.id === taskId
+          ? {
+            ...task,
+            taskItems: nextTaskItems,
+          }
+          : task,
+      ),
+    );
+  }
+  useEffect(() => {
+    setLocalItems(items);
+  }, [items]);
   return (
     <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
@@ -230,7 +236,7 @@ export default function TaskListTable({
                 </td>
               </tr>
             ) : (
-              items.map((row) => {
+              localItems.map((row) => {
                 const expanded = expandedTaskId === row.id;
                 const expandable = canExpand(row);
                 const progress = taskProgress(row);
@@ -399,7 +405,7 @@ export default function TaskListTable({
                             onUpdateTaskItemChecklistTitle={
                               onUpdateTaskItemChecklistTitle
                             }
-                            onDeleteTaskItemChecklist={onDeleteTaskItemChecklist}
+                            onTaskItemsChange={handleTaskItemsChange}
                           />
                         </td>
                       </tr>
