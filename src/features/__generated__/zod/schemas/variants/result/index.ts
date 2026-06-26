@@ -64,3 +64,5 @@ export { TaskResultSchema } from './Task.result';
 export { TaskItemResultSchema } from './TaskItem.result';
 export { TaskItemChecklistResultSchema } from './TaskItemChecklist.result';
 export { TaskExecutionResultSchema } from './TaskExecution.result';
+export { AppTagResultSchema } from './AppTag.result';
+export { AppTagLinkResultSchema } from './AppTagLink.result';

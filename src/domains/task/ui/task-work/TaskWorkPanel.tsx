@@ -8,6 +8,7 @@ import {
   useBusinessEntityPreview,
 } from "@/domains/shared/ui/business/BusinessEntityPreview";
 import TaskItemRow from "./TaskItemRow";
+import TaskTagPicker, { type TaskTagOption } from "./TaskTagPicker";
 import TaskExecutionGroup from "./TaskExecutionGroup";
 import { splitExecutions } from "./taskWorkPanel.helpers";
 
@@ -27,6 +28,7 @@ type TaskItemInput = {
   assignedToUserId?: string | null;
   priority?: TaskPriority | null;
   dueAt?: string | null;
+  tagNames?: string[];
 };
 
 type UpdateTaskItemInput = {
@@ -35,6 +37,7 @@ type UpdateTaskItemInput = {
   assignedToUserId?: string | null;
   priority?: TaskPriority | null;
   dueAt?: string | null;
+  tagNames?: string[];
 };
 
 
@@ -71,17 +74,20 @@ function TaskItemCreateBar({
   task,
   users,
   pending,
+  tagOptions,
   onSubmit,
 }: {
   task: any;
   users: UserOption[];
   pending: boolean;
+  tagOptions: TaskTagOption[];
   onSubmit: (input: TaskItemInput) => Promise<void> | void;
 }) {
   const [title, setTitle] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");
   const [priority, setPriority] = useState<TaskPriority>(TaskPriority.MEDIUM);
   const [dueAt, setDueAt] = useState("");
+  const [tagNames, setTagNames] = useState<string[]>([]);
 
   async function submit() {
     const clean = title.trim();
@@ -94,16 +100,18 @@ function TaskItemCreateBar({
         selectedUserId || task.assignedToUserId || task.createdByUserId || null,
       priority,
       dueAt: dueAt || null,
+      tagNames,
     });
 
     setTitle("");
     setSelectedUserId("");
     setPriority(TaskPriority.MEDIUM);
     setDueAt("");
+    setTagNames([]);
   }
 
   return (
-    <div className="mb-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_180px_140px_150px_80px]">
+    <div className="mb-3 grid gap-2 xl:grid-cols-[minmax(260px,1fr)_220px_150px_120px_145px_76px]">
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
@@ -115,7 +123,14 @@ function TaskItemCreateBar({
           }
         }}
         placeholder="Thêm task item..."
-        className="h-10 rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none focus:border-slate-400"
+        className="h-10 min-w-0 rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none focus:border-slate-400"
+      />
+
+      <TaskTagPicker
+        value={tagNames}
+        options={tagOptions}
+        onChange={setTagNames}
+        compact
       />
 
       <select
@@ -216,7 +231,7 @@ export default function TaskWorkPanel({
   const [expandedItemIds, setExpandedItemIds] = useState<
     Record<string, boolean>
   >({});
-
+  const [tagFilter, setTagFilter] = useState("ALL");
   const [assigneeFilter, setAssigneeFilter] = useState("ALL");
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | "ALL">(
     "ALL",
@@ -225,6 +240,20 @@ export default function TaskWorkPanel({
     useState<TaskItemChecklistFilter>("ALL");
   const [visibleLimit, setVisibleLimit] = useState(INITIAL_VISIBLE_LIMIT);
   const [showCreateBar, setShowCreateBar] = useState(false);
+  const taskTagOptions = useMemo(() => {
+    const map = new Map<string, any>();
+
+    for (const item of localItems) {
+      for (const tag of item.tags ?? []) {
+        const name = String(tag?.name || "").trim();
+        if (!name) continue;
+        map.set(name.toLowerCase(), tag);
+      }
+    }
+
+    return Array.from(map.values());
+  }, [localItems]);
+
   useEffect(() => {
     setLocalItems(taskItems ?? []);
   }, [taskItems]);
@@ -264,10 +293,16 @@ export default function TaskWorkPanel({
       if (checklistFilter === "NO_CHECKLIST" && checklistCount > 0) {
         return false;
       }
+      if (tagFilter !== "ALL") {
+        const hasTag = (item.tags ?? []).some(
+          (tag: any) => String(tag.name || "").toLowerCase() === tagFilter,
+        );
 
+        if (!hasTag) return false;
+      }
       return true;
     });
-  }, [localItems, assigneeFilter, priorityFilter, checklistFilter]);
+  }, [localItems, assigneeFilter, priorityFilter, checklistFilter, tagFilter]);
 
   const visibleItems = useMemo(
     () => filteredItems.slice(0, visibleLimit),
@@ -308,6 +343,7 @@ export default function TaskWorkPanel({
       assignedToUser,
       executions: [],
       checklists: [],
+      tags: (input.tagNames ?? []).map((name) => ({ name })),
       _pending: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -405,6 +441,9 @@ export default function TaskWorkPanel({
           assignedToUser: findUser(users, input.assignedToUserId),
           priority: input.priority ?? item.priority,
           dueAt: input.dueAt ?? null,
+          ...(input.tagNames !== undefined
+            ? { tags: input.tagNames.map((name) => ({ name })) }
+            : {}),
         };
       }),
     );
@@ -698,6 +737,9 @@ export default function TaskWorkPanel({
           onPriorityChange={setPriorityFilter}
           onChecklistChange={setChecklistFilter}
           onReset={resetTaskItemFilters}
+          tagFilter={tagFilter}
+          tagOptions={taskTagOptions}
+          onTagChange={setTagFilter}
         />
 
         {showCreateBar ? (
@@ -706,6 +748,7 @@ export default function TaskWorkPanel({
               task={task}
               users={users}
               pending={pending}
+              tagOptions={taskTagOptions}
               onSubmit={async (input) => {
                 await addTaskItem(input);
                 setShowCreateBar(false);

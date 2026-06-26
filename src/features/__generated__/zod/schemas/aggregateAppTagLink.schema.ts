@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { AppTagLinkOrderByWithRelationInputObjectSchema as AppTagLinkOrderByWithRelationInputObjectSchema } from './objects/AppTagLinkOrderByWithRelationInput.schema';
+import { AppTagLinkWhereInputObjectSchema as AppTagLinkWhereInputObjectSchema } from './objects/AppTagLinkWhereInput.schema';
+import { AppTagLinkWhereUniqueInputObjectSchema as AppTagLinkWhereUniqueInputObjectSchema } from './objects/AppTagLinkWhereUniqueInput.schema';
+import { AppTagLinkCountAggregateInputObjectSchema as AppTagLinkCountAggregateInputObjectSchema } from './objects/AppTagLinkCountAggregateInput.schema';
+import { AppTagLinkMinAggregateInputObjectSchema as AppTagLinkMinAggregateInputObjectSchema } from './objects/AppTagLinkMinAggregateInput.schema';
+import { AppTagLinkMaxAggregateInputObjectSchema as AppTagLinkMaxAggregateInputObjectSchema } from './objects/AppTagLinkMaxAggregateInput.schema';
+
+export const AppTagLinkAggregateSchema: z.ZodType<Prisma.AppTagLinkAggregateArgs> = z.object({ orderBy: z.union([AppTagLinkOrderByWithRelationInputObjectSchema, AppTagLinkOrderByWithRelationInputObjectSchema.array()]).optional(), where: AppTagLinkWhereInputObjectSchema.optional(), cursor: AppTagLinkWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), AppTagLinkCountAggregateInputObjectSchema ]).optional(), _min: AppTagLinkMinAggregateInputObjectSchema.optional(), _max: AppTagLinkMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.AppTagLinkAggregateArgs>;
+
+export const AppTagLinkAggregateZodSchema = z.object({ orderBy: z.union([AppTagLinkOrderByWithRelationInputObjectSchema, AppTagLinkOrderByWithRelationInputObjectSchema.array()]).optional(), where: AppTagLinkWhereInputObjectSchema.optional(), cursor: AppTagLinkWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), AppTagLinkCountAggregateInputObjectSchema ]).optional(), _min: AppTagLinkMinAggregateInputObjectSchema.optional(), _max: AppTagLinkMaxAggregateInputObjectSchema.optional() }).strict();

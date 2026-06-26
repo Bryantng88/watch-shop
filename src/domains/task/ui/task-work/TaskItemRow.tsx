@@ -15,6 +15,7 @@ import type { BusinessEntityPreview } from "@/domains/shared/business/business-e
 import { ExecutionMiniInlineList, isTrackingExecution } from "../execution";
 import { isBusinessDone, splitExecutions } from "./taskWorkPanel.helpers";
 import TaskItemChecklistBlock from "./TaskItemChecklistBlock";
+import { TaskTagChips } from "./TaskTagPicker";
 
 function checklistStats(rows: any[]) {
   const total = rows.length;
@@ -254,15 +255,22 @@ export default function TaskItemRow({
 
         <div className="w-[250px] min-w-0 shrink-0">
           <div className="flex min-w-0 items-center gap-2">
+            <TaskTagChips tags={item.tags} compact maxVisible={2} />
+
             <button
               type="button"
               title={item.title}
               disabled={isPending}
-              onClick={() => {
-                if (!isPending && hasChecklists) onToggleExpand(item);
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+
+                if (!isPending) {
+                  onManage(item);
+                }
               }}
               className={cn(
-                "block max-w-full truncate text-left text-sm font-semibold disabled:cursor-not-allowed",
+                "block min-w-0 flex-1 truncate text-left text-sm font-semibold disabled:cursor-not-allowed",
                 done ? "text-slate-400 line-through" : "text-slate-950",
               )}
             >

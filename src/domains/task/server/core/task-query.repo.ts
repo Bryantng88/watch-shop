@@ -12,6 +12,7 @@ import {
   startOfTomorrow,
 } from "./task.repo.shared";
 import { hydrateTaskBusinessLinks } from "./task-business-hydrate.repo";
+import { hydrateTasksWithTaskItemTagsRepo } from "../tag/task-tag.repo";
 
 export async function listTasksRepo(
   db: DB,
@@ -53,9 +54,11 @@ export async function listTasksRepo(
     items.map((item) => hydrateTaskBusinessLinks(db, item)),
   );
 
-  const finalItems = hydratedItems.map((item) =>
+  const accessItems = hydratedItems.map((item) =>
     applyTaskRowAccess(item, input.userId, canViewAll),
   );
+
+  const finalItems = await hydrateTasksWithTaskItemTagsRepo(db, accessItems);
 
   return {
     items: finalItems,
@@ -159,7 +162,9 @@ export async function getTaskByIdRepo(db: DB, id: string) {
   const client = dbOrTx(db);
   const task = await client.task.findUnique({ where: { id }, include: TASK_INCLUDE });
   if (!task) return null;
-  return hydrateTaskBusinessLinks(db, task);
+  const hydrated = await hydrateTaskBusinessLinks(db, task);
+  const [withTags] = await hydrateTasksWithTaskItemTagsRepo(db, [hydrated]);
+  return withTags;
 }
 
 export async function listAssignableUsersRepo(db: DB) {

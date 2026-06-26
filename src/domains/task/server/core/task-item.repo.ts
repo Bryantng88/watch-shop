@@ -1,4 +1,4 @@
-import { TaskStatus } from "@prisma/client";
+import { AppTagOwnerType, AppTagTargetType, TaskStatus } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
 import type {
   CreateTaskItemChecklistInput,
@@ -7,6 +7,7 @@ import type {
   UpdateTaskItemInput,
 } from "../task.types";
 import { TASK_ITEM_INCLUDE, toDate } from "./task.repo.shared";
+import { setTargetTagsRepo } from "../tag/task-tag.repo";
 
 export async function createTaskItemRepo(db: DB, input: CreateTaskItemInput) {
   const client = dbOrTx(db);
@@ -17,7 +18,7 @@ export async function createTaskItemRepo(db: DB, input: CreateTaskItemInput) {
     select: { sortOrder: true },
   });
 
-  return client.taskItem.create({
+  const item = await client.taskItem.create({
     data: {
       taskId: input.taskId,
       title: input.title.trim(),
@@ -30,6 +31,18 @@ export async function createTaskItemRepo(db: DB, input: CreateTaskItemInput) {
     },
     include: TASK_ITEM_INCLUDE,
   });
+
+  if (input.tagNames !== undefined) {
+    await setTargetTagsRepo(db, {
+      ownerType: AppTagOwnerType.TASK,
+      ownerId: input.taskId,
+      targetType: AppTagTargetType.TASK_ITEM,
+      targetId: item.id,
+      names: input.tagNames,
+    });
+  }
+
+  return item;
 }
 
 export async function updateTaskItemRepo(
@@ -39,7 +52,7 @@ export async function updateTaskItemRepo(
 ) {
   const client = dbOrTx(db);
 
-  return client.taskItem.update({
+  const item = await client.taskItem.update({
     where: { id: itemId },
     data: {
       ...(input.title !== undefined ? { title: input.title.trim() } : {}),
@@ -53,6 +66,18 @@ export async function updateTaskItemRepo(
     },
     include: TASK_ITEM_INCLUDE,
   });
+
+  if (input.tagNames !== undefined) {
+    await setTargetTagsRepo(db, {
+      ownerType: AppTagOwnerType.TASK,
+      ownerId: item.taskId,
+      targetType: AppTagTargetType.TASK_ITEM,
+      targetId: item.id,
+      names: input.tagNames,
+    });
+  }
+
+  return item;
 }
 
 export async function setTaskItemDoneRepo(

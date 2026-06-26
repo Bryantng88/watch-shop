@@ -100,6 +100,7 @@ export async function createTaskItemAction(input: {
   assignedToUserId?: string | null;
   priority?: TaskPriority | null;
   dueAt?: string | null;
+  tagNames?: string[];
 }) {
   await getTaskAuth();
 
@@ -115,6 +116,7 @@ export async function createTaskItemAction(input: {
     assignedToUserId: input.assignedToUserId || null,
     priority: input.priority || "MEDIUM",
     dueAt: input.dueAt || null,
+    tagNames: input.tagNames ?? [],
   });
 
   revalidatePath("/admin/tasks");

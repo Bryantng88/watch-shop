@@ -64,3 +64,5 @@ export { TaskModelSchema } from './Task.pure';
 export { TaskItemModelSchema } from './TaskItem.pure';
 export { TaskItemChecklistModelSchema } from './TaskItemChecklist.pure';
 export { TaskExecutionModelSchema } from './TaskExecution.pure';
+export { AppTagModelSchema } from './AppTag.pure';
+export { AppTagLinkModelSchema } from './AppTagLink.pure';

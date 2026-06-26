@@ -35,6 +35,7 @@ type AddSubtaskInput = {
   assignedToUserId?: string | null;
   priority?: string | null;
   dueAt?: string | null;
+  tagNames?: string[];
 };
 
 function userLabel(
@@ -189,7 +190,8 @@ export default function TaskListTable({
     assignedToUserId?: string | null;
     priority?: string | null;
     dueAt?: string | null;
-  }) => Promise<void> | void;
+    tagNames?: string[];
+  }) => Promise<any> | any;
   onAddTaskItemChecklist?: (
     taskItemId: string,
     title: string,

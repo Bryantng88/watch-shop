@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { AppTagLinkWhereInputObjectSchema as AppTagLinkWhereInputObjectSchema } from './objects/AppTagLinkWhereInput.schema';
+import { AppTagLinkOrderByWithAggregationInputObjectSchema as AppTagLinkOrderByWithAggregationInputObjectSchema } from './objects/AppTagLinkOrderByWithAggregationInput.schema';
+import { AppTagLinkScalarWhereWithAggregatesInputObjectSchema as AppTagLinkScalarWhereWithAggregatesInputObjectSchema } from './objects/AppTagLinkScalarWhereWithAggregatesInput.schema';
+import { AppTagLinkScalarFieldEnumSchema } from './enums/AppTagLinkScalarFieldEnum.schema';
+import { AppTagLinkCountAggregateInputObjectSchema as AppTagLinkCountAggregateInputObjectSchema } from './objects/AppTagLinkCountAggregateInput.schema';
+import { AppTagLinkMinAggregateInputObjectSchema as AppTagLinkMinAggregateInputObjectSchema } from './objects/AppTagLinkMinAggregateInput.schema';
+import { AppTagLinkMaxAggregateInputObjectSchema as AppTagLinkMaxAggregateInputObjectSchema } from './objects/AppTagLinkMaxAggregateInput.schema';
+
+export const AppTagLinkGroupBySchema: z.ZodType<Prisma.AppTagLinkGroupByArgs> = z.object({ where: AppTagLinkWhereInputObjectSchema.optional(), orderBy: z.union([AppTagLinkOrderByWithAggregationInputObjectSchema, AppTagLinkOrderByWithAggregationInputObjectSchema.array()]).optional(), having: AppTagLinkScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(AppTagLinkScalarFieldEnumSchema), _count: z.union([ z.literal(true), AppTagLinkCountAggregateInputObjectSchema ]).optional(), _min: AppTagLinkMinAggregateInputObjectSchema.optional(), _max: AppTagLinkMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.AppTagLinkGroupByArgs>;
+
+export const AppTagLinkGroupByZodSchema = z.object({ where: AppTagLinkWhereInputObjectSchema.optional(), orderBy: z.union([AppTagLinkOrderByWithAggregationInputObjectSchema, AppTagLinkOrderByWithAggregationInputObjectSchema.array()]).optional(), having: AppTagLinkScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(AppTagLinkScalarFieldEnumSchema), _count: z.union([ z.literal(true), AppTagLinkCountAggregateInputObjectSchema ]).optional(), _min: AppTagLinkMinAggregateInputObjectSchema.optional(), _max: AppTagLinkMaxAggregateInputObjectSchema.optional() }).strict();

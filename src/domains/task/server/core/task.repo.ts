@@ -4,3 +4,4 @@ export * from "./task-query.repo";
 export * from "./task-core.repo";
 export * from "./task-item.repo";
 export * from "./task-sync.repo";
+export * from "../tag/task-tag.repo";

@@ -275,11 +275,12 @@ export default function TaskListClient(props: Props) {
     assignedToUserId?: string | null;
     priority?: TaskPriority | null;
     dueAt?: string | null;
+    tagNames?: string[];
   }) {
     try {
-      await createTaskItemAction(input);
+      const result = await createTaskItemAction(input);
       notify.success("Đã thêm subtask");
-
+      return result;
     } catch (error: any) {
       notify.error(error?.message || "Không thể thêm subtask");
     }

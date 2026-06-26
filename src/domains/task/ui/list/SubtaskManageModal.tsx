@@ -76,7 +76,30 @@ function existingTargetIds(item: any) {
             .filter(Boolean),
     );
 }
+function formatDateTime(value?: Date | string | null) {
+    if (!value) return "—";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "—";
+    return date.toLocaleString("vi-VN");
+}
 
+function ageInDays(value?: Date | string | null) {
+    if (!value) return null;
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const created = new Date(date);
+    created.setHours(0, 0, 0, 0);
+
+    return Math.max(
+        0,
+        Math.floor((today.getTime() - created.getTime()) / 86400000),
+    );
+}
 export default function SubtaskManageModal({
     open,
     task,
@@ -108,7 +131,7 @@ export default function SubtaskManageModal({
     const [assignedToUserId, setAssignedToUserId] = useState("");
     const [dueAt, setDueAt] = useState("");
     const [priority, setPriority] = useState<TaskPriority>(TaskPriority.MEDIUM);
-
+    const createdDays = ageInDays(item?.createdAt);
     const [linkMode, setLinkMode] = useState<LinkMode>("CONTEXT");
     const [linkTargetType, setLinkTargetType] = useState<LinkTargetType>("WATCH");
     const [linkTargetIds, setLinkTargetIds] = useState<string[]>([]);
@@ -220,7 +243,31 @@ export default function SubtaskManageModal({
                         <X className="h-5 w-5" />
                     </button>
                 </div>
+                <div className="border-b border-slate-100 px-5 py-3">
+                    <div className="grid gap-2 rounded-2xl bg-slate-50 px-4 py-3 text-xs text-slate-500 sm:grid-cols-2">
+                        <div>
+                            <span className="text-slate-400">Ngày tạo: </span>
+                            <span className="font-semibold text-slate-700">
+                                {formatDateTime(item?.createdAt)}
+                            </span>
+                        </div>
 
+                        {item?.assignedToUser ? (
+                            <div>
+                                <span className="text-slate-400">Người nhận: </span>
+                                <span className="font-semibold text-slate-700">
+                                    {item.assignedToUser.name || item.assignedToUser.email}
+                                </span>
+                            </div>
+                        ) : null}
+
+                        {createdDays !== null ? (
+                            <div className="sm:col-span-2 rounded-xl bg-amber-50 px-3 py-2 text-amber-700">
+                                Task item này đã được tạo {createdDays} ngày.
+                            </div>
+                        ) : null}
+                    </div>
+                </div>
                 <div className="space-y-4 px-5 py-4">
                     <label className="block">
                         <span className="text-sm font-medium text-slate-700">Nội dung</span>

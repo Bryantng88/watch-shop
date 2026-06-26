@@ -127,3 +127,22 @@ export type UpdateTaskItemChecklistInput = {
   dueAt?: Date | string | null;
   isDone?: boolean;
 };
+export type CreateTaskItemInput = {
+  taskId: string;
+  title: string;
+  note?: string | null;
+  assignedToUserId?: string | null;
+  priority?: TaskPriority;
+  dueAt?: Date | string | null;
+  tagNames?: string[];
+};
+
+export type UpdateTaskItemInput = {
+  title?: string;
+  note?: string | null;
+  assignedToUserId?: string | null;
+  priority?: TaskPriority;
+  dueAt?: Date | string | null;
+  status?: TaskStatus;
+  tagNames?: string[];
+};

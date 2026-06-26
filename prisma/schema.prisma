@@ -1453,6 +1453,31 @@ enum TaskStatus {
   CANCELLED
 }
 
+enum AppTagScope {
+  GLOBAL
+  OWNER
+}
+
+enum AppTagOwnerType {
+  TASK
+  WATCH
+  ORDER
+  SERVICE_REQUEST
+  TECHNICAL_ISSUE
+  CUSTOMER
+  GENERAL
+}
+
+enum AppTagTargetType {
+  TASK_ITEM
+  WATCH
+  ORDER
+  SERVICE_REQUEST
+  TECHNICAL_ISSUE
+  CUSTOMER
+  GENERAL
+}
+
 enum TaskPriority {
   LOW
   MEDIUM
@@ -1742,6 +1767,46 @@ model TaskExecution {
   @@index([taskItemId])
   @@index([serviceRequestId])
   @@index([technicalIssueId])
+}
+
+// Add near Task enums/models in schema.prisma
+
+model AppTag {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  name  String
+  slug  String
+  color String?
+  scope AppTagScope @default(OWNER)
+
+  ownerType AppTagOwnerType?
+  ownerId   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  links AppTagLink[]
+
+  @@unique([slug, scope, ownerType, ownerId])
+  @@index([scope])
+  @@index([ownerType, ownerId])
+  @@index([createdAt])
+}
+
+model AppTagLink {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  tagId      String
+  targetType AppTagTargetType
+  targetId   String
+
+  createdAt DateTime @default(now())
+
+  tag AppTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([tagId, targetType, targetId])
+  @@index([targetType, targetId])
+  @@index([tagId])
 }
 
 enum AcquisitionItemKind {

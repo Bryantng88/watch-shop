@@ -64,3 +64,5 @@ export { TaskInputSchema } from './Task.input';
 export { TaskItemInputSchema } from './TaskItem.input';
 export { TaskItemChecklistInputSchema } from './TaskItemChecklist.input';
 export { TaskExecutionInputSchema } from './TaskExecution.input';
+export { AppTagInputSchema } from './AppTag.input';
+export { AppTagLinkInputSchema } from './AppTagLink.input';
