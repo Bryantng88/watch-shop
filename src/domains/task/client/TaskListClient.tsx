@@ -149,15 +149,22 @@ export default function TaskListClient(props: Props) {
     assignedToUserId?: string | null;
     priority?: string | null;
     dueAt?: string | null;
+    tagNames?: string[];
   }) {
-    await updateTaskItemAction(input.itemId, {
-      title: input.title,
-      assignedToUserId: input.assignedToUserId ?? null,
-      priority: input.priority as any,
-      dueAt: input.dueAt || null,
-    });
+    try {
+      const result = await updateTaskItemAction(input.itemId, {
+        title: input.title,
+        assignedToUserId: input.assignedToUserId ?? null,
+        priority: input.priority as any,
+        dueAt: input.dueAt || null,
+        tagNames: input.tagNames ?? [],
+      } as any);
 
-    router.refresh();
+      return result;
+    } catch (error: any) {
+      notify.error(error?.message || "Không thể cập nhật task item");
+      throw error;
+    }
   }
   async function updateTaskItemChecklistTitle(
     checklistId: string,

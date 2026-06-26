@@ -34,6 +34,12 @@ import {
 
 } from "../server/core/task.repo";
 
+import { setTargetTagsRepo, listTargetTagsRepo } from "../server/core/task.repo";
+
+import {
+  AppTagOwnerType,
+  AppTagTargetType,
+} from "@prisma/client";
 async function getTaskAuth() {
   return requirePermission("TASK_VIEW");
 }
@@ -142,14 +148,32 @@ export async function updateTaskItemAction(
   if (!cleanItemId) throw new Error("Missing checklist item id");
 
   const item = await updateTaskItemRepo(prisma, cleanItemId, input);
+
+  let tags: any[] = [];
+
+  if (Array.isArray(input.tagNames)) {
+    tags = await setTargetTagsRepo(prisma, {
+      ownerType: AppTagOwnerType.TASK,
+      ownerId: item.taskId,
+      targetType: AppTagTargetType.TASK_ITEM,
+      targetId: item.id,
+      names: input.tagNames,
+    });
+  }
+
   await syncTaskStatusFromChecklistRepo(prisma, item.taskId);
 
   revalidatePath("/admin/tasks");
   revalidatePath(`/admin/tasks/${item.taskId}`);
 
-  return { ok: true, item };
+  return {
+    ok: true,
+    item: {
+      ...item,
+      tags,
+    },
+  };
 }
-
 export async function changeTaskItemStatusAction(
   itemId: string,
   status: TaskStatus,

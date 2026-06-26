@@ -241,35 +241,71 @@ export default function TaskWorkPanel({
   const [visibleLimit, setVisibleLimit] = useState(INITIAL_VISIBLE_LIMIT);
   const [showCreateBar, setShowCreateBar] = useState(false);
   const taskTagOptions = useMemo(() => {
-    const map = new Map<string, any>();
+    const map = new Map<
+      string,
+      TaskTagOption & {
+        count: number;
+      }
+    >();
 
     for (const item of localItems) {
       for (const tag of item.tags ?? []) {
         const name = String(tag?.name || "").trim();
         if (!name) continue;
-        map.set(name.toLowerCase(), tag);
+
+        const key = String(tag?.slug || name).toLowerCase();
+        const current = map.get(key);
+
+        map.set(key, {
+          id: tag.id,
+          name,
+          slug: tag.slug,
+          color: tag.color ?? null,
+          count: (current?.count ?? 0) + 1,
+        });
       }
     }
 
-    return Array.from(map.values());
+    return Array.from(map.values()).sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return a.name.localeCompare(b.name);
+    });
   }, [localItems]);
+
+  function itemSignature(items: any[]) {
+    return items
+      .map((item) => {
+        const tags = (item.tags ?? []).map((tag: any) => tag.id ?? tag.name).join(",");
+        const checks = (item.checklists ?? [])
+          .map((row: any) => `${row.id}:${row.isDone}:${row.title}`)
+          .join(",");
+        return `${item.id}:${item.title}:${item.status}:${item.isDone}:${item.dueAt}:${item.priority}:${tags}:${checks}`;
+      })
+      .join("|");
+  }
+  const taskItemsSignature = useMemo(
+    () => itemSignature(taskItems ?? []),
+    [taskItems],
+  );
 
   useEffect(() => {
     setLocalItems(taskItems ?? []);
-  }, [taskItems]);
-
+  }, [taskItemsSignature]);
   useEffect(() => {
     setVisibleLimit(INITIAL_VISIBLE_LIMIT);
-  }, [assigneeFilter, priorityFilter, checklistFilter]);
+  }, [assigneeFilter, priorityFilter, checklistFilter, tagFilter]);
 
   function commitLocalItems(updater: (prev: any[]) => any[]) {
     setLocalItems((prev) => {
       const next = updater(prev);
-      onTaskItemsChange?.(task.id, next);
+
+      if (itemSignature(prev) === itemSignature(next)) {
+        return prev;
+      }
+
       return next;
     });
   }
-
   const filteredItems = useMemo(() => {
     return localItems.filter((item) => {
       if (assigneeFilter === "UNASSIGNED") {
@@ -323,6 +359,7 @@ export default function TaskWorkPanel({
     setAssigneeFilter("ALL");
     setPriorityFilter("ALL");
     setChecklistFilter("ALL");
+    setTagFilter("ALL");
     setVisibleLimit(INITIAL_VISIBLE_LIMIT);
   }
 
@@ -444,12 +481,31 @@ export default function TaskWorkPanel({
           ...(input.tagNames !== undefined
             ? { tags: input.tagNames.map((name) => ({ name })) }
             : {}),
+          _uiState: "updating",
         };
       }),
     );
 
     try {
-      await onUpdateTaskItem?.(input);
+      const result: any = await onUpdateTaskItem?.(input);
+      const updated = result?.item ?? result?.data ?? null;
+
+      commitLocalItems((prev) =>
+        prev.map((item) =>
+          item.id === input.itemId
+            ? {
+              ...item,
+              ...(updated ?? {}),
+              tags:
+                updated?.tags ??
+                (input.tagNames !== undefined
+                  ? input.tagNames.map((name) => ({ name }))
+                  : item.tags),
+              _uiState: null,
+            }
+            : item,
+        ),
+      );
     } catch (error) {
       if (oldItem) {
         commitLocalItems((prev) =>
@@ -809,7 +865,10 @@ export default function TaskWorkPanel({
 
       <SubtaskManageModal
         open={Boolean(managingItem)}
-        task={task}
+        task={{
+          ...task,
+          tagOptions: taskTagOptions,
+        }}
         item={managingItem}
         users={users}
         canEdit={canAddTaskItem}

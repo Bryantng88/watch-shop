@@ -18,7 +18,7 @@ import {
 } from "@/domains/shared/ui/business/BusinessEntityPreview";
 
 import { deleteTaskExecutionAction } from "../../actions/task-action-execution.actions";
-
+import TaskTagPicker from "../task-work/TaskTagPicker";
 type LinkMode = "CONTEXT" | "TRACKING";
 type LinkTargetType = "WATCH" | "ORDER" | "SHIPMENT" | "SERVICE";
 
@@ -122,6 +122,7 @@ export default function SubtaskManageModal({
         assignedToUserId?: string | null;
         dueAt?: string | null;
         priority?: TaskPriority | null;
+        tagNames?: string[];
     }) => Promise<void> | void;
     onLinked?: (payload?: any) => void;
 }) {
@@ -135,7 +136,7 @@ export default function SubtaskManageModal({
     const [linkMode, setLinkMode] = useState<LinkMode>("CONTEXT");
     const [linkTargetType, setLinkTargetType] = useState<LinkTargetType>("WATCH");
     const [linkTargetIds, setLinkTargetIds] = useState<string[]>([]);
-
+    const [tagNames, setTagNames] = useState<string[]>([]);
     const existingType = useMemo(() => getExistingTargetType(item), [item]);
     const existingMode = useMemo(() => getExistingLinkMode(item), [item]);
     const lockedTargetType = Boolean(existingType);
@@ -149,7 +150,11 @@ export default function SubtaskManageModal({
         setAssignedToUserId(item.assignedToUserId || "");
         setDueAt(toDateInput(item.dueAt));
         setPriority((item.priority as TaskPriority) || TaskPriority.MEDIUM);
-
+        setTagNames(
+            Array.isArray(item.tags)
+                ? item.tags.map((x: any) => x.name)
+                : [],
+        );
         setLinkTargetType(existingType || "WATCH");
         setLinkMode(existingMode || "CONTEXT");
         setLinkTargetIds([]);
@@ -172,10 +177,11 @@ export default function SubtaskManageModal({
         startTransition(async () => {
             await onSave?.({
                 itemId: item.id,
-                title: title.trim() || item.title,
+                title,
                 assignedToUserId: assignedToUserId || null,
                 dueAt: dueAt || null,
                 priority,
+                tagNames,
             });
 
             onClose();
@@ -278,7 +284,17 @@ export default function SubtaskManageModal({
                             className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm outline-none focus:border-slate-400 disabled:bg-slate-50 disabled:text-slate-400"
                         />
                     </label>
+                    <div className="mt-4">
+                        <label className="mb-1 block text-xs font-medium text-slate-700">
+                            Tag
+                        </label>
 
+                        <TaskTagPicker
+                            value={tagNames}
+                            options={task?.tagOptions ?? []}
+                            onChange={setTagNames}
+                        />
+                    </div>
                     <div className="grid gap-3 md:grid-cols-3">
                         <label className="block">
                             <span className="text-sm font-medium text-slate-700">

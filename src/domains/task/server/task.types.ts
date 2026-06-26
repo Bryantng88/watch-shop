@@ -96,23 +96,9 @@ export type RelatedTaskSuggestion = {
   } | null;
 };
 
-export type CreateTaskItemInput = {
-  taskId: string;
-  title: string;
-  note?: string | null;
-  assignedToUserId?: string | null;
-  priority?: TaskPriority;
-  dueAt?: Date | string | null;
-};
 
-export type UpdateTaskItemInput = {
-  title?: string;
-  note?: string | null;
-  assignedToUserId?: string | null;
-  priority?: TaskPriority;
-  dueAt?: Date | string | null;
-  status?: TaskStatus;
-};
+
+
 
 export type CreateTaskItemChecklistInput = {
   taskItemId: string;
