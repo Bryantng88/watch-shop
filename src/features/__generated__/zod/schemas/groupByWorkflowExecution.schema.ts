@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WorkflowExecutionWhereInputObjectSchema as WorkflowExecutionWhereInputObjectSchema } from './objects/WorkflowExecutionWhereInput.schema';
+import { WorkflowExecutionOrderByWithAggregationInputObjectSchema as WorkflowExecutionOrderByWithAggregationInputObjectSchema } from './objects/WorkflowExecutionOrderByWithAggregationInput.schema';
+import { WorkflowExecutionScalarWhereWithAggregatesInputObjectSchema as WorkflowExecutionScalarWhereWithAggregatesInputObjectSchema } from './objects/WorkflowExecutionScalarWhereWithAggregatesInput.schema';
+import { WorkflowExecutionScalarFieldEnumSchema } from './enums/WorkflowExecutionScalarFieldEnum.schema';
+import { WorkflowExecutionCountAggregateInputObjectSchema as WorkflowExecutionCountAggregateInputObjectSchema } from './objects/WorkflowExecutionCountAggregateInput.schema';
+import { WorkflowExecutionMinAggregateInputObjectSchema as WorkflowExecutionMinAggregateInputObjectSchema } from './objects/WorkflowExecutionMinAggregateInput.schema';
+import { WorkflowExecutionMaxAggregateInputObjectSchema as WorkflowExecutionMaxAggregateInputObjectSchema } from './objects/WorkflowExecutionMaxAggregateInput.schema';
+
+export const WorkflowExecutionGroupBySchema: z.ZodType<Prisma.WorkflowExecutionGroupByArgs> = z.object({ where: WorkflowExecutionWhereInputObjectSchema.optional(), orderBy: z.union([WorkflowExecutionOrderByWithAggregationInputObjectSchema, WorkflowExecutionOrderByWithAggregationInputObjectSchema.array()]).optional(), having: WorkflowExecutionScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(WorkflowExecutionScalarFieldEnumSchema), _count: z.union([ z.literal(true), WorkflowExecutionCountAggregateInputObjectSchema ]).optional(), _min: WorkflowExecutionMinAggregateInputObjectSchema.optional(), _max: WorkflowExecutionMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.WorkflowExecutionGroupByArgs>;
+
+export const WorkflowExecutionGroupByZodSchema = z.object({ where: WorkflowExecutionWhereInputObjectSchema.optional(), orderBy: z.union([WorkflowExecutionOrderByWithAggregationInputObjectSchema, WorkflowExecutionOrderByWithAggregationInputObjectSchema.array()]).optional(), having: WorkflowExecutionScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(WorkflowExecutionScalarFieldEnumSchema), _count: z.union([ z.literal(true), WorkflowExecutionCountAggregateInputObjectSchema ]).optional(), _min: WorkflowExecutionMinAggregateInputObjectSchema.optional(), _max: WorkflowExecutionMaxAggregateInputObjectSchema.optional() }).strict();

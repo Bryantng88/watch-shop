@@ -7,7 +7,8 @@ import { EnumAppTagScopeFieldUpdateOperationsInputObjectSchema as EnumAppTagScop
 import { AppTagOwnerTypeSchema } from '../enums/AppTagOwnerType.schema';
 import { NullableEnumAppTagOwnerTypeFieldUpdateOperationsInputObjectSchema as NullableEnumAppTagOwnerTypeFieldUpdateOperationsInputObjectSchema } from './NullableEnumAppTagOwnerTypeFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { AppTagLinkUpdateManyWithoutTagNestedInputObjectSchema as AppTagLinkUpdateManyWithoutTagNestedInputObjectSchema } from './AppTagLinkUpdateManyWithoutTagNestedInput.schema'
+import { AppTagLinkUpdateManyWithoutTagNestedInputObjectSchema as AppTagLinkUpdateManyWithoutTagNestedInputObjectSchema } from './AppTagLinkUpdateManyWithoutTagNestedInput.schema';
+import { WorkflowTemplateUpdateOneWithoutTagsNestedInputObjectSchema as WorkflowTemplateUpdateOneWithoutTagsNestedInputObjectSchema } from './WorkflowTemplateUpdateOneWithoutTagsNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -19,7 +20,8 @@ const makeSchema = () => z.object({
   ownerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  links: z.lazy(() => AppTagLinkUpdateManyWithoutTagNestedInputObjectSchema).optional()
+  links: z.lazy(() => AppTagLinkUpdateManyWithoutTagNestedInputObjectSchema).optional(),
+  workflowTemplate: z.lazy(() => WorkflowTemplateUpdateOneWithoutTagsNestedInputObjectSchema).optional()
 }).strict();
 export const AppTagUpdateInputObjectSchema: z.ZodType<Prisma.AppTagUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.AppTagUpdateInput>;
 export const AppTagUpdateInputObjectZodSchema = makeSchema();

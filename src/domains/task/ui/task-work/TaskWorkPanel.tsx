@@ -1,5 +1,5 @@
 "use client";
-
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { TaskPriority } from "@prisma/client";
 import SubtaskManageModal from "../list/SubtaskManageModal";
@@ -240,6 +240,7 @@ export default function TaskWorkPanel({
     useState<TaskItemChecklistFilter>("ALL");
   const [visibleLimit, setVisibleLimit] = useState(INITIAL_VISIBLE_LIMIT);
   const [showCreateBar, setShowCreateBar] = useState(false);
+  const router = useRouter();
   const taskTagOptions = useMemo(() => {
     const map = new Map<
       string,
@@ -864,6 +865,7 @@ export default function TaskWorkPanel({
       </div>
 
       <SubtaskManageModal
+        onRefresh={() => router.refresh()}
         open={Boolean(managingItem)}
         task={{
           ...task,

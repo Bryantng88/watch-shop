@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WorkflowExecutionEventSelectObjectSchema as WorkflowExecutionEventSelectObjectSchema } from './objects/WorkflowExecutionEventSelect.schema';
+import { WorkflowExecutionEventIncludeObjectSchema as WorkflowExecutionEventIncludeObjectSchema } from './objects/WorkflowExecutionEventInclude.schema';
+import { WorkflowExecutionEventWhereUniqueInputObjectSchema as WorkflowExecutionEventWhereUniqueInputObjectSchema } from './objects/WorkflowExecutionEventWhereUniqueInput.schema';
+import { WorkflowExecutionEventCreateInputObjectSchema as WorkflowExecutionEventCreateInputObjectSchema } from './objects/WorkflowExecutionEventCreateInput.schema';
+import { WorkflowExecutionEventUncheckedCreateInputObjectSchema as WorkflowExecutionEventUncheckedCreateInputObjectSchema } from './objects/WorkflowExecutionEventUncheckedCreateInput.schema';
+import { WorkflowExecutionEventUpdateInputObjectSchema as WorkflowExecutionEventUpdateInputObjectSchema } from './objects/WorkflowExecutionEventUpdateInput.schema';
+import { WorkflowExecutionEventUncheckedUpdateInputObjectSchema as WorkflowExecutionEventUncheckedUpdateInputObjectSchema } from './objects/WorkflowExecutionEventUncheckedUpdateInput.schema';
+
+export const WorkflowExecutionEventUpsertOneSchema: z.ZodType<Prisma.WorkflowExecutionEventUpsertArgs> = z.object({ select: WorkflowExecutionEventSelectObjectSchema.optional(), include: WorkflowExecutionEventIncludeObjectSchema.optional(), where: WorkflowExecutionEventWhereUniqueInputObjectSchema, create: z.union([ WorkflowExecutionEventCreateInputObjectSchema, WorkflowExecutionEventUncheckedCreateInputObjectSchema ]), update: z.union([ WorkflowExecutionEventUpdateInputObjectSchema, WorkflowExecutionEventUncheckedUpdateInputObjectSchema ]) }).strict() as unknown as z.ZodType<Prisma.WorkflowExecutionEventUpsertArgs>;
+
+export const WorkflowExecutionEventUpsertOneZodSchema = z.object({ select: WorkflowExecutionEventSelectObjectSchema.optional(), include: WorkflowExecutionEventIncludeObjectSchema.optional(), where: WorkflowExecutionEventWhereUniqueInputObjectSchema, create: z.union([ WorkflowExecutionEventCreateInputObjectSchema, WorkflowExecutionEventUncheckedCreateInputObjectSchema ]), update: z.union([ WorkflowExecutionEventUpdateInputObjectSchema, WorkflowExecutionEventUncheckedUpdateInputObjectSchema ]) }).strict();

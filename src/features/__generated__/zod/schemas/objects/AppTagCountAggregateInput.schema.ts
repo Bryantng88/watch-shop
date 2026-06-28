@@ -12,6 +12,7 @@ const makeSchema = () => z.object({
   ownerId: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
+  workflowTemplateId: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const AppTagCountAggregateInputObjectSchema: z.ZodType<Prisma.AppTagCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.AppTagCountAggregateInputType>;

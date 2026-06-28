@@ -17,7 +17,8 @@ const makeSchema = () => z.object({
   ownerType: z.union([AppTagOwnerTypeSchema, z.lazy(() => NullableEnumAppTagOwnerTypeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   ownerId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  workflowTemplateId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
 }).strict();
 export const AppTagUncheckedUpdateManyInputObjectSchema: z.ZodType<Prisma.AppTagUncheckedUpdateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.AppTagUncheckedUpdateManyInput>;
 export const AppTagUncheckedUpdateManyInputObjectZodSchema = makeSchema();

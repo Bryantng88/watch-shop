@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WorkflowExecutionOrderByWithRelationInputObjectSchema as WorkflowExecutionOrderByWithRelationInputObjectSchema } from './objects/WorkflowExecutionOrderByWithRelationInput.schema';
+import { WorkflowExecutionWhereInputObjectSchema as WorkflowExecutionWhereInputObjectSchema } from './objects/WorkflowExecutionWhereInput.schema';
+import { WorkflowExecutionWhereUniqueInputObjectSchema as WorkflowExecutionWhereUniqueInputObjectSchema } from './objects/WorkflowExecutionWhereUniqueInput.schema';
+import { WorkflowExecutionCountAggregateInputObjectSchema as WorkflowExecutionCountAggregateInputObjectSchema } from './objects/WorkflowExecutionCountAggregateInput.schema';
+
+export const WorkflowExecutionCountSchema: z.ZodType<Prisma.WorkflowExecutionCountArgs> = z.object({ orderBy: z.union([WorkflowExecutionOrderByWithRelationInputObjectSchema, WorkflowExecutionOrderByWithRelationInputObjectSchema.array()]).optional(), where: WorkflowExecutionWhereInputObjectSchema.optional(), cursor: WorkflowExecutionWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), WorkflowExecutionCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.WorkflowExecutionCountArgs>;
+
+export const WorkflowExecutionCountZodSchema = z.object({ orderBy: z.union([WorkflowExecutionOrderByWithRelationInputObjectSchema, WorkflowExecutionOrderByWithRelationInputObjectSchema.array()]).optional(), where: WorkflowExecutionWhereInputObjectSchema.optional(), cursor: WorkflowExecutionWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), WorkflowExecutionCountAggregateInputObjectSchema ]).optional() }).strict();

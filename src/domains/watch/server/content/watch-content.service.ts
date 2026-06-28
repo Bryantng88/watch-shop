@@ -7,7 +7,34 @@ import {
   syncWatchContentSnapshotRepo,
   updateWatchContentStatusRepo,
 } from "./watch-content.repo";
+import { recordBusinessEvent } from "@/domains/workflow/server/workflow.engine";
 
+
+async function safeEmitWatchContentUpdatedEvent(input: {
+  productId: string;
+  userId?: string | null;
+}) {
+  try {
+    const target = await getReviewTargetOrThrow(input.productId);
+
+    await recordBusinessEvent(prisma, {
+      eventKey: "watch.content.modified",
+      targetType: "WATCH",
+      targetId: target.id,
+      targetAliasIds: [input.productId],
+      actorUserId: input.userId ?? null,
+      payload: {
+        productId: input.productId,
+        watchId: target.id,
+      },
+    } as any);
+  } catch (error) {
+    console.error("WORKFLOW_EMIT_WATCH_CONTENT_UPDATED_FAILED", {
+      productId: input.productId,
+      error,
+    });
+  }
+}
 function hasMeaningfulContent(content: any) {
   return Boolean(
     String(content?.titleOverride ?? "").trim() ||
@@ -32,12 +59,21 @@ export async function getWatchContent(productId: string) {
 
 export async function saveWatchContent(
   productId: string,
-  input: Omit<SaveWatchContentInput, "productId">
+  input: Omit<SaveWatchContentInput, "productId"> & {
+    userId?: string | null;
+  },
 ) {
-  return saveWatchContentRepo(prisma as any, productId, {
+  const content = await saveWatchContentRepo(prisma as any, productId, {
     productId,
     ...input,
   });
+
+  await safeEmitWatchContentUpdatedEvent({
+    productId,
+    userId: input.userId ?? null,
+  });
+
+  return content;
 }
 
 export async function syncWatchContentSnapshot(productId: string) {

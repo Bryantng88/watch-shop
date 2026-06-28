@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WorkflowExecutionEventOrderByWithRelationInputObjectSchema as WorkflowExecutionEventOrderByWithRelationInputObjectSchema } from './objects/WorkflowExecutionEventOrderByWithRelationInput.schema';
+import { WorkflowExecutionEventWhereInputObjectSchema as WorkflowExecutionEventWhereInputObjectSchema } from './objects/WorkflowExecutionEventWhereInput.schema';
+import { WorkflowExecutionEventWhereUniqueInputObjectSchema as WorkflowExecutionEventWhereUniqueInputObjectSchema } from './objects/WorkflowExecutionEventWhereUniqueInput.schema';
+import { WorkflowExecutionEventCountAggregateInputObjectSchema as WorkflowExecutionEventCountAggregateInputObjectSchema } from './objects/WorkflowExecutionEventCountAggregateInput.schema';
+
+export const WorkflowExecutionEventCountSchema: z.ZodType<Prisma.WorkflowExecutionEventCountArgs> = z.object({ orderBy: z.union([WorkflowExecutionEventOrderByWithRelationInputObjectSchema, WorkflowExecutionEventOrderByWithRelationInputObjectSchema.array()]).optional(), where: WorkflowExecutionEventWhereInputObjectSchema.optional(), cursor: WorkflowExecutionEventWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), WorkflowExecutionEventCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.WorkflowExecutionEventCountArgs>;
+
+export const WorkflowExecutionEventCountZodSchema = z.object({ orderBy: z.union([WorkflowExecutionEventOrderByWithRelationInputObjectSchema, WorkflowExecutionEventOrderByWithRelationInputObjectSchema.array()]).optional(), where: WorkflowExecutionEventWhereInputObjectSchema.optional(), cursor: WorkflowExecutionEventWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), WorkflowExecutionEventCountAggregateInputObjectSchema ]).optional() }).strict();

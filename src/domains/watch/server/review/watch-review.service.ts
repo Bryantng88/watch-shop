@@ -1,6 +1,7 @@
 import { prisma } from "@/server/db/client";
 import { ProductStatus, WatchSaleStage, WatchStockStage } from "@prisma/client";
-import { completeRelatedTasks, ensureSystemTask } from "@/domains/task";
+import { recordBusinessEvent } from "@/domains/workflow/server/workflow.engine";
+
 type ReviewTargetType = "CONTENT" | "IMAGE";
 type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
@@ -14,18 +15,25 @@ type RejectInput = ReviewInput & {
     note?: string | null;
 };
 
+function watchReviewApprovedEventKey(targetType: ReviewTargetType) {
+    return targetType === "CONTENT"
+        ? "watch.content.approved"
+        : "watch.image.approved";
+}
+
+function watchReviewUnapprovedEventKey(targetType: ReviewTargetType) {
+    return targetType === "CONTENT"
+        ? "watch.content.unapproved"
+        : "watch.image.unapproved";
+}
+
 async function getWatchOrThrow(productId: string) {
     const watch = await prisma.watch.findUnique({
         where: { productId },
-        select: {
-            id: true,
-            productId: true,
-        },
+        select: { id: true, productId: true },
     });
 
-    if (!watch) {
-        throw new Error("Không tìm thấy watch.");
-    }
+    if (!watch) throw new Error("Không tìm thấy watch.");
 
     return watch;
 }
@@ -55,7 +63,7 @@ async function ensureReviewState(input: {
 
 async function writeReviewLog(input: {
     reviewStateId: string;
-    action: "SUBMIT" | "APPROVE" | "REJECT" | "RESET_DRAFT" | "AUTO_APPROVE";
+    action: "SUBMIT" | "APPROVE" | "REJECT" | "RESET_DRAFT";
     fromStatus?: ReviewStatus | null;
     toStatus: ReviewStatus;
     actorId?: string | null;
@@ -72,6 +80,68 @@ async function writeReviewLog(input: {
         },
     });
 }
+
+async function emitWatchReviewApprovedEvent(input: ReviewInput) {
+    const watch = await getWatchOrThrow(input.productId);
+
+    await recordBusinessEvent(prisma, {
+        eventKey: watchReviewApprovedEventKey(input.targetType),
+        targetType: "WATCH",
+        targetId: watch.id,
+        targetAliasIds: [input.productId],
+        actorUserId: input.userId ?? null,
+        payload: {
+            productId: input.productId,
+            watchId: watch.id,
+            reviewTargetType: input.targetType,
+        },
+    } as any);
+}
+
+async function safeEmitWatchReviewApprovedEvent(input: ReviewInput) {
+    try {
+        await emitWatchReviewApprovedEvent(input);
+    } catch (error) {
+        console.error("WORKFLOW_EMIT_APPROVED_FAILED", {
+            productId: input.productId,
+            targetType: input.targetType,
+            error,
+        });
+    }
+}
+
+async function safeEmitWatchReviewUnapprovedEvent(input: ReviewInput & {
+    fromStatus: ReviewStatus;
+    toStatus: ReviewStatus;
+}) {
+    try {
+        const watch = await getWatchOrThrow(input.productId);
+
+        await recordBusinessEvent(prisma, {
+            eventKey: watchReviewUnapprovedEventKey(input.targetType),
+            targetType: "WATCH",
+            targetId: watch.id,
+            targetAliasIds: [input.productId],
+            actorUserId: input.userId ?? null,
+            effect: "REVOKE",
+            revokeEventKey: watchReviewApprovedEventKey(input.targetType),
+            payload: {
+                productId: input.productId,
+                watchId: watch.id,
+                reviewTargetType: input.targetType,
+                fromStatus: input.fromStatus,
+                toStatus: input.toStatus,
+            },
+        } as any);
+    } catch (error) {
+        console.error("WORKFLOW_EMIT_UNAPPROVED_FAILED", {
+            productId: input.productId,
+            targetType: input.targetType,
+            error,
+        });
+    }
+}
+
 async function moveWatchToProcessingIfEditable(productId: string) {
     await prisma.watch.updateMany({
         where: {
@@ -87,13 +157,29 @@ async function moveWatchToProcessingIfEditable(productId: string) {
     });
 }
 
+async function getReviewPair(productId: string) {
+    const watch = await prisma.watch.findUnique({
+        where: { productId },
+        include: {
+            product: true,
+            reviewStates: true,
+        },
+    });
+
+    if (!watch) return null;
+
+    const content = watch.reviewStates.find((x) => x.targetType === "CONTENT");
+    const image = watch.reviewStates.find((x) => x.targetType === "IMAGE");
+
+    return { watch, content, image };
+}
+
 async function moveWatchToReadyIfFullyApproved(productId: string) {
     const pair = await getReviewPair(productId);
     if (!pair?.content || !pair?.image) return false;
 
     const fullyApproved =
-        pair.content.status === "APPROVED" &&
-        pair.image.status === "APPROVED";
+        pair.content.status === "APPROVED" && pair.image.status === "APPROVED";
 
     if (!fullyApproved) return false;
 
@@ -120,22 +206,6 @@ async function moveWatchToReadyIfFullyApproved(productId: string) {
     });
 
     return true;
-}
-async function getReviewPair(productId: string) {
-    const watch = await prisma.watch.findUnique({
-        where: { productId },
-        include: {
-            product: true,
-            reviewStates: true,
-        },
-    });
-
-    if (!watch) return null;
-
-    const content = watch.reviewStates.find((x) => x.targetType === "CONTENT");
-    const image = watch.reviewStates.find((x) => x.targetType === "IMAGE");
-
-    return { watch, content, image };
 }
 
 async function notifyReviewRejected(input: {
@@ -182,14 +252,11 @@ async function notifyFullyApprovedIfReady(productId: string) {
 
     const userIds = Array.from(
         new Set(
-            [
-                pair.content.submittedById,
-                pair.image.submittedById,
-            ].filter(Boolean)
-        )
+            [pair.content.submittedById, pair.image.submittedById].filter(Boolean),
+        ),
     );
 
-    if (userIds.length === 0) return;
+    if (!userIds.length) return;
 
     await prisma.notification.createMany({
         data: userIds.map((userId) => ({
@@ -206,6 +273,7 @@ async function notifyFullyApprovedIfReady(productId: string) {
         skipDuplicates: false,
     });
 }
+
 export async function submitWatchReview(input: ReviewInput) {
     const current = await ensureReviewState(input);
 
@@ -237,47 +305,23 @@ export async function submitWatchReview(input: ReviewInput) {
 
     return state;
 }
+
 export async function approveWatchReview(input: ReviewInput) {
     const current = await ensureReviewState(input);
 
+    if (current.status === "APPROVED") {
+        await safeEmitWatchReviewApprovedEvent(input);
+        await moveWatchToReadyIfFullyApproved(input.productId);
+        await notifyFullyApprovedIfReady(input.productId);
+        return current;
+    }
+
     if (!["DRAFT", "SUBMITTED", "REJECTED"].includes(current.status)) {
         throw new Error(
-            input.targetType === "CONTENT"
-                ? "Nội dung hiện không thể duyệt."
-                : "Hình ảnh hiện không thể duyệt.",
+            `${input.targetType === "CONTENT" ? "Nội dung" : "Hình ảnh"} hiện không thể duyệt. Status hiện tại: ${current.status}`,
         );
     }
-    if (input.targetType === "IMAGE") {
-        const watch = await prisma.watch.findUnique({
-            where: { productId: input.productId },
-            select: { id: true },
-        });
 
-        if (watch) {
-            await completeRelatedTasks(
-                prisma,
-                {
-                    taskTypeCode: "WATCH_IMAGE",
-                    watchId: watch.id,
-                    completedByUserId: input.userId,
-                },
-            );
-        }
-    }
-    if (input.targetType === "CONTENT") {
-        const watch = await prisma.watch.findUnique({
-            where: { productId: input.productId },
-            select: { id: true },
-        });
-
-        if (watch) {
-            await completeRelatedTasks(prisma, {
-                taskTypeCode: "WATCH_CONTENT",
-                watchId: watch.id,
-                completedByUserId: input.userId,
-            });
-        }
-    }
     const state = await prisma.watchReviewState.update({
         where: { id: current.id },
         data: {
@@ -296,11 +340,14 @@ export async function approveWatchReview(input: ReviewInput) {
         actorId: input.userId,
     });
 
+    await safeEmitWatchReviewApprovedEvent(input);
+
     await moveWatchToReadyIfFullyApproved(input.productId);
     await notifyFullyApprovedIfReady(input.productId);
 
     return state;
 }
+
 export async function rejectWatchReview(input: RejectInput) {
     const current = await ensureReviewState(input);
 
@@ -321,27 +368,6 @@ export async function rejectWatchReview(input: RejectInput) {
             reviewNote: input.note ?? null,
         },
     });
-    await ensureSystemTask(
-        prisma,
-        {
-            taskTypeCode: "WATCH_IMAGE",
-            watchId: current.id,
-            title: `Bổ sung hình ảnh`,
-            description: input.note ?? "",
-        },
-    );
-
-    await ensureSystemTask(
-        prisma,
-        {
-            taskTypeCode: "WATCH_CONTENT",
-            watchId: current.id,
-            title: `Bổ sung nội dung`,
-            description: input.note ?? "",
-        },
-    );
-
-
 
     await writeReviewLog({
         reviewStateId: state.id,
@@ -372,6 +398,8 @@ export async function resetWatchReviewToDraft(input: ReviewInput) {
         return current;
     }
 
+    const wasApproved = current.status === "APPROVED";
+
     const state = await prisma.watchReviewState.update({
         where: { id: current.id },
         data: {
@@ -390,34 +418,15 @@ export async function resetWatchReviewToDraft(input: ReviewInput) {
         actorId: input.userId,
     });
 
+    if (wasApproved) {
+        await safeEmitWatchReviewUnapprovedEvent({
+            ...input,
+            fromStatus: current.status as ReviewStatus,
+            toStatus: "DRAFT",
+        });
+    }
+
     await moveWatchToProcessingIfEditable(input.productId);
-
-    return state;
-}
-
-export async function autoApproveWatchReview(input: ReviewInput) {
-    const current = await ensureReviewState(input);
-
-    const state = await prisma.watchReviewState.update({
-        where: { id: current.id },
-        data: {
-            status: "APPROVED",
-            reviewedAt: new Date(),
-            reviewedById: input.userId ?? null,
-            reviewNote: null,
-        },
-    });
-
-    await writeReviewLog({
-        reviewStateId: state.id,
-        action: "AUTO_APPROVE",
-        fromStatus: current.status as ReviewStatus,
-        toStatus: "APPROVED",
-        actorId: input.userId,
-    });
-
-    await moveWatchToReadyIfFullyApproved(input.productId);
-    await notifyFullyApprovedIfReady(input.productId);
 
     return state;
 }

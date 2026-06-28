@@ -12,7 +12,8 @@ const makeSchema = () => z.object({
   ownerType: AppTagOwnerTypeSchema.optional().nullable(),
   ownerId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date().optional(),
+  workflowTemplateId: z.string().optional().nullable()
 }).strict();
 export const AppTagUncheckedCreateWithoutLinksInputObjectSchema: z.ZodType<Prisma.AppTagUncheckedCreateWithoutLinksInput> = makeSchema() as unknown as z.ZodType<Prisma.AppTagUncheckedCreateWithoutLinksInput>;
 export const AppTagUncheckedCreateWithoutLinksInputObjectZodSchema = makeSchema();

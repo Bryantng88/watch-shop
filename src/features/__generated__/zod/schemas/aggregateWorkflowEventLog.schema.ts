@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WorkflowEventLogOrderByWithRelationInputObjectSchema as WorkflowEventLogOrderByWithRelationInputObjectSchema } from './objects/WorkflowEventLogOrderByWithRelationInput.schema';
+import { WorkflowEventLogWhereInputObjectSchema as WorkflowEventLogWhereInputObjectSchema } from './objects/WorkflowEventLogWhereInput.schema';
+import { WorkflowEventLogWhereUniqueInputObjectSchema as WorkflowEventLogWhereUniqueInputObjectSchema } from './objects/WorkflowEventLogWhereUniqueInput.schema';
+import { WorkflowEventLogCountAggregateInputObjectSchema as WorkflowEventLogCountAggregateInputObjectSchema } from './objects/WorkflowEventLogCountAggregateInput.schema';
+import { WorkflowEventLogMinAggregateInputObjectSchema as WorkflowEventLogMinAggregateInputObjectSchema } from './objects/WorkflowEventLogMinAggregateInput.schema';
+import { WorkflowEventLogMaxAggregateInputObjectSchema as WorkflowEventLogMaxAggregateInputObjectSchema } from './objects/WorkflowEventLogMaxAggregateInput.schema';
+
+export const WorkflowEventLogAggregateSchema: z.ZodType<Prisma.WorkflowEventLogAggregateArgs> = z.object({ orderBy: z.union([WorkflowEventLogOrderByWithRelationInputObjectSchema, WorkflowEventLogOrderByWithRelationInputObjectSchema.array()]).optional(), where: WorkflowEventLogWhereInputObjectSchema.optional(), cursor: WorkflowEventLogWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), WorkflowEventLogCountAggregateInputObjectSchema ]).optional(), _min: WorkflowEventLogMinAggregateInputObjectSchema.optional(), _max: WorkflowEventLogMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.WorkflowEventLogAggregateArgs>;
+
+export const WorkflowEventLogAggregateZodSchema = z.object({ orderBy: z.union([WorkflowEventLogOrderByWithRelationInputObjectSchema, WorkflowEventLogOrderByWithRelationInputObjectSchema.array()]).optional(), where: WorkflowEventLogWhereInputObjectSchema.optional(), cursor: WorkflowEventLogWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), WorkflowEventLogCountAggregateInputObjectSchema ]).optional(), _min: WorkflowEventLogMinAggregateInputObjectSchema.optional(), _max: WorkflowEventLogMaxAggregateInputObjectSchema.optional() }).strict();

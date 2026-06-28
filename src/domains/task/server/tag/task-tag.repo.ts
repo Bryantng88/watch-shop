@@ -14,7 +14,35 @@ export type AppTagPayload = {
   scope: AppTagScope;
   ownerType: AppTagOwnerType | null;
   ownerId: string | null;
+  workflowTemplateId?: string | null;
+  workflowTemplate?: {
+    id: string;
+    name: string;
+    description?: string | null;
+    conditions?: Array<{
+      id: string;
+      eventKey: string;
+      targetType?: string | null;
+    }>;
+    actions?: Array<{
+      id: string;
+      actionType: string;
+    }>;
+  } | null;
 };
+
+const WORKFLOW_TEMPLATE_INCLUDE = {
+  workflowTemplate: {
+    include: {
+      conditions: {
+        orderBy: [{ createdAt: "asc" }],
+      },
+      actions: {
+        orderBy: [{ createdAt: "asc" }],
+      },
+    },
+  },
+} satisfies Prisma.AppTagInclude;
 
 export function normalizeTagName(value: unknown) {
   return String(value ?? "").trim().replace(/\s+/g, " ");
@@ -57,6 +85,7 @@ export async function listOwnerTagsRepo(
       ownerType: input.ownerType,
       ownerId: input.ownerId,
     },
+    include: WORKFLOW_TEMPLATE_INCLUDE,
     orderBy: [{ name: "asc" }],
   });
 }
@@ -99,6 +128,7 @@ export async function ensureOwnerTagsRepo(
         ownerType: input.ownerType,
         ownerId: input.ownerId,
       },
+      include: WORKFLOW_TEMPLATE_INCLUDE,
     });
 
     tags.push(tag);
@@ -174,7 +204,9 @@ export async function listTargetTagsRepo(
       targetId: input.targetId,
     },
     include: {
-      tag: true,
+      tag: {
+        include: WORKFLOW_TEMPLATE_INCLUDE,
+      },
     },
     orderBy: [{ createdAt: "asc" }],
   });
@@ -196,11 +228,16 @@ export async function hydrateTaskItemsWithTagsRepo<T extends { id: string }>(
       targetType: AppTagTargetType.TASK_ITEM,
       targetId: { in: ids },
     },
-    include: { tag: true },
+    include: {
+      tag: {
+        include: WORKFLOW_TEMPLATE_INCLUDE,
+      },
+    },
     orderBy: [{ createdAt: "asc" }],
   });
 
   const byTarget = new Map<string, AppTagPayload[]>();
+
   for (const link of links) {
     const next = byTarget.get(link.targetId) ?? [];
     next.push(link.tag);
@@ -213,10 +250,9 @@ export async function hydrateTaskItemsWithTagsRepo<T extends { id: string }>(
   }));
 }
 
-export async function hydrateTasksWithTaskItemTagsRepo<T extends { taskItems?: any[] }>(
-  db: DB,
-  tasks: T[],
-): Promise<T[]> {
+export async function hydrateTasksWithTaskItemTagsRepo<
+  T extends { taskItems?: any[] },
+>(db: DB, tasks: T[]): Promise<T[]> {
   const allItems = tasks.flatMap((task) => task.taskItems ?? []);
   if (!allItems.length) return tasks;
 

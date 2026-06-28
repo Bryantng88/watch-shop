@@ -7,7 +7,9 @@ import { AppTagScopeSchema } from '../enums/AppTagScope.schema';
 import { EnumAppTagOwnerTypeNullableFilterObjectSchema as EnumAppTagOwnerTypeNullableFilterObjectSchema } from './EnumAppTagOwnerTypeNullableFilter.schema';
 import { AppTagOwnerTypeSchema } from '../enums/AppTagOwnerType.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
-import { AppTagLinkListRelationFilterObjectSchema as AppTagLinkListRelationFilterObjectSchema } from './AppTagLinkListRelationFilter.schema'
+import { AppTagLinkListRelationFilterObjectSchema as AppTagLinkListRelationFilterObjectSchema } from './AppTagLinkListRelationFilter.schema';
+import { WorkflowTemplateNullableScalarRelationFilterObjectSchema as WorkflowTemplateNullableScalarRelationFilterObjectSchema } from './WorkflowTemplateNullableScalarRelationFilter.schema';
+import { WorkflowTemplateWhereInputObjectSchema as WorkflowTemplateWhereInputObjectSchema } from './WorkflowTemplateWhereInput.schema'
 
 const apptagwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => AppTagWhereInputObjectSchema), z.lazy(() => AppTagWhereInputObjectSchema).array()]).optional(),
@@ -22,7 +24,9 @@ const apptagwhereinputSchema = z.object({
   ownerId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  links: z.lazy(() => AppTagLinkListRelationFilterObjectSchema).optional()
+  workflowTemplateId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  links: z.lazy(() => AppTagLinkListRelationFilterObjectSchema).optional(),
+  workflowTemplate: z.union([z.lazy(() => WorkflowTemplateNullableScalarRelationFilterObjectSchema), z.lazy(() => WorkflowTemplateWhereInputObjectSchema)]).optional()
 }).strict();
 export const AppTagWhereInputObjectSchema: z.ZodType<Prisma.AppTagWhereInput> = apptagwhereinputSchema as unknown as z.ZodType<Prisma.AppTagWhereInput>;
 export const AppTagWhereInputObjectZodSchema = apptagwhereinputSchema;

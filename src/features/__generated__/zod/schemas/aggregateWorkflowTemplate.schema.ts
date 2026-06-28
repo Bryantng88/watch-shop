@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WorkflowTemplateOrderByWithRelationInputObjectSchema as WorkflowTemplateOrderByWithRelationInputObjectSchema } from './objects/WorkflowTemplateOrderByWithRelationInput.schema';
+import { WorkflowTemplateWhereInputObjectSchema as WorkflowTemplateWhereInputObjectSchema } from './objects/WorkflowTemplateWhereInput.schema';
+import { WorkflowTemplateWhereUniqueInputObjectSchema as WorkflowTemplateWhereUniqueInputObjectSchema } from './objects/WorkflowTemplateWhereUniqueInput.schema';
+import { WorkflowTemplateCountAggregateInputObjectSchema as WorkflowTemplateCountAggregateInputObjectSchema } from './objects/WorkflowTemplateCountAggregateInput.schema';
+import { WorkflowTemplateMinAggregateInputObjectSchema as WorkflowTemplateMinAggregateInputObjectSchema } from './objects/WorkflowTemplateMinAggregateInput.schema';
+import { WorkflowTemplateMaxAggregateInputObjectSchema as WorkflowTemplateMaxAggregateInputObjectSchema } from './objects/WorkflowTemplateMaxAggregateInput.schema';
+
+export const WorkflowTemplateAggregateSchema: z.ZodType<Prisma.WorkflowTemplateAggregateArgs> = z.object({ orderBy: z.union([WorkflowTemplateOrderByWithRelationInputObjectSchema, WorkflowTemplateOrderByWithRelationInputObjectSchema.array()]).optional(), where: WorkflowTemplateWhereInputObjectSchema.optional(), cursor: WorkflowTemplateWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), WorkflowTemplateCountAggregateInputObjectSchema ]).optional(), _min: WorkflowTemplateMinAggregateInputObjectSchema.optional(), _max: WorkflowTemplateMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.WorkflowTemplateAggregateArgs>;
+
+export const WorkflowTemplateAggregateZodSchema = z.object({ orderBy: z.union([WorkflowTemplateOrderByWithRelationInputObjectSchema, WorkflowTemplateOrderByWithRelationInputObjectSchema.array()]).optional(), where: WorkflowTemplateWhereInputObjectSchema.optional(), cursor: WorkflowTemplateWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), WorkflowTemplateCountAggregateInputObjectSchema ]).optional(), _min: WorkflowTemplateMinAggregateInputObjectSchema.optional(), _max: WorkflowTemplateMaxAggregateInputObjectSchema.optional() }).strict();

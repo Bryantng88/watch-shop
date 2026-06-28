@@ -9,5 +9,7 @@ export const AppTagFindFirstResultSchema = z.nullable(z.object({
   ownerId: z.string().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
-  links: z.array(z.unknown())
+  links: z.array(z.unknown()),
+  workflowTemplate: z.unknown().optional(),
+  workflowTemplateId: z.string().optional()
 }));

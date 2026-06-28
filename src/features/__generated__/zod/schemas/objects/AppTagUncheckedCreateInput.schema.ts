@@ -13,6 +13,7 @@ const makeSchema = () => z.object({
   ownerType: AppTagOwnerTypeSchema.optional().nullable(),
   ownerId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
+  workflowTemplateId: z.string().optional().nullable(),
   links: z.lazy(() => AppTagLinkUncheckedCreateNestedManyWithoutTagInputObjectSchema)
 }).strict();
 export const AppTagUncheckedCreateInputObjectSchema: z.ZodType<Prisma.AppTagUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.AppTagUncheckedCreateInput>;

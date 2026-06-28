@@ -1607,6 +1607,184 @@ model WorkCaseActivity {
   @@index([createdAt])
 }
 
+// Add these enums/models to prisma/schema.prisma
+// IMPORTANT: do NOT keep the old TaskItemCompletionRule / AutomationRule draft models.
+
+// Generic workflow engine status.
+
+enum WorkflowTemplateStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum WorkflowConditionStrategy {
+  ALL
+  ANY
+}
+
+enum WorkflowActionType {
+  COMPLETE_TASK_ITEM
+  // SEND_NOTIFICATION
+  // CREATE_TASK
+  // CREATE_PAYMENT
+  // UPDATE_ORDER
+  // UPDATE_SHIPMENT
+}
+
+enum WorkflowExecutionStatus {
+  WAITING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// 2) Replace old WorkflowRule models with these models.
+
+model WorkflowTemplate {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  name        String
+  description String?
+  status      WorkflowTemplateStatus    @default(ACTIVE)
+  strategy    WorkflowConditionStrategy @default(ALL)
+
+  // Scope is optional. For task-owned tags, ownerType = TASK, ownerId = taskId.
+  // For reusable global workflow templates, leave ownerType/ownerId null.
+  ownerType String?
+  ownerId   String?
+
+  isSystem Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  conditions WorkflowCondition[]
+  actions    WorkflowAction[]
+  executions WorkflowExecution[]
+  tags       AppTag[]
+
+  @@index([status])
+  @@index([ownerType, ownerId])
+  @@index([isSystem])
+  @@index([createdAt])
+}
+
+model WorkflowCondition {
+  id         String @id @default(dbgenerated("(gen_random_uuid())::text"))
+  workflowId String
+
+  // String registry key. Example: watch.content.approved, shipment.delivered.
+  eventKey String
+
+  // Optional domain hint. Example: WATCH, ORDER, SHIPMENT, PAYMENT, SERVICE_REQUEST.
+  targetType String?
+
+  sortOrder  Int   @default(0)
+  configJson Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workflow WorkflowTemplate @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, eventKey])
+  @@index([workflowId, sortOrder])
+  @@index([eventKey])
+  @@index([targetType])
+}
+
+model WorkflowAction {
+  id         String @id @default(dbgenerated("(gen_random_uuid())::text"))
+  workflowId String
+
+  actionType WorkflowActionType
+  sortOrder  Int                @default(0)
+  configJson Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workflow WorkflowTemplate @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId, sortOrder])
+  @@index([actionType])
+}
+
+model WorkflowEventLog {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  eventKey   String
+  targetType String
+  targetId   String
+
+  actorUserId  String?
+  metadataJson Json?
+  createdAt    DateTime @default(now())
+
+  @@unique([eventKey, targetType, targetId])
+  @@index([eventKey])
+  @@index([targetType, targetId])
+  @@index([actorUserId])
+  @@index([createdAt])
+}
+
+model WorkflowExecution {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  workflowId String
+
+  // Event target currently being evaluated. Example WATCH + watchId.
+
+  // Action target. First MVP: TASK_ITEM + taskItemId.
+  actionTargetType String
+  actionTargetId   String
+
+  status       WorkflowExecutionStatus @default(WAITING)
+  errorMessage String?
+  metadataJson Json?
+
+  startedAt   DateTime?
+  completedAt DateTime?
+  failedAt    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workflow WorkflowTemplate         @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  events   WorkflowExecutionEvent[]
+
+  @@unique([workflowId, actionTargetType, actionTargetId])
+  @@index([workflowId])
+  @@index([actionTargetType, actionTargetId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model WorkflowExecutionEvent {
+  id          String  @id @default(dbgenerated("(gen_random_uuid())::text"))
+  executionId String
+  targetType  String
+  targetId    String
+  eventKey    String
+  eventLogId  String?
+
+  createdAt DateTime @default(now())
+
+  execution WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@unique([executionId, targetType, targetId, eventKey])
+  @@index([executionId])
+  @@index([eventKey])
+  @@index([targetType, targetId])
+  @@index([eventLogId])
+}
+
+// Add this field to model TaskItem:
+// workflowRuleId String?
+// workflowRule   WorkflowRule? @relation(fields: [workflowRuleId], references: [id], onDelete: SetNull)
+// @@index([workflowRuleId])
+
 model Task {
   id String @id @default(dbgenerated("(gen_random_uuid())::text"))
 
@@ -1785,7 +1963,9 @@ model AppTag {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  links AppTagLink[]
+  links              AppTagLink[]
+  workflowTemplate   WorkflowTemplate? @relation(fields: [workflowTemplateId], references: [id])
+  workflowTemplateId String?
 
   @@unique([slug, scope, ownerType, ownerId])
   @@index([scope])

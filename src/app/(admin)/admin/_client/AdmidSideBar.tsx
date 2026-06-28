@@ -157,6 +157,13 @@ const NAV: NavEntry[] = [
     },
     {
         type: "item",
+        href: "/admin/workflows",
+        label: "Workflow",
+        icon: CheckSquare,
+        permission: PERMISSIONS.TASK_MANAGE,
+    },
+    {
+        type: "item",
         href: "/admin/media",
         label: "Media",
         icon: CameraIcon,

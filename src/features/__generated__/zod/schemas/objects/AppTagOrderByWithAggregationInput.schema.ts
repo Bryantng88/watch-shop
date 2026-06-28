@@ -16,6 +16,7 @@ const makeSchema = () => z.object({
   ownerId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
+  workflowTemplateId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => AppTagCountOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => AppTagMaxOrderByAggregateInputObjectSchema).optional(),
   _min: z.lazy(() => AppTagMinOrderByAggregateInputObjectSchema).optional()

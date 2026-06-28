@@ -1,6 +1,7 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { AppTagLinkFindManySchema as AppTagLinkFindManySchema } from '../findManyAppTagLink.schema';
+import { WorkflowTemplateArgsObjectSchema as WorkflowTemplateArgsObjectSchema } from './WorkflowTemplateArgs.schema';
 import { AppTagCountOutputTypeArgsObjectSchema as AppTagCountOutputTypeArgsObjectSchema } from './AppTagCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -14,6 +15,8 @@ const makeSchema = () => z.object({
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
   links: z.union([z.boolean(), z.lazy(() => AppTagLinkFindManySchema)]).optional(),
+  workflowTemplate: z.union([z.boolean(), z.lazy(() => WorkflowTemplateArgsObjectSchema)]).optional(),
+  workflowTemplateId: z.boolean().optional(),
   _count: z.union([z.boolean(), z.lazy(() => AppTagCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const AppTagSelectObjectSchema: z.ZodType<Prisma.AppTagSelect> = makeSchema() as unknown as z.ZodType<Prisma.AppTagSelect>;

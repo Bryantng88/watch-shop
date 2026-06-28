@@ -20,7 +20,8 @@ const apptagscalarwherewithaggregatesinputSchema = z.object({
   ownerType: z.union([z.lazy(() => EnumAppTagOwnerTypeNullableWithAggregatesFilterObjectSchema), AppTagOwnerTypeSchema]).optional().nullable(),
   ownerId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
-  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional()
+  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
+  workflowTemplateId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const AppTagScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.AppTagScalarWhereWithAggregatesInput> = apptagscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.AppTagScalarWhereWithAggregatesInput>;
 export const AppTagScalarWhereWithAggregatesInputObjectZodSchema = apptagscalarwherewithaggregatesinputSchema;

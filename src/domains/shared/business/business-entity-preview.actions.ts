@@ -84,8 +84,7 @@ export async function getBusinessEntityPreviewAction(input: {
             subtitle: product?.sku ? `SKU: ${product.sku}` : compactId(row.id),
             status: row.saleStage,
             imageUrl: imageUrlFromProduct(product),
-            href: `/admin/watches/${row.id}`,
-            facts: [
+            href: `/admin/watches/${product?.id}/edit`, facts: [
                 { label: "Brand", value: product?.brand?.name || "-" },
                 { label: "Product status", value: product?.status || "-" },
                 { label: "Sale stage", value: row.saleStage || "-" },

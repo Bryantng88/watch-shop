@@ -12,7 +12,8 @@ const makeSchema = () => z.object({
   ownerType: AppTagOwnerTypeSchema.optional().nullable(),
   ownerId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date().optional(),
+  workflowTemplateId: z.string().optional().nullable()
 }).strict();
 export const AppTagCreateManyInputObjectSchema: z.ZodType<Prisma.AppTagCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.AppTagCreateManyInput>;
 export const AppTagCreateManyInputObjectZodSchema = makeSchema();

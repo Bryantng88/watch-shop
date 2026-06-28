@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WorkflowConditionOrderByWithRelationInputObjectSchema as WorkflowConditionOrderByWithRelationInputObjectSchema } from './objects/WorkflowConditionOrderByWithRelationInput.schema';
+import { WorkflowConditionWhereInputObjectSchema as WorkflowConditionWhereInputObjectSchema } from './objects/WorkflowConditionWhereInput.schema';
+import { WorkflowConditionWhereUniqueInputObjectSchema as WorkflowConditionWhereUniqueInputObjectSchema } from './objects/WorkflowConditionWhereUniqueInput.schema';
+import { WorkflowConditionCountAggregateInputObjectSchema as WorkflowConditionCountAggregateInputObjectSchema } from './objects/WorkflowConditionCountAggregateInput.schema';
+
+export const WorkflowConditionCountSchema: z.ZodType<Prisma.WorkflowConditionCountArgs> = z.object({ orderBy: z.union([WorkflowConditionOrderByWithRelationInputObjectSchema, WorkflowConditionOrderByWithRelationInputObjectSchema.array()]).optional(), where: WorkflowConditionWhereInputObjectSchema.optional(), cursor: WorkflowConditionWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), WorkflowConditionCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.WorkflowConditionCountArgs>;
+
+export const WorkflowConditionCountZodSchema = z.object({ orderBy: z.union([WorkflowConditionOrderByWithRelationInputObjectSchema, WorkflowConditionOrderByWithRelationInputObjectSchema.array()]).optional(), where: WorkflowConditionWhereInputObjectSchema.optional(), cursor: WorkflowConditionWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), WorkflowConditionCountAggregateInputObjectSchema ]).optional() }).strict();

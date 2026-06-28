@@ -1,7 +1,8 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { AppTagScopeSchema } from '../enums/AppTagScope.schema';
-import { AppTagOwnerTypeSchema } from '../enums/AppTagOwnerType.schema'
+import { AppTagOwnerTypeSchema } from '../enums/AppTagOwnerType.schema';
+import { WorkflowTemplateCreateNestedOneWithoutTagsInputObjectSchema as WorkflowTemplateCreateNestedOneWithoutTagsInputObjectSchema } from './WorkflowTemplateCreateNestedOneWithoutTagsInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -12,7 +13,8 @@ const makeSchema = () => z.object({
   ownerType: AppTagOwnerTypeSchema.optional().nullable(),
   ownerId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date().optional(),
+  workflowTemplate: z.lazy(() => WorkflowTemplateCreateNestedOneWithoutTagsInputObjectSchema).optional()
 }).strict();
 export const AppTagCreateWithoutLinksInputObjectSchema: z.ZodType<Prisma.AppTagCreateWithoutLinksInput> = makeSchema() as unknown as z.ZodType<Prisma.AppTagCreateWithoutLinksInput>;
 export const AppTagCreateWithoutLinksInputObjectZodSchema = makeSchema();

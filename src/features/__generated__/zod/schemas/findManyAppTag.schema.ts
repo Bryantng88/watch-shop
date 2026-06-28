@@ -20,6 +20,8 @@ export const AppTagFindManySelectSchema: z.ZodType<Prisma.AppTagSelect> = z.obje
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     links: z.boolean().optional(),
+    workflowTemplate: z.boolean().optional(),
+    workflowTemplateId: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.AppTagSelect>;
 
@@ -34,6 +36,8 @@ export const AppTagFindManySelectZodSchema = z.object({
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     links: z.boolean().optional(),
+    workflowTemplate: z.boolean().optional(),
+    workflowTemplateId: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

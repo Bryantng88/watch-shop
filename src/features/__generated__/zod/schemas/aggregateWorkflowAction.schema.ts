@@ -1,0 +1,14 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WorkflowActionOrderByWithRelationInputObjectSchema as WorkflowActionOrderByWithRelationInputObjectSchema } from './objects/WorkflowActionOrderByWithRelationInput.schema';
+import { WorkflowActionWhereInputObjectSchema as WorkflowActionWhereInputObjectSchema } from './objects/WorkflowActionWhereInput.schema';
+import { WorkflowActionWhereUniqueInputObjectSchema as WorkflowActionWhereUniqueInputObjectSchema } from './objects/WorkflowActionWhereUniqueInput.schema';
+import { WorkflowActionCountAggregateInputObjectSchema as WorkflowActionCountAggregateInputObjectSchema } from './objects/WorkflowActionCountAggregateInput.schema';
+import { WorkflowActionMinAggregateInputObjectSchema as WorkflowActionMinAggregateInputObjectSchema } from './objects/WorkflowActionMinAggregateInput.schema';
+import { WorkflowActionMaxAggregateInputObjectSchema as WorkflowActionMaxAggregateInputObjectSchema } from './objects/WorkflowActionMaxAggregateInput.schema';
+import { WorkflowActionAvgAggregateInputObjectSchema as WorkflowActionAvgAggregateInputObjectSchema } from './objects/WorkflowActionAvgAggregateInput.schema';
+import { WorkflowActionSumAggregateInputObjectSchema as WorkflowActionSumAggregateInputObjectSchema } from './objects/WorkflowActionSumAggregateInput.schema';
+
+export const WorkflowActionAggregateSchema: z.ZodType<Prisma.WorkflowActionAggregateArgs> = z.object({ orderBy: z.union([WorkflowActionOrderByWithRelationInputObjectSchema, WorkflowActionOrderByWithRelationInputObjectSchema.array()]).optional(), where: WorkflowActionWhereInputObjectSchema.optional(), cursor: WorkflowActionWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), WorkflowActionCountAggregateInputObjectSchema ]).optional(), _min: WorkflowActionMinAggregateInputObjectSchema.optional(), _max: WorkflowActionMaxAggregateInputObjectSchema.optional(), _avg: WorkflowActionAvgAggregateInputObjectSchema.optional(), _sum: WorkflowActionSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.WorkflowActionAggregateArgs>;
+
+export const WorkflowActionAggregateZodSchema = z.object({ orderBy: z.union([WorkflowActionOrderByWithRelationInputObjectSchema, WorkflowActionOrderByWithRelationInputObjectSchema.array()]).optional(), where: WorkflowActionWhereInputObjectSchema.optional(), cursor: WorkflowActionWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), WorkflowActionCountAggregateInputObjectSchema ]).optional(), _min: WorkflowActionMinAggregateInputObjectSchema.optional(), _max: WorkflowActionMaxAggregateInputObjectSchema.optional(), _avg: WorkflowActionAvgAggregateInputObjectSchema.optional(), _sum: WorkflowActionSumAggregateInputObjectSchema.optional() }).strict();

@@ -20,6 +20,8 @@ export const AppTagFindFirstOrThrowSelectSchema: z.ZodType<Prisma.AppTagSelect> 
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     links: z.boolean().optional(),
+    workflowTemplate: z.boolean().optional(),
+    workflowTemplateId: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.AppTagSelect>;
 
@@ -34,6 +36,8 @@ export const AppTagFindFirstOrThrowSelectZodSchema = z.object({
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     links: z.boolean().optional(),
+    workflowTemplate: z.boolean().optional(),
+    workflowTemplateId: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

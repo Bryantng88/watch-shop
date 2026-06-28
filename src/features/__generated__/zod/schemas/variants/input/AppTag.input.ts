@@ -13,7 +13,9 @@ export const AppTagInputSchema = z.object({
     ownerId: z.string().optional().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
-    links: z.array(z.unknown())
+    links: z.array(z.unknown()),
+    workflowTemplate: z.unknown().optional().nullable(),
+    workflowTemplateId: z.string().optional().nullable()
 }).strict();
 
 export type AppTagInputType = z.infer<typeof AppTagInputSchema>;

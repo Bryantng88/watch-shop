@@ -13,7 +13,7 @@ import {
 } from "./task.repo.shared";
 import { hydrateTaskBusinessLinks } from "./task-business-hydrate.repo";
 import { hydrateTasksWithTaskItemTagsRepo } from "../tag/task-tag.repo";
-
+import { getTaskItemWorkflowProgress } from "@/domains/workflow/server/workflow.repo";
 export async function listTasksRepo(
   db: DB,
   input: { userId: string; canViewAll?: boolean; filters: TaskListFilters },
@@ -58,7 +58,27 @@ export async function listTasksRepo(
     applyTaskRowAccess(item, input.userId, canViewAll),
   );
 
-  const finalItems = await hydrateTasksWithTaskItemTagsRepo(db, accessItems);
+  let finalItems = await hydrateTasksWithTaskItemTagsRepo(
+    db,
+    accessItems,
+  );
+
+  const workflowMap =
+    await getTaskItemWorkflowProgress(
+      db,
+      finalItems
+        .flatMap((task) => task.taskItems ?? [])
+        .map((item) => item.id),
+    );
+
+  finalItems = finalItems.map((task) => ({
+    ...task,
+    taskItems: (task.taskItems ?? []).map((item) => ({
+      ...item,
+      workflowProgress:
+        workflowMap.get(item.id) ?? null,
+    })),
+  }));
 
   return {
     items: finalItems,
@@ -163,8 +183,26 @@ export async function getTaskByIdRepo(db: DB, id: string) {
   const task = await client.task.findUnique({ where: { id }, include: TASK_INCLUDE });
   if (!task) return null;
   const hydrated = await hydrateTaskBusinessLinks(db, task);
-  const [withTags] = await hydrateTasksWithTaskItemTagsRepo(db, [hydrated]);
-  return withTags;
+  const [withTags] =
+    await hydrateTasksWithTaskItemTagsRepo(
+      db,
+      [hydrated],
+    );
+
+  const workflowMap =
+    await getTaskItemWorkflowProgress(
+      db,
+      (withTags.taskItems ?? []).map((x) => x.id),
+    );
+
+  return {
+    ...withTags,
+    taskItems: (withTags.taskItems ?? []).map((item) => ({
+      ...item,
+      workflowProgress:
+        workflowMap.get(item.id) ?? null,
+    })),
+  };
 }
 
 export async function listAssignableUsersRepo(db: DB) {

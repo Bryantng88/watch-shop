@@ -9,7 +9,9 @@ export const AppTagAggregateResultSchema = z.object({  _count: z.object({
     ownerId: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
-    links: z.number()
+    links: z.number(),
+    workflowTemplate: z.number(),
+    workflowTemplateId: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -18,7 +20,8 @@ export const AppTagAggregateResultSchema = z.object({  _count: z.object({
     color: z.string().nullable(),
     ownerId: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    workflowTemplateId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -27,5 +30,6 @@ export const AppTagAggregateResultSchema = z.object({  _count: z.object({
     color: z.string().nullable(),
     ownerId: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    workflowTemplateId: z.string().nullable()
   }).nullable().optional()});

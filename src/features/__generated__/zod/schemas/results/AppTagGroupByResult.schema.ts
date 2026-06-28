@@ -7,6 +7,7 @@ export const AppTagGroupByResultSchema = z.array(z.object({
   ownerId: z.string(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  workflowTemplateId: z.string(),
   _count: z.object({
     id: z.number(),
     name: z.number(),
@@ -17,7 +18,9 @@ export const AppTagGroupByResultSchema = z.array(z.object({
     ownerId: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
-    links: z.number()
+    links: z.number(),
+    workflowTemplate: z.number(),
+    workflowTemplateId: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -26,7 +29,8 @@ export const AppTagGroupByResultSchema = z.array(z.object({
     color: z.string().nullable(),
     ownerId: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    workflowTemplateId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -35,6 +39,7 @@ export const AppTagGroupByResultSchema = z.array(z.object({
     color: z.string().nullable(),
     ownerId: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    workflowTemplateId: z.string().nullable()
   }).nullable().optional()
 }));
