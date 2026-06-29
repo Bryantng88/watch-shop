@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { BusinessEventLogOrderByWithRelationInputObjectSchema as BusinessEventLogOrderByWithRelationInputObjectSchema } from './objects/BusinessEventLogOrderByWithRelationInput.schema';
+import { BusinessEventLogWhereInputObjectSchema as BusinessEventLogWhereInputObjectSchema } from './objects/BusinessEventLogWhereInput.schema';
+import { BusinessEventLogWhereUniqueInputObjectSchema as BusinessEventLogWhereUniqueInputObjectSchema } from './objects/BusinessEventLogWhereUniqueInput.schema';
+import { BusinessEventLogCountAggregateInputObjectSchema as BusinessEventLogCountAggregateInputObjectSchema } from './objects/BusinessEventLogCountAggregateInput.schema';
+import { BusinessEventLogMinAggregateInputObjectSchema as BusinessEventLogMinAggregateInputObjectSchema } from './objects/BusinessEventLogMinAggregateInput.schema';
+import { BusinessEventLogMaxAggregateInputObjectSchema as BusinessEventLogMaxAggregateInputObjectSchema } from './objects/BusinessEventLogMaxAggregateInput.schema';
+
+export const BusinessEventLogAggregateSchema: z.ZodType<Prisma.BusinessEventLogAggregateArgs> = z.object({ orderBy: z.union([BusinessEventLogOrderByWithRelationInputObjectSchema, BusinessEventLogOrderByWithRelationInputObjectSchema.array()]).optional(), where: BusinessEventLogWhereInputObjectSchema.optional(), cursor: BusinessEventLogWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), BusinessEventLogCountAggregateInputObjectSchema ]).optional(), _min: BusinessEventLogMinAggregateInputObjectSchema.optional(), _max: BusinessEventLogMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.BusinessEventLogAggregateArgs>;
+
+export const BusinessEventLogAggregateZodSchema = z.object({ orderBy: z.union([BusinessEventLogOrderByWithRelationInputObjectSchema, BusinessEventLogOrderByWithRelationInputObjectSchema.array()]).optional(), where: BusinessEventLogWhereInputObjectSchema.optional(), cursor: BusinessEventLogWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), BusinessEventLogCountAggregateInputObjectSchema ]).optional(), _min: BusinessEventLogMinAggregateInputObjectSchema.optional(), _max: BusinessEventLogMaxAggregateInputObjectSchema.optional() }).strict();

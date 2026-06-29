@@ -8,10 +8,10 @@ import {
 } from "@prisma/client";
 import { X, Plus, Trash2 } from "lucide-react";
 import {
-    WORKFLOW_EVENTS,
-    WORKFLOW_ACTIONS,
-    getWorkflowEventDefinition,
-} from "@/domains/workflow/server/workflow.registry";
+    BUSINESS_EVENTS,
+    getBusinessEventDefinition,
+} from "@/domains/event/registry/business-event-registry";
+import { WORKFLOW_ACTIONS } from "../server/workflow.registry";
 
 
 export default function WorkflowTemplateModal({
@@ -65,7 +65,7 @@ export default function WorkflowTemplateModal({
     if (!open) return null;
 
     function addCondition() {
-        const first = WORKFLOW_EVENTS[0];
+        const first = BUSINESS_EVENTS[0];
 
         setConditions((prev) => [
             ...prev,
@@ -77,7 +77,7 @@ export default function WorkflowTemplateModal({
         ]);
     }
     function updateCondition(index: number, eventKey: string) {
-        const event = getWorkflowEventDefinition(eventKey);
+        const event = getBusinessEventDefinition(eventKey);
 
         setConditions((prev) =>
             prev.map((row, idx) =>
@@ -209,7 +209,7 @@ export default function WorkflowTemplateModal({
                                         onChange={(e) => updateCondition(index, e.target.value)}
                                         className="h-10 min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-3 text-sm"
                                     >
-                                        {WORKFLOW_EVENTS.map((event) => (
+                                        {BUSINESS_EVENTS.map((event) => (
                                             <option key={event.key} value={event.key}>
                                                 {event.label}
                                             </option>

@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { NotificationRecipientGroupOrderByWithRelationInputObjectSchema as NotificationRecipientGroupOrderByWithRelationInputObjectSchema } from './objects/NotificationRecipientGroupOrderByWithRelationInput.schema';
+import { NotificationRecipientGroupWhereInputObjectSchema as NotificationRecipientGroupWhereInputObjectSchema } from './objects/NotificationRecipientGroupWhereInput.schema';
+import { NotificationRecipientGroupWhereUniqueInputObjectSchema as NotificationRecipientGroupWhereUniqueInputObjectSchema } from './objects/NotificationRecipientGroupWhereUniqueInput.schema';
+import { NotificationRecipientGroupCountAggregateInputObjectSchema as NotificationRecipientGroupCountAggregateInputObjectSchema } from './objects/NotificationRecipientGroupCountAggregateInput.schema';
+
+export const NotificationRecipientGroupCountSchema: z.ZodType<Prisma.NotificationRecipientGroupCountArgs> = z.object({ orderBy: z.union([NotificationRecipientGroupOrderByWithRelationInputObjectSchema, NotificationRecipientGroupOrderByWithRelationInputObjectSchema.array()]).optional(), where: NotificationRecipientGroupWhereInputObjectSchema.optional(), cursor: NotificationRecipientGroupWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), NotificationRecipientGroupCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.NotificationRecipientGroupCountArgs>;
+
+export const NotificationRecipientGroupCountZodSchema = z.object({ orderBy: z.union([NotificationRecipientGroupOrderByWithRelationInputObjectSchema, NotificationRecipientGroupOrderByWithRelationInputObjectSchema.array()]).optional(), where: NotificationRecipientGroupWhereInputObjectSchema.optional(), cursor: NotificationRecipientGroupWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), NotificationRecipientGroupCountAggregateInputObjectSchema ]).optional() }).strict();

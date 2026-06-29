@@ -8,8 +8,8 @@ const makeSchema = () => z.object({
   targetType: SortOrderSchema.optional(),
   targetId: SortOrderSchema.optional(),
   eventKey: SortOrderSchema.optional(),
-  eventLogId: SortOrderSchema.optional(),
-  createdAt: SortOrderSchema.optional()
+  createdAt: SortOrderSchema.optional(),
+  businessEventLogId: SortOrderSchema.optional()
 }).strict();
 export const WorkflowExecutionEventCountOrderByAggregateInputObjectSchema: z.ZodType<Prisma.WorkflowExecutionEventCountOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.WorkflowExecutionEventCountOrderByAggregateInput>;
 export const WorkflowExecutionEventCountOrderByAggregateInputObjectZodSchema = makeSchema();

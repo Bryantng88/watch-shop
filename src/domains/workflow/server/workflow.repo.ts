@@ -4,7 +4,8 @@ import {
   WorkflowTemplateStatus,
 } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
-import { normalizeWorkflowEventKey } from "./workflow.registry";
+
+import { normalizeBusinessEventKey } from "@/domains/event/registry/business-event-registry";
 
 export async function listWorkflowTemplatesRepo(
   db: DB,
@@ -49,7 +50,7 @@ export async function createWorkflowTemplateRepo(
   if (!name) throw new Error("Missing workflow name");
 
   const eventKeys = Array.from(
-    new Set(input.eventKeys.map(normalizeWorkflowEventKey).filter(Boolean)),
+    new Set(input.eventKeys.map(normalizeBusinessEventKey).filter(Boolean)),
   );
 
   if (!eventKeys.length) throw new Error("Workflow cần ít nhất một condition");

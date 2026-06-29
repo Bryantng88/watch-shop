@@ -1,0 +1,17 @@
+import * as z from 'zod';
+import type { Prisma } from '@prisma/client';
+
+
+const makeSchema = () => z.object({
+  id: z.literal(true).optional(),
+  dispatchId: z.literal(true).optional(),
+  channel: z.literal(true).optional(),
+  recipientGroupKey: z.literal(true).optional(),
+  status: z.literal(true).optional(),
+  errorMessage: z.literal(true).optional(),
+  sentAt: z.literal(true).optional(),
+  createdAt: z.literal(true).optional(),
+  updatedAt: z.literal(true).optional()
+}).strict();
+export const NotificationChannelDeliveryMaxAggregateInputObjectSchema: z.ZodType<Prisma.NotificationChannelDeliveryMaxAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.NotificationChannelDeliveryMaxAggregateInputType>;
+export const NotificationChannelDeliveryMaxAggregateInputObjectZodSchema = makeSchema();

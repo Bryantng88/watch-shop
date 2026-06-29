@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { NotificationChannelDeliveryOrderByWithRelationInputObjectSchema as NotificationChannelDeliveryOrderByWithRelationInputObjectSchema } from './objects/NotificationChannelDeliveryOrderByWithRelationInput.schema';
+import { NotificationChannelDeliveryWhereInputObjectSchema as NotificationChannelDeliveryWhereInputObjectSchema } from './objects/NotificationChannelDeliveryWhereInput.schema';
+import { NotificationChannelDeliveryWhereUniqueInputObjectSchema as NotificationChannelDeliveryWhereUniqueInputObjectSchema } from './objects/NotificationChannelDeliveryWhereUniqueInput.schema';
+import { NotificationChannelDeliveryCountAggregateInputObjectSchema as NotificationChannelDeliveryCountAggregateInputObjectSchema } from './objects/NotificationChannelDeliveryCountAggregateInput.schema';
+
+export const NotificationChannelDeliveryCountSchema: z.ZodType<Prisma.NotificationChannelDeliveryCountArgs> = z.object({ orderBy: z.union([NotificationChannelDeliveryOrderByWithRelationInputObjectSchema, NotificationChannelDeliveryOrderByWithRelationInputObjectSchema.array()]).optional(), where: NotificationChannelDeliveryWhereInputObjectSchema.optional(), cursor: NotificationChannelDeliveryWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), NotificationChannelDeliveryCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.NotificationChannelDeliveryCountArgs>;
+
+export const NotificationChannelDeliveryCountZodSchema = z.object({ orderBy: z.union([NotificationChannelDeliveryOrderByWithRelationInputObjectSchema, NotificationChannelDeliveryOrderByWithRelationInputObjectSchema.array()]).optional(), where: NotificationChannelDeliveryWhereInputObjectSchema.optional(), cursor: NotificationChannelDeliveryWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), NotificationChannelDeliveryCountAggregateInputObjectSchema ]).optional() }).strict();

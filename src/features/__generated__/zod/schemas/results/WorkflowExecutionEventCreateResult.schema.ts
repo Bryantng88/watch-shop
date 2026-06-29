@@ -5,7 +5,8 @@ export const WorkflowExecutionEventCreateResultSchema = z.object({
   targetType: z.string(),
   targetId: z.string(),
   eventKey: z.string(),
-  eventLogId: z.string().optional(),
   createdAt: z.date(),
-  execution: z.unknown()
+  execution: z.unknown(),
+  businessEventLog: z.unknown().optional(),
+  businessEventLogId: z.string().optional()
 });

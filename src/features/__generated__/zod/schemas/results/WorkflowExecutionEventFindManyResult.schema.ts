@@ -6,9 +6,10 @@ export const WorkflowExecutionEventFindManyResultSchema = z.object({
   targetType: z.string(),
   targetId: z.string(),
   eventKey: z.string(),
-  eventLogId: z.string().optional(),
   createdAt: z.date(),
-  execution: z.unknown()
+  execution: z.unknown(),
+  businessEventLog: z.unknown().optional(),
+  businessEventLogId: z.string().optional()
 })),
   pagination: z.object({
   page: z.number().int().min(1),

@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { NotificationRuleOrderByWithRelationInputObjectSchema as NotificationRuleOrderByWithRelationInputObjectSchema } from './objects/NotificationRuleOrderByWithRelationInput.schema';
+import { NotificationRuleWhereInputObjectSchema as NotificationRuleWhereInputObjectSchema } from './objects/NotificationRuleWhereInput.schema';
+import { NotificationRuleWhereUniqueInputObjectSchema as NotificationRuleWhereUniqueInputObjectSchema } from './objects/NotificationRuleWhereUniqueInput.schema';
+import { NotificationRuleCountAggregateInputObjectSchema as NotificationRuleCountAggregateInputObjectSchema } from './objects/NotificationRuleCountAggregateInput.schema';
+import { NotificationRuleMinAggregateInputObjectSchema as NotificationRuleMinAggregateInputObjectSchema } from './objects/NotificationRuleMinAggregateInput.schema';
+import { NotificationRuleMaxAggregateInputObjectSchema as NotificationRuleMaxAggregateInputObjectSchema } from './objects/NotificationRuleMaxAggregateInput.schema';
+
+export const NotificationRuleAggregateSchema: z.ZodType<Prisma.NotificationRuleAggregateArgs> = z.object({ orderBy: z.union([NotificationRuleOrderByWithRelationInputObjectSchema, NotificationRuleOrderByWithRelationInputObjectSchema.array()]).optional(), where: NotificationRuleWhereInputObjectSchema.optional(), cursor: NotificationRuleWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), NotificationRuleCountAggregateInputObjectSchema ]).optional(), _min: NotificationRuleMinAggregateInputObjectSchema.optional(), _max: NotificationRuleMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.NotificationRuleAggregateArgs>;
+
+export const NotificationRuleAggregateZodSchema = z.object({ orderBy: z.union([NotificationRuleOrderByWithRelationInputObjectSchema, NotificationRuleOrderByWithRelationInputObjectSchema.array()]).optional(), where: NotificationRuleWhereInputObjectSchema.optional(), cursor: NotificationRuleWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), NotificationRuleCountAggregateInputObjectSchema ]).optional(), _min: NotificationRuleMinAggregateInputObjectSchema.optional(), _max: NotificationRuleMaxAggregateInputObjectSchema.optional() }).strict();

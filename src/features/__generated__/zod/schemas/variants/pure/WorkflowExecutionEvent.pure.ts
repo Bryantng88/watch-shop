@@ -7,9 +7,10 @@ export const WorkflowExecutionEventModelSchema = z.object({
     targetType: z.string(),
     targetId: z.string(),
     eventKey: z.string(),
-    eventLogId: z.string().nullable(),
     createdAt: z.date(),
-    execution: z.unknown()
+    execution: z.unknown(),
+    businessEventLog: z.unknown().nullable(),
+    businessEventLogId: z.string().nullable()
 }).strict();
 
 export type WorkflowExecutionEventPureType = z.infer<typeof WorkflowExecutionEventModelSchema>;

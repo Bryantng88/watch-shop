@@ -12,8 +12,8 @@ const makeSchema = () => z.object({
   targetType: SortOrderSchema.optional(),
   targetId: SortOrderSchema.optional(),
   eventKey: SortOrderSchema.optional(),
-  eventLogId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
+  businessEventLogId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => WorkflowExecutionEventCountOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => WorkflowExecutionEventMaxOrderByAggregateInputObjectSchema).optional(),
   _min: z.lazy(() => WorkflowExecutionEventMinOrderByAggregateInputObjectSchema).optional()

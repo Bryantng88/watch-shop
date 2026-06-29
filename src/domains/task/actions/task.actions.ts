@@ -33,7 +33,7 @@ import {
   syncTaskItemStatusFromChecklistRepo,
 
 } from "../server/core/task.repo";
-
+import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
 import { setTargetTagsRepo, listTargetTagsRepo } from "../server/core/task.repo";
 
 import {
@@ -124,7 +124,21 @@ export async function createTaskItemAction(input: {
     dueAt: input.dueAt || null,
     tagNames: input.tagNames ?? [],
   });
-
+  await recordBusinessEvent(prisma, {
+    eventKey: "task.item.created",
+    targetType: "TASK_ITEM",
+    targetId: item.id,
+    actorUserId: null,
+    payload: {
+      taskId: item.taskId,
+      taskItemId: item.id,
+      title: item.title,
+      message: `Task item mới: ${item.title}`,
+      assignedToUserId: item.assignedToUserId,
+      priority: item.priority,
+      dueAt: item.dueAt,
+    },
+  });
   revalidatePath("/admin/tasks");
   revalidatePath(`/admin/tasks/${cleanTaskId}`);
 

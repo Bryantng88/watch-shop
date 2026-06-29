@@ -5,17 +5,18 @@ export const WorkflowExecutionEventGroupByResultSchema = z.array(z.object({
   targetType: z.string(),
   targetId: z.string(),
   eventKey: z.string(),
-  eventLogId: z.string(),
   createdAt: z.date(),
+  businessEventLogId: z.string(),
   _count: z.object({
     id: z.number(),
     executionId: z.number(),
     targetType: z.number(),
     targetId: z.number(),
     eventKey: z.number(),
-    eventLogId: z.number(),
     createdAt: z.number(),
-    execution: z.number()
+    execution: z.number(),
+    businessEventLog: z.number(),
+    businessEventLogId: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -23,8 +24,8 @@ export const WorkflowExecutionEventGroupByResultSchema = z.array(z.object({
     targetType: z.string().nullable(),
     targetId: z.string().nullable(),
     eventKey: z.string().nullable(),
-    eventLogId: z.string().nullable(),
-    createdAt: z.date().nullable()
+    createdAt: z.date().nullable(),
+    businessEventLogId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -32,7 +33,7 @@ export const WorkflowExecutionEventGroupByResultSchema = z.array(z.object({
     targetType: z.string().nullable(),
     targetId: z.string().nullable(),
     eventKey: z.string().nullable(),
-    eventLogId: z.string().nullable(),
-    createdAt: z.date().nullable()
+    createdAt: z.date().nullable(),
+    businessEventLogId: z.string().nullable()
   }).nullable().optional()
 }));

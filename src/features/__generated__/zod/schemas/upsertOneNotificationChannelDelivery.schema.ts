@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { NotificationChannelDeliverySelectObjectSchema as NotificationChannelDeliverySelectObjectSchema } from './objects/NotificationChannelDeliverySelect.schema';
+import { NotificationChannelDeliveryWhereUniqueInputObjectSchema as NotificationChannelDeliveryWhereUniqueInputObjectSchema } from './objects/NotificationChannelDeliveryWhereUniqueInput.schema';
+import { NotificationChannelDeliveryCreateInputObjectSchema as NotificationChannelDeliveryCreateInputObjectSchema } from './objects/NotificationChannelDeliveryCreateInput.schema';
+import { NotificationChannelDeliveryUncheckedCreateInputObjectSchema as NotificationChannelDeliveryUncheckedCreateInputObjectSchema } from './objects/NotificationChannelDeliveryUncheckedCreateInput.schema';
+import { NotificationChannelDeliveryUpdateInputObjectSchema as NotificationChannelDeliveryUpdateInputObjectSchema } from './objects/NotificationChannelDeliveryUpdateInput.schema';
+import { NotificationChannelDeliveryUncheckedUpdateInputObjectSchema as NotificationChannelDeliveryUncheckedUpdateInputObjectSchema } from './objects/NotificationChannelDeliveryUncheckedUpdateInput.schema';
+
+export const NotificationChannelDeliveryUpsertOneSchema: z.ZodType<Prisma.NotificationChannelDeliveryUpsertArgs> = z.object({ select: NotificationChannelDeliverySelectObjectSchema.optional(),  where: NotificationChannelDeliveryWhereUniqueInputObjectSchema, create: z.union([ NotificationChannelDeliveryCreateInputObjectSchema, NotificationChannelDeliveryUncheckedCreateInputObjectSchema ]), update: z.union([ NotificationChannelDeliveryUpdateInputObjectSchema, NotificationChannelDeliveryUncheckedUpdateInputObjectSchema ]) }).strict() as unknown as z.ZodType<Prisma.NotificationChannelDeliveryUpsertArgs>;
+
+export const NotificationChannelDeliveryUpsertOneZodSchema = z.object({ select: NotificationChannelDeliverySelectObjectSchema.optional(),  where: NotificationChannelDeliveryWhereUniqueInputObjectSchema, create: z.union([ NotificationChannelDeliveryCreateInputObjectSchema, NotificationChannelDeliveryUncheckedCreateInputObjectSchema ]), update: z.union([ NotificationChannelDeliveryUpdateInputObjectSchema, NotificationChannelDeliveryUncheckedUpdateInputObjectSchema ]) }).strict();

@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { BusinessEventLogWhereInputObjectSchema as BusinessEventLogWhereInputObjectSchema } from './objects/BusinessEventLogWhereInput.schema';
+import { BusinessEventLogOrderByWithAggregationInputObjectSchema as BusinessEventLogOrderByWithAggregationInputObjectSchema } from './objects/BusinessEventLogOrderByWithAggregationInput.schema';
+import { BusinessEventLogScalarWhereWithAggregatesInputObjectSchema as BusinessEventLogScalarWhereWithAggregatesInputObjectSchema } from './objects/BusinessEventLogScalarWhereWithAggregatesInput.schema';
+import { BusinessEventLogScalarFieldEnumSchema } from './enums/BusinessEventLogScalarFieldEnum.schema';
+import { BusinessEventLogCountAggregateInputObjectSchema as BusinessEventLogCountAggregateInputObjectSchema } from './objects/BusinessEventLogCountAggregateInput.schema';
+import { BusinessEventLogMinAggregateInputObjectSchema as BusinessEventLogMinAggregateInputObjectSchema } from './objects/BusinessEventLogMinAggregateInput.schema';
+import { BusinessEventLogMaxAggregateInputObjectSchema as BusinessEventLogMaxAggregateInputObjectSchema } from './objects/BusinessEventLogMaxAggregateInput.schema';
+
+export const BusinessEventLogGroupBySchema: z.ZodType<Prisma.BusinessEventLogGroupByArgs> = z.object({ where: BusinessEventLogWhereInputObjectSchema.optional(), orderBy: z.union([BusinessEventLogOrderByWithAggregationInputObjectSchema, BusinessEventLogOrderByWithAggregationInputObjectSchema.array()]).optional(), having: BusinessEventLogScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(BusinessEventLogScalarFieldEnumSchema), _count: z.union([ z.literal(true), BusinessEventLogCountAggregateInputObjectSchema ]).optional(), _min: BusinessEventLogMinAggregateInputObjectSchema.optional(), _max: BusinessEventLogMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.BusinessEventLogGroupByArgs>;
+
+export const BusinessEventLogGroupByZodSchema = z.object({ where: BusinessEventLogWhereInputObjectSchema.optional(), orderBy: z.union([BusinessEventLogOrderByWithAggregationInputObjectSchema, BusinessEventLogOrderByWithAggregationInputObjectSchema.array()]).optional(), having: BusinessEventLogScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(BusinessEventLogScalarFieldEnumSchema), _count: z.union([ z.literal(true), BusinessEventLogCountAggregateInputObjectSchema ]).optional(), _min: BusinessEventLogMinAggregateInputObjectSchema.optional(), _max: BusinessEventLogMaxAggregateInputObjectSchema.optional() }).strict();

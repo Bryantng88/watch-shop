@@ -8,8 +8,8 @@ const makeSchema = () => z.object({
   targetType: z.literal(true).optional(),
   targetId: z.literal(true).optional(),
   eventKey: z.literal(true).optional(),
-  eventLogId: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
+  businessEventLogId: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const WorkflowExecutionEventCountAggregateInputObjectSchema: z.ZodType<Prisma.WorkflowExecutionEventCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.WorkflowExecutionEventCountAggregateInputType>;

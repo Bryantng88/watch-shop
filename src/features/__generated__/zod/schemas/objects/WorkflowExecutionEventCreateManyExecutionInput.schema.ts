@@ -7,8 +7,8 @@ const makeSchema = () => z.object({
   targetType: z.string(),
   targetId: z.string(),
   eventKey: z.string(),
-  eventLogId: z.string().optional().nullable(),
-  createdAt: z.coerce.date().optional()
+  createdAt: z.coerce.date().optional(),
+  businessEventLogId: z.string().optional().nullable()
 }).strict();
 export const WorkflowExecutionEventCreateManyExecutionInputObjectSchema: z.ZodType<Prisma.WorkflowExecutionEventCreateManyExecutionInput> = makeSchema() as unknown as z.ZodType<Prisma.WorkflowExecutionEventCreateManyExecutionInput>;
 export const WorkflowExecutionEventCreateManyExecutionInputObjectZodSchema = makeSchema();

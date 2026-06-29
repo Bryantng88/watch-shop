@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { NotificationRecipientGroupSelectObjectSchema as NotificationRecipientGroupSelectObjectSchema } from './objects/NotificationRecipientGroupSelect.schema';
+import { NotificationRecipientGroupWhereUniqueInputObjectSchema as NotificationRecipientGroupWhereUniqueInputObjectSchema } from './objects/NotificationRecipientGroupWhereUniqueInput.schema';
+import { NotificationRecipientGroupCreateInputObjectSchema as NotificationRecipientGroupCreateInputObjectSchema } from './objects/NotificationRecipientGroupCreateInput.schema';
+import { NotificationRecipientGroupUncheckedCreateInputObjectSchema as NotificationRecipientGroupUncheckedCreateInputObjectSchema } from './objects/NotificationRecipientGroupUncheckedCreateInput.schema';
+import { NotificationRecipientGroupUpdateInputObjectSchema as NotificationRecipientGroupUpdateInputObjectSchema } from './objects/NotificationRecipientGroupUpdateInput.schema';
+import { NotificationRecipientGroupUncheckedUpdateInputObjectSchema as NotificationRecipientGroupUncheckedUpdateInputObjectSchema } from './objects/NotificationRecipientGroupUncheckedUpdateInput.schema';
+
+export const NotificationRecipientGroupUpsertOneSchema: z.ZodType<Prisma.NotificationRecipientGroupUpsertArgs> = z.object({ select: NotificationRecipientGroupSelectObjectSchema.optional(),  where: NotificationRecipientGroupWhereUniqueInputObjectSchema, create: z.union([ NotificationRecipientGroupCreateInputObjectSchema, NotificationRecipientGroupUncheckedCreateInputObjectSchema ]), update: z.union([ NotificationRecipientGroupUpdateInputObjectSchema, NotificationRecipientGroupUncheckedUpdateInputObjectSchema ]) }).strict() as unknown as z.ZodType<Prisma.NotificationRecipientGroupUpsertArgs>;
+
+export const NotificationRecipientGroupUpsertOneZodSchema = z.object({ select: NotificationRecipientGroupSelectObjectSchema.optional(),  where: NotificationRecipientGroupWhereUniqueInputObjectSchema, create: z.union([ NotificationRecipientGroupCreateInputObjectSchema, NotificationRecipientGroupUncheckedCreateInputObjectSchema ]), update: z.union([ NotificationRecipientGroupUpdateInputObjectSchema, NotificationRecipientGroupUncheckedUpdateInputObjectSchema ]) }).strict();

@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { NotificationRuleWhereInputObjectSchema as NotificationRuleWhereInputObjectSchema } from './objects/NotificationRuleWhereInput.schema';
+import { NotificationRuleOrderByWithAggregationInputObjectSchema as NotificationRuleOrderByWithAggregationInputObjectSchema } from './objects/NotificationRuleOrderByWithAggregationInput.schema';
+import { NotificationRuleScalarWhereWithAggregatesInputObjectSchema as NotificationRuleScalarWhereWithAggregatesInputObjectSchema } from './objects/NotificationRuleScalarWhereWithAggregatesInput.schema';
+import { NotificationRuleScalarFieldEnumSchema } from './enums/NotificationRuleScalarFieldEnum.schema';
+import { NotificationRuleCountAggregateInputObjectSchema as NotificationRuleCountAggregateInputObjectSchema } from './objects/NotificationRuleCountAggregateInput.schema';
+import { NotificationRuleMinAggregateInputObjectSchema as NotificationRuleMinAggregateInputObjectSchema } from './objects/NotificationRuleMinAggregateInput.schema';
+import { NotificationRuleMaxAggregateInputObjectSchema as NotificationRuleMaxAggregateInputObjectSchema } from './objects/NotificationRuleMaxAggregateInput.schema';
+
+export const NotificationRuleGroupBySchema: z.ZodType<Prisma.NotificationRuleGroupByArgs> = z.object({ where: NotificationRuleWhereInputObjectSchema.optional(), orderBy: z.union([NotificationRuleOrderByWithAggregationInputObjectSchema, NotificationRuleOrderByWithAggregationInputObjectSchema.array()]).optional(), having: NotificationRuleScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(NotificationRuleScalarFieldEnumSchema), _count: z.union([ z.literal(true), NotificationRuleCountAggregateInputObjectSchema ]).optional(), _min: NotificationRuleMinAggregateInputObjectSchema.optional(), _max: NotificationRuleMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.NotificationRuleGroupByArgs>;
+
+export const NotificationRuleGroupByZodSchema = z.object({ where: NotificationRuleWhereInputObjectSchema.optional(), orderBy: z.union([NotificationRuleOrderByWithAggregationInputObjectSchema, NotificationRuleOrderByWithAggregationInputObjectSchema.array()]).optional(), having: NotificationRuleScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(NotificationRuleScalarFieldEnumSchema), _count: z.union([ z.literal(true), NotificationRuleCountAggregateInputObjectSchema ]).optional(), _min: NotificationRuleMinAggregateInputObjectSchema.optional(), _max: NotificationRuleMaxAggregateInputObjectSchema.optional() }).strict();

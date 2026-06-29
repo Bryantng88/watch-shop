@@ -15,9 +15,10 @@ export const WorkflowExecutionEventFindFirstSelectSchema: z.ZodType<Prisma.Workf
     targetType: z.boolean().optional(),
     targetId: z.boolean().optional(),
     eventKey: z.boolean().optional(),
-    eventLogId: z.boolean().optional(),
     createdAt: z.boolean().optional(),
-    execution: z.boolean().optional()
+    execution: z.boolean().optional(),
+    businessEventLog: z.boolean().optional(),
+    businessEventLogId: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.WorkflowExecutionEventSelect>;
 
 export const WorkflowExecutionEventFindFirstSelectZodSchema = z.object({
@@ -26,9 +27,10 @@ export const WorkflowExecutionEventFindFirstSelectZodSchema = z.object({
     targetType: z.boolean().optional(),
     targetId: z.boolean().optional(),
     eventKey: z.boolean().optional(),
-    eventLogId: z.boolean().optional(),
     createdAt: z.boolean().optional(),
-    execution: z.boolean().optional()
+    execution: z.boolean().optional(),
+    businessEventLog: z.boolean().optional(),
+    businessEventLogId: z.boolean().optional()
   }).strict();
 
 export const WorkflowExecutionEventFindFirstSchema: z.ZodType<Prisma.WorkflowExecutionEventFindFirstArgs> = z.object({ select: WorkflowExecutionEventFindFirstSelectSchema.optional(), include: WorkflowExecutionEventIncludeObjectSchema.optional(), orderBy: z.union([WorkflowExecutionEventOrderByWithRelationInputObjectSchema, WorkflowExecutionEventOrderByWithRelationInputObjectSchema.array()]).optional(), where: WorkflowExecutionEventWhereInputObjectSchema.optional(), cursor: WorkflowExecutionEventWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([WorkflowExecutionEventScalarFieldEnumSchema, WorkflowExecutionEventScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.WorkflowExecutionEventFindFirstArgs>;

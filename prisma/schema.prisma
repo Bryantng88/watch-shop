@@ -344,6 +344,110 @@ model Notification {
   @@index([userId, isRead], map: "idx_notification_user_read")
 }
 
+model NotificationRule {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  name     String
+  eventKey String
+  enabled  Boolean @default(true)
+
+  channel           String // IN_APP | ZALO_OA
+  recipientGroupKey String
+
+  titleTemplate   String?
+  messageTemplate String
+  priority        String  @default("NORMAL")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([eventKey])
+  @@index([enabled])
+  @@index([channel])
+  @@index([recipientGroupKey])
+}
+
+model NotificationDispatch {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  businessEventLogId String?
+  ruleId             String?
+
+  eventKey   String
+  targetType String
+  targetId   String
+
+  status       String  @default("PENDING") // PENDING | SENT | PARTIAL | FAILED
+  errorMessage String?
+  payloadJson  Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([businessEventLogId])
+  @@index([ruleId])
+  @@index([eventKey])
+  @@index([status])
+}
+
+model NotificationChannelDelivery {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  dispatchId String
+
+  channel           String // IN_APP | ZALO_OA
+  recipientGroupKey String
+
+  status       String  @default("PENDING")
+  errorMessage String?
+  payloadJson  Json?
+
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([dispatchId])
+  @@index([channel])
+  @@index([status])
+  @@index([recipientGroupKey])
+}
+
+model NotificationRecipientGroup {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  key     String  @unique // OPERATIONS | SALES | TECHNICAL
+  name    String
+  enabled Boolean @default(true)
+
+  roleNames Json? // ["ADMIN", "SALE"]
+  userIds   Json? // optional direct users
+
+  zaloGroupId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BusinessEventLog {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  eventKey   String
+  targetType String
+  targetId   String
+
+  actorUserId  String?
+  metadataJson Json?
+  createdAt    DateTime @default(now())
+
+  workflowEvents WorkflowExecutionEvent[]
+
+  @@unique([eventKey, targetType, targetId])
+  @@index([eventKey])
+  @@index([targetType, targetId])
+  @@index([actorUserId])
+  @@index([createdAt])
+}
+
 model Order {
   id                   String         @id @default(dbgenerated("(gen_random_uuid())::text"))
   refNo                String?        @unique(map: "Order_orderCode_key")
@@ -1712,24 +1816,6 @@ model WorkflowAction {
   @@index([actionType])
 }
 
-model WorkflowEventLog {
-  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
-
-  eventKey   String
-  targetType String
-  targetId   String
-
-  actorUserId  String?
-  metadataJson Json?
-  createdAt    DateTime @default(now())
-
-  @@unique([eventKey, targetType, targetId])
-  @@index([eventKey])
-  @@index([targetType, targetId])
-  @@index([actorUserId])
-  @@index([createdAt])
-}
-
 model WorkflowExecution {
   id String @id @default(dbgenerated("(gen_random_uuid())::text"))
 
@@ -1762,22 +1848,22 @@ model WorkflowExecution {
 }
 
 model WorkflowExecutionEvent {
-  id          String  @id @default(dbgenerated("(gen_random_uuid())::text"))
+  id          String @id @default(dbgenerated("(gen_random_uuid())::text"))
   executionId String
   targetType  String
   targetId    String
   eventKey    String
-  eventLogId  String?
 
   createdAt DateTime @default(now())
 
-  execution WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  execution          WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  businessEventLog   BusinessEventLog? @relation(fields: [businessEventLogId], references: [id])
+  businessEventLogId String?
 
   @@unique([executionId, targetType, targetId, eventKey])
   @@index([executionId])
   @@index([eventKey])
   @@index([targetType, targetId])
-  @@index([eventLogId])
 }
 
 // Add this field to model TaskItem:

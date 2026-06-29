@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { BusinessEventLogOrderByWithRelationInputObjectSchema as BusinessEventLogOrderByWithRelationInputObjectSchema } from './objects/BusinessEventLogOrderByWithRelationInput.schema';
+import { BusinessEventLogWhereInputObjectSchema as BusinessEventLogWhereInputObjectSchema } from './objects/BusinessEventLogWhereInput.schema';
+import { BusinessEventLogWhereUniqueInputObjectSchema as BusinessEventLogWhereUniqueInputObjectSchema } from './objects/BusinessEventLogWhereUniqueInput.schema';
+import { BusinessEventLogCountAggregateInputObjectSchema as BusinessEventLogCountAggregateInputObjectSchema } from './objects/BusinessEventLogCountAggregateInput.schema';
+
+export const BusinessEventLogCountSchema: z.ZodType<Prisma.BusinessEventLogCountArgs> = z.object({ orderBy: z.union([BusinessEventLogOrderByWithRelationInputObjectSchema, BusinessEventLogOrderByWithRelationInputObjectSchema.array()]).optional(), where: BusinessEventLogWhereInputObjectSchema.optional(), cursor: BusinessEventLogWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), BusinessEventLogCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.BusinessEventLogCountArgs>;
+
+export const BusinessEventLogCountZodSchema = z.object({ orderBy: z.union([BusinessEventLogOrderByWithRelationInputObjectSchema, BusinessEventLogOrderByWithRelationInputObjectSchema.array()]).optional(), where: BusinessEventLogWhereInputObjectSchema.optional(), cursor: BusinessEventLogWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), BusinessEventLogCountAggregateInputObjectSchema ]).optional() }).strict();
