@@ -7,7 +7,11 @@ import type {
   UpdateTaskItemInput,
 } from "../task.types";
 import { TASK_ITEM_INCLUDE, toDate } from "./task.repo.shared";
-import { setTargetTagsRepo } from "../tag/task-tag.repo";
+import {
+  ensureOwnerTagsRepo,
+  listTargetTagsRepo,
+  setTargetTagsRepo,
+} from "../tag/task-tag.repo";
 
 export async function createTaskItemRepo(db: DB, input: CreateTaskItemInput) {
   const client = dbOrTx(db);
@@ -78,6 +82,64 @@ export async function updateTaskItemRepo(
   }
 
   return item;
+}
+
+export async function moveTaskItemRepo(
+  db: DB,
+  input: {
+    itemId: string;
+    toTaskId: string;
+  },
+) {
+  const client = dbOrTx(db);
+
+  const current = await client.taskItem.findUnique({
+    where: { id: input.itemId },
+    select: {
+      id: true,
+      taskId: true,
+      title: true,
+    },
+  });
+
+  if (!current) throw new Error("Task item không tồn tại.");
+
+  if (current.taskId === input.toTaskId) {
+    throw new Error("Task item đang nằm trong task này rồi.");
+  }
+
+  const targetTask = await client.task.findUnique({
+    where: { id: input.toTaskId },
+    select: { id: true },
+  });
+
+  if (!targetTask) throw new Error("Task đích không tồn tại.");
+
+  const last = await client.taskItem.findFirst({
+    where: { taskId: input.toTaskId },
+    orderBy: { sortOrder: "desc" },
+    select: { sortOrder: true },
+  });
+
+  const item = await client.taskItem.update({
+    where: { id: input.itemId },
+    data: {
+      taskId: input.toTaskId,
+      sortOrder: (last?.sortOrder ?? -1) + 1,
+    },
+  });
+
+  await client.taskExecution.updateMany({
+    where: { taskItemId: input.itemId },
+    data: { taskId: input.toTaskId },
+  });
+
+
+  return {
+    item,
+    fromTaskId: current.taskId,
+    toTaskId: input.toTaskId,
+  };
 }
 
 export async function setTaskItemDoneRepo(

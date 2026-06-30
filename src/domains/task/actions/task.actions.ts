@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { TaskStatus, TaskPriority, TaskKind } from "@prisma/client";
+import { Prisma, TaskStatus, TaskPriority, TaskKind } from "@prisma/client";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
 import {
@@ -12,7 +12,9 @@ import {
   getTaskDetail,
   getTaskQuickCreateData,
   updateTask,
-  quickCreateTaskItem
+  quickCreateTaskItem,
+  authCanViewAllTasks,
+  getAuthUserId,
 } from "../server/core/task.service";
 import type {
   CreateTaskItemInput,
@@ -31,6 +33,8 @@ import {
   updateTaskItemChecklistRepo,
   deleteTaskItemChecklistRepo,
   syncTaskItemStatusFromChecklistRepo,
+  moveTaskItemRepo,
+  buildAccessWhere,
 
 } from "../server/core/task.repo";
 import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
@@ -437,4 +441,101 @@ export async function deleteTaskItemChecklistAction(checklistId: string) {
   const checklist = await deleteTaskItemChecklistRepo(prisma, cleanId);
 
   return { ok: true, checklist, alreadyDeleted: false };
+}
+
+export async function moveTaskItemAction(input: {
+  itemId: string;
+  toTaskId: string;
+}) {
+  const auth = await getTaskAuth();
+
+  const itemId = String(input.itemId || "").trim();
+  const toTaskId = String(input.toTaskId || "").trim();
+
+  if (!itemId) throw new Error("Missing taskItemId");
+  if (!toTaskId) throw new Error("Vui lòng chọn task đích.");
+
+  const result = await moveTaskItemRepo(prisma, { itemId, toTaskId });
+
+  await Promise.all([
+    syncTaskStatusFromChecklistRepo(prisma, result.fromTaskId),
+    syncTaskStatusFromChecklistRepo(prisma, result.toTaskId),
+  ]);
+
+  await recordBusinessEvent(prisma, {
+    eventKey: "task.item.moved",
+    targetType: "TASK_ITEM",
+    targetId: result.item.id,
+    actorUserId: getAuthUserId(auth),
+    payload: {
+      taskItemId: result.item.id,
+      title: result.item.title,
+      fromTaskId: result.fromTaskId,
+      toTaskId: result.toTaskId,
+      message: `Đã move task item: ${result.item.title}`,
+    },
+  });
+
+  revalidatePath("/admin/tasks");
+  revalidatePath(`/admin/tasks/${result.fromTaskId}`);
+  revalidatePath(`/admin/tasks/${result.toTaskId}`);
+
+  return { ok: true, ...result };
+}
+export async function searchTasksForTaskItemMoveAction(input: {
+  keyword?: string | null;
+  excludeTaskId?: string | null;
+  limit?: number | null;
+}) {
+  const auth = await getTaskAuth();
+  const userId = getAuthUserId(auth);
+  if (!userId) throw new Error("Không xác định được user hiện tại.");
+
+  const keyword = String(input.keyword ?? "").trim();
+  const excludeTaskId = String(input.excludeTaskId ?? "").trim();
+  const limit = Math.min(30, Math.max(5, Number(input.limit || 15)));
+  const canViewAll = authCanViewAllTasks(auth);
+
+  const where: Prisma.TaskWhereInput = {
+    AND: [
+      buildAccessWhere(userId, canViewAll),
+      excludeTaskId ? { id: { not: excludeTaskId } } : {},
+      { status: { not: TaskStatus.CANCELLED } },
+      keyword
+        ? {
+          OR: [
+            { id: keyword },
+            { title: { contains: keyword, mode: "insensitive" } },
+            { description: { contains: keyword, mode: "insensitive" } },
+          ],
+        }
+        : {},
+    ],
+  };
+
+  const items = await prisma.task.findMany({
+    where,
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      priority: true,
+      kind: true,
+      dueAt: true,
+      assignedToUser: {
+        select: { id: true, name: true, email: true },
+      },
+      _count: {
+        select: { taskItems: true },
+      },
+    },
+    orderBy: [
+      { status: "asc" },
+      { priority: "desc" },
+      { updatedAt: "desc" },
+    ],
+    take: limit,
+  });
+
+  return { ok: true, items };
 }

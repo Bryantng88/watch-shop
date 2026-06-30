@@ -45,6 +45,16 @@ function matchNotificationRule(rule: any, eventLog: any) {
         return false;
     }
 
+    if (condition.eventKeys?.length) {
+        if (!condition.eventKeys.includes(eventLog.eventKey)) return false;
+    }
+
+    if (condition.reviewTargetTypes?.length) {
+        if (!condition.reviewTargetTypes.includes(payload?.reviewTargetType)) {
+            return false;
+        }
+    }
+
     if (Array.isArray(condition.taskKinds) && condition.taskKinds.length > 0) {
         if (!condition.taskKinds.includes(payload?.taskKind)) {
             return false;

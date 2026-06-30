@@ -1870,6 +1870,27 @@ model WorkflowExecutionEvent {
 // workflowRuleId String?
 // workflowRule   WorkflowRule? @relation(fields: [workflowRuleId], references: [id], onDelete: SetNull)
 // @@index([workflowRuleId])
+model BusinessFeedback {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  targetType String
+  targetId   String
+
+  eventKey    String?
+  actorUserId String?
+
+  message    String
+  visibility String @default("INTERNAL")
+
+  metadataJson Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([targetType, targetId])
+  @@index([eventKey])
+  @@index([actorUserId])
+}
 
 model Task {
   id String @id @default(dbgenerated("(gen_random_uuid())::text"))

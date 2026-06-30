@@ -10,6 +10,7 @@ import {
 import TaskItemRow from "./TaskItemRow";
 import TaskTagPicker, { type TaskTagOption } from "./TaskTagPicker";
 import TaskExecutionGroup from "./TaskExecutionGroup";
+import MoveTaskItemModal from "./MoveTaskItemModal";
 import { splitExecutions } from "./taskWorkPanel.helpers";
 
 import TaskItemFilterBar, {
@@ -228,6 +229,8 @@ export default function TaskWorkPanel({
   const [pending, setPending] = useState(false);
   const [localItems, setLocalItems] = useState<any[]>(taskItems ?? []);
   const [managingItem, setManagingItem] = useState<any | null>(null);
+  const [movingItem, setMovingItem] = useState<any | null>(null);
+
   const [expandedItemIds, setExpandedItemIds] = useState<
     Record<string, boolean>
   >({});
@@ -240,6 +243,7 @@ export default function TaskWorkPanel({
     useState<TaskItemChecklistFilter>("ALL");
   const [visibleLimit, setVisibleLimit] = useState(INITIAL_VISIBLE_LIMIT);
   const [showCreateBar, setShowCreateBar] = useState(false);
+  const [openMenuItemId, setOpenMenuItemId] = useState<string | null>(null);
   const router = useRouter();
   const taskTagOptions = useMemo(() => {
     const map = new Map<
@@ -461,6 +465,20 @@ export default function TaskWorkPanel({
       commitLocalItems((prev) => [...prev, item]);
       throw error;
     }
+  }
+
+  function handleMovedTaskItem(result: any) {
+    const movedItemId = result?.item?.id ?? movingItem?.id;
+
+    if (movedItemId) {
+      commitLocalItems((prev) => prev.filter((x) => x.id !== movedItemId));
+    }
+
+    if (managingItem?.id === movedItemId) {
+      setManagingItem(null);
+    }
+
+    setMovingItem(null);
   }
 
   async function updateItem(input: UpdateTaskItemInput) {
@@ -822,6 +840,12 @@ export default function TaskWorkPanel({
                 item={item}
                 canCancel={canCancelTaskItem}
                 onManage={setManagingItem}
+                openMenuItemId={openMenuItemId}
+                onOpenMenu={setOpenMenuItemId}
+                onMove={(row) => {
+                  setOpenMenuItemId(null);
+                  setMovingItem(row);
+                }}
                 onToggle={toggleItem}
                 onDelete={deleteItem}
                 onPreview={previewState.openPreview}
@@ -863,6 +887,14 @@ export default function TaskWorkPanel({
           </div>
         </div>
       </div>
+
+      <MoveTaskItemModal
+        open={Boolean(movingItem)}
+        item={movingItem}
+        currentTask={task}
+        onClose={() => setMovingItem(null)}
+        onMoved={() => setMovingItem(null)}
+      />
 
       <SubtaskManageModal
         onRefresh={() => router.refresh()}

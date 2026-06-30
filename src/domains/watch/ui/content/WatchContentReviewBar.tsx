@@ -103,6 +103,7 @@ export default function WatchContentReviewBar({
                     body: JSON.stringify({
                         action,
                         note: action === "reject" ? note : null,
+                        feedbackMessage: action === "reject" ? note : null,
                     }),
                 }
             );

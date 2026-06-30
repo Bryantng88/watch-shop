@@ -1,7 +1,7 @@
 import { prisma } from "@/server/db/client";
 import { ProductStatus, WatchSaleStage, WatchStockStage } from "@prisma/client";
 import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
-
+import { createBusinessFeedback } from "@/domains/shared/business-feedback/server/business-feedback.repo";
 type ReviewTargetType = "CONTENT" | "IMAGE";
 type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
@@ -14,7 +14,17 @@ type ReviewInput = {
 type RejectInput = ReviewInput & {
     note?: string | null;
 };
+function watchReviewRejectedEventKey(targetType: ReviewTargetType) {
+    return targetType === "CONTENT"
+        ? "watch.content.rejected"
+        : "watch.image.rejected";
+}
 
+function watchReviewFeedbackTargetType(targetType: ReviewTargetType) {
+    return targetType === "CONTENT"
+        ? "WATCH_CONTENT_REVIEW"
+        : "WATCH_IMAGE_REVIEW";
+}
 function watchReviewApprovedEventKey(targetType: ReviewTargetType) {
     return targetType === "CONTENT"
         ? "watch.content.approved"
@@ -378,13 +388,44 @@ export async function rejectWatchReview(input: RejectInput) {
         note: input.note,
     });
 
+    const feedback = await createBusinessFeedback({
+        targetType: watchReviewFeedbackTargetType(input.targetType),
+        targetId: input.productId,
+        eventKey: watchReviewRejectedEventKey(input.targetType),
+        actorUserId: input.userId ?? null,
+        message: input.note || "Admin đã trả về hạng mục cần chỉnh lại.",
+        metadataJson: {
+            productId: input.productId,
+            reviewTargetType: input.targetType,
+            reviewStateId: state.id,
+        },
+    });
+
     await moveWatchToProcessingIfEditable(input.productId);
+
+    const watch = await getWatchOrThrow(input.productId);
+
+    await recordBusinessEvent(prisma, {
+        eventKey: watchReviewRejectedEventKey(input.targetType),
+        targetType: "WATCH",
+        targetId: watch.id,
+        targetAliasIds: [input.productId],
+        actorUserId: input.userId ?? null,
+        payload: {
+            productId: input.productId,
+            watchId: watch.id,
+            reviewTargetType: input.targetType,
+
+            feedbackId: feedback.id,
+            feedbackMessage: feedback.message,
+        },
+    } as any);
 
     await notifyReviewRejected({
         state,
         productId: input.productId,
         targetType: input.targetType,
-        note: input.note,
+        note: feedback.message,
     });
 
     return state;

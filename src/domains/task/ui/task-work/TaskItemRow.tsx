@@ -9,6 +9,7 @@ import {
   Plus,
   Check,
   Settings2,
+  ArrowRightLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { BusinessEntityPreview } from "@/domains/shared/business/business-entity.types";
@@ -98,7 +99,10 @@ function priorityTone(value?: string | null) {
 export default function TaskItemRow({
   item,
   canCancel = true,
+  openMenuItemId,
+  onOpenMenu,
   onManage,
+  onMove,
   onToggle,
   onDelete,
   onPreview,
@@ -111,7 +115,12 @@ export default function TaskItemRow({
 }: {
   item: any;
   canCancel?: boolean;
+
+  openMenuItemId?: string | null;
+  onOpenMenu?: (itemId: string | null) => void;
+
   onManage: (item: any) => void;
+  onMove?: (item: any) => void;
   onToggle: (item: any) => Promise<void>;
   onDelete: (item: any) => Promise<void>;
   onPreview: (preview: BusinessEntityPreview) => void;
@@ -143,7 +152,21 @@ export default function TaskItemRow({
   );
   const [isAddingChecklist, setIsAddingChecklist] = useState(false);
   const [checklistTitle, setChecklistTitle] = useState("");
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [fallbackMenuOpen, setFallbackMenuOpen] = useState(false);
+
+  const isControlledMenu = typeof onOpenMenu === "function";
+  const menuOpen = isControlledMenu
+    ? openMenuItemId === item.id
+    : fallbackMenuOpen;
+
+  function setMenuOpen(next: boolean) {
+    if (isControlledMenu) {
+      onOpenMenu?.(next ? item.id : null);
+      return;
+    }
+
+    setFallbackMenuOpen(next);
+  }
 
   useEffect(() => {
     setLocalChecklists(item.checklists ?? []);
@@ -292,11 +315,9 @@ export default function TaskItemRow({
             {hasChecklists ? (
               <>
                 <span>•</span>
-
                 <span className="shrink-0 font-medium text-slate-600">
                   {checklistDone}/{checklistTotal}
                 </span>
-
                 <ProgressRing value={checklistProgress} />
               </>
             ) : null}
@@ -304,7 +325,6 @@ export default function TaskItemRow({
             {item.assignedToUser ? (
               <>
                 <span>•</span>
-
                 <span className="truncate">
                   {item.assignedToUser.name || item.assignedToUser.email}
                 </span>
@@ -344,8 +364,10 @@ export default function TaskItemRow({
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
+
               if (isPending) return;
-              setMenuOpen((v) => !v);
+
+              setMenuOpen(!menuOpen);
             }}
             className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -353,7 +375,7 @@ export default function TaskItemRow({
           </button>
 
           {menuOpen && !isPending ? (
-            <div className="absolute right-0 top-10 z-30 w-48 overflow-hidden rounded-2xl border border-slate-200 bg-white py-1 shadow-xl shadow-slate-200/70">
+            <div className="absolute right-0 top-9 z-[80] w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white py-1 shadow-2xl shadow-slate-300/80">
               <button
                 type="button"
                 onClick={(event) => {
@@ -379,6 +401,20 @@ export default function TaskItemRow({
               >
                 <Settings2 className="h-4 w-4 text-blue-600" />
                 Quản lý
+              </button>
+
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setMenuOpen(false);
+                  onMove?.(item);
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+              >
+                <ArrowRightLeft className="h-4 w-4 text-blue-600" />
+                Chuyển sang Task khác
               </button>
 
               {canCancel ? (
