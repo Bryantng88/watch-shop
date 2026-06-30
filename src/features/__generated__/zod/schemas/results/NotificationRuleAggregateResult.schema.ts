@@ -6,6 +6,7 @@ export const NotificationRuleAggregateResultSchema = z.object({  _count: z.objec
     enabled: z.number(),
     channel: z.number(),
     recipientGroupKey: z.number(),
+    conditionJson: z.number(),
     titleTemplate: z.number(),
     messageTemplate: z.number(),
     priority: z.number(),

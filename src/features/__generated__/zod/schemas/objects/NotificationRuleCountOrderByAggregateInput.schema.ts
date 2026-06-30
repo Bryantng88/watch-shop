@@ -9,6 +9,7 @@ const makeSchema = () => z.object({
   enabled: SortOrderSchema.optional(),
   channel: SortOrderSchema.optional(),
   recipientGroupKey: SortOrderSchema.optional(),
+  conditionJson: SortOrderSchema.optional(),
   titleTemplate: SortOrderSchema.optional(),
   messageTemplate: SortOrderSchema.optional(),
   priority: SortOrderSchema.optional(),

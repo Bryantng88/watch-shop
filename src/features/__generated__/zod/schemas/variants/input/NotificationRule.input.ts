@@ -8,6 +8,7 @@ export const NotificationRuleInputSchema = z.object({
     enabled: z.boolean(),
     channel: z.string(),
     recipientGroupKey: z.string(),
+    conditionJson: z.unknown().optional().nullable(),
     titleTemplate: z.string().optional().nullable(),
     messageTemplate: z.string(),
     priority: z.string(),

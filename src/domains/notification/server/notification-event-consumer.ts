@@ -5,15 +5,78 @@ import { sendZaloTextToGroup } from "./channels/zalo";
 function renderTemplate(template: string, event: any) {
     const meta = event.metadataJson ?? {};
 
-    return template
-        .replaceAll("{{eventKey}}", event.eventKey ?? "")
-        .replaceAll("{{targetType}}", event.targetType ?? "")
-        .replaceAll("{{targetId}}", event.targetId ?? "")
-        .replaceAll("{{title}}", meta.title ?? "")
-        .replaceAll("{{refNo}}", meta.refNo ?? "")
-        .replaceAll("{{message}}", meta.message ?? "");
+    return String(template ?? "").replace(
+        /\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g,
+        (_, rawKey: string) => {
+            const key = String(rawKey || "").trim();
+
+            const value = getTemplateValue(
+                {
+                    ...event,
+                    ...meta,
+                },
+                key,
+            );
+
+            if (value === null || value === undefined) return "";
+            if (Array.isArray(value)) return value.join(", ");
+            if (value instanceof Date) return value.toLocaleString("vi-VN");
+
+            return String(value);
+        },
+    );
 }
 
+function getTemplateValue(source: any, path: string) {
+    return String(path)
+        .split(".")
+        .reduce((acc, key) => {
+            if (acc === null || acc === undefined) return undefined;
+            return acc[key];
+        }, source);
+}
+function matchNotificationRule(rule: any, eventLog: any) {
+    const condition = rule.conditionJson as any;
+    const payload = eventLog.metadataJson as any;
+
+    if (!condition) return true;
+
+    if (condition.targetType && eventLog.targetType !== condition.targetType) {
+        return false;
+    }
+
+    if (Array.isArray(condition.taskKinds) && condition.taskKinds.length > 0) {
+        if (!condition.taskKinds.includes(payload?.taskKind)) {
+            return false;
+        }
+    }
+
+    if (condition.taskKind && payload?.taskKind !== condition.taskKind) {
+        return false;
+    }
+
+    if (condition.priority && payload?.priority !== condition.priority) {
+        return false;
+    }
+
+    if (Array.isArray(condition.priorities) && condition.priorities.length > 0) {
+        if (!condition.priorities.includes(payload?.priority)) {
+            return false;
+        }
+    }
+
+    if (Array.isArray(condition.tagNames) && condition.tagNames.length > 0) {
+        const eventTags = Array.isArray(payload?.tagNames) ? payload.tagNames : [];
+
+        const matched = condition.tagNames.some((tag: string) =>
+            eventTags.includes(tag),
+        );
+
+        if (!matched) return false;
+    }
+
+    return true;
+}
 function jsonArray(value: any): string[] {
     return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
 }
@@ -46,6 +109,8 @@ export async function consumeBusinessEventForNotification(
     const results = [];
 
     for (const rule of rules) {
+        if (!matchNotificationRule(rule, eventLog)) continue;
+
         const group = await client.notificationRecipientGroup.findUnique({
             where: { key: rule.recipientGroupKey },
         });
@@ -57,6 +122,9 @@ export async function consumeBusinessEventForNotification(
             : rule.name;
 
         const message = renderTemplate(rule.messageTemplate, eventLog);
+
+        // giữ nguyên phần dispatch/delivery/gửi Zalo bên dưới
+
 
         const dispatch = await client.notificationDispatch.create({
             data: {

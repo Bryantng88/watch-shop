@@ -13,6 +13,7 @@ const makeSchema = () => z.object({
   enabled: SortOrderSchema.optional(),
   channel: SortOrderSchema.optional(),
   recipientGroupKey: SortOrderSchema.optional(),
+  conditionJson: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   titleTemplate: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   messageTemplate: SortOrderSchema.optional(),
   priority: SortOrderSchema.optional(),
