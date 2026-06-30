@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { TimelineEntryWhereInputObjectSchema as TimelineEntryWhereInputObjectSchema } from './objects/TimelineEntryWhereInput.schema';
+import { TimelineEntryOrderByWithAggregationInputObjectSchema as TimelineEntryOrderByWithAggregationInputObjectSchema } from './objects/TimelineEntryOrderByWithAggregationInput.schema';
+import { TimelineEntryScalarWhereWithAggregatesInputObjectSchema as TimelineEntryScalarWhereWithAggregatesInputObjectSchema } from './objects/TimelineEntryScalarWhereWithAggregatesInput.schema';
+import { TimelineEntryScalarFieldEnumSchema } from './enums/TimelineEntryScalarFieldEnum.schema';
+import { TimelineEntryCountAggregateInputObjectSchema as TimelineEntryCountAggregateInputObjectSchema } from './objects/TimelineEntryCountAggregateInput.schema';
+import { TimelineEntryMinAggregateInputObjectSchema as TimelineEntryMinAggregateInputObjectSchema } from './objects/TimelineEntryMinAggregateInput.schema';
+import { TimelineEntryMaxAggregateInputObjectSchema as TimelineEntryMaxAggregateInputObjectSchema } from './objects/TimelineEntryMaxAggregateInput.schema';
+
+export const TimelineEntryGroupBySchema: z.ZodType<Prisma.TimelineEntryGroupByArgs> = z.object({ where: TimelineEntryWhereInputObjectSchema.optional(), orderBy: z.union([TimelineEntryOrderByWithAggregationInputObjectSchema, TimelineEntryOrderByWithAggregationInputObjectSchema.array()]).optional(), having: TimelineEntryScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(TimelineEntryScalarFieldEnumSchema), _count: z.union([ z.literal(true), TimelineEntryCountAggregateInputObjectSchema ]).optional(), _min: TimelineEntryMinAggregateInputObjectSchema.optional(), _max: TimelineEntryMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.TimelineEntryGroupByArgs>;
+
+export const TimelineEntryGroupByZodSchema = z.object({ where: TimelineEntryWhereInputObjectSchema.optional(), orderBy: z.union([TimelineEntryOrderByWithAggregationInputObjectSchema, TimelineEntryOrderByWithAggregationInputObjectSchema.array()]).optional(), having: TimelineEntryScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(TimelineEntryScalarFieldEnumSchema), _count: z.union([ z.literal(true), TimelineEntryCountAggregateInputObjectSchema ]).optional(), _min: TimelineEntryMinAggregateInputObjectSchema.optional(), _max: TimelineEntryMaxAggregateInputObjectSchema.optional() }).strict();

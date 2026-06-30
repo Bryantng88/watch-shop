@@ -1,0 +1,18 @@
+import * as z from 'zod';
+import type { Prisma } from '@prisma/client';
+import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema'
+
+import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
+
+const makeSchema = () => z.object({
+  id: z.string().optional(),
+  targetType: z.string(),
+  targetId: z.string(),
+  actorUserId: z.string().optional().nullable(),
+  body: z.string(),
+  visibility: z.string().optional(),
+  metadataJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  createdAt: z.coerce.date().optional()
+}).strict();
+export const UserCommentUncheckedCreateInputObjectSchema: z.ZodType<Prisma.UserCommentUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.UserCommentUncheckedCreateInput>;
+export const UserCommentUncheckedCreateInputObjectZodSchema = makeSchema();

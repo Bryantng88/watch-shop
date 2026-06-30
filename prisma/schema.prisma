@@ -1626,6 +1626,19 @@ enum TaskExecutionActionType {
   CANCELLED
 }
 
+enum TimelineContainerType {
+  TASK_ITEM
+}
+
+enum TimelineSourceType {
+  BUSINESS_EVENT
+  BUSINESS_FEEDBACK
+  USER_COMMENT
+  WORKFLOW_ACTION
+  NOTIFICATION
+  SYSTEM
+}
+
 model WorkCaseCategory {
   id          String        @id @default(dbgenerated("(gen_random_uuid())::text"))
   code        String        @unique
@@ -1889,6 +1902,52 @@ model BusinessFeedback {
 
   @@index([targetType, targetId])
   @@index([eventKey])
+  @@index([actorUserId])
+}
+
+model TimelineEntry {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  containerType TimelineContainerType
+  containerId   String
+
+  sourceType TimelineSourceType
+  sourceId   String
+
+  occurredAt  DateTime
+  actorUserId String?
+
+  title        String?
+  bodySnapshot String?
+  visibility   String  @default("INTERNAL")
+
+  metadataJson Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([containerType, containerId, sourceType, sourceId])
+  @@index([containerType, containerId, occurredAt])
+  @@index([sourceType, sourceId])
+  @@index([actorUserId])
+}
+
+model UserComment {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  targetType String
+  targetId   String
+
+  actorUserId String?
+  body        String
+  visibility  String  @default("INTERNAL")
+
+  metadataJson Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([targetType, targetId, createdAt])
   @@index([actorUserId])
 }
 

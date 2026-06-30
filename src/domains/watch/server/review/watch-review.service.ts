@@ -397,13 +397,14 @@ export async function rejectWatchReview(input: RejectInput) {
     });
 
     const watch = await getWatchOrThrow(input.productId);
+    const rejectedEventKey = watchReviewRejectedEventKey(input.targetType);
 
     const feedback = await createWatchReviewRejectionFeedback({
         productId: input.productId,
         watchId: watch.id,
         reviewStateId: state.id,
         reviewTargetType: input.targetType,
-        eventKey: watchReviewRejectedEventKey(input.targetType),
+        eventKey: rejectedEventKey,
         actorUserId: input.userId ?? null,
         message: feedbackMessage,
     });
@@ -411,7 +412,7 @@ export async function rejectWatchReview(input: RejectInput) {
     await moveWatchToProcessingIfEditable(input.productId);
 
     await recordBusinessEvent(prisma, {
-        eventKey: watchReviewRejectedEventKey(input.targetType),
+        eventKey: rejectedEventKey,
         targetType: "WATCH",
         targetId: watch.id,
         targetAliasIds: [input.productId],
@@ -419,7 +420,6 @@ export async function rejectWatchReview(input: RejectInput) {
         payload: {
             productId: input.productId,
             watchId: watch.id,
-            watchTitle: watch.product?.title || input.productId,
             reviewTargetType: input.targetType,
 
             feedbackId: feedback.id,

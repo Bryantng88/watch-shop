@@ -71,6 +71,8 @@ export { WorkflowActionInputSchema } from './WorkflowAction.input';
 export { WorkflowExecutionInputSchema } from './WorkflowExecution.input';
 export { WorkflowExecutionEventInputSchema } from './WorkflowExecutionEvent.input';
 export { BusinessFeedbackInputSchema } from './BusinessFeedback.input';
+export { TimelineEntryInputSchema } from './TimelineEntry.input';
+export { UserCommentInputSchema } from './UserComment.input';
 export { TaskInputSchema } from './Task.input';
 export { TaskItemInputSchema } from './TaskItem.input';
 export { TaskItemChecklistInputSchema } from './TaskItemChecklist.input';

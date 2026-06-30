@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { UserCommentOrderByWithRelationInputObjectSchema as UserCommentOrderByWithRelationInputObjectSchema } from './objects/UserCommentOrderByWithRelationInput.schema';
+import { UserCommentWhereInputObjectSchema as UserCommentWhereInputObjectSchema } from './objects/UserCommentWhereInput.schema';
+import { UserCommentWhereUniqueInputObjectSchema as UserCommentWhereUniqueInputObjectSchema } from './objects/UserCommentWhereUniqueInput.schema';
+import { UserCommentCountAggregateInputObjectSchema as UserCommentCountAggregateInputObjectSchema } from './objects/UserCommentCountAggregateInput.schema';
+import { UserCommentMinAggregateInputObjectSchema as UserCommentMinAggregateInputObjectSchema } from './objects/UserCommentMinAggregateInput.schema';
+import { UserCommentMaxAggregateInputObjectSchema as UserCommentMaxAggregateInputObjectSchema } from './objects/UserCommentMaxAggregateInput.schema';
+
+export const UserCommentAggregateSchema: z.ZodType<Prisma.UserCommentAggregateArgs> = z.object({ orderBy: z.union([UserCommentOrderByWithRelationInputObjectSchema, UserCommentOrderByWithRelationInputObjectSchema.array()]).optional(), where: UserCommentWhereInputObjectSchema.optional(), cursor: UserCommentWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), UserCommentCountAggregateInputObjectSchema ]).optional(), _min: UserCommentMinAggregateInputObjectSchema.optional(), _max: UserCommentMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.UserCommentAggregateArgs>;
+
+export const UserCommentAggregateZodSchema = z.object({ orderBy: z.union([UserCommentOrderByWithRelationInputObjectSchema, UserCommentOrderByWithRelationInputObjectSchema.array()]).optional(), where: UserCommentWhereInputObjectSchema.optional(), cursor: UserCommentWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), UserCommentCountAggregateInputObjectSchema ]).optional(), _min: UserCommentMinAggregateInputObjectSchema.optional(), _max: UserCommentMaxAggregateInputObjectSchema.optional() }).strict();

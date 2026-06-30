@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { TimelineEntryOrderByWithRelationInputObjectSchema as TimelineEntryOrderByWithRelationInputObjectSchema } from './objects/TimelineEntryOrderByWithRelationInput.schema';
+import { TimelineEntryWhereInputObjectSchema as TimelineEntryWhereInputObjectSchema } from './objects/TimelineEntryWhereInput.schema';
+import { TimelineEntryWhereUniqueInputObjectSchema as TimelineEntryWhereUniqueInputObjectSchema } from './objects/TimelineEntryWhereUniqueInput.schema';
+import { TimelineEntryCountAggregateInputObjectSchema as TimelineEntryCountAggregateInputObjectSchema } from './objects/TimelineEntryCountAggregateInput.schema';
+import { TimelineEntryMinAggregateInputObjectSchema as TimelineEntryMinAggregateInputObjectSchema } from './objects/TimelineEntryMinAggregateInput.schema';
+import { TimelineEntryMaxAggregateInputObjectSchema as TimelineEntryMaxAggregateInputObjectSchema } from './objects/TimelineEntryMaxAggregateInput.schema';
+
+export const TimelineEntryAggregateSchema: z.ZodType<Prisma.TimelineEntryAggregateArgs> = z.object({ orderBy: z.union([TimelineEntryOrderByWithRelationInputObjectSchema, TimelineEntryOrderByWithRelationInputObjectSchema.array()]).optional(), where: TimelineEntryWhereInputObjectSchema.optional(), cursor: TimelineEntryWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), TimelineEntryCountAggregateInputObjectSchema ]).optional(), _min: TimelineEntryMinAggregateInputObjectSchema.optional(), _max: TimelineEntryMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.TimelineEntryAggregateArgs>;
+
+export const TimelineEntryAggregateZodSchema = z.object({ orderBy: z.union([TimelineEntryOrderByWithRelationInputObjectSchema, TimelineEntryOrderByWithRelationInputObjectSchema.array()]).optional(), where: TimelineEntryWhereInputObjectSchema.optional(), cursor: TimelineEntryWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), TimelineEntryCountAggregateInputObjectSchema ]).optional(), _min: TimelineEntryMinAggregateInputObjectSchema.optional(), _max: TimelineEntryMaxAggregateInputObjectSchema.optional() }).strict();

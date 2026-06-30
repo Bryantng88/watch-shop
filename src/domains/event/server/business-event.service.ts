@@ -1,6 +1,7 @@
 import { dbOrTx, type DB } from "@/server/db/client";
 import { consumeBusinessEventForWorkflow } from "@/domains/workflow/server/workflow-event-consumer";
 import { consumeBusinessEventForNotification } from "@/domains/notification/server/notification-event-consumer";
+import { consumeBusinessEventForTimeline } from "@/domains/shared/timeline/server/timeline-event-consumer";
 export type BusinessEventEffect = "ASSERT" | "REVOKE";
 
 export type BusinessEventInput = {
@@ -8,12 +9,52 @@ export type BusinessEventInput = {
     targetType: string;
     targetId: string;
     actorUserId?: string | null;
-    payload?: any;
+    payload?: unknown;
 
     effect?: BusinessEventEffect;
     revokeEventKey?: string | null;
     targetAliasIds?: string[];
 };
+
+type BusinessEventConsumerContext = {
+    eventLog: unknown;
+    eventKey: string;
+    targetType: string;
+    targetId: string;
+    actorUserId?: string | null;
+    effect: BusinessEventEffect;
+    revokeEventKey?: string | null;
+    targetAliasIds?: string[];
+};
+
+type BusinessEventConsumer = {
+    key: "workflow" | "notification" | "timeline";
+    consume: (
+        client: DB,
+        context: BusinessEventConsumerContext,
+    ) => Promise<unknown>;
+};
+
+const consumers: BusinessEventConsumer[] = [
+    {
+        key: "workflow",
+        consume: (client, context) =>
+            consumeBusinessEventForWorkflow(client, context),
+    },
+    {
+        key: "notification",
+        consume: (client, context) =>
+            consumeBusinessEventForNotification(client, context.eventLog),
+    },
+    {
+        key: "timeline",
+        consume: (client, context) =>
+            consumeBusinessEventForTimeline(client, context.eventLog),
+    },
+    // ApprovalConsumer
+    // AuditConsumer
+    // AnalyticsConsumer
+];
 
 function clean(value: unknown) {
     return String(value ?? "").trim();
@@ -37,7 +78,7 @@ export async function recordBusinessEvent(db: DB, input: BusinessEventInput) {
     }
 
     const metadataJson = {
-        ...(input.payload ?? {}),
+        ...((input.payload ?? {}) as Record<string, unknown>),
         effect,
         revokeEventKey: revokeEventKey || null,
         targetAliasIds: input.targetAliasIds ?? [],
@@ -64,7 +105,7 @@ export async function recordBusinessEvent(db: DB, input: BusinessEventInput) {
         },
     });
 
-    const workflowResult = await consumeBusinessEventForWorkflow(client, {
+    const consumerContext: BusinessEventConsumerContext = {
         eventLog,
         eventKey,
         targetType,
@@ -73,19 +114,23 @@ export async function recordBusinessEvent(db: DB, input: BusinessEventInput) {
         effect,
         revokeEventKey: revokeEventKey || null,
         targetAliasIds: input.targetAliasIds ?? [],
-    });
+    };
 
-    const notificationResult = await consumeBusinessEventForNotification(
-        client,
-        eventLog,
-    );
+    const consumerResults: Record<string, unknown> = {};
+
+    for (const consumer of consumers) {
+        consumerResults[consumer.key] = await consumer.consume(
+            client,
+            consumerContext,
+        );
+    }
 
     return {
         ok: true,
         eventLog,
         consumers: {
-            workflow: workflowResult,
-            notification: notificationResult,
+            workflow: consumerResults.workflow,
+            notification: consumerResults.notification,
         },
     };
 }

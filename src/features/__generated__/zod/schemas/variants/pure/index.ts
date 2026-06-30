@@ -71,6 +71,8 @@ export { WorkflowActionModelSchema } from './WorkflowAction.pure';
 export { WorkflowExecutionModelSchema } from './WorkflowExecution.pure';
 export { WorkflowExecutionEventModelSchema } from './WorkflowExecutionEvent.pure';
 export { BusinessFeedbackModelSchema } from './BusinessFeedback.pure';
+export { TimelineEntryModelSchema } from './TimelineEntry.pure';
+export { UserCommentModelSchema } from './UserComment.pure';
 export { TaskModelSchema } from './Task.pure';
 export { TaskItemModelSchema } from './TaskItem.pure';
 export { TaskItemChecklistModelSchema } from './TaskItemChecklist.pure';

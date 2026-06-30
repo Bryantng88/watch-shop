@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { UserCommentWhereInputObjectSchema as UserCommentWhereInputObjectSchema } from './objects/UserCommentWhereInput.schema';
+import { UserCommentOrderByWithAggregationInputObjectSchema as UserCommentOrderByWithAggregationInputObjectSchema } from './objects/UserCommentOrderByWithAggregationInput.schema';
+import { UserCommentScalarWhereWithAggregatesInputObjectSchema as UserCommentScalarWhereWithAggregatesInputObjectSchema } from './objects/UserCommentScalarWhereWithAggregatesInput.schema';
+import { UserCommentScalarFieldEnumSchema } from './enums/UserCommentScalarFieldEnum.schema';
+import { UserCommentCountAggregateInputObjectSchema as UserCommentCountAggregateInputObjectSchema } from './objects/UserCommentCountAggregateInput.schema';
+import { UserCommentMinAggregateInputObjectSchema as UserCommentMinAggregateInputObjectSchema } from './objects/UserCommentMinAggregateInput.schema';
+import { UserCommentMaxAggregateInputObjectSchema as UserCommentMaxAggregateInputObjectSchema } from './objects/UserCommentMaxAggregateInput.schema';
+
+export const UserCommentGroupBySchema: z.ZodType<Prisma.UserCommentGroupByArgs> = z.object({ where: UserCommentWhereInputObjectSchema.optional(), orderBy: z.union([UserCommentOrderByWithAggregationInputObjectSchema, UserCommentOrderByWithAggregationInputObjectSchema.array()]).optional(), having: UserCommentScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(UserCommentScalarFieldEnumSchema), _count: z.union([ z.literal(true), UserCommentCountAggregateInputObjectSchema ]).optional(), _min: UserCommentMinAggregateInputObjectSchema.optional(), _max: UserCommentMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.UserCommentGroupByArgs>;
+
+export const UserCommentGroupByZodSchema = z.object({ where: UserCommentWhereInputObjectSchema.optional(), orderBy: z.union([UserCommentOrderByWithAggregationInputObjectSchema, UserCommentOrderByWithAggregationInputObjectSchema.array()]).optional(), having: UserCommentScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(UserCommentScalarFieldEnumSchema), _count: z.union([ z.literal(true), UserCommentCountAggregateInputObjectSchema ]).optional(), _min: UserCommentMinAggregateInputObjectSchema.optional(), _max: UserCommentMaxAggregateInputObjectSchema.optional() }).strict();
