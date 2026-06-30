@@ -70,6 +70,7 @@ export { WorkflowConditionInputSchema } from './WorkflowCondition.input';
 export { WorkflowActionInputSchema } from './WorkflowAction.input';
 export { WorkflowExecutionInputSchema } from './WorkflowExecution.input';
 export { WorkflowExecutionEventInputSchema } from './WorkflowExecutionEvent.input';
+export { BusinessFeedbackInputSchema } from './BusinessFeedback.input';
 export { TaskInputSchema } from './Task.input';
 export { TaskItemInputSchema } from './TaskItem.input';
 export { TaskItemChecklistInputSchema } from './TaskItemChecklist.input';

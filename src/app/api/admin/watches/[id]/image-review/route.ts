@@ -47,11 +47,19 @@ export async function POST(
         }
 
         if (action === "reject") {
+            const note = String(body?.note ?? "").trim();
+            if (!note) {
+                return NextResponse.json(
+                    { ok: false, error: "Vui lòng nhập lý do trả về hình ảnh." },
+                    { status: 400 },
+                );
+            }
+
             const state = await rejectWatchReview({
                 productId,
                 targetType: "IMAGE",
                 userId: getAuthUserId(auth),
-                note: body?.note ?? null,
+                note,
             });
             return NextResponse.json({ ok: true, item: state });
         }

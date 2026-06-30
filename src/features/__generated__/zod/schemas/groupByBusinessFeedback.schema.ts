@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { BusinessFeedbackWhereInputObjectSchema as BusinessFeedbackWhereInputObjectSchema } from './objects/BusinessFeedbackWhereInput.schema';
+import { BusinessFeedbackOrderByWithAggregationInputObjectSchema as BusinessFeedbackOrderByWithAggregationInputObjectSchema } from './objects/BusinessFeedbackOrderByWithAggregationInput.schema';
+import { BusinessFeedbackScalarWhereWithAggregatesInputObjectSchema as BusinessFeedbackScalarWhereWithAggregatesInputObjectSchema } from './objects/BusinessFeedbackScalarWhereWithAggregatesInput.schema';
+import { BusinessFeedbackScalarFieldEnumSchema } from './enums/BusinessFeedbackScalarFieldEnum.schema';
+import { BusinessFeedbackCountAggregateInputObjectSchema as BusinessFeedbackCountAggregateInputObjectSchema } from './objects/BusinessFeedbackCountAggregateInput.schema';
+import { BusinessFeedbackMinAggregateInputObjectSchema as BusinessFeedbackMinAggregateInputObjectSchema } from './objects/BusinessFeedbackMinAggregateInput.schema';
+import { BusinessFeedbackMaxAggregateInputObjectSchema as BusinessFeedbackMaxAggregateInputObjectSchema } from './objects/BusinessFeedbackMaxAggregateInput.schema';
+
+export const BusinessFeedbackGroupBySchema: z.ZodType<Prisma.BusinessFeedbackGroupByArgs> = z.object({ where: BusinessFeedbackWhereInputObjectSchema.optional(), orderBy: z.union([BusinessFeedbackOrderByWithAggregationInputObjectSchema, BusinessFeedbackOrderByWithAggregationInputObjectSchema.array()]).optional(), having: BusinessFeedbackScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(BusinessFeedbackScalarFieldEnumSchema), _count: z.union([ z.literal(true), BusinessFeedbackCountAggregateInputObjectSchema ]).optional(), _min: BusinessFeedbackMinAggregateInputObjectSchema.optional(), _max: BusinessFeedbackMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.BusinessFeedbackGroupByArgs>;
+
+export const BusinessFeedbackGroupByZodSchema = z.object({ where: BusinessFeedbackWhereInputObjectSchema.optional(), orderBy: z.union([BusinessFeedbackOrderByWithAggregationInputObjectSchema, BusinessFeedbackOrderByWithAggregationInputObjectSchema.array()]).optional(), having: BusinessFeedbackScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(BusinessFeedbackScalarFieldEnumSchema), _count: z.union([ z.literal(true), BusinessFeedbackCountAggregateInputObjectSchema ]).optional(), _min: BusinessFeedbackMinAggregateInputObjectSchema.optional(), _max: BusinessFeedbackMaxAggregateInputObjectSchema.optional() }).strict();

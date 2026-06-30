@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { BusinessFeedbackOrderByWithRelationInputObjectSchema as BusinessFeedbackOrderByWithRelationInputObjectSchema } from './objects/BusinessFeedbackOrderByWithRelationInput.schema';
+import { BusinessFeedbackWhereInputObjectSchema as BusinessFeedbackWhereInputObjectSchema } from './objects/BusinessFeedbackWhereInput.schema';
+import { BusinessFeedbackWhereUniqueInputObjectSchema as BusinessFeedbackWhereUniqueInputObjectSchema } from './objects/BusinessFeedbackWhereUniqueInput.schema';
+import { BusinessFeedbackCountAggregateInputObjectSchema as BusinessFeedbackCountAggregateInputObjectSchema } from './objects/BusinessFeedbackCountAggregateInput.schema';
+import { BusinessFeedbackMinAggregateInputObjectSchema as BusinessFeedbackMinAggregateInputObjectSchema } from './objects/BusinessFeedbackMinAggregateInput.schema';
+import { BusinessFeedbackMaxAggregateInputObjectSchema as BusinessFeedbackMaxAggregateInputObjectSchema } from './objects/BusinessFeedbackMaxAggregateInput.schema';
+
+export const BusinessFeedbackAggregateSchema: z.ZodType<Prisma.BusinessFeedbackAggregateArgs> = z.object({ orderBy: z.union([BusinessFeedbackOrderByWithRelationInputObjectSchema, BusinessFeedbackOrderByWithRelationInputObjectSchema.array()]).optional(), where: BusinessFeedbackWhereInputObjectSchema.optional(), cursor: BusinessFeedbackWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), BusinessFeedbackCountAggregateInputObjectSchema ]).optional(), _min: BusinessFeedbackMinAggregateInputObjectSchema.optional(), _max: BusinessFeedbackMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.BusinessFeedbackAggregateArgs>;
+
+export const BusinessFeedbackAggregateZodSchema = z.object({ orderBy: z.union([BusinessFeedbackOrderByWithRelationInputObjectSchema, BusinessFeedbackOrderByWithRelationInputObjectSchema.array()]).optional(), where: BusinessFeedbackWhereInputObjectSchema.optional(), cursor: BusinessFeedbackWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), BusinessFeedbackCountAggregateInputObjectSchema ]).optional(), _min: BusinessFeedbackMinAggregateInputObjectSchema.optional(), _max: BusinessFeedbackMaxAggregateInputObjectSchema.optional() }).strict();

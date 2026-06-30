@@ -1,7 +1,10 @@
 import { prisma } from "@/server/db/client";
 import { ProductStatus, WatchSaleStage, WatchStockStage } from "@prisma/client";
 import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
-import { createBusinessFeedback } from "@/domains/shared/business-feedback/server/business-feedback.repo";
+import {
+    createWatchReviewRejectionFeedback,
+    normalizeBusinessFeedbackMessage,
+} from "@/domains/shared/business-feedback/server";
 type ReviewTargetType = "CONTENT" | "IMAGE";
 type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
@@ -20,11 +23,6 @@ function watchReviewRejectedEventKey(targetType: ReviewTargetType) {
         : "watch.image.rejected";
 }
 
-function watchReviewFeedbackTargetType(targetType: ReviewTargetType) {
-    return targetType === "CONTENT"
-        ? "WATCH_CONTENT_REVIEW"
-        : "WATCH_IMAGE_REVIEW";
-}
 function watchReviewApprovedEventKey(targetType: ReviewTargetType) {
     return targetType === "CONTENT"
         ? "watch.content.approved"
@@ -40,7 +38,15 @@ function watchReviewUnapprovedEventKey(targetType: ReviewTargetType) {
 async function getWatchOrThrow(productId: string) {
     const watch = await prisma.watch.findUnique({
         where: { productId },
-        select: { id: true, productId: true },
+        select: {
+            id: true,
+            productId: true,
+            product: {
+                select: {
+                    title: true,
+                },
+            },
+        },
     });
 
     if (!watch) throw new Error("Không tìm thấy watch.");
@@ -238,7 +244,7 @@ async function notifyReviewRejected(input: {
                 input.targetType === "CONTENT"
                     ? "Content watch bị trả về"
                     : "Hình ảnh watch bị trả về",
-            message: input.note || "Admin đã trả về hạng mục cần chỉnh lại.",
+            message: normalizeBusinessFeedbackMessage(input.note),
             priority: "NORMAL",
             metadata: {
                 route: `/admin/watches/${input.productId}/edit`,
@@ -369,13 +375,15 @@ export async function rejectWatchReview(input: RejectInput) {
         );
     }
 
+    const feedbackMessage = normalizeBusinessFeedbackMessage(input.note);
+
     const state = await prisma.watchReviewState.update({
         where: { id: current.id },
         data: {
             status: "REJECTED",
             reviewedAt: new Date(),
             reviewedById: input.userId ?? null,
-            reviewNote: input.note ?? null,
+            reviewNote: feedbackMessage,
         },
     });
 
@@ -385,25 +393,22 @@ export async function rejectWatchReview(input: RejectInput) {
         fromStatus: current.status as ReviewStatus,
         toStatus: "REJECTED",
         actorId: input.userId,
-        note: input.note,
+        note: feedbackMessage,
     });
 
-    const feedback = await createBusinessFeedback({
-        targetType: watchReviewFeedbackTargetType(input.targetType),
-        targetId: input.productId,
+    const watch = await getWatchOrThrow(input.productId);
+
+    const feedback = await createWatchReviewRejectionFeedback({
+        productId: input.productId,
+        watchId: watch.id,
+        reviewStateId: state.id,
+        reviewTargetType: input.targetType,
         eventKey: watchReviewRejectedEventKey(input.targetType),
         actorUserId: input.userId ?? null,
-        message: input.note || "Admin đã trả về hạng mục cần chỉnh lại.",
-        metadataJson: {
-            productId: input.productId,
-            reviewTargetType: input.targetType,
-            reviewStateId: state.id,
-        },
+        message: feedbackMessage,
     });
 
     await moveWatchToProcessingIfEditable(input.productId);
-
-    const watch = await getWatchOrThrow(input.productId);
 
     await recordBusinessEvent(prisma, {
         eventKey: watchReviewRejectedEventKey(input.targetType),
@@ -414,6 +419,7 @@ export async function rejectWatchReview(input: RejectInput) {
         payload: {
             productId: input.productId,
             watchId: watch.id,
+            watchTitle: watch.product?.title || input.productId,
             reviewTargetType: input.targetType,
 
             feedbackId: feedback.id,

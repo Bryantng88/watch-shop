@@ -1,4 +1,4 @@
-import { listBusinessFeedbacks } from "../server/business-feedback.repo";
+import { listBusinessFeedbacks } from "../server";
 
 function formatDate(value?: Date | string | null) {
     if (!value) return "-";

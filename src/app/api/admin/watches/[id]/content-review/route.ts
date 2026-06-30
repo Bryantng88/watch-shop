@@ -43,11 +43,19 @@ export async function POST(
         }
 
         if (action === "reject") {
+            const note = String(body?.note ?? "").trim();
+            if (!note) {
+                return NextResponse.json(
+                    { ok: false, error: "Vui lòng nhập lý do trả về nội dung." },
+                    { status: 400 },
+                );
+            }
+
             const state = await rejectWatchReview({
                 productId,
                 targetType: "CONTENT",
                 userId: getAuthUserId(auth),
-                note: body?.note ?? null,
+                note,
             });
             return NextResponse.json({ ok: true, item: state });
         }

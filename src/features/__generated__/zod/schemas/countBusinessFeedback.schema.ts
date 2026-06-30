@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { BusinessFeedbackOrderByWithRelationInputObjectSchema as BusinessFeedbackOrderByWithRelationInputObjectSchema } from './objects/BusinessFeedbackOrderByWithRelationInput.schema';
+import { BusinessFeedbackWhereInputObjectSchema as BusinessFeedbackWhereInputObjectSchema } from './objects/BusinessFeedbackWhereInput.schema';
+import { BusinessFeedbackWhereUniqueInputObjectSchema as BusinessFeedbackWhereUniqueInputObjectSchema } from './objects/BusinessFeedbackWhereUniqueInput.schema';
+import { BusinessFeedbackCountAggregateInputObjectSchema as BusinessFeedbackCountAggregateInputObjectSchema } from './objects/BusinessFeedbackCountAggregateInput.schema';
+
+export const BusinessFeedbackCountSchema: z.ZodType<Prisma.BusinessFeedbackCountArgs> = z.object({ orderBy: z.union([BusinessFeedbackOrderByWithRelationInputObjectSchema, BusinessFeedbackOrderByWithRelationInputObjectSchema.array()]).optional(), where: BusinessFeedbackWhereInputObjectSchema.optional(), cursor: BusinessFeedbackWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), BusinessFeedbackCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.BusinessFeedbackCountArgs>;
+
+export const BusinessFeedbackCountZodSchema = z.object({ orderBy: z.union([BusinessFeedbackOrderByWithRelationInputObjectSchema, BusinessFeedbackOrderByWithRelationInputObjectSchema.array()]).optional(), where: BusinessFeedbackWhereInputObjectSchema.optional(), cursor: BusinessFeedbackWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), BusinessFeedbackCountAggregateInputObjectSchema ]).optional() }).strict();

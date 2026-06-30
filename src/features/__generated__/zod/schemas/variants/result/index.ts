@@ -70,6 +70,7 @@ export { WorkflowConditionResultSchema } from './WorkflowCondition.result';
 export { WorkflowActionResultSchema } from './WorkflowAction.result';
 export { WorkflowExecutionResultSchema } from './WorkflowExecution.result';
 export { WorkflowExecutionEventResultSchema } from './WorkflowExecutionEvent.result';
+export { BusinessFeedbackResultSchema } from './BusinessFeedback.result';
 export { TaskResultSchema } from './Task.result';
 export { TaskItemResultSchema } from './TaskItem.result';
 export { TaskItemChecklistResultSchema } from './TaskItemChecklist.result';

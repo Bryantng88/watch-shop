@@ -1,33 +1,24 @@
 import { prisma } from "@/server/db/client";
+import type { Prisma } from "@prisma/client";
 
-export type CreateBusinessFeedbackInput = {
+export type CreateBusinessFeedbackRecordInput = {
     targetType: string;
     targetId: string;
     message: string;
     eventKey?: string | null;
     actorUserId?: string | null;
     visibility?: string;
-    metadataJson?: any;
+    metadataJson?: Prisma.InputJsonValue;
 };
 
-function clean(value: any) {
-    return String(value ?? "").trim();
-}
-
-export async function createBusinessFeedback(input: CreateBusinessFeedbackInput) {
-    const targetType = clean(input.targetType);
-    const targetId = clean(input.targetId);
-    const message = clean(input.message);
-
-    if (!targetType) throw new Error("Missing feedback targetType");
-    if (!targetId) throw new Error("Missing feedback targetId");
-    if (!message) throw new Error("Vui lòng nhập nội dung feedback.");
-
+export async function createBusinessFeedbackRecord(
+    input: CreateBusinessFeedbackRecordInput,
+) {
     return prisma.businessFeedback.create({
         data: {
-            targetType,
-            targetId,
-            message,
+            targetType: input.targetType,
+            targetId: input.targetId,
+            message: input.message,
             eventKey: input.eventKey ?? null,
             actorUserId: input.actorUserId ?? null,
             visibility: input.visibility ?? "INTERNAL",
@@ -36,7 +27,7 @@ export async function createBusinessFeedback(input: CreateBusinessFeedbackInput)
     });
 }
 
-export async function listBusinessFeedbacks(input: {
+export async function listBusinessFeedbackRecords(input: {
     targetType: string;
     targetId: string;
     limit?: number;
@@ -48,5 +39,34 @@ export async function listBusinessFeedbacks(input: {
         },
         orderBy: { createdAt: "desc" },
         take: input.limit ?? 20,
+    });
+}
+
+export async function findLatestBusinessFeedbackRecord(input: {
+    targetType: string;
+    targetId: string;
+}) {
+    return prisma.businessFeedback.findFirst({
+        where: {
+            targetType: input.targetType,
+            targetId: input.targetId,
+        },
+        orderBy: { createdAt: "desc" },
+    });
+}
+
+export async function listBusinessFeedbackRecordsForTargets(
+    targets: Array<{ targetType: string; targetId: string }>,
+) {
+    if (!targets.length) return [];
+
+    return prisma.businessFeedback.findMany({
+        where: {
+            OR: targets.map((target) => ({
+                targetType: target.targetType,
+                targetId: target.targetId,
+            })),
+        },
+        orderBy: { createdAt: "desc" },
     });
 }

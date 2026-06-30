@@ -43,41 +43,26 @@ export async function recordBusinessEvent(db: DB, input: BusinessEventInput) {
         targetAliasIds: input.targetAliasIds ?? [],
     };
 
-    const shouldCreateNewLog =
-        Boolean((input.payload as any)?.feedbackMessage) ||
-        eventKey.endsWith(".rejected") ||
-        eventKey.includes(".rejected.");
-
-    const eventLog = shouldCreateNewLog
-        ? await client.businessEventLog.create({
-            data: {
+    const eventLog = await client.businessEventLog.upsert({
+        where: {
+            eventKey_targetType_targetId: {
                 eventKey,
                 targetType,
                 targetId,
-                actorUserId: input.actorUserId ?? null,
-                metadataJson,
             },
-        })
-        : await client.businessEventLog.upsert({
-            where: {
-                eventKey_targetType_targetId: {
-                    eventKey,
-                    targetType,
-                    targetId,
-                },
-            },
-            update: {
-                actorUserId: input.actorUserId ?? null,
-                metadataJson,
-            },
-            create: {
-                eventKey,
-                targetType,
-                targetId,
-                actorUserId: input.actorUserId ?? null,
-                metadataJson,
-            },
-        });
+        },
+        update: {
+            actorUserId: input.actorUserId ?? null,
+            metadataJson,
+        },
+        create: {
+            eventKey,
+            targetType,
+            targetId,
+            actorUserId: input.actorUserId ?? null,
+            metadataJson,
+        },
+    });
 
     const workflowResult = await consumeBusinessEventForWorkflow(client, {
         eventLog,

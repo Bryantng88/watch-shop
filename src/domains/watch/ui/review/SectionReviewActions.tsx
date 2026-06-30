@@ -80,6 +80,9 @@ export default function SectionReviewActions({
     const [relatedTaskItems, setRelatedTaskItems] = useState<RelatedTaskSuggestion[]>([]);
     const [approveAfterTaskModal, setApproveAfterTaskModal] = useState(false);
     const [pending, setPending] = useState<string | null>(null);
+    const [rejectOpen, setRejectOpen] = useState(false);
+    const [rejectNote, setRejectNote] = useState("");
+    const [rejectError, setRejectError] = useState<string | null>(null);
 
     const currentStatus = normalizeStatus(status);
     const StatusIcon = statusIcon(currentStatus);
@@ -324,7 +327,13 @@ export default function SectionReviewActions({
         }
     }
 
-    async function handleReject() {
+    function handleReject() {
+        setRejectNote("");
+        setRejectError(null);
+        setRejectOpen(true);
+    }
+
+    async function submitReject() {
         const label = targetLabel(target);
 
         const ok = await dialog.confirm({
@@ -361,6 +370,56 @@ export default function SectionReviewActions({
                         : "Đã trả về hình ảnh.",
             });
 
+            router.refresh();
+        } catch (error) {
+            await dialog.alert({
+                title: "Không thể trả về",
+                message:
+                    error instanceof Error
+                        ? error.message
+                        : "Không thể cập nhật duyệt.",
+                tone: "danger",
+            });
+        } finally {
+            progress.hide();
+            setPending(null);
+        }
+    }
+
+    async function confirmRejectWithNote() {
+        const label = targetLabel(target);
+        const note = rejectNote.trim();
+
+        if (!note) {
+            setRejectError("Vui lòng nhập lý do trả về.");
+            return;
+        }
+
+        try {
+            setRejectError(null);
+            setPending("reject");
+            progress.show({
+                title: `Đang trả về ${label}`,
+                message: "Hệ thống đang cập nhật trạng thái review.",
+            });
+
+            await callReviewApi("reject", note);
+
+            onStatusChange?.({
+                status: "REJECTED",
+                reviewNote: note,
+            });
+
+            notify.warning({
+                title: "Đã trả về",
+                message:
+                    target === "content"
+                        ? "Đã trả về nội dung."
+                        : "Đã trả về hình ảnh.",
+            });
+
+            setRejectOpen(false);
+            setRejectNote("");
             router.refresh();
         } catch (error) {
             await dialog.alert({
@@ -541,6 +600,78 @@ export default function SectionReviewActions({
                             }
                         }}
                     />
+                </div>
+            ) : null}
+
+            {rejectOpen ? (
+                <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4">
+                    <div
+                        className="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px]"
+                        onClick={() => {
+                            if (pending) return;
+                            setRejectOpen(false);
+                        }}
+                    />
+
+                    <div className="relative z-[1] w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                        <div className="p-5">
+                            <div className="inline-flex rounded-full border border-red-200 bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
+                                Xác nhận thao tác
+                            </div>
+
+                            <div className="mt-4 text-lg font-semibold text-slate-950">
+                                Trả về {targetLabel(target)}
+                            </div>
+
+                            <div className="mt-2 text-sm leading-6 text-slate-600">
+                                Nhập lý do để người phụ trách chỉnh lại. Lý do này sẽ được lưu vào feedback và gửi theo notification.
+                            </div>
+
+                            <textarea
+                                value={rejectNote}
+                                onChange={(event) => {
+                                    setRejectNote(event.target.value);
+                                    if (rejectError) setRejectError(null);
+                                }}
+                                rows={4}
+                                autoFocus
+                                placeholder={`Lý do trả về ${targetLabel(target)}...`}
+                                className="mt-4 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-red-300 focus:ring-4 focus:ring-red-100"
+                                disabled={Boolean(pending)}
+                            />
+
+                            {rejectError ? (
+                                <div className="mt-2 text-sm font-medium text-red-600">
+                                    {rejectError}
+                                </div>
+                            ) : null}
+
+                            <div className="mt-5 flex flex-wrap justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setRejectOpen(false)}
+                                    disabled={Boolean(pending)}
+                                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                                >
+                                    Hủy
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={confirmRejectWithNote}
+                                    disabled={Boolean(pending)}
+                                    className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-60"
+                                >
+                                    {pending === "reject" ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <XCircle className="h-4 w-4" />
+                                    )}
+                                    Trả về
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             ) : null}
 

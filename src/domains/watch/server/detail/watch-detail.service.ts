@@ -2,6 +2,10 @@ import { prisma } from "@/server/db/client";
 import { mapWatchDetail } from "../shared";
 import { listWatchChosenMediaPool } from "@/domains/media/server";
 import {
+  getLatestBusinessFeedbackByTargets,
+  getWatchReviewFeedbackTargetType,
+} from "@/domains/shared/business-feedback/server";
+import {
   getAdminEditWatchDetail,
   getAdminWatchDetail,
   getAdminWatchRow,
@@ -10,6 +14,8 @@ import {
   getWatchServiceHistory,
   getWatchTradeHistory,
 } from "./watch-detail.repo";
+
+type ReviewFeedbackTarget = "CONTENT" | "IMAGE";
 
 async function getLatestAcquisitionUnitCost(
   productId: string,
@@ -39,6 +45,65 @@ async function getLatestAcquisitionUnitCost(
   };
 }
 
+function normalizeReviewFeedbackTarget(
+  value?: string | null,
+): ReviewFeedbackTarget | null {
+  const targetType = String(value ?? "").toUpperCase();
+  return targetType === "CONTENT" || targetType === "IMAGE" ? targetType : null;
+}
+
+function feedbackKey(targetType: ReviewFeedbackTarget, productId: string) {
+  return `${getWatchReviewFeedbackTargetType(targetType)}:${productId}`;
+}
+
+async function withComposedReviewNotes<
+  T extends {
+    productId?: string | null;
+    reviewStates?: Array<{
+      targetType?: string | null;
+      status?: string | null;
+      reviewNote?: string | null;
+    }> | null;
+  },
+>(
+  row: T,
+) {
+  if (!row?.productId) return row;
+
+  const productId = row.productId;
+
+  const feedbacks = await getLatestBusinessFeedbackByTargets([
+    {
+      targetType: getWatchReviewFeedbackTargetType("CONTENT"),
+      targetId: productId,
+    },
+    {
+      targetType: getWatchReviewFeedbackTargetType("IMAGE"),
+      targetId: productId,
+    },
+  ]);
+
+  const nextReviewStates = (row.reviewStates ?? []).map((state) => {
+    const targetType = normalizeReviewFeedbackTarget(state.targetType);
+    const status = String(state.status ?? "DRAFT").toUpperCase();
+
+    if (!targetType) return state;
+    if (status !== "REJECTED") return state;
+
+    const feedback = feedbacks.get(feedbackKey(targetType, productId));
+
+    return {
+      ...state,
+      reviewNote: feedback?.message ?? state.reviewNote ?? null,
+    };
+  });
+
+  return {
+    ...row,
+    reviewStates: nextReviewStates,
+  };
+}
+
 export async function getWatchDetail(productId: string) {
   const row = await getAdminWatchDetail(prisma as any, productId);
 
@@ -46,7 +111,7 @@ export async function getWatchDetail(productId: string) {
     throw new Error("Không tìm thấy watch");
   }
 
-  return mapWatchDetail(row);
+  return mapWatchDetail(await withComposedReviewNotes(row));
 }
 
 export async function getWatchEditDetail(productId: string) {
@@ -56,7 +121,7 @@ export async function getWatchEditDetail(productId: string) {
     throw new Error("Không tìm thấy watch để edit");
   }
 
-  const mapped = mapWatchDetail(row);
+  const mapped = mapWatchDetail(await withComposedReviewNotes(row));
   const acq = await getLatestAcquisitionUnitCost(productId, row.acquisitionId);
   const poolImages = await listWatchChosenMediaPool({
     productId,

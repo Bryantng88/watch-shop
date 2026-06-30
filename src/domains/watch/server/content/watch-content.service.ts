@@ -159,3 +159,14 @@ export async function autoApproveWatchContent(input: {
     reviewNote: null,
   });
 }
+
+export async function publishWatchContent(input: {
+  productId: string;
+  userId?: string | null;
+}) {
+  return updateWatchContentStatusRepo(prisma as any, {
+    productId: input.productId,
+    status: "PUBLISHED",
+    userId: input.userId ?? null,
+  });
+}
