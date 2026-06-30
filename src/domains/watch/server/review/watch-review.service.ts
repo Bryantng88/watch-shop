@@ -1,6 +1,6 @@
 import { prisma } from "@/server/db/client";
 import { ProductStatus, WatchSaleStage, WatchStockStage } from "@prisma/client";
-import { recordBusinessEvent } from "@/domains/workflow/server/workflow.engine";
+import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
 
 type ReviewTargetType = "CONTENT" | "IMAGE";
 type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";

@@ -7,7 +7,7 @@ import {
   syncWatchContentSnapshotRepo,
   updateWatchContentStatusRepo,
 } from "./watch-content.repo";
-import { recordBusinessEvent } from "@/domains/workflow/server/workflow.engine";
+import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
 
 
 async function safeEmitWatchContentUpdatedEvent(input: {
