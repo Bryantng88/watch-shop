@@ -3,6 +3,7 @@ import { dbOrTx, type DB } from "@/server/db/client";
 import type { TaskListFilters, TaskViewKey } from "../task.types";
 import {
   TASK_INCLUDE,
+  TASK_ITEM_INCLUDE,
   USER_SELECT,
   applyTaskRowAccess,
   buildFilterWhere,
@@ -14,6 +15,90 @@ import {
 import { hydrateTaskBusinessLinks } from "./task-business-hydrate.repo";
 import { hydrateTasksWithTaskItemTagsRepo } from "../tag/task-tag.repo";
 import { getTaskItemWorkflowProgress } from "@/domains/workflow/server/workflow.repo";
+import { getTaskItemTimelineViewModels } from "@/domains/shared/timeline/server";
+import { listTaskItemBusinessBindings } from "../business-binding.service";
+
+type TimelineHydratableTaskItem = {
+  id: string;
+  [key: string]: unknown;
+};
+
+function bindingHref(
+  binding: { targetType: string; targetId: string },
+  watchProductIds: Map<string, string>,
+) {
+  if (binding.targetType === "WATCH") {
+    const productId = watchProductIds.get(binding.targetId);
+    return productId ? `/admin/watches/${productId}` : null;
+  }
+
+  if (binding.targetType === "SERVICE_REQUEST") return `/admin/services/${binding.targetId}`;
+  if (binding.targetType === "TECHNICAL_ISSUE") {
+    return `/admin/services/issues-board?issueId=${binding.targetId}`;
+  }
+  if (binding.targetType === "ORDER") return `/admin/orders/${binding.targetId}`;
+  if (binding.targetType === "SHIPMENT") return `/admin/shipments/${binding.targetId}`;
+  if (binding.targetType === "PAYMENT") return "/admin/payments";
+  if (binding.targetType === "WORK_CASE") return `/admin/work-cases/${binding.targetId}`;
+  if (binding.targetType === "ACQUISITION") return `/admin/acquisitions/${binding.targetId}`;
+
+  return null;
+}
+
+async function resolveWatchProductIds(
+  db: DB,
+  bindings: Array<{ targetType: string; targetId: string }>,
+) {
+  const watchIds = Array.from(
+    new Set(
+      bindings
+        .filter((binding) => binding.targetType === "WATCH")
+        .map((binding) => binding.targetId)
+        .filter(Boolean),
+    ),
+  );
+
+  if (!watchIds.length) return new Map<string, string>();
+
+  const rows = await dbOrTx(db).watch.findMany({
+    where: { id: { in: watchIds } },
+    select: { id: true, productId: true },
+  });
+
+  return new Map(
+    rows
+      .filter((row) => row.productId)
+      .map((row) => [row.id, row.productId as string]),
+  );
+}
+
+async function hydrateTaskItemsWithTimeline<
+  T extends { taskItems?: TimelineHydratableTaskItem[] | null },
+>(
+  task: T,
+) {
+  const taskItems = task.taskItems ?? [];
+
+  if (!taskItems.length) {
+    return {
+      ...task,
+      taskItems,
+    };
+  }
+
+  const timelines = await Promise.all(
+    taskItems.map((item) => getTaskItemTimelineViewModels(item.id)),
+  );
+
+  return {
+    ...task,
+    taskItems: taskItems.map((item, index) => ({
+      ...item,
+      timeline: timelines[index] ?? [],
+    })),
+  };
+}
+
 export async function listTasksRepo(
   db: DB,
   input: { userId: string; canViewAll?: boolean; filters: TaskListFilters },
@@ -79,6 +164,10 @@ export async function listTasksRepo(
         workflowMap.get(item.id) ?? null,
     })),
   }));
+
+  finalItems = await Promise.all(
+    finalItems.map((task) => hydrateTaskItemsWithTimeline(task)),
+  );
 
   return {
     items: finalItems,
@@ -195,12 +284,52 @@ export async function getTaskByIdRepo(db: DB, id: string) {
       (withTags.taskItems ?? []).map((x) => x.id),
     );
 
-  return {
+  const withWorkflow = {
     ...withTags,
     taskItems: (withTags.taskItems ?? []).map((item) => ({
       ...item,
       workflowProgress:
         workflowMap.get(item.id) ?? null,
+    })),
+  };
+
+  return hydrateTaskItemsWithTimeline(withWorkflow);
+}
+
+export async function getTaskItemDetailRepo(db: DB, id: string) {
+  const client = dbOrTx(db);
+  const item = await client.taskItem.findUnique({
+    where: { id },
+    include: {
+      ...TASK_ITEM_INCLUDE,
+      task: {
+        select: {
+          id: true,
+          title: true,
+          kind: true,
+          status: true,
+          priority: true,
+          dueAt: true,
+          periodKey: true,
+        },
+      },
+    },
+  });
+
+  if (!item) return null;
+
+  const [timeline, businessBindings] = await Promise.all([
+    getTaskItemTimelineViewModels(item.id, 50),
+    listTaskItemBusinessBindings(db, item.id),
+  ]);
+  const watchProductIds = await resolveWatchProductIds(db, businessBindings);
+
+  return {
+    ...item,
+    timeline,
+    businessBindings: businessBindings.map((binding) => ({
+      ...binding,
+      href: bindingHref(binding, watchProductIds),
     })),
   };
 }

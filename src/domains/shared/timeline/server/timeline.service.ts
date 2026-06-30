@@ -10,6 +10,10 @@ import {
     upsertTimelineEntryRecord,
     type AppendTimelineEntryInput,
 } from "./timeline.repo";
+import {
+    mapTimelineEntriesToViewModels,
+    type TimelineEntryViewModel,
+} from "./timeline-renderer.service";
 
 type BusinessFeedbackLike = {
     id: string;
@@ -75,6 +79,22 @@ export async function listTimelineEntries(
         containerId: cleanContainerId,
         limit,
     });
+}
+
+export async function getTaskItemTimelineViewModels(
+    taskItemId: string,
+    limit?: number,
+): Promise<TimelineEntryViewModel[]> {
+    const cleanTaskItemId = clean(taskItemId);
+    assertPresent(cleanTaskItemId, "Missing taskItemId");
+
+    const entries = await listTimelineEntries(
+        TimelineContainerType.TASK_ITEM,
+        cleanTaskItemId,
+        limit,
+    );
+
+    return mapTimelineEntriesToViewModels(entries);
 }
 
 export async function appendTaskItemComment(

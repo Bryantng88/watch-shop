@@ -13,22 +13,8 @@ export type BusinessBindingActionType = TaskExecutionActionType;
 
 export type BusinessBinding = TaskExecution;
 
-export const BusinessBindingRole = {
-  PRIMARY: "PRIMARY",
-  REVIEW: "REVIEW",
-  IMAGE: "IMAGE",
-  SERVICE: "SERVICE",
-  PAYMENT: "PAYMENT",
-  SHIPMENT: "SHIPMENT",
-  GENERAL: "GENERAL",
-} as const;
-
-export type BusinessBindingRole =
-  (typeof BusinessBindingRole)[keyof typeof BusinessBindingRole];
-
 export type BusinessBindingDTO = {
   id: string;
-  role: BusinessBindingRole;
   targetType: BusinessBindingTargetType;
   targetId: string;
   taskItemId: string | null;
@@ -39,7 +25,6 @@ export type BusinessBindingDTO = {
 export type BusinessBindingTargetInput = {
   targetType: BusinessBindingTargetType;
   targetId: string;
-  aliasIds?: string[];
 };
 
 export type CreateBusinessBindingInput = BusinessBindingTargetInput & {

@@ -4,7 +4,7 @@ import type {
   BusinessBindingTargetInput,
   CreateBusinessBindingInput,
 } from "./business-binding.types";
-
+import type { BusinessBindingTargetType } from "./business-binding.types";
 function clean(value: unknown) {
   return String(value ?? "").trim();
 }
@@ -82,21 +82,15 @@ export async function findTaskItemIdsByTarget(
   db: DB,
   targetType: BusinessBindingTargetInput["targetType"],
   targetId: string,
-  aliasIds: string[] = [],
 ) {
   const client = dbOrTx(db);
   const cleanTargetId = clean(targetId);
   assertPresent(cleanTargetId, "Missing targetId");
-  const targetIds = Array.from(
-    new Set([cleanTargetId, ...aliasIds.map((id) => clean(id))].filter(Boolean)),
-  );
 
   const rows = await client.taskExecution.findMany({
     where: {
       targetType,
-      targetId: {
-        in: targetIds,
-      },
+      targetId: cleanTargetId,
       taskItemId: {
         not: null,
       },
@@ -126,4 +120,33 @@ export async function findBusinessBindingsByTaskItem(
     },
     orderBy: { createdAt: "desc" },
   });
+}
+export async function findTaskItemIdsByTargetIds(
+  db: DB,
+  input: {
+    targetType: BusinessBindingTargetType;
+    targetIds: string[];
+  },
+) {
+  const client = dbOrTx(db);
+
+  const targetIds = Array.from(
+    new Set(input.targetIds.map((id) => String(id ?? "").trim()).filter(Boolean)),
+  );
+
+  if (!targetIds.length) return [];
+
+  const rows = await client.taskExecution.findMany({
+    where: {
+      targetType: input.targetType as any,
+      targetId: { in: targetIds },
+      taskItemId: { not: null },
+    },
+    select: { taskItemId: true },
+    distinct: ["taskItemId"],
+  });
+
+  return rows
+    .map((row) => row.taskItemId)
+    .filter((id): id is string => Boolean(id));
 }

@@ -15,6 +15,7 @@ import {
   setTaskStatusRepo,
   updateTaskRepo,
 } from "./task.repo";
+import { getTaskItemDetailRepo } from "./task-query.repo";
 import type {
   CompleteRelatedTasksInput,
   CreateTaskInput,
@@ -189,6 +190,19 @@ export async function getTaskListPageData(
 
 export async function getTaskDetail(db: DB, id: string, auth: any) {
   return assertCanAccessTask(db, id, auth);
+}
+
+export async function getTaskItemDetail(
+  db: DB,
+  id: string,
+  auth: Parameters<typeof getTaskDetail>[2],
+) {
+  const item = await getTaskItemDetailRepo(db, id);
+  if (!item) return null;
+
+  await assertCanAccessTask(db, item.taskId, auth);
+
+  return item;
 }
 
 export async function createTask(db: DB, input: CreateTaskInput, auth: any) {

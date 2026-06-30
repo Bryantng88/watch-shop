@@ -8,40 +8,33 @@ import type {
   BindTaskItemToBusinessObjectInput,
   BusinessBinding,
   BusinessBindingDTO,
-  BusinessBindingRole,
   BusinessBindingTargetInput,
 } from "./business-binding.types";
-import { BusinessBindingRole as BusinessBindingRoleValue } from "./business-binding.types";
-
+import { findTaskItemIdsByTargetIds } from "./business-binding.repo";
+import type { BusinessBindingTargetType } from "./business-binding.types";
 function clean(value: unknown) {
   return String(value ?? "").trim();
 }
-
+export async function findRelatedTaskItemIdsForBusinessTargets(
+  db: DB,
+  input: {
+    targetType: BusinessBindingTargetType;
+    targetIds: string[];
+  },
+) {
+  return findTaskItemIdsByTargetIds(db, input);
+}
 function assertPresent(value: unknown, message: string) {
   if (!clean(value)) throw new Error(message);
 }
 
 // TaskExecution remains the database model. This service exposes the
 // BusinessBinding abstraction so new server code does not need that legacy name.
-export function resolveBusinessBindingRole(
-  binding: Pick<BusinessBinding, "targetType">,
-): BusinessBindingRole {
-  if (binding.targetType === "SERVICE_REQUEST") {
-    return BusinessBindingRoleValue.SERVICE;
-  }
-
-  if (binding.targetType === "PAYMENT") return BusinessBindingRoleValue.PAYMENT;
-  if (binding.targetType === "SHIPMENT") return BusinessBindingRoleValue.SHIPMENT;
-
-  return BusinessBindingRoleValue.GENERAL;
-}
-
 export function toBusinessBindingDTO(
   binding: BusinessBinding,
 ): BusinessBindingDTO {
   return {
     id: binding.id,
-    role: resolveBusinessBindingRole(binding),
     targetType: binding.targetType,
     targetId: binding.targetId,
     taskItemId: binding.taskItemId,
@@ -70,12 +63,7 @@ export async function findRelatedTaskItemIdsForBusinessTarget(
   db: DB,
   input: BusinessBindingTargetInput,
 ) {
-  return findTaskItemIdsByTarget(
-    db,
-    input.targetType,
-    input.targetId,
-    input.aliasIds ?? [],
-  );
+  return findTaskItemIdsByTarget(db, input.targetType, input.targetId);
 }
 
 export async function listTaskItemBusinessBindings(

@@ -21,8 +21,8 @@ import {
   changeTaskItemChecklistDoneAction,
   deleteTaskItemAction,
 } from "../actions/task.actions";
-import TaskWorkPanel from "../ui/list/TaskWorkPanel";
 
+import TaskWorkPanel from "../ui/task-work/TaskWorkPanel";
 type UserOption = {
   id: string;
   name: string | null;
@@ -215,7 +215,7 @@ export default function TaskDetailClient({
               ) : null}
 
               {task.status === TaskStatus.DONE ||
-              task.status === TaskStatus.CANCELLED ? (
+                task.status === TaskStatus.CANCELLED ? (
                 <button
                   type="button"
                   disabled={pending}

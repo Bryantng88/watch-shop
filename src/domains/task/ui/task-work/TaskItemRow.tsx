@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   Ban,
@@ -10,9 +11,16 @@ import {
   Check,
   Settings2,
   ArrowRightLeft,
+  Bell,
+  CircleDot,
+  GitBranch,
+  Info,
+  MessageSquare,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { BusinessEntityPreview } from "@/domains/shared/business/business-entity.types";
+import type { TimelineEntryViewModel } from "@/domains/shared/timeline/server/timeline-renderer.types";
 import { ExecutionMiniInlineList, isTrackingExecution } from "../execution";
 import { isBusinessDone, splitExecutions } from "./taskWorkPanel.helpers";
 import TaskItemChecklistBlock from "./TaskItemChecklistBlock";
@@ -29,6 +37,16 @@ function formatDate(value?: Date | string | null) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   return date.toLocaleDateString("vi-VN");
+}
+
+function formatDateTime(value?: Date | string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("vi-VN", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
 }
 
 function dueTone(value?: Date | string | null) {
@@ -96,6 +114,73 @@ function priorityTone(value?: string | null) {
   return "bg-blue-50 text-blue-600";
 }
 
+function timelineToneClass(tone?: TimelineEntryViewModel["tone"]) {
+  if (tone === "blue") return "bg-blue-50 text-blue-600 ring-blue-100";
+  if (tone === "green") return "bg-emerald-50 text-emerald-600 ring-emerald-100";
+  if (tone === "amber") return "bg-amber-50 text-amber-700 ring-amber-100";
+  if (tone === "rose") return "bg-rose-50 text-rose-600 ring-rose-100";
+  return "bg-slate-100 text-slate-600 ring-slate-200";
+}
+
+function TimelineIcon({ icon }: { icon?: TimelineEntryViewModel["icon"] }) {
+  const className = "h-3.5 w-3.5";
+
+  if (icon === "message") return <MessageSquare className={className} />;
+  if (icon === "workflow") return <GitBranch className={className} />;
+  if (icon === "notification") return <Bell className={className} />;
+  if (icon === "system") return <Info className={className} />;
+
+  return <CircleDot className={className} />;
+}
+
+function TaskItemTimelineFeed({ items }: { items: TimelineEntryViewModel[] }) {
+  if (!items.length) return null;
+
+  return (
+    <div className="mt-3 border-t border-slate-100 pt-3">
+      <div className="space-y-3">
+        {items.map((entry) => (
+          <div key={entry.id} className="grid grid-cols-[28px_minmax(0,1fr)] gap-3">
+            <div
+              className={cn(
+                "mt-0.5 flex h-7 w-7 items-center justify-center rounded-full ring-1",
+                timelineToneClass(entry.tone),
+              )}
+            >
+              <TimelineIcon icon={entry.icon} />
+            </div>
+
+            <div className="min-w-0">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                <div className="min-w-0 truncate text-sm font-semibold text-slate-800">
+                  {entry.title}
+                </div>
+                {entry.occurredAt ? (
+                  <div className="shrink-0 text-[11px] font-medium text-slate-400">
+                    {formatDateTime(entry.occurredAt)}
+                  </div>
+                ) : null}
+              </div>
+
+              {entry.body ? (
+                <div className="mt-1 whitespace-pre-wrap text-sm leading-5 text-slate-600">
+                  {entry.body}
+                </div>
+              ) : null}
+
+              {entry.actorLabel ? (
+                <div className="mt-1 text-[11px] font-medium text-slate-400">
+                  {entry.actorLabel}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function TaskItemRow({
   item,
   canCancel = true,
@@ -143,6 +228,10 @@ export default function TaskItemRow({
   const itemExecutions = splitExecutions(item.executions ?? []);
   const hasExecutions = itemExecutions.grouped.length > 0;
   const trackingExecutions = itemExecutions.grouped.filter(isTrackingExecution);
+  const timelineItems: TimelineEntryViewModel[] = Array.isArray(item.timeline)
+    ? item.timeline
+    : [];
+  const hasTimeline = timelineItems.length > 0;
 
   const isPending =
     Boolean(item._pending) || String(item.id || "").startsWith("temp-");
@@ -178,6 +267,7 @@ export default function TaskItemRow({
   const hasChecklists = checklistTotal > 0;
   const checklistProgress = checklistTotal ? checklistDone / checklistTotal : 0;
   const isChecklistOpen = Boolean(expanded) || isAddingChecklist;
+  const isTimelineOpen = Boolean(expanded) && hasTimeline;
 
   const checklistDoneState =
     hasChecklists && checklistTotal > 0 && checklistDone === checklistTotal;
@@ -357,6 +447,42 @@ export default function TaskItemRow({
         )}
 
         <div className="relative shrink-0">
+          {!isPending ? (
+            <Link
+              href={`/admin/task-items/${item.id}`}
+              title="Chi tiết ticket"
+              onClick={(event) => {
+                event.stopPropagation();
+                setMenuOpen(false);
+              }}
+              className="mr-1 inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-xs font-semibold text-blue-700 hover:bg-blue-50"
+            >
+              Chi tiết
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Link>
+          ) : null}
+
+          {!hasChecklists && hasTimeline ? (
+            <button
+              type="button"
+              disabled={isPending}
+              title={expanded ? "Thu gọn timeline" : "Mở timeline"}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+
+                if (!isPending) onToggleExpand(item);
+              }}
+              className="mr-1 inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {expanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </button>
+          ) : null}
+
           <button
             type="button"
             disabled={isPending}
@@ -452,6 +578,10 @@ export default function TaskItemRow({
           onToggleChecklist={onToggleTaskItemChecklist}
           onUpdateChecklistTitle={onUpdateTaskItemChecklistTitle}
         />
+      ) : null}
+
+      {!isPending && isTimelineOpen ? (
+        <TaskItemTimelineFeed items={timelineItems} />
       ) : null}
     </div>
   );

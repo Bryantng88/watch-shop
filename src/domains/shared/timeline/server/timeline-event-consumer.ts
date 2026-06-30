@@ -1,6 +1,8 @@
 import { TimelineContainerType, TimelineSourceType } from "@prisma/client";
 import type { DB } from "@/server/db/client";
-import { findRelatedTaskItemIdsForBusinessTarget } from "@/domains/task/server/business-binding.service";
+import {
+    findRelatedTaskItemIdsForBusinessTargets,
+} from "@/domains/task/server/business-binding.service";
 import type { BusinessBindingTargetType } from "@/domains/task/server/business-binding.types";
 import { appendTimelineEntry } from "./timeline.service";
 
@@ -29,28 +31,64 @@ function toDate(value: Date | string | null | undefined) {
     return new Date();
 }
 
+function readStringArray(value: unknown) {
+    if (!Array.isArray(value)) return [];
+    return value.map((item) => clean(item)).filter(Boolean);
+}
+
 function getTimelineTitle(eventKey: string) {
     const titles: Record<string, string> = {
+        "watch.content.submitted": "Đã gửi duyệt nội dung",
         "watch.content.rejected": "Content watch bị trả về",
+        "watch.content.approved": "Content watch đã được duyệt",
+        "watch.image.submitted": "Đã gửi duyệt hình ảnh",
         "watch.image.rejected": "Hình ảnh watch bị trả về",
+        "watch.image.approved": "Hình ảnh watch đã được duyệt",
     };
 
     return titles[eventKey] ?? eventKey;
 }
 
-export async function projectBusinessFeedbackEventToTaskItemTimeline(
+async function findRelatedTaskItemIdsForBusinessEvent(
+    client: DB,
+    event: TimelineBusinessEventLog,
+    metadata: Record<string, unknown>,
+) {
+    const targetType = clean(event.targetType);
+    const targetId = clean(event.targetId);
+
+    if (!targetType || !targetId) return [];
+
+    const targetIds = Array.from(
+        new Set(
+            [
+                targetId,
+                clean(metadata.watchId),
+                clean(metadata.productId),
+                ...readStringArray(metadata.targetAliasIds),
+            ].filter(Boolean),
+        ),
+    );
+
+    return findRelatedTaskItemIdsForBusinessTargets(client, {
+        targetType: targetType as BusinessBindingTargetType,
+        targetIds,
+    });
+}
+
+export async function projectBusinessEventToTaskItemTimeline(
     client: DB,
     event: TimelineBusinessEventLog,
 ) {
     const metadata = asRecord(event.metadataJson);
-    const feedbackId = clean(metadata.feedbackId);
-    const feedbackMessage = clean(metadata.feedbackMessage);
+    const businessEventLogId = clean(event.id);
+    const eventKey = clean(event.eventKey);
 
-    if (!feedbackId || !feedbackMessage) {
+    if (!businessEventLogId) {
         return {
             ok: true,
             skipped: true,
-            skippedReason: "NO_FEEDBACK_METADATA",
+            skippedReason: "NO_BUSINESS_EVENT_LOG_ID",
             relatedTaskItemIds: [],
             createdTimelineEntries: [],
         };
@@ -78,11 +116,82 @@ export async function projectBusinessFeedbackEventToTaskItemTimeline(
                 {
                     containerType: TimelineContainerType.TASK_ITEM,
                     containerId: taskItemId,
-                    sourceType: TimelineSourceType.BUSINESS_FEEDBACK,
-                    sourceId: feedbackId,
+                    sourceType: TimelineSourceType.BUSINESS_EVENT,
+                    sourceId: businessEventLogId,
                     occurredAt: toDate(event.createdAt),
                     actorUserId: event.actorUserId ?? null,
-                    title: getTimelineTitle(clean(event.eventKey)) || null,
+                    title: getTimelineTitle(eventKey) || null,
+                    bodySnapshot: null,
+                    metadataJson: {
+                        eventKey: event.eventKey ?? null,
+                        targetType: event.targetType ?? null,
+                        targetId: event.targetId ?? null,
+                        businessEventLogId,
+                    },
+                },
+                client,
+            ),
+        ),
+    );
+
+    return {
+        ok: true,
+        skipped: false,
+        relatedTaskItemIds: taskItemIds,
+        createdTimelineEntries: timelineEntries,
+    };
+}
+
+export async function projectBusinessFeedbackEventToTaskItemTimeline(
+    client: DB,
+    event: TimelineBusinessEventLog,
+) {
+    const metadata = asRecord(event.metadataJson);
+    const feedbackId = clean(metadata.feedbackId);
+    const feedbackMessage = clean(metadata.feedbackMessage);
+    const feedbackCreatedAt = toDate(
+        clean(metadata.feedbackCreatedAt) || event.createdAt,
+    );
+
+    if (!feedbackId || !feedbackMessage) {
+        return {
+            ok: true,
+            skipped: true,
+            skippedReason: "NO_FEEDBACK_METADATA",
+            relatedTaskItemIds: [],
+            createdTimelineEntries: [],
+        };
+    }
+
+    const taskItemIds = await findRelatedTaskItemIdsForBusinessEvent(
+        client,
+        event,
+        metadata,
+    );
+
+    if (!taskItemIds.length) {
+        return {
+            ok: true,
+            skipped: true,
+            skippedReason: "NO_RELATED_TASK_ITEM",
+            relatedTaskItemIds: [],
+            createdTimelineEntries: [],
+        };
+    }
+
+    const eventKey = clean(event.eventKey);
+
+    const timelineEntries = await Promise.all(
+        taskItemIds.map((taskItemId) =>
+            appendTimelineEntry(
+                {
+                    containerType: TimelineContainerType.TASK_ITEM,
+                    containerId: taskItemId,
+                    sourceType: TimelineSourceType.BUSINESS_FEEDBACK,
+                    sourceId: feedbackId,
+                    occurredAt: feedbackCreatedAt,
+                    actorUserId: event.actorUserId ?? null,
+                    title: getTimelineTitle(eventKey) || null,
                     bodySnapshot: feedbackMessage,
                     metadataJson: {
                         eventKey: event.eventKey ?? null,
@@ -105,41 +214,6 @@ export async function projectBusinessFeedbackEventToTaskItemTimeline(
     };
 }
 
-async function findRelatedTaskItemIdsForBusinessEvent(
-    client: DB,
-    event: TimelineBusinessEventLog,
-    metadata: Record<string, unknown>,
-) {
-    const explicitTaskItemId = clean(metadata.taskItemId);
-    if (explicitTaskItemId) return [explicitTaskItemId];
-
-    const targetType = clean(event.targetType);
-    const targetId = clean(event.targetId);
-
-    if (!targetType || !targetId) return [];
-
-    const aliasIds = Array.from(
-        new Set(
-            [
-                clean(metadata.watchId),
-                clean(metadata.productId),
-                ...readStringArray(metadata.targetAliasIds),
-            ].filter(Boolean),
-        ),
-    );
-
-    return findRelatedTaskItemIdsForBusinessTarget(client, {
-        targetType: targetType as BusinessBindingTargetType,
-        targetId,
-        aliasIds,
-    });
-}
-
-function readStringArray(value: unknown) {
-    if (!Array.isArray(value)) return [];
-    return value.map((item) => clean(item)).filter(Boolean);
-}
-
 export async function consumeBusinessEventForTimeline(
     client: DB,
     eventLog: unknown,
@@ -147,23 +221,38 @@ export async function consumeBusinessEventForTimeline(
     const event = eventLog as TimelineBusinessEventLog;
 
     try {
-        const result = await projectBusinessFeedbackEventToTaskItemTimeline(
+        const businessEventResult = await projectBusinessEventToTaskItemTimeline(
             client,
             event,
         );
 
-        if (result.skipped) {
+        const feedbackResult = await projectBusinessFeedbackEventToTaskItemTimeline(
+            client,
+            event,
+        );
+
+        const timelineEntries = [
+            ...businessEventResult.createdTimelineEntries,
+            ...feedbackResult.createdTimelineEntries,
+        ];
+
+        if (!timelineEntries.length) {
             return {
                 ok: true,
                 skipped: true,
-                reason: result.skippedReason,
+                reason:
+                    feedbackResult.skippedReason ??
+                    businessEventResult.skippedReason ??
+                    "NO_TIMELINE_ENTRY",
             };
         }
 
         return {
             ok: true,
             skipped: false,
-            timelineEntries: result.createdTimelineEntries,
+            timelineEntries,
+            businessEvent: businessEventResult,
+            feedback: feedbackResult,
         };
     } catch (error) {
         console.error("TIMELINE_CONSUMER_FAILED", {

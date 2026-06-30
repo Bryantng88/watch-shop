@@ -1,5 +1,3 @@
-import { WorkflowActionType } from "@prisma/client";
-
 export type BusinessEventTargetType =
     | "WATCH"
     | "ORDER"
@@ -22,6 +20,18 @@ export type BusinessEventDefinition = {
 };
 
 export const BUSINESS_EVENTS: BusinessEventDefinition[] = [
+    {
+        key: "watch.content.submitted",
+        label: "Watch content submitted",
+        targetType: "WATCH",
+        group: "Watch",
+    },
+    {
+        key: "watch.image.submitted",
+        label: "Watch image submitted",
+        targetType: "WATCH",
+        group: "Watch",
+    },
     {
         key: "watch.content.approved",
         label: "Watch đã duyệt nội dung",
