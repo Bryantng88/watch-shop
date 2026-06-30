@@ -9,6 +9,7 @@ const makeSchema = () => z.object({
   enabled: z.literal(true).optional(),
   channel: z.literal(true).optional(),
   recipientGroupKey: z.literal(true).optional(),
+  conditionJson: z.literal(true).optional(),
   titleTemplate: z.literal(true).optional(),
   messageTemplate: z.literal(true).optional(),
   priority: z.literal(true).optional(),

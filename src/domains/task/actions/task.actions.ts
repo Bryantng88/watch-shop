@@ -108,7 +108,7 @@ export async function createTaskItemAction(input: {
   dueAt?: string | null;
   tagNames?: string[];
 }) {
-  await getTaskAuth();
+  const auth = await getTaskAuth();
 
   const cleanTaskId = String(input?.taskId || "").trim();
   const cleanTitle = String(input?.title || "").trim();
@@ -124,19 +124,89 @@ export async function createTaskItemAction(input: {
     dueAt: input.dueAt || null,
     tagNames: input.tagNames ?? [],
   });
+
+  const task = await prisma.task.findUnique({
+    where: { id: item.taskId },
+    select: {
+      id: true,
+      title: true,
+      kind: true,
+      assignedToUser: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+  });
+
+  const creator = auth.userId
+    ? await prisma.user.findUnique({
+      where: { id: auth.userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+    })
+    : null;
+
+  const assignedUser = item.assignedToUserId
+    ? await prisma.user.findUnique({
+      where: { id: item.assignedToUserId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+    })
+    : task?.assignedToUser ?? null;
+
+  const taskKindLabel =
+    task?.kind === "BUSINESS"
+      ? "Kinh doanh"
+      : task?.kind === "OPERATION"
+        ? "Vận hành"
+        : task?.kind === "SERVICE"
+          ? "Kỹ thuật / Service"
+          : task?.kind === "PERSONAL"
+            ? "Cá nhân"
+            : task?.kind === "FREE"
+              ? "Tự do"
+              : "-";
+
+  const tagNames = input.tagNames ?? [];
+
   await recordBusinessEvent(prisma, {
     eventKey: "task.item.created",
     targetType: "TASK_ITEM",
     targetId: item.id,
-    actorUserId: null,
+    actorUserId: auth.userId,
     payload: {
       taskId: item.taskId,
+      taskTitle: task?.title ?? "-",
+      taskKind: task?.kind ?? null,
+      taskKindLabel,
+
       taskItemId: item.id,
-      title: item.title,
-      message: `Task item mới: ${item.title}`,
-      assignedToUserId: item.assignedToUserId,
-      priority: item.priority,
+      taskItemTitle: item.title,
+
+      creatorUserId: auth.userId,
+      creatorName: creator?.name || creator?.email || "-",
+
+      assignedToUserId: assignedUser?.id ?? item.assignedToUserId ?? null,
+      assignedToName: assignedUser?.name || assignedUser?.email || "-",
+
+      priority: item.priority ?? "MEDIUM",
+
       dueAt: item.dueAt,
+      dueLabel: item.dueAt
+        ? new Date(item.dueAt).toLocaleString("vi-VN")
+        : "-",
+
+      tagNames,
+      tagLabel: tagNames.length ? tagNames.join(", ") : "-",
     },
   });
   revalidatePath("/admin/tasks");

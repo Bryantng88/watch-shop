@@ -7,6 +7,7 @@ export const NotificationRuleFindManyResultSchema = z.object({
   enabled: z.boolean(),
   channel: z.string(),
   recipientGroupKey: z.string(),
+  conditionJson: z.unknown().optional(),
   titleTemplate: z.string().optional(),
   messageTemplate: z.string(),
   priority: z.string(),
