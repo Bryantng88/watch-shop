@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db/client";
+import { perfStep } from "@/lib/server-perf";
 import { normalizeWatchListView } from "../../shared/watch-status";
 import type {
   WatchListCounts,
@@ -29,14 +30,6 @@ type NormalizedWatchListInput = WatchListFilters & {
 
 type WatchListRawRow = Prisma.WatchGetPayload<{
   select: typeof WATCH_LIST_ROW_SELECT;
-}>;
-
-type AcquisitionSourceItem = Prisma.AcquisitionItemGetPayload<{
-  select: typeof ACQUISITION_SOURCE_ITEM_SELECT;
-}>;
-
-type AcquisitionSiblingItem = Prisma.AcquisitionItemGetPayload<{
-  select: typeof ACQUISITION_SIBLING_ITEM_SELECT;
 }>;
 
 type ServiceRequestPreview = Prisma.ServiceRequestGetPayload<{
@@ -193,52 +186,6 @@ const WATCH_LIST_ROW_SELECT = {
     },
   },
 } satisfies Prisma.WatchSelect;
-
-const ACQUISITION_SOURCE_ITEM_SELECT = {
-  id: true,
-  acquisitionId: true,
-  productId: true,
-  quantity: true,
-  unitCost: true,
-  currency: true,
-  status: true,
-  kind: true,
-  productTitle: true,
-  notes: true,
-  createdAt: true,
-  acquisition: {
-    select: {
-      id: true,
-      refNo: true,
-      type: true,
-      accquisitionStt: true,
-      acquiredAt: true,
-      totalAmount: true,
-      vendor: { select: { id: true, name: true } },
-    },
-  },
-} satisfies Prisma.AcquisitionItemSelect;
-
-const ACQUISITION_SIBLING_ITEM_SELECT = {
-  id: true,
-  acquisitionId: true,
-  productId: true,
-  quantity: true,
-  unitCost: true,
-  currency: true,
-  status: true,
-  kind: true,
-  productTitle: true,
-  notes: true,
-  createdAt: true,
-  product: {
-    select: {
-      id: true,
-      title: true,
-      sku: true,
-    },
-  },
-} satisfies Prisma.AcquisitionItemSelect;
 
 const SERVICE_REQUEST_PREVIEW_SELECT = {
   id: true,
@@ -535,74 +482,6 @@ async function getWatchListSummary(input: NormalizedWatchListInput, currentSegme
   );
 }
 
-async function getAcquisitionPreviewMap(productIds: string[]) {
-  const result = new Map<string, AcquisitionSourceItem[]>();
-  if (!productIds.length) return result;
-
-  const sourceItems = await prisma.acquisitionItem.findMany({
-    where: { productId: { in: productIds } },
-    select: ACQUISITION_SOURCE_ITEM_SELECT,
-    orderBy: [{ createdAt: "desc" }],
-  });
-
-  if (!sourceItems.length) return result;
-
-  const limitedSourceItems: AcquisitionSourceItem[] = [];
-  const perProductCount = new Map<string, number>();
-
-  for (const item of sourceItems) {
-    const productId = String(item.productId ?? "");
-    if (!productId) continue;
-
-    const count = perProductCount.get(productId) ?? 0;
-    if (count >= 3) continue;
-
-    perProductCount.set(productId, count + 1);
-    limitedSourceItems.push(item);
-  }
-
-  const acquisitionIds = uniqueStrings(limitedSourceItems.map((item) => item.acquisitionId));
-
-  const siblingItems = acquisitionIds.length
-    ? await prisma.acquisitionItem.findMany({
-      where: { acquisitionId: { in: acquisitionIds } },
-      select: ACQUISITION_SIBLING_ITEM_SELECT,
-      orderBy: [{ createdAt: "asc" }],
-    })
-    : [];
-
-  const siblingsByAcquisitionId = new Map<string, AcquisitionSiblingItem[]>();
-  for (const item of siblingItems) {
-    const acquisitionId = String(item.acquisitionId ?? "");
-    if (!acquisitionId) continue;
-
-    const current = siblingsByAcquisitionId.get(acquisitionId) ?? [];
-    current.push(item);
-    siblingsByAcquisitionId.set(acquisitionId, current);
-  }
-
-  for (const sourceItem of limitedSourceItems) {
-    const productId = String(sourceItem.productId ?? "");
-    if (!productId) continue;
-
-    const enrichedSourceItem = {
-      ...sourceItem,
-      acquisition: sourceItem.acquisition
-        ? {
-          ...sourceItem.acquisition,
-          acquisitionItem: siblingsByAcquisitionId.get(sourceItem.acquisition.id) ?? [],
-        }
-        : null,
-    } as AcquisitionSourceItem;
-
-    const current = result.get(productId) ?? [];
-    current.push(enrichedSourceItem);
-    result.set(productId, current);
-  }
-
-  return result;
-}
-
 async function getServiceRequestMap(productIds: string[]) {
   const result = new Map<string, ServiceRequestPreview[]>();
   if (!productIds.length) return result;
@@ -626,7 +505,6 @@ async function getServiceRequestMap(productIds: string[]) {
 
 function attachBulkLoadedRelations(
   row: WatchListRawRow,
-  acquisitionMap: Map<string, AcquisitionSourceItem[]>,
   serviceRequestMap: Map<string, ServiceRequestPreview[]>
 ) {
   const productId = String(row.productId ?? row.product?.id ?? "");
@@ -636,7 +514,6 @@ function attachBulkLoadedRelations(
     product: row.product
       ? {
         ...row.product,
-        acquisitionItem: acquisitionMap.get(productId) ?? [],
         serviceRequest: serviceRequestMap.get(productId) ?? [],
       }
       : row.product,
@@ -653,41 +530,70 @@ export async function listAdminWatches(
   const orderBy = buildSort(normalizedInput.sort);
 
   const shouldLoadMeta = normalizedInput.meta === "full";
+  const rowTake = shouldLoadMeta
+    ? normalizedInput.pageSize
+    : normalizedInput.pageSize + 1;
 
-  const [rows, total, summaryMeta, counts, subCounts] = await Promise.all([
-    prisma.watch.findMany({
-      where: listWhere,
-      skip,
-      take: normalizedInput.pageSize,
-      orderBy,
-      select: WATCH_LIST_ROW_SELECT,
-    }),
-    prisma.watch.count({ where: listWhere }),
+  const [rawRows, total, summaryMeta, counts, subCounts] = await Promise.all([
+    perfStep("watch-list-repo", "watchFindMany", () =>
+      prisma.watch.findMany({
+        where: listWhere,
+        skip,
+        take: rowTake,
+        orderBy,
+        select: WATCH_LIST_ROW_SELECT,
+      })
+    ),
     shouldLoadMeta
-      ? getWatchListSummary(normalizedInput, currentSegmentWhere)
+      ? perfStep("watch-list-repo", "watchCount", () =>
+        prisma.watch.count({ where: listWhere })
+      )
       : Promise.resolve(null),
     shouldLoadMeta
-      ? getWatchListCounts(normalizedInput)
+      ? perfStep("watch-list-repo", "summaryCounts", () =>
+        getWatchListSummary(normalizedInput, currentSegmentWhere)
+      )
       : Promise.resolve(null),
     shouldLoadMeta
-      ? getWatchListSubCounts(normalizedInput)
+      ? perfStep("watch-list-repo", "viewCounts", () =>
+        getWatchListCounts(normalizedInput)
+      )
+      : Promise.resolve(null),
+    shouldLoadMeta
+      ? perfStep("watch-list-repo", "subCounts", () =>
+        getWatchListSubCounts(normalizedInput)
+      )
       : Promise.resolve(null),
   ]);
+
+  const hasNextPage = !shouldLoadMeta && rawRows.length > normalizedInput.pageSize;
+  const rows = hasNextPage ? rawRows.slice(0, normalizedInput.pageSize) : rawRows;
+  const liteTotal = skip + rows.length + (hasNextPage ? 1 : 0);
+  const resolvedTotal = total ?? liteTotal;
 
   const productIds = uniqueStrings(
     rows.map((row) => row.productId ?? row.product?.id)
   );
 
-  const [imageCountMap, userMap, acquisitionMap, serviceRequestMap] = await Promise.all([
-    countListGalleryImages(productIds),
-    getReviewActors(rows),
-    getAcquisitionPreviewMap(productIds),
-    getServiceRequestMap(productIds),
+  const [imageCountMap, userMap, serviceRequestMap] = await Promise.all([
+    perfStep("watch-list-repo", "imageCounts", () =>
+      countListGalleryImages(productIds)
+    ),
+    shouldLoadMeta
+      ? perfStep("watch-list-repo", "reviewActors", () =>
+        getReviewActors(rows)
+      )
+      : Promise.resolve(new Map<string, any>()),
+    shouldLoadMeta
+      ? perfStep("watch-list-repo", "servicePreview", () =>
+        getServiceRequestMap(productIds)
+      )
+      : Promise.resolve(new Map<string, ServiceRequestPreview[]>()),
   ]);
 
   const items = rows.map((row) => {
     const productId = String(row.productId ?? row.product?.id ?? "");
-    const enrichedRow = attachBulkLoadedRelations(row, acquisitionMap, serviceRequestMap);
+    const enrichedRow = attachBulkLoadedRelations(row, serviceRequestMap);
 
     return mapWatchRow({
       ...enrichedRow,
@@ -698,10 +604,12 @@ export async function listAdminWatches(
 
   return {
     items,
-    total,
+    total: resolvedTotal,
     page: normalizedInput.page,
     pageSize: normalizedInput.pageSize,
-    totalPages: Math.max(1, Math.ceil(total / normalizedInput.pageSize)),
+    totalPages: shouldLoadMeta
+      ? Math.max(1, Math.ceil(resolvedTotal / normalizedInput.pageSize))
+      : Math.max(normalizedInput.page, normalizedInput.page + (hasNextPage ? 1 : 0)),
     counts: counts ?? (undefined as any),
     summary: summaryMeta
       ? {

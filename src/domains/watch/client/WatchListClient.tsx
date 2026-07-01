@@ -351,21 +351,24 @@ export default function WatchListClient(props: WatchListClientProps) {
     const replaceUrl = useCallback(
         (next: URLSearchParams) => {
             const sanitized = sanitizeParams(next);
-            router.replace(`${pathname}?${sanitized.toString()}`, { scroll: false });
+            window.history.replaceState(null, "", `${pathname}?${sanitized.toString()}`);
             setParams(new URLSearchParams(sanitized.toString()));
             return sanitized;
         },
-        [pathname, router],
+        [pathname],
     );
 
-    async function loadList(next: URLSearchParams) {
+    async function loadList(next: URLSearchParams, options?: { meta?: "full" | "lite" }) {
         const sanitized = replaceUrl(next);
+        const requestParams = new URLSearchParams(sanitized.toString());
+        if (options?.meta) requestParams.set("meta", options.meta);
+
         setSelectedIds([]);
         setIsLoading(true);
 
         try {
             const res = await fetch(
-                `/api/admin/watches/list?${sanitized.toString()}&_ts=${Date.now()}`,
+                `/api/admin/watches/list?${requestParams.toString()}&_ts=${Date.now()}`,
                 {
                     method: "GET",
                     headers: { Accept: "application/json" },
@@ -379,7 +382,13 @@ export default function WatchListClient(props: WatchListClientProps) {
                 throw new Error(json?.error || "Không tải được danh sách watch");
             }
 
-            setListData(normalizeResult(json.data));
+            setListData((prev) =>
+                normalizeResult({
+                    ...json.data,
+                    counts: json.data?.counts ?? prev.counts,
+                    summary: json.data?.summary ?? prev.summary,
+                }),
+            );
         } catch (error) {
             console.error("[WATCH_LIST][LOAD_ERROR]", error);
             router.refresh();
@@ -388,12 +397,15 @@ export default function WatchListClient(props: WatchListClientProps) {
         }
     }
 
-    function pushParams(mutator: (next: URLSearchParams) => void) {
+    function pushParams(
+        mutator: (next: URLSearchParams) => void,
+        options?: { meta?: "full" | "lite" },
+    ) {
         const next = new URLSearchParams(params.toString());
         mutator(next);
 
         startTransition(() => {
-            void loadList(next);
+            void loadList(next, options);
         });
     }
 
@@ -402,7 +414,7 @@ export default function WatchListClient(props: WatchListClientProps) {
             setParam(next, "view", view);
             next.delete("subFilter");
             setParam(next, "page", "1");
-        });
+        }, { meta: "lite" });
     }
 
     function handleSubFilterChange(subFilter: WatchListSubFilter) {
@@ -450,7 +462,7 @@ export default function WatchListClient(props: WatchListClientProps) {
     }
 
     function handlePage(page: number) {
-        pushParams((next) => setParam(next, "page", String(page)));
+        pushParams((next) => setParam(next, "page", String(page)), { meta: "lite" });
     }
 
     function onToggleOne(watchId: string, checked: boolean) {

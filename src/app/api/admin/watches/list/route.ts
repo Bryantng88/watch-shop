@@ -53,6 +53,7 @@ function buildWatchListInput(req: NextRequest) {
         sort: firstValue(params, "sort") || "updatedDesc",
         page: toPositiveInt(firstValue(params, "page"), 1),
         pageSize: toPositiveInt(firstValue(params, "pageSize"), 20),
+        meta: firstValue(params, "meta"),
     };
 }
 

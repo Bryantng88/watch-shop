@@ -718,6 +718,8 @@ model ProductImage {
   isForAdmin      Boolean   @default(true)
   isForStorefront Boolean   @default(true)
   product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, role, sortOrder, createdAt])
 }
 
 model ProductVariant {
@@ -1135,6 +1137,7 @@ model Watch {
 
   @@index([gender])
   @@index([saleStage])
+  @@index([saleStage, updatedAt])
   @@index([serviceStage])
   @@index([siteChannel])
   @@index([stockStage])

@@ -101,6 +101,110 @@ Current file:
 
 - `src/domains/task/ui/task-work/TaskItemRow.tsx`
 
+### 6. Watch list was still too slow on tab/filter changes
+
+After the Task/TaskItem path improved, `/admin/watches` was still taking several seconds per tab change. The user supplied logs such as:
+
+```txt
+[perf:watch-list-repo] watchFindMany=1102ms
+[perf:watch-list-repo] watchCount=1335ms
+[perf:watch-list-repo] imageCounts=240ms
+[perf:watch-list-repo] reviewActors=475ms
+[perf:watch-list-repo] servicePreview=806ms
+GET /api/admin/watches/list?...meta=lite 200 in 2980ms
+```
+
+Earlier logs were worse because the client was also triggering a full `/admin/watches?...` server render in addition to the list API request.
+
+Current state:
+
+- Watch list API accepts `meta`.
+  - `meta=full`: first SSR/full load can return counts/summary/sub-counts.
+  - `meta=lite`: tab/page changes fetch only the row data needed for the table.
+- `WatchListClient` now updates the URL with `window.history.replaceState` on list interactions.
+  - This avoids the previous double request: API fetch plus Next server render for `/admin/watches`.
+- `meta=lite` now avoids:
+  - `watchCount`
+  - `summaryCounts`
+  - `viewCounts`
+  - `subCounts`
+  - `reviewActors`
+  - `servicePreview`
+- Lite pagination uses `pageSize + 1`.
+  - This preserves "has next page" behavior without counting the whole filtered set.
+- The Acquisition column/popup was removed from the watch list.
+  - The list no longer queries `acquisitionItem`/acquisition preview data.
+  - Acquisition/trade data should stay on detail-oriented screens, not the hot list path.
+- The main view segment filter now uses indexed `Watch.saleStage`.
+  - `draft` -> `saleStage = DRAFT`
+  - `processing` -> `saleStage = PROCESSING`
+  - `ready` -> `saleStage = READY`
+  - `hold` -> `saleStage = HOLD`
+  - `sold` -> `saleStage = SOLD`
+  - Previously `draft`/`processing`/`ready` recomputed readiness via `watchContent` and `productImage` relation filters on every list request.
+- Sub-filters still use computed relation filters when needed.
+  - Example: `MISSING_CONTENT`, `MISSING_IMAGE`, review status chips.
+  - This is intentional because those chips describe derived states, not the primary stage bucket.
+- Watch detail no longer calls duplicate pricing/images queries.
+  - `getWatchDetail` already includes `price` and `images`.
+- Watch edit detail no longer includes open `tasks` as a relation just to count them.
+  - It now uses `task.count` on indexed `watchId`.
+
+Important files:
+
+- `src/domains/watch/client/WatchListClient.tsx`
+- `src/app/api/admin/watches/list/route.ts`
+- `src/domains/watch/server/list/watch-list.repo.ts`
+- `src/domains/watch/server/list/watch-list.query.ts`
+- `src/domains/watch/ui/list/WatchListTable.tsx`
+- `src/domains/watch/ui/list/WatchListRow.tsx`
+- `src/domains/watch/ui/list/helpers.ts`
+- `src/domains/watch/ui/list/types.ts`
+- `src/app/(admin)/admin/watches/[id]/page.tsx`
+- `src/domains/watch/server/detail/watch-detail.repo.ts`
+
+New migration:
+
+```txt
+prisma/migrations/20260701_watch_list_indexes/migration.sql
+```
+
+It adds:
+
+```sql
+CREATE INDEX "Watch_saleStage_updatedAt_idx" ON "Watch"("saleStage", "updatedAt");
+CREATE INDEX "ProductImage_productId_role_sortOrder_createdAt_idx" ON "ProductImage"("productId", "role", "sortOrder", "createdAt");
+```
+
+Important operational note:
+
+- The code changes reduce query complexity immediately.
+- The index improvements only take effect after the migration is applied to the remote DB.
+- If the tab rows look wrong after switching to `saleStage`, audit the sale-stage sync paths before reverting the list query.
+  - Relevant files include:
+    - `src/domains/watch/application/submit-watch-form/submit-watch-form.application.ts`
+    - `src/domains/watch/server/media/watch-media.repo.ts`
+    - `src/domains/watch/server/review/watch-review.service.ts`
+    - `src/domains/watch/server/state/watch-state.rules.ts`
+
+Expected log after this work for tab/page changes:
+
+```txt
+[perf:watch-list-repo] watchFindMany=<...>ms
+[perf:watch-list-repo] imageCounts=<...>ms
+GET /api/admin/watches/list?...meta=lite 200 in <...>ms
+```
+
+The following should no longer appear for normal tab/page changes:
+
+```txt
+[perf:watch-list-repo] acquisitionPreview=...
+[perf:watch-list-repo] watchCount=...
+[perf:watch-list-repo] reviewActors=...
+[perf:watch-list-repo] servicePreview=...
+GET /admin/watches?... 200 in ...
+```
+
 ## Perf Instrumentation
 
 Added helper:
@@ -140,6 +244,15 @@ Currently instrumented:
   - `task-list-repo/assignableUsersFindMany`
 - `src/app/(admin)/admin/_server/sidebar-notifications.ts`
   - still has per-count instrumentation, but is no longer called by layout.
+- `src/domains/watch/server/list/watch-list.repo.ts`
+  - `watchFindMany`
+  - `watchCount` only on `meta=full`
+  - `summaryCounts` only on `meta=full`
+  - `viewCounts` only on `meta=full`
+  - `subCounts` only on `meta=full`
+  - `imageCounts`
+  - `reviewActors` only on `meta=full`
+  - `servicePreview` only on `meta=full`
 
 When continuing, reload `/admin/tasks` twice. Ignore the first request if it includes Next dev compile. Use the second request to judge.
 
@@ -208,6 +321,21 @@ Modified files include:
 - `src/domains/task/ui/list/TaskListTable.tsx`
 - `src/domains/task/ui/task-work/TaskItemRow.tsx`
 - `src/domains/task/utils/task-labels.ts`
+- `prisma/schema.prisma`
+- `src/app/(admin)/admin/watches/[id]/page.tsx`
+- `src/app/api/admin/watches/list/route.ts`
+- `src/domains/watch/client/WatchListClient.tsx`
+- `src/domains/watch/server/detail/watch-detail.repo.ts`
+- `src/domains/watch/server/list/watch-list.query.ts`
+- `src/domains/watch/server/list/watch-list.repo.ts`
+- `src/domains/watch/ui/list/WatchListRow.tsx`
+- `src/domains/watch/ui/list/WatchListTable.tsx`
+- `src/domains/watch/ui/list/helpers.ts`
+- `src/domains/watch/ui/list/types.ts`
+
+New watch performance migration:
+
+- `prisma/migrations/20260701_watch_list_indexes/migration.sql`
 
 There is also a generated manifest dirty file:
 
@@ -231,6 +359,12 @@ npx eslint src/domains/task/server/core/task.service.ts --rule "@typescript-esli
 npx eslint src/domains/task/utils/task-labels.ts src/domains/task/server/task-rule-keys.ts src/domains/task/client/TaskTypeSettingsClient.tsx src/domains/task/ui/settings/TaskActionFormModal.tsx src/domains/task/ui/settings/TaskTypeFormModal.tsx --rule "@typescript-eslint/no-explicit-any: off" --max-warnings=0
 ```
 
+Watch list lint also passed with old debt rules disabled:
+
+```txt
+npx eslint src/domains/watch/server/list/watch-list.query.ts src/domains/watch/server/list/watch-list.repo.ts src/domains/watch/client/WatchListClient.tsx src/domains/watch/ui/list/WatchListTable.tsx src/domains/watch/ui/list/WatchListRow.tsx src/domains/watch/ui/list/helpers.ts src/domains/watch/ui/list/types.ts --rule "@typescript-eslint/no-explicit-any: off" --rule "@typescript-eslint/no-unused-vars: off" --rule "react-hooks/exhaustive-deps: off" --rule "@next/next/no-img-element: off" --max-warnings=0
+```
+
 Full `tsc --noEmit` was not reliable earlier because the repo already has unrelated type debt in old files.
 
 ## Recommended Next Steps
@@ -250,3 +384,9 @@ Full `tsc --noEmit` was not reliable earlier because the repo already has unrela
    - whether dev server creates too many Prisma clients
 6. Clean remaining import warnings from Watch/media/order barrels to reduce dev compile noise.
 7. Once performance is stable, remove or gate perf logs behind an env flag such as `PERF_LOG=1` instead of always logging in dev.
+8. Apply `prisma/migrations/20260701_watch_list_indexes/migration.sql` to the remote DB before judging final watch-list timings.
+9. Reload `/admin/watches`, then switch tabs twice and check:
+   - no duplicate `GET /admin/watches?...` request during client tab changes
+   - no `acquisitionPreview`, `watchCount`, `reviewActors`, or `servicePreview` logs for `meta=lite`
+   - `watchFindMany` should be significantly lower after `saleStage` filtering and DB indexes are active
+10. If watch list buckets look inaccurate, audit sale-stage sync before changing the list query back to relation-computed readiness.
