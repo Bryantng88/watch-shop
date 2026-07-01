@@ -6,7 +6,7 @@ export {
   createInitialPaymentsForOrderTx as createInitialPaymentForOrderTx,
   createPayment as createNextOrderPayment,
   getOrderPaymentSummary,
-  getOrderPaymentSummaryTx,
+  getPaymentSummaryTx as getOrderPaymentSummaryTx,
   listOrderPayments,
-  recomputeOrderPaymentRollupTx as recomputeOrderOperationalStateTx,
+  recomputePaymentOwnerRollupTx as recomputeOrderOperationalStateTx,
 } from "@/domains/payment/server";

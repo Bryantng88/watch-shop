@@ -2,12 +2,15 @@ import { Prisma, TaskKind, TaskStatus } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
 import type { TaskListFilters, TaskViewKey } from "../task.types";
 import {
+  TASK_EXECUTION_INCLUDE,
   USER_SELECT,
   applyTaskRowAccess,
+  buildAccessWhere,
   buildFilterWhere,
   buildViewWhere,
 } from "./task.repo.shared";
 import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
+import { hydrateTasksWithTaskItemTagsRepo } from "../tag/task-tag.repo";
 
 const TASK_LIST_SELECT = {
   id: true,
@@ -42,57 +45,6 @@ const TASK_LIST_SELECT = {
   _count: { select: { taskItems: true } },
 } satisfies Prisma.TaskSelect;
 
-async function getTaskProgressSummaryMap(db: DB, taskIds: string[]) {
-  const totalStartedAt = perfNow();
-  const ids = Array.from(new Set(taskIds.filter(Boolean)));
-  const map = new Map<string, { total: number; done: number; percent: number }>();
-
-  if (!ids.length) return map;
-
-  const [totalRows, doneRows] = await Promise.all([
-    perfStep("task-list-repo", "progressTotalGroupBy", () =>
-      dbOrTx(db).taskItem.groupBy({
-        by: ["taskId"],
-        where: { taskId: { in: ids } },
-        _count: { _all: true },
-      }),
-    ),
-    perfStep("task-list-repo", "progressDoneGroupBy", () =>
-      dbOrTx(db).taskItem.groupBy({
-        by: ["taskId"],
-        where: {
-          taskId: { in: ids },
-          OR: [{ isDone: true }, { status: TaskStatus.DONE }],
-        },
-        _count: { _all: true },
-      }),
-    ),
-  ]);
-
-  for (const row of totalRows) {
-    map.set(row.taskId, {
-      total: row._count._all,
-      done: 0,
-      percent: 0,
-    });
-  }
-
-  for (const row of doneRows) {
-    const current = map.get(row.taskId) ?? { total: 0, done: 0, percent: 0 };
-    current.done = row._count._all;
-    map.set(row.taskId, current);
-  }
-
-  for (const [taskId, current] of map.entries()) {
-    current.percent =
-      current.total > 0 ? Math.round((current.done / current.total) * 100) : 0;
-    map.set(taskId, current);
-  }
-
-  perfLog("task-list-repo", "progressSummaryTotal", totalStartedAt);
-  return map;
-}
-
 export async function listTaskRowsRepo(
   db: DB,
   input: { userId: string; canViewAll?: boolean; filters: TaskListFilters },
@@ -108,51 +60,89 @@ export async function listTaskRowsRepo(
     AND: [buildViewWhere(view, input.userId), buildFilterWhere(input.filters)],
   };
 
-  const [items, total] = await Promise.all([
-    perfStep("task-list-repo", "taskFindMany", () =>
-      client.task.findMany({
-        where,
-        select: TASK_LIST_SELECT,
-        orderBy: [
-          { status: "asc" },
-          { priority: "desc" },
-          { dueAt: "asc" },
-          { createdAt: "desc" },
-        ],
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-    ),
-    perfStep("task-list-repo", "taskCount", () => client.task.count({ where })),
-  ]);
+  const rows = await perfStep("task-list-repo", "taskFindMany", () =>
+    client.task.findMany({
+      where,
+      select: TASK_LIST_SELECT,
+      orderBy: [
+        { status: "asc" },
+        { priority: "desc" },
+        { dueAt: "asc" },
+        { createdAt: "desc" },
+      ],
+      skip: (page - 1) * pageSize,
+      take: pageSize + 1,
+    }),
+  );
 
+  const hasNextPage = rows.length > pageSize;
+  const items = hasNextPage ? rows.slice(0, pageSize) : rows;
   const accessItems = items.map((item) =>
     applyTaskRowAccess(item, input.userId, canViewAll),
-  );
-  const progressSummaryMap = await getTaskProgressSummaryMap(
-    db,
-    accessItems.map((task) => task.id),
   );
 
   const finalItems = accessItems.map((task) => ({
     ...task,
-    taskProgressSummary:
-      progressSummaryMap.get(task.id) ??
-      { total: task._count?.taskItems ?? 0, done: 0, percent: 0 },
+    taskProgressSummary: { total: task._count?.taskItems ?? 0, done: 0, percent: 0 },
     taskItems: [],
     executions: [],
     _detailLoaded: false,
   }));
+  const estimatedTotal = (page - 1) * pageSize + finalItems.length + (hasNextPage ? 1 : 0);
 
   const result = {
     items: finalItems,
-    total,
+    total: estimatedTotal,
     page,
     pageSize,
-    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    totalPages: hasNextPage ? page + 1 : page,
   };
   perfLog("task-list-repo", "listRowsTotal", totalStartedAt);
   return result;
+}
+
+const TASK_EXPAND_INCLUDE = {
+  createdByUser: { select: USER_SELECT },
+  assignedToUser: { select: USER_SELECT },
+  taskItems: {
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    include: {
+      assignedToUser: { select: USER_SELECT },
+      executions: {
+        orderBy: { createdAt: "desc" },
+        include: TASK_EXECUTION_INCLUDE,
+      },
+      checklists: {
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      },
+    },
+  },
+  executions: {
+    orderBy: { createdAt: "desc" },
+    include: TASK_EXECUTION_INCLUDE,
+  },
+} satisfies Prisma.TaskInclude;
+
+export async function getTaskForWorkPanelRepo(
+  db: DB,
+  input: { id: string; userId: string; canViewAll?: boolean },
+) {
+  const task = await perfStep("task-list-repo", "taskExpandFindUnique", () =>
+    dbOrTx(db).task.findFirst({
+      where: {
+        AND: [{ id: input.id }, buildAccessWhere(input.userId, Boolean(input.canViewAll))],
+      },
+      include: TASK_EXPAND_INCLUDE,
+    }),
+  );
+
+  if (!task) return null;
+
+  const [withTags] = await perfStep("task-list-repo", "taskExpandTags", () =>
+    hydrateTasksWithTaskItemTagsRepo(db, [task]),
+  );
+
+  return applyTaskRowAccess(withTags, input.userId, Boolean(input.canViewAll));
 }
 
 export async function countTaskViewsForListRepo(

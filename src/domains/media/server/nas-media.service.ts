@@ -213,3 +213,12 @@ export async function moveMediaFile(input: {
         toKey,
     };
 }
+
+export async function organizeActiveLooseNasFiles(_input: {
+    dryRun?: boolean;
+    maxFiles?: number;
+} = {}) {
+    throw new Error(
+        "organizeActiveLooseNasFiles is not implemented for the current NAS media service.",
+    );
+}

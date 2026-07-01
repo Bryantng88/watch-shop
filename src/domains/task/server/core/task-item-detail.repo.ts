@@ -2,6 +2,7 @@ import { TimelineContainerType } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
 import { listTimelineEntryRecords } from "@/domains/shared/timeline/server/timeline.repo";
 import { mapTimelineEntriesToViewModels } from "@/domains/shared/timeline/server/timeline-renderer.service";
+import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
 
 const USER_SELECT = {
   id: true,
@@ -55,10 +56,12 @@ async function resolveWatchProductIds(
 
   if (!watchIds.length) return new Map<string, string>();
 
-  const rows = await dbOrTx(db).watch.findMany({
-    where: { id: { in: watchIds } },
-    select: { id: true, productId: true },
-  });
+  const rows = await perfStep("task-item-detail-repo", "watchProductIds", () =>
+    dbOrTx(db).watch.findMany({
+      where: { id: { in: watchIds } },
+      select: { id: true, productId: true },
+    }),
+  );
 
   return new Map(
     rows
@@ -68,47 +71,54 @@ async function resolveWatchProductIds(
 }
 
 async function getTaskItemTimelineViewModels(db: DB, taskItemId: string) {
-  const entries = await listTimelineEntryRecords(db, {
-    containerType: TimelineContainerType.TASK_ITEM,
-    containerId: taskItemId,
-    limit: 50,
-  });
+  const entries = await perfStep("task-item-detail-repo", "timelineEntries", () =>
+    listTimelineEntryRecords(db, {
+      containerType: TimelineContainerType.TASK_ITEM,
+      containerId: taskItemId,
+      limit: 50,
+    }),
+  );
 
   return mapTimelineEntriesToViewModels(entries);
 }
 
 async function listTaskItemBusinessBindings(db: DB, taskItemId: string) {
-  return dbOrTx(db).taskExecution.findMany({
-    where: { taskItemId },
-    select: BUSINESS_BINDING_SELECT,
-    orderBy: { createdAt: "desc" },
-  });
+  return perfStep("task-item-detail-repo", "businessBindings", () =>
+    dbOrTx(db).taskExecution.findMany({
+      where: { taskItemId },
+      select: BUSINESS_BINDING_SELECT,
+      orderBy: { createdAt: "desc" },
+    }),
+  );
 }
 
 export async function getTaskItemDetailPageRepo(db: DB, id: string) {
+  const totalStartedAt = perfNow();
   const client = dbOrTx(db);
-  const item = await client.taskItem.findUnique({
-    where: { id },
-    include: {
-      assignedToUser: { select: USER_SELECT },
-      checklists: {
-        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-      },
-      task: {
-        select: {
-          id: true,
-          title: true,
-          kind: true,
-          status: true,
-          priority: true,
-          dueAt: true,
-          periodKey: true,
-          createdByUserId: true,
-          assignedToUserId: true,
+  const item = await perfStep("task-item-detail-repo", "taskItemFindUnique", () =>
+    client.taskItem.findUnique({
+      where: { id },
+      include: {
+        assignedToUser: { select: USER_SELECT },
+        checklists: {
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        },
+        task: {
+          select: {
+            id: true,
+            title: true,
+            kind: true,
+            status: true,
+            priority: true,
+            dueAt: true,
+            periodKey: true,
+            createdByUserId: true,
+            assignedToUserId: true,
+          },
         },
       },
-    },
-  });
+    }),
+  );
 
   if (!item) return null;
 
@@ -118,7 +128,7 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
   ]);
   const watchProductIds = await resolveWatchProductIds(db, businessBindings);
 
-  return {
+  const result = {
     ...item,
     timeline,
     businessBindings: businessBindings.map((binding) => ({
@@ -131,4 +141,6 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
       href: bindingHref(binding, watchProductIds),
     })),
   };
+  perfLog("task-item-detail-repo", "total", totalStartedAt);
+  return result;
 }

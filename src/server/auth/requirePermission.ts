@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 
-import { prisma } from "@/server/db/client";
 import { getCurrentUser } from "./getCurrentUser";
 
 type AuthUserWithPermissions = {
@@ -38,32 +37,7 @@ export async function getCurrentUserPermissions(): Promise<CurrentUserPermission
         };
     }
 
-    const dbUser = await prisma.user.findFirst({
-        where: {
-            isActive: true,
-            OR: [
-                userId ? { id: userId } : undefined,
-                email ? { email } : undefined,
-            ].filter(Boolean) as any,
-        },
-        select: {
-            id: true,
-            email: true,
-            name: true,
-            roles: {
-                select: {
-                    name: true,
-                    permissions: {
-                        select: {
-                            code: true,
-                        },
-                    },
-                },
-            },
-        },
-    });
-
-    if (!dbUser) {
+    if (!userId) {
         return {
             user: null,
             permissions: [],
@@ -71,21 +45,17 @@ export async function getCurrentUserPermissions(): Promise<CurrentUserPermission
     }
 
     const permissions: string[] = Array.from(
-        new Set<string>(
-            dbUser.roles.flatMap((role) =>
-                role.permissions.map((permission) => permission.code),
-            ),
-        ),
+        new Set<string>(Array.isArray(currentUser?.permissions) ? currentUser.permissions : []),
     );
 
     return {
         user: {
             ...(currentUser as any),
-            id: dbUser.id,
-            userId: dbUser.id,
-            email: dbUser.email,
-            name: dbUser.name,
-            roles: dbUser.roles.map((role) => role.name),
+            id: userId,
+            userId,
+            email,
+            name: currentUser?.name ?? null,
+            roles: Array.isArray(currentUser?.roles) ? currentUser.roles : [],
             permissions,
         },
         permissions,

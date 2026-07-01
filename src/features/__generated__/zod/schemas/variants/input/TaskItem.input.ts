@@ -23,6 +23,7 @@ export const TaskItemInputSchema = z.object({
     assignedToUser: z.unknown().optional().nullable(),
     executions: z.array(z.unknown()),
     checklists: z.array(z.unknown()),
+    activities: z.array(z.unknown()),
     userId: z.string().optional().nullable(),
     User: z.unknown().optional().nullable()
 }).strict();

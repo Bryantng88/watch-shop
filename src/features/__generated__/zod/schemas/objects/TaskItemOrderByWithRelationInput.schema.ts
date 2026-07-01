@@ -5,7 +5,8 @@ import { SortOrderInputObjectSchema as SortOrderInputObjectSchema } from './Sort
 import { TaskOrderByWithRelationInputObjectSchema as TaskOrderByWithRelationInputObjectSchema } from './TaskOrderByWithRelationInput.schema';
 import { UserOrderByWithRelationInputObjectSchema as UserOrderByWithRelationInputObjectSchema } from './UserOrderByWithRelationInput.schema';
 import { TaskExecutionOrderByRelationAggregateInputObjectSchema as TaskExecutionOrderByRelationAggregateInputObjectSchema } from './TaskExecutionOrderByRelationAggregateInput.schema';
-import { TaskItemChecklistOrderByRelationAggregateInputObjectSchema as TaskItemChecklistOrderByRelationAggregateInputObjectSchema } from './TaskItemChecklistOrderByRelationAggregateInput.schema'
+import { TaskItemChecklistOrderByRelationAggregateInputObjectSchema as TaskItemChecklistOrderByRelationAggregateInputObjectSchema } from './TaskItemChecklistOrderByRelationAggregateInput.schema';
+import { TaskItemActivityOrderByRelationAggregateInputObjectSchema as TaskItemActivityOrderByRelationAggregateInputObjectSchema } from './TaskItemActivityOrderByRelationAggregateInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -28,6 +29,7 @@ const makeSchema = () => z.object({
   assignedToUser: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
   executions: z.lazy(() => TaskExecutionOrderByRelationAggregateInputObjectSchema).optional(),
   checklists: z.lazy(() => TaskItemChecklistOrderByRelationAggregateInputObjectSchema).optional(),
+  activities: z.lazy(() => TaskItemActivityOrderByRelationAggregateInputObjectSchema).optional(),
   User: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const TaskItemOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.TaskItemOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskItemOrderByWithRelationInput>;

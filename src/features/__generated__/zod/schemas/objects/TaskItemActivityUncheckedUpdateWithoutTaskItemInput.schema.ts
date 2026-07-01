@@ -1,0 +1,30 @@
+import * as z from 'zod';
+import type { Prisma } from '@prisma/client';
+import { StringFieldUpdateOperationsInputObjectSchema as StringFieldUpdateOperationsInputObjectSchema } from './StringFieldUpdateOperationsInput.schema';
+import { ActivitySourceTypeSchema } from '../enums/ActivitySourceType.schema';
+import { EnumActivitySourceTypeFieldUpdateOperationsInputObjectSchema as EnumActivitySourceTypeFieldUpdateOperationsInputObjectSchema } from './EnumActivitySourceTypeFieldUpdateOperationsInput.schema';
+import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringFieldUpdateOperationsInputObjectSchema } from './NullableStringFieldUpdateOperationsInput.schema';
+import { ActivityStatusSchema } from '../enums/ActivityStatus.schema';
+import { EnumActivityStatusFieldUpdateOperationsInputObjectSchema as EnumActivityStatusFieldUpdateOperationsInputObjectSchema } from './EnumActivityStatusFieldUpdateOperationsInput.schema';
+import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema';
+import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
+import { TaskItemActivityReplyUncheckedUpdateManyWithoutActivityNestedInputObjectSchema as TaskItemActivityReplyUncheckedUpdateManyWithoutActivityNestedInputObjectSchema } from './TaskItemActivityReplyUncheckedUpdateManyWithoutActivityNestedInput.schema'
+
+import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
+
+const makeSchema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  sourceType: z.union([ActivitySourceTypeSchema, z.lazy(() => EnumActivitySourceTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  sourceId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  title: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  body: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  status: z.union([ActivityStatusSchema, z.lazy(() => EnumActivityStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
+  actorUserId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  metadataJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
+  occurredAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  replies: z.lazy(() => TaskItemActivityReplyUncheckedUpdateManyWithoutActivityNestedInputObjectSchema).optional()
+}).strict();
+export const TaskItemActivityUncheckedUpdateWithoutTaskItemInputObjectSchema: z.ZodType<Prisma.TaskItemActivityUncheckedUpdateWithoutTaskItemInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskItemActivityUncheckedUpdateWithoutTaskItemInput>;
+export const TaskItemActivityUncheckedUpdateWithoutTaskItemInputObjectZodSchema = makeSchema();

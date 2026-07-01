@@ -1,9 +1,7 @@
 import type { DB } from "@/server/db/client";
 import type { TaskListFilters } from "../task.types";
 import {
-  countTaskKindsForListRepo,
-  countTaskViewsForListRepo,
-  listAssignableUsersForTaskListRepo,
+  getTaskForWorkPanelRepo,
   listTaskRowsRepo,
 } from "./task-list.repo";
 import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
@@ -62,33 +60,42 @@ export async function getTaskListPageData(
   assertUser(userId);
 
   const canViewAll = authCanViewAllTasks(input.auth);
-  const view = input.filters.view || "all";
-  const kind = input.filters.kind || "ALL";
 
-  const [list, viewCounts, kindCounts, users] = await Promise.all([
-    perfStep("task-list-service", "listRows", () =>
-      listTaskRowsRepo(db, { userId, canViewAll, filters: input.filters }),
-    ),
-    perfStep("task-list-service", "viewCounts", () =>
-      countTaskViewsForListRepo(db, { userId, kind }),
-    ),
-    perfStep("task-list-service", "kindCounts", () =>
-      countTaskKindsForListRepo(db, { userId, view }),
-    ),
-    perfStep("task-list-service", "users", () =>
-      listAssignableUsersForTaskListRepo(db),
-    ),
-  ]);
+  const list = await perfStep("task-list-service", "listRows", () =>
+    listTaskRowsRepo(db, { userId, canViewAll, filters: input.filters }),
+  );
   perfLog("task-list-service", "total", totalStartedAt);
 
   return {
     ...list,
-    counts: {
-      ...viewCounts,
-      ...kindCounts,
-    },
-    users,
+    counts: {},
+    users: [],
     currentUserId: userId,
     canViewAll,
   };
+}
+
+export async function getTaskWorkPanelData(
+  db: DB,
+  input: { id: string; auth: unknown },
+) {
+  const userId = getAuthUserId(input.auth);
+  assertUser(userId);
+
+  const canViewAll = authCanViewAllTasks(input.auth);
+  const task = await getTaskForWorkPanelRepo(db, {
+    id: input.id,
+    userId,
+    canViewAll,
+  });
+
+  if (!task) return null;
+
+  const rowAccess = String((task as { rowAccess?: string }).rowAccess || "OWNER");
+
+  if (canViewAll || rowAccess === "OWNER" || rowAccess === "TASK_ITEM_ASSIGNEE") {
+    return task;
+  }
+
+  throw new Error("Ban khong co quyen xem task nay");
 }

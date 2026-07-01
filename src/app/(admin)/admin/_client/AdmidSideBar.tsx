@@ -19,6 +19,8 @@ import {
     ListTodo,
     Wrench,
     AlertCircle,
+    LogOut,
+    UserCircle2,
 } from "lucide-react";
 
 import ActiveLink from "./AdminActiveLink";
@@ -39,7 +41,11 @@ type NotificationCounts = Partial<{
 }>;
 
 type Props = {
-    user: { permissions: string[] };
+    user: {
+        permissions: string[];
+        name?: string | null;
+        roles?: string[];
+    };
     notifications?: NotificationCounts;
     variant?: "desktop" | "mobile";
 };
@@ -241,6 +247,7 @@ export default function AdminSidebar({
     const progress = useAppProgress();
     const notify = useNotify();
     const [open, setOpen] = useState(false);
+    const [loggingOut, setLoggingOut] = useState(false);
     const hideTimerRef = useRef<number | null>(null);
 
     useEffect(() => {
@@ -285,6 +292,14 @@ export default function AdminSidebar({
         [isMobile, notify, pathname, progress],
     );
 
+    const handleLogout = useCallback(async () => {
+        if (loggingOut) return;
+
+        setLoggingOut(true);
+        await fetch("/api/auth/logout", { method: "POST" });
+        window.location.replace("/login");
+    }, [loggingOut]);
+
     return (
         <>
             {isMobile ? (
@@ -298,7 +313,18 @@ export default function AdminSidebar({
                         <span className="text-sm">Menu</span>
                     </button>
 
-                    <div className="ml-auto text-sm opacity-80">Admin</div>
+                    <div className="ml-auto flex items-center gap-3">
+                        <span className="text-sm opacity-80">Admin</span>
+                        <button
+                            type="button"
+                            onClick={handleLogout}
+                            disabled={loggingOut}
+                            className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2 py-1 text-xs font-semibold text-white/80 hover:text-white disabled:cursor-wait disabled:opacity-50"
+                        >
+                            <LogOut className="h-3.5 w-3.5" />
+                            Logout
+                        </button>
+                    </div>
                 </div>
             ) : null}
 
@@ -326,6 +352,18 @@ export default function AdminSidebar({
                     <span className="hidden text-xs opacity-70 xl:inline">
                         Control Panel
                     </span>
+
+                    {!isMobile ? (
+                        <button
+                            type="button"
+                            onClick={handleLogout}
+                            disabled={loggingOut}
+                            title="Logout"
+                            className="ml-auto hidden h-8 w-8 items-center justify-center rounded-lg text-white/60 hover:bg-white/10 hover:text-white disabled:cursor-wait disabled:opacity-50 xl:flex"
+                        >
+                            <LogOut className="h-4 w-4" />
+                        </button>
+                    ) : null}
 
                     {isMobile ? (
                         <button

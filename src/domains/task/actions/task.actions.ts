@@ -16,6 +16,7 @@ import {
   authCanViewAllTasks,
   getAuthUserId,
 } from "../server/core/task.service";
+import { getTaskWorkPanelData } from "../server/core/task-list.service";
 import type {
   CreateTaskItemInput,
   CreateTaskInput,
@@ -56,6 +57,12 @@ export async function getTaskQuickCreateDataAction() {
 export async function getTaskDetailAction(id: string) {
   const auth = await getTaskAuth();
   const task = await getTaskDetail(prisma, id, auth);
+  return { ok: true, task };
+}
+
+export async function getTaskWorkPanelAction(id: string) {
+  const auth = await getTaskAuth();
+  const task = await getTaskWorkPanelData(prisma, { id, auth });
   return { ok: true, task };
 }
 

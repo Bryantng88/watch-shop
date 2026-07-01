@@ -15,7 +15,9 @@ import { TaskListRelationFilterObjectSchema as TaskListRelationFilterObjectSchem
 import { WorkCaseListRelationFilterObjectSchema as WorkCaseListRelationFilterObjectSchema } from './WorkCaseListRelationFilter.schema';
 import { WorkCaseActivityListRelationFilterObjectSchema as WorkCaseActivityListRelationFilterObjectSchema } from './WorkCaseActivityListRelationFilter.schema';
 import { TaskExecutionListRelationFilterObjectSchema as TaskExecutionListRelationFilterObjectSchema } from './TaskExecutionListRelationFilter.schema';
-import { TaskItemListRelationFilterObjectSchema as TaskItemListRelationFilterObjectSchema } from './TaskItemListRelationFilter.schema'
+import { TaskItemListRelationFilterObjectSchema as TaskItemListRelationFilterObjectSchema } from './TaskItemListRelationFilter.schema';
+import { TaskItemActivityListRelationFilterObjectSchema as TaskItemActivityListRelationFilterObjectSchema } from './TaskItemActivityListRelationFilter.schema';
+import { TaskItemActivityReplyListRelationFilterObjectSchema as TaskItemActivityReplyListRelationFilterObjectSchema } from './TaskItemActivityReplyListRelationFilter.schema'
 
 const userwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => UserWhereInputObjectSchema), z.lazy(() => UserWhereInputObjectSchema).array()]).optional(),
@@ -45,7 +47,9 @@ const userwhereinputSchema = z.object({
   workCaseActivities: z.lazy(() => WorkCaseActivityListRelationFilterObjectSchema).optional(),
   taskExecution: z.lazy(() => TaskExecutionListRelationFilterObjectSchema).optional(),
   assignedTaskItems: z.lazy(() => TaskItemListRelationFilterObjectSchema).optional(),
-  taskItems: z.lazy(() => TaskItemListRelationFilterObjectSchema).optional()
+  taskItems: z.lazy(() => TaskItemListRelationFilterObjectSchema).optional(),
+  taskItemActivities: z.lazy(() => TaskItemActivityListRelationFilterObjectSchema).optional(),
+  activityReplies: z.lazy(() => TaskItemActivityReplyListRelationFilterObjectSchema).optional()
 }).strict();
 export const UserWhereInputObjectSchema: z.ZodType<Prisma.UserWhereInput> = userwhereinputSchema as unknown as z.ZodType<Prisma.UserWhereInput>;
 export const UserWhereInputObjectZodSchema = userwhereinputSchema;

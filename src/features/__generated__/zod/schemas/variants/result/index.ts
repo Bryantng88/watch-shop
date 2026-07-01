@@ -75,6 +75,8 @@ export { TimelineEntryResultSchema } from './TimelineEntry.result';
 export { UserCommentResultSchema } from './UserComment.result';
 export { TaskResultSchema } from './Task.result';
 export { TaskItemResultSchema } from './TaskItem.result';
+export { TaskItemActivityResultSchema } from './TaskItemActivity.result';
+export { TaskItemActivityReplyResultSchema } from './TaskItemActivityReply.result';
 export { TaskItemChecklistResultSchema } from './TaskItemChecklist.result';
 export { TaskExecutionResultSchema } from './TaskExecution.result';
 export { AppTagResultSchema } from './AppTag.result';

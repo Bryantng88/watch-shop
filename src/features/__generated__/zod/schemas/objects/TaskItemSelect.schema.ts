@@ -4,6 +4,7 @@ import { TaskArgsObjectSchema as TaskArgsObjectSchema } from './TaskArgs.schema'
 import { UserArgsObjectSchema as UserArgsObjectSchema } from './UserArgs.schema';
 import { TaskExecutionFindManySchema as TaskExecutionFindManySchema } from '../findManyTaskExecution.schema';
 import { TaskItemChecklistFindManySchema as TaskItemChecklistFindManySchema } from '../findManyTaskItemChecklist.schema';
+import { TaskItemActivityFindManySchema as TaskItemActivityFindManySchema } from '../findManyTaskItemActivity.schema';
 import { TaskItemCountOutputTypeArgsObjectSchema as TaskItemCountOutputTypeArgsObjectSchema } from './TaskItemCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -26,6 +27,7 @@ const makeSchema = () => z.object({
   assignedToUser: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
   executions: z.union([z.boolean(), z.lazy(() => TaskExecutionFindManySchema)]).optional(),
   checklists: z.union([z.boolean(), z.lazy(() => TaskItemChecklistFindManySchema)]).optional(),
+  activities: z.union([z.boolean(), z.lazy(() => TaskItemActivityFindManySchema)]).optional(),
   userId: z.boolean().optional(),
   User: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => TaskItemCountOutputTypeArgsObjectSchema)]).optional()

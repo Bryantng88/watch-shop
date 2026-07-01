@@ -29,12 +29,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 <AppProgressProvider>
                     <div className="grid h-screen overflow-hidden bg-slate-50 lg:grid-cols-[76px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)]">
                         <div className="relative z-50 hidden overflow-visible bg-[#11191f] lg:block">
-                            <AdminSidebar user={{ permissions }} />
+                            <AdminSidebar
+                                user={{ permissions, name: user.name, roles: user.roles }}
+                            />
                         </div>
 
                         <div className="lg:hidden">
                             <AdminSidebar
-                                user={{ permissions }}
+                                user={{ permissions, name: user.name, roles: user.roles }}
                                 variant="mobile"
                             />
                         </div>

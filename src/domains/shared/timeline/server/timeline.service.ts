@@ -14,6 +14,8 @@ import {
     mapTimelineEntriesToViewModels,
     type TimelineEntryViewModel,
 } from "./timeline-renderer.service";
+import { buildTaskItemActivities } from "./timeline-activity.builder";
+import type { TimelineActivityViewModel } from "./timeline-activity.types";
 
 type BusinessFeedbackLike = {
     id: string;
@@ -95,6 +97,16 @@ export async function getTaskItemTimelineViewModels(
     );
 
     return mapTimelineEntriesToViewModels(entries);
+}
+
+export async function getTaskItemActivities(
+    taskItemId: string,
+    limit?: number,
+): Promise<TimelineActivityViewModel[]> {
+    const cleanTaskItemId = clean(taskItemId);
+    assertPresent(cleanTaskItemId, "Missing taskItemId");
+
+    return buildTaskItemActivities(cleanTaskItemId, limit);
 }
 
 export async function appendTaskItemComment(

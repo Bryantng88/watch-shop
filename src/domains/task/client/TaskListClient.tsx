@@ -13,6 +13,7 @@ import {
   createTaskItemAction,
   createTaskItemChecklistAction,
   deleteTaskItemAction,
+  getTaskQuickCreateDataAction,
   updateTaskItemChecklistTitleAction,
 } from "../actions/task.actions";
 import type { TaskWithRelations } from "../server/core/task.repo";
@@ -114,6 +115,7 @@ export default function TaskListClient(props: Props) {
     useState<TaskQuickCreateContext | null>(null);
   const [editTask, setEditTask] = useState<TaskWithRelations | null>(null);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+  const [users, setUsers] = useState<TaskUserOption[]>(props.users);
 
   useEffect(() => {
     setFilters({
@@ -124,6 +126,27 @@ export default function TaskListClient(props: Props) {
       pageSize: sp.get("pageSize") || String(props.pageSize),
     });
   }, [sp, props.pageSize]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (props.users.length) {
+      setUsers(props.users);
+      return;
+    }
+
+    getTaskQuickCreateDataAction()
+      .then((result) => {
+        if (!cancelled) setUsers(result.users ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setUsers([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [props.users]);
 
   function navigate(patch: Record<string, string | null | undefined>) {
     progress.show({
@@ -350,7 +373,7 @@ export default function TaskListClient(props: Props) {
 
       <TaskListTable
         items={props.items}
-        users={props.users}
+        users={users}
         page={props.page}
         totalPages={props.totalPages}
         expandedTaskId={expandedTaskId}
@@ -374,7 +397,7 @@ export default function TaskListClient(props: Props) {
       />
       <TaskQuickCreateModal
         open={modalOpen}
-        users={props.users}
+        users={users}
         currentUserId={props.currentUserId}
         context={modalContext}
         editTask={editTask}

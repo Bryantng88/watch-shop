@@ -35,6 +35,8 @@ export const UserFindFirstOrThrowSelectSchema: z.ZodType<Prisma.UserSelect> = z.
     taskExecution: z.boolean().optional(),
     assignedTaskItems: z.boolean().optional(),
     taskItems: z.boolean().optional(),
+    taskItemActivities: z.boolean().optional(),
+    activityReplies: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.UserSelect>;
 
@@ -64,6 +66,8 @@ export const UserFindFirstOrThrowSelectZodSchema = z.object({
     taskExecution: z.boolean().optional(),
     assignedTaskItems: z.boolean().optional(),
     taskItems: z.boolean().optional(),
+    taskItemActivities: z.boolean().optional(),
+    activityReplies: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

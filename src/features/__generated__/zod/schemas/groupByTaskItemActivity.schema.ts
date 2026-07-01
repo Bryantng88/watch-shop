@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { TaskItemActivityWhereInputObjectSchema as TaskItemActivityWhereInputObjectSchema } from './objects/TaskItemActivityWhereInput.schema';
+import { TaskItemActivityOrderByWithAggregationInputObjectSchema as TaskItemActivityOrderByWithAggregationInputObjectSchema } from './objects/TaskItemActivityOrderByWithAggregationInput.schema';
+import { TaskItemActivityScalarWhereWithAggregatesInputObjectSchema as TaskItemActivityScalarWhereWithAggregatesInputObjectSchema } from './objects/TaskItemActivityScalarWhereWithAggregatesInput.schema';
+import { TaskItemActivityScalarFieldEnumSchema } from './enums/TaskItemActivityScalarFieldEnum.schema';
+import { TaskItemActivityCountAggregateInputObjectSchema as TaskItemActivityCountAggregateInputObjectSchema } from './objects/TaskItemActivityCountAggregateInput.schema';
+import { TaskItemActivityMinAggregateInputObjectSchema as TaskItemActivityMinAggregateInputObjectSchema } from './objects/TaskItemActivityMinAggregateInput.schema';
+import { TaskItemActivityMaxAggregateInputObjectSchema as TaskItemActivityMaxAggregateInputObjectSchema } from './objects/TaskItemActivityMaxAggregateInput.schema';
+
+export const TaskItemActivityGroupBySchema: z.ZodType<Prisma.TaskItemActivityGroupByArgs> = z.object({ where: TaskItemActivityWhereInputObjectSchema.optional(), orderBy: z.union([TaskItemActivityOrderByWithAggregationInputObjectSchema, TaskItemActivityOrderByWithAggregationInputObjectSchema.array()]).optional(), having: TaskItemActivityScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(TaskItemActivityScalarFieldEnumSchema), _count: z.union([ z.literal(true), TaskItemActivityCountAggregateInputObjectSchema ]).optional(), _min: TaskItemActivityMinAggregateInputObjectSchema.optional(), _max: TaskItemActivityMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.TaskItemActivityGroupByArgs>;
+
+export const TaskItemActivityGroupByZodSchema = z.object({ where: TaskItemActivityWhereInputObjectSchema.optional(), orderBy: z.union([TaskItemActivityOrderByWithAggregationInputObjectSchema, TaskItemActivityOrderByWithAggregationInputObjectSchema.array()]).optional(), having: TaskItemActivityScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(TaskItemActivityScalarFieldEnumSchema), _count: z.union([ z.literal(true), TaskItemActivityCountAggregateInputObjectSchema ]).optional(), _min: TaskItemActivityMinAggregateInputObjectSchema.optional(), _max: TaskItemActivityMaxAggregateInputObjectSchema.optional() }).strict();

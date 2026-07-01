@@ -75,6 +75,8 @@ export { TimelineEntryInputSchema } from './TimelineEntry.input';
 export { UserCommentInputSchema } from './UserComment.input';
 export { TaskInputSchema } from './Task.input';
 export { TaskItemInputSchema } from './TaskItem.input';
+export { TaskItemActivityInputSchema } from './TaskItemActivity.input';
+export { TaskItemActivityReplyInputSchema } from './TaskItemActivityReply.input';
 export { TaskItemChecklistInputSchema } from './TaskItemChecklist.input';
 export { TaskExecutionInputSchema } from './TaskExecution.input';
 export { AppTagInputSchema } from './AppTag.input';

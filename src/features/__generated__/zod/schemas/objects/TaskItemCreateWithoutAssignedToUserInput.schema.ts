@@ -5,6 +5,7 @@ import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
 import { TaskCreateNestedOneWithoutTaskItemsInputObjectSchema as TaskCreateNestedOneWithoutTaskItemsInputObjectSchema } from './TaskCreateNestedOneWithoutTaskItemsInput.schema';
 import { TaskExecutionCreateNestedManyWithoutTaskItemInputObjectSchema as TaskExecutionCreateNestedManyWithoutTaskItemInputObjectSchema } from './TaskExecutionCreateNestedManyWithoutTaskItemInput.schema';
 import { TaskItemChecklistCreateNestedManyWithoutTaskItemInputObjectSchema as TaskItemChecklistCreateNestedManyWithoutTaskItemInputObjectSchema } from './TaskItemChecklistCreateNestedManyWithoutTaskItemInput.schema';
+import { TaskItemActivityCreateNestedManyWithoutTaskItemInputObjectSchema as TaskItemActivityCreateNestedManyWithoutTaskItemInputObjectSchema } from './TaskItemActivityCreateNestedManyWithoutTaskItemInput.schema';
 import { UserCreateNestedOneWithoutTaskItemsInputObjectSchema as UserCreateNestedOneWithoutTaskItemsInputObjectSchema } from './UserCreateNestedOneWithoutTaskItemsInput.schema'
 
 const makeSchema = () => z.object({
@@ -24,6 +25,7 @@ const makeSchema = () => z.object({
   task: z.lazy(() => TaskCreateNestedOneWithoutTaskItemsInputObjectSchema),
   executions: z.lazy(() => TaskExecutionCreateNestedManyWithoutTaskItemInputObjectSchema).optional(),
   checklists: z.lazy(() => TaskItemChecklistCreateNestedManyWithoutTaskItemInputObjectSchema).optional(),
+  activities: z.lazy(() => TaskItemActivityCreateNestedManyWithoutTaskItemInputObjectSchema).optional(),
   User: z.lazy(() => UserCreateNestedOneWithoutTaskItemsInputObjectSchema).optional()
 }).strict();
 export const TaskItemCreateWithoutAssignedToUserInputObjectSchema: z.ZodType<Prisma.TaskItemCreateWithoutAssignedToUserInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskItemCreateWithoutAssignedToUserInput>;

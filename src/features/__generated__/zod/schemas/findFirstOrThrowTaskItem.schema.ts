@@ -29,6 +29,7 @@ export const TaskItemFindFirstOrThrowSelectSchema: z.ZodType<Prisma.TaskItemSele
     assignedToUser: z.boolean().optional(),
     executions: z.boolean().optional(),
     checklists: z.boolean().optional(),
+    activities: z.boolean().optional(),
     userId: z.boolean().optional(),
     User: z.boolean().optional(),
     _count: z.boolean().optional()
@@ -54,6 +55,7 @@ export const TaskItemFindFirstOrThrowSelectZodSchema = z.object({
     assignedToUser: z.boolean().optional(),
     executions: z.boolean().optional(),
     checklists: z.boolean().optional(),
+    activities: z.boolean().optional(),
     userId: z.boolean().optional(),
     User: z.boolean().optional(),
     _count: z.boolean().optional()

@@ -1042,12 +1042,14 @@ model User {
   completedTasks Task[] @relation("TaskCompletedBy")
   cancelledTasks Task[] @relation("TaskCancelledBy")
 
-  raisedWorkCases    WorkCase[]         @relation("WorkCaseRaisedBy")
-  assignedWorkCases  WorkCase[]         @relation("WorkCaseAssignedTo")
+  raisedWorkCases    WorkCase[]              @relation("WorkCaseRaisedBy")
+  assignedWorkCases  WorkCase[]              @relation("WorkCaseAssignedTo")
   workCaseActivities WorkCaseActivity[]
   taskExecution      TaskExecution[]
-  assignedTaskItems  TaskItem[]         @relation("TaskItemAssignedTo")
+  assignedTaskItems  TaskItem[]              @relation("TaskItemAssignedTo")
   taskItems          TaskItem[]
+  taskItemActivities TaskItemActivity[]      @relation("TaskItemActivityActor")
+  activityReplies    TaskItemActivityReply[] @relation("TaskItemActivityReplyActor")
 
   @@index([isActive])
 }
@@ -1557,6 +1559,18 @@ enum TaskStatus {
   CANCELLED
 }
 
+enum ActivitySourceType {
+  BUSINESS_EVENT
+  DISCUSSION
+  SYSTEM
+}
+
+enum ActivityStatus {
+  OPEN
+  RESOLVED
+  ARCHIVED
+}
+
 enum AppTagScope {
   GLOBAL
   OWNER
@@ -2050,6 +2064,7 @@ model TaskItem {
   assignedToUser User?               @relation("TaskItemAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
   executions     TaskExecution[]
   checklists     TaskItemChecklist[]
+  activities     TaskItemActivity[]
 
   userId String?
   User   User?   @relation(fields: [userId], references: [id])
@@ -2059,6 +2074,52 @@ model TaskItem {
   @@index([priority])
   @@index([assignedToUserId])
   @@index([dueAt])
+}
+
+model TaskItemActivity {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  taskItemId String
+  sourceType ActivitySourceType
+  sourceId   String?
+
+  title String
+  body  String?
+
+  status       ActivityStatus @default(OPEN)
+  actorUserId  String?
+  metadataJson Json?
+
+  occurredAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  taskItem  TaskItem                @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
+  actorUser User?                   @relation("TaskItemActivityActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  replies   TaskItemActivityReply[]
+
+  @@index([taskItemId, occurredAt])
+  @@index([sourceType, sourceId])
+  @@index([actorUserId])
+}
+
+model TaskItemActivityReply {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  activityId  String
+  actorUserId String?
+
+  body         String
+  metadataJson Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  activity  TaskItemActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  actorUser User?            @relation("TaskItemActivityReplyActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([activityId, createdAt])
+  @@index([actorUserId])
 }
 
 model TaskItemChecklist {

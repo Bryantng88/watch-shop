@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { TaskItemActivityReplyOrderByWithRelationInputObjectSchema as TaskItemActivityReplyOrderByWithRelationInputObjectSchema } from './objects/TaskItemActivityReplyOrderByWithRelationInput.schema';
+import { TaskItemActivityReplyWhereInputObjectSchema as TaskItemActivityReplyWhereInputObjectSchema } from './objects/TaskItemActivityReplyWhereInput.schema';
+import { TaskItemActivityReplyWhereUniqueInputObjectSchema as TaskItemActivityReplyWhereUniqueInputObjectSchema } from './objects/TaskItemActivityReplyWhereUniqueInput.schema';
+import { TaskItemActivityReplyCountAggregateInputObjectSchema as TaskItemActivityReplyCountAggregateInputObjectSchema } from './objects/TaskItemActivityReplyCountAggregateInput.schema';
+
+export const TaskItemActivityReplyCountSchema: z.ZodType<Prisma.TaskItemActivityReplyCountArgs> = z.object({ orderBy: z.union([TaskItemActivityReplyOrderByWithRelationInputObjectSchema, TaskItemActivityReplyOrderByWithRelationInputObjectSchema.array()]).optional(), where: TaskItemActivityReplyWhereInputObjectSchema.optional(), cursor: TaskItemActivityReplyWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), TaskItemActivityReplyCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.TaskItemActivityReplyCountArgs>;
+
+export const TaskItemActivityReplyCountZodSchema = z.object({ orderBy: z.union([TaskItemActivityReplyOrderByWithRelationInputObjectSchema, TaskItemActivityReplyOrderByWithRelationInputObjectSchema.array()]).optional(), where: TaskItemActivityReplyWhereInputObjectSchema.optional(), cursor: TaskItemActivityReplyWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), TaskItemActivityReplyCountAggregateInputObjectSchema ]).optional() }).strict();

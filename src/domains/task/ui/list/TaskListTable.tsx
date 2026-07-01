@@ -7,13 +7,14 @@ import {
   ChevronDown,
   ChevronRight,
   CirclePlay,
+  Loader2,
   RotateCcw,
   XCircle,
 } from "lucide-react";
 import { TaskStatus } from "@prisma/client";
 import RowActions from "@/domains/shared/ui/list/RowActions";
 import type { TaskWithRelations } from "../../server/core/task.repo";
-import { getTaskDetailAction } from "../../actions/task.actions";
+import { getTaskWorkPanelAction } from "../../actions/task.actions";
 import TaskWorkPanel from "../task-work/TaskWorkPanel";
 import TaskPagination from "./TaskPagination";
 import TaskListViewTabs from "./TaskListViewTabs";
@@ -24,7 +25,8 @@ import {
 } from "@/domains/shared/ui/business/BusinessEntityPreview";
 import { cn } from "@/lib/utils";
 import { TASK_KIND_LABEL } from "../../utils/task-labels";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 type UserOption = {
   id: string;
   name?: string | null;
@@ -223,37 +225,82 @@ export default function TaskListTable({
   onDeleteTaskItemChecklist?: (checklistId: string) => Promise<void> | void;
 }) {
   const previewState = useBusinessEntityPreview();
+  const appProgress = useAppProgress();
   const [localItems, setLocalItems] = useState(items);
   const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null);
+  const detailCacheRef = useRef(new Map<string, TaskWithRelations>());
+  const inFlightRef = useRef(new Map<string, Promise<TaskWithRelations>>());
+  const requestedExpandTaskIdRef = useRef<string | null>(null);
 
   async function loadTaskDetail(row: TaskWithRelations) {
     if ((row as any)._detailLoaded) return row;
 
+    const cachedTask = detailCacheRef.current.get(row.id);
+    if (cachedTask) return cachedTask;
+
+    const currentRequest = inFlightRef.current.get(row.id);
+    if (currentRequest) return currentRequest;
+
     setLoadingTaskId(row.id);
-    try {
-      const result = await getTaskDetailAction(row.id);
+    appProgress.show({
+      title: "Đang mở task",
+      message: "Đang tải danh sách task item và checklist.",
+    });
+
+    const request = (async () => {
+      const result = await getTaskWorkPanelAction(row.id);
       const nextTask = result?.task
         ? { ...result.task, _detailLoaded: true }
         : { ...row, _detailLoaded: true };
+
+      detailCacheRef.current.set(row.id, nextTask as TaskWithRelations);
 
       setLocalItems((prev) =>
         prev.map((task) => (task.id === row.id ? (nextTask as any) : task)),
       );
 
       return nextTask as TaskWithRelations;
+    })();
+
+    inFlightRef.current.set(row.id, request);
+
+    try {
+      return await request;
     } finally {
-      setLoadingTaskId(null);
+      inFlightRef.current.delete(row.id);
+
+      if (requestedExpandTaskIdRef.current === row.id) {
+        setLoadingTaskId(null);
+        appProgress.hide();
+      }
     }
   }
 
   async function handleToggleExpand(row: TaskWithRelations) {
     if (expandedTaskId === row.id) {
+      requestedExpandTaskIdRef.current = null;
       onToggleExpand?.(row);
       return;
     }
 
-    const nextRow = await loadTaskDetail(row);
-    onToggleExpand?.(nextRow);
+    requestedExpandTaskIdRef.current = row.id;
+    let nextRow: TaskWithRelations;
+
+    try {
+      nextRow = await loadTaskDetail(row);
+    } catch (error) {
+      if (requestedExpandTaskIdRef.current === row.id) {
+        setLoadingTaskId(null);
+        appProgress.hide();
+      }
+
+      console.error("[task-list] failed to expand task", error);
+      return;
+    }
+
+    if (requestedExpandTaskIdRef.current === row.id) {
+      onToggleExpand?.(nextRow);
+    }
   }
 
   function handleTaskItemsChange(taskId: string, nextTaskItems: any[]) {
@@ -269,7 +316,9 @@ export default function TaskListTable({
     );
   }
   useEffect(() => {
-    setLocalItems(items);
+    setLocalItems(
+      items.map((item) => detailCacheRef.current.get(item.id) ?? item),
+    );
   }, [items]);
   return (
     <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
@@ -321,6 +370,7 @@ export default function TaskListTable({
                 const rowAccess = String((row as any).rowAccess || "OWNER");
                 const visibleTaskItemIds = (row as any).visibleTaskItemIds ?? null;
                 const taskItems = ((row as any).taskItems ?? []) as any[];
+                const isLoadingTask = loadingTaskId === row.id;
 
                 const visibleTaskItems = Array.isArray(visibleTaskItemIds)
                   ? taskItems.filter((item) => visibleTaskItemIds.includes(item.id))
@@ -337,7 +387,10 @@ export default function TaskListTable({
                       }}
                       className={
                         expandable
-                          ? "cursor-pointer hover:bg-slate-50/70"
+                          ? cn(
+                            "cursor-pointer hover:bg-slate-50/70",
+                            isLoadingTask && "bg-slate-50/80",
+                          )
                           : "hover:bg-slate-50/70"
                       }
                     >
@@ -352,7 +405,9 @@ export default function TaskListTable({
                             className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                             aria-label={expanded ? "Thu gọn task" : "Mở rộng task"}
                           >
-                            {expanded ? (
+                            {isLoadingTask ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : expanded ? (
                               <ChevronDown className="h-4 w-4" />
                             ) : (
                               <ChevronRight className="h-4 w-4" />
@@ -490,6 +545,15 @@ export default function TaskListTable({
                               Đang tải task item...
                             </div>
                           ) : null}
+                        </td>
+                      </tr>
+                    ) : isLoadingTask ? (
+                      <tr>
+                        <td colSpan={5} className="bg-slate-50 px-4 py-3">
+                          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600">
+                            <Loader2 className="h-4 w-4 animate-spin text-slate-500" />
+                            Đang tải task item...
+                          </div>
                         </td>
                       </tr>
                     ) : null}

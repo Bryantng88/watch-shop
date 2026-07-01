@@ -3,7 +3,8 @@ import type { Prisma } from '@prisma/client';
 import { TaskStatusSchema } from '../enums/TaskStatus.schema';
 import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
 import { TaskExecutionUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema as TaskExecutionUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema } from './TaskExecutionUncheckedCreateNestedManyWithoutTaskItemInput.schema';
-import { TaskItemChecklistUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema as TaskItemChecklistUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema } from './TaskItemChecklistUncheckedCreateNestedManyWithoutTaskItemInput.schema'
+import { TaskItemChecklistUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema as TaskItemChecklistUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema } from './TaskItemChecklistUncheckedCreateNestedManyWithoutTaskItemInput.schema';
+import { TaskItemActivityUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema as TaskItemActivityUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema } from './TaskItemActivityUncheckedCreateNestedManyWithoutTaskItemInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -22,7 +23,8 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   userId: z.string().optional().nullable(),
   executions: z.lazy(() => TaskExecutionUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema),
-  checklists: z.lazy(() => TaskItemChecklistUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema)
+  checklists: z.lazy(() => TaskItemChecklistUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema),
+  activities: z.lazy(() => TaskItemActivityUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema)
 }).strict();
 export const TaskItemUncheckedCreateInputObjectSchema: z.ZodType<Prisma.TaskItemUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskItemUncheckedCreateInput>;
 export const TaskItemUncheckedCreateInputObjectZodSchema = makeSchema();

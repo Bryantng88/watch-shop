@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import TaskItemDetailClient from "@/domains/task/client/TaskItemDetailClient";
-import { getTaskItemDetailPageData } from "@/domains/task/server/core/task-item-detail.service";
+import { getTaskItemDetailPageRepo } from "@/domains/task/server/core/task-item-detail.repo";
+import { authorizeTaskItemDetail } from "@/domains/task/server/core/task-item-detail.service";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
+import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -13,11 +15,21 @@ function serialize<T>(value: T): T {
 }
 
 export default async function AdminTaskItemDetailPage(props: PageProps) {
+  const totalStartedAt = perfNow();
   const { id } = await props.params;
-  const auth = await requirePermission("TASK_VIEW");
-  const item = await getTaskItemDetailPageData(prisma, id, auth);
+  const authPromise = perfStep("task-item-detail-page", "requirePermission", () =>
+    requirePermission("TASK_VIEW"),
+  );
+  const itemPromise = perfStep("task-item-detail-page", "loadDetail", () =>
+    getTaskItemDetailPageRepo(prisma, id),
+  );
+
+  const [auth, item] = await Promise.all([authPromise, itemPromise]);
 
   if (!item) notFound();
 
-  return <TaskItemDetailClient item={serialize(item)} />;
+  const authorizedItem = authorizeTaskItemDetail(item, auth);
+  perfLog("task-item-detail-page", "totalBeforeRender", totalStartedAt);
+
+  return <TaskItemDetailClient item={serialize(authorizedItem)} />;
 }

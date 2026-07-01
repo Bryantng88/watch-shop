@@ -1,2 +1,5 @@
 export * from "./watch-pricing.repo";
-export * from "./watch-pricing.service";
+export {
+  getWatchPricing,
+  updateWatchPricingWithDiff,
+} from "./watch-pricing.service";

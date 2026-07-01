@@ -250,6 +250,90 @@ export async function createBuyBackFromProduct(input: {
     });
 }
 
+export async function createConsignToFromProduct(input: {
+    productId: string;
+    vendorId: string;
+    notes?: string | null;
+}) {
+    const productId = String(input.productId ?? "").trim();
+    const vendorId = String(input.vendorId ?? "").trim();
+
+    if (!productId) {
+        throw new Error("Thieu productId.");
+    }
+
+    if (!vendorId) {
+        throw new Error("Thieu vendorId.");
+    }
+
+    return prisma.$transaction(async (tx) => {
+        const watch = await tx.watch.findUnique({
+            where: { productId },
+            select: {
+                id: true,
+                productId: true,
+                product: {
+                    select: {
+                        id: true,
+                        title: true,
+                        sku: true,
+                    },
+                },
+            },
+        });
+
+        if (!watch) {
+            throw new Error("Khong tim thay watch.");
+        }
+
+        const vendor = await tx.vendor.findUnique({
+            where: { id: vendorId },
+            select: { id: true },
+        });
+
+        if (!vendor) {
+            throw new Error("Vendor khong ton tai.");
+        }
+
+        const acquisition = await tx.acquisition.create({
+            data: {
+                vendorId,
+                type: AcquisitionType.CONSIGNMENT,
+                acquiredAt: new Date(),
+                currency: "VND",
+                accquisitionStt: AcquisitionStatus.DRAFT,
+                totalAmount: new Prisma.Decimal(0),
+                notes: cleanText(input.notes),
+            },
+            select: {
+                id: true,
+                refNo: true,
+                accquisitionStt: true,
+                type: true,
+            },
+        });
+
+        await tx.acquisitionItem.create({
+            data: {
+                acquisitionId: acquisition.id,
+                productId,
+                variantId: null,
+                productType: "WATCH" as any,
+                productTitle: watch.product?.title ?? watch.product?.sku ?? "Watch consign",
+                quantity: 1,
+                unitCost: new Prisma.Decimal(0),
+                currency: "VND",
+                status: "DRAFT" as any,
+                kind: "PRODUCT" as any,
+                capitalizeToProduct: false,
+                notes: cleanText(input.notes),
+            },
+        });
+
+        return acquisition;
+    });
+}
+
 export async function restoreBuyBackWatchAfterAcquisitionPostTx(tx: DB, acquisitionId: string) {
     const db = dbOrTx(tx);
 

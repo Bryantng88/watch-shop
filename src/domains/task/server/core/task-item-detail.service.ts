@@ -92,6 +92,14 @@ function assertCanAccessTaskItemDetail(item: TaskItemAccessShape, auth: unknown)
   throw new Error("Ban khong co quyen xem task item nay");
 }
 
+export function authorizeTaskItemDetail<T extends TaskItemAccessShape>(
+  item: T,
+  auth: unknown,
+) {
+  assertCanAccessTaskItemDetail(item, auth);
+  return omitTaskAccessFields(item);
+}
+
 export async function getTaskItemDetailPageData(
   db: DB,
   id: string,
@@ -100,7 +108,5 @@ export async function getTaskItemDetailPageData(
   const item = await getTaskItemDetailPageRepo(db, id);
   if (!item) return null;
 
-  assertCanAccessTaskItemDetail(item, auth);
-
-  return omitTaskAccessFields(item);
+  return authorizeTaskItemDetail(item, auth);
 }

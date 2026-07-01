@@ -24,5 +24,7 @@ export const UserUpsertResultSchema = z.object({
   workCaseActivities: z.array(z.unknown()),
   taskExecution: z.array(z.unknown()),
   assignedTaskItems: z.array(z.unknown()),
-  taskItems: z.array(z.unknown())
+  taskItems: z.array(z.unknown()),
+  taskItemActivities: z.array(z.unknown()),
+  activityReplies: z.array(z.unknown())
 });

@@ -84,7 +84,7 @@ export default function AdminTopbar({
     const notifyItems = useMemo(() => items.slice(0, 6), [items]);
 
     return (
-        <header className="sticky top-0 z-20 border-b bg-white">
+        <header className="sticky top-0 z-40 shrink-0 border-b bg-white">
             <div className="mx-auto flex items-center gap-3 px-4 py-3">
                 <h1 className="text-lg font-semibold">{title}</h1>
 

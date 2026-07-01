@@ -75,6 +75,8 @@ export { TimelineEntryModelSchema } from './TimelineEntry.pure';
 export { UserCommentModelSchema } from './UserComment.pure';
 export { TaskModelSchema } from './Task.pure';
 export { TaskItemModelSchema } from './TaskItem.pure';
+export { TaskItemActivityModelSchema } from './TaskItemActivity.pure';
+export { TaskItemActivityReplyModelSchema } from './TaskItemActivityReply.pure';
 export { TaskItemChecklistModelSchema } from './TaskItemChecklist.pure';
 export { TaskExecutionModelSchema } from './TaskExecution.pure';
 export { AppTagModelSchema } from './AppTag.pure';

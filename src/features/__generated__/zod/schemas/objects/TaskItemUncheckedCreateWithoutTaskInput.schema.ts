@@ -3,7 +3,8 @@ import type { Prisma } from '@prisma/client';
 import { TaskStatusSchema } from '../enums/TaskStatus.schema';
 import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
 import { TaskExecutionUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema as TaskExecutionUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema } from './TaskExecutionUncheckedCreateNestedManyWithoutTaskItemInput.schema';
-import { TaskItemChecklistUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema as TaskItemChecklistUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema } from './TaskItemChecklistUncheckedCreateNestedManyWithoutTaskItemInput.schema'
+import { TaskItemChecklistUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema as TaskItemChecklistUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema } from './TaskItemChecklistUncheckedCreateNestedManyWithoutTaskItemInput.schema';
+import { TaskItemActivityUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema as TaskItemActivityUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema } from './TaskItemActivityUncheckedCreateNestedManyWithoutTaskItemInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -22,7 +23,8 @@ const makeSchema = () => z.object({
   updatedAt: z.coerce.date().optional(),
   userId: z.string().optional().nullable(),
   executions: z.lazy(() => TaskExecutionUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema).optional(),
-  checklists: z.lazy(() => TaskItemChecklistUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema).optional()
+  checklists: z.lazy(() => TaskItemChecklistUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema).optional(),
+  activities: z.lazy(() => TaskItemActivityUncheckedCreateNestedManyWithoutTaskItemInputObjectSchema).optional()
 }).strict();
 export const TaskItemUncheckedCreateWithoutTaskInputObjectSchema: z.ZodType<Prisma.TaskItemUncheckedCreateWithoutTaskInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskItemUncheckedCreateWithoutTaskInput>;
 export const TaskItemUncheckedCreateWithoutTaskInputObjectZodSchema = makeSchema();

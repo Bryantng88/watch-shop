@@ -13,6 +13,7 @@ import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOp
 import { TaskUpdateOneRequiredWithoutTaskItemsNestedInputObjectSchema as TaskUpdateOneRequiredWithoutTaskItemsNestedInputObjectSchema } from './TaskUpdateOneRequiredWithoutTaskItemsNestedInput.schema';
 import { UserUpdateOneWithoutAssignedTaskItemsNestedInputObjectSchema as UserUpdateOneWithoutAssignedTaskItemsNestedInputObjectSchema } from './UserUpdateOneWithoutAssignedTaskItemsNestedInput.schema';
 import { TaskItemChecklistUpdateManyWithoutTaskItemNestedInputObjectSchema as TaskItemChecklistUpdateManyWithoutTaskItemNestedInputObjectSchema } from './TaskItemChecklistUpdateManyWithoutTaskItemNestedInput.schema';
+import { TaskItemActivityUpdateManyWithoutTaskItemNestedInputObjectSchema as TaskItemActivityUpdateManyWithoutTaskItemNestedInputObjectSchema } from './TaskItemActivityUpdateManyWithoutTaskItemNestedInput.schema';
 import { UserUpdateOneWithoutTaskItemsNestedInputObjectSchema as UserUpdateOneWithoutTaskItemsNestedInputObjectSchema } from './UserUpdateOneWithoutTaskItemsNestedInput.schema'
 
 const makeSchema = () => z.object({
@@ -32,6 +33,7 @@ const makeSchema = () => z.object({
   task: z.lazy(() => TaskUpdateOneRequiredWithoutTaskItemsNestedInputObjectSchema).optional(),
   assignedToUser: z.lazy(() => UserUpdateOneWithoutAssignedTaskItemsNestedInputObjectSchema).optional(),
   checklists: z.lazy(() => TaskItemChecklistUpdateManyWithoutTaskItemNestedInputObjectSchema).optional(),
+  activities: z.lazy(() => TaskItemActivityUpdateManyWithoutTaskItemNestedInputObjectSchema).optional(),
   User: z.lazy(() => UserUpdateOneWithoutTaskItemsNestedInputObjectSchema).optional()
 }).strict();
 export const TaskItemUpdateWithoutExecutionsInputObjectSchema: z.ZodType<Prisma.TaskItemUpdateWithoutExecutionsInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskItemUpdateWithoutExecutionsInput>;

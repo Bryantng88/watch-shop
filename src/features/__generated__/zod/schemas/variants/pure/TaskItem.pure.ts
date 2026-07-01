@@ -23,6 +23,7 @@ export const TaskItemModelSchema = z.object({
     assignedToUser: z.unknown().nullable(),
     executions: z.array(z.unknown()),
     checklists: z.array(z.unknown()),
+    activities: z.array(z.unknown()),
     userId: z.string().nullable(),
     User: z.unknown().nullable()
 }).strict();

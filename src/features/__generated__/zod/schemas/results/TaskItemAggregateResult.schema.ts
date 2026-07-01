@@ -19,6 +19,7 @@ export const TaskItemAggregateResultSchema = z.object({  _count: z.object({
     assignedToUser: z.number(),
     executions: z.number(),
     checklists: z.number(),
+    activities: z.number(),
     userId: z.number(),
     User: z.number()
   }).optional(),

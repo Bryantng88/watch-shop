@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { TaskItemActivityOrderByWithRelationInputObjectSchema as TaskItemActivityOrderByWithRelationInputObjectSchema } from './objects/TaskItemActivityOrderByWithRelationInput.schema';
+import { TaskItemActivityWhereInputObjectSchema as TaskItemActivityWhereInputObjectSchema } from './objects/TaskItemActivityWhereInput.schema';
+import { TaskItemActivityWhereUniqueInputObjectSchema as TaskItemActivityWhereUniqueInputObjectSchema } from './objects/TaskItemActivityWhereUniqueInput.schema';
+import { TaskItemActivityCountAggregateInputObjectSchema as TaskItemActivityCountAggregateInputObjectSchema } from './objects/TaskItemActivityCountAggregateInput.schema';
+import { TaskItemActivityMinAggregateInputObjectSchema as TaskItemActivityMinAggregateInputObjectSchema } from './objects/TaskItemActivityMinAggregateInput.schema';
+import { TaskItemActivityMaxAggregateInputObjectSchema as TaskItemActivityMaxAggregateInputObjectSchema } from './objects/TaskItemActivityMaxAggregateInput.schema';
+
+export const TaskItemActivityAggregateSchema: z.ZodType<Prisma.TaskItemActivityAggregateArgs> = z.object({ orderBy: z.union([TaskItemActivityOrderByWithRelationInputObjectSchema, TaskItemActivityOrderByWithRelationInputObjectSchema.array()]).optional(), where: TaskItemActivityWhereInputObjectSchema.optional(), cursor: TaskItemActivityWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), TaskItemActivityCountAggregateInputObjectSchema ]).optional(), _min: TaskItemActivityMinAggregateInputObjectSchema.optional(), _max: TaskItemActivityMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.TaskItemActivityAggregateArgs>;
+
+export const TaskItemActivityAggregateZodSchema = z.object({ orderBy: z.union([TaskItemActivityOrderByWithRelationInputObjectSchema, TaskItemActivityOrderByWithRelationInputObjectSchema.array()]).optional(), where: TaskItemActivityWhereInputObjectSchema.optional(), cursor: TaskItemActivityWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), TaskItemActivityCountAggregateInputObjectSchema ]).optional(), _min: TaskItemActivityMinAggregateInputObjectSchema.optional(), _max: TaskItemActivityMaxAggregateInputObjectSchema.optional() }).strict();

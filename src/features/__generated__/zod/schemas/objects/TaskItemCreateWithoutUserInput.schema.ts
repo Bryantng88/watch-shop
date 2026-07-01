@@ -5,7 +5,8 @@ import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
 import { TaskCreateNestedOneWithoutTaskItemsInputObjectSchema as TaskCreateNestedOneWithoutTaskItemsInputObjectSchema } from './TaskCreateNestedOneWithoutTaskItemsInput.schema';
 import { UserCreateNestedOneWithoutAssignedTaskItemsInputObjectSchema as UserCreateNestedOneWithoutAssignedTaskItemsInputObjectSchema } from './UserCreateNestedOneWithoutAssignedTaskItemsInput.schema';
 import { TaskExecutionCreateNestedManyWithoutTaskItemInputObjectSchema as TaskExecutionCreateNestedManyWithoutTaskItemInputObjectSchema } from './TaskExecutionCreateNestedManyWithoutTaskItemInput.schema';
-import { TaskItemChecklistCreateNestedManyWithoutTaskItemInputObjectSchema as TaskItemChecklistCreateNestedManyWithoutTaskItemInputObjectSchema } from './TaskItemChecklistCreateNestedManyWithoutTaskItemInput.schema'
+import { TaskItemChecklistCreateNestedManyWithoutTaskItemInputObjectSchema as TaskItemChecklistCreateNestedManyWithoutTaskItemInputObjectSchema } from './TaskItemChecklistCreateNestedManyWithoutTaskItemInput.schema';
+import { TaskItemActivityCreateNestedManyWithoutTaskItemInputObjectSchema as TaskItemActivityCreateNestedManyWithoutTaskItemInputObjectSchema } from './TaskItemActivityCreateNestedManyWithoutTaskItemInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -24,7 +25,8 @@ const makeSchema = () => z.object({
   task: z.lazy(() => TaskCreateNestedOneWithoutTaskItemsInputObjectSchema),
   assignedToUser: z.lazy(() => UserCreateNestedOneWithoutAssignedTaskItemsInputObjectSchema).optional(),
   executions: z.lazy(() => TaskExecutionCreateNestedManyWithoutTaskItemInputObjectSchema).optional(),
-  checklists: z.lazy(() => TaskItemChecklistCreateNestedManyWithoutTaskItemInputObjectSchema).optional()
+  checklists: z.lazy(() => TaskItemChecklistCreateNestedManyWithoutTaskItemInputObjectSchema).optional(),
+  activities: z.lazy(() => TaskItemActivityCreateNestedManyWithoutTaskItemInputObjectSchema).optional()
 }).strict();
 export const TaskItemCreateWithoutUserInputObjectSchema: z.ZodType<Prisma.TaskItemCreateWithoutUserInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskItemCreateWithoutUserInput>;
 export const TaskItemCreateWithoutUserInputObjectZodSchema = makeSchema();

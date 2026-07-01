@@ -11,7 +11,8 @@ import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperations
 import { IntFieldUpdateOperationsInputObjectSchema as IntFieldUpdateOperationsInputObjectSchema } from './IntFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { TaskExecutionUncheckedUpdateManyWithoutTaskItemNestedInputObjectSchema as TaskExecutionUncheckedUpdateManyWithoutTaskItemNestedInputObjectSchema } from './TaskExecutionUncheckedUpdateManyWithoutTaskItemNestedInput.schema';
-import { TaskItemChecklistUncheckedUpdateManyWithoutTaskItemNestedInputObjectSchema as TaskItemChecklistUncheckedUpdateManyWithoutTaskItemNestedInputObjectSchema } from './TaskItemChecklistUncheckedUpdateManyWithoutTaskItemNestedInput.schema'
+import { TaskItemChecklistUncheckedUpdateManyWithoutTaskItemNestedInputObjectSchema as TaskItemChecklistUncheckedUpdateManyWithoutTaskItemNestedInputObjectSchema } from './TaskItemChecklistUncheckedUpdateManyWithoutTaskItemNestedInput.schema';
+import { TaskItemActivityUncheckedUpdateManyWithoutTaskItemNestedInputObjectSchema as TaskItemActivityUncheckedUpdateManyWithoutTaskItemNestedInputObjectSchema } from './TaskItemActivityUncheckedUpdateManyWithoutTaskItemNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -30,7 +31,8 @@ const makeSchema = () => z.object({
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   userId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   executions: z.lazy(() => TaskExecutionUncheckedUpdateManyWithoutTaskItemNestedInputObjectSchema).optional(),
-  checklists: z.lazy(() => TaskItemChecklistUncheckedUpdateManyWithoutTaskItemNestedInputObjectSchema).optional()
+  checklists: z.lazy(() => TaskItemChecklistUncheckedUpdateManyWithoutTaskItemNestedInputObjectSchema).optional(),
+  activities: z.lazy(() => TaskItemActivityUncheckedUpdateManyWithoutTaskItemNestedInputObjectSchema).optional()
 }).strict();
 export const TaskItemUncheckedUpdateWithoutAssignedToUserInputObjectSchema: z.ZodType<Prisma.TaskItemUncheckedUpdateWithoutAssignedToUserInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskItemUncheckedUpdateWithoutAssignedToUserInput>;
 export const TaskItemUncheckedUpdateWithoutAssignedToUserInputObjectZodSchema = makeSchema();

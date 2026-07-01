@@ -1,15 +1,13 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
-  Bell,
   CalendarDays,
   CheckCircle2,
   Circle,
   CircleDot,
-  ClipboardList,
   Clock3,
   ExternalLink,
   FileText,
@@ -19,7 +17,6 @@ import {
   Link2,
   ListChecks,
   MessageSquare,
-  PencilLine,
   Send,
   Tag,
   UserRound,
@@ -33,7 +30,6 @@ import {
 } from "@/domains/shared/ui/signals/StatePrioritySignal";
 import type {
   TimelineActivityBlock,
-  TimelineEntryIcon,
   TimelineEntryTone,
   TimelineEntryViewModel,
 } from "@/domains/shared/timeline/server/timeline-renderer.types";
@@ -87,9 +83,11 @@ type TaskItemDetail = {
   businessBindings?: TaskItemBinding[];
 };
 
-type NavItem = {
+type DetailTab = "overview" | "activity" | "checklist" | "business" | "info";
+
+type TabItem = {
+  key: DetailTab;
   label: string;
-  href: string;
   icon: ReactNode;
 };
 
@@ -121,93 +119,79 @@ function entryTime(entry: TimelineEntryViewModel) {
   return toTime(entry.occurredAt);
 }
 
-function compareTimelineEntries(
-  a: TimelineEntryViewModel,
-  b: TimelineEntryViewModel,
-) {
-  const timeDiff = entryTime(a) - entryTime(b);
-  if (timeDiff !== 0) return timeDiff;
+function compareEntries(a: TimelineEntryViewModel, b: TimelineEntryViewModel) {
+  const diff = entryTime(a) - entryTime(b);
+  if (diff !== 0) return diff;
   return a.id.localeCompare(b.id);
 }
 
-function blockKind(entry: TimelineEntryViewModel): TimelineActivityBlock["kind"] {
-  if (entry.sourceType === "BUSINESS_EVENT") return "BUSINESS_EVENT";
-  if (entry.sourceType === "USER_COMMENT") return "USER_COMMENT";
-  return "TIMELINE_ENTRY";
-}
-
-function makeActivityBlock(
+function makeBlock(
   entry: TimelineEntryViewModel,
   feedbackEntries: TimelineEntryViewModel[] = [],
 ): TimelineActivityBlock {
   return {
     id: entry.id,
-    kind: blockKind(entry),
+    kind:
+      entry.sourceType === "BUSINESS_EVENT"
+        ? "BUSINESS_EVENT"
+        : entry.sourceType === "USER_COMMENT"
+          ? "USER_COMMENT"
+          : "TIMELINE_ENTRY",
     entry,
-    feedbackEntries: [...feedbackEntries].sort(compareTimelineEntries),
+    feedbackEntries: [...feedbackEntries].sort(compareEntries),
     eventKey: metadataText(entry, "eventKey"),
     businessEventLogId: metadataText(entry, "businessEventLogId"),
   };
 }
 
 function nextBusinessEventTime(
-  eventEntries: TimelineEntryViewModel[],
+  events: TimelineEntryViewModel[],
   event: TimelineEntryViewModel,
 ) {
-  const currentTime = entryTime(event);
-  const nextEvent = eventEntries.find(
-    (candidate) =>
-      candidate.id !== event.id && entryTime(candidate) > currentTime,
+  const current = entryTime(event);
+  const next = events.find(
+    (candidate) => candidate.id !== event.id && entryTime(candidate) > current,
   );
 
-  return nextEvent ? entryTime(nextEvent) : null;
+  return next ? entryTime(next) : null;
 }
 
 function groupActivityBlocks(entries: TimelineEntryViewModel[]) {
-  const sortedEntries = [...entries].sort(compareTimelineEntries);
-  const eventEntries = sortedEntries.filter(
-    (entry) => entry.sourceType === "BUSINESS_EVENT",
-  );
+  const sorted = [...entries].sort(compareEntries);
+  const events = sorted.filter((entry) => entry.sourceType === "BUSINESS_EVENT");
   const eventByBusinessLogId = new Map<string, TimelineEntryViewModel>();
 
-  for (const entry of eventEntries) {
-    const businessEventLogId = metadataText(entry, "businessEventLogId");
-    if (businessEventLogId) eventByBusinessLogId.set(businessEventLogId, entry);
+  for (const event of events) {
+    const logId = metadataText(event, "businessEventLogId");
+    if (logId) eventByBusinessLogId.set(logId, event);
   }
 
-  const feedbackByEventId = new Map<string, TimelineEntryViewModel[]>();
+  const feedbackByLogId = new Map<string, TimelineEntryViewModel[]>();
   const groupedFeedbackIds = new Set<string>();
 
-  for (const entry of sortedEntries) {
+  for (const entry of sorted) {
     if (entry.sourceType !== "BUSINESS_FEEDBACK") continue;
 
-    const businessEventLogId = metadataText(entry, "businessEventLogId");
-    const eventEntry = businessEventLogId
-      ? eventByBusinessLogId.get(businessEventLogId)
-      : null;
+    const logId = metadataText(entry, "businessEventLogId");
+    const event = logId ? eventByBusinessLogId.get(logId) : null;
+    if (!logId || !event) continue;
 
-    if (!businessEventLogId || !eventEntry) continue;
-
-    const nextEventTime = nextBusinessEventTime(eventEntries, eventEntry);
+    const nextEventTime = nextBusinessEventTime(events, event);
     if (nextEventTime && entryTime(entry) > nextEventTime) continue;
 
-    const group = feedbackByEventId.get(businessEventLogId) ?? [];
+    const group = feedbackByLogId.get(logId) ?? [];
     group.push(entry);
-    feedbackByEventId.set(businessEventLogId, group);
+    feedbackByLogId.set(logId, group);
     groupedFeedbackIds.add(entry.id);
   }
 
-  return sortedEntries
+  return sorted
     .filter((entry) => !groupedFeedbackIds.has(entry.id))
     .map((entry) => {
-      if (entry.sourceType !== "BUSINESS_EVENT") return makeActivityBlock(entry);
+      if (entry.sourceType !== "BUSINESS_EVENT") return makeBlock(entry);
 
-      const businessEventLogId = metadataText(entry, "businessEventLogId");
-      const feedbackEntries = businessEventLogId
-        ? feedbackByEventId.get(businessEventLogId) ?? []
-        : [];
-
-      return makeActivityBlock(entry, feedbackEntries);
+      const logId = metadataText(entry, "businessEventLogId");
+      return makeBlock(entry, logId ? feedbackByLogId.get(logId) ?? [] : []);
     });
 }
 
@@ -244,18 +228,6 @@ function activityValue(entry: TimelineEntryViewModel) {
     : entry.occurredAt;
 }
 
-function activityDateTime(entry: TimelineEntryViewModel) {
-  return formatDateTime(activityValue(entry), "");
-}
-
-function activityDate(entry: TimelineEntryViewModel) {
-  return formatDate(activityValue(entry), "");
-}
-
-function activityTime(entry: TimelineEntryViewModel) {
-  return formatTime(activityValue(entry));
-}
-
 function compactId(id?: string | null) {
   const value = String(id ?? "").trim();
   if (!value) return "-";
@@ -263,8 +235,8 @@ function compactId(id?: string | null) {
   return `${value.slice(0, 8)}...${value.slice(-6)}`;
 }
 
-function ticketRef(id: string) {
-  return `TI-${id.slice(0, 4).toUpperCase()}-${id.slice(-6).toUpperCase()}`;
+function taskItemRef(id: string) {
+  return `PX-${id.slice(0, 4).toUpperCase()}-${id.slice(-6).toUpperCase()}`;
 }
 
 function userLabel(user?: UserSummary | null) {
@@ -283,42 +255,22 @@ function initials(label?: string | null) {
     .join("");
 }
 
-function eventVisual(block: TimelineActivityBlock) {
+function eventTone(block: TimelineActivityBlock): TimelineEntryTone {
   const eventKey = String(block.eventKey || "").toLowerCase();
   const title = `${block.entry.title} ${eventKey}`.toLowerCase();
 
-  if (eventKey.includes("rejected") || title.includes("trả về")) {
-    return {
-      tone: "rose" as TimelineEntryTone,
-      icon: "rejected",
-      panelTitle: "Lý do trả về",
-    };
+  if (block.entry.sourceType === "USER_COMMENT") return "slate";
+  if (eventKey.includes("rejected") || title.includes("trả về")) return "rose";
+  if (
+    eventKey.includes("submitted") ||
+    eventKey.includes("approved") ||
+    title.includes("gửi duyệt")
+  ) {
+    return "green";
   }
-
-  if (eventKey.includes("submitted") || title.includes("gửi duyệt")) {
-    return {
-      tone: "green" as TimelineEntryTone,
-      icon: "submitted",
-      panelTitle: "Nội dung",
-    };
-  }
-
-  if (eventKey.includes("updated") || title.includes("cập nhật")) {
-    return {
-      tone: "blue" as TimelineEntryTone,
-      icon: "updated",
-      panelTitle: "Cập nhật",
-    };
-  }
-
-  return {
-    tone: block.entry.sourceType === "BUSINESS_FEEDBACK"
-      ? ("rose" as TimelineEntryTone)
-      : block.entry.tone,
-    icon: block.entry.icon,
-    panelTitle:
-      block.entry.sourceType === "BUSINESS_FEEDBACK" ? "Lý do trả về" : "Nội dung",
-  };
+  if (eventKey.includes("updated") || title.includes("cập nhật")) return "blue";
+  if (block.entry.sourceType === "BUSINESS_FEEDBACK") return "rose";
+  return block.entry.tone;
 }
 
 function toneClasses(tone?: TimelineEntryTone) {
@@ -328,15 +280,6 @@ function toneClasses(tone?: TimelineEntryTone) {
       card: "border-emerald-100",
       badge: "bg-emerald-50 text-emerald-700",
       panel: "border-emerald-100 bg-emerald-50 text-emerald-950",
-    };
-  }
-
-  if (tone === "amber") {
-    return {
-      dot: "bg-amber-400 text-white ring-amber-100",
-      card: "border-amber-100",
-      badge: "bg-amber-50 text-amber-700",
-      panel: "border-amber-100 bg-amber-50 text-amber-950",
     };
   }
 
@@ -366,26 +309,6 @@ function toneClasses(tone?: TimelineEntryTone) {
   };
 }
 
-function TimelineIcon({
-  icon,
-}: {
-  icon?: TimelineEntryIcon | "rejected" | "submitted" | "updated";
-}) {
-  const className = "h-4 w-4";
-
-  if (icon === "rejected") return <XCircle className={className} />;
-  if (icon === "submitted") return <Send className={className} />;
-  if (icon === "updated") return <PencilLine className={className} />;
-  if (icon === "message" || icon === "feedback") {
-    return <MessageSquare className={className} />;
-  }
-  if (icon === "workflow") return <GitBranch className={className} />;
-  if (icon === "notification") return <Bell className={className} />;
-  if (icon === "system") return <Info className={className} />;
-
-  return <CircleDot className={className} />;
-}
-
 function EmptyState({ children }: { children: ReactNode }) {
   return (
     <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
@@ -398,12 +321,10 @@ function HeaderMetric({
   icon,
   label,
   value,
-  subValue,
 }: {
   icon: ReactNode;
   label: string;
   value: ReactNode;
-  subValue?: ReactNode;
 }) {
   return (
     <div className="min-w-0">
@@ -414,29 +335,23 @@ function HeaderMetric({
       <div className="mt-1 truncate text-sm font-semibold text-slate-950">
         {value}
       </div>
-      {subValue ? <div className="text-xs text-slate-500">{subValue}</div> : null}
     </div>
   );
 }
 
-function SideSection({
-  id,
-  icon,
+function Panel({
   title,
-  action,
+  icon,
   children,
+  action,
 }: {
-  id?: string;
-  icon?: ReactNode;
   title: string;
-  action?: ReactNode;
+  icon?: ReactNode;
   children: ReactNode;
+  action?: ReactNode;
 }) {
   return (
-    <section
-      id={id}
-      className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-    >
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 text-base font-semibold text-slate-950">
           {icon ? <span className="text-slate-500">{icon}</span> : null}
@@ -451,20 +366,29 @@ function SideSection({
 
 function ActivityBlockCard({ block }: { block: TimelineActivityBlock }) {
   const entry = block.entry;
+  const tone = eventTone(block);
+  const classes = toneClasses(tone);
+  const actor = entry.actorLabel || "Hệ thống";
+  const eventKey = block.eventKey;
+  const isComment = entry.sourceType === "USER_COMMENT";
   const standaloneFeedback = entry.sourceType === "BUSINESS_FEEDBACK";
   const feedbackEntries =
     standaloneFeedback && !block.feedbackEntries.length
       ? [entry]
       : block.feedbackEntries;
-  const visual = eventVisual(block);
-  const classes = toneClasses(visual.tone);
-  const actor = entry.actorLabel || "Hệ thống";
+  const bodyLabel = isComment
+    ? "Trao đổi"
+    : standaloneFeedback
+      ? "Lý do / Feedback"
+      : "Nội dung";
 
   return (
     <div className="grid grid-cols-[58px_34px_minmax(0,1fr)] gap-3 sm:grid-cols-[82px_42px_minmax(0,1fr)] sm:gap-4">
       <div className="pt-4 text-right text-xs leading-5 text-slate-500">
-        <div className="font-semibold text-slate-700">{activityTime(entry)}</div>
-        <div>{activityDate(entry)}</div>
+        <div className="font-semibold text-slate-700">
+          {formatTime(activityValue(entry))}
+        </div>
+        <div>{formatDate(activityValue(entry), "")}</div>
       </div>
 
       <div className="relative flex justify-center">
@@ -476,7 +400,15 @@ function ActivityBlockCard({ block }: { block: TimelineActivityBlock }) {
             classes.dot,
           )}
         >
-          <TimelineIcon icon={visual.icon} />
+          {isComment ? (
+            <MessageSquare className="h-4 w-4" />
+          ) : tone === "rose" ? (
+            <XCircle className="h-4 w-4" />
+          ) : tone === "green" ? (
+            <Send className="h-4 w-4" />
+          ) : (
+            <CircleDot className="h-4 w-4" />
+          )}
         </div>
       </div>
 
@@ -494,31 +426,36 @@ function ActivityBlockCard({ block }: { block: TimelineActivityBlock }) {
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <h3 className="min-w-0 text-sm font-semibold text-slate-950">
-                {entry.title}
+                {isComment ? "Trao đổi nội bộ" : entry.title}
               </h3>
-              {block.eventKey ? (
+              {eventKey ? (
                 <span
                   className={cn(
                     "rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase",
                     classes.badge,
                   )}
                 >
-                  {block.eventKey}
+                  {eventKey}
                 </span>
               ) : null}
             </div>
 
             <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
-              <span>bởi {actor}</span>
+              <span>{actor}</span>
               <span>·</span>
-              <span>qua Hệ thống</span>
+              <span>{formatDateTime(activityValue(entry), "")}</span>
             </div>
           </div>
         </div>
 
         {entry.body && !standaloneFeedback ? (
-          <div className={cn("mt-4 rounded-xl border px-4 py-3 text-sm", classes.panel)}>
-            <div className="mb-1 text-xs font-semibold">{visual.panelTitle}</div>
+          <div
+            className={cn(
+              "mt-4 rounded-xl border px-4 py-3 text-sm",
+              classes.panel,
+            )}
+          >
+            <div className="mb-1 text-xs font-semibold">{bodyLabel}</div>
             <div className="whitespace-pre-wrap leading-6">{entry.body}</div>
           </div>
         ) : null}
@@ -532,10 +469,10 @@ function ActivityBlockCard({ block }: { block: TimelineActivityBlock }) {
               >
                 <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-rose-700">
                   <MessageSquare className="h-3.5 w-3.5" />
-                  <span>{visual.panelTitle}</span>
-                  {activityDateTime(feedback) ? (
+                  <span>Lý do / Feedback</span>
+                  {formatDateTime(activityValue(feedback), "") ? (
                     <span className="font-medium text-rose-600/80">
-                      {activityDateTime(feedback)}
+                      {formatDateTime(activityValue(feedback), "")}
                     </span>
                   ) : null}
                 </div>
@@ -555,10 +492,10 @@ function ActivityBlockCard({ block }: { block: TimelineActivityBlock }) {
 }
 
 function ActivityFeed({ items }: { items: TimelineEntryViewModel[] }) {
-  const blocks = groupActivityBlocks(items);
+  const blocks = useMemo(() => groupActivityBlocks(items), [items]);
 
   if (!blocks.length) {
-    return <EmptyState>Chưa có activity nào cho ticket này.</EmptyState>;
+    return <EmptyState>Chưa có activity nào cho phiếu xử lý này.</EmptyState>;
   }
 
   return (
@@ -574,8 +511,7 @@ function ReadonlyChecklist({ items }: { items: TaskItemChecklist[] }) {
   const done = items.filter((row) => row.isDone).length;
 
   return (
-    <SideSection
-      id="checklist"
+    <Panel
       icon={<ListChecks className="h-4 w-4" />}
       title="Checklist"
       action={
@@ -616,21 +552,15 @@ function ReadonlyChecklist({ items }: { items: TaskItemChecklist[] }) {
           ))}
         </div>
       ) : (
-        <EmptyState>
-          <div className="flex flex-col items-center gap-2">
-            <ClipboardList className="h-5 w-5 text-slate-400" />
-            <span>Chưa có checklist.</span>
-          </div>
-        </EmptyState>
+        <EmptyState>Chưa có checklist.</EmptyState>
       )}
-    </SideSection>
+    </Panel>
   );
 }
 
 function BusinessBindings({ items }: { items: TaskItemBinding[] }) {
   return (
-    <SideSection
-      id="business"
+    <Panel
       icon={<Link2 className="h-4 w-4" />}
       title="Liên kết nghiệp vụ"
     >
@@ -642,7 +572,7 @@ function BusinessBindings({ items }: { items: TaskItemBinding[] }) {
               className="rounded-2xl border border-slate-200 px-3 py-3"
             >
               <div className="flex gap-3">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-sm font-semibold text-slate-500">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-sm font-semibold text-slate-500">
                   {targetLabel(binding.targetType).slice(0, 1)}
                 </div>
 
@@ -678,29 +608,29 @@ function BusinessBindings({ items }: { items: TaskItemBinding[] }) {
       ) : (
         <EmptyState>Chưa có business binding.</EmptyState>
       )}
-    </SideSection>
+    </Panel>
   );
 }
 
-function TicketInfo({ item }: { item: TaskItemDetail }) {
+function DetailInfo({ item }: { item: TaskItemDetail }) {
   const parentTask = item.task;
 
   return (
-    <SideSection
-      id="info"
-      icon={<Info className="h-4 w-4" />}
-      title="Thông tin Ticket"
-    >
+    <Panel icon={<Info className="h-4 w-4" />} title="Thông tin chi tiết">
       <dl className="space-y-3 text-sm">
         <div className="flex justify-between gap-4">
-          <dt className="text-slate-500">ID</dt>
-          <dd className="font-semibold text-slate-950">{ticketRef(item.id)}</dd>
+          <dt className="text-slate-500">Mã phiếu</dt>
+          <dd className="font-semibold text-slate-950">{taskItemRef(item.id)}</dd>
         </div>
         <div className="flex justify-between gap-4">
-          <dt className="text-slate-500">Kind</dt>
-          <dd className="font-semibold text-slate-950">
-            {parentTask?.kind || "-"}
+          <dt className="text-slate-500">Task cha</dt>
+          <dd className="max-w-[220px] truncate text-right font-semibold text-slate-950">
+            {parentTask?.title || "-"}
           </dd>
+        </div>
+        <div className="flex justify-between gap-4">
+          <dt className="text-slate-500">Loại task</dt>
+          <dd className="font-semibold text-slate-950">{parentTask?.kind || "-"}</dd>
         </div>
         <div className="flex justify-between gap-4">
           <dt className="text-slate-500">Tạo lúc</dt>
@@ -709,80 +639,126 @@ function TicketInfo({ item }: { item: TaskItemDetail }) {
           </dd>
         </div>
         <div className="flex justify-between gap-4">
-          <dt className="text-slate-500">Cập nhật lần cuối</dt>
+          <dt className="text-slate-500">Cập nhật</dt>
           <dd className="text-right font-semibold text-slate-950">
             {formatDateTime(item.updatedAt)}
           </dd>
         </div>
-        <div className="flex justify-between gap-4">
-          <dt className="text-slate-500">Mô tả</dt>
-          <dd className="max-w-[220px] text-right text-slate-500">
-            {item.note ? item.note : "Không có mô tả"}
-          </dd>
-        </div>
       </dl>
-    </SideSection>
+    </Panel>
   );
 }
 
-function SectionNav({ items }: { items: NavItem[] }) {
+function SectionTabs({
+  items,
+  activeTab,
+  onChange,
+}: {
+  items: TabItem[];
+  activeTab: DetailTab;
+  onChange: (tab: DetailTab) => void;
+}) {
   return (
     <div className="mt-4 border-b border-slate-200">
-      <nav className="flex flex-wrap items-center gap-2" aria-label="Ticket sections">
-        {items.map((item, index) => (
-          <a
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "inline-flex h-11 items-center gap-2 border-b-2 px-3 text-sm font-semibold",
-              index === 0
-                ? "border-blue-600 text-blue-700"
-                : "border-transparent text-slate-600 hover:text-slate-900",
-            )}
-          >
-            {item.icon}
-            {item.label}
-          </a>
-        ))}
+      <nav className="flex flex-wrap items-center gap-2" aria-label="Phiếu xử lý">
+        {items.map((item) => {
+          const active = item.key === activeTab;
+
+          return (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => onChange(item.key)}
+              className={cn(
+                "inline-flex h-11 items-center gap-2 border-b-2 px-3 text-sm font-semibold",
+                active
+                  ? "border-blue-600 text-blue-700"
+                  : "border-transparent text-slate-600 hover:text-slate-900",
+              )}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          );
+        })}
       </nav>
     </div>
   );
 }
 
+function OverviewPanel({
+  item,
+  activityCount,
+  checklistDone,
+  checklistTotal,
+  bindingCount,
+}: {
+  item: TaskItemDetail;
+  activityCount: number;
+  checklistDone: number;
+  checklistTotal: number;
+  bindingCount: number;
+}) {
+  return (
+    <div className="space-y-5">
+      <Panel icon={<FileText className="h-4 w-4" />} title="Tổng quan">
+        {item.note ? (
+          <div className="whitespace-pre-wrap rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700">
+            {item.note}
+          </div>
+        ) : (
+          <EmptyState>Chưa có mô tả cho phiếu xử lý này.</EmptyState>
+        )}
+      </Panel>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-sm font-semibold text-slate-950">Activity</div>
+          <div className="mt-2 text-2xl font-semibold text-slate-950">
+            {activityCount}
+          </div>
+          <div className="mt-1 text-xs text-slate-500">sự kiện và trao đổi</div>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-sm font-semibold text-slate-950">Checklist</div>
+          <div className="mt-2 text-2xl font-semibold text-slate-950">
+            {checklistDone}/{checklistTotal}
+          </div>
+          <div className="mt-1 text-xs text-slate-500">tiêu chí hoàn thành</div>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-sm font-semibold text-slate-950">
+            Liên kết nghiệp vụ
+          </div>
+          <div className="mt-2 text-2xl font-semibold text-slate-950">
+            {bindingCount}
+          </div>
+          <div className="mt-1 text-xs text-slate-500">business object</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TaskItemDetailClient({ item }: { item: TaskItemDetail }) {
+  const [activeTab, setActiveTab] = useState<DetailTab>("activity");
   const parentTask = item.task;
-  const checklists = item.checklists ?? [];
-  const timeline = item.timeline ?? [];
-  const businessBindings = item.businessBindings ?? [];
+  const checklists = useMemo(() => item.checklists ?? [], [item.checklists]);
+  const timeline = useMemo(() => item.timeline ?? [], [item.timeline]);
+  const businessBindings = useMemo(
+    () => item.businessBindings ?? [],
+    [item.businessBindings],
+  );
   const assignee = userLabel(item.assignedToUser);
   const checklistDone = checklists.filter((row) => row.isDone).length;
+  const activityBlocks = useMemo(() => groupActivityBlocks(timeline), [timeline]);
   const ref = parentTask?.periodKey || compactId(parentTask?.id);
-  const sectionItems: NavItem[] = [
-    {
-      label: "Tổng quan",
-      href: "#overview",
-      icon: <FileText className="h-4 w-4" />,
-    },
-    {
-      label: "Activity",
-      href: "#activity",
-      icon: <GitBranch className="h-4 w-4" />,
-    },
-    {
-      label: "Checklist",
-      href: "#checklist",
-      icon: <ListChecks className="h-4 w-4" />,
-    },
-    {
-      label: "Liên kết nghiệp vụ",
-      href: "#business",
-      icon: <Link2 className="h-4 w-4" />,
-    },
-    {
-      label: "Thông tin",
-      href: "#info",
-      icon: <Info className="h-4 w-4" />,
-    },
+  const tabs: TabItem[] = [
+    { key: "overview", label: "Tổng quan", icon: <FileText className="h-4 w-4" /> },
+    { key: "activity", label: "Activity", icon: <GitBranch className="h-4 w-4" /> },
+    { key: "checklist", label: "Checklist", icon: <ListChecks className="h-4 w-4" /> },
+    { key: "business", label: "Liên kết nghiệp vụ", icon: <Link2 className="h-4 w-4" /> },
+    { key: "info", label: "Thông tin", icon: <Info className="h-4 w-4" /> },
   ];
 
   return (
@@ -796,16 +772,12 @@ export default function TaskItemDetailClient({ item }: { item: TaskItemDetail })
                 label: parentTask?.title || "Task",
                 href: parentTask ? `/admin/tasks/${parentTask.id}` : undefined,
               },
-              { label: item.title || "Ticket" },
-              { label: `Ticket #${ticketRef(item.id)}` },
+              { label: item.title || "Phiếu xử lý" },
             ]}
           />
         </div>
 
-        <section
-          id="overview"
-          className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-        >
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               {parentTask ? (
@@ -818,7 +790,16 @@ export default function TaskItemDetailClient({ item }: { item: TaskItemDetail })
                 </Link>
               ) : null}
 
-              <div className="mt-5 flex min-w-0 flex-wrap items-center gap-3">
+              <div className="mt-5 flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
+                  Phiếu xử lý
+                </span>
+                <span className="font-mono text-xs font-semibold text-slate-500">
+                  {taskItemRef(item.id)}
+                </span>
+              </div>
+
+              <div className="mt-4 flex min-w-0 flex-wrap items-center gap-3">
                 <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
                   {item.title}
                 </h1>
@@ -830,9 +811,9 @@ export default function TaskItemDetailClient({ item }: { item: TaskItemDetail })
             </div>
 
             <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm ring-1 ring-slate-100">
-              <div className="text-xs font-medium text-slate-500">Ticket</div>
+              <div className="text-xs font-medium text-slate-500">Mã phiếu</div>
               <div className="mt-1 font-mono text-sm font-semibold text-slate-900">
-                {ticketRef(item.id)}
+                {taskItemRef(item.id)}
               </div>
             </div>
           </div>
@@ -858,11 +839,7 @@ export default function TaskItemDetailClient({ item }: { item: TaskItemDetail })
               label="Task cha"
               value={parentTask?.title || "-"}
             />
-            <HeaderMetric
-              icon={<Tag className="h-4 w-4" />}
-              label="Ref"
-              value={ref}
-            />
+            <HeaderMetric icon={<Tag className="h-4 w-4" />} label="Ref" value={ref} />
             <HeaderMetric
               icon={<Clock3 className="h-4 w-4" />}
               label="Tạo lúc"
@@ -871,38 +848,52 @@ export default function TaskItemDetailClient({ item }: { item: TaskItemDetail })
           </div>
         </section>
 
-        <SectionNav items={sectionItems} />
+        <SectionTabs items={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
         <div className="mt-4 grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
-          <section
-            id="activity"
-            className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-          >
-            <div className="mb-5 flex items-start justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-slate-950">
-                    Activity feed
-                  </h2>
-                  <Info className="h-4 w-4 text-slate-400" />
-                </div>
-              </div>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                {groupActivityBlocks(timeline).length} activity
-              </span>
-            </div>
-            <ActivityFeed items={timeline} />
-          </section>
+          <div className="min-w-0">
+            {activeTab === "overview" ? (
+              <OverviewPanel
+                item={item}
+                activityCount={activityBlocks.length}
+                checklistDone={checklistDone}
+                checklistTotal={checklists.length}
+                bindingCount={businessBindings.length}
+              />
+            ) : null}
+
+            {activeTab === "activity" ? (
+              <Panel
+                title="Activity feed"
+                icon={<GitBranch className="h-4 w-4" />}
+                action={
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                    {activityBlocks.length} activity
+                  </span>
+                }
+              >
+                <ActivityFeed items={timeline} />
+              </Panel>
+            ) : null}
+
+            {activeTab === "checklist" ? <ReadonlyChecklist items={checklists} /> : null}
+            {activeTab === "business" ? (
+              <BusinessBindings items={businessBindings} />
+            ) : null}
+            {activeTab === "info" ? <DetailInfo item={item} /> : null}
+          </div>
 
           <aside className="space-y-5">
-            <TicketInfo item={item} />
-            <ReadonlyChecklist items={checklists} />
+            <DetailInfo item={item} />
             <BusinessBindings items={businessBindings} />
-            <SideSection
-              icon={<Tag className="h-4 w-4" />}
-              title="Thông tin mở rộng"
-            >
+            <Panel icon={<Tag className="h-4 w-4" />} title="Thông tin mở rộng">
               <dl className="space-y-3 text-sm">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-slate-500">Activity</dt>
+                  <dd className="font-semibold text-slate-950">
+                    {activityBlocks.length}
+                  </dd>
+                </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-slate-500">Priority</dt>
                   <dd>
@@ -914,13 +905,13 @@ export default function TaskItemDetailClient({ item }: { item: TaskItemDetail })
                   <dd className="font-semibold text-slate-950">{assignee}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-slate-500">Task item id</dt>
+                  <dt className="text-slate-500">Phiếu xử lý id</dt>
                   <dd className="font-mono text-xs text-slate-500">
                     {compactId(item.id)}
                   </dd>
                 </div>
               </dl>
-            </SideSection>
+            </Panel>
           </aside>
         </div>
       </div>
