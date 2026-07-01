@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import TaskItemDetailClient from "@/domains/task/client/TaskItemDetailClient";
-import { getTaskItemDetail } from "@/domains/task/server/core/task.service";
+import { getTaskItemDetailPageData } from "@/domains/task/server/core/task-item-detail.service";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
 
@@ -15,7 +15,7 @@ function serialize<T>(value: T): T {
 export default async function AdminTaskItemDetailPage(props: PageProps) {
   const { id } = await props.params;
   const auth = await requirePermission("TASK_VIEW");
-  const item = await getTaskItemDetail(prisma, id, auth);
+  const item = await getTaskItemDetailPageData(prisma, id, auth);
 
   if (!item) notFound();
 

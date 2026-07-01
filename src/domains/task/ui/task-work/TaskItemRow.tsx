@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
@@ -11,11 +13,6 @@ import {
   Check,
   Settings2,
   ArrowRightLeft,
-  Bell,
-  CircleDot,
-  GitBranch,
-  Info,
-  MessageSquare,
   ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -37,16 +34,6 @@ function formatDate(value?: Date | string | null) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   return date.toLocaleDateString("vi-VN");
-}
-
-function formatDateTime(value?: Date | string | null) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString("vi-VN", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
 }
 
 function dueTone(value?: Date | string | null) {
@@ -114,69 +101,68 @@ function priorityTone(value?: string | null) {
   return "bg-blue-50 text-blue-600";
 }
 
-function timelineToneClass(tone?: TimelineEntryViewModel["tone"]) {
-  if (tone === "blue") return "bg-blue-50 text-blue-600 ring-blue-100";
-  if (tone === "green") return "bg-emerald-50 text-emerald-600 ring-emerald-100";
-  if (tone === "amber") return "bg-amber-50 text-amber-700 ring-amber-100";
-  if (tone === "rose") return "bg-rose-50 text-rose-600 ring-rose-100";
-  return "bg-slate-100 text-slate-600 ring-slate-200";
+function timelineStats(items: TimelineEntryViewModel[]) {
+  const feedbackCount = items.filter(
+    (entry) => entry.sourceType === "BUSINESS_FEEDBACK" || entry.icon === "feedback",
+  ).length;
+  const commentCount = items.filter(
+    (entry) => entry.sourceType === "USER_COMMENT" || entry.icon === "message",
+  ).length;
+
+  return {
+    activityCount: items.length,
+    feedbackCount,
+    commentCount,
+  };
 }
 
-function TimelineIcon({ icon }: { icon?: TimelineEntryViewModel["icon"] }) {
-  const className = "h-3.5 w-3.5";
+function itemTimelineStats(item: any) {
+  const stats = item?.timelineStats;
+  if (stats && typeof stats === "object") {
+    return {
+      activityCount: Number(stats.activityCount ?? 0),
+      feedbackCount: Number(stats.feedbackCount ?? 0),
+      commentCount: Number(stats.commentCount ?? 0),
+    };
+  }
 
-  if (icon === "message") return <MessageSquare className={className} />;
-  if (icon === "workflow") return <GitBranch className={className} />;
-  if (icon === "notification") return <Bell className={className} />;
-  if (icon === "system") return <Info className={className} />;
-
-  return <CircleDot className={className} />;
+  return timelineStats(Array.isArray(item?.timeline) ? item.timeline : []);
 }
 
-function TaskItemTimelineFeed({ items }: { items: TimelineEntryViewModel[] }) {
-  if (!items.length) return null;
+function TaskItemSignalStats({
+  stats,
+  bindingCount,
+}: {
+  stats: { activityCount: number; feedbackCount: number; commentCount: number };
+  bindingCount: number;
+}) {
+  if (!stats.activityCount && !bindingCount) return null;
 
   return (
-    <div className="mt-3 border-t border-slate-100 pt-3">
-      <div className="space-y-3">
-        {items.map((entry) => (
-          <div key={entry.id} className="grid grid-cols-[28px_minmax(0,1fr)] gap-3">
-            <div
-              className={cn(
-                "mt-0.5 flex h-7 w-7 items-center justify-center rounded-full ring-1",
-                timelineToneClass(entry.tone),
-              )}
-            >
-              <TimelineIcon icon={entry.icon} />
-            </div>
+    <div className="flex shrink-0 items-center gap-1.5">
+      {stats.feedbackCount ? (
+        <span className="rounded-full bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-100">
+          {stats.feedbackCount} luồng phản hồi
+        </span>
+      ) : null}
 
-            <div className="min-w-0">
-              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                <div className="min-w-0 truncate text-sm font-semibold text-slate-800">
-                  {entry.title}
-                </div>
-                {entry.occurredAt ? (
-                  <div className="shrink-0 text-[11px] font-medium text-slate-400">
-                    {formatDateTime(entry.occurredAt)}
-                  </div>
-                ) : null}
-              </div>
+      {stats.commentCount ? (
+        <span className="rounded-full bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200">
+          {stats.commentCount} bình luận
+        </span>
+      ) : null}
 
-              {entry.body ? (
-                <div className="mt-1 whitespace-pre-wrap text-sm leading-5 text-slate-600">
-                  {entry.body}
-                </div>
-              ) : null}
+      {stats.activityCount && !stats.feedbackCount && !stats.commentCount ? (
+        <span className="rounded-full bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-700 ring-1 ring-blue-100">
+          {stats.activityCount} activity
+        </span>
+      ) : null}
 
-              {entry.actorLabel ? (
-                <div className="mt-1 text-[11px] font-medium text-slate-400">
-                  {entry.actorLabel}
-                </div>
-              ) : null}
-            </div>
-          </div>
-        ))}
-      </div>
+      {bindingCount ? (
+        <span className="rounded-full bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-slate-200">
+          {bindingCount} liên kết
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -228,10 +214,7 @@ export default function TaskItemRow({
   const itemExecutions = splitExecutions(item.executions ?? []);
   const hasExecutions = itemExecutions.grouped.length > 0;
   const trackingExecutions = itemExecutions.grouped.filter(isTrackingExecution);
-  const timelineItems: TimelineEntryViewModel[] = Array.isArray(item.timeline)
-    ? item.timeline
-    : [];
-  const hasTimeline = timelineItems.length > 0;
+  const signalStats = itemTimelineStats(item);
 
   const isPending =
     Boolean(item._pending) || String(item.id || "").startsWith("temp-");
@@ -267,7 +250,6 @@ export default function TaskItemRow({
   const hasChecklists = checklistTotal > 0;
   const checklistProgress = checklistTotal ? checklistDone / checklistTotal : 0;
   const isChecklistOpen = Boolean(expanded) || isAddingChecklist;
-  const isTimelineOpen = Boolean(expanded) && hasTimeline;
 
   const checklistDoneState =
     hasChecklists && checklistTotal > 0 && checklistDone === checklistTotal;
@@ -432,10 +414,16 @@ export default function TaskItemRow({
           </div>
         </div>
 
+        <TaskItemSignalStats
+          stats={signalStats}
+          bindingCount={itemExecutions.grouped.length}
+        />
+
         {hasExecutions ? (
-          <div className="ml-auto min-w-0 flex-1 overflow-hidden border-l border-slate-200 pl-3">
+          <div className="min-w-[180px] max-w-[320px] flex-1 overflow-hidden border-l border-slate-200 pl-3">
             <ExecutionMiniInlineList
               items={itemExecutions.grouped}
+              limit={2}
               onPreview={onPreview}
               onMore={() => {
                 if (!isPending) onManage(item);
@@ -443,7 +431,7 @@ export default function TaskItemRow({
             />
           </div>
         ) : (
-          <div className="ml-auto min-w-0 flex-1 overflow-hidden" />
+          <div className="min-w-0 flex-1 overflow-hidden" />
         )}
 
         <div className="relative shrink-0">
@@ -460,27 +448,6 @@ export default function TaskItemRow({
               Chi tiết
               <ExternalLink className="h-3.5 w-3.5" />
             </Link>
-          ) : null}
-
-          {!hasChecklists && hasTimeline ? (
-            <button
-              type="button"
-              disabled={isPending}
-              title={expanded ? "Thu gọn timeline" : "Mở timeline"}
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-
-                if (!isPending) onToggleExpand(item);
-              }}
-              className="mr-1 inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {expanded ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-            </button>
           ) : null}
 
           <button
@@ -580,9 +547,6 @@ export default function TaskItemRow({
         />
       ) : null}
 
-      {!isPending && isTimelineOpen ? (
-        <TaskItemTimelineFeed items={timelineItems} />
-      ) : null}
     </div>
   );
 }

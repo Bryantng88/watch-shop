@@ -37,7 +37,7 @@ import type {
   TimelineEntryTone,
   TimelineEntryViewModel,
 } from "@/domains/shared/timeline/server/timeline-renderer.types";
-import { targetLabel } from "@/domains/task/ui/execution";
+import { targetLabel } from "@/domains/task/ui/execution/execution-ui.utils";
 import { cn } from "@/lib/utils";
 
 type UserSummary = {

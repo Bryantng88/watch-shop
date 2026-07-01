@@ -5,6 +5,7 @@ import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useNotifications } from "../__hooks/useNotifications";
+import type { AdminNotificationItem } from "../__hooks/useNotifications";
 
 type AdminTopbarProps = {
     title?: string;
@@ -13,8 +14,14 @@ type AdminTopbarProps = {
         roles?: string[];
     };
 };
-function getNotificationRoute(item: any) {
-    const meta = item.metadata ?? {};
+function metadataRecord(value: unknown): Record<string, unknown> {
+    return value && typeof value === "object" && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : {};
+}
+
+function getNotificationRoute(item: AdminNotificationItem) {
+    const meta = metadataRecord(item.metadata);
 
     const rawRoute =
         typeof meta.route === "string"
@@ -22,7 +29,7 @@ function getNotificationRoute(item: any) {
             : typeof meta.link === "string"
                 ? meta.link
                 : typeof meta.productId === "string"
-                    ? `/admin/watches/${meta.productId}?focus=${meta.focus ?? "pricing"}`
+                    ? `/admin/watches/${meta.productId}?focus=${typeof meta.focus === "string" ? meta.focus : "pricing"}`
                     : "/admin/watches";
 
     const separator = rawRoute.includes("?") ? "&" : "?";
@@ -56,6 +63,7 @@ export default function AdminTopbar({
     const {
         items,
         unreadCount,
+        fetchNotifications,
         markAsRead,
         markAllAsRead,
     } = useNotifications();
@@ -95,7 +103,13 @@ export default function AdminTopbar({
                     <div className="relative" ref={boxRef}>
                         <button
                             type="button"
-                            onClick={() => setOpenNotify((v) => !v)}
+                            onClick={() => {
+                                setOpenNotify((value) => {
+                                    const next = !value;
+                                    if (next) void fetchNotifications();
+                                    return next;
+                                });
+                            }}
                             className="relative grid h-9 w-9 place-items-center rounded-full border hover:bg-gray-50"
                         >
                             <Bell size={16} />

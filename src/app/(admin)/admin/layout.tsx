@@ -5,10 +5,11 @@ import { redirect } from "next/navigation";
 import { AppToastProvider } from "@/domains/shared/feedback/AppToastProvider";
 import { AppDialogProvider } from "@/domains/shared/feedback/AppDialogProvider";
 import { AppProgressProvider } from "@/domains/shared/feedback/AppProgressProvider";
-import { getSideMenuNotificationCounts } from "./_server/sidebar-notifications";
+import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-    const user = await getCurrentUser();
+    const totalStartedAt = perfNow();
+    const user = await perfStep("admin-layout", "getCurrentUser", getCurrentUser);
 
     if (!user) {
         redirect("/login");
@@ -20,7 +21,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         redirect("/403");
     }
 
-    const notificationCounts = await getSideMenuNotificationCounts();
+    perfLog("admin-layout", "totalBeforeRender", totalStartedAt);
 
     return (
         <AppToastProvider>
@@ -28,13 +29,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 <AppProgressProvider>
                     <div className="grid h-screen overflow-hidden bg-slate-50 lg:grid-cols-[76px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)]">
                         <div className="relative z-50 hidden overflow-visible bg-[#11191f] lg:block">
-                            <AdminSidebar user={{ permissions }} notifications={notificationCounts} />
+                            <AdminSidebar user={{ permissions }} />
                         </div>
 
                         <div className="lg:hidden">
                             <AdminSidebar
                                 user={{ permissions }}
-                                notifications={notificationCounts}
                                 variant="mobile"
                             />
                         </div>

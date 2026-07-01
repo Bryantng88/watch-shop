@@ -1,5 +1,6 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import {
   CheckCircle2,
@@ -12,6 +13,7 @@ import {
 import { TaskStatus } from "@prisma/client";
 import RowActions from "@/domains/shared/ui/list/RowActions";
 import type { TaskWithRelations } from "../../server/core/task.repo";
+import { getTaskDetailAction } from "../../actions/task.actions";
 import TaskWorkPanel from "../task-work/TaskWorkPanel";
 import TaskPagination from "./TaskPagination";
 import TaskListViewTabs from "./TaskListViewTabs";
@@ -44,7 +46,7 @@ function userLabel(
   return user?.name || user?.email || "—";
 }
 
-function canExpand(_row: any) {
+function canExpand() {
   return true;
 }
 
@@ -132,6 +134,20 @@ function isTaskItemDone(item: any) {
 }
 
 function taskProgress(row: TaskWithRelations) {
+  const summary = (row as any).taskProgressSummary;
+  if (summary && typeof summary === "object") {
+    const total = Number(summary.total ?? 0);
+    const done = Number(summary.done ?? 0);
+    const percent =
+      typeof summary.percent === "number"
+        ? summary.percent
+        : total > 0
+          ? Math.round((done / total) * 100)
+          : 0;
+
+    return { done, total, percent };
+  }
+
   const items = ((row as any).taskItems ?? []) as any[];
   const total = items.length;
   const done = items.filter(isTaskItemDone).length;
@@ -208,6 +224,38 @@ export default function TaskListTable({
 }) {
   const previewState = useBusinessEntityPreview();
   const [localItems, setLocalItems] = useState(items);
+  const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null);
+
+  async function loadTaskDetail(row: TaskWithRelations) {
+    if ((row as any)._detailLoaded) return row;
+
+    setLoadingTaskId(row.id);
+    try {
+      const result = await getTaskDetailAction(row.id);
+      const nextTask = result?.task
+        ? { ...result.task, _detailLoaded: true }
+        : { ...row, _detailLoaded: true };
+
+      setLocalItems((prev) =>
+        prev.map((task) => (task.id === row.id ? (nextTask as any) : task)),
+      );
+
+      return nextTask as TaskWithRelations;
+    } finally {
+      setLoadingTaskId(null);
+    }
+  }
+
+  async function handleToggleExpand(row: TaskWithRelations) {
+    if (expandedTaskId === row.id) {
+      onToggleExpand?.(row);
+      return;
+    }
+
+    const nextRow = await loadTaskDetail(row);
+    onToggleExpand?.(nextRow);
+  }
+
   function handleTaskItemsChange(taskId: string, nextTaskItems: any[]) {
     setLocalItems((prev) =>
       prev.map((task) =>
@@ -285,7 +333,7 @@ export default function TaskListTable({
                   <Fragment key={row.id}>
                     <tr
                       onClick={() => {
-                        if (expandable) onToggleExpand?.(row);
+                        if (expandable) void handleToggleExpand(row);
                       }}
                       className={
                         expandable
@@ -299,7 +347,7 @@ export default function TaskListTable({
                             type="button"
                             onClick={(event) => {
                               event.stopPropagation();
-                              onToggleExpand?.(row);
+                              void handleToggleExpand(row);
                             }}
                             className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                             aria-label={expanded ? "Thu gọn task" : "Mở rộng task"}
@@ -362,7 +410,7 @@ export default function TaskListTable({
                             {
                               key: "toggle",
                               label: expanded ? "Thu gọn xử lý" : "Xem xử lý",
-                              onClick: (r) => onToggleExpand?.(r),
+                              onClick: (r) => void handleToggleExpand(r),
                             },
                             {
                               key: "edit",
@@ -437,6 +485,11 @@ export default function TaskListTable({
                             }
                             onTaskItemsChange={handleTaskItemsChange}
                           />
+                          {loadingTaskId === row.id ? (
+                            <div className="px-4 py-3 text-sm text-slate-500">
+                              Đang tải task item...
+                            </div>
+                          ) : null}
                         </td>
                       </tr>
                     ) : null}

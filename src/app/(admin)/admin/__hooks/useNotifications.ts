@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 export type AdminNotificationItem = {
     id: string;
@@ -9,16 +9,17 @@ export type AdminNotificationItem = {
     message: string;
     priority: "LOW" | "NORMAL" | "HIGH";
     isRead: boolean;
-    metadata: any;
+    metadata: unknown;
     createdAt: string;
 };
 
 export function useNotifications() {
     const [items, setItems] = useState<AdminNotificationItem[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
 
     const fetchNotifications = useCallback(async () => {
+        setLoading(true);
         try {
             const res = await fetch("/api/admin/notifications?take=6", {
                 cache: "no-store",
@@ -56,12 +57,6 @@ export function useNotifications() {
         setItems((prev) => prev.map((x) => ({ ...x, isRead: true })));
         setUnreadCount(0);
     }, []);
-
-    useEffect(() => {
-        fetchNotifications();
-        const timer = window.setInterval(fetchNotifications, 15000);
-        return () => window.clearInterval(timer);
-    }, [fetchNotifications]);
 
     return useMemo(
         () => ({

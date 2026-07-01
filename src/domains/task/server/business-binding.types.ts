@@ -11,7 +11,10 @@ export { TaskExecutionTargetType as BusinessBindingTargetType };
 export type BusinessBindingTargetType = TaskExecutionTargetType;
 export type BusinessBindingActionType = TaskExecutionActionType;
 
-export type BusinessBinding = TaskExecution;
+export type BusinessBinding = Pick<
+  TaskExecution,
+  "id" | "targetType" | "targetId" | "taskItemId" | "actionType" | "metadataJson"
+>;
 
 export type BusinessBindingDTO = {
   id: string;

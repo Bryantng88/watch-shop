@@ -16,6 +16,7 @@ import {
     MonitorCog,
     CameraIcon,
     CheckSquare,
+    ListTodo,
     Wrench,
     AlertCircle,
 } from "lucide-react";
@@ -130,6 +131,13 @@ const NAV: NavEntry[] = [
         icon: CheckSquare,
         permission: PERMISSIONS.TASK_VIEW,
         notificationKey: "tasks",
+    },
+    {
+        type: "item",
+        href: "/admin/task-items",
+        label: "Task Items",
+        icon: ListTodo,
+        permission: PERMISSIONS.TASK_VIEW,
     },
 
     { type: "group", label: "Hệ thống" },

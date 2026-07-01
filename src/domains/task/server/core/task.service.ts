@@ -1,8 +1,7 @@
-import { TaskKind, TaskPeriod, TaskStatus } from "@prisma/client";
+import { TaskKind, TaskPeriod, TaskStatus, type TaskPriority } from "@prisma/client";
 import type { DB } from "@/server/db/client";
 import {
   completeRelatedTasksRepo,
-  countTaskDueBucketsRepo,
   countTaskKindsRepo,
   countTaskViewsRepo,
   createTaskRepo,
@@ -10,20 +9,49 @@ import {
   findActivePeriodTaskRepo,
   findOpenRelatedTasksRepo,
   getTaskByIdRepo,
+  isSharedTaskKind,
   listAssignableUsersRepo,
   listTasksRepo,
+  createTaskItemRepo,
   setTaskStatusRepo,
   updateTaskRepo,
 } from "./task.repo";
-import { getTaskItemDetailRepo } from "./task-query.repo";
+import {
+  getTaskItemDetailRepo,
+  listTaskItemsRepo,
+  listTaskOptionsForTaskItemRepo,
+} from "./task-query.repo";
 import type {
   CompleteRelatedTasksInput,
   CreateTaskInput,
   EnsureSystemTaskInput,
   FindOpenRelatedTasksInput,
+  TaskItemListFilters,
   TaskListFilters,
   UpdateTaskInput,
 } from "../task.types";
+
+type TaskItemAccessShape = {
+  assignedToUserId?: string | null;
+  task?: {
+    kind?: TaskKind | null;
+    createdByUserId?: string | null;
+    assignedToUserId?: string | null;
+  } | null;
+};
+
+function omitTaskAccessFields<T extends TaskItemAccessShape>(item: T) {
+  if (!item.task) return item;
+
+  const task = { ...item.task };
+  delete task.createdByUserId;
+  delete task.assignedToUserId;
+
+  return {
+    ...item,
+    task,
+  };
+}
 
 export function getAuthUserId(auth: any): string | null {
   return auth?.user?.id ?? auth?.id ?? auth?.userId ?? null;
@@ -156,6 +184,26 @@ async function assertCanAccessTask(db: DB, id: string, auth: any) {
   return task;
 }
 
+function assertCanAccessTaskItemDetail(item: TaskItemAccessShape, auth: unknown) {
+  const userId = getAuthUserId(auth);
+  assertUser(userId);
+
+  if (authCanViewAllTasks(auth)) return;
+
+  const task = item?.task;
+
+  if (
+    isSharedTaskKind(task?.kind) ||
+    task?.createdByUserId === userId ||
+    task?.assignedToUserId === userId ||
+    item?.assignedToUserId === userId
+  ) {
+    return;
+  }
+
+  throw new Error("Bạn không có quyền thao tác task item này");
+}
+
 export async function getTaskListPageData(
   db: DB,
   input: { auth: any; filters: TaskListFilters },
@@ -167,11 +215,10 @@ export async function getTaskListPageData(
   const view = input.filters.view || "all";
   const kind = input.filters.kind || "ALL";
 
-  const [list, viewCounts, kindCounts, dueCounts, users] = await Promise.all([
+  const [list, viewCounts, kindCounts, users] = await Promise.all([
     listTasksRepo(db, { userId, canViewAll, filters: input.filters }),
     countTaskViewsRepo(db, { userId, canViewAll, kind }),
     countTaskKindsRepo(db, { userId, canViewAll, view }),
-    countTaskDueBucketsRepo(db, { userId, canViewAll, view }),
     listAssignableUsersRepo(db),
   ]);
 
@@ -181,7 +228,30 @@ export async function getTaskListPageData(
       ...viewCounts,
       ...kindCounts,
     },
-    dueCounts,
+    users,
+    currentUserId: userId,
+    canViewAll,
+  };
+}
+
+export async function getTaskItemListPageData(
+  db: DB,
+  input: { auth: unknown; filters: TaskItemListFilters },
+) {
+  const userId = getAuthUserId(input.auth);
+  assertUser(userId);
+
+  const canViewAll = authCanViewAllTasks(input.auth);
+
+  const [list, taskOptions, users] = await Promise.all([
+    listTaskItemsRepo(db, { userId, canViewAll, filters: input.filters }),
+    listTaskOptionsForTaskItemRepo(db, { userId, canViewAll }),
+    listAssignableUsersRepo(db),
+  ]);
+
+  return {
+    ...list,
+    taskOptions,
     users,
     currentUserId: userId,
     canViewAll,
@@ -200,9 +270,9 @@ export async function getTaskItemDetail(
   const item = await getTaskItemDetailRepo(db, id);
   if (!item) return null;
 
-  await assertCanAccessTask(db, item.taskId, auth);
+  assertCanAccessTaskItemDetail(item, auth);
 
-  return item;
+  return omitTaskAccessFields(item);
 }
 
 export async function createTask(db: DB, input: CreateTaskInput, auth: any) {
@@ -266,6 +336,45 @@ export async function createTask(db: DB, input: CreateTaskInput, auth: any) {
     wasExistingPeriodTask: false,
   };
 }
+export async function quickCreateTaskItem(
+  db: DB,
+  input: {
+    kind: TaskKind;
+    title: string;
+    assignedToUserId?: string | null;
+    priority?: TaskPriority;
+    dueAt?: Date | string | null;
+  },
+  auth: unknown,
+) {
+  const title = String(input.title ?? "").trim();
+  if (!title) throw new Error("Vui long nhap tieu de task item");
+
+  const taskResult = await createTask(
+    db,
+    {
+      kind: input.kind,
+      title,
+      assignedToUserId: input.assignedToUserId ?? null,
+    },
+    auth,
+  );
+
+  const item = await createTaskItemRepo(db, {
+    taskId: taskResult.task.id,
+    title,
+    assignedToUserId: input.assignedToUserId ?? null,
+    priority: input.priority,
+    dueAt: input.dueAt ?? null,
+  });
+
+  return {
+    task: taskResult.task,
+    item,
+    wasExistingPeriodTask: taskResult.wasExistingPeriodTask,
+  };
+}
+
 export async function ensureSystemTask(db: DB, input: EnsureSystemTaskInput) {
   if (!input.title?.trim()) throw new Error("System task thiếu tiêu đề");
   return ensureSystemTaskRepo(db, input);

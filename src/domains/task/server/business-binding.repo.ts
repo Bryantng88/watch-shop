@@ -5,6 +5,16 @@ import type {
   CreateBusinessBindingInput,
 } from "./business-binding.types";
 import type { BusinessBindingTargetType } from "./business-binding.types";
+
+const BUSINESS_BINDING_SELECT = {
+  id: true,
+  targetType: true,
+  targetId: true,
+  taskItemId: true,
+  actionType: true,
+  metadataJson: true,
+} as const;
+
 function clean(value: unknown) {
   return String(value ?? "").trim();
 }
@@ -74,6 +84,7 @@ export async function findBusinessBindingsByTarget(
       targetType,
       targetId: cleanTargetId,
     },
+    select: BUSINESS_BINDING_SELECT,
     orderBy: { createdAt: "desc" },
   });
 }
@@ -118,6 +129,7 @@ export async function findBusinessBindingsByTaskItem(
     where: {
       taskItemId: cleanTaskItemId,
     },
+    select: BUSINESS_BINDING_SELECT,
     orderBy: { createdAt: "desc" },
   });
 }
@@ -138,7 +150,7 @@ export async function findTaskItemIdsByTargetIds(
 
   const rows = await client.taskExecution.findMany({
     where: {
-      targetType: input.targetType as any,
+      targetType: input.targetType,
       targetId: { in: targetIds },
       taskItemId: { not: null },
     },

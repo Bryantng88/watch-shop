@@ -65,6 +65,7 @@ export async function createTaskAction(input: CreateTaskInput) {
   const result = await createTask(prisma, input, auth);
 
   revalidatePath("/admin/tasks");
+  revalidatePath("/admin/task-items");
 
   return {
     ok: true,
@@ -215,6 +216,7 @@ export async function createTaskItemAction(input: {
   });
   revalidatePath("/admin/tasks");
   revalidatePath(`/admin/tasks/${cleanTaskId}`);
+  revalidatePath("/admin/task-items");
 
   return { ok: true, item };
 }
@@ -253,6 +255,7 @@ export async function updateTaskItemAction(
 
   revalidatePath("/admin/tasks");
   revalidatePath(`/admin/tasks/${item.taskId}`);
+  revalidatePath("/admin/task-items");
 
   return {
     ok: true,
@@ -287,6 +290,7 @@ export async function changeTaskItemDoneAction(
 
   revalidatePath("/admin/tasks");
   revalidatePath(`/admin/tasks/${item.taskId}`);
+  revalidatePath("/admin/task-items");
 
   return { ok: true, item };
 }
@@ -310,6 +314,7 @@ export async function deleteTaskItemAction(itemId: string) {
   }
 
   revalidatePath("/admin/tasks");
+  revalidatePath("/admin/task-items");
 
   return { ok: true, item };
 }
@@ -364,6 +369,7 @@ export async function changeTaskItemChecklistDoneAction(
   await syncTaskStatusFromChecklistRepo(prisma, row.taskItem.taskId);
 
   revalidatePath("/admin/tasks");
+  revalidatePath("/admin/task-items");
   revalidatePath(`/admin/tasks/${row.taskItem.taskId}`);
 
   return { ok: true, checklist };
@@ -389,6 +395,7 @@ export async function quickCreateTaskItemAction(
   );
 
   revalidatePath("/admin/tasks");
+  revalidatePath("/admin/task-items");
 
   return {
     ok: true,

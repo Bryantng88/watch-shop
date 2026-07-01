@@ -116,3 +116,14 @@ export function getTaskCompletionRuleLabel(value?: string | null) {
   return getTaskCompletionRuleDefinition(value)?.label ?? value;
 }
 
+export function listTaskCompletionRuleOptions(domain?: unknown) {
+  void domain;
+
+  return TASK_COMPLETION_RULES.map((rule) => ({
+    key: rule.key,
+    label: rule.label,
+    description: rule.description,
+    requiredEvents: rule.requiredEvents,
+  }));
+}
+

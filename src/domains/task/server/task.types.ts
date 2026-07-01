@@ -22,6 +22,16 @@ export type TaskListFilters = {
   pageSize?: number;
 };
 
+export type TaskItemListFilters = {
+  q?: string;
+  status?: TaskStatus | "OPEN" | "ALL";
+  priority?: TaskPriority | "ALL";
+  kind?: TaskKind | "ALL";
+  taskId?: string | null;
+  page?: number;
+  pageSize?: number;
+};
+
 export type TaskDomainLinksInput = {
   watchId?: string | null;
   orderId?: string | null;

@@ -1,5 +1,4 @@
 import { TaskKind, TaskPriority, TaskSource, TaskStatus } from "@prisma/client";
-import { getTaskCompletionRuleLabel } from "../server/task-rule-keys";
 
 export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
   TODO: "Cần làm",
@@ -26,6 +25,22 @@ export const TASK_KIND_LABEL: Record<TaskKind, string> = {
   SERVICE: "Kỹ thuật",
   PERSONAL: "Cá nhân",
   FREE: "Tự do",
+};
+
+export const TASK_DOMAIN_LABEL: Record<string, string> = {
+  GENERAL: "Chung",
+  WATCH: "Watch",
+  ORDER: "Order",
+  SHIPMENT: "Shipment",
+  PAYMENT: "Payment",
+  SERVICE_REQUEST: "Service",
+  TECHNICAL_ISSUE: "Technical issue",
+  CUSTOMER: "Khach hang",
+};
+
+export const TASK_COMPLETION_MODE_LABEL: Record<string, string> = {
+  MANUAL_CONFIRM: "Xac nhan thu cong",
+  BUSINESS_RULE: "Theo business rule",
 };
 
 export function taskPeriodLabel(periodType?: string | null, periodKey?: string | null) {
