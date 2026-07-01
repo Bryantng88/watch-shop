@@ -1,5 +1,5 @@
 import { prisma } from "@/server/db/client";
-import { ProductStatus, WatchSaleStage, WatchStockStage } from "@prisma/client";
+import { ProductStatus, WatchSaleStage, WatchStockStage, type Prisma } from "@prisma/client";
 import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
 import {
     createWatchReviewRejectionFeedback,
@@ -117,12 +117,13 @@ async function emitWatchReviewApprovedEvent(input: ReviewInput) {
             watchId: watch.id,
             reviewTargetType: input.targetType,
         },
-    } as any);
+    });
 }
 
 async function safeEmitWatchReviewSubmittedEvent(input: ReviewInput & {
     fromStatus: ReviewStatus;
     toStatus: ReviewStatus;
+    reviewLogId?: string | null;
 }) {
     try {
         const watch = await getWatchOrThrow(input.productId);
@@ -130,12 +131,15 @@ async function safeEmitWatchReviewSubmittedEvent(input: ReviewInput & {
         await recordBusinessEvent(prisma, {
             eventKey: watchReviewSubmittedEventKey(input.targetType),
             targetType: "WATCH",
-            targetId: watch.id,
+            targetId: input.reviewLogId
+                ? `${watch.id}:${input.targetType}:${input.reviewLogId}`
+                : watch.id,
             targetAliasIds: [input.productId],
             actorUserId: input.userId ?? null,
             payload: {
                 productId: input.productId,
                 watchId: watch.id,
+                reviewLogId: input.reviewLogId ?? null,
                 reviewTargetType: input.targetType,
                 fromStatus: input.fromStatus,
                 toStatus: input.toStatus,
@@ -184,7 +188,7 @@ async function safeEmitWatchReviewUnapprovedEvent(input: ReviewInput & {
                 fromStatus: input.fromStatus,
                 toStatus: input.toStatus,
             },
-        } as any);
+        });
     } catch (error) {
         console.error("WORKFLOW_EMIT_UNAPPROVED_FAILED", {
             productId: input.productId,
@@ -261,7 +265,7 @@ async function moveWatchToReadyIfFullyApproved(productId: string) {
 }
 
 async function notifyReviewRejected(input: {
-    state: any;
+    state: { submittedById?: string | null };
     productId: string;
     targetType: ReviewTargetType;
     note?: string | null;
@@ -287,7 +291,7 @@ async function notifyReviewRejected(input: {
                 productId: input.productId,
                 targetType: input.targetType,
             },
-        } as any,
+        },
     });
 }
 
@@ -310,8 +314,7 @@ async function notifyFullyApprovedIfReady(productId: string) {
 
     if (!userIds.length) return;
 
-    await prisma.notification.createMany({
-        data: userIds.map((userId) => ({
+    const notifications: Prisma.NotificationCreateManyInput[] = userIds.map((userId) => ({
             userId,
             type: "WATCH_REVIEW_APPROVED",
             title: "Watch đã được duyệt hoàn toàn",
@@ -321,7 +324,10 @@ async function notifyFullyApprovedIfReady(productId: string) {
                 route: `/admin/watches/${productId}`,
                 productId,
             },
-        })) as any,
+        }));
+
+    await prisma.notification.createMany({
+        data: notifications,
         skipDuplicates: false,
     });
 }
@@ -345,7 +351,7 @@ export async function submitWatchReview(input: ReviewInput) {
         },
     });
 
-    await writeReviewLog({
+    const reviewLog = await writeReviewLog({
         reviewStateId: state.id,
         action: "SUBMIT",
         fromStatus: current.status as ReviewStatus,
@@ -358,6 +364,7 @@ export async function submitWatchReview(input: ReviewInput) {
         ...input,
         fromStatus: current.status as ReviewStatus,
         toStatus: "SUBMITTED",
+        reviewLogId: reviewLog.id,
     });
 
     return state;

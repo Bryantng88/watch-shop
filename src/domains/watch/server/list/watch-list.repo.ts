@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import { ImageRole, Prisma } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import { perfStep } from "@/lib/server-perf";
 import { normalizeWatchListView } from "../../shared/watch-status";
@@ -16,6 +16,7 @@ import {
   buildWatchListSubFilterWhere,
   buildWatchListSummaryWhere,
   mergeWatchWhere,
+  WATCH_LIST_THUMBNAIL_IMAGE_ROLES,
 } from "./watch-list.query";
 
 type WatchListMetaMode = "full" | "lite";
@@ -36,6 +37,21 @@ type ServiceRequestPreview = Prisma.ServiceRequestGetPayload<{
   select: typeof SERVICE_REQUEST_PREVIEW_SELECT;
 }>;
 
+type ListImagePreview = {
+  id: string;
+  productId: string;
+  role: ImageRole | string;
+  fileKey: string;
+  sortOrder: number;
+  createdAt: Date;
+};
+
+type UserPreview = {
+  id: string;
+  name: string | null;
+  email: string | null;
+};
+
 const EMPTY_SUB_COUNTS: WatchListSubCounts = {
   missingContent: 0,
   missingImage: 0,
@@ -55,7 +71,7 @@ const EMPTY_COUNTS: WatchListCounts = {
   all: 0,
 };
 
-type CacheItem<T> = { expiresAt: number; value: T };
+type CacheItem<T> = { expiresAt: number; value: T | Promise<T> };
 const COUNT_CACHE_TTL_MS = 30_000;
 const countCache = new Map<string, CacheItem<unknown>>();
 
@@ -75,8 +91,14 @@ async function getCachedCountValue<T>(key: string, loader: () => Promise<T>): Pr
   const cached = countCache.get(key) as CacheItem<T> | undefined;
   if (cached && cached.expiresAt > now) return cached.value;
 
-  const value = await loader();
-  countCache.set(key, { value, expiresAt: now + COUNT_CACHE_TTL_MS });
+  const pending = loader().catch((error) => {
+    countCache.delete(key);
+    throw error;
+  });
+  countCache.set(key, { value: pending, expiresAt: now + COUNT_CACHE_TTL_MS });
+
+  const value = await pending;
+  countCache.set(key, { value, expiresAt: Date.now() + COUNT_CACHE_TTL_MS });
   return value;
 }
 
@@ -135,7 +157,7 @@ const WATCH_LIST_ROW_SELECT = {
         },
       },
       productImage: {
-        where: { role: "INLINE" as any },
+        where: { role: { in: [...WATCH_LIST_THUMBNAIL_IMAGE_ROLES] as ImageRole[] } },
         select: {
           id: true,
           role: true,
@@ -296,7 +318,7 @@ function sanitizeSubFilterForView(
 }
 
 function normalizeMetaMode(input: WatchListFilters): WatchListMetaMode {
-  const value = String((input as any).meta ?? (input as any).metaMode ?? "full").trim().toLowerCase();
+  const value = String(input.meta ?? "full").trim().toLowerCase();
   return value === "lite" ? "lite" : "full";
 }
 
@@ -324,13 +346,6 @@ function buildCurrentListWhere(input: NormalizedWatchListInput) {
   return mergeWatchWhere(
     buildCurrentSegmentWhere(input),
     buildWatchListSubFilterWhere(input.subFilter)
-  );
-}
-
-function buildCountWhere(input: NormalizedWatchListInput, view: NormalizedWatchListInput["view"]) {
-  return mergeWatchWhere(
-    buildWatchListBaseWhere(input),
-    buildWatchListSegmentWhere(view)
   );
 }
 
@@ -378,22 +393,80 @@ function subFilterToSummaryKey(subFilter: WatchListSubFilter): keyof WatchListSu
   }
 }
 
-async function countListGalleryImages(productIds: string[]) {
-  if (!productIds.length) return new Map<string, number>();
+async function getListImageMap(productIds: string[], options?: { exactGalleryCount?: boolean }) {
+  const result = new Map<string, { images: ListImagePreview[]; galleryCount: number }>();
+  if (!productIds.length) return result;
 
-  const grouped = await prisma.productImage.groupBy({
-    by: ["productId"],
-    where: {
-      productId: { in: productIds },
-      role: { in: ["GALLERY"] as any },
-    },
-    _count: { _all: true },
-  });
+  const shouldLoadExactGalleryCount = Boolean(options?.exactGalleryCount);
+  const [galleryCounts, inlineRows, galleryRows] = await Promise.all([
+    shouldLoadExactGalleryCount
+      ? prisma.productImage.groupBy({
+        by: ["productId"],
+        where: {
+          productId: { in: productIds },
+          role: ImageRole.GALLERY,
+        },
+        _count: { _all: true },
+      })
+      : Promise.resolve(null),
+    prisma.$queryRaw<ListImagePreview[]>`
+      SELECT DISTINCT ON ("productId")
+        "id",
+        "productId",
+        "role",
+        "fileKey",
+        "sortOrder",
+        "createdAt"
+      FROM "ProductImage"
+      WHERE "productId" IN (${Prisma.join(productIds)})
+        AND "role" = ${ImageRole.INLINE}::"ImageRole"
+      ORDER BY
+        "productId",
+        "sortOrder",
+        "createdAt"
+    `,
+    prisma.$queryRaw<ListImagePreview[]>`
+      SELECT DISTINCT ON ("productId")
+        "id",
+        "productId",
+        "role",
+        "fileKey",
+        "sortOrder",
+        "createdAt"
+      FROM "ProductImage"
+      WHERE "productId" IN (${Prisma.join(productIds)})
+        AND "role" = ${ImageRole.GALLERY}::"ImageRole"
+      ORDER BY
+        "productId",
+        "sortOrder",
+        "createdAt"
+    `,
+  ]);
 
-  return new Map(grouped.map((item) => [item.productId, item._count._all]));
+  for (const item of galleryCounts ?? []) {
+    result.set(item.productId, {
+      images: [],
+      galleryCount: item._count._all,
+    });
+  }
+
+  for (const row of galleryRows) {
+    const current = result.get(row.productId) ?? { images: [], galleryCount: 0 };
+    if (!shouldLoadExactGalleryCount) current.galleryCount = 1;
+    current.images.push(row);
+    result.set(row.productId, current);
+  }
+
+  for (const row of inlineRows) {
+    const current = result.get(row.productId) ?? { images: [], galleryCount: 0 };
+    current.images = [row];
+    result.set(row.productId, current);
+  }
+
+  return result;
 }
 
-async function getReviewActors(rows: WatchListRawRow[]) {
+async function getReviewActors(rows: WatchListRawRow[]): Promise<Map<string, UserPreview>> {
   const actorIds = uniqueStrings(
     rows.flatMap((row) =>
       (row.reviewStates ?? []).flatMap((state) => [
@@ -403,7 +476,7 @@ async function getReviewActors(rows: WatchListRawRow[]) {
     )
   );
 
-  if (!actorIds.length) return new Map<string, any>();
+  if (!actorIds.length) return new Map<string, UserPreview>();
 
   const users = await prisma.user.findMany({
     where: { id: { in: actorIds } },
@@ -505,16 +578,22 @@ async function getServiceRequestMap(productIds: string[]) {
 
 function attachBulkLoadedRelations(
   row: WatchListRawRow,
-  serviceRequestMap: Map<string, ServiceRequestPreview[]>
+  input: {
+    imageMap: Map<string, { images: ListImagePreview[]; galleryCount: number }>;
+    serviceRequestMap: Map<string, ServiceRequestPreview[]>;
+  }
 ) {
   const productId = String(row.productId ?? row.product?.id ?? "");
+  const imageInfo = input.imageMap.get(productId);
 
   return {
     ...row,
+    __imagesCount: imageInfo?.galleryCount ?? 0,
     product: row.product
       ? {
         ...row.product,
-        serviceRequest: serviceRequestMap.get(productId) ?? [],
+        productImage: imageInfo?.images ?? row.product.productImage ?? [],
+        serviceRequest: input.serviceRequestMap.get(productId) ?? [],
       }
       : row.product,
   };
@@ -575,15 +654,17 @@ export async function listAdminWatches(
     rows.map((row) => row.productId ?? row.product?.id)
   );
 
-  const [imageCountMap, userMap, serviceRequestMap] = await Promise.all([
-    perfStep("watch-list-repo", "imageCounts", () =>
-      countListGalleryImages(productIds)
-    ),
+  const [imageMap, userMap, serviceRequestMap] = await Promise.all([
+    shouldLoadMeta
+      ? perfStep("watch-list-repo", "imagePreview", () =>
+        getListImageMap(productIds, { exactGalleryCount: true })
+      )
+      : Promise.resolve(new Map<string, { images: ListImagePreview[]; galleryCount: number }>()),
     shouldLoadMeta
       ? perfStep("watch-list-repo", "reviewActors", () =>
         getReviewActors(rows)
       )
-      : Promise.resolve(new Map<string, any>()),
+      : Promise.resolve(new Map<string, UserPreview>()),
     shouldLoadMeta
       ? perfStep("watch-list-repo", "servicePreview", () =>
         getServiceRequestMap(productIds)
@@ -592,12 +673,13 @@ export async function listAdminWatches(
   ]);
 
   const items = rows.map((row) => {
-    const productId = String(row.productId ?? row.product?.id ?? "");
-    const enrichedRow = attachBulkLoadedRelations(row, serviceRequestMap);
+    const enrichedRow = attachBulkLoadedRelations(row, {
+      imageMap,
+      serviceRequestMap,
+    });
 
     return mapWatchRow({
       ...enrichedRow,
-      __imagesCount: imageCountMap.get(productId) ?? 0,
       __userMap: userMap,
     });
   });
@@ -610,7 +692,7 @@ export async function listAdminWatches(
     totalPages: shouldLoadMeta
       ? Math.max(1, Math.ceil(resolvedTotal / normalizedInput.pageSize))
       : Math.max(normalizedInput.page, normalizedInput.page + (hasNextPage ? 1 : 0)),
-    counts: counts ?? (undefined as any),
+    counts: counts ?? (undefined as unknown as WatchListCounts),
     summary: summaryMeta
       ? {
         items: summaryMeta.segmentTotal,
@@ -618,6 +700,6 @@ export async function listAdminWatches(
         hasImages: summaryMeta.hasImages,
         subCounts: subCounts ?? { ...EMPTY_SUB_COUNTS },
       }
-      : (undefined as any),
+      : (undefined as unknown as WatchListResult["summary"]),
   };
 }

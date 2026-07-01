@@ -11,6 +11,7 @@ const USER_SELECT = {
   id: true,
   name: true,
   email: true,
+  avatarUrl: true,
 } satisfies Prisma.UserSelect;
 
 export const TASK_ITEM_ACTIVITY_INCLUDE = {
@@ -36,6 +37,7 @@ export async function findTaskItemActivityBySourceRepo(
 ) {
   return dbOrTx(db).taskItemActivity.findFirst({
     where: {
+      taskItemId: input.taskItemId,
       sourceType: input.sourceType,
       sourceId: input.sourceId,
     },
@@ -74,6 +76,18 @@ export async function createBusinessEventActivityRepo(
       actorUserId: input.actorUserId ?? null,
       metadataJson: input.metadataJson ?? undefined,
     },
+    include: TASK_ITEM_ACTIVITY_INCLUDE,
+  });
+}
+
+export async function updateTaskItemActivityMetadataRepo(
+  db: DB,
+  activityId: string,
+  metadataJson: Prisma.InputJsonValue,
+) {
+  return dbOrTx(db).taskItemActivity.update({
+    where: { id: activityId },
+    data: { metadataJson },
     include: TASK_ITEM_ACTIVITY_INCLUDE,
   });
 }

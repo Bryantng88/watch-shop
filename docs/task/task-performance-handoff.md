@@ -130,6 +130,15 @@ Current state:
   - `subCounts`
   - `reviewActors`
   - `servicePreview`
+- Watch list image handling has two modes.
+  - `meta=full`: can bulk-load richer image metadata/counts outside the main list query.
+  - `meta=lite`: must not call `imagePreview`.
+    - The list query includes one lightweight thumbnail relation on `product.productImage`.
+    - `attachBulkLoadedRelations` must preserve that nested thumbnail when no bulk image map is loaded.
+    - Do not remove thumbnails from `meta=lite`; the image column is critical for the operator workflow.
+- Watch list API defaults to `meta=lite`.
+  - Client tab, sub-filter, filter apply/clear, and pagination interactions explicitly request lite.
+  - This prevents Ready sub-filter clicks from running `watchCount`, `summaryCounts`, `viewCounts`, `subCounts`, `reviewActors`, or `servicePreview`.
 - Lite pagination uses `pageSize + 1`.
   - This preserves "has next page" behavior without counting the whole filtered set.
 - The Acquisition column/popup was removed from the watch list.
@@ -176,6 +185,19 @@ CREATE INDEX "Watch_saleStage_updatedAt_idx" ON "Watch"("saleStage", "updatedAt"
 CREATE INDEX "ProductImage_productId_role_sortOrder_createdAt_idx" ON "ProductImage"("productId", "role", "sortOrder", "createdAt");
 ```
 
+Additional review-filter migration:
+
+```txt
+prisma/migrations/20260701_watch_review_filter_indexes/migration.sql
+```
+
+It adds:
+
+```sql
+CREATE INDEX "WatchReviewState_watch_target_status_idx" ON "WatchReviewState"("watchId", "targetType", "status");
+CREATE INDEX "WatchReviewState_target_status_watch_idx" ON "WatchReviewState"("targetType", "status", "watchId");
+```
+
 Important operational note:
 
 - The code changes reduce query complexity immediately.
@@ -191,7 +213,6 @@ Expected log after this work for tab/page changes:
 
 ```txt
 [perf:watch-list-repo] watchFindMany=<...>ms
-[perf:watch-list-repo] imageCounts=<...>ms
 GET /api/admin/watches/list?...meta=lite 200 in <...>ms
 ```
 
@@ -199,11 +220,41 @@ The following should no longer appear for normal tab/page changes:
 
 ```txt
 [perf:watch-list-repo] acquisitionPreview=...
+[perf:watch-list-repo] imagePreview=...
 [perf:watch-list-repo] watchCount=...
 [perf:watch-list-repo] reviewActors=...
 [perf:watch-list-repo] servicePreview=...
 GET /admin/watches?... 200 in ...
 ```
+
+Latest observed Ready sub-filter logs after the 2026-07-01 follow-up:
+
+```txt
+[perf:watch-list-repo] watchFindMany=1083-1181ms
+GET /api/admin/watches/list?view=ready&...&subFilter=...&meta=lite 200 in 1800-1855ms
+```
+
+This is considered temporarily acceptable for the admin workflow. The hot path is now mostly `watchFindMany`; there is no separate `imagePreview` or meta/count query in the sub-filter transition.
+
+Important follow-up notes for future query optimization:
+
+- Read this section before changing watch list query/image loading again.
+- Do not reintroduce `imagePreview` into `meta=lite`; it regressed sub-filter changes from about `1.8s` to about `2.6s`.
+- Do not remove the lightweight nested thumbnail from `watchFindMany`; doing so made the image column blank.
+- A tried-but-reverted direction was splitting thumbnail loading into separate `INLINE` and `GALLERY` raw queries plus gallery counts.
+  - It made `imagePreview` slower, around `700-880ms`.
+  - The current acceptable path is no `imagePreview` for lite requests.
+- The next meaningful optimization target is `watchFindMany`, especially Ready review sub-filters:
+  - `REVIEW_DRAFT`
+  - `REVIEW_SUBMITTED`
+  - `PARTIAL_APPROVED`
+  - `APPROVED`
+  - `POSTED`
+- Likely next directions:
+  - inspect `EXPLAIN ANALYZE` for the generated Ready sub-filter query against the remote DB;
+  - verify the review filter indexes are actually applied in the remote database;
+  - consider a two-step query: first fetch matching `watchId`s from `WatchReviewState`, then fetch list rows by those ids ordered by `Watch.updatedAt`;
+  - consider denormalized per-watch review readiness fields only if query/index tuning is not enough.
 
 ## Perf Instrumentation
 

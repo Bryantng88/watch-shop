@@ -18,7 +18,6 @@ import {
 } from "../server/core/task.service";
 import { getTaskWorkPanelData } from "../server/core/task-list.service";
 import type {
-  CreateTaskItemInput,
   CreateTaskInput,
   FindOpenRelatedTasksInput,
   UpdateTaskItemInput,
@@ -39,12 +38,13 @@ import {
 
 } from "../server/core/task.repo";
 import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
-import { setTargetTagsRepo, listTargetTagsRepo } from "../server/core/task.repo";
+import { setTargetTagsRepo } from "../server/core/task.repo";
 
 import {
   AppTagOwnerType,
   AppTagTargetType,
 } from "@prisma/client";
+import { addActivityReply } from "../server/activity";
 async function getTaskAuth() {
   return requirePermission("TASK_VIEW");
 }
@@ -246,7 +246,7 @@ export async function updateTaskItemAction(
 
   const item = await updateTaskItemRepo(prisma, cleanItemId, input);
 
-  let tags: any[] = [];
+  let tags: Awaited<ReturnType<typeof setTargetTagsRepo>> = [];
 
   if (Array.isArray(input.tagNames)) {
     tags = await setTargetTagsRepo(prisma, {
@@ -495,6 +495,36 @@ export async function moveTaskItemAction(input: {
   revalidatePath(`/admin/tasks/${result.toTaskId}`);
 
   return { ok: true, ...result };
+}
+
+export async function addTaskItemActivityReplyAction(input: {
+  activityId: string;
+  body: string;
+}) {
+  const auth = await getTaskAuth();
+  const activityId = String(input.activityId ?? "").trim();
+  const body = String(input.body ?? "").trim();
+
+  if (!activityId) throw new Error("Missing activityId");
+  if (!body) throw new Error("Vui lòng nhập nội dung trao đổi.");
+
+  const activity = await prisma.taskItemActivity.findUnique({
+    where: { id: activityId },
+    select: { taskItemId: true },
+  });
+
+  const reply = await addActivityReply({
+    activityId,
+    body,
+    actorUserId: getAuthUserId(auth),
+  });
+
+  revalidatePath("/admin/task-items");
+  if (activity?.taskItemId) {
+    revalidatePath(`/admin/task-items/${activity.taskItemId}`);
+  }
+
+  return { ok: true, reply };
 }
 export async function searchTasksForTaskItemMoveAction(input: {
   keyword?: string | null;

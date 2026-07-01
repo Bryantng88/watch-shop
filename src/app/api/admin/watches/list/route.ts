@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getAdminWatchList } from "@/domains/watch/server";
+import type { WatchListSubFilter } from "@/domains/watch/ui/list/types";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
 
@@ -37,7 +38,7 @@ function buildWatchListInput(req: NextRequest) {
 
     return {
         view,
-        subFilter: firstValue(params, "subFilter") as any,
+        subFilter: firstValue(params, "subFilter") as WatchListSubFilter,
 
         q: firstValue(params, "q"),
         sku: firstValue(params, "sku"),
@@ -53,7 +54,7 @@ function buildWatchListInput(req: NextRequest) {
         sort: firstValue(params, "sort") || "updatedDesc",
         page: toPositiveInt(firstValue(params, "page"), 1),
         pageSize: toPositiveInt(firstValue(params, "pageSize"), 20),
-        meta: firstValue(params, "meta"),
+        meta: firstValue(params, "meta") || "lite",
     };
 }
 

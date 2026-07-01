@@ -4,6 +4,7 @@ import {
     findRelatedTaskItemIdsForBusinessTargets,
 } from "@/domains/task/server/business-binding.service";
 import type { BusinessBindingTargetType } from "@/domains/task/server/business-binding.types";
+import { createBusinessEventActivity } from "@/domains/task/server/activity";
 import { appendTimelineEntry } from "./timeline.service";
 
 export type TimelineBusinessEventLog = {
@@ -214,6 +215,77 @@ export async function projectBusinessFeedbackEventToTaskItemTimeline(
     };
 }
 
+export async function projectBusinessEventToTaskItemActivity(
+    client: DB,
+    event: TimelineBusinessEventLog,
+) {
+    const metadata = asRecord(event.metadataJson);
+    const businessEventLogId = clean(event.id);
+    const eventKey = clean(event.eventKey);
+
+    if (!businessEventLogId) {
+        return {
+            ok: true,
+            skipped: true,
+            skippedReason: "NO_BUSINESS_EVENT_LOG_ID",
+            relatedTaskItemIds: [],
+            createdActivities: [],
+        };
+    }
+
+    const taskItemIds = await findRelatedTaskItemIdsForBusinessEvent(
+        client,
+        event,
+        metadata,
+    );
+
+    if (!taskItemIds.length) {
+        return {
+            ok: true,
+            skipped: true,
+            skippedReason: "NO_RELATED_TASK_ITEM",
+            relatedTaskItemIds: [],
+            createdActivities: [],
+        };
+    }
+
+    const feedbackId = clean(metadata.feedbackId);
+    const feedbackMessage = clean(metadata.feedbackMessage);
+    const feedbackCreatedAt = clean(metadata.feedbackCreatedAt);
+    const title = getTimelineTitle(eventKey) || eventKey || "Business event";
+
+    const activities = await Promise.all(
+        taskItemIds.map((taskItemId) =>
+            createBusinessEventActivity(
+                {
+                    taskItemId,
+                    sourceId: businessEventLogId,
+                    title,
+                    body: null,
+                    actorUserId: event.actorUserId ?? null,
+                    metadataJson: {
+                        eventKey: event.eventKey ?? null,
+                        targetType: event.targetType ?? null,
+                        targetId: event.targetId ?? null,
+                        businessEventLogId,
+                        feedbackId: feedbackId || null,
+                        feedbackMessage: feedbackMessage || null,
+                        feedbackCreatedAt: feedbackCreatedAt || null,
+                    },
+                },
+                client,
+            ),
+        ),
+    );
+
+    return {
+        ok: true,
+        skipped: false,
+        relatedTaskItemIds: taskItemIds,
+        createdActivities: activities,
+    };
+}
+
 export async function consumeBusinessEventForTimeline(
     client: DB,
     eventLog: unknown,
@@ -221,29 +293,37 @@ export async function consumeBusinessEventForTimeline(
     const event = eventLog as TimelineBusinessEventLog;
 
     try {
-        const businessEventResult = await projectBusinessEventToTaskItemTimeline(
-            client,
-            event,
-        );
-
-        const feedbackResult = await projectBusinessFeedbackEventToTaskItemTimeline(
-            client,
-            event,
-        );
+        const [businessEventResult, feedbackResult, activityResult] =
+            await Promise.all([
+                projectBusinessEventToTaskItemTimeline(
+                    client,
+                    event,
+                ),
+                projectBusinessFeedbackEventToTaskItemTimeline(
+                    client,
+                    event,
+                ),
+                projectBusinessEventToTaskItemActivity(
+                    client,
+                    event,
+                ),
+            ]);
 
         const timelineEntries = [
             ...businessEventResult.createdTimelineEntries,
             ...feedbackResult.createdTimelineEntries,
         ];
+        const activities = activityResult.createdActivities;
 
-        if (!timelineEntries.length) {
+        if (!timelineEntries.length && !activities.length) {
             return {
                 ok: true,
                 skipped: true,
                 reason:
+                    activityResult.skippedReason ??
                     feedbackResult.skippedReason ??
                     businessEventResult.skippedReason ??
-                    "NO_TIMELINE_ENTRY",
+                    "NO_TIMELINE_OR_ACTIVITY",
             };
         }
 
@@ -251,8 +331,10 @@ export async function consumeBusinessEventForTimeline(
             ok: true,
             skipped: false,
             timelineEntries,
+            activities,
             businessEvent: businessEventResult,
             feedback: feedbackResult,
+            activity: activityResult,
         };
     } catch (error) {
         console.error("TIMELINE_CONSUMER_FAILED", {

@@ -14,6 +14,7 @@ export async function getCurrentUser() {
         id: user.id,
         email: user.email,
         name: user.name,
+        avatarUrl: user.avatarUrl,
         roles: user.roles.map((r) => r.name),
         permissions: user.roles.flatMap((r) =>
             r.permissions.map((p) => p.code)

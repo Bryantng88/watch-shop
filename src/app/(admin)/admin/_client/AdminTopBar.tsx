@@ -1,19 +1,42 @@
 "use client";
 
-import { Bell, Search, LogOut, UserCircle2 } from "lucide-react";
+import { Bell, Search, LogOut } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useNotifications } from "../__hooks/useNotifications";
 import type { AdminNotificationItem } from "../__hooks/useNotifications";
+import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 
 type AdminTopbarProps = {
     title?: string;
     user?: {
         name?: string | null;
+        avatarUrl?: string | null;
         roles?: string[];
     };
 };
+
+function initials(label?: string | null) {
+    const words = String(label || "User").trim().split(/\s+/).filter(Boolean);
+    return words.slice(0, 2).map((word) => word.charAt(0).toUpperCase()).join("");
+}
+
+function TopbarAvatar({ user }: { user?: AdminTopbarProps["user"] }) {
+    const label = user?.name || "User";
+    const src = resolveMediaPreviewSrc(user?.avatarUrl);
+
+    return (
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
+            {src ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={src} alt={label} className="h-full w-full object-cover" />
+            ) : (
+                initials(label)
+            )}
+        </span>
+    );
+}
 function metadataRecord(value: unknown): Record<string, unknown> {
     return value && typeof value === "object" && !Array.isArray(value)
         ? (value as Record<string, unknown>)
@@ -206,7 +229,7 @@ export default function AdminTopbar({
                             href="/admin/profile"
                             className="flex items-center gap-2 hover:opacity-80"
                         >
-                            <UserCircle2 size={18} className="text-gray-600" />
+                            <TopbarAvatar user={user} />
                             <div className="flex flex-col leading-tight">
                                 <span className="text-sm font-medium">
                                     {user?.name ?? "User"}

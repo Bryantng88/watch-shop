@@ -1,13 +1,13 @@
 "use client";
 
 import * as React from "react";
-import MediaBrowserDialog from "./MediaBrowserDialog";
+import MediaBrowserDialog, { type SharedMediaProfile } from "./MediaBrowserDialog";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 
 type Props = {
     value: string | null;
     onChange: (key: string) => void;
-    profile?: any;
+    profile?: SharedMediaProfile;
 };
 
 export default function MediaPickerInline({
@@ -26,7 +26,8 @@ export default function MediaPickerInline({
                 className="w-20 h-20 border rounded-lg overflow-hidden cursor-pointer"
             >
                 {src ? (
-                    <img src={src} className="w-full h-full object-cover" />
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={src} alt="" className="w-full h-full object-cover" />
                 ) : (
                     <div className="flex items-center justify-center h-full text-xs text-gray-400">
                         Chọn ảnh
@@ -38,10 +39,17 @@ export default function MediaPickerInline({
                 open={open}
                 onClose={() => setOpen(false)}
                 profile={profile}
-                multiple={false}
+                selectedKey={value}
                 selectedKeys={value ? [value] : []}
+                onSelect={(key) => {
+                    onChange(key);
+                    setOpen(false);
+                }}
                 onSubmit={(keys) => {
-                    if (keys[0]) onChange(keys[0]);
+                    if (keys[0]) {
+                        onChange(keys[0]);
+                        setOpen(false);
+                    }
                 }}
             />
         </>

@@ -217,6 +217,38 @@ function dataFromProps(props: WatchListClientProps): WatchListResult {
     } as WatchListResult);
 }
 
+function mergePreviousImageFields(
+    items: WatchRow[],
+    previousItems: WatchRow[],
+): WatchRow[] {
+    if (!items.length || !previousItems.length) return items;
+
+    const previousByProductId = new Map(
+        previousItems.map((item) => [item.productId, item]),
+    );
+
+    return items.map((item) => {
+        const previous = previousByProductId.get(item.productId);
+        if (!previous) return item;
+
+        const hasCurrentImage =
+            Boolean(item.imageUrl || item.imageKey) ||
+            Number(item.imagesCount ?? 0) > 0 ||
+            Boolean(item.hasImages);
+
+        if (hasCurrentImage) return item;
+
+        return {
+            ...item,
+            imageUrl: previous.imageUrl ?? item.imageUrl,
+            imageKey: previous.imageKey ?? item.imageKey,
+            imagesCount: previous.imagesCount ?? item.imagesCount,
+            hasImages: previous.hasImages ?? item.hasImages,
+            imageReady: previous.imageReady ?? item.imageReady,
+        };
+    });
+}
+
 function paramsKey(params: URLSearchParams) {
     const normalized = sanitizeParams(params);
     normalized.sort();
@@ -385,6 +417,10 @@ export default function WatchListClient(props: WatchListClientProps) {
             setListData((prev) =>
                 normalizeResult({
                     ...json.data,
+                    items: mergePreviousImageFields(
+                        json.data?.items ?? [],
+                        prev.items ?? [],
+                    ),
                     counts: json.data?.counts ?? prev.counts,
                     summary: json.data?.summary ?? prev.summary,
                 }),
@@ -422,7 +458,7 @@ export default function WatchListClient(props: WatchListClientProps) {
             const nextValue = currentSubFilter === subFilter ? "" : subFilter;
             setParam(next, "subFilter", nextValue || null);
             setParam(next, "page", "1");
-        });
+        }, { meta: "lite" });
     }
 
     function handleApplyFilters() {
@@ -437,7 +473,7 @@ export default function WatchListClient(props: WatchListClientProps) {
             setParam(next, "opsStage", filters.opsStage);
             setParam(next, "sort", filters.sort || DEFAULT_SORT);
             setParam(next, "page", "1");
-        });
+        }, { meta: "lite" });
     }
 
     function handleClearFilters() {
@@ -458,7 +494,7 @@ export default function WatchListClient(props: WatchListClientProps) {
 
             setParam(next, "sort", DEFAULT_SORT);
             setParam(next, "page", "1");
-        });
+        }, { meta: "lite" });
     }
 
     function handlePage(page: number) {
@@ -547,7 +583,7 @@ export default function WatchListClient(props: WatchListClientProps) {
                 ].filter(Boolean).join("\n"),
             });
             setTaskModalOpen(true);
-        } catch (error: any) {
+        } catch (error) {
             notify.error({
                 title: "Không thể mở tạo task",
                 message: error?.message || "Không tải được dữ liệu tạo task.",

@@ -1197,6 +1197,8 @@ model WatchReviewState {
   @@unique([watchId, targetType])
   @@index([productId])
   @@index([targetType, status])
+  @@index([watchId, targetType, status], map: "WatchReviewState_watch_target_status_idx")
+  @@index([targetType, status, watchId], map: "WatchReviewState_target_status_watch_idx")
 }
 
 model WatchReviewLog {

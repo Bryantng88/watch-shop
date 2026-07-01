@@ -42,7 +42,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                         </div>
 
                         <div className="flex min-w-0 overflow-hidden flex-col">
-                            <AdminTopbar title="Admin" user={{ name: user.name, roles: user.roles }} />
+                            <AdminTopbar
+                                title="Admin"
+                                user={{
+                                    name: user.name,
+                                    roles: user.roles,
+                                    avatarUrl: user.avatarUrl,
+                                }}
+                            />
 
                             <main className="flex-1 min-h-0 min-w-0 overflow-y-auto bg-slate-50">
                                 {children}
