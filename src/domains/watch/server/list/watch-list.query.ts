@@ -278,50 +278,15 @@ export function buildWatchListBaseWhere(
 export function buildWatchListSegmentWhere(
     view?: WatchListView,
 ): Prisma.WatchWhereInput {
-    const hasContent = buildWatchHasContentWhere();
-    const hasImage = buildWatchHasGalleryImageWhere();
-
     switch (view) {
         case "draft":
-            return {
-                AND: [
-                    buildWatchNonTerminalSaleWhere(),
-                    { NOT: hasContent },
-                    { NOT: hasImage },
-                ],
-            };
+            return { saleStage: WatchSaleStage.DRAFT };
 
         case "processing":
-            return {
-                AND: [
-                    buildWatchNonTerminalSaleWhere(),
-                    {
-                        OR: [
-                            {
-                                AND: [
-                                    hasContent,
-                                    { NOT: hasImage },
-                                ],
-                            },
-                            {
-                                AND: [
-                                    { NOT: hasContent },
-                                    hasImage,
-                                ],
-                            },
-                        ],
-                    },
-                ],
-            };
+            return { saleStage: WatchSaleStage.PROCESSING };
 
         case "ready":
-            return {
-                AND: [
-                    buildWatchNonTerminalSaleWhere(),
-                    hasContent,
-                    hasImage,
-                ],
-            };
+            return { saleStage: WatchSaleStage.READY };
 
         case "hold":
             return { saleStage: WatchSaleStage.HOLD };

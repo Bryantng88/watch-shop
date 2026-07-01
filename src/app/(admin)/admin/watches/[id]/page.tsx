@@ -3,8 +3,6 @@ import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
 import {
     getWatchDetail,
-    getWatchImages,
-    getWatchPricing,
     getWatchServiceHistoryDetail,
     getWatchTradeHistoryDetail,
 } from "@/domains/watch/server";
@@ -61,11 +59,9 @@ export default async function WatchDetailPage({
     const user = await requirePermission(PERMISSIONS.PRODUCT_VIEW);
     const { id } = await params;
 
-    const [detail, images, pricing, serviceHistory, tradeHistory] =
+    const [detail, serviceHistory, tradeHistory] =
         await Promise.all([
             getWatchDetail(id),
-            getWatchImages(id),
-            getWatchPricing(id),
             getWatchServiceHistoryDetail(id),
             getWatchTradeHistoryDetail(id),
         ]);
@@ -75,8 +71,6 @@ export default async function WatchDetailPage({
     return (
         <WatchDetailClient
             detail={serialize(detail)}
-            images={serialize(images)}
-            pricing={serialize(pricing)}
             serviceHistory={serialize(serviceHistory)}
             tradeHistory={serialize(tradeHistory)}
             canViewTradeFinancials={canViewTradeFinancials(user)}

@@ -58,28 +58,26 @@ export async function getAdminEditWatchDetail(db: DB, productId: string) {
       watchPrice: true,
       watchContent: true,
       reviewStates: true,
-      tasks: {
-        where: {
-          status: { in: ["TODO", "IN_PROGRESS"] },
-        },
-        select: {
-          id: true,
-          status: true,
-          title: true,
-        },
-      },
     },
   });
 
   if (!watch) return null;
 
-  const tasks = watch.tasks ?? [];
+  const openTaskCount = await client.task.count({
+    where: {
+      watchId: watch.id,
+      status: { in: ["TODO", "IN_PROGRESS"] },
+    },
+  });
 
   return {
     ...watch,
-    watchReview: tasks.filter((t) =>
-      String(t.title ?? "").toLowerCase().includes("review")
-    ).length,
+    taskSummary: {
+      watchImage: openTaskCount,
+      watchContent: openTaskCount,
+      watchReview: openTaskCount,
+    },
+    watchReview: openTaskCount,
   };
 }
 
