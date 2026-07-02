@@ -127,6 +127,7 @@ export type CreateTaskItemInput = {
   taskId: string;
   title: string;
   note?: string | null;
+  ownerUserId?: string | null;
   assignedToUserId?: string | null;
   priority?: TaskPriority;
   dueAt?: Date | string | null;

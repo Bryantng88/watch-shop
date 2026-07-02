@@ -15,6 +15,10 @@ export type CreateDiscussionActivityInput = {
   metadataJson?: Prisma.InputJsonValue;
 };
 
+export type CreateSystemActivityInput = CreateDiscussionActivityInput & {
+  sourceId?: string | null;
+};
+
 export type CreateBusinessEventActivityInput = {
   taskItemId: string;
   sourceId: string;

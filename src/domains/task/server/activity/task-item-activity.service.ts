@@ -4,6 +4,7 @@ import {
   addActivityReplyRepo,
   createBusinessEventActivityRepo,
   createDiscussionActivityRepo,
+  createSystemActivityRepo,
   findTaskItemActivityByIdRepo,
   findTaskItemActivityBySourceRepo,
   findTaskItemActivityTaskRepo,
@@ -14,6 +15,7 @@ import type {
   AddActivityReplyInput,
   CreateBusinessEventActivityInput,
   CreateDiscussionActivityInput,
+  CreateSystemActivityInput,
   TaskItemActivityFeedbackViewModel,
   TaskItemActivityViewModel,
 } from "./task-item-activity.types";
@@ -226,6 +228,30 @@ export async function createDiscussionActivity(
       title,
       body: cleanNullable(input.body),
       actorUserId: cleanNullable(input.actorUserId),
+    });
+  });
+}
+
+export async function createSystemActivity(
+  input: CreateSystemActivityInput,
+  db?: DB,
+) {
+  const taskItemId = clean(input.taskItemId);
+  const title = clean(input.title);
+
+  assertPresent(taskItemId, "Missing taskItemId");
+  assertPresent(title, "Missing activity title");
+
+  return withDbTransaction(db ?? prisma, async (tx) => {
+    await assertTaskItemExists(tx, taskItemId);
+
+    return createSystemActivityRepo(tx, {
+      ...input,
+      taskItemId,
+      title,
+      body: cleanNullable(input.body),
+      actorUserId: cleanNullable(input.actorUserId),
+      sourceId: cleanNullable(input.sourceId),
     });
   });
 }

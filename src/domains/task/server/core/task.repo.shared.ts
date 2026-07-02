@@ -21,6 +21,7 @@ export const USER_SELECT = {
   id: true,
   name: true,
   email: true,
+  avatarUrl: true,
 } satisfies Prisma.UserSelect;
 
 

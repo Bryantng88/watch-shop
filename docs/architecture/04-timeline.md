@@ -3,6 +3,7 @@
 Timeline is a projection/read model. It is not the source of truth.
 
 Timeline entries can reference source records such as:
+
 - `BusinessEvent`
 - `BusinessFeedback`
 - `UserComment`
@@ -10,18 +11,21 @@ Timeline entries can reference source records such as:
 - `Notification`
 - `System`
 
-`BusinessFeedback` remains independent. It can be projected into a TaskItem timeline, but Timeline does not own the feedback.
+`BusinessFeedback` remains independent. It can be projected into Workspace
+Activity, but Timeline does not own the feedback.
 
-TaskItem renders Timeline to behave like a lightweight Jira ticket.
+Workspace renders Activity as the primary collaboration surface. Timeline stays
+as an audit/projection layer.
 
 Projection rule:
+
 - Business domains emit `BusinessEvent`.
-- Timeline consumer reads the event metadata.
-- Timeline consumer resolves related TaskItems through `BusinessBinding`.
+- Timeline consumer reads event metadata.
+- Timeline consumer resolves related Workspaces through Items.
 - Timeline consumer upserts `TimelineEntry`.
 
 Out of scope:
-- Direct Watch -> Timeline calls.
-- Passing `taskItemId` through Watch URL/API.
-- Treating Timeline as source of truth.
 
+- Direct Watch -> Timeline calls.
+- Passing Workspace ids through Watch URL/API.
+- Treating Timeline as source of truth.

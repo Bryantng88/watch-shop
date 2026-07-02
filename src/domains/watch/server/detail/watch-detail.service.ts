@@ -1,4 +1,5 @@
 import { prisma } from "@/server/db/client";
+import { perfStep } from "@/lib/server-perf";
 import { mapWatchDetail } from "../shared";
 import { listWatchChosenMediaPool } from "@/domains/media/server";
 import {
@@ -105,7 +106,7 @@ async function withComposedReviewNotes<
 }
 
 export async function getWatchDetail(productId: string) {
-  const row = await getAdminWatchDetail(prisma as any, productId);
+  const row = await getAdminWatchDetail(prisma, productId);
 
   if (!row) {
     throw new Error("Không tìm thấy watch");
@@ -115,28 +116,40 @@ export async function getWatchDetail(productId: string) {
 }
 
 export async function getWatchEditDetail(productId: string) {
-  const row = await getAdminEditWatchDetail(prisma as any, productId);
+  const row = await perfStep("watch-edit-detail", "watchRow", () =>
+    getAdminEditWatchDetail(prisma, productId),
+  );
 
   if (!row) {
     throw new Error("Không tìm thấy watch để edit");
   }
 
-  const mapped = mapWatchDetail(await withComposedReviewNotes(row));
-  const acq = await getLatestAcquisitionUnitCost(productId, row.acquisitionId);
-  const poolImages = await listWatchChosenMediaPool({
-    productId,
-    acquisitionId: row.acquisitionId,
-  });
+  const [rowWithReviewNotes, acq, poolImages] = await Promise.all([
+    perfStep("watch-edit-detail", "reviewNotes", () =>
+      withComposedReviewNotes(row),
+    ),
+    perfStep("watch-edit-detail", "acquisitionCost", () =>
+      getLatestAcquisitionUnitCost(productId, row.acquisitionId),
+    ),
+    perfStep("watch-edit-detail", "mediaPool", () =>
+      listWatchChosenMediaPool({
+        productId,
+        acquisitionId: row.acquisitionId,
+      }),
+    ),
+  ]);
+  const mapped = mapWatchDetail(rowWithReviewNotes);
+  const mappedMedia = (mapped as { media?: Record<string, unknown> }).media ?? {};
 
   return {
     ...mapped,
-    taskSummary: (row as any).taskSummary ?? {
+    taskSummary: row.taskSummary ?? {
       watchImage: 0,
       watchContent: 0,
       watchReview: 0,
     },
     media: {
-      ...((mapped as any).media ?? {}),
+      ...mappedMedia,
       poolImages,
     },
     acquisition: acq,
@@ -148,21 +161,21 @@ export async function getWatchEditDetail(productId: string) {
 }
 
 export async function getWatchRow(productId: string) {
-  return getAdminWatchRow(prisma as any, productId);
+  return getAdminWatchRow(prisma, productId);
 }
 
 export async function getWatchTradeHistoryDetail(productId: string) {
-  return getWatchTradeHistory(prisma as any, productId);
+  return getWatchTradeHistory(prisma, productId);
 }
 
 export async function getWatchServiceHistoryDetail(productId: string) {
-  return getWatchServiceHistory(prisma as any, productId);
+  return getWatchServiceHistory(prisma, productId);
 }
 
 export async function getLatestWatchVariant(productId: string) {
-  return getLatestWatchVariantForAdmin(prisma as any, productId);
+  return getLatestWatchVariantForAdmin(prisma, productId);
 }
 
 export async function getOpenServiceWatchList() {
-  return getOpenServiceWatches(prisma as any);
+  return getOpenServiceWatches(prisma);
 }

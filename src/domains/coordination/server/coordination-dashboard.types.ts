@@ -1,29 +1,40 @@
+import type { CoordinationContext } from "./coordination-cycle.types";
+
 export type CoordinationReportMetricDTO = {
   key: string;
   label: string;
   value: number;
 };
 
+export type QueueSummaryDTO = {
+  ready: number;
+  review: number;
+  feedback: number;
+  done: number;
+};
+
 export type CoordinationWorkTicketSummaryDTO = {
   id: string;
   title: string;
   ownerLabel: string;
-  queueCount: number;
+  owner: {
+    label: string;
+    avatarUrl: string | null;
+    isSystem: boolean;
+  };
+  queueSummary: QueueSummaryDTO;
   needAttention: boolean;
   feedbackCount: number;
   lastActivity: string | null;
   lastActivityAt: string | null;
   updatedAt: string | null;
-  progress: {
-    queue: number;
-    waiting: number;
-    feedback: number;
-    done: number;
-  };
 };
 
 export type CoordinationDashboardDTO = {
-  context: "OPERATION";
+  context: CoordinationContext;
+  contextLabel: string;
+  spaceLabel: string;
+  spacesLabel: string;
   title: string;
   week: {
     label: string;

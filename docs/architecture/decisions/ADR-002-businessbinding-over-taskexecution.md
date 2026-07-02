@@ -1,30 +1,32 @@
-# ADR-002: BusinessBinding Over TaskExecution
+# ADR-002: Item Over TaskExecution
 
-Status: Accepted
+Status: Superseded by Sprint 27 language migration.
 
 ## Context
 
 The existing persisted model is `TaskExecution`.
 
-Its role is expanding from execution history to relationship mapping between TaskItem and business objects.
+Its role is relationship mapping between Workspace and business objects.
+
+The previous application-layer name was `BusinessBinding`. New code should use
+Item vocabulary.
 
 ## Decision
 
 Keep Prisma `TaskExecution` unchanged for now.
 
-Introduce `BusinessBinding` as the server-side domain abstraction over `TaskExecution`.
+Introduce `Item` as the application-layer abstraction over `TaskExecution`.
 
-`BusinessBinding` maps:
+`Item` maps:
 
-`TaskItem <-> Business Object`
+`Workspace <-> Business Object`
 
 ## Consequences
 
-New server code should use BusinessBinding names.
+New server code should use Item names.
 
-Timeline projection can resolve related TaskItems through BusinessBinding.
+Activity and Timeline projection can resolve related Workspaces through Items.
 
-No Prisma rename is required yet.
+No Prisma rename is required.
 
-ExecutionContext through URL/API is rejected/deferred for Timeline routing.
-
+ExecutionContext through URL/API is rejected/deferred for routing.

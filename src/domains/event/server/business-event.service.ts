@@ -3,6 +3,7 @@ import { consumeBusinessEventForWorkflow } from "@/domains/workflow/server/workf
 import { consumeBusinessEventForNotification } from "@/domains/notification/server/notification-event-consumer";
 import { consumeBusinessEventForTimeline } from "@/domains/shared/timeline/server/timeline-event-consumer";
 import { consumeBusinessEventForCoordination } from "@/domains/coordination/server";
+import { perfLog, perfNow } from "@/lib/server-perf";
 export type BusinessEventEffect = "ASSERT" | "REVOKE";
 
 export type BusinessEventInput = {
@@ -35,6 +36,8 @@ type BusinessEventConsumer = {
         context: BusinessEventConsumerContext,
     ) => Promise<unknown>;
 };
+
+const DEFAULT_CONSUMER_TIMEOUT_MS = 5000;
 
 const consumers: BusinessEventConsumer[] = [
     {
@@ -90,7 +93,37 @@ function businessEventLogForCoordination(eventLog: unknown) {
     };
 }
 
+function businessEventConsumerTimeoutMs() {
+    const configured = Number(process.env.BUSINESS_EVENT_CONSUMER_TIMEOUT_MS);
+    if (Number.isFinite(configured) && configured > 0) return configured;
+    return DEFAULT_CONSUMER_TIMEOUT_MS;
+}
+
+function errorMessage(error: unknown) {
+    return error instanceof Error ? error.message : "Unknown error";
+}
+
+async function withTimeout<T>(
+    promise: Promise<T>,
+    timeoutMs: number,
+    message: string,
+) {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+
+    try {
+        return await Promise.race([
+            promise,
+            new Promise<never>((_, reject) => {
+                timeout = setTimeout(() => reject(new Error(message)), timeoutMs);
+            }),
+        ]);
+    } finally {
+        if (timeout) clearTimeout(timeout);
+    }
+}
+
 export async function recordBusinessEvent(db: DB, input: BusinessEventInput) {
+    const totalStartedAt = perfNow();
     const client = dbOrTx(db);
 
     const eventKey = clean(input.eventKey);
@@ -114,6 +147,7 @@ export async function recordBusinessEvent(db: DB, input: BusinessEventInput) {
         targetAliasIds: input.targetAliasIds ?? [],
     };
 
+    const upsertStartedAt = perfNow();
     const eventLog = await client.businessEventLog.upsert({
         where: {
             eventKey_targetType_targetId: {
@@ -134,6 +168,7 @@ export async function recordBusinessEvent(db: DB, input: BusinessEventInput) {
             metadataJson,
         },
     });
+    perfLog("business-event", `${eventKey}:upsert`, upsertStartedAt);
 
     const consumerContext: BusinessEventConsumerContext = {
         eventLog,
@@ -148,28 +183,43 @@ export async function recordBusinessEvent(db: DB, input: BusinessEventInput) {
 
     const consumerResults: Record<string, unknown> = {};
 
-    for (const consumer of consumers) {
+    const consumerTimeoutMs = businessEventConsumerTimeoutMs();
+    const consumerEntries = await Promise.all(consumers.map(async (consumer) => {
+        const consumerStartedAt = perfNow();
         try {
-            consumerResults[consumer.key] = await consumer.consume(
-                client,
-                consumerContext,
+            const result = await withTimeout(
+                consumer.consume(client, consumerContext),
+                consumerTimeoutMs,
+                `BusinessEvent consumer ${consumer.key} timed out after ${consumerTimeoutMs}ms`,
             );
-        } catch (error) {
-            if (consumer.key !== "coordination") throw error;
 
-            console.error("[coordination] BusinessEvent consumer failed", {
+            return [consumer.key, result] as const;
+        } catch (error) {
+            console.error("[business-event] consumer failed", {
+                consumer: consumer.key,
                 eventKey,
                 targetType,
                 targetId,
-                error,
+                error: errorMessage(error),
             });
 
-            consumerResults[consumer.key] = {
+            return [consumer.key, {
                 ok: false,
-                error: error instanceof Error ? error.message : "Unknown error",
-            };
+                error: errorMessage(error),
+            }] as const;
+        } finally {
+            perfLog(
+                "business-event",
+                `${eventKey}:consumer:${consumer.key}`,
+                consumerStartedAt,
+            );
         }
+    }));
+
+    for (const [consumerKey, result] of consumerEntries) {
+        consumerResults[consumerKey] = result;
     }
+    perfLog("business-event", `${eventKey}:total`, totalStartedAt);
 
     return {
         ok: true,

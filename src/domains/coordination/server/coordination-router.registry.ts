@@ -63,8 +63,7 @@ registerCoordinationRoutes([
     workTypeKey: "publish",
     enabled: true,
     metadata: {
-      example: true,
-      note: "Framework route only. Does not create bindings or activities.",
+      note: "Auto-bind Watch content review event to the publish work ticket.",
     },
   },
   {
@@ -72,10 +71,49 @@ registerCoordinationRoutes([
     targetType: "WATCH",
     coordinationType: "operation",
     workTypeKey: "publish",
-    enabled: false,
+    enabled: true,
     metadata: {
-      example: true,
-      note: "Disabled sample route reserved for future rule activation.",
+      note: "Auto-bind Watch content review event to the publish work ticket.",
+    },
+  },
+  {
+    eventKey: "watch.content.approved",
+    targetType: "WATCH",
+    coordinationType: "operation",
+    workTypeKey: "publish",
+    enabled: true,
+    metadata: {
+      note: "Auto-bind Watch content review event to the publish work ticket.",
+    },
+  },
+  {
+    eventKey: "watch.image.submitted",
+    targetType: "WATCH",
+    coordinationType: "operation",
+    workTypeKey: "publish",
+    enabled: true,
+    metadata: {
+      note: "Auto-bind Watch image review event to the publish work ticket.",
+    },
+  },
+  {
+    eventKey: "watch.image.rejected",
+    targetType: "WATCH",
+    coordinationType: "operation",
+    workTypeKey: "publish",
+    enabled: true,
+    metadata: {
+      note: "Auto-bind Watch image review event to the publish work ticket.",
+    },
+  },
+  {
+    eventKey: "watch.image.approved",
+    targetType: "WATCH",
+    coordinationType: "operation",
+    workTypeKey: "publish",
+    enabled: true,
+    metadata: {
+      note: "Auto-bind Watch image review event to the publish work ticket.",
     },
   },
 ]);

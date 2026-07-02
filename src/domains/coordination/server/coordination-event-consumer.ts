@@ -6,12 +6,13 @@ import {
 } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
 import { ensureTaskItemBusinessBinding } from "@/domains/task/server/business-binding.service";
+import { applyEventTriggerToQueueItem } from "@/domains/task/server/business-binding-workflow.service";
 import { createBusinessEventActivity } from "@/domains/task/server/activity/task-item-activity.service";
 import {
   getWorkTypeKeyFromTicketNote,
   resolveCurrentCoordinationCycle,
 } from "./coordination-cycle.service";
-import { getWorkTypeDefinition } from "./coordination-work-type.registry";
+import { getWorkTypeDefinition } from "@/domains/task/server/work-type.service";
 import { getCoordinationRoute } from "./coordination-router.registry";
 import { routeBusinessEvent } from "./coordination-router.service";
 import type { CoordinationContext } from "./coordination-cycle.types";
@@ -157,7 +158,7 @@ function workTicketCandidates(route: CoordinationRoute, context: CoordinationCon
     route.workTypeKey,
     workType?.key,
     workType?.title,
-    ...(workType?.aliases ?? []),
+    ...(workType?.routingKeys ?? []),
     ...metadataStringArray(metadata, "workTypeAliases"),
     ...metadataStringArray(metadata, "workTypeTitles"),
     ...metadataStringArray(metadata, "taskItemTitles"),
@@ -238,6 +239,58 @@ function skipped(
   };
 }
 
+function canonicalTargetIdForCoordination(input: {
+  targetType: string;
+  targetId: string;
+  metadataJson?: Prisma.JsonValue | null;
+}) {
+  const metadata = asRecord(input.metadataJson);
+  const eventKey = clean(metadata.eventKey).toLowerCase();
+  const watchId = clean(metadata.watchId);
+
+  if (
+    input.targetType === "WATCH" &&
+    watchId &&
+    (
+      eventKey.startsWith("watch.content.") ||
+      eventKey.startsWith("watch.image.") ||
+      clean(metadata.reviewTargetType)
+    )
+  ) {
+    return watchId;
+  }
+
+  return input.targetId;
+}
+
+async function applyWorkflowEventTransition(input: {
+  db: DB;
+  bindingId: string;
+  eventKey: string;
+  businessEventLogId: string;
+  actorUserId?: string | null;
+  metadataJson?: Prisma.JsonValue | null;
+}) {
+  try {
+    return await applyEventTriggerToQueueItem(input.db, {
+      bindingId: input.bindingId,
+      eventKey: input.eventKey,
+      businessEventLogId: input.businessEventLogId,
+      actorUserId: input.actorUserId ?? null,
+      metadataJson: input.metadataJson ?? null,
+    });
+  } catch (error) {
+    console.error("[coordination] workflow event transition failed", {
+      bindingId: input.bindingId,
+      eventKey: input.eventKey,
+      businessEventLogId: input.businessEventLogId,
+      error,
+    });
+
+    return null;
+  }
+}
+
 export async function consumeBusinessEventForCoordination(
   db: DB,
   input: CoordinationEventConsumerInput,
@@ -245,6 +298,11 @@ export async function consumeBusinessEventForCoordination(
   const eventKey = clean(input.eventKey).toLowerCase();
   const targetType = clean(input.targetType).toUpperCase();
   const targetId = clean(input.targetId);
+  const canonicalTargetId = canonicalTargetIdForCoordination({
+    targetType,
+    targetId,
+    metadataJson: input.metadataJson ?? null,
+  });
   const businessEventLogId = clean(input.businessEventLogId) || clean(input.id);
   const rawRoute = getCoordinationRoute({ eventKey, targetType });
 
@@ -259,7 +317,7 @@ export async function consumeBusinessEventForCoordination(
   const resolution = routeBusinessEvent({
     eventKey,
     targetType,
-    targetId,
+    targetId: canonicalTargetId,
     actorUserId: input.actorUserId ?? null,
     payload: input.metadataJson ?? input.payload ?? null,
   });
@@ -282,6 +340,7 @@ export async function consumeBusinessEventForCoordination(
     workTypeKey: route.workTypeKey,
     businessEventLogId,
     businessEventCreatedAt: formatDateMetadata(input.createdAt),
+    sourceTargetId: targetId,
     targetAliasIds: extractTargetAliasIds(input),
   } satisfies Prisma.InputJsonObject;
 
@@ -289,10 +348,18 @@ export async function consumeBusinessEventForCoordination(
     taskId: task.id,
     taskItemId: workTicket.id,
     targetType,
-    targetId,
+    targetId: canonicalTargetId,
     actionType: TaskExecutionActionType.LINKED,
     createdByUserId: input.actorUserId ?? null,
     metadataJson,
+  });
+  await applyWorkflowEventTransition({
+    db,
+    bindingId: bindingResult.binding.id,
+    eventKey,
+    businessEventLogId,
+    actorUserId: input.actorUserId ?? null,
+    metadataJson: input.metadataJson ?? null,
   });
 
   const activity = await createBusinessEventActivity({
@@ -303,7 +370,8 @@ export async function consumeBusinessEventForCoordination(
     metadataJson: {
       eventKey,
       targetType,
-      targetId,
+      targetId: canonicalTargetId,
+      sourceTargetId: targetId,
       routeKey: metadataJson.routeKey,
       coordinationType: route.coordinationType,
       workTypeKey: route.workTypeKey,

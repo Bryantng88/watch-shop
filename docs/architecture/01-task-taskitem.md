@@ -1,13 +1,24 @@
-# Task And TaskItem
+# Space And Workspace
 
-`Task` is a container, epic, or case. It groups work and provides ownership, status, and context.
+`Space` is a container, cycle, epic, or case. It groups Workspaces and provides
+ownership, status, and context.
 
-`TaskItem` is the primary collaboration ticket:
+`Workspace` is the primary collaboration surface:
+
 - The unit people discuss and execute.
 - The aggregate root for collaboration UX.
-- The Jira-like issue surface where timeline, comments, feedback, and business events are rendered.
+- The issue-like surface where Activity, Discussion, feedback, and business
+  events are rendered.
 
-Business domains must not depend on TaskItem. A Watch Review action should update Watch state and emit a `BusinessEvent`; it should not know which TaskItem is watching it.
+Business domains must not depend on Workspace. A Watch review action should
+update Watch state and emit a `BusinessEvent`; it should not know which
+Workspace is watching it.
 
-TaskItem discovers business context through `BusinessBinding`, not through domain-specific coupling.
+Workspace discovers business context through Items, not through domain-specific
+coupling.
 
+Implementation note:
+
+- Prisma `Task` persists Space.
+- Prisma `TaskItem` persists Workspace.
+- Application code should prefer Space/Workspace vocabulary for new APIs.

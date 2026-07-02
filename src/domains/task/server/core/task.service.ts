@@ -76,6 +76,25 @@ export function authCanViewAllTasks(auth: any): boolean {
   );
 }
 
+function authShareGroups(auth: unknown) {
+  const authRecord = auth && typeof auth === "object" ? auth as Record<string, unknown> : {};
+  const user = authRecord.user && typeof authRecord.user === "object"
+    ? authRecord.user as Record<string, unknown>
+    : {};
+  const roles = authRecord.roles ?? user.roles ?? [];
+  if (!Array.isArray(roles)) return [];
+
+  const groups = new Set<string>();
+  for (const role of roles) {
+    const normalized = String(role ?? "").trim().toUpperCase();
+    if (normalized === "OPERATION") groups.add("operation");
+    if (normalized === "TECHNICAL") groups.add("technical");
+    if (normalized === "SALES" || normalized === "SALE") groups.add("sales");
+  }
+
+  return Array.from(groups);
+}
+
 function assertUser(userId: string | null): asserts userId is string {
   if (!userId) throw new Error("Không xác định được user hiện tại");
 }
@@ -244,7 +263,12 @@ export async function getTaskItemListPageData(
   const canViewAll = authCanViewAllTasks(input.auth);
 
   const [list, taskOptions, users] = await Promise.all([
-    listTaskItemsRepo(db, { userId, canViewAll, filters: input.filters }),
+    listTaskItemsRepo(db, {
+      userId,
+      canViewAll,
+      shareGroups: authShareGroups(input.auth),
+      filters: input.filters,
+    }),
     listTaskOptionsForTaskItemRepo(db, { userId, canViewAll }),
     listAssignableUsersRepo(db),
   ]);

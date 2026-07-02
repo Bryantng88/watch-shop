@@ -45,6 +45,27 @@ import {
   AppTagTargetType,
 } from "@prisma/client";
 import { addActivityReply } from "../server/activity";
+import { applyManualWorkflowAction } from "../server/business-binding-workflow.service";
+import {
+  addManualQueueItem,
+  searchManualQueueTargets,
+} from "../server/business-binding.service";
+import type { BusinessBindingTargetType } from "../server/business-binding.types";
+
+function authActorLabel(auth: unknown) {
+  const root = auth && typeof auth === "object" && !Array.isArray(auth)
+    ? (auth as Record<string, unknown>)
+    : {};
+  const user = root.user && typeof root.user === "object" && !Array.isArray(root.user)
+    ? (root.user as Record<string, unknown>)
+    : {};
+
+  return {
+    name: user.name ?? root.name ?? null,
+    email: user.email ?? root.email ?? null,
+  };
+}
+
 async function getTaskAuth() {
   return requirePermission("TASK_VIEW");
 }
@@ -131,6 +152,7 @@ export async function createTaskItemAction(input: {
   const item = await createTaskItemRepo(prisma, {
     taskId: cleanTaskId,
     title: cleanTitle,
+    ownerUserId: auth.userId,
     assignedToUserId: input.assignedToUserId || null,
     priority: input.priority || "MEDIUM",
     dueAt: input.dueAt || null,
@@ -272,6 +294,91 @@ export async function updateTaskItemAction(
     },
   };
 }
+
+function setSharedUserIdsInNote(note: string | null | undefined, userIds: string[]) {
+  const cleanIds = Array.from(
+    new Set(userIds.map((id) => String(id ?? "").trim()).filter(Boolean)),
+  );
+  const lines = String(note ?? "")
+    .split(/\r?\n/)
+    .filter((line) => !/^sharedUserIds:\s*/i.test(line.trim()));
+
+  if (cleanIds.length) {
+    lines.push(`sharedUserIds: ${cleanIds.join(",")}`);
+  }
+
+  return lines.join("\n").trim() || null;
+}
+
+export async function updateTaskItemSharingAction(input: {
+  taskItemId: string;
+  sharedUserIds: string[];
+}) {
+  const auth = await getTaskAuth();
+  const actorUserId = getAuthUserId(auth);
+  const canViewAll = authCanViewAllTasks(auth);
+
+  const taskItemId = String(input.taskItemId ?? "").trim();
+  if (!taskItemId) throw new Error("Missing taskItemId");
+
+  const requestedIds = Array.from(
+    new Set(
+      (input.sharedUserIds ?? [])
+        .map((id) => String(id ?? "").trim())
+        .filter(Boolean),
+    ),
+  );
+
+  const users = requestedIds.length
+    ? await prisma.user.findMany({
+      where: { id: { in: requestedIds }, isActive: true },
+      select: { id: true },
+    })
+    : [];
+  const validIds = users.map((user) => user.id);
+
+  const item = await prisma.taskItem.findUnique({
+    where: { id: taskItemId },
+    select: {
+      id: true,
+      taskId: true,
+      note: true,
+      userId: true,
+      assignedToUserId: true,
+      task: {
+        select: {
+          createdByUserId: true,
+          assignedToUserId: true,
+        },
+      },
+    },
+  });
+
+  if (!item) throw new Error("Phiếu xử lý không tồn tại.");
+  if (
+    !canViewAll &&
+    actorUserId !== item.userId &&
+    actorUserId !== item.assignedToUserId &&
+    actorUserId !== item.task.createdByUserId &&
+    actorUserId !== item.task.assignedToUserId
+  ) {
+    throw new Error("Bạn không có quyền chia sẻ phiếu xử lý này.");
+  }
+
+  await prisma.taskItem.update({
+    where: { id: taskItemId },
+    data: {
+      note: setSharedUserIdsInNote(item.note, validIds),
+    },
+  });
+
+  revalidatePath("/admin/coordination/operation");
+  revalidatePath(`/admin/task-items/${taskItemId}`);
+  revalidatePath("/admin/task-items");
+
+  return { ok: true, sharedUserIds: validIds };
+}
+
 export async function changeTaskItemStatusAction(
   itemId: string,
   status: TaskStatus,
@@ -525,6 +632,82 @@ export async function addTaskItemActivityReplyAction(input: {
   }
 
   return { ok: true, reply };
+}
+
+export async function applyQueueItemManualTransitionAction(input: {
+  bindingId: string;
+  actionKey?: string | null;
+  toState?: string | null;
+  note?: string | null;
+}) {
+  const auth = await getTaskAuth();
+  const bindingId = String(input.bindingId ?? "").trim();
+  const actionKey = String(input.actionKey ?? "").trim();
+  const toState = String(input.toState ?? "").trim();
+
+  if (!bindingId) throw new Error("Missing bindingId");
+  if (!actionKey && !toState) throw new Error("Missing manual workflow action");
+
+  const result = await applyManualWorkflowAction(prisma, {
+    bindingId,
+    actionKey,
+    toState,
+    actorUserId: getAuthUserId(auth),
+    actorLabel: auth?.user?.name ?? auth?.name ?? auth?.user?.email ?? auth?.email ?? null,
+    note: input.note ?? null,
+  });
+
+  revalidatePath("/admin/task-items");
+  if (result.applied && result.taskItemId) {
+    revalidatePath(`/admin/task-items/${result.taskItemId}`);
+  }
+
+  return { ok: true, result };
+}
+
+export async function searchManualQueueTargetsAction(input: {
+  targetType: string;
+  keyword?: string | null;
+  limit?: number | null;
+}) {
+  await getTaskAuth();
+  const items = await searchManualQueueTargets(prisma, {
+    targetType: String(input.targetType ?? "").trim() as BusinessBindingTargetType,
+    keyword: input.keyword ?? null,
+    limit: input.limit ?? null,
+  });
+
+  return { ok: true, items };
+}
+
+export async function addManualQueueItemAction(input: {
+  taskItemId: string;
+  targetType: string;
+  targetId: string;
+  intakeNote?: string | null;
+}) {
+  const auth = await getTaskAuth();
+  const taskItemId = String(input.taskItemId ?? "").trim();
+  const targetId = String(input.targetId ?? "").trim();
+  const targetType = String(input.targetType ?? "").trim();
+
+  if (!taskItemId) throw new Error("Missing taskItemId");
+  if (!targetType) throw new Error("Vui lòng chọn loại nghiệp vụ.");
+  if (!targetId) throw new Error("Vui lòng chọn nghiệp vụ.");
+
+  const result = await addManualQueueItem(prisma, {
+    taskItemId,
+    targetType: targetType as BusinessBindingTargetType,
+    targetId,
+    intakeNote: input.intakeNote ?? null,
+    actorUserId: getAuthUserId(auth),
+    actor: authActorLabel(auth),
+  });
+
+  revalidatePath("/admin/task-items");
+  revalidatePath(`/admin/task-items/${taskItemId}`);
+
+  return { ok: true, result };
 }
 export async function searchTasksForTaskItemMoveAction(input: {
   keyword?: string | null;

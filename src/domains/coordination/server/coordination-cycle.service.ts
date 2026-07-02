@@ -3,8 +3,8 @@ import { dbOrTx, withDbTransaction, type DB } from "@/server/db/client";
 import {
   listWorkTypes,
   normalizeWorkTypeKey,
-  type CoordinationWorkTypeDefinition,
-} from "./coordination-work-type.registry";
+} from "@/domains/task/server/work-type.service";
+import type { WorkTypeDefinition } from "@/domains/task/server/work-type.types";
 import type {
   CoordinationContext,
   CoordinationWeekRange,
@@ -34,6 +34,13 @@ const COORDINATION_WORK_TICKET_SELECT = {
   status: true,
 } as const;
 
+const DEFAULT_SYSTEM_SHARE_GROUP_BY_CONTEXT: Record<CoordinationContext, string> = {
+  OPERATION: "operation",
+  SALES: "sales",
+  TECHNICAL: "technical",
+  GENERAL: "general",
+};
+
 function startOfUtcDate(date: Date) {
   return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
 }
@@ -45,8 +52,18 @@ function contextToTaskKind(context: CoordinationContext) {
   return TaskKind.BUSINESS;
 }
 
-function workTypeNote(workType: CoordinationWorkTypeDefinition) {
-  return `workTypeKey: ${workType.key}`;
+function workTypeNote(workType: WorkTypeDefinition) {
+  const lines = [
+    `workTypeKey: ${workType.key}`,
+    "ownerType: SYSTEM",
+    `shareGroupKey: ${DEFAULT_SYSTEM_SHARE_GROUP_BY_CONTEXT[workType.coordinationContext]}`,
+  ];
+
+  if (workType.workflowKey) {
+    lines.push(`workflowKey: ${workType.workflowKey}`);
+  }
+
+  return lines.join("\n");
 }
 
 export function getWeekRange(date = new Date()): CoordinationWeekRange {
@@ -117,11 +134,26 @@ async function findCoordinationCycleTask(
   });
 }
 
-async function listWorkTicketsForCycle(db: DB, taskId: string) {
-  return dbOrTx(db).taskItem.findMany({
-    where: { taskId },
+async function listWorkTicketsForCycle(
+  db: DB,
+  input: {
+    taskId: string;
+    context: CoordinationContext;
+  },
+) {
+  const activeWorkTypeKeys = new Set(
+    listWorkTypes(input.context).map((workType) => normalizeWorkTypeKey(workType.key)),
+  );
+  const items = await dbOrTx(db).taskItem.findMany({
+    where: { taskId: input.taskId },
     select: COORDINATION_WORK_TICKET_SELECT,
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  });
+
+  return items.filter((item) => {
+    const workTypeKey = getWorkTypeKeyFromTicketNote(item.note);
+    if (!workTypeKey) return true;
+    return activeWorkTypeKeys.has(workTypeKey);
   });
 }
 
@@ -152,7 +184,7 @@ export async function ensureWorkTickets(
   },
 ) {
   const client = dbOrTx(db);
-  const existing = await listWorkTicketsForCycle(client, input.taskId);
+  const existing = await listWorkTicketsForCycle(client, input);
   const existingTitles = new Set(existing.map((item) => item.title.trim()));
   let createdCount = 0;
 
@@ -176,7 +208,7 @@ export async function ensureWorkTickets(
   }
 
   return {
-    items: await listWorkTicketsForCycle(client, input.taskId),
+    items: await listWorkTicketsForCycle(client, input),
     createdCount,
   };
 }

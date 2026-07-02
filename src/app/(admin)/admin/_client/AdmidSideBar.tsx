@@ -10,15 +10,14 @@ import {
     User,
     Users2,
     Menu,
+    ChevronDown,
     ClipboardList,
     Warehouse,
     LayoutList,
     MonitorCog,
     CameraIcon,
     CheckSquare,
-    ListTodo,
     Wrench,
-    AlertCircle,
     LogOut,
     Workflow,
 } from "lucide-react";
@@ -63,6 +62,8 @@ type NavItem = {
 type NavGroup = {
     type: "group";
     label: string;
+    children?: NavItem[];
+    defaultOpen?: boolean;
 };
 
 type NavEntry = NavItem | NavGroup;
@@ -77,12 +78,12 @@ const NAV: NavEntry[] = [
         permission: PERMISSIONS.DASHBOARD_VIEW,
     },
 
-    { type: "group", label: "Vận hành" },
+    { type: "group", label: "Business" },
 
     {
         type: "item",
         href: "/admin/watches",
-        label: "Sản phẩm",
+        label: "Product",
         icon: Package,
         permission: PERMISSIONS.PRODUCT_VIEW,
         notificationKey: "products",
@@ -90,7 +91,7 @@ const NAV: NavEntry[] = [
     {
         type: "item",
         href: "/admin/acquisitions",
-        label: "Phiếu nhập",
+        label: "Acquisition",
         icon: Tags,
         permission: PERMISSIONS.ACQUISITION_VIEW,
         notificationKey: "acquisitions",
@@ -98,7 +99,7 @@ const NAV: NavEntry[] = [
     {
         type: "item",
         href: "/admin/orders",
-        label: "Đơn hàng",
+        label: "Order",
         icon: ClipboardList,
         permission: PERMISSIONS.ORDER_VIEW,
         notificationKey: "orders",
@@ -120,60 +121,66 @@ const NAV: NavEntry[] = [
         notificationKey: "services",
     },
 
-    { type: "group", label: "Điều phối" },
+    {
+        type: "group",
+        label: "Space Management",
+        defaultOpen: true,
+        children: [
+            {
+                type: "item",
+                href: "/admin/coordination/operation",
+                label: "Operations",
+                icon: Workflow,
+                permission: PERMISSIONS.TASK_VIEW,
+                notificationKey: "tasks",
+            },
+            {
+                type: "item",
+                href: "/admin/coordination/sales",
+                label: "Sales",
+                icon: ClipboardList,
+                permission: PERMISSIONS.TASK_VIEW,
+                notificationKey: "tasks",
+            },
+            {
+                type: "item",
+                href: "/admin/coordination/technical",
+                label: "Technical",
+                icon: Wrench,
+                permission: PERMISSIONS.TASK_VIEW,
+                notificationKey: "tasks",
+            },
+            {
+                type: "item",
+                href: "/admin/coordination/general",
+                label: "General",
+                icon: LayoutList,
+                permission: PERMISSIONS.TASK_VIEW,
+                notificationKey: "tasks",
+            },
+        ],
+    },
 
-    {
-        type: "item",
-        href: "/admin/coordination/operation",
-        label: "Vận hành",
-        icon: Workflow,
-        permission: PERMISSIONS.TASK_VIEW,
-        notificationKey: "tasks",
-    },
-    {
-        type: "item",
-        href: "/admin/work-cases",
-        label: "Phiếu xử lý",
-        icon: AlertCircle,
-        permission: PERMISSIONS.TASK_VIEW,
-        notificationKey: "workCases",
-    },
-    {
-        type: "item",
-        href: "/admin/tasks",
-        label: "Tasks",
-        icon: CheckSquare,
-        permission: PERMISSIONS.TASK_VIEW,
-        notificationKey: "tasks",
-    },
-    {
-        type: "item",
-        href: "/admin/task-items",
-        label: "Task Items",
-        icon: ListTodo,
-        permission: PERMISSIONS.TASK_VIEW,
-    },
-
-    { type: "group", label: "Hệ thống" },
+    { type: "group", label: "System" },
 
     {
         type: "item",
         href: "/admin/catalogs/technical",
-        label: "Danh mục",
+        label: "Catalog",
         icon: LayoutList,
         permission: PERMISSIONS.SERVICE_VIEW,
     },
     {
         type: "item",
         href: "/admin/customers",
-        label: "Khách hàng",
+        label: "Customers",
         icon: Users2,
         permission: PERMISSIONS.CUSTOMER_VIEW,
     },
     {
         type: "item",
         href: "/admin/settings/task-types",
-        label: "Loại task",
+        label: "Workspace Templates",
         icon: CheckSquare,
         permission: PERMISSIONS.TASK_MANAGE,
     },
@@ -201,14 +208,14 @@ const NAV: NavEntry[] = [
     {
         type: "item",
         href: "/admin/users",
-        label: "Người dùng",
+        label: "Users",
         icon: User,
         permission: PERMISSIONS.USER_VIEW,
     },
     {
         type: "item",
         href: "/admin/reports",
-        label: "Báo cáo",
+        label: "Reports",
         icon: LineChart,
         permission: PERMISSIONS.REPORT_VIEW,
     },
@@ -234,6 +241,12 @@ function buildAllowedNav(user: Props["user"]) {
             continue;
         }
 
+        if (entry.children?.length) {
+            const children = entry.children.filter((item) => canAccess(user, item));
+            if (children.length) result.push({ ...entry, children });
+            continue;
+        }
+
         const hasAllowedItemAfterGroup = NAV.slice(i + 1).some((next) => {
             if (next.type === "group") return false;
             return canAccess(user, next);
@@ -256,6 +269,9 @@ export default function AdminSidebar({
     const notify = useNotify();
     const [open, setOpen] = useState(false);
     const [loggingOut, setLoggingOut] = useState(false);
+    const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
+        () => new Set(),
+    );
     const hideTimerRef = useRef<number | null>(null);
 
     useEffect(() => {
@@ -265,6 +281,18 @@ export default function AdminSidebar({
     }, []);
 
     const allowedNav = useMemo(() => buildAllowedNav(user), [user]);
+
+    const toggleGroup = useCallback((label: string) => {
+        setCollapsedGroups((current) => {
+            const next = new Set(current);
+            if (next.has(label)) {
+                next.delete(label);
+            } else {
+                next.add(label);
+            }
+            return next;
+        });
+    }, []);
 
     const handleMenuSwitch = useCallback(
         (item: NavItem, event: React.MouseEvent) => {
@@ -307,6 +335,52 @@ export default function AdminSidebar({
         await fetch("/api/auth/logout", { method: "POST" });
         window.location.replace("/login");
     }, [loggingOut]);
+
+    function renderNavItem(item: NavItem, nested = false) {
+        const Icon = item.icon;
+        const count = Number(
+            item.notificationKey ? notifications?.[item.notificationKey] ?? 0 : 0,
+        );
+
+        return (
+            <div
+                key={item.href}
+                className="group relative"
+                onClick={(event) => handleMenuSwitch(item, event)}
+            >
+                <ActiveLink href={item.href} exact={item.exact}>
+                    <Icon size={18} className="shrink-0 opacity-80" />
+
+                    <span className="hidden min-w-0 items-center gap-2 xl:inline-flex">
+                        <span
+                            className={[
+                                "truncate text-[14px] leading-none",
+                                nested ? "text-white/75" : "",
+                            ].join(" ")}
+                        >
+                            {item.label}
+                        </span>
+
+                        {Number.isFinite(count) && count > 0 ? (
+                            <span className="inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
+                                {count > 99 ? "99+" : count}
+                            </span>
+                        ) : null}
+                    </span>
+
+                    {Number.isFinite(count) && count > 0 ? (
+                        <span className="absolute right-2 top-2 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white xl:hidden">
+                            {count > 99 ? "99+" : count}
+                        </span>
+                    ) : null}
+                </ActiveLink>
+
+                <div className="pointer-events-none absolute left-[68px] top-1/2 z-[9999] hidden -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white shadow-xl group-hover:block xl:hidden">
+                    {item.label}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <>
@@ -388,59 +462,50 @@ export default function AdminSidebar({
                 <nav className="relative z-50 space-y-1 overflow-visible px-3 py-3">
                     {allowedNav.map((entry, index) => {
                         if (entry.type === "group") {
+                            const hasChildren = Boolean(entry.children?.length);
+                            const isCollapsed = collapsedGroups.has(entry.label);
+                            const isOpen = hasChildren && !isCollapsed;
+
                             return (
                                 <div
                                     key={`group-${entry.label}-${index}`}
                                     className="pt-3 first:pt-0"
                                 >
-                                    <div className="mx-2 hidden border-t border-white/10 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35 xl:block">
-                                        {entry.label}
-                                    </div>
+                                    {hasChildren ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleGroup(entry.label)}
+                                            className="mx-2 hidden w-[calc(100%-1rem)] items-center justify-between border-t border-white/10 pt-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45 transition hover:text-white/70 xl:flex"
+                                            aria-expanded={isOpen}
+                                        >
+                                            <span>{entry.label}</span>
+                                            <ChevronDown
+                                                className={[
+                                                    "h-3.5 w-3.5 transition-transform",
+                                                    isOpen ? "rotate-0" : "-rotate-90",
+                                                ].join(" ")}
+                                            />
+                                        </button>
+                                    ) : (
+                                        <div className="mx-2 hidden border-t border-white/10 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35 xl:block">
+                                            {entry.label}
+                                        </div>
+                                    )}
 
                                     <div className="mx-auto h-px w-7 bg-white/10 xl:hidden" />
+
+                                    {isOpen ? (
+                                        <div className="mt-1 space-y-1 xl:pl-2">
+                                            {entry.children?.map((item) =>
+                                                renderNavItem(item, true),
+                                            )}
+                                        </div>
+                                    ) : null}
                                 </div>
                             );
                         }
 
-                        const n = entry;
-                        const Icon = n.icon;
-                        const count = Number(
-                            n.notificationKey ? notifications?.[n.notificationKey] ?? 0 : 0,
-                        );
-
-                        return (
-                            <div
-                                key={n.href}
-                                className="group relative"
-                                onClick={(event) => handleMenuSwitch(n, event)}
-                            >
-                                <ActiveLink href={n.href} exact={n.exact}>
-                                    <Icon size={18} className="shrink-0 opacity-80" />
-
-                                    <span className="hidden min-w-0 items-center gap-2 xl:inline-flex">
-                                        <span className="truncate text-[14px] leading-none">
-                                            {n.label}
-                                        </span>
-
-                                        {Number.isFinite(count) && count > 0 ? (
-                                            <span className="inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
-                                                {count > 99 ? "99+" : count}
-                                            </span>
-                                        ) : null}
-                                    </span>
-
-                                    {Number.isFinite(count) && count > 0 ? (
-                                        <span className="absolute right-2 top-2 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white xl:hidden">
-                                            {count > 99 ? "99+" : count}
-                                        </span>
-                                    ) : null}
-                                </ActiveLink>
-
-                                <div className="pointer-events-none absolute left-[68px] top-1/2 z-[9999] hidden -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white shadow-xl group-hover:block xl:hidden">
-                                    {n.label}
-                                </div>
-                            </div>
-                        );
+                        return renderNavItem(entry);
                     })}
                 </nav>
 

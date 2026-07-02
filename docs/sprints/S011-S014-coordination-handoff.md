@@ -255,6 +255,54 @@ Product wording:
 - UI does not show BusinessBinding.
 - UI does not show direct Business links.
 
+## Sprint 15 - Queue Summary
+
+Goal:
+
+- Do not build Queue Detail.
+- Upgrade only the per Work Ticket summary.
+- Replace single `Queue` count in the Work Ticket row with:
+  - `Ready`
+  - `Review`
+  - `Feedback`
+  - `Done`
+- Do not use charts.
+- Do not add heavy color treatment.
+- Do not hydrate Business objects.
+- Do not change Business Logic, Activity, or Workflow.
+
+Updated DTO:
+
+- `QueueSummaryDTO`
+- `CoordinationWorkTicketSummaryDTO.queueSummary`
+
+Queue summary mapping:
+
+- `Ready`: queue count when Work Ticket status is `TODO`.
+- `Review`: queue count when Work Ticket status is `IN_PROGRESS`.
+- `Feedback`: `BUSINESS_EVENT` activity count.
+- `Done`: queue count when Work Ticket status is `DONE`.
+
+Aggregation strategy:
+
+- Keep `taskExecution.groupBy({ by: ["taskItemId"] })` for queue counts.
+- Keep `taskItemActivity.groupBy({ by: ["taskItemId"] })` for feedback counts.
+- No Queue Detail query.
+- No Business object include/hydration.
+- No N+1 query added.
+
+Updated files:
+
+- `src/domains/coordination/server/coordination-dashboard.types.ts`
+- `src/domains/coordination/server/coordination-dashboard.service.ts`
+- `src/domains/coordination/ui/OperationCoordinationWorkspace.tsx`
+- `docs/sprints/CURRENT.md`
+- `docs/sprints/S011-S014-coordination-handoff.md`
+
+Validation:
+
+- Scoped ESLint passed for the updated Coordination DTO/service/UI files.
+
 ## Dashboard Query Strategy
 
 File:

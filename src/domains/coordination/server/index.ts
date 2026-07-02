@@ -44,15 +44,17 @@ export {
 } from "./coordination-cycle.service";
 
 export type {
-  CoordinationWorkTypeDefinition,
-} from "./coordination-work-type.registry";
+  WorkTypeDefinition as CoordinationWorkTypeDefinition,
+} from "@/domains/task/server/work-type.types";
 
 export {
+  getWorkTypeWorkflowDefinition,
   getWorkTypeDefinition,
   listAllWorkTypes,
   listWorkTypes,
+  listWorkTypesWithWorkflow,
   normalizeWorkTypeKey,
-} from "./coordination-work-type.registry";
+} from "@/domains/task/server/work-type.service";
 
 export type {
   CoordinationDashboardDTO,
@@ -61,6 +63,7 @@ export type {
 } from "./coordination-dashboard.types";
 
 export {
+  getCoordinationDashboard,
   getOperationCoordinationDashboard,
 } from "./coordination-dashboard.service";
 

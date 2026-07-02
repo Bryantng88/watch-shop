@@ -39,8 +39,20 @@ export const BUSINESS_EVENTS: BusinessEventDefinition[] = [
         group: "Watch",
     },
     {
+        key: "watch.content.rejected",
+        label: "Watch content rejected",
+        targetType: "WATCH",
+        group: "Watch",
+    },
+    {
         key: "watch.image.approved",
         label: "Watch đã duyệt hình ảnh",
+        targetType: "WATCH",
+        group: "Watch",
+    },
+    {
+        key: "watch.image.rejected",
+        label: "Watch image rejected",
         targetType: "WATCH",
         group: "Watch",
     },

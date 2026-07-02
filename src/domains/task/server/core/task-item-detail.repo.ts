@@ -1,57 +1,25 @@
 import { dbOrTx, type DB } from "@/server/db/client";
 import { getTaskItemActivityViewModels } from "@/domains/task/server/activity";
+import { listTaskItemQueueItems } from "@/domains/task/server/business-binding.service";
 import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
 
 const USER_SELECT = {
   id: true,
   name: true,
   email: true,
+  avatarUrl: true,
 } as const;
 
-const BUSINESS_BINDING_SELECT = {
-  id: true,
-  targetType: true,
-  targetId: true,
-  taskItemId: true,
-  actionType: true,
-  metadataJson: true,
-  createdAt: true,
-} as const;
-
-type ActivityViewModel = Awaited<ReturnType<typeof getTaskItemActivityViewModels>>[number];
-type BusinessBindingRow = Awaited<ReturnType<typeof listTaskItemBusinessBindings>>[number];
-
-type BusinessQueuePreview = {
-  title: string;
-  ref: string;
-  subtitle: string | null;
-  status: string | null;
-  imageUrl: string | null;
-};
-
-function mediaUrl(value?: string | null) {
-  const raw = String(value ?? "").trim();
-  if (!raw) return null;
-  if (raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("/")) {
-    return raw;
-  }
-  return `/api/media/sign?key=${encodeURIComponent(raw)}`;
-}
-
-function metadataRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
-}
-
-function cleanText(value: unknown) {
-  return String(value ?? "").trim();
-}
-
-function compactId(id: string) {
-  if (!id) return "-";
-  if (id.length <= 18) return id;
-  return `${id.slice(0, 8)}...${id.slice(-6)}`;
+function fallbackQueueTitle(targetType: string) {
+  if (targetType === "WATCH") return "Watch";
+  if (targetType === "ORDER") return "Đơn hàng";
+  if (targetType === "SERVICE_REQUEST") return "Yêu cầu dịch vụ";
+  if (targetType === "TECHNICAL_ISSUE") return "Vấn đề kỹ thuật";
+  if (targetType === "SHIPMENT") return "Vận chuyển";
+  if (targetType === "PAYMENT") return "Thanh toán";
+  if (targetType === "WORK_CASE") return "Hồ sơ xử lý";
+  if (targetType === "ACQUISITION") return "Thu mua";
+  return "Nghiệp vụ";
 }
 
 function queueKey(targetType: string, targetId: string) {
@@ -109,234 +77,6 @@ async function resolveWatchProductIds(
   );
 }
 
-async function listTaskItemBusinessBindings(db: DB, taskItemId: string) {
-  return perfStep("task-item-detail-repo", "businessBindings", () =>
-    dbOrTx(db).taskExecution.findMany({
-      where: { taskItemId },
-      select: BUSINESS_BINDING_SELECT,
-      orderBy: { createdAt: "desc" },
-    }),
-  );
-}
-
-async function resolveWatchQueuePreviews(
-  db: DB,
-  bindings: BusinessBindingRow[],
-) {
-  const ids = Array.from(
-    new Set(
-      bindings
-        .filter((binding) => binding.targetType === "WATCH")
-        .map((binding) => binding.targetId)
-        .filter(Boolean),
-    ),
-  );
-  if (!ids.length) return new Map<string, BusinessQueuePreview>();
-
-  const rows = await perfStep("task-item-detail-repo", "watchQueuePreviews", () =>
-    dbOrTx(db).watch.findMany({
-      where: { id: { in: ids } },
-      select: {
-        id: true,
-        saleStage: true,
-        stockStage: true,
-        product: {
-          select: {
-            title: true,
-            sku: true,
-            status: true,
-            primaryImageUrl: true,
-            storefrontImageKey: true,
-            productImage: {
-              where: { role: "INLINE" },
-              orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-              take: 1,
-              select: { fileKey: true },
-            },
-          },
-        },
-      },
-    }),
-  );
-
-  return new Map(
-    rows.map((row) => {
-      const product = row.product;
-      const imageKey =
-        product?.productImage?.[0]?.fileKey ||
-        product?.primaryImageUrl ||
-        product?.storefrontImageKey ||
-        null;
-      const preview: BusinessQueuePreview = {
-        title: product?.title || product?.sku || "Watch",
-        ref: product?.sku || compactId(row.id),
-        subtitle: product?.status ? `Product ${product.status}` : null,
-        status: row.saleStage || row.stockStage || product?.status || null,
-        imageUrl: mediaUrl(imageKey),
-      };
-      return [queueKey("WATCH", row.id), preview] as const;
-    }),
-  );
-}
-
-async function resolveOrderQueuePreviews(
-  db: DB,
-  bindings: BusinessBindingRow[],
-) {
-  const ids = Array.from(
-    new Set(
-      bindings
-        .filter((binding) => binding.targetType === "ORDER")
-        .map((binding) => binding.targetId)
-        .filter(Boolean),
-    ),
-  );
-  if (!ids.length) return new Map<string, BusinessQueuePreview>();
-
-  const rows = await perfStep("task-item-detail-repo", "orderQueuePreviews", () =>
-    dbOrTx(db).order.findMany({
-      where: { id: { in: ids } },
-      select: {
-        id: true,
-        refNo: true,
-        status: true,
-        paymentStatus: true,
-        customerName: true,
-        orderItem: {
-          take: 1,
-          select: {
-            product: {
-              select: {
-                title: true,
-                primaryImageUrl: true,
-                storefrontImageKey: true,
-                productImage: {
-                  orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-                  take: 1,
-                  select: { fileKey: true },
-                },
-              },
-            },
-          },
-        },
-      },
-    }),
-  );
-
-  return new Map(
-    rows.map((row) => {
-      const product = row.orderItem?.[0]?.product;
-      const imageKey =
-        product?.productImage?.[0]?.fileKey ||
-        product?.primaryImageUrl ||
-        product?.storefrontImageKey ||
-        null;
-      const preview: BusinessQueuePreview = {
-        title: row.refNo || product?.title || "Order",
-        ref: row.refNo || compactId(row.id),
-        subtitle: row.customerName ? `Khach: ${row.customerName}` : null,
-        status: row.status || row.paymentStatus || null,
-        imageUrl: mediaUrl(imageKey),
-      };
-      return [queueKey("ORDER", row.id), preview] as const;
-    }),
-  );
-}
-
-async function resolveServiceQueuePreviews(
-  db: DB,
-  bindings: BusinessBindingRow[],
-) {
-  const ids = Array.from(
-    new Set(
-      bindings
-        .filter((binding) => binding.targetType === "SERVICE_REQUEST")
-        .map((binding) => binding.targetId)
-        .filter(Boolean),
-    ),
-  );
-  if (!ids.length) return new Map<string, BusinessQueuePreview>();
-
-  const rows = await perfStep("task-item-detail-repo", "serviceQueuePreviews", () =>
-    dbOrTx(db).serviceRequest.findMany({
-      where: { id: { in: ids } },
-      select: {
-        id: true,
-        refNo: true,
-        status: true,
-        brandSnapshot: true,
-        modelSnapshot: true,
-        skuSnapshot: true,
-        primaryImageUrlSnapshot: true,
-      },
-    }),
-  );
-
-  return new Map(
-    rows.map((row) => {
-      const title = [row.brandSnapshot, row.modelSnapshot].filter(Boolean).join(" ");
-      const preview: BusinessQueuePreview = {
-        title: title || row.refNo || "Service Request",
-        ref: row.refNo || row.skuSnapshot || compactId(row.id),
-        subtitle: row.skuSnapshot ? `SKU: ${row.skuSnapshot}` : null,
-        status: row.status || null,
-        imageUrl: mediaUrl(row.primaryImageUrlSnapshot),
-      };
-      return [queueKey("SERVICE_REQUEST", row.id), preview] as const;
-    }),
-  );
-}
-
-async function resolveBusinessQueuePreviews(
-  db: DB,
-  bindings: BusinessBindingRow[],
-) {
-  const maps = await Promise.all([
-    resolveWatchQueuePreviews(db, bindings),
-    resolveOrderQueuePreviews(db, bindings),
-    resolveServiceQueuePreviews(db, bindings),
-  ]);
-
-  const result = new Map<string, BusinessQueuePreview>();
-  for (const map of maps) {
-    for (const [key, value] of map) result.set(key, value);
-  }
-  return result;
-}
-
-function activityTarget(activity: ActivityViewModel) {
-  const metadata = metadataRecord(activity.metadataJson);
-  const targetType = cleanText(metadata.targetType);
-  const targetId = cleanText(metadata.targetId);
-  if (!targetType || !targetId) return null;
-  return { targetType, targetId };
-}
-
-function buildActivityStats(activities: ActivityViewModel[]) {
-  const map = new Map<
-    string,
-    { lastActivityTitle: string | null; lastActivityAt: string | null; feedbackCount: number }
-  >();
-
-  for (const activity of activities) {
-    const target = activityTarget(activity);
-    if (!target) continue;
-    const key = queueKey(target.targetType, target.targetId);
-    const current = map.get(key) ?? {
-      lastActivityTitle: null,
-      lastActivityAt: null,
-      feedbackCount: 0,
-    };
-
-    current.lastActivityTitle = activity.title;
-    current.lastActivityAt = activity.occurredAt;
-    if (activity.feedback) current.feedbackCount += 1;
-    map.set(key, current);
-  }
-
-  return map;
-}
-
 export async function getTaskItemDetailPageRepo(db: DB, id: string) {
   const totalStartedAt = perfNow();
   const client = dbOrTx(db);
@@ -345,6 +85,7 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
       where: { id },
       include: {
         assignedToUser: { select: USER_SELECT },
+        User: { select: USER_SELECT },
         checklists: {
           orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
         },
@@ -367,49 +108,73 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
 
   if (!item) return null;
 
-  const [activities, businessBindings] = await Promise.all([
+  const sharedUserIds = Array.from(
+    new Set(
+      String(item.note ?? "")
+        .match(/^sharedUserIds:\s*(.+)$/im)?.[1]
+        ?.split(",")
+        .map((id) => id.trim())
+        .filter(Boolean) ?? [],
+    ),
+  );
+
+  const [activities, queueItems, sharedUsers] = await Promise.all([
     perfStep("task-item-detail-repo", "activities", () =>
       getTaskItemActivityViewModels(item.id, 50),
     ),
-    listTaskItemBusinessBindings(db, item.id),
+    perfStep("task-item-detail-repo", "queueItems", () =>
+      listTaskItemQueueItems(db, item.id),
+    ),
+    sharedUserIds.length
+      ? client.user.findMany({
+        where: { id: { in: sharedUserIds } },
+        select: USER_SELECT,
+        orderBy: [{ name: "asc" }, { email: "asc" }],
+      })
+      : Promise.resolve([]),
   ]);
-  const watchProductIds = await resolveWatchProductIds(db, businessBindings);
-  const [businessQueuePreviews] = await Promise.all([
-    resolveBusinessQueuePreviews(db, businessBindings),
-  ]);
-  const activityStats = buildActivityStats(activities);
+  const watchProductIds = await resolveWatchProductIds(db, queueItems);
+  const queueHrefs = new Map(
+    queueItems.map((queueItem) => [
+      queueKey(queueItem.targetType, queueItem.targetId),
+      bindingHref(queueItem, watchProductIds),
+    ]),
+  );
 
   const result = {
     ...item,
+    ownerUser: item.User,
+    sharedUserIds,
+    sharedUsers,
     activities,
-    businessBindings: businessBindings.map((binding) => ({
-      id: binding.id,
-      targetType: binding.targetType,
-      targetId: binding.targetId,
-      taskItemId: binding.taskItemId,
-      actionType: binding.actionType,
-      metadata: binding.metadataJson,
-      href: bindingHref(binding, watchProductIds),
-      createdAt: binding.createdAt,
-      updatedAt: binding.createdAt,
-      preview:
-        businessQueuePreviews.get(queueKey(binding.targetType, binding.targetId)) ??
-        {
-          title: cleanText(metadataRecord(binding.metadataJson).targetTitle) ||
-            `${binding.targetType} ${compactId(binding.targetId)}`,
-          ref: cleanText(metadataRecord(binding.metadataJson).targetRefNo) ||
-            compactId(binding.targetId),
-          subtitle: null,
-          status: cleanText(metadataRecord(binding.metadataJson).targetStatus) ||
-            binding.actionType,
-          imageUrl: null,
-        },
-      stats: activityStats.get(queueKey(binding.targetType, binding.targetId)) ?? {
-        lastActivityTitle: null,
-        lastActivityAt: null,
-        feedbackCount: 0,
+    queueItems: queueItems.map((queueItem) => ({
+      ...queueItem,
+      href: queueHrefs.get(queueKey(queueItem.targetType, queueItem.targetId)) ?? null,
+    })),
+    businessBindings: queueItems.map((queueItem) => ({
+      id: queueItem.id,
+      targetType: queueItem.targetType,
+      targetId: queueItem.targetId,
+      taskItemId: queueItem.taskItemId,
+      actionType: queueItem.status,
+      href: queueHrefs.get(queueKey(queueItem.targetType, queueItem.targetId)) ?? null,
+      createdAt: queueItem.updatedAt,
+      updatedAt: queueItem.updatedAt,
+      preview: {
+        title: queueItem.preview.title ||
+          fallbackQueueTitle(queueItem.targetType),
+        ref: queueItem.preview.ref || queueItem.targetType,
+        subtitle: null,
+        status: queueItem.preview.status || queueItem.status,
+        imageUrl: queueItem.preview.imageUrl ?? null,
+        imageUrls: queueItem.preview.imageUrls ?? [],
       },
-      processingLabel: binding.actionType,
+      stats: {
+        lastActivityTitle: queueItem.latestActivityTitle,
+        lastActivityAt: queueItem.updatedAt,
+        feedbackCount: queueItem.feedbackCount,
+      },
+      processingLabel: queueItem.status,
     })),
   };
   perfLog("task-item-detail-repo", "total", totalStartedAt);

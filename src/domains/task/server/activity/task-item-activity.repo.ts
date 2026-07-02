@@ -4,6 +4,7 @@ import type {
   AddActivityReplyInput,
   CreateBusinessEventActivityInput,
   CreateDiscussionActivityInput,
+  CreateSystemActivityInput,
   TaskItemActivitySourceIdentity,
 } from "./task-item-activity.types";
 
@@ -53,6 +54,24 @@ export async function createDiscussionActivityRepo(
     data: {
       taskItemId: input.taskItemId,
       sourceType: ActivitySourceType.DISCUSSION,
+      title: input.title,
+      body: input.body ?? null,
+      actorUserId: input.actorUserId ?? null,
+      metadataJson: input.metadataJson ?? undefined,
+    },
+    include: TASK_ITEM_ACTIVITY_INCLUDE,
+  });
+}
+
+export async function createSystemActivityRepo(
+  db: DB,
+  input: CreateSystemActivityInput,
+) {
+  return dbOrTx(db).taskItemActivity.create({
+    data: {
+      taskItemId: input.taskItemId,
+      sourceType: ActivitySourceType.SYSTEM,
+      sourceId: input.sourceId ?? null,
       title: input.title,
       body: input.body ?? null,
       actorUserId: input.actorUserId ?? null,

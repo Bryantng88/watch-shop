@@ -259,21 +259,60 @@ export async function listTasksRepo(
 function buildTaskItemAccessWhere(
   userId: string,
   canViewAll: boolean,
+  shareGroups: string[] = [],
 ): Prisma.TaskItemWhereInput {
   if (canViewAll) return {};
 
+  const systemShareWhere: Prisma.TaskItemWhereInput[] = [];
+  const normalizedShareGroups = new Set(
+    shareGroups.map((group) => String(group).trim().toLowerCase()).filter(Boolean),
+  );
+
+  for (const group of normalizedShareGroups) {
+    systemShareWhere.push({
+      note: { contains: `shareGroupKey: ${group}`, mode: "insensitive" },
+    });
+
+    if (group === "operation") {
+      systemShareWhere.push({
+        userId: null,
+        note: { contains: "workTypeKey:", mode: "insensitive" },
+        task: { kind: TaskKind.OPERATION },
+      });
+    }
+
+    if (group === "technical") {
+      systemShareWhere.push({
+        userId: null,
+        note: { contains: "workTypeKey:", mode: "insensitive" },
+        task: { kind: TaskKind.SERVICE },
+      });
+    }
+
+    if (group === "sales") {
+      systemShareWhere.push({
+        userId: null,
+        note: { contains: "workTypeKey:", mode: "insensitive" },
+        task: { kind: TaskKind.BUSINESS },
+      });
+    }
+  }
+
   return {
     OR: [
+      { userId },
+      { note: { contains: `sharedUserIds: ${userId}`, mode: "insensitive" } },
+      { note: { contains: `,${userId}`, mode: "insensitive" } },
       { assignedToUserId: userId },
       {
         task: {
           OR: [
-            { kind: { in: [TaskKind.OPERATION, TaskKind.BUSINESS, TaskKind.SERVICE] } },
             { createdByUserId: userId },
             { assignedToUserId: userId },
           ],
         },
       },
+      ...systemShareWhere,
     ],
   };
 }
@@ -323,7 +362,12 @@ function buildTaskItemFilterWhere(
 
 export async function listTaskItemsRepo(
   db: DB,
-  input: { userId: string; canViewAll?: boolean; filters: TaskItemListFilters },
+  input: {
+    userId: string;
+    canViewAll?: boolean;
+    shareGroups?: string[];
+    filters: TaskItemListFilters;
+  },
 ) {
   const client = dbOrTx(db);
   const page = Math.max(1, Number(input.filters.page || 1));
@@ -331,7 +375,11 @@ export async function listTaskItemsRepo(
 
   const where: Prisma.TaskItemWhereInput = {
     AND: [
-      buildTaskItemAccessWhere(input.userId, Boolean(input.canViewAll)),
+      buildTaskItemAccessWhere(
+        input.userId,
+        Boolean(input.canViewAll),
+        input.shareGroups ?? [],
+      ),
       buildTaskItemFilterWhere(input.filters),
     ],
   };

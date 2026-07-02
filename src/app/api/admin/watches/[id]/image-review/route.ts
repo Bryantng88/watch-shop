@@ -6,18 +6,29 @@ import {
     approveWatchReview,
     rejectWatchReview,
     resetWatchReviewToDraft,
-} from "@/domains/watch/server/review";
+} from "@/domains/watch/server/review/watch-review.service";
+import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
 
 export const dynamic = "force-dynamic";
 function isNextRedirectError(error: unknown) {
+    const maybeRedirect = error as { digest?: unknown };
     return (
         error instanceof Error &&
         (error.message === "NEXT_REDIRECT" ||
-            String((error as any)?.digest ?? "").startsWith("NEXT_REDIRECT"))
+            String(maybeRedirect.digest ?? "").startsWith("NEXT_REDIRECT"))
     );
 }
-function getAuthUserId(auth: any) {
-    return auth?.user?.id ?? auth?.id ?? auth?.userId ?? null;
+function asRecord(value: unknown): Record<string, unknown> {
+    return value && typeof value === "object" && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : {};
+}
+
+function getAuthUserId(auth: unknown) {
+    const root = asRecord(auth);
+    const user = asRecord(root.user);
+    const id = user.id ?? root.id ?? root.userId;
+    return typeof id === "string" && id.trim() ? id : null;
 }
 
 export async function POST(
@@ -26,23 +37,37 @@ export async function POST(
         params,
     }: { params: Promise<{ id: string }> | { id: string } },
 ) {
+    const totalStartedAt = perfNow();
     try {
-        const auth = await requirePermission(PERMISSIONS.PRODUCT_APPROVE);
+        const auth = await perfStep(
+            "watch-review-route",
+            "image:requirePermission",
+            () => requirePermission(PERMISSIONS.PRODUCT_APPROVE),
+        );
 
         const { id } = await params;
         const productId = id;
 
-        const body = await req.json().catch(() => ({}));
+        const body = await perfStep(
+            "watch-review-route",
+            "image:parseBody",
+            () => req.json().catch(() => ({})),
+        );
         const action = String(body?.action ?? "").toLowerCase();
 
         // giữ nguyên phần approve/reject/reset bên dưới
 
         if (action === "approve") {
-            const state = await approveWatchReview({
+            const state = await perfStep(
+                "watch-review-route",
+                "image:approve",
+                () => approveWatchReview({
                 productId,
                 targetType: "IMAGE",
                 userId: getAuthUserId(auth),
-            });
+            }),
+            );
+            perfLog("watch-review-route", "image:total", totalStartedAt);
             return NextResponse.json({ ok: true, item: state });
         }
 
@@ -55,21 +80,31 @@ export async function POST(
                 );
             }
 
-            const state = await rejectWatchReview({
+            const state = await perfStep(
+                "watch-review-route",
+                "image:reject",
+                () => rejectWatchReview({
                 productId,
                 targetType: "IMAGE",
                 userId: getAuthUserId(auth),
                 note,
-            });
+            }),
+            );
+            perfLog("watch-review-route", "image:total", totalStartedAt);
             return NextResponse.json({ ok: true, item: state });
         }
 
         if (action === "reset") {
-            const state = await resetWatchReviewToDraft({
+            const state = await perfStep(
+                "watch-review-route",
+                "image:reset",
+                () => resetWatchReviewToDraft({
                 productId,
                 targetType: "IMAGE",
                 userId: getAuthUserId(auth),
-            });
+            }),
+            );
+            perfLog("watch-review-route", "image:total", totalStartedAt);
             return NextResponse.json({ ok: true, item: state });
         }
 

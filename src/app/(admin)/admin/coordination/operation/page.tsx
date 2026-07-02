@@ -1,5 +1,5 @@
 import OperationCoordinationWorkspace from "@/domains/coordination/ui/OperationCoordinationWorkspace";
-import { getOperationCoordinationDashboard } from "@/domains/coordination/server/coordination-dashboard.service";
+import { getCoordinationDashboard } from "@/domains/coordination/server/coordination-dashboard.service";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
 import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
@@ -16,17 +16,19 @@ export default async function OperationCoordinationPage(props: PageProps) {
   const totalStartedAt = perfNow();
   const searchParams = (await props.searchParams) ?? {};
 
-  await perfStep("coordination-operation-page", "requirePermission", () =>
+  const auth = await perfStep("coordination-operation-page", "requirePermission", () =>
     requirePermission("TASK_VIEW"),
   );
 
   const data = await perfStep(
     "coordination-operation-page",
-    "getOperationCoordinationDashboard",
+    "getCoordinationDashboard",
     () =>
-      getOperationCoordinationDashboard({
+      getCoordinationDashboard({
+        context: "OPERATION",
         db: prisma,
         date: first(searchParams.date) ?? null,
+        auth,
       }),
   );
 

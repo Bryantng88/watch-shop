@@ -1,20 +1,26 @@
-# BusinessBinding
+# Item
 
-`BusinessBinding` is the server abstraction for mapping:
+`Item` is the application-layer abstraction for mapping:
 
-`TaskItem <-> Business Object`
+`Workspace <-> Business Object`
 
-For now, the persisted Prisma model remains `TaskExecution`. Do not rename it yet.
+For now, the persisted Prisma model remains `TaskExecution`. Do not rename it.
 
-New server code should use the BusinessBinding vocabulary:
-- `BusinessBindingTargetType`
-- `BusinessBindingActionType`
-- `BusinessBindingRole`
-- `BusinessBindingDTO`
+Legacy vocabulary:
 
-`TaskExecution` remains the storage table. `BusinessBinding` is the domain abstraction over that table.
+- `BusinessBinding` was the previous application-layer name.
+- `TaskExecution` is still the Prisma storage table.
 
-Role is virtual for now:
+New server code should use Item vocabulary where possible:
+
+- `ItemDTO`
+- `ItemViewModel`
+- `ItemSummaryDTO`
+- `listWorkspaceItems()`
+- `summarizeWorkspaceItems()`
+
+Runtime role is virtual for now:
+
 - `SERVICE_REQUEST` -> `SERVICE`
 - `PAYMENT` -> `PAYMENT`
 - `SHIPMENT` -> `SHIPMENT`
@@ -22,6 +28,6 @@ Role is virtual for now:
 - default -> `GENERAL`
 
 Out of scope:
-- Prisma rename from `TaskExecution` to `BusinessBinding`.
-- Persisting `BusinessBindingRole`.
 
+- Prisma rename from `TaskExecution` to `Item`.
+- Persisting runtime role.

@@ -11,6 +11,8 @@ const SHARED_TASK_KINDS = new Set<TaskKind>([
 type AuthRecord = Record<string, unknown>;
 
 type TaskItemAccessShape = {
+  note?: string | null;
+  userId?: string | null;
   assignedToUserId?: string | null;
   task?: {
     kind?: TaskKind | null;
@@ -77,17 +79,63 @@ function authCanViewAllTasks(auth: unknown): boolean {
   );
 }
 
+function authRoles(auth: unknown) {
+  const authRecord = asRecord(auth);
+  const user = asRecord(authRecord.user);
+  const roles = authRecord.roles ?? user.roles ?? [];
+  return Array.isArray(roles)
+    ? roles.map((role) => text(role).trim().toUpperCase()).filter(Boolean)
+    : [];
+}
+
+function shareGroupFromNote(note?: string | null) {
+  const match = String(note ?? "").match(/shareGroupKey:\s*([a-z0-9-]+)/i);
+  return match ? match[1].trim().toUpperCase() : null;
+}
+
+function workTypeKeyFromNote(note?: string | null) {
+  const match = String(note ?? "").match(/workTypeKey:\s*([a-z0-9-]+)/i);
+  return match ? match[1].trim() : null;
+}
+
+function sharedUserIdsFromNote(note?: string | null) {
+  return String(note ?? "")
+    .match(/^sharedUserIds:\s*(.+)$/im)?.[1]
+    ?.split(",")
+    .map((id) => id.trim())
+    .filter(Boolean) ?? [];
+}
+
+function defaultShareGroupForTaskKind(kind?: TaskKind | null) {
+  if (kind === TaskKind.OPERATION) return "OPERATION";
+  if (kind === TaskKind.SERVICE) return "TECHNICAL";
+  if (kind === TaskKind.BUSINESS) return "SALES";
+  return null;
+}
+
+function isSystemOwned(item: TaskItemAccessShape) {
+  if (/ownerType:\s*SYSTEM/i.test(String(item.note ?? ""))) return true;
+  return Boolean(workTypeKeyFromNote(item.note) && !item.userId);
+}
+
 function assertCanAccessTaskItemDetail(item: TaskItemAccessShape, auth: unknown) {
   if (authCanViewAllTasks(auth)) return;
 
   const userId = authUserId(auth);
   if (!userId) throw new Error("Khong xac dinh duoc user hien tai");
 
+  if (item.userId === userId) return;
+  if (sharedUserIdsFromNote(item.note).includes(userId)) return;
   if (item.assignedToUserId === userId) return;
   if (!item.task) throw new Error("Ban khong co quyen xem task item nay");
-  if (item.task.kind && SHARED_TASK_KINDS.has(item.task.kind)) return;
   if (item.task.createdByUserId === userId) return;
   if (item.task.assignedToUserId === userId) return;
+
+  if (item.task.kind && SHARED_TASK_KINDS.has(item.task.kind) && isSystemOwned(item)) {
+    const shareGroupKey =
+      shareGroupFromNote(item.note) ?? defaultShareGroupForTaskKind(item.task.kind);
+    if (shareGroupKey && authRoles(auth).includes(shareGroupKey)) return;
+  }
 
   throw new Error("Ban khong co quyen xem task item nay");
 }

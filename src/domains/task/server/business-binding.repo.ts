@@ -1,4 +1,4 @@
-import { TaskExecutionActionType } from "@prisma/client";
+import { Prisma, TaskExecutionActionType } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
 import type {
   BusinessBindingTargetInput,
@@ -13,6 +13,17 @@ const BUSINESS_BINDING_SELECT = {
   taskItemId: true,
   actionType: true,
   metadataJson: true,
+  createdAt: true,
+} as const;
+
+const QUEUE_ACTIVITY_SELECT = {
+  id: true,
+  taskItemId: true,
+  sourceType: true,
+  title: true,
+  metadataJson: true,
+  occurredAt: true,
+  updatedAt: true,
 } as const;
 
 function clean(value: unknown) {
@@ -131,6 +142,53 @@ export async function findBusinessBindingsByTaskItem(
     },
     select: BUSINESS_BINDING_SELECT,
     orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function findBusinessBindingById(db: DB, bindingId: string) {
+  const client = dbOrTx(db);
+  const cleanBindingId = clean(bindingId);
+  assertPresent(cleanBindingId, "Missing bindingId");
+
+  return client.taskExecution.findUnique({
+    where: { id: cleanBindingId },
+    select: BUSINESS_BINDING_SELECT,
+  });
+}
+
+export async function updateBusinessBindingMetadata(
+  db: DB,
+  bindingId: string,
+  metadataJson: Prisma.InputJsonValue,
+) {
+  const client = dbOrTx(db);
+  const cleanBindingId = clean(bindingId);
+  assertPresent(cleanBindingId, "Missing bindingId");
+
+  return client.taskExecution.update({
+    where: { id: cleanBindingId },
+    data: { metadataJson },
+    select: BUSINESS_BINDING_SELECT,
+  });
+}
+
+export async function findQueueActivitiesByTaskItem(
+  db: DB,
+  taskItemId: string,
+) {
+  const client = dbOrTx(db);
+  const cleanTaskItemId = clean(taskItemId);
+  assertPresent(cleanTaskItemId, "Missing taskItemId");
+
+  return client.taskItemActivity.findMany({
+    where: {
+      taskItemId: cleanTaskItemId,
+    },
+    select: QUEUE_ACTIVITY_SELECT,
+    orderBy: [
+      { occurredAt: "asc" },
+      { id: "asc" },
+    ],
   });
 }
 
