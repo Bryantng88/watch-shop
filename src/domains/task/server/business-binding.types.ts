@@ -5,9 +5,6 @@ import {
   type Prisma,
 } from "@prisma/client";
 
-export { TaskExecutionActionType as BusinessBindingActionType };
-export { TaskExecutionTargetType as BusinessBindingTargetType };
-
 export type BusinessBindingTargetType = TaskExecutionTargetType;
 export type BusinessBindingActionType = TaskExecutionActionType;
 

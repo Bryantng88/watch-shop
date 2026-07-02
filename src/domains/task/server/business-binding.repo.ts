@@ -133,6 +133,28 @@ export async function findBusinessBindingsByTaskItem(
     orderBy: { createdAt: "desc" },
   });
 }
+
+export async function findBusinessBindingByTaskItemTarget(
+  db: DB,
+  input: BusinessBindingTargetInput & { taskItemId: string },
+) {
+  const client = dbOrTx(db);
+  const cleanTaskItemId = clean(input.taskItemId);
+  const cleanTargetId = clean(input.targetId);
+
+  assertPresent(cleanTaskItemId, "Missing taskItemId");
+  assertPresent(cleanTargetId, "Missing targetId");
+
+  return client.taskExecution.findFirst({
+    where: {
+      taskItemId: cleanTaskItemId,
+      targetType: input.targetType,
+      targetId: cleanTargetId,
+    },
+    select: BUSINESS_BINDING_SELECT,
+    orderBy: { createdAt: "asc" },
+  });
+}
 export async function findTaskItemIdsByTargetIds(
   db: DB,
   input: {

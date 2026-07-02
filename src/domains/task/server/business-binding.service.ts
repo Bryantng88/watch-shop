@@ -1,6 +1,7 @@
 import type { DB } from "@/server/db/client";
 import {
   createBusinessBinding,
+  findBusinessBindingByTaskItemTarget,
   findBusinessBindingsByTaskItem,
   findTaskItemIdsByTarget,
 } from "./business-binding.repo";
@@ -57,6 +58,36 @@ export async function bindTaskItemToBusinessObject(
   });
 
   return toBusinessBindingDTO(binding);
+}
+
+export async function ensureTaskItemBusinessBinding(
+  db: DB,
+  input: BindTaskItemToBusinessObjectInput,
+) {
+  assertPresent(input.taskItemId, "Missing taskItemId");
+
+  const cleanInput = {
+    ...input,
+    taskId: clean(input.taskId),
+    taskItemId: clean(input.taskItemId),
+    targetId: clean(input.targetId),
+  };
+
+  const existing = await findBusinessBindingByTaskItemTarget(db, cleanInput);
+
+  if (existing) {
+    return {
+      binding: toBusinessBindingDTO(existing),
+      created: false,
+    };
+  }
+
+  const binding = await createBusinessBinding(db, cleanInput);
+
+  return {
+    binding: toBusinessBindingDTO(binding),
+    created: true,
+  };
 }
 
 export async function findRelatedTaskItemIdsForBusinessTarget(

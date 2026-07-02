@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import { usePathname } from "next/navigation";
 import {
     LayoutDashboard,
@@ -20,7 +20,7 @@ import {
     Wrench,
     AlertCircle,
     LogOut,
-    UserCircle2,
+    Workflow,
 } from "lucide-react";
 
 import ActiveLink from "./AdminActiveLink";
@@ -54,7 +54,7 @@ type NavItem = {
     type: "item";
     href: string;
     label: string;
-    icon: any;
+    icon: ComponentType<{ size?: number; className?: string }>;
     exact?: boolean;
     permission?: string;
     notificationKey?: keyof NotificationCounts;
@@ -122,6 +122,14 @@ const NAV: NavEntry[] = [
 
     { type: "group", label: "Điều phối" },
 
+    {
+        type: "item",
+        href: "/admin/coordination/operation",
+        label: "Vận hành",
+        icon: Workflow,
+        permission: PERMISSIONS.TASK_VIEW,
+        notificationKey: "tasks",
+    },
     {
         type: "item",
         href: "/admin/work-cases",

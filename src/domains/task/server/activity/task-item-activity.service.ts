@@ -39,7 +39,7 @@ function asRecord(value: unknown): Record<string, unknown> {
 function normalizeBusinessEventActivityMetadata(
   metadataJson: unknown,
 ): Prisma.InputJsonObject {
-  const metadata = { ...asRecord(metadataJson) } as Prisma.InputJsonObject;
+  const metadata = { ...asRecord(metadataJson) } as Record<string, unknown>;
   const feedbackId = clean(metadata.feedbackId);
   const feedbackMessage = clean(metadata.feedbackMessage);
 
@@ -52,16 +52,16 @@ function normalizeBusinessEventActivityMetadata(
     };
   }
 
-  return metadata;
+  return metadata as Prisma.InputJsonObject;
 }
 
 function mergeBusinessEventActivityMetadata(
   existingMetadata: unknown,
   incomingMetadata: unknown,
 ): Prisma.InputJsonObject {
-  const existing = { ...asRecord(existingMetadata) } as Prisma.InputJsonObject;
+  const existing = { ...asRecord(existingMetadata) };
   const incoming = normalizeBusinessEventActivityMetadata(incomingMetadata);
-  const merged = { ...existing } as Prisma.InputJsonObject;
+  const merged = { ...existing } as Record<string, unknown>;
 
   for (const key of [
     "eventKey",
@@ -92,7 +92,7 @@ function mergeBusinessEventActivityMetadata(
     }
   }
 
-  return merged;
+  return merged as Prisma.InputJsonObject;
 }
 
 function metadataChanged(left: unknown, right: unknown) {
