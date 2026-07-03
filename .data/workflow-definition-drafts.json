@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "drafts": [
+    {
+      "key": "new-workflow-draft",
+      "workspaceTemplateKey": null,
+      "workTypeKey": null,
+      "name": "New Workflow Draft",
+      "description": null,
+      "definitionJson": {
+        "key": "new-workflow-draft",
+        "title": "New Workflow Draft",
+        "description": null,
+        "initialState": "NEW",
+        "terminalStates": [
+          "DONE"
+        ],
+        "metadata": null,
+        "states": [
+          {
+            "key": "NEW",
+            "title": "New",
+            "description": null,
+            "color": "gray",
+            "icon": "circle",
+            "sortOrder": 10
+          },
+          {
+            "key": "DONE",
+            "title": "Done",
+            "description": null,
+            "color": "zinc",
+            "icon": "check-circle",
+            "sortOrder": 20
+          }
+        ],
+        "transitions": []
+      },
+      "status": "VALIDATED",
+      "validationJson": {
+        "valid": true,
+        "issues": [],
+        "warnings": []
+      },
+      "sourceRegistryKey": null,
+      "createdByUserId": "e8cd72d2-429b-4822-96ac-6f52bdc5f922",
+      "updatedByUserId": "e8cd72d2-429b-4822-96ac-6f52bdc5f922",
+      "id": "205890c2-e32f-4ed8-be62-0fc0903196ee",
+      "createdAt": "2026-07-03T03:32:54.251Z",
+      "updatedAt": "2026-07-03T03:32:54.251Z"
+    },
+    {
+      "key": "watch-operation-technical",
+      "workspaceTemplateKey": "watch-operation-technical",
+      "workTypeKey": "watch-operation-technical",
+      "name": "Operation Technical Workflow",
+      "description": "Lightweight definition for operation technical work.",
+      "definitionJson": {
+        "key": "watch-operation-technical",
+        "title": "Operation Technical Workflow",
+        "description": "Lightweight definition for operation technical work.",
+        "initialState": "NEW",
+        "terminalStates": [
+          "DONE"
+        ],
+        "metadata": null,
+        "states": [
+          {
+            "key": "NEW",
+            "title": "New",
+            "description": "Work has been created.",
+            "color": "gray",
+            "icon": "circle",
+            "sortOrder": 10
+          },
+          {
+            "key": "IN_PROGRESS",
+            "title": "Handling",
+            "description": "Work is being handled.",
+            "color": "blue",
+            "icon": "wrench",
+            "sortOrder": 20
+          },
+          {
+            "key": "DONE",
+            "title": "Done",
+            "description": "Work is complete.",
+            "color": "zinc",
+            "icon": "check-circle",
+            "sortOrder": 30
+          }
+        ],
+        "transitions": [
+          {
+            "fromState": "NEW",
+            "toState": "IN_PROGRESS",
+            "triggerType": "MANUAL",
+            "triggerValue": "start-work",
+            "manualActionLabel": "Bắt đầu xử lý",
+            "condition": null,
+            "metadata": null
+          },
+          {
+            "fromState": "IN_PROGRESS",
+            "toState": "DONE",
+            "triggerType": "MANUAL",
+            "triggerValue": "mark-done",
+            "manualActionLabel": "Hoàn tất",
+            "condition": null,
+            "metadata": null
+          }
+        ]
+      },
+      "status": "VALIDATED",
+      "validationJson": {
+        "valid": true,
+        "issues": [],
+        "warnings": []
+      },
+      "sourceRegistryKey": "watch-operation-technical",
+      "createdByUserId": "e8cd72d2-429b-4822-96ac-6f52bdc5f922",
+      "updatedByUserId": "e8cd72d2-429b-4822-96ac-6f52bdc5f922",
+      "id": "e5daeb34-e217-49a4-a44b-b58c98ccce53",
+      "createdAt": "2026-07-03T03:05:44.604Z",
+      "updatedAt": "2026-07-03T03:05:44.604Z"
+    }
+  ]
+}

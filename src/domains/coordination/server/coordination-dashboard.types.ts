@@ -58,5 +58,12 @@ export type CoordinationDashboardDTO = {
     }>;
   };
   report: CoordinationReportMetricDTO[];
+  blueprints: Array<{
+    key: string;
+    name: string;
+    description: string | null;
+    workflowKey: string | null;
+    snapshotNote: string;
+  }>;
   workTickets: CoordinationWorkTicketSummaryDTO[];
 };

@@ -95,6 +95,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [title, setTitle] = useState("");
+  const [blueprintKey, setBlueprintKey] = useState(data.blueprints[0]?.key ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -108,6 +109,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     event.preventDefault();
     const cleanTitle = title.trim();
     if (!cleanTitle) return;
+    const blueprint = data.blueprints.find((item) => item.key === blueprintKey);
 
     setError(null);
     startTransition(async () => {
@@ -115,6 +117,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
         await createTaskItemAction({
           taskId: data.cycle.id,
           title: cleanTitle,
+          note: blueprint?.snapshotNote ?? null,
           priority: "MEDIUM",
         });
         setTitle("");
@@ -208,10 +211,21 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
               </h2>
 
               <form className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center" onSubmit={createWorkTicket}>
+                <select
+                  value={blueprintKey}
+                  onChange={(event) => setBlueprintKey(event.target.value)}
+                  className="h-9 min-w-0 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-slate-400 sm:w-56"
+                >
+                  {data.blueprints.map((blueprint) => (
+                    <option key={blueprint.key} value={blueprint.key}>
+                      {blueprint.name}
+                    </option>
+                  ))}
+                </select>
                 <input
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
-                  placeholder="Add workspace"
+                  placeholder="Workspace name"
                   className="h-9 min-w-0 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-slate-400 sm:w-64"
                 />
                 <button
@@ -220,7 +234,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-slate-900 px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300"
                 >
                   <Plus className="h-4 w-4" />
-                  Add
+                  Create Workspace
                 </button>
               </form>
             </div>

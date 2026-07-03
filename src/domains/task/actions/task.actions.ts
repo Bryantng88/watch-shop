@@ -136,6 +136,7 @@ export async function completeTasksByIdsAction(ids: string[]) {
 export async function createTaskItemAction(input: {
   taskId: string;
   title: string;
+  note?: string | null;
   assignedToUserId?: string | null;
   priority?: TaskPriority | null;
   dueAt?: string | null;
@@ -152,6 +153,7 @@ export async function createTaskItemAction(input: {
   const item = await createTaskItemRepo(prisma, {
     taskId: cleanTaskId,
     title: cleanTitle,
+    note: input.note ?? null,
     ownerUserId: auth.userId,
     assignedToUserId: input.assignedToUserId || null,
     priority: input.priority || "MEDIUM",

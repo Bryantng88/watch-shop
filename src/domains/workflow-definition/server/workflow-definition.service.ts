@@ -1,4 +1,5 @@
 import { listRegisteredWorkflowDefinitions } from "./workflow-definition.registry";
+import { validateWorkflowDefinition } from "./workflow-definition.validation";
 
 export function normalizeWorkflowDefinitionKey(value: unknown) {
   return String(value ?? "")
@@ -10,6 +11,14 @@ export function normalizeWorkflowDefinitionKey(value: unknown) {
 
 export function listWorkflowDefinitions() {
   return listRegisteredWorkflowDefinitions();
+}
+
+export function listWorkflowDefinitionsWithValidation() {
+  return listWorkflowDefinitions().map((definition) => ({
+    definition,
+    validation: validateWorkflowDefinition(definition),
+    source: "STATIC_REGISTRY" as const,
+  }));
 }
 
 export function getWorkflowDefinition(key: string) {
@@ -27,3 +36,5 @@ export function resolveWorkflowDefinition(workflowKey: string | null | undefined
 
   return getWorkflowDefinition(workflowKey);
 }
+
+export { validateWorkflowDefinition };

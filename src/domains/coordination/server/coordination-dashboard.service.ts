@@ -8,6 +8,7 @@ import {
   listWorkTypes,
   normalizeWorkTypeKey,
 } from "@/domains/task/server/work-type.service";
+import { listWorkspaceInstantiationBlueprintOptions } from "@/domains/blueprint/server";
 import type {
   CoordinationDashboardDTO,
   CoordinationWorkTicketSummaryDTO,
@@ -440,6 +441,13 @@ export async function getCoordinationDashboard(input: {
       { key: "done", label: "Done", value: reportValues.done },
       { key: "overdue", label: "Overdue", value: reportValues.overdue },
     ],
+    blueprints: listWorkspaceInstantiationBlueprintOptions(input.context).map((blueprint) => ({
+      key: blueprint.key,
+      name: blueprint.name,
+      description: blueprint.description,
+      workflowKey: blueprint.workflowKey,
+      snapshotNote: blueprint.snapshotNote,
+    })),
     workTickets,
   };
 }
