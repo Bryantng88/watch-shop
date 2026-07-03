@@ -1,4 +1,8 @@
 import type { CoordinationContext } from "./coordination-cycle.types";
+import type {
+  BlueprintSource,
+  BlueprintWorkspaceDefinition,
+} from "@/domains/blueprint/server";
 
 export type CoordinationReportMetricDTO = {
   key: string;
@@ -59,10 +63,15 @@ export type CoordinationDashboardDTO = {
   };
   report: CoordinationReportMetricDTO[];
   blueprints: Array<{
+    selectionKey: string;
     key: string;
     name: string;
     description: string | null;
     workflowKey: string | null;
+    businessContext: CoordinationContext | "DRAFT";
+    source: BlueprintSource;
+    status: string | null;
+    workspaceDefinition: BlueprintWorkspaceDefinition;
     snapshotNote: string;
   }>;
   workTickets: CoordinationWorkTicketSummaryDTO[];

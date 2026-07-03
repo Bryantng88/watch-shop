@@ -186,9 +186,9 @@ const NAV: NavEntry[] = [
     },
     {
         type: "item",
-        href: "/admin/workflows",
-        label: "Workflow",
-        icon: CheckSquare,
+        href: "/admin/system/blueprints",
+        label: "Thư viện Blueprint",
+        icon: Workflow,
         permission: PERMISSIONS.TASK_MANAGE,
     },
     {

@@ -13,11 +13,21 @@ import {
 import type {
   CreateWorkflowDefinitionDraftInput,
   UpdateWorkflowDefinitionDraftInput,
+  WorkflowDefinitionDraftBlueprintJson,
   WorkflowDefinitionDraft,
 } from "./workflow-definition-draft.types";
 
 function clean(value: unknown) {
   return String(value ?? "").trim();
+}
+
+function actionKeyFromLabel(label: string | null | undefined, index: number) {
+  const key = clean(label)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return key || `manual-action-${index + 1}`;
 }
 
 function emptyDefinition(): WorkflowDefinition {
@@ -71,8 +81,136 @@ function normalizeDefinition(input: WorkflowDefinition): WorkflowDefinition {
       ? input.terminalStates
       : [],
     states: Array.isArray(input.states) ? input.states : [],
-    transitions: Array.isArray(input.transitions) ? input.transitions : [],
+    transitions: Array.isArray(input.transitions)
+      ? input.transitions.map((transition, index) => {
+          if (transition.triggerType !== "MANUAL") return transition;
+
+          return {
+            ...transition,
+            triggerValue:
+              clean(transition.triggerValue) ||
+              actionKeyFromLabel(transition.manualActionLabel, index),
+          };
+        })
+      : [],
     metadata: input.metadata ?? null,
+  };
+}
+
+function defaultBlueprintJson(
+  definition: WorkflowDefinition,
+  sourceRegistryKey: string | null,
+): WorkflowDefinitionDraftBlueprintJson {
+  const name = clean(definition.title) || "Blueprint Draft";
+
+  return {
+    purpose:
+      definition.description ??
+      "Thiết kế một cách vận hành chuẩn cho Workspace trong tương lai.",
+    businessContext: sourceRegistryKey ? "REGISTRY_DRAFT" : "DRAFT",
+    typicalUsage:
+      "Dùng khi admin cần định nghĩa Blueprint trước khi tạo Workspace.",
+    expectedResult:
+      "Một Blueprint draft có thể validate và dùng làm nền cho Workspace.",
+    ownerLabel: "System Admin",
+    workspaceDefinition: {
+      defaultName: `${name} Workspace`,
+      defaultDescription:
+        definition.description ?? `Workspace được tạo từ Blueprint ${name}.`,
+      workspaceType: `${name} Workspace`,
+      itemLabel: `${name} Items`,
+      defaultView: "items",
+      enabledCapabilities: {
+        workflow: true,
+        items: true,
+        activity: true,
+        discussion: true,
+        attachments: false,
+        checklist: false,
+        dueDate: false,
+        assignee: false,
+        priority: true,
+      },
+      instantiationNotes:
+        "Ở V1, Workspace lưu ý định định nghĩa này dưới dạng snapshot note.",
+    },
+  };
+}
+
+function normalizeBlueprintJson(
+  input: WorkflowDefinitionDraftBlueprintJson | null | undefined,
+  definition: WorkflowDefinition,
+  sourceRegistryKey: string | null,
+) {
+  const fallback = defaultBlueprintJson(definition, sourceRegistryKey);
+  if (!input) return fallback;
+
+  return {
+    ...fallback,
+    ...input,
+    purpose: clean(input.purpose) || fallback.purpose,
+    businessContext: clean(input.businessContext) || fallback.businessContext,
+    typicalUsage: clean(input.typicalUsage) || fallback.typicalUsage,
+    expectedResult: clean(input.expectedResult) || fallback.expectedResult,
+    ownerLabel: clean(input.ownerLabel) || fallback.ownerLabel,
+    workspaceDefinition: {
+      ...fallback.workspaceDefinition,
+      ...input.workspaceDefinition,
+      defaultName:
+        clean(input.workspaceDefinition?.defaultName) ||
+        fallback.workspaceDefinition.defaultName,
+      defaultDescription:
+        input.workspaceDefinition?.defaultDescription ??
+        fallback.workspaceDefinition.defaultDescription,
+      workspaceType:
+        clean(input.workspaceDefinition?.workspaceType) ||
+        fallback.workspaceDefinition.workspaceType,
+      itemLabel:
+        clean(input.workspaceDefinition?.itemLabel) ||
+        fallback.workspaceDefinition.itemLabel,
+      defaultView: ["items", "activity", "workflow"].includes(
+        clean(input.workspaceDefinition?.defaultView),
+      )
+        ? input.workspaceDefinition.defaultView
+        : fallback.workspaceDefinition.defaultView,
+      enabledCapabilities: {
+        ...fallback.workspaceDefinition.enabledCapabilities,
+        ...input.workspaceDefinition?.enabledCapabilities,
+      },
+      instantiationNotes:
+        input.workspaceDefinition?.instantiationNotes ??
+        fallback.workspaceDefinition.instantiationNotes,
+    },
+  };
+}
+
+function blueprintValidationIssues(
+  blueprintJson: WorkflowDefinitionDraftBlueprintJson,
+) {
+  const issues: string[] = [];
+
+  if (!clean(blueprintJson.purpose)) issues.push("Blueprint purpose is required.");
+  if (!clean(blueprintJson.workspaceDefinition.defaultName)) {
+    issues.push("Default Workspace name is required.");
+  }
+  if (!clean(blueprintJson.workspaceDefinition.itemLabel)) {
+    issues.push("Item label is required.");
+  }
+
+  return issues;
+}
+
+function mergeBlueprintValidation(
+  validation: ReturnType<typeof validateDraftDefinition>,
+  blueprintJson: WorkflowDefinitionDraftBlueprintJson,
+) {
+  const blueprintIssues = blueprintValidationIssues(blueprintJson);
+  if (!blueprintIssues.length) return validation;
+
+  return {
+    ...validation,
+    valid: false,
+    issues: [...validation.issues, ...blueprintIssues],
   };
 }
 
@@ -94,7 +232,15 @@ export async function createWorkflowDefinitionDraft(
   const definition = normalizeDefinition(
     input.definitionJson ?? sourceDefinition ?? emptyDefinition(),
   );
-  const validation = validateDraftDefinition(definition);
+  const blueprintJson = normalizeBlueprintJson(
+    input.blueprintJson,
+    definition,
+    sourceRegistryKey || null,
+  );
+  const validation = mergeBlueprintValidation(
+    validateDraftDefinition(definition),
+    blueprintJson,
+  );
 
   return createWorkflowDefinitionDraftRecord({
     key: definition.key,
@@ -102,6 +248,7 @@ export async function createWorkflowDefinitionDraft(
     workTypeKey: sourceRegistryKey || null,
     name: definition.title,
     description: definition.description,
+    blueprintJson,
     definitionJson: definition,
     status: validation.valid ? "VALIDATED" : "DRAFT",
     validationJson: validation,
@@ -118,10 +265,18 @@ export async function updateWorkflowDefinitionDraft(
   const existing = await getWorkflowDefinitionDraftRecord(id);
   if (!existing) return null;
 
-  const definition = input.definitionJson
-    ? normalizeDefinition(input.definitionJson)
-    : existing.definitionJson;
-  const validation = validateDraftDefinition(definition);
+  const definition = normalizeDefinition(
+    input.definitionJson ?? existing.definitionJson,
+  );
+  const blueprintJson = normalizeBlueprintJson(
+    input.blueprintJson ?? existing.blueprintJson,
+    definition,
+    existing.sourceRegistryKey,
+  );
+  const validation = mergeBlueprintValidation(
+    validateDraftDefinition(definition),
+    blueprintJson,
+  );
   const status: WorkflowDefinitionDraft["status"] =
     existing.status === "ARCHIVED"
       ? "ARCHIVED"
@@ -136,6 +291,7 @@ export async function updateWorkflowDefinitionDraft(
     workTypeKey: input.workTypeKey ?? existing.workTypeKey,
     name: input.name ?? definition.title,
     description: input.description ?? definition.description,
+    blueprintJson,
     definitionJson: definition,
     status,
     validationJson: validation,
@@ -147,9 +303,20 @@ export async function validateWorkflowDefinitionDraft(id: string) {
   const existing = await getWorkflowDefinitionDraftRecord(id);
   if (!existing) return null;
 
-  const validation = validateDraftDefinition(existing.definitionJson);
+  const definition = normalizeDefinition(existing.definitionJson);
+  const blueprintJson = normalizeBlueprintJson(
+    existing.blueprintJson,
+    definition,
+    existing.sourceRegistryKey,
+  );
+  const validation = mergeBlueprintValidation(
+    validateDraftDefinition(definition),
+    blueprintJson,
+  );
 
   return updateWorkflowDefinitionDraftRecord(id, {
+    blueprintJson,
+    definitionJson: definition,
     validationJson: validation,
     status:
       existing.status === "ARCHIVED"

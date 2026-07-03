@@ -47,6 +47,7 @@ export async function PATCH(
       workTypeKey: body?.workTypeKey,
       name: body?.name,
       description: body?.description,
+      blueprintJson: body?.blueprintJson,
       definitionJson: body?.definitionJson,
       updatedByUserId: auth.id ?? null,
     });

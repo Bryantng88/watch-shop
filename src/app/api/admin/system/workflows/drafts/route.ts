@@ -38,6 +38,7 @@ export async function POST(request: Request) {
     const draft = await createWorkflowDefinitionDraft({
       sourceRegistryKey: body?.sourceRegistryKey ?? null,
       definitionJson: body?.definitionJson ?? null,
+      blueprintJson: body?.blueprintJson ?? null,
       createdByUserId: auth.id ?? null,
     });
 

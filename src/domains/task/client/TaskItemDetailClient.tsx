@@ -34,6 +34,12 @@ import {
 import type { TaskPriority, TaskStatus } from "@prisma/client";
 import AdminBreadcrumbs from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
 import {
+  parseWorkspaceDefinitionSnapshot,
+  resolveWorkspaceCapabilities,
+  type WorkspaceCapabilities,
+  type WorkspaceDefinitionSnapshot,
+} from "@/domains/blueprint/shared/workspace-capabilities";
+import {
   PrioritySignal,
   TaskStatusSignal,
 } from "@/domains/shared/ui/signals/StatePrioritySignal";
@@ -271,7 +277,7 @@ function displayNote(note?: string | null) {
     .split(/\r?\n/)
     .filter((line) => {
       const trimmed = line.trim();
-      return !/^(workTypeKey|workflowKey|ownerType|shareGroupKey|sharedUserIds):/i.test(trimmed);
+      return !/^(blueprintKey|blueprintSource|workTypeKey|workflowKey|workspaceType|itemLabel|defaultView|instantiationNotes|ownerType|shareGroupKey|sharedUserIds|blueprintSnapshot):/i.test(trimmed);
     })
     .join("\n")
     .trim();
@@ -948,6 +954,7 @@ function ActivityReplies({
   onCloseComposer,
   onSubmitted,
   replyCount,
+  discussionEnabled,
 }: {
   activity: TaskItemActivityViewModel;
   open: boolean;
@@ -957,10 +964,13 @@ function ActivityReplies({
   onCloseComposer: () => void;
   onSubmitted: () => void;
   replyCount: number;
+  discussionEnabled: boolean;
 }) {
   const summary = replyCount
     ? `${replyCount} discussions`
     : "Add discussion";
+
+  if (!discussionEnabled && replyCount === 0) return null;
 
   return (
     <div className="mt-3">
@@ -1004,13 +1014,13 @@ function ActivityReplies({
             </div>
           ))}
 
-          {composerOpen ? (
+          {discussionEnabled && composerOpen ? (
             <ActivityReplyComposer
               activityId={activity.id}
               onCancel={onCloseComposer}
               onSubmitted={onSubmitted}
             />
-          ) : (
+          ) : discussionEnabled ? (
             <button
               type="button"
               onClick={onOpenComposer}
@@ -1019,7 +1029,7 @@ function ActivityReplies({
               <Plus className="h-4 w-4" />
               Add discussion
             </button>
-          )}
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -1029,9 +1039,11 @@ function ActivityReplies({
 function ActivityViewModelCard({
   activity,
   businessContext,
+  discussionEnabled,
 }: {
   activity: TaskItemActivityViewModel;
   businessContext?: TaskItemBinding | null;
+  discussionEnabled: boolean;
 }) {
   const classes = toneClasses(activity.tone);
   const actor = activity.actorLabel || "He thong";
@@ -1120,6 +1132,7 @@ function ActivityViewModelCard({
           onCloseComposer={() => setComposerOpen(false)}
           onSubmitted={handleSubmitted}
           replyCount={optimisticReplyCount}
+          discussionEnabled={discussionEnabled}
         />
       </article>
     </div>
@@ -1131,11 +1144,13 @@ function ActivityViewModelFeed({
   businessBindings,
   queueItems,
   mode,
+  discussionEnabled,
 }: {
   items: TaskItemActivityViewModel[];
   businessBindings: TaskItemBinding[];
   queueItems: TaskItemQueueItem[];
   mode: ActivityMode;
+  discussionEnabled: boolean;
 }) {
   if (!items.length) {
     return <EmptyState>Chua co hoat dong nao.</EmptyState>;
@@ -1160,6 +1175,7 @@ function ActivityViewModelFeed({
           businessContext={activityBusinessKeys(activity)
             .map((key) => bindingByTarget.get(key))
             .find(Boolean)}
+          discussionEnabled={discussionEnabled}
         />
       ))}
     </div>
@@ -1556,9 +1572,11 @@ function ManualQueueIntake({ taskItemId }: { taskItemId: string }) {
 function QueueWorkQueue({
   taskItemId,
   items,
+  capabilities,
 }: {
   taskItemId: string;
   items: TaskItemQueueItem[];
+  capabilities: WorkspaceCapabilities;
 }) {
   const [filter, setFilter] = useState<QueueFilter>("ALL");
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -1574,6 +1592,9 @@ function QueueWorkQueue({
   const visibleItems = filter === "ALL"
     ? items
     : items.filter((item) => item.status === filter);
+  const gridClass = capabilities.workflow
+    ? "grid-cols-[minmax(250px,1.3fr)_130px_150px_170px_80px_80px_120px_110px]"
+    : "grid-cols-[minmax(250px,1.3fr)_130px_150px_80px_80px_120px_110px]";
   const applyManualAction = (queueItem: TaskItemQueueItem, actionKey: string) => {
     setPendingId(`${queueItem.id}:${actionKey}`);
     startTransition(async () => {
@@ -1600,7 +1621,7 @@ function QueueWorkQueue({
       }
     >
       <div className="space-y-3">
-        <ManualQueueIntake taskItemId={taskItemId} />
+        {capabilities.items ? <ManualQueueIntake taskItemId={taskItemId} /> : null}
         {items.length ? (
           <>
           <div className="flex flex-wrap gap-2">
@@ -1628,11 +1649,11 @@ function QueueWorkQueue({
           {visibleItems.length ? (
             <div className="overflow-x-auto rounded-2xl border border-slate-200">
               <div className="min-w-[920px]">
-                <div className="grid grid-cols-[minmax(250px,1.3fr)_130px_150px_170px_80px_80px_120px_110px] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase text-slate-500">
+                <div className={cn("grid gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase text-slate-500", gridClass)}>
                   <div>Item</div>
                   <div>Status</div>
                   <div>Latest Activity</div>
-                  <div>Workflow</div>
+                  {capabilities.workflow ? <div>Workflow</div> : null}
                   <div>Feedback</div>
                   <div>Activity</div>
                   <div>Updated</div>
@@ -1642,7 +1663,7 @@ function QueueWorkQueue({
                 {visibleItems.map((queueItem) => (
                   <div
                     key={queueItem.id}
-                    className="grid grid-cols-[minmax(250px,1.3fr)_130px_150px_170px_80px_80px_120px_110px] gap-3 border-b border-slate-100 px-4 py-4 last:border-b-0"
+                    className={cn("grid gap-3 border-b border-slate-100 px-4 py-4 last:border-b-0", gridClass)}
                   >
                     <div className="flex min-w-0 items-start gap-3">
                       <QueueItemThumbnail item={queueItem} />
@@ -1680,37 +1701,39 @@ function QueueWorkQueue({
                       </div>
                     </div>
 
-                    <div className="min-w-0 self-center">
-                      <div className="truncate text-xs font-semibold text-slate-700">
-                        {queueItem.currentWorkflowStateLabel ||
-                          queueItem.currentWorkflowState ||
-                          "-"}
-                      </div>
-                      {queueItem.manualTransitions?.length ? (
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {queueItem.manualTransitions.map((transition) => {
-                            const pendingKey = `${queueItem.id}:${transition.actionKey}`;
-                            const pending = isPending && pendingId === pendingKey;
-                            const disabled = pending || transition.enabled === false;
-
-                            return (
-                              <button
-                                key={transition.actionKey}
-                                type="button"
-                                disabled={disabled}
-                                onClick={() =>
-                                  applyManualAction(queueItem, transition.actionKey)
-                                }
-                                title={transition.reason ?? undefined}
-                                className="inline-flex h-7 items-center rounded-lg border border-slate-200 px-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                              >
-                                {pending ? "Applying" : transition.label || transition.manualActionLabel}
-                              </button>
-                            );
-                          })}
+                    {capabilities.workflow ? (
+                      <div className="min-w-0 self-center">
+                        <div className="truncate text-xs font-semibold text-slate-700">
+                          {queueItem.currentWorkflowStateLabel ||
+                            queueItem.currentWorkflowState ||
+                            "-"}
                         </div>
-                      ) : null}
-                    </div>
+                        {queueItem.manualTransitions?.length ? (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {queueItem.manualTransitions.map((transition) => {
+                              const pendingKey = `${queueItem.id}:${transition.actionKey}`;
+                              const pending = isPending && pendingId === pendingKey;
+                              const disabled = pending || transition.enabled === false;
+
+                              return (
+                                <button
+                                  key={transition.actionKey}
+                                  type="button"
+                                  disabled={disabled}
+                                  onClick={() =>
+                                    applyManualAction(queueItem, transition.actionKey)
+                                  }
+                                  title={transition.reason ?? undefined}
+                                  className="inline-flex h-7 items-center rounded-lg border border-slate-200 px-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  {pending ? "Applying" : transition.label || transition.manualActionLabel}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
 
                     <div className="self-center text-sm font-semibold text-slate-700">
                       {queueItem.feedbackCount}
@@ -2018,23 +2041,92 @@ function SectionTabs({
   );
 }
 
+function snapshotCapabilityLabels(snapshot: WorkspaceDefinitionSnapshot) {
+  const capabilities =
+    snapshot.workspaceDefinition?.enabledCapabilities ??
+    snapshot.enabledCapabilities ??
+    {};
+
+  return Object.entries(capabilities)
+    .filter(([, enabled]) => enabled)
+    .map(([key]) => key)
+    .join(", ");
+}
+
+function WorkspaceDefinitionSnapshotPanel({
+  snapshot,
+}: {
+  snapshot: WorkspaceDefinitionSnapshot;
+}) {
+  const definition = snapshot.workspaceDefinition ?? {};
+  const workspaceType = definition.workspaceType ?? snapshot.workspaceType ?? "-";
+  const itemLabel = definition.itemLabel ?? snapshot.itemLabel ?? "-";
+  const defaultView = definition.defaultView ?? snapshot.defaultView ?? "-";
+  const notes =
+    definition.instantiationNotes ?? snapshot.instantiationNotes ?? null;
+  const capabilities = snapshotCapabilityLabels(snapshot);
+
+  return (
+    <Panel icon={<Info className="h-4 w-4" />} title="Workspace Definition Snapshot">
+      <div className="grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
+        <div>
+          <div className="text-xs font-medium text-slate-500">Blueprint</div>
+          <div className="mt-1 font-semibold text-slate-950">
+            {snapshot.blueprintName ?? snapshot.blueprintKey ?? "-"}
+          </div>
+          <div className="mt-0.5 text-xs text-slate-500">
+            {snapshot.blueprintSource ?? "UNKNOWN"}
+          </div>
+        </div>
+        <div>
+          <div className="text-xs font-medium text-slate-500">Loại Workspace</div>
+          <div className="mt-1 font-semibold text-slate-950">{workspaceType}</div>
+        </div>
+        <div>
+          <div className="text-xs font-medium text-slate-500">Tên gọi Item</div>
+          <div className="mt-1 font-semibold text-slate-950">{itemLabel}</div>
+        </div>
+        <div>
+          <div className="text-xs font-medium text-slate-500">View mặc định</div>
+          <div className="mt-1 font-semibold text-slate-950">{defaultView}</div>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+        <div className="text-xs font-medium uppercase text-slate-500">
+          Capability đang bật
+        </div>
+        <div className="mt-1">{capabilities || "-"}</div>
+        {notes ? <div className="mt-2 text-slate-600">{notes}</div> : null}
+      </div>
+    </Panel>
+  );
+}
+
 function OverviewPanel({
   item,
   activityCount,
   checklistDone,
   checklistTotal,
   bindingCount,
+  capabilities,
 }: {
   item: TaskItemDetail;
   activityCount: number;
   checklistDone: number;
   checklistTotal: number;
   bindingCount: number;
+  capabilities: WorkspaceCapabilities;
 }) {
   const note = displayNote(item.note);
+  const workspaceSnapshot = parseWorkspaceDefinitionSnapshot(item.note);
 
   return (
     <div className="space-y-5">
+      {workspaceSnapshot ? (
+        <WorkspaceDefinitionSnapshotPanel snapshot={workspaceSnapshot} />
+      ) : null}
+
       <Panel icon={<FileText className="h-4 w-4" />} title="Tổng quan">
         {note ? (
           <div className="whitespace-pre-wrap rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700">
@@ -2046,6 +2138,7 @@ function OverviewPanel({
       </Panel>
 
       <div className="grid gap-4 md:grid-cols-3">
+        {capabilities.activity ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="text-sm font-semibold text-slate-950">Hoạt động</div>
           <div className="mt-2 text-2xl font-semibold text-slate-950">
@@ -2053,6 +2146,8 @@ function OverviewPanel({
           </div>
           <div className="mt-1 text-xs text-slate-500">sự kiện và trao đổi</div>
         </div>
+        ) : null}
+        {capabilities.checklist ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="text-sm font-semibold text-slate-950">Checklist</div>
           <div className="mt-2 text-2xl font-semibold text-slate-950">
@@ -2060,6 +2155,8 @@ function OverviewPanel({
           </div>
           <div className="mt-1 text-xs text-slate-500">tiêu chí hoàn thành</div>
         </div>
+        ) : null}
+        {capabilities.items ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="text-sm font-semibold text-slate-950">
             Items
@@ -2069,6 +2166,7 @@ function OverviewPanel({
           </div>
           <div className="mt-1 text-xs text-slate-500">runtime items</div>
         </div>
+        ) : null}
       </div>
     </div>
   );
@@ -2083,7 +2181,7 @@ export default function TaskItemDetailClient({
   users: UserSummary[];
   currentUser?: UserSummary | null;
 }) {
-  const [activeTab, setActiveTab] = useState<DetailTab>("activity");
+  const [activeTab, setActiveTab] = useState<DetailTab>("overview");
   const [activityMode, setActivityMode] = useState<ActivityMode>("ALL");
   const parentTask = item.task;
   const checklists = useMemo(() => item.checklists ?? [], [item.checklists]);
@@ -2093,6 +2191,17 @@ export default function TaskItemDetailClient({
     [item.businessBindings],
   );
   const queueItems = useMemo(() => item.queueItems ?? [], [item.queueItems]);
+  const workspaceSnapshot = useMemo(
+    () => parseWorkspaceDefinitionSnapshot(item.note),
+    [item.note],
+  );
+  const capabilities = useMemo(
+    () => resolveWorkspaceCapabilities({
+      note: item.note,
+      snapshot: workspaceSnapshot,
+    }),
+    [item.note, workspaceSnapshot],
+  );
   const backHref = coordinationHref(parentTask);
   const isSystemOwner = noteHasSystemOwner(item.note) && !item.ownerUser;
   const owner = mergeCurrentUserAvatar(
@@ -2152,9 +2261,11 @@ export default function TaskItemDetailClient({
                   {item.title}
                 </h1>
                 <TaskStatusSignal status={item.status} />
-                <span className="rounded-xl bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 ring-1 ring-orange-100">
-                  <PrioritySignal priority={item.priority} showLabel />
-                </span>
+                {capabilities.priority ? (
+                  <span className="rounded-xl bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 ring-1 ring-orange-100">
+                    <PrioritySignal priority={item.priority} showLabel />
+                  </span>
+                ) : null}
               </div>
             </div>
 
@@ -2167,21 +2278,27 @@ export default function TaskItemDetailClient({
           </div>
 
           <div className="mt-6 grid gap-x-8 gap-y-4 md:grid-cols-2 xl:grid-cols-6">
-            <HeaderMetric
-              icon={<UserRound className="h-4 w-4" />}
-              label="Owner"
-              value={<UserIdentity user={owner} isSystem={isSystemOwner} />}
-            />
-            <HeaderMetric
-              icon={<CalendarDays className="h-4 w-4" />}
-              label="Due date"
-              value={formatDate(item.dueAt)}
-            />
-            <HeaderMetric
-              icon={<ListChecks className="h-4 w-4" />}
-              label="Checklist"
-              value={`${checklistDone}/${checklists.length}`}
-            />
+            {capabilities.assignee ? (
+              <HeaderMetric
+                icon={<UserRound className="h-4 w-4" />}
+                label="Owner"
+                value={<UserIdentity user={owner} isSystem={isSystemOwner} />}
+              />
+            ) : null}
+            {capabilities.dueDate ? (
+              <HeaderMetric
+                icon={<CalendarDays className="h-4 w-4" />}
+                label="Due date"
+                value={formatDate(item.dueAt)}
+              />
+            ) : null}
+            {capabilities.checklist ? (
+              <HeaderMetric
+                icon={<ListChecks className="h-4 w-4" />}
+                label="Checklist"
+                value={`${checklistDone}/${checklists.length}`}
+              />
+            ) : null}
             <HeaderMetric
               icon={<Folder className="h-4 w-4" />}
               label="Space"
@@ -2196,7 +2313,16 @@ export default function TaskItemDetailClient({
           </div>
         </section>
 
-        <SectionTabs items={tabs} activeTab={activeTab} onChange={setActiveTab} />
+        <SectionTabs
+          items={tabs.filter((tab) => {
+            if (tab.key === "activity") return capabilities.activity;
+            if (tab.key === "checklist") return capabilities.checklist;
+            if (tab.key === "business") return capabilities.items;
+            return true;
+          })}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+        />
 
         <div className="mt-4 grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
           <div className="min-w-0">
@@ -2207,6 +2333,7 @@ export default function TaskItemDetailClient({
                 checklistDone={checklistDone}
                 checklistTotal={checklists.length}
                 bindingCount={businessBindings.length}
+                capabilities={capabilities}
               />
             ) : null}
 
@@ -2239,48 +2366,61 @@ export default function TaskItemDetailClient({
                   businessBindings={businessBindings}
                   queueItems={queueItems}
                   mode={activityMode}
+                  discussionEnabled={capabilities.discussion}
                 />
               </Panel>
             ) : null}
 
             {activeTab === "checklist" ? <ReadonlyChecklist items={checklists} /> : null}
             {activeTab === "business" ? (
-              <QueueWorkQueue taskItemId={item.id} items={queueItems} />
+              <QueueWorkQueue
+                taskItemId={item.id}
+                items={queueItems}
+                capabilities={capabilities}
+              />
             ) : null}
             {activeTab === "info" ? <DetailInfo item={item} /> : null}
           </div>
 
           <aside className="space-y-5">
-            <SharingEditor
-              taskItemId={item.id}
-              users={users}
-              sharedUsers={item.sharedUsers ?? []}
-              sharedUserIds={item.sharedUserIds ?? []}
-              currentUser={currentUser}
-            />
+            {capabilities.assignee ? (
+              <SharingEditor
+                taskItemId={item.id}
+                users={users}
+                sharedUsers={item.sharedUsers ?? []}
+                sharedUserIds={item.sharedUserIds ?? []}
+                currentUser={currentUser}
+              />
+            ) : null}
 
             <DetailInfo item={item} />
-            <QueueSummary items={queueItems} />
+            {capabilities.items ? <QueueSummary items={queueItems} /> : null}
             <Panel icon={<Tag className="h-4 w-4" />} title="Thông tin mở rộng">
               <dl className="space-y-3 text-sm">
+                {capabilities.activity ? (
                 <div className="flex justify-between gap-4">
                   <dt className="text-slate-500">Hoạt động</dt>
                   <dd className="font-semibold text-slate-950">
                     {activities.length}
                   </dd>
                 </div>
+                ) : null}
+                {capabilities.priority ? (
                 <div className="flex justify-between gap-4">
                   <dt className="text-slate-500">Priority</dt>
                   <dd>
                     <PrioritySignal priority={item.priority} showLabel />
                   </dd>
                 </div>
+                ) : null}
+                {capabilities.assignee ? (
                 <div className="flex justify-between gap-4">
                   <dt className="text-slate-500">Owner</dt>
                   <dd className="min-w-0 font-semibold text-slate-950">
                     <UserIdentity user={owner} isSystem={isSystemOwner} />
                   </dd>
                 </div>
+                ) : null}
                 <div className="flex justify-between gap-4">
                   <dt className="text-slate-500">Workspace id</dt>
                   <dd className="font-mono text-xs text-slate-500">

@@ -248,6 +248,10 @@ export async function createTaskItemAction(input: {
   revalidatePath("/admin/tasks");
   revalidatePath(`/admin/tasks/${cleanTaskId}`);
   revalidatePath("/admin/task-items");
+  revalidatePath("/admin/coordination/operation");
+  revalidatePath("/admin/coordination/sales");
+  revalidatePath("/admin/coordination/technical");
+  revalidatePath("/admin/coordination/general");
 
   return { ok: true, item };
 }

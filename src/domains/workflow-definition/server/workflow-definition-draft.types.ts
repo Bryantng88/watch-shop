@@ -4,11 +4,23 @@ import type {
 import type {
   WorkflowDefinitionValidationResult,
 } from "./workflow-definition.validation";
+import type {
+  BlueprintWorkspaceDefinition,
+} from "@/domains/blueprint/server/blueprint.types";
 
 export type WorkflowDefinitionDraftStatus =
   | "DRAFT"
   | "VALIDATED"
   | "ARCHIVED";
+
+export type WorkflowDefinitionDraftBlueprintJson = {
+  purpose: string;
+  businessContext: string;
+  typicalUsage: string;
+  expectedResult: string;
+  ownerLabel: string | null;
+  workspaceDefinition: BlueprintWorkspaceDefinition;
+};
 
 export type WorkflowDefinitionDraft = {
   id: string;
@@ -17,6 +29,7 @@ export type WorkflowDefinitionDraft = {
   workTypeKey: string | null;
   name: string;
   description: string | null;
+  blueprintJson: WorkflowDefinitionDraftBlueprintJson | null;
   definitionJson: WorkflowDefinition;
   status: WorkflowDefinitionDraftStatus;
   validationJson: WorkflowDefinitionValidationResult | null;
@@ -30,6 +43,7 @@ export type WorkflowDefinitionDraft = {
 export type CreateWorkflowDefinitionDraftInput = {
   sourceRegistryKey?: string | null;
   definitionJson?: WorkflowDefinition | null;
+  blueprintJson?: WorkflowDefinitionDraftBlueprintJson | null;
   createdByUserId?: string | null;
 };
 
@@ -39,6 +53,7 @@ export type UpdateWorkflowDefinitionDraftInput = {
   workTypeKey?: string | null;
   name?: string;
   description?: string | null;
+  blueprintJson?: WorkflowDefinitionDraftBlueprintJson | null;
   definitionJson?: WorkflowDefinition;
   updatedByUserId?: string | null;
 };

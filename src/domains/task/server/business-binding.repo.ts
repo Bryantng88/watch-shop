@@ -1,4 +1,8 @@
-import { Prisma, TaskExecutionActionType } from "@prisma/client";
+import {
+  Prisma,
+  TaskExecutionActionType,
+  TaskExecutionTargetType,
+} from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
 import type {
   BusinessBindingTargetInput,
@@ -32,6 +36,16 @@ function clean(value: unknown) {
 
 function assertPresent(value: unknown, message: string) {
   if (!clean(value)) throw new Error(message);
+}
+
+const BUSINESS_BINDING_TARGET_TYPES = new Set<string>(
+  Object.values(TaskExecutionTargetType),
+);
+
+function isBusinessBindingTargetType(
+  value: unknown,
+): value is BusinessBindingTargetType {
+  return BUSINESS_BINDING_TARGET_TYPES.has(clean(value));
 }
 
 function relationIdsForTarget(input: BusinessBindingTargetInput) {
@@ -89,6 +103,7 @@ export async function findBusinessBindingsByTarget(
   const client = dbOrTx(db);
   const cleanTargetId = clean(targetId);
   assertPresent(cleanTargetId, "Missing targetId");
+  if (!isBusinessBindingTargetType(targetType)) return [];
 
   return client.taskExecution.findMany({
     where: {
@@ -108,6 +123,7 @@ export async function findTaskItemIdsByTarget(
   const client = dbOrTx(db);
   const cleanTargetId = clean(targetId);
   assertPresent(cleanTargetId, "Missing targetId");
+  if (!isBusinessBindingTargetType(targetType)) return [];
 
   const rows = await client.taskExecution.findMany({
     where: {
@@ -227,6 +243,7 @@ export async function findTaskItemIdsByTargetIds(
   );
 
   if (!targetIds.length) return [];
+  if (!isBusinessBindingTargetType(input.targetType)) return [];
 
   const rows = await client.taskExecution.findMany({
     where: {

@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useState, useTransition } from "react";
+import { type FormEvent, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CalendarDays, ChevronRight, Clock3, Inbox, MessageSquareWarning, Plus } from "lucide-react";
@@ -64,6 +64,32 @@ function prefixedLabel(prefix: "Space" | "Workspace", value: string) {
   return `${prefix} ${cleanValue}`;
 }
 
+function enabledCapabilityLabels(
+  capabilities: CoordinationDashboardDTO["blueprints"][number]["workspaceDefinition"]["enabledCapabilities"],
+) {
+  return [
+    capabilities.workflow ? "Workflow" : null,
+    capabilities.items ? "Items" : null,
+    capabilities.activity ? "Activity" : null,
+    capabilities.discussion ? "Discussion" : null,
+    capabilities.attachments ? "Attachments" : null,
+    capabilities.checklist ? "Checklist" : null,
+    capabilities.dueDate ? "Due Date" : null,
+    capabilities.assignee ? "Assignee" : null,
+    capabilities.priority ? "Priority" : null,
+  ].filter(Boolean) as string[];
+}
+
+function blueprintSourceLabel(
+  blueprint: CoordinationDashboardDTO["blueprints"][number],
+) {
+  if (blueprint.source === "DRAFT") {
+    return blueprint.status ? `Draft (${blueprint.status})` : "Draft";
+  }
+
+  return "Registry";
+}
+
 function OwnerCell({
   owner,
 }: {
@@ -73,7 +99,7 @@ function OwnerCell({
 
   return (
     <div className="text-sm">
-      <div className="text-xs font-medium text-slate-500">Owner</div>
+      <div className="text-xs font-medium text-slate-500">Phụ trách</div>
       <div className="mt-1 inline-flex min-w-0 items-center gap-2">
         <span className={`flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-semibold ${owner.isSystem ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}>
           {src ? (
@@ -94,10 +120,26 @@ function OwnerCell({
 export default function OperationCoordinationWorkspace({ data }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [title, setTitle] = useState("");
-  const [blueprintKey, setBlueprintKey] = useState(data.blueprints[0]?.key ?? "");
+  const [blueprintKey, setBlueprintKey] = useState(
+    data.blueprints[0]?.selectionKey ?? "",
+  );
+  const initialTitle = data.blueprints[0]?.workspaceDefinition.defaultName ?? "";
+  const [title, setTitle] = useState(initialTitle);
+  const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const selectedBlueprint = useMemo(
+    () =>
+      data.blueprints.find((blueprint) => blueprint.selectionKey === blueprintKey) ??
+      data.blueprints[0] ??
+      null,
+    [blueprintKey, data.blueprints],
+  );
+  const capabilityLabels = selectedBlueprint
+    ? enabledCapabilityLabels(
+        selectedBlueprint.workspaceDefinition.enabledCapabilities,
+      )
+    : [];
 
   function updateDate(date: string) {
     const next = new URLSearchParams(searchParams.toString());
@@ -109,7 +151,9 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     event.preventDefault();
     const cleanTitle = title.trim();
     if (!cleanTitle) return;
-    const blueprint = data.blueprints.find((item) => item.key === blueprintKey);
+    const blueprint = data.blueprints.find(
+      (item) => item.selectionKey === blueprintKey,
+    );
 
     setError(null);
     startTransition(async () => {
@@ -120,10 +164,12 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
           note: blueprint?.snapshotNote ?? null,
           priority: "MEDIUM",
         });
-        setTitle("");
+        setIsCreateFormOpen(false);
+        setBlueprintKey(data.blueprints[0]?.selectionKey ?? "");
+        setTitle(data.blueprints[0]?.workspaceDefinition.defaultName ?? "");
         router.refresh();
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : "Cannot add workspace.");
+        setError(caught instanceof Error ? caught.message : "Không thể tạo Workspace.");
       }
     });
   }
@@ -146,7 +192,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
             <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-500">
               <span className="inline-flex items-center gap-1.5">
                 <CalendarDays className="h-4 w-4" />
-                Week {data.week.weekNumber}/{data.week.year}
+                Tuần {data.week.weekNumber}/{data.week.year}
               </span>
               <span>
                 {formatDate(data.week.startDate)} - {formatDate(data.week.endDate)}
@@ -156,7 +202,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
 
           <div className="grid gap-3 sm:grid-cols-[160px_220px]">
             <label className="text-sm">
-              <span className="mb-1 block font-medium text-slate-600">Week</span>
+              <span className="mb-1 block font-medium text-slate-600">Tuần</span>
               <select
                 value={data.week.periodKey}
                 onChange={(event) => {
@@ -176,7 +222,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
             </label>
 
             <label className="text-sm">
-              <span className="mb-1 block font-medium text-slate-600">Date range</span>
+              <span className="mb-1 block font-medium text-slate-600">Khoảng ngày</span>
               <input
                 type="date"
                 value={data.filters.selectedDate}
@@ -210,22 +256,48 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                 {prefixedLabel("Space", data.cycle.title)}
               </h2>
 
-              <form className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center" onSubmit={createWorkTicket}>
+              {!isCreateFormOpen ? (
+                <button
+                  type="button"
+                  disabled={!data.blueprints.length}
+                  onClick={() => {
+                    setError(null);
+                    setBlueprintKey(data.blueprints[0]?.selectionKey ?? "");
+                    setTitle(data.blueprints[0]?.workspaceDefinition.defaultName ?? "");
+                    setIsCreateFormOpen(true);
+                  }}
+                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-slate-900 px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  <Plus className="h-4 w-4" />
+                  Tạo Workspace
+                </button>
+              ) : null}
+              <form
+                className={`${isCreateFormOpen ? "flex" : "hidden"} min-w-0 flex-col gap-2 sm:flex-row sm:items-center`}
+                onSubmit={createWorkTicket}
+              >
                 <select
                   value={blueprintKey}
-                  onChange={(event) => setBlueprintKey(event.target.value)}
+                  onChange={(event) => {
+                    const nextKey = event.target.value;
+                    const nextBlueprint = data.blueprints.find(
+                      (blueprint) => blueprint.selectionKey === nextKey,
+                    );
+                    setBlueprintKey(nextKey);
+                    setTitle(nextBlueprint?.workspaceDefinition.defaultName ?? "");
+                  }}
                   className="h-9 min-w-0 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-slate-400 sm:w-56"
                 >
                   {data.blueprints.map((blueprint) => (
-                    <option key={blueprint.key} value={blueprint.key}>
-                      {blueprint.name}
+                    <option key={blueprint.selectionKey} value={blueprint.selectionKey}>
+                      {blueprint.name} - {blueprintSourceLabel(blueprint)}
                     </option>
                   ))}
                 </select>
                 <input
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
-                  placeholder="Workspace name"
+                placeholder="Tên Workspace"
                   className="h-9 min-w-0 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-slate-400 sm:w-64"
                 />
                 <button
@@ -234,11 +306,68 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-slate-900 px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300"
                 >
                   <Plus className="h-4 w-4" />
-                  Create Workspace
+                  Xác nhận tạo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError(null);
+                    setIsCreateFormOpen(false);
+                  }}
+                  className="inline-flex h-9 items-center justify-center rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Hủy
                 </button>
               </form>
             </div>
             {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
+            {isCreateFormOpen && selectedBlueprint ? (
+              <div className="mt-3 grid gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 md:grid-cols-3 xl:grid-cols-6">
+                <div>
+                  <div className="font-medium text-slate-500">Nguồn Blueprint</div>
+                  <div className="mt-1 text-slate-900">
+                    {blueprintSourceLabel(selectedBlueprint)}
+                  </div>
+                </div>
+                <div>
+                  <div className="font-medium text-slate-500">Loại Workspace</div>
+                  <div className="mt-1 text-slate-900">
+                    {selectedBlueprint.workspaceDefinition.workspaceType}
+                  </div>
+                </div>
+                <div>
+                  <div className="font-medium text-slate-500">Tên gọi Item</div>
+                  <div className="mt-1 text-slate-900">
+                    {selectedBlueprint.workspaceDefinition.itemLabel}
+                  </div>
+                </div>
+                <div>
+                  <div className="font-medium text-slate-500">View mặc định</div>
+                  <div className="mt-1 text-slate-900">
+                    {selectedBlueprint.workspaceDefinition.defaultView}
+                  </div>
+                </div>
+                <div>
+                  <div className="font-medium text-slate-500">Đang bật</div>
+                  <div className="mt-1 text-slate-900">
+                    {capabilityLabels.join(", ")}
+                  </div>
+                </div>
+                <div className="md:col-span-3 xl:col-span-6">
+                  <div className="font-medium text-slate-500">Mô tả khi tạo</div>
+                  <div className="mt-1 text-slate-900">
+                    {selectedBlueprint.workspaceDefinition.defaultDescription ||
+                      selectedBlueprint.description ||
+                      "-"}
+                  </div>
+                  {selectedBlueprint.workspaceDefinition.instantiationNotes ? (
+                    <div className="mt-1 text-slate-600">
+                      {selectedBlueprint.workspaceDefinition.instantiationNotes}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="divide-y divide-slate-100">
@@ -262,16 +391,16 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                 <OwnerCell owner={ticket.owner} />
                 <QueueSummaryCell summary={ticket.queueSummary} />
                 <SummaryCell
-                  label="Need Attention"
+                  label="Cần chú ý"
                   value={ticket.needAttention ? "Yes" : "No"}
                 />
                 <SummaryCell label="Feedback" value={String(ticket.feedbackCount)} />
-                <SummaryCell label="Updated" value={formatDateTime(ticket.updatedAt)} />
+                <SummaryCell label="Cập nhật" value={formatDateTime(ticket.updatedAt)} />
 
                 <div className="min-w-0 text-sm">
                   <div className="mb-1 flex items-center gap-1 text-xs font-medium text-slate-500">
                     <Clock3 className="h-3.5 w-3.5" />
-                    Last Activity
+                    Activity gần nhất
                   </div>
                   <div className="truncate text-slate-800">
                     {ticket.lastActivity || "-"}
@@ -290,7 +419,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
             {!data.workTickets.length ? (
               <div className="flex items-center gap-3 px-4 py-10 text-sm text-slate-500">
                 <Inbox className="h-5 w-5" />
-                No workspaces for this week.
+                Chưa có Workspace trong tuần này.
               </div>
             ) : null}
           </div>
@@ -315,15 +444,15 @@ function QueueSummaryCell({
   summary: CoordinationDashboardDTO["workTickets"][number]["queueSummary"];
 }) {
   const items = [
-    { label: "Ready", value: summary.ready },
+    { label: "Sẵn sàng", value: summary.ready },
     { label: "Review", value: summary.review },
     { label: "Feedback", value: summary.feedback },
-    { label: "Done", value: summary.done },
+    { label: "Xong", value: summary.done },
   ];
 
   return (
     <div className="text-sm">
-      <div className="text-xs font-medium text-slate-500">Items Summary</div>
+      <div className="text-xs font-medium text-slate-500">Tóm tắt Item</div>
       <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-slate-600">
         {items.map((item) => (
           <span key={item.label} className="flex items-center justify-between gap-2">

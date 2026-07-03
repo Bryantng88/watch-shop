@@ -1,4 +1,8 @@
-import { TimelineContainerType, TimelineSourceType } from "@prisma/client";
+import {
+    TaskExecutionTargetType,
+    TimelineContainerType,
+    TimelineSourceType,
+} from "@prisma/client";
 import type { DB } from "@/server/db/client";
 import {
     findRelatedTaskItemIdsForBusinessTargets,
@@ -37,6 +41,16 @@ function readStringArray(value: unknown) {
     return value.map((item) => clean(item)).filter(Boolean);
 }
 
+const BUSINESS_BINDING_TARGET_TYPES = new Set<string>(
+    Object.values(TaskExecutionTargetType),
+);
+
+function isBusinessBindingTargetType(
+    value: string,
+): value is BusinessBindingTargetType {
+    return BUSINESS_BINDING_TARGET_TYPES.has(value);
+}
+
 function getTimelineTitle(eventKey: string) {
     const titles: Record<string, string> = {
         "watch.content.submitted": "Đã gửi duyệt nội dung",
@@ -59,6 +73,7 @@ async function findRelatedTaskItemIdsForBusinessEvent(
     const targetId = clean(event.targetId);
 
     if (!targetType || !targetId) return [];
+    if (!isBusinessBindingTargetType(targetType)) return [];
 
     const targetIds = Array.from(
         new Set(
@@ -72,7 +87,7 @@ async function findRelatedTaskItemIdsForBusinessEvent(
     );
 
     return findRelatedTaskItemIdsForBusinessTargets(client, {
-        targetType: targetType as BusinessBindingTargetType,
+        targetType,
         targetIds,
     });
 }

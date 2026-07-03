@@ -1,8 +1,4 @@
-import {
-  listAllWorkTypes,
-  listWorkTypes,
-  listWorkTypesWithWorkflow,
-} from "@/domains/task/server/work-type.service";
+import { listWorkTypesWithWorkflow } from "@/domains/task/server/work-type.service";
 import type {
   WorkTypeCoordinationContext,
   WorkTypeWithWorkflowDefinition,
@@ -17,6 +13,9 @@ import type {
   BlueprintCapability,
   BlueprintExperience,
   BlueprintLibraryItem,
+  BlueprintSource,
+  BlueprintWorkspaceDefinition,
+  BlueprintWorkspaceDefinitionCapabilities,
   BlueprintWorkflowCapability,
   WorkspaceInstantiationBlueprintOption,
 } from "./blueprint.types";
@@ -30,69 +29,69 @@ type ExperienceSeed = {
 
 const EXPERIENCE_BY_WORK_TYPE: Record<string, ExperienceSeed> = {
   publish: {
-    purpose: "Standardize how watches move from preparation to publishing readiness.",
-    typicalUsage: "Use when Operations needs one shared Workspace for content, images, review, and publish readiness.",
-    expectedResult: "A Publish Workspace where Items reach a clear ready-to-publish outcome.",
+    purpose: "Chuẩn hóa cách đồng hồ đi từ bước chuẩn bị đến trạng thái sẵn sàng đăng bán.",
+    typicalUsage: "Dùng khi Operations cần một Workspace chung cho nội dung, hình ảnh, review và trạng thái sẵn sàng đăng.",
+    expectedResult: "Một Publish Workspace nơi các Item đạt kết quả rõ ràng: sẵn sàng đăng bán.",
     workspaceType: "Publish Workspace",
   },
   photography: {
-    purpose: "Coordinate photography requests until usable watch images are available.",
-    typicalUsage: "Use when Operations needs to request, track, and complete product photography.",
-    expectedResult: "A Photography Workspace with Items showing whether image work is complete or needs follow-up.",
+    purpose: "Điều phối yêu cầu chụp ảnh cho đến khi có hình ảnh đồng hồ dùng được.",
+    typicalUsage: "Dùng khi Operations cần yêu cầu, theo dõi và hoàn tất việc chụp ảnh sản phẩm.",
+    expectedResult: "Một Photography Workspace nơi các Item thể hiện việc hình ảnh đã xong hay còn cần xử lý.",
     workspaceType: "Photography Workspace",
   },
   technical: {
-    purpose: "Coordinate operational technical work that supports watch handling.",
-    typicalUsage: "Use for technical tasks that Operations needs to track across a shared workspace.",
-    expectedResult: "A Technical Workspace where Items reflect current technical handling status.",
+    purpose: "Điều phối các việc kỹ thuật hỗ trợ quá trình xử lý đồng hồ.",
+    typicalUsage: "Dùng cho các việc kỹ thuật mà Operations cần theo dõi trong một Workspace chung.",
+    expectedResult: "Một Technical Workspace nơi các Item phản ánh trạng thái xử lý kỹ thuật hiện tại.",
     workspaceType: "Technical Workspace",
   },
   quotation: {
-    purpose: "Standardize how Sales prepares and follows up quotations.",
-    typicalUsage: "Use when Sales needs a shared place for quote requests, review, and customer follow-up.",
-    expectedResult: "A Quotation Workspace where Items make quotation progress visible.",
+    purpose: "Chuẩn hóa cách Sales chuẩn bị và theo dõi báo giá.",
+    typicalUsage: "Dùng khi Sales cần một nơi chung cho yêu cầu báo giá, review và follow-up khách hàng.",
+    expectedResult: "Một Quotation Workspace nơi tiến độ báo giá được thể hiện rõ qua các Item.",
     workspaceType: "Quotation Workspace",
   },
   pricing: {
-    purpose: "Coordinate pricing decisions and price adjustment work.",
-    typicalUsage: "Use when Sales needs to review, adjust, or confirm pricing before business action.",
-    expectedResult: "A Pricing Workspace where Items show which pricing decisions are pending or complete.",
+    purpose: "Điều phối quyết định giá và các việc điều chỉnh giá.",
+    typicalUsage: "Dùng khi Sales cần review, điều chỉnh hoặc xác nhận giá trước khi hành động.",
+    expectedResult: "Một Pricing Workspace nơi các Item cho thấy quyết định giá nào đang chờ hoặc đã hoàn tất.",
     workspaceType: "Pricing Workspace",
   },
   negotiation: {
-    purpose: "Track negotiation work from initial discussion to a clear commercial outcome.",
-    typicalUsage: "Use when Sales needs to coordinate customer negotiation steps and decisions.",
-    expectedResult: "A Negotiation Workspace where Items make next commercial actions visible.",
+    purpose: "Theo dõi quá trình thương lượng từ trao đổi ban đầu đến kết quả kinh doanh rõ ràng.",
+    typicalUsage: "Dùng khi Sales cần điều phối các bước thương lượng và quyết định với khách hàng.",
+    expectedResult: "Một Negotiation Workspace nơi các Item làm rõ hành động thương mại tiếp theo.",
     workspaceType: "Negotiation Workspace",
   },
   marketing: {
-    purpose: "Coordinate marketing work that supports sales and operations.",
-    typicalUsage: "Use when campaign, listing, or promotion work needs shared follow-up.",
-    expectedResult: "A Marketing Workspace where Items show marketing readiness and blockers.",
+    purpose: "Điều phối các việc marketing hỗ trợ Sales và Operations.",
+    typicalUsage: "Dùng khi chiến dịch, listing hoặc promotion cần được theo dõi chung.",
+    expectedResult: "Một Marketing Workspace nơi các Item cho thấy mức sẵn sàng và điểm nghẽn marketing.",
     workspaceType: "Marketing Workspace",
   },
   repair: {
-    purpose: "Standardize how repair work is received, tracked, and completed.",
-    typicalUsage: "Use when Technical needs a shared Workspace for repair intake, handling, and result tracking.",
-    expectedResult: "A Repair Workspace where Items show repair progress and completion state.",
+    purpose: "Chuẩn hóa cách tiếp nhận, theo dõi và hoàn tất việc sửa chữa.",
+    typicalUsage: "Dùng khi Technical cần một Workspace chung cho tiếp nhận sửa chữa, xử lý và theo dõi kết quả.",
+    expectedResult: "Một Repair Workspace nơi các Item thể hiện tiến độ sửa chữa và trạng thái hoàn tất.",
     workspaceType: "Repair Workspace",
   },
   inspection: {
-    purpose: "Coordinate inspection work so technical findings become visible to the business.",
-    typicalUsage: "Use when watches require inspection before repair, sale, warranty, or another decision.",
-    expectedResult: "An Inspection Workspace where Items capture inspection progress and outcome.",
+    purpose: "Điều phối việc kiểm tra để kết quả kỹ thuật trở nên rõ ràng với business.",
+    typicalUsage: "Dùng khi đồng hồ cần kiểm tra trước sửa chữa, bán hàng, bảo hành hoặc quyết định khác.",
+    expectedResult: "Một Inspection Workspace nơi các Item ghi nhận tiến độ và kết quả kiểm tra.",
     workspaceType: "Inspection Workspace",
   },
   warranty: {
-    purpose: "Track warranty handling from claim intake to technical or customer resolution.",
-    typicalUsage: "Use when Technical needs to coordinate warranty cases and follow-up actions.",
-    expectedResult: "A Warranty Workspace where Items show warranty status and next action.",
+    purpose: "Theo dõi xử lý bảo hành từ lúc tiếp nhận yêu cầu đến khi có kết quả kỹ thuật hoặc phản hồi khách hàng.",
+    typicalUsage: "Dùng khi Technical cần điều phối ca bảo hành và các hành động follow-up.",
+    expectedResult: "Một Warranty Workspace nơi các Item thể hiện trạng thái bảo hành và bước tiếp theo.",
     workspaceType: "Warranty Workspace",
   },
   general: {
-    purpose: "Provide a standard operating space for work that does not fit a specialized Blueprint yet.",
-    typicalUsage: "Use when the business needs coordination without a dedicated domain-specific flow.",
-    expectedResult: "A General Workspace where Items still have clear activity and discussion history.",
+    purpose: "Cung cấp một không gian vận hành chuẩn cho các việc chưa có Blueprint chuyên biệt.",
+    typicalUsage: "Dùng khi business cần điều phối công việc nhưng chưa có flow riêng theo domain.",
+    expectedResult: "Một General Workspace nơi các Item vẫn có lịch sử Activity và Discussion rõ ràng.",
     workspaceType: "General Workspace",
   },
 };
@@ -124,14 +123,14 @@ function contextLabel(context: WorkTypeCoordinationContext | "DRAFT") {
 }
 
 function workflowSummary(workflow: BlueprintWorkflowCapability) {
-  if (!workflow.definition) return "No Workflow capability is attached yet.";
+  if (!workflow.definition) return "Chưa gắn capability Workflow.";
 
   return [
-    `${workflow.stateCount} stages`,
-    `${workflow.transitionCount} ways work moves forward`,
-    `${workflow.manualActionCount} manual actions`,
-    `${workflow.eventTriggerCount} BusinessEvent triggers`,
-    `${workflow.conditionCount} conditions`,
+    `${workflow.stateCount} bước trạng thái`,
+    `${workflow.transitionCount} cách chuyển việc`,
+    `${workflow.manualActionCount} thao tác thủ công`,
+    `${workflow.eventTriggerCount} trigger BusinessEvent`,
+    `${workflow.conditionCount} điều kiện`,
   ].join(", ");
 }
 
@@ -143,45 +142,81 @@ function capabilitiesForWorkflow(
       key: "workflow",
       label: "Workflow",
       status: "ACTIVE",
-      description: "Defines the stages and movements Items use after a Workspace is created.",
+      description: "Định nghĩa các bước trạng thái và cách Item di chuyển sau khi Workspace được tạo.",
       summary: workflowSummary(workflow),
     },
     {
       key: "permissions",
       label: "Permissions",
       status: "FUTURE",
-      description: "Will define who can see, join, and operate the Workspace.",
+      description: "Sau này dùng để định nghĩa ai được xem, tham gia và thao tác trong Workspace.",
       summary: null,
     },
     {
       key: "notifications",
       label: "Notifications",
       status: "FUTURE",
-      description: "Will define when people are informed about important workspace changes.",
+      description: "Sau này dùng để thông báo khi Workspace có thay đổi quan trọng.",
       summary: null,
     },
     {
       key: "automation",
       label: "Automation",
       status: "FUTURE",
-      description: "Will define automated reactions after the platform has an automation engine.",
+      description: "Sau này dùng để định nghĩa phản ứng tự động khi platform có automation engine.",
       summary: null,
     },
     {
       key: "layout",
       label: "Layout",
       status: "FUTURE",
-      description: "Will define how operators see and organize Workspace information.",
+      description: "Sau này dùng để định nghĩa cách operator nhìn và tổ chức thông tin trong Workspace.",
       summary: null,
     },
     {
       key: "metrics",
       label: "Metrics",
       status: "FUTURE",
-      description: "Will define what administrators measure for this Workspace type.",
+      description: "Sau này dùng để định nghĩa các chỉ số admin cần đo cho loại Workspace này.",
       summary: null,
     },
   ];
+}
+
+function workspaceCapabilities(
+  workflow: BlueprintWorkflowCapability,
+): BlueprintWorkspaceDefinitionCapabilities {
+  return {
+    workflow: Boolean(workflow.definition),
+    items: true,
+    activity: true,
+    discussion: true,
+    attachments: false,
+    checklist: false,
+    dueDate: false,
+    assignee: false,
+    priority: true,
+  };
+}
+
+function buildWorkspaceDefinition(input: {
+  name: string;
+  description: string | null;
+  experience: BlueprintExperience;
+  workflow: BlueprintWorkflowCapability;
+}): BlueprintWorkspaceDefinition {
+  return {
+    defaultName: input.experience.workspaceType,
+    defaultDescription:
+      input.description ??
+      `Workspace được tạo từ Blueprint ${input.name}.`,
+    workspaceType: input.experience.workspaceType,
+    itemLabel: input.experience.workspacePreview.itemLabel,
+    defaultView: "items",
+    enabledCapabilities: workspaceCapabilities(input.workflow),
+    instantiationNotes:
+      "Ở V1, Workspace lưu ý định định nghĩa này dưới dạng snapshot note.",
+  };
 }
 
 function buildExperience(input: {
@@ -195,13 +230,13 @@ function buildExperience(input: {
   const seed = EXPERIENCE_BY_WORK_TYPE[input.key] ?? {
     purpose:
       input.description ??
-      `Define how a ${input.name} Workspace should operate for ${contextLabel(
+      `Định nghĩa cách ${input.name} Workspace vận hành cho ${contextLabel(
         input.context,
       )}.`,
-    typicalUsage: `Use when ${contextLabel(
+    typicalUsage: `Dùng khi ${contextLabel(
       input.context,
-    )} needs a standard Workspace for ${input.name} work.`,
-    expectedResult: `A ${input.name} Workspace with Items, Activity, and Discussion organized around one operating model.`,
+    )} cần một Workspace chuẩn cho nhóm việc ${input.name}.`,
+    expectedResult: `Một ${input.name} Workspace có Item, Activity và Discussion được tổ chức theo cùng một operating model.`,
     workspaceType: `${input.name} Workspace`,
   };
 
@@ -214,13 +249,13 @@ function buildExperience(input: {
     workspacePreview: {
       workspaceType: seed.workspaceType,
       itemLabel: `${input.name} Items`,
-      activityLabel: "Activity history",
+      activityLabel: "Lịch sử Activity",
       discussionLabel: "Discussion",
       steps: [
-        "Administrator selects this Blueprint when creating a Workspace inside a Space.",
-        "Workspace stores a snapshot of the Blueprint selection.",
-        "Operators add or receive Items inside the Workspace.",
-        "Items execute the Workflow capability and generate Activity and Discussion.",
+        "Admin chọn Blueprint này khi tạo Workspace bên trong Space.",
+        "Workspace lưu snapshot của lựa chọn Blueprint.",
+        "Operator thêm hoặc nhận Item trong Workspace.",
+        "Item chạy capability Workflow và tạo Activity, Discussion.",
       ],
     },
     capabilities: capabilitiesForWorkflow(input.workflow),
@@ -232,15 +267,40 @@ function buildDraftExperience(
     key: string;
     name: string;
     description: string | null;
+    blueprintJson?: {
+      purpose: string;
+      typicalUsage: string;
+      expectedResult: string;
+      ownerLabel: string | null;
+    } | null;
   },
   workflow: BlueprintWorkflowCapability,
 ): BlueprintExperience {
+  if (draft.blueprintJson) {
+    const fallback = buildExperience({
+      key: draft.key,
+      name: draft.name,
+      description: draft.description,
+      context: "DRAFT",
+      ownerLabel: draft.blueprintJson.ownerLabel,
+      workflow,
+    });
+
+    return {
+      ...fallback,
+      purpose: draft.blueprintJson.purpose,
+      typicalUsage: draft.blueprintJson.typicalUsage,
+      expectedResult: draft.blueprintJson.expectedResult,
+      ownerLabel: draft.blueprintJson.ownerLabel,
+    };
+  }
+
   return buildExperience({
     key: draft.key,
     name: draft.name,
     description:
       draft.description ??
-      "Draft a standardized way for a future Workspace to operate.",
+      "Draft một cách vận hành chuẩn cho Workspace trong tương lai.",
     context: "DRAFT",
     ownerLabel: "System Admin",
     workflow,
@@ -254,26 +314,32 @@ function registryBlueprint(
     ? validateWorkflowDefinition(workType.workflowDefinition)
     : null;
   const workflow = workflowCapability(workType.workflowDefinition, validation);
+  const description = workType.metadata?.description
+    ? String(workType.metadata.description)
+    : null;
+  const experience = buildExperience({
+    key: workType.key,
+    name: workType.title,
+    description,
+    context: workType.coordinationContext,
+    ownerLabel: workType.defaultOwnerRole,
+    workflow,
+  });
 
   return {
     key: workType.key,
     name: workType.title,
-    description: workType.metadata?.description
-      ? String(workType.metadata.description)
-      : null,
+    description,
     icon: workType.icon,
     category: "Workspace Blueprint",
     businessContext: workType.coordinationContext,
     source: "REGISTRY",
     registrySource: workType.key,
-    experience: buildExperience({
-      key: workType.key,
+    experience,
+    workspaceDefinition: buildWorkspaceDefinition({
       name: workType.title,
-      description: workType.metadata?.description
-        ? String(workType.metadata.description)
-        : null,
-      context: workType.coordinationContext,
-      ownerLabel: workType.defaultOwnerRole,
+      description,
+      experience,
       workflow,
     }),
     workflow,
@@ -306,6 +372,7 @@ export async function listBlueprintLibraryItems(): Promise<BlueprintLibraryItem[
       draft.definitionJson,
       draft.validationJson ?? workflowValidations.get(draft.definitionJson.key) ?? null,
     );
+    const experience = buildDraftExperience(draft, workflow);
 
     return {
       key: draft.key,
@@ -316,7 +383,15 @@ export async function listBlueprintLibraryItems(): Promise<BlueprintLibraryItem[
       businessContext: "DRAFT",
       source: "DRAFT",
       registrySource: draft.sourceRegistryKey,
-      experience: buildDraftExperience(draft, workflow),
+      experience,
+      workspaceDefinition:
+        draft.blueprintJson?.workspaceDefinition ??
+        buildWorkspaceDefinition({
+          name: draft.name,
+          description: draft.description,
+          experience,
+          workflow,
+        }),
       workflow,
       metadata: {
         draftId: draft.id,
@@ -331,38 +406,107 @@ export async function listBlueprintLibraryItems(): Promise<BlueprintLibraryItem[
   return [...registryBlueprints, ...draftBlueprints];
 }
 
-function snapshotNoteForBlueprint(workTypeKey: string) {
-  const workType = listAllWorkTypes().find((item) => item.key === workTypeKey);
-  const workflowKey = workType?.workflowKey ?? null;
+function snapshotNoteForBlueprint(input: {
+  blueprintKey: string;
+  blueprintName: string;
+  blueprintSource: BlueprintSource;
+  workTypeKey: string;
+  workflowKey: string | null;
+  workspaceDefinition: BlueprintWorkspaceDefinition;
+}) {
   const snapshot = {
-    blueprintKey: workTypeKey,
-    blueprintName: workType?.title ?? workTypeKey,
-    workflowKey,
+    blueprintKey: input.blueprintKey,
+    blueprintName: input.blueprintName,
+    blueprintSource: input.blueprintSource,
+    workTypeKey: input.workTypeKey,
+    workflowKey: input.workflowKey,
+    workspaceDefinition: input.workspaceDefinition,
+    enabledCapabilities: input.workspaceDefinition.enabledCapabilities,
+    itemLabel: input.workspaceDefinition.itemLabel,
+    defaultView: input.workspaceDefinition.defaultView,
+    workspaceType: input.workspaceDefinition.workspaceType,
+    instantiationNotes: input.workspaceDefinition.instantiationNotes,
     snapshotAt: new Date().toISOString(),
-    source: "REGISTRY",
   };
 
   return [
-    `blueprintKey: ${workTypeKey}`,
-    `workTypeKey: ${workTypeKey}`,
-    workflowKey ? `workflowKey: ${workflowKey}` : null,
+    `blueprintKey: ${input.blueprintKey}`,
+    `blueprintSource: ${input.blueprintSource}`,
+    `workTypeKey: ${input.workTypeKey}`,
+    input.workflowKey ? `workflowKey: ${input.workflowKey}` : null,
+    `workspaceType: ${input.workspaceDefinition.workspaceType}`,
+    `itemLabel: ${input.workspaceDefinition.itemLabel}`,
+    `defaultView: ${input.workspaceDefinition.defaultView}`,
+    input.workspaceDefinition.instantiationNotes
+      ? `instantiationNotes: ${input.workspaceDefinition.instantiationNotes}`
+      : null,
     `blueprintSnapshot: ${JSON.stringify(snapshot)}`,
   ]
     .filter(Boolean)
     .join("\n");
 }
 
-export function listWorkspaceInstantiationBlueprintOptions(
+export async function listWorkspaceInstantiationBlueprintOptions(
   context: WorkTypeCoordinationContext,
-): WorkspaceInstantiationBlueprintOption[] {
-  return listWorkTypes(context).map((workType) => ({
-    key: workType.key,
-    name: workType.title,
-    description: workType.metadata?.description
-      ? String(workType.metadata.description)
-      : null,
-    workflowKey: workType.workflowKey,
-    businessContext: workType.coordinationContext,
-    snapshotNote: snapshotNoteForBlueprint(workType.key),
+): Promise<WorkspaceInstantiationBlueprintOption[]> {
+  const registryOptions = listRegistryBlueprints(context).map((blueprint) => ({
+    selectionKey: `REGISTRY:${blueprint.key}`,
+    key: blueprint.key,
+    name: blueprint.name,
+    description: blueprint.description,
+    workflowKey: blueprint.workflow.workflowKey,
+    businessContext:
+      blueprint.businessContext === "DRAFT" ? context : blueprint.businessContext,
+    source: blueprint.source,
+    status: null,
+    workspaceDefinition: blueprint.workspaceDefinition,
+    snapshotNote: snapshotNoteForBlueprint({
+      blueprintKey: blueprint.key,
+      blueprintName: blueprint.name,
+      blueprintSource: blueprint.source,
+      workTypeKey: blueprint.key,
+      workflowKey: blueprint.workflow.workflowKey,
+      workspaceDefinition: blueprint.workspaceDefinition,
+    }),
   }));
+
+  const draftOptions = (await listBlueprintLibraryItems())
+    .filter((blueprint) => blueprint.source === "DRAFT")
+    .filter((blueprint) => blueprint.metadata?.draftStatus !== "ARCHIVED")
+    .map((blueprint) => {
+      const draftId =
+        typeof blueprint.metadata?.draftId === "string"
+          ? blueprint.metadata.draftId
+          : blueprint.key;
+      const sourceRegistryKey =
+        typeof blueprint.metadata?.sourceRegistryKey === "string"
+          ? blueprint.metadata.sourceRegistryKey
+          : blueprint.registrySource ?? blueprint.key;
+      const status =
+        typeof blueprint.metadata?.draftStatus === "string"
+          ? blueprint.metadata.draftStatus
+          : null;
+
+      return {
+        selectionKey: `DRAFT:${draftId}`,
+        key: blueprint.key,
+        name: blueprint.name,
+        description: blueprint.description,
+        workflowKey: blueprint.workflow.workflowKey,
+        businessContext: blueprint.businessContext,
+        source: blueprint.source,
+        status,
+        workspaceDefinition: blueprint.workspaceDefinition,
+        snapshotNote: snapshotNoteForBlueprint({
+          blueprintKey: blueprint.key,
+          blueprintName: blueprint.name,
+          blueprintSource: blueprint.source,
+          workTypeKey: sourceRegistryKey,
+          workflowKey: blueprint.workflow.workflowKey,
+          workspaceDefinition: blueprint.workspaceDefinition,
+        }),
+      };
+    });
+
+  return [...registryOptions, ...draftOptions];
 }

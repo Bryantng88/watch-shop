@@ -75,6 +75,11 @@ function ticketWorkTypeKey(note?: string | null) {
   return match ? normalizeWorkTypeKey(match[1]) : null;
 }
 
+function ticketBlueprintSource(note?: string | null) {
+  const match = String(note ?? "").match(/blueprintSource:\s*([a-z0-9_-]+)/i);
+  return match ? match[1].trim().toUpperCase() : null;
+}
+
 function ticketShareGroupKey(note?: string | null) {
   const match = String(note ?? "").match(/shareGroupKey:\s*([a-z0-9-]+)/i);
   return match ? normalizeWorkTypeKey(match[1]) : null;
@@ -317,7 +322,14 @@ export async function getCoordinationDashboard(input: {
   );
   const taskItems = rawTaskItems.filter((item) => {
     const workTypeKey = ticketWorkTypeKey(item.note);
-    if (workTypeKey && !activeWorkTypeKeys.has(workTypeKey)) return false;
+    const blueprintSource = ticketBlueprintSource(item.note);
+    if (
+      workTypeKey &&
+      blueprintSource !== "DRAFT" &&
+      !activeWorkTypeKeys.has(workTypeKey)
+    ) {
+      return false;
+    }
     return canViewTicket(item, input?.auth);
   });
   const taskItemIds = taskItems.map((item) => item.id);
@@ -441,11 +453,16 @@ export async function getCoordinationDashboard(input: {
       { key: "done", label: "Done", value: reportValues.done },
       { key: "overdue", label: "Overdue", value: reportValues.overdue },
     ],
-    blueprints: listWorkspaceInstantiationBlueprintOptions(input.context).map((blueprint) => ({
+    blueprints: (await listWorkspaceInstantiationBlueprintOptions(input.context)).map((blueprint) => ({
+      selectionKey: blueprint.selectionKey,
       key: blueprint.key,
       name: blueprint.name,
       description: blueprint.description,
       workflowKey: blueprint.workflowKey,
+      businessContext: blueprint.businessContext,
+      source: blueprint.source,
+      status: blueprint.status,
+      workspaceDefinition: blueprint.workspaceDefinition,
       snapshotNote: blueprint.snapshotNote,
     })),
     workTickets,

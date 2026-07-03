@@ -2,14 +2,14 @@
   "version": 1,
   "drafts": [
     {
-      "key": "new-workflow-draft",
+      "key": "test-2",
       "workspaceTemplateKey": null,
       "workTypeKey": null,
-      "name": "New Workflow Draft",
+      "name": "Test 2",
       "description": null,
       "definitionJson": {
         "key": "new-workflow-draft",
-        "title": "New Workflow Draft",
+        "title": "Test 2",
         "description": null,
         "initialState": "NEW",
         "terminalStates": [
@@ -19,7 +19,7 @@
         "states": [
           {
             "key": "NEW",
-            "title": "New",
+            "title": "Bước 1",
             "description": null,
             "color": "gray",
             "icon": "circle",
@@ -27,14 +27,32 @@
           },
           {
             "key": "DONE",
-            "title": "Done",
+            "title": "Bước 2",
             "description": null,
             "color": "zinc",
             "icon": "check-circle",
             "sortOrder": 20
+          },
+          {
+            "key": "B_C_M_I",
+            "title": "Bước mới",
+            "description": null,
+            "color": "gray",
+            "icon": "circle",
+            "sortOrder": 30
           }
         ],
-        "transitions": []
+        "transitions": [
+          {
+            "fromState": "NEW",
+            "toState": "DONE",
+            "triggerType": "MANUAL",
+            "triggerValue": "thao-t-c-m-i",
+            "manualActionLabel": "Thao tác mới",
+            "condition": null,
+            "metadata": null
+          }
+        ]
       },
       "status": "VALIDATED",
       "validationJson": {
@@ -47,7 +65,33 @@
       "updatedByUserId": "e8cd72d2-429b-4822-96ac-6f52bdc5f922",
       "id": "205890c2-e32f-4ed8-be62-0fc0903196ee",
       "createdAt": "2026-07-03T03:32:54.251Z",
-      "updatedAt": "2026-07-03T03:32:54.251Z"
+      "updatedAt": "2026-07-03T09:54:01.898Z",
+      "blueprintJson": {
+        "purpose": "Thiết kế một cách vận hành chuẩn cho Workspace trong tương lai.",
+        "businessContext": "DRAFT",
+        "typicalUsage": "Dùng khi đang định nghĩa operating model trước khi Blueprint sẵn sàng để tạo Workspace.",
+        "expectedResult": "Một Blueprint draft đã validate, sau này có thể trở thành lựa chọn tạo Workspace.",
+        "ownerLabel": "System Admin",
+        "workspaceDefinition": {
+          "defaultName": "Test 2 Workspace",
+          "defaultDescription": "Workspace được tạo từ Blueprint draft Test 2.",
+          "workspaceType": "Test 2 Workspace",
+          "itemLabel": "Test 2 Items",
+          "defaultView": "items",
+          "enabledCapabilities": {
+            "workflow": false,
+            "items": false,
+            "activity": false,
+            "discussion": true,
+            "attachments": true,
+            "checklist": false,
+            "dueDate": false,
+            "assignee": false,
+            "priority": true
+          },
+          "instantiationNotes": "Ở V1, Workspace Definition của draft được derive và chưa publish cho runtime."
+        }
+      }
     },
     {
       "key": "watch-operation-technical",
