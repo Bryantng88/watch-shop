@@ -27,6 +27,7 @@ Handoff:
 - Read `docs/sprints/S027-S028-space-management-workflow-handoff.md`
 - Read `docs/architecture/07-space-management-language.md`
 - Read `docs/architecture/06-item-runtime-contract.md`
+- Read `docs/architecture/14-blueprint-snapshot-semantics.md`
 
 ## How To Continue On Another Machine
 
@@ -37,4 +38,5 @@ Handoff:
 5. Read `docs/sprints/S027-S028-space-management-workflow-handoff.md`
 6. Read `docs/architecture/07-space-management-language.md`
 7. Read `docs/architecture/06-item-runtime-contract.md`
-8. Continue current sprint from `docs/sprints/CURRENT.md`
+8. Read `docs/architecture/14-blueprint-snapshot-semantics.md`
+9. Continue current sprint from `docs/sprints/CURRENT.md`
