@@ -44,6 +44,8 @@ export default async function AdminTaskItemDetailPage(props: PageProps) {
         name: auth.name ?? null,
         email: auth.email ?? null,
         avatarUrl: auth.avatarUrl ?? null,
+        roles: Array.isArray(auth.roles) ? auth.roles : [],
+        permissions: Array.isArray(auth.permissions) ? auth.permissions : [],
       })}
     />
   );

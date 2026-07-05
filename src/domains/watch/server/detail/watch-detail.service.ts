@@ -8,6 +8,7 @@ import {
 } from "@/domains/shared/business-feedback/server";
 import {
   getAdminEditWatchDetail,
+  getAdminWatchMediaEditDetail,
   getAdminWatchDetail,
   getAdminWatchRow,
   getLatestWatchVariantForAdmin,
@@ -156,6 +157,43 @@ export async function getWatchEditDetail(productId: string) {
     price: {
       ...(mapped.price ?? {}),
       costPrice: mapped.price?.costPrice ?? acq?.unitCost ?? null,
+    },
+  };
+}
+
+export async function getWatchMediaEditDetail(productId: string) {
+  const row = await perfStep("watch-media-edit-detail", "watchRow", () =>
+    getAdminWatchMediaEditDetail(prisma, productId),
+  );
+
+  if (!row) {
+    throw new Error("KhÃ´ng tÃ¬m tháº¥y watch Ä‘á»ƒ edit media");
+  }
+
+  const poolImages = await perfStep("watch-media-edit-detail", "mediaPool", () =>
+    listWatchChosenMediaPool({
+      productId,
+      acquisitionId: row.acquisitionId,
+    }),
+  );
+  const mapped = mapWatchDetail({
+    ...row,
+    stockState: row.stockStage,
+    saleState: row.saleStage,
+    serviceState: row.serviceStage,
+  });
+  const mappedMedia = (mapped as { media?: Record<string, unknown> }).media ?? {};
+
+  return {
+    ...mapped,
+    taskSummary: {
+      watchImage: 0,
+      watchContent: 0,
+      watchReview: 0,
+    },
+    media: {
+      ...mappedMedia,
+      poolImages,
     },
   };
 }

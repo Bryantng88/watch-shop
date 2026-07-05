@@ -1,6 +1,8 @@
 import type { WorkflowDefinitionValidationResult } from "@/domains/workflow-definition/server";
 import type { WorkTypeCoordinationContext } from "@/domains/task/server/work-type.types";
 import type { WorkflowDefinition } from "@/domains/workflow-definition/server/workflow-definition.types";
+import type { WorkspaceEventBinding } from "@/domains/blueprint/shared/event-bindings";
+import type { WorkspaceProvisioningPolicy } from "@/domains/blueprint/shared/workspace-provisioning";
 
 export type BlueprintSource = "REGISTRY" | "DRAFT";
 
@@ -25,7 +27,12 @@ export type BlueprintWorkspacePreview = {
 export type BlueprintWorkspaceDefinitionDefaultView =
   | "items"
   | "activity"
-  | "workflow";
+  | "workflow"
+  | "discussion"
+  | "attachments"
+  | "checklist"
+  | "priority"
+  | "info";
 
 export type BlueprintWorkspaceDefinitionCapabilities = {
   workflow: boolean;
@@ -39,6 +46,8 @@ export type BlueprintWorkspaceDefinitionCapabilities = {
   priority: boolean;
 };
 
+export type BlueprintEventBinding = WorkspaceEventBinding;
+
 export type BlueprintWorkspaceDefinition = {
   defaultName: string;
   defaultDescription: string | null;
@@ -46,6 +55,8 @@ export type BlueprintWorkspaceDefinition = {
   itemLabel: string;
   defaultView: BlueprintWorkspaceDefinitionDefaultView;
   enabledCapabilities: BlueprintWorkspaceDefinitionCapabilities;
+  provisioning: WorkspaceProvisioningPolicy;
+  eventBindings: BlueprintEventBinding[];
   instantiationNotes: string | null;
 };
 

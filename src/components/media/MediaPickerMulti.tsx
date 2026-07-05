@@ -3,7 +3,6 @@
 import * as React from "react";
 import MediaBrowserDialog from "./MediaBrowserDialog";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
-import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 
 
 
@@ -375,7 +374,6 @@ export default function MediaPickerMulti({
 }: Props) {
     const [open, setOpen] = React.useState(false);
     const [preview, setPreview] = React.useState<PreviewState>(null);
-    const notify = useNotify();
     const chosenItems = React.useMemo(
         () => normalizeItems(chosenValue),
         [chosenValue]
@@ -586,6 +584,10 @@ export default function MediaPickerMulti({
                 profile={profile}
                 selectionMode="multiple"
                 selectedKeys={chosenItems.map((item) => item.key)}
+                disabledKeys={[
+                    ...chosenItems.map((item) => item.key),
+                    ...selectedItems.map((item) => item.key),
+                ]}
                 onSubmit={handleDialogSubmit}
                 submitLabel="Xác nhận ảnh đã chọn"
                 contextImage={contextImage}

@@ -8,6 +8,19 @@ import {
   validateWorkflowDefinition,
 } from "@/domains/workflow-definition/server";
 import { listWorkflowDefinitionDrafts } from "@/domains/workflow-definition/server/workflow-definition-draft.service";
+import {
+  createAppliedWorkflowSnapshot,
+  normalizeWorkspaceCapabilities,
+} from "@/domains/blueprint/shared/workspace-capabilities";
+import {
+  eventBindingsForWorkType,
+  type WorkspaceEventBinding,
+} from "@/domains/blueprint/shared/event-bindings";
+import {
+  MANUAL_WORKSPACE_PROVISIONING,
+  workspaceProvisioningForWorkType,
+  type WorkspaceProvisioningPolicy,
+} from "@/domains/blueprint/shared/workspace-provisioning";
 import type { WorkflowDefinition } from "@/domains/workflow-definition/server/workflow-definition.types";
 import type {
   BlueprintCapability,
@@ -116,10 +129,12 @@ function workflowCapability(
 
 function contextLabel(context: WorkTypeCoordinationContext | "DRAFT") {
   if (context === "DRAFT") return "Draft";
-  if (context === "OPERATION") return "Operations";
-  if (context === "TECHNICAL") return "Technical";
-  if (context === "SALES") return "Sales";
-  return "General";
+  if (context === "OPERATION") return "Vận hành";
+  if (context === "TECHNICAL") return "Kỹ thuật";
+  if (context === "SALES") return "Bán hàng";
+  if (context === "MEDIA") return "Media";
+  if (context === "PAYMENT") return "Thanh toán";
+  return "Tổng quát";
 }
 
 function workflowSummary(workflow: BlueprintWorkflowCapability) {
@@ -204,6 +219,8 @@ function buildWorkspaceDefinition(input: {
   description: string | null;
   experience: BlueprintExperience;
   workflow: BlueprintWorkflowCapability;
+  provisioning?: WorkspaceProvisioningPolicy;
+  eventBindings?: WorkspaceEventBinding[];
 }): BlueprintWorkspaceDefinition {
   return {
     defaultName: input.experience.workspaceType,
@@ -213,7 +230,11 @@ function buildWorkspaceDefinition(input: {
     workspaceType: input.experience.workspaceType,
     itemLabel: input.experience.workspacePreview.itemLabel,
     defaultView: "items",
-    enabledCapabilities: workspaceCapabilities(input.workflow),
+    enabledCapabilities: normalizeWorkspaceCapabilities(
+      workspaceCapabilities(input.workflow),
+    ),
+    provisioning: input.provisioning ?? MANUAL_WORKSPACE_PROVISIONING,
+    eventBindings: input.eventBindings ?? [],
     instantiationNotes:
       "Ở V1, Workspace lưu ý định định nghĩa này dưới dạng snapshot note.",
   };
@@ -325,6 +346,15 @@ function registryBlueprint(
     ownerLabel: workType.defaultOwnerRole,
     workflow,
   });
+  const eventBindings = eventBindingsForWorkType({
+    workTypeKey: workType.key,
+    coordinationContext: workType.coordinationContext,
+  });
+  const provisioning = workspaceProvisioningForWorkType({
+    workTypeKey: workType.key,
+    coordinationContext: workType.coordinationContext,
+    enabled: workType.enabled,
+  });
 
   return {
     key: workType.key,
@@ -341,6 +371,8 @@ function registryBlueprint(
       description,
       experience,
       workflow,
+      provisioning,
+      eventBindings,
     }),
     workflow,
     metadata: {
@@ -391,6 +423,8 @@ export async function listBlueprintLibraryItems(): Promise<BlueprintLibraryItem[
           description: draft.description,
           experience,
           workflow,
+          provisioning: MANUAL_WORKSPACE_PROVISIONING,
+          eventBindings: [],
         }),
       workflow,
       metadata: {
@@ -412,20 +446,36 @@ function snapshotNoteForBlueprint(input: {
   blueprintSource: BlueprintSource;
   workTypeKey: string;
   workflowKey: string | null;
+  workflowDefinition: WorkflowDefinition | null;
   workspaceDefinition: BlueprintWorkspaceDefinition;
 }) {
+  const appliedWorkflowSnapshot = createAppliedWorkflowSnapshot(
+    input.workflowDefinition,
+  );
+  const workspaceDefinition = {
+    ...input.workspaceDefinition,
+    provisioning:
+      input.workspaceDefinition.provisioning ?? MANUAL_WORKSPACE_PROVISIONING,
+    eventBindings: input.workspaceDefinition.eventBindings ?? [],
+    enabledCapabilities: normalizeWorkspaceCapabilities(
+      input.workspaceDefinition.enabledCapabilities,
+    ),
+  };
   const snapshot = {
     blueprintKey: input.blueprintKey,
     blueprintName: input.blueprintName,
     blueprintSource: input.blueprintSource,
     workTypeKey: input.workTypeKey,
     workflowKey: input.workflowKey,
-    workspaceDefinition: input.workspaceDefinition,
-    enabledCapabilities: input.workspaceDefinition.enabledCapabilities,
-    itemLabel: input.workspaceDefinition.itemLabel,
-    defaultView: input.workspaceDefinition.defaultView,
-    workspaceType: input.workspaceDefinition.workspaceType,
-    instantiationNotes: input.workspaceDefinition.instantiationNotes,
+    appliedWorkflowSnapshot,
+    workspaceDefinition,
+    provisioning: workspaceDefinition.provisioning,
+    eventBindings: workspaceDefinition.eventBindings,
+    enabledCapabilities: workspaceDefinition.enabledCapabilities,
+    itemLabel: workspaceDefinition.itemLabel,
+    defaultView: workspaceDefinition.defaultView,
+    workspaceType: workspaceDefinition.workspaceType,
+    instantiationNotes: workspaceDefinition.instantiationNotes,
     snapshotAt: new Date().toISOString(),
   };
 
@@ -466,6 +516,7 @@ export async function listWorkspaceInstantiationBlueprintOptions(
       blueprintSource: blueprint.source,
       workTypeKey: blueprint.key,
       workflowKey: blueprint.workflow.workflowKey,
+      workflowDefinition: blueprint.workflow.definition,
       workspaceDefinition: blueprint.workspaceDefinition,
     }),
   }));
@@ -503,6 +554,7 @@ export async function listWorkspaceInstantiationBlueprintOptions(
           blueprintSource: blueprint.source,
           workTypeKey: sourceRegistryKey,
           workflowKey: blueprint.workflow.workflowKey,
+          workflowDefinition: blueprint.workflow.definition,
           workspaceDefinition: blueprint.workspaceDefinition,
         }),
       };

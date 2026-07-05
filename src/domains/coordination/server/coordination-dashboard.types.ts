@@ -32,6 +32,11 @@ export type CoordinationWorkTicketSummaryDTO = {
   lastActivity: string | null;
   lastActivityAt: string | null;
   updatedAt: string | null;
+  blueprint: {
+    key: string;
+    source: BlueprintSource;
+    isAutoBindingReceiver: boolean;
+  } | null;
 };
 
 export type CoordinationDashboardDTO = {
@@ -73,6 +78,16 @@ export type CoordinationDashboardDTO = {
     status: string | null;
     workspaceDefinition: BlueprintWorkspaceDefinition;
     snapshotNote: string;
+    usage: {
+      total: number;
+      active: number;
+      receiverId: string | null;
+      activeWorkspaces: Array<{
+        id: string;
+        title: string;
+        isAutoBindingReceiver: boolean;
+      }>;
+    };
   }>;
   workTickets: CoordinationWorkTicketSummaryDTO[];
 };

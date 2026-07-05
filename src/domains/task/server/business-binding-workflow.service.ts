@@ -2,9 +2,9 @@ import type { Prisma } from "@prisma/client";
 import type { DB } from "@/server/db/client";
 import {
   getWorkflowDefinition,
-  resolveWorkflowDefinition,
 } from "@/domains/workflow-definition/server";
 import type { WorkflowDefinition } from "@/domains/workflow-definition/server";
+import { resolveAppliedWorkflowSnapshot } from "@/domains/blueprint/shared/workspace-capabilities";
 import { createSystemActivity } from "./activity";
 import { getWorkTypeWorkflowDefinition } from "./work-type.service";
 import {
@@ -127,6 +127,9 @@ function bool(value: unknown) {
 }
 
 function derivePublishRuntimeState(metadata: Record<string, unknown>) {
+  if (bool(metadata.publishAssetsCompleted)) return "DONE";
+  if (bool(metadata.readyForPublish)) return "READY_TO_POST";
+
   if (bool(metadata.contentApproved) && bool(metadata.imageApproved)) {
     return "DONE";
   }
@@ -152,8 +155,23 @@ function derivePublishRuntimeState(metadata: Record<string, unknown>) {
 function updatePublishRuntimeMetadataForEvent(
   metadata: Record<string, unknown>,
   eventKey: string,
+  eventMetadataJson?: unknown,
 ) {
   const next = { ...metadata };
+  const eventMetadata = asRecord(eventMetadataJson);
+
+  if (eventKey === "watch.media.ready_for_publish") {
+    next.readyForPublish = true;
+  }
+
+  if (eventKey === "watch.publish.assets.downloaded") {
+    next.publishAssetsDownloaded = true;
+    next.publishAssetKind = clean(eventMetadata.publishAssetKind) || null;
+    next.lastPublishAssetKind = clean(eventMetadata.publishAssetKind) || null;
+    next.isContentDownloaded = bool(eventMetadata.isContentDownloaded);
+    next.isImageDownloaded = bool(eventMetadata.isImageDownloaded);
+    next.publishAssetsCompleted = bool(eventMetadata.isPosted);
+  }
 
   if (eventKey === "watch.content.submitted") {
     next.contentSubmitted = true;
@@ -190,6 +208,30 @@ function updatePublishRuntimeMetadataForEvent(
   }
 
   return next;
+}
+
+function shouldSkipAlreadyAppliedEvent(input: {
+  runtimeMetadata: Record<string, unknown>;
+  eventKey: string;
+  businessEventLogId: string;
+  eventMetadataJson?: unknown;
+}) {
+  if (
+    clean(input.runtimeMetadata.lastBusinessEventLogId) !==
+    input.businessEventLogId
+  ) {
+    return false;
+  }
+
+  if (input.eventKey !== "watch.publish.assets.downloaded") return true;
+
+  const eventMetadata = asRecord(input.eventMetadataJson);
+  const nextKind = clean(eventMetadata.publishAssetKind);
+  const lastKind = clean(input.runtimeMetadata.lastPublishAssetKind);
+  const nextCompleted = bool(eventMetadata.isPosted);
+  const lastCompleted = bool(input.runtimeMetadata.publishAssetsCompleted);
+
+  return nextKind === lastKind && nextCompleted === lastCompleted;
 }
 
 export function getQueueItemWorkflowState(
@@ -242,7 +284,12 @@ function getManualTransitionDTOs(
     });
 }
 
-function resolveBindingWorkflowDefinition(metadataJson: unknown) {
+export function resolveBindingWorkflowDefinition(metadataJson: unknown) {
+  const appliedWorkflowSnapshot = resolveAppliedWorkflowSnapshot({
+    metadataJson,
+  });
+  if (appliedWorkflowSnapshot) return appliedWorkflowSnapshot;
+
   const metadata = asRecord(metadataJson);
   const workflowKey = clean(metadata.workflowKey);
 
@@ -321,7 +368,7 @@ export async function updateQueueItemWorkflowState(
     );
   }
 
-  const workflowDefinition = resolveWorkflowDefinition(runtime.workflowKey);
+  const workflowDefinition = resolveBindingWorkflowDefinition(binding.metadataJson);
   if (!workflowDefinition) {
     throw new Error(`Workflow definition "${runtime.workflowKey}" is missing.`);
   }
@@ -382,7 +429,14 @@ export async function applyEventTriggerToQueueItem(
   }
 
   const runtimeMetadata = asRecord(runtime.metadata);
-  if (clean(runtimeMetadata.lastBusinessEventLogId) === businessEventLogId) {
+  if (
+    shouldSkipAlreadyAppliedEvent({
+      runtimeMetadata,
+      eventKey,
+      businessEventLogId,
+      eventMetadataJson: input.metadataJson,
+    })
+  ) {
     return {
       applied: false,
       bindingId,
@@ -390,7 +444,7 @@ export async function applyEventTriggerToQueueItem(
     };
   }
 
-  const workflowDefinition = resolveWorkflowDefinition(runtime.workflowKey);
+  const workflowDefinition = resolveBindingWorkflowDefinition(binding.metadataJson);
   if (!workflowDefinition) {
     return {
       applied: false,
@@ -401,6 +455,8 @@ export async function applyEventTriggerToQueueItem(
 
   if (isPublishWorkflow(runtime.workflowKey)) {
     const publishEvents = new Set([
+      "watch.media.ready_for_publish",
+      "watch.publish.assets.downloaded",
       "watch.content.submitted",
       "watch.content.rejected",
       "watch.content.approved",
@@ -421,6 +477,7 @@ export async function applyEventTriggerToQueueItem(
     const nextMetadata = updatePublishRuntimeMetadataForEvent(
       runtimeMetadata,
       eventKey,
+      input.metadataJson,
     );
     const nextState = derivePublishRuntimeState(nextMetadata);
     const terminal = workflowDefinition.terminalStates.includes(nextState);
@@ -515,7 +572,7 @@ export async function listAvailableManualTransitions(
   const runtime = getQueueItemWorkflowState(binding);
   if (!runtime) return [];
 
-  const workflowDefinition = resolveWorkflowDefinition(runtime.workflowKey);
+  const workflowDefinition = resolveBindingWorkflowDefinition(binding.metadataJson);
   if (!workflowDefinition) return [];
 
   return getManualTransitionDTOs(workflowDefinition, runtime.currentState);
@@ -531,7 +588,7 @@ export async function listAvailableManualActions(
   const runtime = getQueueItemWorkflowState(binding);
   if (!runtime) return [];
 
-  const workflowDefinition = resolveWorkflowDefinition(runtime.workflowKey);
+  const workflowDefinition = resolveBindingWorkflowDefinition(binding.metadataJson);
   if (!workflowDefinition) return [];
 
   return getManualTransitionDTOs(workflowDefinition, runtime.currentState, {
@@ -579,7 +636,7 @@ export async function applyManualTriggerToQueueItem(
     return { applied: false, bindingId, reason: "NO_WORKFLOW_RUNTIME" };
   }
 
-  const workflowDefinition = resolveWorkflowDefinition(runtime.workflowKey);
+  const workflowDefinition = resolveBindingWorkflowDefinition(binding.metadataJson);
   if (!workflowDefinition) {
     return {
       applied: false,

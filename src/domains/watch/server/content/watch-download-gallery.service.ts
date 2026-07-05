@@ -28,16 +28,6 @@ function crc32(buffer: Buffer) {
     return (crc ^ 0xffffffff) >>> 0;
 }
 
-function sanitizeFilename(value: string) {
-    return value
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-zA-Z0-9._()\-[\] ]+/g, "_")
-        .replace(/\s+/g, " ")
-        .trim()
-        .slice(0, 120);
-}
-
 function extensionFromContentType(contentType: string) {
     const normalized = contentType.toLowerCase();
 
@@ -167,8 +157,9 @@ export async function buildWatchGalleryZip(input: {
     origin: string;
     cookie?: string | null;
 }) {
-    const snapshot = await prisma.$transaction((tx) =>
-        getWatchDownloadGallerySnapshotRepo(tx as any, input.productId)
+    const snapshot = await getWatchDownloadGallerySnapshotRepo(
+        prisma,
+        input.productId,
     );
 
     if (!snapshot) {

@@ -3,6 +3,7 @@ import { consumeBusinessEventForWorkflow } from "@/domains/workflow/server/workf
 import { consumeBusinessEventForNotification } from "@/domains/notification/server/notification-event-consumer";
 import { consumeBusinessEventForTimeline } from "@/domains/shared/timeline/server/timeline-event-consumer";
 import { consumeBusinessEventForCoordination } from "@/domains/coordination/server";
+import { getBusinessEventDefinition } from "@/domains/event/registry/business-event-registry";
 import { perfLog, perfNow } from "@/lib/server-perf";
 export type BusinessEventEffect = "ASSERT" | "REVOKE";
 
@@ -103,6 +104,32 @@ function errorMessage(error: unknown) {
     return error instanceof Error ? error.message : "Unknown error";
 }
 
+function consumerSkipResult(input: {
+    consumer: BusinessEventConsumer["key"];
+    eventKey: string;
+    reason: string;
+}) {
+    return {
+        ok: true,
+        skipped: true,
+        reason: input.reason,
+        consumer: input.consumer,
+        eventKey: input.eventKey,
+    };
+}
+
+function isConsumerAllowed(
+    eventKey: string,
+    consumer: BusinessEventConsumer["key"],
+) {
+    const definition = getBusinessEventDefinition(eventKey);
+
+    if (!definition) return true;
+    if (!Array.isArray(definition.knownConsumers)) return true;
+
+    return definition.knownConsumers.includes(consumer);
+}
+
 async function withTimeout<T>(
     promise: Promise<T>,
     timeoutMs: number,
@@ -119,6 +146,53 @@ async function withTimeout<T>(
         ]);
     } finally {
         if (timeout) clearTimeout(timeout);
+    }
+}
+
+async function runConsumer(input: {
+    client: DB;
+    consumer: BusinessEventConsumer;
+    context: BusinessEventConsumerContext;
+    timeoutMs: number;
+}) {
+    const { client, consumer, context, timeoutMs } = input;
+    const consumerStartedAt = perfNow();
+
+    try {
+        if (!isConsumerAllowed(context.eventKey, consumer.key)) {
+            return [consumer.key, consumerSkipResult({
+                consumer: consumer.key,
+                eventKey: context.eventKey,
+                reason: "CONSUMER_NOT_ALLOWED",
+            })] as const;
+        }
+
+        const result = await withTimeout(
+            consumer.consume(client, context),
+            timeoutMs,
+            `BusinessEvent consumer ${consumer.key} timed out after ${timeoutMs}ms`,
+        );
+
+        return [consumer.key, result] as const;
+    } catch (error) {
+        console.error("[business-event] consumer failed", {
+            consumer: consumer.key,
+            eventKey: context.eventKey,
+            targetType: context.targetType,
+            targetId: context.targetId,
+            error: errorMessage(error),
+        });
+
+        return [consumer.key, {
+            ok: false,
+            error: errorMessage(error),
+        }] as const;
+    } finally {
+        perfLog(
+            "business-event",
+            `${context.eventKey}:consumer:${consumer.key}`,
+            consumerStartedAt,
+        );
     }
 }
 
@@ -184,37 +258,35 @@ export async function recordBusinessEvent(db: DB, input: BusinessEventInput) {
     const consumerResults: Record<string, unknown> = {};
 
     const consumerTimeoutMs = businessEventConsumerTimeoutMs();
-    const consumerEntries = await Promise.all(consumers.map(async (consumer) => {
-        const consumerStartedAt = perfNow();
-        try {
-            const result = await withTimeout(
-                consumer.consume(client, consumerContext),
-                consumerTimeoutMs,
-                `BusinessEvent consumer ${consumer.key} timed out after ${consumerTimeoutMs}ms`,
-            );
+    const coordinationConsumer = consumers.find(
+        (consumer) => consumer.key === "coordination",
+    );
+    const remainingConsumers = consumers.filter(
+        (consumer) => consumer.key !== "coordination",
+    );
+    const consumerEntries: Array<readonly [string, unknown]> = [];
 
-            return [consumer.key, result] as const;
-        } catch (error) {
-            console.error("[business-event] consumer failed", {
-                consumer: consumer.key,
-                eventKey,
-                targetType,
-                targetId,
-                error: errorMessage(error),
-            });
+    if (coordinationConsumer) {
+        consumerEntries.push(await runConsumer({
+            client,
+            consumer: coordinationConsumer,
+            context: consumerContext,
+            timeoutMs: consumerTimeoutMs,
+        }));
+    }
 
-            return [consumer.key, {
-                ok: false,
-                error: errorMessage(error),
-            }] as const;
-        } finally {
-            perfLog(
-                "business-event",
-                `${eventKey}:consumer:${consumer.key}`,
-                consumerStartedAt,
-            );
-        }
-    }));
+    consumerEntries.push(
+        ...(await Promise.all(
+            remainingConsumers.map((consumer) =>
+                runConsumer({
+                    client,
+                    consumer,
+                    context: consumerContext,
+                    timeoutMs: consumerTimeoutMs,
+                }),
+            ),
+        )),
+    );
 
     for (const [consumerKey, result] of consumerEntries) {
         consumerResults[consumerKey] = result;

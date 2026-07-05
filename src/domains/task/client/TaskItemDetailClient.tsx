@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useEffect,
   useMemo,
   useState,
   useTransition,
@@ -25,6 +26,7 @@ import {
   Info,
   ListChecks,
   MessageSquare,
+  Paperclip,
   Plus,
   Send,
   Tag,
@@ -55,9 +57,12 @@ import {
 } from "@/domains/task/ui/execution/execution-ui.utils";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 import { cn } from "@/lib/utils";
+import { repairVietnameseMojibake } from "@/domains/shared/text/vietnamese-mojibake";
+import { workspaceFlowOrder } from "@/domains/task/shared/workspace-flow-policy";
 import {
   addTaskItemActivityReplyAction,
   addManualQueueItemAction,
+  applyQueueItemManualTransitionsAction,
   applyQueueItemManualTransitionAction,
   searchManualQueueTargetsAction,
   updateTaskItemSharingAction,
@@ -68,6 +73,8 @@ type UserSummary = {
   name?: string | null;
   email?: string | null;
   avatarUrl?: string | null;
+  roles?: string[];
+  permissions?: string[];
 };
 
 type TaskItemChecklist = {
@@ -134,9 +141,21 @@ type TaskItemQueueItem = {
     metadata?: unknown;
   }>;
   intakeNote?: string | null;
+  mediaAssetAttachedAt?: string | null;
+  mediaWorkProgress?: {
+    profile: boolean;
+    content: boolean;
+    image: boolean;
+    completed: number;
+    total: number;
+    updatedAt?: string | null;
+  } | null;
   updatedAt: string;
   href?: string | null;
 };
+type TaskItemQueueTransition = NonNullable<
+  TaskItemQueueItem["manualTransitions"]
+>[number];
 
 type ManualQueueTargetPreview = {
   targetType: string;
@@ -156,6 +175,14 @@ type ParentTask = {
   priority?: string | null;
   dueAt?: string | null;
   periodKey?: string | null;
+  taskItems?: Array<{
+    id: string;
+    title: string;
+    note?: string | null;
+    status?: TaskStatus | string | null;
+    sortOrder?: number | null;
+    updatedAt?: string | null;
+  }>;
 };
 
 type TaskItemDetail = {
@@ -179,7 +206,16 @@ type TaskItemDetail = {
   queueItems?: TaskItemQueueItem[];
 };
 
-type DetailTab = "overview" | "activity" | "checklist" | "business" | "info";
+type DetailTab =
+  | "overview"
+  | "workflow"
+  | "activity"
+  | "discussion"
+  | "attachments"
+  | "checklist"
+  | "business"
+  | "priority"
+  | "info";
 type QueueFilter = "ALL" | QueueItemStatus;
 type ActivityMode = "ALL" | "QUEUE";
 
@@ -188,6 +224,215 @@ type TabItem = {
   label: string;
   icon: ReactNode;
 };
+
+function objectValue(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
+function transitionIntent(transition: { metadata?: unknown }) {
+  return String(objectValue(transition.metadata).intent ?? "").trim().toUpperCase();
+}
+
+function transitionLabel(transition: {
+  label?: string | null;
+  manualActionLabel?: string | null;
+}) {
+  return repairVietnameseMojibake(
+    transition.label || transition.manualActionLabel || "Action",
+  );
+}
+
+function isOpenTargetTransition(transition: { metadata?: unknown }) {
+  return transitionIntent(transition) === "OPEN_TARGET";
+}
+
+function isRunnableManualTransition(transition: TaskItemQueueTransition) {
+  return transition.enabled !== false && !isOpenTargetTransition(transition);
+}
+
+function effectiveTransitionLabel(
+  transition: TaskItemQueueTransition,
+  workspaceWorkTypeKey?: string | null,
+) {
+  if (
+    workspaceWorkTypeKey === "photography" &&
+    (transition.actionKey === "start-work" || transition.actionKey === "mark-done")
+  ) {
+    return "Hoàn tất";
+  }
+
+  return transitionLabel(transition);
+}
+
+function metadataTextValue(
+  metadata: Record<string, unknown>,
+  key: string,
+  fallback = "",
+) {
+  return String(metadata[key] ?? fallback).trim();
+}
+
+function transitionPresentation(transition: { metadata?: unknown }) {
+  return metadataTextValue(objectValue(transition.metadata), "presentation")
+    .toUpperCase();
+}
+
+function openTargetActionLabel(transition: { metadata?: unknown; label?: string | null; manualActionLabel?: string | null }) {
+  const metadata = objectValue(transition.metadata);
+  if (metadataTextValue(metadata, "targetMode") === "media") {
+    return "Xử lý media";
+  }
+
+  return transitionLabel(transition);
+}
+
+function mediaOpenTargetTransition(
+  queueItem: TaskItemQueueItem,
+): TaskItemQueueTransition {
+  return {
+    actionKey: "open-watch-media",
+    label: "Xử lý media",
+    fromState: queueItem.currentWorkflowState || "NEW",
+    toState: queueItem.currentWorkflowState || "NEW",
+    manualActionLabel: "Xử lý media",
+    enabled: true,
+    reason: null,
+    metadata: {
+      intent: "OPEN_TARGET",
+      presentation: "MODAL",
+      targetRoute: "watch.edit",
+      targetMode: "media",
+      focus: "media",
+      from: "media-workspace",
+      expectedEventKey: "watch.media.asset.attached",
+    },
+  };
+}
+
+function userHasAdminRole(user?: UserSummary | null) {
+  const roles = user?.roles ?? [];
+  const permissions = user?.permissions ?? [];
+
+  return (
+    roles.map((role) => role.toUpperCase()).includes("ADMIN") ||
+    permissions.map((permission) => permission.toUpperCase()).includes("ADMIN")
+  );
+}
+
+type WorkspacePresentation = {
+  workspaceType: string;
+  itemLabel: string;
+  defaultView: string;
+  defaultDescription: string | null;
+  blueprintName: string | null;
+  blueprintSource: string | null;
+};
+
+function workspacePresentation(
+  snapshot: WorkspaceDefinitionSnapshot | null,
+): WorkspacePresentation {
+  const definition = snapshot?.workspaceDefinition ?? {};
+
+  return {
+    workspaceType: repairVietnameseMojibake(
+      definition.workspaceType ?? snapshot?.workspaceType ?? "Workspace",
+    ),
+    itemLabel: repairVietnameseMojibake(
+      definition.itemLabel ?? snapshot?.itemLabel ?? "Items",
+    ),
+    defaultView: definition.defaultView ?? snapshot?.defaultView ?? "overview",
+    defaultDescription: repairVietnameseMojibake(
+      definition.defaultDescription ?? null,
+    ),
+    blueprintName: repairVietnameseMojibake(
+      snapshot?.blueprintName ?? snapshot?.blueprintKey ?? null,
+    ),
+    blueprintSource: repairVietnameseMojibake(snapshot?.blueprintSource ?? null),
+  };
+}
+
+function defaultTabFromPresentation(
+  presentation: WorkspacePresentation,
+): DetailTab {
+  if (presentation.defaultView === "items") return "business";
+  if (presentation.defaultView === "activity") return "activity";
+  if (presentation.defaultView === "workflow") return "workflow";
+  if (presentation.defaultView === "discussion") return "discussion";
+  if (presentation.defaultView === "attachments") return "attachments";
+  if (presentation.defaultView === "checklist") return "checklist";
+  if (presentation.defaultView === "priority") return "priority";
+  if (presentation.defaultView === "info") return "info";
+  return "overview";
+}
+
+function tabEnabled(tab: DetailTab, capabilities: WorkspaceCapabilities) {
+  if (tab === "workflow") return capabilities.workflow;
+  if (tab === "activity") return capabilities.activity;
+  if (tab === "discussion") return capabilities.discussion;
+  if (tab === "attachments") return capabilities.attachments;
+  if (tab === "checklist") return capabilities.checklist;
+  if (tab === "business") return capabilities.items;
+  if (tab === "priority") return capabilities.priority;
+  return true;
+}
+
+function initialWorkspaceTab(note?: string | null): DetailTab {
+  const snapshot = parseWorkspaceDefinitionSnapshot(note);
+  const capabilities = resolveWorkspaceCapabilities({ note, snapshot });
+  const tab = defaultTabFromPresentation(workspacePresentation(snapshot));
+
+  return tabEnabled(tab, capabilities) ? tab : "overview";
+}
+
+function openTargetHref(input: {
+  queueItem: {
+    id: string;
+    href?: string | null;
+    currentWorkflowState?: string | null;
+    mediaWorkProgress?: TaskItemQueueItem["mediaWorkProgress"];
+  };
+  taskItemId: string;
+  transition?: { metadata?: unknown } | null;
+}) {
+  const { queueItem, taskItemId, transition } = input;
+  if (!queueItem.href) return null;
+  const metadata = objectValue(transition?.metadata);
+  const targetRoute = metadataTextValue(metadata, "targetRoute");
+  const targetMode = metadataTextValue(metadata, "targetMode");
+  const focus = metadataTextValue(metadata, "focus");
+  const from = metadataTextValue(metadata, "from");
+  const baseHref = queueItem.href.replace(/\/$/, "");
+
+  const href = targetRoute === "watch.edit" && !baseHref.endsWith("/edit")
+    ? `${baseHref}/edit`
+    : baseHref;
+  const params = new URLSearchParams();
+  if (targetMode) params.set("mode", targetMode);
+  if (focus) params.set("focus", focus);
+  if (from) params.set("from", from);
+  if (queueItem.mediaWorkProgress) {
+    params.set("mediaProfileDone", queueItem.mediaWorkProgress.profile ? "1" : "0");
+    params.set("mediaContentDone", queueItem.mediaWorkProgress.content ? "1" : "0");
+    params.set("mediaImageDone", queueItem.mediaWorkProgress.image ? "1" : "0");
+  }
+  params.set("workspaceBindingId", queueItem.id);
+  if (queueItem.currentWorkflowState) {
+    params.set("workspaceState", queueItem.currentWorkflowState);
+  }
+  if (
+    transitionPresentation(transition ?? {}) === "MODAL" ||
+    transitionIntent(transition ?? {}) === "OPEN_TARGET"
+  ) {
+    params.set("embedded", "1");
+  }
+  params.set("returnTo", `/admin/task-items/${taskItemId}`);
+
+  const query = params.toString();
+  if (!query) return href;
+
+  return `${href}${href.includes("?") ? "&" : "?"}${query}`;
+}
 
 function formatDate(value?: Date | string | null, fallback = "Chưa có") {
   if (!value) return fallback;
@@ -248,6 +493,37 @@ function activityBusinessKeys(activity: TaskItemActivityViewModel) {
   }
 
   return keys;
+}
+
+function mediaProgressLabel(
+  progress?: TaskItemQueueItem["mediaWorkProgress"],
+) {
+  if (!progress) return null;
+
+  const parts = [
+    progress.profile ? "Thông tin" : null,
+    progress.content ? "Content" : null,
+    progress.image ? "Hình ảnh" : null,
+  ].filter(Boolean);
+
+  return `${progress.completed}/${progress.total}${parts.length ? ` · ${parts.join(", ")}` : ""}`;
+}
+
+function queueLatestActivityLabel(queueItem: TaskItemQueueItem) {
+  const title = String(queueItem.latestActivityTitle ?? "").trim();
+  const progress = mediaProgressLabel(queueItem.mediaWorkProgress);
+
+  if (/^media work saved/i.test(title)) {
+    return progress ? `Đã lưu xử lý dở ${progress}` : "Đã lưu xử lý dở";
+  }
+
+  return title || "-";
+}
+
+function isMediaReworkSignal(queueItem: TaskItemQueueItem) {
+  const latest = String(queueItem.latestActivityTitle ?? "").toLowerCase();
+
+  return latest.includes("unapproved") || latest.includes("recalled");
 }
 
 function taskItemRef(id: string) {
@@ -312,6 +588,10 @@ function coordinationHref(parentTask?: ParentTask | null) {
   let workspace = "operation";
 
   if (kind === "SERVICE") workspace = "technical";
+  if (title.includes("media")) workspace = "media";
+  if (title.includes("thanh toÒ¡n") || title.includes("thanh toán")) {
+    workspace = "payment";
+  }
   if (kind === "BUSINESS") {
     workspace = title.includes("khác") || title.includes("khac") ? "general" : "sales";
   }
@@ -320,6 +600,25 @@ function coordinationHref(parentTask?: ParentTask | null) {
   return date
     ? `/admin/coordination/${workspace}?date=${date}`
     : `/admin/coordination/${workspace}`;
+}
+
+function siblingWorkspaceLabel(input: { title: string; note?: string | null }) {
+  const snapshot = parseWorkspaceDefinitionSnapshot(input.note);
+  const presentation = workspacePresentation(snapshot);
+  const title = repairVietnameseMojibake(input.title);
+
+  return title || presentation.workspaceType;
+}
+
+function siblingWorkspaceOrder(input: { note?: string | null; title?: string | null }) {
+  const snapshot = parseWorkspaceDefinitionSnapshot(input.note);
+  const key =
+    snapshot?.workTypeKey ??
+    snapshot?.blueprintKey ??
+    snapshot?.workspaceDefinition?.workspaceType ??
+    input.title;
+
+  return workspaceFlowOrder({ key });
 }
 
 function initials(label?: string | null) {
@@ -345,7 +644,7 @@ function UserAvatar({
   isSystem?: boolean;
   className?: string;
 }) {
-  const src = resolveMediaPreviewSrc(avatarUrl);
+  const src = isSystem ? null : resolveMediaPreviewSrc(avatarUrl);
 
   return (
     <div
@@ -1189,6 +1488,7 @@ function ActivityGroupedByQueue({
   items: TaskItemActivityViewModel[];
   queueItems: TaskItemQueueItem[];
 }) {
+  const [expandedGroupIds, setExpandedGroupIds] = useState<string[]>([]);
   const queueByTarget = new Map(
     queueItems
       .map((item) => [businessQueueKey(item.targetType, item.targetId), item] as const)
@@ -1223,9 +1523,15 @@ function ActivityGroupedByQueue({
 
   return (
     <div className="space-y-6">
-      {visibleGroups.map((group) => (
-        <div key={group.id}>
-          <div className="mb-3 flex items-center gap-3">
+      {visibleGroups.map((group) => {
+        const expanded = expandedGroupIds.includes(group.id);
+        const visibleActivities = expanded ? group.activities : group.activities.slice(0, 2);
+        const hiddenCount = Math.max(0, group.activities.length - visibleActivities.length);
+
+        return (
+        <div key={group.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
             {group.queueItem ? <QueueItemThumbnail item={group.queueItem} /> : null}
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold text-slate-950">
@@ -1241,11 +1547,15 @@ function ActivityGroupedByQueue({
                 </div>
               )}
             </div>
+            </div>
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
+              {group.activities.length} activity
+            </span>
           </div>
 
           {group.activities.length ? (
             <div className="space-y-3 border-l border-slate-200 pl-4">
-              {group.activities.map((activity) => (
+              {visibleActivities.map((activity) => (
                 <div key={activity.id} className="relative">
                   <span className="absolute -left-[21px] top-2 h-2 w-2 rounded-full bg-slate-300 ring-4 ring-white" />
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -1266,6 +1576,21 @@ function ActivityGroupedByQueue({
                   ) : null}
                 </div>
               ))}
+              {hiddenCount ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setExpandedGroupIds((prev) =>
+                      expanded
+                        ? prev.filter((id) => id !== group.id)
+                        : [...prev, group.id],
+                    )
+                  }
+                  className="text-xs font-semibold text-slate-500 transition hover:text-slate-900"
+                >
+                  {expanded ? "Thu gọn" : `Xem thêm ${hiddenCount} hoạt động`}
+                </button>
+              ) : null}
             </div>
           ) : (
             <div className="border-l border-slate-200 pl-4 text-sm text-slate-400">
@@ -1273,7 +1598,8 @@ function ActivityGroupedByQueue({
             </div>
           )}
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -1417,7 +1743,13 @@ function BusinessQueueImage({ binding }: { binding: TaskItemBinding }) {
   );
 }
 
-function ManualQueueIntake({ taskItemId }: { taskItemId: string }) {
+function ManualQueueIntake({
+  taskItemId,
+  itemLabel,
+}: {
+  taskItemId: string;
+  itemLabel: string;
+}) {
   const [open, setOpen] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [intakeNote, setIntakeNote] = useState("");
@@ -1464,7 +1796,7 @@ function ManualQueueIntake({ taskItemId }: { taskItemId: string }) {
         className="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-900 px-3 text-xs font-semibold text-white transition hover:bg-slate-800"
       >
         <Plus className="h-4 w-4" />
-        Add item
+        Add {itemLabel}
       </button>
     );
   }
@@ -1573,15 +1905,23 @@ function QueueWorkQueue({
   taskItemId,
   items,
   capabilities,
+  itemLabel,
+  workspaceWorkTypeKey,
+  currentUser,
 }: {
   taskItemId: string;
   items: TaskItemQueueItem[];
   capabilities: WorkspaceCapabilities;
+  itemLabel: string;
+  workspaceWorkTypeKey?: string | null;
+  currentUser?: UserSummary | null;
 }) {
   const [filter, setFilter] = useState<QueueFilter>("ALL");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const canReviewMedia = userHasAdminRole(currentUser);
   const filters: Array<{ key: QueueFilter; label: string }> = [
     { key: "ALL", label: "All" },
     { key: "WAITING", label: "Waiting" },
@@ -1592,9 +1932,53 @@ function QueueWorkQueue({
   const visibleItems = filter === "ALL"
     ? items
     : items.filter((item) => item.status === filter);
+  const isMediaProcessingWorkspace = workspaceWorkTypeKey === "media-processing";
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const selectedItems = visibleItems.filter((item) => selectedIdSet.has(item.id));
+  const transitionForItem = (queueItem: TaskItemQueueItem) => {
+    const transitions = queueItem.manualTransitions?.filter(isRunnableManualTransition) ?? [];
+
+    if (workspaceWorkTypeKey === "photography") {
+      return transitions.find((transition) =>
+        transition.actionKey === "start-work" || transition.actionKey === "mark-done"
+      ) ?? null;
+    }
+
+    return transitions[0] ?? null;
+  };
+  const workflowActionsForItem = (queueItem: TaskItemQueueItem) => {
+    const transitions = queueItem.manualTransitions ?? [];
+
+    if (isMediaProcessingWorkspace && queueItem.targetType === "WATCH") {
+      if (queueItem.isWorkflowDone || queueItem.currentWorkflowState === "DONE") {
+        if (!isMediaReworkSignal(queueItem)) return [];
+      }
+
+      return [
+        transitions.find(isOpenTargetTransition) ?? mediaOpenTargetTransition(queueItem),
+      ];
+    }
+
+    if (workspaceWorkTypeKey === "publish" && !canReviewMedia) {
+      return transitions.filter((transition) => transition.actionKey !== "recall-media");
+    }
+
+    return transitions;
+  };
+  const selectableItems = visibleItems.filter((item) => Boolean(transitionForItem(item)));
+  const selectedTransitions = selectedItems
+    .map((item) => ({ queueItem: item, transition: transitionForItem(item) }))
+    .filter((item): item is { queueItem: TaskItemQueueItem; transition: TaskItemQueueTransition } =>
+      Boolean(item.transition),
+    );
+  const bulkLabel = selectedTransitions[0]?.transition
+    ? effectiveTransitionLabel(selectedTransitions[0].transition, workspaceWorkTypeKey)
+    : "Áp dụng";
+  const allSelectableSelected =
+    selectableItems.length > 0 && selectableItems.every((item) => selectedIdSet.has(item.id));
   const gridClass = capabilities.workflow
-    ? "grid-cols-[minmax(250px,1.3fr)_130px_150px_170px_80px_80px_120px_110px]"
-    : "grid-cols-[minmax(250px,1.3fr)_130px_150px_80px_80px_120px_110px]";
+    ? "grid-cols-[42px_minmax(250px,1.3fr)_130px_150px_170px_80px_80px_120px_110px]"
+    : "grid-cols-[42px_minmax(250px,1.3fr)_130px_150px_80px_80px_120px_110px]";
   const applyManualAction = (queueItem: TaskItemQueueItem, actionKey: string) => {
     setPendingId(`${queueItem.id}:${actionKey}`);
     startTransition(async () => {
@@ -1610,20 +1994,76 @@ function QueueWorkQueue({
     });
   };
 
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+  const toggleSelectAllVisible = () => {
+    setSelectedIds((prev) => {
+      const visibleSelectableIds = selectableItems.map((item) => item.id);
+      if (!visibleSelectableIds.length) return prev;
+
+      if (visibleSelectableIds.every((id) => prev.includes(id))) {
+        return prev.filter((id) => !visibleSelectableIds.includes(id));
+      }
+
+      return Array.from(new Set([...prev, ...visibleSelectableIds]));
+    });
+  };
+  const applyBulkManualAction = () => {
+    if (!selectedTransitions.length) return;
+
+    setPendingId("bulk");
+    startTransition(async () => {
+      try {
+        await applyQueueItemManualTransitionsAction({
+          items: selectedTransitions.map(({ queueItem, transition }) => ({
+            bindingId: queueItem.id,
+            actionKey: transition.actionKey,
+          })),
+        });
+        setSelectedIds([]);
+        router.refresh();
+      } finally {
+        setPendingId(null);
+      }
+    });
+  };
+
+  const isBulkPending = isPending && pendingId === "bulk";
+
   return (
     <Panel
       icon={<GitBranch className="h-4 w-4" />}
-      title="Items"
+      title={itemLabel}
       action={
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-          {items.length} items
+          {items.length} {itemLabel}
         </span>
       }
     >
       <div className="space-y-3">
-        {capabilities.items ? <ManualQueueIntake taskItemId={taskItemId} /> : null}
+        {capabilities.items ? (
+          <ManualQueueIntake taskItemId={taskItemId} itemLabel={itemLabel} />
+        ) : null}
         {items.length ? (
           <>
+          {selectedTransitions.length ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+              <div className="text-sm font-semibold text-slate-700">
+                Đã chọn {selectedTransitions.length} item
+              </div>
+              <button
+                type="button"
+                disabled={isBulkPending}
+                onClick={applyBulkManualAction}
+                className="inline-flex h-9 items-center rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isBulkPending ? "Đang xử lý" : bulkLabel}
+              </button>
+            </div>
+          ) : null}
           <div className="flex flex-wrap gap-2">
             {filters.map((item) => {
               const active = item.key === filter;
@@ -1650,7 +2090,17 @@ function QueueWorkQueue({
             <div className="overflow-x-auto rounded-2xl border border-slate-200">
               <div className="min-w-[920px]">
                 <div className={cn("grid gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase text-slate-500", gridClass)}>
-                  <div>Item</div>
+                  <div>
+                    <input
+                      type="checkbox"
+                      checked={allSelectableSelected}
+                      disabled={!selectableItems.length || isPending}
+                      onChange={toggleSelectAllVisible}
+                      aria-label="Select visible items"
+                      className="h-4 w-4 rounded border-slate-300"
+                    />
+                  </div>
+                  <div>{itemLabel}</div>
                   <div>Status</div>
                   <div>Latest Activity</div>
                   {capabilities.workflow ? <div>Workflow</div> : null}
@@ -1660,11 +2110,30 @@ function QueueWorkQueue({
                   <div className="text-right">Open</div>
                 </div>
 
-                {visibleItems.map((queueItem) => (
+                {visibleItems.map((queueItem) => {
+                  const workflowActions = workflowActionsForItem(queueItem);
+                  const isMediaQueueRow =
+                    isMediaProcessingWorkspace && queueItem.targetType === "WATCH";
+                  const displayStatus =
+                    isMediaQueueRow && isMediaReworkSignal(queueItem)
+                      ? "FEEDBACK"
+                      : queueItem.status;
+
+                  return (
                   <div
                     key={queueItem.id}
                     className={cn("grid gap-3 border-b border-slate-100 px-4 py-4 last:border-b-0", gridClass)}
                   >
+                    <div className="flex items-start pt-1">
+                      <input
+                        type="checkbox"
+                        checked={selectedIdSet.has(queueItem.id)}
+                        disabled={!transitionForItem(queueItem) || isPending}
+                        onChange={() => toggleSelected(queueItem.id)}
+                        aria-label={`Select ${queueItemTitle(queueItem)}`}
+                        className="h-4 w-4 rounded border-slate-300"
+                      />
+                    </div>
                     <div className="flex min-w-0 items-start gap-3">
                       <QueueItemThumbnail item={queueItem} />
                       <div className="min-w-0">
@@ -1691,29 +2160,57 @@ function QueueWorkQueue({
                       </div>
                     </div>
 
-                    <div className="flex items-center">
-                      <QueueStatusBadge status={queueItem.status} />
+                    <div className="flex flex-col items-start justify-center gap-1.5">
+                      <QueueStatusBadge status={displayStatus} />
+                      {queueItem.mediaWorkProgress ? (
+                        <span
+                          title={mediaProgressLabel(queueItem.mediaWorkProgress) ?? undefined}
+                          className="inline-flex h-6 items-center rounded-full bg-blue-50 px-2 text-[11px] font-semibold text-blue-700 ring-1 ring-blue-100"
+                        >
+                          {queueItem.mediaWorkProgress.completed}/{queueItem.mediaWorkProgress.total} phần
+                        </span>
+                      ) : null}
                     </div>
 
                     <div className="min-w-0 self-center">
                       <div className="truncate text-xs font-medium text-slate-700">
-                        {queueItem.latestActivityTitle || "-"}
+                        {queueLatestActivityLabel(queueItem)}
                       </div>
                     </div>
 
                     {capabilities.workflow ? (
                       <div className="min-w-0 self-center">
-                        <div className="truncate text-xs font-semibold text-slate-700">
-                          {queueItem.currentWorkflowStateLabel ||
-                            queueItem.currentWorkflowState ||
-                            "-"}
-                        </div>
-                        {queueItem.manualTransitions?.length ? (
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {queueItem.manualTransitions.map((transition) => {
+                        {!isMediaQueueRow ? (
+                          <div className="truncate text-xs font-semibold text-slate-700">
+                            {queueItem.currentWorkflowStateLabel ||
+                              queueItem.currentWorkflowState ||
+                              "-"}
+                          </div>
+                        ) : null}
+                        {workflowActions.length ? (
+                          <div
+                            className={cn(
+                              "flex flex-wrap gap-1.5",
+                              isMediaQueueRow ? "" : "mt-2",
+                            )}
+                          >
+                            {workflowActions.map((transition) => {
                               const pendingKey = `${queueItem.id}:${transition.actionKey}`;
                               const pending = isPending && pendingId === pendingKey;
                               const disabled = pending || transition.enabled === false;
+                              const isOpenTarget = isOpenTargetTransition(transition);
+
+                              if (isOpenTarget) {
+                                return (
+                                  <OpenTargetAction
+                                    key={transition.actionKey}
+                                    queueItem={queueItem}
+                                    taskItemId={taskItemId}
+                                    transition={transition}
+                                    className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-slate-200 px-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                                  />
+                                );
+                              }
 
                               return (
                                 <button
@@ -1726,7 +2223,9 @@ function QueueWorkQueue({
                                   title={transition.reason ?? undefined}
                                   className="inline-flex h-7 items-center rounded-lg border border-slate-200 px-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
-                                  {pending ? "Applying" : transition.label || transition.manualActionLabel}
+                                  {pending
+                                    ? "Applying"
+                                    : effectiveTransitionLabel(transition, workspaceWorkTypeKey)}
                                 </button>
                               );
                             })}
@@ -1760,7 +2259,8 @@ function QueueWorkQueue({
                       ) : null}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ) : (
@@ -1768,16 +2268,369 @@ function QueueWorkQueue({
           )}
           </>
       ) : (
-        <EmptyState>No items in this workspace yet.</EmptyState>
+        <EmptyState>No {itemLabel} in this workspace yet.</EmptyState>
         )}
       </div>
     </Panel>
   );
 }
 
-function QueueSummary({ items }: { items: TaskItemQueueItem[] }) {
+function WorkflowTabPanel({
+  taskItemId,
+  items,
+  snapshot,
+}: {
+  taskItemId: string;
+  items: TaskItemQueueItem[];
+  snapshot: WorkspaceDefinitionSnapshot | null;
+}) {
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const workflowDefinition = snapshot?.appliedWorkflowSnapshot ?? null;
+
+  const applyManualAction = (queueItem: TaskItemQueueItem, actionKey: string) => {
+    setPendingId(`${queueItem.id}:${actionKey}`);
+    startTransition(async () => {
+      try {
+        await applyQueueItemManualTransitionAction({
+          bindingId: queueItem.id,
+          actionKey,
+        });
+        router.refresh();
+      } finally {
+        setPendingId(null);
+      }
+    });
+  };
   return (
-    <Panel icon={<GitBranch className="h-4 w-4" />} title="Items">
+    <Panel
+      icon={<GitBranch className="h-4 w-4" />}
+      title="Workflow"
+      action={
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+          {items.length} items
+        </span>
+      }
+    >
+      <div className="space-y-4">
+        {workflowDefinition ? (
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <div className="text-sm font-semibold text-slate-950">
+                  {workflowDefinition.title}
+                </div>
+                <div className="mt-1 text-xs text-slate-500">
+                  {workflowDefinition.key}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className="rounded-full bg-white px-3 py-1 font-semibold text-slate-600 ring-1 ring-slate-200">
+                  Initial: {workflowDefinition.initialState}
+                </span>
+                <span className="rounded-full bg-white px-3 py-1 font-semibold text-slate-600 ring-1 ring-slate-200">
+                  {workflowDefinition.states.length} states
+                </span>
+                <span className="rounded-full bg-white px-3 py-1 font-semibold text-slate-600 ring-1 ring-slate-200">
+                  {workflowDefinition.transitions.length} transitions
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+              <div>
+                <div className="text-xs font-semibold uppercase text-slate-500">
+                  States
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {workflowDefinition.states.map((state) => (
+                    <span
+                      key={state.key}
+                      className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200"
+                    >
+                      {state.title || state.key}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold uppercase text-slate-500">
+                  Transitions
+                </div>
+                <div className="mt-2 space-y-1.5">
+                  {workflowDefinition.transitions.map((transition, index) => (
+                    <div
+                      key={`${transition.fromState}:${transition.toState}:${transition.triggerType}:${index}`}
+                      className="text-xs text-slate-600"
+                    >
+                      <span className="font-semibold text-slate-800">
+                        {transition.fromState}
+                      </span>
+                      {" -> "}
+                      <span className="font-semibold text-slate-800">
+                        {transition.toState}
+                      </span>
+                      <span className="ml-2 text-slate-500">
+                        {transition.triggerType}
+                        {transition.triggerValue ? `:${transition.triggerValue}` : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <EmptyState>No applied workflow snapshot on this workspace.</EmptyState>
+        )}
+
+        {items.length ? (
+          <div className="space-y-3">
+          {items.map((queueItem) => (
+            <div
+              key={queueItem.id}
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3"
+            >
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-slate-950">
+                    {queueItemTitle(queueItem)}
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                    <span>{queueItemRef(queueItem)}</span>
+                    <span>-</span>
+                    <span>{targetLabel(queueItem.targetType)}</span>
+                  </div>
+                </div>
+                <div className="shrink-0 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
+                  {queueItem.currentWorkflowStateLabel ||
+                    queueItem.currentWorkflowState ||
+                    "No state"}
+                </div>
+              </div>
+
+              {queueItem.manualTransitions?.length ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {queueItem.manualTransitions.map((transition) => {
+                    const pendingKey = `${queueItem.id}:${transition.actionKey}`;
+                    const pending = isPending && pendingId === pendingKey;
+                    const disabled = pending || transition.enabled === false;
+                    const isOpenTarget = transitionIntent(transition) === "OPEN_TARGET";
+
+                    if (isOpenTarget) {
+                      return (
+                        <OpenTargetAction
+                          key={transition.actionKey}
+                          queueItem={queueItem}
+                          taskItemId={taskItemId}
+                          transition={transition}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                          iconClassName="h-4 w-4"
+                        />
+                      );
+                    }
+
+                    return (
+                      <button
+                        key={transition.actionKey}
+                        type="button"
+                        disabled={disabled}
+                        onClick={() =>
+                          applyManualAction(queueItem, transition.actionKey)
+                        }
+                        title={transition.reason ?? undefined}
+                        className="inline-flex h-8 items-center rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {pending
+                          ? "Applying"
+                          : transitionLabel(transition)}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          ))}
+          </div>
+        ) : (
+          <EmptyState>No workflow runtime items yet.</EmptyState>
+        )}
+      </div>
+    </Panel>
+  );
+}
+
+function DiscussionTabPanel({
+  activities,
+  businessBindings,
+  queueItems,
+}: {
+  activities: TaskItemActivityViewModel[];
+  businessBindings: TaskItemBinding[];
+  queueItems: TaskItemQueueItem[];
+}) {
+  return (
+    <Panel title="Discussion" icon={<MessageSquare className="h-4 w-4" />}>
+      <ActivityViewModelFeed
+        items={activities}
+        businessBindings={businessBindings}
+        queueItems={queueItems}
+        mode="ALL"
+        discussionEnabled
+      />
+    </Panel>
+  );
+}
+
+function AttachmentsTabPanel() {
+  return (
+    <Panel title="Attachments" icon={<Paperclip className="h-4 w-4" />}>
+      <EmptyState>No attachments yet.</EmptyState>
+    </Panel>
+  );
+}
+
+function PriorityTabPanel({
+  priority,
+  status,
+}: {
+  priority: TaskPriority;
+  status: TaskStatus;
+}) {
+  return (
+    <Panel title="Priority" icon={<Tag className="h-4 w-4" />}>
+      <div className="grid gap-3 text-sm md:grid-cols-2">
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+          <div className="text-xs font-medium text-slate-500">Priority</div>
+          <div className="mt-2">
+            <PrioritySignal priority={priority} showLabel />
+          </div>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+          <div className="text-xs font-medium text-slate-500">Status</div>
+          <div className="mt-2">
+            <TaskStatusSignal status={status} />
+          </div>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+function OpenTargetAction({
+  queueItem,
+  taskItemId,
+  transition,
+  className,
+  iconClassName = "h-3.5 w-3.5",
+}: {
+  queueItem: TaskItemQueueItem;
+  taskItemId: string;
+  transition: TaskItemQueueTransition;
+  className: string;
+  iconClassName?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const router = useRouter();
+  const href = openTargetHref({ queueItem, taskItemId, transition });
+  const label = openTargetActionLabel(transition);
+  const modal =
+    transitionPresentation(transition) === "MODAL" ||
+    transitionIntent(transition) === "OPEN_TARGET";
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type !== "workspace-target-modal-close") return;
+
+      setOpen(false);
+      router.refresh();
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [open, router]);
+
+  if (!href) return null;
+
+  if (!modal) {
+    return (
+      <Link href={href} className={className}>
+        <ExternalLink className={iconClassName} />
+        {label}
+      </Link>
+    );
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={className}
+      >
+        <ExternalLink className={iconClassName} />
+        {label}
+      </button>
+
+      {open ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4">
+          <div className="flex h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
+            <div className="flex h-12 items-center justify-between border-b border-slate-200 px-4">
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-slate-950">
+                  {label}
+                </div>
+                <div className="truncate text-xs text-slate-500">
+                  {queueItemTitle(queueItem)}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link
+                  href={href}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Full page
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    router.refresh();
+                  }}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
+                  aria-label="Close modal"
+                >
+                  <XCircle className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <iframe
+              src={href}
+              title={label}
+              className="min-h-0 flex-1 border-0 bg-slate-50"
+            />
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function QueueSummary({
+  items,
+  itemLabel,
+}: {
+  items: TaskItemQueueItem[];
+  itemLabel: string;
+}) {
+  return (
+    <Panel icon={<GitBranch className="h-4 w-4" />} title={itemLabel}>
       {items.length ? (
         <div className="space-y-3">
           {items.slice(0, 5).map((queueItem) => (
@@ -1796,12 +2649,12 @@ function QueueSummary({ items }: { items: TaskItemQueueItem[] }) {
           ))}
           {items.length > 5 ? (
             <div className="text-xs text-slate-500">
-              +{items.length - 5} more items
+              +{items.length - 5} more {itemLabel}
             </div>
           ) : null}
         </div>
       ) : (
-        <EmptyState>No items in this workspace yet.</EmptyState>
+        <EmptyState>No {itemLabel} in this workspace yet.</EmptyState>
       )}
     </Panel>
   );
@@ -1967,7 +2820,13 @@ function BusinessQueueSummary({ items }: { items: TaskItemBinding[] }) {
   );
 }
 
-function DetailInfo({ item }: { item: TaskItemDetail }) {
+function DetailInfo({
+  item,
+  presentation,
+}: {
+  item: TaskItemDetail;
+  presentation: WorkspacePresentation;
+}) {
   const parentTask = item.task;
 
   return (
@@ -1984,8 +2843,16 @@ function DetailInfo({ item }: { item: TaskItemDetail }) {
           </dd>
         </div>
         <div className="flex justify-between gap-4">
-          <dt className="text-slate-500">Space type</dt>
-          <dd className="font-semibold text-slate-950">{parentTask?.kind || "-"}</dd>
+          <dt className="text-slate-500">Workspace type</dt>
+          <dd className="font-semibold text-slate-950">{presentation.workspaceType}</dd>
+        </div>
+        <div className="flex justify-between gap-4">
+          <dt className="text-slate-500">Item label</dt>
+          <dd className="font-semibold text-slate-950">{presentation.itemLabel}</dd>
+        </div>
+        <div className="flex justify-between gap-4">
+          <dt className="text-slate-500">Default view</dt>
+          <dd className="font-semibold text-slate-950">{presentation.defaultView}</dd>
         </div>
         <div className="flex justify-between gap-4">
           <dt className="text-slate-500">Tạo lúc</dt>
@@ -2059,11 +2926,17 @@ function WorkspaceDefinitionSnapshotPanel({
   snapshot: WorkspaceDefinitionSnapshot;
 }) {
   const definition = snapshot.workspaceDefinition ?? {};
-  const workspaceType = definition.workspaceType ?? snapshot.workspaceType ?? "-";
-  const itemLabel = definition.itemLabel ?? snapshot.itemLabel ?? "-";
+  const workspaceType = repairVietnameseMojibake(
+    definition.workspaceType ?? snapshot.workspaceType ?? "-",
+  );
+  const itemLabel = repairVietnameseMojibake(
+    definition.itemLabel ?? snapshot.itemLabel ?? "-",
+  );
   const defaultView = definition.defaultView ?? snapshot.defaultView ?? "-";
   const notes =
-    definition.instantiationNotes ?? snapshot.instantiationNotes ?? null;
+    repairVietnameseMojibake(
+      definition.instantiationNotes ?? snapshot.instantiationNotes ?? null,
+    );
   const capabilities = snapshotCapabilityLabels(snapshot);
 
   return (
@@ -2094,6 +2967,9 @@ function WorkspaceDefinitionSnapshotPanel({
 
       <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
         <div className="text-xs font-medium uppercase text-slate-500">
+          Capability dang bat
+        </div>
+        <div className="sr-only">
           Capability đang bật
         </div>
         <div className="mt-1">{capabilities || "-"}</div>
@@ -2110,6 +2986,7 @@ function OverviewPanel({
   checklistTotal,
   bindingCount,
   capabilities,
+  presentation,
 }: {
   item: TaskItemDetail;
   activityCount: number;
@@ -2117,9 +2994,11 @@ function OverviewPanel({
   checklistTotal: number;
   bindingCount: number;
   capabilities: WorkspaceCapabilities;
+  presentation: WorkspacePresentation;
 }) {
   const note = displayNote(item.note);
   const workspaceSnapshot = parseWorkspaceDefinitionSnapshot(item.note);
+  const description = note || presentation.defaultDescription;
 
   return (
     <div className="space-y-5">
@@ -2128,9 +3007,9 @@ function OverviewPanel({
       ) : null}
 
       <Panel icon={<FileText className="h-4 w-4" />} title="Tổng quan">
-        {note ? (
+        {description ? (
           <div className="whitespace-pre-wrap rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700">
-            {note}
+            {description}
           </div>
         ) : (
           <EmptyState>No description for this workspace yet.</EmptyState>
@@ -2159,14 +3038,72 @@ function OverviewPanel({
         {capabilities.items ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="text-sm font-semibold text-slate-950">
-            Items
+            {presentation.itemLabel}
           </div>
           <div className="mt-2 text-2xl font-semibold text-slate-950">
             {bindingCount}
           </div>
-          <div className="mt-1 text-xs text-slate-500">runtime items</div>
+          <div className="mt-1 text-xs text-slate-500">runtime {presentation.itemLabel}</div>
         </div>
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+function SpaceWorkspaceNav({
+  currentItemId,
+  parentTask,
+}: {
+  currentItemId: string;
+  parentTask?: ParentTask | null;
+}) {
+  const workspaces = (parentTask?.taskItems ?? [])
+    .filter((workspace) => workspace.id)
+    .map((workspace, index) => ({ workspace, index }))
+    .sort((left, right) => {
+      const leftOrder = siblingWorkspaceOrder(left.workspace);
+      const rightOrder = siblingWorkspaceOrder(right.workspace);
+
+      if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+      return left.index - right.index;
+    })
+    .map((item) => item.workspace);
+
+  if (workspaces.length <= 1) return null;
+
+  return (
+    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+      <div className="mb-2 text-xs font-semibold uppercase text-slate-500">
+        Workspace trong Space
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {workspaces.map((workspace) => {
+          const active = workspace.id === currentItemId;
+
+          return (
+            <Link
+              key={workspace.id}
+              href={`/admin/task-items/${workspace.id}`}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "inline-flex h-8 items-center gap-2 rounded-lg px-3 text-xs font-semibold ring-1 transition",
+                active
+                  ? "bg-slate-950 text-white ring-slate-950"
+                  : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-100",
+              )}
+            >
+              <span className="max-w-[180px] truncate">
+                {siblingWorkspaceLabel(workspace)}
+              </span>
+              {active ? (
+                <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[10px]">
+                  hiện tại
+                </span>
+              ) : null}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
@@ -2181,8 +3118,10 @@ export default function TaskItemDetailClient({
   users: UserSummary[];
   currentUser?: UserSummary | null;
 }) {
-  const [activeTab, setActiveTab] = useState<DetailTab>("overview");
-  const [activityMode, setActivityMode] = useState<ActivityMode>("ALL");
+  const [activeTab, setActiveTab] = useState<DetailTab>(() =>
+    initialWorkspaceTab(item.note),
+  );
+  const [activityMode, setActivityMode] = useState<ActivityMode>("QUEUE");
   const parentTask = item.task;
   const checklists = useMemo(() => item.checklists ?? [], [item.checklists]);
   const activities = useMemo(() => item.activities ?? [], [item.activities]);
@@ -2202,21 +3141,48 @@ export default function TaskItemDetailClient({
     }),
     [item.note, workspaceSnapshot],
   );
-  const backHref = coordinationHref(parentTask);
-  const isSystemOwner = noteHasSystemOwner(item.note) && !item.ownerUser;
-  const owner = mergeCurrentUserAvatar(
-    item.ownerUser ?? item.assignedToUser ?? currentUser ?? null,
-    currentUser,
+  const presentation = useMemo(
+    () => workspacePresentation(workspaceSnapshot),
+    [workspaceSnapshot],
   );
+  const displayTitle = repairVietnameseMojibake(item.title || "Workspace");
+  const backHref = coordinationHref(parentTask);
+  const isSystemOwner = noteHasSystemOwner(item.note);
+  const owner = isSystemOwner
+    ? null
+    : mergeCurrentUserAvatar(
+      item.ownerUser ?? item.assignedToUser ?? currentUser ?? null,
+      currentUser,
+    );
   const checklistDone = checklists.filter((row) => row.isDone).length;
   const ref = parentTask?.periodKey || compactId(parentTask?.id);
   const tabs: TabItem[] = [
     { key: "overview", label: "Tổng quan", icon: <FileText className="h-4 w-4" /> },
     { key: "activity", label: "Hoạt động", icon: <GitBranch className="h-4 w-4" /> },
     { key: "checklist", label: "Checklist", icon: <ListChecks className="h-4 w-4" /> },
-    { key: "business", label: "Items", icon: <GitBranch className="h-4 w-4" /> },
+    { key: "business", label: presentation.itemLabel, icon: <GitBranch className="h-4 w-4" /> },
     { key: "info", label: "Thông tin", icon: <Info className="h-4 w-4" /> },
   ];
+  const tabByKey = new Map(tabs.map((tab) => [tab.key, tab]));
+  const capabilityTabs = [
+    tabByKey.get("overview"),
+    capabilities.workflow
+      ? { key: "workflow" as const, label: "Workflow", icon: <GitBranch className="h-4 w-4" /> }
+      : null,
+    capabilities.activity ? tabByKey.get("activity") : null,
+    capabilities.discussion
+      ? { key: "discussion" as const, label: "Discussion", icon: <MessageSquare className="h-4 w-4" /> }
+      : null,
+    capabilities.attachments
+      ? { key: "attachments" as const, label: "Attachments", icon: <Paperclip className="h-4 w-4" /> }
+      : null,
+    capabilities.checklist ? tabByKey.get("checklist") : null,
+    capabilities.items ? tabByKey.get("business") : null,
+    capabilities.priority
+      ? { key: "priority" as const, label: "Priority", icon: <Tag className="h-4 w-4" /> }
+      : null,
+    tabByKey.get("info"),
+  ].filter((tab): tab is TabItem => Boolean(tab));
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -2229,7 +3195,7 @@ export default function TaskItemDetailClient({
                 label: parentTask?.title || "Space",
                 href: backHref,
               },
-              { label: item.title || "Workspace" },
+              { label: displayTitle },
             ]}
           />
         </div>
@@ -2246,11 +3212,21 @@ export default function TaskItemDetailClient({
                   Back to space
                 </Link>
               ) : null}
+              <SpaceWorkspaceNav
+                currentItemId={item.id}
+                parentTask={parentTask}
+              />
 
               <div className="mt-5 flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
-                  Workspace
+                  {presentation.workspaceType}
                 </span>
+                {presentation.blueprintName ? (
+                  <span className="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+                    {presentation.blueprintName}
+                    {presentation.blueprintSource ? ` / ${presentation.blueprintSource}` : ""}
+                  </span>
+                ) : null}
                 <span className="font-mono text-xs font-semibold text-slate-500">
                   {taskItemRef(item.id)}
                 </span>
@@ -2258,7 +3234,7 @@ export default function TaskItemDetailClient({
 
               <div className="mt-4 flex min-w-0 flex-wrap items-center gap-3">
                 <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-                  {item.title}
+                  {displayTitle}
                 </h1>
                 <TaskStatusSignal status={item.status} />
                 {capabilities.priority ? (
@@ -2267,6 +3243,11 @@ export default function TaskItemDetailClient({
                   </span>
                 ) : null}
               </div>
+              {presentation.defaultDescription ? (
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+                  {presentation.defaultDescription}
+                </p>
+              ) : null}
             </div>
 
             <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm ring-1 ring-slate-100">
@@ -2314,12 +3295,7 @@ export default function TaskItemDetailClient({
         </section>
 
         <SectionTabs
-          items={tabs.filter((tab) => {
-            if (tab.key === "activity") return capabilities.activity;
-            if (tab.key === "checklist") return capabilities.checklist;
-            if (tab.key === "business") return capabilities.items;
-            return true;
-          })}
+          items={capabilityTabs}
           activeTab={activeTab}
           onChange={setActiveTab}
         />
@@ -2334,6 +3310,15 @@ export default function TaskItemDetailClient({
                 checklistTotal={checklists.length}
                 bindingCount={businessBindings.length}
                 capabilities={capabilities}
+                presentation={presentation}
+              />
+            ) : null}
+
+            {activeTab === "workflow" ? (
+              <WorkflowTabPanel
+                taskItemId={item.id}
+                items={queueItems}
+                snapshot={workspaceSnapshot}
               />
             ) : null}
 
@@ -2343,7 +3328,7 @@ export default function TaskItemDetailClient({
                 icon={<GitBranch className="h-4 w-4" />}
                 action={
                   <div className="flex items-center gap-2">
-                    {(["ALL", "QUEUE"] as ActivityMode[]).map((mode) => (
+                    {(["QUEUE", "ALL"] as ActivityMode[]).map((mode) => (
                       <button
                         key={mode}
                         type="button"
@@ -2371,15 +3356,32 @@ export default function TaskItemDetailClient({
               </Panel>
             ) : null}
 
+            {activeTab === "discussion" ? (
+              <DiscussionTabPanel
+                activities={activities}
+                businessBindings={businessBindings}
+                queueItems={queueItems}
+              />
+            ) : null}
+
+            {activeTab === "attachments" ? <AttachmentsTabPanel /> : null}
             {activeTab === "checklist" ? <ReadonlyChecklist items={checklists} /> : null}
             {activeTab === "business" ? (
               <QueueWorkQueue
                 taskItemId={item.id}
                 items={queueItems}
                 capabilities={capabilities}
+                itemLabel={presentation.itemLabel}
+                workspaceWorkTypeKey={workspaceSnapshot?.workTypeKey ?? null}
+                currentUser={currentUser}
               />
             ) : null}
-            {activeTab === "info" ? <DetailInfo item={item} /> : null}
+            {activeTab === "priority" ? (
+              <PriorityTabPanel priority={item.priority} status={item.status} />
+            ) : null}
+            {activeTab === "info" ? (
+              <DetailInfo item={item} presentation={presentation} />
+            ) : null}
           </div>
 
           <aside className="space-y-5">
@@ -2393,8 +3395,10 @@ export default function TaskItemDetailClient({
               />
             ) : null}
 
-            <DetailInfo item={item} />
-            {capabilities.items ? <QueueSummary items={queueItems} /> : null}
+            <DetailInfo item={item} presentation={presentation} />
+            {capabilities.items ? (
+              <QueueSummary items={queueItems} itemLabel={presentation.itemLabel} />
+            ) : null}
             <Panel icon={<Tag className="h-4 w-4" />} title="Thông tin mở rộng">
               <dl className="space-y-3 text-sm">
                 {capabilities.activity ? (

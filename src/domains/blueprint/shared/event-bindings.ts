@@ -1,0 +1,156 @@
+import type { WorkTypeCoordinationContext } from "@/domains/task/server/work-type.types";
+
+export type WorkspaceEventBindingConsumer =
+  | "coordination"
+  | "workflow"
+  | "timeline"
+  | "notification";
+
+export type WorkspaceEventBindingEffect =
+  | "AUTO_BIND"
+  | "APPLY_WORKFLOW"
+  | "WRITE_ACTIVITY";
+
+export type WorkspaceEventBindingStatus = "ACTIVE" | "DRAFT" | "DEPRECATED";
+
+export type WorkspaceEventBindingMode = "INTAKE" | "PROGRESS";
+
+export type WorkspaceEventBindingScopeType = "CURRENT_ACTIVE_WEEKLY_SPACE";
+
+export type WorkspaceEventBindingSource = "BLUEPRINT";
+
+export type WorkspaceEventBinding = {
+  eventKey: string;
+  targetType: string;
+  consumer: WorkspaceEventBindingConsumer;
+  scopeType: WorkspaceEventBindingScopeType;
+  scopeContext: WorkTypeCoordinationContext;
+  workTypeKey: string;
+  mode: WorkspaceEventBindingMode;
+  effects: WorkspaceEventBindingEffect[];
+  status: WorkspaceEventBindingStatus;
+  source: WorkspaceEventBindingSource;
+};
+
+const WATCH_MEDIA_PIPELINE_BINDINGS: Array<{
+  eventKey: string;
+  workTypeKey: string;
+  mode: WorkspaceEventBindingMode;
+  status?: WorkspaceEventBindingStatus;
+}> = [
+  {
+    eventKey: "watch.media.photoshoot.requested",
+    workTypeKey: "photography",
+    mode: "INTAKE",
+  },
+  {
+    eventKey: "watch.media.photoshoot.completed",
+    workTypeKey: "media-processing",
+    mode: "INTAKE",
+  },
+  {
+    eventKey: "watch.media.asset.attached",
+    workTypeKey: "media-processing",
+    mode: "INTAKE",
+  },
+  {
+    eventKey: "watch.content.submitted",
+    workTypeKey: "media-processing",
+    mode: "PROGRESS",
+  },
+  {
+    eventKey: "watch.content.rejected",
+    workTypeKey: "media-processing",
+    mode: "PROGRESS",
+  },
+  {
+    eventKey: "watch.content.approved",
+    workTypeKey: "media-processing",
+    mode: "PROGRESS",
+  },
+  {
+    eventKey: "watch.content.unapproved",
+    workTypeKey: "media-processing",
+    mode: "PROGRESS",
+  },
+  {
+    eventKey: "watch.image.submitted",
+    workTypeKey: "media-processing",
+    mode: "PROGRESS",
+  },
+  {
+    eventKey: "watch.image.rejected",
+    workTypeKey: "media-processing",
+    mode: "PROGRESS",
+  },
+  {
+    eventKey: "watch.image.approved",
+    workTypeKey: "media-processing",
+    mode: "PROGRESS",
+  },
+  {
+    eventKey: "watch.image.unapproved",
+    workTypeKey: "media-processing",
+    mode: "PROGRESS",
+  },
+  {
+    eventKey: "watch.media.ready_for_publish",
+    workTypeKey: "publish",
+    mode: "INTAKE",
+  },
+  {
+    eventKey: "watch.media.recalled",
+    workTypeKey: "media-processing",
+    mode: "INTAKE",
+  },
+  {
+    eventKey: "watch.publish.assets.downloaded",
+    workTypeKey: "publish",
+    mode: "PROGRESS",
+  },
+];
+
+export function eventBindingsForWorkType(input: {
+  workTypeKey: string;
+  coordinationContext: WorkTypeCoordinationContext | "DRAFT";
+}): WorkspaceEventBinding[] {
+  if (input.coordinationContext !== "MEDIA") {
+    return [];
+  }
+
+  return WATCH_MEDIA_PIPELINE_BINDINGS
+    .filter((binding) => binding.workTypeKey === input.workTypeKey)
+    .map((binding) => ({
+      eventKey: binding.eventKey,
+      targetType: "WATCH",
+      consumer: "coordination",
+      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeContext: "MEDIA",
+      workTypeKey: binding.workTypeKey,
+      mode: binding.mode,
+      effects: ["AUTO_BIND", "APPLY_WORKFLOW", "WRITE_ACTIVITY"],
+      status: binding.status ?? "ACTIVE",
+      source: "BLUEPRINT",
+    }));
+}
+
+export function normalizeEventKey(value: unknown) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+export function normalizeTargetType(value: unknown) {
+  return String(value ?? "").trim().toUpperCase();
+}
+
+export function eventBindingConflictKey(binding: Pick<
+  WorkspaceEventBinding,
+  "eventKey" | "targetType" | "consumer" | "scopeType" | "scopeContext"
+>) {
+  return [
+    normalizeEventKey(binding.eventKey),
+    normalizeTargetType(binding.targetType),
+    binding.consumer,
+    binding.scopeType,
+    binding.scopeContext,
+  ].join("::");
+}

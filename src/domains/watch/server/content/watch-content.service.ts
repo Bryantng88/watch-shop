@@ -7,8 +7,16 @@ import {
   syncWatchContentSnapshotRepo,
   updateWatchContentStatusRepo,
 } from "./watch-content.repo";
-import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
+import { emitWatchContentModifiedEvent } from "@/domains/watch/server/events";
 
+type MeaningfulWatchContent = {
+  titleOverride?: unknown;
+  hookText?: unknown;
+  body?: unknown;
+  summary?: unknown;
+  hashtags?: unknown;
+  bulletSpecs?: unknown;
+};
 
 async function safeEmitWatchContentUpdatedEvent(input: {
   productId: string;
@@ -17,17 +25,10 @@ async function safeEmitWatchContentUpdatedEvent(input: {
   try {
     const target = await getReviewTargetOrThrow(input.productId);
 
-    await recordBusinessEvent(prisma, {
-      eventKey: "watch.content.modified",
-      targetType: "WATCH",
-      targetId: target.id,
-      targetAliasIds: [input.productId],
+    await emitWatchContentModifiedEvent(prisma, {
+      watch: target,
       actorUserId: input.userId ?? null,
-      payload: {
-        productId: input.productId,
-        watchId: target.id,
-      },
-    } as any);
+    });
   } catch (error) {
     console.error("WORKFLOW_EMIT_WATCH_CONTENT_UPDATED_FAILED", {
       productId: input.productId,
@@ -35,26 +36,27 @@ async function safeEmitWatchContentUpdatedEvent(input: {
     });
   }
 }
-function hasMeaningfulContent(content: any) {
+function hasMeaningfulContent(content: MeaningfulWatchContent | null | undefined) {
+  const bulletSpecs = Array.isArray(content?.bulletSpecs) ? content.bulletSpecs : [];
+
   return Boolean(
     String(content?.titleOverride ?? "").trim() ||
     String(content?.hookText ?? "").trim() ||
     String(content?.body ?? "").trim() ||
     String(content?.summary ?? "").trim() ||
     String(content?.hashtags ?? "").trim() ||
-    (Array.isArray(content?.bulletSpecs) &&
-      content.bulletSpecs.some((x: any) => String(x ?? "").trim()))
+    bulletSpecs.some((item) => String(item ?? "").trim())
   );
 }
 
 async function getReviewTargetOrThrow(productId: string) {
-  const target = await getWatchContentReviewTargetRepo(prisma as any, productId);
+  const target = await getWatchContentReviewTargetRepo(prisma, productId);
   if (!target) throw new Error("Không tìm thấy watch");
   return target;
 }
 
 export async function getWatchContent(productId: string) {
-  return getWatchContentRepo(prisma as any, productId);
+  return getWatchContentRepo(prisma, productId);
 }
 
 export async function saveWatchContent(
@@ -63,7 +65,7 @@ export async function saveWatchContent(
     userId?: string | null;
   },
 ) {
-  const content = await saveWatchContentRepo(prisma as any, productId, {
+  const content = await saveWatchContentRepo(prisma, productId, {
     productId,
     ...input,
   });
@@ -77,7 +79,7 @@ export async function saveWatchContent(
 }
 
 export async function syncWatchContentSnapshot(productId: string) {
-  return syncWatchContentSnapshotRepo(prisma as any, productId);
+  return syncWatchContentSnapshotRepo(prisma, productId);
 }
 
 export async function submitWatchContentForReview(input: {
@@ -95,7 +97,7 @@ export async function submitWatchContentForReview(input: {
     throw new Error("Chưa có nội dung để gửi duyệt.");
   }
 
-  return updateWatchContentStatusRepo(prisma as any, {
+  return updateWatchContentStatusRepo(prisma, {
     productId: input.productId,
     status: "SUBMITTED",
     userId: input.userId ?? null,
@@ -114,7 +116,7 @@ export async function approveWatchContent(input: {
     throw new Error("Chỉ content đã gửi duyệt mới được duyệt.");
   }
 
-  return updateWatchContentStatusRepo(prisma as any, {
+  return updateWatchContentStatusRepo(prisma, {
     productId: input.productId,
     status: "APPROVED",
     userId: input.userId ?? null,
@@ -134,7 +136,7 @@ export async function rejectWatchContent(input: {
     throw new Error("Chỉ content đã gửi duyệt mới được trả về.");
   }
 
-  return updateWatchContentStatusRepo(prisma as any, {
+  return updateWatchContentStatusRepo(prisma, {
     productId: input.productId,
     status: "REJECTED",
     userId: input.userId ?? null,
@@ -152,7 +154,7 @@ export async function autoApproveWatchContent(input: {
     return target.watchContent;
   }
 
-  return updateWatchContentStatusRepo(prisma as any, {
+  return updateWatchContentStatusRepo(prisma, {
     productId: input.productId,
     status: "APPROVED",
     userId: input.userId ?? null,
@@ -164,7 +166,7 @@ export async function publishWatchContent(input: {
   productId: string;
   userId?: string | null;
 }) {
-  return updateWatchContentStatusRepo(prisma as any, {
+  return updateWatchContentStatusRepo(prisma, {
     productId: input.productId,
     status: "PUBLISHED",
     userId: input.userId ?? null,

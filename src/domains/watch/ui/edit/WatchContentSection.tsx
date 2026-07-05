@@ -39,6 +39,8 @@ type Props = {
     onBeforeSubmitReview?: (target: "content" | "image") => Promise<boolean>;
     isFormDirty?: boolean;
     watchId?: string;
+    defaultOpen?: boolean;
+    hideReviewActions?: boolean;
 };
 
 function normalizeStatus(status?: string | null): ReviewStatus {
@@ -68,6 +70,8 @@ export default function WatchContentSection({
     onBeforeSubmitReview,
     isFormDirty,
     watchId,
+    defaultOpen = false,
+    hideReviewActions = false,
 }: Props) {
     const dialog = useAppDialog();
     const notify = useNotify();
@@ -181,7 +185,9 @@ export default function WatchContentSection({
             title="Content"
             subtitle="Gen hook & bullet specs từ dữ liệu spec hiện có."
             onBeforeOpen={handleBeforeOpen}
+            defaultOpen={defaultOpen}
             actions={
+                hideReviewActions ? null :
                 <SectionReviewActions
                     productId={productId}
                     target="content"

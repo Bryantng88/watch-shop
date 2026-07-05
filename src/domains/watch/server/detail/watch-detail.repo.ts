@@ -81,11 +81,98 @@ export async function getAdminEditWatchDetail(db: DB, productId: string) {
   };
 }
 
+export async function getAdminWatchMediaEditDetail(db: DB, productId: string) {
+  const client = dbOrTx(db);
+
+  return client.watch.findUnique({
+    where: { productId },
+    select: {
+      id: true,
+      productId: true,
+      acquisitionId: true,
+      gender: true,
+      siteChannel: true,
+      stockStage: true,
+      saleStage: true,
+      serviceStage: true,
+      movementType: true,
+      movementCalibre: true,
+      style: true,
+      yearText: true,
+      hasBox: true,
+      hasPapers: true,
+      specStatus: true,
+      notes: true,
+      conditionGrade: true,
+      isContentDownloaded: true,
+      isImageDownloaded: true,
+      serialNumber: true,
+      product: {
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          status: true,
+          sku: true,
+          primaryImageUrl: true,
+          storefrontImageKey: true,
+          seoTitle: true,
+          seoDescription: true,
+          brand: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+          vendor: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          productCategory: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          postTargets: {
+            include: {
+              postTarget: true,
+            },
+            orderBy: {
+              createdAt: "asc",
+            },
+          },
+          productImage: {
+            orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+            select: {
+              id: true,
+              fileKey: true,
+              role: true,
+              isForAdmin: true,
+              isForStorefront: true,
+              sortOrder: true,
+              alt: true,
+            },
+          },
+        },
+      },
+      watchSpecV2: true,
+      watchPrice: true,
+      watchContent: true,
+    },
+  });
+}
+
 export async function getAdminWatchDetail(db: DB, productId: string) {
   return getAdminWatchRow(db, productId);
 }
 
 export async function getLatestWatchVariantForAdmin(_db: DB, _productId: string) {
+  void _db;
+  void _productId;
   return null;
 }
 
@@ -143,7 +230,7 @@ export async function getWatchTradeHistory(db: DB, productId: string) {
   ]);
 
   return {
-    acquisitions: acquisitionItems.map((item: any) => ({
+    acquisitions: acquisitionItems.map((item) => ({
       id: item.id,
       type: "ACQUISITION",
       acquisitionId: item.acquisitionId,
@@ -159,7 +246,7 @@ export async function getWatchTradeHistory(db: DB, productId: string) {
       updatedAt: item.acquisition?.updatedAt ?? item.updatedAt,
     })),
 
-    orders: orderItems.map((item: any) => ({
+    orders: orderItems.map((item) => ({
       id: item.id,
       type: "ORDER",
       orderId: item.orderId,
@@ -186,7 +273,7 @@ export async function getWatchServiceHistory(db: DB, productId: string) {
     },
   });
 
-  return rows.map((item: any) => ({
+  return rows.map((item) => ({
     id: item.id,
     issue: item.refNo ?? item.serviceName ?? "Service request",
     title: item.refNo ?? "Service request",

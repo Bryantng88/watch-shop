@@ -10,6 +10,15 @@ export type BusinessEventCatalogItem = {
   targetType: string;
   label: string;
   description: string | null;
+  status: string;
+  businessMeaning: string | null;
+  producer: string | null;
+  emitPoint: string | null;
+  targetIdPolicy: string | null;
+  targetAliasPolicy: string | null;
+  payloadContract: string | null;
+  knownConsumers: string[];
+  autoBindingScope: string | null;
   samplePayload: Record<string, unknown> | null;
   emittedFrom: string | null;
   routeStatus: string;
@@ -43,6 +52,15 @@ export function listBusinessEventCatalog(): BusinessEventCatalogItem[] {
       targetType: event.targetType,
       label: event.label,
       description: event.description ?? null,
+      status: event.status ?? "ACTIVE",
+      businessMeaning: event.businessMeaning ?? event.description ?? null,
+      producer: event.producer ?? null,
+      emitPoint: event.emitPoint ?? null,
+      targetIdPolicy: event.targetIdPolicy ?? null,
+      targetAliasPolicy: event.targetAliasPolicy ?? null,
+      payloadContract: event.payloadContract ?? null,
+      knownConsumers: event.knownConsumers ?? [],
+      autoBindingScope: event.autoBindingScope ?? null,
       samplePayload: null,
       emittedFrom: event.group,
       routeStatus: route ? (route.enabled ? "ROUTED" : "ROUTE_DISABLED") : "NOT_ROUTED",

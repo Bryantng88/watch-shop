@@ -5,13 +5,28 @@ import {
   type Prisma,
 } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
-import { ensureTaskItemBusinessBinding } from "@/domains/task/server/business-binding.service";
+import {
+  ensureTaskItemBusinessBinding,
+  findTaskItemBusinessBinding,
+} from "@/domains/task/server/business-binding.service";
 import { applyEventTriggerToQueueItem } from "@/domains/task/server/business-binding-workflow.service";
 import { createBusinessEventActivity } from "@/domains/task/server/activity/task-item-activity.service";
 import {
   getWorkTypeKeyFromTicketNote,
   resolveCurrentCoordinationCycle,
 } from "./coordination-cycle.service";
+import {
+  parseWorkspaceDefinitionSnapshot,
+} from "@/domains/blueprint/shared/workspace-capabilities";
+import {
+  normalizeEventKey,
+  normalizeTargetType,
+  type WorkspaceEventBinding,
+} from "@/domains/blueprint/shared/event-bindings";
+import {
+  getTimelineBody,
+  getTimelineTitle,
+} from "@/domains/shared/timeline/server/timeline-event-consumer";
 import { getWorkTypeDefinition } from "@/domains/task/server/work-type.service";
 import { getCoordinationRoute } from "./coordination-router.registry";
 import { routeBusinessEvent } from "./coordination-router.service";
@@ -29,7 +44,12 @@ export type CoordinationConsumerSkipReason =
   | "MISSING_BUSINESS_EVENT_LOG_ID"
   | "MISSING_TARGET_ID"
   | "NO_ACTIVE_COORDINATION_CYCLE"
-  | "NO_WORK_TICKET";
+  | "NO_ACTIVE_BINDING_SCOPE"
+  | "NO_WORK_TICKET"
+  | "NO_ACTIVE_SCOPE_ITEM"
+  | "NO_BLUEPRINT_EVENT_BINDING"
+  | "NO_EXISTING_WORKSPACE_ITEM"
+  | "DUPLICATE_BLUEPRINT_EVENT_BINDING";
 
 export type CoordinationEventConsumerInput = CoordinationBusinessEvent & {
   id?: string | null;
@@ -45,6 +65,7 @@ export type CoordinationEventConsumerResult =
     skipped: true;
     reason: CoordinationConsumerSkipReason;
     route?: CoordinationRoute | null;
+    scope?: CoordinationBindingScope | null;
   }
   | {
     ok: true;
@@ -55,9 +76,28 @@ export type CoordinationEventConsumerResult =
     bindingId: string;
     bindingCreated: boolean;
     activityId: string;
+    scope: CoordinationBindingScope;
+    workflow: unknown;
   };
 
 const TARGET_TYPES = new Set<string>(Object.values(TaskExecutionTargetType));
+
+type CoordinationBindingScope = {
+  scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE";
+  context: CoordinationContext;
+  coordinationType: string;
+  workTypeKey: string;
+  taskId?: string;
+  taskItemId?: string;
+};
+
+type WorkTicketResolution = {
+  item: NonNullable<
+    Awaited<ReturnType<typeof findActiveCoordinationTask>>["task"]
+  >["taskItems"][number];
+  eventBinding: WorkspaceEventBinding;
+  source: "BLUEPRINT_SNAPSHOT";
+};
 
 function clean(value: unknown) {
   return String(value ?? "").trim();
@@ -101,6 +141,8 @@ function coordinationTypeToContext(
   if (normalized === "technical" || normalized === "service") {
     return "TECHNICAL";
   }
+  if (normalized === "media") return "MEDIA";
+  if (normalized === "payment" || normalized === "payments") return "PAYMENT";
   if (normalized === "general" || normalized === "business") return "GENERAL";
 
   return null;
@@ -121,7 +163,7 @@ async function findActiveCoordinationTask(
 
   const cycle = await resolveCurrentCoordinationCycle(db, {
     context,
-    createIfMissing: false,
+    createIfMissing: true,
   });
 
   if (!cycle) return { task: null, context, unsupported: false };
@@ -151,6 +193,15 @@ async function findActiveCoordinationTask(
   return { task, context, unsupported: false };
 }
 
+function routeScope(route: CoordinationRoute, context: CoordinationContext): CoordinationBindingScope {
+  return {
+    scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+    context,
+    coordinationType: route.coordinationType,
+    workTypeKey: route.workTypeKey,
+  };
+}
+
 function workTicketCandidates(route: CoordinationRoute, context: CoordinationContext) {
   const metadata = asRecord(route.metadata);
   const workType = getWorkTypeDefinition(context, route.workTypeKey);
@@ -167,17 +218,229 @@ function workTicketCandidates(route: CoordinationRoute, context: CoordinationCon
   return new Set(values.map(normalizeMatchKey).filter(Boolean));
 }
 
+function eventBindingsFromNote(note: string | null | undefined) {
+  const snapshot = parseWorkspaceDefinitionSnapshot(note);
+  const bindings =
+    snapshot?.eventBindings ??
+    snapshot?.workspaceDefinition?.eventBindings ??
+    [];
+
+  return Array.isArray(bindings) ? bindings : [];
+}
+
+function isAutoBindingReceiverNote(note: string | null | undefined) {
+  return /^blueprintAutoBindingReceiver:\s*true\s*$/im.test(String(note ?? ""));
+}
+
+function workTypeKeyFromWorkspaceSnapshot(note: string | null | undefined) {
+  const snapshot = parseWorkspaceDefinitionSnapshot(note);
+  return clean(
+    snapshot?.workspaceDefinition?.workTypeKey ??
+      snapshot?.workTypeKey ??
+      getWorkTypeKeyFromTicketNote(note),
+  );
+}
+
+function effectiveReceiverEventBinding(input: {
+  eventKey: string;
+  targetType: string;
+  context: CoordinationContext;
+  route: CoordinationRoute;
+}): WorkspaceEventBinding {
+  const metadata = asRecord(input.route.metadata);
+  const mode = clean(metadata.bindingMode).toUpperCase() === "PROGRESS"
+    ? "PROGRESS"
+    : "INTAKE";
+
+  return {
+    eventKey: input.eventKey,
+    targetType: normalizeTargetType(input.targetType),
+    consumer: "coordination",
+    scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+    scopeContext: input.context,
+    workTypeKey: input.route.workTypeKey,
+    mode,
+    effects: ["AUTO_BIND", "APPLY_WORKFLOW", "WRITE_ACTIVITY"],
+    status: "ACTIVE",
+    source: "BLUEPRINT",
+  };
+}
+
+function eventBindingWithEffectiveRouteMode(input: {
+  binding: WorkspaceEventBinding;
+  eventKey: string;
+  targetType: string;
+  context: CoordinationContext;
+  route: CoordinationRoute;
+}): WorkspaceEventBinding {
+  const effective = effectiveReceiverEventBinding({
+    eventKey: input.eventKey,
+    targetType: input.targetType,
+    context: input.context,
+    route: input.route,
+  });
+
+  return {
+    ...input.binding,
+    mode: effective.mode,
+  };
+}
+
+function eventBindingMatches(input: {
+  binding: WorkspaceEventBinding;
+  eventKey: string;
+  targetType: string;
+  context: CoordinationContext;
+  route: CoordinationRoute;
+}) {
+  return (
+    input.binding.status === "ACTIVE" &&
+    input.binding.consumer === "coordination" &&
+    normalizeEventKey(input.binding.eventKey) === input.eventKey &&
+    normalizeTargetType(input.binding.targetType) === input.targetType &&
+    input.binding.scopeType === "CURRENT_ACTIVE_WEEKLY_SPACE" &&
+    input.binding.scopeContext === input.context &&
+    normalizeMatchKey(input.binding.workTypeKey) ===
+      normalizeMatchKey(input.route.workTypeKey)
+  );
+}
+
+function eventBindingMatchesCurrentRoute(input: {
+  binding: WorkspaceEventBinding;
+  eventKey: string;
+  targetType: string;
+  context: CoordinationContext;
+  route: CoordinationRoute;
+}) {
+  return (
+    input.binding.consumer === "coordination" &&
+    normalizeEventKey(input.binding.eventKey) === input.eventKey &&
+    normalizeTargetType(input.binding.targetType) === input.targetType &&
+    input.binding.scopeType === "CURRENT_ACTIVE_WEEKLY_SPACE" &&
+    input.binding.scopeContext === input.context &&
+    normalizeMatchKey(input.binding.workTypeKey) ===
+      normalizeMatchKey(input.route.workTypeKey)
+  );
+}
+
 function findWorkTicket(
   task: Awaited<ReturnType<typeof findActiveCoordinationTask>>["task"],
   context: CoordinationContext | null,
   route: CoordinationRoute,
-) {
+  input: {
+    eventKey: string;
+    targetType: string;
+  },
+):
+  | WorkTicketResolution
+  | "DUPLICATE_BLUEPRINT_EVENT_BINDING"
+  | "NO_BLUEPRINT_EVENT_BINDING"
+  | null {
   if (!task || !context) return null;
 
   const candidates = workTicketCandidates(route, context);
   if (!candidates.size) return null;
 
-  return task.taskItems.find((item) => {
+  const matchingSnapshotTickets = task.taskItems.flatMap((item) =>
+    eventBindingsFromNote(item.note)
+      .filter((binding) =>
+        eventBindingMatches({
+          binding,
+          eventKey: input.eventKey,
+          targetType: input.targetType,
+          context,
+          route,
+        }),
+      )
+      .map((eventBinding) => ({
+        item,
+        eventBinding: eventBindingWithEffectiveRouteMode({
+          binding: eventBinding,
+          eventKey: input.eventKey,
+          targetType: input.targetType,
+          context,
+          route,
+        }),
+        source: "BLUEPRINT_SNAPSHOT" as const,
+      })),
+  );
+
+  if (matchingSnapshotTickets.length > 1) {
+    const selectedReceivers = matchingSnapshotTickets.filter((ticket) =>
+      isAutoBindingReceiverNote(ticket.item.note),
+    );
+
+    if (selectedReceivers.length === 1) return selectedReceivers[0];
+
+    return "DUPLICATE_BLUEPRINT_EVENT_BINDING";
+  }
+
+  if (matchingSnapshotTickets.length === 1) return matchingSnapshotTickets[0];
+
+  const selectedReceiverTickets = task.taskItems
+    .filter((item) => isAutoBindingReceiverNote(item.note))
+    .filter(
+      (item) =>
+        normalizeMatchKey(workTypeKeyFromWorkspaceSnapshot(item.note)) ===
+        normalizeMatchKey(route.workTypeKey),
+    )
+    .map((item) => ({
+      item,
+      eventBinding: effectiveReceiverEventBinding({
+        eventKey: input.eventKey,
+        targetType: input.targetType,
+        context,
+        route,
+      }),
+      source: "BLUEPRINT_SNAPSHOT" as const,
+    }));
+
+  if (selectedReceiverTickets.length > 1) {
+    return "DUPLICATE_BLUEPRINT_EVENT_BINDING";
+  }
+
+  if (selectedReceiverTickets.length === 1) return selectedReceiverTickets[0];
+
+  const currentRouteSnapshotTickets = task.taskItems.flatMap((item) =>
+    eventBindingsFromNote(item.note)
+      .filter((binding) =>
+        eventBindingMatchesCurrentRoute({
+          binding,
+          eventKey: input.eventKey,
+          targetType: input.targetType,
+          context,
+          route,
+        }),
+      )
+      .map((eventBinding) => ({
+        item,
+        eventBinding: eventBinding.status === "ACTIVE"
+          ? eventBindingWithEffectiveRouteMode({
+            binding: eventBinding,
+            eventKey: input.eventKey,
+            targetType: input.targetType,
+            context,
+            route,
+          })
+          : effectiveReceiverEventBinding({
+            eventKey: input.eventKey,
+            targetType: input.targetType,
+            context,
+            route,
+          }),
+        source: "BLUEPRINT_SNAPSHOT" as const,
+      })),
+  );
+
+  if (currentRouteSnapshotTickets.length > 1) {
+    return "DUPLICATE_BLUEPRINT_EVENT_BINDING";
+  }
+
+  if (currentRouteSnapshotTickets.length === 1) {
+    return currentRouteSnapshotTickets[0];
+  }
+
+  const legacyCandidate = task.taskItems.find((item) => {
     const title = normalizeMatchKey(item.title);
     const workTypeKey = getWorkTypeKeyFromTicketNote(item.note);
     const note = normalizeMatchKey(item.note);
@@ -189,10 +452,15 @@ function findWorkTicket(
         note.includes(candidate),
       )
     );
-  }) ?? null;
+  });
+
+  return legacyCandidate ? "NO_BLUEPRINT_EVENT_BINDING" : null;
 }
 
 function formatEventTitle(eventKey: string) {
+  const title = getTimelineTitle(eventKey);
+  if (title) return title;
+
   return clean(eventKey)
     .split(".")
     .filter(Boolean)
@@ -230,12 +498,14 @@ function extractFeedbackMetadata(metadataJson: unknown) {
 function skipped(
   reason: CoordinationConsumerSkipReason,
   route?: CoordinationRoute | null,
+  scope?: CoordinationBindingScope | null,
 ): CoordinationEventConsumerResult {
   return {
     ok: true,
     skipped: true,
     reason,
     route,
+    scope,
   };
 }
 
@@ -327,10 +597,28 @@ export async function consumeBusinessEventForCoordination(
 
   const { task, context, unsupported } = await findActiveCoordinationTask(db, route);
   if (unsupported) return skipped("UNSUPPORTED_COORDINATION_TYPE", route);
-  if (!task) return skipped("NO_ACTIVE_COORDINATION_CYCLE", route);
+  const scope = context ? routeScope(route, context) : null;
+  if (!task) return skipped("NO_ACTIVE_BINDING_SCOPE", route, scope);
 
-  const workTicket = findWorkTicket(task, context, route);
-  if (!workTicket) return skipped("NO_WORK_TICKET", route);
+  const workTicketResolution = findWorkTicket(task, context, route, {
+    eventKey,
+    targetType,
+  });
+  if (workTicketResolution === "DUPLICATE_BLUEPRINT_EVENT_BINDING") {
+    return skipped("DUPLICATE_BLUEPRINT_EVENT_BINDING", route, scope);
+  }
+  if (workTicketResolution === "NO_BLUEPRINT_EVENT_BINDING") {
+    return skipped("NO_BLUEPRINT_EVENT_BINDING", route, scope);
+  }
+  if (!workTicketResolution) return skipped("NO_ACTIVE_SCOPE_ITEM", route, scope);
+
+  const workTicket = workTicketResolution.item;
+
+  const resolvedScope: CoordinationBindingScope = {
+    ...(scope as CoordinationBindingScope),
+    taskId: task.id,
+    taskItemId: workTicket.id,
+  };
 
   const metadataJson = {
     source: "AUTO",
@@ -342,7 +630,25 @@ export async function consumeBusinessEventForCoordination(
     businessEventCreatedAt: formatDateMetadata(input.createdAt),
     sourceTargetId: targetId,
     targetAliasIds: extractTargetAliasIds(input),
+    eventBindingSource: workTicketResolution.source,
+    eventBinding: workTicketResolution.eventBinding,
   } satisfies Prisma.InputJsonObject;
+
+  if (workTicketResolution.eventBinding.mode === "PROGRESS") {
+    const existingBinding = await findTaskItemBusinessBinding(db, {
+      taskId: task.id,
+      taskItemId: workTicket.id,
+      targetType,
+      targetId: canonicalTargetId,
+      actionType: TaskExecutionActionType.LINKED,
+      createdByUserId: input.actorUserId ?? null,
+      metadataJson,
+    });
+
+    if (!existingBinding) {
+      return skipped("NO_EXISTING_WORKSPACE_ITEM", route, resolvedScope);
+    }
+  }
 
   const bindingResult = await ensureTaskItemBusinessBinding(db, {
     taskId: task.id,
@@ -353,7 +659,7 @@ export async function consumeBusinessEventForCoordination(
     createdByUserId: input.actorUserId ?? null,
     metadataJson,
   });
-  await applyWorkflowEventTransition({
+  const workflowResult = await applyWorkflowEventTransition({
     db,
     bindingId: bindingResult.binding.id,
     eventKey,
@@ -366,6 +672,7 @@ export async function consumeBusinessEventForCoordination(
     taskItemId: workTicket.id,
     sourceId: businessEventLogId,
     title: formatEventTitle(eventKey),
+    body: getTimelineBody(input.metadataJson),
     actorUserId: input.actorUserId ?? null,
     metadataJson: {
       eventKey,
@@ -375,6 +682,9 @@ export async function consumeBusinessEventForCoordination(
       routeKey: metadataJson.routeKey,
       coordinationType: route.coordinationType,
       workTypeKey: route.workTypeKey,
+      bindingScope: resolvedScope,
+      eventBindingSource: workTicketResolution.source,
+      eventBinding: workTicketResolution.eventBinding,
       businessEventLogId,
       businessEventCreatedAt: metadataJson.businessEventCreatedAt,
       targetAliasIds: metadataJson.targetAliasIds,
@@ -391,5 +701,7 @@ export async function consumeBusinessEventForCoordination(
     bindingId: bindingResult.binding.id,
     bindingCreated: bindingResult.created,
     activityId: activity.id,
+    scope: resolvedScope,
+    workflow: workflowResult,
   };
 }

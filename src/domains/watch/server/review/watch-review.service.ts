@@ -1,13 +1,18 @@
 import { prisma } from "@/server/db/client";
 import { ProductStatus, WatchSaleStage, WatchStockStage, type Prisma } from "@prisma/client";
-import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
 import {
     createWatchReviewRejectionFeedback,
     normalizeBusinessFeedbackMessage,
 } from "@/domains/shared/business-feedback/server";
+import {
+    emitWatchReviewBusinessEvent,
+    watchReviewEventKey,
+    type WatchReviewStatus,
+    type WatchReviewTargetType,
+} from "@/domains/watch/server/events";
 import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
-type ReviewTargetType = "CONTENT" | "IMAGE";
-type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
+type ReviewTargetType = WatchReviewTargetType;
+type ReviewStatus = WatchReviewStatus;
 
 type ReviewInput = {
     productId: string;
@@ -20,30 +25,6 @@ type RejectInput = ReviewInput & {
 };
 
 const WATCH_REVIEW_PERF_SCOPE = "watch-review";
-
-function watchReviewRejectedEventKey(targetType: ReviewTargetType) {
-    return targetType === "CONTENT"
-        ? "watch.content.rejected"
-        : "watch.image.rejected";
-}
-
-function watchReviewSubmittedEventKey(targetType: ReviewTargetType) {
-    return targetType === "CONTENT"
-        ? "watch.content.submitted"
-        : "watch.image.submitted";
-}
-
-function watchReviewApprovedEventKey(targetType: ReviewTargetType) {
-    return targetType === "CONTENT"
-        ? "watch.content.approved"
-        : "watch.image.approved";
-}
-
-function watchReviewUnapprovedEventKey(targetType: ReviewTargetType) {
-    return targetType === "CONTENT"
-        ? "watch.content.unapproved"
-        : "watch.image.unapproved";
-}
 
 async function getWatchOrThrow(productId: string) {
     const watch = await prisma.watch.findUnique({
@@ -66,54 +47,6 @@ async function getWatchOrThrow(productId: string) {
     if (!watch) throw new Error("Không tìm thấy watch.");
 
     return watch;
-}
-
-type WatchReviewEventWatch = Awaited<ReturnType<typeof getWatchOrThrow>>;
-
-function watchReviewEventAliases(
-    watch: WatchReviewEventWatch,
-    sourceId?: string | null,
-) {
-    return Array.from(
-        new Set([watch.id, watch.productId, sourceId].map((id) => String(id ?? "").trim()).filter(Boolean)),
-    );
-}
-
-function watchReviewEventPayload(input: {
-    watch: WatchReviewEventWatch;
-    reviewTargetType: ReviewTargetType;
-    sourceAction: string;
-    fromStatus?: ReviewStatus | null;
-    toStatus?: ReviewStatus | null;
-    sourceId?: string | null;
-    feedbackId?: string | null;
-    feedbackMessage?: string | null;
-    feedbackCreatedAt?: Date | string | null;
-}) {
-    const sourceId = String(input.sourceId ?? "").trim() || null;
-
-    return {
-        productId: input.watch.productId,
-        watchId: input.watch.id,
-        title: input.watch.product.title,
-        watchTitle: input.watch.product.title,
-        ref: input.watch.product.sku ?? null,
-        sku: input.watch.product.sku ?? null,
-        preview: {
-            imageUrl: input.watch.product.primaryImageUrl ?? null,
-            href: `/admin/watches/${input.watch.productId}`,
-        },
-        businessStatus: String(input.watch.saleStage || input.watch.product.status || ""),
-        reviewTargetType: input.reviewTargetType,
-        sourceAction: input.sourceAction,
-        fromStatus: input.fromStatus ?? null,
-        toStatus: input.toStatus ?? null,
-        sourceId,
-        eventInstanceId: sourceId,
-        feedbackId: input.feedbackId ?? null,
-        feedbackMessage: input.feedbackMessage ?? null,
-        feedbackCreatedAt: input.feedbackCreatedAt ?? null,
-    };
 }
 
 async function ensureReviewState(input: {
@@ -235,19 +168,13 @@ async function emitWatchReviewApprovedEvent(input: ReviewInput) {
     await perfStep(
         WATCH_REVIEW_PERF_SCOPE,
         `${input.targetType}:approved:recordBusinessEvent`,
-        () => recordBusinessEvent(prisma, {
-        eventKey: watchReviewApprovedEventKey(input.targetType),
-        targetType: "WATCH",
-        targetId: watch.id,
-        targetAliasIds: watchReviewEventAliases(watch),
-        actorUserId: input.userId ?? null,
-        payload: watchReviewEventPayload({
+        () => emitWatchReviewBusinessEvent(prisma, {
             watch,
             reviewTargetType: input.targetType,
             sourceAction: "APPROVE",
+            actorUserId: input.userId ?? null,
             toStatus: "APPROVED",
         }),
-    }),
     );
 }
 
@@ -259,24 +186,16 @@ async function safeEmitWatchReviewSubmittedEvent(input: ReviewInput & {
     try {
         const watch = await getWatchOrThrow(input.productId);
 
-        await recordBusinessEvent(prisma, {
-            eventKey: watchReviewSubmittedEventKey(input.targetType),
-            targetType: "WATCH",
-            targetId: watch.id,
-            targetAliasIds: watchReviewEventAliases(watch, input.reviewLogId),
+        await emitWatchReviewBusinessEvent(prisma, {
+            watch,
+            reviewTargetType: input.targetType,
+            sourceAction: "SUBMIT",
             actorUserId: input.userId ?? null,
-            payload: {
-                ...watchReviewEventPayload({
-                    watch,
-                    reviewTargetType: input.targetType,
-                    sourceAction: "SUBMIT",
-                    fromStatus: input.fromStatus,
-                    toStatus: input.toStatus,
-                    sourceId: input.reviewLogId ?? null,
-                }),
+            fromStatus: input.fromStatus,
+            toStatus: input.toStatus,
+            sourceId: input.reviewLogId ?? null,
+            extraPayload: {
                 reviewLogId: input.reviewLogId ?? null,
-                fromStatus: input.fromStatus,
-                toStatus: input.toStatus,
             },
         });
     } catch (error) {
@@ -307,21 +226,15 @@ async function safeEmitWatchReviewUnapprovedEvent(input: ReviewInput & {
     try {
         const watch = await getWatchOrThrow(input.productId);
 
-        await recordBusinessEvent(prisma, {
-            eventKey: watchReviewUnapprovedEventKey(input.targetType),
-            targetType: "WATCH",
-            targetId: watch.id,
-            targetAliasIds: watchReviewEventAliases(watch),
+        await emitWatchReviewBusinessEvent(prisma, {
+            watch,
+            reviewTargetType: input.targetType,
+            sourceAction: "RESET_DRAFT",
             actorUserId: input.userId ?? null,
             effect: "REVOKE",
-            revokeEventKey: watchReviewApprovedEventKey(input.targetType),
-            payload: watchReviewEventPayload({
-                watch,
-                reviewTargetType: input.targetType,
-                sourceAction: "RESET_DRAFT",
-                fromStatus: input.fromStatus,
-                toStatus: input.toStatus,
-            }),
+            revokeEventKey: watchReviewEventKey(input.targetType, "APPROVE"),
+            fromStatus: input.fromStatus,
+            toStatus: input.toStatus,
         });
     } catch (error) {
         console.error("WORKFLOW_EMIT_UNAPPROVED_FAILED", {
@@ -610,7 +523,7 @@ export async function rejectWatchReview(input: RejectInput) {
     });
 
     const watch = await getWatchOrThrow(input.productId);
-    const rejectedEventKey = watchReviewRejectedEventKey(input.targetType);
+    const rejectedEventKey = watchReviewEventKey(input.targetType, "REJECT");
 
     const feedback = await createWatchReviewRejectionFeedback({
         productId: input.productId,
@@ -624,25 +537,18 @@ export async function rejectWatchReview(input: RejectInput) {
 
     await moveWatchToProcessingIfEditable(input.productId);
 
-    await recordBusinessEvent(prisma, {
-        eventKey: rejectedEventKey,
-        targetType: "WATCH",
-        targetId: watch.id,
-        targetAliasIds: watchReviewEventAliases(watch, feedback.id),
+    await emitWatchReviewBusinessEvent(prisma, {
+        watch,
+        reviewTargetType: input.targetType,
+        sourceAction: "REJECT",
         actorUserId: input.userId ?? null,
-        payload: {
-            ...watchReviewEventPayload({
-                watch,
-                reviewTargetType: input.targetType,
-                sourceAction: "REJECT",
-                fromStatus: current.status as ReviewStatus,
-                toStatus: "REJECTED",
-                sourceId: feedback.id,
-                feedbackId: feedback.id,
-                feedbackMessage: feedback.message,
-                feedbackCreatedAt: feedback.createdAt,
-            }),
-
+        fromStatus: current.status as ReviewStatus,
+        toStatus: "REJECTED",
+        sourceId: feedback.id,
+        feedbackId: feedback.id,
+        feedbackMessage: feedback.message,
+        feedbackCreatedAt: feedback.createdAt,
+        extraPayload: {
             feedbackId: feedback.id,
             feedbackMessage: feedback.message,
             feedbackCreatedAt: feedback.createdAt,

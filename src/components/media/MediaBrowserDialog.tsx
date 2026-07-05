@@ -46,6 +46,7 @@ type Props = {
     profile?: SharedMediaProfile;
     selectedKey?: string | null;
     selectedKeys?: string[];
+    disabledKeys?: string[];
     selectionMode?: "single" | "multiple";
     maxSelection?: number;
     title?: string;
@@ -125,6 +126,7 @@ export default function MediaBrowserDialog({
     profile = "inline",
     selectedKey,
     selectedKeys = [],
+    disabledKeys = [],
     selectionMode = "single",
     maxSelection = 9999,
     title = "Chọn ảnh từ thư viện",
@@ -144,6 +146,10 @@ export default function MediaBrowserDialog({
     const [totalCount, setTotalCount] = React.useState(0);
     const rootPrefix = React.useMemo(() => getRootPrefix(profile), [profile]);
     const profileLabel = getLabel(profile);
+    const disabledKeySet = React.useMemo(
+        () => new Set(disabledKeys.map((key) => String(key).trim()).filter(Boolean)),
+        [disabledKeys],
+    );
 
     const resetPagination = React.useCallback(() => {
         setNextCursor(null);
@@ -294,6 +300,8 @@ export default function MediaBrowserDialog({
     }, [open, prefix, profile, loadItems]);
 
     function toggleKey(fileKey: string) {
+        if (disabledKeySet.has(fileKey)) return;
+
         setInternalSelectedKeys((prev) => {
             const exists = prev.includes(fileKey);
             if (exists) return prev.filter((key) => key !== fileKey);
@@ -303,6 +311,8 @@ export default function MediaBrowserDialog({
     }
 
     function handleItemClick(fileKey: string) {
+        if (disabledKeySet.has(fileKey)) return;
+
         if (selectionMode === "single") {
             onSelect?.(fileKey);
             onClose();
@@ -496,6 +506,7 @@ export default function MediaBrowserDialog({
 
                                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
                                         {items.map((item) => {
+                                            const disabled = disabledKeySet.has(item.key);
                                             const selected =
                                                 selectionMode === "multiple"
                                                     ? internalSelectedKeys.includes(
@@ -514,6 +525,7 @@ export default function MediaBrowserDialog({
                                                 <button
                                                     key={item.key}
                                                     type="button"
+                                                    disabled={disabled}
                                                     onClick={() =>
                                                         handleItemClick(
                                                             item.key
@@ -521,6 +533,7 @@ export default function MediaBrowserDialog({
                                                     }
                                                     className={cx(
                                                         "relative overflow-hidden rounded-2xl border text-left transition",
+                                                        disabled && "cursor-not-allowed opacity-45",
                                                         selected
                                                             ? "border-slate-900 ring-1 ring-slate-900"
                                                             : "border-slate-200 hover:border-slate-300"
@@ -553,6 +566,12 @@ export default function MediaBrowserDialog({
                                                             ) : (
                                                                 <Check className="h-4 w-4" />
                                                             )}
+                                                        </div>
+                                                    ) : null}
+
+                                                    {disabled && !selected ? (
+                                                        <div className="absolute left-2 top-2 rounded-full bg-amber-100 px-2 py-1 text-[11px] font-semibold text-amber-800 ring-1 ring-amber-200">
+                                                            Đã chọn
                                                         </div>
                                                     ) : null}
 

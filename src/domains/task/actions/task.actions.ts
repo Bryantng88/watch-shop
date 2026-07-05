@@ -38,6 +38,12 @@ import {
 
 } from "../server/core/task.repo";
 import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
+import { parseWorkspaceDefinitionSnapshot } from "@/domains/blueprint/shared/workspace-capabilities";
+import {
+  completeWatchMediaProcessingFromQueueItem,
+  completeWatchPhotoshootFromQueueItem,
+  recallWatchMediaFromPublishQueueItem,
+} from "@/domains/watch/server/media-work";
 import { setTargetTagsRepo } from "../server/core/task.repo";
 
 import {
@@ -51,6 +57,7 @@ import {
   searchManualQueueTargets,
 } from "../server/business-binding.service";
 import type { BusinessBindingTargetType } from "../server/business-binding.types";
+import { isCoreWorkspaceBlueprint } from "../shared/workspace-flow-policy";
 
 function authActorLabel(auth: unknown) {
   const root = auth && typeof auth === "object" && !Array.isArray(auth)
@@ -64,6 +71,80 @@ function authActorLabel(auth: unknown) {
     name: user.name ?? root.name ?? null,
     email: user.email ?? root.email ?? null,
   };
+}
+
+function normalizeTextKey(value: unknown) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function blueprintIdentityFromNote(note?: string | null) {
+  const snapshot = parseWorkspaceDefinitionSnapshot(note);
+  const blueprintKey =
+    snapshot?.blueprintKey ??
+    String(note ?? "").match(/blueprintKey:\s*([^\r\n]+)/i)?.[1]?.trim();
+  const blueprintSource =
+    snapshot?.blueprintSource ??
+    String(note ?? "").match(/blueprintSource:\s*([^\r\n]+)/i)?.[1]?.trim();
+
+  if (!blueprintKey) return null;
+
+  return {
+    key: normalizeTextKey(blueprintKey),
+    source: String(blueprintSource || "REGISTRY").trim().toUpperCase(),
+  };
+}
+
+async function assertWorkspaceCreationAllowed(input: {
+  taskId: string;
+  title: string;
+  note?: string | null;
+  allowDuplicateBlueprint?: boolean;
+}) {
+  const existingItems = await prisma.taskItem.findMany({
+    where: {
+      taskId: input.taskId,
+      status: { not: TaskStatus.CANCELLED },
+    },
+    select: {
+      title: true,
+      note: true,
+      status: true,
+    },
+  });
+  const nextBlueprint = blueprintIdentityFromNote(input.note);
+  if (!nextBlueprint) return;
+
+  const duplicateTitle = existingItems.find(
+    (item) => normalizeTextKey(item.title) === normalizeTextKey(input.title),
+  );
+
+  if (duplicateTitle) {
+    throw new Error("Workspace name already exists in this Space.");
+  }
+
+  const duplicateBlueprint = existingItems.find((item) => {
+    if (item.status === TaskStatus.DONE) return false;
+    const current = blueprintIdentityFromNote(item.note);
+
+    return (
+      current?.key === nextBlueprint.key &&
+      current.source === nextBlueprint.source
+    );
+  });
+
+  if (duplicateBlueprint) {
+    if (isCoreWorkspaceBlueprint(nextBlueprint)) {
+      throw new Error(
+        "This core Blueprint can only have one active Workspace in this Space.",
+      );
+    }
+
+    if (input.allowDuplicateBlueprint) return;
+
+    throw new Error(
+      "This Blueprint already has an active Workspace in this Space. Confirm duplicate Blueprint creation before trying again.",
+    );
+  }
 }
 
 async function getTaskAuth() {
@@ -141,6 +222,7 @@ export async function createTaskItemAction(input: {
   priority?: TaskPriority | null;
   dueAt?: string | null;
   tagNames?: string[];
+  allowDuplicateBlueprint?: boolean;
 }) {
   const auth = await getTaskAuth();
 
@@ -150,11 +232,18 @@ export async function createTaskItemAction(input: {
   if (!cleanTaskId) throw new Error("Missing taskId");
   if (!cleanTitle) throw new Error("Vui lòng nhập nội dung subtask.");
 
+  await assertWorkspaceCreationAllowed({
+    taskId: cleanTaskId,
+    title: cleanTitle,
+    note: input.note ?? null,
+    allowDuplicateBlueprint: input.allowDuplicateBlueprint ?? false,
+  });
+
   const item = await createTaskItemRepo(prisma, {
     taskId: cleanTaskId,
     title: cleanTitle,
     note: input.note ?? null,
-    ownerUserId: auth.userId,
+    ownerUserId: getAuthUserId(auth),
     assignedToUserId: input.assignedToUserId || null,
     priority: input.priority || "MEDIUM",
     dueAt: input.dueAt || null,
@@ -654,7 +743,7 @@ export async function applyQueueItemManualTransitionAction(input: {
   if (!bindingId) throw new Error("Missing bindingId");
   if (!actionKey && !toState) throw new Error("Missing manual workflow action");
 
-  const result = await applyManualWorkflowAction(prisma, {
+  let result = await applyManualWorkflowAction(prisma, {
     bindingId,
     actionKey,
     toState,
@@ -663,12 +752,119 @@ export async function applyQueueItemManualTransitionAction(input: {
     note: input.note ?? null,
   });
 
+  if (
+    result.applied &&
+    result.workflowKey === "watch-photography" &&
+    result.toState === "IN_PROGRESS"
+  ) {
+    const nextResult = await applyManualWorkflowAction(prisma, {
+      bindingId,
+      actionKey: "mark-done",
+      actorUserId: getAuthUserId(auth),
+      actorLabel: auth?.user?.name ?? auth?.name ?? auth?.user?.email ?? auth?.email ?? null,
+      note: input.note ?? null,
+    });
+
+    if (nextResult.applied) {
+      result = nextResult;
+    }
+  }
+
+  if (
+    result.applied &&
+    result.workflowKey === "watch-publish" &&
+    result.toState === "RECALLED"
+  ) {
+    const recallResult = await recallWatchMediaFromPublishQueueItem({
+      bindingId,
+      actorUserId: getAuthUserId(auth),
+      note: input.note ?? null,
+    }, prisma);
+
+    if ("productId" in recallResult && recallResult.productId) {
+      revalidatePath("/admin/watches");
+      revalidatePath(`/admin/watches/${recallResult.productId}`);
+      revalidatePath(`/admin/watches/${recallResult.productId}/edit`);
+    }
+  }
+
+  if (result.applied && result.toState === "DONE") {
+    await completeWatchPhotoshootFromQueueItem({
+      bindingId,
+      actorUserId: getAuthUserId(auth),
+      note: input.note ?? null,
+    }, prisma);
+    const mediaProcessingResult = await completeWatchMediaProcessingFromQueueItem({
+      bindingId,
+      actorUserId: getAuthUserId(auth),
+      note: input.note ?? null,
+    }, prisma);
+
+    if ("productId" in mediaProcessingResult && mediaProcessingResult.productId) {
+      revalidatePath("/admin/watches");
+      revalidatePath(`/admin/watches/${mediaProcessingResult.productId}`);
+      revalidatePath(`/admin/watches/${mediaProcessingResult.productId}/edit`);
+    }
+  }
+
   revalidatePath("/admin/task-items");
   if (result.applied && result.taskItemId) {
     revalidatePath(`/admin/task-items/${result.taskItemId}`);
   }
 
   return { ok: true, result };
+}
+
+export async function applyQueueItemManualTransitionsAction(input: {
+  items: Array<{
+    bindingId: string;
+    actionKey?: string | null;
+    toState?: string | null;
+    note?: string | null;
+  }>;
+}) {
+  const items = (input.items ?? [])
+    .map((item) => ({
+      bindingId: String(item.bindingId ?? "").trim(),
+      actionKey: String(item.actionKey ?? "").trim(),
+      toState: String(item.toState ?? "").trim(),
+      note: item.note ?? null,
+    }))
+    .filter((item) => item.bindingId && (item.actionKey || item.toState));
+
+  if (!items.length) throw new Error("Missing manual workflow items");
+
+  const results: Array<{
+    bindingId: string;
+    ok: boolean;
+    reason?: string;
+  }> = [];
+
+  for (const item of items) {
+    try {
+      const result = await applyQueueItemManualTransitionAction(item);
+      results.push({
+        bindingId: item.bindingId,
+        ok: Boolean(result.result.applied),
+        reason: result.result.reason,
+      });
+    } catch (error) {
+      results.push({
+        bindingId: item.bindingId,
+        ok: false,
+        reason: error instanceof Error ? error.message : "UNKNOWN_ERROR",
+      });
+    }
+  }
+
+  revalidatePath("/admin/task-items");
+
+  return {
+    ok: results.every((result) => result.ok),
+    applied: results.filter((result) => result.ok).length,
+    failed: results.filter((result) => !result.ok).length,
+    results,
+  };
 }
 
 export async function searchManualQueueTargetsAction(input: {

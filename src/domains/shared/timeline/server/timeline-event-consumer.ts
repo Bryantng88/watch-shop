@@ -51,7 +51,7 @@ function isBusinessBindingTargetType(
     return BUSINESS_BINDING_TARGET_TYPES.has(value);
 }
 
-function getTimelineTitle(eventKey: string) {
+export function getTimelineTitle(eventKey: string) {
     const titles: Record<string, string> = {
         "watch.content.submitted": "Đã gửi duyệt nội dung",
         "watch.content.rejected": "Content watch bị trả về",
@@ -59,9 +59,31 @@ function getTimelineTitle(eventKey: string) {
         "watch.image.submitted": "Đã gửi duyệt hình ảnh",
         "watch.image.rejected": "Hình ảnh watch bị trả về",
         "watch.image.approved": "Hình ảnh watch đã được duyệt",
+        "watch.media.recalled": "Media đã được thu hồi về xử lý",
     };
 
     return titles[eventKey] ?? eventKey;
+}
+
+export function getTimelineBody(metadataJson: unknown) {
+    const metadata = asRecord(metadataJson);
+    const title = clean(metadata.watchTitle) || clean(metadata.title);
+    const ref = clean(metadata.sku) || clean(metadata.ref);
+    const reviewTargetType = clean(metadata.reviewTargetType);
+    const fromStatus = clean(metadata.fromStatus);
+    const toStatus = clean(metadata.toStatus);
+    const feedbackMessage = clean(metadata.feedbackMessage);
+    const parts = [
+        title ? `Watch: ${title}` : null,
+        ref ? `Ref: ${ref}` : null,
+        reviewTargetType ? `Review: ${reviewTargetType}` : null,
+        fromStatus || toStatus
+            ? `Status: ${fromStatus || "-"} -> ${toStatus || "-"}`
+            : null,
+        feedbackMessage ? `Feedback: ${feedbackMessage}` : null,
+    ].filter(Boolean);
+
+    return parts.length ? parts.join("\n") : null;
 }
 
 async function findRelatedTaskItemIdsForBusinessEvent(
@@ -137,7 +159,7 @@ export async function projectBusinessEventToTaskItemTimeline(
                     occurredAt: toDate(event.createdAt),
                     actorUserId: event.actorUserId ?? null,
                     title: getTimelineTitle(eventKey) || null,
-                    bodySnapshot: null,
+                    bodySnapshot: getTimelineBody(event.metadataJson),
                     metadataJson: {
                         eventKey: event.eventKey ?? null,
                         targetType: event.targetType ?? null,
@@ -268,6 +290,7 @@ export async function projectBusinessEventToTaskItemActivity(
     const feedbackMessage = clean(metadata.feedbackMessage);
     const feedbackCreatedAt = clean(metadata.feedbackCreatedAt);
     const title = getTimelineTitle(eventKey) || eventKey || "Business event";
+    const body = getTimelineBody(event.metadataJson);
 
     const activities = await Promise.all(
         taskItemIds.map((taskItemId) =>
@@ -276,7 +299,7 @@ export async function projectBusinessEventToTaskItemActivity(
                     taskItemId,
                     sourceId: businessEventLogId,
                     title,
-                    body: null,
+                    body,
                     actorUserId: event.actorUserId ?? null,
                     metadataJson: {
                         eventKey: event.eventKey ?? null,

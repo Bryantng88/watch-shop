@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ClipboardList, ImageIcon } from "lucide-react";
+import { ImageIcon } from "lucide-react";
 import { TaskKind } from "@prisma/client";
 import MediaPickerMulti, {
     type PickedMediaItem,
@@ -16,12 +16,14 @@ import TaskQuickCreateModal, {
     type TaskQuickCreateContext,
     type TaskUserOption,
 } from "@/domains/task/ui/quick-create/TaskQuickCreateModal";
-import type { TaskTypeOption } from "@/domains/task/server/task-type.types";
-import {
-    TaskSignalIcon,
-    WatchImageSectionSignalIcon,
-} from "@/domains/shared/ui/icons";
+import { TaskSignalIcon } from "@/domains/shared/ui/icons";
 type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
+
+type MediaItemWithAliases = PickedMediaItem & {
+    fileKey?: string | null;
+    imageUrl?: string | null;
+    src?: string | null;
+};
 
 type Props = {
     poolImages: PickedMediaItem[];
@@ -43,6 +45,7 @@ type Props = {
     watchTitle?: string | null;
     isFormDirty?: boolean;
     openTaskCount?: number;
+    hideReviewActions?: boolean;
 };
 
 function normalizeStatus(status?: string | null): ReviewStatus {
@@ -60,9 +63,11 @@ function normalizeStatus(status?: string | null): ReviewStatus {
 }
 
 function getMediaKey(item: PickedMediaItem) {
+    const media = item as MediaItemWithAliases;
+
     return String(
-        (item as any)?.key ??
-        (item as any)?.fileKey ??
+        media.key ??
+        media.fileKey ??
         ""
     ).trim();
 }
@@ -96,6 +101,7 @@ export default function WatchImageSection({
     onBeforeSubmitReview,
     isFormDirty,
     openTaskCount = 0,
+    hideReviewActions = false,
 }: Props) {
     const dialog = useAppDialog();
     const notify = useNotify();
@@ -211,7 +217,7 @@ export default function WatchImageSection({
                     descriptionPreset: "",
                 });
                 setTaskModalOpen(true);
-            } catch (err: any) {
+            } catch (err: unknown) {
                 notify.error({
                     title: "Không thể mở tạo task",
                     message: err?.message || "Có lỗi xảy ra khi tải dữ liệu task.",
@@ -227,6 +233,7 @@ export default function WatchImageSection({
                 title="Hình ảnh"
                 subtitle="Chỉ quản lý ảnh gallery của watch. Ảnh đại diện dùng role INLINE riêng."
                 actions={
+                    hideReviewActions ? null :
                     <div className="flex flex-wrap items-center justify-end gap-2">
                         <TaskSignalIcon
                             title={taskPending ? "Đang tải task..." : "Giao task hình ảnh"}
@@ -302,8 +309,8 @@ export default function WatchImageSection({
                             contextImage={{
                                 src:
                                     inlineImage?.url ??
-                                    (inlineImage as any)?.imageUrl ??
-                                    (inlineImage as any)?.src ??
+                                    (inlineImage as MediaItemWithAliases | null)?.imageUrl ??
+                                    (inlineImage as MediaItemWithAliases | null)?.src ??
                                     null,
                                 title: watchTitle || "Watch đang chỉnh",
                                 subtitle: "Ảnh đại diện INLINE của watch hiện tại",

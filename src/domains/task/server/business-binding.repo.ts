@@ -155,6 +155,7 @@ export async function findBusinessBindingsByTaskItem(
   return client.taskExecution.findMany({
     where: {
       taskItemId: cleanTaskItemId,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
     },
     select: BUSINESS_BINDING_SELECT,
     orderBy: { createdAt: "desc" },

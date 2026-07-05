@@ -51,6 +51,7 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
     return {
         watchId: s(detail?.watchId),
         productId: s(detail?.productId),
+        specStatus: s(detail?.watch?.specStatus || detail?.specStatus || "PENDING"),
         contentReviewStatus,
         contentReviewNote,
         imageReviewStatus,

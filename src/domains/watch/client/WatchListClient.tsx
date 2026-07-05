@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
+import {
+    useAppProgress,
+    type AppProgressStep,
+} from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import React from "react";
 import { WatchListToolbar } from "../ui/list";
@@ -21,6 +24,10 @@ import type {
     WatchRow,
 } from "../ui/list/types";
 import { WatchServiceQuickModal } from "@/domains/service/ui/quick-service";
+import {
+    markWatchMediaAssetAttachedFromWatchAction,
+    requestWatchPhotoshootAction,
+} from "./media-work/watch-media-work.actions";
 import RaiseWorkCaseModal, { type RaiseWorkCaseSourceContext } from "@/domains/work-case/ui/RaiseWorkCaseModal";
 import { getTaskQuickCreateDataAction } from "@/domains/task/actions/task.actions";
 import TaskQuickCreateModal, {
@@ -328,6 +335,8 @@ export default function WatchListClient(props: WatchListClientProps) {
     const [filters, setFilters] = useState<WatchFilterFormState>(() => filterStateFromParams(urlParams));
     const [isLoading, setIsLoading] = useState(false);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [photoshootSubmitting, setPhotoshootSubmitting] = useState(false);
+    const [mediaReviewSubmitting, setMediaReviewSubmitting] = useState(false);
 
     /**
      * URL state and server props must be synced separately.
@@ -363,7 +372,19 @@ export default function WatchListClient(props: WatchListClientProps) {
         }
     }, [pathname, router, sp]);
 
-    const rows = listData.items ?? [];
+    const rows = useMemo(() => listData.items ?? [], [listData.items]);
+    const selectedRows = useMemo(
+        () => rows.filter((row) => selectedIds.includes(row.id)),
+        [rows, selectedIds],
+    );
+    const photoshootEligibleRows = useMemo(
+        () => selectedRows.filter((row) => !row.hasImages && Number(row.imagesCount ?? 0) <= 0),
+        [selectedRows],
+    );
+    const mediaReviewEligibleRows = useMemo(
+        () => selectedRows.filter((row) => row.hasContent && row.hasImages && row.productId),
+        [selectedRows],
+    );
 
     const currentView = useMemo(
         () => normalizeView(params.get("view")),
@@ -511,6 +532,133 @@ export default function WatchListClient(props: WatchListClientProps) {
 
     function onToggleAll(checked: boolean) {
         setSelectedIds(checked ? displayRows.map((x) => x.id) : []);
+    }
+
+    async function requestSelectedPhotoshoot() {
+        if (!photoshootEligibleRows.length || photoshootSubmitting) return;
+
+        setPhotoshootSubmitting(true);
+
+        try {
+            const result = await requestWatchPhotoshootAction({
+                watchIds: photoshootEligibleRows.map((row) => row.id),
+                note: "Requested from Watch list bulk action.",
+            });
+
+            notify.success({
+                title: "Đã gửi sang Photoshoot",
+                message: `${result.requested} watch được gửi, ${result.skipped} watch bỏ qua.`,
+            });
+            setSelectedIds([]);
+
+            const next = new URLSearchParams(params.toString());
+            await loadList(next, { meta: "lite" });
+        } catch (error) {
+            notify.error({
+                title: "Không thể gửi Photoshoot",
+                message:
+                    error instanceof Error
+                        ? error.message
+                        : "Không thể gửi danh sách watch sang Photoshoot.",
+            });
+        } finally {
+            setPhotoshootSubmitting(false);
+        }
+    }
+
+    async function requestSelectedMediaReview() {
+        if (!mediaReviewEligibleRows.length || mediaReviewSubmitting) return;
+
+        setMediaReviewSubmitting(true);
+        const total = mediaReviewEligibleRows.length;
+        const steps: AppProgressStep[] = mediaReviewEligibleRows.map((row, index) => ({
+            id: row.id,
+            label: row.title || row.sku || row.productId,
+            detail: `Chờ gửi sang WP Xử lý Media (${index + 1}/${total})`,
+            status: "pending",
+        }));
+
+        progress.show({
+            title: "Đang gửi sang WP Xử lý Media",
+            message: `0/${total} watch hoàn tất`,
+            steps,
+        });
+
+        try {
+            let sent = 0;
+            let skipped = 0;
+
+            for (let index = 0; index < mediaReviewEligibleRows.length; index += 1) {
+                const row = mediaReviewEligibleRows[index];
+                steps[index] = {
+                    ...steps[index],
+                    status: "running",
+                    detail: `Đang move ${row.title || row.sku || row.productId} sang WP Xử lý Media`,
+                };
+                progress.update({
+                    message: `${index}/${total} watch hoàn tất`,
+                    steps: [...steps],
+                });
+
+                try {
+                    const result = await markWatchMediaAssetAttachedFromWatchAction({
+                        productId: row.productId,
+                        note: "Submitted to Media Processing review from Watch list bulk action.",
+                    });
+
+                    if (result.skipped) {
+                        skipped += 1;
+                        steps[index] = {
+                            ...steps[index],
+                            status: "skipped",
+                            detail: result.reason ?? "Watch đã được bỏ qua.",
+                        };
+                    } else {
+                        sent += 1;
+                        steps[index] = {
+                            ...steps[index],
+                            status: "done",
+                            detail: "Đã gửi vào WP Xử lý Media.",
+                        };
+                    }
+                } catch (error) {
+                    skipped += 1;
+                    steps[index] = {
+                        ...steps[index],
+                        status: "error",
+                        detail:
+                            error instanceof Error
+                                ? error.message
+                                : "Không thể gửi watch này.",
+                    };
+                }
+
+                progress.update({
+                    message: `${index + 1}/${total} watch hoàn tất`,
+                    steps: [...steps],
+                });
+            }
+
+            notify.success({
+                title: "Đã gửi sang Xử lý Media",
+                message: `${sent} watch được gửi duyệt, ${skipped} watch bỏ qua.`,
+            });
+            setSelectedIds([]);
+
+            const next = new URLSearchParams(params.toString());
+            await loadList(next, { meta: "lite" });
+        } catch (error) {
+            notify.error({
+                title: "Không thể gửi Xử lý Media",
+                message:
+                    error instanceof Error
+                        ? error.message
+                        : "Không thể gửi danh sách watch sang Workspace Xử lý Media.",
+            });
+        } finally {
+            setMediaReviewSubmitting(false);
+            window.setTimeout(() => progress.hide(), 1200);
+        }
     }
 
     function navigateWithProgress(href: string, title = "Đang chuyển trang") {
@@ -680,7 +828,15 @@ export default function WatchListClient(props: WatchListClientProps) {
 
     return (
         <div className="mx-auto w-full max-w-[1360px] min-w-0 space-y-5 px-4 pt-6 lg:px-5 xl:px-6">
-            <WatchListToolbar selectedCount={selectedIds.length} />
+            <WatchListToolbar
+                selectedCount={selectedIds.length}
+                photoshootEligibleCount={photoshootEligibleRows.length}
+                mediaReviewEligibleCount={mediaReviewEligibleRows.length}
+                submittingPhotoshoot={photoshootSubmitting}
+                submittingMediaReview={mediaReviewSubmitting}
+                onRequestPhotoshoot={requestSelectedPhotoshoot}
+                onRequestMediaReview={requestSelectedMediaReview}
+            />
 
             <WatchListViewTabs
                 value={currentView}

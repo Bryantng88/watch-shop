@@ -25,17 +25,20 @@ export async function POST(
         const state = await markWatchPostUsage({
             productId: params.id,
             kind: body.action,
+            actorUserId: auth.id,
         });
 
         return NextResponse.json({
             success: true,
             ...state,
         });
-    } catch (error: any) {
+    } catch (error) {
         return NextResponse.json(
             {
                 success: false,
-                error: error?.message || "Không thể cập nhật trạng thái đăng bài.",
+                error: error instanceof Error
+                    ? error.message
+                    : "Không thể cập nhật trạng thái đăng bài.",
             },
             { status: 400 }
         );

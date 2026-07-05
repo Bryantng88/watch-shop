@@ -1,3 +1,7 @@
+import type { WorkflowDefinition } from "@/domains/workflow-definition/server";
+import type { WorkspaceEventBinding } from "./event-bindings";
+import type { WorkspaceProvisioningPolicy } from "./workspace-provisioning";
+
 export type WorkspaceCapabilities = {
   workflow: boolean;
   items: boolean;
@@ -21,6 +25,9 @@ export type WorkspaceDefinitionSnapshot = {
   workspaceType?: string;
   instantiationNotes?: string | null;
   snapshotAt?: string;
+  eventBindings?: WorkspaceEventBinding[];
+  provisioning?: WorkspaceProvisioningPolicy;
+  appliedWorkflowSnapshot?: WorkflowDefinition | null;
   workspaceDefinition?: {
     defaultName?: string;
     defaultDescription?: string | null;
@@ -28,6 +35,8 @@ export type WorkspaceDefinitionSnapshot = {
     itemLabel?: string;
     defaultView?: string;
     instantiationNotes?: string | null;
+    provisioning?: WorkspaceProvisioningPolicy;
+    eventBindings?: WorkspaceEventBinding[];
     enabledCapabilities?: Partial<WorkspaceCapabilities>;
   };
   enabledCapabilities?: Partial<WorkspaceCapabilities>;
@@ -66,6 +75,55 @@ export function parseWorkspaceDefinitionSnapshot(
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function clean(value: unknown) {
+  return String(value ?? "").trim();
+}
+
+export function createAppliedWorkflowSnapshot(
+  definition: WorkflowDefinition | null | undefined,
+): WorkflowDefinition | null {
+  if (!definition) return null;
+
+  return JSON.parse(JSON.stringify(definition)) as WorkflowDefinition;
+}
+
+export function resolveAppliedWorkflowSnapshot(input: {
+  note?: string | null;
+  snapshot?: WorkspaceDefinitionSnapshot | null;
+  metadataJson?: unknown;
+}): WorkflowDefinition | null {
+  const metadata = isRecord(input.metadataJson) ? input.metadataJson : {};
+  const metadataSnapshot = metadata.appliedWorkflowSnapshot;
+  if (isWorkflowDefinitionLike(metadataSnapshot)) {
+    return metadataSnapshot;
+  }
+
+  const workspaceSnapshot =
+    input.snapshot ?? parseWorkspaceDefinitionSnapshot(input.note) ?? null;
+  const appliedSnapshot = workspaceSnapshot?.appliedWorkflowSnapshot;
+  if (isWorkflowDefinitionLike(appliedSnapshot)) return appliedSnapshot;
+
+  return null;
+}
+
+function isWorkflowDefinitionLike(
+  value: unknown,
+): value is WorkflowDefinition {
+  if (!isRecord(value)) return false;
+
+  return Boolean(
+    clean(value.key) &&
+      clean(value.initialState) &&
+      Array.isArray(value.states) &&
+      Array.isArray(value.transitions) &&
+      Array.isArray(value.terminalStates),
+  );
+}
+
 export function resolveWorkspaceCapabilities(input: {
   note?: string | null;
   snapshot?: WorkspaceDefinitionSnapshot | null;
@@ -77,8 +135,23 @@ export function resolveWorkspaceCapabilities(input: {
     snapshot?.enabledCapabilities ??
     null;
 
-  return {
+  return normalizeWorkspaceCapabilities({
     ...DEFAULT_WORKSPACE_CAPABILITIES,
     ...(enabled ?? {}),
+  });
+}
+
+export function normalizeWorkspaceCapabilities(
+  capabilities: Partial<WorkspaceCapabilities>,
+): WorkspaceCapabilities {
+  const normalized = {
+    ...DEFAULT_WORKSPACE_CAPABILITIES,
+    ...capabilities,
   };
+
+  if (!normalized.items) {
+    normalized.workflow = false;
+  }
+
+  return normalized;
 }

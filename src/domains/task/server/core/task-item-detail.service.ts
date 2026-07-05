@@ -1,4 +1,5 @@
 import { TaskKind } from "@prisma/client";
+import { parseWorkspaceDefinitionSnapshot } from "@/domains/blueprint/shared/workspace-capabilities";
 import type { DB } from "@/server/db/client";
 import { getTaskItemDetailPageRepo } from "./task-item-detail.repo";
 
@@ -61,6 +62,7 @@ function authCanViewAllTasks(auth: unknown): boolean {
   const user = asRecord(authRecord.user);
   const role = asRecord(authRecord.role);
   const userRole = asRecord(user.role);
+  const roles = authRecord.roles ?? user.roles ?? [];
 
   const roleName = (
     text(user.role) ||
@@ -75,7 +77,10 @@ function authCanViewAllTasks(auth: unknown): boolean {
 
   return (
     roleName === "ADMIN" ||
-    (Array.isArray(permissions) && permissions.includes("TASK_VIEW_ALL"))
+    (Array.isArray(roles) &&
+      roles.map((item) => text(item).toUpperCase()).includes("ADMIN")) ||
+    (Array.isArray(permissions) &&
+      (permissions.includes("TASK_VIEW_ALL") || permissions.includes("ADMIN")))
   );
 }
 
@@ -91,6 +96,19 @@ function authRoles(auth: unknown) {
 function shareGroupFromNote(note?: string | null) {
   const match = String(note ?? "").match(/shareGroupKey:\s*([a-z0-9-]+)/i);
   return match ? match[1].trim().toUpperCase() : null;
+}
+
+function shareGroupFromBlueprintSnapshot(note?: string | null) {
+  const snapshot = parseWorkspaceDefinitionSnapshot(note);
+  const eventBindings =
+    snapshot?.eventBindings ??
+    snapshot?.workspaceDefinition?.eventBindings ??
+    [];
+  const scopeContext = Array.isArray(eventBindings)
+    ? eventBindings.find((binding) => binding?.scopeContext)?.scopeContext
+    : null;
+
+  return scopeContext ? String(scopeContext).trim().toUpperCase() : null;
 }
 
 function workTypeKeyFromNote(note?: string | null) {
@@ -133,7 +151,9 @@ function assertCanAccessTaskItemDetail(item: TaskItemAccessShape, auth: unknown)
 
   if (item.task.kind && SHARED_TASK_KINDS.has(item.task.kind) && isSystemOwned(item)) {
     const shareGroupKey =
-      shareGroupFromNote(item.note) ?? defaultShareGroupForTaskKind(item.task.kind);
+      shareGroupFromNote(item.note) ??
+      shareGroupFromBlueprintSnapshot(item.note) ??
+      defaultShareGroupForTaskKind(item.task.kind);
     if (shareGroupKey && authRoles(auth).includes(shareGroupKey)) return;
   }
 

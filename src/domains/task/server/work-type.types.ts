@@ -5,6 +5,8 @@ export type WorkTypeCoordinationContext =
   | "OPERATION"
   | "SALES"
   | "TECHNICAL"
+  | "MEDIA"
+  | "PAYMENT"
   | "GENERAL";
 
 export type WorkTypeDefinition = {

@@ -32,6 +32,10 @@ export async function getWatchPostUsageStateRepo(tx: Tx, productId: string) {
             product: {
                 select: {
                     id: true,
+                    title: true,
+                    sku: true,
+                    primaryImageUrl: true,
+                    status: true,
                     productImage: {
                         where: {
                             role: "GALLERY",

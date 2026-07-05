@@ -1,3 +1,5 @@
+import { WATCH_BUSINESS_EVENT_DEFINITIONS } from "@/domains/watch/server/events/watch-business-event.contract";
+
 export type BusinessEventTargetType =
     | "WATCH"
     | "ORDER"
@@ -17,69 +19,19 @@ export type BusinessEventDefinition = {
     targetType: BusinessEventTargetType;
     group: string;
     description?: string;
+    status?: string;
+    businessMeaning?: string;
+    producer?: string | null;
+    emitPoint?: string | null;
+    targetIdPolicy?: string;
+    targetAliasPolicy?: string;
+    payloadContract?: string;
+    knownConsumers?: string[];
+    autoBindingScope?: string | null;
 };
 
 export const BUSINESS_EVENTS: BusinessEventDefinition[] = [
-    {
-        key: "watch.content.submitted",
-        label: "Watch content submitted",
-        targetType: "WATCH",
-        group: "Watch",
-    },
-    {
-        key: "watch.image.submitted",
-        label: "Watch image submitted",
-        targetType: "WATCH",
-        group: "Watch",
-    },
-    {
-        key: "watch.content.approved",
-        label: "Watch đã duyệt nội dung",
-        targetType: "WATCH",
-        group: "Watch",
-    },
-    {
-        key: "watch.content.rejected",
-        label: "Watch content rejected",
-        targetType: "WATCH",
-        group: "Watch",
-    },
-    {
-        key: "watch.image.approved",
-        label: "Watch đã duyệt hình ảnh",
-        targetType: "WATCH",
-        group: "Watch",
-    },
-    {
-        key: "watch.image.rejected",
-        label: "Watch image rejected",
-        targetType: "WATCH",
-        group: "Watch",
-    },
-    {
-        key: "watch.content.modified",
-        label: "Watch đã sửa nội dung",
-        targetType: "WATCH",
-        group: "Watch",
-    },
-    {
-        key: "watch.ready",
-        label: "Watch sẵn sàng bán",
-        targetType: "WATCH",
-        group: "Watch",
-    },
-    {
-        key: "watch.saleStage.posted",
-        label: "Watch đã post",
-        targetType: "WATCH",
-        group: "Watch",
-    },
-    {
-        key: "watch.sold",
-        label: "Watch đã bán",
-        targetType: "WATCH",
-        group: "Watch",
-    },
+    ...WATCH_BUSINESS_EVENT_DEFINITIONS,
     {
         key: "order.posted",
         label: "Order đã post",
@@ -133,7 +85,7 @@ export const BUSINESS_EVENTS: BusinessEventDefinition[] = [
         label: "Task item được tạo",
         targetType: "GENERAL",
         group: "Task",
-    }
+    },
 ];
 
 export function normalizeBusinessEventKey(value: unknown) {

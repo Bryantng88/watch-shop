@@ -2,6 +2,8 @@ export type CoordinationContext =
   | "OPERATION"
   | "SALES"
   | "TECHNICAL"
+  | "MEDIA"
+  | "PAYMENT"
   | "GENERAL";
 
 export type CoordinationWeekRange = {

@@ -67,10 +67,29 @@ introduced.
 - Workspace creation writes `blueprintSnapshot` into the Workspace note.
 - Workspace detail reads the snapshot from the note.
 - Capability UI enforcement resolves capabilities from the Workspace snapshot.
+- Workspace presentation reads type, Item label, default view, capabilities, and
+  default description from the snapshot.
+- Workspace creation stores the applied Workflow snapshot inside
+  `blueprintSnapshot`.
+- New Items copy the Workspace applied Workflow snapshot into Item metadata.
+- Manual workflow actions and BusinessEvent transitions resolve Workflow from
+  the Item applied snapshot first, then legacy keys for older Items.
 - Draft Blueprint selection uses a distinct selection key so registry and draft
   Blueprints cannot be confused in the create flow.
 - Manual workflow draft actions are normalized so authoring can validate older
   draft transitions that have labels but missing action keys.
+
+## M1 Closure
+
+Blueprint Milestone M1 is closed as PASS.
+
+Closed contract:
+
+- Blueprint defines.
+- Workspace snapshots.
+- Item Runtime executes.
+
+See `docs/sprints/SM-M1-blueprint-completion-handoff.md` for the M1 handoff.
 
 ## Not Implemented
 

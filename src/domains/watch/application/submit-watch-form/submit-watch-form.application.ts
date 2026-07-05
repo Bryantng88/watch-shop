@@ -2,7 +2,7 @@ import { prisma } from "@/server/db/client";
 import { markGalleryMediaAssetsAttached } from "@/domains/media/server";
 import { notifyUsersByRole } from "@/app/(admin)/admin/notifications/notification.service";
 
-import { TaskKind } from "@prisma/client";
+import { WatchSpecStatus } from "@prisma/client";
 import type { WatchFormValues } from "../../client/form/watch-form.types";
 import { replaceWatchGalleryImagesRepo } from "../../server/media";
 import {
@@ -79,6 +79,14 @@ function hasContentSnapshotData(
         Boolean(content.hashTags) ||
         content.bulletSpecs.length > 0
     );
+}
+
+function normalizeSpecStatusForSubmit(value?: string | null): WatchSpecStatus {
+    const status = String(value ?? "PENDING").toUpperCase();
+    if (status === WatchSpecStatus.PARTIAL) return WatchSpecStatus.PARTIAL;
+    if (status === WatchSpecStatus.READY) return WatchSpecStatus.READY;
+    if (status === WatchSpecStatus.FAILED) return WatchSpecStatus.FAILED;
+    return WatchSpecStatus.PENDING;
 }
 
 
@@ -297,6 +305,37 @@ async function syncProductPostTargets(
     }
 }
 
+async function assertMediaWorkspaceAssetsAvailable(input: {
+    productId: string;
+    keys: string[];
+}) {
+    const keys = Array.from(new Set(input.keys.map((key) => key.trim()).filter(Boolean)));
+
+    if (!keys.length) return;
+
+    const reserved = await prisma.mediaAsset.findFirst({
+        where: {
+            key: { in: keys },
+            productId: {
+                not: input.productId,
+            },
+            status: {
+                in: ["CHOSEN", "ATTACHED"] as any,
+            },
+        },
+        select: {
+            key: true,
+            productId: true,
+        },
+    });
+
+    if (!reserved) return;
+
+    throw new Error(
+        `Ảnh ${reserved.key} đang được chọn cho watch khác, không thể lưu trùng.`,
+    );
+}
+
 export async function submitWatchFormApplication(
     values: WatchFormValues,
     context: SubmitWatchFormContext,
@@ -336,6 +375,7 @@ export async function submitWatchFormApplication(
     });
 
     const saveIntent = String((values as any).saveIntent ?? "NORMAL").toUpperCase();
+    const isMediaWorkspaceSave = saveIntent === "MEDIA_WORKSPACE";
 
     const afterContent =
         saveIntent === "SUBMIT_IMAGE"
@@ -446,6 +486,7 @@ export async function submitWatchFormApplication(
                 movementCalibre: values.basic.movementCalibre || null,
                 serialNumber: values.basic.serialNumber || null,
                 yearText: values.basic.yearText || null,
+                specStatus: normalizeSpecStatusForSubmit(values.specStatus),
             },
         });
 
@@ -543,6 +584,15 @@ export async function submitWatchFormApplication(
         return key && !galleryOriginalKeys.has(key);
     });
 
+    if (isMediaWorkspaceSave) {
+        await assertMediaWorkspaceAssetsAvailable({
+            productId,
+            keys: [...remainingPoolImages, ...requestedGalleryImages]
+                .map(mediaKey)
+                .filter(Boolean),
+        });
+    }
+
     // Release persisted pool images that the user removed before moving/saving
     // the new gallery/pool state. This keeps MediaAsset + NAS in sync.
     await releaseRemovedWatchPoolImagesToActive({
@@ -560,12 +610,25 @@ export async function submitWatchFormApplication(
         { productId },
     );
 
-    const galleryImageInputs = normalizedGalleryImages.map((item, index) => ({
-        fileKey: String(item.key),
-        isForAdmin: true,
-        isForStorefront: true,
-        sortOrder: index,
-    }));
+    const galleryImageInputs = normalizedGalleryImages
+        .map((item, index) => {
+            const key = mediaKey(item);
+
+            if (!key) return null;
+
+            return {
+                fileKey: key,
+                isForAdmin: true,
+                isForStorefront: true,
+                sortOrder: index,
+            };
+        })
+        .filter(Boolean) as Array<{
+            fileKey: string;
+            isForAdmin: boolean;
+            isForStorefront: boolean;
+            sortOrder: number;
+        }>;
 
     await replaceWatchGalleryImagesRepo(prisma as any, {
         productId,
@@ -588,16 +651,18 @@ export async function submitWatchFormApplication(
         hasGalleryImages,
     });
 
-    const pricingResult = await updateWatchPricingWithDiff(productId, {
-        salePrice: values.pricing.salePrice,
-        minPrice: values.pricing.minPrice,
-        costPrice: values.pricing.costPrice,
-        serviceCost: values.pricing.serviceCost,
-        landedCost: values.pricing.landedCost,
-        pricingNote: values.pricing.pricingNote,
-    });
+    const pricingResult = isMediaWorkspaceSave
+        ? { changedFields: [], product: null }
+        : await updateWatchPricingWithDiff(productId, {
+            salePrice: values.pricing.salePrice,
+            minPrice: values.pricing.minPrice,
+            costPrice: values.pricing.costPrice,
+            serviceCost: values.pricing.serviceCost,
+            landedCost: values.pricing.landedCost,
+            pricingNote: values.pricing.pricingNote,
+        });
 
-    if (pricingResult.changedFields.length > 0) {
+    if (!isMediaWorkspaceSave && pricingResult.changedFields.length > 0) {
         await notifyUsersByRole({
             role: "SALE",
             type: "WATCH_PRICE_UPDATED",

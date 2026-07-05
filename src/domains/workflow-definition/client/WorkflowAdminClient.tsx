@@ -6,6 +6,7 @@ import type {
 } from "@/domains/event/server/business-event-catalog.service";
 import type {
   BlueprintCapability,
+  BlueprintEventBindingAuditItem,
   BlueprintExperience,
   BlueprintLibraryItem,
   BlueprintWorkspaceDefinition,
@@ -16,10 +17,12 @@ import type {
   WorkflowStateDefinition,
   WorkflowTransitionDefinition,
 } from "@/domains/workflow-definition/server";
+import { normalizeWorkspaceCapabilities } from "@/domains/blueprint/shared/workspace-capabilities";
 
 type Props = {
   blueprints: BlueprintLibraryItem[];
   businessEvents: BusinessEventCatalogItem[];
+  eventBindingAudit: BlueprintEventBindingAuditItem[];
   initialDrafts: WorkflowDefinitionDraft[];
 };
 
@@ -57,6 +60,13 @@ function draftStatusLabel(status: WorkflowDefinitionDraft["status"]) {
 
 function fmtJson(value: unknown) {
   return JSON.stringify(value, null, 2);
+}
+
+function eventStatusTone(status: string) {
+  if (status === "ACTIVE") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (status === "DEPRECATED") return "border-rose-200 bg-rose-50 text-rose-700";
+
+  return "border-amber-200 bg-amber-50 text-amber-700";
 }
 
 function actionKeyFromLabel(label: string | null | undefined, index: number) {
@@ -263,7 +273,9 @@ function draftBlueprintJson(
 function workspaceCapabilityCards(
   workspaceDefinition: BlueprintWorkspaceDefinition,
 ): BlueprintCapability[] {
-  const capabilities = workspaceDefinition.enabledCapabilities;
+  const capabilities = normalizeWorkspaceCapabilities(
+    workspaceDefinition.enabledCapabilities,
+  );
 
   return [
     {
@@ -495,6 +507,7 @@ function DraftList({
 export default function WorkflowAdminClient({
   blueprints,
   businessEvents,
+  eventBindingAudit,
   initialDrafts,
 }: Props) {
   const registryBlueprints = useMemo(
@@ -572,6 +585,12 @@ export default function WorkflowAdminClient({
   ).length;
   const validDraftCount = drafts.filter((draft) => draft.validationJson?.valid).length;
   const eventKeys = new Set(businessEvents.map((event) => event.eventKey));
+  const activeEventBindingCount = eventBindingAudit.filter(
+    (item) => item.status === "ACTIVE",
+  ).length;
+  const eventBindingConflictCount = eventBindingAudit.filter(
+    (item) => item.hasConflict,
+  ).length;
 
   function replaceDraft(next: WorkflowDefinitionDraft) {
     setDrafts((current) => {
@@ -741,12 +760,15 @@ export default function WorkflowAdminClient({
     patch: Partial<BlueprintWorkspaceDefinition["enabledCapabilities"]>,
   ) {
     if (!detailWorkspaceDefinition) return;
+    const nextCapabilities = normalizeWorkspaceCapabilities({
+      ...detailWorkspaceDefinition.enabledCapabilities,
+      ...patch,
+      ...(patch.items === false ? { workflow: false } : {}),
+      ...(patch.workflow === true ? { items: true } : {}),
+    });
 
     patchWorkspaceDefinition({
-      enabledCapabilities: {
-        ...detailWorkspaceDefinition.enabledCapabilities,
-        ...patch,
-      },
+      enabledCapabilities: nextCapabilities,
     });
   }
 
@@ -1284,6 +1306,11 @@ export default function WorkflowAdminClient({
                         <option value="items">Items</option>
                         <option value="activity">Activity</option>
                         <option value="workflow">Workflow</option>
+                        <option value="discussion">Discussion</option>
+                        <option value="attachments">Attachments</option>
+                        <option value="checklist">Checklist</option>
+                        <option value="priority">Priority</option>
+                        <option value="info">Info</option>
                       </select>
                     ) : (
                       detailWorkspaceDefinition.defaultView
@@ -1365,8 +1392,14 @@ export default function WorkflowAdminClient({
                       capability.key in detailWorkspaceDefinition.enabledCapabilities ? (
                         <input
                           type="checkbox"
+                          disabled={
+                            capability.key === "workflow" &&
+                            !detailWorkspaceDefinition.enabledCapabilities.items
+                          }
                           checked={
-                            detailWorkspaceDefinition.enabledCapabilities[
+                            normalizeWorkspaceCapabilities(
+                              detailWorkspaceDefinition.enabledCapabilities,
+                            )[
                               capability.key as keyof BlueprintWorkspaceDefinition["enabledCapabilities"]
                             ]
                           }
@@ -1375,11 +1408,13 @@ export default function WorkflowAdminClient({
                               [capability.key]: event.target.checked,
                             })
                           }
-                          className="h-4 w-4"
+                          className="h-4 w-4 disabled:cursor-not-allowed disabled:opacity-50"
                         />
                       ) : null}
                       <h3 className="text-sm font-semibold text-slate-900">
-                        {capability.label}
+                        {capability.key === "workflow"
+                          ? "Item Workflow"
+                          : capability.label}
                       </h3>
                     </div>
                     <span
@@ -1391,6 +1426,12 @@ export default function WorkflowAdminClient({
                   <p className="mt-2 text-sm text-slate-600">
                     {capability.description}
                   </p>
+                  {capability.key === "workflow" ? (
+                    <p className="mt-2 text-xs font-medium text-slate-500">
+                      Requires Items. Turn on Items first, then choose whether
+                      Items run Workflow.
+                    </p>
+                  ) : null}
                   {capability.summary ? (
                     <p className="mt-3 text-sm font-medium text-slate-900">
                       {capability.summary}
@@ -1727,17 +1768,109 @@ export default function WorkflowAdminClient({
                 </div>
 
                 <div className="border border-slate-200 p-4">
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-900">
+                        Event Binding Matrix
+                      </h3>
+                      <div className="mt-1 text-xs text-slate-500">
+                        {activeEventBindingCount} active, {eventBindingConflictCount} conflict
+                      </div>
+                    </div>
+                  </div>
+                  <div className="max-h-[260px] space-y-2 overflow-auto">
+                    {eventBindingAudit.map((binding, index) => (
+                      <div
+                        key={`${binding.source}:${binding.conflictKey}:${binding.workTypeKey}:${index}`}
+                        className={`border p-2 ${
+                          binding.hasConflict
+                            ? "border-amber-200 bg-amber-50"
+                            : "border-slate-200"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="text-xs font-medium text-slate-900">
+                              {binding.eventKey}
+                            </div>
+                            <div className="mt-0.5 text-[11px] text-slate-500">
+                              {binding.targetType} / {binding.consumer} / {binding.scopeContext}
+                            </div>
+                          </div>
+                          <span className="shrink-0 border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
+                            {binding.mode}
+                          </span>
+                        </div>
+                        <div className="mt-2 grid gap-1 text-[11px] text-slate-500">
+                          <div>
+                            Source: <span className="font-medium text-slate-700">{binding.source}</span>
+                          </div>
+                          <div>
+                            Work type: <span className="font-medium text-slate-700">{binding.workTypeKey}</span>
+                          </div>
+                          <div>
+                            Blueprint: <span className="font-medium text-slate-700">{binding.sourceBlueprint ?? "none"}</span>
+                          </div>
+                          <div>
+                            Conflict key: <span className="font-medium text-slate-700">{binding.conflictKey}</span>
+                          </div>
+                          {binding.hasConflict ? (
+                            <div className="font-medium text-amber-700">
+                              {binding.conflictCount} active bindings claim this event scope
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="border border-slate-200 p-4">
                   <h3 className="text-sm font-semibold text-slate-900">
                     Catalog BusinessEvent
                   </h3>
                   <div className="mt-3 max-h-[260px] space-y-2 overflow-auto">
                     {businessEvents.map((event) => (
                       <div key={event.eventKey} className="border border-slate-200 p-2">
-                        <div className="text-xs font-medium text-slate-900">
-                          {event.label}
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="text-xs font-medium text-slate-900">
+                              {event.label}
+                            </div>
+                            <div className="mt-0.5 text-xs text-slate-500">
+                              {event.eventKey}
+                            </div>
+                          </div>
+                          <span className={`shrink-0 border px-1.5 py-0.5 text-[10px] font-semibold ${eventStatusTone(event.status)}`}>
+                            {event.status}
+                          </span>
                         </div>
-                        <div className="mt-0.5 text-xs text-slate-500">
-                          {event.eventKey}
+                        {event.businessMeaning ? (
+                          <div className="mt-2 text-xs text-slate-600">
+                            {event.businessMeaning}
+                          </div>
+                        ) : null}
+                        <div className="mt-2 grid gap-1 text-[11px] text-slate-500">
+                          <div>
+                            Producer: <span className="font-medium text-slate-700">{event.producer ?? "TBD"}</span>
+                          </div>
+                          <div>
+                            Emit point: <span className="font-medium text-slate-700">{event.emitPoint ?? "TBD"}</span>
+                          </div>
+                          <div>
+                            Payload: <span className="font-medium text-slate-700">{event.payloadContract ?? "TBD"}</span>
+                          </div>
+                          <div>
+                            Consumers: <span className="font-medium text-slate-700">{event.knownConsumers.length ? event.knownConsumers.join(", ") : "none"}</span>
+                          </div>
+                          <div>
+                            Route: <span className="font-medium text-slate-700">{event.routeStatus}</span>
+                          </div>
+                          {event.autoBindingScope ? (
+                            <div>
+                              Scope: <span className="font-medium text-slate-700">{event.autoBindingScope}</span>
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                     ))}

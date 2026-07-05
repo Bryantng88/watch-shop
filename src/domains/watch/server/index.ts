@@ -9,3 +9,4 @@ export * from "./content";
 export * from "./pricing";
 export * from "./review";
 export * from "./bridge";
+export * from "./media-work";

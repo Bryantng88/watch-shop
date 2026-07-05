@@ -161,7 +161,6 @@ export async function listWatchChosenMediaAssetsRepo(
   input: { productId: string; acquisitionId?: string | null }
 ) {
   const client = dbOrTx(db);
-
   const poolPrefix = `products/edit/chosen/watch/${input.productId}/pool`;
 
   return client.mediaAsset.findMany({

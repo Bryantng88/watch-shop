@@ -100,6 +100,17 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
             periodKey: true,
             createdByUserId: true,
             assignedToUserId: true,
+            taskItems: {
+              select: {
+                id: true,
+                title: true,
+                note: true,
+                status: true,
+                sortOrder: true,
+                updatedAt: true,
+              },
+              orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+            },
           },
         },
       },

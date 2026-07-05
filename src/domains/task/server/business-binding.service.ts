@@ -14,8 +14,9 @@ import {
   getWorkflowStateLabel,
   initializeQueueItemWorkflowState,
   listAvailableManualTransitionsForQueueItem,
+  resolveBindingWorkflowDefinition,
 } from "./business-binding-workflow.service";
-import { resolveWorkflowDefinition } from "@/domains/workflow-definition/server";
+import { resolveAppliedWorkflowSnapshot } from "@/domains/blueprint/shared/workspace-capabilities";
 import type { WorkflowDefinition } from "@/domains/workflow-definition/server";
 import type {
   BindTaskItemToBusinessObjectInput,
@@ -38,6 +39,12 @@ function clean(value: unknown) {
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
+}
+
+function toInputJsonObject(value: Prisma.InputJsonValue | null | undefined) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? { ...(value as Prisma.InputJsonObject) }
+    : {};
 }
 
 function cleanUpper(value: unknown) {
@@ -79,6 +86,32 @@ function queueItemIntakeNote(metadata: Record<string, unknown>) {
 
 function queueKey(targetType: string, targetId: string) {
   return `${cleanUpper(targetType)}:${clean(targetId)}`;
+}
+
+async function metadataWithWorkspaceWorkflowSnapshot(
+  db: DB,
+  input: {
+    taskItemId: string;
+    metadataJson?: Prisma.InputJsonValue | null;
+  },
+): Promise<Prisma.InputJsonObject> {
+  const metadata = toInputJsonObject(input.metadataJson);
+  if (resolveAppliedWorkflowSnapshot({ metadataJson: metadata })) return metadata;
+
+  const taskItem = await dbOrTx(db).taskItem.findUnique({
+    where: { id: input.taskItemId },
+    select: { note: true },
+  });
+  const appliedWorkflowSnapshot = resolveAppliedWorkflowSnapshot({
+    note: taskItem?.note ?? null,
+  });
+
+  if (!appliedWorkflowSnapshot) return metadata;
+
+  return {
+    ...metadata,
+    appliedWorkflowSnapshot: appliedWorkflowSnapshot as unknown as Prisma.InputJsonValue,
+  };
 }
 
 function hasAnyToken(value: string, tokens: string[]) {
@@ -152,6 +185,7 @@ function resolveWorkflowQueueStatus(input: {
   if (
     state.includes("FEEDBACK") ||
     state.includes("REJECTED") ||
+    state.includes("RECALLED") ||
     metadata.contentRejected === true ||
     metadata.imageRejected === true
   ) {
@@ -174,6 +208,26 @@ function resolveWorkflowQueueStatus(input: {
 
 function resolveQueueSource(metadata: Record<string, unknown>): QueueItemSource {
   return cleanUpper(metadata.source) === "AUTO" ? "AUTO" : "MANUAL";
+}
+
+function mediaWorkProgress(metadata: Record<string, unknown>) {
+  const progress = asRecord(metadata.mediaWorkProgress);
+  const parts = asRecord(progress.parts);
+  const profile = parts.profile === true;
+  const content = parts.content === true;
+  const image = parts.image === true;
+  const completed = [profile, content, image].filter(Boolean).length;
+
+  if (!completed && !clean(progress.updatedAt)) return null;
+
+  return {
+    profile,
+    content,
+    image,
+    completed,
+    total: 3,
+    updatedAt: clean(progress.updatedAt) || null,
+  };
 }
 
 function formatDate(value: Date | string | null | undefined) {
@@ -393,6 +447,10 @@ export async function bindTaskItemToBusinessObject(
   input: BindTaskItemToBusinessObjectInput,
 ) {
   assertPresent(input.taskItemId, "Missing taskItemId");
+  const metadataJson = await metadataWithWorkspaceWorkflowSnapshot(db, {
+    taskItemId: input.taskItemId,
+    metadataJson: input.metadataJson ?? null,
+  });
 
   const binding = await createBusinessBinding(db, {
     ...input,
@@ -400,7 +458,7 @@ export async function bindTaskItemToBusinessObject(
     taskItemId: clean(input.taskItemId),
     targetId: clean(input.targetId),
     metadataJson: initializeQueueItemWorkflowState({
-      metadataJson: input.metadataJson ?? null,
+      metadataJson,
       createdAt: new Date(),
     }),
   });
@@ -432,10 +490,15 @@ export async function ensureTaskItemBusinessBinding(
     };
   }
 
+  const metadataJson = await metadataWithWorkspaceWorkflowSnapshot(db, {
+    taskItemId: cleanInput.taskItemId,
+    metadataJson: cleanInput.metadataJson ?? null,
+  });
+
   const binding = await createBusinessBinding(db, {
     ...cleanInput,
     metadataJson: initializeQueueItemWorkflowState({
-      metadataJson: cleanInput.metadataJson ?? null,
+      metadataJson,
       createdAt: new Date(),
     }),
   });
@@ -444,6 +507,22 @@ export async function ensureTaskItemBusinessBinding(
     binding: toBusinessBindingDTO(binding),
     created: true,
   };
+}
+
+export async function findTaskItemBusinessBinding(
+  db: DB,
+  input: BindTaskItemToBusinessObjectInput,
+) {
+  assertPresent(input.taskItemId, "Missing taskItemId");
+
+  const binding = await findBusinessBindingByTaskItemTarget(db, {
+    ...input,
+    taskId: clean(input.taskId),
+    taskItemId: clean(input.taskItemId),
+    targetId: clean(input.targetId),
+  });
+
+  return binding ? toBusinessBindingDTO(binding) : null;
 }
 
 export async function findRelatedTaskItemIdsForBusinessTarget(
@@ -480,8 +559,8 @@ export async function listTaskItemQueueItems(
     .map((binding) => {
       const metadata = asRecord(binding.metadataJson);
       const workflowRuntime = getQueueItemWorkflowState(binding);
-      const workflowDefinition = resolveWorkflowDefinition(
-        workflowRuntime?.workflowKey,
+      const workflowDefinition = resolveBindingWorkflowDefinition(
+        binding.metadataJson,
       );
       const key = queueKey(binding.targetType, binding.targetId);
       const businessPreview = businessPreviews.get(key);
@@ -548,6 +627,8 @@ export async function listTaskItemQueueItems(
           currentState: workflowRuntime?.currentState ?? null,
         }),
         intakeNote: queueItemIntakeNote(metadata),
+        mediaAssetAttachedAt: metadataText(metadata, ["mediaAssetAttachedAt"]),
+        mediaWorkProgress: mediaWorkProgress(metadata),
         updatedAt: formatDate(updatedAt),
       };
     });

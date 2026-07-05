@@ -3,11 +3,22 @@
 import { type FormEvent, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CalendarDays, ChevronRight, Clock3, Inbox, MessageSquareWarning, Plus } from "lucide-react";
+import { CalendarDays, ChevronRight, Clock3, Inbox, MessageSquareWarning, Plus, RotateCcw } from "lucide-react";
 import AdminBreadcrumbs from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
+import {
+  rolloverPreviousCycleItemsAction,
+  setWorkspaceAutoBindingReceiverAction,
+} from "@/domains/coordination/actions/coordination.actions";
 import { createTaskItemAction } from "@/domains/task/actions/task.actions";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
+import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
+import {
+  useAppProgress,
+  type AppProgressStep,
+} from "@/domains/shared/feedback/AppProgressProvider";
+import { repairVietnameseMojibake } from "@/domains/shared/text/vietnamese-mojibake";
 import type { CoordinationDashboardDTO } from "../server/coordination-dashboard.types";
+import { isCoreWorkspaceBlueprint } from "@/domains/task/shared/workspace-flow-policy";
 
 type Props = {
   data: CoordinationDashboardDTO;
@@ -23,6 +34,10 @@ function formatDate(value: string | null) {
     month: "2-digit",
     year: "numeric",
   }).format(date);
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 function formatDateTime(value: string | null) {
@@ -50,12 +65,14 @@ function initials(label: string) {
 function contextPath(context: CoordinationDashboardDTO["context"]) {
   if (context === "SALES") return "sales";
   if (context === "TECHNICAL") return "technical";
+  if (context === "MEDIA") return "media";
+  if (context === "PAYMENT") return "payment";
   if (context === "GENERAL") return "general";
   return "operation";
 }
 
 function prefixedLabel(prefix: "Space" | "Workspace", value: string) {
-  const cleanValue = value.trim();
+  const cleanValue = repairVietnameseMojibake(value).trim();
   if (!cleanValue) return prefix;
   if (cleanValue.toLowerCase().startsWith(`${prefix.toLowerCase()} `)) {
     return cleanValue;
@@ -120,6 +137,8 @@ function OwnerCell({
 export default function OperationCoordinationWorkspace({ data }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const dialog = useAppDialog();
+  const progress = useAppProgress();
   const [blueprintKey, setBlueprintKey] = useState(
     data.blueprints[0]?.selectionKey ?? "",
   );
@@ -147,13 +166,34 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     router.push(`/admin/coordination/${contextPath(data.context)}?${next.toString()}`);
   }
 
-  function createWorkTicket(event: FormEvent<HTMLFormElement>) {
+  async function createWorkTicket(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const cleanTitle = title.trim();
     if (!cleanTitle) return;
     const blueprint = data.blueprints.find(
       (item) => item.selectionKey === blueprintKey,
     );
+    if (blueprint?.usage.active && isCoreWorkspaceBlueprint(blueprint)) {
+      await dialog.alert({
+        title: "Blueprint core đã có Workspace",
+        message:
+          "Blueprint này chỉ được có một Workspace đang hoạt động trong Space hiện tại. Hãy dùng Workspace hiện có hoặc đóng Workspace cũ trước khi tạo mới.",
+        tone: "warning",
+      });
+      return;
+    }
+
+    const duplicateBlueprintConfirmed =
+      !blueprint?.usage.active ||
+      (await dialog.confirm({
+        title: "Xác nhận tạo Workspace",
+        message: `Blueprint này hiện có ${blueprint.usage.active} Workspace đang hoạt động trong Space này. Bạn có chắc muốn tạo thêm Workspace mới từ Blueprint này không?`,
+        confirmText: "Tạo thêm",
+        cancelText: "Hủy",
+        tone: "warning",
+      }));
+
+    if (!duplicateBlueprintConfirmed) return;
 
     setError(null);
     startTransition(async () => {
@@ -163,6 +203,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
           title: cleanTitle,
           note: blueprint?.snapshotNote ?? null,
           priority: "MEDIUM",
+          allowDuplicateBlueprint: Boolean(blueprint?.usage.active),
         });
         setIsCreateFormOpen(false);
         setBlueprintKey(data.blueprints[0]?.selectionKey ?? "");
@@ -172,6 +213,119 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
         setError(caught instanceof Error ? caught.message : "Không thể tạo Workspace.");
       }
     });
+  }
+
+  async function updateAutoBindingReceiver(nextReceiverId: string) {
+    if (!selectedBlueprint) return;
+
+    const nextWorkspace = selectedBlueprint.usage.activeWorkspaces.find(
+      (workspace) => workspace.id === nextReceiverId,
+    );
+    const message = nextWorkspace
+      ? `Workspace "${nextWorkspace.title}" sẽ nhận auto-binding request từ domain business cho Blueprint này.`
+      : "Blueprint này sẽ chưa có Workspace nhận auto-binding request từ domain business.";
+    const ok = await dialog.confirm({
+      title: "Cập nhật auto-binding receiver",
+      message,
+      confirmText: "Cập nhật",
+      cancelText: "Hủy",
+      tone: nextWorkspace ? "warning" : "danger",
+    });
+
+    if (!ok) return;
+
+    setError(null);
+    startTransition(async () => {
+      try {
+        await setWorkspaceAutoBindingReceiverAction({
+          taskId: data.cycle.id,
+          taskItemId: nextReceiverId || null,
+          context: data.context,
+          blueprintKey: selectedBlueprint.key,
+          blueprintSource: selectedBlueprint.source,
+        });
+        router.refresh();
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : "Không thể cập nhật auto-binding receiver.");
+      }
+    });
+  }
+
+  async function rolloverPreviousCycle() {
+    const ok = await dialog.confirm({
+      title: "Nhận item tồn từ tuần trước?",
+      message:
+        "Hệ thống sẽ chuyển các item chưa xử lý xong từ Space tuần trước sang Workspace core tương ứng trong Space tuần này. Item cũ sẽ được đánh dấu đã chuyển để không còn hiện như active.",
+      confirmText: "Nhận item tồn",
+      cancelText: "Hủy",
+      tone: "warning",
+    });
+
+    if (!ok) return;
+
+    setError(null);
+    progress.show({
+      title: "Đang nhận item tồn",
+      message: "Hệ thống đang chuyển item sang các Workspace core của tuần hiện tại.",
+    });
+
+    try {
+      const result = await rolloverPreviousCycleItemsAction({
+        taskId: data.cycle.id,
+        context: data.context,
+      });
+      const steps: AppProgressStep[] = result.items.map((item, index) => {
+        const target = `${item.targetType}:${item.targetId.slice(0, 8)}`;
+        const from = repairVietnameseMojibake(item.fromWorkspaceTitle);
+        const to = repairVietnameseMojibake(item.toWorkspaceTitle ?? "không có workspace nhận");
+        const status =
+          item.status === "MOVED"
+            ? "done"
+            : item.status === "FAILED"
+              ? "error"
+              : "skipped";
+
+        return {
+          id: `${item.targetType}:${item.targetId}:${index}`,
+          label: `${target} - ${from} -> ${to}`,
+          detail: item.reason ? `${item.status} (${item.reason})` : item.status,
+          status,
+        };
+      });
+      progress.update({
+        title: "Đã xử lý item tồn",
+        message: `Moved: ${result.moved} · Skipped: ${result.skipped} · Failed: ${result.failed}`,
+        steps,
+      });
+      await sleep(result.items.length ? 1800 : 700);
+
+      const lines = result.items
+        .slice(0, 12)
+        .map((item) => {
+          const target = `${item.targetType}:${item.targetId.slice(0, 8)}`;
+          const to = item.toWorkspaceTitle ?? "không có workspace nhận";
+          return `${item.status} - ${target} - ${item.fromWorkspaceTitle} -> ${to}${item.reason ? ` (${item.reason})` : ""}`;
+        });
+      const more = result.items.length > lines.length
+        ? `\n... và ${result.items.length - lines.length} item khác`
+        : "";
+
+      progress.hide();
+      await dialog.alert({
+        title: "Đã xử lý item tồn",
+        message: [
+          `Moved: ${result.moved}`,
+          `Skipped: ${result.skipped}`,
+          `Failed: ${result.failed}`,
+          lines.length ? `\n${lines.join("\n")}${more}` : "\nKhông có item cần chuyển.",
+        ].join("\n"),
+        tone: result.failed ? "warning" : "success",
+      });
+      router.refresh();
+    } catch (caught) {
+      progress.hide();
+      setError(caught instanceof Error ? caught.message : "Không thể nhận item tồn từ tuần trước.");
+    }
   }
 
   return (
@@ -257,6 +411,16 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
               </h2>
 
               {!isCreateFormOpen ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => void rolloverPreviousCycle()}
+                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Nhận item tồn tuần trước
+                  </button>
                 <button
                   type="button"
                   disabled={!data.blueprints.length}
@@ -271,6 +435,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   <Plus className="h-4 w-4" />
                   Tạo Workspace
                 </button>
+                </div>
               ) : null}
               <form
                 className={`${isCreateFormOpen ? "flex" : "hidden"} min-w-0 flex-col gap-2 sm:flex-row sm:items-center`}
@@ -321,6 +486,57 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
               </form>
             </div>
             {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
+            {selectedBlueprint ? (
+              <div className="mt-3 grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 lg:grid-cols-[1fr_1fr_1.5fr]">
+                <label>
+                  <span className="font-medium text-slate-500">Blueprint</span>
+                  <select
+                    value={blueprintKey}
+                    onChange={(event) => {
+                      const nextKey = event.target.value;
+                      const nextBlueprint = data.blueprints.find(
+                        (blueprint) => blueprint.selectionKey === nextKey,
+                      );
+                      setBlueprintKey(nextKey);
+                      if (isCreateFormOpen) {
+                        setTitle(nextBlueprint?.workspaceDefinition.defaultName ?? "");
+                      }
+                    }}
+                    className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-slate-400"
+                  >
+                    {data.blueprints.map((blueprint) => (
+                      <option key={blueprint.selectionKey} value={blueprint.selectionKey}>
+                        {blueprint.name} - {blueprintSourceLabel(blueprint)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div>
+                  <div className="font-medium text-slate-500">Workspace đang implicit</div>
+                  <div className={`mt-2 text-sm font-semibold ${selectedBlueprint.usage.active ? "text-amber-700" : "text-slate-900"}`}>
+                    {selectedBlueprint.usage.active} active / {selectedBlueprint.usage.total} total
+                  </div>
+                </div>
+
+                <label>
+                  <span className="font-medium text-slate-500">Workspace nhận auto-binding</span>
+                  <select
+                    value={selectedBlueprint.usage.receiverId ?? ""}
+                    disabled={isPending || !selectedBlueprint.usage.activeWorkspaces.length}
+                    onChange={(event) => void updateAutoBindingReceiver(event.target.value)}
+                    className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-slate-100"
+                  >
+                    <option value="">Chưa chọn receiver</option>
+                    {selectedBlueprint.usage.activeWorkspaces.map((workspace) => (
+                      <option key={workspace.id} value={workspace.id}>
+                        {prefixedLabel("Workspace", workspace.title)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            ) : null}
             {isCreateFormOpen && selectedBlueprint ? (
               <div className="mt-3 grid gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 md:grid-cols-3 xl:grid-cols-6">
                 <div>
@@ -351,6 +567,12 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   <div className="font-medium text-slate-500">Đang bật</div>
                   <div className="mt-1 text-slate-900">
                     {capabilityLabels.join(", ")}
+                  </div>
+                </div>
+                <div>
+                  <div className="font-medium text-slate-500">Da dung Blueprint</div>
+                  <div className={`mt-1 font-semibold ${selectedBlueprint.usage.active ? "text-amber-700" : "text-slate-900"}`}>
+                    {selectedBlueprint.usage.active} active / {selectedBlueprint.usage.total} total
                   </div>
                 </div>
                 <div className="md:col-span-3 xl:col-span-6">

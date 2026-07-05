@@ -8,7 +8,12 @@ import {
   listWorkTypes,
   normalizeWorkTypeKey,
 } from "@/domains/task/server/work-type.service";
-import { listWorkspaceInstantiationBlueprintOptions } from "@/domains/blueprint/server";
+import {
+  listWorkspaceInstantiationBlueprintOptions,
+  type BlueprintSource,
+} from "@/domains/blueprint/server";
+import { parseWorkspaceDefinitionSnapshot } from "@/domains/blueprint/shared/workspace-capabilities";
+import { workspaceFlowOrder } from "@/domains/task/shared/workspace-flow-policy";
 import type {
   CoordinationDashboardDTO,
   CoordinationWorkTicketSummaryDTO,
@@ -80,9 +85,42 @@ function ticketBlueprintSource(note?: string | null) {
   return match ? match[1].trim().toUpperCase() : null;
 }
 
+function blueprintIdentityFromNote(note?: string | null) {
+  const snapshot = parseWorkspaceDefinitionSnapshot(note);
+  const blueprintKey =
+    snapshot?.blueprintKey ??
+    String(note ?? "").match(/blueprintKey:\s*([^\r\n]+)/i)?.[1]?.trim();
+  const blueprintSource =
+    snapshot?.blueprintSource ??
+    String(note ?? "").match(/blueprintSource:\s*([^\r\n]+)/i)?.[1]?.trim();
+
+  if (!blueprintKey) return null;
+
+  return {
+    key: blueprintKey,
+    source: String(blueprintSource || "REGISTRY").toUpperCase(),
+  };
+}
+
+function blueprintUsageKey(input: { key: string; source?: string | null }) {
+  return `${String(input.source || "REGISTRY").toUpperCase()}:${normalizeWorkTypeKey(input.key)}`;
+}
+
+function isAutoBindingReceiverNote(note?: string | null) {
+  return /^blueprintAutoBindingReceiver:\s*true\s*$/im.test(String(note ?? ""));
+}
+
 function ticketShareGroupKey(note?: string | null) {
   const match = String(note ?? "").match(/shareGroupKey:\s*([a-z0-9-]+)/i);
   return match ? normalizeWorkTypeKey(match[1]) : null;
+}
+
+function sharedUserIdsFromNote(note?: string | null) {
+  return String(note ?? "")
+    .match(/^sharedUserIds:\s*(.+)$/im)?.[1]
+    ?.split(",")
+    .map((id) => id.trim())
+    .filter(Boolean) ?? [];
 }
 
 function isSystemTicket(item: {
@@ -145,24 +183,34 @@ const SPACE_LABELS: Record<CoordinationContext, {
   spacesLabel: string;
 }> = {
   OPERATION: {
-    label: "Operations",
-    spaceLabel: "Operation",
-    spacesLabel: "Operations Spaces",
+    label: "Vận hành",
+    spaceLabel: "Vận hành",
+    spacesLabel: "Vận hành Spaces",
   },
   SALES: {
-    label: "Sales",
-    spaceLabel: "Sales",
-    spacesLabel: "Sales Spaces",
+    label: "Bán hàng",
+    spaceLabel: "Bán hàng",
+    spacesLabel: "Bán hàng Spaces",
   },
   TECHNICAL: {
-    label: "Technical",
-    spaceLabel: "Technical",
-    spacesLabel: "Technical Spaces",
+    label: "Kỹ thuật",
+    spaceLabel: "Kỹ thuật",
+    spacesLabel: "Kỹ thuật Spaces",
+  },
+  MEDIA: {
+    label: "Media",
+    spaceLabel: "Media",
+    spacesLabel: "Media Spaces",
+  },
+  PAYMENT: {
+    label: "Thanh toán",
+    spaceLabel: "Thanh toán",
+    spacesLabel: "Thanh toán Spaces",
   },
   GENERAL: {
-    label: "General",
-    spaceLabel: "General",
-    spacesLabel: "General Spaces",
+    label: "Tổng quát",
+    spaceLabel: "Tổng quát",
+    spacesLabel: "Tổng quát Spaces",
   },
 };
 
@@ -180,6 +228,7 @@ function canViewTicket(
   if (userId && (item.userId === userId || item.assignedToUserId === userId)) {
     return true;
   }
+  if (userId && sharedUserIdsFromNote(item.note).includes(userId)) return true;
 
   if (!isSystemTicket(item)) return false;
 
@@ -385,6 +434,7 @@ export async function getCoordinationDashboard(input: {
     const lastActivityAt = lastActivity?.occurredAt ??
       lastActivityAtByTaskItem.get(item.id) ??
       null;
+    const blueprintIdentity = blueprintIdentityFromNote(item.note);
 
     return {
       id: item.id,
@@ -401,7 +451,20 @@ export async function getCoordinationDashboard(input: {
       lastActivity: lastActivity?.title ?? null,
       lastActivityAt: formatDateTime(lastActivityAt),
       updatedAt: formatDateTime(item.updatedAt),
+      blueprint: blueprintIdentity
+        ? {
+            key: blueprintIdentity.key,
+            source: blueprintIdentity.source as BlueprintSource,
+            isAutoBindingReceiver: isAutoBindingReceiverNote(item.note),
+          }
+        : null,
     };
+  }).sort((left, right) => {
+    const leftOrder = workspaceFlowOrder({ key: left.blueprint?.key });
+    const rightOrder = workspaceFlowOrder({ key: right.blueprint?.key });
+
+    if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+    return left.title.localeCompare(right.title);
   });
 
   const reportValues = {
@@ -421,6 +484,47 @@ export async function getCoordinationDashboard(input: {
       Boolean(item.dueAt && item.dueAt < now && item.status !== TaskStatus.DONE),
     ).length,
   };
+  const blueprintUsage = new Map<
+    string,
+    {
+      total: number;
+      active: number;
+      receiverId: string | null;
+      activeWorkspaces: Array<{
+        id: string;
+        title: string;
+        isAutoBindingReceiver: boolean;
+      }>;
+    }
+  >();
+
+  for (const item of rawTaskItems) {
+    if (item.status === TaskStatus.CANCELLED) continue;
+
+    const identity = blueprintIdentityFromNote(item.note);
+    if (!identity) continue;
+
+    const key = blueprintUsageKey(identity);
+    const current = blueprintUsage.get(key) ?? {
+      total: 0,
+      active: 0,
+      receiverId: null,
+      activeWorkspaces: [],
+    };
+    const isReceiver = isAutoBindingReceiverNote(item.note);
+
+    current.total += 1;
+    if (item.status !== TaskStatus.DONE) {
+      current.active += 1;
+      current.activeWorkspaces.push({
+        id: item.id,
+        title: item.title,
+        isAutoBindingReceiver: isReceiver,
+      });
+      if (isReceiver) current.receiverId = item.id;
+    }
+    blueprintUsage.set(key, current);
+  }
 
   return {
     context: input.context,
@@ -453,18 +557,30 @@ export async function getCoordinationDashboard(input: {
       { key: "done", label: "Done", value: reportValues.done },
       { key: "overdue", label: "Overdue", value: reportValues.overdue },
     ],
-    blueprints: (await listWorkspaceInstantiationBlueprintOptions(input.context)).map((blueprint) => ({
-      selectionKey: blueprint.selectionKey,
-      key: blueprint.key,
-      name: blueprint.name,
-      description: blueprint.description,
-      workflowKey: blueprint.workflowKey,
-      businessContext: blueprint.businessContext,
-      source: blueprint.source,
-      status: blueprint.status,
-      workspaceDefinition: blueprint.workspaceDefinition,
-      snapshotNote: blueprint.snapshotNote,
-    })),
+    blueprints: (await listWorkspaceInstantiationBlueprintOptions(input.context)).map((blueprint) => {
+      const usage = blueprintUsage.get(
+        blueprintUsageKey({ key: blueprint.key, source: blueprint.source }),
+      ) ?? {
+        total: 0,
+        active: 0,
+        receiverId: null,
+        activeWorkspaces: [],
+      };
+
+      return {
+        selectionKey: blueprint.selectionKey,
+        key: blueprint.key,
+        name: blueprint.name,
+        description: blueprint.description,
+        workflowKey: blueprint.workflowKey,
+        businessContext: blueprint.businessContext,
+        source: blueprint.source,
+        status: blueprint.status,
+        workspaceDefinition: blueprint.workspaceDefinition,
+        snapshotNote: blueprint.snapshotNote,
+        usage,
+      };
+    }),
     workTickets,
   };
 }

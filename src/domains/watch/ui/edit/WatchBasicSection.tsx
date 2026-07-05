@@ -17,6 +17,7 @@ type Props = {
     onOpenSpecModal: () => void;
     brands: SimpleOption[];
     onBrandsChange: (brands: SimpleOption[]) => void;
+    defaultOpen?: boolean;
 };
 
 const GENDER_OPTIONS = ["MEN", "WOMEN", "UNISEX"].map((x) => ({
@@ -201,9 +202,9 @@ export default function WatchBasicSection({
     postTargets,
     onChange,
     onOpenSpecModal,
-    onBrandsChange
+    onBrandsChange,
+    defaultOpen = false
 }: Props) {
-    const brandOptions = brands.map((x) => ({ value: x.id, label: x.name }));
     const vendorOptions = vendors.map((x) => ({ value: x.id, label: x.name }));
     const categoryOptions = categories.map((x) => ({
         value: x.id,
@@ -214,6 +215,7 @@ export default function WatchBasicSection({
 
     return (
         <SectionCard
+            defaultOpen={defaultOpen}
             icon={<Pencil className="h-5 w-5" />}
             title="Thông tin chính"
             subtitle="Giữ phần thao tác hằng ngày ở đây. Spec sâu đưa sang modal riêng."

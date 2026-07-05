@@ -58,6 +58,7 @@ export function getAuthUserId(auth: any): string | null {
 }
 
 export function authCanViewAllTasks(auth: any): boolean {
+  const roles = auth?.roles ?? auth?.user?.roles ?? [];
   const roleName = String(
     auth?.user?.role ??
     auth?.role ??
@@ -72,7 +73,10 @@ export function authCanViewAllTasks(auth: any): boolean {
 
   return (
     roleName === "ADMIN" ||
-    (Array.isArray(permissions) && permissions.includes("TASK_VIEW_ALL"))
+    (Array.isArray(roles) &&
+      roles.map((item) => String(item ?? "").toUpperCase()).includes("ADMIN")) ||
+    (Array.isArray(permissions) &&
+      (permissions.includes("TASK_VIEW_ALL") || permissions.includes("ADMIN")))
   );
 }
 

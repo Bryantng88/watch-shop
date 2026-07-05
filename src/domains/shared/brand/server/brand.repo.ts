@@ -63,3 +63,31 @@ export async function listActiveBrands() {
         },
     });
 }
+
+export async function searchActiveBrands(query: string, limit = 20) {
+    const keyword = query.trim();
+
+    return prisma.brand.findMany({
+        where: {
+            status: "ACTIVE",
+            ...(keyword
+                ? {
+                    name: {
+                        contains: keyword,
+                        mode: "insensitive",
+                    },
+                }
+                : {}),
+        },
+        orderBy: [
+            { sortOrder: "asc" },
+            { name: "asc" },
+        ],
+        take: Math.min(Math.max(limit, 1), 50),
+        select: {
+            id: true,
+            name: true,
+            slug: true,
+        },
+    });
+}

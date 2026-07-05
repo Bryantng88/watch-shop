@@ -23,7 +23,9 @@ Existing Workspaces without a snapshot receive backward-compatible defaults.
   - Hide Items summary.
   - Hide manual item intake surface.
 - `workflow=false`
-  - Hide Workflow column and manual workflow action controls inside Items.
+  - Hide Workflow tab.
+  - Hide Workflow column.
+  - Hide manual workflow action controls inside Items.
 - `activity=false`
   - Hide Activity tab and activity summary surfaces.
 - `discussion=false`
@@ -37,8 +39,13 @@ Existing Workspaces without a snapshot receive backward-compatible defaults.
 - `assignee=false`
   - Hide owner/assignee header and summary surfaces.
 - `attachments=false`
-  - Resolver supports the capability. No dedicated attachment surface exists in
-    this UI yet.
+  - Hide Attachments tab.
+
+Dependency:
+
+- Workflow requires Items.
+- If `items=false`, normalized capabilities force `workflow=false`.
+- In Blueprint authoring, Item Workflow is disabled until Items is enabled.
 
 ## Snapshot Source
 
@@ -48,8 +55,6 @@ registry or draft values after creation.
 ## Not Implemented
 
 - Server-side permission enforcement.
-- Workflow runtime changes.
-- Item runtime changes.
 - Capability inheritance.
 - Automation.
 - Notification changes.

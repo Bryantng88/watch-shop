@@ -1,9 +1,14 @@
 import { TaskKind, TaskPeriod, TaskSource, TaskStatus } from "@prisma/client";
-import { dbOrTx, withDbTransaction, type DB } from "@/server/db/client";
+import { dbOrTx, type DB } from "@/server/db/client";
 import {
   listWorkTypes,
   normalizeWorkTypeKey,
 } from "@/domains/task/server/work-type.service";
+import { eventBindingsForWorkType } from "@/domains/blueprint/shared/event-bindings";
+import {
+  shouldAutoCreateOnSpaceOpened,
+  workspaceProvisioningForWorkType,
+} from "@/domains/blueprint/shared/workspace-provisioning";
 import type { WorkTypeDefinition } from "@/domains/task/server/work-type.types";
 import type {
   CoordinationContext,
@@ -38,6 +43,8 @@ const DEFAULT_SYSTEM_SHARE_GROUP_BY_CONTEXT: Record<CoordinationContext, string>
   OPERATION: "operation",
   SALES: "sales",
   TECHNICAL: "technical",
+  MEDIA: "media",
+  PAYMENT: "payment",
   GENERAL: "general",
 };
 
@@ -53,6 +60,15 @@ function contextToTaskKind(context: CoordinationContext) {
 }
 
 function workTypeNote(workType: WorkTypeDefinition) {
+  const eventBindings = eventBindingsForWorkType({
+    workTypeKey: workType.key,
+    coordinationContext: workType.coordinationContext,
+  });
+  const provisioning = workspaceProvisioningForWorkType({
+    workTypeKey: workType.key,
+    coordinationContext: workType.coordinationContext,
+    enabled: workType.enabled,
+  });
   const lines = [
     `workTypeKey: ${workType.key}`,
     "ownerType: SYSTEM",
@@ -63,7 +79,55 @@ function workTypeNote(workType: WorkTypeDefinition) {
     lines.push(`workflowKey: ${workType.workflowKey}`);
   }
 
+  if (eventBindings.length) {
+    const workspaceDefinition = {
+      defaultName: workType.title,
+      defaultDescription:
+        typeof workType.metadata?.description === "string"
+          ? workType.metadata.description
+          : null,
+      workspaceType: `${workType.title} Workspace`,
+      itemLabel: `${workType.title} Items`,
+      defaultView: "items",
+      provisioning,
+      eventBindings,
+    };
+    const snapshot = {
+      blueprintKey: workType.key,
+      blueprintName: workType.title,
+      blueprintSource: "REGISTRY",
+      workTypeKey: workType.key,
+      workflowKey: workType.workflowKey ?? null,
+      workspaceDefinition,
+      provisioning,
+      eventBindings,
+      itemLabel: workspaceDefinition.itemLabel,
+      defaultView: workspaceDefinition.defaultView,
+      workspaceType: workspaceDefinition.workspaceType,
+      snapshotAt: new Date().toISOString(),
+    };
+
+    lines.push(`blueprintKey: ${workType.key}`);
+    lines.push("blueprintSource: REGISTRY");
+    lines.push(`blueprintSnapshot: ${JSON.stringify(snapshot)}`);
+  }
+
   return lines.join("\n");
+}
+
+function noteHasBlueprintEventBindings(note: string | null | undefined) {
+  return /blueprintSnapshot:\s*/i.test(String(note ?? "")) &&
+    /"eventBindings"\s*:/i.test(String(note ?? ""));
+}
+
+function shouldAutoCreateWorkTicket(workType: WorkTypeDefinition) {
+  return shouldAutoCreateOnSpaceOpened(
+    workspaceProvisioningForWorkType({
+      workTypeKey: workType.key,
+      coordinationContext: workType.coordinationContext,
+      enabled: workType.enabled,
+    }),
+  );
 }
 
 export function getWeekRange(date = new Date()): CoordinationWeekRange {
@@ -106,6 +170,19 @@ export function getCoordinationCycleTitle(
   return `Khác tuần ${weekNumber}`;
 }
 
+function getCoordinationCycleRuntimeTitle(
+  context: CoordinationContext,
+  weekNumber: number,
+) {
+  if (context === "OPERATION") return `Vận hành tuần ${weekNumber}`;
+  if (context === "SALES") return `Bán hàng tuần ${weekNumber}`;
+  if (context === "TECHNICAL") return `Kỹ thuật tuần ${weekNumber}`;
+  if (context === "MEDIA") return `Media tuần ${weekNumber}`;
+  if (context === "PAYMENT") return `Thanh toán tuần ${weekNumber}`;
+
+  return `Tổng quát tuần ${weekNumber}`;
+}
+
 async function findCoordinationCycleTask(
   db: DB,
   input: {
@@ -113,7 +190,7 @@ async function findCoordinationCycleTask(
     week: CoordinationWeekRange;
   },
 ) {
-  const title = getCoordinationCycleTitle(
+  const title = getCoordinationCycleRuntimeTitle(
     input.context,
     input.week.weekNumber,
   );
@@ -185,11 +262,27 @@ export async function ensureWorkTickets(
 ) {
   const client = dbOrTx(db);
   const existing = await listWorkTicketsForCycle(client, input);
-  const existingTitles = new Set(existing.map((item) => item.title.trim()));
+  const existingByTitle = new Map(existing.map((item) => [item.title.trim(), item]));
+  const existingTitles = new Set(existingByTitle.keys());
   let createdCount = 0;
 
   for (const workType of listWorkTypes(input.context)) {
-    if (existingTitles.has(workType.title)) continue;
+    if (!shouldAutoCreateWorkTicket(workType)) continue;
+
+    const existingItem = existingByTitle.get(workType.title);
+    if (existingItem) {
+      const nextNote = workTypeNote(workType);
+      if (
+        nextNote.includes("blueprintSnapshot:") &&
+        !noteHasBlueprintEventBindings(existingItem.note)
+      ) {
+        await client.taskItem.update({
+          where: { id: existingItem.id },
+          data: { note: nextNote },
+        });
+      }
+      continue;
+    }
 
     await client.taskItem.create({
       data: {
@@ -218,61 +311,60 @@ export async function ensureCoordinationCycle(
   input: EnsureCoordinationCycleInput,
 ): Promise<EnsureCoordinationCycleResult> {
   const week = getWeekRange(input.date);
+  const client = dbOrTx(db);
 
-  return withDbTransaction(db, async (tx) => {
-    const existing = await findCoordinationCycleTask(tx, {
-      context: input.context,
-      week,
-    });
+  const existing = await findCoordinationCycleTask(client, {
+    context: input.context,
+    week,
+  });
 
-    if (existing) {
-      const workTickets = await ensureWorkTickets(tx, {
-        taskId: existing.id,
-        context: input.context,
-      });
-
-      return {
-        task: existing,
-        week,
-        context: input.context,
-        created: false,
-        workTickets: workTickets.items,
-        workTicketsCreated: workTickets.createdCount,
-      };
-    }
-
-    const title = getCoordinationCycleTitle(
-      input.context,
-      week.weekNumber,
-    );
-
-    const task = await tx.task.create({
-      data: {
-        title,
-        description: `Coordination cycle ${input.context} ${week.periodKey}`,
-        source: TaskSource.SYSTEM,
-        kind: contextToTaskKind(input.context),
-        periodType: TaskPeriod.WEEKLY,
-        periodKey: week.periodKey,
-        priority: "MEDIUM",
-      },
-      select: COORDINATION_CYCLE_TASK_SELECT,
-    });
-
-    const workTickets = await ensureWorkTickets(tx, {
-      taskId: task.id,
+  if (existing) {
+    const workTickets = await ensureWorkTickets(client, {
+      taskId: existing.id,
       context: input.context,
     });
 
     return {
-      task,
+      task: existing,
       week,
       context: input.context,
-      created: true,
+      created: false,
       workTickets: workTickets.items,
       workTicketsCreated: workTickets.createdCount,
     };
+  }
+
+  const title = getCoordinationCycleRuntimeTitle(
+    input.context,
+    week.weekNumber,
+  );
+
+  const task = await client.task.create({
+    data: {
+      title,
+      description: `Coordination cycle ${input.context} ${week.periodKey}`,
+      source: TaskSource.SYSTEM,
+      kind: contextToTaskKind(input.context),
+      periodType: TaskPeriod.WEEKLY,
+      periodKey: week.periodKey,
+      priority: "MEDIUM",
+    },
+    select: COORDINATION_CYCLE_TASK_SELECT,
   });
+
+  const workTickets = await ensureWorkTickets(client, {
+    taskId: task.id,
+    context: input.context,
+  });
+
+  return {
+    task,
+    week,
+    context: input.context,
+    created: true,
+    workTickets: workTickets.items,
+    workTicketsCreated: workTickets.createdCount,
+  };
 }
 
 export async function resolveCurrentCoordinationCycle(
