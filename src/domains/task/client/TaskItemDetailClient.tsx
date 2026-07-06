@@ -589,7 +589,7 @@ function coordinationHref(parentTask?: ParentTask | null) {
 
   if (kind === "SERVICE") workspace = "technical";
   if (title.includes("media")) workspace = "media";
-  if (title.includes("thanh toÒ¡n") || title.includes("thanh toán")) {
+  if (title.includes("thanh toán") || title.includes("thanh toán")) {
     workspace = "payment";
   }
   if (kind === "BUSINESS") {
@@ -1570,6 +1570,12 @@ function ActivityCompactRow({
           className="mb-1 ml-1 flex max-w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
         >
           <span className="shrink-0 text-slate-300">↳</span>
+          <UserAvatar
+            label={latestReply.actorLabel}
+            avatarUrl={latestReply.actorAvatarUrl}
+            isSystem={!latestReply.actorUserId}
+            className="h-5 w-5 text-[10px]"
+          />
           <span className="shrink-0 font-semibold text-slate-700">
             {latestReply.actorLabel}
           </span>
@@ -1588,12 +1594,22 @@ function ActivityCompactRow({
             <div className="space-y-1.5">
               {activity.replies.map((reply) => (
                 <div key={reply.id} className="flex min-w-0 items-start gap-2 text-xs">
-                  <span className="shrink-0 font-semibold text-slate-700">
-                    {reply.actorLabel}
-                  </span>
-                  <span className="min-w-0 flex-1 whitespace-pre-wrap text-slate-600">
-                    {reply.body}
-                  </span>
+                  <UserAvatar
+                    label={reply.actorLabel}
+                    avatarUrl={reply.actorAvatarUrl}
+                    isSystem={!reply.actorUserId}
+                    className="h-6 w-6 text-[10px]"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-baseline gap-2">
+                      <span className="shrink-0 font-semibold text-slate-700">
+                        {reply.actorLabel}
+                      </span>
+                      <span className="min-w-0 flex-1 whitespace-pre-wrap text-slate-600">
+                        {reply.body}
+                      </span>
+                    </div>
+                  </div>
                   <span className="shrink-0 text-slate-400">
                     {formatDateTime(reply.createdAt, "")}
                   </span>
