@@ -5,6 +5,7 @@ import {
     findBrandBySlug,
     listActiveBrands,
     searchActiveBrands,
+    searchBrands,
 } from "./brand.repo";
 
 function slugify(input: string) {
@@ -57,4 +58,8 @@ export async function getActiveBrandOptions() {
 
 export async function searchActiveBrandOptions(query: string) {
     return searchActiveBrands(query, 20);
+}
+
+export async function searchBrandOptions(query: string) {
+    return searchBrands(query, 50);
 }

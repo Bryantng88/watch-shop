@@ -60,10 +60,13 @@ export default function WatchBrandField({
         [brands, value],
     );
 
-    const visibleOptions = useMemo(
-        () => mergeBrands(brands, results).slice(0, 30),
-        [brands, results],
-    );
+    const visibleOptions = useMemo(() => {
+        const cleanQuery = query.trim();
+        const selected = selectedBrand ? [selectedBrand] : [];
+        const source = cleanQuery ? mergeBrands(selected, results) : brands;
+
+        return source.slice(0, cleanQuery ? 50 : 30);
+    }, [brands, query, results, selectedBrand]);
 
     useEffect(() => {
         if (!open) return;

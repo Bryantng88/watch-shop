@@ -382,7 +382,7 @@ export default function WatchListClient(props: WatchListClientProps) {
         [selectedRows],
     );
     const mediaReviewEligibleRows = useMemo(
-        () => selectedRows.filter((row) => row.hasContent && row.hasImages && row.productId),
+        () => selectedRows.filter((row) => row.hasImages && row.productId),
         [selectedRows],
     );
 
@@ -538,22 +538,74 @@ export default function WatchListClient(props: WatchListClientProps) {
         if (!photoshootEligibleRows.length || photoshootSubmitting) return;
 
         setPhotoshootSubmitting(true);
+        const total = photoshootEligibleRows.length;
+        const steps: AppProgressStep[] = photoshootEligibleRows.map((row, index) => ({
+            id: row.id,
+            label: row.title || row.sku || row.productId,
+            detail: `Chờ gửi sang WP Photoshoot (${index + 1}/${total})`,
+            status: "pending",
+        }));
+
+        progress.show({
+            title: "Đang gửi sang WP Photoshoot",
+            message: `0/${total} watch hoàn tất`,
+            steps,
+        });
 
         try {
+            progress.update({
+                message: `Đang gửi ${total} watch sang WP Photoshoot`,
+                steps: steps.map((step) => ({
+                    ...step,
+                    status: "running",
+                    detail: "Đang gửi sang WP Photoshoot",
+                })),
+            });
+
             const result = await requestWatchPhotoshootAction({
                 watchIds: photoshootEligibleRows.map((row) => row.id),
                 note: "Requested from Watch list bulk action.",
             });
+            const itemByWatchId = new Map(result.items.map((item) => [item.watchId, item]));
+            const sentCount = result.requested ?? 0;
+            const skippedCount = result.skipped ?? 0;
+
+            progress.update({
+                message: `${sentCount}/${total} watch hoàn tất`,
+                steps: steps.map((step) => {
+                    const item = itemByWatchId.get(step.id);
+                    const requested = item?.status === "REQUESTED";
+
+                    return {
+                        ...step,
+                        status: requested ? "done" : "skipped",
+                        detail: requested
+                            ? "Đã gửi vào WP Photoshoot."
+                            : item?.reason ?? "Watch được bỏ qua.",
+                    };
+                }),
+            });
 
             notify.success({
                 title: "Đã gửi sang Photoshoot",
-                message: `${result.requested} watch được gửi, ${result.skipped} watch bỏ qua.`,
+                message: `${sentCount} watch được gửi, ${skippedCount} watch bỏ qua.`,
             });
             setSelectedIds([]);
 
             const next = new URLSearchParams(params.toString());
             await loadList(next, { meta: "lite" });
         } catch (error) {
+            progress.update({
+                message: "Gửi sang WP Photoshoot thất bại",
+                steps: steps.map((step) => ({
+                    ...step,
+                    status: "error",
+                    detail:
+                        error instanceof Error
+                            ? error.message
+                            : "Không thể gửi watch này.",
+                })),
+            });
             notify.error({
                 title: "Không thể gửi Photoshoot",
                 message:
@@ -563,6 +615,7 @@ export default function WatchListClient(props: WatchListClientProps) {
             });
         } finally {
             setPhotoshootSubmitting(false);
+            window.setTimeout(() => progress.hide(), 1200);
         }
     }
 

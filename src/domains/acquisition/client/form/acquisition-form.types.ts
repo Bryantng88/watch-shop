@@ -17,6 +17,7 @@ export type AcquisitionWatchLine = {
 export type AcquisitionFormVendor = {
     id: string;
     name: string;
+    phone?: string | null;
 };
 
 export type AcquisitionInlineSubmitPayload = {

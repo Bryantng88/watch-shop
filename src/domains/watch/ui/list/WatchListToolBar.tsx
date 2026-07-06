@@ -93,8 +93,8 @@ export default function WatchListToolbar({
                                 className="flex w-full items-start gap-3 rounded-xl px-3 py-2 text-left text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                                 title={
                                     selectedCount > 0 && mediaReviewEligibleCount === 0
-                                        ? "Watch đã chọn chưa đủ ảnh và content"
-                                        : "Gửi Watch đã có ảnh/content sang Workspace Xử lý Media"
+                                        ? "Watch đã chọn chưa có ảnh để xử lý media"
+                                        : "Gửi Watch đã có ảnh sang Workspace Xử lý Media"
                                 }
                             >
                                 <Images className="mt-0.5 h-4 w-4 text-slate-500" />
@@ -103,7 +103,7 @@ export default function WatchListToolbar({
                                         Gửi sang WP Xử lý Media
                                     </span>
                                     <span className="mt-0.5 block text-xs text-slate-500">
-                                        {mediaReviewEligibleCount} watch đã có ảnh/content trong {selectedCount} watch đã chọn
+                                        {mediaReviewEligibleCount} watch đã có ảnh trong {selectedCount} watch đã chọn
                                     </span>
                                 </span>
                             </button>

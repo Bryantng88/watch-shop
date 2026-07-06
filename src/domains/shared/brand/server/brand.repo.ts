@@ -91,3 +91,28 @@ export async function searchActiveBrands(query: string, limit = 20) {
         },
     });
 }
+
+export async function searchBrands(query: string, limit = 50) {
+    const keyword = query.trim();
+
+    return prisma.brand.findMany({
+        where: keyword
+            ? {
+                name: {
+                    contains: keyword,
+                    mode: "insensitive",
+                },
+            }
+            : {},
+        orderBy: [
+            { sortOrder: "asc" },
+            { name: "asc" },
+        ],
+        take: Math.min(Math.max(limit, 1), 100),
+        select: {
+            id: true,
+            name: true,
+            slug: true,
+        },
+    });
+}
