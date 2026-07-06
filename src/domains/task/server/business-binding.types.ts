@@ -74,6 +74,7 @@ export type QueueItemDTO = {
   preview: QueueItemPreviewDTO;
   latestActivityTitle: string | null;
   feedbackCount: number;
+  discussionCount: number;
   activityCount: number;
   workflowKey: string | null;
   currentWorkflowState: string | null;

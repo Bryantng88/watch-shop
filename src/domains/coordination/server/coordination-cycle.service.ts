@@ -59,7 +59,19 @@ function contextToTaskKind(context: CoordinationContext) {
   return TaskKind.BUSINESS;
 }
 
-function workTypeNote(workType: WorkTypeDefinition) {
+function sharedUserIdsFromNote(note?: string | null) {
+  return Array.from(
+    new Set(
+      String(note ?? "")
+        .match(/^sharedUserIds:\s*(.+)$/im)?.[1]
+        ?.split(",")
+        .map((item) => item.trim())
+        .filter(Boolean) ?? [],
+    ),
+  );
+}
+
+function workTypeNote(workType: WorkTypeDefinition, sharedUserIds: string[] = []) {
   const eventBindings = eventBindingsForWorkType({
     workTypeKey: workType.key,
     coordinationContext: workType.coordinationContext,
@@ -77,6 +89,10 @@ function workTypeNote(workType: WorkTypeDefinition) {
 
   if (workType.workflowKey) {
     lines.push(`workflowKey: ${workType.workflowKey}`);
+  }
+
+  if (sharedUserIds.length) {
+    lines.push(`sharedUserIds: ${sharedUserIds.join(",")}`);
   }
 
   if (eventBindings.length) {
@@ -118,6 +134,30 @@ function workTypeNote(workType: WorkTypeDefinition) {
 function noteHasBlueprintEventBindings(note: string | null | undefined) {
   return /blueprintSnapshot:\s*/i.test(String(note ?? "")) &&
     /"eventBindings"\s*:/i.test(String(note ?? ""));
+}
+
+async function listAdminUserIds(db: DB) {
+  const users = await dbOrTx(db).user.findMany({
+    where: {
+      isActive: true,
+      roles: {
+        some: {
+          OR: [
+            { name: { equals: "ADMIN", mode: "insensitive" } },
+            {
+              permissions: {
+                some: { code: { equals: "ADMIN", mode: "insensitive" } },
+              },
+            },
+          ],
+        },
+      },
+    },
+    select: { id: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  return users.map((user) => user.id);
 }
 
 function shouldAutoCreateWorkTicket(workType: WorkTypeDefinition) {
@@ -264,6 +304,7 @@ export async function ensureWorkTickets(
   const existing = await listWorkTicketsForCycle(client, input);
   const existingByTitle = new Map(existing.map((item) => [item.title.trim(), item]));
   const existingTitles = new Set(existingByTitle.keys());
+  const adminUserIds = await listAdminUserIds(client);
   let createdCount = 0;
 
   for (const workType of listWorkTypes(input.context)) {
@@ -271,10 +312,15 @@ export async function ensureWorkTickets(
 
     const existingItem = existingByTitle.get(workType.title);
     if (existingItem) {
-      const nextNote = workTypeNote(workType);
+      const nextSharedUserIds = Array.from(
+        new Set([...sharedUserIdsFromNote(existingItem.note), ...adminUserIds]),
+      );
+      const nextNote = workTypeNote(workType, nextSharedUserIds);
       if (
-        nextNote.includes("blueprintSnapshot:") &&
-        !noteHasBlueprintEventBindings(existingItem.note)
+        nextNote !== existingItem.note &&
+        (nextSharedUserIds.length > sharedUserIdsFromNote(existingItem.note).length ||
+          (nextNote.includes("blueprintSnapshot:") &&
+            !noteHasBlueprintEventBindings(existingItem.note)))
       ) {
         await client.taskItem.update({
           where: { id: existingItem.id },
@@ -288,7 +334,7 @@ export async function ensureWorkTickets(
       data: {
         taskId: input.taskId,
         title: workType.title,
-        note: workTypeNote(workType),
+        note: workTypeNote(workType, adminUserIds),
         status: TaskStatus.TODO,
         priority: "MEDIUM",
         assignedToUserId: null,

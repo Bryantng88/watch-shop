@@ -1,4 +1,5 @@
 import type { ZaloApiResponse } from "./types";
+import { getZaloAccessToken } from "./zalo-token.service";
 
 const DEFAULT_ZALO_SEND_URL = "https://openapi.zalo.me/v3.0/oa/group/message";
 const DEFAULT_ZALO_TIMEOUT_MS = 3000;
@@ -12,14 +13,25 @@ export async function zaloPost<TBody extends Record<string, unknown>>(
     body: TBody,
 ): Promise<ZaloApiResponse> {
     const endpoint = process.env.ZALO_OA_SEND_URL || DEFAULT_ZALO_SEND_URL;
-    const accessToken = process.env.ZALO_OA_ACCESS_TOKEN;
+    const accessToken = await getZaloAccessToken();
+
+    try {
+        return await zaloPostWithToken(endpoint, body, accessToken);
+    } catch (error) {
+        if (!isAccessTokenExpiredError(error)) throw error;
+
+        const refreshedAccessToken = await getZaloAccessToken({ forceRefresh: true });
+        return zaloPostWithToken(endpoint, body, refreshedAccessToken);
+    }
+}
+
+async function zaloPostWithToken<TBody extends Record<string, unknown>>(
+    endpoint: string,
+    body: TBody,
+    accessToken: string,
+): Promise<ZaloApiResponse> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), resolveTimeoutMs());
-
-    if (!accessToken) {
-        clearTimeout(timeout);
-        throw new Error("Missing ZALO_OA_ACCESS_TOKEN");
-    }
 
     try {
         const response = await fetch(endpoint, {
@@ -38,11 +50,13 @@ export async function zaloPost<TBody extends Record<string, unknown>>(
             throw new Error(data?.message || `Zalo API failed: ${response.status}`);
         }
 
-        if (data?.error && String(data.error) !== "0") {
+        const errorCode = data?.error ?? data?.error_code;
+
+        if (errorCode !== undefined && errorCode !== null && String(errorCode) !== "0") {
             throw new Error(
-                data.message ||
-                data.error_description ||
-                `Zalo API error: ${String(data.error)}`,
+                data?.message ||
+                data?.error_description ||
+                `Zalo API error: ${String(errorCode)}`,
             );
         }
 
@@ -56,4 +70,9 @@ export async function zaloPost<TBody extends Record<string, unknown>>(
     } finally {
         clearTimeout(timeout);
     }
+}
+
+function isAccessTokenExpiredError(error: unknown) {
+    if (!(error instanceof Error)) return false;
+    return /access token.*expired|token.*expired|expired.*token/i.test(error.message);
 }

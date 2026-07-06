@@ -117,12 +117,14 @@ export default async function WatchEditPage({
         query.embedded === "1" && query.mode === "media";
 
     const [detail, options] = isEmbeddedMediaMode
-        ? [
-            await perfStep("watch-edit-page", "getWatchMediaEditDetail", () =>
+        ? await Promise.all([
+            perfStep("watch-edit-page", "getWatchMediaEditDetail", () =>
                 getWatchMediaEditDetail(id),
             ),
-            null,
-        ]
+            perfStep("watch-edit-page", "listWatchEditOptions", () =>
+                listWatchEditOptions(),
+            ),
+        ])
         : await Promise.all([
             perfStep("watch-edit-page", "getWatchEditDetail", () =>
                 getWatchEditDetail(id),

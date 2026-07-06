@@ -52,6 +52,17 @@ export type WatchMediaPipelineEventPayloadInput = {
     | "DOWNLOAD_PUBLISH_ASSETS";
   sourceId?: string | null;
   note?: string | null;
+  mediaWorkProgress?: {
+    parts: {
+      profile: boolean;
+      content: boolean;
+      image: boolean;
+    };
+    completed: string;
+    total: number;
+    updatedAt?: string | null;
+    seededFromWatch?: boolean;
+  } | null;
 };
 
 export const WATCH_REVIEW_EVENT_CONSUMERS = [
@@ -424,6 +435,7 @@ export function watchMediaPipelineEventPayload(input: WatchMediaPipelineEventPay
     sourceId,
     eventInstanceId: sourceId,
     intakeNote: input.note ?? null,
+    mediaWorkProgress: input.mediaWorkProgress ?? null,
   };
 }
 

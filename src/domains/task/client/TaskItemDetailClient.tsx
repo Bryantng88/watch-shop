@@ -3,6 +3,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
   type KeyboardEvent,
@@ -11,7 +12,6 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   CalendarDays,
   CheckCircle2,
   ChevronDown,
@@ -45,6 +45,11 @@ import {
   PrioritySignal,
   TaskStatusSignal,
 } from "@/domains/shared/ui/signals/StatePrioritySignal";
+import {
+  BusinessEntityPreviewModal,
+  useBusinessEntityPreview,
+} from "@/domains/shared/ui/business/BusinessEntityPreview";
+import type { BusinessEntityPreview } from "@/domains/shared/business/business-entity.types";
 import type {
   TimelineActivityBlock,
   TimelineEntryTone,
@@ -61,10 +66,8 @@ import { repairVietnameseMojibake } from "@/domains/shared/text/vietnamese-mojib
 import { workspaceFlowOrder } from "@/domains/task/shared/workspace-flow-policy";
 import {
   addTaskItemActivityReplyAction,
-  addManualQueueItemAction,
   applyQueueItemManualTransitionsAction,
   applyQueueItemManualTransitionAction,
-  searchManualQueueTargetsAction,
   updateTaskItemSharingAction,
 } from "../actions/task.actions";
 
@@ -103,6 +106,7 @@ type TaskItemBinding = {
     lastActivityTitle?: string | null;
     lastActivityAt?: string | null;
     feedbackCount?: number;
+    discussionCount?: number;
   } | null;
   processingLabel?: string | null;
 };
@@ -125,6 +129,7 @@ type TaskItemQueueItem = {
   };
   latestActivityTitle: string | null;
   feedbackCount: number;
+  discussionCount: number;
   activityCount: number;
   workflowKey?: string | null;
   currentWorkflowState?: string | null;
@@ -156,16 +161,6 @@ type TaskItemQueueItem = {
 type TaskItemQueueTransition = NonNullable<
   TaskItemQueueItem["manualTransitions"]
 >[number];
-
-type ManualQueueTargetPreview = {
-  targetType: string;
-  targetId: string;
-  title: string;
-  ref: string | null;
-  status: string | null;
-  imageUrl: string | null;
-  href: string | null;
-};
 
 type ParentTask = {
   id: string;
@@ -218,6 +213,11 @@ type DetailTab =
   | "info";
 type QueueFilter = "ALL" | QueueItemStatus;
 type ActivityMode = "ALL" | "QUEUE";
+type ActivityJumpTarget = {
+  queueItemId: string;
+  mode: "activity" | "discussion";
+  nonce: number;
+};
 
 type TabItem = {
   key: DetailTab;
@@ -1444,19 +1444,28 @@ function ActivityViewModelFeed({
   queueItems,
   mode,
   discussionEnabled,
+  jumpTarget,
 }: {
   items: TaskItemActivityViewModel[];
   businessBindings: TaskItemBinding[];
   queueItems: TaskItemQueueItem[];
   mode: ActivityMode;
   discussionEnabled: boolean;
+  jumpTarget?: ActivityJumpTarget | null;
 }) {
   if (!items.length) {
     return <EmptyState>Chua co hoat dong nao.</EmptyState>;
   }
 
   if (mode === "QUEUE") {
-    return <ActivityGroupedByQueue items={items} queueItems={queueItems} />;
+    return (
+      <ActivityGroupedByQueue
+        items={items}
+        queueItems={queueItems}
+        discussionEnabled={discussionEnabled}
+        jumpTarget={jumpTarget}
+      />
+    );
   }
 
   const bindingByTarget = new Map(
@@ -1481,14 +1490,157 @@ function ActivityViewModelFeed({
   );
 }
 
+function ActivityCompactRow({
+  activity,
+  discussionEnabled,
+}: {
+  activity: TaskItemActivityViewModel;
+  discussionEnabled: boolean;
+}) {
+  const classes = toneClasses(activity.tone);
+  const actor = activity.actorLabel || "System";
+  const [repliesOpen, setRepliesOpen] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [optimisticReplyCount, setOptimisticReplyCount] = useState(
+    activity.replies.length,
+  );
+  const body = String(activity.body ?? "").replace(/\s+/g, " ").trim();
+  const latestReply = activity.replies[activity.replies.length - 1] ?? null;
+
+  function toggleReplies() {
+    if (optimisticReplyCount === 0 && !repliesOpen) {
+      setRepliesOpen(true);
+      setComposerOpen(true);
+      return;
+    }
+    setRepliesOpen((value) => !value);
+  }
+
+  function handleSubmitted() {
+    setOptimisticReplyCount((count) => count + 1);
+    setComposerOpen(false);
+    setRepliesOpen(true);
+  }
+
+  return (
+    <div className="relative min-w-0">
+      <span
+        className={cn(
+          "absolute -left-[31px] top-2 flex h-5 w-5 items-center justify-center rounded-full text-[10px] ring-4 ring-white",
+          classes.dot,
+        )}
+      >
+        <ActivityViewModelIcon activity={activity} />
+      </span>
+      <div className="flex min-w-0 items-center gap-2 py-1.5 text-sm leading-6">
+        <span className="min-w-0 shrink truncate font-semibold text-slate-900">
+          {activity.title}
+        </span>
+        {body ? (
+          <span className="min-w-0 flex-1 truncate text-slate-500">
+            - {body}
+          </span>
+        ) : (
+          <span className="min-w-0 flex-1" />
+        )}
+        <span className="hidden shrink-0 text-xs text-slate-400 md:inline">
+          {actor} - {formatDateTime(activity.occurredAt, "")}
+        </span>
+        {discussionEnabled || optimisticReplyCount ? (
+          <button
+            type="button"
+            onClick={toggleReplies}
+            className={cn(
+              "inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-semibold transition hover:bg-slate-100",
+              optimisticReplyCount
+                ? "text-blue-700 hover:text-blue-800"
+                : "text-slate-500 hover:text-slate-900",
+            )}
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+            {optimisticReplyCount ? optimisticReplyCount : "Comment"}
+          </button>
+        ) : null}
+      </div>
+
+      {latestReply && !repliesOpen ? (
+        <button
+          type="button"
+          onClick={() => setRepliesOpen(true)}
+          className="mb-1 ml-1 flex max-w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
+        >
+          <span className="shrink-0 text-slate-300">↳</span>
+          <span className="shrink-0 font-semibold text-slate-700">
+            {latestReply.actorLabel}
+          </span>
+          <span className="min-w-0 truncate">{latestReply.body}</span>
+          {optimisticReplyCount > 1 ? (
+            <span className="shrink-0 text-slate-400">
+              +{optimisticReplyCount - 1}
+            </span>
+          ) : null}
+        </button>
+      ) : null}
+
+      {repliesOpen ? (
+        <div className="mb-2 ml-1 rounded-lg bg-slate-50 px-3 py-2">
+          {activity.replies.length ? (
+            <div className="space-y-1.5">
+              {activity.replies.map((reply) => (
+                <div key={reply.id} className="flex min-w-0 items-start gap-2 text-xs">
+                  <span className="shrink-0 font-semibold text-slate-700">
+                    {reply.actorLabel}
+                  </span>
+                  <span className="min-w-0 flex-1 whitespace-pre-wrap text-slate-600">
+                    {reply.body}
+                  </span>
+                  <span className="shrink-0 text-slate-400">
+                    {formatDateTime(reply.createdAt, "")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {discussionEnabled && composerOpen ? (
+            <ActivityReplyComposer
+              activityId={activity.id}
+              onCancel={() => {
+                setComposerOpen(false);
+                if (!optimisticReplyCount) setRepliesOpen(false);
+              }}
+              onSubmitted={handleSubmitted}
+            />
+          ) : discussionEnabled ? (
+            <button
+              type="button"
+              onClick={() => setComposerOpen(true)}
+              className="mt-2 inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-semibold text-slate-500 transition hover:bg-white hover:text-slate-900"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add comment
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ActivityGroupedByQueue({
   items,
   queueItems,
+  discussionEnabled,
+  jumpTarget,
 }: {
   items: TaskItemActivityViewModel[];
   queueItems: TaskItemQueueItem[];
+  discussionEnabled: boolean;
+  jumpTarget?: ActivityJumpTarget | null;
 }) {
   const [expandedGroupIds, setExpandedGroupIds] = useState<string[]>([]);
+  const [showCommentedOnly, setShowCommentedOnly] = useState(false);
+  const lastJumpNonceRef = useRef<number | null>(null);
   const queueByTarget = new Map(
     queueItems
       .map((item) => [businessQueueKey(item.targetType, item.targetId), item] as const)
@@ -1518,88 +1670,132 @@ function ActivityGroupedByQueue({
   }
 
   const visibleGroups = Array.from(groups.entries())
-    .map(([id, group]) => ({ id, ...group }))
-    .filter((group) => group.activities.length || group.queueItem);
+    .map(([id, group]) => ({
+      id,
+      queueItem: group.queueItem,
+      activities: showCommentedOnly
+        ? group.activities.filter((activity) => activity.replies.length > 0)
+        : group.activities,
+    }))
+    .filter((group) => group.activities.length || (!showCommentedOnly && group.queueItem));
+
+  useEffect(() => {
+    if (!jumpTarget || lastJumpNonceRef.current === jumpTarget.nonce) return;
+
+    lastJumpNonceRef.current = jumpTarget.nonce;
+    setExpandedGroupIds((prev) =>
+      prev.includes(jumpTarget.queueItemId)
+        ? prev
+        : [...prev, jumpTarget.queueItemId],
+    );
+    setShowCommentedOnly(jumpTarget.mode === "discussion");
+
+    window.setTimeout(() => {
+      document
+        .getElementById(`activity-group-${jumpTarget.queueItemId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
+  }, [jumpTarget]);
 
   return (
-    <div className="space-y-6">
-      {visibleGroups.map((group) => {
+    <div>
+      <div className="mb-2 flex items-center justify-end">
+        <button
+          type="button"
+          onClick={() => setShowCommentedOnly((value) => !value)}
+          className={cn(
+            "inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold ring-1 transition",
+            showCommentedOnly
+              ? "bg-slate-900 text-white ring-slate-900"
+              : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50",
+          )}
+        >
+          <MessageSquare className="h-3.5 w-3.5" />
+          Has comments
+        </button>
+      </div>
+
+      <div className="divide-y divide-slate-100">
+        {visibleGroups.length ? visibleGroups.map((group) => {
         const expanded = expandedGroupIds.includes(group.id);
-        const visibleActivities = expanded ? group.activities : group.activities.slice(0, 2);
+        const visibleActivities = expanded ? group.activities : group.activities.slice(0, 3);
         const hiddenCount = Math.max(0, group.activities.length - visibleActivities.length);
 
         return (
-        <div key={group.id} className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-            {group.queueItem ? <QueueItemThumbnail item={group.queueItem} /> : null}
-            <div className="min-w-0">
-              <div className="truncate text-sm font-semibold text-slate-950">
-                {group.queueItem ? queueItemTitle(group.queueItem) : "Hoạt động chung"}
+          <div
+            key={group.id}
+            id={`activity-group-${group.id}`}
+            className={cn(
+              "scroll-mt-28 py-3 transition-colors",
+              jumpTarget?.queueItemId === group.id ? "bg-blue-50/40" : "",
+            )}
+          >
+            <div className="flex min-w-0 items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                {group.queueItem ? <QueueItemThumbnail item={group.queueItem} /> : null}
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-slate-950">
+                    {group.queueItem ? queueItemTitle(group.queueItem) : "Hoat dong chung"}
+                  </div>
+                  {group.queueItem ? (
+                    <div className="mt-0.5 truncate text-xs text-slate-500">
+                      {queueItemRef(group.queueItem)} - {queueStatusLabel(group.queueItem.status)}
+                    </div>
+                  ) : (
+                    <div className="mt-0.5 text-xs text-slate-500">
+                      Hoat dong khong gan voi item cu the
+                    </div>
+                  )}
+                </div>
               </div>
-              {group.queueItem ? (
-                <div className="mt-0.5 truncate text-xs text-slate-500">
-                  {queueItemRef(group.queueItem)} - {queueStatusLabel(group.queueItem.status)}
+
+              {group.activities.length ? (
+                <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
+                  {group.activities.length}
+                </span>
+              ) : null}
+            </div>
+
+            <div className="ml-5 mt-2 min-w-0 border-l border-slate-200 pl-5">
+              {group.activities.length ? (
+                <div className="min-w-0">
+                  {visibleActivities.map((activity) => (
+                    <ActivityCompactRow
+                      key={activity.id}
+                      activity={activity}
+                      discussionEnabled={discussionEnabled}
+                    />
+                  ))}
+                  {hiddenCount ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedGroupIds((prev) =>
+                          expanded
+                            ? prev.filter((id) => id !== group.id)
+                            : [...prev, group.id],
+                        )
+                      }
+                      className="mt-1 inline-flex h-7 items-center rounded-md px-2 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                    >
+                      {expanded ? "Thu gon" : `Xem them ${hiddenCount} hoat dong`}
+                    </button>
+                  ) : null}
                 </div>
               ) : (
-                <div className="mt-0.5 text-xs text-slate-500">
-                  Hoạt động không gắn với nghiệp vụ cụ thể
+                <div className="py-1.5 text-sm text-slate-400">
+                  Chua co hoat dong.
                 </div>
               )}
             </div>
-            </div>
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-              {group.activities.length} activity
-            </span>
           </div>
-
-          {group.activities.length ? (
-            <div className="space-y-3 border-l border-slate-200 pl-4">
-              {visibleActivities.map((activity) => (
-                <div key={activity.id} className="relative">
-                  <span className="absolute -left-[21px] top-2 h-2 w-2 rounded-full bg-slate-300 ring-4 ring-white" />
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <div className="min-w-0 truncate text-sm font-medium text-slate-900">
-                      {activity.title}
-                    </div>
-                    <div className="shrink-0 text-xs text-slate-400">
-                      {formatDateTime(activity.occurredAt, "")}
-                    </div>
-                  </div>
-                  <div className="mt-0.5 text-xs text-slate-500">
-                    {activity.actorLabel}
-                  </div>
-                  {activity.body ? (
-                    <div className="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">
-                      {activity.body}
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-              {hiddenCount ? (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setExpandedGroupIds((prev) =>
-                      expanded
-                        ? prev.filter((id) => id !== group.id)
-                        : [...prev, group.id],
-                    )
-                  }
-                  className="text-xs font-semibold text-slate-500 transition hover:text-slate-900"
-                >
-                  {expanded ? "Thu gọn" : `Xem thêm ${hiddenCount} hoạt động`}
-                </button>
-              ) : null}
-            </div>
-          ) : (
-            <div className="border-l border-slate-200 pl-4 text-sm text-slate-400">
-              Chưa có hoạt động.
-            </div>
-          )}
-        </div>
         );
-      })}
+        }) : (
+          <div className="py-8 text-center text-sm text-slate-400">
+            No commented activity yet.
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1690,6 +1886,24 @@ function queueItemRef(item: TaskItemQueueItem) {
   return item.preview.ref || item.preview.status || targetLabel(item.targetType);
 }
 
+function queueItemToBusinessPreview(item: TaskItemQueueItem): BusinessEntityPreview | null {
+  const type = item.targetType === "SERVICE_REQUEST" ? "SERVICE" : item.targetType;
+  const supportedTypes = ["WATCH", "ORDER", "SHIPMENT", "SERVICE", "PAYMENT", "ACQUISITION"];
+
+  if (!supportedTypes.includes(type)) return null;
+
+  return {
+    type: type as BusinessEntityPreview["type"],
+    id: item.targetId,
+    refNo: item.preview.ref,
+    title: queueItemTitle(item),
+    subtitle: item.preview.ref || targetLabel(item.targetType),
+    status: item.preview.status,
+    imageUrl: item.preview.imageUrl ?? item.preview.imageUrls?.[0] ?? null,
+    href: item.href,
+  };
+}
+
 function QueueItemThumbnail({ item }: { item: TaskItemQueueItem }) {
   const imageUrls = item.preview.imageUrls?.length
     ? item.preview.imageUrls
@@ -1743,164 +1957,6 @@ function BusinessQueueImage({ binding }: { binding: TaskItemBinding }) {
   );
 }
 
-function ManualQueueIntake({
-  taskItemId,
-  itemLabel,
-}: {
-  taskItemId: string;
-  itemLabel: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const [keyword, setKeyword] = useState("");
-  const [intakeNote, setIntakeNote] = useState("");
-  const [results, setResults] = useState<ManualQueueTargetPreview[]>([]);
-  const [selected, setSelected] = useState<ManualQueueTargetPreview | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const router = useRouter();
-
-  const search = () => {
-    startTransition(async () => {
-      const result = await searchManualQueueTargetsAction({
-        targetType: "WATCH",
-        keyword,
-        limit: 10,
-      });
-      setResults(result.items);
-      setSelected(null);
-    });
-  };
-
-  const add = () => {
-    if (!selected) return;
-    startTransition(async () => {
-      await addManualQueueItemAction({
-        taskItemId,
-        targetType: selected.targetType,
-        targetId: selected.targetId,
-        intakeNote,
-      });
-      setKeyword("");
-      setIntakeNote("");
-      setResults([]);
-      setSelected(null);
-      setOpen(false);
-      router.refresh();
-    });
-  };
-
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-900 px-3 text-xs font-semibold text-white transition hover:bg-slate-800"
-      >
-        <Plus className="h-4 w-4" />
-        Add {itemLabel}
-      </button>
-    );
-  }
-
-  return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-      <div className="grid gap-3 lg:grid-cols-[150px_minmax(0,1fr)_auto]">
-        <select
-          value="WATCH"
-          disabled
-          className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700"
-        >
-          <option value="WATCH">Watch</option>
-        </select>
-        <input
-          value={keyword}
-          onChange={(event) => setKeyword(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") search();
-          }}
-          placeholder="Tìm theo tên hoặc SKU"
-          className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-slate-400"
-        />
-        <button
-          type="button"
-          onClick={search}
-          disabled={isPending}
-          className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-wait disabled:opacity-60"
-        >
-          Tìm
-        </button>
-      </div>
-
-      {results.length ? (
-        <div className="mt-3 max-h-64 divide-y divide-slate-200 overflow-y-auto rounded-lg border border-slate-200 bg-white">
-          {results.map((item) => {
-            const active = selected?.targetId === item.targetId;
-            const src = resolveMediaPreviewSrc(item.imageUrl);
-
-            return (
-              <button
-                key={item.targetId}
-                type="button"
-                onClick={() => setSelected(item)}
-                className={cn(
-                  "flex w-full items-center gap-3 px-3 py-2 text-left transition",
-                  active ? "bg-slate-100" : "hover:bg-slate-50",
-                )}
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 text-xs font-semibold text-slate-500">
-                  {src ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={src} alt={item.title} className="h-full w-full object-cover" />
-                  ) : (
-                    "W"
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-semibold text-slate-900">
-                    {item.title}
-                  </div>
-                  <div className="mt-0.5 flex flex-wrap gap-2 text-xs text-slate-500">
-                    <span>{item.ref || "Watch"}</span>
-                    {item.status ? <span>{item.status}</span> : null}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-
-      <label className="mt-3 block">
-        <span className="text-xs font-semibold text-slate-600">Yêu cầu xử lý</span>
-        <textarea
-          value={intakeNote}
-          onChange={(event) => setIntakeNote(event.target.value)}
-          rows={2}
-          placeholder="Ví dụ: Chụp thêm hình mặt số và dây."
-          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-400"
-        />
-      </label>
-
-      <div className="mt-3 flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
-        >
-          Hủy
-        </button>
-        <button
-          type="button"
-          onClick={add}
-          disabled={!selected || isPending}
-          className="h-9 rounded-lg bg-slate-900 px-3 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Thêm
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function QueueWorkQueue({
   taskItemId,
   items,
@@ -1908,6 +1964,7 @@ function QueueWorkQueue({
   itemLabel,
   workspaceWorkTypeKey,
   currentUser,
+  onOpenQueueActivity,
 }: {
   taskItemId: string;
   items: TaskItemQueueItem[];
@@ -1915,11 +1972,13 @@ function QueueWorkQueue({
   itemLabel: string;
   workspaceWorkTypeKey?: string | null;
   currentUser?: UserSummary | null;
+  onOpenQueueActivity?: (queueItemId: string, mode: "activity" | "discussion") => void;
 }) {
   const [filter, setFilter] = useState<QueueFilter>("ALL");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const previewState = useBusinessEntityPreview();
   const router = useRouter();
   const canReviewMedia = userHasAdminRole(currentUser);
   const filters: Array<{ key: QueueFilter; label: string }> = [
@@ -1977,8 +2036,8 @@ function QueueWorkQueue({
   const allSelectableSelected =
     selectableItems.length > 0 && selectableItems.every((item) => selectedIdSet.has(item.id));
   const gridClass = capabilities.workflow
-    ? "grid-cols-[42px_minmax(250px,1.3fr)_130px_150px_170px_80px_80px_120px_110px]"
-    : "grid-cols-[42px_minmax(250px,1.3fr)_130px_150px_80px_80px_120px_110px]";
+    ? "grid-cols-[42px_minmax(270px,1.35fr)_190px_minmax(150px,0.9fr)_160px_72px_72px_108px]"
+    : "grid-cols-[42px_minmax(270px,1.35fr)_190px_minmax(150px,0.9fr)_72px_72px_108px]";
   const applyManualAction = (queueItem: TaskItemQueueItem, actionKey: string) => {
     setPendingId(`${queueItem.id}:${actionKey}`);
     startTransition(async () => {
@@ -2044,9 +2103,6 @@ function QueueWorkQueue({
       }
     >
       <div className="space-y-3">
-        {capabilities.items ? (
-          <ManualQueueIntake taskItemId={taskItemId} itemLabel={itemLabel} />
-        ) : null}
         {items.length ? (
           <>
           {selectedTransitions.length ? (
@@ -2064,7 +2120,8 @@ function QueueWorkQueue({
               </button>
             </div>
           ) : null}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="inline-flex max-w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-50 p-1">
             {filters.map((item) => {
               const active = item.key === filter;
 
@@ -2074,21 +2131,22 @@ function QueueWorkQueue({
                   type="button"
                   onClick={() => setFilter(item.key)}
                   className={cn(
-                    "h-8 rounded-lg px-3 text-xs font-semibold ring-1 transition",
+                    "h-7 whitespace-nowrap rounded-md px-2.5 text-xs font-semibold transition",
                     active
-                      ? "bg-slate-900 text-white ring-slate-900"
-                      : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50",
+                      ? "bg-white text-slate-950 shadow-sm"
+                      : "text-slate-500 hover:text-slate-900",
                   )}
                 >
                   {item.label}
                 </button>
               );
             })}
+            </div>
           </div>
 
           {visibleItems.length ? (
             <div className="overflow-x-auto rounded-2xl border border-slate-200">
-              <div className="min-w-[920px]">
+              <div className="min-w-[980px]">
                 <div className={cn("grid gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase text-slate-500", gridClass)}>
                   <div>
                     <input
@@ -2104,10 +2162,9 @@ function QueueWorkQueue({
                   <div>Status</div>
                   <div>Latest Activity</div>
                   {capabilities.workflow ? <div>Workflow</div> : null}
-                  <div>Feedback</div>
+                  <div>Discussion</div>
                   <div>Activity</div>
                   <div>Updated</div>
-                  <div className="text-right">Open</div>
                 </div>
 
                 {visibleItems.map((queueItem) => {
@@ -2118,13 +2175,14 @@ function QueueWorkQueue({
                     isMediaQueueRow && isMediaReworkSignal(queueItem)
                       ? "FEEDBACK"
                       : queueItem.status;
+                  const businessPreview = queueItemToBusinessPreview(queueItem);
 
                   return (
                   <div
                     key={queueItem.id}
                     className={cn("grid gap-3 border-b border-slate-100 px-4 py-4 last:border-b-0", gridClass)}
                   >
-                    <div className="flex items-start pt-1">
+                    <div className="flex items-center self-center">
                       <input
                         type="checkbox"
                         checked={selectedIdSet.has(queueItem.id)}
@@ -2137,13 +2195,21 @@ function QueueWorkQueue({
                     <div className="flex min-w-0 items-start gap-3">
                       <QueueItemThumbnail item={queueItem} />
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold text-slate-950">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (businessPreview) previewState.openPreview(businessPreview);
+                          }}
+                          disabled={!businessPreview}
+                          className={cn(
+                            "block max-w-full truncate text-left text-sm font-semibold text-slate-950",
+                            businessPreview ? "hover:text-blue-700" : "cursor-default",
+                          )}
+                        >
                           {queueItemTitle(queueItem)}
-                        </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                        </button>
+                        <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
                           <span>{queueItemRef(queueItem)}</span>
-                          <span>-</span>
-                          <span>{targetLabel(queueItem.targetType)}</span>
                           <span>-</span>
                           <span>{queueItem.source === "MANUAL" ? "Manual" : "Auto"}</span>
                         </div>
@@ -2160,7 +2226,7 @@ function QueueWorkQueue({
                       </div>
                     </div>
 
-                    <div className="flex flex-col items-start justify-center gap-1.5">
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5 self-center">
                       <QueueStatusBadge status={displayStatus} />
                       {queueItem.mediaWorkProgress ? (
                         <span
@@ -2234,29 +2300,42 @@ function QueueWorkQueue({
                       </div>
                     ) : null}
 
-                    <div className="self-center text-sm font-semibold text-slate-700">
-                      {queueItem.feedbackCount}
+                    <div className="self-center">
+                      <button
+                        type="button"
+                        disabled={!queueItem.discussionCount}
+                        onClick={() => onOpenQueueActivity?.(queueItem.id, "discussion")}
+                        title="Open discussions for this item"
+                        className={cn(
+                          "inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-sm font-semibold transition",
+                          queueItem.discussionCount
+                            ? "text-blue-700 hover:bg-blue-50"
+                            : "cursor-default text-slate-400",
+                        )}
+                      >
+                        {queueItem.discussionCount ?? 0}
+                      </button>
                     </div>
 
-                    <div className="self-center text-sm font-semibold text-slate-700">
-                      {queueItem.activityCount}
+                    <div className="self-center">
+                      <button
+                        type="button"
+                        disabled={!queueItem.activityCount}
+                        onClick={() => onOpenQueueActivity?.(queueItem.id, "activity")}
+                        title="Open activities for this item"
+                        className={cn(
+                          "inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-sm font-semibold transition",
+                          queueItem.activityCount
+                            ? "text-slate-700 hover:bg-slate-100"
+                            : "cursor-default text-slate-400",
+                        )}
+                      >
+                        {queueItem.activityCount}
+                      </button>
                     </div>
 
                     <div className="self-center text-xs text-slate-500">
                       {formatDateTime(queueItem.updatedAt, "-")}
-                    </div>
-
-                    <div className="flex items-center justify-end">
-                      {queueItem.href ? (
-                        <Link
-                          href={queueItem.href}
-                          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
-                           aria-label="Open item"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                          Open
-                        </Link>
-                      ) : null}
                     </div>
                   </div>
                   );
@@ -2271,6 +2350,13 @@ function QueueWorkQueue({
         <EmptyState>No {itemLabel} in this workspace yet.</EmptyState>
         )}
       </div>
+      <BusinessEntityPreviewModal
+        open={previewState.open}
+        preview={previewState.preview}
+        loading={previewState.loading}
+        error={previewState.error}
+        onClose={previewState.closePreview}
+      />
     </Panel>
   );
 }
@@ -2694,7 +2780,7 @@ function BusinessWorkQueue({ items }: { items: TaskItemBinding[] }) {
               <div>Item</div>
               <div>Trạng thái</div>
               <div>Hoạt động cuối</div>
-              <div>Feedback</div>
+              <div>Discussion</div>
               <div>Cập nhật</div>
               <div className="text-right">Open</div>
             </div>
@@ -2748,7 +2834,7 @@ function BusinessWorkQueue({ items }: { items: TaskItemBinding[] }) {
                 </div>
 
                 <div className="self-center text-sm font-semibold text-slate-700">
-                  {binding.stats?.feedbackCount ?? 0}
+                  {binding.stats?.discussionCount ?? 0}
                 </div>
 
                 <div className="self-center text-xs text-slate-500">
@@ -3073,11 +3159,10 @@ function SpaceWorkspaceNav({
   if (workspaces.length <= 1) return null;
 
   return (
-    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
-      <div className="mb-2 text-xs font-semibold uppercase text-slate-500">
-        Workspace trong Space
-      </div>
-      <div className="flex flex-wrap gap-2">
+    <nav
+      aria-label="Workspace trong space"
+      className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1"
+    >
         {workspaces.map((workspace) => {
           const active = workspace.id === currentItemId;
 
@@ -3087,25 +3172,24 @@ function SpaceWorkspaceNav({
               href={`/admin/task-items/${workspace.id}`}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "inline-flex h-8 items-center gap-2 rounded-lg px-3 text-xs font-semibold ring-1 transition",
+                "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition",
                 active
-                  ? "bg-slate-950 text-white ring-slate-950"
-                  : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-100",
+                  ? "bg-slate-950 text-white shadow-sm"
+                  : "text-slate-600 hover:bg-white hover:text-slate-900",
               )}
             >
-              <span className="max-w-[180px] truncate">
+              <span className="max-w-[150px] truncate">
                 {siblingWorkspaceLabel(workspace)}
               </span>
               {active ? (
-                <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[10px]">
+                <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[10px] leading-none">
                   hiện tại
                 </span>
               ) : null}
             </Link>
           );
         })}
-      </div>
-    </div>
+    </nav>
   );
 }
 
@@ -3122,6 +3206,7 @@ export default function TaskItemDetailClient({
     initialWorkspaceTab(item.note),
   );
   const [activityMode, setActivityMode] = useState<ActivityMode>("QUEUE");
+  const [activityJumpTarget, setActivityJumpTarget] = useState<ActivityJumpTarget | null>(null);
   const parentTask = item.task;
   const checklists = useMemo(() => item.checklists ?? [], [item.checklists]);
   const activities = useMemo(() => item.activities ?? [], [item.activities]);
@@ -3184,6 +3269,16 @@ export default function TaskItemDetailClient({
     tabByKey.get("info"),
   ].filter((tab): tab is TabItem => Boolean(tab));
 
+  function openQueueActivity(queueItemId: string, mode: ActivityJumpTarget["mode"]) {
+    setActiveTab("activity");
+    setActivityMode("QUEUE");
+    setActivityJumpTarget({
+      queueItemId,
+      mode,
+      nonce: Date.now(),
+    });
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="mx-auto w-full max-w-[1680px] px-5 py-5 lg:px-8">
@@ -3203,19 +3298,12 @@ export default function TaskItemDetailClient({
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
-              {parentTask ? (
-                <Link
-                  href={backHref}
-                  className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to space
-                </Link>
-              ) : null}
-              <SpaceWorkspaceNav
-                currentItemId={item.id}
-                parentTask={parentTask}
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                <SpaceWorkspaceNav
+                  currentItemId={item.id}
+                  parentTask={parentTask}
+                />
+              </div>
 
               <div className="mt-5 flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
@@ -3352,6 +3440,7 @@ export default function TaskItemDetailClient({
                   queueItems={queueItems}
                   mode={activityMode}
                   discussionEnabled={capabilities.discussion}
+                  jumpTarget={activityJumpTarget}
                 />
               </Panel>
             ) : null}
@@ -3374,6 +3463,7 @@ export default function TaskItemDetailClient({
                 itemLabel={presentation.itemLabel}
                 workspaceWorkTypeKey={workspaceSnapshot?.workTypeKey ?? null}
                 currentUser={currentUser}
+                onOpenQueueActivity={openQueueActivity}
               />
             ) : null}
             {activeTab === "priority" ? (

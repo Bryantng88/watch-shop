@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Prisma, TaskStatus, TaskPriority, TaskKind } from "@prisma/client";
+import { Prisma, TaskExecutionTargetType, TaskStatus, TaskPriority, TaskKind } from "@prisma/client";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
 import {
@@ -73,8 +73,46 @@ function authActorLabel(auth: unknown) {
   };
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
 function normalizeTextKey(value: unknown) {
   return String(value ?? "").trim().toLowerCase();
+}
+
+function cleanText(value: unknown) {
+  return String(value ?? "").trim();
+}
+
+async function resolveActivityTargetTitle(input: {
+  targetType: string;
+  targetId: string;
+  metadata: Record<string, unknown>;
+}) {
+  const metadataTitle = cleanText(input.metadata.targetTitle) ||
+    cleanText(input.metadata.title);
+
+  if (metadataTitle) return metadataTitle;
+
+  if (input.targetType === TaskExecutionTargetType.WATCH && input.targetId) {
+    const watch = await prisma.watch.findUnique({
+      where: { id: input.targetId },
+      select: {
+        product: {
+          select: {
+            title: true,
+          },
+        },
+      },
+    });
+
+    return cleanText(watch?.product?.title) || null;
+  }
+
+  return null;
 }
 
 function blueprintIdentityFromNote(note?: string | null) {
@@ -712,7 +750,30 @@ export async function addTaskItemActivityReplyAction(input: {
 
   const activity = await prisma.taskItemActivity.findUnique({
     where: { id: activityId },
-    select: { taskItemId: true },
+    select: {
+      id: true,
+      title: true,
+      body: true,
+      sourceType: true,
+      sourceId: true,
+      metadataJson: true,
+      taskItemId: true,
+      taskItem: {
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          taskId: true,
+          task: {
+            select: {
+              id: true,
+              title: true,
+              periodKey: true,
+            },
+          },
+        },
+      },
+    },
   });
 
   const reply = await addActivityReply({
@@ -720,6 +781,52 @@ export async function addTaskItemActivityReplyAction(input: {
     body,
     actorUserId: getAuthUserId(auth),
   });
+
+  if (activity?.taskItemId) {
+    const actor = authActorLabel(auth);
+    const actorName = String(actor.name || actor.email || "System");
+    const activityMetadata = asRecord(activity.metadataJson);
+    const targetType = cleanText(activityMetadata.targetType);
+    const targetId = cleanText(activityMetadata.targetId);
+    const targetTitle = await resolveActivityTargetTitle({
+      targetType,
+      targetId,
+      metadata: activityMetadata,
+    });
+    const watchTitle = targetType === TaskExecutionTargetType.WATCH
+      ? targetTitle
+      : null;
+
+    await recordBusinessEvent(prisma, {
+      eventKey: "task.item.activity.commented",
+      targetType: "TASK_ITEM",
+      targetId: reply.id,
+      actorUserId: getAuthUserId(auth),
+      payload: {
+        taskItemId: activity.taskItemId,
+        targetTaskItemId: activity.taskItemId,
+        taskItemTitle: activity.taskItem?.title ?? null,
+        taskItemStatus: activity.taskItem?.status ?? null,
+        targetType: targetType || null,
+        targetId: targetId || null,
+        targetTitle,
+        watchTitle,
+        route: `/admin/task-items/${activity.taskItemId}?tab=activity`,
+        taskId: activity.taskItem?.taskId ?? null,
+        taskTitle: activity.taskItem?.task?.title ?? null,
+        periodKey: activity.taskItem?.task?.periodKey ?? null,
+        activityId: activity.id,
+        activityTitle: activity.title,
+        activityBody: activity.body ?? null,
+        activitySourceType: activity.sourceType,
+        activitySourceId: activity.sourceId ?? null,
+        replyId: reply.id,
+        replyBody: reply.body,
+        actorName,
+        message: `${actorName} commented on ${activity.taskItem?.title ?? "workspace activity"}: ${reply.body}`,
+      },
+    });
+  }
 
   revalidatePath("/admin/task-items");
   if (activity?.taskItemId) {

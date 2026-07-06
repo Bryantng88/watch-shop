@@ -28,6 +28,11 @@ const QUEUE_ACTIVITY_SELECT = {
   metadataJson: true,
   occurredAt: true,
   updatedAt: true,
+  _count: {
+    select: {
+      replies: true,
+    },
+  },
 } as const;
 
 function clean(value: unknown) {

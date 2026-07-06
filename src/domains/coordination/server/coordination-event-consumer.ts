@@ -495,6 +495,19 @@ function extractFeedbackMetadata(metadataJson: unknown) {
   };
 }
 
+function extractQueueSeedMetadata(metadataJson: unknown): Prisma.InputJsonObject {
+  const metadata = asRecord(metadataJson);
+  const mediaWorkProgress = asRecord(metadata.mediaWorkProgress);
+  const mediaAssetAttachedAt = clean(metadata.mediaAssetAttachedAt);
+
+  return {
+    ...(Object.keys(mediaWorkProgress).length
+      ? { mediaWorkProgress: mediaWorkProgress as Prisma.InputJsonObject }
+      : {}),
+    ...(mediaAssetAttachedAt ? { mediaAssetAttachedAt } : {}),
+  };
+}
+
 function skipped(
   reason: CoordinationConsumerSkipReason,
   route?: CoordinationRoute | null,
@@ -632,6 +645,7 @@ export async function consumeBusinessEventForCoordination(
     targetAliasIds: extractTargetAliasIds(input),
     eventBindingSource: workTicketResolution.source,
     eventBinding: workTicketResolution.eventBinding,
+    ...extractQueueSeedMetadata(input.metadataJson),
   } satisfies Prisma.InputJsonObject;
 
   if (workTicketResolution.eventBinding.mode === "PROGRESS") {

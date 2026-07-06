@@ -86,6 +86,13 @@ export const BUSINESS_EVENTS: BusinessEventDefinition[] = [
         targetType: "GENERAL",
         group: "Task",
     },
+    {
+        key: "task.item.activity.commented",
+        label: "Task activity commented",
+        targetType: "TASK_ITEM",
+        group: "Task",
+        knownConsumers: ["notification", "timeline"],
+    },
 ];
 
 export function normalizeBusinessEventKey(value: unknown) {

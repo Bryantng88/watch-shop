@@ -16,6 +16,7 @@ import {
   emitWatchMediaRecalledEvent,
   emitWatchPhotoshootCompletedEvent,
   emitWatchPhotoshootRequestedEvent,
+  type WatchMediaPipelineEventPayloadInput,
 } from "@/domains/watch/server/events";
 import {
   approveWatchReview,
@@ -26,12 +27,26 @@ type WatchPhotoshootRow = {
   id: string;
   productId: string;
   saleStage: unknown;
+  watchContent?: {
+    titleOverride: string | null;
+    summary: string | null;
+    hookText: string | null;
+    body: string | null;
+    bulletSpecs: string[];
+    hashTags: string | null;
+  } | null;
   product: {
     title: string | null;
     sku: string | null;
     primaryImageUrl: string | null;
+    postContent?: string | null;
     status: unknown;
     productImage: Array<{ id: string }>;
+    productContent?: {
+      generatedContent: string | null;
+      specBullets: string[];
+      hashtags: string[];
+    } | null;
   };
 };
 
@@ -85,6 +100,90 @@ function uniqueIds(values: string[]) {
 
 function hasGalleryImage(watch: WatchPhotoshootRow) {
   return watch.product.productImage.length > 0;
+}
+
+function hasWatchContent(watch: WatchPhotoshootRow) {
+  const watchContent = watch.watchContent;
+  const productContent = watch.product.productContent;
+
+  return Boolean(
+    clean(watchContent?.titleOverride) ||
+      clean(watchContent?.summary) ||
+      clean(watchContent?.hookText) ||
+      clean(watchContent?.body) ||
+      clean(watchContent?.hashTags) ||
+      (watchContent?.bulletSpecs?.length ?? 0) > 0 ||
+      clean(watch.product.postContent) ||
+      clean(productContent?.generatedContent) ||
+      (productContent?.specBullets?.length ?? 0) > 0 ||
+      (productContent?.hashtags?.length ?? 0) > 0,
+  );
+}
+
+function seedMediaWorkProgressFromWatch(watch: WatchPhotoshootRow, updatedAt = new Date().toISOString()) {
+  const parts = {
+    profile: false,
+    content: hasWatchContent(watch),
+    image: hasGalleryImage(watch),
+  };
+
+  return {
+    parts,
+    completed: mediaWorkCompletedLabel(parts),
+    total: 3,
+    updatedAt,
+    seededFromWatch: true,
+  };
+}
+
+function mediaWorkProgressPayload(
+  value: unknown,
+): WatchMediaPipelineEventPayloadInput["mediaWorkProgress"] {
+  const progress = asRecord(value);
+  const parts = mediaWorkParts(progress.parts);
+  const completed = mediaWorkCompletedLabel(parts);
+
+  if (![parts.profile, parts.content, parts.image].some(Boolean) && !clean(progress.updatedAt)) {
+    return null;
+  }
+
+  return {
+    parts,
+    completed: clean(progress.completed) || completed,
+    total: 3,
+    updatedAt: clean(progress.updatedAt) || null,
+    seededFromWatch: progress.seededFromWatch === true,
+  };
+}
+
+function mergeMediaWorkProgressSeed(
+  metadata: Record<string, unknown>,
+  watch: WatchPhotoshootRow,
+  updatedAt = new Date().toISOString(),
+) {
+  const current = asRecord(metadata.mediaWorkProgress);
+  const currentParts = mediaWorkParts(current.parts);
+  const seededParts = mediaWorkParts(seedMediaWorkProgressFromWatch(watch, updatedAt).parts);
+  const parts = {
+    profile: currentParts.profile || seededParts.profile,
+    content: currentParts.content || seededParts.content,
+    image: currentParts.image || seededParts.image,
+  };
+  const hasProgress = parts.profile || parts.content || parts.image;
+
+  if (!hasProgress && !clean(current.updatedAt)) return metadata;
+
+  return {
+    ...metadata,
+    mediaWorkProgress: {
+      ...current,
+      parts,
+      completed: mediaWorkCompletedLabel(parts),
+      total: 3,
+      updatedAt: clean(current.updatedAt) || updatedAt,
+      seededFromWatch: true,
+    },
+  };
 }
 
 function toWatchEventSnapshot(watch: WatchPhotoshootRow) {
@@ -149,12 +248,30 @@ export async function requestWatchPhotoshoot(
       id: true,
       productId: true,
       saleStage: true,
+      watchContent: {
+        select: {
+          titleOverride: true,
+          summary: true,
+          hookText: true,
+          body: true,
+          bulletSpecs: true,
+          hashTags: true,
+        },
+      },
       product: {
         select: {
           title: true,
           sku: true,
           primaryImageUrl: true,
+          postContent: true,
           status: true,
+          productContent: {
+            select: {
+              generatedContent: true,
+              specBullets: true,
+              hashtags: true,
+            },
+          },
           productImage: {
             where: { role: ImageRole.GALLERY },
             select: { id: true },
@@ -263,12 +380,30 @@ export async function completeWatchPhotoshootFromQueueItem(
       id: true,
       productId: true,
       saleStage: true,
+      watchContent: {
+        select: {
+          titleOverride: true,
+          summary: true,
+          hookText: true,
+          body: true,
+          bulletSpecs: true,
+          hashTags: true,
+        },
+      },
       product: {
         select: {
           title: true,
           sku: true,
           primaryImageUrl: true,
+          postContent: true,
           status: true,
+          productContent: {
+            select: {
+              generatedContent: true,
+              specBullets: true,
+              hashtags: true,
+            },
+          },
           productImage: {
             where: { role: ImageRole.GALLERY },
             select: { id: true },
@@ -338,12 +473,30 @@ export async function markWatchMediaAssetAttachedFromQueueItem(
       id: true,
       productId: true,
       saleStage: true,
+      watchContent: {
+        select: {
+          titleOverride: true,
+          summary: true,
+          hookText: true,
+          body: true,
+          bulletSpecs: true,
+          hashTags: true,
+        },
+      },
       product: {
         select: {
           title: true,
           sku: true,
           primaryImageUrl: true,
+          postContent: true,
           status: true,
+          productContent: {
+            select: {
+              generatedContent: true,
+              specBullets: true,
+              hashtags: true,
+            },
+          },
           productImage: {
             where: { role: ImageRole.GALLERY },
             select: { id: true },
@@ -361,6 +514,8 @@ export async function markWatchMediaAssetAttachedFromQueueItem(
   const runtimeMetadata = asRecord(runtime?.metadata);
   const wasAttached = Boolean(clean(metadata.mediaAssetAttachedAt));
   const attachedAt = new Date().toISOString();
+  const metadataWithProgress = mergeMediaWorkProgressSeed(metadata, watch, attachedAt);
+  const seededProgress = mediaWorkProgressPayload(metadataWithProgress.mediaWorkProgress);
   const revision = Math.max(
     numberValue(metadata.mediaAssetRevision),
     numberValue(runtimeMetadata.mediaAssetRevision),
@@ -369,7 +524,7 @@ export async function markWatchMediaAssetAttachedFromQueueItem(
     where: { id: binding.id },
     data: {
       metadataJson: {
-        ...metadata,
+        ...metadataWithProgress,
         mediaAssetAttachedAt: attachedAt,
         mediaAssetAttachedByUserId: input.actorUserId ?? null,
         mediaAssetRevision: revision,
@@ -385,6 +540,7 @@ export async function markWatchMediaAssetAttachedFromQueueItem(
       mediaAssetAttachedByUserId: input.actorUserId ?? null,
       mediaAssetRevision: revision,
       mediaAssetLastAction: wasAttached ? "UPDATE" : "ATTACH",
+      ...(seededProgress ? { mediaWorkProgress: seededProgress } : {}),
     } as Prisma.JsonObject);
   }
 
@@ -404,6 +560,7 @@ export async function markWatchMediaAssetAttachedFromQueueItem(
       mediaAssetAttachedAt: attachedAt,
       mediaAssetRevision: revision,
       mediaAssetLastAction: wasAttached ? "UPDATE" : "ATTACH",
+      ...(seededProgress ? { mediaWorkProgress: seededProgress } : {}),
       workflowState: "REVIEW",
     },
   }, db);
@@ -413,6 +570,7 @@ export async function markWatchMediaAssetAttachedFromQueueItem(
     actorUserId: input.actorUserId ?? null,
     sourceId: `media-asset-attached:${binding.id}`,
     note: input.note ?? null,
+    mediaWorkProgress: seededProgress,
   });
 
   return {
@@ -479,11 +637,13 @@ export async function markWatchMediaAssetAttachedFromWatch(
 
   if (!binding) {
     const attachedAt = new Date().toISOString();
+    const seededProgress = seedMediaWorkProgressFromWatch(watch, attachedAt);
     const event = await emitWatchMediaAssetAttachedEvent(db, {
       watch: toWatchEventSnapshot(watch),
       actorUserId: input.actorUserId ?? null,
       sourceId: `media-asset-attached:list:${watch.id}:${attachedAt}`,
       note: input.note ?? null,
+      mediaWorkProgress: seededProgress,
     });
 
     return {

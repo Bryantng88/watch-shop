@@ -1,9 +1,62 @@
 
+import type { Prisma } from "@prisma/client";
 import { createNotification } from "../notification.repo";
 import { findUsersByRoleNames } from "@/app/(admin)/admin/users/_server/user.repo";
 import { sendZaloTextToGroup } from "./channels/zalo";
-function renderTemplate(template: string, event: any) {
-    const meta = event.metadataJson ?? {};
+
+type NotificationEventLog = {
+    id: string;
+    eventKey: string;
+    targetType: string;
+    targetId: string;
+    metadataJson?: Prisma.JsonValue | null;
+};
+
+type NotificationRuleRow = {
+    id: string;
+    name: string;
+    eventKey: string;
+    enabled: boolean;
+    channel: string;
+    recipientGroupKey: string;
+    conditionJson?: Prisma.JsonValue | null;
+    titleTemplate?: string | null;
+    messageTemplate: string;
+    priority: string;
+};
+
+type NotificationRecipientGroupRow = {
+    key: string;
+    enabled: boolean;
+    roleNames?: Prisma.JsonValue | null;
+    userIds?: Prisma.JsonValue | null;
+    zaloGroupId?: string | null;
+};
+
+function asRecord(value: unknown): Record<string, unknown> {
+    return value && typeof value === "object" && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : {};
+}
+
+function clean(value: unknown) {
+    return String(value ?? "").trim();
+}
+
+function normalizeEventLog(value: unknown): NotificationEventLog {
+    const row = asRecord(value);
+
+    return {
+        id: clean(row.id),
+        eventKey: clean(row.eventKey),
+        targetType: clean(row.targetType),
+        targetId: clean(row.targetId),
+        metadataJson: (row.metadataJson ?? null) as Prisma.JsonValue | null,
+    };
+}
+
+function renderTemplate(template: string, event: NotificationEventLog) {
+    const meta = asRecord(event.metadataJson);
 
     return String(template ?? "").replace(
         /\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g,
@@ -27,58 +80,63 @@ function renderTemplate(template: string, event: any) {
     );
 }
 
-function getTemplateValue(source: any, path: string) {
+function getTemplateValue(source: Record<string, unknown>, path: string) {
     return String(path)
         .split(".")
         .reduce((acc, key) => {
             if (acc === null || acc === undefined) return undefined;
-            return acc[key];
-        }, source);
+            return asRecord(acc)[key];
+        }, source as unknown);
 }
-function matchNotificationRule(rule: any, eventLog: any) {
-    const condition = rule.conditionJson as any;
-    const payload = eventLog.metadataJson as any;
+function matchNotificationRule(rule: NotificationRuleRow, eventLog: NotificationEventLog) {
+    const condition = asRecord(rule.conditionJson);
+    const payload = asRecord(eventLog.metadataJson);
 
-    if (!condition) return true;
+    if (!Object.keys(condition).length) return true;
 
     if (condition.targetType && eventLog.targetType !== condition.targetType) {
         return false;
     }
 
-    if (condition.eventKeys?.length) {
-        if (!condition.eventKeys.includes(eventLog.eventKey)) return false;
+    const eventKeys = jsonArray(condition.eventKeys);
+    if (eventKeys.length) {
+        if (!eventKeys.includes(eventLog.eventKey)) return false;
     }
 
-    if (condition.reviewTargetTypes?.length) {
-        if (!condition.reviewTargetTypes.includes(payload?.reviewTargetType)) {
+    const reviewTargetTypes = jsonArray(condition.reviewTargetTypes);
+    if (reviewTargetTypes.length) {
+        if (!reviewTargetTypes.includes(String(payload.reviewTargetType ?? ""))) {
             return false;
         }
     }
 
-    if (Array.isArray(condition.taskKinds) && condition.taskKinds.length > 0) {
-        if (!condition.taskKinds.includes(payload?.taskKind)) {
+    const taskKinds = jsonArray(condition.taskKinds);
+    if (taskKinds.length > 0) {
+        if (!taskKinds.includes(String(payload.taskKind ?? ""))) {
             return false;
         }
     }
 
-    if (condition.taskKind && payload?.taskKind !== condition.taskKind) {
+    if (condition.taskKind && payload.taskKind !== condition.taskKind) {
         return false;
     }
 
-    if (condition.priority && payload?.priority !== condition.priority) {
+    if (condition.priority && payload.priority !== condition.priority) {
         return false;
     }
 
-    if (Array.isArray(condition.priorities) && condition.priorities.length > 0) {
-        if (!condition.priorities.includes(payload?.priority)) {
+    const priorities = jsonArray(condition.priorities);
+    if (priorities.length > 0) {
+        if (!priorities.includes(String(payload.priority ?? ""))) {
             return false;
         }
     }
 
-    if (Array.isArray(condition.tagNames) && condition.tagNames.length > 0) {
-        const eventTags = Array.isArray(payload?.tagNames) ? payload.tagNames : [];
+    const tagNames = jsonArray(condition.tagNames);
+    if (tagNames.length > 0) {
+        const eventTags = jsonArray(payload.tagNames);
 
-        const matched = condition.tagNames.some((tag: string) =>
+        const matched = tagNames.some((tag: string) =>
             eventTags.includes(tag),
         );
 
@@ -87,11 +145,15 @@ function matchNotificationRule(rule: any, eventLog: any) {
 
     return true;
 }
-function jsonArray(value: any): string[] {
+function jsonArray(value: unknown): string[] {
     return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
 }
 
-async function resolveGroupUsers(group: any) {
+function errorMessage(error: unknown) {
+    return error instanceof Error ? error.message : "Unknown error";
+}
+
+async function resolveGroupUsers(group: NotificationRecipientGroupRow) {
     const userIds = jsonArray(group.userIds);
     const roleNames = jsonArray(group.roleNames);
 
@@ -105,9 +167,20 @@ async function resolveGroupUsers(group: any) {
 }
 
 export async function consumeBusinessEventForNotification(
-    client: any,
-    eventLog: any,
+    client: Prisma.TransactionClient,
+    eventLogInput: unknown,
 ) {
+    const eventLog = normalizeEventLog(eventLogInput);
+
+    if (!eventLog.id || !eventLog.eventKey || !eventLog.targetType || !eventLog.targetId) {
+        return {
+            ok: true,
+            skipped: true,
+            reason: "INVALID_EVENT_LOG",
+            eventKey: eventLog.eventKey,
+        };
+    }
+
     const rules = await client.notificationRule.findMany({
         where: {
             enabled: true,
@@ -115,6 +188,15 @@ export async function consumeBusinessEventForNotification(
         },
         orderBy: [{ createdAt: "asc" }],
     });
+
+    if (!rules.length) {
+        return {
+            ok: true,
+            skipped: true,
+            reason: "NO_NOTIFICATION_RULE",
+            eventKey: eventLog.eventKey,
+        };
+    }
 
     const results = [];
 
@@ -125,16 +207,23 @@ export async function consumeBusinessEventForNotification(
             where: { key: rule.recipientGroupKey },
         });
 
-        if (!group?.enabled) continue;
+        if (!group?.enabled) {
+            results.push({
+                ok: true,
+                skipped: true,
+                reason: "NO_ENABLED_RECIPIENT_GROUP",
+                ruleId: rule.id,
+                recipientGroupKey: rule.recipientGroupKey,
+            });
+            continue;
+        }
 
         const title = rule.titleTemplate
             ? renderTemplate(rule.titleTemplate, eventLog)
             : rule.name;
 
         const message = renderTemplate(rule.messageTemplate, eventLog);
-
-        // giữ nguyên phần dispatch/delivery/gửi Zalo bên dưới
-
+        const channelMessage = [title, message].filter(Boolean).join("\n");
 
         const dispatch = await client.notificationDispatch.create({
             data: {
@@ -147,6 +236,7 @@ export async function consumeBusinessEventForNotification(
                 payloadJson: {
                     title,
                     message,
+                    channelMessage,
                     channel: rule.channel,
                     recipientGroupKey: rule.recipientGroupKey,
                 },
@@ -159,13 +249,17 @@ export async function consumeBusinessEventForNotification(
                 channel: rule.channel,
                 recipientGroupKey: rule.recipientGroupKey,
                 status: "PENDING",
-                payloadJson: { title, message },
+                payloadJson: { title, message, channelMessage },
             },
         });
 
         try {
             if (rule.channel === "IN_APP") {
                 const userIds = await resolveGroupUsers(group);
+
+                if (!userIds.length) {
+                    throw new Error(`No in-app recipients for ${group.key}`);
+                }
 
                 await Promise.all(
                     userIds.map((userId) =>
@@ -174,7 +268,9 @@ export async function consumeBusinessEventForNotification(
                             type: eventLog.eventKey,
                             title,
                             message,
-                            priority: rule.priority as any,
+                            priority: rule.priority === "HIGH" || rule.priority === "LOW"
+                                ? rule.priority
+                                : "NORMAL",
                             metadata: {
                                 businessEventLogId: eventLog.id,
                                 targetType: eventLog.targetType,
@@ -192,7 +288,7 @@ export async function consumeBusinessEventForNotification(
 
                 await sendZaloTextToGroup({
                     groupId: group.zaloGroupId,
-                    message,
+                    message: channelMessage,
                 });
             }
 
@@ -212,12 +308,14 @@ export async function consumeBusinessEventForNotification(
             });
 
             results.push({ ok: true, dispatchId: dispatch.id });
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const message = errorMessage(error);
+
             await client.notificationChannelDelivery.update({
                 where: { id: delivery.id },
                 data: {
                     status: "FAILED",
-                    errorMessage: error?.message || "Unknown error",
+                    errorMessage: message,
                 },
             });
 
@@ -225,14 +323,14 @@ export async function consumeBusinessEventForNotification(
                 where: { id: dispatch.id },
                 data: {
                     status: "FAILED",
-                    errorMessage: error?.message || "Unknown error",
+                    errorMessage: message,
                 },
             });
 
             results.push({
                 ok: false,
                 dispatchId: dispatch.id,
-                error: error?.message,
+                error: message,
             });
         }
     }

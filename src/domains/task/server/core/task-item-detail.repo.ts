@@ -10,6 +10,38 @@ const USER_SELECT = {
   avatarUrl: true,
 } as const;
 
+function noteHasSystemOwner(note?: string | null) {
+  return /ownerType:\s*SYSTEM/i.test(String(note ?? ""));
+}
+
+function noteHasCoreWorkspace(note?: string | null) {
+  return /workTypeKey:\s*[a-z0-9-]+/i.test(String(note ?? ""));
+}
+
+async function listDefaultAdminShareUserIds(db: DB) {
+  const users = await dbOrTx(db).user.findMany({
+    where: {
+      isActive: true,
+      roles: {
+        some: {
+          OR: [
+            { name: { equals: "ADMIN", mode: "insensitive" } },
+            {
+              permissions: {
+                some: { code: { equals: "ADMIN", mode: "insensitive" } },
+              },
+            },
+          ],
+        },
+      },
+    },
+    select: { id: true },
+    orderBy: [{ name: "asc" }, { email: "asc" }],
+  });
+
+  return users.map((user) => user.id);
+}
+
 function fallbackQueueTitle(targetType: string) {
   if (targetType === "WATCH") return "Watch";
   if (targetType === "ORDER") return "Đơn hàng";
@@ -119,7 +151,7 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
 
   if (!item) return null;
 
-  const sharedUserIds = Array.from(
+  const noteSharedUserIds = Array.from(
     new Set(
       String(item.note ?? "")
         .match(/^sharedUserIds:\s*(.+)$/im)?.[1]
@@ -127,6 +159,13 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
         .map((id) => id.trim())
         .filter(Boolean) ?? [],
     ),
+  );
+  const defaultAdminShareUserIds =
+    noteHasSystemOwner(item.note) && noteHasCoreWorkspace(item.note)
+      ? await listDefaultAdminShareUserIds(db)
+      : [];
+  const sharedUserIds = Array.from(
+    new Set([...noteSharedUserIds, ...defaultAdminShareUserIds]),
   );
 
   const [activities, queueItems, sharedUsers] = await Promise.all([
@@ -184,6 +223,7 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
         lastActivityTitle: queueItem.latestActivityTitle,
         lastActivityAt: queueItem.updatedAt,
         feedbackCount: queueItem.feedbackCount,
+        discussionCount: queueItem.discussionCount,
       },
       processingLabel: queueItem.status,
     })),

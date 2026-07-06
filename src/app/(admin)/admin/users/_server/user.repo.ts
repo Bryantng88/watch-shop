@@ -195,9 +195,9 @@ export async function findUsersByRoleNames(roleNames: string[]) {
             isActive: true,
             roles: {
                 some: {
-                    name: {
-                        in: normalized,
-                    },
+                    OR: normalized.map((name) => ({
+                        name: { equals: name, mode: "insensitive" as const },
+                    })),
                 },
             },
         },

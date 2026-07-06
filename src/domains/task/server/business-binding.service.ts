@@ -255,6 +255,7 @@ type QueueActivityStats = {
   latestUpdatedAt: Date | null;
   activityCount: number;
   feedbackCount: number;
+  discussionCount: number;
   hasRejectedOrFeedback: boolean;
   hasDoneSignal: boolean;
 };
@@ -265,7 +266,66 @@ type QueueBusinessPreview = {
   status: string | null;
   imageUrl: string | null;
   imageUrls: string[];
+  mediaWorkProgress?: QueueItemDTO["mediaWorkProgress"];
 };
+
+function hasWatchContentPreview(watch: {
+  watchContent?: {
+    titleOverride?: string | null;
+    summary?: string | null;
+    hookText?: string | null;
+    body?: string | null;
+    bulletSpecs?: string[] | null;
+    hashTags?: string | null;
+  } | null;
+  product?: {
+    postContent?: string | null;
+    productContent?: {
+      generatedContent?: string | null;
+      specBullets?: string[] | null;
+      hashtags?: string[] | null;
+    } | null;
+  } | null;
+}) {
+  const watchContent = watch.watchContent;
+  const productContent = watch.product?.productContent;
+
+  return Boolean(
+    clean(watchContent?.titleOverride) ||
+      clean(watchContent?.summary) ||
+      clean(watchContent?.hookText) ||
+      clean(watchContent?.body) ||
+      clean(watchContent?.hashTags) ||
+      (watchContent?.bulletSpecs?.length ?? 0) > 0 ||
+      clean(watch.product?.postContent) ||
+      clean(productContent?.generatedContent) ||
+      (productContent?.specBullets?.length ?? 0) > 0 ||
+      (productContent?.hashtags?.length ?? 0) > 0,
+  );
+}
+
+function watchPreviewMediaProgress(watch: {
+  watchContent?: Parameters<typeof hasWatchContentPreview>[0]["watchContent"];
+  product?: Parameters<typeof hasWatchContentPreview>[0]["product"] & {
+    productImage?: Array<unknown>;
+  } | null;
+}): QueueItemDTO["mediaWorkProgress"] {
+  const profile = false;
+  const content = hasWatchContentPreview(watch);
+  const image = (watch.product?.productImage?.length ?? 0) > 0;
+  const completed = [profile, content, image].filter(Boolean).length;
+
+  if (!completed) return null;
+
+  return {
+    profile,
+    content,
+    image,
+    completed,
+    total: 3,
+    updatedAt: null,
+  };
+}
 
 function buildQueueActivityStats(
   activities: Awaited<ReturnType<typeof findQueueActivitiesByTaskItem>>,
@@ -283,6 +343,7 @@ function buildQueueActivityStats(
       latestUpdatedAt: null,
       activityCount: 0,
       feedbackCount: 0,
+      discussionCount: 0,
       hasRejectedOrFeedback: false,
       hasDoneSignal: false,
     };
@@ -292,6 +353,7 @@ function buildQueueActivityStats(
 
     current.activityCount += 1;
     if (hasFeedback) current.feedbackCount += 1;
+    current.discussionCount += activity._count.replies;
     current.hasRejectedOrFeedback ||= hasFeedback;
     current.hasDoneSignal ||= activityHasDoneSignal(activity);
 
@@ -340,12 +402,35 @@ async function buildQueueBusinessPreviewMap(
         select: {
           id: true,
           saleStage: true,
+          watchContent: {
+            select: {
+              titleOverride: true,
+              summary: true,
+              hookText: true,
+              body: true,
+              bulletSpecs: true,
+              hashTags: true,
+            },
+          },
           product: {
             select: {
               title: true,
               sku: true,
               primaryImageUrl: true,
+              postContent: true,
               status: true,
+              productContent: {
+                select: {
+                  generatedContent: true,
+                  specBullets: true,
+                  hashtags: true,
+                },
+              },
+              productImage: {
+                where: { role: "GALLERY" },
+                select: { id: true },
+                take: 1,
+              },
             },
           },
         },
@@ -388,6 +473,7 @@ async function buildQueueBusinessPreviewMap(
       status: String(watch.saleStage || watch.product.status || ""),
       imageUrl,
       imageUrls: imageUrl ? [imageUrl] : [],
+      mediaWorkProgress: watchPreviewMediaProgress(watch),
     });
   }
 
@@ -570,15 +656,26 @@ export async function listTaskItemQueueItems(
         latestUpdatedAt: null,
         activityCount: 0,
         feedbackCount: 0,
+        discussionCount: 0,
         hasRejectedOrFeedback: false,
         hasDoneSignal: false,
       };
       const updatedAt = latestDate(
         stats.latestUpdatedAt,
         stats.latestActivityAt,
-        workflowRuntime?.updatedAt,
-        binding.createdAt,
+          workflowRuntime?.updatedAt,
+          binding.createdAt,
       );
+      const progress =
+        mediaWorkProgress(metadata) ?? businessPreview?.mediaWorkProgress ?? null;
+      const workflowStatus = resolveWorkflowQueueStatus({
+        workflowRuntime,
+        workflowDefinition,
+      });
+      const queueStatus =
+        workflowStatus === "WAITING" && progress?.completed
+          ? "IN_PROGRESS"
+          : workflowStatus ?? resolveQueueStatus(stats);
 
       return {
         id: binding.id,
@@ -586,10 +683,7 @@ export async function listTaskItemQueueItems(
         targetType: binding.targetType,
         targetId: binding.targetId,
         source: resolveQueueSource(metadata),
-        status: resolveWorkflowQueueStatus({
-          workflowRuntime,
-          workflowDefinition,
-        }) ?? resolveQueueStatus(stats),
+        status: queueStatus,
         preview: {
           title: metadataText(metadata, ["targetTitle", "title"]) ??
             businessPreview?.title ??
@@ -609,6 +703,7 @@ export async function listTaskItemQueueItems(
         },
         latestActivityTitle: stats.latestActivityTitle,
         feedbackCount: stats.feedbackCount,
+        discussionCount: stats.discussionCount,
         activityCount: stats.activityCount,
         workflowKey: workflowRuntime?.workflowKey ?? null,
         currentWorkflowState: workflowRuntime?.currentState ?? null,
@@ -628,7 +723,7 @@ export async function listTaskItemQueueItems(
         }),
         intakeNote: queueItemIntakeNote(metadata),
         mediaAssetAttachedAt: metadataText(metadata, ["mediaAssetAttachedAt"]),
-        mediaWorkProgress: mediaWorkProgress(metadata),
+        mediaWorkProgress: progress,
         updatedAt: formatDate(updatedAt),
       };
     });
