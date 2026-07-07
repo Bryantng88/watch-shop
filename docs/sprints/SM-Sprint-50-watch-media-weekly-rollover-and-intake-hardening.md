@@ -43,6 +43,20 @@ movable into the matching current-week core Workspace.
   then matches core Workspaces by workType.
 - Rollover action displays moved/skipped/failed result steps in appLoading
   before the final summary dialog.
+- Media Workspace item row UI now uses a shared queue-row presentation adapter
+  instead of hardcoding status/progress/workflow display directly inside the
+  detail page.
+- Media progress chips such as `1/3`, `2/3`, `3/3` are scoped to the owning
+  Media Processing Workspace only. They must not leak into Photoshoot or
+  Publish Workspaces.
+- Activity feed is scoped by current Workspace workType and queue targets so a
+  Photoshoot Workspace does not show Media Processing or Publish-only activity.
+- Activity/discussion UI was extracted from `TaskItemDetailClient.tsx` into a
+  task-work activity module to keep the detail page from becoming the only
+  place where Workspace behavior lives.
+- Queue item thumbnails now use the same Watch preview image resolution order
+  as the business preview modal:
+  `productImage.fileKey -> primaryImageUrl -> storefrontImageKey`.
 
 ## Current Media Weekly Flow
 
@@ -73,6 +87,22 @@ New Media weekly Space
 - Existing current-week bindings are skipped as `ALREADY_EXISTS`.
 - Old bindings are cancelled after successful rollover so they no longer appear
   active.
+- A Workspace row status is the status of that queue item in the current
+  Workspace, not a cross-flow media readiness badge.
+- The workflow/next-step column should present the next available action or
+  state for the current Workspace only.
+- Activity shown in a Workspace must be in scope for that Workspace. Cross-WP
+  activity belongs in a dedicated flow/core view later, not inside every WP
+  activity tab by default.
+
+## Architecture Guardrail
+
+When implementing Workspace UI, always decide where the behavior belongs before
+coding. Do not keep adding JSX, policy, and domain adapters into one growing
+client file. New behavior should move into focused modules such as
+`task-work/queue-row-presentation.ts`, `task-work/QueueWorkQueue.tsx`, or
+`task-work/activity/ActivityFeed.tsx` so other Workspaces can reuse the same
+rules without another refactor pass.
 
 ## Verified During Sprint
 
@@ -93,6 +123,14 @@ Read-only DB check on `2026-07-06` showed:
 - `src/domains/coordination/server/coordination-rollover.service.ts`
 - `src/domains/coordination/ui/OperationCoordinationWorkspace.tsx`
 - `src/domains/shared/feedback/AppProgressProvider.tsx`
+- `src/domains/task/client/TaskItemDetailClient.tsx`
+- `src/domains/task/server/activity/task-item-activity.service.ts`
+- `src/domains/task/server/activity/task-item-activity.types.ts`
+- `src/domains/task/server/business-binding.service.ts`
+- `src/domains/task/server/core/task-item-detail.repo.ts`
+- `src/domains/task/ui/task-work/QueueWorkQueue.tsx`
+- `src/domains/task/ui/task-work/activity/ActivityFeed.tsx`
+- `src/domains/task/ui/task-work/queue-row-presentation.ts`
 - `src/domains/watch/client/WatchListClient.tsx`
 
 ## Out Of Scope
@@ -103,6 +141,9 @@ Read-only DB check on `2026-07-06` showed:
 - Notification/Zalo flow.
 - Permission model redesign.
 - Moving all Watch edit behavior into Workspace.
+- Manual archive for completed queue items. This is intentionally postponed.
+- Core-flow-wide activity view. Current WP activity tabs stay scoped to their
+  own Workspace.
 
 ## Known Follow-Up
 
@@ -116,6 +157,16 @@ plan rollover items -> move one binding per client step -> refresh summary
 
 This is intentionally deferred to avoid expanding the sprint while quota is
 low.
+
+Planned next cleanup:
+
+- Add manual archive for completed queue items when the Workspace list becomes
+  too noisy.
+- Introduce a durable core-flow model/rule layer so fixed core Workspaces in a
+  Space are created and ordered as one business flow, not ad hoc per screen.
+- Continue extracting `TaskItemDetailClient.tsx` by responsibility if the file
+  grows again: header, sidebar metadata, checklist, and workflow panel should
+  not collapse back into a single monolith.
 
 ## Acceptance
 

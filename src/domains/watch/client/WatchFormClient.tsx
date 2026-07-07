@@ -224,8 +224,12 @@ export default function WatchFormClient({
     const returnTo = searchParams.get("returnTo") || "/admin/watches";
     const workspaceBindingId = searchParams.get("workspaceBindingId") || "";
     const workspaceState = searchParams.get("workspaceState") || "";
+    const isMediaWorkspaceDone = workspaceState === "DONE";
     const canApproveMediaWorkspace =
-        fromMediaWorkspace && Boolean(workspaceBindingId) && canReviewContent;
+        fromMediaWorkspace &&
+        Boolean(workspaceBindingId) &&
+        canReviewContent &&
+        !isMediaWorkspaceDone;
     const canReturnMediaWorkspace =
         canApproveMediaWorkspace && workspaceState === "REVIEW";
     const inlineImage = values.media.inlineImage;
@@ -1116,6 +1120,11 @@ export default function WatchFormClient({
                                 ))}
                             </div>
                         </div>
+                        {isMediaWorkspaceDone ? (
+                            <div className="inline-flex h-10 items-center rounded-xl bg-emerald-100 px-4 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
+                                Đã hoàn tất
+                            </div>
+                        ) : (
                         <div className="flex flex-wrap gap-2">
                             <button
                                 type="button"
@@ -1156,6 +1165,7 @@ export default function WatchFormClient({
                                 </button>
                             ) : null}
                         </div>
+                        )}
                     </div>
                 </div>
             ) : null}

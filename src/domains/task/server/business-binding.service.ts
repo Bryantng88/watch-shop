@@ -56,6 +56,34 @@ function cleanNullable(value: unknown) {
   return text || null;
 }
 
+function mediaUrl(value?: string | null) {
+  const raw = clean(value);
+  if (!raw) return null;
+  if (
+    raw.startsWith("http://") ||
+    raw.startsWith("https://") ||
+    raw.startsWith("/")
+  ) {
+    return raw;
+  }
+
+  return `/api/media/sign?key=${encodeURIComponent(raw)}`;
+}
+
+function productPreviewImage(product?: {
+  primaryImageUrl?: string | null;
+  storefrontImageKey?: string | null;
+  productImage?: Array<{ fileKey?: string | null }> | null;
+} | null) {
+  const img = product?.productImage?.[0];
+  return mediaUrl(
+    img?.fileKey ||
+      product?.primaryImageUrl ||
+      product?.storefrontImageKey ||
+      null,
+  );
+}
+
 function metadataText(metadata: Record<string, unknown>, keys: string[]) {
   for (const key of keys) {
     const value = clean(metadata[key]);
@@ -456,6 +484,15 @@ async function buildQueueBusinessPreviewMap(
                   title: true,
                   sku: true,
                   primaryImageUrl: true,
+                  storefrontImageKey: true,
+                  productImage: {
+                    where: { role: "INLINE" },
+                    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+                    take: 1,
+                    select: {
+                      fileKey: true,
+                    },
+                  },
                 },
               },
             },
@@ -466,7 +503,7 @@ async function buildQueueBusinessPreviewMap(
   ]);
 
   for (const watch of watches) {
-    const imageUrl = watch.product.primaryImageUrl || null;
+    const imageUrl = productPreviewImage(watch.product);
     map.set(queueKey(TaskExecutionTargetType.WATCH, watch.id), {
       title: watch.product.title || "Watch",
       ref: watch.product.sku || null,
@@ -694,12 +731,12 @@ export async function listTaskItemQueueItems(
           status: metadataText(metadata, ["targetStatus", "status"]) ??
             businessPreview?.status ??
             null,
-          imageUrl: queueItemImageUrl(metadata) ??
-            businessPreview?.imageUrl ??
+          imageUrl: businessPreview?.imageUrl ??
+            queueItemImageUrl(metadata) ??
             null,
-          imageUrls: queueItemImageUrls(metadata).length
-            ? queueItemImageUrls(metadata)
-            : businessPreview?.imageUrls ?? [],
+          imageUrls: businessPreview?.imageUrls?.length
+            ? businessPreview.imageUrls
+            : queueItemImageUrls(metadata),
         },
         latestActivityTitle: stats.latestActivityTitle,
         feedbackCount: stats.feedbackCount,

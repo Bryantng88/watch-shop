@@ -18,6 +18,10 @@ function noteHasCoreWorkspace(note?: string | null) {
   return /workTypeKey:\s*[a-z0-9-]+/i.test(String(note ?? ""));
 }
 
+function noteWorkTypeKey(note?: string | null) {
+  return String(note ?? "").match(/^workTypeKey:\s*([a-z0-9-]+)/im)?.[1] ?? null;
+}
+
 async function listDefaultAdminShareUserIds(db: DB) {
   const users = await dbOrTx(db).user.findMany({
     where: {
@@ -168,10 +172,7 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
     new Set([...noteSharedUserIds, ...defaultAdminShareUserIds]),
   );
 
-  const [activities, queueItems, sharedUsers] = await Promise.all([
-    perfStep("task-item-detail-repo", "activities", () =>
-      getTaskItemActivityViewModels(item.id, 50),
-    ),
+  const [queueItems, sharedUsers] = await Promise.all([
     perfStep("task-item-detail-repo", "queueItems", () =>
       listTaskItemQueueItems(db, item.id),
     ),
@@ -183,6 +184,19 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
       })
       : Promise.resolve([]),
   ]);
+  const activities = await perfStep("task-item-detail-repo", "activities", () =>
+    getTaskItemActivityViewModels(item.id, {
+      limit: 50,
+      scope: {
+        targets: queueItems.map((queueItem) => ({
+          targetType: queueItem.targetType,
+          targetId: queueItem.targetId,
+        })),
+        includeWorkspaceLevel: true,
+        workspaceWorkTypeKey: noteWorkTypeKey(item.note),
+      },
+    }),
+  );
   const watchProductIds = await resolveWatchProductIds(db, queueItems);
   const queueHrefs = new Map(
     queueItems.map((queueItem) => [

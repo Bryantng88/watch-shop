@@ -16,6 +16,7 @@ import type {
   CreateBusinessEventActivityInput,
   CreateDiscussionActivityInput,
   CreateSystemActivityInput,
+  TaskItemActivityScope,
   TaskItemActivityFeedbackViewModel,
   TaskItemActivityViewModel,
 } from "./task-item-activity.types";
@@ -36,6 +37,89 @@ function assertPresent(value: unknown, message: string) {
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
+}
+
+function activityScopeKey(targetType?: string | null, targetId?: string | null) {
+  const type = clean(targetType);
+  const id = clean(targetId);
+
+  return type && id ? `${type}:${id}` : null;
+}
+
+function activityTargetKeys(activity: { metadataJson?: unknown }) {
+  const metadata = asRecord(activity.metadataJson);
+  const targetType = clean(metadata.targetType);
+  const targetId = clean(metadata.targetId);
+  const keys = [activityScopeKey(targetType, targetId)].filter(Boolean) as string[];
+
+  if (targetType === "WATCH" && targetId.includes(":")) {
+    const parts = targetId.split(":").map((part) => part.trim()).filter(Boolean);
+
+    for (const canonicalId of [parts[0], parts[parts.length - 1]]) {
+      const canonicalKey = activityScopeKey(targetType, canonicalId);
+      if (canonicalKey && !keys.includes(canonicalKey)) keys.push(canonicalKey);
+    }
+  }
+
+  return keys;
+}
+
+function activityEventKey(activity: { metadataJson?: unknown }) {
+  return clean(asRecord(activity.metadataJson).eventKey).toLowerCase();
+}
+
+function eventMatchesWorkspaceScope(eventKey: string, workspaceWorkTypeKey?: string | null) {
+  const workTypeKey = clean(workspaceWorkTypeKey).toLowerCase();
+  if (!eventKey || !workTypeKey) return true;
+
+  if (workTypeKey === "photography") {
+    return eventKey.startsWith("watch.media.photoshoot.");
+  }
+
+  if (workTypeKey === "media-processing") {
+    return (
+      eventKey === "watch.media.asset.attached" ||
+      eventKey === "watch.media.ready_for_publish" ||
+      eventKey === "watch.media.recalled" ||
+      eventKey.startsWith("watch.content.") ||
+      eventKey.startsWith("watch.image.")
+    );
+  }
+
+  if (workTypeKey === "publish") {
+    return (
+      eventKey === "watch.media.ready_for_publish" ||
+      eventKey === "watch.media.recalled" ||
+      eventKey.startsWith("watch.publish.")
+    );
+  }
+
+  return true;
+}
+
+function activityMatchesScope(
+  activity: { metadataJson?: unknown },
+  scope?: TaskItemActivityScope,
+) {
+  if (!scope) return true;
+  if (!eventMatchesWorkspaceScope(
+    activityEventKey(activity),
+    scope.workspaceWorkTypeKey,
+  )) {
+    return false;
+  }
+
+  const keys = activityTargetKeys(activity);
+  if (!keys.length) return scope.includeWorkspaceLevel !== false;
+  if (!scope.targets?.length) return false;
+
+  const allowedKeys = new Set(
+    scope.targets
+      .map((target) => activityScopeKey(target.targetType, target.targetId))
+      .filter(Boolean),
+  );
+
+  return keys.some((key) => allowedKeys.has(key));
 }
 
 function normalizeBusinessEventActivityMetadata(
@@ -333,16 +417,19 @@ export async function listTaskItemActivities(taskItemId: string) {
 
 export async function getTaskItemActivityViewModels(
   taskItemId: string,
-  limit?: number,
+  input?: number | { limit?: number; scope?: TaskItemActivityScope },
 ) {
   const cleanTaskItemId = clean(taskItemId);
   assertPresent(cleanTaskItemId, "Missing taskItemId");
 
   const items = await listTaskItemActivities(cleanTaskItemId);
+  const limit = typeof input === "number" ? input : input?.limit;
+  const scope = typeof input === "number" ? undefined : input?.scope;
+  const scopedItems = items.filter((item) => activityMatchesScope(item, scope));
   const take = Number(limit);
   const limitedItems = Number.isFinite(take) && take > 0
-    ? items.slice(-Math.floor(take))
-    : items;
+    ? scopedItems.slice(-Math.floor(take))
+    : scopedItems;
 
   return limitedItems.map(toTaskItemActivityViewModel);
 }

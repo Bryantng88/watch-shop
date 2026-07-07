@@ -39,6 +39,17 @@ export type ListTaskItemActivitiesInput = {
   taskItemId: string;
 };
 
+export type TaskItemActivityScopeTarget = {
+  targetType: string;
+  targetId: string;
+};
+
+export type TaskItemActivityScope = {
+  targets?: TaskItemActivityScopeTarget[];
+  includeWorkspaceLevel?: boolean;
+  workspaceWorkTypeKey?: string | null;
+};
+
 export type TaskItemActivitySourceIdentity = {
   taskItemId: string;
   sourceType: ActivitySourceType;
