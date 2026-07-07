@@ -20,6 +20,10 @@ type ReviewInput = {
     userId?: string | null;
 };
 
+type ApproveReviewInput = ReviewInput & {
+    emitBusinessEvent?: boolean;
+};
+
 type RejectInput = ReviewInput & {
     note?: string | null;
 };
@@ -123,13 +127,17 @@ function approveReviewStateQueries(input: {
     ]);
 }
 
-async function runApprovedSideEffects(input: ReviewInput) {
+async function runApprovedSideEffects(input: ApproveReviewInput) {
+    const emitBusinessEvent = input.emitBusinessEvent !== false;
+
     await Promise.all([
-        perfStep(
-            WATCH_REVIEW_PERF_SCOPE,
-            `${input.targetType}:approve:emitApprovedEvent`,
-            () => safeEmitWatchReviewApprovedEvent(input),
-        ),
+        emitBusinessEvent
+            ? perfStep(
+                WATCH_REVIEW_PERF_SCOPE,
+                `${input.targetType}:approve:emitApprovedEvent`,
+                () => safeEmitWatchReviewApprovedEvent(input),
+            )
+            : Promise.resolve(),
         perfStep(
             WATCH_REVIEW_PERF_SCOPE,
             `${input.targetType}:approve:finalizeFullyApproved`,
@@ -453,7 +461,7 @@ async function finalizeWatchIfFullyApproved(productId: string) {
     return true;
 }
 
-export async function approveWatchReview(input: ReviewInput) {
+export async function approveWatchReview(input: ApproveReviewInput) {
     const totalStartedAt = perfNow();
     const step = (label: string) => `${input.targetType}:approve:${label}`;
     const current = await perfStep(

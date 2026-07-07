@@ -1,0 +1,72 @@
+import { defineBusinessEventContract } from "@/domains/event/contract/business-event-contract.helpers";
+import type { BusinessEventContract } from "@/domains/event/contract/business-event-contract.types";
+
+export const LEGACY_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
+  defineBusinessEventContract({
+    key: "order.posted",
+    label: "Order posted",
+    targetType: "ORDER",
+    group: "Order",
+  }),
+  defineBusinessEventContract({
+    key: "order.paid",
+    label: "Order paid",
+    targetType: "ORDER",
+    group: "Order",
+  }),
+  defineBusinessEventContract({
+    key: "order.completed",
+    label: "Order completed",
+    targetType: "ORDER",
+    group: "Order",
+  }),
+  defineBusinessEventContract({
+    key: "shipment.delivered",
+    label: "Shipment delivered",
+    targetType: "SHIPMENT",
+    group: "Shipment",
+  }),
+  defineBusinessEventContract({
+    key: "shipment.returned",
+    label: "Shipment returned",
+    targetType: "SHIPMENT",
+    group: "Shipment",
+  }),
+  defineBusinessEventContract({
+    key: "payment.paid",
+    label: "Payment paid",
+    targetType: "PAYMENT",
+    group: "Payment",
+  }),
+  defineBusinessEventContract({
+    key: "service_request.completed",
+    label: "Service request completed",
+    targetType: "SERVICE_REQUEST",
+    group: "Service",
+  }),
+  defineBusinessEventContract({
+    key: "technical_issue.done",
+    label: "Technical issue done",
+    targetType: "TECHNICAL_ISSUE",
+    group: "Service",
+  }),
+  defineBusinessEventContract({
+    key: "task.item.created",
+    label: "Task item created",
+    targetType: "TASK_ITEM",
+    group: "Task",
+  }),
+  defineBusinessEventContract({
+    key: "task.item.moved",
+    label: "Task item moved",
+    targetType: "TASK_ITEM",
+    group: "Task",
+  }),
+  defineBusinessEventContract({
+    key: "task.item.activity.commented",
+    label: "Task activity commented",
+    targetType: "TASK_ITEM",
+    group: "Task",
+    knownConsumers: ["notification", "timeline"],
+  }),
+];

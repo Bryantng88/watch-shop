@@ -70,14 +70,32 @@ function activityBusinessKeys(activity: TaskItemActivityViewModel) {
   const targetType = typeof metadata.targetType === "string" ? metadata.targetType : null;
   const targetId = typeof metadata.targetId === "string" ? metadata.targetId : null;
   const keys = [businessQueueKey(targetType, targetId)].filter(Boolean) as string[];
+  const targetAliasIds = Array.isArray(metadata.targetAliasIds)
+    ? metadata.targetAliasIds
+        .map((value) => String(value ?? "").trim())
+        .filter(Boolean)
+    : [];
 
   if (targetType === "WATCH" && targetId?.includes(":")) {
-    const watchId = targetId.split(":")[0]?.trim();
-    const canonicalKey = businessQueueKey(targetType, watchId);
-    if (canonicalKey && !keys.includes(canonicalKey)) keys.push(canonicalKey);
+    const parts = targetId.split(":").map((part) => part.trim()).filter(Boolean);
+
+    for (const canonicalId of [parts[0], parts[parts.length - 1]]) {
+      const canonicalKey = businessQueueKey(targetType, canonicalId);
+      if (canonicalKey && !keys.includes(canonicalKey)) keys.push(canonicalKey);
+    }
+  }
+
+  for (const aliasId of targetAliasIds) {
+    const aliasKey = businessQueueKey(targetType, aliasId);
+    if (aliasKey && !keys.includes(aliasKey)) keys.push(aliasKey);
   }
 
   return keys;
+}
+
+function activityTimeValue(activity: TaskItemActivityViewModel) {
+  const timestamp = new Date(activity.occurredAt).getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
 function formatDate(value?: Date | string | null, fallback = "Chưa có") {
@@ -793,6 +811,7 @@ function ActivityGroupedByQueue({
       .map((item) => [businessQueueKey(item.targetType, item.targetId), item] as const)
       .filter((entry): entry is readonly [string, TaskItemQueueItem] => Boolean(entry[0])),
   );
+  const queueOrder = new Map(queueItems.map((item, index) => [item.id, index]));
   const groups = new Map<string, {
     queueItem: TaskItemQueueItem | null;
     activities: TaskItemActivityViewModel[];
@@ -824,7 +843,22 @@ function ActivityGroupedByQueue({
         ? group.activities.filter((activity) => activity.replies.length > 0)
         : group.activities,
     }))
-    .filter((group) => group.activities.length || (!showCommentedOnly && group.queueItem));
+    .filter((group) => group.activities.length || (!showCommentedOnly && group.queueItem))
+    .sort((left, right) => {
+      const leftLatest = left.activities[0]
+        ? activityTimeValue(left.activities[0])
+        : 0;
+      const rightLatest = right.activities[0]
+        ? activityTimeValue(right.activities[0])
+        : 0;
+
+      if (leftLatest !== rightLatest) return rightLatest - leftLatest;
+
+      return (
+        (queueOrder.get(left.id) ?? Number.MAX_SAFE_INTEGER) -
+        (queueOrder.get(right.id) ?? Number.MAX_SAFE_INTEGER)
+      );
+    });
 
   useEffect(() => {
     if (!jumpTarget || lastJumpNonceRef.current === jumpTarget.nonce) return;

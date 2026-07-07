@@ -4,7 +4,10 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
-import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
+import {
+    useAppProgress,
+    type AppProgressStep,
+} from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import AfterSaveDialog from "@/domains/shared/ui/navigation/AfterSaveDialog";
 import { applyQueueItemManualTransitionAction } from "@/domains/task/actions/task.actions";
@@ -12,6 +15,7 @@ import { applyQueueItemManualTransitionAction } from "@/domains/task/actions/tas
 import { submitWatchForm } from "./form/watch-form.actions";
 import {
     markWatchMediaAssetAttachedFromWatchAction,
+    requestWatchMediaReshootFromWatchAction,
     saveWatchMediaWorkDraftFromWatchAction,
 } from "./media-work/watch-media-work.actions";
 import { mapWatchDetailToFormValues } from "./form/watch-form.mapper";
@@ -70,6 +74,12 @@ type AfterSaveMode =
 
 type MediaWorkPart = "profile" | "content" | "image";
 
+const MEDIA_WORK_PARTS: Array<{ key: MediaWorkPart; label: string }> = [
+    { key: "profile", label: "Thông tin/spec" },
+    { key: "content", label: "Content" },
+    { key: "image", label: "Hình ảnh" },
+];
+
 function stableStringify(value: unknown) {
     return JSON.stringify(value, (_key, v) => {
         if (Array.isArray(v)) return v;
@@ -102,12 +112,127 @@ function hasMediaWorkContent(values: WatchFormValues) {
     );
 }
 
-function missingMediaWorkPartLabels(touched: Record<MediaWorkPart, boolean>) {
-    return [
-        touched.profile ? null : "Thông tin/spec",
-        touched.content ? null : "Content",
-        touched.image ? null : "Hình ảnh",
-    ].filter(Boolean) as string[];
+function missingMediaWorkPartLabels(doneState: Record<MediaWorkPart, boolean>) {
+    return MEDIA_WORK_PARTS
+        .filter((part) => !doneState[part.key])
+        .map((part) => part.label);
+}
+
+function setStepStatus(
+    steps: AppProgressStep[],
+    id: string,
+    status: AppProgressStep["status"],
+    detail?: string,
+) {
+    return steps.map((step) =>
+        step.id === id
+            ? {
+                ...step,
+                status,
+                detail: detail ?? step.detail,
+            }
+            : step,
+    );
+}
+
+function recordValue(value: unknown): Record<string, unknown> {
+    return value && typeof value === "object" && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : {};
+}
+
+function resultItems(value: unknown): Array<Record<string, unknown>> {
+    if (!Array.isArray(value)) return [];
+    return value
+        .map((item) => recordValue(item))
+        .filter((item) => Object.keys(item).length > 0);
+}
+
+function firstText(value: unknown): string {
+    if (Array.isArray(value)) {
+        return value.map((item) => String(item ?? "").trim()).filter(Boolean).join(", ");
+    }
+
+    return String(value ?? "").trim();
+}
+
+function mediaApproveNotificationStep(
+    mediaProcessingResult: unknown,
+): Pick<AppProgressStep, "status" | "detail"> {
+    const event = recordValue(recordValue(mediaProcessingResult).event);
+    const consumers = recordValue(event.consumers);
+    const notification = recordValue(consumers.notification);
+    const status = String(notification.status ?? "");
+    const reason = String(notification.reason ?? "");
+    const error = String(notification.error ?? "");
+
+    if (!Object.keys(notification).length) {
+        return {
+            status: "skipped",
+            detail: "Khong co ket qua notification tu event dispatch.",
+        };
+    }
+
+    const items = resultItems(notification.result);
+    const sentItem = items.find((item) => item.ok === true && item.skipped !== true && item.dispatchId);
+    const skippedItem = items.find((item) => item.skipped === true);
+    const failedItem = items.find((item) => item.ok === false || item.error);
+
+    if (sentItem) {
+        return {
+            status: "done",
+            detail: "Notification da duoc dispatch.",
+        };
+    }
+
+    if (failedItem) {
+        return {
+            status: "error",
+            detail: firstText(failedItem.error) || "Notification dispatch failed.",
+        };
+    }
+
+    if (skippedItem) {
+        const skippedReason = firstText(skippedItem.reason);
+        const missingKeys = firstText(skippedItem.missingKeys);
+
+        return {
+            status: "skipped",
+            detail: missingKeys
+                ? `Notification skipped: ${skippedReason || "MISSING_TEMPLATE_VALUES"} (${missingKeys})`
+                : skippedReason
+                    ? `Notification skipped: ${skippedReason}`
+                    : "Notification skipped.",
+        };
+    }
+
+    if (status === "skipped" || notification.skipped === true) {
+        return {
+            status: "skipped",
+            detail: reason ? `Notification skipped: ${reason}` : "Notification skipped.",
+        };
+    }
+
+    if (status === "success" || notification.ok === true) {
+        return {
+            status: "skipped",
+            detail: "Notification consumer thanh cong nhung khong tao dispatch.",
+        };
+    }
+
+    return {
+        status: "error",
+        detail: error || "Notification dispatch failed.",
+    };
+}
+
+function mediaApproveConsumerResult(
+    mediaProcessingResult: unknown,
+    consumerKey: string,
+) {
+    const event = recordValue(recordValue(mediaProcessingResult).event);
+    const consumers = recordValue(event.consumers);
+    return recordValue(consumers[consumerKey]);
 }
 
 function useUnsavedChangesGuard({
@@ -202,7 +327,7 @@ export default function WatchFormClient({
     const [specModalOpen, setSpecModalOpen] = useState(false);
     const [brandOptions, setBrandOptions] = useState<SimpleOption[]>(brands);
     const [mediaSubmitPending, setMediaSubmitPending] = useState(false);
-    const [mediaWorkTouched, setMediaWorkTouched] = useState<
+    const [mediaWorkDone, setMediaWorkDone] = useState<
         Record<MediaWorkPart, boolean>
     >({
         profile: searchParams.get("mediaProfileDone") === "1",
@@ -223,7 +348,8 @@ export default function WatchFormClient({
     const isMediaMode = viewMode === "media";
     const returnTo = searchParams.get("returnTo") || "/admin/watches";
     const workspaceBindingId = searchParams.get("workspaceBindingId") || "";
-    const workspaceState = searchParams.get("workspaceState") || "";
+    const initialWorkspaceState = searchParams.get("workspaceState") || "";
+    const [workspaceState, setWorkspaceState] = useState(initialWorkspaceState);
     const isMediaWorkspaceDone = workspaceState === "DONE";
     const canApproveMediaWorkspace =
         fromMediaWorkspace &&
@@ -242,17 +368,13 @@ export default function WatchFormClient({
         });
     };
 
-    const markMediaWorkTouched = (part: MediaWorkPart) => {
+    const toggleMediaWorkPartDone = (part: MediaWorkPart) => {
         if (!isMediaMode || !fromMediaWorkspace) return;
 
-        setMediaWorkTouched((prev) =>
-            prev[part]
-                ? prev
-                : {
-                    ...prev,
-                    [part]: true,
-                },
-        );
+        setMediaWorkDone((prev) => ({
+            ...prev,
+            [part]: !prev[part],
+        }));
     };
 
     useEffect(() => {
@@ -328,7 +450,6 @@ export default function WatchFormClient({
     };
 
     const updateBasic = (patch: Partial<WatchFormValues["basic"]>) => {
-        markMediaWorkTouched("profile");
         setFormValues((prev) => ({
             ...prev,
             basic: {
@@ -339,7 +460,6 @@ export default function WatchFormClient({
     };
 
     const replaceSpec = (next: WatchFormValues["spec"]) => {
-        markMediaWorkTouched("profile");
         setFormValues((prev) => ({
             ...prev,
             spec: next,
@@ -347,8 +467,18 @@ export default function WatchFormClient({
         }));
     };
 
+    const updateSpec = (patch: Partial<WatchFormValues["spec"]>) => {
+        setFormValues((prev) => ({
+            ...prev,
+            spec: {
+                ...prev.spec,
+                ...patch,
+            },
+            specStatus: "PARTIAL",
+        }));
+    };
+
     const updateContent = (patch: Partial<WatchFormValues["content"]>) => {
-        markMediaWorkTouched("content");
         setFormValues((prev) => ({
             ...prev,
             content: {
@@ -369,7 +499,6 @@ export default function WatchFormClient({
     };
 
     const updateMedia = (patch: Partial<WatchFormValues["media"]>) => {
-        markMediaWorkTouched("image");
         setFormValues((prev) => ({
             ...prev,
             media: {
@@ -583,7 +712,7 @@ export default function WatchFormClient({
                     ...buildSubmitValues(),
                     saveIntent: "MEDIA_WORKSPACE",
                 };
-                const missingWorkParts = missingMediaWorkPartLabels(mediaWorkTouched);
+                const missingWorkParts = missingMediaWorkPartLabels(mediaWorkDone);
 
                 if (fromMediaWorkspace && missingWorkParts.length > 0) {
                     await dialog.alert({
@@ -678,7 +807,7 @@ export default function WatchFormClient({
             ...buildSubmitValues(),
             saveIntent: "MEDIA_WORKSPACE",
         };
-        const missingWorkParts = missingMediaWorkPartLabels(mediaWorkTouched);
+        const missingWorkParts = missingMediaWorkPartLabels(mediaWorkDone);
 
         if (fromMediaWorkspace && missingWorkParts.length > 0) {
             await dialog.alert({
@@ -769,6 +898,7 @@ export default function WatchFormClient({
                 router.push(returnTo);
                 router.refresh();
             }
+
         } catch (error: unknown) {
             notify.error({
                 title: "Không thể gửi về Workspace",
@@ -791,20 +921,10 @@ export default function WatchFormClient({
             saveIntent: "MEDIA_WORKSPACE",
         };
 
-        if (!Object.values(mediaWorkTouched).some(Boolean)) {
-            await dialog.alert({
-                title: "Chưa có phần nào được xử lý",
-                message:
-                    "Bạn hãy thao tác ít nhất một phần trước khi lưu xử lý dở.",
-                tone: "warning",
-            });
-            return;
-        }
-
         setMediaSubmitPending(true);
         progress.show({
             title: "Đang lưu xử lý dở",
-            message: "Hệ thống đang lưu dữ liệu watch và cập nhật tiến độ trong Workspace.",
+            message: "Hệ thống đang lưu watch và cập nhật tiến độ trong Workspace.",
         });
 
         try {
@@ -813,13 +933,13 @@ export default function WatchFormClient({
 
             await saveWatchMediaWorkDraftFromWatchAction({
                 productId: submitValues.productId,
-                parts: mediaWorkTouched,
+                parts: mediaWorkDone,
                 note: "Media work draft saved from Watch edit workspace modal.",
             });
 
             notify.success({
                 title: "Đã lưu xử lý dở",
-                message: "Tiến độ media đã được lưu trên item trong Workspace.",
+                message: "Watch và tiến độ media đã được lưu.",
             });
 
             router.refresh();
@@ -828,7 +948,7 @@ export default function WatchFormClient({
                 title: "Không thể lưu xử lý dở",
                 message: errorMessage(
                     error,
-                    "Có lỗi xảy ra khi lưu dữ liệu hoặc cập nhật tiến độ Workspace.",
+                    "Có lỗi xảy ra khi lưu watch hoặc cập nhật tiến độ Workspace.",
                 ),
             });
         } finally {
@@ -837,71 +957,62 @@ export default function WatchFormClient({
         }
     };
 
-    const approveMediaWorkspaceFromModal = async () => {
+    const requestMediaReshootFromModal = async () => {
         if (mediaSubmitPending || !workspaceBindingId) return;
 
-        const missingWorkParts = missingMediaWorkPartLabels(mediaWorkTouched);
+        const accepted = await dialog.confirm({
+            title: "Yêu cầu chụp lại ảnh?",
+            message:
+                "Item sẽ được đưa về Photoshoot để chụp lại. Phần Hình ảnh trong tiến độ media sẽ chuyển về chưa xong và activity sẽ ghi rõ yêu cầu này.",
+            confirmText: "Yêu cầu chụp lại",
+            cancelText: "Hủy",
+            tone: "warning",
+        });
 
-        if (missingWorkParts.length > 0) {
-            await dialog.alert({
-                title: "Chưa xử lý đủ media package",
-                message: `Bạn cần thao tác đủ 3 phần trước khi duyệt: ${missingWorkParts.join(", ")}.`,
-                tone: "warning",
-            });
-            return;
-        }
+        if (!accepted) return;
 
         const submitValues: WatchFormValues = {
             ...buildSubmitValues(),
             saveIntent: "MEDIA_WORKSPACE",
         };
-
-        if (!hasMediaWorkContent(submitValues)) {
-            await dialog.alert({
-                title: "Chưa có content",
-                message:
-                    "Bạn cần nhập hoặc generate content trước khi duyệt media.",
-                tone: "warning",
-            });
-            return;
-        }
-
-        const localGalleryCount = submitValues.media.galleryImages?.length ?? 0;
-
-        if (localGalleryCount <= 0) {
-            await dialog.alert({
-                title: "Chưa có ảnh gallery",
-                message:
-                    "Bạn cần chọn ít nhất một ảnh gallery trước khi duyệt media.",
-                tone: "warning",
-            });
-            return;
-        }
+        const note = "Hình ảnh chưa đạt, yêu cầu chụp lại từ modal Xử lý Media.";
 
         setMediaSubmitPending(true);
         progress.show({
-            title: "Đang duyệt media",
-            message: "Hệ thống đang lưu watch, duyệt media và chuyển item sang Đăng bài.",
+            title: "Đang yêu cầu chụp lại",
+            message: "Hệ thống đang lưu watch, cập nhật activity và chuyển item về Photoshoot.",
         });
 
         try {
             const result = await submitWatchForm(submitValues);
             updateValuesAfterSave(result);
 
-            await markWatchMediaAssetAttachedFromWatchAction({
+            const reshootResult = await requestWatchMediaReshootFromWatchAction({
+                bindingId: workspaceBindingId,
                 productId: submitValues.productId,
-                note: "Spec, content, and media approved from Watch edit workspace modal.",
+                note,
             });
 
-            await applyQueueItemManualTransitionAction({
-                bindingId: workspaceBindingId,
-                actionKey: "approve-media",
-                note: "Approved from Watch media workspace modal.",
-            });
+            if (reshootResult?.skipped) {
+                await dialog.alert({
+                    title: "Chưa thể chuyển về Photoshoot",
+                    message:
+                        reshootResult.reason === "WATCH_ALREADY_IN_ACTIVE_PHOTOSHOOT"
+                            ? "Watch này đã có item Photoshoot đang mở."
+                            : "Không tìm thấy item Xử lý Media đang mở để chuyển về Photoshoot.",
+                    tone: "warning",
+                });
+                return;
+            }
+
+            setMediaWorkDone((prev) => ({
+                ...prev,
+                image: false,
+            }));
 
             notify.success({
-                title: "Đã duyệt media",
-                message: "Item đã được duyệt và chuyển sang Workspace Đăng bài.",
+                title: "Đã yêu cầu chụp lại",
+                message: "Item đã được chuyển về Photoshoot và activity đã được cập nhật.",
             });
 
             if (embedded && window.parent && window.parent !== window) {
@@ -915,15 +1026,181 @@ export default function WatchFormClient({
             }
         } catch (error: unknown) {
             notify.error({
-                title: "Không thể duyệt media",
+                title: "Không thể yêu cầu chụp lại",
                 message: errorMessage(
                     error,
-                    "Có lỗi xảy ra khi lưu hoặc duyệt media trong Workspace.",
+                    "Có lỗi xảy ra khi lưu watch hoặc chuyển item về Photoshoot.",
                 ),
             });
         } finally {
             setMediaSubmitPending(false);
             progress.hide();
+        }
+    };
+
+    const approveMediaWorkspaceFromModal = async () => {
+        if (mediaSubmitPending || !workspaceBindingId) return;
+
+        const missingWorkParts = missingMediaWorkPartLabels(mediaWorkDone);
+
+        if (missingWorkParts.length > 0) {
+            await dialog.alert({
+                title: "Chưa xử lý đủ media package",
+                message: `Bạn cần thao tác đủ 3 phần trước khi duyệt: ${missingWorkParts.join(", ")}.`,
+                tone: "warning",
+            });
+            return;
+        }
+
+        setMediaSubmitPending(true);
+        let steps: AppProgressStep[] = [
+            {
+                id: "approve",
+                label: "Duyet content va hinh anh",
+                detail: "Dang chay workflow approve-media cho item Workspace.",
+                status: "running",
+            },
+            {
+                id: "publish",
+                label: "Chuyen sang Dang bai",
+                detail: "Tao item Publish workspace tu event ready_for_publish.",
+                status: "pending",
+            },
+            {
+                id: "notification",
+                label: "Gui notification",
+                detail: "Gui Zalo notification theo rule watch.media.ready_for_publish.",
+                status: "pending",
+            },
+            {
+                id: "close",
+                label: "Hoan tat va lam moi workspace",
+                status: "pending",
+            },
+        ];
+        progress.show({
+            steps,
+            title: "Đang duyệt media",
+            message: "He thong dang duyet media va chuyen item sang Dang bai.",
+        });
+        let elapsedSeconds = 0;
+        const heartbeat = window.setInterval(() => {
+            elapsedSeconds += 6;
+            progress.update({
+                message: `Server dang xu ly workflow, event, notification... (${elapsedSeconds}s)`,
+                steps,
+            });
+        }, 6000);
+        let hideDelay = 1200;
+
+        try {
+            const transitionResult = await applyQueueItemManualTransitionAction({
+                bindingId: workspaceBindingId,
+                actionKey: "approve-media",
+                note: "Approved from Watch media workspace modal.",
+            });
+            const workflowResult = transitionResult?.result;
+            const mediaProcessingResult = transitionResult?.mediaProcessingResult;
+
+            if (!workflowResult?.applied || workflowResult.toState !== "DONE") {
+                throw new Error(
+                    `Workflow chua hoan tat: ${workflowResult?.reason ?? "UNKNOWN"}`,
+                );
+            }
+
+            if (
+                !mediaProcessingResult ||
+                mediaProcessingResult.ok === false ||
+                mediaProcessingResult.skipped
+            ) {
+                throw new Error(
+                    `Chua chuyen sang Dang bai: ${mediaProcessingResult?.reason ?? "MEDIA_PROCESSING_NOT_COMPLETED"}`,
+                );
+            }
+            const coordinationResult = mediaApproveConsumerResult(
+                mediaProcessingResult,
+                "coordination",
+            );
+
+            if (
+                coordinationResult.status !== "success" &&
+                coordinationResult.ok !== true
+            ) {
+                throw new Error(
+                    `Chua tao duoc item Dang bai: ${coordinationResult.reason ?? coordinationResult.error ?? "COORDINATION_NOT_COMPLETED"}`,
+                );
+            }
+
+            steps = setStepStatus(steps, "approve", "done", "Content/image da duoc duyet.");
+            steps = setStepStatus(steps, "publish", "done", "Da chuyen item sang Publish workspace.");
+            const notificationStep = mediaApproveNotificationStep(mediaProcessingResult);
+            steps = setStepStatus(
+                steps,
+                "notification",
+                notificationStep.status,
+                notificationStep.detail,
+            );
+            steps = setStepStatus(steps, "close", "running");
+            progress.update({
+                message: "Dang lam moi workspace.",
+                steps,
+            });
+
+            if (notificationStep.status === "done") {
+                notify.success({
+                    title: "Đã duyệt media",
+                    message: "Item đã được duyệt, chuyển sang Workspace Đăng bài và đã gửi notification.",
+                });
+            } else {
+                notify.warning({
+                    title: "Đã duyệt media, notification chưa gửi",
+                    message: notificationStep.detail ?? "Notification chưa tạo dispatch thật.",
+                    duration: 6000,
+                });
+            }
+
+            steps = setStepStatus(steps, "close", "done", "Workspace da duoc lam moi.");
+            progress.update({
+                message:
+                    notificationStep.status === "done"
+                        ? "Duyet media hoan tat."
+                        : "Duyet media hoan tat, notification can kiem tra.",
+                steps,
+            });
+            hideDelay = 2200;
+
+            window.setTimeout(() => {
+                if (embedded && window.parent && window.parent !== window) {
+                    router.refresh();
+                } else {
+                    router.push(returnTo);
+                    router.refresh();
+                }
+            }, 350);
+        } catch (error: unknown) {
+            hideDelay = 5000;
+            const message = errorMessage(
+                error,
+                "Co loi xay ra khi duyet media hoac cap nhat Workspace.",
+            );
+            steps = steps.map((step) =>
+                step.status === "running"
+                    ? { ...step, status: "error", detail: message }
+                    : step,
+            );
+            progress.update({
+                title: "Duyet media that bai",
+                message,
+                steps,
+            });
+            notify.error({
+                title: "Không thể duyệt media",
+                message,
+            });
+        } finally {
+            window.clearInterval(heartbeat);
+            setMediaSubmitPending(false);
+            window.setTimeout(() => progress.hide(), hideDelay);
         }
     };
 
@@ -982,6 +1259,57 @@ export default function WatchFormClient({
         }
     };
 
+    const reopenMediaWorkspaceFromModal = async () => {
+        if (mediaSubmitPending || !workspaceBindingId) return;
+
+        const accepted = await dialog.confirm({
+            title: "Má»Ÿ láº¡i xá»­ lÃ½ media?",
+            message:
+                "Item nÃ y Ä‘ang bá»‹ khá»‘a á»Ÿ tráº¡ng thÃ¡i hoÃ n táº¥t. Má»Ÿ láº¡i sáº½ chuyá»ƒn vá» Feedback Ä‘á»ƒ xá»­ lÃ½ vÃ  duyá»‡t láº¡i.",
+            tone: "warning",
+            confirmText: "Má»Ÿ láº¡i",
+            cancelText: "Há»§y",
+        });
+
+        if (!accepted) return;
+
+        setMediaSubmitPending(true);
+        progress.show({
+            title: "Äang má»Ÿ láº¡i xá»­ lÃ½",
+            message: "Há»‡ thá»‘ng Ä‘ang chuyá»ƒn item media vá» tráº¡ng thÃ¡i Feedback.",
+        });
+
+        try {
+            const result = await applyQueueItemManualTransitionAction({
+                bindingId: workspaceBindingId,
+                actionKey: "reopen-media",
+                note: "Reopened from Watch media workspace modal.",
+            });
+
+            if (!result?.result?.applied || result.result.toState !== "FEEDBACK") {
+                throw new Error(result?.result?.reason ?? "REOPEN_MEDIA_NOT_APPLIED");
+            }
+
+            setWorkspaceState("FEEDBACK");
+            notify.success({
+                title: "ÄÃ£ má»Ÿ láº¡i xá»­ lÃ½",
+                message: "Báº¡n cÃ³ thá»ƒ cáº­p nháº­t media vÃ  duyá»‡t láº¡i item nÃ y.",
+            });
+            router.refresh();
+        } catch (error: unknown) {
+            notify.error({
+                title: "KhÃ´ng thá»ƒ má»Ÿ láº¡i xá»­ lÃ½",
+                message: errorMessage(
+                    error,
+                    "CÃ³ lá»—i xáº£y ra khi chuyá»ƒn item media vá» Feedback.",
+                ),
+            });
+        } finally {
+            setMediaSubmitPending(false);
+            progress.hide();
+        }
+    };
+
     const saveBeforeReview = async (target?: "content" | "image") => {
         progress.show({
             title: "Đang lưu watch",
@@ -1031,6 +1359,7 @@ export default function WatchFormClient({
             categories={categories}
             postTargets={postTargets}
             onChange={updateBasic}
+            onSpecChange={updateSpec}
             onOpenSpecModal={() => setSpecModalOpen(true)}
             onBrandsChange={setBrandOptions}
             defaultOpen={isMediaMode}
@@ -1101,28 +1430,42 @@ export default function WatchFormClient({
                                 Chọn ảnh từ NAS, sau đó bấm xong để gửi item về Workspace chờ duyệt.
                             </p>
                             <div className="mt-3 flex flex-wrap gap-2">
-                                {[
-                                    ["Thông tin/spec", mediaWorkTouched.profile],
-                                    ["Content", mediaWorkTouched.content],
-                                    ["Hình ảnh", mediaWorkTouched.image],
-                                ].map(([label, done]) => (
-                                    <span
-                                        key={String(label)}
-                                        className={[
-                                            "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
-                                            done
-                                                ? "bg-emerald-100 text-emerald-800 ring-emerald-200"
-                                                : "bg-white/70 text-amber-700 ring-amber-200",
-                                        ].join(" ")}
-                                    >
-                                        {done ? "Đã xử lý" : "Chưa xử lý"} {label}
-                                    </span>
-                                ))}
+                                {MEDIA_WORK_PARTS.map((part) => {
+                                    const done = mediaWorkDone[part.key];
+
+                                    return (
+                                        <button
+                                            key={part.key}
+                                            type="button"
+                                            disabled={mediaSubmitPending || isMediaWorkspaceDone}
+                                            onClick={() => toggleMediaWorkPartDone(part.key)}
+                                            className={[
+                                                "inline-flex h-8 items-center justify-center rounded-full px-3 text-xs font-semibold ring-1 transition disabled:cursor-not-allowed disabled:opacity-60",
+                                                done
+                                                    ? "bg-emerald-100 text-emerald-800 ring-emerald-200 hover:bg-emerald-200"
+                                                    : "bg-white/80 text-amber-700 ring-amber-200 hover:bg-amber-50",
+                                            ].join(" ")}
+                                            title={done ? "Bấm để chuyển về chưa xong" : "Bấm để chốt mục này đã xong"}
+                                        >
+                                            {done ? "Đã xong" : "Chưa xong"} {part.label}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
                         {isMediaWorkspaceDone ? (
-                            <div className="inline-flex h-10 items-center rounded-xl bg-emerald-100 px-4 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
-                                Đã hoàn tất
+                            <div className="flex flex-wrap gap-2">
+                                <div className="inline-flex h-10 items-center rounded-xl bg-emerald-100 px-4 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
+                                    Đã hoàn tất
+                                </div>
+                                <button
+                                    type="button"
+                                    disabled={mediaSubmitPending}
+                                    onClick={reopenMediaWorkspaceFromModal}
+                                    className="inline-flex h-10 items-center justify-center rounded-xl border border-amber-200 bg-white px-4 text-sm font-semibold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {mediaSubmitPending ? "Đang xử lý" : "Mở lại xử lý"}
+                                </button>
                             </div>
                         ) : (
                         <div className="flex flex-wrap gap-2">
@@ -1134,6 +1477,16 @@ export default function WatchFormClient({
                             >
                                 {mediaSubmitPending ? "Đang lưu" : "Lưu xử lý dở"}
                             </button>
+                            {workspaceBindingId ? (
+                                <button
+                                    type="button"
+                                    disabled={mediaSubmitPending}
+                                    onClick={requestMediaReshootFromModal}
+                                    className="inline-flex h-10 items-center justify-center rounded-xl border border-amber-200 bg-white px-4 text-sm font-semibold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {mediaSubmitPending ? "Đang xử lý" : "Yêu cầu chụp lại"}
+                                </button>
+                            ) : null}
                             {!canApproveMediaWorkspace ? (
                         <button
                             type="button"
@@ -1189,7 +1542,6 @@ export default function WatchFormClient({
                         { label: values.basic.title || "Edit" },
                     ]}
                     onChange={(patch) => {
-                        markMediaWorkTouched("profile");
                         setFormValues((prev) => ({
                             ...prev,
                             ...patch,
@@ -1233,7 +1585,6 @@ export default function WatchFormClient({
                     { label: values.basic.title || "Edit" },
                 ]}
                 onChange={(patch) => {
-                    markMediaWorkTouched("profile");
                     setFormValues((prev) => ({
                         ...prev,
                         ...patch,
@@ -1292,7 +1643,7 @@ export default function WatchFormClient({
                                         Xử lý Media Workspace
                                     </div>
                                     <p className="mt-1 text-sm text-emerald-800">
-                                        Xử lý thông tin, content và hình ảnh. Có thể lưu dở, gửi duyệt hoặc duyệt ngay nếu bạn có quyền.
+                                        Xử lý thông tin, content và hình ảnh. Lưu xử lý dở sẽ lưu cả watch và tiến độ Workspace.
                                     </p>
                                 </div>
                                 <div className="flex flex-wrap gap-2">

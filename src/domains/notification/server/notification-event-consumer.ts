@@ -80,6 +80,49 @@ function renderTemplate(template: string, event: NotificationEventLog) {
     );
 }
 
+function templateSource(event: NotificationEventLog) {
+    return {
+        ...event,
+        ...asRecord(event.metadataJson),
+    };
+}
+
+function extractTemplateKeys(...templates: Array<string | null | undefined>) {
+    const keys = new Set<string>();
+
+    for (const template of templates) {
+        String(template ?? "").replace(
+            /\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g,
+            (_match, rawKey: string) => {
+                const key = clean(rawKey);
+                if (key) keys.add(key);
+                return "";
+            },
+        );
+    }
+
+    return Array.from(keys);
+}
+
+function templateValueIsMissing(value: unknown) {
+    if (value === null || value === undefined) return true;
+    if (Array.isArray(value)) return value.length === 0;
+    return clean(value) === "";
+}
+
+function missingTemplateKeys(rule: NotificationRuleRow, event: NotificationEventLog) {
+    const source = templateSource(event);
+    return extractTemplateKeys(rule.titleTemplate, rule.messageTemplate).filter((key) =>
+        templateValueIsMissing(getTemplateValue(source, key)),
+    );
+}
+
+function eventInstanceId(event: NotificationEventLog) {
+    const meta = asRecord(event.metadataJson);
+
+    return clean(meta.eventInstanceId) || clean(meta.sourceId) || event.id;
+}
+
 function getTemplateValue(source: Record<string, unknown>, path: string) {
     return String(path)
         .split(".")
@@ -225,6 +268,48 @@ export async function consumeBusinessEventForNotification(
         const message = renderTemplate(rule.messageTemplate, eventLog);
         const channelMessage = [title, message].filter(Boolean).join("\n");
 
+        const missingKeys = missingTemplateKeys(rule, eventLog);
+        if (missingKeys.length) {
+            results.push({
+                ok: true,
+                skipped: true,
+                reason: "MISSING_TEMPLATE_VALUES",
+                ruleId: rule.id,
+                eventKey: eventLog.eventKey,
+                missingKeys,
+            });
+            continue;
+        }
+
+        const instanceId = eventInstanceId(eventLog);
+        const existingDispatch = await client.notificationDispatch.findFirst({
+            where: {
+                businessEventLogId: eventLog.id,
+                ruleId: rule.id,
+                eventKey: eventLog.eventKey,
+                targetType: eventLog.targetType,
+                targetId: eventLog.targetId,
+                status: { in: ["PENDING", "PARTIAL", "SENT"] },
+                payloadJson: {
+                    path: ["eventInstanceId"],
+                    equals: instanceId,
+                },
+            },
+            select: { id: true, status: true },
+        });
+
+        if (existingDispatch) {
+            results.push({
+                ok: true,
+                skipped: true,
+                reason: "DUPLICATE_DISPATCH",
+                ruleId: rule.id,
+                dispatchId: existingDispatch.id,
+                status: existingDispatch.status,
+            });
+            continue;
+        }
+
         const dispatch = await client.notificationDispatch.create({
             data: {
                 businessEventLogId: eventLog.id,
@@ -234,6 +319,7 @@ export async function consumeBusinessEventForNotification(
                 targetId: eventLog.targetId,
                 status: "PENDING",
                 payloadJson: {
+                    eventInstanceId: instanceId,
                     title,
                     message,
                     channelMessage,
@@ -249,7 +335,7 @@ export async function consumeBusinessEventForNotification(
                 channel: rule.channel,
                 recipientGroupKey: rule.recipientGroupKey,
                 status: "PENDING",
-                payloadJson: { title, message, channelMessage },
+                payloadJson: { eventInstanceId: instanceId, title, message, channelMessage },
             },
         });
 

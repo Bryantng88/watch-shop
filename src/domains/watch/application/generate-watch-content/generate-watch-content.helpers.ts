@@ -139,7 +139,7 @@ function styleLabel(value?: string | null) {
     return map[normalizeEnum(value)] || "";
 }
 
-function strapSetLabel(type?: string | null, source?: string | null) {
+export function strapSetLabel(type?: string | null, source?: string | null) {
     const t = normalizeEnum(type);
     const s = normalizeEnum(source);
 
@@ -181,7 +181,7 @@ function buildHeroName(values: WatchFormValues) {
     );
 }
 
-function buildTitleDescriptor(values: WatchFormValues) {
+export function buildTitleDescriptor(values: WatchFormValues) {
     const style = normalizeEnum(values.basic.style);
     const movement = normalizeEnum(values.basic.movementType);
     const dial = clean(values.spec.dialColor);
@@ -209,8 +209,15 @@ export function buildPostTitle(values: WatchFormValues) {
     const model = clean(values.spec.model);
     const nickname = clean(values.spec.nickname);
     const reference = clean(values.spec.referenceNumber);
+    const movement = movementLabel(values.basic.movementType);
     const baseTitle = clean(values.basic.title);
 
+    return [year, brand, model, reference, nickname, movement]
+        .filter(Boolean)
+        .join(" ") || baseTitle;
+}
+
+    /*
     const identity =
         [brand, model || nickname || reference].filter(Boolean).join(" ") ||
         baseTitle;
@@ -222,6 +229,8 @@ export function buildPostTitle(values: WatchFormValues) {
         (descriptor ? ` – ${descriptor.toUpperCase()}` : "")
     );
 }
+
+*/
 
 export function buildHookText(values: WatchFormValues) {
     const priceLabel = getPriceHookLabel(values.pricing.salePrice);
@@ -251,7 +260,6 @@ export function buildWatchBulletSpecs(values: WatchFormValues) {
     const secondaryMaterial = materialLabel(spec.secondaryCaseMaterial);
     const crystalText = crystalLabel(spec.crystal);
 
-    const strapText = strapSetLabel(spec.strapSetType, spec.strapComponentSource);
     const styleText = styleLabel(basic.style);
 
     if (model || reference) {
@@ -288,7 +296,6 @@ export function buildWatchBulletSpecs(values: WatchFormValues) {
     }
 
     if (crystalText) bulletSpecs.push(`Kính ${crystalText}.`);
-    if (strapText) bulletSpecs.push(strapText);
     if (styleText) bulletSpecs.push(`Phong cách ${styleText}.`);
 
     return Array.from(new Set(bulletSpecs));
@@ -379,11 +386,12 @@ export function buildWatchContentWarnings(values: WatchFormValues) {
         pushMissing(warnings, "primaryCaseMaterial", "Chưa có chất liệu vỏ.");
     }
 
-    if (!clean(values.spec.strapSetType)) {
+    if (false && !clean(values.spec.strapSetType)) {
         pushMissing(warnings, "strapSetType", "Chưa chọn dây hãng hay linh kiện.");
     }
 
     if (
+        false &&
         normalizeEnum(values.spec.strapSetType) === "COMPONENT" &&
         !clean(values.spec.strapComponentSource)
     ) {

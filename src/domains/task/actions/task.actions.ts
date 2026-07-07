@@ -877,6 +877,10 @@ export async function applyQueueItemManualTransitionAction(input: {
     }
   }
 
+  let mediaProcessingResult: Awaited<
+    ReturnType<typeof completeWatchMediaProcessingFromQueueItem>
+  > | null = null;
+
   if (
     result.applied &&
     result.workflowKey === "watch-publish" &&
@@ -896,21 +900,26 @@ export async function applyQueueItemManualTransitionAction(input: {
   }
 
   if (result.applied && result.toState === "DONE") {
-    await completeWatchPhotoshootFromQueueItem({
-      bindingId,
-      actorUserId: getAuthUserId(auth),
-      note: input.note ?? null,
-    }, prisma);
-    const mediaProcessingResult = await completeWatchMediaProcessingFromQueueItem({
-      bindingId,
-      actorUserId: getAuthUserId(auth),
-      note: input.note ?? null,
-    }, prisma);
+    if (result.workflowKey === "watch-photography") {
+      await completeWatchPhotoshootFromQueueItem({
+        bindingId,
+        actorUserId: getAuthUserId(auth),
+        note: input.note ?? null,
+      }, prisma);
+    }
 
-    if ("productId" in mediaProcessingResult && mediaProcessingResult.productId) {
-      revalidatePath("/admin/watches");
-      revalidatePath(`/admin/watches/${mediaProcessingResult.productId}`);
-      revalidatePath(`/admin/watches/${mediaProcessingResult.productId}/edit`);
+    if (result.workflowKey === "watch-media-processing") {
+      mediaProcessingResult = await completeWatchMediaProcessingFromQueueItem({
+        bindingId,
+        actorUserId: getAuthUserId(auth),
+        note: input.note ?? null,
+      }, prisma);
+
+      if ("productId" in mediaProcessingResult && mediaProcessingResult.productId) {
+        revalidatePath("/admin/watches");
+        revalidatePath(`/admin/watches/${mediaProcessingResult.productId}`);
+        revalidatePath(`/admin/watches/${mediaProcessingResult.productId}/edit`);
+      }
     }
   }
 
@@ -919,7 +928,7 @@ export async function applyQueueItemManualTransitionAction(input: {
     revalidatePath(`/admin/task-items/${result.taskItemId}`);
   }
 
-  return { ok: true, result };
+  return { ok: true, result, mediaProcessingResult };
 }
 
 export async function applyQueueItemManualTransitionsAction(input: {

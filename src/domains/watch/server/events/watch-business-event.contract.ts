@@ -111,7 +111,7 @@ export const WATCH_BUSINESS_EVENT_DEFINITIONS: WatchBusinessEventDefinition[] = 
     targetIdPolicy: "watch.id",
     targetAliasPolicy: "[watch.id, productId]",
     payloadContract: "WatchMediaPipelinePayload",
-    knownConsumers: [...WATCH_REVIEW_EVENT_CONSUMERS],
+    knownConsumers: [...WATCH_REVIEW_EVENT_CONSUMERS, "notification"],
     autoBindingScope: WATCH_MEDIA_PROCESSING_AUTO_BINDING_SCOPE,
   },
   {
@@ -291,7 +291,7 @@ export const WATCH_BUSINESS_EVENT_DEFINITIONS: WatchBusinessEventDefinition[] = 
     targetIdPolicy: "watch.id",
     targetAliasPolicy: "[watch.id, productId]",
     payloadContract: "WatchMediaPipelinePayload",
-    knownConsumers: [...WATCH_REVIEW_EVENT_CONSUMERS],
+    knownConsumers: [...WATCH_REVIEW_EVENT_CONSUMERS, "notification"],
     autoBindingScope: WATCH_PUBLISH_AUTO_BINDING_SCOPE,
   },
   {

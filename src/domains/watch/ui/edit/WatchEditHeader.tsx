@@ -189,7 +189,7 @@ export default function WatchEditHeader({
                                 </span>
                             </div>
 
-                            <div className="mt-3 max-w-3xl text-sm text-slate-600">
+                            <div className="hidden">
                                 Sau khi bổ sung spec cần thiết, bấm{" "}
                                 <span className="font-medium text-slate-800">
                                     Gen lại title & SKU
@@ -222,13 +222,13 @@ export default function WatchEditHeader({
                             brands={brands}
                             onDone={(res) => {
                                 onChange?.({
+                                    header: {
+                                        ...values.header,
+                                        ...(res.sku ? { sku: res.sku } : {}),
+                                    },
                                     basic: {
                                         ...values.basic,
                                         title: res.title,
-                                    },
-                                    header: {
-                                        ...values.header,
-                                        sku: res.sku,
                                     },
                                 });
                             }}

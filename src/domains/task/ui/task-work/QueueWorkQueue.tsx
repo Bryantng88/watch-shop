@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ExternalLink,
-  GitBranch,
+  Folder,
   MoreHorizontal,
   XCircle,
 } from "lucide-react";
@@ -15,6 +15,10 @@ import {
   BusinessEntityPreviewModal,
   useBusinessEntityPreview,
 } from "@/domains/shared/ui/business/BusinessEntityPreview";
+import {
+  useAppProgress,
+  type AppProgressStep,
+} from "@/domains/shared/feedback/AppProgressProvider";
 import { repairVietnameseMojibake } from "@/domains/shared/text/vietnamese-mojibake";
 import { targetLabel } from "@/domains/task/ui/execution/execution-ui.utils";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
@@ -23,7 +27,10 @@ import {
   applyQueueItemManualTransitionsAction,
   applyQueueItemManualTransitionAction,
 } from "@/domains/task/actions/task.actions";
-import { resolveQueueRowPresentation } from "./queue-row-presentation";
+import {
+  resolveQueueRowPresentation,
+  type QueueRowProgress,
+} from "./queue-row-presentation";
 
 export type UserSummary = {
   id: string;
@@ -181,16 +188,6 @@ function mediaOpenTargetTransition(
   };
 }
 
-function userHasAdminRole(user?: UserSummary | null) {
-  const roles = user?.roles ?? [];
-  const permissions = user?.permissions ?? [];
-
-  return (
-    roles.map((role) => role.toUpperCase()).includes("ADMIN") ||
-    permissions.map((permission) => permission.toUpperCase()).includes("ADMIN")
-  );
-}
-
 function openTargetHref(input: {
   queueItem: {
     id: string;
@@ -277,6 +274,44 @@ export function QueueStatusBadge({ status }: { status: QueueItemStatus }) {
   );
 }
 
+function QueueProgressCell({ progress }: { progress: QueueRowProgress }) {
+  if (!progress) {
+    return <span className="text-xs font-medium text-slate-400">-</span>;
+  }
+
+  const total = progress.total || 3;
+  const completed = Math.max(0, Math.min(progress.completed, total));
+  const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const done = completed >= total && total > 0;
+
+  return (
+    <div className="min-w-[150px]" title={`${completed}/${total}`}>
+      <div className="flex items-center justify-between gap-3">
+        <span
+          className={cn(
+            "text-xs font-semibold",
+            done ? "text-emerald-700" : "text-blue-700",
+          )}
+        >
+          {completed}/{total}
+        </span>
+        <span className="text-[11px] font-medium text-slate-400">
+          {percent}%
+        </span>
+      </div>
+      <div className="mt-1 h-1 overflow-hidden rounded-full bg-slate-200">
+        <div
+          className={cn(
+            "h-full rounded-full transition-all duration-300 ease-out",
+            done ? "bg-emerald-500" : "bg-blue-500",
+          )}
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function queueItemTitle(item: TaskItemQueueItem) {
   return item.preview.title || targetLabel(item.targetType);
 }
@@ -332,7 +367,6 @@ export function QueueItemThumbnail({ item }: { item: TaskItemQueueItem }) {
               style={{ left: index * 6, zIndex: 3 - index }}
             >
               {stackedSrc ? (
-                // eslint-disable-next-line @next/next/no-img-element
                 <img src={stackedSrc} alt={label} className="h-full w-full object-cover" />
               ) : (
                 targetLabel(item.targetType).slice(0, 1)
@@ -347,7 +381,6 @@ export function QueueItemThumbnail({ item }: { item: TaskItemQueueItem }) {
   return (
     <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
       {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt={label} className="h-full w-full object-cover" />
       ) : (
         targetLabel(item.targetType).slice(0, 1)
@@ -395,12 +428,14 @@ export function OpenTargetAction({
   transition,
   className,
   iconClassName = "h-3.5 w-3.5",
+  onActivate,
 }: {
   queueItem: TaskItemQueueItem;
   taskItemId: string;
   transition: TaskItemQueueTransition;
   className: string;
   iconClassName?: string;
+  onActivate?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
@@ -415,9 +450,16 @@ export function OpenTargetAction({
 
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
-      if (event.data?.type !== "workspace-target-modal-close") return;
+      if (
+        event.data?.type !== "workspace-target-modal-close" &&
+        event.data?.type !== "workspace-target-modal-refresh"
+      ) {
+        return;
+      }
 
-      setOpen(false);
+      if (event.data?.type === "workspace-target-modal-close") {
+        setOpen(false);
+      }
       router.refresh();
     };
 
@@ -429,7 +471,7 @@ export function OpenTargetAction({
 
   if (!modal) {
     return (
-      <Link href={href} className={className}>
+      <Link href={href} onClick={onActivate} className={className}>
         <ExternalLink className={iconClassName} />
         {label}
       </Link>
@@ -438,7 +480,14 @@ export function OpenTargetAction({
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={className}>
+      <button
+        type="button"
+        onClick={() => {
+          onActivate?.();
+          setOpen(true);
+        }}
+        className={className}
+      >
         <ExternalLink className={iconClassName} />
         {label}
       </button>
@@ -494,7 +543,6 @@ export function QueueWorkQueue({
   capabilities,
   itemLabel,
   workspaceWorkTypeKey,
-  currentUser,
   onOpenQueueActivity,
 }: {
   taskItemId: string;
@@ -503,15 +551,16 @@ export function QueueWorkQueue({
   itemLabel: string;
   workspaceWorkTypeKey?: string | null;
   currentUser?: UserSummary | null;
-  onOpenQueueActivity?: (queueItemId: string, mode: "activity" | "discussion") => void;
+  onOpenQueueActivity?: (queueItemId: string, mode: "activity") => void;
 }) {
   const [filter, setFilter] = useState<QueueFilter>("ALL");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const previewState = useBusinessEntityPreview();
   const router = useRouter();
-  const canReviewMedia = userHasAdminRole(currentUser);
+  const appProgress = useAppProgress();
   const filters: Array<{ key: QueueFilter; label: string }> = [
     { key: "ALL", label: "All" },
     { key: "WAITING", label: "Waiting" },
@@ -545,10 +594,6 @@ export function QueueWorkQueue({
       ];
     }
 
-    if (workspaceWorkTypeKey === "publish" && !canReviewMedia) {
-      return transitions.filter((transition) => transition.actionKey !== "recall-media");
-    }
-
     return transitions;
   };
   const selectableItems = visibleItems.filter((item) => Boolean(transitionForItem(item)));
@@ -563,19 +608,113 @@ export function QueueWorkQueue({
   const allSelectableSelected =
     selectableItems.length > 0 && selectableItems.every((item) => selectedIdSet.has(item.id));
   const gridClass = capabilities.workflow
-    ? "grid-cols-[42px_minmax(270px,1.35fr)_190px_minmax(150px,0.9fr)_160px_72px_72px_108px]"
-    : "grid-cols-[42px_minmax(270px,1.35fr)_190px_minmax(150px,0.9fr)_72px_72px_108px]";
+    ? "grid-cols-[42px_minmax(270px,1.45fr)_120px_180px_160px_96px_108px]"
+    : "grid-cols-[42px_minmax(270px,1.45fr)_120px_180px_96px_108px]";
   const applyManualAction = (queueItem: TaskItemQueueItem, actionKey: string) => {
-    setPendingId(`${queueItem.id}:${actionKey}`);
+    if (isPending && pendingId) return;
+
+    const pendingKey = `${queueItem.id}:${actionKey}`;
+    const isRecallAction = actionKey === "recall-media";
+    let recallSteps: AppProgressStep[] = [
+      {
+        id: "recall",
+        label: "Thu hoi khoi Dang bai",
+        detail: "Dang chay workflow recall-media cho item Workspace.",
+        status: "running",
+      },
+      {
+        id: "workspace",
+        label: "Cap nhat Workspace",
+        detail: "Dong bo trang thai item ve luong xu ly media.",
+        status: "pending",
+      },
+      {
+        id: "refresh",
+        label: "Lam moi danh sach",
+        detail: "Cap nhat lai bang item sau khi thu hoi.",
+        status: "pending",
+      },
+    ];
+    const setRecallStep = (
+      stepId: string,
+      status: AppProgressStep["status"],
+      detail?: string,
+    ) => {
+      recallSteps = recallSteps.map((step) =>
+        step.id === stepId ? { ...step, status, detail: detail ?? step.detail } : step,
+      );
+      appProgress.update({ steps: recallSteps });
+    };
+
+    setOpenActionMenuId(null);
+    setPendingId(pendingKey);
+    if (isRecallAction) {
+      appProgress.show({
+        title: "Dang thu hoi media",
+        message: "He thong dang dua item ve lai Workspace xu ly media.",
+        steps: recallSteps,
+      });
+    }
+
     startTransition(async () => {
+      let hideProgress = isRecallAction;
+      let hideDelay = 2200;
+      let elapsedSeconds = 0;
+      const heartbeat = isRecallAction
+        ? window.setInterval(() => {
+          elapsedSeconds += 6;
+          appProgress.update({
+            message: `Server dang thu hoi media va cap nhat workspace... (${elapsedSeconds}s)`,
+            steps: recallSteps,
+          });
+        }, 6000)
+        : null;
+
       try {
-        await applyQueueItemManualTransitionAction({
+        const result = await applyQueueItemManualTransitionAction({
           bindingId: queueItem.id,
           actionKey,
         });
-        router.refresh();
+        if (isRecallAction) {
+          if (!result?.result?.applied) {
+            throw new Error(result?.result?.reason ?? "RECALL_NOT_APPLIED");
+          }
+
+          setRecallStep("recall", "done", "Da thu hoi item khoi luong Dang bai.");
+          setRecallStep("workspace", "running");
+          setRecallStep("workspace", "done", "Workspace da ghi nhan trang thai moi.");
+          setRecallStep("refresh", "running", "Dang lam moi danh sach.");
+        }
+        if (isRecallAction) {
+          setRecallStep("refresh", "done", "Danh sach da duoc lam moi.");
+          appProgress.update({
+            message: "Thu hoi media hoan tat.",
+            steps: recallSteps,
+          });
+        }
+        window.setTimeout(() => router.refresh(), isRecallAction ? 350 : 0);
+      } catch (error) {
+        if (isRecallAction) {
+          hideDelay = 5000;
+          const message = error instanceof Error ? error.message : "Khong the thu hoi media.";
+          recallSteps = recallSteps.map((step) =>
+            step.status === "running" ? { ...step, status: "error", detail: message } : step,
+          );
+          appProgress.update({
+            title: "Thu hoi media that bai",
+            message,
+            steps: recallSteps,
+          });
+          hideProgress = false;
+          window.setTimeout(() => appProgress.hide(), hideDelay);
+        }
+        console.error(error);
       } finally {
+        if (heartbeat) window.clearInterval(heartbeat);
         setPendingId(null);
+        if (hideProgress) {
+          window.setTimeout(() => appProgress.hide(), hideDelay);
+        }
       }
     });
   };
@@ -621,7 +760,7 @@ export function QueueWorkQueue({
 
   return (
     <Panel
-      icon={<GitBranch className="h-4 w-4" />}
+      icon={<Folder className="h-4 w-4" />}
       title={itemLabel}
       action={
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
@@ -687,9 +826,8 @@ export function QueueWorkQueue({
                     </div>
                     <div>{itemLabel}</div>
                     <div>Status</div>
-                    <div>Latest Activity</div>
+                    <div>Progress</div>
                     {capabilities.workflow ? <div>Next step</div> : null}
-                    <div>Discussion</div>
                     <div>Activity</div>
                     <div>Updated</div>
                   </div>
@@ -759,20 +897,10 @@ export function QueueWorkQueue({
 
                         <div className="flex min-w-0 flex-wrap items-center gap-1.5 self-center">
                           <QueueStatusBadge status={displayStatus} />
-                          {rowPresentation.progressBadge ? (
-                            <span
-                              title={rowPresentation.progressBadge.title ?? undefined}
-                              className="inline-flex h-6 items-center rounded-full bg-blue-50 px-2 text-[11px] font-semibold text-blue-700 ring-1 ring-blue-100"
-                            >
-                              {rowPresentation.progressBadge.label}
-                            </span>
-                          ) : null}
                         </div>
 
                         <div className="min-w-0 self-center">
-                          <div className="truncate text-xs font-medium text-slate-700">
-                            {rowPresentation.latestActivityLabel}
-                          </div>
+                          <QueueProgressCell progress={rowPresentation.progress} />
                         </div>
 
                         {capabilities.workflow ? (
@@ -794,6 +922,7 @@ export function QueueWorkQueue({
                                         taskItemId={taskItemId}
                                         transition={transition}
                                         className="inline-flex h-7 min-w-0 items-center gap-1.5 rounded-lg border border-slate-200 px-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                                        onActivate={() => setOpenActionMenuId(null)}
                                       />
                                     );
                                   }
@@ -817,51 +946,61 @@ export function QueueWorkQueue({
                                 })()}
 
                                 {secondaryNextStepActions.length ? (
-                                  <details className="group relative">
-                                    <summary
-                                      className="inline-flex h-7 w-7 cursor-pointer list-none items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
+                                  <div className="relative">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setOpenActionMenuId((current) =>
+                                          current === queueItem.id ? null : queueItem.id,
+                                        )
+                                      }
+                                      className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
                                       aria-label="More workflow actions"
+                                      aria-expanded={openActionMenuId === queueItem.id}
                                     >
                                       <MoreHorizontal className="h-4 w-4" />
-                                    </summary>
-                                    <div className="absolute right-0 z-20 mt-1 min-w-36 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
-                                      {secondaryNextStepActions.map((transition) => {
-                                        const pendingKey = `${queueItem.id}:${transition.actionKey}`;
-                                        const pending = isPending && pendingId === pendingKey;
-                                        const disabled = pending || transition.enabled === false;
-                                        const isOpenTarget = isOpenTargetTransition(transition);
+                                    </button>
+                                    {openActionMenuId === queueItem.id ? (
+                                      <div className="absolute right-0 z-20 mt-1 min-w-36 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+                                        {secondaryNextStepActions.map((transition) => {
+                                          const pendingKey = `${queueItem.id}:${transition.actionKey}`;
+                                          const pending = isPending && pendingId === pendingKey;
+                                          const disabled = pending || transition.enabled === false;
+                                          const isOpenTarget = isOpenTargetTransition(transition);
 
-                                        if (isOpenTarget) {
+                                          if (isOpenTarget) {
+                                            return (
+                                              <OpenTargetAction
+                                                key={transition.actionKey}
+                                                queueItem={queueItem}
+                                                taskItemId={taskItemId}
+                                                transition={transition}
+                                                className="flex h-8 w-full items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                                                onActivate={() => setOpenActionMenuId(null)}
+                                              />
+                                            );
+                                          }
+
                                           return (
-                                            <OpenTargetAction
+                                            <button
                                               key={transition.actionKey}
-                                              queueItem={queueItem}
-                                              taskItemId={taskItemId}
-                                              transition={transition}
-                                              className="flex h-8 w-full items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
-                                            />
+                                              type="button"
+                                              disabled={disabled}
+                                              onClick={() =>
+                                                applyManualAction(queueItem, transition.actionKey)
+                                              }
+                                              title={transition.reason ?? undefined}
+                                              className="flex h-8 w-full items-center rounded-lg px-2 text-left text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                            >
+                                              {pending
+                                                ? "Applying"
+                                                : effectiveTransitionLabel(transition, workspaceWorkTypeKey)}
+                                            </button>
                                           );
-                                        }
-
-                                        return (
-                                          <button
-                                            key={transition.actionKey}
-                                            type="button"
-                                            disabled={disabled}
-                                            onClick={() =>
-                                              applyManualAction(queueItem, transition.actionKey)
-                                            }
-                                            title={transition.reason ?? undefined}
-                                            className="flex h-8 w-full items-center rounded-lg px-2 text-left text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                          >
-                                            {pending
-                                              ? "Applying"
-                                              : effectiveTransitionLabel(transition, workspaceWorkTypeKey)}
-                                          </button>
-                                        );
-                                      })}
-                                    </div>
-                                  </details>
+                                        })}
+                                      </div>
+                                    ) : null}
+                                  </div>
                                 ) : null}
                               </div>
                             ) : null}
@@ -871,34 +1010,17 @@ export function QueueWorkQueue({
                         <div className="self-center">
                           <button
                             type="button"
-                            disabled={!queueItem.discussionCount}
-                            onClick={() => onOpenQueueActivity?.(queueItem.id, "discussion")}
-                            title="Open discussions for this item"
-                            className={cn(
-                              "inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-sm font-semibold transition",
-                              queueItem.discussionCount
-                                ? "text-blue-700 hover:bg-blue-50"
-                                : "cursor-default text-slate-400",
-                            )}
-                          >
-                            {queueItem.discussionCount ?? 0}
-                          </button>
-                        </div>
-
-                        <div className="self-center">
-                          <button
-                            type="button"
-                            disabled={!queueItem.activityCount}
+                            disabled={!queueItem.activityCount && !queueItem.discussionCount}
                             onClick={() => onOpenQueueActivity?.(queueItem.id, "activity")}
-                            title="Open activities for this item"
+                            title="Open activity for this item"
                             className={cn(
-                              "inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-sm font-semibold transition",
-                              queueItem.activityCount
+                              "inline-flex h-8 min-w-[58px] items-center justify-center rounded-lg px-2 text-sm font-semibold tabular-nums transition",
+                              queueItem.activityCount || queueItem.discussionCount
                                 ? "text-slate-700 hover:bg-slate-100"
                                 : "cursor-default text-slate-400",
                             )}
                           >
-                            {queueItem.activityCount}
+                            {queueItem.discussionCount ?? 0}/{queueItem.activityCount ?? 0}
                           </button>
                         </div>
 

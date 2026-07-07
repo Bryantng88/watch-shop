@@ -114,6 +114,7 @@ type TaskItemBinding = {
     lastActivityAt?: string | null;
     feedbackCount?: number;
     discussionCount?: number;
+    activityCount?: number;
   } | null;
   processingLabel?: string | null;
 };
@@ -161,7 +162,6 @@ type DetailTab =
   | "overview"
   | "workflow"
   | "activity"
-  | "discussion"
   | "attachments"
   | "checklist"
   | "business"
@@ -213,7 +213,7 @@ function defaultTabFromPresentation(
   if (presentation.defaultView === "items") return "business";
   if (presentation.defaultView === "activity") return "activity";
   if (presentation.defaultView === "workflow") return "workflow";
-  if (presentation.defaultView === "discussion") return "discussion";
+  if (presentation.defaultView === "discussion") return "activity";
   if (presentation.defaultView === "attachments") return "attachments";
   if (presentation.defaultView === "checklist") return "checklist";
   if (presentation.defaultView === "priority") return "priority";
@@ -224,7 +224,6 @@ function defaultTabFromPresentation(
 function tabEnabled(tab: DetailTab, capabilities: WorkspaceCapabilities) {
   if (tab === "workflow") return capabilities.workflow;
   if (tab === "activity") return capabilities.activity;
-  if (tab === "discussion") return capabilities.discussion;
   if (tab === "attachments") return capabilities.attachments;
   if (tab === "checklist") return capabilities.checklist;
   if (tab === "business") return capabilities.items;
@@ -403,7 +402,6 @@ function UserAvatar({
       )}
     >
       {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt={label} className="h-full w-full object-cover" />
       ) : isSystem ? (
         <CircleDot className="h-4 w-4" />
@@ -1060,28 +1058,6 @@ function WorkflowTabPanel({
   );
 }
 
-function DiscussionTabPanel({
-  activities,
-  businessBindings,
-  queueItems,
-}: {
-  activities: TaskItemActivityViewModel[];
-  businessBindings: TaskItemBinding[];
-  queueItems: TaskItemQueueItem[];
-}) {
-  return (
-    <Panel title="Discussion" icon={<MessageSquare className="h-4 w-4" />}>
-      <ActivityViewModelFeed
-        items={activities}
-        businessBindings={businessBindings}
-        queueItems={queueItems}
-        mode="ALL"
-        discussionEnabled
-      />
-    </Panel>
-  );
-}
-
 function AttachmentsTabPanel() {
   return (
     <Panel title="Attachments" icon={<Paperclip className="h-4 w-4" />}>
@@ -1125,7 +1101,7 @@ function QueueSummary({
   itemLabel: string;
 }) {
   return (
-    <Panel icon={<GitBranch className="h-4 w-4" />} title={itemLabel}>
+    <Panel icon={<Folder className="h-4 w-4" />} title={itemLabel}>
       {items.length ? (
         <div className="space-y-3">
           {items.slice(0, 5).map((queueItem) => (
@@ -1174,7 +1150,7 @@ function BusinessWorkQueue({ items }: { items: TaskItemBinding[] }) {
 
   return (
     <Panel
-      icon={<GitBranch className="h-4 w-4" />}
+      icon={<Folder className="h-4 w-4" />}
       title="Items"
       action={
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
@@ -1189,7 +1165,7 @@ function BusinessWorkQueue({ items }: { items: TaskItemBinding[] }) {
               <div>Item</div>
               <div>Trạng thái</div>
               <div>Hoạt động cuối</div>
-              <div>Discussion</div>
+              <div>Activity</div>
               <div>Cập nhật</div>
               <div className="text-right">Open</div>
             </div>
@@ -1242,8 +1218,8 @@ function BusinessWorkQueue({ items }: { items: TaskItemBinding[] }) {
                   ) : null}
                 </div>
 
-                <div className="self-center text-sm font-semibold text-slate-700">
-                  {binding.stats?.discussionCount ?? 0}
+                <div className="self-center text-sm font-semibold tabular-nums text-slate-700">
+                  {binding.stats?.discussionCount ?? 0}/{binding.stats?.activityCount ?? 0}
                 </div>
 
                 <div className="self-center text-xs text-slate-500">
@@ -1278,7 +1254,7 @@ function BusinessWorkQueue({ items }: { items: TaskItemBinding[] }) {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function BusinessQueueSummary({ items }: { items: TaskItemBinding[] }) {
   return (
-    <Panel icon={<GitBranch className="h-4 w-4" />} title="Nghiệp vụ">
+    <Panel icon={<Folder className="h-4 w-4" />} title="Nghiệp vụ">
       {items.length ? (
         <div className="space-y-3">
           {items.slice(0, 5).map((binding) => (
@@ -1652,9 +1628,9 @@ export default function TaskItemDetailClient({
   const ref = parentTask?.periodKey || compactId(parentTask?.id);
   const tabs: TabItem[] = [
     { key: "overview", label: "Tổng quan", icon: <FileText className="h-4 w-4" /> },
-    { key: "activity", label: "Hoạt động", icon: <GitBranch className="h-4 w-4" /> },
+    { key: "activity", label: "Hoạt động", icon: <Clock3 className="h-4 w-4" /> },
     { key: "checklist", label: "Checklist", icon: <ListChecks className="h-4 w-4" /> },
-    { key: "business", label: presentation.itemLabel, icon: <GitBranch className="h-4 w-4" /> },
+    { key: "business", label: presentation.itemLabel, icon: <Folder className="h-4 w-4" /> },
     { key: "info", label: "Thông tin", icon: <Info className="h-4 w-4" /> },
   ];
   const tabByKey = new Map(tabs.map((tab) => [tab.key, tab]));
@@ -1664,9 +1640,6 @@ export default function TaskItemDetailClient({
       ? { key: "workflow" as const, label: "Workflow", icon: <GitBranch className="h-4 w-4" /> }
       : null,
     capabilities.activity ? tabByKey.get("activity") : null,
-    capabilities.discussion
-      ? { key: "discussion" as const, label: "Discussion", icon: <MessageSquare className="h-4 w-4" /> }
-      : null,
     capabilities.attachments
       ? { key: "attachments" as const, label: "Attachments", icon: <Paperclip className="h-4 w-4" /> }
       : null,
@@ -1822,7 +1795,7 @@ export default function TaskItemDetailClient({
             {activeTab === "activity" ? (
               <Panel
                 title="Hoạt động"
-                icon={<GitBranch className="h-4 w-4" />}
+                icon={<Clock3 className="h-4 w-4" />}
                 action={
                   <div className="flex items-center gap-2">
                     {(["QUEUE", "ALL"] as ActivityMode[]).map((mode) => (
@@ -1852,14 +1825,6 @@ export default function TaskItemDetailClient({
                   jumpTarget={activityJumpTarget}
                 />
               </Panel>
-            ) : null}
-
-            {activeTab === "discussion" ? (
-              <DiscussionTabPanel
-                activities={activities}
-                businessBindings={businessBindings}
-                queueItems={queueItems}
-              />
             ) : null}
 
             {activeTab === "attachments" ? <AttachmentsTabPanel /> : null}

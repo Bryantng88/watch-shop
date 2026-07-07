@@ -162,6 +162,13 @@ function updatePublishRuntimeMetadataForEvent(
 
   if (eventKey === "watch.media.ready_for_publish") {
     next.readyForPublish = true;
+    next.contentSubmitted = true;
+    next.contentApproved = true;
+    next.contentRejected = false;
+    next.imageSubmitted = true;
+    next.imageApproved = true;
+    next.imageRejected = false;
+    next.publishAssetsCompleted = false;
   }
 
   if (eventKey === "watch.publish.assets.downloaded") {
@@ -210,12 +217,92 @@ function updatePublishRuntimeMetadataForEvent(
   return next;
 }
 
+function normalizePublishReadyManualMetadata(metadata: Record<string, unknown>) {
+  return {
+    ...metadata,
+    readyForPublish: true,
+    contentSubmitted: true,
+    contentApproved: true,
+    contentRejected: false,
+    imageSubmitted: true,
+    imageApproved: true,
+    imageRejected: false,
+    publishAssetsCompleted: false,
+  };
+}
+
+function normalizePublishRecalledManualMetadata(metadata: Record<string, unknown>) {
+  return {
+    ...metadata,
+    readyForPublish: false,
+    publishAssetsCompleted: false,
+  };
+}
+
+function normalizeRuntimeState(runtime: WorkflowRuntimeState): WorkflowRuntimeState {
+  const metadata = asRecord(runtime.metadata);
+
+  if (
+    isPublishWorkflow(runtime.workflowKey) &&
+    runtime.currentState === "RECALLED" &&
+    clean(metadata.lastTriggerValue) === "watch.media.ready_for_publish" &&
+    bool(metadata.readyForPublish) &&
+    bool(metadata.contentApproved) &&
+    bool(metadata.imageApproved) &&
+    !bool(metadata.publishAssetsCompleted)
+  ) {
+    return {
+      ...runtime,
+      currentState: "READY_TO_POST",
+      completedAt: null,
+      metadata: {
+        ...metadata,
+        normalizedFromState: "RECALLED",
+        normalizedReason: "ready_for_publish_after_recall",
+      } as Prisma.JsonObject,
+    };
+  }
+
+  return runtime;
+}
+
 function shouldSkipAlreadyAppliedEvent(input: {
   runtimeMetadata: Record<string, unknown>;
   eventKey: string;
   businessEventLogId: string;
   eventMetadataJson?: unknown;
 }) {
+  const eventMetadata = asRecord(input.eventMetadataJson);
+  const eventInstanceId =
+    clean(eventMetadata.eventInstanceId) ||
+    clean(eventMetadata.sourceId) ||
+    input.businessEventLogId;
+  const lastEventInstanceId =
+    clean(input.runtimeMetadata.lastEventInstanceId) ||
+    clean(input.runtimeMetadata.lastTriggerSourceId) ||
+    clean(asRecord(input.runtimeMetadata.lastTriggerMetadata).eventInstanceId) ||
+    clean(asRecord(input.runtimeMetadata.lastTriggerMetadata).sourceId);
+
+  if (lastEventInstanceId) {
+    if (lastEventInstanceId !== eventInstanceId) return false;
+
+    if (input.eventKey !== "watch.publish.assets.downloaded") return true;
+
+    const nextKind = clean(eventMetadata.publishAssetKind);
+    const lastKind = clean(input.runtimeMetadata.lastPublishAssetKind);
+    const nextCompleted = bool(eventMetadata.isPosted);
+    const lastCompleted = bool(input.runtimeMetadata.publishAssetsCompleted);
+
+    return nextKind === lastKind && nextCompleted === lastCompleted;
+  }
+
+  if (
+    (clean(eventMetadata.eventInstanceId) || clean(eventMetadata.sourceId)) &&
+    clean(input.runtimeMetadata.lastBusinessEventLogId) === input.businessEventLogId
+  ) {
+    return false;
+  }
+
   if (
     clean(input.runtimeMetadata.lastBusinessEventLogId) !==
     input.businessEventLogId
@@ -225,7 +312,6 @@ function shouldSkipAlreadyAppliedEvent(input: {
 
   if (input.eventKey !== "watch.publish.assets.downloaded") return true;
 
-  const eventMetadata = asRecord(input.eventMetadataJson);
   const nextKind = clean(eventMetadata.publishAssetKind);
   const lastKind = clean(input.runtimeMetadata.lastPublishAssetKind);
   const nextCompleted = bool(eventMetadata.isPosted);
@@ -245,7 +331,7 @@ export function getQueueItemWorkflowState(
 
   if (!workflowKey || !currentState || !startedAt || !updatedAt) return null;
 
-  return {
+  return normalizeRuntimeState({
     workflowKey,
     currentState,
     startedAt,
@@ -254,7 +340,7 @@ export function getQueueItemWorkflowState(
     metadata: Object.keys(asRecord(runtime.metadata)).length
       ? toJsonObject(runtime.metadata)
       : null,
-  };
+  });
 }
 
 function getManualTransitionDTOs(
@@ -486,14 +572,18 @@ export async function applyEventTriggerToQueueItem(
       currentState: nextState,
       updatedAt: timestamp,
       completedAt: terminal ? timestamp : null,
-      metadata: {
-        ...nextMetadata,
-        lastTriggerType: "EVENT",
-        lastTriggerValue: eventKey,
-        lastBusinessEventLogId: businessEventLogId,
-        ...(input.actorUserId ? { lastActorUserId: input.actorUserId } : {}),
-        ...(input.metadataJson ? { lastTriggerMetadata: input.metadataJson } : {}),
-      } as Prisma.JsonObject,
+    metadata: {
+      ...nextMetadata,
+      lastTriggerType: "EVENT",
+      lastTriggerValue: eventKey,
+      lastBusinessEventLogId: businessEventLogId,
+      lastEventInstanceId:
+        clean(asRecord(input.metadataJson).eventInstanceId) ||
+        clean(asRecord(input.metadataJson).sourceId) ||
+        businessEventLogId,
+      ...(input.actorUserId ? { lastActorUserId: input.actorUserId } : {}),
+      ...(input.metadataJson ? { lastTriggerMetadata: input.metadataJson } : {}),
+    } as Prisma.JsonObject,
     };
     const metadataJson = {
       ...toJsonObject(binding.metadataJson),
@@ -535,12 +625,16 @@ export async function applyEventTriggerToQueueItem(
     ...runtime,
     currentState: transition.toState,
     updatedAt: timestamp,
-    completedAt: terminal ? timestamp : runtime.completedAt ?? null,
+    completedAt: terminal ? timestamp : null,
     metadata: {
       ...runtimeMetadata,
       lastTriggerType: "EVENT",
       lastTriggerValue: eventKey,
       lastBusinessEventLogId: businessEventLogId,
+      lastEventInstanceId:
+        clean(asRecord(input.metadataJson).eventInstanceId) ||
+        clean(asRecord(input.metadataJson).sourceId) ||
+        businessEventLogId,
       ...(input.actorUserId ? { lastActorUserId: input.actorUserId } : {}),
       ...(input.metadataJson ? { lastTriggerMetadata: input.metadataJson } : {}),
     } as Prisma.JsonObject,
@@ -673,13 +767,21 @@ export async function applyManualTriggerToQueueItem(
     transition.toState,
   );
   const runtimeMetadata = asRecord(runtime.metadata);
+  const nextRuntimeMetadata =
+    isPublishWorkflow(runtime.workflowKey) &&
+    manualActionKey(transition) === "restore-publish"
+      ? normalizePublishReadyManualMetadata(runtimeMetadata)
+      : isPublishWorkflow(runtime.workflowKey) &&
+          manualActionKey(transition) === "recall-media"
+        ? normalizePublishRecalledManualMetadata(runtimeMetadata)
+      : runtimeMetadata;
   const nextRuntime: WorkflowRuntimeState = {
     ...runtime,
     currentState: transition.toState,
     updatedAt: timestamp,
-    completedAt: terminal ? timestamp : runtime.completedAt ?? null,
+    completedAt: terminal ? timestamp : null,
     metadata: {
-      ...runtimeMetadata,
+      ...nextRuntimeMetadata,
       lastTriggerType: "MANUAL",
       lastTriggerValue: manualActionKey(transition),
       lastManualActionKey: manualActionKey(transition),

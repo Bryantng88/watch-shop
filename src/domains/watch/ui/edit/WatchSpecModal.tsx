@@ -235,24 +235,6 @@ export default function WatchSpecModal({
                         </div>
 
                         <div>
-                            <FieldLabel>Case size (mm)</FieldLabel>
-                            <Input
-                                value={draft.caseSizeMM}
-                                onChange={(e) => patch({ caseSizeMM: e.target.value })}
-                                placeholder="34"
-                            />
-                        </div>
-
-                        <div>
-                            <FieldLabel>Lug to lug (mm)</FieldLabel>
-                            <Input
-                                value={draft.lugToLugMM}
-                                onChange={(e) => patch({ lugToLugMM: e.target.value })}
-                                placeholder="44"
-                            />
-                        </div>
-
-                        <div>
                             <FieldLabel>Thickness (mm)</FieldLabel>
                             <Input
                                 value={draft.thicknessMM}
@@ -289,7 +271,7 @@ export default function WatchSpecModal({
                             />
                         </div>
 
-                        <div>
+                        <div className="hidden">
                             <FieldLabel>Water resistance</FieldLabel>
                             <Input
                                 value={draft.waterResistance}
@@ -300,7 +282,7 @@ export default function WatchSpecModal({
                             />
                         </div>
 
-                        <div>
+                        <div className="hidden">
                             <FieldLabel>Dial finish</FieldLabel>
                             <Input
                                 value={draft.dialFinish}
@@ -428,7 +410,7 @@ export default function WatchSpecModal({
                             </>
                         ) : null}
 
-                        <div>
+                        <div className="hidden">
                             <FieldLabel>Bracelet type</FieldLabel>
                             <Select
                                 value={draft.braceletType}
@@ -440,7 +422,7 @@ export default function WatchSpecModal({
                             />
                         </div>
 
-                        <div>
+                        <div className="hidden">
                             <FieldLabel>Dây / khóa</FieldLabel>
                             <Select
                                 value={draft.strapSetType}
@@ -455,7 +437,7 @@ export default function WatchSpecModal({
                             />
                         </div>
 
-                        {draft.strapSetType === "COMPONENT" ? (
+                        {false && draft.strapSetType === "COMPONENT" ? (
                             <div>
                                 <FieldLabel>Nguồn dây</FieldLabel>
                                 <Select
@@ -470,7 +452,7 @@ export default function WatchSpecModal({
                                 />
                             </div>
                         ) : null}
-                        <div>
+                        <div className="hidden">
                             <FieldLabel>Buckle type</FieldLabel>
                             <Input
                                 value={draft.buckleType}

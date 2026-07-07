@@ -51,6 +51,9 @@ function activityTargetKeys(activity: { metadataJson?: unknown }) {
   const targetType = clean(metadata.targetType);
   const targetId = clean(metadata.targetId);
   const keys = [activityScopeKey(targetType, targetId)].filter(Boolean) as string[];
+  const targetAliasIds = Array.isArray(metadata.targetAliasIds)
+    ? metadata.targetAliasIds.map(clean).filter(Boolean)
+    : [];
 
   if (targetType === "WATCH" && targetId.includes(":")) {
     const parts = targetId.split(":").map((part) => part.trim()).filter(Boolean);
@@ -59,6 +62,11 @@ function activityTargetKeys(activity: { metadataJson?: unknown }) {
       const canonicalKey = activityScopeKey(targetType, canonicalId);
       if (canonicalKey && !keys.includes(canonicalKey)) keys.push(canonicalKey);
     }
+  }
+
+  for (const aliasId of targetAliasIds) {
+    const aliasKey = activityScopeKey(targetType, aliasId);
+    if (aliasKey && !keys.includes(aliasKey)) keys.push(aliasKey);
   }
 
   return keys;
@@ -102,15 +110,18 @@ function activityMatchesScope(
   scope?: TaskItemActivityScope,
 ) {
   if (!scope) return true;
-  if (!eventMatchesWorkspaceScope(
-    activityEventKey(activity),
-    scope.workspaceWorkTypeKey,
-  )) {
-    return false;
-  }
 
   const keys = activityTargetKeys(activity);
-  if (!keys.length) return scope.includeWorkspaceLevel !== false;
+  const eventKey = activityEventKey(activity);
+
+  if (!keys.length) {
+    if (!eventMatchesWorkspaceScope(eventKey, scope.workspaceWorkTypeKey)) {
+      return false;
+    }
+
+    return scope.includeWorkspaceLevel !== false;
+  }
+
   if (!scope.targets?.length) return false;
 
   const allowedKeys = new Set(
@@ -119,7 +130,10 @@ function activityMatchesScope(
       .filter(Boolean),
   );
 
-  return keys.some((key) => allowedKeys.has(key));
+  const matchesTarget = keys.some((key) => allowedKeys.has(key));
+  if (!matchesTarget) return false;
+
+  return true;
 }
 
 function normalizeBusinessEventActivityMetadata(
@@ -388,6 +402,51 @@ export async function createBusinessEventActivity(
   });
 }
 
+export async function createBusinessEventActivityLoose(
+  input: CreateBusinessEventActivityInput,
+  db: DB = prisma,
+) {
+  const taskItemId = clean(input.taskItemId);
+  const sourceId = clean(input.sourceId);
+  const title = clean(input.title);
+
+  assertPresent(taskItemId, "Missing taskItemId");
+  assertPresent(sourceId, "Missing businessEventLogId");
+  assertPresent(title, "Missing activity title");
+
+  await assertTaskItemExists(db, taskItemId);
+
+  const existing = await findTaskItemActivityBySourceRepo(db, {
+    taskItemId,
+    sourceType: ActivitySourceType.BUSINESS_EVENT,
+    sourceId,
+  });
+  const metadataJson = normalizeBusinessEventActivityMetadata(input.metadataJson);
+
+  if (existing) {
+    const mergedMetadata = mergeBusinessEventActivityMetadata(
+      existing.metadataJson,
+      metadataJson,
+    );
+
+    if (!metadataChanged(existing.metadataJson, mergedMetadata)) {
+      return existing;
+    }
+
+    return updateTaskItemActivityMetadataRepo(db, existing.id, mergedMetadata);
+  }
+
+  return createBusinessEventActivityRepo(db, {
+    ...input,
+    taskItemId,
+    sourceId,
+    title,
+    body: cleanNullable(input.body),
+    actorUserId: cleanNullable(input.actorUserId),
+    metadataJson,
+  });
+}
+
 export async function addActivityReply(input: AddActivityReplyInput) {
   const activityId = clean(input.activityId);
   const body = clean(input.body);
@@ -428,7 +487,7 @@ export async function getTaskItemActivityViewModels(
   const scopedItems = items.filter((item) => activityMatchesScope(item, scope));
   const take = Number(limit);
   const limitedItems = Number.isFinite(take) && take > 0
-    ? scopedItems.slice(-Math.floor(take))
+    ? scopedItems.slice(0, Math.floor(take))
     : scopedItems;
 
   return limitedItems.map(toTaskItemActivityViewModel);

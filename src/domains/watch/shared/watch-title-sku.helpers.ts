@@ -54,15 +54,12 @@ export function buildWatchTitleFromForm(
     "Unknown brand";
 
   const model = cleanText(values.spec.model) || "model unknown";
+  const yearText = cleanText(values.basic.yearText);
   const reference = cleanText(values.spec.referenceNumber);
-  const movement =
-    normalizeMovementLabel(values.basic.movementType) ||
-    normalizeMovementLabel(values.spec.calibre) ||
-    "movement unknown";
-  const dialColor = cleanText(values.spec.dialColor);
+  const nickname = cleanText(values.spec.nickname);
+  const movement = normalizeMovementLabel(values.basic.movementType);
 
-  // Rule: Brand + Model + Reference + Movement + Dial
-  return [brandName, model, reference, movement, dialColor]
+  return [yearText, brandName, model, reference, nickname, movement]
     .filter(Boolean)
     .join(" ")
     .replace(/\s+/g, " ")
@@ -125,6 +122,7 @@ function formatSkuDate(date = new Date()) {
 export function shouldRegenerateWatchSku(currentSku?: string | null) {
   const sku = String(currentSku ?? "").trim();
   if (!sku) return true;
+  if (/^UNK-\d{8}-\d{3}$/i.test(sku)) return true;
   if (/^[A-Z0-9]{3}-\d{8}-\d{3}$/i.test(sku)) return false;
   return true;
 }

@@ -8,7 +8,7 @@ import {
     findRelatedTaskItemIdsForBusinessTargets,
 } from "@/domains/task/server/business-binding.service";
 import type { BusinessBindingTargetType } from "@/domains/task/server/business-binding.types";
-import { createBusinessEventActivity } from "@/domains/task/server/activity";
+import { createBusinessEventActivityLoose } from "@/domains/task/server/activity";
 import { appendTimelineEntry } from "./timeline.service";
 
 export type TimelineBusinessEventLog = {
@@ -148,9 +148,10 @@ export async function projectBusinessEventToTaskItemTimeline(
         };
     }
 
-    const timelineEntries = await Promise.all(
-        taskItemIds.map((taskItemId) =>
-            appendTimelineEntry(
+    const timelineEntries = [];
+    for (const taskItemId of taskItemIds) {
+        timelineEntries.push(
+            await appendTimelineEntry(
                 {
                     containerType: TimelineContainerType.TASK_ITEM,
                     containerId: taskItemId,
@@ -169,8 +170,8 @@ export async function projectBusinessEventToTaskItemTimeline(
                 },
                 client,
             ),
-        ),
-    );
+        );
+    }
 
     return {
         ok: true,
@@ -219,9 +220,10 @@ export async function projectBusinessFeedbackEventToTaskItemTimeline(
 
     const eventKey = clean(event.eventKey);
 
-    const timelineEntries = await Promise.all(
-        taskItemIds.map((taskItemId) =>
-            appendTimelineEntry(
+    const timelineEntries = [];
+    for (const taskItemId of taskItemIds) {
+        timelineEntries.push(
+            await appendTimelineEntry(
                 {
                     containerType: TimelineContainerType.TASK_ITEM,
                     containerId: taskItemId,
@@ -241,8 +243,8 @@ export async function projectBusinessFeedbackEventToTaskItemTimeline(
                 },
                 client,
             ),
-        ),
-    );
+        );
+    }
 
     return {
         ok: true,
@@ -292,9 +294,10 @@ export async function projectBusinessEventToTaskItemActivity(
     const title = getTimelineTitle(eventKey) || eventKey || "Business event";
     const body = getTimelineBody(event.metadataJson);
 
-    const activities = await Promise.all(
-        taskItemIds.map((taskItemId) =>
-            createBusinessEventActivity(
+    const activities = [];
+    for (const taskItemId of taskItemIds) {
+        activities.push(
+            await createBusinessEventActivityLoose(
                 {
                     taskItemId,
                     sourceId: businessEventLogId,
@@ -313,8 +316,8 @@ export async function projectBusinessEventToTaskItemActivity(
                 },
                 client,
             ),
-        ),
-    );
+        );
+    }
 
     return {
         ok: true,
@@ -331,21 +334,18 @@ export async function consumeBusinessEventForTimeline(
     const event = eventLog as TimelineBusinessEventLog;
 
     try {
-        const [businessEventResult, feedbackResult, activityResult] =
-            await Promise.all([
-                projectBusinessEventToTaskItemTimeline(
-                    client,
-                    event,
-                ),
-                projectBusinessFeedbackEventToTaskItemTimeline(
-                    client,
-                    event,
-                ),
-                projectBusinessEventToTaskItemActivity(
-                    client,
-                    event,
-                ),
-            ]);
+        const businessEventResult = await projectBusinessEventToTaskItemTimeline(
+            client,
+            event,
+        );
+        const feedbackResult = await projectBusinessFeedbackEventToTaskItemTimeline(
+            client,
+            event,
+        );
+        const activityResult = await projectBusinessEventToTaskItemActivity(
+            client,
+            event,
+        );
 
         const timelineEntries = [
             ...businessEventResult.createdTimelineEntries,

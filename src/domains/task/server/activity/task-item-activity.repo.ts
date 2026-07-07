@@ -136,6 +136,6 @@ export async function listTaskItemActivitiesRepo(db: DB, taskItemId: string) {
   return dbOrTx(db).taskItemActivity.findMany({
     where: { taskItemId },
     include: TASK_ITEM_ACTIVITY_INCLUDE,
-    orderBy: [{ occurredAt: "asc" }, { id: "asc" }],
+    orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
   });
 }

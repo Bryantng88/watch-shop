@@ -140,19 +140,40 @@ export default function WatchContentSection({
         return true;
     };
 
-    const handleGenerate = () => {
+    const buildGeneration = () => {
         if (locked) return;
 
         const result = generateWatchContent(watchValues);
+        setGeneration(result);
+        return result;
+    };
+
+    const handleGenerateTitle = () => {
+        const result = buildGeneration();
+        if (!result) return;
 
         onChange({
             titleOverride: result.titleOverride,
-            hookText: result.hookText,
-            bulletSpecs: result.bulletSpecs,
             hashTags: result.hashTags,
         });
+    };
 
-        setGeneration(result);
+    const handleGenerateHook = () => {
+        const result = buildGeneration();
+        if (!result) return;
+
+        onChange({
+            hookText: result.hookText,
+        });
+    };
+
+    const handleGenerateBullets = () => {
+        const result = buildGeneration();
+        if (!result) return;
+
+        onChange({
+            bulletSpecs: result.bulletSpecs,
+        });
     };
 
     const updateBullet = (index: number, next: string) => {
@@ -231,15 +252,35 @@ export default function WatchContentSection({
                         </div>
                     </div>
 
-                    <Button
-                        type="button"
-                        disabled={locked}
-                        onClick={handleGenerate}
-                        className="shrink-0"
-                    >
-                        <WandSparkles className="mr-2 h-4 w-4" />
-                        Gen hook & bullet specs
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            type="button"
+                            disabled={locked}
+                            onClick={handleGenerateTitle}
+                            className="shrink-0"
+                        >
+                            <WandSparkles className="mr-2 h-4 w-4" />
+                            Gen title
+                        </Button>
+                        <Button
+                            type="button"
+                            disabled={locked}
+                            onClick={handleGenerateHook}
+                            className="shrink-0"
+                        >
+                            <WandSparkles className="mr-2 h-4 w-4" />
+                            Gen hook
+                        </Button>
+                        <Button
+                            type="button"
+                            disabled={locked}
+                            onClick={handleGenerateBullets}
+                            className="shrink-0"
+                        >
+                            <WandSparkles className="mr-2 h-4 w-4" />
+                            Gen bullet specs
+                        </Button>
+                    </div>
                 </div>
 
                 <div>

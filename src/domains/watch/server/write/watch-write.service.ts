@@ -49,17 +49,23 @@ function normalizeMovementLabel(value?: string | null) {
 }
 
 function buildWatchTitle(input: {
+  yearText?: string | null;
   brand?: string | null;
   model?: string | null;
+  reference?: string | null;
+  nickname?: string | null;
   movement?: string | null;
-  dialColor?: string | null;
 }) {
+  const yearText = cleanText(input.yearText);
   const brand = cleanText(input.brand) ?? "Unknown brand";
   const model = cleanText(input.model) ?? "model unknown";
-  const movement = normalizeMovementLabel(input.movement) ?? "movement unknown";
-  const dialColor = cleanText(input.dialColor);
+  const reference = cleanText(input.reference);
+  const nickname = cleanText(input.nickname);
+  const movement = normalizeMovementLabel(input.movement);
 
-  return [brand, model, movement, dialColor].filter(Boolean).join(" ");
+  return [yearText, brand, model, reference, nickname, movement]
+    .filter(Boolean)
+    .join(" ");
 }
 
 function normalizeBrandText(value?: string | null) {
@@ -128,6 +134,10 @@ function shouldRegenerateSku(currentSku?: string | null) {
   if (!sku) return true;
 
   // format mới chuẩn
+  if (/^UNK-\d{8}-\d{3}$/i.test(sku)) {
+    return true;
+  }
+
   if (/^[A-Z0-9]{3}-\d{8}-\d{3}$/i.test(sku)) {
     return false;
   }
@@ -212,20 +222,25 @@ export async function regenerateWatchTitleAndSku(productId: string) {
       null;
 
     const title = buildWatchTitle({
+      yearText: watch.yearText ?? null,
       brand: brandName,
       model: watch.watchSpecV2?.model ?? null,
+      reference: watch.watchSpecV2?.referenceNumber ?? null,
+      nickname: watch.watchSpecV2?.nickname ?? null,
       movement:
         (watch.watchSpecV2?.movementType
           ? String(watch.watchSpecV2.movementType)
           : null) ??
         (watch.movementType ? String(watch.movementType) : null),
-      dialColor: watch.watchSpecV2?.dialColor ?? null,
     });
 
-    const nextSku = await genUniqueWatchSku(tx, {
-      brandName,
-      date: new Date(),
-    });
+    const currentSku = watch.product.sku ?? null;
+    const nextSku = shouldRegenerateSku(currentSku)
+      ? await genUniqueWatchSku(tx, {
+        brandName,
+        date: new Date(),
+      })
+      : undefined;
 
     await updateProductTitleSkuRepo(tx, {
       productId,
@@ -235,7 +250,7 @@ export async function regenerateWatchTitleAndSku(productId: string) {
 
     return {
       title,
-      sku: nextSku,
+      sku: nextSku ?? currentSku,
     };
   });
 }
@@ -249,16 +264,20 @@ export async function applyWatchTitleAndSkuForSpec(
     resolvedBrandId?: string | null;
     brandName?: string | null;
     model?: string | null;
+    reference?: string | null;
+    nickname?: string | null;
+    yearText?: string | null;
     movement?: string | null;
-    dialColor?: string | null;
     acquiredAt?: Date | null;
   }
 ) {
   const title = buildWatchTitle({
+    yearText: input.yearText,
     brand: input.brandName,
     model: input.model,
+    reference: input.reference,
+    nickname: input.nickname,
     movement: input.movement,
-    dialColor: input.dialColor,
   });
 
   const nextSku = shouldRegenerateSku(input.currentSku)

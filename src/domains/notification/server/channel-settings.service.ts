@@ -47,6 +47,13 @@ function defaultZaloTemplatesForEvent(eventKey: string) {
         };
     }
 
+    if (eventKey === "watch.media.ready_for_publish") {
+        return {
+            titleTemplate: "Media san sang dang bai",
+            messageTemplate: "Watch: {{watchTitle}}\nSKU: {{sku}}\nTrang thai: {{businessStatus}}\nMedia da duyet xong va chuyen sang Workspace Dang bai.",
+        };
+    }
+
     return {
         titleTemplate: "{{eventKey}}",
         messageTemplate: "New event: {{eventKey}}\n{{targetType}}: {{targetId}}",

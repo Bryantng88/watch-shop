@@ -6,6 +6,7 @@ import { ensureCoordinationCycle } from "@/domains/coordination/server";
 import {
   markWatchMediaAssetAttachedFromQueueItem,
   markWatchMediaAssetAttachedFromWatch,
+  requestWatchMediaReshootFromQueueItem,
   requestWatchPhotoshoot,
   saveWatchMediaWorkDraftFromWatch,
 } from "@/domains/watch/server";
@@ -119,6 +120,35 @@ export async function saveWatchMediaWorkDraftFromWatchAction(input: {
   revalidatePath("/admin/coordination/media");
   revalidatePath(`/admin/watches/${input.productId}`);
   revalidatePath(`/admin/watches/${input.productId}/edit`);
+
+  return result;
+}
+
+export async function requestWatchMediaReshootFromWatchAction(input: {
+  bindingId: string;
+  productId?: string | null;
+  note?: string | null;
+}) {
+  const user = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+
+  const result = await requestWatchMediaReshootFromQueueItem(
+    {
+      bindingId: input.bindingId,
+      actorUserId: user.id,
+      note: input.note ?? null,
+    },
+    prisma,
+  );
+
+  revalidatePath("/admin/watches");
+  revalidatePath("/admin/coordination/media");
+
+  const productId =
+    ("productId" in result && result.productId ? result.productId : input.productId) || null;
+  if (productId) {
+    revalidatePath(`/admin/watches/${productId}`);
+    revalidatePath(`/admin/watches/${productId}/edit`);
+  }
 
   return result;
 }

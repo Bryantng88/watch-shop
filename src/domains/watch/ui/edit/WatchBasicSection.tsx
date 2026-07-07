@@ -1,11 +1,18 @@
 "use client";
 
 import { Pencil } from "lucide-react";
-import { FieldLabel, Input, SectionCard, Select, Button } from "./shared";
+import { buildWatchTitleFromForm } from "../../shared/watch-title-sku.helpers";
 import type { WatchFormValues } from "../../client/form/watch-form.types";
+import { Button, FieldLabel, Input, SectionCard, Select } from "./shared";
 import { buildWatchSpecSummary } from "./WatchSpecModal";
 import WatchBrandField from "./WatchBrandField";
-type SimpleOption = { id: string; name: string; slug?: string | null; platform?: string | null };
+
+type SimpleOption = {
+    id: string;
+    name: string;
+    slug?: string | null;
+    platform?: string | null;
+};
 
 type Props = {
     values: WatchFormValues["basic"];
@@ -14,38 +21,13 @@ type Props = {
     categories: SimpleOption[];
     postTargets: SimpleOption[];
     onChange: (patch: Partial<WatchFormValues["basic"]>) => void;
+    onSpecChange: (patch: Partial<WatchFormValues["spec"]>) => void;
     onOpenSpecModal: () => void;
     brands: SimpleOption[];
     onBrandsChange: (brands: SimpleOption[]) => void;
     defaultOpen?: boolean;
 };
 
-const GENDER_OPTIONS = ["MEN", "WOMEN", "UNISEX"].map((x) => ({
-    value: x,
-    label: x,
-}));
-
-const SITE_CHANNEL_OPTIONS = [
-    "AFFORDABLE",
-    "CORE",
-    "PREMIUM",
-    "ARCHIVE",
-].map((x) => ({
-    value: x,
-    label: x,
-}));
-const WATCH_STYLE_OPTIONS = [
-    "MILITARY",
-    "DRESS",
-    "SPORT",
-    "TOOL",
-    "CASUAL",
-    "CLASSIC",
-    "MINIMALIST",
-    "LUXURY",
-    "RETRO",
-    "FUTURISTIC",
-].map((x) => ({ value: x, label: x }));
 const MOVEMENT_TYPE_OPTIONS = [
     "AUTOMATIC",
     "HAND_WOUND",
@@ -55,7 +37,20 @@ const MOVEMENT_TYPE_OPTIONS = [
     "MECHAQUARTZ",
     "SPRING_DRIVE",
     "HYBRID",
-].map((x) => ({ value: x, label: x }));
+].map((value) => ({ value, label: value }));
+
+const MATERIAL_OPTIONS = [
+    "STAINLESS_STEEL",
+    "TITANIUM",
+    "CERAMIC",
+    "CARBON",
+    "GOLD",
+    "PLATINUM",
+    "SILVER",
+    "BRASS",
+    "OTHER",
+].map((value) => ({ value, label: value }));
+
 function normalizeTargetName(value: unknown) {
     return String(value ?? "").trim();
 }
@@ -65,14 +60,7 @@ function getPostTargetGroupKey(target: SimpleOption) {
 }
 
 function buildPostTargetGroups(options: SimpleOption[]) {
-    const byName = new Map<
-        string,
-        {
-            key: string;
-            name: string;
-            ids: string[];
-        }
-    >();
+    const byName = new Map<string, { key: string; name: string; ids: string[] }>();
 
     for (const option of options) {
         const name = normalizeTargetName(option.name);
@@ -86,16 +74,10 @@ function buildPostTargetGroups(options: SimpleOption[]) {
         if (current) {
             if (!current.ids.includes(id)) current.ids.push(id);
         } else {
-            byName.set(key, {
-                key,
-                name,
-                ids: [id],
-            });
+            byName.set(key, { key, name, ids: [id] });
         }
     }
 
-    // Giữ đúng thứ tự option được server trả về.
-    // Không sort alphabet để thứ tự page/kênh đăng phản ánh thứ tự vận hành.
     return Array.from(byName.values());
 }
 
@@ -114,20 +96,15 @@ function PostTargetMultiSelect({
 
     const groups = buildPostTargetGroups(options);
     const selectedSet = new Set(selected);
-
     const groupById = new Map<string, (typeof groups)[number]>();
 
     for (const group of groups) {
-        for (const id of group.ids) {
-            groupById.set(id, group);
-        }
+        for (const id of group.ids) groupById.set(id, group);
     }
 
     const selectedGroups = selected.reduce<(typeof groups)[number][]>((acc, id) => {
         const group = groupById.get(id);
-        if (!group) return acc;
-        if (acc.some((item) => item.key === group.key)) return acc;
-
+        if (!group || acc.some((item) => item.key === group.key)) return acc;
         acc.push(group);
         return acc;
     }, []);
@@ -157,14 +134,14 @@ function PostTargetMultiSelect({
                             type="button"
                             onClick={() => toggleGroup(group.key)}
                             className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-2.5 py-1 text-xs font-medium text-white"
-                            title="Bấm để bỏ chọn"
+                            title="Bo chon"
                         >
                             {group.name}
-                            <span className="text-slate-300">×</span>
+                            <span className="text-slate-300">x</span>
                         </button>
                     ))
                 ) : (
-                    <div className="text-sm text-slate-400">Chưa chọn page/kênh đăng</div>
+                    <div className="text-sm text-slate-400">Chua chon page/kenh dang</div>
                 )}
             </div>
 
@@ -176,13 +153,13 @@ function PostTargetMultiSelect({
                 }}
                 className="block h-[40px] w-full border-0 border-b border-slate-200 bg-transparent px-0 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
             >
-                <option value="">Thêm page/kênh đăng</option>
+                <option value="">Them page/kenh dang</option>
                 {groups.map((group) => {
                     const selectedGroup = group.ids.some((id) => selectedSet.has(id));
 
                     return (
                         <option key={group.key} value={group.key}>
-                            {selectedGroup ? "✓ " : ""}
+                            {selectedGroup ? "- " : ""}
                             {group.name}
                         </option>
                     );
@@ -192,6 +169,44 @@ function PostTargetMultiSelect({
     );
 }
 
+function buildTitlePreviewValues(
+    values: WatchFormValues["basic"],
+    spec: WatchFormValues["spec"],
+): WatchFormValues {
+    return {
+        watchId: "",
+        productId: "",
+        header: { sku: "", status: "", serviceState: "" },
+        basic: values,
+        spec,
+        content: {
+            titleOverride: "",
+            hookText: "",
+            body: "",
+            bulletSpecs: [],
+            hashTags: "",
+        },
+        pricing: {
+            salePrice: "",
+            listPrice: "",
+            minPrice: "",
+            costPrice: "",
+            serviceCost: "",
+            landedCost: "",
+            pricingNote: "",
+        },
+        media: {
+            inlineImage: null,
+            poolImages: [],
+            galleryImages: [],
+            imageCount: 0,
+            hasBox: false,
+            hasPapers: false,
+            bookletIncluded: false,
+            cardIncluded: false,
+        },
+    };
+}
 
 export default function WatchBasicSection({
     values,
@@ -201,41 +216,38 @@ export default function WatchBasicSection({
     categories,
     postTargets,
     onChange,
+    onSpecChange,
     onOpenSpecModal,
     onBrandsChange,
-    defaultOpen = false
+    defaultOpen = false,
 }: Props) {
-    const vendorOptions = vendors.map((x) => ({ value: x.id, label: x.name }));
-    const categoryOptions = categories.map((x) => ({
-        value: x.id,
-        label: x.name,
+    void categories;
+
+    const vendorOptions = vendors.map((item) => ({
+        value: item.id,
+        label: item.name,
     }));
 
     const specSummary = buildWatchSpecSummary(spec);
+    const generatedTitle = buildWatchTitleFromForm(
+        buildTitlePreviewValues(values, spec),
+        brands,
+    );
 
     return (
         <SectionCard
             defaultOpen={defaultOpen}
             icon={<Pencil className="h-5 w-5" />}
-            title="Thông tin chính"
-            subtitle="Giữ phần thao tác hằng ngày ở đây. Spec sâu đưa sang modal riêng."
+            title="Thong tin chinh"
+            subtitle="Giu cac field van hanh va spec tao title/content trong cung mot block."
         >
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="md:col-span-2">
                     <FieldLabel>Title</FieldLabel>
                     <Input
                         value={values.title}
-                        onChange={(e) => onChange({ title: e.target.value })}
-                        placeholder="Tên watch"
-                    />
-                </div>
-
-                <div>
-                    <FieldLabel>Slug</FieldLabel>
-                    <Input
-                        value={values.slug}
-                        onChange={(e) => onChange({ slug: e.target.value })}
-                        placeholder="slug"
+                        onChange={(event) => onChange({ title: event.target.value })}
+                        placeholder="Ten watch"
                     />
                 </div>
 
@@ -249,17 +261,105 @@ export default function WatchBasicSection({
                 </div>
 
                 <div>
-                    <FieldLabel>Vendor</FieldLabel>
-                    <Select
-                        value={values.vendorId}
-                        onChange={(e) => onChange({ vendorId: e.target.value })}
-                        options={vendorOptions}
-                        placeholder="Chọn vendor"
+                    <FieldLabel>Year text</FieldLabel>
+                    <Input
+                        value={values.yearText}
+                        onChange={(event) => onChange({ yearText: event.target.value })}
+                        placeholder="1970s / 1990s / ..."
                     />
                 </div>
 
                 <div>
-                    <FieldLabel>Page đăng đề xuất</FieldLabel>
+                    <FieldLabel>Model</FieldLabel>
+                    <Input
+                        value={spec.model}
+                        onChange={(event) => onSpecChange({ model: event.target.value })}
+                        placeholder="Seamaster / Datejust / Tank..."
+                    />
+                </div>
+
+                <div>
+                    <FieldLabel>Reference</FieldLabel>
+                    <Input
+                        value={spec.referenceNumber}
+                        onChange={(event) =>
+                            onSpecChange({ referenceNumber: event.target.value })
+                        }
+                        placeholder="Reference"
+                    />
+                </div>
+
+                <div>
+                    <FieldLabel>Nick name</FieldLabel>
+                    <Input
+                        value={spec.nickname}
+                        onChange={(event) => onSpecChange({ nickname: event.target.value })}
+                        placeholder="Jumbo / Ghost / Linen dial..."
+                    />
+                </div>
+
+                <div>
+                    <FieldLabel>Movement type</FieldLabel>
+                    <Select
+                        value={values.movementType}
+                        onChange={(event) => onChange({ movementType: event.target.value })}
+                        options={MOVEMENT_TYPE_OPTIONS}
+                        placeholder="Chon movement"
+                    />
+                </div>
+
+                <div>
+                    <FieldLabel>Movement calibre</FieldLabel>
+                    <Input
+                        value={values.movementCalibre}
+                        onChange={(event) =>
+                            onChange({ movementCalibre: event.target.value })
+                        }
+                        placeholder="L993.1 / 7S26 / ..."
+                    />
+                </div>
+
+                <div>
+                    <FieldLabel>Case size (mm)</FieldLabel>
+                    <Input
+                        value={spec.caseSizeMM}
+                        onChange={(event) => onSpecChange({ caseSizeMM: event.target.value })}
+                        placeholder="35"
+                    />
+                </div>
+
+                <div>
+                    <FieldLabel>Lug to lug (mm)</FieldLabel>
+                    <Input
+                        value={spec.lugToLugMM}
+                        onChange={(event) => onSpecChange({ lugToLugMM: event.target.value })}
+                        placeholder="44"
+                    />
+                </div>
+
+                <div>
+                    <FieldLabel>Dial color</FieldLabel>
+                    <Input
+                        value={spec.dialColor}
+                        onChange={(event) => onSpecChange({ dialColor: event.target.value })}
+                        placeholder="Silver / Black / Champagne"
+                    />
+                </div>
+
+                <div>
+                    <FieldLabel>Primary material</FieldLabel>
+                    <Select
+                        value={spec.primaryCaseMaterial}
+                        onChange={(event) =>
+                            onSpecChange({ primaryCaseMaterial: event.target.value })
+                        }
+                        options={MATERIAL_OPTIONS}
+                        placeholder="Chon material"
+                    />
+                </div>
+
+                <div>
+                    <FieldLabel>Page dang de xuat</FieldLabel>
                     <PostTargetMultiSelect
                         value={values.postTargetIds}
                         options={postTargets}
@@ -268,85 +368,40 @@ export default function WatchBasicSection({
                 </div>
 
                 <div>
-                    <FieldLabel>Category</FieldLabel>
+                    <FieldLabel>Vendor</FieldLabel>
                     <Select
-                        value={values.categoryId}
-                        onChange={(e) => onChange({ categoryId: e.target.value })}
-                        options={categoryOptions}
-                        placeholder="Chọn category"
+                        value={values.vendorId}
+                        onChange={(event) => onChange({ vendorId: event.target.value })}
+                        options={vendorOptions}
+                        placeholder="Chon vendor"
                     />
                 </div>
 
-                <div>
-                    <FieldLabel>Gender</FieldLabel>
-                    <Select
-                        value={values.gender}
-                        onChange={(e) => onChange({ gender: e.target.value })}
-                        options={GENDER_OPTIONS}
-                    />
-                </div>
+                <div className="md:col-span-2">
+                    <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-inset ring-slate-200">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                            <div className="min-w-0">
+                                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                                    Title preview
+                                </div>
+                                <div className="mt-1 text-sm font-medium text-slate-900">
+                                    {generatedTitle}
+                                </div>
+                                <div className="mt-1 text-sm text-slate-500">
+                                    Rule: year text + brand + model + reference + nick name + movement.
+                                </div>
+                            </div>
 
-                <div>
-                    <FieldLabel>Site channel</FieldLabel>
-                    <Select
-                        value={values.siteChannel}
-                        onChange={(e) => onChange({ siteChannel: e.target.value })}
-                        options={SITE_CHANNEL_OPTIONS}
-                    />
-                </div>
-                <div>
-                    <FieldLabel>Style</FieldLabel>
-                    <Select
-                        value={values.style}
-                        onChange={(e) => onChange({ style: e.target.value })}
-                        options={WATCH_STYLE_OPTIONS}
-                        placeholder="Chọn phong cách"
-                    />
-                </div>
-                <div>
-                    <FieldLabel>Condition grade</FieldLabel>
-                    <Input
-                        value={values.conditionGrade}
-                        onChange={(e) => onChange({ conditionGrade: e.target.value })}
-                        placeholder="A / B / NOS / ..."
-                    />
-                </div>
-
-                <div>
-                    <FieldLabel>Movement type</FieldLabel>
-                    <Select
-                        value={values.movementType}
-                        onChange={(e) => onChange({ movementType: e.target.value })}
-                        options={MOVEMENT_TYPE_OPTIONS}
-                        placeholder="Chọn movement"
-                    />
-                </div>
-
-                <div>
-                    <FieldLabel>Movement calibre</FieldLabel>
-                    <Input
-                        value={values.movementCalibre}
-                        onChange={(e) => onChange({ movementCalibre: e.target.value })}
-                        placeholder="L993.1 / 7S26 / ..."
-                    />
-                </div>
-
-                <div>
-                    <FieldLabel>Serial number</FieldLabel>
-                    <Input
-                        value={values.serialNumber}
-                        onChange={(e) => onChange({ serialNumber: e.target.value })}
-                        placeholder="Serial"
-                    />
-                </div>
-
-                <div>
-                    <FieldLabel>Year text</FieldLabel>
-                    <Input
-                        value={values.yearText}
-                        onChange={(e) => onChange({ yearText: e.target.value })}
-                        placeholder="1970s / 1990s / ..."
-                    />
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => onChange({ title: generatedTitle })}
+                                className="shrink-0"
+                            >
+                                Apply title
+                            </Button>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="md:col-span-2">
@@ -360,7 +415,7 @@ export default function WatchBasicSection({
                                     {specSummary}
                                 </div>
                                 <div className="mt-1 text-sm text-slate-500">
-                                    Model, reference, case, material... được gom vào modal riêng để form chính gọn hơn.
+                                    Field sau va it dung van nam trong modal spec.
                                 </div>
                             </div>
 
@@ -370,7 +425,7 @@ export default function WatchBasicSection({
                                 onClick={onOpenSpecModal}
                                 className="shrink-0 border-indigo-200 bg-white/80 text-indigo-700 hover:bg-white"
                             >
-                                Chỉnh spec & vật liệu
+                                More specs
                             </Button>
                         </div>
                     </div>
