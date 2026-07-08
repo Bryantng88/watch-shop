@@ -112,6 +112,34 @@ function consumerResultOutcome(result: unknown): Pick<
   return { ok: true, status: "success" };
 }
 
+function logConsumerResult(
+  context: BusinessEventConsumerContext,
+  result: BusinessEventConsumerResult,
+) {
+  if (result.status === "success") return;
+
+  const payload = {
+    consumer: result.consumer,
+    eventKey: context.eventKey,
+    targetType: context.targetType,
+    targetId: context.targetId,
+    eventInstanceId: context.eventInstanceId ?? null,
+    idempotencyKey: context.idempotencyKey ?? null,
+    attempts: result.attempts,
+    status: result.status,
+    reason: result.reason,
+    error: result.error,
+    durationMs: result.durationMs,
+  };
+
+  if (result.status === "skipped") {
+    console.info("[business-event] consumer skipped", payload);
+    return;
+  }
+
+  console.warn("[business-event] consumer failed", payload);
+}
+
 async function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
@@ -181,7 +209,7 @@ async function runConsumer(input: {
         );
         const outcome = consumerResultOutcome(result);
 
-        return {
+        const consumerResult = {
           ok: outcome.ok,
           consumer: consumer.key,
           status: outcome.status,
@@ -192,6 +220,8 @@ async function runConsumer(input: {
           error: outcome.error,
           result,
         } satisfies BusinessEventConsumerResult;
+        logConsumerResult(context, consumerResult);
+        return consumerResult;
       } catch (error) {
         lastError = error;
       }
@@ -200,17 +230,7 @@ async function runConsumer(input: {
     const status = isTimeoutError(lastError) ? "timeout" : "failed";
     const message = errorMessage(lastError);
 
-    console.error("[business-event] consumer failed", {
-      consumer: consumer.key,
-      eventKey: context.eventKey,
-      targetType: context.targetType,
-      targetId: context.targetId,
-      attempts,
-      status,
-      error: message,
-    });
-
-    return {
+    const consumerResult = {
       ok: false,
       consumer: consumer.key,
       status,
@@ -218,6 +238,8 @@ async function runConsumer(input: {
       durationMs: Math.max(0, perfNow() - consumerStartedAt),
       error: message,
     } satisfies BusinessEventConsumerResult;
+    logConsumerResult(context, consumerResult);
+    return consumerResult;
   } finally {
     perfLog(
       "business-event",

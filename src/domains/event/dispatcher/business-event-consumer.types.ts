@@ -3,7 +3,7 @@ import type { BusinessEventConsumerKey } from "@/domains/event/contract/business
 
 export type BusinessEventEffect = "ASSERT" | "REVOKE";
 
-export type BusinessEventConsumerContext = {
+export type BusinessEventDispatchContext = {
   eventLog: unknown;
   eventKey: string;
   targetType: string;
@@ -12,7 +12,11 @@ export type BusinessEventConsumerContext = {
   effect: BusinessEventEffect;
   revokeEventKey?: string | null;
   targetAliasIds?: string[];
+  eventInstanceId?: string | null;
+  idempotencyKey?: string | null;
 };
+
+export type BusinessEventConsumerContext = BusinessEventDispatchContext;
 
 export type BusinessEventConsumerRetryPolicy = {
   attempts: number;
@@ -22,7 +26,7 @@ export type BusinessEventConsumer = {
   key: BusinessEventConsumerKey;
   consume: (
     client: DB,
-    context: BusinessEventConsumerContext,
+    context: BusinessEventDispatchContext,
   ) => Promise<unknown>;
   timeoutMs?: number;
   retry?: BusinessEventConsumerRetryPolicy;
@@ -56,4 +60,3 @@ export type BusinessEventDispatchResult = Record<
   BusinessEventConsumerKey,
   BusinessEventConsumerResult | undefined
 >;
-

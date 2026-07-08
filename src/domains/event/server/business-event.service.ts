@@ -2,7 +2,7 @@ import { dbOrTx, type DB } from "@/server/db/client";
 import { validateBusinessEventInput } from "@/domains/event/validator/business-event-validator";
 import { dispatchBusinessEvent } from "@/domains/event/dispatcher/business-event-dispatcher";
 import type {
-    BusinessEventConsumerContext,
+    BusinessEventDispatchContext,
     BusinessEventEffect,
 } from "@/domains/event/dispatcher/business-event-consumer.types";
 import { perfLog, perfNow } from "@/lib/server-perf";
@@ -22,6 +22,15 @@ export type BusinessEventInput = {
 
 function clean(value: unknown) {
     return String(value ?? "").trim();
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    return value as Record<string, unknown>;
+}
+
+function eventInstanceIdFromPayload(payload: Record<string, unknown>) {
+    return clean(payload.eventInstanceId) || clean(payload.sourceId) || null;
 }
 
 function formatValidationErrors(
@@ -62,11 +71,22 @@ export async function recordBusinessEvent(db: DB, input: BusinessEventInput) {
         throw new Error(formatValidationErrors(validation));
     }
 
+    const payload = asRecord(input.payload);
+    const eventInstanceId = eventInstanceIdFromPayload(payload);
+    const idempotencyKey = [
+        eventKey,
+        targetType,
+        targetId,
+        eventInstanceId,
+    ].filter(Boolean).join(":");
+
     const metadataJson = {
-        ...((input.payload ?? {}) as Record<string, unknown>),
+        ...payload,
         effect,
         revokeEventKey: revokeEventKey || null,
         targetAliasIds: input.targetAliasIds ?? [],
+        eventInstanceId,
+        idempotencyKey,
     };
 
     const upsertStartedAt = perfNow();
@@ -92,7 +112,7 @@ export async function recordBusinessEvent(db: DB, input: BusinessEventInput) {
     });
     perfLog("business-event", `${eventKey}:upsert`, upsertStartedAt);
 
-    const consumerContext: BusinessEventConsumerContext = {
+    const consumerContext: BusinessEventDispatchContext = {
         eventLog,
         eventKey,
         targetType,
@@ -101,6 +121,8 @@ export async function recordBusinessEvent(db: DB, input: BusinessEventInput) {
         effect,
         revokeEventKey: revokeEventKey || null,
         targetAliasIds: input.targetAliasIds ?? [],
+        eventInstanceId,
+        idempotencyKey,
     };
 
     const consumerResults = await dispatchBusinessEvent({

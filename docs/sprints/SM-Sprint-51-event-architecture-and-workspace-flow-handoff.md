@@ -81,21 +81,36 @@ versionable, and auditable.
 - Gradually replace hardcoded event strings in business logic as files are
   touched.
 
-## Sprint 2 - Event Dispatch Hardening
+## Sprint 2 - Dispatch Boundary and Observability
 
 ### Scope
 
-- Standardize dispatcher behavior.
-- Add idempotency rules.
-- Make retry/timeout policy explicit.
-- Return meaningful consumer result status.
-- Keep dispatcher independent from business logic.
+- Separate dispatcher from `recordBusinessEvent`.
+- Keep consumer registry separate from dispatcher.
+- Standardize `BusinessEventConsumer`, `BusinessEventConsumerResult`,
+  `BusinessEventDispatchContext`, and `BusinessEventDispatchPolicy`.
+- Keep existing timeout behavior, but move it into dispatcher policy.
+- Add idempotency contract/code path through `eventInstanceId` and
+  `idempotencyKey`; do not migrate schema yet.
+- Define retry type/policy, with default retry disabled because current
+  consumers have side effects and are not all proven idempotent.
+- Add clear audit/log output for skipped, failed, and timed-out consumers.
 
 ### Expected Output
 
-- Dispatcher is stable and consumer-agnostic.
-- Duplicate event instances do not duplicate effects.
-- Retry/timeout behavior is visible and safe.
+- Dispatcher boundary is stable and consumer-agnostic.
+- `recordBusinessEvent` remains simple:
+  - validate;
+  - persist/upsert;
+  - build dispatch context;
+  - dispatch;
+  - return consumer result.
+- Consumer registry is the only place that imports concrete business consumers.
+- Output shape remains compatible with keys:
+  - `workflow`
+  - `notification`
+  - `timeline`
+  - `coordination`
 - Consumer result can distinguish:
   - `success`
   - `skipped`
@@ -110,6 +125,13 @@ versionable, and auditable.
 - Consumer-specific side effects belong in each consumer.
 - Dispatcher may normalize consumer result shape, but not interpret domain
   meaning beyond generic success/skipped/failed/timeout.
+- Design should allow a future queue/message broker replacement without
+  changing business emitters.
+- Do not build queue/background retry in this sprint.
+- Do not enable retry by default.
+- Do not add append-only schema migration yet.
+- Do not force every domain consumer to migrate at once.
+- Do not make the event system the center of the whole application.
 
 ### Implemented Fixes
 
@@ -125,13 +147,18 @@ versionable, and auditable.
   - arrays where every item is skipped become `skipped`;
   - arrays with failed items become `failed`;
   - thrown timeout remains `timeout`.
+- Dispatch context now carries `eventInstanceId` and `idempotencyKey` without a
+  schema migration.
+- Dispatcher logs skipped, failed, and timed-out consumer results with event,
+  target, attempts, duration, event instance, and idempotency key.
 - Notification app progress now only marks notification done when a real
   dispatch id exists.
 
 ### Remaining Follow-Up
 
 - Add tests for dispatcher result normalization.
-- Consider per-consumer retry only for idempotent consumers.
+- Consider per-consumer retry only after each side-effect consumer is proven
+  idempotent.
 - Add durable consumer-attempt logs if operational debugging needs more than
   server logs.
 - Consider moving long-running consumers to background jobs if request time
