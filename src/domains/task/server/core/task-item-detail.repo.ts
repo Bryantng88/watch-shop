@@ -1,6 +1,7 @@
 import { dbOrTx, type DB } from "@/server/db/client";
 import { getTaskItemActivityViewModels } from "@/domains/task/server/activity";
 import { listTaskItemQueueItems } from "@/domains/task/server/business-binding.service";
+import { listWatchMediaQueueProjectionItemsWithFallback } from "@/domains/projection/server/watch-media-queue.projection";
 import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
 
 const USER_SELECT = {
@@ -20,6 +21,28 @@ function noteHasCoreWorkspace(note?: string | null) {
 
 function noteWorkTypeKey(note?: string | null) {
   return String(note ?? "").match(/^workTypeKey:\s*([a-z0-9-]+)/im)?.[1] ?? null;
+}
+
+function shouldUseWatchMediaQueueProjection(note?: string | null) {
+  return noteWorkTypeKey(note) === "media-processing";
+}
+
+async function listQueueItemsForTaskItemDetail(
+  db: DB,
+  input: {
+    taskItemId: string;
+    note?: string | null;
+  },
+) {
+  if (!shouldUseWatchMediaQueueProjection(input.note)) {
+    return listTaskItemQueueItems(db, input.taskItemId);
+  }
+
+  const result = await listWatchMediaQueueProjectionItemsWithFallback(db, {
+    workspaceId: input.taskItemId,
+  });
+
+  return result.items;
 }
 
 async function listDefaultAdminShareUserIds(db: DB) {
@@ -174,7 +197,10 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
 
   const [queueItems, sharedUsers] = await Promise.all([
     perfStep("task-item-detail-repo", "queueItems", () =>
-      listTaskItemQueueItems(db, item.id),
+      listQueueItemsForTaskItemDetail(db, {
+        taskItemId: item.id,
+        note: item.note,
+      }),
     ),
     sharedUserIds.length
       ? client.user.findMany({

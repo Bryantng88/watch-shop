@@ -2,6 +2,7 @@ import { consumeBusinessEventForWorkflow } from "@/domains/workflow/server/workf
 import { consumeBusinessEventForNotification } from "@/domains/notification/server/notification-event-consumer";
 import { consumeBusinessEventForTimeline } from "@/domains/shared/timeline/server/timeline-event-consumer";
 import { consumeBusinessEventForCoordination } from "@/domains/coordination/server";
+import { consumeBusinessEventForProjection } from "@/domains/projection/server/projection-event-consumer";
 import type { BusinessEventConsumer } from "@/domains/event/dispatcher/business-event-consumer.types";
 
 function clean(value: unknown) {
@@ -58,6 +59,12 @@ export function listBusinessEventConsumers(): BusinessEventConsumer[] {
           actorUserId: context.actorUserId ?? null,
           targetAliasIds: context.targetAliasIds ?? [],
         }),
+    },
+    {
+      key: "projection",
+      timeoutMs: 15000,
+      consume: (client, context) =>
+        consumeBusinessEventForProjection(client, context),
     },
   ];
 }

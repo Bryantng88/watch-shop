@@ -2,6 +2,11 @@
 
 Business domains emit `BusinessEvent` only.
 
+For the current implementation guardrail, read
+`docs/architecture/15-event-driven-domain-boundary.md`. That document is the
+north star for new code: Business Domain action -> Business Event ->
+Dispatcher -> Consumer Registry -> allowed Event Consumers.
+
 Consumers react to events:
 
 - Workflow

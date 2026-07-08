@@ -296,6 +296,7 @@ export async function dispatchBusinessEvent(input: {
     notification: undefined,
     timeline: undefined,
     coordination: undefined,
+    projection: undefined,
   };
 
   for (const consumer of ordered) {

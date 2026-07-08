@@ -346,7 +346,25 @@ When Media approval looks wrong, check in this order:
 - Add tests for media approve after recall.
 - Add tests for Publish item state after re-approve.
 
-### Sprint 52 - True Progress or Background Job
+### Sprint 52 - Workspace Workflow Processor Boundary
+
+Continue the event-driven architecture by moving Watch Media cross-domain
+orchestration into a Workspace Workflow Processor boundary.
+
+Expected direction:
+
+```text
+Business Domain action
+-> Business Event
+-> Dispatcher
+-> Workspace Workflow Processor
+-> focused consumers / services
+```
+
+Keep the processor orchestration-only. It should not become the place for all
+domain CRUD, all projection writes, or all notification logic.
+
+### Later - True Progress or Background Job
 
 Choose only if approval/recall remains too slow for operators.
 

@@ -139,6 +139,7 @@ export async function recordBusinessEvent(db: DB, input: BusinessEventInput) {
             workflow: consumerResults.workflow,
             notification: consumerResults.notification,
             timeline: consumerResults.timeline,
+            projection: consumerResults.projection,
         },
     };
 }

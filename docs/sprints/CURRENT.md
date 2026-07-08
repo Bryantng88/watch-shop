@@ -37,6 +37,12 @@ Completed:
 - Sprint 48 Watch Media Processing Review Flow V1.
 - Sprint 49 Watch Publish Workspace V1.
 - Sprint 50 Watch Media Weekly Rollover and Intake Hardening.
+- Sprint 51 Event Architecture and Workspace Flow Handoff.
+- Sprint 52 Workspace Workflow Processor Boundary.
+- Sprint 53 First Projection Framework.
+- Sprint 54 Watch Queue / Media Projection.
+- Sprint 55 Watch List Projection.
+- Sprint 56 Projection Observability & Repair.
 
 Current handoff:
 
@@ -55,6 +61,12 @@ Current handoff:
 - Read `docs/sprints/SM-Sprint-49-watch-publish-workspace.md`.
 - Read `docs/sprints/SM-Sprint-50-watch-media-weekly-rollover-and-intake-hardening.md`.
 - Read `docs/sprints/SM-Sprint-51-event-architecture-and-workspace-flow-handoff.md`.
+- Read `docs/sprints/SM-Sprint-52-workspace-workflow-processor-boundary.md`.
+- Read `docs/sprints/SM-Sprint-53-first-projection-framework.md`.
+- Read `docs/sprints/SM-Sprint-54-watch-queue-media-projection.md`.
+- Read `docs/sprints/SM-Sprint-55-watch-list-projection.md`.
+- Read `docs/sprints/SM-Sprint-56-projection-observability-repair.md`.
+- Read `docs/architecture/15-event-driven-domain-boundary.md`.
 - Read `docs/sprints/SM-M1-blueprint-completion-handoff.md`.
 - Read `docs/architecture/14-blueprint-snapshot-semantics.md`.
 - Read `docs/architecture/13-workspace-capability-enforcement.md`.
@@ -80,7 +92,13 @@ M2 has started with the Watch business-event-to-workspace vertical slice.
 Current M2 north star:
 
 ```text
-Watch -> Business Event -> Space/Workspace -> Item Workflow -> Timeline -> Blueprint ownership.
+Business Domain action -> Business Event -> Dispatcher -> Consumer Registry -> Event Consumers.
+```
+
+Watch Media remains the first reference vertical slice:
+
+```text
+Watch -> Business Event -> Space/Workspace -> Item Workflow -> Timeline -> Notification.
 ```
 
 Sprint 39 implemented Watch Business Event Producer Contract V1.
@@ -111,9 +129,21 @@ Sprint 49 implemented Watch Publish Workspace V1.
 
 Sprint 50 implemented Watch Media weekly rollover and intake hardening.
 
+Sprint 51 implemented Event Architecture and Workspace Flow Handoff.
+
+Sprint 52 implemented Workspace Workflow Processor Boundary.
+
+Sprint 53 implemented First Projection Framework.
+
+Sprint 54 implemented Watch Queue / Media Projection.
+
+Sprint 55 implemented Watch List Projection.
+
+Sprint 56 implemented Projection Observability & Repair.
+
 Next recommended sprint:
 
-- Finish Watch Media operational cleanup, then simplify Watch list/search later.
+- Sprint 57 Watch List Projection Cutover Contract Review.
 
 ## M2 Later
 
@@ -134,7 +164,20 @@ Recommended later M2 topics must stay outside Sprint 39 unless explicitly select
 2. `npm install` if needed
 3. `npx prisma generate`
 4. Read `docs/product/business-collaboration-platform.md`
-5. Read `docs/sprints/SM-M1-blueprint-completion-handoff.md`
-6. Read `docs/architecture/14-blueprint-snapshot-semantics.md`
-7. Read `docs/architecture/13-workspace-capability-enforcement.md`
-8. Continue from the selected M2 brief.
+5. Read `docs/architecture/15-event-driven-domain-boundary.md`
+6. Read `docs/sprints/SM-Sprint-56-projection-observability-repair.md`
+7. Continue with Sprint 57 Watch List Projection Cutover Contract Review.
+
+Sprint 57 must start by reviewing the Watch List UI contract before any full
+projection cutover:
+
+- fields the list really needs;
+- client-side business logic that should be removed;
+- actions that should remain available from the list;
+- projection columns required for search/filter/sort.
+
+Older M1 context remains available in:
+
+- `docs/sprints/SM-M1-blueprint-completion-handoff.md`
+- `docs/architecture/14-blueprint-snapshot-semantics.md`
+- `docs/architecture/13-workspace-capability-enforcement.md`

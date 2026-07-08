@@ -448,6 +448,34 @@ model BusinessEventLog {
   @@index([createdAt])
 }
 
+model ProjectionRecord {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  projectionKey     String
+  projectionVersion Int
+  rowKey            String
+
+  workspaceId String?
+  spaceId     String?
+  entityType  String?
+  entityId    String?
+
+  status     String?
+  searchText String?
+  sortAt     DateTime?
+
+  dataJson        Json
+  sourceUpdatedAt DateTime?
+  projectedAt     DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([projectionKey, rowKey])
+  @@index([projectionKey, workspaceId, status, sortAt])
+  @@index([projectionKey, entityType, entityId])
+  @@index([projectionKey, projectedAt])
+}
+
 model Order {
   id                   String         @id @default(dbgenerated("(gen_random_uuid())::text"))
   refNo                String?        @unique(map: "Order_orderCode_key")

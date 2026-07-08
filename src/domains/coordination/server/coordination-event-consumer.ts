@@ -9,7 +9,7 @@ import {
   ensureTaskItemBusinessBinding,
   findTaskItemBusinessBinding,
 } from "@/domains/task/server/business-binding.service";
-import { applyEventTriggerToQueueItem } from "@/domains/task/server/business-binding-workflow.service";
+import { processEventWorkspaceWorkflowTransition } from "@/domains/task/server/workspace-workflow-processor";
 import { createBusinessEventActivity } from "@/domains/task/server/activity/task-item-activity.service";
 import {
   getWorkTypeKeyFromTicketNote,
@@ -555,7 +555,7 @@ async function applyWorkflowEventTransition(input: {
   metadataJson?: Prisma.JsonValue | null;
 }) {
   try {
-    return await applyEventTriggerToQueueItem(input.db, {
+    return await processEventWorkspaceWorkflowTransition(input.db, {
       bindingId: input.bindingId,
       eventKey: input.eventKey,
       businessEventLogId: input.businessEventLogId,

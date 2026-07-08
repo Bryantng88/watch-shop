@@ -1,10 +1,9 @@
 import { prisma } from "@/server/db/client";
-import { mapAdminWatchListItem } from "../shared";
+import { listWatchListProjectionWithFallback } from "@/domains/projection/server/watch-list-projection.service";
 import type { WatchListFilters } from "../../ui/list/types";
-import { listAdminWatches } from "./watch-list.repo";
 
 export async function getAdminWatchList(input: WatchListFilters) {
-  return listAdminWatches(input);
+  return listWatchListProjectionWithFallback(prisma, input);
 }
 
 //export async function searchWatchService(q: string) {

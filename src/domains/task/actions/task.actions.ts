@@ -39,11 +39,6 @@ import {
 } from "../server/core/task.repo";
 import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
 import { parseWorkspaceDefinitionSnapshot } from "@/domains/blueprint/shared/workspace-capabilities";
-import {
-  completeWatchMediaProcessingFromQueueItem,
-  completeWatchPhotoshootFromQueueItem,
-  recallWatchMediaFromPublishQueueItem,
-} from "@/domains/watch/server/media-work";
 import { setTargetTagsRepo } from "../server/core/task.repo";
 
 import {
@@ -52,6 +47,7 @@ import {
 } from "@prisma/client";
 import { addActivityReply } from "../server/activity";
 import { applyManualWorkflowAction } from "../server/business-binding-workflow.service";
+import { processManualWorkspaceWorkflowTransition } from "../server/workspace-workflow-processor";
 import {
   addManualQueueItem,
   searchManualQueueTargets,
@@ -877,49 +873,21 @@ export async function applyQueueItemManualTransitionAction(input: {
     }
   }
 
-  let mediaProcessingResult: Awaited<
-    ReturnType<typeof completeWatchMediaProcessingFromQueueItem>
-  > | null = null;
-
-  if (
-    result.applied &&
-    result.workflowKey === "watch-publish" &&
-    result.toState === "RECALLED"
-  ) {
-    const recallResult = await recallWatchMediaFromPublishQueueItem({
+  const workflowProcessorResult = await processManualWorkspaceWorkflowTransition(
+    prisma,
+    {
       bindingId,
+      transition: result,
       actorUserId: getAuthUserId(auth),
       note: input.note ?? null,
-    }, prisma);
+    },
+  );
 
-    if ("productId" in recallResult && recallResult.productId) {
-      revalidatePath("/admin/watches");
-      revalidatePath(`/admin/watches/${recallResult.productId}`);
-      revalidatePath(`/admin/watches/${recallResult.productId}/edit`);
-    }
-  }
-
-  if (result.applied && result.toState === "DONE") {
-    if (result.workflowKey === "watch-photography") {
-      await completeWatchPhotoshootFromQueueItem({
-        bindingId,
-        actorUserId: getAuthUserId(auth),
-        note: input.note ?? null,
-      }, prisma);
-    }
-
-    if (result.workflowKey === "watch-media-processing") {
-      mediaProcessingResult = await completeWatchMediaProcessingFromQueueItem({
-        bindingId,
-        actorUserId: getAuthUserId(auth),
-        note: input.note ?? null,
-      }, prisma);
-
-      if ("productId" in mediaProcessingResult && mediaProcessingResult.productId) {
-        revalidatePath("/admin/watches");
-        revalidatePath(`/admin/watches/${mediaProcessingResult.productId}`);
-        revalidatePath(`/admin/watches/${mediaProcessingResult.productId}/edit`);
-      }
+  if (workflowProcessorResult.affectedProductIds.length) {
+    revalidatePath("/admin/watches");
+    for (const productId of workflowProcessorResult.affectedProductIds) {
+      revalidatePath(`/admin/watches/${productId}`);
+      revalidatePath(`/admin/watches/${productId}/edit`);
     }
   }
 
@@ -928,7 +896,12 @@ export async function applyQueueItemManualTransitionAction(input: {
     revalidatePath(`/admin/task-items/${result.taskItemId}`);
   }
 
-  return { ok: true, result, mediaProcessingResult };
+  return {
+    ok: true,
+    result,
+    mediaProcessingResult: workflowProcessorResult.mediaProcessingResult,
+    workflowProcessorResult,
+  };
 }
 
 export async function applyQueueItemManualTransitionsAction(input: {
@@ -962,7 +935,7 @@ export async function applyQueueItemManualTransitionsAction(input: {
       results.push({
         bindingId: item.bindingId,
         ok: Boolean(result.result.applied),
-        reason: result.result.reason,
+        reason: result.result.applied ? undefined : result.result.reason,
       });
     } catch (error) {
       results.push({

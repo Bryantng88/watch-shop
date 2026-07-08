@@ -3,6 +3,7 @@ export const BUSINESS_EVENT_CONSUMERS = [
   "notification",
   "timeline",
   "coordination",
+  "projection",
 ] as const;
 
 export type BusinessEventConsumerKey = typeof BUSINESS_EVENT_CONSUMERS[number];
