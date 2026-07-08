@@ -54,6 +54,7 @@ Current handoff:
 - Read `docs/sprints/SM-Sprint-48-watch-media-processing-review-flow.md`.
 - Read `docs/sprints/SM-Sprint-49-watch-publish-workspace.md`.
 - Read `docs/sprints/SM-Sprint-50-watch-media-weekly-rollover-and-intake-hardening.md`.
+- Read `docs/sprints/SM-Sprint-51-event-architecture-and-workspace-flow-handoff.md`.
 - Read `docs/sprints/SM-M1-blueprint-completion-handoff.md`.
 - Read `docs/architecture/14-blueprint-snapshot-semantics.md`.
 - Read `docs/architecture/13-workspace-capability-enforcement.md`.
