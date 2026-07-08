@@ -13,7 +13,8 @@ function valueOf(values: FilterBarValues, key: string) {
 }
 
 function labelFor(field: FilterBarField, value: string) {
-    return field.options.find((option) => option.value === value)?.label ?? value;
+    if (field.type === "text") return value;
+    return field.options?.find((option) => option.value === value)?.label ?? value;
 }
 
 function activeFieldValue(field: FilterBarField, values: FilterBarValues) {
@@ -31,18 +32,76 @@ function SelectField({
     value: string;
     onChange: (value: string) => void;
 }) {
+    const options = field.options ?? [];
+
     return (
         <select
             value={value}
             onChange={(event) => onChange(event.target.value)}
             className="h-11 min-w-0 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 outline-none transition focus:border-slate-400"
         >
-            {field.options.map((option) => (
+            {options.map((option) => (
                 <option key={option.value || "all"} value={option.value}>
                     {option.label}
                 </option>
             ))}
         </select>
+    );
+}
+
+function TextField({
+    field,
+    value,
+    onChange,
+    onApply,
+}: {
+    field: FilterBarField;
+    value: string;
+    onChange: (value: string) => void;
+    onApply: () => void;
+}) {
+    return (
+        <input
+            value={value}
+            inputMode={field.inputMode}
+            onChange={(event) => onChange(event.target.value)}
+            onKeyDown={(event) => {
+                if (event.key === "Enter") onApply();
+            }}
+            placeholder={field.placeholder ?? field.label}
+            className="h-11 min-w-0 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+        />
+    );
+}
+
+function FilterFieldControl({
+    field,
+    value,
+    onChange,
+    onApply,
+}: {
+    field: FilterBarField;
+    value: string;
+    onChange: (value: string) => void;
+    onApply: () => void;
+}) {
+    if (field.type === "text") {
+        return (
+            <TextField
+                field={field}
+                value={value}
+                onChange={onChange}
+                onApply={onApply}
+            />
+        );
+    }
+
+    return (
+        <SelectField
+            field={field}
+            value={value}
+            onChange={onChange}
+        />
     );
 }
 
@@ -115,19 +174,21 @@ export default function FilterBar({
                 ) : null}
 
                 {primaryFields.map((field) => (
-                    <SelectField
+                    <FilterFieldControl
                         key={field.key}
                         field={field}
                         value={valueOf(values, field.key)}
                         onChange={(value) => onChange({ [field.key]: value })}
+                        onApply={onApply}
                     />
                 ))}
 
                 {sortField ? (
-                    <SelectField
+                    <FilterFieldControl
                         field={sortField}
                         value={valueOf(values, sortField.key)}
                         onChange={(value) => onChange({ [sortField.key]: value })}
+                        onApply={onApply}
                     />
                 ) : null}
 
@@ -170,10 +231,11 @@ export default function FilterBar({
                             <span className="text-xs font-semibold text-slate-500">
                                 {field.label}
                             </span>
-                            <SelectField
+                            <FilterFieldControl
                                 field={field}
                                 value={valueOf(values, field.key)}
                                 onChange={(value) => onChange({ [field.key]: value })}
+                                onApply={onApply}
                             />
                         </label>
                     ))}

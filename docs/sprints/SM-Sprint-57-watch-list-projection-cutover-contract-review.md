@@ -2,7 +2,8 @@
 
 ## Status
 
-Draft for product/architecture review.
+Implemented as a lightweight Watch List query-contract and projection-read
+hardening sprint. Some original cutover items remain intentionally deferred.
 
 ## Intent
 
@@ -785,3 +786,155 @@ Sprint 57 passes when:
 - Projection compare has been run for agreed views/filters.
 - A reversible cutover plan exists.
 - No business rule is moved into projection.
+
+## Implemented Query Contract Notes
+
+Watch List filtering now goes through a lightweight Watch Inventory Query
+Contract before reaching either projection read or source fallback read.
+
+Current contract responsibilities:
+
+- Normalize UI filter values before query execution.
+- Keep operational filters explicit: media, service, sale, price.
+- Treat empty text values as inactive filters.
+- Preserve `withTotal=true` as a request for real total count even when
+  `meta=lite`.
+- Keep projection and source fallback behavior aligned.
+
+Price filter contract:
+
+- `priceStatus=MISSING` means watches without a usable sale price.
+- `priceStatus=HAS_PRICE` means watches with a usable sale price.
+- `pricePreset` maps to predefined ranges such as under 3m, under 5m,
+  5m-10m, 10m-20m, and over 20m.
+- Custom `priceMin` / `priceMax` is normalized into
+  `price.status=HAS_PRICE` with numeric `min` / `max`.
+- Empty `priceMin` / `priceMax` must not be converted to `0`.
+
+UI scope:
+
+- The shared `FilterBar` supports select and text fields so range filters can
+  be reused by other domains later.
+- Watch List owns only Watch-specific field configuration.
+- Saved views remain local/lightweight for now; server-side saved views are a
+  later sprint.
+
+## Sprint 57 Outcome
+
+Delivered:
+
+- Watch List now uses one operational table instead of legacy tabs/subfilters.
+- The table exposes the main operational columns:
+  - media;
+  - service;
+  - sale;
+  - price;
+  - updated;
+  - actions.
+- Media/service/sale statuses are rendered as lightweight signal dot + text,
+  not heavy pills.
+- The old content/image readiness icons were removed from the title area.
+- Watch List reads through `WatchInventoryQueryInput` before reaching the
+  projection/source query path.
+- The shared `FilterBar` was refactored for reuse and now supports:
+  - search;
+  - select filters;
+  - text/range inputs;
+  - active filter chips;
+  - visible/total count;
+  - lightweight save-view entry point.
+- Price filtering now supports:
+  - missing price;
+  - has price;
+  - predefined price ranges;
+  - custom `priceMin` / `priceMax`.
+- Empty `priceMin` / `priceMax` no longer become `0`.
+- `withTotal=true` now returns real total count in both projection and source
+  fallback paths, even when `meta=lite`.
+
+Known remaining work:
+
+- Saved views are still local/lightweight and not yet persisted server-side.
+- Filter parity is smoke-tested manually, not covered by a formal automated
+  contract test suite yet.
+- Projection remains behind the existing read flag and source fallback remains
+  available.
+- Order and Service workflow statuses still use current legacy/domain logic
+  where no new workflow projection exists yet.
+- Task Item performance is out of scope for this sprint.
+
+## Suggested Next Sprint - SM Sprint 58
+
+Recommended sprint name:
+
+```text
+SM Sprint 58 - Watch Inventory Query Contract Hardening
+```
+
+### Scope
+
+Harden the Watch Inventory Query Contract so it can safely become the reusable
+query foundation for:
+
+- admin Watch List filters;
+- future Zalo OA natural-language queries;
+- future public storefront filters;
+- future reporting/read-model queries.
+
+### In Scope
+
+- Add a small contract test suite for query normalization.
+- Test projection and source fallback parity for common filters:
+  - clean URL / no filters;
+  - missing price;
+  - has price;
+  - price range;
+  - media status;
+  - service status;
+  - sale status;
+  - brand/vendor;
+  - combined filters.
+- Move price preset/range rules into a clearly named query-contract module if
+  the mapper starts growing.
+- Add a lightweight saved-view contract type:
+  - name;
+  - domain;
+  - query payload;
+  - owner/scope placeholder.
+- Keep saved-view persistence local for now unless product explicitly needs
+  shared/team views.
+- Document which fields are supported for admin-only query versus storefront
+  query.
+
+### Out Of Scope
+
+- Do not build a generic all-domain query engine yet.
+- Do not implement natural-language query parsing yet.
+- Do not move Order/Service workflow to projection in this sprint.
+- Do not remove source fallback.
+- Do not introduce a report/dashboard system.
+- Do not add server-side saved-view tables unless the product decision is
+  explicitly made.
+
+### Senior Engineering Expectations
+
+- Query Contract owns normalization, not business decisions.
+- Projection remains a read model, not a business-rule engine.
+- UI components only describe available fields and collect user input.
+- Source fallback and projection path must return equivalent results for the
+  same query contract.
+- Tests should cover edge cases that caused real bugs:
+  - empty strings;
+  - `"0"`;
+  - missing params;
+  - invalid numeric range;
+  - `meta=lite + withTotal=true`.
+- Keep changes incremental and reversible.
+
+### Expected Output
+
+- A reliable Watch Inventory Query Contract test suite.
+- Clear parity checks for projection/source fallback.
+- Saved-view shape documented and optionally implemented locally.
+- Watch List filters remain fast, predictable, and ready to be reused by
+  future Zalo/storefront/report flows.

@@ -27,6 +27,7 @@ type NormalizedWatchListInput = WatchListFilters & {
   page: number;
   pageSize: number;
   meta: WatchListMetaMode;
+  withTotal: boolean;
 };
 
 type WatchListRawRow = Prisma.WatchGetPayload<{
@@ -324,6 +325,9 @@ function normalizeMetaMode(input: WatchListFilters): WatchListMetaMode {
 
 function normalizeInput(input: WatchListFilters): NormalizedWatchListInput {
   const view = normalizeWatchListView(input.view);
+  const withTotal =
+    input.withTotal === true ||
+    String(input.withTotal ?? "").trim().toLowerCase() === "true";
 
   return {
     ...input,
@@ -332,6 +336,7 @@ function normalizeInput(input: WatchListFilters): NormalizedWatchListInput {
     page: toPositiveInt(input.page, 1),
     pageSize: Math.min(toPositiveInt(input.pageSize, 20), 100),
     meta: normalizeMetaMode(input),
+    withTotal,
   };
 }
 
@@ -609,6 +614,7 @@ export async function listAdminWatches(
   const orderBy = buildSort(normalizedInput.sort);
 
   const shouldLoadMeta = normalizedInput.meta === "full";
+  const shouldLoadTotal = shouldLoadMeta || normalizedInput.withTotal;
   const rowTake = shouldLoadMeta
     ? normalizedInput.pageSize
     : normalizedInput.pageSize + 1;
@@ -623,7 +629,7 @@ export async function listAdminWatches(
         select: WATCH_LIST_ROW_SELECT,
       })
     ),
-    shouldLoadMeta
+    shouldLoadTotal
       ? perfStep("watch-list-repo", "watchCount", () =>
         prisma.watch.count({ where: listWhere })
       )
@@ -689,7 +695,7 @@ export async function listAdminWatches(
     total: resolvedTotal,
     page: normalizedInput.page,
     pageSize: normalizedInput.pageSize,
-    totalPages: shouldLoadMeta
+    totalPages: shouldLoadTotal
       ? Math.max(1, Math.ceil(resolvedTotal / normalizedInput.pageSize))
       : Math.max(normalizedInput.page, normalizedInput.page + (hasNextPage ? 1 : 0)),
     counts: counts ?? (undefined as unknown as WatchListCounts),

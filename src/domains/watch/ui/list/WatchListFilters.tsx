@@ -18,6 +18,8 @@ type Filters = {
     saleStatus: string;
     priceStatus: string;
     pricePreset: string;
+    priceMin: string;
+    priceMax: string;
     sort: string;
 };
 
@@ -98,6 +100,20 @@ const advancedFields: FilterBarField[] = [
             { label: "10tr - 20tr", value: "TEN_TO_TWENTY" },
             { label: "Trên 20tr", value: "OVER_TWENTY" },
         ],
+    },
+    {
+        key: "priceMin",
+        label: "Từ giá",
+        type: "text",
+        placeholder: "Ví dụ 5000000",
+        inputMode: "numeric",
+    },
+    {
+        key: "priceMax",
+        label: "Đến giá",
+        type: "text",
+        placeholder: "Ví dụ 10000000",
+        inputMode: "numeric",
     },
 ];
 

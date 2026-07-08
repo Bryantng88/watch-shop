@@ -6,9 +6,11 @@ export type FilterBarOption = {
 export type FilterBarField = {
     key: string;
     label: string;
-    type: "select";
-    options: FilterBarOption[];
+    type: "select" | "text";
+    options?: FilterBarOption[];
     defaultValue?: string;
+    placeholder?: string;
+    inputMode?: "text" | "numeric" | "decimal";
 };
 
 export type FilterBarSearch = {

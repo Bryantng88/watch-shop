@@ -53,6 +53,8 @@ type WatchFilterFormState = {
     saleStatus: string;
     priceStatus: string;
     pricePreset: string;
+    priceMin: string;
+    priceMax: string;
     sort: string;
 };
 
@@ -125,6 +127,8 @@ function filterStateFromParams(params: URLSearchParams): WatchFilterFormState {
         saleStatus: params.get("saleStatus") ?? "",
         priceStatus: params.get("priceStatus") ?? "",
         pricePreset: params.get("pricePreset") ?? "",
+        priceMin: params.get("priceMin") ?? "",
+        priceMax: params.get("priceMax") ?? "",
         sort: params.get("sort") ?? DEFAULT_SORT,
     };
 }
@@ -144,6 +148,8 @@ function emptyFilterState(): WatchFilterFormState {
         saleStatus: "",
         priceStatus: "",
         pricePreset: "",
+        priceMin: "",
+        priceMax: "",
         sort: DEFAULT_SORT,
     };
 }
@@ -425,6 +431,8 @@ export default function WatchListClient(props: WatchListClientProps) {
             setParam(next, "saleStatus", filters.saleStatus);
             setParam(next, "priceStatus", filters.priceStatus);
             setParam(next, "pricePreset", filters.pricePreset);
+            setParam(next, "priceMin", filters.priceMin);
+            setParam(next, "priceMax", filters.priceMax);
             [
                 "hasContent",
                 "hasImages",
@@ -485,9 +493,20 @@ export default function WatchListClient(props: WatchListClientProps) {
             const next = { ...prev, ...patch };
             if (Object.prototype.hasOwnProperty.call(patch, "priceStatus") && patch.priceStatus) {
                 next.pricePreset = "";
+                next.priceMin = "";
+                next.priceMax = "";
             }
             if (Object.prototype.hasOwnProperty.call(patch, "pricePreset") && patch.pricePreset) {
                 next.priceStatus = "";
+                next.priceMin = "";
+                next.priceMax = "";
+            }
+            if (
+                (Object.prototype.hasOwnProperty.call(patch, "priceMin") && patch.priceMin) ||
+                (Object.prototype.hasOwnProperty.call(patch, "priceMax") && patch.priceMax)
+            ) {
+                next.priceStatus = "";
+                next.pricePreset = "";
             }
             return next;
         });

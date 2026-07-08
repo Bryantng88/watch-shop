@@ -4,11 +4,14 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import {
     AlertCircle,
+    BadgeCheck,
     Eye,
     Hammer,
     HandCoins,
+    Handshake,
     ImageIcon,
     ListChecks,
+    Lock,
     Pencil,
     RotateCcw,
     ShoppingCart,
@@ -70,25 +73,82 @@ function upper(value: unknown) {
     return String(value ?? "").trim().toUpperCase();
 }
 
-function StatusBadge({ label, tone }: { label: string; tone: BadgeTone }) {
-    const classes: Record<BadgeTone, string> = {
-        slate: "border-slate-200 bg-slate-50 text-slate-600",
-        blue: "border-blue-200 bg-blue-50 text-blue-700",
-        emerald: "border-emerald-200 bg-emerald-50 text-emerald-700",
-        amber: "border-amber-200 bg-amber-50 text-amber-700",
-        rose: "border-rose-200 bg-rose-50 text-rose-700",
-        violet: "border-violet-200 bg-violet-50 text-violet-700",
+function StatusSignal({ label, tone }: { label: string; tone: BadgeTone }) {
+    const dotClasses: Record<BadgeTone, string> = {
+        slate: "bg-slate-400",
+        blue: "bg-blue-500",
+        emerald: "bg-emerald-500",
+        amber: "bg-amber-500",
+        rose: "bg-rose-500",
+        violet: "bg-violet-500",
     };
 
     return (
         <span
             className={cn(
-                "inline-flex max-w-[132px] items-center rounded-full border px-2.5 py-1 text-xs font-semibold",
-                classes[tone],
+                "inline-flex max-w-[132px] items-center gap-2 text-xs font-medium leading-5",
+                tone === "slate" ? "text-slate-600" : "text-slate-700",
             )}
             title={label}
         >
+            <span
+                aria-hidden="true"
+                className={cn("h-2 w-2 shrink-0 rounded-full", dotClasses[tone])}
+            />
             <span className="truncate">{label}</span>
+        </span>
+    );
+}
+
+function SaleStatusBadge({
+    label,
+    status,
+}: {
+    label: string;
+    status?: string | null;
+}) {
+    const normalized = upper(status);
+    const config = (() => {
+        switch (normalized) {
+            case "READY":
+                return {
+                    icon: ShoppingCart,
+                    className: "border-blue-200 bg-blue-50 text-blue-700",
+                };
+            case "HOLD":
+                return {
+                    icon: Lock,
+                    className: "border-amber-200 bg-amber-50 text-amber-700",
+                };
+            case "SOLD":
+                return {
+                    icon: BadgeCheck,
+                    className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+                };
+            case "CONSIGNED":
+                return {
+                    icon: Handshake,
+                    className: "border-violet-200 bg-violet-50 text-violet-700",
+                };
+            default:
+                return {
+                    icon: AlertCircle,
+                    className: "border-slate-200 bg-slate-50 text-slate-600",
+                };
+        }
+    })();
+    const Icon = config.icon;
+
+    return (
+        <span
+            className={cn(
+                "inline-flex max-w-[132px] items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold leading-5",
+                config.className,
+            )}
+            title={label}
+        >
+            <Icon className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{label || "Không rõ"}</span>
         </span>
     );
 }
@@ -152,21 +212,6 @@ function legacySaleStatus(row: WatchRow) {
     return { label: "Sẵn sàng", tone: "blue" as BadgeTone };
 }
 
-function saleTone(status?: string | null): BadgeTone {
-    switch (upper(status)) {
-        case "SOLD":
-            return "emerald";
-        case "HOLD":
-            return "amber";
-        case "CONSIGNED":
-            return "violet";
-        case "READY":
-            return "blue";
-        default:
-            return "slate";
-    }
-}
-
 export default function WatchListRow({
     product,
     checked,
@@ -206,7 +251,6 @@ export default function WatchListRow({
     const sale = product.v2Row
         ? {
             label: product.v2Row.saleStatusLabel,
-            tone: saleTone(product.v2Row.saleStatus),
         }
         : legacySaleStatus(product);
 
@@ -308,15 +352,18 @@ export default function WatchListRow({
             </td>
 
             <td className="px-4 py-3 align-middle">
-                <StatusBadge label={media.label} tone={media.tone} />
+                <StatusSignal label={media.label} tone={media.tone} />
             </td>
 
             <td className="px-4 py-3 align-middle">
-                <StatusBadge label={service.label} tone={service.tone} />
+                <StatusSignal label={service.label} tone={service.tone} />
             </td>
 
             <td className="px-4 py-3 align-middle">
-                <StatusBadge label={sale.label} tone={sale.tone} />
+                <SaleStatusBadge
+                    label={sale.label}
+                    status={product.v2Row?.saleStatus ?? product.saleState}
+                />
             </td>
 
             <td className="px-4 py-3">
