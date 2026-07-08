@@ -260,10 +260,12 @@ function buildPriceStatusWhere(priceStatus: string): Prisma.WatchWhereInput {
 }
 
 function buildPriceRangeWhere(input: WatchListFilters): Prisma.WatchWhereInput {
-    const min = Number(input.priceMin);
-    const max = Number(input.priceMax);
-    const hasMin = Number.isFinite(min) && min >= 0;
-    const hasMax = Number.isFinite(max) && max >= 0;
+    const rawMin = String(input.priceMin ?? "").trim();
+    const rawMax = String(input.priceMax ?? "").trim();
+    const min = Number(rawMin);
+    const max = Number(rawMax);
+    const hasMin = rawMin !== "" && Number.isFinite(min) && min >= 0;
+    const hasMax = rawMax !== "" && Number.isFinite(max) && max >= 0;
 
     if (!hasMin && !hasMax) return {};
 
@@ -434,8 +436,9 @@ export function buildWatchListBaseWhere(
         and.push(buildPriceStatusWhere(String(input.priceStatus).toUpperCase()));
     }
 
-    if (input.priceMin !== undefined || input.priceMax !== undefined) {
-        and.push(buildPriceRangeWhere(input));
+    const priceRangeWhere = buildPriceRangeWhere(input);
+    if (Object.keys(priceRangeWhere).length > 0) {
+        and.push(priceRangeWhere);
     }
 
     if (input.quickFilter) {

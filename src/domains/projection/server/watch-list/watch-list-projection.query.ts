@@ -194,10 +194,12 @@ function projectionPriceCondition(status: string) {
 }
 
 function projectionPriceRangeCondition(input: NormalizedProjectionInput) {
-  const min = Number(input.priceMin);
-  const max = Number(input.priceMax);
-  const hasMin = Number.isFinite(min) && min >= 0;
-  const hasMax = Number.isFinite(max) && max >= 0;
+  const rawMin = clean(input.priceMin);
+  const rawMax = clean(input.priceMax);
+  const min = Number(rawMin);
+  const max = Number(rawMax);
+  const hasMin = rawMin !== "" && Number.isFinite(min) && min >= 0;
+  const hasMax = rawMax !== "" && Number.isFinite(max) && max >= 0;
 
   if (!hasMin && !hasMax) return null;
 

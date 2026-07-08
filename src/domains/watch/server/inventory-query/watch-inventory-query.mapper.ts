@@ -57,7 +57,10 @@ function normalizePricePreset(value: unknown): WatchInventoryPricePreset | undef
 }
 
 function numberOrUndefined(value: unknown) {
-  const number = Number(value);
+  const text = clean(value);
+  if (!text) return undefined;
+
+  const number = Number(text);
   return Number.isFinite(number) && number >= 0 ? number : undefined;
 }
 
