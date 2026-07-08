@@ -26,6 +26,7 @@ type NormalizedProjectionInput = WatchListProjectionQueryInput & {
   subFilter: WatchListSubFilter;
   page: number;
   pageSize: number;
+  withTotal: boolean;
   meta: "full" | "lite";
 };
 
@@ -110,6 +111,7 @@ function normalizeInput(
     subFilter: sanitizeSubFilter(view, normalizeSubFilter(input.subFilter)),
     page: toPositiveInt(input.page, 1),
     pageSize: Math.min(toPositiveInt(input.pageSize, 20), 100),
+    withTotal: input.withTotal === true || clean(input.withTotal).toLowerCase() === "true",
     meta: clean(input.meta).toLowerCase() === "lite" ? "lite" : "full",
   };
 }
@@ -130,6 +132,108 @@ function jsonNumber(path: string) {
   return Prisma.raw(`(("dataJson"->'filters'->>'${path}')::numeric)`);
 }
 
+function projectionMediaCondition(status: string) {
+  switch (status) {
+    case "POSTED":
+      return Prisma.sql`(${jsonText("mediaStatus")} = 'POSTED' OR ${jsonBool("isPosted")} = true)`;
+    case "NO_IMAGE":
+    case "PHOTOSHOOT":
+      return Prisma.sql`(${jsonText("mediaStatus")} = ${status} OR ${jsonBool("hasImages")} = false)`;
+    case "READY_TO_PUBLISH":
+      return Prisma.sql`(${jsonText("mediaStatus")} = 'READY_TO_PUBLISH' OR (${jsonBool("isPosted")} = false AND ${jsonText("reviewStatus")} = 'APPROVED'))`;
+    case "MEDIA_PROCESSING":
+      return Prisma.sql`(${jsonText("mediaStatus")} = 'MEDIA_PROCESSING' OR (${jsonBool("hasImages")} = true AND ${jsonBool("isPosted")} = false))`;
+    case "NEEDS_REWORK":
+      return Prisma.sql`${jsonText("mediaStatus")} = 'NEEDS_REWORK'`;
+    default:
+      return null;
+  }
+}
+
+function projectionServiceCondition(status: string) {
+  switch (status) {
+    case "DONE":
+      return Prisma.sql`(${jsonText("serviceStatus")} = 'DONE' OR ${jsonText("serviceStage")} = 'DONE')`;
+    case "IN_SERVICE":
+      return Prisma.sql`(${jsonText("serviceStatus")} = 'IN_SERVICE' OR ${jsonText("serviceStage")} = 'IN_SERVICE')`;
+    case "WAITING":
+      return Prisma.sql`(${jsonText("serviceStatus")} = 'WAITING' OR ${jsonText("serviceStage")} = 'PENDING')`;
+    case "NOT_REQUIRED":
+      return Prisma.sql`(${jsonText("serviceStatus")} = 'NOT_REQUIRED' OR ${jsonText("serviceStage")} = 'NOT_REQUIRED')`;
+    case "ISSUE":
+      return Prisma.sql`${jsonText("serviceStatus")} = 'ISSUE'`;
+    default:
+      return null;
+  }
+}
+
+function projectionSaleCondition(status: string) {
+  switch (status) {
+    case "SOLD":
+      return Prisma.sql`(${jsonText("saleStatus")} = 'SOLD' OR ${jsonText("saleStage")} = 'SOLD')`;
+    case "HOLD":
+      return Prisma.sql`(${jsonText("saleStatus")} = 'HOLD' OR ${jsonText("saleStage")} = 'HOLD')`;
+    case "CONSIGNED":
+      return Prisma.sql`(${jsonText("saleStatus")} = 'CONSIGNED' OR ${jsonText("saleStage")} = 'CONSIGNED_TO')`;
+    case "READY":
+      return Prisma.sql`(${jsonText("saleStatus")} = 'READY' OR COALESCE(${jsonText("saleStage")}, '') NOT IN ('HOLD', 'SOLD', 'CONSIGNED_TO'))`;
+    default:
+      return null;
+  }
+}
+
+function projectionPriceCondition(status: string) {
+  switch (status) {
+    case "MISSING":
+      return Prisma.sql`${jsonNumber("salePrice")} IS NULL`;
+    case "HAS_PRICE":
+      return Prisma.sql`${jsonNumber("salePrice")} IS NOT NULL`;
+    default:
+      return null;
+  }
+}
+
+function projectionPriceRangeCondition(input: NormalizedProjectionInput) {
+  const min = Number(input.priceMin);
+  const max = Number(input.priceMax);
+  const hasMin = Number.isFinite(min) && min >= 0;
+  const hasMax = Number.isFinite(max) && max >= 0;
+
+  if (!hasMin && !hasMax) return null;
+
+  const conditions: Prisma.Sql[] = [
+    Prisma.sql`${jsonNumber("salePrice")} IS NOT NULL`,
+  ];
+
+  if (hasMin) conditions.push(Prisma.sql`${jsonNumber("salePrice")} >= ${min}`);
+  if (hasMax) conditions.push(Prisma.sql`${jsonNumber("salePrice")} <= ${max}`);
+
+  return Prisma.sql`(${Prisma.join(conditions, " AND ")})`;
+}
+
+function projectionQuickFilterCondition(quickFilter: string) {
+  switch (quickFilter) {
+    case "missingPrice":
+      return Prisma.sql`${jsonNumber("salePrice")} IS NULL`;
+    case "missingImage":
+      return Prisma.sql`${jsonBool("hasImages")} = false`;
+    case "missingContent":
+      return Prisma.sql`${jsonBool("hasContent")} = false`;
+    case "photoshoot":
+      return projectionMediaCondition("PHOTOSHOOT");
+    case "mediaProcessing":
+      return projectionMediaCondition("MEDIA_PROCESSING");
+    case "readyToPublish":
+      return projectionMediaCondition("READY_TO_PUBLISH");
+    case "readyToSell":
+      return projectionSaleCondition("READY");
+    case "hasIssue":
+      return Prisma.sql`(${jsonText("serviceStatus")} = 'ISSUE' OR ${jsonText("mediaStatus")} = 'NEEDS_REWORK')`;
+    default:
+      return null;
+  }
+}
+
 function filterConditions(input: NormalizedProjectionInput) {
   const conditions: Prisma.Sql[] = [
     Prisma.sql`"projectionKey" = ${WATCH_LIST_PROJECTION_KEY}`,
@@ -139,6 +243,18 @@ function filterConditions(input: NormalizedProjectionInput) {
   if (viewStatus) conditions.push(Prisma.sql`"status" = ${viewStatus}`);
   if (clean(input.saleStage)) conditions.push(Prisma.sql`"status" = ${clean(input.saleStage).toUpperCase()}`);
   if (clean(input.opsStage)) conditions.push(Prisma.sql`${jsonText("serviceStage")} = ${clean(input.opsStage).toUpperCase()}`);
+  const mediaCondition = projectionMediaCondition(clean(input.mediaStatus).toUpperCase());
+  const serviceCondition = projectionServiceCondition(clean(input.serviceStatus).toUpperCase());
+  const saleCondition = projectionSaleCondition(clean(input.saleStatus).toUpperCase());
+  const priceCondition = projectionPriceCondition(clean(input.priceStatus).toUpperCase());
+  const priceRangeCondition = projectionPriceRangeCondition(input);
+  const quickFilterCondition = projectionQuickFilterCondition(clean(input.quickFilter));
+  if (mediaCondition) conditions.push(mediaCondition);
+  if (serviceCondition) conditions.push(serviceCondition);
+  if (saleCondition) conditions.push(saleCondition);
+  if (priceCondition) conditions.push(priceCondition);
+  if (priceRangeCondition) conditions.push(priceRangeCondition);
+  if (quickFilterCondition) conditions.push(quickFilterCondition);
   if (clean(input.brandId)) conditions.push(Prisma.sql`${jsonText("brandId")} = ${clean(input.brandId)}`);
   if (clean(input.vendorId)) conditions.push(Prisma.sql`${jsonText("vendorId")} = ${clean(input.vendorId)}`);
   if (clean(input.q)) conditions.push(Prisma.sql`"searchText" ILIKE ${`%${clean(input.q).toLowerCase()}%`}`);
@@ -332,7 +448,9 @@ export async function listWatchListProjection(
   const data = dataFromRows(rows);
   const hasNextPage = normalized.meta === "lite" && data.length > normalized.pageSize;
   const pageData = hasNextPage ? data.slice(0, normalized.pageSize) : data;
-  const total = normalized.meta === "lite"
+  const total = normalized.withTotal || normalized.meta === "full"
+    ? await countRows(db, normalized)
+    : normalized.meta === "lite"
     ? offset + pageData.length + (hasNextPage ? 1 : 0)
     : await countRows(db, normalized);
   const [counts, summary] = normalized.meta === "full"
@@ -343,11 +461,14 @@ export async function listWatchListProjection(
     : [undefined, undefined] as const;
 
   return {
-    items: pageData.map((item) => item.row),
+    items: pageData.map((item) => ({
+      ...item.row,
+      ...(item.v2Row ? { v2Row: item.v2Row } : {}),
+    })),
     total,
     page: normalized.page,
     pageSize: normalized.pageSize,
-    totalPages: normalized.meta === "full"
+    totalPages: normalized.withTotal || normalized.meta === "full"
       ? Math.max(1, Math.ceil(total / normalized.pageSize))
       : Math.max(normalized.page, normalized.page + (hasNextPage ? 1 : 0)),
     counts: counts ?? (undefined as unknown as WatchListCounts),

@@ -1,4 +1,4 @@
-import { WatchSaleStage } from "@prisma/client";
+import { WatchSaleStage, WatchServiceStage } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 import type { WatchListFilters, WatchListSubFilter } from "../../ui/list/types";
 import type { WatchListView } from "../../shared/watch-status";
@@ -133,6 +133,152 @@ function postedWhere(): Prisma.WatchWhereInput {
         isImageDownloaded: true,
     };
 }
+
+function buildOperationalMediaWhere(status: string): Prisma.WatchWhereInput {
+    switch (status) {
+        case "POSTED":
+            return postedWhere();
+        case "NO_IMAGE":
+        case "PHOTOSHOOT":
+            return { NOT: buildWatchHasGalleryImageWhere() };
+        case "READY_TO_PUBLISH":
+            return {
+                AND: [
+                    notPostedWhere(),
+                    reviewApprovedWhere("CONTENT"),
+                    reviewApprovedWhere("IMAGE"),
+                ],
+            };
+        case "NEEDS_REWORK":
+            return {
+                AND: [
+                    notPostedWhere(),
+                    {
+                        OR: [
+                            reviewRejectedWhere("CONTENT"),
+                            reviewRejectedWhere("IMAGE"),
+                        ],
+                    },
+                ],
+            };
+        case "MEDIA_PROCESSING":
+            return {
+                AND: [
+                    buildWatchHasGalleryImageWhere(),
+                    notPostedWhere(),
+                ],
+            };
+        default:
+            return {};
+    }
+}
+
+function buildOperationalServiceWhere(status: string): Prisma.WatchWhereInput {
+    switch (status) {
+        case "DONE":
+            return { serviceStage: WatchServiceStage.DONE };
+        case "IN_SERVICE":
+            return { serviceStage: WatchServiceStage.IN_SERVICE };
+        case "WAITING":
+            return { serviceStage: WatchServiceStage.PENDING };
+        case "NOT_REQUIRED":
+            return { serviceStage: WatchServiceStage.NOT_REQUIRED };
+        case "ISSUE":
+            return { id: "__NO_SOURCE_FALLBACK_SERVICE_ISSUE__" };
+        default:
+            return {};
+    }
+}
+
+function buildOperationalSaleWhere(status: string): Prisma.WatchWhereInput {
+    switch (status) {
+        case "SOLD":
+            return { saleStage: WatchSaleStage.SOLD };
+        case "HOLD":
+            return { saleStage: WatchSaleStage.HOLD };
+        case "CONSIGNED":
+            return { saleStage: WatchSaleStage.CONSIGNED_TO };
+        case "READY":
+            return {
+                saleStage: {
+                    notIn: [
+                        WatchSaleStage.HOLD,
+                        WatchSaleStage.SOLD,
+                        WatchSaleStage.CONSIGNED_TO,
+                    ],
+                },
+            };
+        default:
+            return {};
+    }
+}
+
+function buildQuickFilterWhere(quickFilter: string): Prisma.WatchWhereInput {
+    switch (quickFilter) {
+        case "missingPrice":
+            return {
+                OR: [
+                    { watchPrice: null },
+                    { watchPrice: { is: { salePrice: null } } },
+                ],
+            };
+        case "missingImage":
+            return { NOT: buildWatchHasGalleryImageWhere() };
+        case "missingContent":
+            return { NOT: buildWatchHasContentWhere() };
+        case "photoshoot":
+            return buildOperationalMediaWhere("PHOTOSHOOT");
+        case "mediaProcessing":
+            return buildOperationalMediaWhere("MEDIA_PROCESSING");
+        case "readyToPublish":
+            return buildOperationalMediaWhere("READY_TO_PUBLISH");
+        case "readyToSell":
+            return buildOperationalSaleWhere("READY");
+        case "hasIssue":
+            return buildOperationalMediaWhere("NEEDS_REWORK");
+        default:
+            return {};
+    }
+}
+
+function buildPriceStatusWhere(priceStatus: string): Prisma.WatchWhereInput {
+    switch (priceStatus) {
+        case "MISSING":
+            return {
+                OR: [
+                    { watchPrice: null },
+                    { watchPrice: { is: { salePrice: null } } },
+                ],
+            };
+        case "HAS_PRICE":
+            return {
+                watchPrice: { is: { salePrice: { not: null } } },
+            };
+        default:
+            return {};
+    }
+}
+
+function buildPriceRangeWhere(input: WatchListFilters): Prisma.WatchWhereInput {
+    const min = Number(input.priceMin);
+    const max = Number(input.priceMax);
+    const hasMin = Number.isFinite(min) && min >= 0;
+    const hasMax = Number.isFinite(max) && max >= 0;
+
+    if (!hasMin && !hasMax) return {};
+
+    return {
+        watchPrice: {
+            is: {
+                salePrice: {
+                    ...(hasMin ? { gte: min } : {}),
+                    ...(hasMax ? { lte: max } : {}),
+                },
+            },
+        },
+    };
+}
+
 function reviewWorkflowWhere(): Prisma.WatchWhereInput {
     return {
         reviewStates: {
@@ -270,6 +416,30 @@ export function buildWatchListBaseWhere(
 
     if (input.opsStage) {
         and.push({ serviceStage: input.opsStage as any });
+    }
+
+    if (input.mediaStatus) {
+        and.push(buildOperationalMediaWhere(String(input.mediaStatus).toUpperCase()));
+    }
+
+    if (input.serviceStatus) {
+        and.push(buildOperationalServiceWhere(String(input.serviceStatus).toUpperCase()));
+    }
+
+    if (input.saleStatus) {
+        and.push(buildOperationalSaleWhere(String(input.saleStatus).toUpperCase()));
+    }
+
+    if (input.priceStatus) {
+        and.push(buildPriceStatusWhere(String(input.priceStatus).toUpperCase()));
+    }
+
+    if (input.priceMin !== undefined || input.priceMax !== undefined) {
+        and.push(buildPriceRangeWhere(input));
+    }
+
+    if (input.quickFilter) {
+        and.push(buildQuickFilterWhere(String(input.quickFilter)));
     }
 
     return and.length ? { AND: and } : {};

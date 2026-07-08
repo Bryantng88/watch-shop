@@ -1,14 +1,38 @@
 import type { DB } from "@/server/db/client";
 import { listAdminWatches } from "@/domains/watch/server/list/watch-list.repo";
 import type { WatchListFilters } from "@/domains/watch/ui/list/types";
-import {
-  listWatchListProjection,
-  rebuildWatchListProjectionRows,
-} from "./watch-list";
+import { listWatchListProjection } from "./watch-list";
 import type { WatchListProjectionListResult } from "./watch-list";
 
 function projectionReadEnabled() {
-  return process.env.WATCH_LIST_PROJECTION_READ === "1";
+  return process.env.WATCH_LIST_PROJECTION_READ !== "0";
+}
+
+function sourceFallbackEnabled() {
+  return process.env.WATCH_LIST_PROJECTION_FALLBACK === "1";
+}
+
+function isProjectionTableMissing(error: unknown) {
+  const record = error && typeof error === "object"
+    ? error as { code?: unknown; message?: unknown }
+    : null;
+  const message = String(record?.message ?? "");
+
+  return record?.code === "P2021" ||
+    message.includes("ProjectionRecord") && message.includes("does not exist");
+}
+
+async function listSourceFallback(
+  input: WatchListFilters,
+  fallbackReason: string,
+): Promise<WatchListProjectionListResult> {
+  return {
+    ...(await listAdminWatches(input)),
+    projection: {
+      source: "source",
+      fallbackReason,
+    },
+  };
 }
 
 export async function listWatchListProjectionWithFallback(
@@ -16,48 +40,25 @@ export async function listWatchListProjectionWithFallback(
   input: WatchListFilters,
 ): Promise<WatchListProjectionListResult> {
   if (!projectionReadEnabled()) {
-    return {
-      ...(await listAdminWatches(input)),
-      projection: {
-        source: "source",
-        fallbackReason: "PROJECTION_READ_FLAG_DISABLED",
-      },
-    };
+    return listSourceFallback(input, "PROJECTION_READ_FLAG_DISABLED");
   }
 
   try {
-    let result = await listWatchListProjection(db, input);
-
-    if (!result.items.length && Number(input.page ?? 1) <= 1) {
-      await rebuildWatchListProjectionRows(db, {
-        limit: Math.max(Number(input.pageSize ?? 20) * 5, 100),
-      });
-      result = await listWatchListProjection(db, input);
-    }
-
-    if (result.items.length) {
-      return {
-        ...result,
-        projection: {
-          source: "projection",
-        },
-      };
-    }
+    const result = await listWatchListProjection(db, input);
 
     return {
-      ...(await listAdminWatches(input)),
+      ...result,
       projection: {
-        source: "source",
-        fallbackReason: "EMPTY_PROJECTION",
+        source: "projection",
+        fallbackReason: result.items.length ? undefined : "EMPTY_PROJECTION",
       },
     };
   } catch (error) {
-    return {
-      ...(await listAdminWatches(input)),
-      projection: {
-        source: "source",
-        fallbackReason: error instanceof Error ? error.message : "PROJECTION_READ_FAILED",
-      },
-    };
+    const reason = error instanceof Error ? error.message : "PROJECTION_READ_FAILED";
+    if (isProjectionTableMissing(error)) {
+      return listSourceFallback(input, "PROJECTION_TABLE_MISSING");
+    }
+    if (sourceFallbackEnabled()) return listSourceFallback(input, reason);
+    throw error;
   }
 }

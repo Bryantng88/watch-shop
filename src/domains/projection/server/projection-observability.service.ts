@@ -12,7 +12,10 @@ import {
   getProjectionBuilder,
   listProjectionBuilders,
 } from "./projection.registry";
-import { summarizeProjectionRecords } from "./projection-record.repo";
+import {
+  getProjectionRecordStoreHealth,
+  summarizeProjectionRecords,
+} from "./projection-record.repo";
 import { rebuildProjection } from "./projection.runner";
 import type { ProjectionScope } from "./projection.types";
 import type {
@@ -53,9 +56,12 @@ function emptySummary(input: {
   registered: boolean;
   rebuildSupported: boolean;
   eventBuildSupported: boolean;
+  storageReady?: boolean;
+  storageReason?: string;
 }): ProjectionStatusSummary {
   return {
     ...input,
+    storageReady: input.storageReady ?? true,
     rowCount: 0,
     statusCounts: {},
     latestProjectedAt: null,
@@ -74,13 +80,16 @@ export async function listProjectionStatus(
 ): Promise<ProjectionStatusSummary[]> {
   const projectionKey = clean(input.projectionKey);
   const scope = input.scope ?? {};
-  const rows = await summarizeProjectionRecords(db, {
-    projectionKey: projectionKey || null,
-    workspaceId: scope.workspaceId,
-    spaceId: scope.spaceId,
-    entityType: scope.targetType,
-    entityId: scope.targetId,
-  });
+  const storeHealth = await getProjectionRecordStoreHealth(db);
+  const rows = storeHealth.ready
+    ? await summarizeProjectionRecords(db, {
+      projectionKey: projectionKey || null,
+      workspaceId: scope.workspaceId,
+      spaceId: scope.spaceId,
+      entityType: scope.targetType,
+      entityId: scope.targetId,
+    })
+    : [];
   const summaries = new Map<string, ProjectionStatusSummary>();
 
   for (const builder of listProjectionBuilders()) {
@@ -94,6 +103,8 @@ export async function listProjectionStatus(
         registered: true,
         rebuildSupported: Boolean(builder.rebuild),
         eventBuildSupported: Boolean(builder.buildFromEvent),
+        storageReady: storeHealth.ready,
+        storageReason: storeHealth.reason,
       }),
     );
   }
@@ -109,6 +120,8 @@ export async function listProjectionStatus(
         description: builder?.description,
         rebuildSupported: Boolean(builder?.rebuild),
         eventBuildSupported: Boolean(builder?.buildFromEvent),
+        storageReady: storeHealth.ready,
+        storageReason: storeHealth.reason,
       });
     const count = numberCount(row.count);
     const key = statusKey(row.status);
@@ -171,6 +184,16 @@ export async function compareProjection(
 ): Promise<ProjectionCompareResult> {
   const projectionKey = clean(input.projectionKey);
   const scope = input.scope ?? {};
+  const storeHealth = await getProjectionRecordStoreHealth(db);
+
+  if (!storeHealth.ready) {
+    return {
+      ok: false,
+      projectionKey,
+      skipped: true,
+      reason: storeHealth.reason ?? "PROJECTION_STORE_NOT_READY",
+    };
+  }
 
   if (projectionKey === WATCH_MEDIA_QUEUE_PROJECTION_KEY) {
     const workspaceId = clean(scope.workspaceId);
@@ -217,6 +240,27 @@ export async function repairProjection(
 ): Promise<ProjectionRepairResult> {
   const projectionKey = clean(input.projectionKey);
   const scope = input.scope ?? {};
+  const storeHealth = await getProjectionRecordStoreHealth(db);
+  if (!storeHealth.ready) {
+    return {
+      ok: false,
+      projectionKey,
+      scope,
+      before: null,
+      build: {
+        ok: false,
+        status: "failed",
+        projectionKey,
+        projectionVersion: 0,
+        scope,
+        applied: 0,
+        skipped: 0,
+        failed: 1,
+        reason: storeHealth.reason ?? "PROJECTION_STORE_NOT_READY",
+      },
+      after: null,
+    };
+  }
   const before = await getProjectionStatus(db, projectionKey, scope);
   const build = await rebuildProjection(db, { projectionKey, scope });
   const after = await getProjectionStatus(db, projectionKey, scope);

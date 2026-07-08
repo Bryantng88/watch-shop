@@ -1,7 +1,57 @@
 import type { WatchListFilters, WatchListResult, WatchRow } from "@/domains/watch/ui/list/types";
 
+export type WatchListMediaStatus =
+  | "PHOTOSHOOT"
+  | "MEDIA_PROCESSING"
+  | "READY_TO_PUBLISH"
+  | "POSTED"
+  | "NEEDS_REWORK"
+  | "NO_IMAGE";
+
+export type WatchListServiceStatus =
+  | "NOT_REQUIRED"
+  | "WAITING"
+  | "IN_SERVICE"
+  | "DONE"
+  | "ISSUE";
+
+export type WatchListSaleStatus =
+  | "READY"
+  | "HOLD"
+  | "SOLD"
+  | "CONSIGNED";
+
+export type WatchListProjectionRow = {
+  watchId: string;
+  productId: string;
+  sku: string | null;
+  title: string | null;
+  imageUrl: string | null;
+  imageKey: string | null;
+  brandName: string | null;
+  vendorName: string | null;
+  mediaStatus: WatchListMediaStatus;
+  mediaStatusLabel: string;
+  serviceStatus: WatchListServiceStatus;
+  serviceStatusLabel: string;
+  saleStatus: WatchListSaleStatus;
+  saleStatusLabel: string;
+  salePrice: number | null;
+  updatedAt: string | null;
+};
+
+export type WatchListProjectionMediaState = {
+  watchId: string;
+  workTypeKey: "photoshoot" | "media-processing" | "publish";
+  workflowKey: string | null;
+  workflowState: string | null;
+  taskStatus: string | null;
+  updatedAt: string | null;
+};
+
 export type WatchListProjectionData = {
   row: WatchRow;
+  v2Row?: WatchListProjectionRow;
   filters: {
     watchId: string;
     productId: string;
@@ -20,6 +70,9 @@ export type WatchListProjectionData = {
     reviewStatus: string | null;
     contentStatus: string | null;
     specStatus: string | null;
+    mediaStatus?: WatchListMediaStatus | null;
+    serviceStatus?: WatchListServiceStatus | null;
+    saleStatus?: WatchListSaleStatus | null;
     salePrice: number | null;
     listPrice: number | null;
     createdAt: string | null;
@@ -95,6 +148,7 @@ export type WatchListProjectionSourceRow = {
     submittedById: string | null;
   }>;
   __imagesCount?: number;
+  __mediaState?: WatchListProjectionMediaState[];
 };
 
 export type WatchListProjectionListResult = WatchListResult & {

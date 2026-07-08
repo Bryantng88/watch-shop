@@ -1,9 +1,9 @@
 import { getAdminWatchList } from "@/domains/watch/server";
 import WatchListClient from "@/domains/watch/client/WatchListClient";
-import { getCurrentUser } from "@/server/auth/getCurrentUser";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getListVendors } from "../vendors/_server/vendor.repo";
+import { unstable_cache } from "next/cache";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
@@ -27,31 +27,41 @@ function toPositiveInt(value: string | undefined, fallback: number) {
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
 }
 
-function hasRole(user: any, roleName: string) {
-    const roles = user?.roles ?? [];
+function recordValue(value: unknown, key: string) {
+    return value && typeof value === "object"
+        ? (value as Record<string, unknown>)[key]
+        : undefined;
+}
 
-    return roles.some((r: any) => {
+function hasRole(user: unknown, roleName: string) {
+    const roles = Array.isArray(recordValue(user, "roles"))
+        ? recordValue(user, "roles") as unknown[]
+        : [];
+
+    return roles.some((r) => {
         if (typeof r === "string") return r === roleName;
-        if (typeof r?.name === "string") return r.name === roleName;
-        if (typeof r?.code === "string") return r.code === roleName;
+        if (recordValue(r, "name") === roleName) return true;
+        if (recordValue(r, "code") === roleName) return true;
         return false;
     });
 }
 
-function hasPermission(user: any, permission: string) {
-    const permissions = user?.permissions ?? [];
+function hasPermission(user: unknown, permission: string) {
+    const permissions = Array.isArray(recordValue(user, "permissions"))
+        ? recordValue(user, "permissions") as unknown[]
+        : [];
 
-    return permissions.some((p: any) => {
+    return permissions.some((p) => {
         if (typeof p === "string") return p === permission;
-        if (typeof p?.name === "string") return p.name === permission;
-        if (typeof p?.code === "string") return p.code === permission;
-        if (typeof p?.key === "string") return p.key === permission;
+        if (recordValue(p, "name") === permission) return true;
+        if (recordValue(p, "code") === permission) return true;
+        if (recordValue(p, "key") === permission) return true;
         return false;
     });
 }
 
 function buildInitialWatchListInput(searchParams: SearchParams) {
-    const view = (firstValue(searchParams.view) || "draft") as
+    const view = "all" as
         | "draft"
         | "processing"
         | "ready"
@@ -61,35 +71,49 @@ function buildInitialWatchListInput(searchParams: SearchParams) {
     return {
         view,
 
-        subFilter: firstValue(searchParams.subFilter) as any,
+        subFilter: "",
 
         q: firstValue(searchParams.q),
         sku: firstValue(searchParams.sku),
         brandId: firstValue(searchParams.brandId),
         vendorId: firstValue(searchParams.vendorId),
 
-        hasContent: firstValue(searchParams.hasContent) as "" | "yes" | "no",
-        hasImages: firstValue(searchParams.hasImages) as "" | "yes" | "no",
+        hasContent: "" as "" | "yes" | "no",
+        hasImages: "" as "" | "yes" | "no",
 
-        saleStage: firstValue(searchParams.saleStage),
-        opsStage: firstValue(searchParams.opsStage),
+        saleStage: "",
+        opsStage: "",
+        mediaStatus: firstValue(searchParams.mediaStatus),
+        serviceStatus: firstValue(searchParams.serviceStatus),
+        saleStatus: firstValue(searchParams.saleStatus),
+        priceStatus: firstValue(searchParams.priceStatus),
+        pricePreset: firstValue(searchParams.pricePreset),
+        priceMin: firstValue(searchParams.priceMin),
+        priceMax: firstValue(searchParams.priceMax),
 
         sort: firstValue(searchParams.sort) || "updatedDesc",
 
         page: toPositiveInt(firstValue(searchParams.page), 1),
         pageSize: toPositiveInt(firstValue(searchParams.pageSize), 20),
+        withTotal: true,
+        meta: "lite",
     };
 }
+
+const getCachedListVendors = unstable_cache(
+    () => getListVendors(),
+    ["watch-list-vendor-options"],
+    { revalidate: 300 },
+);
 
 export default async function WatchesPage({
     searchParams,
 }: {
     searchParams: Promise<SearchParams>;
 }) {
-    await requirePermission(PERMISSIONS.PRODUCT_VIEW);
+    const user = await requirePermission(PERMISSIONS.PRODUCT_VIEW);
 
     const resolvedSearchParams = await searchParams;
-    const user = await getCurrentUser();
 
     const isAdmin = hasRole(user, "ADMIN");
     const canViewCost =
@@ -99,7 +123,7 @@ export default async function WatchesPage({
 
     const [initialResult, vendors] = await Promise.all([
         getAdminWatchList(input),
-        getListVendors(),
+        getCachedListVendors(),
     ]);
 
     return (

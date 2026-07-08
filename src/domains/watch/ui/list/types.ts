@@ -115,6 +115,25 @@ export type WatchRow = {
     serviceReady: boolean;
 
     specStatus?: "PENDING" | "PARTIAL" | "READY" | "FAILED" | null;
+
+    v2Row?: {
+        watchId: string;
+        productId: string;
+        sku: string | null;
+        title: string | null;
+        imageUrl: string | null;
+        imageKey: string | null;
+        brandName: string | null;
+        vendorName: string | null;
+        mediaStatus: string;
+        mediaStatusLabel: string;
+        serviceStatus: string;
+        serviceStatusLabel: string;
+        saleStatus: string;
+        saleStatusLabel: string;
+        salePrice: number | null;
+        updatedAt: string | null;
+    };
 };
 
 export type WatchListResult = {
@@ -138,9 +157,18 @@ export type WatchListFilters = {
     hasImages?: "" | "yes" | "no";
     saleStage?: string;
     opsStage?: string;
+    mediaStatus?: string;
+    serviceStatus?: string;
+    saleStatus?: string;
+    priceStatus?: string;
+    pricePreset?: string;
+    priceMin?: string | number;
+    priceMax?: string | number;
+    quickFilter?: string;
     sort?: string;
     page?: number;
     pageSize?: number;
+    withTotal?: boolean;
     meta?: "full" | "lite" | string;
 };
 

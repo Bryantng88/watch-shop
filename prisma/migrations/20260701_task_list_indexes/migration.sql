@@ -1,0 +1,3 @@
+-- No-op migration placeholder.
+-- This directory exists in the migration chain; keeping an empty SQL migration
+-- lets Prisma record it without changing the database schema.

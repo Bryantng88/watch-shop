@@ -472,6 +472,7 @@ model ProjectionRecord {
 
   @@unique([projectionKey, rowKey])
   @@index([projectionKey, workspaceId, status, sortAt])
+  @@index([projectionKey, sortAt(sort: Desc), rowKey], map: "ProjectionRecord_watch_list_sort_idx")
   @@index([projectionKey, entityType, entityId])
   @@index([projectionKey, projectedAt])
 }

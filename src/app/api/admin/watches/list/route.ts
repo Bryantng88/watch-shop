@@ -28,7 +28,7 @@ function serialize(obj: unknown) {
 function buildWatchListInput(req: NextRequest) {
     const params = req.nextUrl.searchParams;
 
-    const view = (firstValue(params, "view") || "draft") as
+    const view = "all" as
         | "draft"
         | "processing"
         | "ready"
@@ -38,22 +38,30 @@ function buildWatchListInput(req: NextRequest) {
 
     return {
         view,
-        subFilter: firstValue(params, "subFilter") as WatchListSubFilter,
+        subFilter: "" as WatchListSubFilter,
 
         q: firstValue(params, "q"),
         sku: firstValue(params, "sku"),
         brandId: firstValue(params, "brandId"),
         vendorId: firstValue(params, "vendorId"),
 
-        hasContent: firstValue(params, "hasContent") as "" | "yes" | "no",
-        hasImages: firstValue(params, "hasImages") as "" | "yes" | "no",
+        hasContent: "" as "" | "yes" | "no",
+        hasImages: "" as "" | "yes" | "no",
 
-        saleStage: firstValue(params, "saleStage"),
-        opsStage: firstValue(params, "opsStage"),
+        saleStage: "",
+        opsStage: "",
+        mediaStatus: firstValue(params, "mediaStatus"),
+        serviceStatus: firstValue(params, "serviceStatus"),
+        saleStatus: firstValue(params, "saleStatus"),
+        priceStatus: firstValue(params, "priceStatus"),
+        pricePreset: firstValue(params, "pricePreset"),
+        priceMin: firstValue(params, "priceMin"),
+        priceMax: firstValue(params, "priceMax"),
 
         sort: firstValue(params, "sort") || "updatedDesc",
         page: toPositiveInt(firstValue(params, "page"), 1),
         pageSize: toPositiveInt(firstValue(params, "pageSize"), 20),
+        withTotal: true,
         meta: firstValue(params, "meta") || "lite",
     };
 }

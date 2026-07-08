@@ -9,18 +9,13 @@ import {
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import React from "react";
 import { WatchListToolbar } from "../ui/list";
-import WatchListViewTabs from "../ui/list/WatchListViewTabs";
 import WatchListFilters from "../ui/list/WatchListFilters";
 import WatchListTable from "../ui/list/WatchListTable";
 import BuyBackWatchModal from "../ui/buy-back/BuyBackWatchModal";
-import { buildCounts } from "../ui/list/helpers";
-import { normalizeWatchListView } from "../shared/watch-status";
 import { buildWatchWorkCaseSource } from "@/domains/work-case/utils/work-case-source";
 import type {
-    ViewKey,
     WatchListPageProps,
     WatchListResult,
-    WatchListSubFilter,
     WatchRow,
 } from "../ui/list/types";
 import { WatchServiceQuickModal } from "@/domains/service/ui/quick-service";
@@ -53,6 +48,11 @@ type WatchFilterFormState = {
     hasImages: string;
     saleStage: string;
     opsStage: string;
+    mediaStatus: string;
+    serviceStatus: string;
+    saleStatus: string;
+    priceStatus: string;
+    pricePreset: string;
     sort: string;
 };
 
@@ -68,54 +68,7 @@ const EMPTY_SUB_COUNTS = {
 
 const DEFAULT_PAGE_SIZE = "20";
 const DEFAULT_SORT = "updatedDesc";
-const DEFAULT_VIEW: ViewKey = "draft";
-
-function normalizeView(value: string | null | undefined): ViewKey {
-    return normalizeWatchListView(value);
-}
-
-function normalizeSubFilter(
-    value: string | null | undefined,
-): WatchListSubFilter {
-    const text = String(value ?? "")
-        .trim()
-        .toUpperCase();
-
-    const allowed: WatchListSubFilter[] = [
-        "",
-        "MISSING_CONTENT",
-        "MISSING_IMAGE",
-        "REVIEW_DRAFT",
-        "REVIEW_SUBMITTED",
-        "PARTIAL_APPROVED",
-        "APPROVED",
-        "POSTED",
-    ];
-
-    return allowed.includes(text as WatchListSubFilter)
-        ? (text as WatchListSubFilter)
-        : "";
-}
-
-function subFilterAllowedForView(view: ViewKey, subFilter: WatchListSubFilter) {
-    if (!subFilter) return true;
-
-    if (view === "processing") {
-        return subFilter === "MISSING_CONTENT" || subFilter === "MISSING_IMAGE";
-    }
-
-    if (view === "ready") {
-        return [
-            "REVIEW_DRAFT",
-            "REVIEW_SUBMITTED",
-            "PARTIAL_APPROVED",
-            "APPROVED",
-            "POSTED",
-        ].includes(subFilter);
-    }
-
-    return false;
-}
+const DEFAULT_VIEW = "all";
 
 function setParam(next: URLSearchParams, key: string, value?: string | null) {
     const normalized = String(value ?? "").trim();
@@ -126,8 +79,15 @@ function setParam(next: URLSearchParams, key: string, value?: string | null) {
 function sanitizeParams(input: URLSearchParams) {
     const params = new URLSearchParams(input.toString());
 
-    const view = normalizeView(params.get("view"));
-    params.set("view", view || DEFAULT_VIEW);
+    params.set("view", DEFAULT_VIEW);
+    [
+        "subFilter",
+        "hasContent",
+        "hasImages",
+        "saleStage",
+        "opsStage",
+        "quickFilter",
+    ].forEach((key) => params.delete(key));
 
     const sort = params.get("sort") || DEFAULT_SORT;
     params.set("sort", sort);
@@ -142,13 +102,6 @@ function sanitizeParams(input: URLSearchParams) {
             ? String(Math.min(Math.floor(pageSize), 100))
             : DEFAULT_PAGE_SIZE,
     );
-
-    const subFilter = normalizeSubFilter(params.get("subFilter"));
-    if (subFilterAllowedForView(view, subFilter)) {
-        setParam(params, "subFilter", subFilter);
-    } else {
-        params.delete("subFilter");
-    }
 
     Array.from(params.entries()).forEach(([key, value]) => {
         if (!String(value ?? "").trim()) params.delete(key);
@@ -167,6 +120,11 @@ function filterStateFromParams(params: URLSearchParams): WatchFilterFormState {
         hasImages: params.get("hasImages") ?? "",
         saleStage: params.get("saleStage") ?? "",
         opsStage: params.get("opsStage") ?? "",
+        mediaStatus: params.get("mediaStatus") ?? "",
+        serviceStatus: params.get("serviceStatus") ?? "",
+        saleStatus: params.get("saleStatus") ?? "",
+        priceStatus: params.get("priceStatus") ?? "",
+        pricePreset: params.get("pricePreset") ?? "",
         sort: params.get("sort") ?? DEFAULT_SORT,
     };
 }
@@ -181,6 +139,11 @@ function emptyFilterState(): WatchFilterFormState {
         hasImages: "",
         saleStage: "",
         opsStage: "",
+        mediaStatus: "",
+        serviceStatus: "",
+        saleStatus: "",
+        priceStatus: "",
+        pricePreset: "",
         sort: DEFAULT_SORT,
     };
 }
@@ -386,21 +349,6 @@ export default function WatchListClient(props: WatchListClientProps) {
         [selectedRows],
     );
 
-    const currentView = useMemo(
-        () => normalizeView(params.get("view")),
-        [params],
-    );
-
-    const currentSubFilter = useMemo(() => {
-        const value = normalizeSubFilter(params.get("subFilter"));
-        return subFilterAllowedForView(currentView, value) ? value : "";
-    }, [params, currentView]);
-
-    const counts = useMemo(
-        () => buildCounts(rows, listData.counts),
-        [rows, listData.counts],
-    );
-
     const replaceUrl = useCallback(
         (next: URLSearchParams) => {
             const sanitized = sanitizeParams(next);
@@ -466,32 +414,25 @@ export default function WatchListClient(props: WatchListClientProps) {
         });
     }
 
-    function handleViewChange(view: ViewKey) {
-        pushParams((next) => {
-            setParam(next, "view", view);
-            next.delete("subFilter");
-            setParam(next, "page", "1");
-        }, { meta: "lite" });
-    }
-
-    function handleSubFilterChange(subFilter: WatchListSubFilter) {
-        pushParams((next) => {
-            const nextValue = currentSubFilter === subFilter ? "" : subFilter;
-            setParam(next, "subFilter", nextValue || null);
-            setParam(next, "page", "1");
-        }, { meta: "lite" });
-    }
-
     function handleApplyFilters() {
         pushParams((next) => {
             setParam(next, "q", filters.q);
             setParam(next, "sku", filters.sku);
             setParam(next, "brandId", filters.brandId);
             setParam(next, "vendorId", filters.vendorId);
-            setParam(next, "hasContent", filters.hasContent);
-            setParam(next, "hasImages", filters.hasImages);
-            setParam(next, "saleStage", filters.saleStage);
-            setParam(next, "opsStage", filters.opsStage);
+            setParam(next, "mediaStatus", filters.mediaStatus);
+            setParam(next, "serviceStatus", filters.serviceStatus);
+            setParam(next, "saleStatus", filters.saleStatus);
+            setParam(next, "priceStatus", filters.priceStatus);
+            setParam(next, "pricePreset", filters.pricePreset);
+            [
+                "hasContent",
+                "hasImages",
+                "saleStage",
+                "opsStage",
+                "subFilter",
+                "quickFilter",
+            ].forEach((key) => next.delete(key));
             setParam(next, "sort", filters.sort || DEFAULT_SORT);
             setParam(next, "page", "1");
         }, { meta: "lite" });
@@ -510,6 +451,14 @@ export default function WatchListClient(props: WatchListClientProps) {
                 "hasImages",
                 "saleStage",
                 "opsStage",
+                "mediaStatus",
+                "serviceStatus",
+                "saleStatus",
+                "priceStatus",
+                "pricePreset",
+                "priceMin",
+                "priceMax",
+                "quickFilter",
                 "subFilter",
             ].forEach((key) => next.delete(key));
 
@@ -520,6 +469,49 @@ export default function WatchListClient(props: WatchListClientProps) {
 
     function handlePage(page: number) {
         pushParams((next) => setParam(next, "page", String(page)), { meta: "lite" });
+    }
+
+    function handleClearField(key: string) {
+        setFilters((prev) => ({ ...prev, [key]: "" }));
+
+        pushParams((next) => {
+            next.delete(key);
+            setParam(next, "page", "1");
+        }, { meta: "lite" });
+    }
+
+    function handleFilterChange(patch: Partial<WatchFilterFormState>) {
+        setFilters((prev) => {
+            const next = { ...prev, ...patch };
+            if (Object.prototype.hasOwnProperty.call(patch, "priceStatus") && patch.priceStatus) {
+                next.pricePreset = "";
+            }
+            if (Object.prototype.hasOwnProperty.call(patch, "pricePreset") && patch.pricePreset) {
+                next.priceStatus = "";
+            }
+            return next;
+        });
+    }
+
+    function handleSaveView() {
+        const name = window.prompt("Đặt tên view này");
+        const normalizedName = String(name ?? "").trim();
+        if (!normalizedName) return;
+
+        const storageKey = "watch-list:saved-views";
+        const current = JSON.parse(window.localStorage.getItem(storageKey) || "[]");
+        const views = Array.isArray(current) ? current : [];
+        const nextView = {
+            id: `${Date.now()}`,
+            name: normalizedName,
+            values: filters,
+            savedAt: new Date().toISOString(),
+        };
+        window.localStorage.setItem(storageKey, JSON.stringify([nextView, ...views]));
+        notify.success({
+            title: "Đã lưu view",
+            message: `View "${normalizedName}" đã được lưu trên trình duyệt này.`,
+        });
     }
 
     function onToggleOne(watchId: string, checked: boolean) {
@@ -877,8 +869,6 @@ export default function WatchListClient(props: WatchListClientProps) {
 
     const loading = isLoading || isPending;
     const displayRows = rows;
-    const displayTotal = listData.total;
-
     return (
         <div className="mx-auto w-full max-w-[1360px] min-w-0 space-y-5 px-4 pt-6 lg:px-5 xl:px-6">
             <WatchListToolbar
@@ -891,32 +881,25 @@ export default function WatchListClient(props: WatchListClientProps) {
                 onRequestMediaReview={requestSelectedMediaReview}
             />
 
-            <WatchListViewTabs
-                value={currentView}
-                counts={counts}
-                onChange={handleViewChange}
-            />
-
             <WatchListFilters
                 filters={filters}
+                total={listData.total}
+                visibleCount={displayRows.length}
                 brandOptions={brandOptions}
                 vendorOptions={vendorOptions}
-                onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
+                onChange={handleFilterChange}
                 onApply={handleApplyFilters}
                 onClear={handleClearFilters}
+                onClearField={handleClearField}
+                onSaveView={handleSaveView}
             />
 
             <div className={loading ? "opacity-60 transition" : "transition"}>
                 <WatchListTable
                     items={displayRows}
+                    total={listData.total}
                     selectedIds={selectedIds}
                     canViewCost={props.canViewCost}
-                    currentView={currentView}
-                    subFilter={currentSubFilter}
-                    subCounts={listData.summary?.subCounts ?? EMPTY_SUB_COUNTS}
-                    total={displayTotal}
-                    segmentTotal={listData.summary?.items ?? listData.total}
-                    onSubFilterChange={handleSubFilterChange}
                     onToggleOne={onToggleOne}
                     onToggleAll={onToggleAll}
                     onView={onView}

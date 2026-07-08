@@ -1,7 +1,6 @@
 "use client";
 
-import * as React from "react";
-import { ChevronDown, Filter } from "lucide-react";
+import { FilterBar, type FilterBarField } from "@/domains/shared/ui/filter-bar";
 
 type Option = { label: string; value: string };
 
@@ -14,158 +13,146 @@ type Filters = {
     hasImages: string;
     saleStage: string;
     opsStage: string;
+    mediaStatus: string;
+    serviceStatus: string;
+    saleStatus: string;
+    priceStatus: string;
+    pricePreset: string;
     sort: string;
 };
 
-const yesNoOptions = (label: string): Option[] => [
-    { label, value: "" },
-    { label: "Có", value: "yes" },
-    { label: "Chưa có", value: "no" },
+const sortField: FilterBarField = {
+    key: "sort",
+    label: "Sắp xếp",
+    type: "select",
+    defaultValue: "updatedDesc",
+    options: [
+        { label: "Sắp xếp: Cập nhật mới nhất", value: "updatedDesc" },
+        { label: "Sắp xếp: Cập nhật cũ nhất", value: "updatedAsc" },
+        { label: "Sắp xếp: Tạo mới nhất", value: "createdDesc" },
+        { label: "Sắp xếp: Giá tăng dần", value: "priceAsc" },
+        { label: "Sắp xếp: Giá giảm dần", value: "priceDesc" },
+        { label: "Sắp xếp: Tên A-Z", value: "titleAsc" },
+    ],
+};
+
+const advancedFields: FilterBarField[] = [
+    {
+        key: "mediaStatus",
+        label: "Media",
+        type: "select",
+        options: [
+            { label: "Tất cả", value: "" },
+            { label: "Đang chụp", value: "PHOTOSHOOT" },
+            { label: "Đang xử lý media", value: "MEDIA_PROCESSING" },
+            { label: "Sẵn sàng đăng", value: "READY_TO_PUBLISH" },
+            { label: "Đã đăng", value: "POSTED" },
+            { label: "Cần xử lý lại", value: "NEEDS_REWORK" },
+            { label: "Chưa có ảnh", value: "NO_IMAGE" },
+        ],
+    },
+    {
+        key: "serviceStatus",
+        label: "Service",
+        type: "select",
+        options: [
+            { label: "Tất cả", value: "" },
+            { label: "Không cần service", value: "NOT_REQUIRED" },
+            { label: "Chờ service", value: "WAITING" },
+            { label: "Đang service", value: "IN_SERVICE" },
+            { label: "Đã xong", value: "DONE" },
+            { label: "Có vấn đề", value: "ISSUE" },
+        ],
+    },
+    {
+        key: "saleStatus",
+        label: "Bán hàng",
+        type: "select",
+        options: [
+            { label: "Tất cả", value: "" },
+            { label: "Sẵn sàng", value: "READY" },
+            { label: "Giữ hàng", value: "HOLD" },
+            { label: "Đã bán", value: "SOLD" },
+            { label: "Consigned", value: "CONSIGNED" },
+        ],
+    },
+    {
+        key: "priceStatus",
+        label: "Trạng thái giá",
+        type: "select",
+        options: [
+            { label: "Tất cả", value: "" },
+            { label: "Chưa có giá", value: "MISSING" },
+            { label: "Đã có giá", value: "HAS_PRICE" },
+        ],
+    },
+    {
+        key: "pricePreset",
+        label: "Khoảng giá",
+        type: "select",
+        options: [
+            { label: "Tất cả", value: "" },
+            { label: "Dưới 3tr", value: "UNDER_3M" },
+            { label: "Dưới 5tr", value: "UNDER_5M" },
+            { label: "5tr - 10tr", value: "FIVE_TO_TEN" },
+            { label: "10tr - 20tr", value: "TEN_TO_TWENTY" },
+            { label: "Trên 20tr", value: "OVER_TWENTY" },
+        ],
+    },
 ];
-
-const sortOptions: Option[] = [
-    { label: "Cập nhật ↓", value: "updatedDesc" },
-    { label: "Cập nhật ↑", value: "updatedAsc" },
-    { label: "Tạo mới ↓", value: "createdDesc" },
-    { label: "Tạo mới ↑", value: "createdAsc" },
-    { label: "Giá tăng dần", value: "priceAsc" },
-    { label: "Giá giảm dần", value: "priceDesc" },
-    { label: "Tên A-Z", value: "titleAsc" },
-    { label: "Tên Z-A", value: "titleDesc" },
-];
-
-const saleStageOptions: Option[] = [
-    { label: "Sale: tất cả", value: "" },
-    { label: "Draft", value: "DRAFT" },
-    { label: "Ready", value: "READY" },
-    { label: "Hold", value: "HOLD" },
-    { label: "Sold", value: "SOLD" },
-    { label: "Ký gửi đi", value: "CONSIGNED_TO" },
-    { label: "Đang service", value: "IN_SERVICE" },
-];
-
-const opsStageOptions: Option[] = [
-    { label: "Service: tất cả", value: "" },
-    { label: "Không cần service", value: "NOT_REQUIRED" },
-    { label: "Chờ service", value: "PENDING" },
-    { label: "Đang service", value: "IN_SERVICE" },
-    { label: "Đã xong", value: "DONE" },
-];
-
-function Input({ value, placeholder, onChange }: { value: string; placeholder?: string; onChange: (value: string) => void }) {
-    return (
-        <input
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-        />
-    );
-}
-
-function Select({ value, options, onChange }: { value: string; options: Option[]; onChange: (value: string) => void }) {
-    return (
-        <select
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
-        >
-            {options.map((item, idx) => (
-                <option key={`${item.value}-${idx}`} value={item.value}>
-                    {item.label}
-                </option>
-            ))}
-        </select>
-    );
-}
 
 export default function WatchListFilters({
     filters,
+    total,
+    visibleCount,
     brandOptions = [],
     vendorOptions,
     onChange,
     onApply,
     onClear,
+    onClearField,
+    onSaveView,
 }: {
     filters: Filters;
+    total?: number;
+    visibleCount?: number;
     brandOptions?: Option[];
     vendorOptions: Option[];
     onChange: (patch: Partial<Filters>) => void;
     onApply: () => void;
     onClear: () => void;
+    onClearField: (key: string) => void;
+    onSaveView?: () => void;
 }) {
-    const [advancedOpen, setAdvancedOpen] = React.useState(false);
-
-    const advancedCount =
-        Number(Boolean(filters.sku)) +
-        Number(Boolean(filters.hasContent)) +
-        Number(Boolean(filters.hasImages)) +
-        Number(Boolean(filters.saleStage)) +
-        Number(Boolean(filters.opsStage));
+    const primaryFields: FilterBarField[] = [
+        {
+            key: "brandId",
+            label: "Brand",
+            type: "select",
+            options: [{ label: "Brand: Tất cả", value: "" }, ...brandOptions],
+        },
+        {
+            key: "vendorId",
+            label: "Vendor",
+            type: "select",
+            options: [{ label: "Vendor: Tất cả", value: "" }, ...vendorOptions],
+        },
+    ];
 
     return (
-        <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-3">
-                <div className="min-w-[280px] flex-1">
-                    <Input
-                        value={filters.q}
-                        placeholder="Tìm theo title / brand / model / ref..."
-                        onChange={(value) => onChange({ q: value })}
-                    />
-                </div>
-
-                <div className="w-[170px] shrink-0">
-                    <Input value={filters.sku} placeholder="SKU" onChange={(value) => onChange({ sku: value })} />
-                </div>
-
-                <div className="w-[190px] shrink-0">
-                    <Select
-                        value={filters.brandId}
-                        options={[{ label: "Brand: tất cả", value: "" }, ...brandOptions]}
-                        onChange={(value) => onChange({ brandId: value })}
-                    />
-                </div>
-
-                <div className="w-[190px] shrink-0">
-                    <Select
-                        value={filters.vendorId}
-                        options={[{ label: "Vendor: tất cả", value: "" }, ...vendorOptions]}
-                        onChange={(value) => onChange({ vendorId: value })}
-                    />
-                </div>
-
-                <div className="w-[180px] shrink-0">
-                    <Select value={filters.sort} options={sortOptions} onChange={(value) => onChange({ sort: value })} />
-                </div>
-
-                <button
-                    type="button"
-                    onClick={() => setAdvancedOpen((prev) => !prev)}
-                    className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
-                >
-                    <Filter className="h-4 w-4" />
-                    <span>Nâng cao</span>
-                    {advancedCount > 0 ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">{advancedCount}</span> : null}
-                    <ChevronDown className={["h-4 w-4 transition", advancedOpen ? "rotate-180" : ""].join(" ")} />
-                </button>
-
-                <button type="button" onClick={onApply} className="inline-flex h-11 shrink-0 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-medium text-white transition hover:bg-slate-800">
-                    Lọc
-                </button>
-
-                <button type="button" onClick={onClear} className="inline-flex h-11 shrink-0 items-center justify-center rounded-xl px-2 text-sm font-medium text-slate-500 transition hover:text-slate-900">
-                    Xóa lọc
-                </button>
-            </div>
-
-            {advancedOpen ? (
-                <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3 md:grid-cols-2 xl:grid-cols-4">
-                    <Select value={filters.hasContent} options={yesNoOptions("Content: tất cả")} onChange={(value) => onChange({ hasContent: value })} />
-                    <Select value={filters.hasImages} options={yesNoOptions("Image: tất cả")} onChange={(value) => onChange({ hasImages: value })} />
-                    <Select value={filters.saleStage} options={saleStageOptions} onChange={(value) => onChange({ saleStage: value })} />
-                    <Select value={filters.opsStage} options={opsStageOptions} onChange={(value) => onChange({ opsStage: value })} />
-                </div>
-            ) : null}
-        </div>
+        <FilterBar
+            values={filters}
+            total={total}
+            visibleCount={visibleCount}
+            search={{ key: "q", placeholder: "Tìm theo title / brand / model / ref..." }}
+            primaryFields={primaryFields}
+            advancedFields={advancedFields}
+            sortField={sortField}
+            onChange={(patch) => onChange(patch as Partial<Filters>)}
+            onApply={onApply}
+            onClearField={onClearField}
+            onClearAll={onClear}
+            onSaveView={onSaveView}
+        />
     );
 }

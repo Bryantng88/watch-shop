@@ -1,6 +1,10 @@
-import { ImageRole, Prisma } from "@prisma/client";
+import { ImageRole, Prisma, TaskExecutionTargetType } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
-import type { WatchListProjectionSourceRow } from "./watch-list-projection.types";
+import { getQueueItemWorkflowState } from "@/domains/task/server/business-binding-workflow.service";
+import type {
+  WatchListProjectionMediaState,
+  WatchListProjectionSourceRow,
+} from "./watch-list-projection.types";
 
 const WATCH_LIST_SOURCE_SELECT = {
   id: true,
@@ -95,6 +99,69 @@ function clean(value: unknown) {
   return String(value ?? "").trim();
 }
 
+function workTypeKeyFromNote(note: unknown): WatchListProjectionMediaState["workTypeKey"] | null {
+  const text = clean(note).toLowerCase();
+  if (/worktypekey:\s*photoshoot/.test(text)) return "photoshoot";
+  if (/worktypekey:\s*media-processing/.test(text)) return "media-processing";
+  if (/worktypekey:\s*publish/.test(text)) return "publish";
+  return null;
+}
+
+async function loadMediaStatesByWatchId(
+  db: DB,
+  watchIds: string[],
+): Promise<Map<string, WatchListProjectionMediaState[]>> {
+  if (!watchIds.length) return new Map();
+
+  const bindings = await dbOrTx(db).taskExecution.findMany({
+    where: {
+      targetType: TaskExecutionTargetType.WATCH,
+      targetId: { in: watchIds },
+      taskItemId: { not: null },
+    },
+    select: {
+      targetId: true,
+      metadataJson: true,
+      createdAt: true,
+      taskItem: {
+        select: {
+          note: true,
+          status: true,
+          updatedAt: true,
+        },
+      },
+    },
+    orderBy: [{ createdAt: "desc" }],
+  });
+
+  const byWatchId = new Map<string, WatchListProjectionMediaState[]>();
+
+  for (const binding of bindings) {
+    const workTypeKey = workTypeKeyFromNote(binding.taskItem?.note);
+    if (!workTypeKey) continue;
+
+    const runtime = getQueueItemWorkflowState(binding);
+    const item: WatchListProjectionMediaState = {
+      watchId: binding.targetId,
+      workTypeKey,
+      workflowKey: runtime?.workflowKey ?? null,
+      workflowState: runtime?.currentState ?? null,
+      taskStatus: clean(binding.taskItem?.status) || null,
+      updatedAt:
+        runtime?.updatedAt ??
+        binding.taskItem?.updatedAt?.toISOString() ??
+        binding.createdAt.toISOString(),
+    };
+
+    byWatchId.set(binding.targetId, [
+      ...(byWatchId.get(binding.targetId) ?? []),
+      item,
+    ]);
+  }
+
+  return byWatchId;
+}
+
 export async function loadWatchListProjectionSourceRows(
   db: DB,
   input: {
@@ -123,7 +190,15 @@ export async function loadWatchListProjectionSourceRows(
     take: limit,
   });
 
-  return rows as WatchListProjectionSourceRow[];
+  const mediaStatesByWatchId = await loadMediaStatesByWatchId(
+    db,
+    rows.map((row) => row.id),
+  );
+
+  return rows.map((row) => ({
+    ...row,
+    __mediaState: mediaStatesByWatchId.get(row.id) ?? [],
+  })) as WatchListProjectionSourceRow[];
 }
 
 export async function resolveWatchIdsForProjectionTarget(

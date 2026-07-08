@@ -55,6 +55,12 @@ export type ProjectionRecordSummaryRow = {
   oldestProjectedAt: Date | null;
 };
 
+export type ProjectionRecordStoreHealth = {
+  ready: boolean;
+  tableName: string;
+  reason?: string;
+};
+
 function clean(value: unknown) {
   return String(value ?? "").trim();
 }
@@ -74,6 +80,31 @@ function intRange(value: number | null | undefined, fallback: number, max: numbe
   const number = Math.trunc(Number(value ?? fallback));
   if (!Number.isFinite(number)) return fallback;
   return Math.min(max, Math.max(0, number));
+}
+
+export async function getProjectionRecordStoreHealth(
+  db: DB,
+): Promise<ProjectionRecordStoreHealth> {
+  const client = dbOrTx(db);
+
+  try {
+    const rows = await client.$queryRaw<Array<{ tableName: string | null }>>(
+      Prisma.sql`SELECT to_regclass('"ProjectionRecord"')::text AS "tableName"`,
+    );
+    const tableName = clean(rows[0]?.tableName);
+
+    return {
+      ready: Boolean(tableName),
+      tableName: "ProjectionRecord",
+      reason: tableName ? undefined : "PROJECTION_TABLE_MISSING",
+    };
+  } catch (error) {
+    return {
+      ready: false,
+      tableName: "ProjectionRecord",
+      reason: error instanceof Error ? error.message : "PROJECTION_STORE_CHECK_FAILED",
+    };
+  }
 }
 
 export async function upsertProjectionRecord(

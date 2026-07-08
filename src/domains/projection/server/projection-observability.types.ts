@@ -7,6 +7,8 @@ export type ProjectionStatusSummary = {
   registered: boolean;
   rebuildSupported: boolean;
   eventBuildSupported: boolean;
+  storageReady: boolean;
+  storageReason?: string;
   rowCount: number;
   statusCounts: Record<string, number>;
   latestProjectedAt: Date | null;

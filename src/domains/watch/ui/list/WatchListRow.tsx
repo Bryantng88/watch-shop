@@ -3,30 +3,24 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import {
+    AlertCircle,
     Eye,
     Hammer,
     HandCoins,
     ImageIcon,
-    RotateCcw,
+    ListChecks,
     Pencil,
+    RotateCcw,
     ShoppingCart,
     Trash2,
-    AlertCircle,
-    ListChecks,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import RowActions from "@/domains/shared/ui/list/RowActions";
-import {
-    DomainSignalGroup,
-    WatchContentSignalIcon,
-    WatchGalleryImageSignalIcon,
-    WatchReadinessSignalIcon,
-    WatchServiceSignalIcon,
-} from "@/domains/shared/ui/icons";
 
 import type { WatchRow } from "./types";
-import { contentStatusText, formatDateTime, formatMoney } from "./helpers";
+import { formatDateTime, formatMoney } from "./helpers";
+
 type WatchRowAction = {
     key: string;
     label: string;
@@ -36,6 +30,7 @@ type WatchRowAction = {
     tone?: "danger";
     separatorBefore?: boolean;
 };
+
 type Props = {
     product: WatchRow;
     checked: boolean;
@@ -53,104 +48,123 @@ type Props = {
     onCreateTask?: (row: WatchRow) => void;
 };
 
+type BadgeTone = "slate" | "blue" | "emerald" | "amber" | "rose" | "violet";
+
 function Thumb({ src, alt }: { src?: string | null; alt: string }) {
     if (!src) {
         return (
-            <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+            <div className="flex h-[64px] w-[64px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
                 <ImageIcon className="h-6 w-6 text-slate-400" />
             </div>
         );
     }
 
     return (
-        <div className="h-[72px] w-[72px] shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+        <div className="h-[64px] w-[64px] shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
             <img src={src} alt={alt} className="h-full w-full object-cover object-center" />
         </div>
     );
 }
 
-
-function uniquePostTargetNames(targets: WatchRow["postTargets"] = []) {
-    const byName = new Map<string, NonNullable<WatchRow["postTargets"]>[number]>();
-
-    for (const target of targets) {
-        const name = String(target?.name ?? "").trim();
-        if (!name) continue;
-
-        const key = name.toLowerCase();
-        if (!byName.has(key)) {
-            byName.set(key, {
-                ...target,
-                name,
-                platform: null,
-            });
-        }
-    }
-
-    return Array.from(byName.values());
+function upper(value: unknown) {
+    return String(value ?? "").trim().toUpperCase();
 }
 
-function formatPostTargetLabel(target: NonNullable<WatchRow["postTargets"]>[number]) {
-    return String(target.name ?? "").trim();
-}
-
-function PostTargetCell({ row }: { row: WatchRow }) {
-    const targets = uniquePostTargetNames(row.postTargets);
-    const label = targets.map(formatPostTargetLabel).join(", ");
-
-    if (!label) {
-        return <span className="text-xs font-medium text-slate-300">-</span>;
-    }
+function StatusBadge({ label, tone }: { label: string; tone: BadgeTone }) {
+    const classes: Record<BadgeTone, string> = {
+        slate: "border-slate-200 bg-slate-50 text-slate-600",
+        blue: "border-blue-200 bg-blue-50 text-blue-700",
+        emerald: "border-emerald-200 bg-emerald-50 text-emerald-700",
+        amber: "border-amber-200 bg-amber-50 text-amber-700",
+        rose: "border-rose-200 bg-rose-50 text-rose-700",
+        violet: "border-violet-200 bg-violet-50 text-violet-700",
+    };
 
     return (
         <span
-            className="block max-w-[160px] truncate text-sm text-slate-600"
+            className={cn(
+                "inline-flex max-w-[132px] items-center rounded-full border px-2.5 py-1 text-xs font-semibold",
+                classes[tone],
+            )}
             title={label}
         >
-            {label}
+            <span className="truncate">{label}</span>
         </span>
     );
 }
-function WatchSignalSummary({ row }: { row: WatchRow }) {
-    const hasContent = Boolean(row.hasContent);
-    const hasGalleryImage = Number(row.imagesCount ?? 0) > 0 || Boolean(row.hasImages);
-    const hasService = Number(row.serviceIssuesCount ?? 0) > 0;
 
-    if (!hasContent && !hasGalleryImage && !hasService) return null;
-
-    return (
-        <DomainSignalGroup>
-            {hasContent ? <WatchContentSignalIcon /> : null}
-            {hasGalleryImage ? <WatchGalleryImageSignalIcon /> : null}
-            {hasService ? <WatchServiceSignalIcon /> : null}
-        </DomainSignalGroup>
-    );
+function legacyMediaStatus(row: WatchRow) {
+    if (row.isPosted) return { label: "Đã đăng", tone: "emerald" as BadgeTone };
+    if (!row.hasImages && Number(row.imagesCount ?? 0) <= 0) {
+        return { label: "Chưa có ảnh", tone: "slate" as BadgeTone };
+    }
+    return { label: "Đang xử lý media", tone: "blue" as BadgeTone };
 }
-function normalizePostReadiness(row: WatchRow) {
-    const raw =
-        (row as any).reviewStatus ??
-        (row as any).postReadiness ??
-        (row as any).contentStatus ??
-        "";
 
-    const value = String(raw).toUpperCase();
-
-    if (["POSTED", "PUBLISHED"].includes(value)) return "POSTED";
-    if (["APPROVED", "READY_TO_POST"].includes(value)) return "APPROVED";
-    if (["PARTIAL", "PARTIALLY_APPROVED", "APPROVED_PARTIAL"].includes(value)) return "PARTIAL";
-    if (["PENDING", "PENDING_REVIEW", "SUBMITTED", "IN_REVIEW"].includes(value)) return "PENDING";
-
-    const label = contentStatusText(row).toLowerCase();
-
-    if (label.includes("đã đăng")) return "POSTED";
-    if (label.includes("duyệt một phần")) return "PARTIAL";
-    if (label.includes("đã duyệt")) return "APPROVED";
-    if (label.includes("chờ duyệt")) return "PENDING";
-
-    return "NOT_SUBMITTED";
+function mediaTone(status?: string | null): BadgeTone {
+    switch (upper(status)) {
+        case "POSTED":
+            return "emerald";
+        case "READY_TO_PUBLISH":
+            return "violet";
+        case "NEEDS_REWORK":
+        case "NO_IMAGE":
+            return "amber";
+        case "PHOTOSHOOT":
+        case "MEDIA_PROCESSING":
+            return "blue";
+        default:
+            return "slate";
+    }
 }
-function WatchPostReadinessIcon({ row }: { row: WatchRow }) {
-    return <WatchReadinessSignalIcon state={normalizePostReadiness(row)} />;
+
+function legacyServiceStatus(row: WatchRow) {
+    const state = upper(row.serviceState);
+    if (state === "DONE") return { label: "Đã xong", tone: "emerald" as BadgeTone };
+    if (state === "IN_SERVICE") return { label: "Đang service", tone: "blue" as BadgeTone };
+    if (state === "PENDING") return { label: "Chờ service", tone: "amber" as BadgeTone };
+    if (Number(row.serviceIssuesCount ?? 0) > 0) {
+        return { label: "Cần kiểm tra", tone: "rose" as BadgeTone };
+    }
+    return { label: "Không cần service", tone: "slate" as BadgeTone };
+}
+
+function serviceTone(status?: string | null): BadgeTone {
+    switch (upper(status)) {
+        case "DONE":
+            return "emerald";
+        case "IN_SERVICE":
+            return "blue";
+        case "WAITING":
+            return "amber";
+        case "ISSUE":
+            return "rose";
+        default:
+            return "slate";
+    }
+}
+
+function legacySaleStatus(row: WatchRow) {
+    const state = upper(row.saleState);
+    if (state === "SOLD") return { label: "Đã bán", tone: "emerald" as BadgeTone };
+    if (state === "HOLD") return { label: "Giữ hàng", tone: "amber" as BadgeTone };
+    if (state === "CONSIGNED_TO") return { label: "Consigned", tone: "violet" as BadgeTone };
+    return { label: "Sẵn sàng", tone: "blue" as BadgeTone };
+}
+
+function saleTone(status?: string | null): BadgeTone {
+    switch (upper(status)) {
+        case "SOLD":
+            return "emerald";
+        case "HOLD":
+            return "amber";
+        case "CONSIGNED":
+            return "violet";
+        case "READY":
+            return "blue";
+        default:
+            return "slate";
+    }
 }
 
 export default function WatchListRow({
@@ -170,19 +184,31 @@ export default function WatchListRow({
     const isRecent =
         product.updatedAt &&
         Date.now() - new Date(product.updatedAt).getTime() < 1000 * 60 * 60 * 24;
-    const saleState = String(product.saleState ?? "").toUpperCase();
+    const saleState = upper(product.saleState);
 
-    const isLockedForQuickOrder =
-        saleState === "HOLD" ||
-        saleState === "SOLD";
-
-    const isLockedForService =
-        saleState === "HOLD";
-
-    const isLockedForEdit =
-        saleState === "SOLD";
-
+    const isLockedForQuickOrder = saleState === "HOLD" || saleState === "SOLD";
+    const isLockedForService = saleState === "HOLD";
+    const isLockedForEdit = saleState === "SOLD";
     const canBuyBack = saleState === "SOLD";
+
+    const media = product.v2Row
+        ? {
+            label: product.v2Row.mediaStatusLabel,
+            tone: mediaTone(product.v2Row.mediaStatus),
+        }
+        : legacyMediaStatus(product);
+    const service = product.v2Row
+        ? {
+            label: product.v2Row.serviceStatusLabel,
+            tone: serviceTone(product.v2Row.serviceStatus),
+        }
+        : legacyServiceStatus(product);
+    const sale = product.v2Row
+        ? {
+            label: product.v2Row.saleStatusLabel,
+            tone: saleTone(product.v2Row.saleStatus),
+        }
+        : legacySaleStatus(product);
 
     const actions = [
         onView && {
@@ -191,7 +217,6 @@ export default function WatchListRow({
             icon: <Eye className="h-4 w-4" />,
             onClick: onView,
         },
-
         onEdit &&
         !isLockedForEdit && {
             key: "edit",
@@ -199,7 +224,6 @@ export default function WatchListRow({
             icon: <Pencil className="h-4 w-4" />,
             onClick: onEdit,
         },
-
         onQuickOrder &&
         !isLockedForQuickOrder && {
             key: "quick-order",
@@ -207,7 +231,6 @@ export default function WatchListRow({
             icon: <ShoppingCart className="h-4 w-4" />,
             onClick: onQuickOrder,
         },
-
         onService &&
         !isLockedForService && {
             key: "service",
@@ -215,7 +238,6 @@ export default function WatchListRow({
             icon: <Hammer className="h-4 w-4" />,
             onClick: onService,
         },
-
         onConsign &&
         !isLockedForQuickOrder && {
             key: "consign",
@@ -223,9 +245,6 @@ export default function WatchListRow({
             icon: <HandCoins className="h-4 w-4" />,
             onClick: onConsign,
         },
-
-
-
         onCreateTask && {
             key: "create-task",
             label: "Tạo task",
@@ -233,14 +252,12 @@ export default function WatchListRow({
             separatorBefore: true,
             onClick: onCreateTask,
         },
-
         onRaiseCase && {
             key: "raise-case",
             label: "Tạo phiếu xử lý",
             icon: <AlertCircle className="h-4 w-4" />,
             onClick: onRaiseCase,
         },
-
         onBuyBack &&
         canBuyBack && {
             key: "buy-back",
@@ -249,7 +266,6 @@ export default function WatchListRow({
             separatorBefore: true,
             onClick: onBuyBack,
         },
-
         onDelete && {
             key: "delete",
             label: "Xóa",
@@ -259,9 +275,10 @@ export default function WatchListRow({
             onClick: onDelete,
         },
     ].filter(Boolean) as WatchRowAction[];
+
     return (
         <tr className="border-t border-slate-100 align-middle hover:bg-slate-50/40">
-            <td className="px-4 py-4">
+            <td className="px-4 py-3">
                 <input
                     type="checkbox"
                     checked={checked}
@@ -270,8 +287,8 @@ export default function WatchListRow({
                 />
             </td>
 
-            <td className="px-4 py-4">
-                <div className="flex min-w-[360px] items-center gap-3">
+            <td className="px-4 py-3">
+                <div className="flex min-w-[340px] items-center gap-3">
                     <Thumb src={product.imageUrl} alt={product.title} />
 
                     <div className="min-w-0 flex-1">
@@ -282,41 +299,33 @@ export default function WatchListRow({
                             {product.title}
                         </Link>
 
-                        <div className="mt-1 text-xs text-slate-400">
-                            SKU: {product.sku || "-"}
-                            <div className="font-mono text-[11px] text-slate-400">
-                                PID: {product.productId || "-"}
-                            </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400">
+                            <span>SKU: {product.sku || "-"}</span>
+                            {product.brandName ? <span>{product.brandName}</span> : null}
                         </div>
-
-                        <WatchSignalSummary row={product} />
                     </div>
                 </div>
             </td>
 
-            <td className="px-4 py-4">
-                <div className="flex min-w-[120px] items-center gap-2">
-                    <WatchPostReadinessIcon row={product} />
-                </div>
+            <td className="px-4 py-3 align-middle">
+                <StatusBadge label={media.label} tone={media.tone} />
             </td>
 
-            <td className="px-4 py-4 align-middle">
-                <PostTargetCell row={product} />
+            <td className="px-4 py-3 align-middle">
+                <StatusBadge label={service.label} tone={service.tone} />
             </td>
 
-            <td className="px-4 py-4">
-                <div className="min-w-[120px] text-sm font-semibold text-orange-600">
+            <td className="px-4 py-3 align-middle">
+                <StatusBadge label={sale.label} tone={sale.tone} />
+            </td>
+
+            <td className="px-4 py-3">
+                <div className="min-w-[110px] text-sm font-semibold text-orange-600">
                     {formatMoney(product.salePrice)}
                 </div>
             </td>
 
-            <td className="px-4 py-4 align-middle">
-                <div className="text-sm text-slate-700">
-                    {formatDateTime(product.createdAt)}
-                </div>
-            </td>
-
-            <td className="px-4 py-4 align-middle">
+            <td className="px-4 py-3 align-middle">
                 <div
                     className={cn(
                         "text-sm",
@@ -327,13 +336,7 @@ export default function WatchListRow({
                 </div>
             </td>
 
-            <td className="px-4 py-4 align-middle">
-                <div className="text-sm font-medium text-slate-700">
-                    {product.lastUpdatedBy?.name || product.lastUpdatedBy?.email || "-"}
-                </div>
-            </td>
-
-            <td className="px-4 py-4 text-right">
+            <td className="px-4 py-3 text-right">
                 <RowActions<WatchRow>
                     row={product}
                     actions={actions}

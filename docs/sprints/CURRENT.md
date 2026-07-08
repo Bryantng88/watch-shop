@@ -43,6 +43,7 @@ Completed:
 - Sprint 54 Watch Queue / Media Projection.
 - Sprint 55 Watch List Projection.
 - Sprint 56 Projection Observability & Repair.
+- Sprint 57 Watch List Projection Cutover Contract Review draft.
 
 Current handoff:
 
@@ -66,6 +67,7 @@ Current handoff:
 - Read `docs/sprints/SM-Sprint-54-watch-queue-media-projection.md`.
 - Read `docs/sprints/SM-Sprint-55-watch-list-projection.md`.
 - Read `docs/sprints/SM-Sprint-56-projection-observability-repair.md`.
+- Read `docs/sprints/SM-Sprint-57-watch-list-projection-cutover-contract-review.md`.
 - Read `docs/architecture/15-event-driven-domain-boundary.md`.
 - Read `docs/sprints/SM-M1-blueprint-completion-handoff.md`.
 - Read `docs/architecture/14-blueprint-snapshot-semantics.md`.
