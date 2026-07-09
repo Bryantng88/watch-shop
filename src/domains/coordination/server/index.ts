@@ -69,10 +69,12 @@ export {
 
 export type {
   CoordinationConsumerSkipReason,
+  CoordinationEventDiagnosticResult,
   CoordinationEventConsumerInput,
   CoordinationEventConsumerResult,
 } from "./coordination-event-consumer";
 
 export {
   consumeBusinessEventForCoordination,
+  diagnoseBusinessEventForCoordination,
 } from "./coordination-event-consumer";

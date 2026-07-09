@@ -91,7 +91,7 @@ export type TaskItemQueueItem = {
   href?: string | null;
 };
 
-type QueueFilter = "ALL" | QueueItemStatus;
+type QueueFilter = "ALL" | QueueItemStatus | `WF:${string}`;
 
 function objectValue(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -144,6 +144,36 @@ function metadataTextValue(
 function transitionPresentation(transition: { metadata?: unknown }) {
   return metadataTextValue(objectValue(transition.metadata), "presentation")
     .toUpperCase();
+}
+
+function workflowStateLabel(value?: string | null) {
+  const state = String(value ?? "").trim();
+  if (!state) return "-";
+  if (state === "IN_PROGRESS") return "In Progress";
+  return state
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function workflowStateTone(value?: string | null) {
+  const state = String(value ?? "").toUpperCase();
+  if (state === "DONE") return "bg-emerald-50 text-emerald-700 ring-emerald-100";
+  if (state === "IN_PROGRESS") return "bg-blue-50 text-blue-700 ring-blue-100";
+  if (state === "READY") return "bg-indigo-50 text-indigo-700 ring-indigo-100";
+  return "bg-amber-50 text-amber-700 ring-amber-100";
+}
+
+function WorkflowStateBadge({ value, label }: { value?: string | null; label?: string | null }) {
+  return (
+    <span className={cn(
+      "inline-flex min-h-6 items-center rounded-full px-2.5 text-xs font-semibold ring-1",
+      workflowStateTone(value),
+    )}>
+      {label || workflowStateLabel(value)}
+    </span>
+  );
 }
 
 function openTargetActionLabel(
@@ -309,6 +339,20 @@ function QueueProgressCell({ progress }: { progress: QueueRowProgress }) {
         />
       </div>
     </div>
+  );
+}
+
+function QueueIssueDetailCell({ item }: { item: TaskItemQueueItem }) {
+  const detail = item.preview.status?.trim();
+
+  if (!detail) {
+    return <span className="text-xs font-medium text-slate-400">-</span>;
+  }
+
+  return (
+    <span className="line-clamp-2 text-xs font-semibold leading-5 text-slate-600">
+      {detail}
+    </span>
   );
 }
 
@@ -557,20 +601,35 @@ export function QueueWorkQueue({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<{
+    itemId: string;
+    message: string;
+  } | null>(null);
   const [isPending, startTransition] = useTransition();
   const previewState = useBusinessEntityPreview();
   const router = useRouter();
   const appProgress = useAppProgress();
-  const filters: Array<{ key: QueueFilter; label: string }> = [
-    { key: "ALL", label: "All" },
-    { key: "WAITING", label: "Waiting" },
-    { key: "IN_PROGRESS", label: "In Progress" },
-    { key: "FEEDBACK", label: "Feedback" },
-    { key: "DONE", label: "Done" },
-  ];
+  const isServiceOperationWorkspace = workspaceWorkTypeKey === "service-operation";
+  const filters: Array<{ key: QueueFilter; label: string }> = isServiceOperationWorkspace
+    ? [
+      { key: "ALL", label: "All" },
+      { key: "WF:INSPECT", label: "Inspect" },
+      { key: "WF:READY", label: "Ready" },
+      { key: "WF:IN_PROGRESS", label: "In Progress" },
+      { key: "WF:DONE", label: "Done" },
+    ]
+    : [
+      { key: "ALL", label: "All" },
+      { key: "WAITING", label: "Waiting" },
+      { key: "IN_PROGRESS", label: "In Progress" },
+      { key: "FEEDBACK", label: "Feedback" },
+      { key: "DONE", label: "Done" },
+    ];
   const visibleItems = filter === "ALL"
     ? items
-    : items.filter((item) => item.status === filter);
+    : filter.startsWith("WF:")
+      ? items.filter((item) => item.currentWorkflowState === filter.slice(3))
+      : items.filter((item) => item.status === filter);
   const isMediaProcessingWorkspace = workspaceWorkTypeKey === "media-processing";
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const selectedItems = visibleItems.filter((item) => selectedIdSet.has(item.id));
@@ -610,6 +669,7 @@ export function QueueWorkQueue({
   const gridClass = capabilities.workflow
     ? "grid-cols-[42px_minmax(270px,1.45fr)_120px_180px_160px_96px_108px]"
     : "grid-cols-[42px_minmax(270px,1.45fr)_120px_180px_96px_108px]";
+  const detailColumnLabel = isServiceOperationWorkspace ? "Issue detail" : "Progress";
   const applyManualAction = (queueItem: TaskItemQueueItem, actionKey: string) => {
     if (isPending && pendingId) return;
 
@@ -648,6 +708,7 @@ export function QueueWorkQueue({
 
     setOpenActionMenuId(null);
     setPendingId(pendingKey);
+    setActionError(null);
     if (isRecallAction) {
       appProgress.show({
         title: "Dang thu hoi media",
@@ -675,11 +736,10 @@ export function QueueWorkQueue({
           bindingId: queueItem.id,
           actionKey,
         });
+        if (!result?.result?.applied) {
+          throw new Error(result?.result?.reason ?? "WORKFLOW_ACTION_NOT_APPLIED");
+        }
         if (isRecallAction) {
-          if (!result?.result?.applied) {
-            throw new Error(result?.result?.reason ?? "RECALL_NOT_APPLIED");
-          }
-
           setRecallStep("recall", "done", "Da thu hoi item khoi luong Dang bai.");
           setRecallStep("workspace", "running");
           setRecallStep("workspace", "done", "Workspace da ghi nhan trang thai moi.");
@@ -692,11 +752,12 @@ export function QueueWorkQueue({
             steps: recallSteps,
           });
         }
+        setActionError(null);
         window.setTimeout(() => router.refresh(), isRecallAction ? 350 : 0);
       } catch (error) {
+        const message = error instanceof Error ? error.message : "Khong the cap nhat workflow.";
         if (isRecallAction) {
           hideDelay = 5000;
-          const message = error instanceof Error ? error.message : "Khong the thu hoi media.";
           recallSteps = recallSteps.map((step) =>
             step.status === "running" ? { ...step, status: "error", detail: message } : step,
           );
@@ -708,6 +769,10 @@ export function QueueWorkQueue({
           hideProgress = false;
           window.setTimeout(() => appProgress.hide(), hideDelay);
         }
+        setActionError({
+          itemId: queueItem.id,
+          message,
+        });
         console.error(error);
       } finally {
         if (heartbeat) window.clearInterval(heartbeat);
@@ -771,6 +836,24 @@ export function QueueWorkQueue({
       <div className="space-y-3">
         {items.length ? (
           <>
+            {actionError ? (
+              <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+                <XCircle className="mt-0.5 h-4 w-4 flex-none" />
+                <div className="min-w-0">
+                  <div className="font-semibold">Workflow action failed</div>
+                  <div className="mt-0.5 break-words text-xs leading-5">
+                    {actionError.message}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActionError(null)}
+                  className="ml-auto h-6 rounded-md px-2 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                >
+                  Dismiss
+                </button>
+              </div>
+            ) : null}
             {selectedTransitions.length ? (
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
                 <div className="text-sm font-semibold text-slate-700">
@@ -826,7 +909,7 @@ export function QueueWorkQueue({
                     </div>
                     <div>{itemLabel}</div>
                     <div>Status</div>
-                    <div>Progress</div>
+                    <div>{detailColumnLabel}</div>
                     {capabilities.workflow ? <div>Next step</div> : null}
                     <div>Activity</div>
                     <div>Updated</div>
@@ -896,11 +979,22 @@ export function QueueWorkQueue({
                         </div>
 
                         <div className="flex min-w-0 flex-wrap items-center gap-1.5 self-center">
-                          <QueueStatusBadge status={displayStatus} />
+                          {isServiceOperationWorkspace ? (
+                            <WorkflowStateBadge
+                              value={queueItem.currentWorkflowState}
+                              label={queueItem.currentWorkflowStateLabel}
+                            />
+                          ) : (
+                            <QueueStatusBadge status={displayStatus} />
+                          )}
                         </div>
 
                         <div className="min-w-0 self-center">
-                          <QueueProgressCell progress={rowPresentation.progress} />
+                          {isServiceOperationWorkspace ? (
+                            <QueueIssueDetailCell item={queueItem} />
+                          ) : (
+                            <QueueProgressCell progress={rowPresentation.progress} />
+                          )}
                         </div>
 
                         {capabilities.workflow ? (

@@ -77,13 +77,16 @@ export type ApplyManualTriggerToQueueItemResult =
     fromState: string;
     toState: string;
     toStateLabel: string;
+    actionKey: string;
     terminal: boolean;
   }
   | {
     applied: false;
     bindingId: string;
-    reason: ManualTriggerTransitionSkipReason;
-  };
+      reason: ManualTriggerTransitionSkipReason;
+    };
+
+export type ResolveManualTriggerToQueueItemResult = ApplyManualTriggerToQueueItemResult;
 
 function clean(value: unknown) {
   return String(value ?? "").trim();
@@ -835,11 +838,94 @@ export async function applyManualTriggerToQueueItem(
     fromState: runtime.currentState,
     toState: transition.toState,
     toStateLabel,
+    actionKey: manualActionKey(transition),
+    terminal,
+  };
+}
+
+export async function resolveManualTriggerToQueueItem(
+  db: DB,
+  input: ApplyManualTriggerToQueueItemInput,
+): Promise<ResolveManualTriggerToQueueItemResult> {
+  const bindingId = clean(input.bindingId);
+  const actorUserId = clean(input.actorUserId);
+  const requestedActionKey = clean(input.actionKey);
+  const requestedToState = clean(input.toState);
+  const requestedTransitionKey = clean(input.transitionKey);
+
+  if (!actorUserId) {
+    return { applied: false, bindingId, reason: "MISSING_ACTOR" };
+  }
+
+  if (!requestedActionKey && !requestedToState && !requestedTransitionKey) {
+    return { applied: false, bindingId, reason: "MISSING_TARGET_STATE" };
+  }
+
+  const binding = await findBusinessBindingById(db, bindingId);
+  if (!binding) {
+    return { applied: false, bindingId, reason: "BINDING_NOT_FOUND" };
+  }
+
+  const runtime = getQueueItemWorkflowState(binding);
+  if (!runtime) {
+    return { applied: false, bindingId, reason: "NO_WORKFLOW_RUNTIME" };
+  }
+
+  const workflowDefinition = resolveBindingWorkflowDefinition(binding.metadataJson);
+  if (!workflowDefinition) {
+    return {
+      applied: false,
+      bindingId,
+      reason: "WORKFLOW_DEFINITION_MISSING",
+    };
+  }
+
+  const transition = workflowDefinition.transitions.find((item) => {
+    if (item.triggerType !== "MANUAL") return false;
+    if (item.fromState !== runtime.currentState) return false;
+    if (requestedActionKey && manualActionKey(item) !== requestedActionKey) return false;
+    if (requestedToState && item.toState !== requestedToState) return false;
+    if (
+      requestedTransitionKey &&
+      transitionKey(item.fromState, item.toState) !== requestedTransitionKey
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+
+  if (!transition) {
+    return { applied: false, bindingId, reason: "NO_MATCHING_TRANSITION" };
+  }
+
+  if (runtime.currentState === transition.toState) {
+    return { applied: false, bindingId, reason: "ALREADY_IN_STATE" };
+  }
+
+  const terminal = workflowDefinition.terminalStates.includes(
+    transition.toState,
+  );
+  const toStateLabel = getWorkflowStateLabel(
+    workflowDefinition,
+    transition.toState,
+  ) ?? transition.toState;
+
+  return {
+    applied: true,
+    bindingId: binding.id,
+    taskItemId: binding.taskItemId ?? "",
+    workflowKey: runtime.workflowKey,
+    fromState: runtime.currentState,
+    toState: transition.toState,
+    toStateLabel,
+    actionKey: manualActionKey(transition),
     terminal,
   };
 }
 
 export const applyManualWorkflowAction = applyManualTriggerToQueueItem;
+export const resolveManualWorkflowAction = resolveManualTriggerToQueueItem;
 
 export function getWorkflowStateLabel(
   workflowDefinition: WorkflowDefinition | null,

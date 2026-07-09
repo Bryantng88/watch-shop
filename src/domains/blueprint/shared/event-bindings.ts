@@ -112,9 +112,10 @@ const WATCH_MEDIA_PIPELINE_BINDINGS: Array<{
 
 const SERVICE_OPERATION_BINDINGS: Array<{
   eventKey: string;
-  targetType: "SERVICE_REQUEST" | "TECHNICAL_ISSUE";
+  targetType: "SERVICE_REQUEST" | "TECHNICAL_ISSUE" | "PAYMENT";
   mode: WorkspaceEventBindingMode;
   effects: WorkspaceEventBindingEffect[];
+  status?: WorkspaceEventBindingStatus;
 }> = [
   {
     eventKey: "service_request.created",
@@ -133,18 +134,21 @@ const SERVICE_OPERATION_BINDINGS: Array<{
     targetType: "TECHNICAL_ISSUE",
     mode: "INTAKE",
     effects: ["AUTO_BIND", "APPLY_WORKFLOW", "WRITE_ACTIVITY"],
+    status: "ACTIVE",
   },
   {
     eventKey: "technical_issue.confirmed",
     targetType: "TECHNICAL_ISSUE",
     mode: "PROGRESS",
     effects: ["APPLY_WORKFLOW", "WRITE_ACTIVITY"],
+    status: "ACTIVE",
   },
   {
     eventKey: "technical_issue.started",
     targetType: "TECHNICAL_ISSUE",
     mode: "PROGRESS",
     effects: ["APPLY_WORKFLOW", "WRITE_ACTIVITY"],
+    status: "ACTIVE",
   },
   {
     eventKey: "technical_issue.stage_changed",
@@ -157,6 +161,7 @@ const SERVICE_OPERATION_BINDINGS: Array<{
     targetType: "TECHNICAL_ISSUE",
     mode: "PROGRESS",
     effects: ["APPLY_WORKFLOW", "WRITE_ACTIVITY"],
+    status: "ACTIVE",
   },
   {
     eventKey: "technical_issue.reopened",
@@ -166,13 +171,13 @@ const SERVICE_OPERATION_BINDINGS: Array<{
   },
   {
     eventKey: "payment.created",
-    targetType: "SERVICE_REQUEST",
+    targetType: "PAYMENT",
     mode: "PROGRESS",
     effects: ["WRITE_ACTIVITY"],
   },
   {
     eventKey: "payment.status_updated",
-    targetType: "SERVICE_REQUEST",
+    targetType: "PAYMENT",
     mode: "PROGRESS",
     effects: ["WRITE_ACTIVITY"],
   },
@@ -195,7 +200,7 @@ export function eventBindingsForWorkType(input: {
       workTypeKey: "service-operation",
       mode: binding.mode,
       effects: binding.effects,
-      status: "DRAFT",
+      status: binding.status ?? "DRAFT",
       source: "BLUEPRINT",
     }));
   }

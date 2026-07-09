@@ -40,6 +40,11 @@ function normalizeRange(value: string | undefined): ServiceOperationRange {
   return value === "CURRENT_WEEK" ? "CURRENT_WEEK" : "ALL_ACTIVE";
 }
 
+function normalizeStage(value: string | undefined) {
+  const stage = STAGES.find((item) => item.key === value);
+  return stage?.key ?? "ALL";
+}
+
 function dateInputValue(value: Date) {
   return value.toISOString().slice(0, 10);
 }
@@ -103,6 +108,10 @@ function statusDot(label: string, toneValue?: string | null) {
   );
 }
 
+function stageLabel(value: string | null | undefined) {
+  return STAGES.find((stage) => stage.key === value)?.label ?? value ?? "-";
+}
+
 function stat(label: string, value: number) {
   return (
     <div className="min-h-[78px] rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -117,12 +126,14 @@ function modeHref(input: {
   q: string;
   range: ServiceOperationRange;
   anchorDate: string;
+  stage?: string | null;
 }) {
   const params = new URLSearchParams();
   params.set("mode", input.mode);
   params.set("range", input.range);
   params.set("anchorDate", input.anchorDate);
   if (input.q) params.set("q", input.q);
+  if (input.stage && input.mode === "ti") params.set("stage", input.stage);
   return `?${params.toString()}`;
 }
 
@@ -133,13 +144,21 @@ function stageItems(
   return items.filter((item) => item.stage === stage);
 }
 
+function tiIssueHref(input: {
+  item: ServiceOperationTiStageItem;
+}) {
+  return `/admin/services/issues-board?issueId=${input.item.id}`;
+}
+
 export default async function ServiceOperationPage(props: PageProps) {
   const searchParams = (await props.searchParams) ?? {};
   const q = first(searchParams.q)?.trim() ?? "";
   const mode = normalizeMode(first(searchParams.mode));
   const range = normalizeRange(first(searchParams.range));
+  const selectedStage = normalizeStage(first(searchParams.stage));
   const anchorDate = first(searchParams.anchorDate) ?? dateInputValue(new Date());
   const scope = resolveServiceOperationScope({ range, anchorDate });
+  const anchorDateValue = dateInputValue(scope.anchorDate);
 
   const [srCases, tiItems, counters] = await Promise.all([
     listServiceOperationSrCases({
@@ -159,7 +178,6 @@ export default async function ServiceOperationPage(props: PageProps) {
     }),
     getServiceOperationCounters({ range, anchorDate }),
   ]);
-
   const scopeText =
     scope.range === "CURRENT_WEEK" && scope.from && scope.to
       ? `${formatDate(scope.from)} - ${formatDate(new Date(scope.to.getTime() - 1))}`
@@ -262,7 +280,7 @@ export default async function ServiceOperationPage(props: PageProps) {
                 className={`grid place-items-center rounded-md text-sm font-bold ${
                   mode === "sr" ? "bg-slate-950 text-white shadow-sm" : "text-slate-500"
                 }`}
-                href={modeHref({ mode: "sr", q, range, anchorDate: dateInputValue(scope.anchorDate) })}
+                href={modeHref({ mode: "sr", q, range, anchorDate: anchorDateValue })}
               >
                 SR Cases
               </Link>
@@ -271,7 +289,7 @@ export default async function ServiceOperationPage(props: PageProps) {
                 className={`grid place-items-center rounded-md text-sm font-bold ${
                   mode === "ti" ? "bg-slate-950 text-white shadow-sm" : "text-slate-500"
                 }`}
-                href={modeHref({ mode: "ti", q, range, anchorDate: dateInputValue(scope.anchorDate) })}
+                href={modeHref({ mode: "ti", q, range, anchorDate: anchorDateValue, stage: selectedStage === "ALL" ? null : selectedStage })}
               >
                 Technical Bench
               </Link>
@@ -379,67 +397,78 @@ export default async function ServiceOperationPage(props: PageProps) {
               </table>
             </div>
           ) : (
-            <section className="grid gap-3 bg-slate-50 p-4 xl:grid-cols-4" aria-label="Technical issue board">
-              {STAGES.map((stage) => {
-                const items = stageItems(tiItems.items, stage.key);
-                return (
-                  <article key={stage.key} className="min-h-[520px] overflow-hidden rounded-lg border border-slate-200 bg-white">
-                    <header className="flex h-11 items-center justify-between border-b border-slate-200 bg-slate-50 px-3">
-                      <strong className="text-sm">{stage.label}</strong>
-                      <span className="grid min-w-6 place-items-center rounded-full border border-slate-200 px-2 text-xs font-bold text-slate-500">
-                        {items.length}
-                      </span>
-                    </header>
-                    <div className="grid gap-3 p-3">
-                      {items.map((item) => (
-                        <section key={item.id} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-                          <div className="mb-2 flex items-start justify-between gap-2">
-                            {chip(item.serviceRequest.refNo ?? item.serviceRequestId, "border-blue-100 bg-blue-50 text-blue-700")}
-                            {statusDot(item.stage, item.stage)}
+            <section
+              className="grid gap-3 bg-slate-50 p-4"
+              aria-label="Technical issue board"
+            >
+              <div className="grid gap-3 xl:grid-cols-4">
+                {STAGES.map((stage) => {
+                  const items = stageItems(tiItems.items, stage.key);
+                  return (
+                    <article key={stage.key} className="min-h-[520px] overflow-hidden rounded-lg border border-slate-200 bg-white">
+                      <header className="flex h-11 items-center justify-between border-b border-slate-200 bg-slate-50 px-3">
+                        <strong className="text-sm">{stage.label}</strong>
+                        <span className="grid min-w-6 place-items-center rounded-full border border-slate-200 px-2 text-xs font-bold text-slate-500">
+                          {items.length}
+                        </span>
+                      </header>
+                      <div className="grid gap-3 p-3">
+                        {items.map((item) => (
+                          <section
+                            key={item.id}
+                            className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
+                          >
+                            <div className="mb-2 flex items-start justify-between gap-2">
+                              {chip(item.serviceRequest.refNo ?? item.serviceRequestId, "border-blue-100 bg-blue-50 text-blue-700")}
+                              {statusDot(item.stage, item.stage)}
+                            </div>
+                            <div className="grid gap-1">
+                              <strong className="text-sm leading-snug">{item.summary}</strong>
+                              <span className="text-xs text-slate-500">
+                                {item.serviceRequest.productTitle ?? "Watch"} / {item.serviceRequest.sku ?? "-"}
+                              </span>
+                            </div>
+                            <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500">
+                              <span>
+                                Area
+                                <b className="mt-0.5 block text-xs text-slate-900">{item.area ?? "-"}</b>
+                              </span>
+                              <span>
+                                Owner
+                                <b className="mt-0.5 block text-xs text-slate-900">{item.ownerKind}</b>
+                              </span>
+                              <span>
+                                Estimate
+                                <b className="mt-0.5 block text-xs text-slate-900">
+                                  {item.estimatedCost == null ? "TBD" : money(item.estimatedCost)}
+                                </b>
+                              </span>
+                              <span>
+                                Priority
+                                <b className="mt-0.5 block text-xs text-slate-900">{item.priority ?? "Normal"}</b>
+                              </span>
+                            </div>
+                            <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                              <span className="text-xs text-slate-500">{formatDateTime(item.updatedAt)}</span>
+                              <Link
+                                className="inline-flex h-8 items-center rounded-md border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700"
+                                href={tiIssueHref({ item })}
+                              >
+                                View issue
+                              </Link>
+                            </div>
+                          </section>
+                        ))}
+                        {!items.length ? (
+                          <div className="rounded-lg border border-dashed border-slate-200 p-5 text-center text-sm text-slate-500">
+                            No items
                           </div>
-                          <div className="grid gap-1">
-                            <strong className="text-sm leading-snug">{item.summary}</strong>
-                            <span className="text-xs text-slate-500">
-                              {item.serviceRequest.productTitle ?? "Watch"} / {item.serviceRequest.sku ?? "-"}
-                            </span>
-                          </div>
-                          <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500">
-                            <span>
-                              Area
-                              <b className="mt-0.5 block text-xs text-slate-900">{item.area ?? "-"}</b>
-                            </span>
-                            <span>
-                              Owner
-                              <b className="mt-0.5 block text-xs text-slate-900">{item.ownerKind}</b>
-                            </span>
-                            <span>
-                              Estimate
-                              <b className="mt-0.5 block text-xs text-slate-900">
-                                {item.estimatedCost == null ? "TBD" : money(item.estimatedCost)}
-                              </b>
-                            </span>
-                            <span>
-                              Priority
-                              <b className="mt-0.5 block text-xs text-slate-900">{item.priority ?? "Normal"}</b>
-                            </span>
-                          </div>
-                          <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
-                            <span className="text-xs text-slate-500">{formatDateTime(item.updatedAt)}</span>
-                            <button className="h-8 rounded-md border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700" type="button">
-                              Open
-                            </button>
-                          </div>
-                        </section>
-                      ))}
-                      {!items.length ? (
-                        <div className="rounded-lg border border-dashed border-slate-200 p-5 text-center text-sm text-slate-500">
-                          No items
-                        </div>
-                      ) : null}
-                    </div>
-                  </article>
-                );
-              })}
+                        ) : null}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
             </section>
           )}
         </section>

@@ -126,7 +126,7 @@ const WORK_TYPES: WorkTypeDefinition[] = [
     sortOrder: 55,
     metadata: {
       workspaceType: "service-operation",
-      itemLabel: "Technical Issues",
+      itemLabel: "Technical Issue Operation",
       defaultView: "items",
       serviceCapabilities: [
         "service.sr_case_view",

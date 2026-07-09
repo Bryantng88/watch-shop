@@ -1,6 +1,7 @@
 import { prisma } from "@/server/db/client";
 import { ensureTechnicalIssuePaymentTx } from "@/domains/payment/server/payment.service";
 import { syncTechnicalIssueToTasks } from "@/domains/task/server/task-technical-issue-sync.service";
+import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
 import {
     deriveServiceRequestStatusFromTechnicalIssues,
     getTechnicalIssueBoardColumn,
@@ -21,6 +22,27 @@ function decimalOrNull(v: unknown): number | null {
     if (v === "" || v == null) return null;
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
+}
+
+async function recordTechnicalIssueEvent(input: {
+    eventKey: string;
+    technicalIssueId: string;
+    serviceRequestId?: string | null;
+    actorUserId?: string | null;
+    payload?: Record<string, unknown>;
+}) {
+    await recordBusinessEvent(prisma, {
+        eventKey: input.eventKey,
+        targetType: "TECHNICAL_ISSUE",
+        targetId: input.technicalIssueId,
+        actorUserId: input.actorUserId ?? null,
+        targetAliasIds: [cleanId(input.serviceRequestId)].filter(Boolean) as string[],
+        payload: {
+            ...(input.payload ?? {}),
+            serviceRequestId: cleanId(input.serviceRequestId),
+            sourceId: `${input.technicalIssueId}:${input.eventKey}`,
+        },
+    });
 }
 
 async function vendorName(vendorId?: string | null) {
@@ -236,6 +258,16 @@ export async function createTechnicalIssue(input: {
 
     await syncServiceRequestStatusFromIssues(prisma as any, serviceRequestId);
 
+    await recordTechnicalIssueEvent({
+        eventKey: "technical_issue.created",
+        technicalIssueId: created.id,
+        serviceRequestId,
+        payload: {
+            executionStatus: "OPEN",
+            area: cleanId(input.area),
+        },
+    });
+
     return created;
 }
 
@@ -266,6 +298,16 @@ export async function confirmTechnicalIssue(input: {
         event: "TECHNICAL_ISSUE_CONFIRMED",
         actorUserId: cleanId(input.actorId),
         note: "Technical Issue đã xác nhận",
+    });
+
+    await recordTechnicalIssueEvent({
+        eventKey: "technical_issue.confirmed",
+        technicalIssueId: id,
+        serviceRequestId: (updated as any).serviceRequestId,
+        actorUserId: cleanId(input.actorId),
+        payload: {
+            executionStatus: "CONFIRMED",
+        },
     });
 
     return updated;
@@ -333,6 +375,17 @@ export async function startTechnicalIssue(input: {
         note: "Technical Issue đã bắt đầu xử lý",
     });
 
+    await recordTechnicalIssueEvent({
+        eventKey: "technical_issue.started",
+        technicalIssueId: id,
+        serviceRequestId: (updated as any).serviceRequestId,
+        payload: {
+            executionStatus: "IN_PROGRESS",
+            actionMode,
+            vendorId,
+        },
+    });
+
     return updated;
 }
 
@@ -352,7 +405,7 @@ export async function completeTechnicalIssue(input: {
         throw new Error("Vui lòng nhập chi phí thực tế hợp lệ. Chi phí có thể bằng 0.");
     }
 
-    return prisma.$transaction(async (tx) => {
+    const updated = await prisma.$transaction(async (tx) => {
         const issue = await tx.technicalIssue.findUnique({
             where: { id },
             select: {
@@ -397,6 +450,18 @@ export async function completeTechnicalIssue(input: {
 
         return updated;
     });
+
+    await recordTechnicalIssueEvent({
+        eventKey: "technical_issue.completed",
+        technicalIssueId: id,
+        serviceRequestId: (updated as any).serviceRequestId,
+        payload: {
+            executionStatus: "DONE",
+            actualCost,
+        },
+    });
+
+    return updated;
 }
 
 export async function cancelTechnicalIssue(

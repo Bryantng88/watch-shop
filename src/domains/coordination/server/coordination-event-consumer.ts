@@ -77,7 +77,32 @@ export type CoordinationEventConsumerResult =
     bindingCreated: boolean;
     activityId: string;
     scope: CoordinationBindingScope;
-    workflow: unknown;
+      workflow: unknown;
+    };
+
+export type CoordinationEventDiagnosticResult =
+  | {
+    ok: true;
+    skipped: true;
+    reason: CoordinationConsumerSkipReason;
+    route?: CoordinationRoute | null;
+    scope?: CoordinationBindingScope | null;
+  }
+  | {
+    ok: true;
+    skipped: false;
+    route: CoordinationRoute;
+    scope: CoordinationBindingScope;
+    taskId: string;
+    taskItemId: string;
+    targetType: string;
+    targetId: string;
+    canonicalTargetId: string;
+    bindingId: string | null;
+    bindingExists: boolean;
+    bindingMode: string;
+    eventBindingStatus: string;
+    eventBindingSource: WorkTicketResolution["source"];
   };
 
 const TARGET_TYPES = new Set<string>(Object.values(TaskExecutionTargetType));
@@ -717,5 +742,90 @@ export async function consumeBusinessEventForCoordination(
     activityId: activity.id,
     scope: resolvedScope,
     workflow: workflowResult,
+  };
+}
+
+export async function diagnoseBusinessEventForCoordination(
+  db: DB,
+  input: CoordinationEventConsumerInput,
+): Promise<CoordinationEventDiagnosticResult> {
+  const eventKey = clean(input.eventKey).toLowerCase();
+  const targetType = clean(input.targetType).toUpperCase();
+  const targetId = clean(input.targetId);
+  const canonicalTargetId = canonicalTargetIdForCoordination({
+    targetType,
+    targetId,
+    metadataJson: input.metadataJson ?? null,
+  });
+  const businessEventLogId = clean(input.businessEventLogId) || clean(input.id) || "diagnostic";
+  const rawRoute = getCoordinationRoute({ eventKey, targetType });
+
+  if (!rawRoute) return skipped("NO_ROUTE");
+  if (!rawRoute.enabled) return skipped("ROUTE_DISABLED", rawRoute);
+  if (!businessEventLogId) return skipped("MISSING_BUSINESS_EVENT_LOG_ID", rawRoute);
+  if (!targetId) return skipped("MISSING_TARGET_ID", rawRoute);
+  if (!isSupportedTargetType(targetType)) {
+    return skipped("UNSUPPORTED_TARGET_TYPE", rawRoute);
+  }
+
+  const resolution = routeBusinessEvent({
+    eventKey,
+    targetType,
+    targetId: canonicalTargetId,
+    actorUserId: input.actorUserId ?? null,
+    payload: input.metadataJson ?? input.payload ?? null,
+  });
+  const route = resolution.route;
+
+  if (!route) return skipped("NO_ROUTE", rawRoute);
+
+  const { task, context, unsupported } = await findActiveCoordinationTask(db, route);
+  if (unsupported) return skipped("UNSUPPORTED_COORDINATION_TYPE", route);
+  const scope = context ? routeScope(route, context) : null;
+  if (!task) return skipped("NO_ACTIVE_BINDING_SCOPE", route, scope);
+
+  const workTicketResolution = findWorkTicket(task, context, route, {
+    eventKey,
+    targetType,
+  });
+  if (workTicketResolution === "DUPLICATE_BLUEPRINT_EVENT_BINDING") {
+    return skipped("DUPLICATE_BLUEPRINT_EVENT_BINDING", route, scope);
+  }
+  if (workTicketResolution === "NO_BLUEPRINT_EVENT_BINDING") {
+    return skipped("NO_BLUEPRINT_EVENT_BINDING", route, scope);
+  }
+  if (!workTicketResolution) return skipped("NO_ACTIVE_SCOPE_ITEM", route, scope);
+
+  const workTicket = workTicketResolution.item;
+  const resolvedScope: CoordinationBindingScope = {
+    ...(scope as CoordinationBindingScope),
+    taskId: task.id,
+    taskItemId: workTicket.id,
+  };
+  const existingBinding = await findTaskItemBusinessBinding(db, {
+    taskId: task.id,
+    taskItemId: workTicket.id,
+    targetType,
+    targetId: canonicalTargetId,
+    actionType: TaskExecutionActionType.LINKED,
+    createdByUserId: input.actorUserId ?? null,
+    metadataJson: {},
+  });
+
+  return {
+    ok: true,
+    skipped: false,
+    route,
+    scope: resolvedScope,
+    taskId: task.id,
+    taskItemId: workTicket.id,
+    targetType,
+    targetId,
+    canonicalTargetId,
+    bindingId: existingBinding?.id ?? null,
+    bindingExists: Boolean(existingBinding),
+    bindingMode: workTicketResolution.eventBinding.mode,
+    eventBindingStatus: workTicketResolution.eventBinding.status,
+    eventBindingSource: workTicketResolution.source,
   };
 }

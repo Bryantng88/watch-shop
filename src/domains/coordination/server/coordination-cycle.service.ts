@@ -96,15 +96,28 @@ function workTypeNote(workType: WorkTypeDefinition, sharedUserIds: string[] = []
   }
 
   if (eventBindings.length) {
+    lines.push("blueprintAutoBindingReceiver: true");
+
+    const metadata = workType.metadata ?? {};
+    const workspaceType =
+      typeof metadata.workspaceType === "string"
+        ? metadata.workspaceType
+        : `${workType.title} Workspace`;
+    const itemLabel =
+      typeof metadata.itemLabel === "string"
+        ? metadata.itemLabel
+        : `${workType.title} Items`;
+    const defaultView =
+      typeof metadata.defaultView === "string" ? metadata.defaultView : "items";
     const workspaceDefinition = {
       defaultName: workType.title,
       defaultDescription:
-        typeof workType.metadata?.description === "string"
-          ? workType.metadata.description
+        typeof metadata.description === "string"
+          ? metadata.description
           : null,
-      workspaceType: `${workType.title} Workspace`,
-      itemLabel: `${workType.title} Items`,
-      defaultView: "items",
+      workspaceType,
+      itemLabel,
+      defaultView,
       provisioning,
       eventBindings,
     };

@@ -1615,6 +1615,10 @@ export default function TaskItemDetailClient({
     () => workspacePresentation(workspaceSnapshot),
     [workspaceSnapshot],
   );
+  const isServiceOperationWorkspace = workspaceSnapshot?.workTypeKey === "service-operation";
+  const itemTabLabel = isServiceOperationWorkspace
+    ? "Technical Issue Operation"
+    : presentation.itemLabel;
   const displayTitle = repairVietnameseMojibake(item.title || "Workspace");
   const backHref = coordinationHref(parentTask);
   const isSystemOwner = noteHasSystemOwner(item.note);
@@ -1630,7 +1634,7 @@ export default function TaskItemDetailClient({
     { key: "overview", label: "Tổng quan", icon: <FileText className="h-4 w-4" /> },
     { key: "activity", label: "Hoạt động", icon: <Clock3 className="h-4 w-4" /> },
     { key: "checklist", label: "Checklist", icon: <ListChecks className="h-4 w-4" /> },
-    { key: "business", label: presentation.itemLabel, icon: <Folder className="h-4 w-4" /> },
+    { key: "business", label: itemTabLabel, icon: <Folder className="h-4 w-4" /> },
     { key: "info", label: "Thông tin", icon: <Info className="h-4 w-4" /> },
   ];
   const tabByKey = new Map(tabs.map((tab) => [tab.key, tab]));
@@ -1680,17 +1684,24 @@ export default function TaskItemDetailClient({
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <SpaceWorkspaceNav
-                  currentItemId={item.id}
-                  parentTask={parentTask}
-                />
-              </div>
+              {!isServiceOperationWorkspace ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <SpaceWorkspaceNav
+                    currentItemId={item.id}
+                    parentTask={parentTask}
+                  />
+                </div>
+              ) : null}
 
-              <div className="mt-5 flex flex-wrap items-center gap-2">
+              <div className={`${isServiceOperationWorkspace ? "" : "mt-5"} flex flex-wrap items-center gap-2`}>
                 <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
                   {presentation.workspaceType}
                 </span>
+                {isServiceOperationWorkspace ? (
+                  <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">
+                    Technical Issue Operation
+                  </span>
+                ) : null}
                 {presentation.blueprintName ? (
                   <span className="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
                     {presentation.blueprintName}
@@ -1834,7 +1845,7 @@ export default function TaskItemDetailClient({
                 taskItemId={item.id}
                 items={queueItems}
                 capabilities={capabilities}
-                itemLabel={presentation.itemLabel}
+                itemLabel={itemTabLabel}
                 workspaceWorkTypeKey={workspaceSnapshot?.workTypeKey ?? null}
                 currentUser={currentUser}
                 onOpenQueueActivity={openQueueActivity}

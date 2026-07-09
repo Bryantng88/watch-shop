@@ -46,8 +46,12 @@ import {
   AppTagTargetType,
 } from "@prisma/client";
 import { addActivityReply } from "../server/activity";
-import { applyManualWorkflowAction } from "../server/business-binding-workflow.service";
+import {
+  applyManualWorkflowAction,
+  resolveManualWorkflowAction,
+} from "../server/business-binding-workflow.service";
 import { processManualWorkspaceWorkflowTransition } from "../server/workspace-workflow-processor";
+import { runServiceOperationManualAction } from "@/domains/service/server/operation/service-operation-action-adapter";
 import {
   addManualQueueItem,
   searchManualQueueTargets,
@@ -846,13 +850,37 @@ export async function applyQueueItemManualTransitionAction(input: {
   if (!bindingId) throw new Error("Missing bindingId");
   if (!actionKey && !toState) throw new Error("Missing manual workflow action");
 
-  let result = await applyManualWorkflowAction(prisma, {
+  const actorUserId = getAuthUserId(auth);
+  const actorLabel = auth?.user?.name ?? auth?.name ?? auth?.user?.email ?? auth?.email ?? null;
+  const transitionInput = {
     bindingId,
     actionKey,
     toState,
-    actorUserId: getAuthUserId(auth),
-    actorLabel: auth?.user?.name ?? auth?.name ?? auth?.user?.email ?? auth?.email ?? null,
+    actorUserId,
+    actorLabel,
     note: input.note ?? null,
+  };
+  const resolvedTransition = await resolveManualWorkflowAction(prisma, transitionInput);
+
+  if (
+    resolvedTransition.applied &&
+    resolvedTransition.workflowKey === "service-operation-technical-bench"
+  ) {
+    const serviceActionResult = await runServiceOperationManualAction(prisma, {
+      bindingId,
+      transition: resolvedTransition,
+      actorUserId,
+      actorName: actorLabel,
+      note: input.note ?? null,
+    });
+
+    if (!serviceActionResult.ok) {
+      throw new Error(serviceActionResult.error ?? "Service Operation action failed");
+    }
+  }
+
+  let result = await applyManualWorkflowAction(prisma, {
+    ...transitionInput,
   });
 
   if (
@@ -863,8 +891,8 @@ export async function applyQueueItemManualTransitionAction(input: {
     const nextResult = await applyManualWorkflowAction(prisma, {
       bindingId,
       actionKey: "mark-done",
-      actorUserId: getAuthUserId(auth),
-      actorLabel: auth?.user?.name ?? auth?.name ?? auth?.user?.email ?? auth?.email ?? null,
+      actorUserId,
+      actorLabel,
       note: input.note ?? null,
     });
 
@@ -878,7 +906,8 @@ export async function applyQueueItemManualTransitionAction(input: {
     {
       bindingId,
       transition: result,
-      actorUserId: getAuthUserId(auth),
+      actorUserId,
+      actorLabel,
       note: input.note ?? null,
     },
   );

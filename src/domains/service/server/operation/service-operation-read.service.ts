@@ -3,6 +3,8 @@ import {
   PaymentType,
   Prisma,
   ServiceRequestStatus,
+  TaskExecutionActionType,
+  TaskExecutionTargetType,
   TechnicalIssueExecutionStatus,
 } from "@prisma/client";
 
@@ -463,7 +465,31 @@ export async function listServiceOperationTiStageItems(input: ServiceOperationTi
     prisma.technicalIssue.count({ where }),
   ]);
 
-  const items: ServiceOperationTiStageItem[] = rows.map((row) => ({
+  const issueIds = rows.map((row) => row.id);
+  const bindings = issueIds.length
+    ? await prisma.taskExecution.findMany({
+        where: {
+          targetType: TaskExecutionTargetType.TECHNICAL_ISSUE,
+          targetId: { in: issueIds },
+          actionType: { not: TaskExecutionActionType.CANCELLED },
+          taskItemId: { not: null },
+        },
+        select: {
+          id: true,
+          targetId: true,
+          taskItemId: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+      })
+    : [];
+  const bindingByIssueId = new Map(
+    bindings.map((binding) => [binding.targetId, binding]),
+  );
+
+  const items: ServiceOperationTiStageItem[] = rows.map((row) => {
+    const binding = bindingByIssueId.get(row.id);
+    return {
     id: row.id,
     serviceRequestId: row.serviceRequestId,
     stage: getTechnicalIssueOperationStage(row),
@@ -475,6 +501,12 @@ export async function listServiceOperationTiStageItems(input: ServiceOperationTi
     actualCost: toNullableNumber(row.actualCost),
     priority: row.priority ?? null,
     updatedAt: row.updatedAt,
+    workspaceBinding: binding
+      ? {
+          bindingId: binding.id,
+          taskItemId: binding.taskItemId ?? null,
+        }
+      : null,
     serviceRequest: {
       refNo: row.serviceRequest?.refNo ?? null,
       status: row.serviceRequest?.status ?? null,
@@ -485,7 +517,8 @@ export async function listServiceOperationTiStageItems(input: ServiceOperationTi
         row.serviceRequest?.product?.primaryImageUrl ??
         null,
     },
-  }));
+  };
+  });
 
   return { items, total, page, pageSize, scope };
 }

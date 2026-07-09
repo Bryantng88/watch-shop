@@ -56,6 +56,22 @@ function cleanNullable(value: unknown) {
   return text || null;
 }
 
+function technicalIssueOwnerLabel(issue: {
+  actionMode?: string | null;
+  vendorId?: string | null;
+  vendorNameSnap?: string | null;
+  supplyCatalogId?: string | null;
+  mechanicalPartCatalogId?: string | null;
+}) {
+  const actionMode = cleanUpper(issue.actionMode);
+  if (actionMode === "VENDOR" || issue.vendorId) {
+    return issue.vendorNameSnap ? `Vendor: ${issue.vendorNameSnap}` : "Vendor";
+  }
+  if (issue.supplyCatalogId || issue.mechanicalPartCatalogId) return "Parts";
+  if (actionMode === "INTERNAL") return "Internal";
+  return null;
+}
+
 function mediaUrl(value?: string | null) {
   const raw = clean(value);
   if (!raw) return null;
@@ -422,8 +438,16 @@ async function buildQueueBusinessPreviewMap(
         .filter(Boolean),
     ),
   );
+  const technicalIssueIds = Array.from(
+    new Set(
+      bindings
+        .filter((binding) => binding.targetType === TaskExecutionTargetType.TECHNICAL_ISSUE)
+        .map((binding) => clean(binding.targetId))
+        .filter(Boolean),
+    ),
+  );
 
-  const [watches, orders] = await Promise.all([
+  const [watches, orders, technicalIssues] = await Promise.all([
     watchIds.length
       ? client.watch.findMany({
         where: { id: { in: watchIds } },
@@ -500,6 +524,47 @@ async function buildQueueBusinessPreviewMap(
         },
       })
       : Promise.resolve([]),
+    technicalIssueIds.length
+      ? client.technicalIssue.findMany({
+        where: { id: { in: technicalIssueIds } },
+        select: {
+          id: true,
+          summary: true,
+          note: true,
+          area: true,
+          actionMode: true,
+          executionStatus: true,
+          priority: true,
+          vendorId: true,
+          vendorNameSnap: true,
+          supplyCatalogId: true,
+          mechanicalPartCatalogId: true,
+          serviceRequest: {
+            select: {
+              refNo: true,
+              skuSnapshot: true,
+              primaryImageUrlSnapshot: true,
+              product: {
+                select: {
+                  title: true,
+                  sku: true,
+                  primaryImageUrl: true,
+                  storefrontImageKey: true,
+                  productImage: {
+                    where: { role: "INLINE" },
+                    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+                    take: 1,
+                    select: {
+                      fileKey: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      })
+      : Promise.resolve([]),
   ]);
 
   for (const watch of watches) {
@@ -533,6 +598,37 @@ async function buildQueueBusinessPreviewMap(
       const current = map.get(queueKey(TaskExecutionTargetType.ORDER, order.id));
       if (current) current.title = `Đơn hàng ${order.customerName}`;
     }
+  }
+
+  for (const issue of technicalIssues) {
+    const product = issue.serviceRequest?.product ?? null;
+    const srRef = issue.serviceRequest?.refNo ?? null;
+    const sku = issue.serviceRequest?.skuSnapshot ?? product?.sku ?? null;
+    const watchTitle = product?.title ?? null;
+    const imageUrl =
+      productPreviewImage(product) ||
+      mediaUrl(issue.serviceRequest?.primaryImageUrlSnapshot ?? null);
+    const refParts = [srRef, sku || watchTitle].filter(Boolean);
+    const statusParts = [
+      clean(issue.area),
+      technicalIssueOwnerLabel(issue),
+      clean(issue.priority),
+    ].filter(Boolean);
+    const title =
+      clean(issue.summary) ||
+      clean(issue.note) ||
+      clean(issue.area) ||
+      "Technical issue";
+
+    map.set(queueKey(TaskExecutionTargetType.TECHNICAL_ISSUE, issue.id), {
+      title,
+      ref: refParts.length ? refParts.join(" / ") : issue.id,
+      status: statusParts.length
+        ? statusParts.join(" / ")
+        : String(issue.executionStatus || ""),
+      imageUrl,
+      imageUrls: imageUrl ? [imageUrl] : [],
+    });
   }
 
   return map;

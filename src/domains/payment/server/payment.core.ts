@@ -9,6 +9,7 @@ import {
 
 import { prisma } from "@/server/db/client";
 import { syncWatchInventoryFromOrderId } from "@/domains/order/server/order-watch-sync.service";
+import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
 import type {
   CreatePaymentInput,
   PaymentListItem,
@@ -367,7 +368,7 @@ export async function recomputePaymentOwnerRollupTx(
 }
 
 export async function createPayment(input: CreatePaymentInput) {
-  return prisma.$transaction(async (tx) => {
+  const payment = await prisma.$transaction(async (tx) => {
     const normalizedOwnerType = input.ownerType === "SERVICE" ? "TECHNICAL_ISSUE" : input.ownerType;
     const exposure = await getPaymentExposureTx(tx, normalizedOwnerType, input.ownerId);
 
@@ -433,8 +434,26 @@ export async function createPayment(input: CreatePaymentInput) {
       await recomputePaymentOwnerRollupTx(tx, exposure.ownerType, exposure.ownerId);
     }
 
-    return toPlain(payment);
+    return toPlain({
+      ...payment,
+      ...resolvePaymentOwner(payment),
+    });
   });
+
+  await recordBusinessEvent(prisma, {
+    eventKey: "payment.created",
+    targetType: "PAYMENT",
+    targetId: payment.id,
+    payload: {
+      ownerType: payment.ownerType ?? input.ownerType,
+      ownerId: payment.ownerId ?? input.ownerId,
+      status: payment.status ?? PaymentStatus.UNPAID,
+      amount: payment.amount ?? null,
+      sourceId: `${payment.id}:payment.created`,
+    },
+  });
+
+  return payment;
 }
 
 export async function completePayment(input: {
@@ -443,7 +462,7 @@ export async function completePayment(input: {
   reference?: string | null;
   note?: string | null;
 }) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     if (!input.paymentId) throw new Error("Thiếu paymentId.");
 
     const payment = await tx.payment.findUnique({
@@ -480,10 +499,24 @@ export async function completePayment(input: {
     const summary = await recomputePaymentOwnerRollupTx(tx, owner.ownerType, owner.ownerId);
     return toPlain({ paymentId: payment.id, ownerType: owner.ownerType, ownerId: owner.ownerId, summary });
   });
+
+  await recordBusinessEvent(prisma, {
+    eventKey: "payment.status_updated",
+    targetType: "PAYMENT",
+    targetId: result.paymentId,
+    payload: {
+      ownerType: result.ownerType,
+      ownerId: result.ownerId,
+      status: PaymentStatus.PAID,
+      sourceId: `${result.paymentId}:payment.status_updated:PAID`,
+    },
+  });
+
+  return result;
 }
 
 export async function cancelPayment(input: { paymentId: string; note?: string | null }) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     if (!input.paymentId) throw new Error("Thiếu paymentId để hủy payment.");
 
     const payment = await tx.payment.findUnique({
@@ -513,6 +546,20 @@ export async function cancelPayment(input: { paymentId: string; note?: string | 
     const summary = await recomputePaymentOwnerRollupTx(tx, owner.ownerType, owner.ownerId);
     return toPlain({ paymentId: payment.id, ownerType: owner.ownerType, ownerId: owner.ownerId, summary });
   });
+
+  await recordBusinessEvent(prisma, {
+    eventKey: "payment.status_updated",
+    targetType: "PAYMENT",
+    targetId: result.paymentId,
+    payload: {
+      ownerType: result.ownerType,
+      ownerId: result.ownerId,
+      status: "CANCELED",
+      sourceId: `${result.paymentId}:payment.status_updated:CANCELED`,
+    },
+  });
+
+  return result;
 }
 
 export async function listPayments(ownerType: PaymentOwnerType, ownerId: string) {

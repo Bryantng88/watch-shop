@@ -57,6 +57,10 @@ export type ServiceOperationTiStageItem = {
   actualCost: number | null;
   priority: string | null;
   updatedAt: Date;
+  workspaceBinding: {
+    bindingId: string;
+    taskItemId: string | null;
+  } | null;
   serviceRequest: {
     refNo: string | null;
     status: string | null;

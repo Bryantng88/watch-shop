@@ -43,6 +43,7 @@ type ManualProcessorInput = {
   transition: ApplyManualTriggerToQueueItemResult;
   bindingId: string;
   actorUserId?: string | null;
+  actorLabel?: string | null;
   note?: string | null;
 };
 

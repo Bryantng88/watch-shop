@@ -48,6 +48,11 @@ Completed:
 - Sprint 59 Service Operation read facade and boundary cleanup.
 - Sprint 60 Service Operation Blueprint and Workflow Contract.
 - Sprint 61 Service Operation UI and Runtime Wiring first slice.
+- Sprint 62 Service Operation Action Adapter and Event Key Alignment first
+  slice.
+- Sprint 63 Service Operation Workflow and Consumer Hardening first slice.
+- Sprint 64 Service Operation Consumer Activation first slice.
+- Sprint 65 Service Operation Smoke and Workspace UX Hardening first slice.
 
 Current handoff:
 
@@ -56,12 +61,35 @@ Current handoff:
 - Read `docs/sprints/SM-Sprint-59-service-operation-read-facade-boundary-cleanup.md`.
 - Read `docs/sprints/SM-Sprint-60-service-operation-blueprint-workflow-contract.md`.
 - Read `docs/sprints/SM-Sprint-61-service-operation-ui-runtime-wiring.md`.
-- Sprint 61 is complete as a first production UI/API slice. The primary route is
-  `/admin/coordination/technical`; `/admin/services/operation` remains a direct
-  alias; `GET /api/admin/service-operation` is the JSON surface.
-- Continue with Sprint 62 by wiring Service Operation action adapters and
-  aligning Service/Payment event producers/catalog keys. Space has no workflow
-  engine. Do not restart the SR/TI architecture discussion.
+- Read `docs/sprints/SM-Sprint-62-service-operation-action-adapter-event-key-alignment.md`.
+- Read `docs/sprints/SM-Sprint-63-service-operation-workflow-consumer-hardening.md`.
+- Read `docs/sprints/SM-Sprint-64-service-operation-consumer-activation.md`.
+- Read `docs/sprints/SM-Sprint-65-service-operation-smoke-and-workspace-ux-hardening.md`.
+- Read `docs/sprints/SM-Service-Operation-retrospective-corrections-and-current-contract.md`.
+- Sprint 61 is complete as a first production UI/API slice. Space Management
+  Service Operation remains an overview/read surface with SR and TI views;
+  workspace operation happens in the TaskItem workspace shell and must use
+  Blueprint/event-consumer produced queue items.
+- Sprint 62 first slice wires Service Operation action adapters and aligns
+  Service/Payment event producers/catalog keys. Event bindings remain `DRAFT`.
+  Space has no workflow engine. Do not restart the SR/TI architecture
+  discussion.
+- Sprint 63 first slice moves Service Operation manual actions to a preflight
+  path before workflow runtime transition, keeps event bindings `DRAFT`, and
+  cleans up Technical Bench/workspace boundaries.
+- Sprint 64 first slice activates only TechnicalIssue created/confirmed/started/
+  completed events for the coordination consumer. SR, Payment, and reopened
+  events remain outside active binding scope.
+- Sprint 65 first slice adds Service Operation consumer diagnostics/smoke,
+  receiver marker support, and workspace action error UX. Current DB dry-run
+  found duplicate Service Operation receiver candidates; runtime correctly
+  skips until a receiver is selected explicitly.
+- Service Operation workspace UX rule: workspace detail is hybrid by context.
+  An SR workspace shows TI items for that SR; a TI workspace shows TI operation
+  items with stage/workflow actions. `SR Cases` and `Technical Bench` remain
+  Space Management modes/views, not tabs inside a workspace.
+- Retrospective rule: do not repeat the earlier mistakes documented in
+  `SM-Service-Operation-retrospective-corrections-and-current-contract.md`.
 
 Service Operation sprint planning rules:
 
@@ -170,24 +198,30 @@ Sprint 55 implemented Watch List Projection.
 
 Sprint 56 implemented Projection Observability & Repair.
 
-Next recommended sprint:
+Current sprint:
 
-- Sprint 62 Service Operation Action Adapter and Event Key Alignment.
+- Sprint 65 Service Operation smoke and workspace UX hardening first slice.
 
-Sprint 62 proposed scope:
+Sprint 65 scope/status:
 
-- Add a thin Service Operation action adapter from workflow/manual action
-  metadata to existing Service commands.
-- Map `confirm-issue` to `confirmTechnicalIssue`, `start-work` to
-  `startTechnicalIssue`, and `mark-done` to `completeTechnicalIssue`.
-- Align Service/Payment business event keys, catalog entries, and producers
-  before making Service Operation event bindings active.
+- Added dry-run diagnostics for Service Operation coordination event binding.
+- Added `scripts/smoke-service-operation-consumer.ts`.
+- Added `blueprintAutoBindingReceiver:true` marker for new event-bound work
+  tickets.
+- Workspace manual action failures now show an inline UI error.
+- Current DB smoke reports `DUPLICATE_BLUEPRINT_EVENT_BINDING` for Service
+  Operation until one current receiver is selected explicitly.
+- Workspace capacity and TI item binding remain blueprint/event-consumer led,
+  not injected from workspace detail UI.
+- SR, Payment, and reopened events remain inactive/draft for binding.
 - Keep Activity/Timeline event-backed; do not introduce MaintenanceRecord as the
   Activity source.
 - Keep ProjectionRecord Service Operation reads deferred unless measured UI/API
   pressure justifies compare/fallback work.
+- Document the possible future split into Inspect, Processing, and Done/follow-up
+  workspaces as a design candidate only, not an implementation scope.
 
-Sprint 62 non-goals:
+Sprint 63 non-goals:
 
 - no Service schema migration;
 - no Service `spaceId` / `workspaceId`;
@@ -195,6 +229,8 @@ Sprint 62 non-goals:
 - no SR workflow engine;
 - no Payment Workspace;
 - no MaintenanceRecord-as-Activity.
+- no separate Inspect/Processing/Done workspace implementation until Blueprint
+  capacity and consumer bindings are explicit.
 
 ## M2 Later
 
@@ -221,13 +257,19 @@ Recommended later M2 topics must stay outside Sprint 39 unless explicitly select
 8. Read `docs/sprints/SM-Sprint-59-service-operation-read-facade-boundary-cleanup.md`
 9. Read `docs/sprints/SM-Sprint-60-service-operation-blueprint-workflow-contract.md`
 10. Read `docs/sprints/SM-Sprint-61-service-operation-ui-runtime-wiring.md`
-11. Continue with Sprint 62 Service Operation Action Adapter and Event Key
-   Alignment. Use the Sprint 59 read facade, Sprint 60 registry contract, and
-   Sprint 61 production UI/API surface. Space has no workflow engine.
+11. Read `docs/sprints/SM-Sprint-62-service-operation-action-adapter-event-key-alignment.md`
+12. Read `docs/sprints/SM-Sprint-63-service-operation-workflow-consumer-hardening.md`
+13. Read `docs/sprints/SM-Sprint-64-service-operation-consumer-activation.md`
+14. Read `docs/sprints/SM-Sprint-65-service-operation-smoke-and-workspace-ux-hardening.md`
+15. Read `docs/sprints/SM-Service-Operation-retrospective-corrections-and-current-contract.md`
+16. Continue after Sprint 65 by selecting the intended current Service Operation
+   receiver, rerunning smoke, then running a safe `--apply` smoke for
+   TechnicalIssue event binding. Space has no workflow engine.
 
-Sprint 61 first slice is complete. SR and TI remain existing business truth.
-Event bindings remain `DRAFT` until Service/Payment event producers and catalog
-keys are aligned.
+Sprint 65 first slice is complete. SR and TI remain existing business truth.
+Only TechnicalIssue created/confirmed/started/completed are active for Service
+Operation coordination binding. Current DB has duplicate Service Operation
+receiver candidates and needs explicit receiver selection before apply smoke.
 
 Older M1 context remains available in:
 
