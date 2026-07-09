@@ -1,6 +1,11 @@
 import { prisma } from "@/server/db/client";
 import { ensureTechnicalIssuePaymentTx } from "@/domains/payment/server/payment.service";
 import { syncTechnicalIssueToTasks } from "@/domains/task/server/task-technical-issue-sync.service";
+import {
+    deriveServiceRequestStatusFromTechnicalIssues,
+    getTechnicalIssueBoardColumn,
+    isTechnicalIssueDone,
+} from "@/domains/service/server/shared/service-request.rules";
 
 function cleanId(v: unknown): string | null {
     const text = String(v ?? "").trim();
@@ -30,48 +35,30 @@ async function vendorName(vendorId?: string | null) {
     return vendor?.name ?? null;
 }
 
-function normalizeIssueStatus(value: unknown) {
-    return String(value ?? "").trim().toUpperCase();
-}
-
-function isIssueCancelled(status: unknown) {
-    const s = normalizeIssueStatus(status);
-    return s === "CANCELED" || s === "CANCELLED";
-}
-
-function isIssueDone(status: unknown) {
-    const s = normalizeIssueStatus(status);
-    return s === "DONE" || s === "COMPLETED";
-}
-
-function isIssueStarted(status: unknown) {
-    const s = normalizeIssueStatus(status);
-    return ["OPEN", "CONFIRMED", "IN_PROGRESS", "DONE", "COMPLETED"].includes(s);
-}
-
 async function syncServiceRequestStatusFromIssues(client: any, serviceRequestId?: string | null) {
     const srId = cleanId(serviceRequestId);
     if (!srId) return;
 
-    const issues = await client.technicalIssue.findMany({
-        where: { serviceRequestId: srId },
-        select: {
-            id: true,
-            executionStatus: true,
-        },
-    });
+    const [serviceRequest, issues] = await Promise.all([
+        client.serviceRequest.findUnique({
+            where: { id: srId },
+            select: { status: true },
+        }),
+        client.technicalIssue.findMany({
+            where: { serviceRequestId: srId },
+            select: {
+                id: true,
+                executionStatus: true,
+            },
+        }),
+    ]);
 
-    const activeIssues = issues.filter((issue: any) => !isIssueCancelled(issue.executionStatus));
+    if (!serviceRequest) return;
 
-    let nextStatus: any = "DRAFT";
-
-    if (activeIssues.length > 0) {
-        const allDone = activeIssues.every((issue: any) => isIssueDone(issue.executionStatus));
-        const hasStarted = activeIssues.some((issue: any) => isIssueStarted(issue.executionStatus));
-
-        if (allDone) nextStatus = "DONE";
-        else if (hasStarted) nextStatus = "IN_PROGRESS";
-    }
+    const nextStatus = deriveServiceRequestStatusFromTechnicalIssues(
+        serviceRequest.status,
+        issues,
+    );
 
     await client.serviceRequest.update({
         where: { id: srId },
@@ -521,14 +508,7 @@ function normalizeBoardColumn(issue: {
     executionStatus?: string | null;
     isConfirmed?: boolean | null;
 }): BoardColumnKey {
-    const status = String(issue.executionStatus || "").toUpperCase();
-
-    if (status === "DONE" || status === "COMPLETED") return "DONE";
-    if (status === "IN_PROGRESS") return "IN_PROGRESS";
-    if (status === "CONFIRMED") return "READY";
-    if (status === "OPEN" && issue.isConfirmed) return "READY";
-
-    return "PENDING_CONFIRM";
+    return getTechnicalIssueBoardColumn(issue) as BoardColumnKey;
 }
 function normalizeAssessments(
     raw: unknown
@@ -691,14 +671,9 @@ export async function getTechnicalIssueBoardData(input: { serviceRequestId?: str
             const activeIssues = activeAssessment?.TechnicalIssue ?? [];
             const productWatchSpec = (sr.product as any)?.watchSpec ?? null;
 
-            const hasOpenIssue = activeIssues.some((i) => {
-                const status = String(i.executionStatus || "").toUpperCase();
-
-                return ["OPEN", "CONFIRMED", "IN_PROGRESS"].includes(status);
-            });
-
-            const serviceRequestReadyToClose =
-                activeIssues.length > 0 && !hasOpenIssue;
+            const serviceRequestCompleted =
+                activeIssues.length > 0 &&
+                activeIssues.every((i) => isTechnicalIssueDone(i.executionStatus));
 
             const boardColumn = normalizeBoardColumn({
                 executionStatus: x.executionStatus,
@@ -725,9 +700,10 @@ export async function getTechnicalIssueBoardData(input: { serviceRequestId?: str
                 vendorId: x.vendorId ?? null,
                 vendorNameSnap: x.vendorNameSnap ?? x.Vendor?.name ?? null,
                 boardColumn,
-                serviceRequestReadyToClose,
+                serviceRequestReadyToClose: serviceRequestCompleted,
+                serviceRequestCompleted,
                 isLastDoneIssueOfServiceRequest:
-                    serviceRequestReadyToClose &&
+                    serviceRequestCompleted &&
                     String(x.executionStatus || "").toUpperCase() === "DONE",
 
                 serviceRequest: {
@@ -765,7 +741,7 @@ export async function getTechnicalIssueBoardData(input: { serviceRequestId?: str
                     rejectionReason: log.rejectionReason,
                     createdAt: log.createdAt,
                 })),
-                hasPendingMaintenanceApproval: (x.MaintenanceRecord ?? []).some(
+                hasPendingMaintenanceApproval: (x.maintenanceRecord ?? []).some(
                     (log: any) => log.approvalStatus === "PENDING",
                 ),
                 technicalDetailCatalog: x.technicalDetailCatalog

@@ -566,6 +566,171 @@ const WATCH_MEDIA_PROCESSING_WORKFLOW: WorkflowDefinition = {
   ],
 };
 
+const SERVICE_OPERATION_TECHNICAL_BENCH_WORKFLOW: WorkflowDefinition = {
+  key: "service-operation-technical-bench",
+  title: "Service Operation Technical Bench",
+  description:
+    "Definition for TechnicalIssue stage movement inside Service Operation workspaces.",
+  initialState: "INSPECT",
+  terminalStates: ["DONE"],
+  metadata: {
+    domain: "service",
+    itemType: "TechnicalIssue",
+    scope: "workspace-item",
+  },
+  states: [
+    {
+      key: "INSPECT",
+      title: "Inspect",
+      description: "Technical issue is waiting for inspection or confirmation.",
+      color: "amber",
+      icon: "search",
+      sortOrder: 10,
+    },
+    {
+      key: "READY",
+      title: "Ready",
+      description: "Technical issue is confirmed and ready for bench work.",
+      color: "blue",
+      icon: "clipboard-check",
+      sortOrder: 20,
+    },
+    {
+      key: "IN_PROGRESS",
+      title: "In Progress",
+      description: "Technical work is currently in progress.",
+      color: "indigo",
+      icon: "wrench",
+      sortOrder: 30,
+    },
+    {
+      key: "DONE",
+      title: "Done",
+      description: "Technical issue work is complete.",
+      color: "zinc",
+      icon: "check-circle",
+      sortOrder: 40,
+    },
+  ],
+  transitions: [
+    {
+      fromState: "INSPECT",
+      toState: "READY",
+      triggerType: "MANUAL",
+      triggerValue: "confirm-issue",
+      manualActionLabel: "Confirm issue",
+      condition: null,
+      metadata: {
+        serviceOperationAction: "CONFIRM_TECHNICAL_ISSUE",
+      },
+    },
+    {
+      fromState: "READY",
+      toState: "IN_PROGRESS",
+      triggerType: "MANUAL",
+      triggerValue: "start-work",
+      manualActionLabel: "Start work",
+      condition: null,
+      metadata: {
+        serviceOperationAction: "START_TECHNICAL_WORK",
+      },
+    },
+    {
+      fromState: "IN_PROGRESS",
+      toState: "DONE",
+      triggerType: "MANUAL",
+      triggerValue: "mark-done",
+      manualActionLabel: "Mark done",
+      condition: null,
+      metadata: {
+        serviceOperationAction: "COMPLETE_TECHNICAL_ISSUE",
+      },
+    },
+    {
+      fromState: "READY",
+      toState: "INSPECT",
+      triggerType: "MANUAL",
+      triggerValue: "send-back-to-inspect",
+      manualActionLabel: "Send back to inspect",
+      condition: null,
+      metadata: null,
+    },
+    {
+      fromState: "IN_PROGRESS",
+      toState: "READY",
+      triggerType: "MANUAL",
+      triggerValue: "pause-or-return",
+      manualActionLabel: "Return to ready",
+      condition: null,
+      metadata: null,
+    },
+    {
+      fromState: "DONE",
+      toState: "IN_PROGRESS",
+      triggerType: "MANUAL",
+      triggerValue: "reopen-work",
+      manualActionLabel: "Reopen work",
+      condition: null,
+      metadata: null,
+    },
+    {
+      fromState: "INSPECT",
+      toState: "INSPECT",
+      triggerType: "EVENT",
+      triggerValue: "technical_issue.created",
+      manualActionLabel: null,
+      condition: null,
+      metadata: {
+        contractOnly: true,
+      },
+    },
+    {
+      fromState: "INSPECT",
+      toState: "READY",
+      triggerType: "EVENT",
+      triggerValue: "technical_issue.confirmed",
+      manualActionLabel: null,
+      condition: null,
+      metadata: {
+        contractOnly: true,
+      },
+    },
+    {
+      fromState: "READY",
+      toState: "IN_PROGRESS",
+      triggerType: "EVENT",
+      triggerValue: "technical_issue.started",
+      manualActionLabel: null,
+      condition: null,
+      metadata: {
+        contractOnly: true,
+      },
+    },
+    {
+      fromState: "IN_PROGRESS",
+      toState: "DONE",
+      triggerType: "EVENT",
+      triggerValue: "technical_issue.completed",
+      manualActionLabel: null,
+      condition: null,
+      metadata: {
+        contractOnly: true,
+      },
+    },
+    {
+      fromState: "DONE",
+      toState: "IN_PROGRESS",
+      triggerType: "EVENT",
+      triggerValue: "technical_issue.reopened",
+      manualActionLabel: null,
+      condition: null,
+      metadata: {
+        contractOnly: true,
+      },
+    },
+  ],
+};
+
 function createSimpleWorkflowDefinition(input: {
   key: string;
   title: string;
@@ -639,6 +804,7 @@ const WORKFLOW_DEFINITIONS: WorkflowDefinition[] = [
     activeIcon: "file-text",
   }),
   WATCH_MEDIA_PROCESSING_WORKFLOW,
+  SERVICE_OPERATION_TECHNICAL_BENCH_WORKFLOW,
   createSimpleWorkflowDefinition({
     key: "watch-image-review",
     title: "Image Review Workflow",

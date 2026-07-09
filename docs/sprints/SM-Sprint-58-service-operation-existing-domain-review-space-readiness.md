@@ -1,14 +1,15 @@
-# Service Operation Epic - Sprint 1: Existing Service Domain Review & Space Readiness
+# SM Sprint 58 - Service Operation Existing Domain Review & Space Readiness
 
 ## Status
 
-Planned.
+Completed.
 
-This is the current continuation point for Service Operation work.
+Sprint 58 has been executed as a review/proposal sprint. Do not restart the
+architecture discussion. Continue from:
 
-When opening this repo on another machine, do not restart the architecture
-discussion. Start Sprint 1 by auditing the existing Service domain
-implementation and producing the readiness/refactor proposal described below.
+- `docs/sprints/SM-Sprint-58-service-operation-review-proposal.md`
+
+The next implementation slice is Sprint 59, described in the proposal.
 
 ## Intent
 
@@ -16,7 +17,7 @@ Review the existing Service Request and Technical Issue implementation against
 the new Space / Workspace / Blueprint operating model.
 
 Service Request and Technical Issue already exist in schema, services,
-repositories, actions, and UI. Sprint 1 must not design them from zero. The
+repositories, actions, and UI. Sprint 58 must not design them from zero. The
 goal is to identify which current logic remains valid business truth, which
 logic is only legacy UI/workflow glue, and which parts must be adjusted before
 Service Operation Space is implemented as a first-class operational surface.
@@ -36,7 +37,7 @@ misaligned with the newer operating model:
 - Business domains own truth and emit events; TaskItem/Workspace remain
   collaboration/runtime surfaces.
 
-Sprint 1 is a senior-dev audit sprint: read the existing code, map the gaps,
+Sprint 58 is a senior-dev audit sprint: read the existing code, map the gaps,
 and propose scoped changes before building.
 
 ## Existing Implementation Areas To Audit
@@ -143,7 +144,7 @@ Minimum capability candidates:
 - `service.shared_participants`
 - `service.activity`
 
-Do not implement a full Blueprint Platform refactor in Sprint 1.
+Do not implement a full Blueprint Platform refactor in Sprint 58.
 
 ### 4. Event And Payment Boundary Review
 
@@ -166,13 +167,13 @@ Payment direction:
 - Service should show payment status and gate SR readiness, but should not own
   the full payment lifecycle.
 
-Sprint 1 should decide whether current Service code already creates Payment
+Sprint 58 should decide whether current Service code already creates Payment
 records directly and whether that behavior should be kept temporarily,
 wrapped, or moved behind a Payment service boundary.
 
-### 5. Implementation Proposal For Sprint 2
+### 5. Implementation Proposal For Sprint 59
 
-End Sprint 1 with a concrete Sprint 2 recommendation.
+End Sprint 58 with a concrete Sprint 59 recommendation.
 
 The proposal must include:
 
@@ -184,7 +185,7 @@ The proposal must include:
 - risks and rollback plan;
 - validation commands.
 
-Do not leave Sprint 2 as a broad idea.
+Do not leave Sprint 59 as a broad idea.
 
 ## Out Of Scope
 
@@ -199,7 +200,7 @@ Do not leave Sprint 2 as a broad idea.
 
 ## Required Deliverables
 
-Sprint 1 is complete only when there is a written review/proposal that includes:
+Sprint 58 is complete only when there is a written review/proposal that includes:
 
 1. Existing Service domain inventory.
 2. SR/TI status and workflow analysis.
@@ -207,12 +208,12 @@ Sprint 1 is complete only when there is a written review/proposal that includes:
 4. Space readiness gap list.
 5. Blueprint capability minimum contract for Service Operation.
 6. Payment/event boundary recommendation.
-7. Proposed Sprint 2 implementation slice.
+7. Proposed Sprint 59 implementation slice.
 8. Open questions, if any, with clear stop points.
 
 ## Acceptance Criteria
 
-After Sprint 1, another developer should be able to answer:
+After Sprint 58, another developer should be able to answer:
 
 - Which existing SR/TI logic is correct and should stay?
 - Which logic is misaligned with Space/Workspace?
@@ -220,7 +221,7 @@ After Sprint 1, another developer should be able to answer:
 - How should Service Operation bind to Space/Blueprint without making Workspace
   the business truth?
 - How should Payment Space interact with Service?
-- What is the smallest safe Sprint 2 implementation?
+- What is the smallest safe Sprint 59 implementation?
 
 ## Stop And Discuss If Unclear
 
@@ -235,7 +236,7 @@ Pause implementation and ask the user before deciding any of these:
 - Whether Service should create Payment records directly or call/emit through a
   Payment boundary.
 - Whether the current TI board stage model is global or blueprint-specific.
-- Whether schema changes are required in Sprint 2.
+- Whether schema changes are required in Sprint 59.
 
 ## Recommended First Actions
 
@@ -245,7 +246,7 @@ Pause implementation and ask the user before deciding any of these:
 4. Inspect `ServiceRequest`, `TechnicalIssue`, and `Payment` in
    `prisma/schema.prisma`.
 5. Inspect the Service domain files listed above.
-6. Produce the Sprint 1 review/proposal before editing runtime code.
+6. Produce the Sprint 58 review/proposal before editing runtime code.
 
 ## Current UI Reference
 
@@ -263,4 +264,3 @@ Prototype decisions already accepted:
 - User-facing UI should avoid the word "Workspace/WP" for these pages.
 - Main space UI should include receive-previous-week and lightweight flow config.
 - Creator/system/user signal should be visible.
-

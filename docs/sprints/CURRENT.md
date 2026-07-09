@@ -44,13 +44,35 @@ Completed:
 - Sprint 55 Watch List Projection.
 - Sprint 56 Projection Observability & Repair.
 - Sprint 57 Watch List Projection Cutover Contract Review draft.
+- Sprint 58 Service Operation existing domain review and proposal.
+- Sprint 59 Service Operation read facade and boundary cleanup.
+- Sprint 60 Service Operation Blueprint and Workflow Contract.
+- Sprint 61 Service Operation UI and Runtime Wiring first slice.
 
 Current handoff:
 
-- Read `docs/sprints/SM-Service-Operation-Epic-Sprint-1-existing-domain-review-space-readiness.md`.
-- Continue with Service Operation Epic Sprint 1. Do not restart architecture
-  discussion; audit the existing Service domain and produce the readiness /
-  refactor proposal described in that doc.
+- Read `docs/sprints/SM-Sprint-58-service-operation-existing-domain-review-space-readiness.md`.
+- Read `docs/sprints/SM-Sprint-58-service-operation-review-proposal.md`.
+- Read `docs/sprints/SM-Sprint-59-service-operation-read-facade-boundary-cleanup.md`.
+- Read `docs/sprints/SM-Sprint-60-service-operation-blueprint-workflow-contract.md`.
+- Read `docs/sprints/SM-Sprint-61-service-operation-ui-runtime-wiring.md`.
+- Sprint 61 is complete as a first production UI/API slice. The primary route is
+  `/admin/coordination/technical`; `/admin/services/operation` remains a direct
+  alias; `GET /api/admin/service-operation` is the JSON surface.
+- Continue with Sprint 62 by wiring Service Operation action adapters and
+  aligning Service/Payment event producers/catalog keys. Space has no workflow
+  engine. Do not restart the SR/TI architecture discussion.
+
+Service Operation sprint planning rules:
+
+- Stay inside accepted scope.
+- Make concrete, executable proposals with files, behavior, validation, and
+  rollback path.
+- Use senior-dev judgment: preserve domain ownership, avoid unnecessary schema
+  changes, keep compatibility, and prefer adapters before rewrites.
+- Stop and discuss before changing core assumptions around SR/TI cardinality,
+  assessment coupling, Service-to-Space references, Payment ownership,
+  MaintenanceRecord, or Blueprint snapshot semantics.
 
 - Read `docs/sprints/SM-Sprint-39-watch-business-event-producer-contract.md`.
 - Read `docs/sprints/SM-Sprint-40-watch-event-consumer-binding.md`.
@@ -150,7 +172,29 @@ Sprint 56 implemented Projection Observability & Repair.
 
 Next recommended sprint:
 
-- Service Operation Epic Sprint 1 Existing Service Domain Review & Space Readiness.
+- Sprint 62 Service Operation Action Adapter and Event Key Alignment.
+
+Sprint 62 proposed scope:
+
+- Add a thin Service Operation action adapter from workflow/manual action
+  metadata to existing Service commands.
+- Map `confirm-issue` to `confirmTechnicalIssue`, `start-work` to
+  `startTechnicalIssue`, and `mark-done` to `completeTechnicalIssue`.
+- Align Service/Payment business event keys, catalog entries, and producers
+  before making Service Operation event bindings active.
+- Keep Activity/Timeline event-backed; do not introduce MaintenanceRecord as the
+  Activity source.
+- Keep ProjectionRecord Service Operation reads deferred unless measured UI/API
+  pressure justifies compare/fallback work.
+
+Sprint 62 non-goals:
+
+- no Service schema migration;
+- no Service `spaceId` / `workspaceId`;
+- no Space workflow engine;
+- no SR workflow engine;
+- no Payment Workspace;
+- no MaintenanceRecord-as-Activity.
 
 ## M2 Later
 
@@ -172,15 +216,18 @@ Recommended later M2 topics must stay outside Sprint 39 unless explicitly select
 3. `npx prisma generate`
 4. Read `docs/product/business-collaboration-platform.md`
 5. Read `docs/architecture/15-event-driven-domain-boundary.md`
-6. Read `docs/sprints/SM-Service-Operation-Epic-Sprint-1-existing-domain-review-space-readiness.md`
-7. Continue with Service Operation Epic Sprint 1 by auditing the existing
-   Service domain implementation and writing the readiness/refactor proposal.
+6. Read `docs/sprints/SM-Sprint-58-service-operation-existing-domain-review-space-readiness.md`
+7. Read `docs/sprints/SM-Sprint-58-service-operation-review-proposal.md`
+8. Read `docs/sprints/SM-Sprint-59-service-operation-read-facade-boundary-cleanup.md`
+9. Read `docs/sprints/SM-Sprint-60-service-operation-blueprint-workflow-contract.md`
+10. Read `docs/sprints/SM-Sprint-61-service-operation-ui-runtime-wiring.md`
+11. Continue with Sprint 62 Service Operation Action Adapter and Event Key
+   Alignment. Use the Sprint 59 read facade, Sprint 60 registry contract, and
+   Sprint 61 production UI/API surface. Space has no workflow engine.
 
-Service Operation Epic Sprint 1 must start from existing SR/TI code. SR and TI
-already have schema, services, repos, actions, and UI; the sprint is not a
-from-zero design exercise. It is a senior-dev review of what must be kept,
-fixed, moved, added, or deferred so Service Operation can fit the Space /
-Workspace / Blueprint model.
+Sprint 61 first slice is complete. SR and TI remain existing business truth.
+Event bindings remain `DRAFT` until Service/Payment event producers and catalog
+keys are aligned.
 
 Older M1 context remains available in:
 

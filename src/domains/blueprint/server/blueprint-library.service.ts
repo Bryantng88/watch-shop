@@ -38,6 +38,7 @@ type ExperienceSeed = {
   typicalUsage: string;
   expectedResult: string;
   workspaceType: string;
+  itemLabel?: string;
 };
 
 const EXPERIENCE_BY_WORK_TYPE: Record<string, ExperienceSeed> = {
@@ -58,6 +59,16 @@ const EXPERIENCE_BY_WORK_TYPE: Record<string, ExperienceSeed> = {
     typicalUsage: "Dùng cho các việc kỹ thuật mà Operations cần theo dõi trong một Workspace chung.",
     expectedResult: "Một Technical Workspace nơi các Item phản ánh trạng thái xử lý kỹ thuật hiện tại.",
     workspaceType: "Technical Workspace",
+  },
+  "service-operation": {
+    purpose:
+      "Coordinate Service Request case surfaces and Technical Issue bench work inside the active Service Operation space.",
+    typicalUsage:
+      "Use when Technical needs one workspace for SR case visibility, Technical Bench items, approval context, payment context, and activity.",
+    expectedResult:
+      "A Service Operation Workspace where Technical Issues move through bench stages while SR case state remains derived from service data.",
+    workspaceType: "Service Operation Workspace",
+    itemLabel: "Technical Issues",
   },
   quotation: {
     purpose: "Chuẩn hóa cách Sales chuẩn bị và theo dõi báo giá.",
@@ -269,7 +280,7 @@ function buildExperience(input: {
     workspaceType: seed.workspaceType,
     workspacePreview: {
       workspaceType: seed.workspaceType,
-      itemLabel: `${input.name} Items`,
+      itemLabel: seed.itemLabel ?? `${input.name} Items`,
       activityLabel: "Lịch sử Activity",
       discussionLabel: "Discussion",
       steps: [

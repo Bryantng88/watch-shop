@@ -290,6 +290,7 @@ export async function createPaymentRowTx(
     method: PaymentMethod;
     note?: string | null;
     status?: PaymentStatus | string;
+    vendorId?: string | null;
   },
 ) {
   if (input.amount < 0) return null;
@@ -307,6 +308,7 @@ export async function createPaymentRowTx(
       status: (input.status ?? PaymentStatus.UNPAID) as any,
       paidAt: null,
       note: input.note ?? null,
+      vendor_id: input.vendorId ?? null,
     } as any,
   });
 }

@@ -1,6 +1,7 @@
 import { prisma } from "@/server/db/client";
 import { MaintenanceEventType, Prisma } from "@prisma/client";
 import * as maintenanceRepo from "../server/maintenance/maintenance.repo";
+import { createTechnicalIssueMaintenanceCostPaymentTx } from "@/domains/payment/server";
 
 export type CreateMaintenanceRecordInput = {
   serviceRequestId: string;
@@ -20,35 +21,6 @@ export type CreateMaintenanceRecordInput = {
   imageFileKey?: string | null;
   technicalIssueId?: string | null;
 };
-
-async function createPaymentTx(tx: Prisma.TransactionClient, input: {
-  amount: Prisma.Decimal;
-  currency: string;
-  technical_issue_id: string;
-  vendor_id?: string | null;
-  note?: string | null;
-  method: any;
-  status: any;
-  direction: any;
-  type: any;
-  purpose: any;
-}) {
-  return tx.payment.create({
-    data: {
-      amount: input.amount,
-      currency: input.currency,
-      service_request_id: null,
-      technical_issue_id: input.technical_issue_id,
-      vendor_id: input.vendor_id ?? null,
-      note: input.note ?? null,
-      method: input.method,
-      status: input.status,
-      direction: input.direction,
-      type: input.type,
-      purpose: input.purpose,
-    } as any,
-  });
-}
 
 export async function createMaintenanceRecordForServiceRequestApplication(input: CreateMaintenanceRecordInput) {
   const serviceRequestId = String(input.serviceRequestId || "").trim();
@@ -87,20 +59,16 @@ export async function createMaintenanceRecordForServiceRequestApplication(input:
     const technicalIssueId = String(input.technicalIssueId ?? "").trim() || null;
 
     if (input.totalCost != null && Number(input.totalCost) >= 0 && technicalIssueId) {
-      const amount = new Prisma.Decimal(String(input.totalCost));
-      const createdPayment = await createPaymentTx(tx, {
-        amount,
-        currency,
-        technical_issue_id: technicalIssueId,
-        vendor_id: vendorId,
+      const createdPayment = await createTechnicalIssueMaintenanceCostPaymentTx(tx, {
+        technicalIssueId,
+        amount: Number(input.totalCost),
+        vendorId,
         note: input.notes ?? null,
-        method: (input.paymentMethod ?? "CASH") as any,
-        status: "UNPAID" as any,
-        direction: "OUT" as any,
-        type: (input.paymentType ?? "SERVICE") as any,
-        purpose: (input.paymentPurpose ?? "MAINTENANCE_COST") as any,
+        method: input.paymentMethod ?? "CASH",
+        status: input.paymentStatus ?? "UNPAID",
+        purpose: input.paymentPurpose ?? "MAINTENANCE_COST",
       });
-      paymentId = createdPayment.id;
+      paymentId = createdPayment?.id ?? null;
       paidAmount = null;
       paidAt = null;
     }

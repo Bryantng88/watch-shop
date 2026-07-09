@@ -110,10 +110,96 @@ const WATCH_MEDIA_PIPELINE_BINDINGS: Array<{
   },
 ];
 
+const SERVICE_OPERATION_BINDINGS: Array<{
+  eventKey: string;
+  targetType: "SERVICE_REQUEST" | "TECHNICAL_ISSUE";
+  mode: WorkspaceEventBindingMode;
+  effects: WorkspaceEventBindingEffect[];
+}> = [
+  {
+    eventKey: "service_request.created",
+    targetType: "SERVICE_REQUEST",
+    mode: "INTAKE",
+    effects: ["AUTO_BIND", "WRITE_ACTIVITY"],
+  },
+  {
+    eventKey: "service_request.status_changed",
+    targetType: "SERVICE_REQUEST",
+    mode: "PROGRESS",
+    effects: ["WRITE_ACTIVITY"],
+  },
+  {
+    eventKey: "technical_issue.created",
+    targetType: "TECHNICAL_ISSUE",
+    mode: "INTAKE",
+    effects: ["AUTO_BIND", "APPLY_WORKFLOW", "WRITE_ACTIVITY"],
+  },
+  {
+    eventKey: "technical_issue.confirmed",
+    targetType: "TECHNICAL_ISSUE",
+    mode: "PROGRESS",
+    effects: ["APPLY_WORKFLOW", "WRITE_ACTIVITY"],
+  },
+  {
+    eventKey: "technical_issue.started",
+    targetType: "TECHNICAL_ISSUE",
+    mode: "PROGRESS",
+    effects: ["APPLY_WORKFLOW", "WRITE_ACTIVITY"],
+  },
+  {
+    eventKey: "technical_issue.stage_changed",
+    targetType: "TECHNICAL_ISSUE",
+    mode: "PROGRESS",
+    effects: ["APPLY_WORKFLOW", "WRITE_ACTIVITY"],
+  },
+  {
+    eventKey: "technical_issue.completed",
+    targetType: "TECHNICAL_ISSUE",
+    mode: "PROGRESS",
+    effects: ["APPLY_WORKFLOW", "WRITE_ACTIVITY"],
+  },
+  {
+    eventKey: "technical_issue.reopened",
+    targetType: "TECHNICAL_ISSUE",
+    mode: "PROGRESS",
+    effects: ["APPLY_WORKFLOW", "WRITE_ACTIVITY"],
+  },
+  {
+    eventKey: "payment.created",
+    targetType: "SERVICE_REQUEST",
+    mode: "PROGRESS",
+    effects: ["WRITE_ACTIVITY"],
+  },
+  {
+    eventKey: "payment.status_updated",
+    targetType: "SERVICE_REQUEST",
+    mode: "PROGRESS",
+    effects: ["WRITE_ACTIVITY"],
+  },
+];
+
 export function eventBindingsForWorkType(input: {
   workTypeKey: string;
   coordinationContext: WorkTypeCoordinationContext | "DRAFT";
 }): WorkspaceEventBinding[] {
+  if (
+    input.coordinationContext === "TECHNICAL" &&
+    input.workTypeKey === "service-operation"
+  ) {
+    return SERVICE_OPERATION_BINDINGS.map((binding) => ({
+      eventKey: binding.eventKey,
+      targetType: binding.targetType,
+      consumer: "coordination",
+      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeContext: "TECHNICAL",
+      workTypeKey: "service-operation",
+      mode: binding.mode,
+      effects: binding.effects,
+      status: "DRAFT",
+      source: "BLUEPRINT",
+    }));
+  }
+
   if (input.coordinationContext !== "MEDIA") {
     return [];
   }

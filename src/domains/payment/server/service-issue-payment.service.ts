@@ -61,6 +61,43 @@ export async function ensureTechnicalIssuePaymentTx(tx: Tx, technicalIssueId: st
   });
 }
 
+export async function createTechnicalIssueMaintenanceCostPaymentTx(
+  tx: Tx,
+  input: {
+    technicalIssueId: string;
+    amount: number;
+    method?: string | null;
+    note?: string | null;
+    vendorId?: string | null;
+    status?: string | null;
+    purpose?: string | null;
+  },
+) {
+  if (!Number.isFinite(input.amount) || input.amount < 0) {
+    throw new Error("Chi phÃ­ technical issue khÃ´ng há»£p lá»‡.");
+  }
+
+  return createPaymentRowTx(tx, {
+    ownerType: "TECHNICAL_ISSUE",
+    ownerId: input.technicalIssueId,
+    amount: input.amount,
+    direction: PaymentDirection.OUT,
+    type: PaymentType.SERVICE,
+    purpose: (input.purpose ?? PaymentPurpose.MAINTENANCE_COST) as any,
+    method: normalizeServiceIssuePaymentMethod(input.method),
+    status: (input.status ?? PaymentStatus.UNPAID) as any,
+    note: input.note ?? null,
+    vendorId: input.vendorId ?? null,
+  });
+}
+
+function normalizeServiceIssuePaymentMethod(value?: string | null) {
+  const raw = String(value ?? "").trim().toUpperCase();
+  if (raw === "CASH") return PaymentMethod.CASH;
+  if (raw === "COD") return PaymentMethod.COD;
+  return PaymentMethod.BANK_TRANSFER;
+}
+
 export async function listServicePaymentsByServiceRequest(serviceRequestId: string) {
   const issues = await prisma.technicalIssue.findMany({
     where: { serviceRequestId },

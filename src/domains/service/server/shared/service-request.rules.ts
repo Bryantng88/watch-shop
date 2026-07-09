@@ -14,3 +14,6 @@ export function canMoveProductToService(status: ProductStatus) {
 export function canCompleteServiceStatus(status: ServiceRequestStatus) {
   return status !== ServiceRequestStatus.CANCELED;
 }
+
+export * from "./service-request-status.policy";
+export * from "./technical-issue-stage.policy";
