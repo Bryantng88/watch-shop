@@ -47,6 +47,11 @@ Completed:
 
 Current handoff:
 
+- Read `docs/sprints/SM-Service-Operation-Epic-Sprint-1-existing-domain-review-space-readiness.md`.
+- Continue with Service Operation Epic Sprint 1. Do not restart architecture
+  discussion; audit the existing Service domain and produce the readiness /
+  refactor proposal described in that doc.
+
 - Read `docs/sprints/SM-Sprint-39-watch-business-event-producer-contract.md`.
 - Read `docs/sprints/SM-Sprint-40-watch-event-consumer-binding.md`.
 - Read `docs/sprints/SM-Sprint-41-watch-auto-binding-runtime-scope.md`.
@@ -145,7 +150,7 @@ Sprint 56 implemented Projection Observability & Repair.
 
 Next recommended sprint:
 
-- Sprint 57 Watch List Projection Cutover Contract Review.
+- Service Operation Epic Sprint 1 Existing Service Domain Review & Space Readiness.
 
 ## M2 Later
 
@@ -167,16 +172,15 @@ Recommended later M2 topics must stay outside Sprint 39 unless explicitly select
 3. `npx prisma generate`
 4. Read `docs/product/business-collaboration-platform.md`
 5. Read `docs/architecture/15-event-driven-domain-boundary.md`
-6. Read `docs/sprints/SM-Sprint-56-projection-observability-repair.md`
-7. Continue with Sprint 57 Watch List Projection Cutover Contract Review.
+6. Read `docs/sprints/SM-Service-Operation-Epic-Sprint-1-existing-domain-review-space-readiness.md`
+7. Continue with Service Operation Epic Sprint 1 by auditing the existing
+   Service domain implementation and writing the readiness/refactor proposal.
 
-Sprint 57 must start by reviewing the Watch List UI contract before any full
-projection cutover:
-
-- fields the list really needs;
-- client-side business logic that should be removed;
-- actions that should remain available from the list;
-- projection columns required for search/filter/sort.
+Service Operation Epic Sprint 1 must start from existing SR/TI code. SR and TI
+already have schema, services, repos, actions, and UI; the sprint is not a
+from-zero design exercise. It is a senior-dev review of what must be kept,
+fixed, moved, added, or deferred so Service Operation can fit the Space /
+Workspace / Blueprint model.
 
 Older M1 context remains available in:
 
