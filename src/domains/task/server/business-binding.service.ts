@@ -7,6 +7,7 @@ import {
   findBusinessBindingsByTaskItem,
   findQueueActivitiesByTaskItem,
   findTaskItemIdsByTarget,
+  updateBusinessBindingMetadata,
 } from "./business-binding.repo";
 import {
   ensureQueueItemWorkflowState,
@@ -132,6 +133,11 @@ function queueKey(targetType: string, targetId: string) {
   return `${cleanUpper(targetType)}:${clean(targetId)}`;
 }
 
+function noteField(note: string | null | undefined, key: string) {
+  const pattern = new RegExp(`^${key}:\\s*(.+)$`, "im");
+  return clean(String(note ?? "").match(pattern)?.[1]);
+}
+
 async function metadataWithWorkspaceWorkflowSnapshot(
   db: DB,
   input: {
@@ -150,7 +156,16 @@ async function metadataWithWorkspaceWorkflowSnapshot(
     note: taskItem?.note ?? null,
   });
 
-  if (!appliedWorkflowSnapshot) return metadata;
+  if (!appliedWorkflowSnapshot) {
+    const workflowKey = noteField(taskItem?.note, "workflowKey");
+    const workTypeKey = noteField(taskItem?.note, "workTypeKey");
+
+    return {
+      ...metadata,
+      ...(workflowKey && !metadata.workflowKey ? { workflowKey } : {}),
+      ...(workTypeKey && !metadata.workTypeKey ? { workTypeKey } : {}),
+    };
+  }
 
   return {
     ...metadata,
@@ -701,7 +716,17 @@ export async function ensureTaskItemBusinessBinding(
   const existing = await findBusinessBindingByTaskItemTarget(db, cleanInput);
 
   if (existing) {
-    const binding = await ensureQueueItemWorkflowState(db, existing);
+    const metadataJson = await metadataWithWorkspaceWorkflowSnapshot(db, {
+      taskItemId: cleanInput.taskItemId,
+      metadataJson: existing.metadataJson,
+    });
+    const nextMetadataJson = initializeQueueItemWorkflowState({
+      metadataJson,
+      createdAt: existing.createdAt,
+    });
+    const binding = nextMetadataJson.workflowRuntime
+      ? await updateBusinessBindingMetadata(db, existing.id, nextMetadataJson)
+      : await ensureQueueItemWorkflowState(db, existing);
 
     return {
       binding: toBusinessBindingDTO(binding),

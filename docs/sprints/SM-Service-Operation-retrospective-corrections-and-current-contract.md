@@ -36,10 +36,12 @@ Space Management and workspace are different surfaces.
 
 Space Management:
 
-- shows operational overview;
-- can expose `SR Cases`;
-- can expose `TI list` / Technical Bench board;
+- shows the Service Operation space/workspace index;
+- exposes `SR Cases` as SR workspace rows;
+- exposes `Technical Bench` as the technical workspace index;
 - is allowed to help users inspect workload across stages;
+- hydrates workspace rows with ServiceRequest and TechnicalIssue business
+  truth;
 - is not the workflow engine.
 
 Workspace:
@@ -51,13 +53,25 @@ Workspace:
 
 Service Operation workspace is hybrid by context:
 
-- SR context: show TI items belonging to that SR.
-- TI context: show TechnicalIssue operation items with stage and workflow
-  actions.
+- SR view: each workspace row represents one SR case. The row keeps the current
+  SR operational columns such as service request, watch, creator, attention,
+  technical progress, commercial, and updated time, but those fields are a
+  workspace-row presentation hydrated from business truth.
+- SR workspace detail: shows TechnicalIssue items belonging to that SR.
+  The bound ServiceRequest identifies the SR workspace/case; it must not render
+  as an item row. TechnicalIssue creation happens inside this SR workspace via
+  a compact `Tao TI` action.
+- Technical Bench view: represents technical operation workspaces, not a direct
+  business-domain issue board. The accepted model is workspace grouping by
+  operation role: Inspect, Processing, and Done/Follow-up.
+- TI/technical workspace detail: shows TechnicalIssue operation items with
+  stage and workflow actions.
 
-Stages such as `Inspect`, `Ready`, `In Progress`, and `Done` are workflow states
-of TechnicalIssue operation. They are not separate workspaces in the current
-implementation.
+TechnicalIssue still has operation stages such as `Inspect`, `Ready`,
+`In Progress`, and `Done`, but they are not all workspace capacity boundaries.
+`Ready -> In Progress -> Done` is the workflow inside the Processing workspace.
+Runtime binding must still be explicit through Blueprint capacity and event
+receiver semantics; UI/read code must not create missing technical workspaces.
 
 ## What Went Wrong
 
@@ -71,11 +85,12 @@ Wrong direction:
 
 Correction:
 
-- Technical Bench is now documented as a Space Management overview view.
+- Technical Bench is now documented as a Space Management technical workspace
+  index.
 - The focus side panel was removed from
   `src/app/(admin)/admin/services/operation/page.tsx`.
 - The board remains useful for overview, but workflow operation belongs to the
-  workspace queue/item flow.
+  workspace queue/item flow. It must not read as a replacement detail surface.
 
 ### 2. `SR Cases` and `Technical Bench` were added inside workspace tabs
 
@@ -90,6 +105,8 @@ Correction:
 
 - Those tabs were removed from `TaskItemDetailClient`.
 - They remain Space Management modes/views only.
+- `SR Cases` should index SR workspaces.
+- `Technical Bench` should index technical operation workspaces.
 - The workspace item tab is labeled for TechnicalIssue operation and renders
   queue items, not the board.
 
@@ -220,16 +237,42 @@ cmd /c npx tsx scripts/smoke-service-operation-consumer.ts --issue <technicalIss
 - Do not start ProjectionRecord Service Operation reads until the event-driven
   path is stable and measured.
 
-## Design Candidate, Not Current Scope
+### 7. Four technical stage workspaces were over-modeled
 
-Future Service Operation may split TI work into separate workspace roles:
+Wrong direction:
+
+- Sprint 67 briefly modeled Technical Bench as four separate workspaces:
+  Inspect, Ready, In Progress, and Done.
+- That made workflow states look like workspace capacity and blurred where
+  actual operation happens.
+
+Correction:
+
+- Technical Bench now indexes three operation workspaces:
+  Inspect, Processing, and Done/Follow-up.
+- Inspect is for classification/routing.
+- Processing owns the internal workflow `Ready -> In Progress -> Done`.
+- Done/Follow-up tracks completed issues, payment readiness, and possible
+  send-back.
+- TechnicalIssue events map current Service truth to those operation workspaces:
+  `INSPECT` -> Inspect, `READY`/`IN_PROGRESS` -> Processing, `DONE` ->
+  Done/Follow-up.
+
+## Current Technical Workspace Model
+
+Service Operation technical work is split into operation workspace roles:
 
 ```text
-Inspect workspace -> Processing workspace -> Done/follow-up workspace
+Inspect workspace -> Processing workspace -> Done / Follow-up workspace
 ```
 
-This remains a design candidate only.
+The Processing workspace owns this internal workflow:
 
-It should not be implemented until Blueprint capacity, event binding, and
-receiver semantics are explicit for each workspace role.
+```text
+Ready -> In Progress -> Done
+```
 
+This is implemented through workspace role markers on Technical cycle TaskItems:
+`serviceOperationWorkspaceRole: INSPECT|PROCESSING|DONE`. The Space Management
+view may present the groups as workspace index rows/cards, but runtime must not
+create missing workspaces from UI/read code.

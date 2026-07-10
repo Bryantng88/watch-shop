@@ -15,6 +15,8 @@ const EVENTS = [
   "technical_issue.completed",
 ] as const;
 
+const SR_EVENTS = ["service_request.created"] as const;
+
 function argValue(name: string) {
   const index = process.argv.indexOf(name);
   if (index < 0) return null;
@@ -66,6 +68,12 @@ function isBlueprintReceiver(note: string | null | undefined) {
   return /^blueprintAutoBindingReceiver:\s*true\s*$/im.test(String(note ?? ""));
 }
 
+function serviceOperationWorkspaceRole(note: string | null | undefined) {
+  return String(note ?? "")
+    .match(/^serviceOperationWorkspaceRole:\s*(INSPECT|PROCESSING|DONE)\s*$/im)?.[1]
+    ?.toUpperCase() ?? null;
+}
+
 function withoutBlueprintReceiver(note: string | null | undefined) {
   return String(note ?? "")
     .split(/\r?\n/)
@@ -98,6 +106,14 @@ async function printReceiverDiagnostics() {
           title: true,
           note: true,
           status: true,
+          sortOrder: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: {
+            select: {
+              executions: true,
+            },
+          },
         },
       },
     },
@@ -113,7 +129,12 @@ async function printReceiverDiagnostics() {
       id: item.id,
       title: item.title,
       status: item.status,
+      sortOrder: item.sortOrder,
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
+      bindingCount: item._count.executions,
       receiver,
+      workspaceRole: serviceOperationWorkspaceRole(item.note),
       bindings: bindings.map((binding) => {
         const record = asRecord(binding);
         return {
@@ -185,10 +206,34 @@ async function resolveIssueId() {
   return issue?.id ?? null;
 }
 
+async function resolveServiceRequestId() {
+  const explicit = argValue("--sr") ?? argValue("--service-request");
+  if (explicit) return explicit;
+
+  const row = await prisma.serviceRequest.findFirst({
+    orderBy: { updatedAt: "desc" },
+    select: { id: true },
+  });
+
+  return row?.id ?? null;
+}
+
 async function main() {
   const apply = hasFlag("--apply");
   const receivers = hasFlag("--receivers");
   const receiverSelection = argValue("--select-receiver");
+  const requestedEvent = argValue("--event");
+  const serviceRequestMode = hasFlag("--sr") || hasFlag("--service-request") ||
+    requestedEvent?.startsWith("service_request.");
+  const events = requestedEvent
+    ? [...EVENTS, ...SR_EVENTS].filter((eventKey) => eventKey === requestedEvent)
+    : serviceRequestMode
+      ? [...SR_EVENTS]
+      : EVENTS;
+
+  if (requestedEvent && !events.length) {
+    throw new Error(`Unsupported smoke event "${requestedEvent}".`);
+  }
 
   if (receiverSelection) {
     await selectReceiver(receiverSelection);
@@ -201,21 +246,28 @@ async function main() {
     if (!hasFlag("--issue") && !hasFlag("--issue-id")) return;
   }
 
-  const issueId = await resolveIssueId();
+  const targetType = serviceRequestMode ? "SERVICE_REQUEST" : "TECHNICAL_ISSUE";
+  const targetId = serviceRequestMode
+    ? await resolveServiceRequestId()
+    : await resolveIssueId();
 
-  if (!issueId) {
-    throw new Error("No TechnicalIssue found. Pass --issue <id> or seed service data first.");
+  if (!targetId) {
+    throw new Error(
+      serviceRequestMode
+        ? "No ServiceRequest found. Pass --sr <id> or seed service data first."
+        : "No TechnicalIssue found. Pass --issue <id> or seed service data first.",
+    );
   }
 
-  console.log("[service-operation-smoke] issue:", issueId);
+  console.log("[service-operation-smoke] target:", targetType, targetId);
   console.log("[service-operation-smoke] mode:", apply ? "apply" : "dry-run");
 
-  for (const eventKey of EVENTS) {
+  for (const eventKey of events) {
     const diagnostic = await diagnoseBusinessEventForCoordination(prisma, {
       eventKey,
-      targetType: "TECHNICAL_ISSUE",
-      targetId: issueId,
-      businessEventLogId: `smoke:${eventKey}:${issueId}`,
+      targetType,
+      targetId,
+      businessEventLogId: `smoke:${eventKey}:${targetId}`,
       metadataJson: {
         source: "service-operation-smoke",
       },
@@ -241,8 +293,8 @@ async function main() {
 
     const event = await recordBusinessEvent(prisma, {
       eventKey,
-      targetType: "TECHNICAL_ISSUE",
-      targetId: issueId,
+      targetType,
+      targetId,
       payload: {
         source: "service-operation-smoke",
       },

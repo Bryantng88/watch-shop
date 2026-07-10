@@ -48,6 +48,12 @@ const DEFAULT_SYSTEM_SHARE_GROUP_BY_CONTEXT: Record<CoordinationContext, string>
   GENERAL: "general",
 };
 
+const SERVICE_OPERATION_TECHNICAL_WORKSPACES = [
+  { role: "INSPECT", title: "Service Operation - Inspect", sortOrder: 55 },
+  { role: "PROCESSING", title: "Service Operation - Processing", sortOrder: 56 },
+  { role: "DONE", title: "Service Operation - Done / Follow-up", sortOrder: 57 },
+] as const;
+
 function startOfUtcDate(date: Date) {
   return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
 }
@@ -71,11 +77,27 @@ function sharedUserIdsFromNote(note?: string | null) {
   );
 }
 
-function workTypeNote(workType: WorkTypeDefinition, sharedUserIds: string[] = []) {
+function workTypeNote(
+  workType: WorkTypeDefinition,
+  sharedUserIds: string[] = [],
+  options: {
+    extraLines?: string[];
+    eventTargetTypes?: string[];
+    workspaceType?: string;
+    itemLabel?: string;
+  } = {},
+) {
+  const eventTargetTypes = new Set(
+    (options.eventTargetTypes ?? []).map((value) => value.trim().toUpperCase()),
+  );
   const eventBindings = eventBindingsForWorkType({
     workTypeKey: workType.key,
     coordinationContext: workType.coordinationContext,
-  });
+  }).filter((binding) =>
+    eventTargetTypes.size
+      ? eventTargetTypes.has(String(binding.targetType ?? "").toUpperCase())
+      : true,
+  );
   const provisioning = workspaceProvisioningForWorkType({
     workTypeKey: workType.key,
     coordinationContext: workType.coordinationContext,
@@ -85,6 +107,7 @@ function workTypeNote(workType: WorkTypeDefinition, sharedUserIds: string[] = []
     `workTypeKey: ${workType.key}`,
     "ownerType: SYSTEM",
     `shareGroupKey: ${DEFAULT_SYSTEM_SHARE_GROUP_BY_CONTEXT[workType.coordinationContext]}`,
+    ...(options.extraLines ?? []),
   ];
 
   if (workType.workflowKey) {
@@ -100,13 +123,15 @@ function workTypeNote(workType: WorkTypeDefinition, sharedUserIds: string[] = []
 
     const metadata = workType.metadata ?? {};
     const workspaceType =
-      typeof metadata.workspaceType === "string"
+      options.workspaceType ??
+      (typeof metadata.workspaceType === "string"
         ? metadata.workspaceType
-        : `${workType.title} Workspace`;
+        : `${workType.title} Workspace`);
     const itemLabel =
-      typeof metadata.itemLabel === "string"
+      options.itemLabel ??
+      (typeof metadata.itemLabel === "string"
         ? metadata.itemLabel
-        : `${workType.title} Items`;
+        : `${workType.title} Items`);
     const defaultView =
       typeof metadata.defaultView === "string" ? metadata.defaultView : "items";
     const workspaceDefinition = {
@@ -322,6 +347,67 @@ export async function ensureWorkTickets(
 
   for (const workType of listWorkTypes(input.context)) {
     if (!shouldAutoCreateWorkTicket(workType)) continue;
+
+    if (
+      input.context === "TECHNICAL" &&
+      normalizeWorkTypeKey(workType.key) === "service-operation"
+    ) {
+      for (const technicalWorkspace of SERVICE_OPERATION_TECHNICAL_WORKSPACES) {
+        const existingItem = existingByTitle.get(technicalWorkspace.title);
+        const note = workTypeNote(workType, adminUserIds, {
+          extraLines: [
+            `serviceOperationWorkspaceRole: ${technicalWorkspace.role}`,
+          ],
+          eventTargetTypes: ["TECHNICAL_ISSUE"],
+          workspaceType: `${technicalWorkspace.title} Workspace`,
+          itemLabel: "Technical Issue Operation",
+        });
+
+        if (existingItem) {
+          const nextSharedUserIds = Array.from(
+            new Set([...sharedUserIdsFromNote(existingItem.note), ...adminUserIds]),
+          );
+          const nextNote = workTypeNote(workType, nextSharedUserIds, {
+            extraLines: [
+              `serviceOperationWorkspaceRole: ${technicalWorkspace.role}`,
+            ],
+            eventTargetTypes: ["TECHNICAL_ISSUE"],
+            workspaceType: `${technicalWorkspace.title} Workspace`,
+            itemLabel: "Technical Issue Operation",
+          });
+
+          if (
+            nextNote !== existingItem.note &&
+            (nextSharedUserIds.length > sharedUserIdsFromNote(existingItem.note).length ||
+              (nextNote.includes("blueprintSnapshot:") &&
+                !noteHasBlueprintEventBindings(existingItem.note)))
+          ) {
+            await client.taskItem.update({
+              where: { id: existingItem.id },
+              data: { note: nextNote },
+            });
+          }
+          continue;
+        }
+
+        await client.taskItem.create({
+          data: {
+            taskId: input.taskId,
+            title: technicalWorkspace.title,
+            note,
+            status: TaskStatus.TODO,
+            priority: "MEDIUM",
+            assignedToUserId: null,
+            sortOrder: technicalWorkspace.sortOrder,
+          },
+        });
+
+        existingTitles.add(technicalWorkspace.title);
+        createdCount += 1;
+      }
+
+      continue;
+    }
 
     const existingItem = existingByTitle.get(workType.title);
     if (existingItem) {

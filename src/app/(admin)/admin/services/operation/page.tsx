@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import {
   getServiceOperationCounters,
+  listServiceOperationTechnicalWorkspaces,
   listServiceOperationSrCases,
   listServiceOperationTiStageItems,
   resolveServiceOperationScope,
@@ -26,6 +27,32 @@ const STAGES: Array<{
   { key: "READY", label: "Ready" },
   { key: "IN_PROGRESS", label: "In Progress" },
   { key: "DONE", label: "Done" },
+];
+
+const TECHNICAL_WORKSPACES: Array<{
+  role: "INSPECT" | "PROCESSING" | "DONE";
+  label: string;
+  description: string;
+  stages: Array<NonNullable<ServiceOperationTiListInput["stage"]>>;
+}> = [
+  {
+    role: "INSPECT",
+    label: "Inspect",
+    description: "Classify, assign owner/vendor, then route the issue.",
+    stages: ["INSPECT"],
+  },
+  {
+    role: "PROCESSING",
+    label: "Processing",
+    description: "Operational workflow: Ready -> In Progress -> Done.",
+    stages: ["READY", "IN_PROGRESS"],
+  },
+  {
+    role: "DONE",
+    label: "Done / Follow-up",
+    description: "Track completion, send back when needed, then payment.",
+    stages: ["DONE"],
+  },
 ];
 
 function first(value: string | string[] | undefined) {
@@ -108,10 +135,6 @@ function statusDot(label: string, toneValue?: string | null) {
   );
 }
 
-function stageLabel(value: string | null | undefined) {
-  return STAGES.find((stage) => stage.key === value)?.label ?? value ?? "-";
-}
-
 function stat(label: string, value: number) {
   return (
     <div className="min-h-[78px] rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -137,17 +160,21 @@ function modeHref(input: {
   return `?${params.toString()}`;
 }
 
-function stageItems(
+function workspaceItems(
   items: ServiceOperationTiStageItem[],
-  stage: NonNullable<ServiceOperationTiListInput["stage"]>,
+  stages: Array<NonNullable<ServiceOperationTiListInput["stage"]>>,
 ) {
-  return items.filter((item) => item.stage === stage);
+  return items.filter((item) => stages.includes(item.stage));
 }
 
 function tiIssueHref(input: {
   item: ServiceOperationTiStageItem;
 }) {
   return `/admin/services/issues-board?issueId=${input.item.id}`;
+}
+
+function workspaceHref(binding: { taskItemId: string | null } | null | undefined) {
+  return binding?.taskItemId ? `/admin/task-items/${binding.taskItemId}` : null;
 }
 
 export default async function ServiceOperationPage(props: PageProps) {
@@ -160,7 +187,7 @@ export default async function ServiceOperationPage(props: PageProps) {
   const scope = resolveServiceOperationScope({ range, anchorDate });
   const anchorDateValue = dateInputValue(scope.anchorDate);
 
-  const [srCases, tiItems, counters] = await Promise.all([
+  const [srCases, tiItems, technicalWorkspaces, counters] = await Promise.all([
     listServiceOperationSrCases({
       q,
       range,
@@ -176,8 +203,12 @@ export default async function ServiceOperationPage(props: PageProps) {
       page: 1,
       pageSize: 80,
     }),
+    listServiceOperationTechnicalWorkspaces(),
     getServiceOperationCounters({ range, anchorDate }),
   ]);
+  const technicalWorkspaceByRole = new Map(
+    technicalWorkspaces.map((workspace) => [workspace.role, workspace]),
+  );
   const scopeText =
     scope.range === "CURRENT_WEEK" && scope.from && scope.to
       ? `${formatDate(scope.from)} - ${formatDate(new Date(scope.to.getTime() - 1))}`
@@ -270,9 +301,9 @@ export default async function ServiceOperationPage(props: PageProps) {
         <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
           <header className="grid gap-4 border-b border-slate-200 p-4 xl:grid-cols-[minmax(360px,1fr)_auto] xl:items-center">
             <div className="flex flex-wrap items-center gap-2">
-              <strong className="text-base">Service Operation</strong>
-              {chip("SR is case aggregate")}
-              {chip("TI is flow unit")}
+              <strong className="text-base">Service Operation Workspaces</strong>
+              {chip("SR view: one workspace per SR case")}
+              {chip("Technical view: Inspect / Processing / Done-Follow-up")}
             </div>
             <div className="grid h-10 w-full grid-cols-2 rounded-lg border border-slate-200 bg-slate-50 p-1 xl:w-80">
               <Link
@@ -300,8 +331,8 @@ export default async function ServiceOperationPage(props: PageProps) {
             <div className="flex flex-wrap items-center gap-2">
               <strong className="text-sm">Flow setup</strong>
               {chip("Blueprint: Service Operation")}
-              {chip("Auto-binding: Current active service flow")}
-              {chip("Receiver: Technical Bench")}
+              {chip("Auto-binding: workspace capacity")}
+              {chip("Business truth is hydrated into workspace rows")}
             </div>
             <button className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700" type="button">
               Receive previous week
@@ -325,11 +356,11 @@ export default async function ServiceOperationPage(props: PageProps) {
                 </colgroup>
                 <thead className="bg-slate-50 text-[11px] font-extrabold uppercase text-slate-500">
                   <tr>
-                    <th className="border-b border-slate-200 px-4 py-3">Service Request</th>
+                    <th className="border-b border-slate-200 px-4 py-3">SR Workspace</th>
                     <th className="border-b border-slate-200 px-4 py-3">Watch</th>
                     <th className="border-b border-slate-200 px-4 py-3">Creator</th>
                     <th className="border-b border-slate-200 px-4 py-3">Attention</th>
-                    <th className="border-b border-slate-200 px-4 py-3">Technical Progress</th>
+                    <th className="border-b border-slate-200 px-4 py-3">Workspace Items</th>
                     <th className="border-b border-slate-200 px-4 py-3">Commercial</th>
                     <th className="border-b border-slate-200 px-4 py-3">Updated</th>
                   </tr>
@@ -337,6 +368,7 @@ export default async function ServiceOperationPage(props: PageProps) {
                 <tbody>
                   {srCases.items.map((item) => {
                     const progress = pct(item.technicalProgress.done, item.technicalProgress.total);
+                    const srWorkspaceHref = workspaceHref(item.workspaceBinding);
                     return (
                       <tr key={item.id} className="align-top">
                         <td className="border-b border-slate-100 px-4 py-4">
@@ -344,6 +376,18 @@ export default async function ServiceOperationPage(props: PageProps) {
                             <strong>{item.refNo ?? item.id}</strong>
                             <span className="text-xs text-slate-500">{item.id}</span>
                             {statusDot(item.status, item.status)}
+                            {srWorkspaceHref ? (
+                              <Link
+                                className="mt-2 inline-flex h-7 w-fit items-center rounded-md border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700"
+                                href={srWorkspaceHref}
+                              >
+                                Open workspace
+                              </Link>
+                            ) : (
+                              <span className="mt-2 inline-flex h-7 w-fit items-center rounded-md border border-amber-200 bg-amber-50 px-2.5 text-xs font-semibold text-amber-700">
+                                Pending workspace binding
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="border-b border-slate-100 px-4 py-4">
@@ -399,66 +443,104 @@ export default async function ServiceOperationPage(props: PageProps) {
           ) : (
             <section
               className="grid gap-3 bg-slate-50 p-4"
-              aria-label="Technical issue board"
+              aria-label="Technical workspace index"
             >
-              <div className="grid gap-3 xl:grid-cols-4">
-                {STAGES.map((stage) => {
-                  const items = stageItems(tiItems.items, stage.key);
+              <div className="grid gap-3 xl:grid-cols-3">
+                {TECHNICAL_WORKSPACES.map((workspace) => {
+                  const items = workspaceItems(tiItems.items, workspace.stages);
+                  const technicalWorkspace = technicalWorkspaceByRole.get(workspace.role);
+                  const technicalWorkspaceHref = workspaceHref({
+                    taskItemId: technicalWorkspace?.taskItemId ?? null,
+                  });
                   return (
-                    <article key={stage.key} className="min-h-[520px] overflow-hidden rounded-lg border border-slate-200 bg-white">
-                      <header className="flex h-11 items-center justify-between border-b border-slate-200 bg-slate-50 px-3">
-                        <strong className="text-sm">{stage.label}</strong>
-                        <span className="grid min-w-6 place-items-center rounded-full border border-slate-200 px-2 text-xs font-bold text-slate-500">
-                          {items.length}
+                    <article key={workspace.role} className="min-h-[520px] overflow-hidden rounded-lg border border-slate-200 bg-white">
+                      <header className="grid gap-2 border-b border-slate-200 bg-slate-50 px-3 py-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <strong className="text-sm">{technicalWorkspace?.title ?? `${workspace.label} Workspace`}</strong>
+                          <span className="grid min-w-6 place-items-center rounded-full border border-slate-200 px-2 text-xs font-bold text-slate-500">
+                            {items.length}
+                          </span>
+                        </div>
+                        <span className="text-xs font-medium text-slate-500">
+                          {workspace.description}
                         </span>
+                        {technicalWorkspaceHref ? (
+                          <Link
+                            className="inline-flex h-8 w-fit items-center rounded-md bg-slate-950 px-3 text-xs font-semibold text-white"
+                            href={technicalWorkspaceHref}
+                          >
+                            Open workspace
+                          </Link>
+                        ) : (
+                          <span className="inline-flex h-8 w-fit items-center rounded-md border border-amber-200 bg-amber-50 px-3 text-xs font-semibold text-amber-700">
+                            Pending workspace
+                          </span>
+                        )}
                       </header>
                       <div className="grid gap-3 p-3">
-                        {items.map((item) => (
-                          <section
-                            key={item.id}
-                            className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
-                          >
-                            <div className="mb-2 flex items-start justify-between gap-2">
-                              {chip(item.serviceRequest.refNo ?? item.serviceRequestId, "border-blue-100 bg-blue-50 text-blue-700")}
-                              {statusDot(item.stage, item.stage)}
-                            </div>
-                            <div className="grid gap-1">
-                              <strong className="text-sm leading-snug">{item.summary}</strong>
-                              <span className="text-xs text-slate-500">
-                                {item.serviceRequest.productTitle ?? "Watch"} / {item.serviceRequest.sku ?? "-"}
-                              </span>
-                            </div>
-                            <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500">
-                              <span>
-                                Area
-                                <b className="mt-0.5 block text-xs text-slate-900">{item.area ?? "-"}</b>
-                              </span>
-                              <span>
-                                Owner
-                                <b className="mt-0.5 block text-xs text-slate-900">{item.ownerKind}</b>
-                              </span>
-                              <span>
-                                Estimate
-                                <b className="mt-0.5 block text-xs text-slate-900">
-                                  {item.estimatedCost == null ? "TBD" : money(item.estimatedCost)}
-                                </b>
-                              </span>
-                              <span>
-                                Priority
-                                <b className="mt-0.5 block text-xs text-slate-900">{item.priority ?? "Normal"}</b>
-                              </span>
-                            </div>
-                            <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
-                              <span className="text-xs text-slate-500">{formatDateTime(item.updatedAt)}</span>
-                              <Link
-                                className="inline-flex h-8 items-center rounded-md border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700"
-                                href={tiIssueHref({ item })}
-                              >
-                                View issue
-                              </Link>
-                            </div>
-                          </section>
-                        ))}
+                        {items.map((item) => {
+                          const tiWorkspaceHref = workspaceHref(item.workspaceBinding);
+                          return (
+                            <section
+                              key={item.id}
+                              className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
+                            >
+                              <div className="mb-2 flex items-start justify-between gap-2">
+                                {chip(item.serviceRequest.refNo ?? item.serviceRequestId, "border-blue-100 bg-blue-50 text-blue-700")}
+                                {statusDot(item.stage, item.stage)}
+                              </div>
+                              <div className="grid gap-1">
+                                <strong className="text-sm leading-snug">{item.summary}</strong>
+                                <span className="text-xs text-slate-500">
+                                  {item.serviceRequest.productTitle ?? "Watch"} / {item.serviceRequest.sku ?? "-"}
+                                </span>
+                              </div>
+                              <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500">
+                                <span>
+                                  Area
+                                  <b className="mt-0.5 block text-xs text-slate-900">{item.area ?? "-"}</b>
+                                </span>
+                                <span>
+                                  Owner
+                                  <b className="mt-0.5 block text-xs text-slate-900">{item.ownerKind}</b>
+                                </span>
+                                <span>
+                                  Estimate
+                                  <b className="mt-0.5 block text-xs text-slate-900">
+                                    {item.estimatedCost == null ? "TBD" : money(item.estimatedCost)}
+                                  </b>
+                                </span>
+                                <span>
+                                  Priority
+                                  <b className="mt-0.5 block text-xs text-slate-900">{item.priority ?? "Normal"}</b>
+                                </span>
+                              </div>
+                              <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                                <span className="text-xs text-slate-500">{formatDateTime(item.updatedAt)}</span>
+                                <div className="flex flex-wrap items-center justify-end gap-2">
+                                  {tiWorkspaceHref ? (
+                                    <Link
+                                      className="inline-flex h-8 items-center rounded-md bg-slate-950 px-3 text-xs font-semibold text-white"
+                                      href={tiWorkspaceHref}
+                                    >
+                                      Open workspace
+                                    </Link>
+                                  ) : (
+                                    <span className="inline-flex h-8 items-center rounded-md border border-amber-200 bg-amber-50 px-3 text-xs font-semibold text-amber-700">
+                                      Pending binding
+                                    </span>
+                                  )}
+                                  <Link
+                                    className="inline-flex h-8 items-center rounded-md border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700"
+                                    href={tiIssueHref({ item })}
+                                  >
+                                    View issue
+                                  </Link>
+                                </div>
+                              </div>
+                            </section>
+                          );
+                        })}
                         {!items.length ? (
                           <div className="rounded-lg border border-dashed border-slate-200 p-5 text-center text-sm text-slate-500">
                             No items

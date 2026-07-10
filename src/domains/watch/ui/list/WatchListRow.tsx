@@ -278,7 +278,7 @@ export default function WatchListRow({
         onService &&
         !isLockedForService && {
             key: "service",
-            label: "Service",
+            label: "Tao phieu ky thuat",
             icon: <Hammer className="h-4 w-4" />,
             onClick: onService,
         },

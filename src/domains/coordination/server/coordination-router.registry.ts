@@ -57,6 +57,19 @@ export function listCoordinationRoutes() {
 
 registerCoordinationRoutes([
   {
+    eventKey: "service_request.created",
+    targetType: "SERVICE_REQUEST",
+    coordinationType: "technical",
+    workTypeKey: "service-operation",
+    enabled: true,
+    metadata: {
+      note: "Create one SR workspace in Service Operation when Service domain creates a ServiceRequest.",
+      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeContext: "TECHNICAL",
+      bindingMode: "INTAKE",
+    },
+  },
+  {
     eventKey: "watch.media.photoshoot.requested",
     targetType: "WATCH",
     coordinationType: "media",

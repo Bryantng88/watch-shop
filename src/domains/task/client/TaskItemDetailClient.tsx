@@ -221,6 +221,11 @@ function defaultTabFromPresentation(
   return "overview";
 }
 
+function noteTextValue(note: string | null | undefined, key: string) {
+  const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return String(note ?? "").match(new RegExp(`^${escapedKey}:\\s*(.+)$`, "im"))?.[1]?.trim() ?? null;
+}
+
 function tabEnabled(tab: DetailTab, capabilities: WorkspaceCapabilities) {
   if (tab === "workflow") return capabilities.workflow;
   if (tab === "activity") return capabilities.activity;
@@ -1616,6 +1621,13 @@ export default function TaskItemDetailClient({
     [workspaceSnapshot],
   );
   const isServiceOperationWorkspace = workspaceSnapshot?.workTypeKey === "service-operation";
+  const serviceRequestId =
+    noteTextValue(item.note, "serviceRequestId") ??
+    businessBindings.find((binding) => binding.targetType === "SERVICE_REQUEST")?.targetId ??
+    null;
+  const canCreateServiceOperationTechnicalIssue =
+    isServiceOperationWorkspace &&
+    Boolean(serviceRequestId);
   const itemTabLabel = isServiceOperationWorkspace
     ? "Technical Issue Operation"
     : presentation.itemLabel;
@@ -1847,6 +1859,7 @@ export default function TaskItemDetailClient({
                 capabilities={capabilities}
                 itemLabel={itemTabLabel}
                 workspaceWorkTypeKey={workspaceSnapshot?.workTypeKey ?? null}
+                serviceRequestId={canCreateServiceOperationTechnicalIssue ? serviceRequestId : null}
                 currentUser={currentUser}
                 onOpenQueueActivity={openQueueActivity}
               />

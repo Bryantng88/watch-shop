@@ -3,12 +3,14 @@ import {
   PaymentType,
   Prisma,
   ServiceRequestStatus,
+  TaskStatus,
   TaskExecutionActionType,
   TaskExecutionTargetType,
   TechnicalIssueExecutionStatus,
 } from "@prisma/client";
 
 import { prisma } from "@/server/db/client";
+import { resolveCurrentCoordinationCycle } from "@/domains/coordination/server/coordination-cycle.service";
 import {
   getTechnicalIssueOperationStage,
   isTechnicalIssueCanceled,
@@ -21,6 +23,8 @@ import type {
   ServiceOperationOwnerKind,
   ServiceOperationRange,
   ServiceOperationScope,
+  ServiceOperationTechnicalWorkspace,
+  ServiceOperationTechnicalWorkspaceRole,
   ServiceOperationSrCaseRow,
   ServiceOperationTiListInput,
   ServiceOperationTiStageItem,
@@ -247,6 +251,22 @@ function stageWhere(
   return {};
 }
 
+const TECHNICAL_WORKSPACES: ServiceOperationTechnicalWorkspace[] = [
+  { role: "INSPECT", title: "Service Operation - Inspect", taskItemId: null },
+  { role: "PROCESSING", title: "Service Operation - Processing", taskItemId: null },
+  { role: "DONE", title: "Service Operation - Done / Follow-up", taskItemId: null },
+];
+
+function serviceOperationWorkspaceRoleFromNote(note: string | null | undefined): ServiceOperationTechnicalWorkspaceRole | null {
+  const value = String(note ?? "")
+    .match(/^serviceOperationWorkspaceRole:\s*(INSPECT|PROCESSING|DONE)\s*$/im)?.[1]
+    ?.toUpperCase();
+
+  return value === "INSPECT" || value === "PROCESSING" || value === "DONE"
+    ? value
+    : null;
+}
+
 function ownerKind(issue: {
   actionMode?: string | null;
   vendorId?: string | null;
@@ -331,6 +351,28 @@ export async function listServiceOperationSrCases(input: ServiceOperationListInp
     prisma.serviceRequest.count({ where }),
   ]);
 
+  const srIds = rows.map((row) => row.id);
+  const srBindings = srIds.length
+    ? await prisma.taskExecution.findMany({
+        where: {
+          targetType: TaskExecutionTargetType.SERVICE_REQUEST,
+          targetId: { in: srIds },
+          actionType: { not: TaskExecutionActionType.CANCELLED },
+          taskItemId: { not: null },
+        },
+        select: {
+          id: true,
+          targetId: true,
+          taskItemId: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+      })
+    : [];
+  const srBindingBySrId = new Map(
+    srBindings.map((binding) => [binding.targetId, binding]),
+  );
+
   const issueToSr = new Map<string, string>();
   for (const row of rows) {
     for (const issue of row.technicalIssue ?? []) {
@@ -359,6 +401,7 @@ export async function listServiceOperationSrCases(input: ServiceOperationListInp
   }
 
   const items: ServiceOperationSrCaseRow[] = rows.map((row) => {
+    const binding = srBindingBySrId.get(row.id);
     const activeIssues = (row.technicalIssue ?? []).filter(
       (issue) => !isTechnicalIssueCanceled(issue.executionStatus),
     );
@@ -377,6 +420,12 @@ export async function listServiceOperationSrCases(input: ServiceOperationListInp
     return {
       id: row.id,
       refNo: row.refNo ?? null,
+      workspaceBinding: binding
+        ? {
+            bindingId: binding.id,
+            taskItemId: binding.taskItemId ?? null,
+          }
+        : null,
       status: row.status,
       attention: attention({
         completed,
@@ -490,37 +539,81 @@ export async function listServiceOperationTiStageItems(input: ServiceOperationTi
   const items: ServiceOperationTiStageItem[] = rows.map((row) => {
     const binding = bindingByIssueId.get(row.id);
     return {
-    id: row.id,
-    serviceRequestId: row.serviceRequestId,
-    stage: getTechnicalIssueOperationStage(row),
-    summary: row.summary ?? row.note ?? "Technical issue",
-    area: row.area ?? null,
-    ownerKind: ownerKind(row),
-    vendorName: row.vendorNameSnap ?? null,
-    estimatedCost: toNullableNumber(row.estimatedCost),
-    actualCost: toNullableNumber(row.actualCost),
-    priority: row.priority ?? null,
-    updatedAt: row.updatedAt,
-    workspaceBinding: binding
-      ? {
-          bindingId: binding.id,
-          taskItemId: binding.taskItemId ?? null,
-        }
-      : null,
-    serviceRequest: {
-      refNo: row.serviceRequest?.refNo ?? null,
-      status: row.serviceRequest?.status ?? null,
-      productTitle: row.serviceRequest?.product?.title ?? null,
-      sku: row.serviceRequest?.skuSnapshot ?? row.serviceRequest?.product?.sku ?? null,
-      imageUrl:
-        row.serviceRequest?.primaryImageUrlSnapshot ??
-        row.serviceRequest?.product?.primaryImageUrl ??
-        null,
-    },
-  };
+      id: row.id,
+      serviceRequestId: row.serviceRequestId,
+      stage: getTechnicalIssueOperationStage(row),
+      summary: row.summary ?? row.note ?? "Technical issue",
+      area: row.area ?? null,
+      ownerKind: ownerKind(row),
+      vendorName: row.vendorNameSnap ?? null,
+      estimatedCost: toNullableNumber(row.estimatedCost),
+      actualCost: toNullableNumber(row.actualCost),
+      priority: row.priority ?? null,
+      updatedAt: row.updatedAt,
+      workspaceBinding: binding
+        ? {
+            bindingId: binding.id,
+            taskItemId: binding.taskItemId ?? null,
+          }
+        : null,
+      serviceRequest: {
+        refNo: row.serviceRequest?.refNo ?? null,
+        status: row.serviceRequest?.status ?? null,
+        productTitle: row.serviceRequest?.product?.title ?? null,
+        sku: row.serviceRequest?.skuSnapshot ?? row.serviceRequest?.product?.sku ?? null,
+        imageUrl:
+          row.serviceRequest?.primaryImageUrlSnapshot ??
+          row.serviceRequest?.product?.primaryImageUrl ??
+          null,
+      },
+    };
   });
 
   return { items, total, page, pageSize, scope };
+}
+
+export async function listServiceOperationTechnicalWorkspaces() {
+  const cycle = await resolveCurrentCoordinationCycle(prisma, {
+    context: "TECHNICAL",
+    createIfMissing: false,
+  });
+
+  if (!cycle?.task.id) return TECHNICAL_WORKSPACES;
+
+  const rows = await prisma.taskItem.findMany({
+    where: {
+      taskId: cycle.task.id,
+      status: { not: TaskStatus.CANCELLED },
+    },
+    select: {
+      id: true,
+      title: true,
+      note: true,
+    },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  });
+
+  const byRole = new Map(
+    rows
+      .map((row) => ({
+        row,
+        role: serviceOperationWorkspaceRoleFromNote(row.note),
+      }))
+      .filter((item): item is {
+        row: { id: string; title: string; note: string | null };
+        role: ServiceOperationTechnicalWorkspace["role"];
+      } => Boolean(item.role))
+      .map((item) => [item.role, item.row]),
+  );
+
+  return TECHNICAL_WORKSPACES.map((workspace) => {
+    const row = byRole.get(workspace.role);
+    return {
+      ...workspace,
+      title: row?.title ?? workspace.title,
+      taskItemId: row?.id ?? null,
+    };
+  });
 }
 
 export async function getServiceOperationCounters(

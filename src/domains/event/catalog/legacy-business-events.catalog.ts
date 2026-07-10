@@ -57,7 +57,8 @@ export const LEGACY_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
     label: "Service request created",
     targetType: "SERVICE_REQUEST",
     group: "Service",
-    knownConsumers: ["timeline"],
+    knownConsumers: ["timeline", "coordination"],
+    autoBindingScope: "CURRENT_ACTIVE_WEEKLY_SPACE:TECHNICAL:service-operation",
   }),
   defineBusinessEventContract({
     key: "service_request.status_changed",

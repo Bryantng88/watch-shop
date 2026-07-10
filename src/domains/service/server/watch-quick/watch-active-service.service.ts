@@ -4,8 +4,11 @@ import {
   ServiceRequestStatus,
   ServiceScope,
   ServiceType,
+  TaskExecutionActionType,
+  TaskExecutionTargetType,
 } from "@prisma/client";
 import { genRefNo } from "@/domains/shared/utils/AutoGenRef";
+import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
 import * as repo from "../repository/service-request.repo";
 import { canMoveProductToService } from "../shared/service-request.rules";
 
@@ -76,6 +79,40 @@ async function findActiveServiceRequest(client: DB, productId: string) {
   });
 }
 
+async function findActiveServiceRequestDetail(client: DB, productId: string) {
+  return client.serviceRequest.findFirst({
+    where: {
+      productId,
+      status: { in: ACTIVE_SERVICE_STATUSES },
+    },
+    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+    select: {
+      id: true,
+      refNo: true,
+      status: true,
+      productId: true,
+      updatedAt: true,
+    },
+  });
+}
+
+async function findServiceRequestWorkspaceBinding(client: DB, serviceRequestId: string) {
+  return client.taskExecution.findFirst({
+    where: {
+      targetType: TaskExecutionTargetType.SERVICE_REQUEST,
+      targetId: serviceRequestId,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+      taskItemId: { not: null },
+    },
+    select: {
+      id: true,
+      taskItemId: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
 async function createQuickServiceRequest(client: DB, productId: string) {
   const product = await repo.findProductForService(client, productId);
   if (!product) throw new Error("Không tìm thấy watch/product để tạo phiếu service.");
@@ -130,6 +167,102 @@ async function getOrCreateActiveServiceRequestId(productId: string) {
 
     throw error;
   }
+}
+
+export async function getOrCreateServiceOperationWorkspaceForWatch(input: {
+  productId: string;
+  actorUserId?: string | null;
+  openExisting?: boolean;
+}) {
+  const productId = cleanText(input.productId);
+  if (!productId) throw new Error("Missing productId");
+
+  const existing = await findActiveServiceRequestDetail(prisma, productId);
+
+  if (existing?.id) {
+    const existingWorkspace = await findServiceRequestWorkspaceBinding(prisma, existing.id);
+
+    if (existingWorkspace?.taskItemId && !input.openExisting) {
+      return {
+        status: "EXISTING_WORKSPACE" as const,
+        createdServiceRequest: false,
+        createdWorkspace: false,
+        serviceRequestId: existing.id,
+        refNo: existing.refNo ?? null,
+        taskItemId: existingWorkspace.taskItemId,
+        workspaceHref: `/admin/task-items/${existingWorkspace.taskItemId}`,
+      };
+    }
+
+    if (existingWorkspace?.taskItemId) {
+      return {
+        status: "OPEN_EXISTING_WORKSPACE" as const,
+        createdServiceRequest: false,
+        createdWorkspace: false,
+        serviceRequestId: existing.id,
+        refNo: existing.refNo ?? null,
+        taskItemId: existingWorkspace.taskItemId,
+        workspaceHref: `/admin/task-items/${existingWorkspace.taskItemId}`,
+      };
+    }
+
+    const event = await recordBusinessEvent(prisma, {
+      eventKey: "service_request.created",
+      targetType: "SERVICE_REQUEST",
+      targetId: existing.id,
+      actorUserId: input.actorUserId ?? null,
+      payload: {
+        source: "watch-list-service-operation-intake",
+        productId,
+        serviceRequestId: existing.id,
+        refNo: existing.refNo ?? null,
+      },
+      targetAliasIds: [productId],
+    });
+
+    const binding = await findServiceRequestWorkspaceBinding(prisma, existing.id);
+    const taskItemId = binding?.taskItemId ?? event.consumers.coordination?.taskItemId ?? null;
+
+    return {
+      status: "BOUND_EXISTING_SERVICE_REQUEST" as const,
+      createdServiceRequest: false,
+      createdWorkspace: Boolean(taskItemId),
+      serviceRequestId: existing.id,
+      refNo: existing.refNo ?? null,
+      taskItemId,
+      workspaceHref: taskItemId ? `/admin/task-items/${taskItemId}` : null,
+    };
+  }
+
+  const request = await createQuickServiceRequest(prisma, productId);
+  await ensureAssessment(prisma, request.id);
+
+  const event = await recordBusinessEvent(prisma, {
+    eventKey: "service_request.created",
+    targetType: "SERVICE_REQUEST",
+    targetId: request.id,
+    actorUserId: input.actorUserId ?? null,
+    payload: {
+      source: "watch-list-service-operation-intake",
+      productId,
+      serviceRequestId: request.id,
+      refNo: request.refNo ?? null,
+    },
+    targetAliasIds: [productId],
+  });
+
+  const binding = await findServiceRequestWorkspaceBinding(prisma, request.id);
+  const taskItemId = binding?.taskItemId ?? event.consumers.coordination?.taskItemId ?? null;
+
+  return {
+    status: "CREATED_WORKSPACE" as const,
+    createdServiceRequest: true,
+    createdWorkspace: Boolean(taskItemId),
+    serviceRequestId: request.id,
+    refNo: request.refNo ?? null,
+    taskItemId,
+    workspaceHref: taskItemId ? `/admin/task-items/${taskItemId}` : null,
+  };
 }
 
 async function ensureAssessment(client: DB, serviceRequestId: string) {

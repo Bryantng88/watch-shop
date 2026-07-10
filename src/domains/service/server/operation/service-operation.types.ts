@@ -13,9 +13,15 @@ export type ServiceOperationOwnerKind =
   | "PARTS"
   | "UNKNOWN";
 
+export type ServiceOperationWorkspaceBinding = {
+  bindingId: string;
+  taskItemId: string | null;
+};
+
 export type ServiceOperationSrCaseRow = {
   id: string;
   refNo: string | null;
+  workspaceBinding: ServiceOperationWorkspaceBinding | null;
   status: string;
   attention: ServiceOperationAttention;
   watch: {
@@ -57,10 +63,7 @@ export type ServiceOperationTiStageItem = {
   actualCost: number | null;
   priority: string | null;
   updatedAt: Date;
-  workspaceBinding: {
-    bindingId: string;
-    taskItemId: string | null;
-  } | null;
+  workspaceBinding: ServiceOperationWorkspaceBinding | null;
   serviceRequest: {
     refNo: string | null;
     status: string | null;
@@ -68,6 +71,17 @@ export type ServiceOperationTiStageItem = {
     sku: string | null;
     imageUrl: string | null;
   };
+};
+
+export type ServiceOperationTechnicalWorkspaceRole =
+  | "INSPECT"
+  | "PROCESSING"
+  | "DONE";
+
+export type ServiceOperationTechnicalWorkspace = {
+  role: ServiceOperationTechnicalWorkspaceRole;
+  title: string;
+  taskItemId: string | null;
 };
 
 export type ServiceOperationCounters = {

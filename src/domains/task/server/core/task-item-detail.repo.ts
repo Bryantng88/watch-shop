@@ -1,7 +1,9 @@
 import { dbOrTx, type DB } from "@/server/db/client";
 import { getTaskItemActivityViewModels } from "@/domains/task/server/activity";
 import { listTaskItemQueueItems } from "@/domains/task/server/business-binding.service";
+import type { QueueItemDTO } from "@/domains/task/server/business-binding.types";
 import { listWatchMediaQueueProjectionItemsWithFallback } from "@/domains/projection/server/watch-media-queue.projection";
+import { TaskExecutionActionType, TaskExecutionTargetType } from "@prisma/client";
 import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
 
 const USER_SELECT = {
@@ -27,6 +29,177 @@ function shouldUseWatchMediaQueueProjection(note?: string | null) {
   return noteWorkTypeKey(note) === "media-processing";
 }
 
+function serviceOperationWorkspaceRole(note?: string | null) {
+  return String(note ?? "")
+    .match(/^serviceOperationWorkspaceRole:\s*([A-Z_]+)\s*$/im)?.[1]
+    ?.toUpperCase() ?? null;
+}
+
+function queueStatusFromTechnicalIssue(issue: {
+  executionStatus?: string | null;
+  isConfirmed?: boolean | null;
+}): QueueItemDTO["status"] {
+  const status = String(issue.executionStatus ?? "").toUpperCase();
+  if (status === "DONE") return "DONE";
+  if (status === "IN_PROGRESS") return "IN_PROGRESS";
+  if (status === "CONFIRMED" || issue.isConfirmed) return "IN_PROGRESS";
+  return "WAITING";
+}
+
+function mediaUrl(value?: string | null) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  if (
+    raw.startsWith("http://") ||
+    raw.startsWith("https://") ||
+    raw.startsWith("/")
+  ) {
+    return raw;
+  }
+
+  return `/api/media/sign?key=${encodeURIComponent(raw)}`;
+}
+
+function technicalIssueOwnerLabel(issue: {
+  actionMode?: string | null;
+  vendorId?: string | null;
+  vendorNameSnap?: string | null;
+  supplyCatalogId?: string | null;
+  mechanicalPartCatalogId?: string | null;
+}) {
+  const actionMode = String(issue.actionMode ?? "").trim().toUpperCase();
+  if (actionMode === "VENDOR" || issue.vendorId) {
+    return issue.vendorNameSnap ? `Vendor: ${issue.vendorNameSnap}` : "Vendor";
+  }
+  if (issue.supplyCatalogId || issue.mechanicalPartCatalogId) return "Parts";
+  if (actionMode === "INTERNAL") return "Internal";
+  return null;
+}
+
+async function resolveServiceRequestIdForWorkspace(db: DB, taskItemId: string) {
+  const binding = await dbOrTx(db).taskExecution.findFirst({
+    where: {
+      taskItemId,
+      targetType: TaskExecutionTargetType.SERVICE_REQUEST,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+    },
+    select: {
+      targetId: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return binding?.targetId ?? null;
+}
+
+async function listServiceRequestTechnicalIssueQueueItems(
+  db: DB,
+  input: {
+    taskItemId: string;
+    serviceRequestId: string;
+  },
+): Promise<QueueItemDTO[]> {
+  const rows = await dbOrTx(db).technicalIssue.findMany({
+    where: {
+      serviceRequestId: input.serviceRequestId,
+      executionStatus: { not: "CANCELED" },
+    },
+    orderBy: [{ sortOrder: "asc" }, { openedAt: "desc" }, { createdAt: "desc" }],
+    select: {
+      id: true,
+      summary: true,
+      note: true,
+      area: true,
+      actionMode: true,
+      executionStatus: true,
+      priority: true,
+      isConfirmed: true,
+      updatedAt: true,
+      openedAt: true,
+      vendorId: true,
+      vendorNameSnap: true,
+      supplyCatalogId: true,
+      mechanicalPartCatalogId: true,
+      serviceRequest: {
+        select: {
+          refNo: true,
+          skuSnapshot: true,
+          primaryImageUrlSnapshot: true,
+          product: {
+            select: {
+              title: true,
+              sku: true,
+              primaryImageUrl: true,
+              storefrontImageKey: true,
+              productImage: {
+                where: { role: "INLINE" },
+                orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+                take: 1,
+                select: {
+                  fileKey: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return rows.map((issue): QueueItemDTO => {
+    const product = issue.serviceRequest.product;
+    const imageUrl =
+      mediaUrl(product?.productImage?.[0]?.fileKey) ||
+      mediaUrl(product?.primaryImageUrl) ||
+      mediaUrl(product?.storefrontImageKey) ||
+      mediaUrl(issue.serviceRequest.primaryImageUrlSnapshot);
+    const refParts = [
+      issue.serviceRequest.refNo,
+      issue.serviceRequest.skuSnapshot ?? product?.sku ?? product?.title,
+    ].filter(Boolean);
+    const statusParts = [
+      issue.area,
+      technicalIssueOwnerLabel(issue),
+      issue.priority,
+    ].filter(Boolean);
+
+    return {
+      id: `technical-issue:${issue.id}`,
+      taskItemId: input.taskItemId,
+      targetType: TaskExecutionTargetType.TECHNICAL_ISSUE,
+      targetId: issue.id,
+      source: "AUTO",
+      status: queueStatusFromTechnicalIssue(issue),
+      preview: {
+        title:
+          issue.summary ||
+          issue.note ||
+          issue.area ||
+          "Technical issue",
+        ref: refParts.length ? refParts.join(" / ") : issue.id,
+        status: statusParts.length
+          ? statusParts.join(" / ")
+          : String(issue.executionStatus || ""),
+        imageUrl,
+        imageUrls: imageUrl ? [imageUrl] : [],
+      },
+      latestActivityTitle: null,
+      feedbackCount: 0,
+      discussionCount: 0,
+      activityCount: 0,
+      workflowKey: null,
+      currentWorkflowState: String(issue.executionStatus ?? "") || null,
+      currentWorkflowStateLabel: null,
+      isWorkflowDone: issue.executionStatus === "DONE",
+      manualTransitions: [],
+      intakeNote: issue.note ?? null,
+      mediaAssetAttachedAt: null,
+      mediaWorkProgress: null,
+      updatedAt: (issue.updatedAt ?? issue.openedAt).toISOString(),
+    };
+  });
+}
+
 async function listQueueItemsForTaskItemDetail(
   db: DB,
   input: {
@@ -35,6 +208,24 @@ async function listQueueItemsForTaskItemDetail(
   },
 ) {
   if (!shouldUseWatchMediaQueueProjection(input.note)) {
+    if (
+      noteWorkTypeKey(input.note) === "service-operation" &&
+      !["INSPECT", "PROCESSING", "DONE"].includes(
+        serviceOperationWorkspaceRole(input.note) ?? "",
+      )
+    ) {
+      const serviceRequestId = await resolveServiceRequestIdForWorkspace(
+        db,
+        input.taskItemId,
+      );
+      if (serviceRequestId) {
+        return listServiceRequestTechnicalIssueQueueItems(db, {
+          taskItemId: input.taskItemId,
+          serviceRequestId,
+        });
+      }
+    }
+
     return listTaskItemQueueItems(db, input.taskItemId);
   }
 

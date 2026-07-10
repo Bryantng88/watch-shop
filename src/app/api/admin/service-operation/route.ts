@@ -8,6 +8,9 @@ import {
   type ServiceOperationRange,
   type ServiceOperationTiListInput,
 } from "@/domains/service/server/operation";
+import { getOrCreateServiceOperationWorkspaceForWatch } from "@/domains/service/server/watch-quick";
+import { requirePermission } from "@/server/auth/requirePermission";
+import { PERMISSIONS } from "@/constants/permissions";
 
 function normalizeRange(value: string | null): ServiceOperationRange {
   return value === "CURRENT_WEEK" ? "CURRENT_WEEK" : "ALL_ACTIVE";
@@ -69,4 +72,31 @@ export async function GET(request: Request) {
     srCases,
     tiItems,
   });
+}
+
+function fail(error: unknown, status = 400) {
+  const message = error instanceof Error ? error.message : "Cannot process Service Operation request.";
+  return NextResponse.json({ ok: false, error: message }, { status });
+}
+
+export async function POST(request: Request) {
+  try {
+    const auth = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+    const body = await request.json().catch(() => ({}));
+    const action = String(body?.action ?? "").trim();
+
+    if (action !== "watch_intake") {
+      throw new Error("Unsupported Service Operation action.");
+    }
+
+    const data = await getOrCreateServiceOperationWorkspaceForWatch({
+      productId: body?.productId,
+      actorUserId: auth.id ?? auth.userId ?? null,
+      openExisting: body?.openExisting === true,
+    });
+
+    return NextResponse.json({ ok: true, data });
+  } catch (error) {
+    return fail(error);
+  }
 }

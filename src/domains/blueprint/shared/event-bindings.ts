@@ -122,6 +122,7 @@ const SERVICE_OPERATION_BINDINGS: Array<{
     targetType: "SERVICE_REQUEST",
     mode: "INTAKE",
     effects: ["AUTO_BIND", "WRITE_ACTIVITY"],
+    status: "ACTIVE",
   },
   {
     eventKey: "service_request.status_changed",

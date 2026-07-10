@@ -18,7 +18,6 @@ import type {
     WatchListResult,
     WatchRow,
 } from "../ui/list/types";
-import { WatchServiceQuickModal } from "@/domains/service/ui/quick-service";
 import {
     markWatchMediaAssetAttachedFromWatchAction,
     requestWatchPhotoshootAction,
@@ -285,7 +284,7 @@ export default function WatchListClient(props: WatchListClientProps) {
     const [isPending, startTransition] = useTransition();
     const progress = useAppProgress();
     const notify = useNotify();
-    const [serviceQuickRow, setServiceQuickRow] = React.useState<WatchRow | null>(null);
+    const [serviceIntakeProductId, setServiceIntakeProductId] = React.useState<string | null>(null);
     const [buyBackRow, setBuyBackRow] = React.useState<WatchRow | null>(null);
     const [buyBackSubmitting, setBuyBackSubmitting] = React.useState(false);
     const [buyBackError, setBuyBackError] = React.useState<string | null>(null);
@@ -755,7 +754,7 @@ export default function WatchListClient(props: WatchListClientProps) {
         console.log("TODO delete watch", row);
     }
 
-    function onService(row: WatchRow) {
+    async function onService(row: WatchRow) {
         const productId = String(row.productId || "").trim();
 
         if (!productId) {
@@ -763,7 +762,70 @@ export default function WatchListClient(props: WatchListClientProps) {
             return;
         }
 
-        setServiceQuickRow(row);
+        if (serviceIntakeProductId) return;
+
+        setServiceIntakeProductId(productId);
+        progress.show({
+            title: "Dang tao phieu ky thuat",
+            message: "He thong dang mo Service Operation workspace.",
+        });
+
+        try {
+            const res = await fetch("/api/admin/service-operation", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                body: JSON.stringify({
+                    action: "watch_intake",
+                    productId,
+                }),
+            });
+
+            const json = await res.json().catch(() => null);
+
+            if (!res.ok || !json?.ok) {
+                throw new Error(json?.error || "Khong the tao phieu ky thuat.");
+            }
+
+            const data = json.data ?? {};
+            const href = String(data.workspaceHref ?? "").trim();
+
+            if (data.status === "EXISTING_WORKSPACE") {
+                progress.hide();
+                const shouldOpen = window.confirm(
+                    "Watch nay da co workspace ky thuat dang active. Ban muon mo workspace do khong?",
+                );
+                if (!shouldOpen) return;
+                if (!href) throw new Error("Workspace dang ton tai nhung chua co duong dan.");
+
+                navigateWithProgress(href, "Dang mo workspace ky thuat");
+                return;
+            }
+
+            if (!href) {
+                throw new Error("Phieu service da duoc xu ly nhung workspace chua san sang.");
+            }
+
+            notify.success({
+                title: data.createdServiceRequest ? "Da tao phieu ky thuat" : "Da gan workspace ky thuat",
+                message: data.refNo ? `SR ${data.refNo} da san sang.` : "Workspace Service Operation da san sang.",
+            });
+
+            navigateWithProgress(href, "Dang mo workspace ky thuat");
+        } catch (error) {
+            progress.hide();
+            notify.error({
+                title: "Khong the tao phieu ky thuat",
+                message:
+                    error instanceof Error
+                        ? error.message
+                        : "Khong the mo Service Operation workspace.",
+            });
+        } finally {
+            setServiceIntakeProductId(null);
+        }
     }
 
     function onQuickOrder(row: WatchRow) {
@@ -985,16 +1047,6 @@ export default function WatchListClient(props: WatchListClientProps) {
                 />
             ) : null}
 
-            {serviceQuickRow ? (
-                <WatchServiceQuickModal
-                    open
-                    productId={serviceQuickRow.productId}
-                    productTitle={serviceQuickRow.title}
-                    sku={serviceQuickRow.sku}
-                    onClose={() => setServiceQuickRow(null)}
-                    onUpdated={() => router.refresh()}
-                />
-            ) : null}
         </div>
 
     );

@@ -53,6 +53,11 @@ Completed:
 - Sprint 63 Service Operation Workflow and Consumer Hardening first slice.
 - Sprint 64 Service Operation Consumer Activation first slice.
 - Sprint 65 Service Operation Smoke and Workspace UX Hardening first slice.
+- Sprint 66 Service Operation Receiver Repair and Apply Smoke first slice.
+- Sprint 67 Service Operation Workspace Cardinality first slice.
+- Sprint 68 Service Operation Business Flow Realignment first slice.
+- Sprint 69 Watch List Service Operation Intake first slice.
+- Sprint 70 SR Workspace TechnicalIssue Creation first slice.
 
 Current handoff:
 
@@ -65,9 +70,14 @@ Current handoff:
 - Read `docs/sprints/SM-Sprint-63-service-operation-workflow-consumer-hardening.md`.
 - Read `docs/sprints/SM-Sprint-64-service-operation-consumer-activation.md`.
 - Read `docs/sprints/SM-Sprint-65-service-operation-smoke-and-workspace-ux-hardening.md`.
+- Read `docs/sprints/SM-Sprint-66-service-operation-receiver-repair-apply-smoke.md`.
+- Read `docs/sprints/SM-Sprint-67-service-operation-workspace-cardinality.md`.
+- Read `docs/sprints/SM-Sprint-68-service-operation-business-flow-realignment.md`.
+- Read `docs/sprints/SM-Sprint-69-watch-list-service-operation-intake.md`.
+- Read `docs/sprints/SM-Sprint-70-sr-workspace-technical-issue-creation.md`.
 - Read `docs/sprints/SM-Service-Operation-retrospective-corrections-and-current-contract.md`.
 - Sprint 61 is complete as a first production UI/API slice. Space Management
-  Service Operation remains an overview/read surface with SR and TI views;
+  Service Operation is a space/workspace index with SR and Technical views;
   workspace operation happens in the TaskItem workspace shell and must use
   Blueprint/event-consumer produced queue items.
 - Sprint 62 first slice wires Service Operation action adapters and aligns
@@ -84,10 +94,31 @@ Current handoff:
   receiver marker support, and workspace action error UX. Current DB dry-run
   found duplicate Service Operation receiver candidates; runtime correctly
   skips until a receiver is selected explicitly.
-- Service Operation workspace UX rule: workspace detail is hybrid by context.
-  An SR workspace shows TI items for that SR; a TI workspace shows TI operation
-  items with stage/workflow actions. `SR Cases` and `Technical Bench` remain
-  Space Management modes/views, not tabs inside a workspace.
+- Sprint 66 selected the current Service Operation receiver, reran dry-run
+  smoke successfully, applied `technical_issue.created` safely, and fixed
+  legacy binding workflow backfill from receiver TaskItem note.
+- Sprint 67 exposed the SR/TI workspace cardinality problem and added the first
+  SR workspace route. Its four-technical-stage-workspace model was corrected in
+  Sprint 68.
+- Sprint 68 locks the current Service Operation business flow: SR Cases index
+  one workspace per SR case; Technical Bench indexes three technical operation
+  workspaces: Inspect, Processing, and Done/Follow-up. Ready, In Progress, and
+  Done are workflow states inside Processing, not separate workspace capacity.
+- Service Operation workspace UX rule: Space Management renders workspace rows,
+  not raw business-domain rows. In `SR Cases`, each row represents one SR
+  workspace while preserving the current SR columns: service request, watch,
+  creator, attention, technical progress, commercial, and updated time. In
+  `Technical Bench`, the view represents technical operation workspaces.
+  Workspace detail is hybrid by context: an SR workspace shows TI items for
+  that SR; a TI/technical workspace shows TI operation items with
+  stage/workflow actions. `SR Cases` and `Technical Bench` remain Space
+  Management modes/views, not tabs inside a workspace.
+- Sprint 70 adds the SR workspace `Tao TI` modal. Watch List still only
+  creates/opens an SR workspace. TI creation happens inside the SR workspace,
+  uses the existing Service `createTechnicalIssue` command, records
+  `technical_issue.created`, and then the coordination consumer binds the TI to
+  the Inspect workspace. The bound ServiceRequest is workspace identity, not an
+  item row.
 - Retrospective rule: do not repeat the earlier mistakes documented in
   `SM-Service-Operation-retrospective-corrections-and-current-contract.md`.
 
@@ -200,26 +231,39 @@ Sprint 56 implemented Projection Observability & Repair.
 
 Current sprint:
 
-- Sprint 65 Service Operation smoke and workspace UX hardening first slice.
+- Sprint 70 SR Workspace TechnicalIssue creation.
 
-Sprint 65 scope/status:
+Sprint 70 scope/status:
 
-- Added dry-run diagnostics for Service Operation coordination event binding.
-- Added `scripts/smoke-service-operation-consumer.ts`.
-- Added `blueprintAutoBindingReceiver:true` marker for new event-bound work
-  tickets.
-- Workspace manual action failures now show an inline UI error.
-- Current DB smoke reports `DUPLICATE_BLUEPRINT_EVENT_BINDING` for Service
-  Operation until one current receiver is selected explicitly.
-- Workspace capacity and TI item binding remain blueprint/event-consumer led,
-  not injected from workspace detail UI.
+- Activated `service_request.created` route/coordination binding so SR events
+  can create one SR workspace per ServiceRequest.
+- Technical Bench has three technical operation receiver workspaces:
+  Inspect, Processing, and Done/Follow-up.
+- TechnicalIssue event resolution uses current Service truth to select the
+  operation workspace:
+  - `INSPECT` -> Inspect workspace;
+  - `READY` / `IN_PROGRESS` -> Processing workspace;
+  - `DONE` -> Done/Follow-up workspace.
+- Legacy TechnicalIssue bindings in the old receiver are adopted/moved into the
+  correct technical operation workspace instead of duplicated.
+- Workspace capacity and item binding remain blueprint/event-consumer led, not
+  injected from workspace detail UI.
 - SR, Payment, and reopened events remain inactive/draft for binding.
 - Keep Activity/Timeline event-backed; do not introduce MaintenanceRecord as the
   Activity source.
 - Keep ProjectionRecord Service Operation reads deferred unless measured UI/API
   pressure justifies compare/fallback work.
-- Document the possible future split into Inspect, Processing, and Done/follow-up
-  workspaces as a design candidate only, not an implementation scope.
+- Watch List now has a controlled Service Operation intake command:
+  `watch_intake` creates/reuses an active ServiceRequest, emits
+  `service_request.created`, and opens the SR workspace.
+- The Watch List action does not create TechnicalIssue directly.
+- SR workspace detail now has `Tao TI`, a compact modal in the
+  `Technical Issue Operation` item tab.
+- `Tao TI` creates a TechnicalIssue through the existing Service command and
+  producer path. The resulting `technical_issue.created` event is the handoff to
+  the coordination consumer / Inspect workspace.
+- SR workspace items are TechnicalIssues belonging to that SR. The bound
+  ServiceRequest identifies the workspace and must not render as a queue item.
 
 Sprint 63 non-goals:
 
@@ -229,8 +273,8 @@ Sprint 63 non-goals:
 - no SR workflow engine;
 - no Payment Workspace;
 - no MaintenanceRecord-as-Activity.
-- no separate Inspect/Processing/Done workspace implementation until Blueprint
-  capacity and consumer bindings are explicit.
+- no workspace capacity creation from UI/read paths; Blueprint capacity and
+  consumer bindings must be explicit first.
 
 ## M2 Later
 
@@ -261,15 +305,20 @@ Recommended later M2 topics must stay outside Sprint 39 unless explicitly select
 12. Read `docs/sprints/SM-Sprint-63-service-operation-workflow-consumer-hardening.md`
 13. Read `docs/sprints/SM-Sprint-64-service-operation-consumer-activation.md`
 14. Read `docs/sprints/SM-Sprint-65-service-operation-smoke-and-workspace-ux-hardening.md`
-15. Read `docs/sprints/SM-Service-Operation-retrospective-corrections-and-current-contract.md`
-16. Continue after Sprint 65 by selecting the intended current Service Operation
-   receiver, rerunning smoke, then running a safe `--apply` smoke for
-   TechnicalIssue event binding. Space has no workflow engine.
+15. Read `docs/sprints/SM-Sprint-66-service-operation-receiver-repair-apply-smoke.md`
+16. Read `docs/sprints/SM-Sprint-67-service-operation-workspace-cardinality.md`
+17. Read `docs/sprints/SM-Sprint-68-service-operation-business-flow-realignment.md`
+18. Read `docs/sprints/SM-Sprint-69-watch-list-service-operation-intake.md`
+19. Read `docs/sprints/SM-Sprint-70-sr-workspace-technical-issue-creation.md`
+20. Read `docs/sprints/SM-Service-Operation-retrospective-corrections-and-current-contract.md`
+21. Continue after Sprint 70 by building Inspect workspace classification and
+   Processing workspace actions. Space has no workflow engine.
 
-Sprint 65 first slice is complete. SR and TI remain existing business truth.
-Only TechnicalIssue created/confirmed/started/completed are active for Service
-Operation coordination binding. Current DB has duplicate Service Operation
-receiver candidates and needs explicit receiver selection before apply smoke.
+Sprint 70 wires SR workspace TechnicalIssue creation into the Service Operation
+event-driven intake. SR and TI remain existing business truth. Technical Bench
+is modeled as Inspect / Processing / Done-Follow-up operation workspaces, and SR
+workspace intake is handled by `service_request.created` in the coordination
+consumer.
 
 Older M1 context remains available in:
 

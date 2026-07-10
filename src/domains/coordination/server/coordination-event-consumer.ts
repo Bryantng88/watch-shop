@@ -30,6 +30,7 @@ import {
 import { getWorkTypeDefinition } from "@/domains/task/server/work-type.service";
 import { getCoordinationRoute } from "./coordination-router.registry";
 import { routeBusinessEvent } from "./coordination-router.service";
+import { getTechnicalIssueOperationStage } from "@/domains/service/server/shared/service-request.rules";
 import type { CoordinationContext } from "./coordination-cycle.types";
 import type {
   CoordinationBusinessEvent,
@@ -123,6 +124,8 @@ type WorkTicketResolution = {
   eventBinding: WorkspaceEventBinding;
   source: "BLUEPRINT_SNAPSHOT";
 };
+
+type ServiceOperationWorkspaceRole = "INSPECT" | "PROCESSING" | "DONE";
 
 function clean(value: unknown) {
   return String(value ?? "").trim();
@@ -257,6 +260,57 @@ function isAutoBindingReceiverNote(note: string | null | undefined) {
   return /^blueprintAutoBindingReceiver:\s*true\s*$/im.test(String(note ?? ""));
 }
 
+function serviceOperationWorkspaceRoleFromNote(
+  note: string | null | undefined,
+): ServiceOperationWorkspaceRole | null {
+  const value = String(note ?? "")
+    .match(/^serviceOperationWorkspaceRole:\s*(INSPECT|PROCESSING|DONE)\s*$/im)?.[1]
+    ?.toUpperCase();
+
+  if (
+    value === "INSPECT" ||
+    value === "PROCESSING" ||
+    value === "DONE"
+  ) {
+    return value;
+  }
+
+  return null;
+}
+
+function isServiceOperationTechnicalRoute(input: {
+  route: CoordinationRoute;
+  targetType: string;
+}) {
+  return (
+    normalizeMatchKey(input.route.workTypeKey) === "service operation" &&
+    normalizeTargetType(input.targetType) === "TECHNICAL_ISSUE"
+  );
+}
+
+function scopeServiceOperationWorkspaceTickets<T extends { item: { note: string | null } }>(
+  tickets: T[],
+  input: {
+    route: CoordinationRoute;
+    targetType: string;
+    workspaceRole?: ServiceOperationWorkspaceRole | null;
+  },
+) {
+  if (!input.workspaceRole || !isServiceOperationTechnicalRoute(input)) {
+    return tickets;
+  }
+
+  const hasRoleReceivers = tickets.some((ticket) =>
+    serviceOperationWorkspaceRoleFromNote(ticket.item.note),
+  );
+
+  if (!hasRoleReceivers) return tickets;
+
+  return tickets.filter(
+    (ticket) => serviceOperationWorkspaceRoleFromNote(ticket.item.note) === input.workspaceRole,
+  );
+}
+
 function workTypeKeyFromWorkspaceSnapshot(note: string | null | undefined) {
   const snapshot = parseWorkspaceDefinitionSnapshot(note);
   return clean(
@@ -355,6 +409,7 @@ function findWorkTicket(
   input: {
     eventKey: string;
     targetType: string;
+    workspaceRole?: ServiceOperationWorkspaceRole | null;
   },
 ):
   | WorkTicketResolution
@@ -390,8 +445,17 @@ function findWorkTicket(
       })),
   );
 
-  if (matchingSnapshotTickets.length > 1) {
-    const selectedReceivers = matchingSnapshotTickets.filter((ticket) =>
+  const scopedMatchingSnapshotTickets = scopeServiceOperationWorkspaceTickets(
+    matchingSnapshotTickets,
+    {
+      route,
+      targetType: input.targetType,
+      workspaceRole: input.workspaceRole,
+    },
+  );
+
+  if (scopedMatchingSnapshotTickets.length > 1) {
+    const selectedReceivers = scopedMatchingSnapshotTickets.filter((ticket) =>
       isAutoBindingReceiverNote(ticket.item.note),
     );
 
@@ -400,7 +464,9 @@ function findWorkTicket(
     return "DUPLICATE_BLUEPRINT_EVENT_BINDING";
   }
 
-  if (matchingSnapshotTickets.length === 1) return matchingSnapshotTickets[0];
+  if (scopedMatchingSnapshotTickets.length === 1) {
+    return scopedMatchingSnapshotTickets[0];
+  }
 
   const selectedReceiverTickets = task.taskItems
     .filter((item) => isAutoBindingReceiverNote(item.note))
@@ -420,11 +486,20 @@ function findWorkTicket(
       source: "BLUEPRINT_SNAPSHOT" as const,
     }));
 
-  if (selectedReceiverTickets.length > 1) {
+  const scopedSelectedReceiverTickets = scopeServiceOperationWorkspaceTickets(
+    selectedReceiverTickets,
+    {
+      route,
+      targetType: input.targetType,
+      workspaceRole: input.workspaceRole,
+    },
+  );
+
+  if (scopedSelectedReceiverTickets.length > 1) {
     return "DUPLICATE_BLUEPRINT_EVENT_BINDING";
   }
 
-  if (selectedReceiverTickets.length === 1) return selectedReceiverTickets[0];
+  if (scopedSelectedReceiverTickets.length === 1) return scopedSelectedReceiverTickets[0];
 
   const currentRouteSnapshotTickets = task.taskItems.flatMap((item) =>
     eventBindingsFromNote(item.note)
@@ -457,12 +532,21 @@ function findWorkTicket(
       })),
   );
 
-  if (currentRouteSnapshotTickets.length > 1) {
+  const scopedCurrentRouteSnapshotTickets = scopeServiceOperationWorkspaceTickets(
+    currentRouteSnapshotTickets,
+    {
+      route,
+      targetType: input.targetType,
+      workspaceRole: input.workspaceRole,
+    },
+  );
+
+  if (scopedCurrentRouteSnapshotTickets.length > 1) {
     return "DUPLICATE_BLUEPRINT_EVENT_BINDING";
   }
 
-  if (currentRouteSnapshotTickets.length === 1) {
-    return currentRouteSnapshotTickets[0];
+  if (scopedCurrentRouteSnapshotTickets.length === 1) {
+    return scopedCurrentRouteSnapshotTickets[0];
   }
 
   const legacyCandidate = task.taskItems.find((item) => {
@@ -571,6 +655,213 @@ function canonicalTargetIdForCoordination(input: {
   return input.targetId;
 }
 
+function stageToServiceOperationWorkspaceRole(
+  stage: ReturnType<typeof getTechnicalIssueOperationStage>,
+): ServiceOperationWorkspaceRole {
+  if (stage === "INSPECT") return "INSPECT";
+  if (stage === "DONE") return "DONE";
+  return "PROCESSING";
+}
+
+async function resolveServiceOperationWorkspaceRole(input: {
+  db: DB;
+  route: CoordinationRoute;
+  targetType: string;
+  targetId: string;
+  metadataJson?: Prisma.JsonValue | null;
+}): Promise<ServiceOperationWorkspaceRole | null> {
+  if (!isServiceOperationTechnicalRoute(input)) return null;
+
+  const metadata = asRecord(input.metadataJson);
+  const explicitRole = clean(metadata.serviceOperationWorkspaceRole || metadata.workspaceRole)
+    .toUpperCase();
+
+  if (
+    explicitRole === "INSPECT" ||
+    explicitRole === "PROCESSING" ||
+    explicitRole === "DONE"
+  ) {
+    return explicitRole;
+  }
+
+  const issue = await dbOrTx(input.db).technicalIssue.findUnique({
+    where: { id: input.targetId },
+    select: {
+      executionStatus: true,
+      isConfirmed: true,
+    },
+  });
+
+  return issue
+    ? stageToServiceOperationWorkspaceRole(getTechnicalIssueOperationStage(issue))
+    : null;
+}
+
+function isServiceRequestWorkspaceIntake(input: {
+  route: CoordinationRoute;
+  eventKey: string;
+  targetType: string;
+}) {
+  return (
+    normalizeMatchKey(input.route.workTypeKey) === "service operation" &&
+    input.eventKey === "service_request.created" &&
+    normalizeTargetType(input.targetType) === "SERVICE_REQUEST"
+  );
+}
+
+async function ensureServiceRequestWorkspace(input: {
+  db: DB;
+  taskId: string;
+  serviceRequestId: string;
+  actorUserId?: string | null;
+  eventBinding: WorkspaceEventBinding;
+  metadataJson: Prisma.InputJsonObject;
+}) {
+  const client = dbOrTx(input.db);
+  const existing = await client.taskExecution.findFirst({
+    where: {
+      taskId: input.taskId,
+      targetType: TaskExecutionTargetType.SERVICE_REQUEST,
+      targetId: input.serviceRequestId,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+      taskItemId: { not: null },
+    },
+    select: {
+      id: true,
+      taskItemId: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (existing?.taskItemId) {
+    return {
+      taskItemId: existing.taskItemId,
+      bindingId: existing.id,
+      created: false,
+    };
+  }
+
+  const sr = await client.serviceRequest.findUnique({
+    where: { id: input.serviceRequestId },
+    select: {
+      id: true,
+      refNo: true,
+      skuSnapshot: true,
+      product: {
+        select: {
+          title: true,
+          sku: true,
+        },
+      },
+    },
+  });
+
+  const title = sr?.refNo
+    ? `Service Operation - ${sr.refNo}`
+    : `Service Operation - ${input.serviceRequestId.slice(0, 8)}`;
+  const watchLabel = sr?.product?.title ?? sr?.skuSnapshot ?? sr?.product?.sku ?? null;
+
+  const taskItem = await client.taskItem.create({
+    data: {
+      taskId: input.taskId,
+      title,
+      note: [
+        "workTypeKey: service-operation",
+        "ownerType: SYSTEM",
+        "serviceOperationWorkspaceRole: SR_CASE",
+        `serviceRequestId: ${input.serviceRequestId}`,
+        "blueprintKey: service-operation",
+        "blueprintSource: EVENT",
+      ].join("\n"),
+      status: TaskStatus.TODO,
+      priority: "MEDIUM",
+      sortOrder: 56,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  const bindingResult = await ensureTaskItemBusinessBinding(input.db, {
+    taskId: input.taskId,
+    taskItemId: taskItem.id,
+    targetType: TaskExecutionTargetType.SERVICE_REQUEST,
+    targetId: input.serviceRequestId,
+    actionType: TaskExecutionActionType.LINKED,
+    createdByUserId: input.actorUserId ?? null,
+    metadataJson: {
+      ...input.metadataJson,
+      source: "AUTO",
+      eventBinding: input.eventBinding,
+      targetTitle: title,
+      targetRefNo: sr?.refNo ?? null,
+      watchLabel,
+      serviceOperationWorkspaceRole: "SR_CASE",
+    },
+  });
+
+  return {
+    taskItemId: taskItem.id,
+    bindingId: bindingResult.binding.id,
+    created: true,
+  };
+}
+
+async function moveExistingServiceOperationBindingToTechnicalWorkspace(input: {
+  db: DB;
+  taskId: string;
+  taskItemId: string;
+  targetType: string;
+  targetId: string;
+  metadataJson: Prisma.InputJsonObject;
+}) {
+  if (normalizeTargetType(input.targetType) !== "TECHNICAL_ISSUE") return null;
+
+  const client = dbOrTx(input.db);
+  const existingInWorkspace = await findTaskItemBusinessBinding(input.db, {
+    taskId: input.taskId,
+    taskItemId: input.taskItemId,
+    targetType: input.targetType,
+    targetId: input.targetId,
+    actionType: TaskExecutionActionType.LINKED,
+    metadataJson: input.metadataJson,
+  });
+
+  if (existingInWorkspace) return existingInWorkspace;
+
+  const existingElsewhere = await client.taskExecution.findFirst({
+    where: {
+      taskId: input.taskId,
+      targetType: TaskExecutionTargetType.TECHNICAL_ISSUE,
+      targetId: input.targetId,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+      taskItemId: { not: null },
+    },
+    select: {
+      id: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!existingElsewhere) return null;
+
+  await client.taskExecution.update({
+    where: { id: existingElsewhere.id },
+    data: {
+      taskItemId: input.taskItemId,
+    },
+  });
+
+  return findTaskItemBusinessBinding(input.db, {
+    taskId: input.taskId,
+    taskItemId: input.taskItemId,
+    targetType: input.targetType,
+    targetId: input.targetId,
+    actionType: TaskExecutionActionType.LINKED,
+    metadataJson: input.metadataJson,
+  });
+}
+
 async function applyWorkflowEventTransition(input: {
   db: DB;
   bindingId: string;
@@ -638,9 +929,92 @@ export async function consumeBusinessEventForCoordination(
   const scope = context ? routeScope(route, context) : null;
   if (!task) return skipped("NO_ACTIVE_BINDING_SCOPE", route, scope);
 
+  if (context && isServiceRequestWorkspaceIntake({ route, eventKey, targetType })) {
+    const eventBinding = effectiveReceiverEventBinding({
+      eventKey,
+      targetType,
+      context,
+      route,
+    });
+    const resolvedScopeBase: CoordinationBindingScope = {
+      ...(scope as CoordinationBindingScope),
+      taskId: task.id,
+    };
+    const metadataJson = {
+      source: "AUTO",
+      routeKey: `${route.targetType}:${route.eventKey}`,
+      eventKey: route.eventKey,
+      coordinationType: route.coordinationType,
+      workTypeKey: route.workTypeKey,
+      businessEventLogId,
+      businessEventCreatedAt: formatDateMetadata(input.createdAt),
+      sourceTargetId: targetId,
+      targetAliasIds: extractTargetAliasIds(input),
+      eventBindingSource: "BLUEPRINT_SNAPSHOT",
+      eventBinding,
+      serviceOperationWorkspaceRole: "SR_CASE",
+    } satisfies Prisma.InputJsonObject;
+    const workspace = await ensureServiceRequestWorkspace({
+      db,
+      taskId: task.id,
+      serviceRequestId: canonicalTargetId,
+      actorUserId: input.actorUserId ?? null,
+      eventBinding,
+      metadataJson,
+    });
+    const resolvedScope: CoordinationBindingScope = {
+      ...resolvedScopeBase,
+      taskItemId: workspace.taskItemId,
+    };
+    const activity = await createBusinessEventActivity({
+      taskItemId: workspace.taskItemId,
+      sourceId: businessEventLogId,
+      title: formatEventTitle(eventKey),
+      body: getTimelineBody(input.metadataJson),
+      actorUserId: input.actorUserId ?? null,
+      metadataJson: {
+        eventKey,
+        targetType,
+        targetId: canonicalTargetId,
+        sourceTargetId: targetId,
+        routeKey: metadataJson.routeKey,
+        coordinationType: route.coordinationType,
+        workTypeKey: route.workTypeKey,
+        bindingScope: resolvedScope,
+        eventBindingSource: "BLUEPRINT_SNAPSHOT",
+        eventBinding,
+        businessEventLogId,
+        businessEventCreatedAt: metadataJson.businessEventCreatedAt,
+        targetAliasIds: metadataJson.targetAliasIds,
+        serviceOperationWorkspaceRole: "SR_CASE",
+      },
+    }, db);
+
+    return {
+      ok: true,
+      skipped: false,
+      route,
+      taskId: task.id,
+      taskItemId: workspace.taskItemId,
+      bindingId: workspace.bindingId,
+      bindingCreated: workspace.created,
+      activityId: activity.id,
+      scope: resolvedScope,
+      workflow: null,
+    };
+  }
+
+  const workspaceRole = await resolveServiceOperationWorkspaceRole({
+    db,
+    route,
+    targetType,
+    targetId: canonicalTargetId,
+    metadataJson: input.metadataJson ?? null,
+  });
   const workTicketResolution = findWorkTicket(task, context, route, {
     eventKey,
     targetType,
+    workspaceRole,
   });
   if (workTicketResolution === "DUPLICATE_BLUEPRINT_EVENT_BINDING") {
     return skipped("DUPLICATE_BLUEPRINT_EVENT_BINDING", route, scope);
@@ -673,16 +1047,40 @@ export async function consumeBusinessEventForCoordination(
     ...extractQueueSeedMetadata(input.metadataJson),
   } satisfies Prisma.InputJsonObject;
 
-  if (workTicketResolution.eventBinding.mode === "PROGRESS") {
-    const existingBinding = await findTaskItemBusinessBinding(db, {
+  if (
+    workTicketResolution.eventBinding.mode !== "PROGRESS" &&
+    isServiceOperationTechnicalRoute({ route, targetType })
+  ) {
+    await moveExistingServiceOperationBindingToTechnicalWorkspace({
+      db,
       taskId: task.id,
       taskItemId: workTicket.id,
       targetType,
       targetId: canonicalTargetId,
-      actionType: TaskExecutionActionType.LINKED,
-      createdByUserId: input.actorUserId ?? null,
       metadataJson,
     });
+  }
+
+  if (workTicketResolution.eventBinding.mode === "PROGRESS") {
+    const existingBinding =
+      isServiceOperationTechnicalRoute({ route, targetType })
+        ? await moveExistingServiceOperationBindingToTechnicalWorkspace({
+            db,
+            taskId: task.id,
+            taskItemId: workTicket.id,
+            targetType,
+            targetId: canonicalTargetId,
+            metadataJson,
+          })
+        : await findTaskItemBusinessBinding(db, {
+            taskId: task.id,
+            taskItemId: workTicket.id,
+            targetType,
+            targetId: canonicalTargetId,
+            actionType: TaskExecutionActionType.LINKED,
+            createdByUserId: input.actorUserId ?? null,
+            metadataJson,
+          });
 
     if (!existingBinding) {
       return skipped("NO_EXISTING_WORKSPACE_ITEM", route, resolvedScope);
@@ -784,9 +1182,56 @@ export async function diagnoseBusinessEventForCoordination(
   const scope = context ? routeScope(route, context) : null;
   if (!task) return skipped("NO_ACTIVE_BINDING_SCOPE", route, scope);
 
+  if (context && isServiceRequestWorkspaceIntake({ route, eventKey, targetType })) {
+    const existingBinding = await dbOrTx(db).taskExecution.findFirst({
+      where: {
+        taskId: task.id,
+        targetType: TaskExecutionTargetType.SERVICE_REQUEST,
+        targetId: canonicalTargetId,
+        actionType: { not: TaskExecutionActionType.CANCELLED },
+        taskItemId: { not: null },
+      },
+      select: {
+        id: true,
+        taskItemId: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    const resolvedScope: CoordinationBindingScope = {
+      ...(scope as CoordinationBindingScope),
+      taskId: task.id,
+      taskItemId: existingBinding?.taskItemId ?? undefined,
+    };
+
+    return {
+      ok: true,
+      skipped: false,
+      route,
+      scope: resolvedScope,
+      taskId: task.id,
+      taskItemId: existingBinding?.taskItemId ?? "",
+      targetType,
+      targetId,
+      canonicalTargetId,
+      bindingId: existingBinding?.id ?? null,
+      bindingExists: Boolean(existingBinding),
+      bindingMode: "INTAKE",
+      eventBindingStatus: "ACTIVE",
+      eventBindingSource: "BLUEPRINT_SNAPSHOT",
+    };
+  }
+
+  const workspaceRole = await resolveServiceOperationWorkspaceRole({
+    db,
+    route,
+    targetType,
+    targetId: canonicalTargetId,
+    metadataJson: input.metadataJson ?? null,
+  });
   const workTicketResolution = findWorkTicket(task, context, route, {
     eventKey,
     targetType,
+    workspaceRole,
   });
   if (workTicketResolution === "DUPLICATE_BLUEPRINT_EVENT_BINDING") {
     return skipped("DUPLICATE_BLUEPRINT_EVENT_BINDING", route, scope);
@@ -811,6 +1256,22 @@ export async function diagnoseBusinessEventForCoordination(
     createdByUserId: input.actorUserId ?? null,
     metadataJson: {},
   });
+  const existingBindingElsewhere =
+    existingBinding || !isServiceOperationTechnicalRoute({ route, targetType })
+      ? null
+      : await dbOrTx(db).taskExecution.findFirst({
+        where: {
+          taskId: task.id,
+          targetType: TaskExecutionTargetType.TECHNICAL_ISSUE,
+          targetId: canonicalTargetId,
+          actionType: { not: TaskExecutionActionType.CANCELLED },
+          taskItemId: { not: null },
+        },
+        select: {
+          id: true,
+        },
+        orderBy: { createdAt: "desc" },
+      });
 
   return {
     ok: true,
@@ -822,8 +1283,8 @@ export async function diagnoseBusinessEventForCoordination(
     targetType,
     targetId,
     canonicalTargetId,
-    bindingId: existingBinding?.id ?? null,
-    bindingExists: Boolean(existingBinding),
+    bindingId: existingBinding?.id ?? existingBindingElsewhere?.id ?? null,
+    bindingExists: Boolean(existingBinding || existingBindingElsewhere),
     bindingMode: workTicketResolution.eventBinding.mode,
     eventBindingStatus: workTicketResolution.eventBinding.status,
     eventBindingSource: workTicketResolution.source,
