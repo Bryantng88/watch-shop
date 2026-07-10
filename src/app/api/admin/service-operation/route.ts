@@ -8,8 +8,11 @@ import {
   type ServiceOperationRange,
   type ServiceOperationTiListInput,
 } from "@/domains/service/server/operation";
-import { getOrCreateServiceOperationWorkspaceForWatch } from "@/domains/service/server/watch-quick";
-import { requirePermission } from "@/server/auth/requirePermission";
+import {
+  getOrCreateServiceOperationWorkspaceForWatch,
+  watchIntakeWithInitialSuspicion,
+} from "@/domains/service/server/watch-quick";
+import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 import { PERMISSIONS } from "@/constants/permissions";
 
 function normalizeRange(value: string | null): ServiceOperationRange {
@@ -79,21 +82,35 @@ function fail(error: unknown, status = 400) {
   return NextResponse.json({ ok: false, error: message }, { status });
 }
 
+function isAuthResponse(value: unknown): value is NextResponse {
+  return value instanceof NextResponse;
+}
+
 export async function POST(request: Request) {
   try {
-    const auth = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+    const auth = await requirePermissionApi(PERMISSIONS.PRODUCT_UPDATE);
+    if (isAuthResponse(auth)) return auth;
+
     const body = await request.json().catch(() => ({}));
     const action = String(body?.action ?? "").trim();
 
-    if (action !== "watch_intake") {
+    if (action !== "watch_intake" && action !== "watch_intake_with_suspicion") {
       throw new Error("Unsupported Service Operation action.");
     }
 
-    const data = await getOrCreateServiceOperationWorkspaceForWatch({
-      productId: body?.productId,
-      actorUserId: auth.id ?? auth.userId ?? null,
-      openExisting: body?.openExisting === true,
-    });
+    const data =
+      action === "watch_intake_with_suspicion"
+        ? await watchIntakeWithInitialSuspicion({
+            productId: body?.productId,
+            suspicion: body?.suspicion,
+            actorUserId: auth.id ?? auth.userId ?? null,
+            openExisting: body?.openExisting === true,
+          })
+        : await getOrCreateServiceOperationWorkspaceForWatch({
+            productId: body?.productId,
+            actorUserId: auth.id ?? auth.userId ?? null,
+            openExisting: body?.openExisting === true,
+          });
 
     return NextResponse.json({ ok: true, data });
   } catch (error) {

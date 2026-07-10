@@ -12,6 +12,7 @@ import {
   getProjectionBuilder,
   listProjectionBuilders,
 } from "./projection.registry";
+import { listOperationalProjectionSubscriptions } from "./operation-projection-subscriptions";
 import {
   getProjectionRecordStoreHealth,
   summarizeProjectionRecords,
@@ -56,11 +57,17 @@ function emptySummary(input: {
   registered: boolean;
   rebuildSupported: boolean;
   eventBuildSupported: boolean;
+  sourceEvents?: string[];
   storageReady?: boolean;
   storageReason?: string;
 }): ProjectionStatusSummary {
+  const operationSubscriptions = operationProjectionSubscriptions(input.projectionKey);
+
   return {
     ...input,
+    sourceEvents: input.sourceEvents ?? [],
+    operationSubscriptionEvents: operationSubscriptions.eventKeys,
+    operationSubscriptionKeys: operationSubscriptions.operationKeys,
     storageReady: input.storageReady ?? true,
     rowCount: 0,
     statusCounts: {},
@@ -68,6 +75,23 @@ function emptySummary(input: {
     latestSourceUpdatedAt: null,
     oldestProjectedAt: null,
     staleVersion: false,
+  };
+}
+
+function operationProjectionSubscriptions(projectionKey: string) {
+  const eventKeys = new Set<string>();
+  const operationKeys = new Set<string>();
+
+  for (const match of listOperationalProjectionSubscriptions({ projectionKey })) {
+    for (const eventKey of match.eventKeys) {
+      eventKeys.add(eventKey);
+    }
+    operationKeys.add(match.operationKey);
+  }
+
+  return {
+    eventKeys: [...eventKeys].sort(),
+    operationKeys: [...operationKeys].sort(),
   };
 }
 
@@ -103,6 +127,7 @@ export async function listProjectionStatus(
         registered: true,
         rebuildSupported: Boolean(builder.rebuild),
         eventBuildSupported: Boolean(builder.buildFromEvent),
+        sourceEvents: builder.sourceEvents ?? [],
         storageReady: storeHealth.ready,
         storageReason: storeHealth.reason,
       }),
@@ -120,6 +145,7 @@ export async function listProjectionStatus(
         description: builder?.description,
         rebuildSupported: Boolean(builder?.rebuild),
         eventBuildSupported: Boolean(builder?.buildFromEvent),
+        sourceEvents: builder?.sourceEvents ?? [],
         storageReady: storeHealth.ready,
         storageReason: storeHealth.reason,
       });

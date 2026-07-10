@@ -91,6 +91,26 @@ async function syncServiceRequestStatusFromIssues(client: any, serviceRequestId?
     });
 }
 
+async function ensureTechnicalIssuePaymentEventSeed(client: any, technicalIssueId: string) {
+    const existingPayment = await client.payment.findFirst({
+        where: {
+            technical_issue_id: technicalIssueId,
+            type: "SERVICE",
+            purpose: "MAINTENANCE_COST",
+        },
+        select: { id: true },
+    });
+
+    const payment = await ensureTechnicalIssuePaymentTx(client, technicalIssueId);
+    if (existingPayment || !payment?.id) return null;
+
+    return {
+        id: String(payment.id),
+        amount: (payment as any).amount ?? null,
+        status: (payment as any).status ?? "UNPAID",
+    };
+}
+
 function normalizeAreaKey(value?: string | null) {
     const raw = String(value ?? "").trim().toUpperCase();
 
@@ -315,6 +335,7 @@ export async function confirmTechnicalIssue(input: {
 
 export async function startTechnicalIssue(input: {
     id: string;
+    actorId?: string | null;
     actorName?: string | null;
     technicalDetailCatalogId?: string | null;
     actionMode?: string | null;
@@ -372,6 +393,7 @@ export async function startTechnicalIssue(input: {
     await syncTechnicalIssueToTasks(prisma as any, {
         technicalIssueId: id,
         event: "TECHNICAL_ISSUE_STARTED",
+        actorUserId: cleanId(input.actorId),
         note: "Technical Issue đã bắt đầu xử lý",
     });
 
@@ -379,6 +401,7 @@ export async function startTechnicalIssue(input: {
         eventKey: "technical_issue.started",
         technicalIssueId: id,
         serviceRequestId: (updated as any).serviceRequestId,
+        actorUserId: cleanId(input.actorId),
         payload: {
             executionStatus: "IN_PROGRESS",
             actionMode,
@@ -391,11 +414,13 @@ export async function startTechnicalIssue(input: {
 
 export async function completeTechnicalIssue(input: {
     id: string;
+    actorId?: string | null;
     actorName?: string | null;
     actualCost?: unknown;
     resolutionNote?: string | null;
     supplyCatalogId?: string | null;
     mechanicalPartCatalogId?: string | null;
+    createPayment?: boolean;
 }) {
     const id = cleanId(input.id);
     if (!id) throw new Error("Missing issue id");
@@ -405,7 +430,7 @@ export async function completeTechnicalIssue(input: {
         throw new Error("Vui lòng nhập chi phí thực tế hợp lệ. Chi phí có thể bằng 0.");
     }
 
-    const updated = await prisma.$transaction(async (tx) => {
+    const completion = await prisma.$transaction(async (tx) => {
         const issue = await tx.technicalIssue.findUnique({
             where: { id },
             select: {
@@ -438,28 +463,51 @@ export async function completeTechnicalIssue(input: {
             } as any,
         });
 
-        await ensureTechnicalIssuePaymentTx(tx as any, id);
+        const createdPayment =
+            input.createPayment !== false
+                ? await ensureTechnicalIssuePaymentEventSeed(tx as any, id)
+                : null;
 
         await syncServiceRequestStatusFromIssues(tx as any, (updated as any).serviceRequestId);
 
         await syncTechnicalIssueToTasks(tx as any, {
             technicalIssueId: id,
             event: "TECHNICAL_ISSUE_DONE",
+            actorUserId: cleanId(input.actorId),
             note: "Technical Issue đã hoàn tất",
         });
 
-        return updated;
+        return { issue: updated, createdPayment };
     });
+
+    const updated = completion.issue;
 
     await recordTechnicalIssueEvent({
         eventKey: "technical_issue.completed",
         technicalIssueId: id,
         serviceRequestId: (updated as any).serviceRequestId,
+        actorUserId: cleanId(input.actorId),
         payload: {
             executionStatus: "DONE",
             actualCost,
+            createPayment: input.createPayment !== false,
         },
     });
+
+    if (completion.createdPayment) {
+        await recordBusinessEvent(prisma, {
+            eventKey: "payment.created",
+            targetType: "PAYMENT",
+            targetId: completion.createdPayment.id,
+            payload: {
+                ownerType: "TECHNICAL_ISSUE",
+                ownerId: id,
+                status: completion.createdPayment.status,
+                amount: completion.createdPayment.amount,
+                sourceId: `${completion.createdPayment.id}:payment.created`,
+            },
+        });
+    }
 
     return updated;
 }

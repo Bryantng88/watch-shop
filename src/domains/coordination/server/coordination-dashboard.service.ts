@@ -577,6 +577,8 @@ export async function getCoordinationDashboard(input: {
         source: blueprint.source,
         status: blueprint.status,
         workspaceDefinition: blueprint.workspaceDefinition,
+        operation: blueprint.operation,
+        operationValidation: blueprint.operationValidation,
         snapshotNote: blueprint.snapshotNote,
         usage,
       };

@@ -1,5 +1,6 @@
 import type { WorkflowDefinition } from "@/domains/workflow-definition/server";
 import type { WorkspaceEventBinding } from "./event-bindings";
+import type { OperationalBlueprintContract } from "./operational-blueprint";
 import type { WorkspaceProvisioningPolicy } from "./workspace-provisioning";
 
 export type WorkspaceCapabilities = {
@@ -27,6 +28,7 @@ export type WorkspaceDefinitionSnapshot = {
   snapshotAt?: string;
   eventBindings?: WorkspaceEventBinding[];
   provisioning?: WorkspaceProvisioningPolicy;
+  operation?: OperationalBlueprintContract | null;
   appliedWorkflowSnapshot?: WorkflowDefinition | null;
   workspaceDefinition?: {
     defaultName?: string;

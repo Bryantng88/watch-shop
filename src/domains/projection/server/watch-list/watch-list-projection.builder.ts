@@ -30,10 +30,6 @@ function clean(value: unknown) {
   return String(value ?? "").trim();
 }
 
-function cleanUpper(value: unknown) {
-  return clean(value).toUpperCase();
-}
-
 function result(input: {
   context: ProjectionBuildContext;
   scope: ProjectionScope;
@@ -166,16 +162,6 @@ async function buildWatchListProjectionFromEvent(
     sourceEvent: BusinessEventDispatchContext;
   },
 ): Promise<ProjectionBuildResult> {
-  const targetType = cleanUpper(context.sourceEvent.targetType);
-  if (targetType !== "WATCH" && targetType !== "PRODUCT") {
-    return result({
-      context,
-      scope: context.scope ?? {},
-      applied: 0,
-      reason: "EVENT_TARGET_NOT_WATCH_OR_PRODUCT",
-    });
-  }
-
   return rebuildWatchListProjection(db, {
     ...context,
     scope: {

@@ -7,6 +7,9 @@ import type {
 import type {
   BlueprintWorkspaceDefinition,
 } from "@/domains/blueprint/server/blueprint.types";
+import type {
+  OperationalBlueprintContract,
+} from "@/domains/blueprint/shared/operational-blueprint";
 
 export type WorkflowDefinitionDraftStatus =
   | "DRAFT"
@@ -20,6 +23,7 @@ export type WorkflowDefinitionDraftBlueprintJson = {
   expectedResult: string;
   ownerLabel: string | null;
   workspaceDefinition: BlueprintWorkspaceDefinition;
+  operation?: OperationalBlueprintContract | null;
 };
 
 export type WorkflowDefinitionDraft = {

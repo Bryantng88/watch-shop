@@ -285,6 +285,9 @@ export default function WatchListClient(props: WatchListClientProps) {
     const progress = useAppProgress();
     const notify = useNotify();
     const [serviceIntakeProductId, setServiceIntakeProductId] = React.useState<string | null>(null);
+    const [serviceIntakeRow, setServiceIntakeRow] = React.useState<WatchRow | null>(null);
+    const [serviceSuspicion, setServiceSuspicion] = React.useState("");
+    const [serviceIntakeError, setServiceIntakeError] = React.useState<string | null>(null);
     const [buyBackRow, setBuyBackRow] = React.useState<WatchRow | null>(null);
     const [buyBackSubmitting, setBuyBackSubmitting] = React.useState(false);
     const [buyBackError, setBuyBackError] = React.useState<string | null>(null);
@@ -754,7 +757,7 @@ export default function WatchListClient(props: WatchListClientProps) {
         console.log("TODO delete watch", row);
     }
 
-    async function onService(row: WatchRow) {
+    function onService(row: WatchRow) {
         const productId = String(row.productId || "").trim();
 
         if (!productId) {
@@ -764,7 +767,30 @@ export default function WatchListClient(props: WatchListClientProps) {
 
         if (serviceIntakeProductId) return;
 
+        setServiceIntakeRow(row);
+        setServiceSuspicion("");
+        setServiceIntakeError(null);
+    }
+
+    async function submitServiceIntake(openExisting = false) {
+        const row = serviceIntakeRow;
+        const productId = String(row?.productId || "").trim();
+        const suspicion = serviceSuspicion.trim();
+
+        if (!productId) {
+            setServiceIntakeError("Watch nay chua co productId.");
+            return;
+        }
+
+        if (!openExisting && !suspicion) {
+            setServiceIntakeError("Vui long nhap nghi ngo ky thuat dau tien.");
+            return;
+        }
+
+        if (serviceIntakeProductId) return;
+
         setServiceIntakeProductId(productId);
+        setServiceIntakeError(null);
         progress.show({
             title: "Dang tao phieu ky thuat",
             message: "He thong dang mo Service Operation workspace.",
@@ -778,8 +804,10 @@ export default function WatchListClient(props: WatchListClientProps) {
                     Accept: "application/json",
                 },
                 body: JSON.stringify({
-                    action: "watch_intake",
+                    action: "watch_intake_with_suspicion",
                     productId,
+                    suspicion,
+                    openExisting,
                 }),
             });
 
@@ -800,6 +828,8 @@ export default function WatchListClient(props: WatchListClientProps) {
                 if (!shouldOpen) return;
                 if (!href) throw new Error("Workspace dang ton tai nhung chua co duong dan.");
 
+                setServiceIntakeRow(null);
+                setServiceSuspicion("");
                 navigateWithProgress(href, "Dang mo workspace ky thuat");
                 return;
             }
@@ -810,12 +840,23 @@ export default function WatchListClient(props: WatchListClientProps) {
 
             notify.success({
                 title: data.createdServiceRequest ? "Da tao phieu ky thuat" : "Da gan workspace ky thuat",
-                message: data.refNo ? `SR ${data.refNo} da san sang.` : "Workspace Service Operation da san sang.",
+                message: data.createdInitialIssue
+                    ? "Da tao SR kem nghi ngo ky thuat dau tien."
+                    : data.refNo
+                        ? `SR ${data.refNo} da san sang.`
+                        : "Workspace Service Operation da san sang.",
             });
 
+            setServiceIntakeRow(null);
+            setServiceSuspicion("");
             navigateWithProgress(href, "Dang mo workspace ky thuat");
         } catch (error) {
             progress.hide();
+            setServiceIntakeError(
+                error instanceof Error
+                    ? error.message
+                    : "Khong the mo Service Operation workspace.",
+            );
             notify.error({
                 title: "Khong the tao phieu ky thuat",
                 message:
@@ -1015,6 +1056,67 @@ export default function WatchListClient(props: WatchListClientProps) {
                     }}
                     onSubmit={submitBuyBack}
                 />
+            ) : null}
+
+            {serviceIntakeRow ? (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+                    <section className="w-full max-w-lg rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
+                        <div className="border-b border-slate-200 px-5 py-4">
+                            <div className="text-base font-semibold text-slate-950">
+                                Tao Service Request
+                            </div>
+                            <div className="mt-1 text-sm text-slate-500">
+                                {serviceIntakeRow.title || serviceIntakeRow.sku || "Watch"}
+                            </div>
+                        </div>
+                        <div className="space-y-4 px-5 py-4">
+                            <label className="block">
+                                <span className="text-sm font-semibold text-slate-700">
+                                    Nghi ngo ky thuat dau tien
+                                </span>
+                                <textarea
+                                    value={serviceSuspicion}
+                                    onChange={(event) => {
+                                        setServiceSuspicion(event.target.value);
+                                        setServiceIntakeError(null);
+                                    }}
+                                    rows={4}
+                                    className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                                    placeholder="Vi du: may chay cham, kim giay khong on dinh, can kiem tra chong nuoc..."
+                                    disabled={Boolean(serviceIntakeProductId)}
+                                />
+                            </label>
+                            {serviceIntakeError ? (
+                                <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                                    {serviceIntakeError}
+                                </div>
+                            ) : null}
+                        </div>
+                        <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-4">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (serviceIntakeProductId) return;
+                                    setServiceIntakeRow(null);
+                                    setServiceSuspicion("");
+                                    setServiceIntakeError(null);
+                                }}
+                                className="inline-flex h-10 items-center rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                                disabled={Boolean(serviceIntakeProductId)}
+                            >
+                                Huy
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => void submitServiceIntake(false)}
+                                className="inline-flex h-10 items-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
+                                disabled={Boolean(serviceIntakeProductId)}
+                            >
+                                Tao SR
+                            </button>
+                        </div>
+                    </section>
+                </div>
             ) : null}
 
             <RaiseWorkCaseModal

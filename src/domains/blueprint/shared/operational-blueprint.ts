@@ -1,0 +1,1064 @@
+import type { WorkTypeCoordinationContext } from "@/domains/task/server/work-type.types";
+
+export type OperationalBlueprintCardinality =
+  | "SINGLE_PER_ACTIVE_CYCLE"
+  | "ONE_PER_BUSINESS_OBJECT"
+  | "MANY_PER_ACTIVE_CYCLE";
+
+export type OperationalBlueprintObjectRole = "WORKSPACE_IDENTITY" | "ITEM";
+
+export type OperationalBlueprintObjectType = {
+  targetType: string;
+  label: string;
+  role: OperationalBlueprintObjectRole;
+  description: string;
+};
+
+export type OperationalBlueprintWorkspaceRole = {
+  key: string;
+  label: string;
+  cardinality: OperationalBlueprintCardinality;
+  identityTargetType: string | null;
+  itemTargetTypes: string[];
+  description: string;
+};
+
+export type OperationalBlueprintCoreFlowStep = {
+  workspaceRole: string;
+  label: string;
+  description: string;
+  isEntry: boolean;
+  isTerminal: boolean;
+};
+
+export type OperationalBlueprintCoreFlow = {
+  key: string;
+  label: string;
+  description: string;
+  steps: OperationalBlueprintCoreFlowStep[];
+};
+
+export type OperationalBlueprintEventRoute = {
+  eventKey: string;
+  targetType: string;
+  workspaceRole: string;
+  effect: "CREATE_WORKSPACE" | "BIND_ITEM" | "MOVE_ITEM" | "WRITE_ACTIVITY";
+  description: string;
+};
+
+export type OperationalBlueprintActionField = {
+  key: string;
+  label: string;
+  kind: "text" | "textarea" | "select" | "money" | "boolean" | "date";
+  required: boolean;
+  options?: Array<{
+    value: string;
+    label: string;
+  }>;
+};
+
+export type OperationalBlueprintAction = {
+  key: string;
+  label: string;
+  workspaceRole: string;
+  targetType: string;
+  command: string;
+  fields: OperationalBlueprintActionField[];
+  emits: string[];
+  description: string;
+};
+
+export type OperationalBlueprintWorkflow = {
+  key: string;
+  workspaceRole: string;
+  states: string[];
+  transitions: Array<{
+    from: string;
+    to: string;
+    actionKey: string;
+    eventKey: string;
+  }>;
+};
+
+export type OperationalBlueprintProjectionSubscription = {
+  projectionKey: string;
+  eventKeys: string[];
+  resolvesToTargetType: string;
+  description: string;
+};
+
+export type OperationalBlueprintContract = {
+  key: string;
+  version: number;
+  context: WorkTypeCoordinationContext;
+  summary: string;
+  objectTypes: OperationalBlueprintObjectType[];
+  workspaceRoles: OperationalBlueprintWorkspaceRole[];
+  coreFlows: OperationalBlueprintCoreFlow[];
+  eventRoutes: OperationalBlueprintEventRoute[];
+  actions: OperationalBlueprintAction[];
+  workflows: OperationalBlueprintWorkflow[];
+  projectionSubscriptions: OperationalBlueprintProjectionSubscription[];
+};
+
+export type OperationalBlueprintValidationSeverity = "error" | "warning";
+
+export type OperationalBlueprintValidationIssue = {
+  severity: OperationalBlueprintValidationSeverity;
+  code: string;
+  path: string;
+  message: string;
+};
+
+export type OperationalBlueprintValidationResult = {
+  ok: boolean;
+  errors: OperationalBlueprintValidationIssue[];
+  warnings: OperationalBlueprintValidationIssue[];
+  issueCount: number;
+};
+
+export type OperationalBlueprintActionSelectionInput = {
+  contract?: OperationalBlueprintContract | null;
+  workspaceRole?: string | null;
+  targetTypes?: string[] | null;
+};
+
+export type OperationalBlueprintCoreFlowSelectionInput = {
+  contract?: OperationalBlueprintContract | null;
+  workspaceRole?: string | null;
+};
+
+function normalizeKey(value: unknown) {
+  return String(value ?? "").trim().toLowerCase().replace(/[_\s]+/g, "-");
+}
+
+function normalizeEvent(value: unknown) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function normalizeTarget(value: unknown) {
+  return String(value ?? "").trim().toUpperCase();
+}
+
+function clean(value: unknown) {
+  return String(value ?? "").trim();
+}
+
+function issue(
+  severity: OperationalBlueprintValidationSeverity,
+  code: string,
+  path: string,
+  message: string,
+): OperationalBlueprintValidationIssue {
+  return { severity, code, path, message };
+}
+
+function duplicateIssues(input: {
+  values: string[];
+  path: string;
+  label: string;
+  normalize?: (value: string) => string;
+}) {
+  const normalize = input.normalize ?? ((value: string) => value);
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+
+  for (const value of input.values) {
+    const key = normalize(value);
+    if (!key) continue;
+    if (seen.has(key)) {
+      duplicates.add(value);
+    }
+    seen.add(key);
+  }
+
+  return [...duplicates].map((value) =>
+    issue(
+      "error",
+      "duplicate_key",
+      input.path,
+      `${input.label} '${value}' is duplicated.`,
+    ),
+  );
+}
+
+export function validateOperationalBlueprintContract(
+  contract: OperationalBlueprintContract | null | undefined,
+): OperationalBlueprintValidationResult {
+  if (!contract) {
+    return {
+      ok: true,
+      errors: [],
+      warnings: [],
+      issueCount: 0,
+    };
+  }
+
+  const issues: OperationalBlueprintValidationIssue[] = [];
+  const objectTypes = new Set(
+    contract.objectTypes.map((objectType) => normalizeTarget(objectType.targetType)).filter(Boolean),
+  );
+  const workspaceRoles = new Set(
+    contract.workspaceRoles.map((role) => normalizeTarget(role.key)).filter(Boolean),
+  );
+  const actionKeys = new Set(
+    contract.actions.map((action) => normalizeKey(action.key)).filter(Boolean),
+  );
+
+  issues.push(
+    ...duplicateIssues({
+      values: contract.objectTypes.map((objectType) => objectType.targetType),
+      path: "objectTypes",
+      label: "Object target type",
+      normalize: normalizeTarget,
+    }),
+    ...duplicateIssues({
+      values: contract.workspaceRoles.map((role) => role.key),
+      path: "workspaceRoles",
+      label: "Workspace role",
+      normalize: normalizeTarget,
+    }),
+    ...duplicateIssues({
+      values: contract.coreFlows.map((flow) => flow.key),
+      path: "coreFlows",
+      label: "Core flow",
+      normalize: normalizeKey,
+    }),
+    ...duplicateIssues({
+      values: contract.eventRoutes.map((route) => `${route.eventKey}:${route.targetType}`),
+      path: "eventRoutes",
+      label: "Event route",
+      normalize: normalizeEvent,
+    }),
+    ...duplicateIssues({
+      values: contract.actions.map((action) => action.key),
+      path: "actions",
+      label: "Action",
+      normalize: normalizeKey,
+    }),
+    ...duplicateIssues({
+      values: contract.workflows.map((workflow) => workflow.key),
+      path: "workflows",
+      label: "Workflow",
+      normalize: normalizeKey,
+    }),
+    ...duplicateIssues({
+      values: contract.projectionSubscriptions.map(
+        (subscription) => subscription.projectionKey,
+      ),
+      path: "projectionSubscriptions",
+      label: "Projection subscription",
+      normalize: normalizeKey,
+    }),
+  );
+
+  contract.workspaceRoles.forEach((role, roleIndex) => {
+    const representedTargets = [
+      role.identityTargetType,
+      ...role.itemTargetTypes,
+    ].map(normalizeTarget);
+
+    for (const targetType of representedTargets) {
+      if (targetType && !objectTypes.has(targetType)) {
+        issues.push(
+          issue(
+            "error",
+            "unknown_object_target",
+            `workspaceRoles.${roleIndex}`,
+            `Workspace role '${role.key}' references unknown target type '${targetType}'.`,
+          ),
+        );
+      }
+    }
+  });
+
+  for (const objectType of contract.objectTypes) {
+    const targetType = normalizeTarget(objectType.targetType);
+    const represented = contract.workspaceRoles.some(
+      (role) =>
+        normalizeTarget(role.identityTargetType) === targetType ||
+        role.itemTargetTypes.some((itemTargetType) => normalizeTarget(itemTargetType) === targetType),
+    );
+
+    if (targetType && !represented) {
+      issues.push(
+        issue(
+          "error",
+          "unrepresented_object_target",
+          "objectTypes",
+          `Object target type '${objectType.targetType}' is not represented by any workspace role.`,
+        ),
+      );
+    }
+  }
+
+  contract.coreFlows.forEach((flow, flowIndex) => {
+    flow.steps.forEach((step, stepIndex) => {
+      const workspaceRole = normalizeTarget(step.workspaceRole);
+      if (!workspaceRoles.has(workspaceRole)) {
+        issues.push(
+          issue(
+            "error",
+            "missing_workspace_role",
+            `coreFlows.${flowIndex}.steps.${stepIndex}`,
+            `Core flow '${flow.key}' references missing workspace role '${step.workspaceRole}'.`,
+          ),
+        );
+      }
+    });
+  });
+
+  contract.eventRoutes.forEach((route, routeIndex) => {
+    if (!workspaceRoles.has(normalizeTarget(route.workspaceRole))) {
+      issues.push(
+        issue(
+          "error",
+          "missing_workspace_role",
+          `eventRoutes.${routeIndex}`,
+          `Event route '${route.eventKey}' references missing workspace role '${route.workspaceRole}'.`,
+        ),
+      );
+    }
+
+    if (!objectTypes.has(normalizeTarget(route.targetType))) {
+      issues.push(
+        issue(
+          "error",
+          "unknown_object_target",
+          `eventRoutes.${routeIndex}`,
+          `Event route '${route.eventKey}' references unknown target type '${route.targetType}'.`,
+        ),
+      );
+    }
+  });
+
+  contract.actions.forEach((action, actionIndex) => {
+    if (!workspaceRoles.has(normalizeTarget(action.workspaceRole))) {
+      issues.push(
+        issue(
+          "error",
+          "missing_workspace_role",
+          `actions.${actionIndex}`,
+          `Action '${action.key}' references missing workspace role '${action.workspaceRole}'.`,
+        ),
+      );
+    }
+
+    if (!objectTypes.has(normalizeTarget(action.targetType))) {
+      issues.push(
+        issue(
+          "error",
+          "unknown_object_target",
+          `actions.${actionIndex}`,
+          `Action '${action.key}' references unknown target type '${action.targetType}'.`,
+        ),
+      );
+    }
+
+    issues.push(
+      ...duplicateIssues({
+        values: action.fields.map((field) => field.key),
+        path: `actions.${actionIndex}.fields`,
+        label: `Action '${action.key}' field`,
+        normalize: normalizeKey,
+      }),
+    );
+
+  });
+
+  contract.workflows.forEach((workflow, workflowIndex) => {
+    const states = new Set(workflow.states.map(normalizeTarget).filter(Boolean));
+
+    if (!workspaceRoles.has(normalizeTarget(workflow.workspaceRole))) {
+      issues.push(
+        issue(
+          "error",
+          "missing_workspace_role",
+          `workflows.${workflowIndex}`,
+          `Workflow '${workflow.key}' references missing workspace role '${workflow.workspaceRole}'.`,
+        ),
+      );
+    }
+
+    workflow.transitions.forEach((transition, transitionIndex) => {
+      if (!states.has(normalizeTarget(transition.from))) {
+        issues.push(
+          issue(
+            "error",
+            "unknown_workflow_state",
+            `workflows.${workflowIndex}.transitions.${transitionIndex}`,
+            `Workflow '${workflow.key}' transition references missing from-state '${transition.from}'.`,
+          ),
+        );
+      }
+
+      if (!states.has(normalizeTarget(transition.to))) {
+        issues.push(
+          issue(
+            "error",
+            "unknown_workflow_state",
+            `workflows.${workflowIndex}.transitions.${transitionIndex}`,
+            `Workflow '${workflow.key}' transition references missing to-state '${transition.to}'.`,
+          ),
+        );
+      }
+
+      if (!actionKeys.has(normalizeKey(transition.actionKey))) {
+        issues.push(
+          issue(
+            "error",
+            "missing_action",
+            `workflows.${workflowIndex}.transitions.${transitionIndex}`,
+            `Workflow '${workflow.key}' transition references missing action '${transition.actionKey}'.`,
+          ),
+        );
+      }
+    });
+  });
+
+  contract.projectionSubscriptions.forEach((subscription, subscriptionIndex) => {
+    if (!clean(subscription.projectionKey)) {
+      issues.push(
+        issue(
+          "error",
+          "missing_projection_key",
+          `projectionSubscriptions.${subscriptionIndex}`,
+          "Projection subscription is missing projectionKey.",
+        ),
+      );
+    }
+
+    if (!subscription.eventKeys.length) {
+      issues.push(
+        issue(
+          "error",
+          "empty_projection_events",
+          `projectionSubscriptions.${subscriptionIndex}.eventKeys`,
+          `Projection subscription '${subscription.projectionKey}' has no event keys.`,
+        ),
+      );
+    }
+  });
+
+  const errors = issues.filter((item) => item.severity === "error");
+  const warnings = issues.filter((item) => item.severity === "warning");
+
+  return {
+    ok: errors.length === 0,
+    errors,
+    warnings,
+    issueCount: issues.length,
+  };
+}
+
+const SERVICE_OPERATION_CONTRACT: OperationalBlueprintContract = {
+  key: "service-operation",
+  version: 2,
+  context: "TECHNICAL",
+  summary:
+    "Creates SR case workspaces and routes Technical Issues through Inspect, Processing, and Done/Follow-up operation workspaces.",
+  objectTypes: [
+    {
+      targetType: "SERVICE_REQUEST",
+      label: "Service Request",
+      role: "WORKSPACE_IDENTITY",
+      description:
+        "Identifies the SR case workspace. It is not rendered as a queue item inside that workspace.",
+    },
+    {
+      targetType: "TECHNICAL_ISSUE",
+      label: "Technical Issue",
+      role: "ITEM",
+      description:
+        "The operational item that moves through Inspect, Processing, and Done/Follow-up.",
+    },
+    {
+      targetType: "PAYMENT",
+      label: "Payment",
+      role: "ITEM",
+      description:
+        "Commercial follow-up created after technical work needs customer payment.",
+    },
+  ],
+  workspaceRoles: [
+    {
+      key: "SR_CASE",
+      label: "SR Case",
+      cardinality: "ONE_PER_BUSINESS_OBJECT",
+      identityTargetType: "SERVICE_REQUEST",
+      itemTargetTypes: ["TECHNICAL_ISSUE", "PAYMENT"],
+      description:
+        "One workspace per active Service Request. Shows case context and the TI/payment items belonging to that SR.",
+    },
+    {
+      key: "INSPECT",
+      label: "Inspect",
+      cardinality: "SINGLE_PER_ACTIVE_CYCLE",
+      identityTargetType: null,
+      itemTargetTypes: ["TECHNICAL_ISSUE"],
+      description:
+        "Receives newly created Technical Issues and lets technical staff classify the real work, vendor, estimate, and next step.",
+    },
+    {
+      key: "PROCESSING",
+      label: "Processing",
+      cardinality: "SINGLE_PER_ACTIVE_CYCLE",
+      identityTargetType: null,
+      itemTargetTypes: ["TECHNICAL_ISSUE"],
+      description:
+        "Owns Ready, In Progress, and Done workflow actions while vendor, cost, and extra TI changes are managed through modals.",
+    },
+    {
+      key: "DONE",
+      label: "Done / Follow-up",
+      cardinality: "SINGLE_PER_ACTIVE_CYCLE",
+      identityTargetType: null,
+      itemTargetTypes: ["TECHNICAL_ISSUE", "PAYMENT"],
+      description:
+        "Tracks completed technical issues, payment readiness, and SR closure follow-up.",
+    },
+  ],
+  coreFlows: [
+    {
+      key: "service-operation-core-flow",
+      label: "Service Operation Core Flow",
+      description:
+        "Links SR case, Inspect, Processing, and Done/Follow-up workspaces so users can navigate the full service operation from one flow header.",
+      steps: [
+        {
+          workspaceRole: "SR_CASE",
+          label: "SR Case",
+          description: "Case aggregate workspace for the Service Request.",
+          isEntry: true,
+          isTerminal: false,
+        },
+        {
+          workspaceRole: "INSPECT",
+          label: "Inspect",
+          description: "Technical inspection and classification workspace.",
+          isEntry: false,
+          isTerminal: false,
+        },
+        {
+          workspaceRole: "PROCESSING",
+          label: "Processing",
+          description:
+            "Technical processing workspace that owns Ready, In Progress, and completion actions.",
+          isEntry: false,
+          isTerminal: false,
+        },
+        {
+          workspaceRole: "DONE",
+          label: "Done / Follow-up",
+          description: "Completion, payment follow-up, and closure workspace.",
+          isEntry: false,
+          isTerminal: true,
+        },
+      ],
+    },
+  ],
+  eventRoutes: [
+    {
+      eventKey: "service_request.created",
+      targetType: "SERVICE_REQUEST",
+      workspaceRole: "SR_CASE",
+      effect: "CREATE_WORKSPACE",
+      description: "Creates or reuses the SR case workspace for the Service Request.",
+    },
+    {
+      eventKey: "technical_issue.created",
+      targetType: "TECHNICAL_ISSUE",
+      workspaceRole: "INSPECT",
+      effect: "BIND_ITEM",
+      description: "Places a new technical suspicion into the Inspect workspace.",
+    },
+    {
+      eventKey: "technical_issue.confirmed",
+      targetType: "TECHNICAL_ISSUE",
+      workspaceRole: "PROCESSING",
+      effect: "MOVE_ITEM",
+      description: "Moves a classified issue into Processing as Ready work.",
+    },
+    {
+      eventKey: "technical_issue.started",
+      targetType: "TECHNICAL_ISSUE",
+      workspaceRole: "PROCESSING",
+      effect: "MOVE_ITEM",
+      description: "Keeps started technical work in Processing.",
+    },
+    {
+      eventKey: "technical_issue.completed",
+      targetType: "TECHNICAL_ISSUE",
+      workspaceRole: "DONE",
+      effect: "MOVE_ITEM",
+      description: "Moves completed technical work to Done/Follow-up.",
+    },
+    {
+      eventKey: "payment.created",
+      targetType: "PAYMENT",
+      workspaceRole: "DONE",
+      effect: "BIND_ITEM",
+      description: "Shows payment follow-up created from completed technical work.",
+    },
+  ],
+  actions: [
+    {
+      key: "watch_intake_with_suspicion",
+      label: "Create Service Request",
+      workspaceRole: "SR_CASE",
+      targetType: "SERVICE_REQUEST",
+      command: "service.watchIntakeWithInitialIssue",
+      emits: ["service_request.created", "technical_issue.created"],
+      description:
+        "Creates or opens the active SR case for a watch and requires the first technical suspicion so the SR is not empty.",
+      fields: [
+        {
+          key: "suspicion",
+          label: "Technical suspicion",
+          kind: "textarea",
+          required: true,
+        },
+      ],
+    },
+    {
+      key: "create_technical_issue",
+      label: "Create TI",
+      workspaceRole: "SR_CASE",
+      targetType: "TECHNICAL_ISSUE",
+      command: "service.createTechnicalIssue",
+      emits: ["technical_issue.created"],
+      description: "Adds another Technical Issue to the SR case.",
+      fields: [
+        { key: "summary", label: "Summary", kind: "text", required: true },
+        { key: "note", label: "Note", kind: "textarea", required: false },
+      ],
+    },
+    {
+      key: "classify_technical_issue",
+      label: "Classify TI",
+      workspaceRole: "INSPECT",
+      targetType: "TECHNICAL_ISSUE",
+      command: "service.confirmTechnicalIssue",
+      emits: ["technical_issue.confirmed"],
+      description:
+        "Turns a suspicion into a confirmed technical job with technical area, action, vendor mode, and estimate.",
+      fields: [
+        {
+          key: "technicalArea",
+          label: "Technical area",
+          kind: "select",
+          required: true,
+          options: [
+            { value: "GENERAL", label: "General" },
+            { value: "MOVEMENT", label: "Movement" },
+            { value: "CASE", label: "Case" },
+            { value: "CRYSTAL", label: "Crystal" },
+            { value: "BRACELET", label: "Bracelet" },
+            { value: "CROWN", label: "Crown" },
+          ],
+        },
+        {
+          key: "actionMode",
+          label: "Action mode",
+          kind: "select",
+          required: true,
+          options: [
+            { value: "INTERNAL", label: "Internal" },
+            { value: "VENDOR", label: "Vendor" },
+          ],
+        },
+        { key: "vendorId", label: "Vendor", kind: "select", required: false },
+        { key: "estimatedCost", label: "Estimated cost", kind: "money", required: false },
+      ],
+    },
+    {
+      key: "start_processing",
+      label: "Start processing",
+      workspaceRole: "PROCESSING",
+      targetType: "TECHNICAL_ISSUE",
+      command: "service.startTechnicalIssue",
+      emits: ["technical_issue.started"],
+      description: "Starts technical processing and records the current vendor/work setup.",
+      fields: [
+        {
+          key: "technicalDetailCatalogId",
+          label: "Technical detail catalog id",
+          kind: "text",
+          required: true,
+        },
+        {
+          key: "actionMode",
+          label: "Action mode",
+          kind: "select",
+          required: true,
+          options: [
+            { value: "INTERNAL", label: "Internal" },
+            { value: "VENDOR", label: "Vendor" },
+          ],
+        },
+        { key: "vendorId", label: "Vendor", kind: "select", required: false },
+        { key: "startedNote", label: "Start note", kind: "textarea", required: false },
+      ],
+    },
+    {
+      key: "complete_processing",
+      label: "Complete processing",
+      workspaceRole: "PROCESSING",
+      targetType: "TECHNICAL_ISSUE",
+      command: "service.completeTechnicalIssue",
+      emits: ["technical_issue.completed", "payment.created"],
+      description:
+        "Completes technical work, records final cost, and raises payment when needed.",
+      fields: [
+        { key: "actualCost", label: "Actual cost", kind: "money", required: true },
+        { key: "resolutionNote", label: "Resolution note", kind: "textarea", required: false },
+        { key: "createPayment", label: "Create unpaid payment", kind: "boolean", required: false },
+      ],
+    },
+    {
+      key: "raise_follow_up_issue",
+      label: "Raise follow-up TI",
+      workspaceRole: "PROCESSING",
+      targetType: "TECHNICAL_ISSUE",
+      command: "service.createTechnicalIssue",
+      emits: ["technical_issue.created"],
+      description:
+        "Creates another Technical Issue from work discovered during processing.",
+      fields: [
+        { key: "summary", label: "Summary", kind: "text", required: true },
+        { key: "note", label: "Reason", kind: "textarea", required: false },
+      ],
+    },
+  ],
+  workflows: [
+    {
+      key: "service-operation-technical-bench",
+      workspaceRole: "PROCESSING",
+      states: ["READY", "IN_PROGRESS", "DONE"],
+      transitions: [
+        {
+          from: "READY",
+          to: "IN_PROGRESS",
+          actionKey: "start_processing",
+          eventKey: "technical_issue.started",
+        },
+        {
+          from: "IN_PROGRESS",
+          to: "DONE",
+          actionKey: "complete_processing",
+          eventKey: "technical_issue.completed",
+        },
+      ],
+    },
+  ],
+  projectionSubscriptions: [
+    {
+      projectionKey: "watch-list",
+      eventKeys: [
+        "service_request.created",
+        "service_request.status_changed",
+        "technical_issue.created",
+        "technical_issue.confirmed",
+        "technical_issue.started",
+        "technical_issue.completed",
+        "payment.created",
+        "payment.status_updated",
+      ],
+      resolvesToTargetType: "WATCH",
+      description:
+        "Service Operation events must refresh the Watch List row because service state is visible from Watch.",
+    },
+  ],
+};
+
+const PAYMENT_COLLECTION_CONTRACT: OperationalBlueprintContract = {
+  key: "payment-collection",
+  version: 1,
+  context: "PAYMENT",
+  summary:
+    "Routes Payment records through collection review, settlement, and exception follow-up without moving payment truth out of the Payment domain.",
+  objectTypes: [
+    {
+      targetType: "PAYMENT",
+      label: "Payment",
+      role: "ITEM",
+      description:
+        "The payment domain record that owns amount, method, direction, status, and settlement facts.",
+    },
+  ],
+  workspaceRoles: [
+    {
+      key: "PAYMENT_INBOX",
+      label: "Payment Inbox",
+      cardinality: "SINGLE_PER_ACTIVE_CYCLE",
+      identityTargetType: null,
+      itemTargetTypes: ["PAYMENT"],
+      description:
+        "Receives newly created payment records that need collection or payment team attention.",
+    },
+    {
+      key: "PAYMENT_REVIEW",
+      label: "Payment Review",
+      cardinality: "SINGLE_PER_ACTIVE_CYCLE",
+      identityTargetType: null,
+      itemTargetTypes: ["PAYMENT"],
+      description:
+        "Owns verification, method confirmation, and settlement readiness before a payment is marked paid.",
+    },
+    {
+      key: "PAYMENT_SETTLED",
+      label: "Settled / Exception",
+      cardinality: "SINGLE_PER_ACTIVE_CYCLE",
+      identityTargetType: null,
+      itemTargetTypes: ["PAYMENT"],
+      description:
+        "Tracks paid, canceled, failed, or exception payments for follow-up and downstream closure.",
+    },
+  ],
+  coreFlows: [
+    {
+      key: "payment-collection-core-flow",
+      label: "Payment Collection Core Flow",
+      description:
+        "Links payment intake, review, and settlement workspaces for the Payment team.",
+      steps: [
+        {
+          workspaceRole: "PAYMENT_INBOX",
+          label: "Inbox",
+          description: "Newly created payments enter the payment team inbox.",
+          isEntry: true,
+          isTerminal: false,
+        },
+        {
+          workspaceRole: "PAYMENT_REVIEW",
+          label: "Review",
+          description: "Payment team verifies amount, method, and settlement readiness.",
+          isEntry: false,
+          isTerminal: false,
+        },
+        {
+          workspaceRole: "PAYMENT_SETTLED",
+          label: "Settled / Exception",
+          description: "Paid and exception payments are kept visible for follow-up.",
+          isEntry: false,
+          isTerminal: true,
+        },
+      ],
+    },
+  ],
+  eventRoutes: [
+    {
+      eventKey: "payment.created",
+      targetType: "PAYMENT",
+      workspaceRole: "PAYMENT_INBOX",
+      effect: "BIND_ITEM",
+      description:
+        "Places a newly created payment into Payment Inbox for collection attention.",
+    },
+    {
+      eventKey: "payment.status_updated",
+      targetType: "PAYMENT",
+      workspaceRole: "PAYMENT_REVIEW",
+      effect: "MOVE_ITEM",
+      description:
+        "Moves payment work into Review when payment status changes before settlement.",
+    },
+    {
+      eventKey: "payment.paid",
+      targetType: "PAYMENT",
+      workspaceRole: "PAYMENT_SETTLED",
+      effect: "MOVE_ITEM",
+      description:
+        "Moves paid payment records into Settled / Exception for closure follow-up.",
+    },
+  ],
+  actions: [
+    {
+      key: "review_payment",
+      label: "Review payment",
+      workspaceRole: "PAYMENT_INBOX",
+      targetType: "PAYMENT",
+      command: "payment.reviewPayment",
+      emits: ["payment.status_updated"],
+      description:
+        "Moves a payment into review after the Payment team checks owner, amount, and method.",
+      fields: [
+        { key: "reviewNote", label: "Review note", kind: "textarea", required: false },
+      ],
+    },
+    {
+      key: "mark_payment_paid",
+      label: "Mark paid",
+      workspaceRole: "PAYMENT_REVIEW",
+      targetType: "PAYMENT",
+      command: "payment.completePayment",
+      emits: ["payment.paid", "payment.status_updated"],
+      description:
+        "Delegates settlement to the Payment domain and records the expected paid event.",
+      fields: [
+        { key: "paidAt", label: "Paid at", kind: "date", required: false },
+        { key: "method", label: "Payment method", kind: "select", required: false },
+        { key: "settlementNote", label: "Settlement note", kind: "textarea", required: false },
+      ],
+    },
+    {
+      key: "mark_payment_exception",
+      label: "Mark exception",
+      workspaceRole: "PAYMENT_REVIEW",
+      targetType: "PAYMENT",
+      command: "payment.markException",
+      emits: ["payment.status_updated"],
+      description:
+        "Moves a payment into exception follow-up when settlement cannot be completed normally.",
+      fields: [
+        { key: "reason", label: "Reason", kind: "textarea", required: true },
+      ],
+    },
+  ],
+  workflows: [
+    {
+      key: "payment-collection-workflow",
+      workspaceRole: "PAYMENT_REVIEW",
+      states: ["READY", "IN_REVIEW", "PAID", "EXCEPTION"],
+      transitions: [
+        {
+          from: "READY",
+          to: "IN_REVIEW",
+          actionKey: "review_payment",
+          eventKey: "payment.status_updated",
+        },
+        {
+          from: "IN_REVIEW",
+          to: "PAID",
+          actionKey: "mark_payment_paid",
+          eventKey: "payment.paid",
+        },
+        {
+          from: "IN_REVIEW",
+          to: "EXCEPTION",
+          actionKey: "mark_payment_exception",
+          eventKey: "payment.status_updated",
+        },
+      ],
+    },
+  ],
+  projectionSubscriptions: [],
+};
+
+export function operationalBlueprintForWorkType(input: {
+  workTypeKey: string;
+  coordinationContext: WorkTypeCoordinationContext | "DRAFT";
+}): OperationalBlueprintContract | null {
+  if (
+    input.coordinationContext === "TECHNICAL" &&
+    normalizeKey(input.workTypeKey) === "service-operation"
+  ) {
+    return SERVICE_OPERATION_CONTRACT;
+  }
+
+  if (
+    input.coordinationContext === "PAYMENT" &&
+    normalizeKey(input.workTypeKey) === "payment"
+  ) {
+    return PAYMENT_COLLECTION_CONTRACT;
+  }
+
+  return null;
+}
+
+export function operationalEventRouteForWorkType(input: {
+  workTypeKey: string;
+  coordinationContext: WorkTypeCoordinationContext | "DRAFT";
+  eventKey: string;
+  targetType: string;
+}): OperationalBlueprintEventRoute | null {
+  const contract = operationalBlueprintForWorkType({
+    workTypeKey: input.workTypeKey,
+    coordinationContext: input.coordinationContext,
+  });
+
+  if (!contract) return null;
+
+  return (
+    contract.eventRoutes.find(
+      (route) =>
+        normalizeEvent(route.eventKey) === normalizeEvent(input.eventKey) &&
+        normalizeTarget(route.targetType) === normalizeTarget(input.targetType),
+    ) ?? null
+  );
+}
+
+export function operationalWorkspaceRoleExists(input: {
+  workTypeKey: string;
+  coordinationContext: WorkTypeCoordinationContext | "DRAFT";
+  workspaceRole: string;
+}) {
+  const contract = operationalBlueprintForWorkType({
+    workTypeKey: input.workTypeKey,
+    coordinationContext: input.coordinationContext,
+  });
+
+  if (!contract) return false;
+
+  return contract.workspaceRoles.some(
+    (role) => normalizeTarget(role.key) === normalizeTarget(input.workspaceRole),
+  );
+}
+
+export function operationalCoreFlowsForWorkspaceRole(input: {
+  workTypeKey: string;
+  coordinationContext: WorkTypeCoordinationContext | "DRAFT";
+  workspaceRole: string;
+}): OperationalBlueprintCoreFlow[] {
+  const contract = operationalBlueprintForWorkType({
+    workTypeKey: input.workTypeKey,
+    coordinationContext: input.coordinationContext,
+  });
+
+  if (!contract) return [];
+
+  return contract.coreFlows.filter((flow) =>
+    flow.steps.some(
+      (step) =>
+        normalizeTarget(step.workspaceRole) === normalizeTarget(input.workspaceRole),
+    ),
+  );
+}
+
+export function selectOperationalActionsForWorkspaceRole(
+  input: OperationalBlueprintActionSelectionInput,
+): OperationalBlueprintAction[] {
+  const workspaceRole = normalizeTarget(input.workspaceRole);
+  if (!input.contract || !workspaceRole) return [];
+
+  const targetTypes = new Set(
+    (input.targetTypes ?? []).map((targetType) => normalizeTarget(targetType)).filter(Boolean),
+  );
+
+  return input.contract.actions.filter((action) => {
+    if (normalizeTarget(action.workspaceRole) !== workspaceRole) return false;
+    if (!targetTypes.size) return true;
+    return targetTypes.has(normalizeTarget(action.targetType));
+  });
+}
+
+export function selectOperationalCoreFlowForWorkspaceRole(
+  input: OperationalBlueprintCoreFlowSelectionInput,
+): OperationalBlueprintCoreFlow | null {
+  const workspaceRole = normalizeTarget(input.workspaceRole);
+  if (!input.contract || !workspaceRole) return null;
+
+  return (
+    input.contract.coreFlows.find((flow) =>
+      flow.steps.some(
+        (step) => normalizeTarget(step.workspaceRole) === workspaceRole,
+      ),
+    ) ?? null
+  );
+}
+
+export function serviceOperationWorkspaceRoleForStage(stage: string) {
+  if (stage === "INSPECT") return "INSPECT";
+  if (stage === "DONE") return "DONE";
+  return "PROCESSING";
+}

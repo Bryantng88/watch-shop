@@ -51,7 +51,10 @@ import {
   resolveManualWorkflowAction,
 } from "../server/business-binding-workflow.service";
 import { processManualWorkspaceWorkflowTransition } from "../server/workspace-workflow-processor";
-import { runServiceOperationManualAction } from "@/domains/service/server/operation/service-operation-action-adapter";
+import {
+  runServiceOperationBlueprintAction,
+  runServiceOperationManualAction,
+} from "@/domains/service/server/operation/service-operation-action-adapter";
 import {
   addManualQueueItem,
   searchManualQueueTargets,
@@ -983,6 +986,42 @@ export async function applyQueueItemManualTransitionsAction(input: {
     failed: results.filter((result) => !result.ok).length,
     results,
   };
+}
+
+export async function submitOperationalBlueprintActionAction(input: {
+  taskItemId: string;
+  actionKey: string;
+  targetType?: string | null;
+  targetId?: string | null;
+  fields?: Record<string, unknown>;
+}) {
+  const auth = await getTaskAuth();
+  const taskItemId = String(input.taskItemId ?? "").trim();
+  const actionKey = String(input.actionKey ?? "").trim();
+  if (!taskItemId) throw new Error("Missing taskItemId");
+  if (!actionKey) throw new Error("Missing Blueprint action");
+
+  const actorUserId = getAuthUserId(auth);
+  const actorLabel =
+    auth?.user?.name ?? auth?.name ?? auth?.user?.email ?? auth?.email ?? null;
+  const result = await runServiceOperationBlueprintAction(prisma, {
+    taskItemId,
+    actionKey,
+    targetType: input.targetType ?? null,
+    targetId: input.targetId ?? null,
+    fields: input.fields ?? {},
+    actorUserId,
+    actorName: actorLabel,
+  });
+
+  if (!result.ok) {
+    throw new Error(result.error ?? "Operational Blueprint action failed");
+  }
+
+  revalidatePath("/admin/task-items");
+  revalidatePath(`/admin/task-items/${taskItemId}`);
+
+  return { ok: true, result };
 }
 
 export async function searchManualQueueTargetsAction(input: {

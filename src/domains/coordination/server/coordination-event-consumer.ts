@@ -24,13 +24,16 @@ import {
   type WorkspaceEventBinding,
 } from "@/domains/blueprint/shared/event-bindings";
 import {
+  operationalEventRouteForWorkType,
+  operationalWorkspaceRoleExists,
+} from "@/domains/blueprint/shared/operational-blueprint";
+import {
   getTimelineBody,
   getTimelineTitle,
 } from "@/domains/shared/timeline/server/timeline-event-consumer";
 import { getWorkTypeDefinition } from "@/domains/task/server/work-type.service";
 import { getCoordinationRoute } from "./coordination-router.registry";
 import { routeBusinessEvent } from "./coordination-router.service";
-import { getTechnicalIssueOperationStage } from "@/domains/service/server/shared/service-request.rules";
 import type { CoordinationContext } from "./coordination-cycle.types";
 import type {
   CoordinationBusinessEvent,
@@ -273,6 +276,22 @@ function serviceOperationWorkspaceRoleFromNote(
     value === "DONE"
   ) {
     return value;
+  }
+
+  return null;
+}
+
+function serviceOperationWorkspaceRoleValue(
+  value: unknown,
+): ServiceOperationWorkspaceRole | null {
+  const normalized = clean(value).toUpperCase();
+
+  if (
+    normalized === "INSPECT" ||
+    normalized === "PROCESSING" ||
+    normalized === "DONE"
+  ) {
+    return normalized;
   }
 
   return null;
@@ -655,46 +674,47 @@ function canonicalTargetIdForCoordination(input: {
   return input.targetId;
 }
 
-function stageToServiceOperationWorkspaceRole(
-  stage: ReturnType<typeof getTechnicalIssueOperationStage>,
-): ServiceOperationWorkspaceRole {
-  if (stage === "INSPECT") return "INSPECT";
-  if (stage === "DONE") return "DONE";
-  return "PROCESSING";
-}
-
 async function resolveServiceOperationWorkspaceRole(input: {
   db: DB;
   route: CoordinationRoute;
+  eventKey: string;
   targetType: string;
   targetId: string;
   metadataJson?: Prisma.JsonValue | null;
 }): Promise<ServiceOperationWorkspaceRole | null> {
   if (!isServiceOperationTechnicalRoute(input)) return null;
 
+  const context = coordinationTypeToContext(input.route.coordinationType);
+  if (!context) return null;
+
+  const operationRoute = operationalEventRouteForWorkType({
+    workTypeKey: input.route.workTypeKey,
+    coordinationContext: context,
+    eventKey: input.eventKey,
+    targetType: input.targetType,
+  });
+
+  if (!operationRoute) return null;
+
   const metadata = asRecord(input.metadataJson);
-  const explicitRole = clean(metadata.serviceOperationWorkspaceRole || metadata.workspaceRole)
-    .toUpperCase();
+  const explicitRole = serviceOperationWorkspaceRoleValue(
+    metadata.serviceOperationWorkspaceRole || metadata.workspaceRole,
+  );
 
   if (
-    explicitRole === "INSPECT" ||
-    explicitRole === "PROCESSING" ||
-    explicitRole === "DONE"
+    explicitRole &&
+    explicitRole === operationRoute.workspaceRole &&
+    operationalWorkspaceRoleExists({
+      workTypeKey: input.route.workTypeKey,
+      coordinationContext: context,
+      workspaceRole: explicitRole,
+    })
   ) {
     return explicitRole;
   }
 
-  const issue = await dbOrTx(input.db).technicalIssue.findUnique({
-    where: { id: input.targetId },
-    select: {
-      executionStatus: true,
-      isConfirmed: true,
-    },
-  });
-
-  return issue
-    ? stageToServiceOperationWorkspaceRole(getTechnicalIssueOperationStage(issue))
-    : null;
+  const routedRole = serviceOperationWorkspaceRoleValue(operationRoute.workspaceRole);
+  return routedRole;
 }
 
 function isServiceRequestWorkspaceIntake(input: {
@@ -1007,6 +1027,7 @@ export async function consumeBusinessEventForCoordination(
   const workspaceRole = await resolveServiceOperationWorkspaceRole({
     db,
     route,
+    eventKey,
     targetType,
     targetId: canonicalTargetId,
     metadataJson: input.metadataJson ?? null,
@@ -1224,6 +1245,7 @@ export async function diagnoseBusinessEventForCoordination(
   const workspaceRole = await resolveServiceOperationWorkspaceRole({
     db,
     route,
+    eventKey,
     targetType,
     targetId: canonicalTargetId,
     metadataJson: input.metadataJson ?? null,

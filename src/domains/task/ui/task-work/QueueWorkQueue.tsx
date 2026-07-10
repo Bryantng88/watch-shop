@@ -11,6 +11,10 @@ import {
   XCircle,
 } from "lucide-react";
 import type { WorkspaceCapabilities } from "@/domains/blueprint/shared/workspace-capabilities";
+import type {
+  OperationalBlueprintAction,
+  OperationalBlueprintActionField,
+} from "@/domains/blueprint/shared/operational-blueprint";
 import type { BusinessEntityPreview } from "@/domains/shared/business/business-entity.types";
 import {
   BusinessEntityPreviewModal,
@@ -27,6 +31,7 @@ import { cn } from "@/lib/utils";
 import {
   applyQueueItemManualTransitionsAction,
   applyQueueItemManualTransitionAction,
+  submitOperationalBlueprintActionAction,
 } from "@/domains/task/actions/task.actions";
 import {
   resolveQueueRowPresentation,
@@ -174,6 +179,76 @@ function WorkflowStateBadge({ value, label }: { value?: string | null; label?: s
     )}>
       {label || workflowStateLabel(value)}
     </span>
+  );
+}
+
+function BlueprintActionFieldControl({
+  field,
+  value,
+  disabled,
+  onChange,
+}: {
+  field: OperationalBlueprintActionField;
+  value?: string | boolean;
+  disabled?: boolean;
+  onChange: (value: string | boolean) => void;
+}) {
+  const baseClass =
+    "h-8 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700 disabled:bg-slate-50 disabled:text-slate-400";
+
+  if (field.kind === "textarea") {
+    return (
+      <textarea
+        className={`${baseClass} min-h-14 py-2`}
+        disabled={disabled}
+        placeholder={field.label}
+        value={typeof value === "string" ? value : ""}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    );
+  }
+
+  if (field.kind === "select") {
+    return (
+      <select
+        className={baseClass}
+        disabled={disabled}
+        value={typeof value === "string" ? value : ""}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        <option value="">{field.label}</option>
+        {(field.options ?? []).map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
+  if (field.kind === "boolean") {
+    return (
+      <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
+        <input
+          type="checkbox"
+          disabled={disabled}
+          checked={value === true}
+          onChange={(event) => onChange(event.target.checked)}
+        />
+        {field.label}
+      </label>
+    );
+  }
+
+  return (
+    <input
+      className={baseClass}
+      disabled={disabled}
+      type={field.kind === "date" ? "date" : "text"}
+      placeholder={field.kind === "money" ? `${field.label} (money)` : field.label}
+      value={typeof value === "string" ? value : ""}
+      onChange={(event) => onChange(event.target.value)}
+    />
   );
 }
 
@@ -412,6 +487,7 @@ export function QueueItemThumbnail({ item }: { item: TaskItemQueueItem }) {
               style={{ left: index * 6, zIndex: 3 - index }}
             >
               {stackedSrc ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img src={stackedSrc} alt={label} className="h-full w-full object-cover" />
               ) : (
                 targetLabel(item.targetType).slice(0, 1)
@@ -426,6 +502,7 @@ export function QueueItemThumbnail({ item }: { item: TaskItemQueueItem }) {
   return (
     <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
       {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt={label} className="h-full w-full object-cover" />
       ) : (
         targetLabel(item.targetType).slice(0, 1)
@@ -764,6 +841,7 @@ export function QueueWorkQueue({
   capabilities,
   itemLabel,
   workspaceWorkTypeKey,
+  operationalActions = [],
   serviceRequestId,
   onOpenQueueActivity,
 }: {
@@ -772,6 +850,7 @@ export function QueueWorkQueue({
   capabilities: WorkspaceCapabilities;
   itemLabel: string;
   workspaceWorkTypeKey?: string | null;
+  operationalActions?: OperationalBlueprintAction[];
   serviceRequestId?: string | null;
   currentUser?: UserSummary | null;
   onOpenQueueActivity?: (queueItemId: string, mode: "activity") => void;
@@ -785,6 +864,13 @@ export function QueueWorkQueue({
     itemId: string;
     message: string;
   } | null>(null);
+  const [openBlueprintAction, setOpenBlueprintAction] = useState<{
+    itemId: string;
+    actionKey: string;
+  } | null>(null);
+  const [blueprintValues, setBlueprintValues] = useState<
+    Record<string, Record<string, string | boolean>>
+  >({});
   const [isPending, startTransition] = useTransition();
   const previewState = useBusinessEntityPreview();
   const router = useRouter();
@@ -835,6 +921,68 @@ export function QueueWorkQueue({
     }
 
     return transitions;
+  };
+  const blueprintActionsForItem = (queueItem: TaskItemQueueItem) =>
+    operationalActions.filter(
+      (action) =>
+        action.targetType === queueItem.targetType &&
+        action.key !== "create_technical_issue",
+    );
+  const canSubmitBlueprintAction = (action: OperationalBlueprintAction) =>
+    action.command === "service.confirmTechnicalIssue" ||
+    action.command === "service.startTechnicalIssue" ||
+    action.command === "service.completeTechnicalIssue" ||
+    action.command === "service.createTechnicalIssue";
+  const blueprintValueKey = (queueItem: TaskItemQueueItem, action: OperationalBlueprintAction) =>
+    `${queueItem.id}:${action.key}`;
+  const updateBlueprintValue = (
+    queueItem: TaskItemQueueItem,
+    action: OperationalBlueprintAction,
+    fieldKey: string,
+    value: string | boolean,
+  ) => {
+    const key = blueprintValueKey(queueItem, action);
+    setBlueprintValues((current) => ({
+      ...current,
+      [key]: {
+        ...(current[key] ?? {}),
+        [fieldKey]: value,
+      },
+    }));
+  };
+  const applyBlueprintAction = (
+    queueItem: TaskItemQueueItem,
+    action: OperationalBlueprintAction,
+  ) => {
+    if (!canSubmitBlueprintAction(action) || isPending) return;
+
+    const pendingKey = `${queueItem.id}:${action.key}`;
+    setPendingId(pendingKey);
+    setActionError(null);
+    startTransition(async () => {
+      try {
+        await submitOperationalBlueprintActionAction({
+          taskItemId,
+          actionKey: action.key,
+          targetType: queueItem.targetType,
+          targetId: queueItem.targetId,
+          fields: blueprintValues[blueprintValueKey(queueItem, action)] ?? {},
+        });
+        setOpenBlueprintAction(null);
+        setBlueprintValues((current) => ({
+          ...current,
+          [blueprintValueKey(queueItem, action)]: {},
+        }));
+        router.refresh();
+      } catch (error) {
+        setActionError({
+          itemId: queueItem.id,
+          message: error instanceof Error ? error.message : "Blueprint action failed.",
+        });
+      } finally {
+        setPendingId(null);
+      }
+    });
   };
   const selectableItems = visibleItems.filter((item) => Boolean(transitionForItem(item)));
   const selectedTransitions = selectedItems
@@ -1121,6 +1269,7 @@ export function QueueWorkQueue({
                     const secondaryNextStepActions = rowPresentation.nextStep.secondaryActions;
                     const displayStatus = rowPresentation.status.value as QueueItemStatus;
                     const businessPreview = queueItemToBusinessPreview(queueItem);
+                    const blueprintItemActions = blueprintActionsForItem(queueItem);
 
                     return (
                       <div
@@ -1289,6 +1438,90 @@ export function QueueWorkQueue({
                                     ) : null}
                                   </div>
                                 ) : null}
+                              </div>
+                            ) : null}
+                            {blueprintItemActions.length ? (
+                              <div className="mt-2 space-y-2">
+                                <div className="flex flex-wrap gap-1.5">
+                                  {blueprintItemActions.map((action) => {
+                                    const open =
+                                      openBlueprintAction?.itemId === queueItem.id &&
+                                      openBlueprintAction.actionKey === action.key;
+                                    const submitSupported = canSubmitBlueprintAction(action);
+
+                                    return (
+                                      <button
+                                        key={action.key}
+                                        type="button"
+                                        disabled={!submitSupported}
+                                        onClick={() =>
+                                          setOpenBlueprintAction(open
+                                            ? null
+                                            : { itemId: queueItem.id, actionKey: action.key })
+                                        }
+                                        className="inline-flex h-7 min-w-0 items-center rounded-lg border border-blue-100 bg-blue-50 px-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400"
+                                        title={submitSupported ? action.description : `Adapter pending: ${action.command}`}
+                                      >
+                                        {action.label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                                {blueprintItemActions.map((action) => {
+                                  const open =
+                                    openBlueprintAction?.itemId === queueItem.id &&
+                                    openBlueprintAction.actionKey === action.key;
+                                  if (!open) return null;
+
+                                  const valueKey = blueprintValueKey(queueItem, action);
+                                  const pendingKey = `${queueItem.id}:${action.key}`;
+                                  const pending = isPending && pendingId === pendingKey;
+
+                                  return (
+                                    <form
+                                      key={`${action.key}:form`}
+                                      className="space-y-2 rounded-xl border border-blue-100 bg-blue-50/50 p-2"
+                                      onSubmit={(event) => {
+                                        event.preventDefault();
+                                        applyBlueprintAction(queueItem, action);
+                                      }}
+                                    >
+                                      {action.fields.map((field) => (
+                                        <div key={field.key}>
+                                          <div className="mb-1 flex items-center justify-between gap-2 text-[11px] font-semibold text-slate-500">
+                                            <span>{field.label}</span>
+                                            <span>{field.required ? "required" : field.kind}</span>
+                                          </div>
+                                          <BlueprintActionFieldControl
+                                            field={field}
+                                            disabled={pending}
+                                            value={blueprintValues[valueKey]?.[field.key]}
+                                            onChange={(value) =>
+                                              updateBlueprintValue(
+                                                queueItem,
+                                                action,
+                                                field.key,
+                                                value,
+                                              )
+                                            }
+                                          />
+                                        </div>
+                                      ))}
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className="truncate text-[11px] text-slate-500">
+                                          {action.command}
+                                        </span>
+                                        <button
+                                          type="submit"
+                                          disabled={pending}
+                                          className="inline-flex h-7 items-center rounded-md bg-slate-900 px-2.5 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                                        >
+                                          {pending ? "Running" : "Run"}
+                                        </button>
+                                      </div>
+                                    </form>
+                                  );
+                                })}
                               </div>
                             ) : null}
                           </div>

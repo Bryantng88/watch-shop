@@ -2,6 +2,8 @@ import type { CoordinationContext } from "./coordination-cycle.types";
 import type {
   BlueprintSource,
   BlueprintWorkspaceDefinition,
+  OperationalBlueprintContract,
+  OperationalBlueprintValidationResult,
 } from "@/domains/blueprint/server";
 
 export type CoordinationReportMetricDTO = {
@@ -77,6 +79,8 @@ export type CoordinationDashboardDTO = {
     source: BlueprintSource;
     status: string | null;
     workspaceDefinition: BlueprintWorkspaceDefinition;
+    operation: OperationalBlueprintContract | null;
+    operationValidation: OperationalBlueprintValidationResult | null;
     snapshotNote: string;
     usage: {
       total: number;

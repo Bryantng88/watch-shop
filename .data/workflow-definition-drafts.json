@@ -13,6 +13,81 @@
         "typicalUsage": "Dùng khi admin cần định nghĩa Blueprint trước khi tạo Workspace.",
         "expectedResult": "Một Blueprint draft có thể validate và dùng làm nền cho Workspace.",
         "ownerLabel": "System Admin",
+        "operation": null,
+        "workspaceDefinition": {
+          "defaultName": "New Workflow Draft Workspace",
+          "defaultDescription": "Workspace được tạo từ Blueprint New Workflow Draft.",
+          "workspaceType": "New Workflow Draft Workspace",
+          "itemLabel": "New Workflow Draft Items",
+          "defaultView": "items",
+          "enabledCapabilities": {
+            "workflow": true,
+            "items": true,
+            "activity": true,
+            "discussion": true,
+            "attachments": false,
+            "checklist": false,
+            "dueDate": false,
+            "assignee": false,
+            "priority": true
+          },
+          "instantiationNotes": "Ở V1, Workspace lưu ý định định nghĩa này dưới dạng snapshot note."
+        }
+      },
+      "definitionJson": {
+        "key": "new-workflow-draft",
+        "title": "New Workflow Draft",
+        "description": null,
+        "initialState": "NEW",
+        "terminalStates": [
+          "DONE"
+        ],
+        "metadata": null,
+        "states": [
+          {
+            "key": "NEW",
+            "title": "New",
+            "description": null,
+            "color": "gray",
+            "icon": "circle",
+            "sortOrder": 10
+          },
+          {
+            "key": "DONE",
+            "title": "Done",
+            "description": null,
+            "color": "zinc",
+            "icon": "check-circle",
+            "sortOrder": 20
+          }
+        ],
+        "transitions": []
+      },
+      "status": "VALIDATED",
+      "validationJson": {
+        "valid": true,
+        "issues": [],
+        "warnings": []
+      },
+      "sourceRegistryKey": null,
+      "createdByUserId": "e8cd72d2-429b-4822-96ac-6f52bdc5f922",
+      "updatedByUserId": "e8cd72d2-429b-4822-96ac-6f52bdc5f922",
+      "id": "dc15b6f6-7334-4951-83d8-67d4f2193cbf",
+      "createdAt": "2026-07-10T09:53:51.420Z",
+      "updatedAt": "2026-07-10T09:53:51.420Z"
+    },
+    {
+      "key": "new-workflow-draft",
+      "workspaceTemplateKey": null,
+      "workTypeKey": null,
+      "name": "New Workflow Draft",
+      "description": null,
+      "blueprintJson": {
+        "purpose": "Thiết kế một cách vận hành chuẩn cho Workspace trong tương lai.",
+        "businessContext": "DRAFT",
+        "typicalUsage": "Dùng khi admin cần định nghĩa Blueprint trước khi tạo Workspace.",
+        "expectedResult": "Một Blueprint draft có thể validate và dùng làm nền cho Workspace.",
+        "ownerLabel": "System Admin",
         "workspaceDefinition": {
           "defaultName": "New Workflow Draft Workspace",
           "defaultDescription": "Workspace được tạo từ Blueprint New Workflow Draft.",

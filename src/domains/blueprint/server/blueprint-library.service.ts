@@ -17,6 +17,11 @@ import {
   type WorkspaceEventBinding,
 } from "@/domains/blueprint/shared/event-bindings";
 import {
+  operationalBlueprintForWorkType,
+  validateOperationalBlueprintContract,
+  type OperationalBlueprintContract,
+} from "@/domains/blueprint/shared/operational-blueprint";
+import {
   MANUAL_WORKSPACE_PROVISIONING,
   workspaceProvisioningForWorkType,
   type WorkspaceProvisioningPolicy,
@@ -232,6 +237,7 @@ function buildWorkspaceDefinition(input: {
   workflow: BlueprintWorkflowCapability;
   provisioning?: WorkspaceProvisioningPolicy;
   eventBindings?: WorkspaceEventBinding[];
+  operation?: OperationalBlueprintContract | null;
 }): BlueprintWorkspaceDefinition {
   return {
     defaultName: input.experience.workspaceType,
@@ -361,6 +367,11 @@ function registryBlueprint(
     workTypeKey: workType.key,
     coordinationContext: workType.coordinationContext,
   });
+  const operation = operationalBlueprintForWorkType({
+    workTypeKey: workType.key,
+    coordinationContext: workType.coordinationContext,
+  });
+  const operationValidation = validateOperationalBlueprintContract(operation);
   const provisioning = workspaceProvisioningForWorkType({
     workTypeKey: workType.key,
     coordinationContext: workType.coordinationContext,
@@ -384,7 +395,10 @@ function registryBlueprint(
       workflow,
       provisioning,
       eventBindings,
+      operation,
     }),
+    operation,
+    operationValidation,
     workflow,
     metadata: {
       defaultOwnerRole: workType.defaultOwnerRole,
@@ -436,7 +450,10 @@ export async function listBlueprintLibraryItems(): Promise<BlueprintLibraryItem[
           workflow,
           provisioning: MANUAL_WORKSPACE_PROVISIONING,
           eventBindings: [],
+          operation: null,
         }),
+      operation: null,
+      operationValidation: null,
       workflow,
       metadata: {
         draftId: draft.id,
@@ -459,6 +476,7 @@ function snapshotNoteForBlueprint(input: {
   workflowKey: string | null;
   workflowDefinition: WorkflowDefinition | null;
   workspaceDefinition: BlueprintWorkspaceDefinition;
+  operation: OperationalBlueprintContract | null;
 }) {
   const appliedWorkflowSnapshot = createAppliedWorkflowSnapshot(
     input.workflowDefinition,
@@ -479,6 +497,7 @@ function snapshotNoteForBlueprint(input: {
     workTypeKey: input.workTypeKey,
     workflowKey: input.workflowKey,
     appliedWorkflowSnapshot,
+    operation: input.operation,
     workspaceDefinition,
     provisioning: workspaceDefinition.provisioning,
     eventBindings: workspaceDefinition.eventBindings,
@@ -521,6 +540,8 @@ export async function listWorkspaceInstantiationBlueprintOptions(
     source: blueprint.source,
     status: null,
     workspaceDefinition: blueprint.workspaceDefinition,
+    operation: blueprint.operation,
+    operationValidation: blueprint.operationValidation,
     snapshotNote: snapshotNoteForBlueprint({
       blueprintKey: blueprint.key,
       blueprintName: blueprint.name,
@@ -529,6 +550,7 @@ export async function listWorkspaceInstantiationBlueprintOptions(
       workflowKey: blueprint.workflow.workflowKey,
       workflowDefinition: blueprint.workflow.definition,
       workspaceDefinition: blueprint.workspaceDefinition,
+      operation: blueprint.operation,
     }),
   }));
 
@@ -559,6 +581,8 @@ export async function listWorkspaceInstantiationBlueprintOptions(
         source: blueprint.source,
         status,
         workspaceDefinition: blueprint.workspaceDefinition,
+        operation: blueprint.operation,
+        operationValidation: blueprint.operationValidation,
         snapshotNote: snapshotNoteForBlueprint({
           blueprintKey: blueprint.key,
           blueprintName: blueprint.name,
@@ -567,6 +591,7 @@ export async function listWorkspaceInstantiationBlueprintOptions(
           workflowKey: blueprint.workflow.workflowKey,
           workflowDefinition: blueprint.workflow.definition,
           workspaceDefinition: blueprint.workspaceDefinition,
+          operation: blueprint.operation,
         }),
       };
     });

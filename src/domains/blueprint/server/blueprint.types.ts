@@ -2,6 +2,10 @@ import type { WorkflowDefinitionValidationResult } from "@/domains/workflow-defi
 import type { WorkTypeCoordinationContext } from "@/domains/task/server/work-type.types";
 import type { WorkflowDefinition } from "@/domains/workflow-definition/server/workflow-definition.types";
 import type { WorkspaceEventBinding } from "@/domains/blueprint/shared/event-bindings";
+import type {
+  OperationalBlueprintContract,
+  OperationalBlueprintValidationResult,
+} from "@/domains/blueprint/shared/operational-blueprint";
 import type { WorkspaceProvisioningPolicy } from "@/domains/blueprint/shared/workspace-provisioning";
 
 export type BlueprintSource = "REGISTRY" | "DRAFT";
@@ -92,6 +96,8 @@ export type BlueprintLibraryItem = {
   registrySource: string | null;
   experience: BlueprintExperience;
   workspaceDefinition: BlueprintWorkspaceDefinition;
+  operation: OperationalBlueprintContract | null;
+  operationValidation: OperationalBlueprintValidationResult | null;
   workflow: BlueprintWorkflowCapability;
   metadata: Record<string, unknown> | null;
 };
@@ -106,5 +112,7 @@ export type WorkspaceInstantiationBlueprintOption = {
   source: BlueprintSource;
   status: string | null;
   workspaceDefinition: BlueprintWorkspaceDefinition;
+  operation: OperationalBlueprintContract | null;
+  operationValidation: OperationalBlueprintValidationResult | null;
   snapshotNote: string;
 };

@@ -222,5 +222,61 @@ export async function resolveWatchIdsForProjectionTarget(
     return row?.id ? [row.id] : [];
   }
 
+  if (targetType === "SERVICE_REQUEST") {
+    return resolveWatchIdsForServiceRequest(db, targetId);
+  }
+
+  if (targetType === "TECHNICAL_ISSUE") {
+    const issue = await dbOrTx(db).technicalIssue.findUnique({
+      where: { id: targetId },
+      select: { serviceRequestId: true },
+    });
+    return resolveWatchIdsForServiceRequest(db, issue?.serviceRequestId);
+  }
+
+  if (targetType === "PAYMENT") {
+    const payment = await dbOrTx(db).payment.findUnique({
+      where: { id: targetId },
+      select: {
+        service_request_id: true,
+        technical_issue_id: true,
+      },
+    });
+
+    if (payment?.service_request_id) {
+      return resolveWatchIdsForServiceRequest(db, payment.service_request_id);
+    }
+
+    if (payment?.technical_issue_id) {
+      const issue = await dbOrTx(db).technicalIssue.findUnique({
+        where: { id: payment.technical_issue_id },
+        select: { serviceRequestId: true },
+      });
+      return resolveWatchIdsForServiceRequest(db, issue?.serviceRequestId);
+    }
+  }
+
   return [];
+}
+
+async function resolveWatchIdsForServiceRequest(
+  db: DB,
+  serviceRequestId?: string | null,
+) {
+  const id = clean(serviceRequestId);
+  if (!id) return [];
+
+  const serviceRequest = await dbOrTx(db).serviceRequest.findUnique({
+    where: { id },
+    select: { productId: true },
+  });
+  const productId = clean(serviceRequest?.productId);
+  if (!productId) return [];
+
+  const watch = await dbOrTx(db).watch.findUnique({
+    where: { productId },
+    select: { id: true },
+  });
+
+  return watch?.id ? [watch.id] : [];
 }

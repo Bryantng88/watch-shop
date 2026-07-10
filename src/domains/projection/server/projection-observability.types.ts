@@ -7,6 +7,9 @@ export type ProjectionStatusSummary = {
   registered: boolean;
   rebuildSupported: boolean;
   eventBuildSupported: boolean;
+  sourceEvents: string[];
+  operationSubscriptionEvents: string[];
+  operationSubscriptionKeys: string[];
   storageReady: boolean;
   storageReason?: string;
   rowCount: number;

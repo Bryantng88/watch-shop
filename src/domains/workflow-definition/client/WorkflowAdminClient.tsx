@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import type {
   BusinessEventCatalogItem,
 } from "@/domains/event/server/business-event-catalog.service";
@@ -11,6 +11,10 @@ import type {
   BlueprintLibraryItem,
   BlueprintWorkspaceDefinition,
 } from "@/domains/blueprint/server";
+import {
+  validateOperationalBlueprintContract,
+  type OperationalBlueprintContract,
+} from "@/domains/blueprint/shared/operational-blueprint";
 import type {
   WorkflowDefinition,
   WorkflowDefinitionDraft,
@@ -26,7 +30,13 @@ type Props = {
   initialDrafts: WorkflowDefinitionDraft[];
 };
 
-type DetailTab = "purpose" | "workspace" | "capabilities" | "workflow" | "developer";
+type DetailTab =
+  | "purpose"
+  | "workspace"
+  | "capabilities"
+  | "workflow"
+  | "operation"
+  | "developer";
 
 function triggerTone(triggerType: string) {
   if (triggerType === "MANUAL") return "border-sky-200 bg-sky-50 text-sky-700";
@@ -89,6 +99,27 @@ function parseJson(value: string) {
       error: error instanceof Error ? error.message : "JSON không hợp lệ",
     };
   }
+}
+
+function parseOperationJson(value: string) {
+  const parsed = parseJson(value);
+  if (!parsed.ok) return parsed;
+  if (parsed.value === null) {
+    return { ok: true as const, value: null, error: "" };
+  }
+  if (typeof parsed.value !== "object" || Array.isArray(parsed.value)) {
+    return {
+      ok: false as const,
+      value: null,
+      error: "Operation JSON must be an object or null.",
+    };
+  }
+
+  return {
+    ok: true as const,
+    value: parsed.value as OperationalBlueprintContract,
+    error: "",
+  };
 }
 
 function errorMessage(error: unknown, fallback: string) {
@@ -266,6 +297,7 @@ function draftBlueprintJson(
       expectedResult: experience.expectedResult,
       ownerLabel: experience.ownerLabel,
       workspaceDefinition,
+      operation: null,
     }
   );
 }
@@ -386,6 +418,224 @@ function TriggerSummary({ definition }: { definition: WorkflowDefinition | null 
   );
 }
 
+function OperationModelPanel({
+  operation,
+  validation,
+}: {
+  operation: OperationalBlueprintContract | null;
+  validation: ReturnType<typeof validateOperationalBlueprintContract>;
+}) {
+  if (!operation) {
+    return (
+      <div className="border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+        Blueprint nay chua co Operation Model.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 md:grid-cols-5">
+        {[
+          ["Object types", operation.objectTypes.length],
+          ["Workspace roles", operation.workspaceRoles.length],
+          ["Event routes", operation.eventRoutes.length],
+          ["Actions", operation.actions.length],
+          ["Projections", operation.projectionSubscriptions.length],
+        ].map(([label, value]) => (
+          <div key={label} className="border border-slate-200 bg-slate-50 p-3">
+            <div className="text-xs font-medium text-slate-500">{label}</div>
+            <div className="mt-1 text-lg font-semibold text-slate-950">
+              {value}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="border border-slate-200 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">
+              {operation.key} v{operation.version}
+            </h3>
+            <p className="mt-1 text-sm text-slate-600">{operation.summary}</p>
+          </div>
+          <span
+            className={`rounded-full border px-2.5 py-1 text-xs font-medium ${validationTone(validation.ok)}`}
+          >
+            {validation.ok ? "Operation valid" : `${validation.errors.length} errors`}
+          </span>
+        </div>
+        {validation.issueCount ? (
+          <div className="mt-3 space-y-1 text-xs">
+            {[...validation.errors, ...validation.warnings].map((item) => (
+              <div
+                key={`${item.code}:${item.path}:${item.message}`}
+                className={item.severity === "error" ? "text-rose-700" : "text-amber-700"}
+              >
+                {item.path} / {item.code}: {item.message}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-3 text-xs text-slate-500">
+            No blocking operation validation issues.
+          </div>
+        )}
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <div className="border border-slate-200 p-4">
+          <h3 className="text-sm font-semibold text-slate-900">Workspace roles</h3>
+          <div className="mt-3 space-y-2">
+            {operation.workspaceRoles.map((role) => (
+              <div key={role.key} className="border border-slate-200 p-3 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="font-semibold text-slate-950">{role.label}</div>
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                    {role.cardinality}
+                  </span>
+                </div>
+                <div className="mt-1 text-xs text-slate-500">{role.key}</div>
+                <div className="mt-2 text-slate-600">{role.description}</div>
+                <div className="mt-2 flex flex-wrap gap-1 text-[11px]">
+                  {role.identityTargetType ? (
+                    <span className="border border-slate-200 bg-white px-2 py-0.5 font-medium text-slate-700">
+                      identity: {role.identityTargetType}
+                    </span>
+                  ) : null}
+                  {role.itemTargetTypes.map((targetType) => (
+                    <span
+                      key={`${role.key}:${targetType}`}
+                      className="border border-slate-200 bg-white px-2 py-0.5 font-medium text-slate-700"
+                    >
+                      item: {targetType}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="border border-slate-200 p-4">
+          <h3 className="text-sm font-semibold text-slate-900">Event routes</h3>
+          <div className="mt-3 space-y-2">
+            {operation.eventRoutes.map((route) => (
+              <div
+                key={`${route.eventKey}:${route.targetType}`}
+                className="border border-slate-200 p-3 text-sm"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="font-semibold text-slate-950">{route.eventKey}</div>
+                  <span className="rounded-full border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                    {route.effect}
+                  </span>
+                </div>
+                <div className="mt-1 text-xs text-slate-500">
+                  {route.targetType} {"->"} {route.workspaceRole}
+                </div>
+                <div className="mt-2 text-slate-600">{route.description}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <div className="border border-slate-200 p-4">
+          <h3 className="text-sm font-semibold text-slate-900">Actions</h3>
+          <div className="mt-3 space-y-2">
+            {operation.actions.map((action) => (
+              <div key={action.key} className="border border-slate-200 p-3 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="font-semibold text-slate-950">{action.label}</div>
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                    {action.workspaceRole} / {action.targetType}
+                  </span>
+                </div>
+                <div className="mt-1 text-xs text-slate-500">{action.command}</div>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {action.fields.map((field) => (
+                    <span
+                      key={`${action.key}:${field.key}`}
+                      className="border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-slate-700"
+                    >
+                      {field.label} ({field.kind}{field.required ? ", required" : ""})
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {action.emits.map((eventKey) => (
+                    <span
+                      key={`${action.key}:${eventKey}`}
+                      className="border border-blue-100 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700"
+                    >
+                      emits {eventKey}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="border border-slate-200 p-4">
+            <h3 className="text-sm font-semibold text-slate-900">Workflow ownership</h3>
+            <div className="mt-3 space-y-2">
+              {operation.workflows.map((workflow) => (
+                <div key={workflow.key} className="border border-slate-200 p-3 text-sm">
+                  <div className="font-semibold text-slate-950">{workflow.key}</div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    {workflow.workspaceRole} owns {workflow.states.join(", ")}
+                  </div>
+                  <div className="mt-2 space-y-1 text-xs text-slate-600">
+                    {workflow.transitions.map((transition) => (
+                      <div key={`${workflow.key}:${transition.from}:${transition.to}`}>
+                        {transition.from} {"->"} {transition.to} by {transition.actionKey} emits {transition.eventKey}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="border border-slate-200 p-4">
+            <h3 className="text-sm font-semibold text-slate-900">Projection subscriptions</h3>
+            <div className="mt-3 space-y-2">
+              {operation.projectionSubscriptions.map((subscription) => (
+                <div key={subscription.projectionKey} className="border border-slate-200 p-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="font-semibold text-slate-950">
+                      {subscription.projectionKey}
+                    </div>
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                      Target: {subscription.resolvesToTargetType}
+                    </span>
+                  </div>
+                  <div className="mt-2 text-slate-600">{subscription.description}</div>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {subscription.eventKeys.map((eventKey) => (
+                      <span
+                        key={`${subscription.projectionKey}:${eventKey}`}
+                        className="border border-blue-100 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700"
+                      >
+                        {eventKey}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BlueprintList({
   blueprints,
   selectedKey,
@@ -404,6 +654,9 @@ function BlueprintList({
       {blueprints.map((blueprint) => {
         const selected = selectedKey === blueprint.key;
         const valid = Boolean(blueprint.workflow.validation?.valid);
+        const operationValid = blueprint.operation
+          ? Boolean(blueprint.operationValidation?.ok)
+          : null;
 
         return (
           <div
@@ -433,6 +686,15 @@ function BlueprintList({
                   {valid ? "Hợp lệ" : "Có lỗi"}
                 </span>
               </div>
+              {operationValid !== null ? (
+                <div className="mt-2">
+                  <span
+                    className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${validationTone(operationValid)}`}
+                  >
+                    Operation {operationValid ? "valid" : "has errors"}
+                  </span>
+                </div>
+              ) : null}
             </button>
             <button
               type="button"
@@ -526,6 +788,7 @@ export default function WorkflowAdminClient({
   const [message, setMessage] = useState("");
   const [busyKey, setBusyKey] = useState("");
   const [detailTab, setDetailTab] = useState<DetailTab>("purpose");
+  const [operationEditorText, setOperationEditorText] = useState("null");
   const [, startTransition] = useTransition();
 
   const selectedBlueprint = useMemo(
@@ -568,6 +831,18 @@ export default function WorkflowAdminClient({
           detailWorkspaceDefinition,
         )
       : null;
+  const detailOperation =
+    selectedDraft
+      ? detailBlueprintJson?.operation ?? sourceBlueprint?.operation ?? null
+      : selectedBlueprint?.operation ?? null;
+  const operationValidation = selectedDraft
+    ? validateOperationalBlueprintContract(detailOperation)
+    : selectedBlueprint?.operationValidation ??
+      validateOperationalBlueprintContract(detailOperation);
+  const parsedOperationEditor = useMemo(
+    () => parseOperationJson(operationEditorText),
+    [operationEditorText],
+  );
   const detailTitle = selectedDraft
     ? selectedDraft.name
     : selectedBlueprint?.name ?? "Blueprint";
@@ -591,6 +866,10 @@ export default function WorkflowAdminClient({
   const eventBindingConflictCount = eventBindingAudit.filter(
     (item) => item.hasConflict,
   ).length;
+
+  useEffect(() => {
+    setOperationEditorText(fmtJson(detailOperation));
+  }, [detailOperation, selectedDraftId, selectedBlueprintKey]);
 
   function replaceDraft(next: WorkflowDefinitionDraft) {
     setDrafts((current) => {
@@ -1085,6 +1364,7 @@ export default function WorkflowAdminClient({
               ["workspace", "Workspace Definition"],
               ["capabilities", "Capability"],
               ["workflow", "Workflow"],
+              ["operation", "Operation Model"],
               ["developer", "Developer"],
             ].map(([tab, label]) => (
               <button
@@ -1664,6 +1944,68 @@ export default function WorkflowAdminClient({
             </div>
           ) : null}
 
+          {detailTab === "operation" ? (
+            <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+              <OperationModelPanel
+                operation={detailOperation}
+                validation={operationValidation}
+              />
+              <div className="space-y-4">
+                <div className="border border-slate-200 p-4">
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    Operation authoring
+                  </h3>
+                  {selectedDraft ? (
+                    <div className="mt-3 space-y-3">
+                      {sourceBlueprint?.operation && !detailBlueprintJson?.operation ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            patchBlueprintJson({
+                              operation: sourceBlueprint.operation,
+                            })
+                          }
+                          className="w-full border border-slate-900 bg-slate-950 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                        >
+                          Copy source operation
+                        </button>
+                      ) : null}
+                      <textarea
+                        value={operationEditorText}
+                        spellCheck={false}
+                        onChange={(event) => {
+                          const text = event.target.value;
+                          const parsed = parseOperationJson(text);
+                          setOperationEditorText(text);
+                          if (!parsed.ok) return;
+                          patchBlueprintJson({ operation: parsed.value });
+                        }}
+                        className="h-[520px] w-full resize-y border border-slate-300 bg-slate-950 p-3 font-mono text-xs leading-5 text-slate-100 outline-none"
+                      />
+                      {!parsedOperationEditor.ok ? (
+                        <div className="text-sm text-rose-700">
+                          {parsedOperationEditor.error}
+                        </div>
+                      ) : null}
+                      <div className="text-xs text-slate-500">
+                        Draft changes stay inside Blueprint draft JSON. Publish/versioning is not part of this step.
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-3 space-y-3">
+                      <div className="border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+                        Registry operation is read-only. Duplicate the Blueprint into a draft to edit the Operation JSON.
+                      </div>
+                      <pre className="max-h-[520px] overflow-auto border border-slate-300 bg-slate-950 p-3 font-mono text-xs leading-5 text-slate-100">
+                        {fmtJson(detailOperation)}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           {detailTab === "developer" ? (
             <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
               <div>
@@ -1706,6 +2048,7 @@ export default function WorkflowAdminClient({
                         status: detailStatus,
                       },
                       workspaceDefinition: detailWorkspaceDefinition,
+                      operation: detailOperation,
                       workflow: detailDefinition,
                       experience: detailExperience,
                     })}

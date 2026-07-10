@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import {
   CalendarDays,
   CheckCircle2,
+  ChevronRight,
   Circle,
   CircleDot,
   Clock3,
@@ -36,6 +37,14 @@ import {
   type WorkspaceCapabilities,
   type WorkspaceDefinitionSnapshot,
 } from "@/domains/blueprint/shared/workspace-capabilities";
+import {
+  selectOperationalActionsForWorkspaceRole,
+  selectOperationalCoreFlowForWorkspaceRole,
+  type OperationalBlueprintAction,
+  type OperationalBlueprintActionField,
+  type OperationalBlueprintCoreFlowStep,
+  type OperationalBlueprintWorkspaceRole,
+} from "@/domains/blueprint/shared/operational-blueprint";
 import {
   PrioritySignal,
   TaskStatusSignal,
@@ -75,6 +84,7 @@ import { repairVietnameseMojibake } from "@/domains/shared/text/vietnamese-mojib
 import { workspaceFlowOrder } from "@/domains/task/shared/workspace-flow-policy";
 import {
   applyQueueItemManualTransitionAction,
+  submitOperationalBlueprintActionAction,
   updateTaskItemSharingAction,
 } from "../actions/task.actions";
 
@@ -311,6 +321,15 @@ function displayNote(note?: string | null) {
     .trim();
 }
 
+function serviceOperationWorkspaceRoleFromNote(note?: string | null) {
+  return (
+    String(note ?? "")
+      .match(/^serviceOperationWorkspaceRole:\s*([A-Z_]+)\s*$/im)?.[1]
+      ?.trim()
+      .toUpperCase() ?? null
+  );
+}
+
 function noteHasSystemOwner(note?: string | null) {
   const text = String(note ?? "");
   return /ownerType:\s*SYSTEM/i.test(text) || (/workTypeKey:\s*/i.test(text) && !/userId:\s*/i.test(text));
@@ -407,6 +426,7 @@ function UserAvatar({
       )}
     >
       {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt={label} className="h-full w-full object-cover" />
       ) : isSystem ? (
         <CircleDot className="h-4 w-4" />
@@ -1583,6 +1603,329 @@ function SpaceWorkspaceNav({
   );
 }
 
+function workspaceRoleForNavItem(workspace: { note?: string | null }) {
+  return serviceOperationWorkspaceRoleFromNote(workspace.note);
+}
+
+function CoreFlowWorkspaceNav({
+  currentItemId,
+  currentWorkspaceRole,
+  steps,
+  workspaceRoles,
+  parentTask,
+}: {
+  currentItemId: string;
+  currentWorkspaceRole?: string | null;
+  steps: OperationalBlueprintCoreFlowStep[];
+  workspaceRoles?: OperationalBlueprintWorkspaceRole[];
+  parentTask?: ParentTask | null;
+}) {
+  if (!steps.length) return null;
+
+  const workspaces = parentTask?.taskItems ?? [];
+  const roleByKey = new Map(
+    (workspaceRoles ?? []).map((role) => [role.key.toUpperCase(), role]),
+  );
+  const workspaceByRole = new Map<
+    string,
+    NonNullable<ParentTask["taskItems"]>[number]
+  >();
+  for (const workspace of workspaces) {
+    const role = workspaceRoleForNavItem(workspace);
+    if (!role || workspaceByRole.has(role)) continue;
+    workspaceByRole.set(role, workspace);
+  }
+
+  return (
+    <nav
+      aria-label="Core flow workspaces"
+      className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1"
+    >
+      {steps.map((step, index) => {
+        const stepRole = step.workspaceRole.toUpperCase();
+        const roleDefinition = roleByKey.get(stepRole);
+        const active = stepRole === currentWorkspaceRole?.toUpperCase();
+        const shouldLinkSibling =
+          active || roleDefinition?.cardinality !== "ONE_PER_BUSINESS_OBJECT";
+        const workspace =
+          active
+            ? workspaces.find((candidate) => candidate.id === currentItemId)
+            : shouldLinkSibling
+              ? workspaceByRole.get(stepRole)
+              : null;
+        const content = (
+          <>
+            <span className="max-w-[150px] truncate">{step.label}</span>
+            {active ? (
+              <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[10px] leading-none">
+                current
+              </span>
+            ) : null}
+          </>
+        );
+
+        return (
+          <div key={`${step.workspaceRole}:${index}`} className="flex items-center gap-1">
+            {workspace?.id ? (
+              <Link
+                href={`/admin/task-items/${workspace.id}`}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition",
+                  active
+                    ? "bg-slate-950 text-white shadow-sm"
+                    : "text-slate-600 hover:bg-white hover:text-slate-900",
+                )}
+              >
+                {content}
+              </Link>
+            ) : (
+              <span className="inline-flex h-7 shrink-0 items-center rounded-lg px-2.5 text-xs font-semibold text-slate-400">
+                {step.label}
+              </span>
+            )}
+            {index < steps.length - 1 ? (
+              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300" />
+            ) : null}
+          </div>
+        );
+      })}
+    </nav>
+  );
+}
+
+function BlueprintActionFieldPreview({
+  field,
+  disabled = true,
+  value,
+  onChange,
+}: {
+  field: OperationalBlueprintActionField;
+  disabled?: boolean;
+  value?: string | boolean;
+  onChange?: (value: string | boolean) => void;
+}) {
+  const baseClass =
+    "h-8 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs text-slate-700 disabled:text-slate-500";
+
+  if (field.kind === "textarea") {
+    return (
+      <textarea
+        className={`${baseClass} min-h-16 py-2`}
+        placeholder={field.label}
+        disabled={disabled}
+        value={typeof value === "string" ? value : ""}
+        onChange={(event) => onChange?.(event.target.value)}
+      />
+    );
+  }
+
+  if (field.kind === "select") {
+    return (
+      <select
+        className={baseClass}
+        disabled={disabled}
+        value={typeof value === "string" ? value : ""}
+        onChange={(event) => onChange?.(event.target.value)}
+      >
+        <option value="">{field.label}</option>
+        {(field.options ?? []).map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
+  if (field.kind === "boolean") {
+    return (
+      <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
+        <input
+          type="checkbox"
+          disabled={disabled}
+          checked={value === true}
+          onChange={(event) => onChange?.(event.target.checked)}
+        />
+        {field.label}
+      </label>
+    );
+  }
+
+  return (
+    <input
+      className={baseClass}
+      type={field.kind === "date" ? "date" : "text"}
+      placeholder={field.kind === "money" ? `${field.label} (money)` : field.label}
+      disabled={disabled}
+      value={typeof value === "string" ? value : ""}
+      onChange={(event) => onChange?.(event.target.value)}
+    />
+  );
+}
+
+function canSubmitBlueprintAction(action: OperationalBlueprintAction) {
+  return action.key === "create_technical_issue" &&
+    action.command === "service.createTechnicalIssue";
+}
+
+function BlueprintActionDiscoveryPanel({
+  taskItemId,
+  workspaceRole,
+  actions,
+}: {
+  taskItemId: string;
+  workspaceRole?: string | null;
+  actions: OperationalBlueprintAction[];
+}) {
+  const router = useRouter();
+  const [valuesByAction, setValuesByAction] = useState<
+    Record<string, Record<string, string | boolean>>
+  >({});
+  const [pendingActionKey, setPendingActionKey] = useState<string | null>(null);
+  const [message, setMessage] = useState<{
+    tone: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [isPending, startTransition] = useTransition();
+  if (!workspaceRole) return null;
+
+  function updateField(
+    actionKey: string,
+    fieldKey: string,
+    value: string | boolean,
+  ) {
+    setValuesByAction((current) => ({
+      ...current,
+      [actionKey]: {
+        ...(current[actionKey] ?? {}),
+        [fieldKey]: value,
+      },
+    }));
+  }
+
+  function submitAction(action: OperationalBlueprintAction) {
+    if (!canSubmitBlueprintAction(action) || isPending) return;
+    setPendingActionKey(action.key);
+    setMessage(null);
+
+    startTransition(async () => {
+      try {
+        await submitOperationalBlueprintActionAction({
+          taskItemId,
+          actionKey: action.key,
+          fields: valuesByAction[action.key] ?? {},
+        });
+        setValuesByAction((current) => ({
+          ...current,
+          [action.key]: {},
+        }));
+        setMessage({
+          tone: "success",
+          text: `${action.label} completed.`,
+        });
+        router.refresh();
+      } catch (error) {
+        setMessage({
+          tone: "error",
+          text: error instanceof Error ? error.message : "Blueprint action failed.",
+        });
+      } finally {
+        setPendingActionKey(null);
+      }
+    });
+  }
+
+  return (
+    <Panel
+      icon={<GitBranch className="h-4 w-4" />}
+      title="Blueprint actions"
+      action={
+        <span className="rounded-full bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-slate-200">
+          {workspaceRole}
+        </span>
+      }
+    >
+      {message ? (
+        <div
+          className={cn(
+            "mb-3 rounded-xl px-3 py-2 text-xs font-medium ring-1",
+            message.tone === "success"
+              ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+              : "bg-rose-50 text-rose-700 ring-rose-100",
+          )}
+        >
+          {message.text}
+        </div>
+      ) : null}
+      {actions.length ? (
+        <div className="space-y-3">
+          {actions.map((action) => (
+            <form
+              key={action.key}
+              className="rounded-xl border border-slate-200 bg-white p-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                submitAction(action);
+              }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-slate-950">
+                    {action.label}
+                  </div>
+                  <div className="mt-1 text-xs leading-5 text-slate-500">
+                    {action.description}
+                  </div>
+                </div>
+                <span className="shrink-0 rounded-full bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-700 ring-1 ring-blue-100">
+                  {action.targetType}
+                </span>
+              </div>
+              {action.fields.length ? (
+                <div className="mt-3 space-y-2">
+                  {action.fields.map((field) => (
+                    <div key={field.key}>
+                      <div className="mb-1 flex items-center justify-between gap-2 text-[11px] font-semibold text-slate-500">
+                        <span>{field.label}</span>
+                        <span>{field.required ? "required" : field.kind}</span>
+                      </div>
+                      <BlueprintActionFieldPreview
+                        field={field}
+                        disabled={!canSubmitBlueprintAction(action) || isPending}
+                        value={valuesByAction[action.key]?.[field.key]}
+                        onChange={(value) =>
+                          updateField(action.key, field.key, value)
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                <span>
+                  {canSubmitBlueprintAction(action)
+                    ? `Adapter: ${action.command}`
+                    : `Adapter pending: ${action.command}`}
+                </span>
+                <button
+                  type="submit"
+                  disabled={!canSubmitBlueprintAction(action) || isPending}
+                  className="inline-flex h-7 items-center rounded-md bg-slate-900 px-2.5 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  {pendingActionKey === action.key ? "Running" : "Run"}
+                </button>
+              </div>
+            </form>
+          ))}
+        </div>
+      ) : (
+        <EmptyState>No Blueprint actions for this workspace role.</EmptyState>
+      )}
+    </Panel>
+  );
+}
+
 export default function TaskItemDetailClient({
   item,
   users,
@@ -1621,6 +1964,52 @@ export default function TaskItemDetailClient({
     [workspaceSnapshot],
   );
   const isServiceOperationWorkspace = workspaceSnapshot?.workTypeKey === "service-operation";
+  const operationContract = workspaceSnapshot?.operation ?? null;
+  const serviceOperationWorkspaceRole = useMemo(
+    () => serviceOperationWorkspaceRoleFromNote(item.note),
+    [item.note],
+  );
+  const operationalCoreFlow = useMemo(
+    () =>
+      selectOperationalCoreFlowForWorkspaceRole({
+        contract: operationContract,
+        workspaceRole: serviceOperationWorkspaceRole,
+      }),
+    [operationContract, serviceOperationWorkspaceRole],
+  );
+  const operationWorkspaceRoleTargetTypes = useMemo(() => {
+    const role = operationContract?.workspaceRoles.find(
+      (item) =>
+        item.key.toUpperCase() === serviceOperationWorkspaceRole?.toUpperCase(),
+    );
+    if (!role) return [];
+
+    return [
+      role.identityTargetType,
+      ...role.itemTargetTypes,
+    ].filter((targetType): targetType is string => Boolean(targetType));
+  }, [operationContract, serviceOperationWorkspaceRole]);
+  const operationalActions = useMemo(
+    () =>
+      selectOperationalActionsForWorkspaceRole({
+        contract: operationContract,
+        workspaceRole: serviceOperationWorkspaceRole,
+        targetTypes: [
+          ...new Set([
+            ...operationWorkspaceRoleTargetTypes,
+            ...queueItems.map((queueItem) => queueItem.targetType),
+            ...businessBindings.map((binding) => binding.targetType),
+          ]),
+        ],
+      }),
+    [
+      businessBindings,
+      operationContract,
+      operationWorkspaceRoleTargetTypes,
+      queueItems,
+      serviceOperationWorkspaceRole,
+    ],
+  );
   const serviceRequestId =
     noteTextValue(item.note, "serviceRequestId") ??
     businessBindings.find((binding) => binding.targetType === "SERVICE_REQUEST")?.targetId ??
@@ -1696,14 +2085,22 @@ export default function TaskItemDetailClient({
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
-              {!isServiceOperationWorkspace ? (
+              {isServiceOperationWorkspace && operationalCoreFlow ? (
+                <CoreFlowWorkspaceNav
+                  currentItemId={item.id}
+                  currentWorkspaceRole={serviceOperationWorkspaceRole}
+                  steps={operationalCoreFlow.steps}
+                  workspaceRoles={operationContract?.workspaceRoles ?? []}
+                  parentTask={parentTask}
+                />
+              ) : (
                 <div className="flex flex-wrap items-center gap-2">
                   <SpaceWorkspaceNav
                     currentItemId={item.id}
                     parentTask={parentTask}
                   />
                 </div>
-              ) : null}
+              )}
 
               <div className={`${isServiceOperationWorkspace ? "" : "mt-5"} flex flex-wrap items-center gap-2`}>
                 <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
@@ -1859,6 +2256,7 @@ export default function TaskItemDetailClient({
                 capabilities={capabilities}
                 itemLabel={itemTabLabel}
                 workspaceWorkTypeKey={workspaceSnapshot?.workTypeKey ?? null}
+                operationalActions={operationalActions}
                 serviceRequestId={canCreateServiceOperationTechnicalIssue ? serviceRequestId : null}
                 currentUser={currentUser}
                 onOpenQueueActivity={openQueueActivity}
@@ -1884,6 +2282,13 @@ export default function TaskItemDetailClient({
             ) : null}
 
             <DetailInfo item={item} presentation={presentation} />
+            {isServiceOperationWorkspace ? (
+              <BlueprintActionDiscoveryPanel
+                taskItemId={item.id}
+                workspaceRole={serviceOperationWorkspaceRole}
+                actions={operationalActions}
+              />
+            ) : null}
             {capabilities.items ? (
               <QueueSummary items={queueItems} itemLabel={presentation.itemLabel} />
             ) : null}

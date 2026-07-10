@@ -11,6 +11,7 @@ import { genRefNo } from "@/domains/shared/utils/AutoGenRef";
 import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
 import * as repo from "../repository/service-request.repo";
 import { canMoveProductToService } from "../shared/service-request.rules";
+import { createTechnicalIssue } from "../issue-board/service-issue-board.service";
 
 const ACTIVE_SERVICE_STATUSES: ServiceRequestStatus[] = [
   ServiceRequestStatus.DRAFT,
@@ -259,6 +260,121 @@ export async function getOrCreateServiceOperationWorkspaceForWatch(input: {
     createdServiceRequest: true,
     createdWorkspace: Boolean(taskItemId),
     serviceRequestId: request.id,
+    refNo: request.refNo ?? null,
+    taskItemId,
+    workspaceHref: taskItemId ? `/admin/task-items/${taskItemId}` : null,
+  };
+}
+
+export async function watchIntakeWithInitialSuspicion(input: {
+  productId: string;
+  suspicion?: string | null;
+  actorUserId?: string | null;
+  openExisting?: boolean;
+}) {
+  const productId = cleanText(input.productId);
+  if (!productId) throw new Error("Missing productId");
+
+  const suspicion = cleanText(input.suspicion);
+  const existing = await findActiveServiceRequestDetail(prisma, productId);
+
+  if (existing?.id) {
+    const existingWorkspace = await findServiceRequestWorkspaceBinding(prisma, existing.id);
+
+    if (existingWorkspace?.taskItemId && !input.openExisting) {
+      return {
+        status: "EXISTING_WORKSPACE" as const,
+        createdServiceRequest: false,
+        createdWorkspace: false,
+        createdInitialIssue: false,
+        serviceRequestId: existing.id,
+        refNo: existing.refNo ?? null,
+        taskItemId: existingWorkspace.taskItemId,
+        workspaceHref: `/admin/task-items/${existingWorkspace.taskItemId}`,
+      };
+    }
+
+    if (existingWorkspace?.taskItemId) {
+      return {
+        status: "OPEN_EXISTING_WORKSPACE" as const,
+        createdServiceRequest: false,
+        createdWorkspace: false,
+        createdInitialIssue: false,
+        serviceRequestId: existing.id,
+        refNo: existing.refNo ?? null,
+        taskItemId: existingWorkspace.taskItemId,
+        workspaceHref: `/admin/task-items/${existingWorkspace.taskItemId}`,
+      };
+    }
+
+    const event = await recordBusinessEvent(prisma, {
+      eventKey: "service_request.created",
+      targetType: "SERVICE_REQUEST",
+      targetId: existing.id,
+      actorUserId: input.actorUserId ?? null,
+      payload: {
+        source: "watch-list-service-operation-intake",
+        productId,
+        serviceRequestId: existing.id,
+        refNo: existing.refNo ?? null,
+      },
+      targetAliasIds: [productId],
+    });
+
+    const binding = await findServiceRequestWorkspaceBinding(prisma, existing.id);
+    const taskItemId = binding?.taskItemId ?? event.consumers.coordination?.taskItemId ?? null;
+
+    return {
+      status: "BOUND_EXISTING_SERVICE_REQUEST" as const,
+      createdServiceRequest: false,
+      createdWorkspace: Boolean(taskItemId),
+      createdInitialIssue: false,
+      serviceRequestId: existing.id,
+      refNo: existing.refNo ?? null,
+      taskItemId,
+      workspaceHref: taskItemId ? `/admin/task-items/${taskItemId}` : null,
+    };
+  }
+
+  if (!suspicion) throw new Error("Vui long nhap nghi ngo ky thuat dau tien.");
+
+  const request = await createQuickServiceRequest(prisma, productId);
+  await ensureAssessment(prisma, request.id);
+
+  const issue = await createTechnicalIssue({
+    serviceRequestId: request.id,
+    area: "GENERAL",
+    issueType: "CHECK",
+    actionMode: "INTERNAL",
+    summary: suspicion,
+    note: suspicion,
+  });
+
+  const event = await recordBusinessEvent(prisma, {
+    eventKey: "service_request.created",
+    targetType: "SERVICE_REQUEST",
+    targetId: request.id,
+    actorUserId: input.actorUserId ?? null,
+    payload: {
+      source: "watch-list-service-operation-intake",
+      actionKey: "watch_intake_with_suspicion",
+      productId,
+      serviceRequestId: request.id,
+      refNo: request.refNo ?? null,
+    },
+    targetAliasIds: [productId],
+  });
+
+  const binding = await findServiceRequestWorkspaceBinding(prisma, request.id);
+  const taskItemId = binding?.taskItemId ?? event.consumers.coordination?.taskItemId ?? null;
+
+  return {
+    status: "CREATED_WORKSPACE_WITH_INITIAL_ISSUE" as const,
+    createdServiceRequest: true,
+    createdWorkspace: Boolean(taskItemId),
+    createdInitialIssue: true,
+    serviceRequestId: request.id,
+    technicalIssueId: issue.id,
     refNo: request.refNo ?? null,
     taskItemId,
     workspaceHref: taskItemId ? `/admin/task-items/${taskItemId}` : null,

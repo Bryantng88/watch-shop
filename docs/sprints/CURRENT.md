@@ -58,6 +58,7 @@ Completed:
 - Sprint 68 Service Operation Business Flow Realignment first slice.
 - Sprint 69 Watch List Service Operation Intake first slice.
 - Sprint 70 SR Workspace TechnicalIssue Creation first slice.
+- Sprint 71 Operational Blueprint Core closed.
 
 Current handoff:
 
@@ -76,6 +77,17 @@ Current handoff:
 - Read `docs/sprints/SM-Sprint-69-watch-list-service-operation-intake.md`.
 - Read `docs/sprints/SM-Sprint-70-sr-workspace-technical-issue-creation.md`.
 - Read `docs/sprints/SM-Service-Operation-retrospective-corrections-and-current-contract.md`.
+- Read `docs/sprints/SM-Operational-Blueprint-roadmap.md`.
+- Read `docs/architecture/16-operational-blueprint-contract.md`.
+- Read `docs/sprints/SM-Sprint-71-operational-blueprint-core.md`.
+- Read `docs/sprints/SM-Sprint-72-workspace-action-contract-runtime.md`.
+- Read `docs/sprints/SM-Sprint-73-watch-intake-with-required-suspicion.md`.
+- Read `docs/sprints/SM-Sprint-74-inspect-processing-action-adapters.md`.
+- Read `docs/sprints/SM-Sprint-75-operation-projection-subscription-runtime.md`.
+- Read `docs/sprints/SM-Sprint-76-operational-blueprint-validation.md`.
+- Read `docs/sprints/SM-Sprint-77-blueprint-authoring-ui-operation-model.md`.
+- Read `docs/sprints/SM-Sprint-78-payment-operation-proof.md`.
+- Read `docs/sprints/SM-Sprint-79-operation-template-picker.md`.
 - Sprint 61 is complete as a first production UI/API slice. Space Management
   Service Operation is a space/workspace index with SR and Technical views;
   workspace operation happens in the TaskItem workspace shell and must use
@@ -119,6 +131,16 @@ Current handoff:
   `technical_issue.created`, and then the coordination consumer binds the TI to
   the Inspect workspace. The bound ServiceRequest is workspace identity, not an
   item row.
+- Sprint 71 started Blueprint M2 as Operational Blueprint. Blueprint now has an
+  operation contract layer that can describe workspace roles, business object
+  roles, event routes, action contracts, form fields, workflow ownership, and
+  projection subscriptions. Service Operation is the first reference contract.
+  Do not continue Service Operation by hardcoding more feature-specific routing
+  or modal rules before checking the operation contract.
+- The upgrade roadmap is `docs/sprints/SM-Operational-Blueprint-roadmap.md`.
+  It breaks the work into Sprint 71 through Sprint 78: core contract, action
+  runtime, Watch intake with suspicion, Service Operation adapters, projection
+  subscription runtime, validation, authoring UI, and a second operation proof.
 - Retrospective rule: do not repeat the earlier mistakes documented in
   `SM-Service-Operation-retrospective-corrections-and-current-contract.md`.
 
@@ -231,9 +253,196 @@ Sprint 56 implemented Projection Observability & Repair.
 
 Current sprint:
 
-- Sprint 70 SR Workspace TechnicalIssue creation.
+- Sprint 73 Watch Intake With Required Suspicion is closed.
+- Sprint 74 Inspect And Processing Action Adapters is closed.
+- Sprint 75 Operation Projection Subscription Runtime is closed.
+- Sprint 76 Operational Blueprint Validation is closed.
+- Sprint 77 Blueprint Authoring UI For Operation Model is closed.
+- Sprint 78 Payment Operation Proof is closed.
+- Sprint 79 Operation Template Picker is planned next.
 
-Sprint 70 scope/status:
+Sprint 71 closed scope/status:
+
+- Added `docs/architecture/16-operational-blueprint-contract.md`.
+- Added `docs/sprints/SM-Operational-Blueprint-roadmap.md`.
+- Added `docs/sprints/SM-Sprint-71-operational-blueprint-core.md`.
+- Added `src/domains/blueprint/shared/operational-blueprint.ts`.
+- Added `OperationalBlueprintContract` to Blueprint library items,
+  instantiation options, and Workspace snapshot notes.
+- Service Operation contract V2 defines `SR_CASE`, `INSPECT`, `PROCESSING`,
+  and `DONE` (`Done/Follow-up` label) roles, its action contracts, event routes,
+  workflow ownership, and Watch List projection subscription.
+- Service Operation core flow is declared as:
+  `SR_CASE -> INSPECT -> PROCESSING -> DONE`.
+- Coordination Workspace UI now shows operation model summary when creating a
+  Workspace from a Blueprint.
+- Coordination consumer now resolves Service Operation TechnicalIssue
+  workspace roles from the Operational Blueprint event routes instead of local
+  stage-to-workspace rules. Existing receiver markers still scope the selected
+  workspace, but the role target comes from the contract.
+
+Sprint 72 scope/status:
+
+- Closed.
+- Goal: make Workspace UI discover and render core-flow navigation and actions
+  from `OperationalBlueprint.coreFlows` and `OperationalBlueprint.actions`.
+- First runtime discovery slice is implemented: Workspace detail reads
+  operation core flows/actions from the Workspace snapshot, renders Service
+  Operation core-flow navigation in the header, and renders Blueprint-declared
+  action/field shapes in the sidebar.
+- First submit path is implemented for `create_technical_issue` through
+  `submitOperationalBlueprintActionAction` and the Service Operation Blueprint
+  action adapter. Service command logic stays behind the adapter boundary.
+- Item-level Blueprint action forms are now rendered in Technical Issue queue
+  rows with target context. Adapter mappings exist for `classify_technical_issue`,
+  `start_processing`, `complete_processing`, and `raise_follow_up_issue`.
+- `start_processing` carries explicit technical detail/catalog input in the
+  Operational Blueprint action contract before calling the Service domain
+  command.
+- Same-flow navigation no longer links `ONE_PER_BUSINESS_OBJECT` roles to an
+  arbitrary sibling Workspace when a Space has multiple SR case Workspaces.
+- Do not wire new Service Operation buttons or modals unless the action exists
+  in the operation contract first.
+
+Sprint 73 scope/status:
+
+- Closed.
+- Goal: replace Watch List `watch_intake` with
+  `watch_intake_with_suspicion`.
+- Runtime slice completed:
+  - Watch List Service action opens a required-suspicion modal.
+  - POST `/api/admin/service-operation` accepts
+    `watch_intake_with_suspicion`.
+  - Service quick path creates the initial TechnicalIssue through
+    `createTechnicalIssue`, preserving `technical_issue.created` as the
+    Coordination handoff.
+  - Existing active SR workspace returns open-existing behavior instead of
+    silently creating duplicates.
+  - Service Operation POST now uses API auth (`requirePermissionApi`), returning
+    401/403 at the API boundary.
+- Validation:
+  - Scoped ESLint passes for the route, quick service command, and Watch List
+    client.
+  - Local dev server returns HTTP 200 for Service Operation GET.
+  - Unauthenticated Service Operation POST returns HTTP 401.
+- Continue from
+  `docs/sprints/SM-Sprint-73-watch-intake-with-required-suspicion.md`.
+
+Sprint 74 scope/status:
+
+- Closed.
+- Goal: make Inspect and Processing Blueprint actions execute real Service
+  domain commands through `service-operation-action-adapter`.
+- Adapter hardening and payment event parity are implemented:
+  - classify validates area/action mode/vendor/estimate before confirming TI;
+  - start passes actor id and requires technical detail catalog id;
+  - complete passes actor id, validates actual cost, and respects the
+    `createPayment` action field;
+  - complete emits `payment.created` when that action creates a new unpaid
+    technical-issue payment;
+  - follow-up issue creation uses the shared `service.createTechnicalIssue`
+    branch.
+- Continue from
+  `docs/sprints/SM-Sprint-74-inspect-processing-action-adapters.md`.
+
+Sprint 75 scope/status:
+
+- Closed.
+- Sprint 75 - Operation Projection Subscription Runtime.
+- Goal: connect Service Operation events to Watch List projection through
+  `projectionSubscriptions` declared by the operation contract.
+- Runtime slice is implemented:
+  - projection builder selection can read Operational Blueprint
+    `projectionSubscriptions`;
+  - Watch List projection can resolve Service Operation `SERVICE_REQUEST`,
+    `TECHNICAL_ISSUE`, and `PAYMENT` event targets back to Watch rows.
+  - projection status summaries expose native builder events plus
+    operation-derived subscription events.
+- Blueprint operation preview renders projection subscription target and event
+  keys.
+- Connected DB live event smoke is deferred until ServiceRequest/TechnicalIssue
+  seed data exists.
+- Continue to Sprint 76 Operational Blueprint Validation after reading
+  `docs/sprints/SM-Sprint-75-operation-projection-subscription-runtime.md`.
+
+Sprint 76 scope/status:
+
+- Closed.
+- Sprint 76 - Operational Blueprint Validation.
+- Goal: add structural validation so bad operation contracts fail early before
+  event routing, action rendering, workflow ownership, or projection
+  subscriptions reach runtime.
+- Implemented:
+  - `validateOperationalBlueprintContract`;
+  - validation result types and registry DTO exposure through
+    `operationValidation`;
+  - Operation Coordination Blueprint preview validation status;
+  - verification fixtures for missing role references, missing workflow action,
+    empty projection event sets, duplicate keys, and unrepresented object
+    targets.
+- Service Operation contract passes validation with zero issues.
+- Continue to Sprint 77 Blueprint Authoring UI For Operation Model after
+  reading `docs/sprints/SM-Sprint-76-operational-blueprint-validation.md`.
+
+Sprint 77 scope/status:
+
+- Closed.
+- Sprint 77 - Blueprint Authoring UI For Operation Model.
+- Goal: expose Operational Blueprint contracts in the Blueprint Library UI so
+  admins can inspect the operation model and start editing it in draft form
+  without changing source code.
+- Implemented:
+  - Operation Model tab in Blueprint Library;
+  - structured read-only registry view for workspace roles, event routes,
+    action definitions/fields, workflow ownership, and projection
+    subscriptions;
+  - `blueprintJson.operation` support for workflow/Blueprint drafts;
+  - copy-source-operation and raw JSON editing for draft operation contracts;
+  - immediate validation feedback using Sprint 76 validator.
+- Publishing/versioning remains out of scope.
+- Continue to Sprint 78 Second Operation Proof after reading
+  `docs/sprints/SM-Sprint-77-blueprint-authoring-ui-operation-model.md`.
+
+Sprint 78 scope/status:
+
+- Closed.
+- Sprint 78 - Payment Operation Proof.
+- Goal: prove Operational Blueprint is not Service Operation-specific by
+  modeling Payment Collection.
+- Implemented:
+  - Payment Collection operation contract for the `payment` work type in
+    `PAYMENT` context;
+  - roles `PAYMENT_INBOX`, `PAYMENT_REVIEW`, and `PAYMENT_SETTLED`;
+  - routes `payment.created`, `payment.status_updated`, and `payment.paid`;
+  - actions `review_payment`, `mark_payment_paid`, and
+    `mark_payment_exception`;
+  - validation and Blueprint Library Operation Model visibility.
+- Payment command execution remains future Payment domain adapter work.
+- Operational Blueprint upgrade Sprints 71-78 are complete.
+
+Sprint 79 planned scope/status:
+
+- Planned.
+- Sprint 79 - Operation Template Picker.
+- Goal: standardize the first Operation Model authoring UX after the 71-78
+  core upgrade.
+- User problem: a new Workflow Draft currently shows `operation: null` and
+  expects manual JSON editing.
+- Implement:
+  - an empty-state template picker in the Operation Model tab;
+  - Service Operation template choice;
+  - Payment Collection template choice;
+  - Blank Operation choice;
+  - template summary with roles/events/actions/validation;
+  - selection that copies a valid operation contract into draft
+    `blueprintJson.operation`;
+  - immediate Sprint 76 validation and Sprint 77 structured preview rendering.
+- Keep raw JSON editing as a developer escape hatch.
+- Out of scope: publish/versioning, real Space creation, Payment action
+  adapter execution, and field-by-field structured editing.
+- Start from `docs/sprints/SM-Sprint-79-operation-template-picker.md`.
+
+Legacy Sprint 70 status:
 
 - Activated `service_request.created` route/coordination binding so SR events
   can create one SR workspace per ServiceRequest.
@@ -284,6 +493,7 @@ Recommended later M2 topics must stay outside Sprint 39 unless explicitly select
 - Blueprint publish/version/rollback.
 - Dedicated Workspace Blueprint Snapshot persistence.
 - Apply Blueprint Update / Workspace migration.
+- Generic action form renderer from Operational Blueprint action contracts.
 - Permission engine.
 - Notification engine.
 - Automation engine.
@@ -311,14 +521,30 @@ Recommended later M2 topics must stay outside Sprint 39 unless explicitly select
 18. Read `docs/sprints/SM-Sprint-69-watch-list-service-operation-intake.md`
 19. Read `docs/sprints/SM-Sprint-70-sr-workspace-technical-issue-creation.md`
 20. Read `docs/sprints/SM-Service-Operation-retrospective-corrections-and-current-contract.md`
-21. Continue after Sprint 70 by building Inspect workspace classification and
-   Processing workspace actions. Space has no workflow engine.
+21. Read `docs/sprints/SM-Operational-Blueprint-roadmap.md`
+22. Read `docs/architecture/16-operational-blueprint-contract.md`
+23. Read `docs/sprints/SM-Sprint-71-operational-blueprint-core.md`
+24. Read `docs/sprints/SM-Sprint-72-workspace-action-contract-runtime.md`
+25. Read `docs/sprints/SM-Sprint-73-watch-intake-with-required-suspicion.md`
+26. Sprint 73 is closed.
+27. Read `docs/sprints/SM-Sprint-74-inspect-processing-action-adapters.md`
+28. Sprint 74 is closed.
+29. Read `docs/sprints/SM-Sprint-75-operation-projection-subscription-runtime.md`
+30. Sprint 75 is closed.
+31. Read `docs/sprints/SM-Sprint-76-operational-blueprint-validation.md`
+32. Sprint 76 is closed.
+33. Read `docs/sprints/SM-Sprint-77-blueprint-authoring-ui-operation-model.md`
+34. Sprint 77 is closed.
+35. Read `docs/sprints/SM-Sprint-78-payment-operation-proof.md`
+36. Sprint 78 is closed. Operational Blueprint upgrade Sprints 71-78 are complete.
+37. Read `docs/sprints/SM-Sprint-79-operation-template-picker.md`
+38. Implement Sprint 79 Operation Template Picker next.
+   Space has no workflow engine.
 
-Sprint 70 wires SR workspace TechnicalIssue creation into the Service Operation
-event-driven intake. SR and TI remain existing business truth. Technical Bench
-is modeled as Inspect / Processing / Done-Follow-up operation workspaces, and SR
-workspace intake is handled by `service_request.created` in the coordination
-consumer.
+Sprint 71 started Blueprint M2. SR, TI, Payment, Watch, and other business truth
+remain domain-owned. Blueprint now declares how those objects operate inside
+Space/Workspace through roles, actions, event routes, workflow ownership, and
+projection subscriptions.
 
 Older M1 context remains available in:
 

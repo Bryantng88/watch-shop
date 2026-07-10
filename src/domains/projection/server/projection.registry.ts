@@ -1,6 +1,7 @@
 import type { ProjectionBuilder } from "./projection.types";
 import { watchMediaQueueProjectionBuilder } from "./watch-media-queue.projection";
 import { watchListProjectionBuilder } from "./watch-list";
+import { hasOperationalProjectionSubscriptionForEvent } from "./operation-projection-subscriptions";
 
 const PROJECTION_BUILDERS: ProjectionBuilder[] = [
   watchMediaQueueProjectionBuilder,
@@ -37,10 +38,16 @@ export function listProjectionBuildersForEvent(input: {
   const targetType = clean(input.targetType).toUpperCase();
 
   return PROJECTION_BUILDERS.filter((builder) => {
+    const subscriptionMatches = hasOperationalProjectionSubscriptionForEvent({
+      projectionKey: builder.key,
+      eventKey,
+    });
     const eventMatches =
+      subscriptionMatches ||
       !builder.sourceEvents?.length ||
       builder.sourceEvents.map(normalizeKey).includes(eventKey);
     const targetMatches =
+      subscriptionMatches ||
       !builder.targetTypes?.length ||
       builder.targetTypes.map((item) => clean(item).toUpperCase()).includes(targetType);
 

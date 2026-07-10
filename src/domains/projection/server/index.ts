@@ -8,3 +8,4 @@ export * from "./projection-observability.service";
 export * from "./projection.registry";
 export * from "./projection.runner";
 export * from "./projection-event-consumer";
+export * from "./operation-projection-subscriptions";

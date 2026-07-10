@@ -113,6 +113,7 @@ function defaultBlueprintJson(
     expectedResult:
       "Một Blueprint draft có thể validate và dùng làm nền cho Workspace.",
     ownerLabel: "System Admin",
+    operation: null,
     workspaceDefinition: {
       defaultName: `${name} Workspace`,
       defaultDescription:
@@ -153,6 +154,7 @@ function normalizeBlueprintJson(
     typicalUsage: clean(input.typicalUsage) || fallback.typicalUsage,
     expectedResult: clean(input.expectedResult) || fallback.expectedResult,
     ownerLabel: clean(input.ownerLabel) || fallback.ownerLabel,
+    operation: input.operation ?? fallback.operation ?? null,
     workspaceDefinition: {
       ...fallback.workspaceDefinition,
       ...input.workspaceDefinition,
