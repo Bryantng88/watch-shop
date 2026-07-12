@@ -101,6 +101,13 @@ export type OperationalBlueprintContract = {
   projectionSubscriptions: OperationalBlueprintProjectionSubscription[];
 };
 
+export type OperationalBlueprintTemplate = {
+  key: string;
+  label: string;
+  description: string;
+  contract: OperationalBlueprintContract;
+};
+
 export type OperationalBlueprintValidationSeverity = "error" | "warning";
 
 export type OperationalBlueprintValidationIssue = {
@@ -204,6 +211,39 @@ export function validateOperationalBlueprintContract(
   const actionKeys = new Set(
     contract.actions.map((action) => normalizeKey(action.key)).filter(Boolean),
   );
+
+  if (!contract.objectTypes.length) {
+    issues.push(
+      issue(
+        "error",
+        "missing_object_type",
+        "objectTypes",
+        "Operation must declare at least one business object type before it can create real workspace work.",
+      ),
+    );
+  }
+
+  if (!contract.workspaceRoles.length) {
+    issues.push(
+      issue(
+        "error",
+        "missing_workspace_role",
+        "workspaceRoles",
+        "Operation must declare at least one workspace role before it can create real Spaces.",
+      ),
+    );
+  }
+
+  if (!contract.coreFlows.length) {
+    issues.push(
+      issue(
+        "error",
+        "missing_core_flow",
+        "coreFlows",
+        "Operation must declare at least one core flow so generated workspaces have a usable path.",
+      ),
+    );
+  }
 
   issues.push(
     ...duplicateIssues({
@@ -944,6 +984,62 @@ const PAYMENT_COLLECTION_CONTRACT: OperationalBlueprintContract = {
   ],
   projectionSubscriptions: [],
 };
+
+const BLANK_OPERATION_CONTRACT: OperationalBlueprintContract = {
+  key: "blank-operation",
+  version: 1,
+  context: "DRAFT",
+  summary: "A minimal editable operation model shell for a new Blueprint draft.",
+  objectTypes: [],
+  workspaceRoles: [],
+  coreFlows: [],
+  eventRoutes: [],
+  actions: [],
+  workflows: [],
+  projectionSubscriptions: [],
+};
+
+function cloneContract(
+  contract: OperationalBlueprintContract,
+): OperationalBlueprintContract {
+  return JSON.parse(JSON.stringify(contract)) as OperationalBlueprintContract;
+}
+
+export function listOperationalBlueprintTemplates(): OperationalBlueprintTemplate[] {
+  return [
+    {
+      key: "service-operation",
+      label: "Service Operation",
+      description:
+        "Start from the Technical Service Operation model with SR case, Inspect, Processing, and Done/Follow-up roles.",
+      contract: cloneContract(SERVICE_OPERATION_CONTRACT),
+    },
+    {
+      key: "payment-collection",
+      label: "Payment Collection",
+      description:
+        "Start from the Payment Collection proof with inbox, review, and settled/exception roles.",
+      contract: cloneContract(PAYMENT_COLLECTION_CONTRACT),
+    },
+    {
+      key: "blank-operation",
+      label: "Blank Operation",
+      description:
+        "Start with an empty operation shell and add roles, events, actions, and workflows manually.",
+      contract: cloneContract(BLANK_OPERATION_CONTRACT),
+    },
+  ];
+}
+
+export function operationalBlueprintTemplateByKey(
+  key: string,
+): OperationalBlueprintTemplate | null {
+  return (
+    listOperationalBlueprintTemplates().find(
+      (template) => normalizeKey(template.key) === normalizeKey(key),
+    ) ?? null
+  );
+}
 
 export function operationalBlueprintForWorkType(input: {
   workTypeKey: string;

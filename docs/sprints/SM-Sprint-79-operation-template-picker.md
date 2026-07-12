@@ -1,6 +1,6 @@
 # Sprint 79 - Operation Template Picker
 
-Status: planned.
+Status: closed.
 
 ## Goal
 
@@ -116,6 +116,37 @@ If a browser smoke is available, also verify:
 - New Workflow Draft -> Operation Model tab shows template picker.
 - Payment Collection template populates the authoring editor.
 - Validate shows zero structural issues.
+
+## Files Touched
+
+- `src/domains/blueprint/shared/operational-blueprint.ts`
+- `src/domains/blueprint/server/index.ts`
+- `src/domains/workflow-definition/client/WorkflowAdminClient.tsx`
+- `scripts/verify-sprint-79-operation-template-picker.ts`
+
+## Implemented
+
+- Added shared Operation Model templates:
+  - Service Operation;
+  - Payment Collection;
+  - Blank Operation shell.
+- Template reads return cloned contracts so draft editing cannot mutate shared
+  registry contracts.
+- Operation Model tab now shows a focused template picker when a draft has
+  `blueprintJson.operation: null`.
+- Selecting a template copies the contract into draft JSON and immediately
+  updates the existing structured preview and Sprint 76 validation output.
+- Raw JSON editing remains available as the developer escape hatch.
+- Draft operation preview no longer falls back to the source registry operation
+  when the draft operation is still null; this preserves the intentional empty
+  state required by this sprint.
+- Source Blueprint operation lookup now matches both registry key and workflow
+  key before offering the legacy copy-source action.
+
+## Validation
+
+- `cmd /c npx tsx scripts/verify-sprint-79-operation-template-picker.ts` passed.
+- `cmd /c npx eslint src/domains/workflow-definition/client/WorkflowAdminClient.tsx scripts/verify-sprint-79-operation-template-picker.ts src/domains/blueprint/shared/operational-blueprint.ts src/domains/blueprint/server/index.ts --quiet` passed.
 
 ## Out Of Scope
 

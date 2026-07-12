@@ -1,4 +1,9 @@
 export type {
+  BlueprintPublishedVersion,
+  BlueprintPublishedVersionSource,
+} from "./blueprint-published-version.types";
+
+export type {
   BlueprintCapability,
   BlueprintEventBinding,
   BlueprintExperience,
@@ -17,15 +22,18 @@ export type {
   OperationalBlueprintCoreFlow,
   OperationalBlueprintCoreFlowStep,
   OperationalBlueprintEventRoute,
+  OperationalBlueprintTemplate,
   OperationalBlueprintValidationIssue,
   OperationalBlueprintValidationResult,
   OperationalBlueprintWorkspaceRole,
 } from "@/domains/blueprint/shared/operational-blueprint";
 export {
   operationalBlueprintForWorkType,
+  operationalBlueprintTemplateByKey,
   operationalCoreFlowsForWorkspaceRole,
   operationalEventRouteForWorkType,
   operationalWorkspaceRoleExists,
+  listOperationalBlueprintTemplates,
   serviceOperationWorkspaceRoleForStage,
   validateOperationalBlueprintContract,
 } from "@/domains/blueprint/shared/operational-blueprint";
@@ -44,3 +52,23 @@ export {
 export {
   listBlueprintEventBindingAudit,
 } from "./blueprint-event-binding-audit.service";
+
+export {
+  canDraftBePublished,
+  getLatestBlueprintPublishedVersion,
+  listBlueprintPublishedVersions,
+  listBlueprintPublishedVersionsForBlueprint,
+  publishBlueprintVersionCandidate,
+  publishWorkflowDefinitionDraftBlueprint,
+} from "./blueprint-publish.service";
+
+export type {
+  DeferredPublishedBlueprintWorkspaceResult,
+  PublishedBlueprintSpaceCreationResponse,
+  PublishedBlueprintSpaceCreationResult,
+} from "./blueprint-space-creation.service";
+
+export {
+  createSpaceFromPublishedBlueprintVersion,
+  ensureDeferredWorkspaceFromPublishedBlueprintEvent,
+} from "./blueprint-space-creation.service";

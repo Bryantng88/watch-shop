@@ -9,12 +9,16 @@ import type {
   BlueprintEventBindingAuditItem,
   BlueprintExperience,
   BlueprintLibraryItem,
+  BlueprintPublishedVersion,
   BlueprintWorkspaceDefinition,
 } from "@/domains/blueprint/server";
 import {
+  listOperationalBlueprintTemplates,
   validateOperationalBlueprintContract,
   type OperationalBlueprintContract,
+  type OperationalBlueprintTemplate,
 } from "@/domains/blueprint/shared/operational-blueprint";
+import { buildStarterOperationalBlueprintContract } from "@/domains/blueprint/shared/operation-authoring";
 import type {
   WorkflowDefinition,
   WorkflowDefinitionDraft,
@@ -22,12 +26,19 @@ import type {
   WorkflowTransitionDefinition,
 } from "@/domains/workflow-definition/server";
 import { normalizeWorkspaceCapabilities } from "@/domains/blueprint/shared/workspace-capabilities";
+import { OperationAdapterBindings } from "./OperationAdapterBindings";
+import { OperationModelAuthoringPanel } from "./OperationModelAuthoringPanel";
+import { OperationModelWizard } from "./OperationModelWizard";
+import { OperationPublishPlan } from "./OperationPublishPlan";
+import { OperationSpaceCreationPlan } from "./OperationSpaceCreationPlan";
+import { OperationWorkspaceMap } from "./OperationWorkspaceMap";
 
 type Props = {
   blueprints: BlueprintLibraryItem[];
   businessEvents: BusinessEventCatalogItem[];
   eventBindingAudit: BlueprintEventBindingAuditItem[];
   initialDrafts: WorkflowDefinitionDraft[];
+  initialPublishedVersions: BlueprintPublishedVersion[];
 };
 
 type DetailTab =
@@ -37,6 +48,13 @@ type DetailTab =
   | "workflow"
   | "operation"
   | "developer";
+
+type OperationInspectTab =
+  | "workspace-plan"
+  | "adapter"
+  | "version"
+  | "model"
+  | "json";
 
 function triggerTone(triggerType: string) {
   if (triggerType === "MANUAL") return "border-sky-200 bg-sky-50 text-sky-700";
@@ -428,20 +446,30 @@ function OperationModelPanel({
   if (!operation) {
     return (
       <div className="border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-        Blueprint nay chua co Operation Model.
+        Draft này chưa có mô hình vận hành. Hãy chọn template hoặc dựng model
+        đầu tiên ở panel bên phải.
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      <div className="border border-slate-200 bg-slate-50 p-3">
+        <div className="text-xs font-semibold uppercase text-slate-500">
+          Thông tin xem trước
+        </div>
+        <div className="mt-1 text-sm text-slate-600">
+          Khu bên trái chỉ hiển thị model hiện tại. Không chỉnh dữ liệu ở đây.
+        </div>
+      </div>
+
       <div className="grid gap-3 md:grid-cols-5">
         {[
-          ["Object types", operation.objectTypes.length],
-          ["Workspace roles", operation.workspaceRoles.length],
-          ["Event routes", operation.eventRoutes.length],
-          ["Actions", operation.actions.length],
-          ["Projections", operation.projectionSubscriptions.length],
+          ["Object", operation.objectTypes.length],
+          ["Workspace", operation.workspaceRoles.length],
+          ["Event route", operation.eventRoutes.length],
+          ["Action", operation.actions.length],
+          ["Projection", operation.projectionSubscriptions.length],
         ].map(([label, value]) => (
           <div key={label} className="border border-slate-200 bg-slate-50 p-3">
             <div className="text-xs font-medium text-slate-500">{label}</div>
@@ -463,7 +491,7 @@ function OperationModelPanel({
           <span
             className={`rounded-full border px-2.5 py-1 text-xs font-medium ${validationTone(validation.ok)}`}
           >
-            {validation.ok ? "Operation valid" : `${validation.errors.length} errors`}
+            {validation.ok ? "Hợp lệ" : `${validation.errors.length} lỗi`}
           </span>
         </div>
         {validation.issueCount ? (
@@ -473,27 +501,27 @@ function OperationModelPanel({
                 key={`${item.code}:${item.path}:${item.message}`}
                 className={item.severity === "error" ? "text-rose-700" : "text-amber-700"}
               >
-                {item.path} / {item.code}: {item.message}
+                {operationValidationMessage(item.code)}
               </div>
             ))}
           </div>
         ) : (
           <div className="mt-3 text-xs text-slate-500">
-            No blocking operation validation issues.
+            Không còn lỗi cấu trúc đang chặn.
           </div>
         )}
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
         <div className="border border-slate-200 p-4">
-          <h3 className="text-sm font-semibold text-slate-900">Workspace roles</h3>
+          <h3 className="text-sm font-semibold text-slate-900">Vai trò Workspace</h3>
           <div className="mt-3 space-y-2">
             {operation.workspaceRoles.map((role) => (
               <div key={role.key} className="border border-slate-200 p-3 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="font-semibold text-slate-950">{role.label}</div>
                   <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700">
-                    {role.cardinality}
+                    {operationCardinalityLabel(role.cardinality)}
                   </span>
                 </div>
                 <div className="mt-1 text-xs text-slate-500">{role.key}</div>
@@ -501,7 +529,7 @@ function OperationModelPanel({
                 <div className="mt-2 flex flex-wrap gap-1 text-[11px]">
                   {role.identityTargetType ? (
                     <span className="border border-slate-200 bg-white px-2 py-0.5 font-medium text-slate-700">
-                      identity: {role.identityTargetType}
+                      định danh: {role.identityTargetType}
                     </span>
                   ) : null}
                   {role.itemTargetTypes.map((targetType) => (
@@ -519,7 +547,7 @@ function OperationModelPanel({
         </div>
 
         <div className="border border-slate-200 p-4">
-          <h3 className="text-sm font-semibold text-slate-900">Event routes</h3>
+          <h3 className="text-sm font-semibold text-slate-900">Event đưa việc vào Workspace</h3>
           <div className="mt-3 space-y-2">
             {operation.eventRoutes.map((route) => (
               <div
@@ -529,7 +557,7 @@ function OperationModelPanel({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="font-semibold text-slate-950">{route.eventKey}</div>
                   <span className="rounded-full border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
-                    {route.effect}
+                    {operationEffectLabel(route.effect)}
                   </span>
                 </div>
                 <div className="mt-1 text-xs text-slate-500">
@@ -544,7 +572,7 @@ function OperationModelPanel({
 
       <div className="grid gap-4 xl:grid-cols-2">
         <div className="border border-slate-200 p-4">
-          <h3 className="text-sm font-semibold text-slate-900">Actions</h3>
+          <h3 className="text-sm font-semibold text-slate-900">Action</h3>
           <div className="mt-3 space-y-2">
             {operation.actions.map((action) => (
               <div key={action.key} className="border border-slate-200 p-3 text-sm">
@@ -561,7 +589,7 @@ function OperationModelPanel({
                       key={`${action.key}:${field.key}`}
                       className="border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-slate-700"
                     >
-                      {field.label} ({field.kind}{field.required ? ", required" : ""})
+                      {field.label} ({field.kind}{field.required ? ", bắt buộc" : ""})
                     </span>
                   ))}
                 </div>
@@ -571,7 +599,7 @@ function OperationModelPanel({
                       key={`${action.key}:${eventKey}`}
                       className="border border-blue-100 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700"
                     >
-                      emits {eventKey}
+                      phát event {eventKey}
                     </span>
                   ))}
                 </div>
@@ -582,18 +610,18 @@ function OperationModelPanel({
 
         <div className="space-y-4">
           <div className="border border-slate-200 p-4">
-            <h3 className="text-sm font-semibold text-slate-900">Workflow ownership</h3>
+            <h3 className="text-sm font-semibold text-slate-900">Workflow thuộc Workspace</h3>
             <div className="mt-3 space-y-2">
               {operation.workflows.map((workflow) => (
                 <div key={workflow.key} className="border border-slate-200 p-3 text-sm">
                   <div className="font-semibold text-slate-950">{workflow.key}</div>
                   <div className="mt-1 text-xs text-slate-500">
-                    {workflow.workspaceRole} owns {workflow.states.join(", ")}
+                    {workflow.workspaceRole} quản lý {workflow.states.join(", ")}
                   </div>
                   <div className="mt-2 space-y-1 text-xs text-slate-600">
                     {workflow.transitions.map((transition) => (
                       <div key={`${workflow.key}:${transition.from}:${transition.to}`}>
-                        {transition.from} {"->"} {transition.to} by {transition.actionKey} emits {transition.eventKey}
+                        {transition.from} {"->"} {transition.to} bằng {transition.actionKey}, phát {transition.eventKey}
                       </div>
                     ))}
                   </div>
@@ -603,7 +631,7 @@ function OperationModelPanel({
           </div>
 
           <div className="border border-slate-200 p-4">
-            <h3 className="text-sm font-semibold text-slate-900">Projection subscriptions</h3>
+            <h3 className="text-sm font-semibold text-slate-900">Projection cần làm mới</h3>
             <div className="mt-3 space-y-2">
               {operation.projectionSubscriptions.map((subscription) => (
                 <div key={subscription.projectionKey} className="border border-slate-200 p-3 text-sm">
@@ -612,7 +640,7 @@ function OperationModelPanel({
                       {subscription.projectionKey}
                     </div>
                     <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700">
-                      Target: {subscription.resolvesToTargetType}
+                      Object: {subscription.resolvesToTargetType}
                     </span>
                   </div>
                   <div className="mt-2 text-slate-600">{subscription.description}</div>
@@ -634,6 +662,32 @@ function OperationModelPanel({
       </div>
     </div>
   );
+}
+
+function operationCardinalityLabel(value: string) {
+  if (value === "SINGLE_PER_ACTIVE_CYCLE") return "Tạo sẵn";
+  if (value === "ONE_PER_BUSINESS_OBJECT") return "Tạo theo object";
+  if (value === "MANY_PER_ACTIVE_CYCLE") return "Tạo thủ công";
+  return value;
+}
+
+function operationEffectLabel(value: string) {
+  if (value === "CREATE_WORKSPACE") return "Tạo Workspace";
+  if (value === "BIND_ITEM") return "Đưa item vào";
+  if (value === "MOVE_ITEM") return "Chuyển item";
+  if (value === "WRITE_ACTIVITY") return "Ghi hoạt động";
+  return value;
+}
+
+function operationValidationMessage(code: string) {
+  if (code === "missing_object_type") return "Chưa có business object.";
+  if (code === "missing_workspace_role") return "Thiếu vai trò Workspace.";
+  if (code === "missing_core_flow") return "Chưa có luồng Workspace.";
+  if (code === "unknown_object_target") return "Có loại object chưa khai báo.";
+  if (code === "unrepresented_object_target") return "Object chưa được Workspace nào dùng.";
+  if (code === "missing_action") return "Workflow đang trỏ tới action chưa tồn tại.";
+  if (code === "duplicate_key") return "Có mã bị trùng.";
+  return "Cần kiểm tra lại model vận hành.";
 }
 
 function BlueprintList({
@@ -771,12 +825,20 @@ export default function WorkflowAdminClient({
   businessEvents,
   eventBindingAudit,
   initialDrafts,
+  initialPublishedVersions,
 }: Props) {
   const registryBlueprints = useMemo(
     () => blueprints.filter((blueprint) => blueprint.source === "REGISTRY"),
     [blueprints],
   );
+  const operationTemplates = useMemo(
+    () => listOperationalBlueprintTemplates(),
+    [],
+  );
   const [drafts, setDrafts] = useState(initialDrafts);
+  const [publishedVersions, setPublishedVersions] = useState(
+    initialPublishedVersions,
+  );
   const [selectedBlueprintKey, setSelectedBlueprintKey] = useState(
     registryBlueprints[0]?.key ?? "",
   );
@@ -787,7 +849,12 @@ export default function WorkflowAdminClient({
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busyKey, setBusyKey] = useState("");
+  const [creatingSpaceVersionId, setCreatingSpaceVersionId] = useState("");
+  const [spaceCreationNotice, setSpaceCreationNotice] = useState("");
+  const [spaceRuntimeTaskId, setSpaceRuntimeTaskId] = useState("");
   const [detailTab, setDetailTab] = useState<DetailTab>("purpose");
+  const [operationInspectTab, setOperationInspectTab] =
+    useState<OperationInspectTab>("model");
   const [operationEditorText, setOperationEditorText] = useState("null");
   const [, startTransition] = useTransition();
 
@@ -807,7 +874,9 @@ export default function WorkflowAdminClient({
 
     return (
       registryBlueprints.find(
-        (item) => item.workflow.workflowKey === selectedDraft.sourceRegistryKey,
+        (item) =>
+          item.key === selectedDraft.sourceRegistryKey ||
+          item.workflow.workflowKey === selectedDraft.sourceRegistryKey,
       ) ?? null
     );
   }, [selectedDraft, registryBlueprints]);
@@ -833,7 +902,7 @@ export default function WorkflowAdminClient({
       : null;
   const detailOperation =
     selectedDraft
-      ? detailBlueprintJson?.operation ?? sourceBlueprint?.operation ?? null
+      ? detailBlueprintJson?.operation ?? null
       : selectedBlueprint?.operation ?? null;
   const operationValidation = selectedDraft
     ? validateOperationalBlueprintContract(detailOperation)
@@ -866,6 +935,13 @@ export default function WorkflowAdminClient({
   const eventBindingConflictCount = eventBindingAudit.filter(
     (item) => item.hasConflict,
   ).length;
+  const detailPublishedVersions = useMemo(
+    () =>
+      publishedVersions
+        .filter((version) => version.blueprintKey === detailKey)
+        .sort((a, b) => b.version - a.version),
+    [publishedVersions, detailKey],
+  );
 
   useEffect(() => {
     setOperationEditorText(fmtJson(detailOperation));
@@ -1020,6 +1096,150 @@ export default function WorkflowAdminClient({
         ...patch,
       },
     });
+  }
+
+  async function publishDraft() {
+    if (!selectedDraft) return;
+    if (!parsedEditor.ok) {
+      setError(parsedEditor.error);
+      return;
+    }
+
+    setBusyKey("publish");
+    setError("");
+    setMessage("");
+    setSpaceCreationNotice("");
+    setSpaceRuntimeTaskId("");
+
+    try {
+      const definitionJson = parsedEditor.ok
+        ? parsedEditor.value
+        : selectedDraft.definitionJson;
+      const saveResponse = await fetch(
+        `/api/admin/system/workflows/drafts/${selectedDraft.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            key: selectedDraft.key,
+            name: selectedDraft.name,
+            description: selectedDraft.description,
+            blueprintJson: selectedDraft.blueprintJson,
+            definitionJson,
+          }),
+        },
+      );
+      const saveData = await saveResponse.json().catch(() => ({}));
+
+      if (!saveResponse.ok || !saveData?.ok) {
+        throw new Error(saveData?.error || "Khong the luu draft truoc khi publish");
+      }
+
+      replaceDraft(saveData.draft);
+
+      const response = await fetch(
+        `/api/admin/system/workflows/drafts/${selectedDraft.id}/publish-blueprint`,
+        { method: "POST" },
+      );
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data?.ok) {
+        throw new Error(data?.error || "Khong the publish Blueprint");
+      }
+
+      const version = data.version as BlueprintPublishedVersion;
+      setPublishedVersions((current) => {
+        const withoutDuplicate = current.filter((item) => item.id !== version.id);
+        return [version, ...withoutDuplicate].sort((a, b) =>
+          b.publishedAt.localeCompare(a.publishedAt),
+        );
+      });
+      setMessage(`Blueprint đã lưu version ${version.version}.`);
+    } catch (err: unknown) {
+      setError(errorMessage(err, "Không thể lưu version Blueprint"));
+    } finally {
+      setBusyKey("");
+    }
+  }
+
+  async function createSpaceFromVersion(versionId: string) {
+    setCreatingSpaceVersionId(versionId);
+    setError("");
+    setMessage("");
+    setSpaceCreationNotice("");
+    setSpaceRuntimeTaskId("");
+
+    try {
+      const response = await fetch(
+        `/api/admin/system/blueprints/published-versions/${versionId}/create-space`,
+        { method: "POST" },
+      );
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data?.ok) {
+        throw new Error(data?.error || "Không thể tạo Space runtime từ Blueprint");
+      }
+
+      const result = data.result as {
+        taskId: string;
+        created: boolean;
+        createdWorkspaceCount: number;
+        skippedWorkspaceCount: number;
+      };
+      setMessage(
+        result.created
+          ? `Đã tạo Space runtime ${result.taskId} với ${result.createdWorkspaceCount} Workspace.`
+          : `Space runtime đã tồn tại: ${result.taskId}. Bỏ qua ${result.skippedWorkspaceCount} Workspace.`,
+      );
+      setSpaceCreationNotice(
+        result.created
+          ? `Đã tạo Space runtime ${result.taskId}. Hệ thống cũng tạo ${result.createdWorkspaceCount} Workspace ban đầu từ version đã lưu.`
+          : `Space runtime cho version này đã tồn tại: ${result.taskId}. Không tạo trùng Workspace.`,
+      );
+      setSpaceRuntimeTaskId(result.taskId);
+    } catch (err: unknown) {
+      const messageText = errorMessage(
+        err,
+        "Không thể tạo Space runtime từ Blueprint",
+      );
+      setError(messageText);
+      setSpaceCreationNotice(messageText);
+    } finally {
+      setCreatingSpaceVersionId("");
+    }
+  }
+
+  function selectOperationTemplate(template: OperationalBlueprintTemplate) {
+    patchBlueprintJson({ operation: template.contract });
+    setOperationEditorText(fmtJson(template.contract));
+    setMessage(`${template.label} operation template added to this draft.`);
+    setError("");
+    setSpaceCreationNotice("");
+    setSpaceRuntimeTaskId("");
+  }
+
+  function updateOperation(operation: OperationalBlueprintContract | null) {
+    patchBlueprintJson({ operation });
+    setOperationEditorText(fmtJson(operation));
+  }
+
+  function buildStarterOperation() {
+    if (!detailOperation) return;
+
+    const nextOperation = buildStarterOperationalBlueprintContract(detailOperation);
+    patchBlueprintJson({ operation: nextOperation });
+    setOperationEditorText(fmtJson(nextOperation));
+    setMessage("Đã dựng mô hình vận hành khởi đầu.");
+    setError("");
+    setSpaceCreationNotice("");
+    setSpaceRuntimeTaskId("");
+  }
+
+  function updateOperationEditorText(text: string) {
+    const parsed = parseOperationJson(text);
+    setOperationEditorText(text);
+    if (!parsed.ok) return;
+    patchBlueprintJson({ operation: parsed.value });
   }
 
   function patchWorkspaceDefinition(
@@ -1242,11 +1462,18 @@ export default function WorkflowAdminClient({
         </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
-        <aside className="space-y-5">
+      <details className="border border-slate-200 bg-white p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+          Mở thư viện Blueprint / Draft
+        </summary>
+        <div className="mt-2 text-sm text-slate-600">
+          Dùng khu này khi cần đổi Blueprint hoặc chọn draft khác. Khu làm việc
+          chính ở bên dưới chỉ tập trung vào Blueprint đang chọn.
+        </div>
+        <div className="mt-4 grid gap-5 xl:grid-cols-2">
           <div>
             <h2 className="mb-2 text-sm font-semibold text-slate-900">
-              Danh sách Blueprint
+              Blueprint gốc
             </h2>
             <BlueprintList
               blueprints={registryBlueprints}
@@ -1276,8 +1503,10 @@ export default function WorkflowAdminClient({
               }}
             />
           </div>
-        </aside>
+        </div>
+      </details>
 
+      <section>
         <article className="border border-slate-200 bg-white p-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
@@ -1361,11 +1590,11 @@ export default function WorkflowAdminClient({
           <div className="mt-5 flex flex-wrap gap-2 border-b border-slate-200">
             {[
               ["purpose", "Mục đích"],
-              ["workspace", "Workspace Definition"],
+              ["workspace", "Định nghĩa Workspace"],
               ["capabilities", "Capability"],
               ["workflow", "Workflow"],
-              ["operation", "Operation Model"],
-              ["developer", "Developer"],
+              ["operation", "Mô hình vận hành"],
+              ["developer", "Kỹ thuật"],
             ].map(([tab, label]) => (
               <button
                 key={tab}
@@ -1945,64 +2174,186 @@ export default function WorkflowAdminClient({
           ) : null}
 
           {detailTab === "operation" ? (
-            <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-              <OperationModelPanel
-                operation={detailOperation}
-                validation={operationValidation}
-              />
-              <div className="space-y-4">
-                <div className="border border-slate-200 p-4">
-                  <h3 className="text-sm font-semibold text-slate-900">
-                    Operation authoring
-                  </h3>
-                  {selectedDraft ? (
-                    <div className="mt-3 space-y-3">
-                      {sourceBlueprint?.operation && !detailBlueprintJson?.operation ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            patchBlueprintJson({
-                              operation: sourceBlueprint.operation,
-                            })
-                          }
-                          className="w-full border border-slate-900 bg-slate-950 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
-                        >
-                          Copy source operation
-                        </button>
-                      ) : null}
-                      <textarea
-                        value={operationEditorText}
-                        spellCheck={false}
-                        onChange={(event) => {
-                          const text = event.target.value;
-                          const parsed = parseOperationJson(text);
-                          setOperationEditorText(text);
-                          if (!parsed.ok) return;
-                          patchBlueprintJson({ operation: parsed.value });
-                        }}
-                        className="h-[520px] w-full resize-y border border-slate-300 bg-slate-950 p-3 font-mono text-xs leading-5 text-slate-100 outline-none"
+            <div className="mt-4 space-y-4">
+              <section className="border border-slate-200 bg-white p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="text-xs font-semibold uppercase text-slate-500">
+                      Block cấu hình
+                    </div>
+                    <h3 className="text-base font-semibold text-slate-950">
+                      1. Cấu hình Space/Workspace runtime
+                    </h3>
+                    <p className="mt-1 max-w-3xl text-sm text-slate-600">
+                      Đây là bản thiết kế quyết định Space sẽ có Workspace nào,
+                      nhận item/event nào, và người dùng bấm được action gì.
+                    </p>
+                  </div>
+                  <span
+                    className={`border px-2.5 py-1 text-xs font-medium ${
+                      operationValidation.ok
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-rose-200 bg-rose-50 text-rose-700"
+                    }`}
+                  >
+                    {operationValidation.ok ? "Cấu hình hợp lệ" : "Cần cấu hình"}
+                  </span>
+                </div>
+                <div className="mt-3 border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+                  Sau khi cấu hình đúng, phần bên dưới mới lưu version và tạo
+                  runtime. Các tab trong khu này chỉ chỉnh/xem Blueprint, chưa
+                  tạo dữ liệu runtime.
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2 border-b border-slate-200 pb-2">
+                  {[
+                    ["model", "Cấu hình model"],
+                    ["workspace-plan", "Kết quả sẽ tạo"],
+                    ["adapter", "Action/adapter"],
+                    ["version", "Version"],
+                    ["json", "JSON kỹ thuật"],
+                  ].map(([tab, label]) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setOperationInspectTab(tab as OperationInspectTab)}
+                      className={`border px-3 py-2 text-sm font-medium ${
+                        operationInspectTab === tab
+                          ? "border-slate-950 bg-slate-950 text-white"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-400 hover:text-slate-950"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-4">
+                  {operationInspectTab === "workspace-plan" ? (
+                    <div className="space-y-4">
+                      <OperationWorkspaceMap operation={detailOperation} />
+                      <OperationSpaceCreationPlan
+                        blueprintKey={detailKey}
+                        blueprintName={detailTitle}
+                        blueprintSource={selectedDraft ? "DRAFT" : selectedBlueprint?.source ?? "REGISTRY"}
+                        workspaceDefinition={detailWorkspaceDefinition}
+                        operation={detailOperation}
                       />
+                    </div>
+                  ) : null}
+
+                  {operationInspectTab === "adapter" ? (
+                    <OperationAdapterBindings operation={detailOperation} />
+                  ) : null}
+
+                  {operationInspectTab === "version" ? (
+                    <OperationPublishPlan
+                      blueprintKey={detailKey}
+                      blueprintName={detailTitle}
+                      blueprintSource={selectedDraft ? "DRAFT" : selectedBlueprint?.source ?? "REGISTRY"}
+                      workspaceDefinition={detailWorkspaceDefinition}
+                      operation={detailOperation}
+                      publishedVersions={detailPublishedVersions}
+                      canPublish={Boolean(selectedDraft)}
+                      isPublishing={busyKey === "publish"}
+                      onPublish={selectedDraft ? publishDraft : undefined}
+                    />
+                  ) : null}
+
+                  {operationInspectTab === "model" ? (
+                    <div className="grid gap-4 xl:grid-cols-2">
+                      <div className="border border-slate-300 bg-white p-4">
+                        <div className="text-xs font-semibold uppercase text-slate-500">
+                          Thao tác cấu hình
+                        </div>
+                        <h3 className="mt-1 text-sm font-semibold text-slate-900">
+                          Chỉnh Space/Workspace sẽ làm được gì
+                        </h3>
+                        <div className="mt-1 text-xs text-slate-500">
+                          Đây là khu vực thao tác. Các thay đổi ở đây quyết định
+                          runtime sau này có Workspace, event, action và workflow
+                          nào. Chưa tạo Space runtime cho tới khi bạn lưu version
+                          và bấm nút tạo ở bước 2.
+                        </div>
+                        {selectedDraft ? (
+                          <div className="mt-3">
+                            <OperationModelAuthoringPanel
+                              operation={detailOperation}
+                              operationEditorText={operationEditorText}
+                              parsedOperationEditor={parsedOperationEditor}
+                              templates={operationTemplates}
+                              sourceOperation={sourceBlueprint?.operation ?? null}
+                              onOperationChange={updateOperation}
+                              onOperationEditorTextChange={updateOperationEditorText}
+                              onTemplateSelect={selectOperationTemplate}
+                            />
+                          </div>
+                        ) : (
+                          <div className="mt-3 border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+                            Operation từ registry chỉ đọc. Hãy tạo draft nếu cần chỉnh mô hình.
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-4">
+                        <div className="border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+                          Đây là khu vực xem lại kết quả cấu hình. Muốn thay đổi
+                          model, hãy dùng khu thao tác chính bên trái.
+                        </div>
+                        <OperationModelPanel
+                          operation={detailOperation}
+                          validation={operationValidation}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {operationInspectTab === "json" ? (
+                    <div className="space-y-3">
+                      <div className="border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+                        JSON dành cho kiểm tra kỹ thuật hoặc copy snapshot. Người
+                        dùng thường không cần chỉnh trực tiếp ở đây.
+                      </div>
+                      {selectedDraft ? (
+                        <textarea
+                          value={operationEditorText}
+                          spellCheck={false}
+                          onChange={(event) =>
+                            updateOperationEditorText(event.target.value)
+                          }
+                          className="h-[520px] w-full resize-y border border-slate-300 bg-slate-950 p-3 font-mono text-xs leading-5 text-slate-100 outline-none"
+                        />
+                      ) : (
+                        <pre className="max-h-[520px] overflow-auto border border-slate-300 bg-slate-950 p-3 font-mono text-xs leading-5 text-slate-100">
+                          {fmtJson(detailOperation)}
+                        </pre>
+                      )}
                       {!parsedOperationEditor.ok ? (
                         <div className="text-sm text-rose-700">
                           {parsedOperationEditor.error}
                         </div>
                       ) : null}
-                      <div className="text-xs text-slate-500">
-                        Draft changes stay inside Blueprint draft JSON. Publish/versioning is not part of this step.
-                      </div>
                     </div>
-                  ) : (
-                    <div className="mt-3 space-y-3">
-                      <div className="border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-                        Registry operation is read-only. Duplicate the Blueprint into a draft to edit the Operation JSON.
-                      </div>
-                      <pre className="max-h-[520px] overflow-auto border border-slate-300 bg-slate-950 p-3 font-mono text-xs leading-5 text-slate-100">
-                        {fmtJson(detailOperation)}
-                      </pre>
-                    </div>
-                  )}
+                  ) : null}
                 </div>
-              </div>
+              </section>
+
+              <OperationModelWizard
+                blueprintKey={detailKey}
+                blueprintName={detailTitle}
+                blueprintSource={selectedDraft ? "DRAFT" : selectedBlueprint?.source ?? "REGISTRY"}
+                workspaceDefinition={detailWorkspaceDefinition}
+                operation={detailOperation}
+                templates={operationTemplates}
+                publishedVersions={detailPublishedVersions}
+                canPublish={Boolean(selectedDraft)}
+                isPublishing={busyKey === "publish"}
+                creatingSpaceVersionId={creatingSpaceVersionId}
+                spaceCreationNotice={spaceCreationNotice}
+                spaceRuntimeTaskId={spaceRuntimeTaskId}
+                onTemplateSelect={selectOperationTemplate}
+                onBuildStarter={buildStarterOperation}
+                onPublish={selectedDraft ? publishDraft : undefined}
+                onCreateSpace={createSpaceFromVersion}
+              />
             </div>
           ) : null}
 

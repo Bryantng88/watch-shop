@@ -95,4 +95,12 @@ assertHasCode(
   "unrepresented object target",
 );
 
+const emptyOperation = cloneContract(serviceOperation);
+emptyOperation.objectTypes = [];
+emptyOperation.workspaceRoles = [];
+emptyOperation.coreFlows = [];
+assertHasCode(emptyOperation, "missing_object_type", "empty operation object types");
+assertHasCode(emptyOperation, "missing_workspace_role", "empty operation workspace roles");
+assertHasCode(emptyOperation, "missing_core_flow", "empty operation core flows");
+
 console.log("[sprint-76-verify] ok");

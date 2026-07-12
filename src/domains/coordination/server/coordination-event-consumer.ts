@@ -28,6 +28,9 @@ import {
   operationalWorkspaceRoleExists,
 } from "@/domains/blueprint/shared/operational-blueprint";
 import {
+  ensureDeferredWorkspaceFromPublishedBlueprintEvent,
+} from "@/domains/blueprint/server";
+import {
   getTimelineBody,
   getTimelineTitle,
 } from "@/domains/shared/timeline/server/timeline-event-consumer";
@@ -112,7 +115,7 @@ export type CoordinationEventDiagnosticResult =
 const TARGET_TYPES = new Set<string>(Object.values(TaskExecutionTargetType));
 
 type CoordinationBindingScope = {
-  scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE";
+  scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE" | "PUBLISHED_BLUEPRINT_SPACE";
   context: CoordinationContext;
   coordinationType: string;
   workTypeKey: string;
@@ -943,6 +946,108 @@ export async function consumeBusinessEventForCoordination(
   const route = resolution.route;
 
   if (!route) return skipped("NO_ROUTE", rawRoute);
+
+  const contextForPublishedSpace = coordinationTypeToContext(route.coordinationType);
+  const publishedDeferredWorkspace =
+    contextForPublishedSpace
+      ? await ensureDeferredWorkspaceFromPublishedBlueprintEvent({
+          db,
+          eventKey,
+          targetType,
+          targetId: canonicalTargetId,
+          workTypeKey: route.workTypeKey,
+        })
+      : null;
+
+  if (publishedDeferredWorkspace && contextForPublishedSpace) {
+    const eventBinding = effectiveReceiverEventBinding({
+      eventKey,
+      targetType,
+      context: contextForPublishedSpace,
+      route,
+    });
+    const resolvedScope: CoordinationBindingScope = {
+      scopeType: "PUBLISHED_BLUEPRINT_SPACE",
+      context: contextForPublishedSpace,
+      coordinationType: route.coordinationType,
+      workTypeKey: route.workTypeKey,
+      taskId: publishedDeferredWorkspace.taskId,
+      taskItemId: publishedDeferredWorkspace.taskItemId,
+    };
+    const metadataJson = {
+      source: "AUTO",
+      routeKey: `${route.targetType}:${route.eventKey}`,
+      eventKey: route.eventKey,
+      coordinationType: route.coordinationType,
+      workTypeKey: route.workTypeKey,
+      businessEventLogId,
+      businessEventCreatedAt: formatDateMetadata(input.createdAt),
+      sourceTargetId: targetId,
+      targetAliasIds: extractTargetAliasIds(input),
+      eventBindingSource: "PUBLISHED_BLUEPRINT_VERSION",
+      eventBinding,
+      publishedBlueprintVersionId: publishedDeferredWorkspace.publishedVersion.id,
+      publishedBlueprintVersion: publishedDeferredWorkspace.publishedVersion.version,
+      operationWorkspaceRole: publishedDeferredWorkspace.workspaceRole,
+    } satisfies Prisma.InputJsonObject;
+    const bindingResult = await ensureTaskItemBusinessBinding(db, {
+      taskId: publishedDeferredWorkspace.taskId,
+      taskItemId: publishedDeferredWorkspace.taskItemId,
+      targetType,
+      targetId: canonicalTargetId,
+      actionType: TaskExecutionActionType.LINKED,
+      createdByUserId: input.actorUserId ?? null,
+      metadataJson,
+    });
+    const workflowResult = await applyWorkflowEventTransition({
+      db,
+      bindingId: bindingResult.binding.id,
+      eventKey,
+      businessEventLogId,
+      actorUserId: input.actorUserId ?? null,
+      metadataJson: input.metadataJson ?? null,
+    });
+    const activity = await createBusinessEventActivity({
+      taskItemId: publishedDeferredWorkspace.taskItemId,
+      sourceId: businessEventLogId,
+      title: formatEventTitle(eventKey),
+      body: getTimelineBody(input.metadataJson),
+      actorUserId: input.actorUserId ?? null,
+      metadataJson: {
+        eventKey,
+        targetType,
+        targetId: canonicalTargetId,
+        sourceTargetId: targetId,
+        routeKey: metadataJson.routeKey,
+        coordinationType: route.coordinationType,
+        workTypeKey: route.workTypeKey,
+        bindingScope: resolvedScope,
+        eventBindingSource: "PUBLISHED_BLUEPRINT_VERSION",
+        eventBinding,
+        businessEventLogId,
+        businessEventCreatedAt: metadataJson.businessEventCreatedAt,
+        targetAliasIds: metadataJson.targetAliasIds,
+        publishedBlueprintVersionId:
+          publishedDeferredWorkspace.publishedVersion.id,
+        publishedBlueprintVersion:
+          publishedDeferredWorkspace.publishedVersion.version,
+        operationWorkspaceRole: publishedDeferredWorkspace.workspaceRole,
+      },
+    }, db);
+
+    return {
+      ok: true,
+      skipped: false,
+      route,
+      taskId: publishedDeferredWorkspace.taskId,
+      taskItemId: publishedDeferredWorkspace.taskItemId,
+      bindingId: bindingResult.binding.id,
+      bindingCreated: bindingResult.created,
+      activityId: activity.id,
+      scope: resolvedScope,
+      workflow: workflowResult,
+    };
+  }
 
   const { task, context, unsupported } = await findActiveCoordinationTask(db, route);
   if (unsupported) return skipped("UNSUPPORTED_COORDINATION_TYPE", route);

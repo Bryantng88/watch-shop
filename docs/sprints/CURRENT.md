@@ -88,6 +88,16 @@ Current handoff:
 - Read `docs/sprints/SM-Sprint-77-blueprint-authoring-ui-operation-model.md`.
 - Read `docs/sprints/SM-Sprint-78-payment-operation-proof.md`.
 - Read `docs/sprints/SM-Sprint-79-operation-template-picker.md`.
+- Read `docs/sprints/SM-Sprint-80-structured-operation-authoring-ui.md`.
+- Read `docs/sprints/SM-Sprint-81-operation-preview-generated-workspace-map.md`.
+- Read `docs/sprints/SM-Sprint-82-create-space-from-operation-blueprint.md`.
+- Read `docs/sprints/SM-Sprint-83-domain-adapter-binding-ui.md`.
+- Read `docs/sprints/SM-Sprint-84-publish-version-snapshot-ux.md`.
+- Read `docs/sprints/SM-Sprint-85-blueprint-publish-persistence-contract.md`.
+- Read `docs/sprints/SM-Sprint-86-blueprint-publish-action-api.md`.
+- Read `docs/sprints/SM-Sprint-87-create-space-from-published-blueprint.md`.
+- Read `docs/sprints/SM-Sprint-88-deferred-workspace-runtime.md`.
+- Read `docs/sprints/SM-Sprint-89-operation-authoring-guided-repair.md`.
 - Sprint 61 is complete as a first production UI/API slice. Space Management
   Service Operation is a space/workspace index with SR and Technical views;
   workspace operation happens in the TaskItem workspace shell and must use
@@ -259,7 +269,19 @@ Current sprint:
 - Sprint 76 Operational Blueprint Validation is closed.
 - Sprint 77 Blueprint Authoring UI For Operation Model is closed.
 - Sprint 78 Payment Operation Proof is closed.
-- Sprint 79 Operation Template Picker is planned next.
+- Sprint 79 Operation Template Picker is closed.
+- Sprint 80 Structured Operation Authoring UI is closed.
+- Sprint 81 Operation Preview / Generated Workspace Map is closed.
+- Sprint 82 Create Space From Operation Blueprint is closed.
+- Sprint 83 Domain Adapter Binding UI is closed.
+- Sprint 84 Publish / Version / Snapshot UX is closed.
+- Sprint 85 Blueprint Publish Persistence Contract is closed.
+- Sprint 86 Blueprint Publish Action API is closed.
+- Sprint 87 Create Space From Published Blueprint is closed.
+- Sprint 88 Deferred Workspace Runtime is closed.
+- Sprint 89 Operation Authoring Guided Repair is closed.
+- Operation authoring roadmap Sprints 79-89 has a first complete admin publish
+  and runtime Space/deferred Workspace creation loop.
 
 Sprint 71 closed scope/status:
 
@@ -420,15 +442,13 @@ Sprint 78 scope/status:
 - Payment command execution remains future Payment domain adapter work.
 - Operational Blueprint upgrade Sprints 71-78 are complete.
 
-Sprint 79 planned scope/status:
+Sprint 79 scope/status:
 
-- Planned.
+- Closed.
 - Sprint 79 - Operation Template Picker.
 - Goal: standardize the first Operation Model authoring UX after the 71-78
   core upgrade.
-- User problem: a new Workflow Draft currently shows `operation: null` and
-  expects manual JSON editing.
-- Implement:
+- Implemented:
   - an empty-state template picker in the Operation Model tab;
   - Service Operation template choice;
   - Payment Collection template choice;
@@ -437,10 +457,254 @@ Sprint 79 planned scope/status:
   - selection that copies a valid operation contract into draft
     `blueprintJson.operation`;
   - immediate Sprint 76 validation and Sprint 77 structured preview rendering.
+- Draft operation preview no longer falls back to the source registry operation
+  while `blueprintJson.operation` is null.
 - Keep raw JSON editing as a developer escape hatch.
 - Out of scope: publish/versioning, real Space creation, Payment action
   adapter execution, and field-by-field structured editing.
-- Start from `docs/sprints/SM-Sprint-79-operation-template-picker.md`.
+- Continue to Sprint 80 Structured Operation Authoring UI after reading
+  `docs/sprints/SM-Sprint-79-operation-template-picker.md`.
+
+Sprint 80 scope/status:
+
+- Closed.
+- Sprint 80 - Structured Operation Authoring UI.
+- Goal: make Operation Model authoring usable after template selection without
+  relying only on raw JSON editing.
+- Implemented:
+  - pure operation-authoring helpers for cloning, root patching, list item add/
+    update/remove, and action field add/update/remove;
+  - dedicated `OperationModelAuthoringPanel` component;
+  - structured controls for operation identity, object types, workspace roles,
+    core flows, event routes, actions/fields, workflow ownership, and projection
+    subscriptions;
+  - raw JSON remains available as Developer JSON;
+  - structured edits and raw JSON edits update the same draft
+    `blueprintJson.operation`.
+- Out of scope: publish/versioning, real Space creation, Payment action adapter
+  execution, Domain Adapter Binding UI, and Workspace snapshot migration.
+- Continue to Sprint 81 Operation Preview / Generated Workspace Map after
+  reading `docs/sprints/SM-Sprint-80-structured-operation-authoring-ui.md`.
+
+Sprint 81 scope/status:
+
+- Closed.
+- Sprint 81 - Operation Preview / Generated Workspace Map.
+- Goal: let an author see what an Operation Model would generate before real
+  Space/Workspace creation exists.
+- Implemented:
+  - pure `generateOperationPreviewMap` helper;
+  - dedicated `OperationWorkspaceMap` component;
+  - core flow rendering as ordered workspace role paths;
+  - workspace role nodes with cardinality, identity/item targets, inbound
+    events, actions, and workflow ownership;
+  - projection subscriptions rendered as downstream read-model effects;
+  - unplaced route/action warnings when references point to missing roles.
+- Out of scope: creating real Spaces, persisting generated plans,
+  publish/versioning, Domain Adapter Binding UI, and Workspace snapshot
+  migration.
+- Continue to Sprint 82 Create Space From Operation Blueprint after reading
+  `docs/sprints/SM-Sprint-81-operation-preview-generated-workspace-map.md`.
+
+Sprint 82 scope/status:
+
+- Closed.
+- Sprint 82 - Create Space From Operation Blueprint.
+- Goal: prepare the safe creation path from Operation Blueprint to
+  Space/Workspace structure without mutating runtime data yet.
+- Implemented:
+  - pure `buildOperationSpaceCreationPlan` helper;
+  - dedicated `OperationSpaceCreationPlan` dry-run component;
+  - cardinality-aware role classification:
+    `SINGLE_PER_ACTIVE_CYCLE` creates initial receiver Workspaces,
+    `ONE_PER_BUSINESS_OBJECT` defers until an event/business object exists, and
+    `MANY_PER_ACTIVE_CYCLE` requires manual capacity;
+  - per-workspace snapshot notes with operation key and workspace role metadata;
+  - Service Operation plan creates Inspect, Processing, and Done/Follow-up
+    initially while deferring SR Case until a ServiceRequest exists;
+  - Payment Collection plan creates its three receiver Workspaces initially.
+- Out of scope: actual DB creation, generated plan persistence, bulk workspace
+  creation, Domain Adapter Binding UI, publish/versioning, and snapshot
+  migration.
+- Continue to Sprint 83 Domain Adapter Binding UI after reading
+  `docs/sprints/SM-Sprint-82-create-space-from-operation-blueprint.md`.
+
+Sprint 83 scope/status:
+
+- Closed.
+- Sprint 83 - Domain Adapter Binding UI.
+- Goal: make the boundary between declared Blueprint actions and executable
+  domain adapters visible in Operation authoring.
+- Implemented:
+  - pure adapter binding registry and summary helpers;
+  - dedicated `OperationAdapterBindings` component;
+  - action statuses for executable Workspace adapters, external entrypoints,
+    and declared-only actions;
+  - Service Operation workspace commands are shown as executable through
+    `service-operation-action-adapter`;
+  - Service Watch intake is shown as an external entrypoint;
+  - Payment Collection actions are shown as declared-only pending future
+    Payment adapter work.
+- Out of scope: executing Payment commands, adding new domain adapters,
+  persisted adapter binding configuration, publish/versioning, and Workspace
+  snapshot migration.
+- Continue to Sprint 84 Publish / Version / Snapshot UX after reading
+  `docs/sprints/SM-Sprint-83-domain-adapter-binding-ui.md`.
+
+Sprint 84 scope/status:
+
+- Closed.
+- Sprint 84 - Publish / Version / Snapshot UX.
+- Goal: expose publish/version readiness for Operation Models without
+  introducing premature persistence or mutating existing Workspace snapshots.
+- Implemented:
+  - pure `buildOperationPublishPlan` helper;
+  - dedicated `OperationPublishPlan` component;
+  - current version, proposed next version, validation issue count,
+    declared-only adapter count, and snapshot mode display;
+  - readiness issues for missing operation, failed validation, blocked
+    create-space dry-run, and declared-only adapter warnings;
+  - explicit `NEW_WORKSPACES_ONLY` snapshot mode messaging.
+- Existing Workspace snapshots remain immutable. No publish action, rollback,
+  dedicated version table, or migration flow was introduced.
+- Operation authoring roadmap Sprints 79-84 is complete as:
+  template picker -> structured editing -> generated map -> create-space
+  dry-run -> adapter binding visibility -> publish/version readiness.
+
+Sprint 85 scope/status:
+
+- Closed.
+- Sprint 85 - Blueprint Publish Persistence Contract.
+- Goal: persist published Blueprint versions on the server without wiring UI
+  publish execution or mutating existing Workspace snapshots.
+- Implemented:
+  - append-only file-backed published version store;
+  - `BlueprintPublishedVersion` snapshot type;
+  - `publishBlueprintVersionCandidate` service;
+  - `publishWorkflowDefinitionDraftBlueprint` wrapper for future API/UI use;
+  - latest published version lookup for publish plan versioning;
+  - immutable published snapshots containing workflow definition, workspace
+    definition, operation, validation, create-space plan, and publish plan.
+- Existing Workspace snapshots remain immutable. Publish API/button, rollback,
+  database persistence, runtime Space creation, and Workspace migration remain
+  out of scope for Sprint 85.
+
+Sprint 86 scope/status:
+
+- Closed.
+- Sprint 86 - Blueprint Publish Action API.
+- Goal: wire Sprint 85 published version persistence into the admin Blueprint UI
+  with a safe publish action.
+- Implemented:
+  - `POST /api/admin/system/workflows/drafts/[id]/publish-blueprint`;
+  - published version loading on the System Workflow Admin page;
+  - client state for published version history;
+  - Publish button in the Operation Model publish panel;
+  - save-before-publish behavior so local authoring changes are persisted before
+    the publish API appends a version;
+  - latest published version and recent history display.
+- Existing Workspace snapshots remain immutable. Runtime Space creation,
+  rollback/archive, dedicated publish permission, database table persistence,
+  and Workspace migration remain out of scope.
+
+Sprint 87 scope/status:
+
+- Closed.
+- Sprint 87 - Create Space From Published Blueprint.
+- Goal: create runtime Space/Workspace records from immutable published
+  Blueprint versions.
+- Implemented:
+  - `createSpaceFromPublishedBlueprintVersion` service;
+  - `POST /api/admin/system/blueprints/published-versions/[id]/create-space`;
+  - route handler awaits dynamic `params` before reading the published version
+    id;
+  - Create Space action beside published versions in the Operation publish
+    panel;
+  - duplicate guard by `publishedBlueprintVersionId`;
+  - Task-backed Space creation;
+  - TaskItem-backed initial Workspace creation from published
+    `creationPlan.initialWorkspaces`;
+  - deferred/manual Workspace counts are preserved but not created.
+- Existing Workspace snapshots remain immutable. Deferred business-object
+  Workspaces, manual capacity creation, rollback/archive, database persistence,
+  dedicated permissions, and Workspace migration remain out of scope.
+
+Sprint 88 scope/status:
+
+- Closed.
+- Sprint 88 - Deferred Workspace Runtime.
+- Goal: create `ONE_PER_BUSINESS_OBJECT` Workspaces from business events using
+  published Blueprint version snapshots.
+- Implemented:
+  - `ensureDeferredWorkspaceFromPublishedBlueprintEvent`;
+  - coordination consumer branch for published deferred Workspace runtime;
+  - event-route matching against published Operation contracts;
+  - TaskItem-backed deferred Workspace creation from published
+    `creationPlan.deferredWorkspaces`;
+  - business object binding and activity metadata marked as
+    `PUBLISHED_BLUEPRINT_VERSION`;
+  - fallback to legacy weekly coordination flow when no published Space matches.
+- Manual-capacity Workspace creation, multi-Space selection, rollback/archive,
+  database persistence, dedicated permissions, and Workspace migration remain
+  out of scope.
+
+Sprint 89 scope/status:
+
+- Closed.
+- Sprint 89 - Operation Authoring Guided Repair.
+- Goal: make blank Operation authoring recoverable without requiring admins to
+  understand low-level schema references.
+- Implemented:
+  - wizard-first Operation tab that shows the next authoring action before
+    exposing technical detail panels;
+  - invalid Operation Model repair card;
+  - `Create a working starter model` action;
+  - one-click synchronization of object type, workspace role, event route,
+    core flow, action, and workflow;
+  - shared starter repair helper used by both the wizard and detailed editor;
+  - Vietnamese copy across the main Operation authoring flow;
+  - `Tạo Space runtime` copy that explains the action creates a Task-backed
+    Space and initial TaskItem-backed Workspaces from the latest published
+    version;
+  - inline Space creation success/failure feedback inside the wizard;
+  - `Mở Space runtime` link to `/admin/tasks/{taskId}` after creation or
+    duplicate detection;
+  - advanced Operation area renamed to `Xem bản thiết kế mà nút này sẽ dùng`;
+  - advanced details split into Workspace plan, Action/adapter, Version, Model,
+    and JSON tabs;
+  - interaction guide added to distinguish runtime creation buttons, runtime
+    open buttons, and view-only inspection tabs;
+  - heavy media-like guide was removed in favor of a minimal wizard with a
+    compact progress strip and only one visible primary next action;
+  - Blueprint configuration promoted to `1. Cấu hình Space/Workspace runtime`,
+    before any save/create runtime action;
+  - save/create runtime controls moved below configuration as
+    `2. Lưu version và tạo Space runtime`;
+  - registry Blueprint and draft lists moved into collapsed `Mở thư viện
+    Blueprint / Draft`, outside the main work surface;
+  - configuration and runtime action blocks now use different visual treatments
+    so read/config areas and executable runtime actions are distinguishable;
+  - advanced inspect copy was reduced to one short explanation plus tabs;
+  - Workspace plan copy now states that runtime creation makes one Task-backed
+    Space and initial TaskItem-backed Workspaces, with deferred Workspaces left
+    for future events;
+  - duplicate create-space action removed from the Version inspect tab so the
+    wizard remains the single primary runtime flow;
+  - clearer ready vs blocked authoring state.
+- Operation Model authoring now uses a real target-type registry for `Object
+  domain` (`WATCH`, `ORDER`, `SHIPMENT`, `PAYMENT`, `SERVICE_REQUEST`,
+  `TECHNICAL_ISSUE`, `TASK_ITEM`) instead of asking admins to type placeholder
+  object strings.
+- Starter/repair generation treats legacy placeholders like `BUSINESS_OBJECT`,
+  `OBJECT`, and `OBJECT_*` as invalid authoring placeholders and replaces them
+  with the default real target `WATCH`, including matching event/action/command
+  defaults.
+- Changing the object domain retargets linked workspace roles, event routes,
+  actions, workflow transitions, and projection subscriptions together.
+- Map, dry-run, adapter, publish detail, structured editor, and Developer JSON
+  are available under `Chi tiết nâng cao` instead of competing with the primary
+  workflow.
+- Adapter binding warnings remain separate from structural validation errors.
 
 Legacy Sprint 70 status:
 
@@ -538,8 +802,29 @@ Recommended later M2 topics must stay outside Sprint 39 unless explicitly select
 35. Read `docs/sprints/SM-Sprint-78-payment-operation-proof.md`
 36. Sprint 78 is closed. Operational Blueprint upgrade Sprints 71-78 are complete.
 37. Read `docs/sprints/SM-Sprint-79-operation-template-picker.md`
-38. Implement Sprint 79 Operation Template Picker next.
-   Space has no workflow engine.
+38. Sprint 79 is closed.
+39. Read `docs/sprints/SM-Sprint-80-structured-operation-authoring-ui.md`
+40. Sprint 80 is closed.
+41. Read `docs/sprints/SM-Sprint-81-operation-preview-generated-workspace-map.md`
+42. Sprint 81 is closed.
+43. Read `docs/sprints/SM-Sprint-82-create-space-from-operation-blueprint.md`
+44. Sprint 82 is closed.
+45. Read `docs/sprints/SM-Sprint-83-domain-adapter-binding-ui.md`
+46. Sprint 83 is closed.
+47. Read `docs/sprints/SM-Sprint-84-publish-version-snapshot-ux.md`
+48. Sprint 84 is closed.
+49. Read `docs/sprints/SM-Sprint-85-blueprint-publish-persistence-contract.md`
+50. Sprint 85 is closed.
+51. Read `docs/sprints/SM-Sprint-86-blueprint-publish-action-api.md`
+52. Sprint 86 is closed.
+53. Read `docs/sprints/SM-Sprint-87-create-space-from-published-blueprint.md`
+54. Sprint 87 is closed.
+55. Read `docs/sprints/SM-Sprint-88-deferred-workspace-runtime.md`
+56. Sprint 88 is closed.
+57. Read `docs/sprints/SM-Sprint-89-operation-authoring-guided-repair.md`
+58. Sprint 89 is closed.
+59. Operation authoring roadmap Sprints 79-89 has a first admin publish and
+   runtime Space/deferred Workspace creation loop. Space has no workflow engine.
 
 Sprint 71 started Blueprint M2. SR, TI, Payment, Watch, and other business truth
 remain domain-owned. Blueprint now declares how those objects operate inside

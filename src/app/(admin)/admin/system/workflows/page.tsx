@@ -2,6 +2,7 @@ import WorkflowAdminClient from "@/domains/workflow-definition/client/WorkflowAd
 import {
   listBlueprintEventBindingAudit,
   listBlueprintLibraryItems,
+  listBlueprintPublishedVersions,
 } from "@/domains/blueprint/server";
 import { listBusinessEventCatalog } from "@/domains/event/server/business-event-catalog.service";
 import { listWorkflowDefinitionDrafts } from "@/domains/workflow-definition/server/workflow-definition-draft.service";
@@ -14,6 +15,7 @@ export default async function SystemWorkflowAdminPage() {
   const eventBindingAudit = await listBlueprintEventBindingAudit();
   const businessEvents = listBusinessEventCatalog();
   const drafts = await listWorkflowDefinitionDrafts();
+  const publishedVersions = await listBlueprintPublishedVersions();
 
   return (
     <WorkflowAdminClient
@@ -21,6 +23,7 @@ export default async function SystemWorkflowAdminPage() {
       businessEvents={businessEvents}
       eventBindingAudit={eventBindingAudit}
       initialDrafts={drafts}
+      initialPublishedVersions={publishedVersions}
     />
   );
 }

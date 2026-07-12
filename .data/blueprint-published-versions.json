@@ -1,0 +1,211 @@
+{
+  "version": 1,
+  "publishedVersions": [
+    {
+      "blueprintKey": "new-workflow-draft",
+      "blueprintName": "New Workflow Draft",
+      "source": "DRAFT",
+      "sourceDraftId": "dc15b6f6-7334-4951-83d8-67d4f2193cbf",
+      "sourceRegistryKey": null,
+      "version": 2,
+      "operationKey": "blank-operation",
+      "operationVersion": 2,
+      "snapshotMode": "NEW_WORKSPACES_ONLY",
+      "publishedByUserId": "e8cd72d2-429b-4822-96ac-6f52bdc5f922",
+      "workflowDefinition": {
+        "key": "new-workflow-draft",
+        "title": "New Workflow Draft",
+        "description": null,
+        "initialState": "NEW",
+        "terminalStates": [
+          "DONE"
+        ],
+        "metadata": null,
+        "states": [
+          {
+            "key": "NEW",
+            "title": "New",
+            "description": null,
+            "color": "gray",
+            "icon": "circle",
+            "sortOrder": 10
+          },
+          {
+            "key": "DONE",
+            "title": "Done",
+            "description": null,
+            "color": "zinc",
+            "icon": "check-circle",
+            "sortOrder": 20
+          }
+        ],
+        "transitions": []
+      },
+      "workspaceDefinition": {
+        "defaultName": "New Workflow Draft Workspace",
+        "defaultDescription": "Workspace được tạo từ Blueprint New Workflow Draft.",
+        "workspaceType": "New Workflow Draft Workspace",
+        "itemLabel": "New Workflow Draft Items",
+        "defaultView": "items",
+        "enabledCapabilities": {
+          "workflow": true,
+          "items": true,
+          "activity": true,
+          "discussion": true,
+          "attachments": false,
+          "checklist": false,
+          "dueDate": false,
+          "assignee": false,
+          "priority": true
+        },
+        "instantiationNotes": "Ở V1, Workspace lưu ý định định nghĩa này dưới dạng snapshot note."
+      },
+      "workflowValidation": {
+        "valid": true,
+        "issues": [],
+        "warnings": []
+      },
+      "operation": {
+        "key": "blank-operation",
+        "version": 2,
+        "context": "DRAFT",
+        "summary": "A minimal editable operation model shell for a new Blueprint draft.",
+        "objectTypes": [
+          {
+            "targetType": "BUSINESS_OBJECT",
+            "label": "Business object",
+            "role": "ITEM",
+            "description": "The business object this operation tracks as workspace work."
+          }
+        ],
+        "workspaceRoles": [
+          {
+            "key": "WORKSPACE",
+            "label": "Workspace chính",
+            "cardinality": "SINGLE_PER_ACTIVE_CYCLE",
+            "identityTargetType": null,
+            "itemTargetTypes": [
+              "BUSINESS_OBJECT"
+            ],
+            "description": "The primary workspace where the operation receives and works on items."
+          }
+        ],
+        "coreFlows": [
+          {
+            "key": "main_flow",
+            "label": "Main flow",
+            "description": "A single-step flow through the main workspace.",
+            "steps": [
+              {
+                "workspaceRole": "WORKSPACE",
+                "label": "Workspace chính",
+                "description": "Điểm bắt đầu và kết thúc của operation này.",
+                "isEntry": true,
+                "isTerminal": true
+              }
+            ]
+          }
+        ],
+        "eventRoutes": [
+          {
+            "eventKey": "business_object.created",
+            "targetType": "BUSINESS_OBJECT",
+            "workspaceRole": "WORKSPACE",
+            "effect": "BIND_ITEM",
+            "description": "Bind the business object into the main workspace when the event arrives."
+          }
+        ],
+        "actions": [
+          {
+            "key": "review_business_object",
+            "label": "Review item",
+            "workspaceRole": "WORKSPACE",
+            "targetType": "BUSINESS_OBJECT",
+            "command": "domain.reviewBusinessObject",
+            "fields": [],
+            "emits": [
+              "business_object.created"
+            ],
+            "description": "A manual action that delegates the real business command to the domain adapter."
+          }
+        ],
+        "workflows": [
+          {
+            "key": "main_workflow",
+            "workspaceRole": "WORKSPACE",
+            "states": [
+              "READY",
+              "DONE"
+            ],
+            "transitions": [
+              {
+                "from": "READY",
+                "to": "DONE",
+                "actionKey": "review_business_object",
+                "eventKey": "business_object.created"
+              }
+            ]
+          }
+        ],
+        "projectionSubscriptions": []
+      },
+      "operationValidation": {
+        "ok": true,
+        "errors": [],
+        "warnings": [],
+        "issueCount": 0
+      },
+      "creationPlan": {
+        "ok": true,
+        "blueprintKey": "new-workflow-draft",
+        "blueprintName": "New Workflow Draft",
+        "blueprintSource": "DRAFT",
+        "spaceTitle": "New Workflow Draft Workspace",
+        "validation": {
+          "ok": true,
+          "errors": [],
+          "warnings": [],
+          "issueCount": 0
+        },
+        "initialWorkspaces": [
+          {
+            "workspaceRole": "WORKSPACE",
+            "label": "Workspace chính",
+            "title": "New Workflow Draft Workspace - Workspace chính",
+            "description": "The primary workspace where the operation receives and works on items.",
+            "disposition": "CREATE_INITIAL_WORKSPACE",
+            "reason": "Single receiver workspace for the active operation cycle.",
+            "snapshotNote": "blueprintKey: new-workflow-draft\nblueprintSource: DRAFT\noperationKey: blank-operation\noperationWorkspaceRole: WORKSPACE\nworkspaceType: New Workflow Draft Workspace\nitemLabel: New Workflow Draft Items\ndefaultView: items\ninstantiationNotes: Ở V1, Workspace lưu ý định định nghĩa này dưới dạng snapshot note.\nblueprintSnapshot: {\"blueprintKey\":\"new-workflow-draft\",\"blueprintName\":\"New Workflow Draft\",\"blueprintSource\":\"DRAFT\",\"operation\":{\"key\":\"blank-operation\",\"version\":2,\"context\":\"DRAFT\",\"summary\":\"A minimal editable operation model shell for a new Blueprint draft.\",\"objectTypes\":[{\"targetType\":\"BUSINESS_OBJECT\",\"label\":\"Business object\",\"role\":\"ITEM\",\"description\":\"The business object this operation tracks as workspace work.\"}],\"workspaceRoles\":[{\"key\":\"WORKSPACE\",\"label\":\"Workspace chính\",\"cardinality\":\"SINGLE_PER_ACTIVE_CYCLE\",\"identityTargetType\":null,\"itemTargetTypes\":[\"BUSINESS_OBJECT\"],\"description\":\"The primary workspace where the operation receives and works on items.\"}],\"coreFlows\":[{\"key\":\"main_flow\",\"label\":\"Main flow\",\"description\":\"A single-step flow through the main workspace.\",\"steps\":[{\"workspaceRole\":\"WORKSPACE\",\"label\":\"Workspace chính\",\"description\":\"Điểm bắt đầu và kết thúc của operation này.\",\"isEntry\":true,\"isTerminal\":true}]}],\"eventRoutes\":[{\"eventKey\":\"business_object.created\",\"targetType\":\"BUSINESS_OBJECT\",\"workspaceRole\":\"WORKSPACE\",\"effect\":\"BIND_ITEM\",\"description\":\"Bind the business object into the main workspace when the event arrives.\"}],\"actions\":[{\"key\":\"review_business_object\",\"label\":\"Review item\",\"workspaceRole\":\"WORKSPACE\",\"targetType\":\"BUSINESS_OBJECT\",\"command\":\"domain.reviewBusinessObject\",\"fields\":[],\"emits\":[\"business_object.created\"],\"description\":\"A manual action that delegates the real business command to the domain adapter.\"}],\"workflows\":[{\"key\":\"main_workflow\",\"workspaceRole\":\"WORKSPACE\",\"states\":[\"READY\",\"DONE\"],\"transitions\":[{\"from\":\"READY\",\"to\":\"DONE\",\"actionKey\":\"review_business_object\",\"eventKey\":\"business_object.created\"}]}],\"projectionSubscriptions\":[]},\"operationWorkspaceRole\":\"WORKSPACE\",\"workspaceRole\":{\"key\":\"WORKSPACE\",\"label\":\"Workspace chính\",\"cardinality\":\"SINGLE_PER_ACTIVE_CYCLE\",\"identityTargetType\":null,\"itemTargetTypes\":[\"BUSINESS_OBJECT\"],\"description\":\"The primary workspace where the operation receives and works on items.\"},\"workspaceDefinition\":{\"defaultName\":\"New Workflow Draft Workspace\",\"defaultDescription\":\"Workspace được tạo từ Blueprint New Workflow Draft.\",\"workspaceType\":\"New Workflow Draft Workspace\",\"itemLabel\":\"New Workflow Draft Items\",\"defaultView\":\"items\",\"enabledCapabilities\":{\"workflow\":true,\"items\":true,\"activity\":true,\"discussion\":true,\"attachments\":false,\"checklist\":false,\"dueDate\":false,\"assignee\":false,\"priority\":true},\"instantiationNotes\":\"Ở V1, Workspace lưu ý định định nghĩa này dưới dạng snapshot note.\"},\"itemLabel\":\"New Workflow Draft Items\",\"defaultView\":\"items\",\"workspaceType\":\"New Workflow Draft Workspace\",\"instantiationNotes\":\"Ở V1, Workspace lưu ý định định nghĩa này dưới dạng snapshot note.\",\"snapshotAt\":\"2026-07-12T06:24:33.117Z\"}"
+          }
+        ],
+        "deferredWorkspaces": [],
+        "manualWorkspaces": [],
+        "itemCount": 1
+      },
+      "publishPlan": {
+        "ok": true,
+        "operationKey": "blank-operation",
+        "currentVersion": 1,
+        "proposedVersion": 2,
+        "snapshotMode": "NEW_WORKSPACES_ONLY",
+        "validationIssueCount": 0,
+        "adapterSummary": {
+          "total": 1,
+          "executable": 0,
+          "externalEntrypoints": 0,
+          "declaredOnly": 1
+        },
+        "creationPlanReady": true,
+        "issues": [
+          {
+            "severity": "warning",
+            "code": "declared_only_adapters",
+            "message": "Some actions are declared but do not have executable adapter bindings yet."
+          }
+        ]
+      },
+      "id": "c4c4ff6e-1625-4024-b3ef-f7c0695e4d7e",
+      "publishedAt": "2026-07-12T06:24:33.118Z"
+    }
+  ]
+}

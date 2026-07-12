@@ -13,7 +13,90 @@
         "typicalUsage": "Dùng khi admin cần định nghĩa Blueprint trước khi tạo Workspace.",
         "expectedResult": "Một Blueprint draft có thể validate và dùng làm nền cho Workspace.",
         "ownerLabel": "System Admin",
-        "operation": null,
+        "operation": {
+          "key": "blank-operation",
+          "version": 1,
+          "context": "DRAFT",
+          "summary": "A minimal editable operation model shell for a new Blueprint draft.",
+          "objectTypes": [
+            {
+              "targetType": "BUSINESS_OBJECT",
+              "label": "Business object",
+              "role": "ITEM",
+              "description": "The business object this operation tracks as workspace work."
+            }
+          ],
+          "workspaceRoles": [
+            {
+              "key": "WORKSPACE",
+              "label": "Workspace chính",
+              "cardinality": "SINGLE_PER_ACTIVE_CYCLE",
+              "identityTargetType": null,
+              "itemTargetTypes": [
+                "BUSINESS_OBJECT"
+              ],
+              "description": "The primary workspace where the operation receives and works on items."
+            }
+          ],
+          "coreFlows": [
+            {
+              "key": "main_flow",
+              "label": "Main flow",
+              "description": "A single-step flow through the main workspace.",
+              "steps": [
+                {
+                  "workspaceRole": "WORKSPACE",
+                  "label": "Workspace chính",
+                  "description": "Điểm bắt đầu và kết thúc của operation này.",
+                  "isEntry": true,
+                  "isTerminal": true
+                }
+              ]
+            }
+          ],
+          "eventRoutes": [
+            {
+              "eventKey": "business_object.created",
+              "targetType": "BUSINESS_OBJECT",
+              "workspaceRole": "WORKSPACE",
+              "effect": "BIND_ITEM",
+              "description": "Bind the business object into the main workspace when the event arrives."
+            }
+          ],
+          "actions": [
+            {
+              "key": "review_business_object",
+              "label": "Review item",
+              "workspaceRole": "WORKSPACE",
+              "targetType": "BUSINESS_OBJECT",
+              "command": "domain.reviewBusinessObject",
+              "fields": [],
+              "emits": [
+                "business_object.created"
+              ],
+              "description": "A manual action that delegates the real business command to the domain adapter."
+            }
+          ],
+          "workflows": [
+            {
+              "key": "main_workflow",
+              "workspaceRole": "WORKSPACE",
+              "states": [
+                "READY",
+                "DONE"
+              ],
+              "transitions": [
+                {
+                  "from": "READY",
+                  "to": "DONE",
+                  "actionKey": "review_business_object",
+                  "eventKey": "business_object.created"
+                }
+              ]
+            }
+          ],
+          "projectionSubscriptions": []
+        },
         "workspaceDefinition": {
           "defaultName": "New Workflow Draft Workspace",
           "defaultDescription": "Workspace được tạo từ Blueprint New Workflow Draft.",
@@ -74,7 +157,7 @@
       "updatedByUserId": "e8cd72d2-429b-4822-96ac-6f52bdc5f922",
       "id": "dc15b6f6-7334-4951-83d8-67d4f2193cbf",
       "createdAt": "2026-07-10T09:53:51.420Z",
-      "updatedAt": "2026-07-10T09:53:51.420Z"
+      "updatedAt": "2026-07-12T06:24:29.908Z"
     },
     {
       "key": "new-workflow-draft",
