@@ -153,6 +153,17 @@ function contextLabel(context: WorkTypeCoordinationContext | "DRAFT") {
   return "Tổng quát";
 }
 
+function isCoordinationContext(value: unknown): value is WorkTypeCoordinationContext {
+  return (
+    value === "OPERATION" ||
+    value === "SALES" ||
+    value === "TECHNICAL" ||
+    value === "MEDIA" ||
+    value === "PAYMENT" ||
+    value === "GENERAL"
+  );
+}
+
 function workflowSummary(workflow: BlueprintWorkflowCapability) {
   if (!workflow.definition) return "Chưa gắn capability Workflow.";
 
@@ -430,6 +441,12 @@ export async function listBlueprintLibraryItems(): Promise<BlueprintLibraryItem[
       draft.validationJson ?? workflowValidations.get(draft.definitionJson.key) ?? null,
     );
     const experience = buildDraftExperience(draft, workflow);
+    const operation = draft.blueprintJson?.operation ?? null;
+    const businessContext =
+      operation?.context ??
+      (isCoordinationContext(draft.blueprintJson?.businessContext)
+        ? draft.blueprintJson.businessContext
+        : "DRAFT");
 
     return {
       key: draft.key,
@@ -437,7 +454,7 @@ export async function listBlueprintLibraryItems(): Promise<BlueprintLibraryItem[
       description: draft.description,
       icon: null,
       category: "Draft Blueprint",
-      businessContext: "DRAFT",
+      businessContext,
       source: "DRAFT",
       registrySource: draft.sourceRegistryKey,
       experience,
@@ -450,10 +467,12 @@ export async function listBlueprintLibraryItems(): Promise<BlueprintLibraryItem[
           workflow,
           provisioning: MANUAL_WORKSPACE_PROVISIONING,
           eventBindings: [],
-          operation: null,
+          operation,
         }),
-      operation: null,
-      operationValidation: null,
+      operation,
+      operationValidation: operation
+        ? validateOperationalBlueprintContract(operation)
+        : null,
       workflow,
       metadata: {
         draftId: draft.id,
@@ -557,6 +576,10 @@ export async function listWorkspaceInstantiationBlueprintOptions(
   const draftOptions = (await listBlueprintLibraryItems())
     .filter((blueprint) => blueprint.source === "DRAFT")
     .filter((blueprint) => blueprint.metadata?.draftStatus !== "ARCHIVED")
+    .filter(
+      (blueprint) =>
+        blueprint.businessContext === "DRAFT" || blueprint.businessContext === context,
+    )
     .map((blueprint) => {
       const draftId =
         typeof blueprint.metadata?.draftId === "string"

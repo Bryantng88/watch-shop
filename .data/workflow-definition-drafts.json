@@ -2,6 +2,81 @@
   "version": 1,
   "drafts": [
     {
+      "key": "payment-test",
+      "workspaceTemplateKey": null,
+      "workTypeKey": null,
+      "name": "Payment test",
+      "description": null,
+      "blueprintJson": {
+        "purpose": "Thiết kế một cách vận hành chuẩn cho Workspace trong tương lai.",
+        "businessContext": "DRAFT",
+        "typicalUsage": "Dùng khi admin cần định nghĩa Blueprint trước khi tạo Workspace.",
+        "expectedResult": "Một Blueprint draft có thể validate và dùng làm nền cho Workspace.",
+        "ownerLabel": "System Admin",
+        "operation": null,
+        "workspaceDefinition": {
+          "defaultName": "New Workflow Draft Workspace",
+          "defaultDescription": "Workspace được tạo từ Blueprint New Workflow Draft.",
+          "workspaceType": "New Workflow Draft Workspace",
+          "itemLabel": "New Workflow Draft Items",
+          "defaultView": "items",
+          "enabledCapabilities": {
+            "workflow": true,
+            "items": true,
+            "activity": true,
+            "discussion": true,
+            "attachments": false,
+            "checklist": false,
+            "dueDate": false,
+            "assignee": false,
+            "priority": true
+          },
+          "instantiationNotes": "Ở V1, Workspace lưu ý định định nghĩa này dưới dạng snapshot note."
+        }
+      },
+      "definitionJson": {
+        "key": "new-workflow-draft",
+        "title": "Payment test",
+        "description": null,
+        "initialState": "NEW",
+        "terminalStates": [
+          "DONE"
+        ],
+        "metadata": null,
+        "states": [
+          {
+            "key": "NEW",
+            "title": "New",
+            "description": null,
+            "color": "gray",
+            "icon": "circle",
+            "sortOrder": 10
+          },
+          {
+            "key": "DONE",
+            "title": "Done",
+            "description": null,
+            "color": "zinc",
+            "icon": "check-circle",
+            "sortOrder": 20
+          }
+        ],
+        "transitions": []
+      },
+      "status": "VALIDATED",
+      "validationJson": {
+        "valid": true,
+        "issues": [],
+        "warnings": []
+      },
+      "sourceRegistryKey": null,
+      "createdByUserId": "e8cd72d2-429b-4822-96ac-6f52bdc5f922",
+      "updatedByUserId": "e8cd72d2-429b-4822-96ac-6f52bdc5f922",
+      "id": "c3e75f52-eb3c-4871-ba41-2bb878b190b1",
+      "createdAt": "2026-07-13T02:22:33.981Z",
+      "updatedAt": "2026-07-13T02:30:32.951Z"
+    },
+    {
       "key": "new-workflow-draft",
       "workspaceTemplateKey": null,
       "workTypeKey": null,
@@ -14,16 +89,16 @@
         "expectedResult": "Một Blueprint draft có thể validate và dùng làm nền cho Workspace.",
         "ownerLabel": "System Admin",
         "operation": {
-          "key": "blank-operation",
+          "key": "Payment Test",
           "version": 1,
           "context": "DRAFT",
           "summary": "A minimal editable operation model shell for a new Blueprint draft.",
           "objectTypes": [
             {
-              "targetType": "BUSINESS_OBJECT",
-              "label": "Business object",
+              "targetType": "PAYMENT",
+              "label": "Thanh toán",
               "role": "ITEM",
-              "description": "The business object this operation tracks as workspace work."
+              "description": "Payment cần kiểm tra, xác nhận hoặc cập nhật trạng thái thanh toán."
             }
           ],
           "workspaceRoles": [
@@ -31,9 +106,9 @@
               "key": "WORKSPACE",
               "label": "Workspace chính",
               "cardinality": "SINGLE_PER_ACTIVE_CYCLE",
-              "identityTargetType": null,
+              "identityTargetType": "PAYMENT",
               "itemTargetTypes": [
-                "BUSINESS_OBJECT"
+                "PAYMENT"
               ],
               "description": "The primary workspace where the operation receives and works on items."
             }
@@ -56,8 +131,8 @@
           ],
           "eventRoutes": [
             {
-              "eventKey": "business_object.created",
-              "targetType": "BUSINESS_OBJECT",
+              "eventKey": "payment.created",
+              "targetType": "PAYMENT",
               "workspaceRole": "WORKSPACE",
               "effect": "BIND_ITEM",
               "description": "Bind the business object into the main workspace when the event arrives."
@@ -65,14 +140,14 @@
           ],
           "actions": [
             {
-              "key": "review_business_object",
+              "key": "review_payment",
               "label": "Review item",
               "workspaceRole": "WORKSPACE",
-              "targetType": "BUSINESS_OBJECT",
-              "command": "domain.reviewBusinessObject",
+              "targetType": "PAYMENT",
+              "command": "domain.reviewPayment",
               "fields": [],
               "emits": [
-                "business_object.created"
+                "payment.created"
               ],
               "description": "A manual action that delegates the real business command to the domain adapter."
             }
@@ -89,8 +164,8 @@
                 {
                   "from": "READY",
                   "to": "DONE",
-                  "actionKey": "review_business_object",
-                  "eventKey": "business_object.created"
+                  "actionKey": "review_payment",
+                  "eventKey": "payment.created"
                 }
               ]
             }
@@ -157,7 +232,7 @@
       "updatedByUserId": "e8cd72d2-429b-4822-96ac-6f52bdc5f922",
       "id": "dc15b6f6-7334-4951-83d8-67d4f2193cbf",
       "createdAt": "2026-07-10T09:53:51.420Z",
-      "updatedAt": "2026-07-12T06:24:29.908Z"
+      "updatedAt": "2026-07-13T02:14:36.240Z"
     },
     {
       "key": "new-workflow-draft",

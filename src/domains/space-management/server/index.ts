@@ -4,10 +4,17 @@ export type {
   ItemViewModel,
   SpaceContext,
   SpaceDashboardDTO,
+  SpaceViewColumnConfig,
+  SpaceViewConfig,
+  SpaceViewModeConfig,
   SpaceReportMetricDTO,
   WorkspaceSummaryDTO,
   WorkspaceTemplateDefinition,
 } from "./space-management.types";
+
+export {
+  getSpaceViewConfig,
+} from "./space-view.config";
 
 export {
   getCoordinationDashboard as getSpaceDashboard,

@@ -1,6 +1,9 @@
 import {
+  ServiceRequestStatus,
   TaskExecutionActionType,
+  TaskExecutionTargetType,
   TaskStatus,
+  TechnicalIssueExecutionStatus,
   type Prisma,
 } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
@@ -95,6 +98,94 @@ function bindingFinished(metadataJson: unknown) {
   const runtime = getQueueItemWorkflowState({ metadataJson });
   if (!runtime) return false;
   return runtime.currentState === "DONE" || runtime.currentState === "CANCELLED";
+}
+
+function targetKey(input: { targetType: string; targetId: string }) {
+  return `${input.targetType}:${input.targetId}`;
+}
+
+function isServiceRequestProcessing(status: ServiceRequestStatus | null | undefined) {
+  return Boolean(
+    status &&
+      status !== ServiceRequestStatus.COMPLETED &&
+      status !== ServiceRequestStatus.DELIVERED &&
+      status !== ServiceRequestStatus.CANCELED,
+  );
+}
+
+function isTechnicalIssueProcessing(
+  status: TechnicalIssueExecutionStatus | null | undefined,
+) {
+  return Boolean(
+    status &&
+      status !== TechnicalIssueExecutionStatus.DONE &&
+      status !== TechnicalIssueExecutionStatus.CANCELED,
+  );
+}
+
+async function loadProcessingTargetMap(
+  client: DB,
+  bindings: Array<{ targetType: string; targetId: string }>,
+) {
+  const map = new Map<string, boolean>();
+  const serviceRequestIds = bindings
+    .filter((binding) => binding.targetType === TaskExecutionTargetType.SERVICE_REQUEST)
+    .map((binding) => binding.targetId);
+  const technicalIssueIds = bindings
+    .filter((binding) => binding.targetType === TaskExecutionTargetType.TECHNICAL_ISSUE)
+    .map((binding) => binding.targetId);
+
+  const [serviceRequests, technicalIssues] = await Promise.all([
+    serviceRequestIds.length
+      ? client.serviceRequest.findMany({
+          where: { id: { in: serviceRequestIds } },
+          select: { id: true, status: true },
+        })
+      : [],
+    technicalIssueIds.length
+      ? client.technicalIssue.findMany({
+          where: { id: { in: technicalIssueIds } },
+          select: { id: true, executionStatus: true },
+        })
+      : [],
+  ]);
+
+  for (const row of serviceRequests) {
+    map.set(
+      targetKey({
+        targetType: TaskExecutionTargetType.SERVICE_REQUEST,
+        targetId: row.id,
+      }),
+      isServiceRequestProcessing(row.status),
+    );
+  }
+
+  for (const row of technicalIssues) {
+    map.set(
+      targetKey({
+        targetType: TaskExecutionTargetType.TECHNICAL_ISSUE,
+        targetId: row.id,
+      }),
+      isTechnicalIssueProcessing(row.executionStatus),
+    );
+  }
+
+  return map;
+}
+
+function targetStillProcessing(input: {
+  targetType: string;
+  targetId: string;
+  processingTargetMap: Map<string, boolean>;
+}) {
+  if (
+    input.targetType !== TaskExecutionTargetType.SERVICE_REQUEST &&
+    input.targetType !== TaskExecutionTargetType.TECHNICAL_ISSUE
+  ) {
+    return true;
+  }
+
+  return input.processingTargetMap.get(targetKey(input)) === true;
 }
 
 function mergeRolloverMetadata(input: {
@@ -277,6 +368,7 @@ export async function rolloverPreviousCycleItems(
     },
     orderBy: { createdAt: "asc" },
   });
+  const processingTargetMap = await loadProcessingTargetMap(client, previousBindings);
 
   const results: CoordinationRolloverItemResult[] = [];
 
@@ -299,6 +391,17 @@ export async function rolloverPreviousCycleItems(
 
     if (bindingFinished(binding.metadataJson)) {
       results.push({ ...baseResult, status: "SKIPPED", reason: "ITEM_ALREADY_DONE" });
+      continue;
+    }
+
+    if (
+      !targetStillProcessing({
+        targetType: binding.targetType,
+        targetId: binding.targetId,
+        processingTargetMap,
+      })
+    ) {
+      results.push({ ...baseResult, status: "SKIPPED", reason: "TARGET_NOT_PROCESSING" });
       continue;
     }
 

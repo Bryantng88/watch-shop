@@ -21,6 +21,64 @@ function clean(value: unknown) {
   return String(value ?? "").trim();
 }
 
+function normalizeIdentity(value: unknown) {
+  return clean(value).toLowerCase();
+}
+
+function slugify(value: string) {
+  return clean(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function withNumericSuffix(value: string, suffix: number) {
+  return suffix <= 1 ? value : `${value} ${suffix}`;
+}
+
+async function activeDraftIdentityConflict(input: {
+  name: string;
+  key: string;
+  excludeId?: string | null;
+}) {
+  const name = normalizeIdentity(input.name);
+  const key = normalizeIdentity(input.key);
+  const drafts = await listWorkflowDefinitionDraftRecords();
+
+  return drafts.find(
+    (draft) =>
+      draft.status !== "ARCHIVED" &&
+      draft.id !== input.excludeId &&
+      (normalizeIdentity(draft.name) === name || normalizeIdentity(draft.key) === key),
+  );
+}
+
+async function uniqueDraftIdentity(input: { name: string; key: string }) {
+  const drafts = await listWorkflowDefinitionDraftRecords();
+  const activeNames = new Set(
+    drafts
+      .filter((draft) => draft.status !== "ARCHIVED")
+      .map((draft) => normalizeIdentity(draft.name)),
+  );
+  const activeKeys = new Set(
+    drafts
+      .filter((draft) => draft.status !== "ARCHIVED")
+      .map((draft) => normalizeIdentity(draft.key)),
+  );
+  const baseName = clean(input.name) || "Blueprint Draft";
+  const baseKey = slugify(input.key) || slugify(baseName) || "blueprint-draft";
+
+  for (let suffix = 1; suffix < 1000; suffix += 1) {
+    const name = withNumericSuffix(baseName, suffix);
+    const key = suffix <= 1 ? baseKey : `${baseKey}-${suffix}`;
+    if (!activeNames.has(normalizeIdentity(name)) && !activeKeys.has(normalizeIdentity(key))) {
+      return { name, key };
+    }
+  }
+
+  throw new Error("Cannot allocate a unique Blueprint draft name.");
+}
+
 function actionKeyFromLabel(label: string | null | undefined, index: number) {
   const key = clean(label)
     .toLowerCase()
@@ -234,24 +292,33 @@ export async function createWorkflowDefinitionDraft(
   const definition = normalizeDefinition(
     input.definitionJson ?? sourceDefinition ?? emptyDefinition(),
   );
+  const identity = await uniqueDraftIdentity({
+    name: definition.title,
+    key: definition.key,
+  });
+  const definitionJson: WorkflowDefinition = {
+    ...definition,
+    key: identity.key,
+    title: identity.name,
+  };
   const blueprintJson = normalizeBlueprintJson(
     input.blueprintJson,
-    definition,
+    definitionJson,
     sourceRegistryKey || null,
   );
   const validation = mergeBlueprintValidation(
-    validateDraftDefinition(definition),
+    validateDraftDefinition(definitionJson),
     blueprintJson,
   );
 
   return createWorkflowDefinitionDraftRecord({
-    key: definition.key,
+    key: identity.key,
     workspaceTemplateKey: sourceRegistryKey || null,
     workTypeKey: sourceRegistryKey || null,
-    name: definition.title,
-    description: definition.description,
+    name: identity.name,
+    description: definitionJson.description,
     blueprintJson,
-    definitionJson: definition,
+    definitionJson,
     status: validation.valid ? "VALIDATED" : "DRAFT",
     validationJson: validation,
     sourceRegistryKey: sourceRegistryKey || null,
@@ -285,13 +352,26 @@ export async function updateWorkflowDefinitionDraft(
       : validation.valid
         ? "VALIDATED"
         : "DRAFT";
+  const nextKey = clean(input.key ?? definition.key);
+  const nextName = clean(input.name ?? definition.title);
+  const conflict = await activeDraftIdentityConflict({
+    name: nextName,
+    key: nextKey,
+    excludeId: id,
+  });
+
+  if (conflict) {
+    throw new Error(
+      `Blueprint draft name/key must be unique. "${conflict.name}" already exists.`,
+    );
+  }
 
   return updateWorkflowDefinitionDraftRecord(id, {
-    key: input.key ?? definition.key,
+    key: nextKey,
     workspaceTemplateKey:
       input.workspaceTemplateKey ?? existing.workspaceTemplateKey,
     workTypeKey: input.workTypeKey ?? existing.workTypeKey,
-    name: input.name ?? definition.title,
+    name: nextName,
     description: input.description ?? definition.description,
     blueprintJson,
     definitionJson: definition,

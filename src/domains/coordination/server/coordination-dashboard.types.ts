@@ -5,6 +5,7 @@ import type {
   OperationalBlueprintContract,
   OperationalBlueprintValidationResult,
 } from "@/domains/blueprint/server";
+import type { SpaceViewConfig } from "@/domains/space-management/server/space-view.types";
 
 export type CoordinationReportMetricDTO = {
   key: string;
@@ -60,6 +61,7 @@ export type CoordinationDashboardDTO = {
     title: string;
     created: boolean;
   };
+  viewConfig: SpaceViewConfig;
   filters: {
     selectedDate: string;
     weekOptions: Array<{

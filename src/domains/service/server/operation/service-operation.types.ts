@@ -97,6 +97,39 @@ export type ServiceOperationCounters = {
   done: number;
 };
 
+export type ServiceOperationSpaceViewMode = "sr" | "ti";
+
+export type ServiceOperationSpaceViewRowType =
+  | "WORKSPACE"
+  | "WORKSPACE_BUCKET";
+
+export type ServiceOperationSpaceViewPrimaryTarget =
+  | "workspace"
+  | "stage";
+
+export type ServiceOperationSpaceViewCounter = {
+  key: keyof ServiceOperationCounters;
+  label: string;
+};
+
+export type ServiceOperationSpaceViewConfig = {
+  mode: ServiceOperationSpaceViewMode;
+  label: string;
+  description: string;
+  rowType: ServiceOperationSpaceViewRowType;
+  primaryTarget: ServiceOperationSpaceViewPrimaryTarget;
+  searchPlaceholder: string;
+  counters: ServiceOperationSpaceViewCounter[];
+  chips: string[];
+};
+
+export type ServiceOperationTechnicalWorkspaceBucket = {
+  role: ServiceOperationTechnicalWorkspaceRole;
+  label: string;
+  description: string;
+  stages: ServiceOperationTechnicalIssueStage[];
+};
+
 export type ServiceOperationRange = "ALL_ACTIVE" | "CURRENT_WEEK";
 
 export type ServiceOperationScope = {

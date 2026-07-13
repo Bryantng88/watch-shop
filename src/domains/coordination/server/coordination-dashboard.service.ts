@@ -12,6 +12,7 @@ import {
   listWorkspaceInstantiationBlueprintOptions,
   type BlueprintSource,
 } from "@/domains/blueprint/server";
+import { getSpaceViewConfig } from "@/domains/space-management/server/space-view.config";
 import { parseWorkspaceDefinitionSnapshot } from "@/domains/blueprint/shared/workspace-capabilities";
 import { workspaceFlowOrder } from "@/domains/task/shared/workspace-flow-policy";
 import type {
@@ -545,6 +546,7 @@ export async function getCoordinationDashboard(input: {
       title: cycle.task.title,
       created: cycle.created,
     },
+    viewConfig: getSpaceViewConfig(input.context),
     filters: {
       selectedDate: formatDateInput(cycle.week.startDate),
       weekOptions: buildWeekOptions(selectedDate),

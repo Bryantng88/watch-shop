@@ -98,6 +98,8 @@ Current handoff:
 - Read `docs/sprints/SM-Sprint-87-create-space-from-published-blueprint.md`.
 - Read `docs/sprints/SM-Sprint-88-deferred-workspace-runtime.md`.
 - Read `docs/sprints/SM-Sprint-89-operation-authoring-guided-repair.md`.
+- Read `docs/architecture/17-space-workspace-role-taxonomy.md`.
+- Read `docs/sprints/SM-Sprint-90-space-workspace-role-taxonomy-audit.md`.
 - Sprint 61 is complete as a first production UI/API slice. Space Management
   Service Operation is a space/workspace index with SR and Technical views;
   workspace operation happens in the TaskItem workspace shell and must use
@@ -135,6 +137,25 @@ Current handoff:
   that SR; a TI/technical workspace shows TI operation items with
   stage/workflow actions. `SR Cases` and `Technical Bench` remain Space
   Management modes/views, not tabs inside a workspace.
+- Sprint 90 starts a Space/Workspace role taxonomy audit. The working direction
+  is: Workspace may be flexible, but every Workspace must declare its role;
+  Space views may render differently, but every Space view must declare its row
+  model and primary target. Review
+  `docs/architecture/17-space-workspace-role-taxonomy.md` before continuing
+  implementation.
+- Sprint 90 flow-stage rule: `FLOW_STAGE_WORKSPACE` requires a corresponding
+  flow-stage Space view mode. Most business Spaces should default to that mode
+  when their Workspaces belong to an ordered core flow.
+- Sprint 90 audit conclusion: Media and Payment should use flow-stage Space
+  views. Service Operation is composite: `SR Cases` renders
+  `CASE_WORKSPACE`, while `Technical Bench` renders `FLOW_STAGE_WORKSPACE`
+  stages for Inspect, Processing, and Done/Follow-up. Sales stays standalone
+  until a Sales Operation Blueprint proves a required quote/pricing/negotiation
+  flow.
+- Sprint 90 next focus: put the current Media core flow into the operation
+  Space view as the first proof of `coreFlowKey`-driven flow-stage rendering.
+  A Space may contain multiple core flows, but each flow-stage view must declare
+  the flow it renders so the UI does not mix stage rows from different flows.
 - Sprint 70 adds the SR workspace `Tao TI` modal. Watch List still only
   creates/opens an SR workspace. TI creation happens inside the SR workspace,
   uses the existing Service `createTechnicalIssue` command, records

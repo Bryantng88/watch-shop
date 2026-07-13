@@ -107,6 +107,17 @@ function blueprintSourceLabel(
   return "Registry";
 }
 
+function blueprintSelectLabel(
+  blueprint: CoordinationDashboardDTO["blueprints"][number],
+) {
+  const identity =
+    blueprint.source === "DRAFT"
+      ? ` #${blueprint.selectionKey.replace(/^DRAFT:/, "").slice(0, 8)}`
+      : "";
+
+  return `${blueprint.name}${identity} - ${blueprintSourceLabel(blueprint)}`;
+}
+
 function OwnerCell({
   owner,
 }: {
@@ -159,6 +170,10 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
         selectedBlueprint.workspaceDefinition.enabledCapabilities,
       )
     : [];
+  const activeViewMode =
+    data.viewConfig.modes.find(
+      (mode) => mode.key === data.viewConfig.defaultModeKey,
+    ) ?? data.viewConfig.modes[0];
 
   function updateDate(date: string) {
     const next = new URLSearchParams(searchParams.toString());
@@ -414,7 +429,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    disabled={isPending}
+                    disabled={isPending || !data.viewConfig.carryover.enabled}
                     onClick={() => void rolloverPreviousCycle()}
                     className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                   >
@@ -423,7 +438,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   </button>
                 <button
                   type="button"
-                  disabled={!data.blueprints.length}
+                  disabled={!data.blueprints.length || !data.viewConfig.createWorkspace.enabled}
                   onClick={() => {
                     setError(null);
                     setBlueprintKey(data.blueprints[0]?.selectionKey ?? "");
@@ -455,7 +470,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                 >
                   {data.blueprints.map((blueprint) => (
                     <option key={blueprint.selectionKey} value={blueprint.selectionKey}>
-                      {blueprint.name} - {blueprintSourceLabel(blueprint)}
+                      {blueprintSelectLabel(blueprint)}
                     </option>
                   ))}
                 </select>
@@ -506,7 +521,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   >
                     {data.blueprints.map((blueprint) => (
                       <option key={blueprint.selectionKey} value={blueprint.selectionKey}>
-                        {blueprint.name} - {blueprintSourceLabel(blueprint)}
+                        {blueprintSelectLabel(blueprint)}
                       </option>
                     ))}
                   </select>
@@ -535,6 +550,28 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                     ))}
                   </select>
                 </label>
+              </div>
+            ) : null}
+            {activeViewMode ? (
+              <div className="mt-3 grid gap-2 rounded-md border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900 md:grid-cols-[1fr_1fr_1.4fr]">
+                <div>
+                  <div className="font-semibold text-blue-700">Space view</div>
+                  <div className="mt-1 font-medium">{data.viewConfig.label}</div>
+                  <div className="mt-1 text-blue-800">{activeViewMode.label}</div>
+                </div>
+                <div>
+                  <div className="font-semibold text-blue-700">Render rule</div>
+                  <div className="mt-1">
+                    Row: {activeViewMode.rowModel} / Target: {activeViewMode.primaryTarget}
+                  </div>
+                  <div className="mt-1">
+                    Columns: {activeViewMode.columns.map((column) => column.label).join(", ")}
+                  </div>
+                </div>
+                <div>
+                  <div className="font-semibold text-blue-700">Carryover rule</div>
+                  <div className="mt-1">{data.viewConfig.carryover.processingRule}</div>
+                </div>
               </div>
             ) : null}
             {isCreateFormOpen && selectedBlueprint ? (

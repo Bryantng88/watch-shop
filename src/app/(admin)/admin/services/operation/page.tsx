@@ -1,12 +1,18 @@
 import Link from "next/link";
 
 import {
+  SERVICE_OPERATION_SPACE_VIEW_CONFIGS,
+  SERVICE_OPERATION_SPACE_VIEW_LIST,
+  SERVICE_OPERATION_TECHNICAL_WORKSPACE_BUCKETS,
+  SERVICE_OPERATION_TI_STAGE_FILTERS,
   getServiceOperationCounters,
   listServiceOperationTechnicalWorkspaces,
   listServiceOperationSrCases,
   listServiceOperationTiStageItems,
+  normalizeServiceOperationSpaceViewMode,
   resolveServiceOperationScope,
   type ServiceOperationRange,
+  type ServiceOperationSpaceViewMode,
   type ServiceOperationTiListInput,
   type ServiceOperationTiStageItem,
 } from "@/domains/service/server/operation";
@@ -17,50 +23,8 @@ type PageProps = {
   searchParams?: Promise<SearchParams>;
 };
 
-type Mode = "sr" | "ti";
-
-const STAGES: Array<{
-  key: NonNullable<ServiceOperationTiListInput["stage"]>;
-  label: string;
-}> = [
-  { key: "INSPECT", label: "Inspect" },
-  { key: "READY", label: "Ready" },
-  { key: "IN_PROGRESS", label: "In Progress" },
-  { key: "DONE", label: "Done" },
-];
-
-const TECHNICAL_WORKSPACES: Array<{
-  role: "INSPECT" | "PROCESSING" | "DONE";
-  label: string;
-  description: string;
-  stages: Array<NonNullable<ServiceOperationTiListInput["stage"]>>;
-}> = [
-  {
-    role: "INSPECT",
-    label: "Inspect",
-    description: "Classify, assign owner/vendor, then route the issue.",
-    stages: ["INSPECT"],
-  },
-  {
-    role: "PROCESSING",
-    label: "Processing",
-    description: "Operational workflow: Ready -> In Progress -> Done.",
-    stages: ["READY", "IN_PROGRESS"],
-  },
-  {
-    role: "DONE",
-    label: "Done / Follow-up",
-    description: "Track completion, send back when needed, then payment.",
-    stages: ["DONE"],
-  },
-];
-
 function first(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
-}
-
-function normalizeMode(value: string | undefined): Mode {
-  return value === "ti" ? "ti" : "sr";
 }
 
 function normalizeRange(value: string | undefined): ServiceOperationRange {
@@ -68,7 +32,7 @@ function normalizeRange(value: string | undefined): ServiceOperationRange {
 }
 
 function normalizeStage(value: string | undefined) {
-  const stage = STAGES.find((item) => item.key === value);
+  const stage = SERVICE_OPERATION_TI_STAGE_FILTERS.find((item) => item.key === value);
   return stage?.key ?? "ALL";
 }
 
@@ -145,7 +109,7 @@ function stat(label: string, value: number) {
 }
 
 function modeHref(input: {
-  mode: Mode;
+  mode: ServiceOperationSpaceViewMode;
   q: string;
   range: ServiceOperationRange;
   anchorDate: string;
@@ -180,7 +144,8 @@ function workspaceHref(binding: { taskItemId: string | null } | null | undefined
 export default async function ServiceOperationPage(props: PageProps) {
   const searchParams = (await props.searchParams) ?? {};
   const q = first(searchParams.q)?.trim() ?? "";
-  const mode = normalizeMode(first(searchParams.mode));
+  const mode = normalizeServiceOperationSpaceViewMode(first(searchParams.mode));
+  const activeView = SERVICE_OPERATION_SPACE_VIEW_CONFIGS[mode];
   const range = normalizeRange(first(searchParams.range));
   const selectedStage = normalizeStage(first(searchParams.stage));
   const anchorDate = first(searchParams.anchorDate) ?? dateInputValue(new Date());
@@ -213,24 +178,6 @@ export default async function ServiceOperationPage(props: PageProps) {
     scope.range === "CURRENT_WEEK" && scope.from && scope.to
       ? `${formatDate(scope.from)} - ${formatDate(new Date(scope.to.getTime() - 1))}`
       : "All active service work";
-
-  const srStats = [
-    ["Active SR", counters.activeSr],
-    ["Waiting Approval", counters.waitingApproval],
-    ["Has Open TI", counters.hasOpenTi],
-    ["Completed SR", counters.completedSr],
-    ["Waiting Payment", counters.waitingPayment],
-    ["Open TI", counters.openTi],
-  ] as const;
-
-  const tiStats = [
-    ["Open TI", counters.openTi],
-    ["Inspect", counters.inspect],
-    ["Ready", counters.ready],
-    ["In Progress", counters.inProgress],
-    ["Done", counters.done],
-    ["Waiting Payment", counters.waitingPayment],
-  ] as const;
 
   return (
     <main className="min-h-screen bg-slate-50 px-5 py-6 text-slate-950">
@@ -280,7 +227,7 @@ export default async function ServiceOperationPage(props: PageProps) {
               <input
                 className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm"
                 name="q"
-                placeholder={mode === "sr" ? "Search SR, watch, customer, TI..." : "Search TI, SR, watch, area..."}
+                placeholder={activeView.searchPlaceholder}
                 defaultValue={q}
               />
             </label>
@@ -293,8 +240,8 @@ export default async function ServiceOperationPage(props: PageProps) {
         </header>
 
         <section className="grid gap-3 md:grid-cols-3 xl:grid-cols-6" aria-label="Service Operation counters">
-          {(mode === "sr" ? srStats : tiStats).map(([label, value]) => (
-            <div key={label}>{stat(label, value)}</div>
+          {activeView.counters.map((counter) => (
+            <div key={counter.key}>{stat(counter.label, counters[counter.key])}</div>
           ))}
         </section>
 
@@ -302,28 +249,29 @@ export default async function ServiceOperationPage(props: PageProps) {
           <header className="grid gap-4 border-b border-slate-200 p-4 xl:grid-cols-[minmax(360px,1fr)_auto] xl:items-center">
             <div className="flex flex-wrap items-center gap-2">
               <strong className="text-base">Service Operation Workspaces</strong>
-              {chip("SR view: one workspace per SR case")}
-              {chip("Technical view: Inspect / Processing / Done-Follow-up")}
+              {activeView.chips.map((label) => (
+                <span key={label}>{chip(label)}</span>
+              ))}
             </div>
             <div className="grid h-10 w-full grid-cols-2 rounded-lg border border-slate-200 bg-slate-50 p-1 xl:w-80">
-              <Link
-                aria-pressed={mode === "sr"}
-                className={`grid place-items-center rounded-md text-sm font-bold ${
-                  mode === "sr" ? "bg-slate-950 text-white shadow-sm" : "text-slate-500"
-                }`}
-                href={modeHref({ mode: "sr", q, range, anchorDate: anchorDateValue })}
-              >
-                SR Cases
-              </Link>
-              <Link
-                aria-pressed={mode === "ti"}
-                className={`grid place-items-center rounded-md text-sm font-bold ${
-                  mode === "ti" ? "bg-slate-950 text-white shadow-sm" : "text-slate-500"
-                }`}
-                href={modeHref({ mode: "ti", q, range, anchorDate: anchorDateValue, stage: selectedStage === "ALL" ? null : selectedStage })}
-              >
-                Technical Bench
-              </Link>
+              {SERVICE_OPERATION_SPACE_VIEW_LIST.map((view) => (
+                <Link
+                  key={view.mode}
+                  aria-pressed={mode === view.mode}
+                  className={`grid place-items-center rounded-md text-sm font-bold ${
+                    mode === view.mode ? "bg-slate-950 text-white shadow-sm" : "text-slate-500"
+                  }`}
+                  href={modeHref({
+                    mode: view.mode,
+                    q,
+                    range,
+                    anchorDate: anchorDateValue,
+                    stage: view.mode === "ti" && selectedStage !== "ALL" ? selectedStage : null,
+                  })}
+                >
+                  {view.label}
+                </Link>
+              ))}
             </div>
           </header>
 
@@ -446,7 +394,7 @@ export default async function ServiceOperationPage(props: PageProps) {
               aria-label="Technical workspace index"
             >
               <div className="grid gap-3 xl:grid-cols-3">
-                {TECHNICAL_WORKSPACES.map((workspace) => {
+                {SERVICE_OPERATION_TECHNICAL_WORKSPACE_BUCKETS.map((workspace) => {
                   const items = workspaceItems(tiItems.items, workspace.stages);
                   const technicalWorkspace = technicalWorkspaceByRole.get(workspace.role);
                   const technicalWorkspaceHref = workspaceHref({
