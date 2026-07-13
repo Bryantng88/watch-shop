@@ -105,6 +105,22 @@ function roleWorkspaceMetadata(input: {
   flowStageOrder: number | null;
 } {
   const stage = roleFlowStage(input);
+  const explicitWorkspaceKind = input.role.workspaceKind ?? null;
+
+  if (explicitWorkspaceKind) {
+    return {
+      workspaceKind: explicitWorkspaceKind,
+      coreFlowKey: explicitWorkspaceKind === "FLOW_STAGE_WORKSPACE"
+        ? stage?.flow.key ?? null
+        : null,
+      flowStageKey: explicitWorkspaceKind === "FLOW_STAGE_WORKSPACE" && stage
+        ? normalizeRoleKey(stage.step.workspaceRole)
+        : null,
+      flowStageOrder: explicitWorkspaceKind === "FLOW_STAGE_WORKSPACE"
+        ? stage?.order ?? null
+        : null,
+    };
+  }
 
   if (input.role.cardinality === "ONE_PER_BUSINESS_OBJECT") {
     return {

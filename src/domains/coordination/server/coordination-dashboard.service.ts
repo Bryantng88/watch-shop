@@ -1,4 +1,10 @@
-import { ActivitySourceType, TaskStatus } from "@prisma/client";
+import {
+  ActivitySourceType,
+  PaymentType,
+  TaskExecutionActionType,
+  TaskExecutionTargetType,
+  TaskStatus,
+} from "@prisma/client";
 import { prisma, type DB } from "@/server/db/client";
 import {
   ensureCoordinationCycle,
@@ -14,6 +20,7 @@ import {
 } from "@/domains/blueprint/server";
 import { getSpaceViewConfig } from "@/domains/space-management/server/space-view.config";
 import { parseWorkspaceDefinitionSnapshot } from "@/domains/blueprint/shared/workspace-capabilities";
+import { getQueueItemWorkflowState } from "@/domains/task/server/business-binding-workflow.service";
 import { workspaceFlowOrder } from "@/domains/task/shared/workspace-flow-policy";
 import type { WorkspaceKind } from "@/domains/space-management/server/space-view.types";
 import type {
@@ -128,17 +135,93 @@ function numericValue(value: unknown) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
+function normalizeStatus(value: unknown) {
+  return String(value ?? "").trim().toUpperCase();
+}
+
+function targetKey(input: { targetType: string; targetId: string }) {
+  return `${normalizeStatus(input.targetType)}:${input.targetId}`;
+}
+
+function terminalStatesForTarget(
+  terminalStatesByTargetType: Record<string, string[]> | undefined,
+  targetType: string,
+) {
+  return new Set(
+    (terminalStatesByTargetType?.[normalizeStatus(targetType)] ?? [])
+      .map(normalizeStatus)
+      .filter(Boolean),
+  );
+}
+
+function statusListIsProcessing(
+  statuses: unknown[],
+  terminalStates: Set<string>,
+  fallback = true,
+) {
+  const normalized = statuses.map(normalizeStatus).filter(Boolean);
+  if (!normalized.length) return fallback;
+  if (!terminalStates.size) return fallback;
+
+  return !normalized.some((status) => terminalStates.has(status));
+}
+
+function bindingFinished(metadataJson: unknown) {
+  const runtime = getQueueItemWorkflowState({ metadataJson });
+  if (!runtime) return false;
+  return runtime.currentState === "DONE" || runtime.currentState === "CANCELLED";
+}
+
+function serviceOperationWorkspaceRole(note?: string | null) {
+  const role = noteLineValue(note, "serviceOperationWorkspaceRole")?.toUpperCase() ?? null;
+  if (
+    role === "SR_CASE" ||
+    role === "INSPECT" ||
+    role === "PROCESSING" ||
+    role === "DONE"
+  ) {
+    return role;
+  }
+
+  return null;
+}
+
+function serviceOperationWorkspaceKind(role: string | null): WorkspaceKind | null {
+  if (role === "SR_CASE") return "CASE_WORKSPACE";
+  if (role === "INSPECT" || role === "PROCESSING" || role === "DONE") {
+    return "FLOW_STAGE_WORKSPACE";
+  }
+
+  return null;
+}
+
+function flowStageKeyFromServiceOperationRole(role: string | null) {
+  if (role === "INSPECT" || role === "PROCESSING" || role === "DONE") {
+    return role.toLowerCase();
+  }
+
+  return null;
+}
+
 function workspaceRoleMetadataFromNote(note?: string | null) {
   const snapshot = parseWorkspaceDefinitionSnapshot(note);
+  const legacyServiceOperationRole = serviceOperationWorkspaceRole(note);
 
   return {
     workspaceKind: workspaceKindValue(
-      snapshot?.workspaceKind ?? noteLineValue(note, "workspaceKind"),
+      snapshot?.workspaceKind ??
+        noteLineValue(note, "workspaceKind") ??
+        serviceOperationWorkspaceKind(legacyServiceOperationRole),
     ),
     operationWorkspaceRole:
-      snapshot?.operationWorkspaceRole ?? noteLineValue(note, "operationWorkspaceRole"),
+      snapshot?.operationWorkspaceRole ??
+      noteLineValue(note, "operationWorkspaceRole") ??
+      legacyServiceOperationRole,
     coreFlowKey: snapshot?.coreFlowKey ?? noteLineValue(note, "coreFlowKey"),
-    flowStageKey: snapshot?.flowStageKey ?? noteLineValue(note, "flowStageKey"),
+    flowStageKey:
+      snapshot?.flowStageKey ??
+      noteLineValue(note, "flowStageKey") ??
+      flowStageKeyFromServiceOperationRole(legacyServiceOperationRole),
     flowStageOrder: numericValue(
       snapshot?.flowStageOrder ?? noteLineValue(note, "flowStageOrder"),
     ),
@@ -362,6 +445,243 @@ async function loadLastActivityMap(db: DB, taskItemIds: string[]) {
   return map;
 }
 
+async function loadMediaQueueCountByTaskItem(input: {
+  db: DB;
+  taskId: string;
+  taskItemIds: string[];
+  terminalStatesByTargetType?: Record<string, string[]>;
+}) {
+  const counts = new Map<string, number>();
+  if (!input.taskItemIds.length) return counts;
+
+  const bindings = await input.db.taskExecution.findMany({
+    where: {
+      taskId: input.taskId,
+      taskItemId: { in: input.taskItemIds },
+      targetType: TaskExecutionTargetType.WATCH,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+    },
+    select: {
+      taskItemId: true,
+      targetType: true,
+      targetId: true,
+      metadataJson: true,
+    },
+  });
+  const watchIds = [...new Set(bindings.map((binding) => binding.targetId))];
+  const terminalStates = terminalStatesForTarget(
+    input.terminalStatesByTargetType,
+    TaskExecutionTargetType.WATCH,
+  );
+  const watches = watchIds.length
+    ? await input.db.watch.findMany({
+        where: { id: { in: watchIds } },
+        select: {
+          id: true,
+          saleStage: true,
+          isContentDownloaded: true,
+          isImageDownloaded: true,
+        },
+      })
+    : [];
+  const processingByTarget = new Map(
+    watches.map((watch) => [
+      targetKey({
+        targetType: TaskExecutionTargetType.WATCH,
+        targetId: watch.id,
+      }),
+      statusListIsProcessing(
+        [
+          watch.saleStage,
+          watch.isContentDownloaded && watch.isImageDownloaded ? "POSTED" : null,
+        ],
+        terminalStates,
+      ),
+    ]),
+  );
+
+  for (const binding of bindings) {
+    if (!binding.taskItemId || bindingFinished(binding.metadataJson)) continue;
+    const processing =
+      processingByTarget.get(
+        targetKey({
+          targetType: binding.targetType,
+          targetId: binding.targetId,
+        }),
+      ) ?? true;
+    if (!processing) continue;
+
+    counts.set(binding.taskItemId, (counts.get(binding.taskItemId) ?? 0) + 1);
+  }
+
+  return counts;
+}
+
+async function loadTechnicalQueueCountByTaskItem(input: {
+  db: DB;
+  taskId: string;
+  taskItems: Array<{ id: string; note: string | null }>;
+  terminalStatesByTargetType?: Record<string, string[]>;
+}) {
+  const counts = new Map<string, number>();
+  if (!input.taskItems.length) return counts;
+
+  const metadataByTaskItem = new Map(
+    input.taskItems.map((item) => [item.id, workspaceRoleMetadataFromNote(item.note)]),
+  );
+  const taskItemIds = input.taskItems.map((item) => item.id);
+  const bindings = await input.db.taskExecution.findMany({
+    where: {
+      taskId: input.taskId,
+      taskItemId: { in: taskItemIds },
+      targetType: {
+        in: [
+          TaskExecutionTargetType.SERVICE_REQUEST,
+          TaskExecutionTargetType.TECHNICAL_ISSUE,
+        ],
+      },
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+    },
+    select: {
+      taskItemId: true,
+      targetType: true,
+      targetId: true,
+      metadataJson: true,
+    },
+  });
+  const serviceRequestIdsByTaskItem = new Map<string, Set<string>>();
+  const technicalIssueBindings = bindings.filter(
+    (binding) => binding.targetType === TaskExecutionTargetType.TECHNICAL_ISSUE,
+  );
+
+  for (const item of input.taskItems) {
+    const metadata = metadataByTaskItem.get(item.id);
+    if (metadata?.workspaceKind !== "CASE_WORKSPACE") continue;
+
+    const serviceRequestId = noteLineValue(item.note, "serviceRequestId");
+    if (serviceRequestId) {
+      serviceRequestIdsByTaskItem.set(item.id, new Set([serviceRequestId]));
+    }
+  }
+
+  for (const binding of bindings) {
+    if (
+      !binding.taskItemId ||
+      binding.targetType !== TaskExecutionTargetType.SERVICE_REQUEST
+    ) {
+      continue;
+    }
+
+    const metadata = metadataByTaskItem.get(binding.taskItemId);
+    if (metadata?.workspaceKind !== "CASE_WORKSPACE") continue;
+
+    const serviceRequestIds =
+      serviceRequestIdsByTaskItem.get(binding.taskItemId) ?? new Set<string>();
+    serviceRequestIds.add(binding.targetId);
+    serviceRequestIdsByTaskItem.set(binding.taskItemId, serviceRequestIds);
+  }
+
+  const technicalIssueIds = [
+    ...new Set(technicalIssueBindings.map((binding) => binding.targetId)),
+  ];
+  const serviceRequestIds = [
+    ...new Set(
+      [...serviceRequestIdsByTaskItem.values()].flatMap((ids) => [...ids]),
+    ),
+  ];
+  const technicalIssueWhere: Array<
+    { id: { in: string[] } } | { serviceRequestId: { in: string[] } }
+  > = [];
+  if (technicalIssueIds.length) technicalIssueWhere.push({ id: { in: technicalIssueIds } });
+  if (serviceRequestIds.length) {
+    technicalIssueWhere.push({ serviceRequestId: { in: serviceRequestIds } });
+  }
+  const technicalIssues = technicalIssueWhere.length
+    ? await input.db.technicalIssue.findMany({
+        where: { OR: technicalIssueWhere },
+        select: {
+          id: true,
+          serviceRequestId: true,
+          executionStatus: true,
+        },
+      })
+    : [];
+  const terminalTechnicalIssueStates = terminalStatesForTarget(
+    input.terminalStatesByTargetType,
+    TaskExecutionTargetType.TECHNICAL_ISSUE,
+  );
+  const technicalIssueById = new Map(technicalIssues.map((issue) => [issue.id, issue]));
+  const activeTechnicalIssueIds = new Set(
+    technicalIssues
+      .filter((issue) =>
+        statusListIsProcessing([issue.executionStatus], terminalTechnicalIssueStates),
+      )
+      .map((issue) => issue.id),
+  );
+
+  for (const binding of technicalIssueBindings) {
+    if (!binding.taskItemId || bindingFinished(binding.metadataJson)) continue;
+
+    const metadata = metadataByTaskItem.get(binding.taskItemId);
+    if (metadata?.workspaceKind !== "FLOW_STAGE_WORKSPACE") continue;
+    if (!activeTechnicalIssueIds.has(binding.targetId)) continue;
+
+    counts.set(binding.taskItemId, (counts.get(binding.taskItemId) ?? 0) + 1);
+  }
+
+  const issueIdsForServiceRequests = technicalIssues
+    .filter((issue) => serviceRequestIds.includes(issue.serviceRequestId))
+    .map((issue) => issue.id);
+  const paymentRows = issueIdsForServiceRequests.length
+    ? await input.db.payment.findMany({
+        where: {
+          technical_issue_id: { in: issueIdsForServiceRequests },
+          type: PaymentType.SERVICE,
+        },
+        select: {
+          technical_issue_id: true,
+        },
+      })
+    : [];
+  const paymentCountByServiceRequest = new Map<string, number>();
+
+  for (const payment of paymentRows) {
+    if (!payment.technical_issue_id) continue;
+    const issue = technicalIssueById.get(payment.technical_issue_id);
+    if (!issue) continue;
+
+    paymentCountByServiceRequest.set(
+      issue.serviceRequestId,
+      (paymentCountByServiceRequest.get(issue.serviceRequestId) ?? 0) + 1,
+    );
+  }
+
+  const activeIssueCountByServiceRequest = new Map<string, number>();
+  for (const issue of technicalIssues) {
+    if (!serviceRequestIds.includes(issue.serviceRequestId)) continue;
+    if (!activeTechnicalIssueIds.has(issue.id)) continue;
+
+    activeIssueCountByServiceRequest.set(
+      issue.serviceRequestId,
+      (activeIssueCountByServiceRequest.get(issue.serviceRequestId) ?? 0) + 1,
+    );
+  }
+
+  for (const [taskItemId, ids] of serviceRequestIdsByTaskItem.entries()) {
+    const count = [...ids].reduce(
+      (sum, serviceRequestId) =>
+        sum +
+        (activeIssueCountByServiceRequest.get(serviceRequestId) ?? 0) +
+        (paymentCountByServiceRequest.get(serviceRequestId) ?? 0),
+      0,
+    );
+
+    counts.set(taskItemId, count);
+  }
+
+  return counts;
+}
+
 export async function getCoordinationDashboard(input: {
   context: CoordinationContext;
   db?: DB;
@@ -425,8 +745,16 @@ export async function getCoordinationDashboard(input: {
     return canViewTicket(item, input?.auth);
   });
   const taskItemIds = taskItems.map((item) => item.id);
+  const viewConfig = getSpaceViewConfig(input.context);
 
-  const [queueRows, feedbackRows, activityRows, lastActivityMap] = await Promise.all([
+  const [
+    queueRows,
+    mediaQueueCountByTaskItem,
+    technicalQueueCountByTaskItem,
+    feedbackRows,
+    activityRows,
+    lastActivityMap,
+  ] = await Promise.all([
     db.taskExecution.groupBy({
       by: ["taskItemId"],
       where: {
@@ -435,6 +763,22 @@ export async function getCoordinationDashboard(input: {
       },
       _count: { _all: true },
     }),
+    input.context === "MEDIA"
+      ? loadMediaQueueCountByTaskItem({
+          db,
+          taskId: cycle.task.id,
+          taskItemIds,
+          terminalStatesByTargetType: viewConfig.carryover.terminalStatesByTargetType,
+        })
+      : Promise.resolve(new Map<string, number>()),
+    input.context === "TECHNICAL"
+      ? loadTechnicalQueueCountByTaskItem({
+          db,
+          taskId: cycle.task.id,
+          taskItems,
+          terminalStatesByTargetType: viewConfig.carryover.terminalStatesByTargetType,
+        })
+      : Promise.resolve(new Map<string, number>()),
     db.taskItemActivity.groupBy({
       by: ["taskItemId"],
       where: {
@@ -454,9 +798,13 @@ export async function getCoordinationDashboard(input: {
   ]);
 
   const queueCountByTaskItem = new Map(
-    queueRows
-      .filter((row) => row.taskItemId)
-      .map((row) => [row.taskItemId as string, row._count._all]),
+    input.context === "MEDIA"
+      ? mediaQueueCountByTaskItem
+      : input.context === "TECHNICAL"
+        ? technicalQueueCountByTaskItem
+        : queueRows
+            .filter((row) => row.taskItemId)
+            .map((row) => [row.taskItemId as string, row._count._all]),
   );
   const feedbackCountByTaskItem = new Map(
     feedbackRows.map((row) => [row.taskItemId, row._count._all]),
@@ -590,7 +938,7 @@ export async function getCoordinationDashboard(input: {
       title: cycle.task.title,
       created: cycle.created,
     },
-    viewConfig: getSpaceViewConfig(input.context),
+    viewConfig,
     filters: {
       selectedDate: formatDateInput(cycle.week.startDate),
       weekOptions: buildWeekOptions(selectedDate),

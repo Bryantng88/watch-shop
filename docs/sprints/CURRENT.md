@@ -152,10 +152,29 @@ Current handoff:
   stages for Inspect, Processing, and Done/Follow-up. Sales stays standalone
   until a Sales Operation Blueprint proves a required quote/pricing/negotiation
   flow.
-- Sprint 90 next focus: put the current Media core flow into the operation
-  Space view as the first proof of `coreFlowKey`-driven flow-stage rendering.
-  A Space may contain multiple core flows, but each flow-stage view must declare
+- Sprint 90 Media proof slice is implemented: the current Media core flow is in
+  the operation Space view, Media flow-stage rows sort/filter by
+  `coreFlowKey`/stage metadata with legacy key fallback, and stage item counts
+  use active unfinished `WATCH` bindings instead of generic binding totals. A
+  Space may contain multiple core flows, but each flow-stage view must declare
   the flow it renders so the UI does not mix stage rows from different flows.
+- Sprint 90 taxonomy guardrail slice is implemented: Operational Blueprint
+  Workspace roles can declare `workspaceKind`, Operation Model authoring exposes
+  it, validation warns on missing/mismatched role kinds, missing case identity,
+  and missing flow-stage Space view modes, and Service/Payment templates declare
+  clean taxonomy metadata.
+- Sprint 90 Service composite runtime hardening is implemented: Technical Space
+  reads legacy Service Operation workspace roles as taxonomy fallbacks, SR Cases
+  count active TechnicalIssues plus service payment rows, and Technical Bench
+  counts active unfinished `TECHNICAL_ISSUE` bindings using configured terminal
+  states.
+- Sprint 90 Space view UI cleanup started: the selected view mode now appears
+  as a compact operator control with flow-stage chips, while render/carryover
+  contract details are collapsed under `Rules`.
+- Sprint 90 Coordination Space UI polish continues: header actions are now
+  top-level, Blueprint/auto-binding/carryover sit in a summary card, and
+  Workspace rows include stage icons, table headers, attention badges, activity
+  cues, and item progress bars.
 - Media flow audit selected `media-production-flow`:
   `photography -> media-processing -> publish`. These are Space stages;
   internal workflow states such as `NEW`, `REVIEW`, `FEEDBACK`,

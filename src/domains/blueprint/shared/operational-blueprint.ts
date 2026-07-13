@@ -7,6 +7,12 @@ export type OperationalBlueprintCardinality =
 
 export type OperationalBlueprintObjectRole = "WORKSPACE_IDENTITY" | "ITEM";
 
+export type OperationalBlueprintWorkspaceKind =
+  | "STANDALONE_WORKSPACE"
+  | "FLOW_STAGE_WORKSPACE"
+  | "CASE_WORKSPACE"
+  | "BENCH_WORKSPACE";
+
 export type OperationalBlueprintObjectType = {
   targetType: string;
   label: string;
@@ -17,6 +23,7 @@ export type OperationalBlueprintObjectType = {
 export type OperationalBlueprintWorkspaceRole = {
   key: string;
   label: string;
+  workspaceKind?: OperationalBlueprintWorkspaceKind | null;
   cardinality: OperationalBlueprintCardinality;
   identityTargetType: string | null;
   itemTargetTypes: string[];
@@ -87,6 +94,22 @@ export type OperationalBlueprintProjectionSubscription = {
   description: string;
 };
 
+export type OperationalBlueprintSpaceViewMode = {
+  key: string;
+  label: string;
+  rowModel:
+    | "WORKSPACE"
+    | "FLOW_STAGE_WORKSPACE"
+    | "CASE_WORKSPACE"
+    | "BUSINESS_ITEM"
+    | "BENCH_WORKSPACE"
+    | "STAGE_BUCKET";
+  primaryTarget: "workspace" | "businessObject" | "stage";
+  coreFlowKey?: string | null;
+  workspaceRoles: string[];
+  description: string;
+};
+
 export type OperationalBlueprintContract = {
   key: string;
   version: number;
@@ -99,6 +122,7 @@ export type OperationalBlueprintContract = {
   actions: OperationalBlueprintAction[];
   workflows: OperationalBlueprintWorkflow[];
   projectionSubscriptions: OperationalBlueprintProjectionSubscription[];
+  spaceViewModes?: OperationalBlueprintSpaceViewMode[];
 };
 
 export type OperationalBlueprintTemplate = {
@@ -149,6 +173,36 @@ function normalizeTarget(value: unknown) {
 
 function clean(value: unknown) {
   return String(value ?? "").trim();
+}
+
+function workspaceKind(value: unknown): OperationalBlueprintWorkspaceKind | null {
+  const normalized = normalizeTarget(value);
+  if (
+    normalized === "STANDALONE_WORKSPACE" ||
+    normalized === "FLOW_STAGE_WORKSPACE" ||
+    normalized === "CASE_WORKSPACE" ||
+    normalized === "BENCH_WORKSPACE"
+  ) {
+    return normalized;
+  }
+
+  return null;
+}
+
+function inferredWorkspaceKind(input: {
+  role: OperationalBlueprintWorkspaceRole;
+  isInCoreFlow: boolean;
+}): OperationalBlueprintWorkspaceKind {
+  if (input.role.workspaceKind) {
+    return workspaceKind(input.role.workspaceKind) ?? "STANDALONE_WORKSPACE";
+  }
+
+  if (input.role.cardinality === "ONE_PER_BUSINESS_OBJECT") return "CASE_WORKSPACE";
+  if (input.isInCoreFlow && input.role.cardinality === "SINGLE_PER_ACTIVE_CYCLE") {
+    return "FLOW_STAGE_WORKSPACE";
+  }
+  if (input.role.cardinality === "MANY_PER_ACTIVE_CYCLE") return "BENCH_WORKSPACE";
+  return "STANDALONE_WORKSPACE";
 }
 
 function issue(
@@ -207,6 +261,12 @@ export function validateOperationalBlueprintContract(
   );
   const workspaceRoles = new Set(
     contract.workspaceRoles.map((role) => normalizeTarget(role.key)).filter(Boolean),
+  );
+  const coreFlowWorkspaceRoles = new Set(
+    contract.coreFlows
+      .flatMap((flow) => flow.steps.map((step) => step.workspaceRole))
+      .map(normalizeTarget)
+      .filter(Boolean),
   );
   const actionKeys = new Set(
     contract.actions.map((action) => normalizeKey(action.key)).filter(Boolean),
@@ -293,10 +353,75 @@ export function validateOperationalBlueprintContract(
   );
 
   contract.workspaceRoles.forEach((role, roleIndex) => {
+    const roleKey = normalizeTarget(role.key);
+    const explicitKind = workspaceKind(role.workspaceKind);
+    const effectiveKind = inferredWorkspaceKind({
+      role,
+      isInCoreFlow: coreFlowWorkspaceRoles.has(roleKey),
+    });
     const representedTargets = [
       role.identityTargetType,
       ...role.itemTargetTypes,
     ].map(normalizeTarget);
+
+    if (role.workspaceKind && !explicitKind) {
+      issues.push(
+        issue(
+          "error",
+          "invalid_workspace_kind",
+          `workspaceRoles.${roleIndex}.workspaceKind`,
+          `Workspace role '${role.key}' uses unsupported workspaceKind '${role.workspaceKind}'.`,
+        ),
+      );
+    }
+
+    if (!role.workspaceKind) {
+      issues.push(
+        issue(
+          "warning",
+          "missing_workspace_kind",
+          `workspaceRoles.${roleIndex}.workspaceKind`,
+          `Workspace role '${role.key}' should declare workspaceKind explicitly. Current runtime will infer '${effectiveKind}'.`,
+        ),
+      );
+    }
+
+    if (
+      coreFlowWorkspaceRoles.has(roleKey) &&
+      role.cardinality === "SINGLE_PER_ACTIVE_CYCLE" &&
+      effectiveKind !== "FLOW_STAGE_WORKSPACE"
+    ) {
+      issues.push(
+        issue(
+          "warning",
+          "flow_stage_workspace_kind_mismatch",
+          `workspaceRoles.${roleIndex}.workspaceKind`,
+          `Workspace role '${role.key}' is a single-cycle core-flow stage and should use workspaceKind FLOW_STAGE_WORKSPACE.`,
+        ),
+      );
+    }
+
+    if (role.cardinality === "ONE_PER_BUSINESS_OBJECT" && effectiveKind !== "CASE_WORKSPACE") {
+      issues.push(
+        issue(
+          "warning",
+          "case_workspace_kind_mismatch",
+          `workspaceRoles.${roleIndex}.workspaceKind`,
+          `Workspace role '${role.key}' creates one Workspace per business object and should use workspaceKind CASE_WORKSPACE.`,
+        ),
+      );
+    }
+
+    if (effectiveKind === "CASE_WORKSPACE" && !normalizeTarget(role.identityTargetType)) {
+      issues.push(
+        issue(
+          "warning",
+          "case_workspace_missing_identity",
+          `workspaceRoles.${roleIndex}.identityTargetType`,
+          `CASE_WORKSPACE role '${role.key}' should declare identityTargetType so the Workspace identity is explicit.`,
+        ),
+      );
+    }
 
     for (const targetType of representedTargets) {
       if (targetType && !objectTypes.has(targetType)) {
@@ -333,6 +458,34 @@ export function validateOperationalBlueprintContract(
   }
 
   contract.coreFlows.forEach((flow, flowIndex) => {
+    const flowStageRoles = flow.steps
+      .map((step) => contract.workspaceRoles.find(
+        (role) => normalizeTarget(role.key) === normalizeTarget(step.workspaceRole),
+      ))
+      .filter((role): role is OperationalBlueprintWorkspaceRole => Boolean(role))
+      .filter((role) =>
+        inferredWorkspaceKind({
+          role,
+          isInCoreFlow: true,
+        }) === "FLOW_STAGE_WORKSPACE",
+      );
+    const hasFlowStageViewMode = (contract.spaceViewModes ?? []).some(
+      (mode) =>
+        mode.rowModel === "FLOW_STAGE_WORKSPACE" &&
+        normalizeKey(mode.coreFlowKey) === normalizeKey(flow.key),
+    );
+
+    if (flowStageRoles.length && !hasFlowStageViewMode) {
+      issues.push(
+        issue(
+          "warning",
+          "missing_flow_stage_space_view_mode",
+          `coreFlows.${flowIndex}`,
+          `Core flow '${flow.key}' has FLOW_STAGE_WORKSPACE roles but no matching FLOW_STAGE_WORKSPACE Space view mode.`,
+        ),
+      );
+    }
+
     flow.steps.forEach((step, stepIndex) => {
       const workspaceRole = normalizeTarget(step.workspaceRole);
       if (!workspaceRoles.has(workspaceRole)) {
@@ -523,6 +676,7 @@ const SERVICE_OPERATION_CONTRACT: OperationalBlueprintContract = {
   workspaceRoles: [
     {
       key: "SR_CASE",
+      workspaceKind: "CASE_WORKSPACE",
       label: "SR Case",
       cardinality: "ONE_PER_BUSINESS_OBJECT",
       identityTargetType: "SERVICE_REQUEST",
@@ -532,6 +686,7 @@ const SERVICE_OPERATION_CONTRACT: OperationalBlueprintContract = {
     },
     {
       key: "INSPECT",
+      workspaceKind: "FLOW_STAGE_WORKSPACE",
       label: "Inspect",
       cardinality: "SINGLE_PER_ACTIVE_CYCLE",
       identityTargetType: null,
@@ -541,6 +696,7 @@ const SERVICE_OPERATION_CONTRACT: OperationalBlueprintContract = {
     },
     {
       key: "PROCESSING",
+      workspaceKind: "FLOW_STAGE_WORKSPACE",
       label: "Processing",
       cardinality: "SINGLE_PER_ACTIVE_CYCLE",
       identityTargetType: null,
@@ -550,6 +706,7 @@ const SERVICE_OPERATION_CONTRACT: OperationalBlueprintContract = {
     },
     {
       key: "DONE",
+      workspaceKind: "FLOW_STAGE_WORKSPACE",
       label: "Done / Follow-up",
       cardinality: "SINGLE_PER_ACTIVE_CYCLE",
       identityTargetType: null,
@@ -595,6 +752,27 @@ const SERVICE_OPERATION_CONTRACT: OperationalBlueprintContract = {
           isTerminal: true,
         },
       ],
+    },
+  ],
+  spaceViewModes: [
+    {
+      key: "service-operation-flow",
+      label: "Service Operation Flow",
+      rowModel: "FLOW_STAGE_WORKSPACE",
+      primaryTarget: "workspace",
+      coreFlowKey: "service-operation-core-flow",
+      workspaceRoles: ["INSPECT", "PROCESSING", "DONE"],
+      description:
+        "Renders the ordered Technical Issue operation stages while SR cases can stay in a separate case view.",
+    },
+    {
+      key: "sr-cases",
+      label: "SR Cases",
+      rowModel: "CASE_WORKSPACE",
+      primaryTarget: "workspace",
+      workspaceRoles: ["SR_CASE"],
+      description:
+        "Renders one Workspace row per Service Request case.",
     },
   ],
   eventRoutes: [
@@ -829,6 +1007,7 @@ const PAYMENT_COLLECTION_CONTRACT: OperationalBlueprintContract = {
   workspaceRoles: [
     {
       key: "PAYMENT_INBOX",
+      workspaceKind: "FLOW_STAGE_WORKSPACE",
       label: "Payment Inbox",
       cardinality: "SINGLE_PER_ACTIVE_CYCLE",
       identityTargetType: null,
@@ -838,6 +1017,7 @@ const PAYMENT_COLLECTION_CONTRACT: OperationalBlueprintContract = {
     },
     {
       key: "PAYMENT_REVIEW",
+      workspaceKind: "FLOW_STAGE_WORKSPACE",
       label: "Payment Review",
       cardinality: "SINGLE_PER_ACTIVE_CYCLE",
       identityTargetType: null,
@@ -847,6 +1027,7 @@ const PAYMENT_COLLECTION_CONTRACT: OperationalBlueprintContract = {
     },
     {
       key: "PAYMENT_SETTLED",
+      workspaceKind: "FLOW_STAGE_WORKSPACE",
       label: "Settled / Exception",
       cardinality: "SINGLE_PER_ACTIVE_CYCLE",
       identityTargetType: null,
@@ -884,6 +1065,18 @@ const PAYMENT_COLLECTION_CONTRACT: OperationalBlueprintContract = {
           isTerminal: true,
         },
       ],
+    },
+  ],
+  spaceViewModes: [
+    {
+      key: "payment-collection-flow",
+      label: "Payment Collection Flow",
+      rowModel: "FLOW_STAGE_WORKSPACE",
+      primaryTarget: "workspace",
+      coreFlowKey: "payment-collection-core-flow",
+      workspaceRoles: ["PAYMENT_INBOX", "PAYMENT_REVIEW", "PAYMENT_SETTLED"],
+      description:
+        "Renders Payment records as items inside ordered collection stage Workspaces.",
     },
   ],
   eventRoutes: [

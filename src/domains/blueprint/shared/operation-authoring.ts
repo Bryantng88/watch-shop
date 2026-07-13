@@ -302,6 +302,8 @@ export function buildStarterOperationalBlueprintContract(
     workspaceRoles: [
       {
         key: workspaceRole,
+        workspaceKind:
+          operation.workspaceRoles[0]?.workspaceKind ?? "FLOW_STAGE_WORKSPACE",
         label: operation.workspaceRoles[0]?.label?.trim() || "Workspace chính",
         cardinality:
           operation.workspaceRoles[0]?.cardinality ?? "SINGLE_PER_ACTIVE_CYCLE",

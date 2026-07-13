@@ -85,6 +85,7 @@ function objectTypeTemplate(count: number): OperationalBlueprintObjectType {
 function workspaceRoleTemplate(count: number): OperationalBlueprintWorkspaceRole {
   return {
     key: nextKey("WORKSPACE_ROLE", count),
+    workspaceKind: "STANDALONE_WORKSPACE",
     label: "Vai trò Workspace mới",
     cardinality: "SINGLE_PER_ACTIVE_CYCLE",
     identityTargetType: null,
@@ -310,6 +311,41 @@ const WORKSPACE_CARDINALITY_OPTIONS: SelectOption[] = [
     label: "Tạo thủ công nhiều Workspace khi cần",
   },
 ];
+
+const WORKSPACE_KIND_OPTIONS: SelectOption[] = [
+  {
+    value: "STANDALONE_WORKSPACE",
+    label: "Standalone Workspace",
+  },
+  {
+    value: "FLOW_STAGE_WORKSPACE",
+    label: "Flow-stage Workspace",
+  },
+  {
+    value: "CASE_WORKSPACE",
+    label: "Case Workspace",
+  },
+  {
+    value: "BENCH_WORKSPACE",
+    label: "Bench Workspace",
+  },
+];
+
+function workspaceKindHelp(value: OperationalBlueprintWorkspaceRole["workspaceKind"]) {
+  if (value === "FLOW_STAGE_WORKSPACE") {
+    return "This Workspace is one stage in a core flow. The Space view should render it as stage capacity, not as business item identity.";
+  }
+
+  if (value === "CASE_WORKSPACE") {
+    return "This Workspace is identity-bound to one business object, for example a Service Request case.";
+  }
+
+  if (value === "BENCH_WORKSPACE") {
+    return "This Workspace is a workbench or capacity pool, not a required ordered core-flow stage.";
+  }
+
+  return "This Workspace stands alone and does not need a core flow to render correctly.";
+}
 
 function workspaceCardinalityHelp(
   value: OperationalBlueprintWorkspaceRole["cardinality"],
@@ -722,6 +758,18 @@ function validationMessage(code: string) {
   if (code === "duplicate_key") {
     return "Có mã bị trùng. Hãy đổi mã để mỗi dòng là duy nhất.";
   }
+  if (code === "missing_workspace_kind") {
+    return "Workspace role is missing workspaceKind, so runtime must infer the role.";
+  }
+  if (code === "flow_stage_workspace_kind_mismatch") {
+    return "A core-flow Workspace should use FLOW_STAGE_WORKSPACE.";
+  }
+  if (code === "case_workspace_kind_mismatch" || code === "case_workspace_missing_identity") {
+    return "A case Workspace needs explicit workspaceKind and identity object.";
+  }
+  if (code === "missing_flow_stage_space_view_mode") {
+    return "A core flow with stage Workspaces needs a matching FLOW_STAGE_WORKSPACE Space view mode.";
+  }
 
   return "Cần kiểm tra lại cấu hình operation này.";
 }
@@ -1072,7 +1120,30 @@ export function OperationModelAuthoringPanel({
                       }
                     />
                     <SelectInput
-                      label="Cách tạo Workspace"
+                      label="Workspace kind"
+                      value={role.workspaceKind ?? ""}
+                      options={[
+                        {
+                          value: "",
+                          label: "Not declared - runtime will infer",
+                        },
+                        ...WORKSPACE_KIND_OPTIONS,
+                      ]}
+                      onChange={(value) =>
+                        updateOperation(
+                          patchOperationListItem(operation, "workspaceRoles", index, {
+                            workspaceKind: value
+                              ? (value as OperationalBlueprintWorkspaceRole["workspaceKind"])
+                              : null,
+                          }),
+                        )
+                      }
+                    />
+                    <div className="border border-slate-100 bg-slate-50 p-2 text-xs font-normal text-slate-600">
+                      {workspaceKindHelp(role.workspaceKind)}
+                    </div>
+                    <SelectInput
+                      label="Cach tao Workspace"
                       value={role.cardinality}
                       options={WORKSPACE_CARDINALITY_OPTIONS}
                       onChange={(value) =>

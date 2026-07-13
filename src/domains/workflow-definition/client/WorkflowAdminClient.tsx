@@ -704,7 +704,7 @@ function BlueprintList({
   busy: boolean;
 }) {
   return (
-    <div className="space-y-2">
+    <div className="grid gap-2.5 p-2">
       {blueprints.map((blueprint) => {
         const selected = selectedKey === blueprint.key;
         const valid = Boolean(blueprint.workflow.validation?.valid);
@@ -715,7 +715,11 @@ function BlueprintList({
         return (
           <div
             key={blueprint.key}
-            className={`border p-3 ${selected ? "border-slate-900 bg-white" : "border-slate-200 bg-white"}`}
+            className={`rounded-xl border bg-white p-3.5 transition ${
+              selected
+                ? "border-violet-200 bg-gradient-to-br from-white to-violet-50/70 shadow-[inset_3px_0_0_#5b43f1]"
+                : "border-slate-100 hover:border-slate-200 hover:bg-slate-50/50"
+            }`}
           >
             <button
               type="button"
@@ -735,7 +739,7 @@ function BlueprintList({
                   </div>
                 </div>
                 <span
-                  className={`rounded-full border px-2 py-0.5 text-xs font-medium ${validationTone(valid)}`}
+                  className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${validationTone(valid)}`}
                 >
                   {valid ? "Hợp lệ" : "Có lỗi"}
                 </span>
@@ -743,9 +747,9 @@ function BlueprintList({
               {operationValid !== null ? (
                 <div className="mt-2">
                   <span
-                    className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${validationTone(operationValid)}`}
+                    className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${validationTone(operationValid)}`}
                   >
-                    Operation {operationValid ? "valid" : "has errors"}
+                    Mô hình vận hành {operationValid ? "hợp lệ" : "cần sửa"}
                   </span>
                 </div>
               ) : null}
@@ -754,9 +758,9 @@ function BlueprintList({
               type="button"
               onClick={() => onDuplicate(blueprint.workflow.workflowKey ?? "")}
               disabled={busy || !blueprint.workflow.workflowKey}
-              className="mt-3 w-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+              className="mt-3 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
             >
-              Nhân bản thành Blueprint Draft
+              Nhân bản thành Draft
             </button>
           </div>
         );
@@ -775,9 +779,9 @@ function DraftList({
   onSelect: (id: string) => void;
 }) {
   return (
-    <div className="space-y-2">
+    <div className="grid gap-2.5 p-2">
       {drafts.length === 0 ? (
-        <div className="border border-dashed border-slate-200 bg-white p-4 text-sm text-slate-500">
+        <div className="rounded-xl border border-dashed border-slate-200 bg-white p-4 text-sm text-slate-500">
           Chưa có Blueprint draft.
         </div>
       ) : null}
@@ -791,7 +795,11 @@ function DraftList({
             key={draft.id}
             type="button"
             onClick={() => onSelect(draft.id)}
-            className={`block w-full border p-3 text-left ${selected ? "border-slate-900 bg-white" : "border-slate-200 bg-white"}`}
+            className={`block w-full rounded-xl border p-3.5 text-left transition ${
+              selected
+                ? "border-violet-200 bg-gradient-to-br from-white to-violet-50/70 shadow-[inset_3px_0_0_#5b43f1]"
+                : "border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50/50"
+            }`}
           >
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -804,7 +812,7 @@ function DraftList({
                 </div>
               </div>
               <span
-                className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
+                className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${
                   draft.status === "ARCHIVED"
                     ? "border-slate-200 bg-slate-100 text-slate-600"
                     : validationTone(valid)
@@ -928,6 +936,9 @@ export default function WorkflowAdminClient({
     (blueprint) => blueprint.workflow.validation?.valid,
   ).length;
   const validDraftCount = drafts.filter((draft) => draft.validationJson?.valid).length;
+  const operationBlueprintCount =
+    registryBlueprints.filter((blueprint) => blueprint.operation).length +
+    drafts.filter((draft) => draft.blueprintJson?.operation).length;
   const eventKeys = new Set(businessEvents.map((event) => event.eventKey));
   const activeEventBindingCount = eventBindingAudit.filter(
     (item) => item.status === "ACTIVE",
@@ -1385,20 +1396,20 @@ export default function WorkflowAdminClient({
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <section className="border-b border-slate-200 pb-5">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+    <div className="min-h-screen bg-[#f6f7fb] px-4 py-7 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-[1520px] flex-col gap-4">
+        <section className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-sm font-medium text-slate-500">
               System Admin / Thư viện Blueprint
             </p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
+            <h1 className="mt-2 text-3xl font-semibold tracking-normal text-slate-950">
               Thư viện Blueprint
             </h1>
-            <p className="mt-2 max-w-3xl text-sm text-slate-600">
-              Blueprint là thư viện các cách vận hành chuẩn của business.
-              Blueprint định nghĩa Workspace nên vận hành thế nào; Workspace
-              chạy từ snapshot và Item vẫn sở hữu Workflow Runtime.
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+              Blueprint là thư viện các cách vận hành chuẩn của business. Blueprint
+              định nghĩa Workspace nên vận hành thế nào; Workspace mới là nơi chạy
+              runtime từ snapshot.
             </p>
           </div>
 
@@ -1406,75 +1417,85 @@ export default function WorkflowAdminClient({
             type="button"
             onClick={() => startTransition(() => void createDraft())}
             disabled={Boolean(busyKey)}
-            className="w-fit bg-slate-950 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+            className="inline-flex h-11 w-fit items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
           >
-            {busyKey === "create" ? "Đang tạo..." : "Tạo Blueprint Draft"}
+            {busyKey === "create" ? "Đang tạo..." : "+ Tạo Blueprint Draft"}
           </button>
-        </div>
-      </section>
+        </section>
 
-      {error ? (
-        <div className="border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {error}
-        </div>
-      ) : null}
+        {error ? (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {error}
+          </div>
+        ) : null}
 
-      {message ? (
-        <div className="border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          {message}
-        </div>
-      ) : null}
+        {message ? (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            {message}
+          </div>
+        ) : null}
 
-      <section className="grid gap-3 md:grid-cols-4">
-        <div className="border border-slate-200 bg-white p-4">
-          <div className="text-xs font-medium uppercase text-slate-500">
-            Blueprint Registry
+        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_6px_18px_rgba(24,36,76,0.04)]">
+            <div className="text-xs font-bold uppercase tracking-[0.06em] text-slate-500">
+              Blueprint Registry
+            </div>
+            <div className="mt-2 text-2xl font-bold text-slate-950">
+              {registryBlueprints.length}
+            </div>
+            <div className="mt-1 text-xs text-slate-500">{validRegistryCount} hợp lệ</div>
           </div>
-          <div className="mt-2 text-2xl font-semibold text-slate-950">
-            {registryBlueprints.length}
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_6px_18px_rgba(24,36,76,0.04)]">
+            <div className="text-xs font-bold uppercase tracking-[0.06em] text-slate-500">
+              Blueprint Draft
+            </div>
+            <div className="mt-2 text-2xl font-bold text-slate-950">
+              {drafts.length}
+            </div>
+            <div className="mt-1 text-xs text-slate-500">{validDraftCount} hợp lệ</div>
           </div>
-          <div className="mt-1 text-xs text-slate-500">{validRegistryCount} hợp lệ</div>
-        </div>
-        <div className="border border-slate-200 bg-white p-4">
-          <div className="text-xs font-medium uppercase text-slate-500">
-            Blueprint Draft
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_6px_18px_rgba(24,36,76,0.04)]">
+            <div className="text-xs font-bold uppercase tracking-[0.06em] text-slate-500">
+              Workflow hợp lệ
+            </div>
+            <div className="mt-2 text-2xl font-bold text-slate-950">
+              {validRegistryCount + validDraftCount}
+            </div>
+            <div className="mt-1 text-xs text-slate-500">Registry và Draft</div>
           </div>
-          <div className="mt-2 text-2xl font-semibold text-slate-950">
-            {drafts.length}
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_6px_18px_rgba(24,36,76,0.04)]">
+            <div className="text-xs font-bold uppercase tracking-[0.06em] text-slate-500">
+              Operation Model
+            </div>
+            <div className="mt-2 text-2xl font-bold text-slate-950">
+              {operationBlueprintCount}
+            </div>
+            <div className="mt-1 text-xs text-slate-500">Blueprint có mô hình vận hành</div>
           </div>
-          <div className="mt-1 text-xs text-slate-500">{validDraftCount} hợp lệ</div>
-        </div>
-        <div className="border border-slate-200 bg-white p-4">
-          <div className="text-xs font-medium uppercase text-slate-500">
-            Catalog sự kiện
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_6px_18px_rgba(24,36,76,0.04)]">
+            <div className="text-xs font-bold uppercase tracking-[0.06em] text-slate-500">
+              Version đã lưu
+            </div>
+            <div className="mt-2 text-2xl font-bold text-slate-950">
+              {publishedVersions.length}
+            </div>
+            <div className="mt-1 text-xs text-slate-500">Sẵn sàng tạo Space</div>
           </div>
-          <div className="mt-2 text-2xl font-semibold text-slate-950">
-            {businessEvents.length}
-          </div>
-          <div className="mt-1 text-xs text-slate-500">Không scan log</div>
-        </div>
-        <div className="border border-slate-200 bg-white p-4">
-          <div className="text-xs font-medium uppercase text-slate-500">
-            Nguồn runtime
-          </div>
-          <div className="mt-2 text-lg font-semibold text-slate-950">STATIC</div>
-          <div className="mt-1 text-xs text-slate-500">Blueprint không chạy runtime</div>
-        </div>
-      </section>
+        </section>
 
-      <details className="border border-slate-200 bg-white p-4">
-        <summary className="cursor-pointer text-sm font-semibold text-slate-900">
-          Mở thư viện Blueprint / Draft
-        </summary>
-        <div className="mt-2 text-sm text-slate-600">
-          Dùng khu này khi cần đổi Blueprint hoặc chọn draft khác. Khu làm việc
-          chính ở bên dưới chỉ tập trung vào Blueprint đang chọn.
-        </div>
-        <div className="mt-4 grid gap-5 xl:grid-cols-2">
-          <div>
-            <h2 className="mb-2 text-sm font-semibold text-slate-900">
-              Blueprint gốc
-            </h2>
+        <section className="grid items-start gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
+          <aside className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_12px_32px_rgba(24,36,76,0.07)]">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4">
+              <div>
+                <h2 className="text-base font-bold text-slate-950">Blueprint gốc</h2>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Chọn Blueprint registry để xem hoặc nhân bản thành draft.
+                </p>
+              </div>
+              <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700">
+                Registry
+              </span>
+            </div>
             <BlueprintList
               blueprints={registryBlueprints}
               selectedKey={selectedBlueprint?.key ?? ""}
@@ -1486,12 +1507,17 @@ export default function WorkflowAdminClient({
               onDuplicate={(key) => void createDraft(key)}
               busy={Boolean(busyKey)}
             />
-          </div>
-
-          <div>
-            <h2 className="mb-2 text-sm font-semibold text-slate-900">
-              Blueprint Draft
-            </h2>
+            <div className="flex items-start justify-between gap-3 border-y border-slate-200 px-5 py-4">
+              <div>
+                <h2 className="text-base font-bold text-slate-950">Blueprint Draft</h2>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Bản nháp có thể chỉnh sửa, validate và publish version.
+                </p>
+              </div>
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                Draft
+              </span>
+            </div>
             <DraftList
               drafts={drafts}
               selectedId={selectedDraftId}
@@ -1502,26 +1528,24 @@ export default function WorkflowAdminClient({
                 setDetailTab("purpose");
               }}
             />
-          </div>
-        </div>
-      </details>
+          </aside>
 
-      <section>
-        <article className="border border-slate-200 bg-white p-5">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_12px_32px_rgba(24,36,76,0.07)]">
+            <article>
+          <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-5 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-lg font-semibold text-slate-950">
+                <h2 className="text-2xl font-semibold tracking-normal text-slate-950">
                   {detailTitle}
                 </h2>
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-600">
+                <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700">
                   {detailKey}
                 </span>
               </div>
-              <p className="mt-1 max-w-3xl text-sm text-slate-600">
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
                 {detailExperience.purpose}
               </p>
-              <p className="mt-2 text-xs font-medium uppercase text-slate-500">
+              <p className="mt-3 text-xs font-bold uppercase tracking-[0.06em] text-slate-500">
                 {detailExperience.workspaceType} / {detailStatus}
               </p>
             </div>
@@ -1532,7 +1556,7 @@ export default function WorkflowAdminClient({
                   type="button"
                   onClick={() => void saveDraft(false)}
                   disabled={Boolean(busyKey) || !parsedEditor.ok}
-                  className="bg-slate-950 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+                  className="inline-flex h-10 items-center rounded-md bg-slate-950 px-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
                 >
                   {busyKey === "save" ? "Đang lưu..." : "Lưu"}
                 </button>
@@ -1540,7 +1564,7 @@ export default function WorkflowAdminClient({
                   type="button"
                   onClick={() => void saveDraft(true)}
                   disabled={Boolean(busyKey) || !parsedEditor.ok}
-                  className="border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                  className="inline-flex h-10 items-center rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
                 >
                   {busyKey === "validate" ? "Đang validate..." : "Validate"}
                 </button>
@@ -1548,46 +1572,46 @@ export default function WorkflowAdminClient({
                   type="button"
                   onClick={() => void archiveDraft()}
                   disabled={Boolean(busyKey) || selectedDraft.status === "ARCHIVED"}
-                  className="border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-60"
+                  className="inline-flex h-10 items-center rounded-md border border-rose-200 bg-rose-50 px-3 text-sm font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-60"
                 >
                   Lưu trữ
                 </button>
               </div>
             ) : (
-              <div className="border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
                 Blueprint từ registry chỉ đọc. Hãy nhân bản để tạo draft.
               </div>
             )}
           </div>
 
-          <div className="mt-4 grid gap-3 lg:grid-cols-4">
-            <div className="border border-slate-200 bg-slate-50 p-3">
-              <div className="text-xs text-slate-500">Loại Workspace</div>
+          <div className="grid gap-3 px-5 py-4 lg:grid-cols-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div className="text-xs font-bold uppercase tracking-[0.05em] text-slate-500">Loại Workspace</div>
               <div className="mt-1 text-sm font-semibold text-slate-950">
                 {detailExperience.workspaceType}
               </div>
             </div>
-            <div className="border border-slate-200 bg-slate-50 p-3">
-              <div className="text-xs text-slate-500">Bước trạng thái</div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div className="text-xs font-bold uppercase tracking-[0.05em] text-slate-500">Bước trạng thái</div>
               <div className="mt-1 text-lg font-semibold text-slate-950">
                 {counts.states}
               </div>
             </div>
-            <div className="border border-slate-200 bg-slate-50 p-3">
-              <div className="text-xs text-slate-500">Cách chuyển việc</div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div className="text-xs font-bold uppercase tracking-[0.05em] text-slate-500">Cách chuyển việc</div>
               <div className="mt-1 text-lg font-semibold text-slate-950">
                 {counts.transitions}
               </div>
             </div>
-            <div className="border border-slate-200 bg-slate-50 p-3">
-              <div className="text-xs text-slate-500">Trigger</div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div className="text-xs font-bold uppercase tracking-[0.05em] text-slate-500">Trigger</div>
               <div className="mt-2">
                 <TriggerSummary definition={detailDefinition} />
               </div>
             </div>
           </div>
 
-          <div className="mt-5 flex flex-wrap gap-2 border-b border-slate-200">
+          <div className="flex flex-wrap gap-2 border-y border-slate-200 px-5 py-3">
             {[
               ["purpose", "Mục đích"],
               ["workspace", "Định nghĩa Workspace"],
@@ -1600,10 +1624,10 @@ export default function WorkflowAdminClient({
                 key={tab}
                 type="button"
                 onClick={() => setDetailTab(tab as DetailTab)}
-                className={`border-b-2 px-3 py-2 text-sm font-medium ${
+                className={`inline-flex h-9 items-center rounded-full border px-3 text-sm font-semibold ${
                   detailTab === tab
-                    ? "border-slate-950 text-slate-950"
-                    : "border-transparent text-slate-500 hover:text-slate-800"
+                    ? "border-violet-200 bg-violet-50 text-violet-700"
+                    : "border-slate-200 bg-white text-slate-500 hover:text-slate-800"
                 }`}
               >
                 {label}
@@ -1611,6 +1635,7 @@ export default function WorkflowAdminClient({
             ))}
           </div>
 
+          <div className="px-5 pb-5">
           {detailTab === "purpose" ? (
             <div className="mt-4 grid gap-4 lg:grid-cols-2">
               <div className="border border-slate-200 p-4">
@@ -2175,22 +2200,23 @@ export default function WorkflowAdminClient({
 
           {detailTab === "operation" ? (
             <div className="mt-4 space-y-4">
-              <section className="border border-slate-200 bg-white p-4">
+              <section className="overflow-hidden rounded-2xl border border-sky-100 bg-gradient-to-b from-sky-50/70 to-[#f3f8ff]">
+                <div className="p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <div className="text-xs font-semibold uppercase text-slate-500">
+                    <div className="text-xs font-bold uppercase tracking-[0.06em] text-violet-700">
                       Block cấu hình
                     </div>
-                    <h3 className="text-base font-semibold text-slate-950">
+                    <h3 className="mt-1 text-base font-semibold text-slate-950">
                       1. Cấu hình Space/Workspace runtime
                     </h3>
-                    <p className="mt-1 max-w-3xl text-sm text-slate-600">
+                    <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
                       Đây là bản thiết kế quyết định Space sẽ có Workspace nào,
                       nhận item/event nào, và người dùng bấm được action gì.
                     </p>
                   </div>
                   <span
-                    className={`border px-2.5 py-1 text-xs font-medium ${
+                    className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
                       operationValidation.ok
                         ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                         : "border-rose-200 bg-rose-50 text-rose-700"
@@ -2204,7 +2230,7 @@ export default function WorkflowAdminClient({
                   runtime. Các tab trong khu này chỉ chỉnh/xem Blueprint, chưa
                   tạo dữ liệu runtime.
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2 border-b border-slate-200 pb-2">
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-sky-100 pt-4">
                   {[
                     ["model", "Cấu hình model"],
                     ["workspace-plan", "Kết quả sẽ tạo"],
@@ -2216,10 +2242,10 @@ export default function WorkflowAdminClient({
                       key={tab}
                       type="button"
                       onClick={() => setOperationInspectTab(tab as OperationInspectTab)}
-                      className={`border px-3 py-2 text-sm font-medium ${
+                      className={`inline-flex h-9 items-center rounded-full border px-3 text-sm font-semibold ${
                         operationInspectTab === tab
-                          ? "border-slate-950 bg-slate-950 text-white"
-                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-400 hover:text-slate-950"
+                          ? "border-violet-200 bg-violet-50 text-violet-700"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-violet-200 hover:text-violet-700"
                       }`}
                     >
                       {label}
@@ -2333,6 +2359,7 @@ export default function WorkflowAdminClient({
                       ) : null}
                     </div>
                   ) : null}
+                </div>
                 </div>
               </section>
 
@@ -2592,8 +2619,11 @@ export default function WorkflowAdminClient({
               </div>
             </div>
           ) : null}
-        </article>
-      </section>
+          </div>
+            </article>
+          </section>
+        </section>
+      </div>
     </div>
   );
 }

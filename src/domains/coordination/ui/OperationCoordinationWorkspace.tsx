@@ -3,7 +3,25 @@
 import { type FormEvent, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CalendarDays, ChevronRight, Clock3, Inbox, MessageSquareWarning, Plus, RotateCcw } from "lucide-react";
+import {
+  CalendarDays,
+  Camera,
+  CheckCircle2,
+  ChevronRight,
+  BookOpen,
+  Filter,
+  Grid2X2,
+  Info,
+  Inbox,
+  List,
+  Monitor,
+  Plus,
+  RotateCcw,
+  Send,
+  Settings,
+  SlidersHorizontal,
+  Zap,
+} from "lucide-react";
 import AdminBreadcrumbs from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
 import {
   rolloverPreviousCycleItemsAction,
@@ -17,6 +35,16 @@ import {
   type AppProgressStep,
 } from "@/domains/shared/feedback/AppProgressProvider";
 import { repairVietnameseMojibake } from "@/domains/shared/text/vietnamese-mojibake";
+import {
+  SpaceViewFooterTip,
+  SpaceViewInfoCell,
+  SpaceViewInfoGrid,
+  SpaceViewPage,
+  SpaceViewPanel,
+  SpaceViewSectionHeader,
+  SpaceViewSummary,
+  SpaceViewSummaryCell,
+} from "@/domains/shared/ui/space/SpaceViewShell";
 import type { CoordinationDashboardDTO } from "../server/coordination-dashboard.types";
 import { isCoreWorkspaceBlueprint } from "@/domains/task/shared/workspace-flow-policy";
 
@@ -81,25 +109,250 @@ function prefixedLabel(prefix: "Space" | "Workspace", value: string) {
   return `${prefix} ${cleanValue}`;
 }
 
+function displayText(value: string | null | undefined) {
+  return repairVietnameseMojibake(value ?? "").trim();
+}
+
+function actionLabel(value: string) {
+  const cleanValue = displayText(value);
+  if (
+    cleanValue === "Nhận item tồn tuần trước" ||
+    cleanValue.toLowerCase() === "nhan item ton tuan truoc"
+  ) {
+    return "Nhận item tồn từ tuần trước";
+  }
+
+  return cleanValue;
+}
+
+function viewConfigLabel(value: string) {
+  const labels: Record<string, string> = {
+    "Technical Service Space": "Không gian kỹ thuật dịch vụ",
+    "Media Production Space": "Không gian sản xuất Media",
+  };
+
+  return labels[displayText(value)] ?? displayText(value);
+}
+
+function modeLabel(mode: CoordinationDashboardDTO["viewConfig"]["modes"][number]) {
+  if (mode.key === "media-production-flow") return "Luồng sản xuất Media";
+  if (mode.key === "sr-cases") return "Hồ sơ yêu cầu dịch vụ";
+  if (mode.key === "technical-issue-flow") return "Bàn xử lý kỹ thuật";
+  if (mode.key === "workspace-index") return "Danh sách Workspace";
+  return displayText(mode.label);
+}
+
+function modeDescription(mode: CoordinationDashboardDTO["viewConfig"]["modes"][number]) {
+  if (mode.key === "media-production-flow") {
+    return "Chụp ảnh → Xử lý Media → Đăng bài. Mỗi dòng là một Workspace theo stage của luồng.";
+  }
+  if (mode.key === "workspace-index") {
+    return "Danh sách dự phòng cho Workspace thủ công hoặc Workspace độc lập trong Space này.";
+  }
+  if (mode.key === "sr-cases") {
+    return "Mỗi dòng là một Workspace đại diện cho một yêu cầu dịch vụ đang cần theo dõi.";
+  }
+  if (mode.key === "technical-issue-flow") {
+    return "Kiểm tra → Xử lý → Hoàn tất/Theo dõi. Mỗi dòng là một Workspace theo stage kỹ thuật.";
+  }
+
+  return displayText(mode.description);
+}
+
+function coreFlowLabel(flow: CoordinationDashboardDTO["viewConfig"]["coreFlows"][number]) {
+  if (flow.key === "media-production-flow") return "Sản xuất Media";
+  if (flow.key === "technical-issue-flow") return "Xử lý lỗi kỹ thuật";
+  return displayText(flow.label);
+}
+
+function coreFlowDescription(flow: CoordinationDashboardDTO["viewConfig"]["coreFlows"][number]) {
+  if (flow.key === "media-production-flow") {
+    return "Hiển thị đường vận hành Media theo thứ tự stage.";
+  }
+  if (flow.key === "technical-issue-flow") {
+    return "Hiển thị đường xử lý lỗi kỹ thuật theo thứ tự stage.";
+  }
+
+  return displayText(flow.description);
+}
+
+function stageLabel(value: string) {
+  const labels: Record<string, string> = {
+    Photography: "Chụp ảnh",
+    "Media Processing": "Xử lý Media",
+    Publish: "Đăng bài",
+    Inspect: "Kiểm tra",
+    Processing: "Xử lý",
+    "Done / Follow-up": "Hoàn tất / Theo dõi",
+  };
+
+  return labels[value] ?? displayText(value);
+}
+
+function targetTypeLabel(value: string) {
+  const labels: Record<string, string> = {
+    WATCH: "Đồng hồ",
+    SERVICE_REQUEST: "Yêu cầu dịch vụ",
+    TECHNICAL_ISSUE: "Lỗi kỹ thuật",
+  };
+
+  return labels[value] ?? value;
+}
+
+function rowModelLabel(value: string) {
+  const labels: Record<string, string> = {
+    FLOW_STAGE_WORKSPACE: "Workspace theo stage luồng",
+    CASE_WORKSPACE: "Workspace hồ sơ",
+    WORKSPACE: "Workspace",
+  };
+
+  return labels[value] ?? value;
+}
+
+function primaryTargetLabel(value: string) {
+  const labels: Record<string, string> = {
+    workspace: "Workspace",
+    businessObject: "Đối tượng nghiệp vụ",
+    stage: "Stage",
+  };
+
+  return labels[value] ?? value;
+}
+
+function workspaceKindLabel(value: string) {
+  const labels: Record<string, string> = {
+    FLOW_STAGE_WORKSPACE: "Workspace theo stage luồng",
+    CASE_WORKSPACE: "Workspace hồ sơ",
+    BENCH_WORKSPACE: "Workspace kỹ thuật",
+    STANDALONE_WORKSPACE: "Workspace độc lập",
+    INDEX_WORKSPACE: "Workspace chỉ mục",
+  };
+
+  return labels[value] ?? value;
+}
+
+function columnLabel(value: string) {
+  const labels: Record<string, string> = {
+    Workspace: "Workspace",
+    Owner: "Phụ trách",
+    Items: "Số item",
+    Attention: "Cần chú ý",
+    Feedback: "Phản hồi",
+    Updated: "Cập nhật",
+    "Last activity": "Hoạt động gần nhất",
+  };
+
+  return labels[value] ?? displayText(value);
+}
+
+function carryoverRuleText(value: string) {
+  const cleanValue = displayText(value);
+  if (cleanValue.includes("unfinished WATCH items")) {
+    return "Chuyển các item đồng hồ chưa hoàn tất đang gắn với Chụp ảnh, Xử lý Media hoặc Đăng bài. Công việc đã đăng hoặc đã kết thúc sẽ không được chuyển tồn.";
+  }
+  if (cleanValue.includes("active SERVICE_REQUEST cases") || cleanValue.includes("TECHNICAL_ISSUE items")) {
+    return "Chuyển các hồ sơ yêu cầu dịch vụ và lỗi kỹ thuật còn đang xử lý. Hồ sơ hoặc lỗi kỹ thuật đã kết thúc sẽ không được chuyển tồn.";
+  }
+
+  return cleanValue;
+}
+
+function emptyStateText(value: string, modeKey?: string) {
+  if (modeKey === "WORKSPACE") return "Chưa có Workspace thủ công trong chế độ xem này.";
+
+  const cleanValue = displayText(value);
+  if (cleanValue.toLowerCase().includes("technical space")) {
+    return "Chưa có Workspace trong Không gian kỹ thuật này.";
+  }
+  if (cleanValue.toLowerCase().includes("media production flow")) {
+    return "Chưa có Workspace trong Luồng sản xuất Media tuần này.";
+  }
+
+  return cleanValue;
+}
+
+function terminalStatesLabel(targetType: string, states: string[]) {
+  return `${targetTypeLabel(targetType)}: bỏ qua ${states.join(", ")}`;
+}
+
 function ticketFlowStageKey(
   ticket: CoordinationDashboardDTO["workTickets"][number],
 ) {
   return ticket.blueprint?.flowStageKey ?? ticket.blueprint?.key ?? null;
 }
 
+function normalizeStageKey(value: string | null | undefined) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, "-");
+}
+
+function stageVisual(stageKey: string | null | undefined) {
+  const normalized = normalizeStageKey(stageKey);
+  if (normalized.includes("photo")) {
+    return {
+      Icon: Camera,
+      frame: "bg-violet-50 text-violet-700 ring-violet-100",
+      description: "Chuẩn bị và chụp ảnh sản phẩm",
+    };
+  }
+  if (normalized.includes("media-processing")) {
+    return {
+      Icon: SlidersHorizontal,
+      frame: "bg-sky-50 text-sky-700 ring-sky-100",
+      description: "Chỉnh sửa và xử lý hình ảnh",
+    };
+  }
+  if (normalized.includes("inspect")) {
+    return {
+      Icon: Filter,
+      frame: "bg-violet-50 text-violet-700 ring-violet-100",
+      description: "Tiếp nhận và kiểm tra lỗi kỹ thuật",
+    };
+  }
+  if (normalized.includes("processing") || normalized.includes("process")) {
+    return {
+      Icon: SlidersHorizontal,
+      frame: "bg-sky-50 text-sky-700 ring-sky-100",
+      description: "Đang xử lý kỹ thuật",
+    };
+  }
+  if (normalized.includes("done") || normalized.includes("follow")) {
+    return {
+      Icon: CheckCircle2,
+      frame: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+      description: "Hoàn tất và theo dõi sau xử lý",
+    };
+  }
+  if (normalized.includes("publish")) {
+    return {
+      Icon: Send,
+      frame: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+      description: "Xuất bản và phân phối",
+    };
+  }
+
+  return {
+    Icon: List,
+    frame: "bg-slate-50 text-slate-700 ring-slate-100",
+    description: "Workspace vận hành",
+  };
+}
+
 function enabledCapabilityLabels(
   capabilities: CoordinationDashboardDTO["blueprints"][number]["workspaceDefinition"]["enabledCapabilities"],
 ) {
   return [
-    capabilities.workflow ? "Workflow" : null,
-    capabilities.items ? "Items" : null,
-    capabilities.activity ? "Activity" : null,
-    capabilities.discussion ? "Discussion" : null,
-    capabilities.attachments ? "Attachments" : null,
+    capabilities.workflow ? "Quy trình" : null,
+    capabilities.items ? "Item" : null,
+    capabilities.activity ? "Hoạt động" : null,
+    capabilities.discussion ? "Trao đổi" : null,
+    capabilities.attachments ? "Tệp đính kèm" : null,
     capabilities.checklist ? "Checklist" : null,
-    capabilities.dueDate ? "Due Date" : null,
-    capabilities.assignee ? "Assignee" : null,
-    capabilities.priority ? "Priority" : null,
+    capabilities.dueDate ? "Hạn xử lý" : null,
+    capabilities.assignee ? "Người phụ trách" : null,
+    capabilities.priority ? "Độ ưu tiên" : null,
   ].filter(Boolean) as string[];
 }
 
@@ -124,6 +377,17 @@ function blueprintSelectLabel(
   return `${blueprint.name}${identity} - ${blueprintSourceLabel(blueprint)}`;
 }
 
+function StageIconFrame({ stageKey }: { stageKey: string | null | undefined }) {
+  const visual = stageVisual(stageKey);
+  const Icon = visual.Icon;
+
+  return (
+    <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-md ring-1 ${visual.frame}`}>
+      <Icon className="h-6 w-6" />
+    </span>
+  );
+}
+
 function OwnerCell({
   owner,
 }: {
@@ -133,8 +397,8 @@ function OwnerCell({
 
   return (
     <div className="text-sm">
-      <div className="text-xs font-medium text-slate-500">Phụ trách</div>
-      <div className="mt-1 inline-flex min-w-0 items-center gap-2">
+      <div className="text-xs font-medium text-slate-500 lg:hidden">Phụ trách</div>
+      <div className="mt-1 inline-flex min-w-0 items-center gap-2 lg:mt-0">
         <span className={`flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-semibold ${owner.isSystem ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}>
           {src ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -190,18 +454,47 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     : null;
   const activeStageByWorkspaceKey = useMemo(() => {
     const entries =
-      activeCoreFlow?.stages.map((stage) => [stage.workspaceKey, stage] as const) ??
-      [];
+      activeCoreFlow?.stages.flatMap((stage) => [
+        [normalizeStageKey(stage.workspaceKey), stage] as const,
+        [normalizeStageKey(stage.key), stage] as const,
+      ]) ?? [];
 
     return new Map(entries);
   }, [activeCoreFlow]);
+  const flowStageKeys = useMemo(
+    () =>
+      new Set(
+        data.viewConfig.coreFlows?.flatMap((flow) =>
+          flow.stages.flatMap((stage) => [
+            normalizeStageKey(stage.workspaceKey),
+            normalizeStageKey(stage.key),
+          ]),
+        ) ?? [],
+      ),
+    [data.viewConfig.coreFlows],
+  );
   const displayedWorkTickets = useMemo(() => {
     if (!activeCoreFlow || activeViewMode?.rowModel !== "FLOW_STAGE_WORKSPACE") {
-      return data.workTickets;
+      const allowedKinds = activeViewMode?.allowedWorkspaceKinds ?? [];
+      if (!allowedKinds.length) return data.workTickets;
+
+      return data.workTickets.filter((ticket) => {
+        const inferredWorkspaceKind =
+          ticket.blueprint?.workspaceKind ??
+          (flowStageKeys.has(normalizeStageKey(ticketFlowStageKey(ticket)))
+            ? "FLOW_STAGE_WORKSPACE"
+            : null);
+
+        if (!inferredWorkspaceKind) return true;
+        return allowedKinds.includes(inferredWorkspaceKind);
+      });
     }
 
     const stageOrderByWorkspaceKey = new Map(
-      activeCoreFlow.stages.map((stage) => [stage.workspaceKey, stage.sortOrder] as const),
+      activeCoreFlow.stages.flatMap((stage) => [
+        [normalizeStageKey(stage.workspaceKey), stage.sortOrder] as const,
+        [normalizeStageKey(stage.key), stage.sortOrder] as const,
+      ]),
     );
 
     return data.workTickets
@@ -213,13 +506,13 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
           return false;
         }
 
-        const stageKey = ticketFlowStageKey(ticket);
+        const stageKey = normalizeStageKey(ticketFlowStageKey(ticket));
         return stageKey ? stageOrderByWorkspaceKey.has(stageKey) : false;
       })
       .slice()
       .sort((left, right) => {
-        const leftStageKey = ticketFlowStageKey(left);
-        const rightStageKey = ticketFlowStageKey(right);
+        const leftStageKey = normalizeStageKey(ticketFlowStageKey(left));
+        const rightStageKey = normalizeStageKey(ticketFlowStageKey(right));
         const leftOrder = leftStageKey
           ? stageOrderByWorkspaceKey.get(leftStageKey) ?? Number.MAX_SAFE_INTEGER
           : Number.MAX_SAFE_INTEGER;
@@ -230,7 +523,11 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
         if (leftOrder !== rightOrder) return leftOrder - rightOrder;
         return left.title.localeCompare(right.title);
       });
-  }, [activeCoreFlow, activeViewMode?.rowModel, data.workTickets]);
+  }, [activeCoreFlow, activeViewMode, data.workTickets, flowStageKeys]);
+  const activeEmptyState =
+    activeViewMode?.rowModel === "WORKSPACE"
+      ? emptyStateText(data.viewConfig.emptyState, "WORKSPACE")
+      : emptyStateText(data.viewConfig.emptyState, activeViewMode?.rowModel);
 
   function updateDate(date: string) {
     const next = new URLSearchParams(searchParams.toString());
@@ -294,10 +591,10 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
       (workspace) => workspace.id === nextReceiverId,
     );
     const message = nextWorkspace
-      ? `Workspace "${nextWorkspace.title}" sẽ nhận auto-binding request từ domain business cho Blueprint này.`
-      : "Blueprint này sẽ chưa có Workspace nhận auto-binding request từ domain business.";
+      ? `Workspace "${displayText(nextWorkspace.title)}" sẽ tự động nhận item nghiệp vụ cho Blueprint này.`
+      : "Blueprint này chưa có Workspace tự động nhận item nghiệp vụ.";
     const ok = await dialog.confirm({
-      title: "Cập nhật auto-binding receiver",
+      title: "Cập nhật Workspace nhận item tự động",
       message,
       confirmText: "Cập nhật",
       cancelText: "Hủy",
@@ -318,7 +615,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
         });
         router.refresh();
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : "Không thể cập nhật auto-binding receiver.");
+        setError(caught instanceof Error ? caught.message : "Không thể cập nhật Workspace tự động nhận item.");
       }
     });
   }
@@ -327,7 +624,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     const ok = await dialog.confirm({
       title: "Nhận item tồn từ tuần trước?",
       message:
-        "Hệ thống sẽ chuyển các item chưa xử lý xong từ Space tuần trước sang Workspace core tương ứng trong Space tuần này. Item cũ sẽ được đánh dấu đã chuyển để không còn hiện như active.",
+        "Hệ thống sẽ chuyển các item chưa xử lý xong từ Space tuần trước sang Workspace chính tương ứng trong Space tuần này. Item cũ sẽ được đánh dấu đã chuyển để không còn hiện như đang hoạt động.",
       confirmText: "Nhận item tồn",
       cancelText: "Hủy",
       tone: "warning",
@@ -401,32 +698,64 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-5 sm:px-6 lg:px-8">
-      <div className="mx-auto flex max-w-7xl flex-col gap-5">
+    <SpaceViewPage
+      breadcrumbs={
         <AdminBreadcrumbs
           items={[
-            { label: "Space Management" },
+            { label: "Quản lý Space" },
             { label: data.spacesLabel },
           ]}
         />
+      }
+      title={prefixedLabel("Space", data.cycle.title)}
+      status={
+        <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">
+          Đang hoạt động
+        </span>
+      }
+      meta={
+        <>
+          <span className="inline-flex items-center gap-1.5">
+            <CalendarDays className="h-4 w-4" />
+            Tuần {data.week.weekNumber}/{data.week.year}
+          </span>
+          <span>
+            {formatDate(data.week.startDate)} - {formatDate(data.week.endDate)}
+          </span>
+        </>
+      }
+      actions={
+        !isCreateFormOpen ? (
+          <>
+            <button
+              type="button"
+              disabled={isPending || !data.viewConfig.carryover.enabled}
+              onClick={() => void rolloverPreviousCycle()}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+            >
+              <RotateCcw className="h-4 w-4" />
+              {actionLabel(data.viewConfig.carryover.actionLabel)}
+            </button>
+            <button
+              type="button"
+              disabled={!data.blueprints.length || !data.viewConfig.createWorkspace.enabled}
+              onClick={() => {
+                setError(null);
+                setBlueprintKey(data.blueprints[0]?.selectionKey ?? "");
+                setTitle(data.blueprints[0]?.workspaceDefinition.defaultName ?? "");
+                setIsCreateFormOpen(true);
+              }}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              <Plus className="h-4 w-4" />
+              Tạo Workspace
+            </button>
+          </>
+        ) : null
+      }
+    >
 
-        <section className="flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="text-sm font-semibold text-slate-700">
-              {prefixedLabel("Space", data.cycle.title)}
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-500">
-              <span className="inline-flex items-center gap-1.5">
-                <CalendarDays className="h-4 w-4" />
-                Tuần {data.week.weekNumber}/{data.week.year}
-              </span>
-              <span>
-                {formatDate(data.week.startDate)} - {formatDate(data.week.endDate)}
-              </span>
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-[160px_220px]">
+          <div className="hidden gap-3 sm:grid-cols-[160px_220px]">
             <label className="text-sm">
               <span className="mb-1 block font-medium text-slate-600">Tuần</span>
               <select
@@ -457,9 +786,8 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
               />
             </label>
           </div>
-        </section>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <section className="hidden gap-3 sm:grid-cols-2 lg:grid-cols-6">
           {data.report.map((metric) => (
             <div
               key={metric.key}
@@ -475,15 +803,15 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
           ))}
         </section>
 
-        <section className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 px-4 py-3">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <SpaceViewPanel>
+          <div className="border-b border-slate-200 px-5 py-4">
+            <div className={`${isCreateFormOpen ? "flex" : "hidden"} flex-col gap-3 lg:flex-row lg:items-center lg:justify-between`}>
               <h2 className="text-sm font-semibold text-slate-900">
                 {prefixedLabel("Space", data.cycle.title)}
               </h2>
 
               {!isCreateFormOpen ? (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="hidden flex-wrap items-center gap-2">
                   <button
                     type="button"
                     disabled={isPending || !data.viewConfig.carryover.enabled}
@@ -491,7 +819,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                     className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                   >
                     <RotateCcw className="h-4 w-4" />
-                    {data.viewConfig.carryover.actionLabel}
+                    {actionLabel(data.viewConfig.carryover.actionLabel)}
                   </button>
                 <button
                   type="button"
@@ -559,9 +887,9 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
             </div>
             {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
             {selectedBlueprint ? (
-              <div className="mt-3 grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 lg:grid-cols-[1fr_1fr_1.5fr]">
-                <label>
-                  <span className="font-medium text-slate-500">Blueprint</span>
+              <SpaceViewSummary>
+                <SpaceViewSummaryCell as="label">
+                  <span className="font-bold uppercase tracking-wide text-slate-500">Blueprint</span>
                   <select
                     value={blueprintKey}
                     onChange={(event) => {
@@ -574,7 +902,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                         setTitle(nextBlueprint?.workspaceDefinition.defaultName ?? "");
                       }
                     }}
-                    className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-slate-400"
+                    className="mt-3 h-8 w-full rounded-md border-0 bg-transparent px-0 text-base font-semibold text-slate-950 outline-none focus:ring-0"
                   >
                     {data.blueprints.map((blueprint) => (
                       <option key={blueprint.selectionKey} value={blueprint.selectionKey}>
@@ -582,129 +910,215 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                       </option>
                     ))}
                   </select>
-                </label>
-
-                <div>
-                  <div className="font-medium text-slate-500">Workspace đang implicit</div>
-                  <div className={`mt-2 text-sm font-semibold ${selectedBlueprint.usage.active ? "text-amber-700" : "text-slate-900"}`}>
-                    {selectedBlueprint.usage.active} active / {selectedBlueprint.usage.total} total
+                  <div className="mt-3 inline-flex items-center gap-2 text-sm text-slate-500">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-violet-50 text-violet-700 ring-1 ring-violet-100">
+                      <Monitor className="h-3.5 w-3.5" />
+                    </span>
+                    {viewConfigLabel(data.viewConfig.label)}
                   </div>
-                </div>
+                </SpaceViewSummaryCell>
 
-                <label>
-                  <span className="font-medium text-slate-500">Workspace nhận auto-binding</span>
+                <SpaceViewSummaryCell>
+                  <div className="font-bold uppercase tracking-wide text-slate-500">Workspace đang mở</div>
+                  <div className={`mt-3 text-base font-semibold ${selectedBlueprint.usage.active ? "text-slate-950" : "text-slate-500"}`}>
+                    {selectedBlueprint.usage.active} đang hoạt động / {selectedBlueprint.usage.total} tổng
+                  </div>
+                  <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-violet-100">
+                    <div
+                      className="h-full rounded-full bg-violet-600"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          Math.max(
+                            0,
+                            selectedBlueprint.usage.total
+                              ? (selectedBlueprint.usage.active / selectedBlueprint.usage.total) * 100
+                              : 0,
+                          ),
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                </SpaceViewSummaryCell>
+
+                <SpaceViewSummaryCell as="label">
+                  <span className="font-bold uppercase tracking-wide text-slate-500">Tự động nhận item</span>
                   <select
                     value={selectedBlueprint.usage.receiverId ?? ""}
                     disabled={isPending || !selectedBlueprint.usage.activeWorkspaces.length}
                     onChange={(event) => void updateAutoBindingReceiver(event.target.value)}
-                    className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-slate-100"
+                    className="mt-3 h-8 w-full rounded-md border-0 bg-transparent px-0 text-base font-semibold text-slate-950 outline-none focus:ring-0 disabled:cursor-not-allowed disabled:text-slate-400"
                   >
-                    <option value="">Chưa chọn receiver</option>
+                    <option value="">Chưa chọn Workspace nhận item</option>
                     {selectedBlueprint.usage.activeWorkspaces.map((workspace) => (
                       <option key={workspace.id} value={workspace.id}>
                         {prefixedLabel("Workspace", workspace.title)}
                       </option>
                     ))}
                   </select>
-                </label>
-              </div>
-            ) : null}
-            {activeViewMode ? (
-              <div className="mt-3 grid gap-2 rounded-md border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900 md:grid-cols-[1fr_1fr_1.4fr]">
-                <div>
-                  <div className="font-semibold text-blue-700">Space view</div>
-                  <div className="mt-1 font-medium">{data.viewConfig.label}</div>
-                  {data.viewConfig.modes.length > 1 ? (
-                    <select
-                      value={activeViewMode.key}
-                      onChange={(event) => setActiveViewModeKey(event.target.value)}
-                      className="mt-2 h-8 w-full rounded-md border border-blue-200 bg-white px-2 text-xs font-medium text-blue-950 outline-none focus:border-blue-400"
-                    >
-                      {data.viewConfig.modes.map((mode) => (
-                        <option key={mode.key} value={mode.key}>
-                          {mode.label}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <div className="mt-1 text-blue-800">{activeViewMode.label}</div>
-                  )}
-                  <div className="mt-1 text-blue-800">{activeViewMode.description}</div>
-                  {activeCoreFlow ? (
-                    <div className="mt-1 text-blue-800">
-                      Flow: {activeCoreFlow.label}
-                    </div>
-                  ) : null}
-                </div>
-                <div>
-                  <div className="font-semibold text-blue-700">Render rule</div>
-                  <div className="mt-1">
-                    Row: {activeViewMode.rowModel} / Target: {activeViewMode.primaryTarget}
+                  <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Đang bật
+                  </span>
+                </SpaceViewSummaryCell>
+
+                <SpaceViewSummaryCell>
+                  <div className="font-bold uppercase tracking-wide text-slate-500">Quy tắc chuyển tồn</div>
+                  <div className="mt-3 text-sm leading-5 text-slate-700">
+                    {carryoverRuleText(data.viewConfig.carryover.processingRule)}
                   </div>
-                  {activeViewMode.allowedWorkspaceKinds?.length ? (
-                    <div className="mt-1">
-                      Workspace kind: {activeViewMode.allowedWorkspaceKinds.join(", ")}
-                    </div>
-                  ) : null}
-                  {activeViewMode.coreFlowKey ? (
-                    <div className="mt-1">
-                      Core flow: {activeViewMode.coreFlowKey}
-                    </div>
-                  ) : null}
-                  <div className="mt-1">
-                    Columns: {activeViewMode.columns.map((column) => column.label).join(", ")}
-                  </div>
-                </div>
-                <div>
-                  <div className="font-semibold text-blue-700">Carryover rule</div>
-                  <div className="mt-1">{data.viewConfig.carryover.processingRule}</div>
                   {data.viewConfig.carryover.terminalStatesByTargetType ? (
-                    <div className="mt-2 flex flex-wrap gap-1">
+                    <div className="mt-3 flex flex-wrap gap-1">
                       {Object.entries(data.viewConfig.carryover.terminalStatesByTargetType).map(
                         ([targetType, states]) => (
                           <span
                             key={targetType}
-                            className="rounded-full border border-blue-200 bg-white px-2 py-0.5 font-medium text-blue-800"
+                            className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 font-semibold text-violet-700"
                           >
-                            {targetType}: exclude {states.join(", ")}
+                            {terminalStatesLabel(targetType, states)}
                           </span>
                         ),
                       )}
                     </div>
                   ) : null}
+                </SpaceViewSummaryCell>
+
+                <div className="flex items-start justify-end p-5">
+                  <button
+                    type="button"
+                    className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-violet-100 bg-violet-50 px-3 text-xs font-semibold text-violet-700"
+                  >
+                    <Settings className="h-3.5 w-3.5" />
+                    Chỉnh sửa cài đặt
+                  </button>
                 </div>
-              </div>
+              </SpaceViewSummary>
             ) : null}
-            {activeCoreFlow ? (
-              <div className="mt-3 rounded-md border border-slate-200 bg-white p-3 text-xs text-slate-700">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <div className="font-semibold text-slate-900">
-                      {activeCoreFlow.label}
+            {activeViewMode ? (
+              <SpaceViewInfoGrid>
+                <SpaceViewInfoCell icon={<Monitor className="h-4 w-4" />} label="Chế độ xem Space">
+                  <div className="mt-3 text-sm font-semibold text-slate-950">
+                    {modeLabel(activeViewMode)}
+                  </div>
+                  <div className="mt-3">
+                    {data.viewConfig.modes.length > 1 ? (
+                      <select
+                        value={activeViewMode.key}
+                        onChange={(event) => setActiveViewModeKey(event.target.value)}
+                        className="h-9 w-full rounded-md border border-sky-200 bg-white px-3 text-sm font-semibold text-slate-950 shadow-sm outline-none focus:border-violet-300"
+                      >
+                        {data.viewConfig.modes.map((mode) => (
+                          <option key={mode.key} value={mode.key}>
+                            {modeLabel(mode)}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="font-medium text-slate-900">
+                        {modeLabel(activeViewMode)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-3 leading-5 text-slate-600">
+                    {modeDescription(activeViewMode)}
+                  </div>
+                  {activeCoreFlow ? (
+                    <div className="mt-3 font-semibold text-violet-700">
+                      Luồng: {coreFlowLabel(activeCoreFlow)}
                     </div>
-                    <div className="mt-1 text-slate-500">
-                      {activeCoreFlow.description}
+                  ) : null}
+                </SpaceViewInfoCell>
+
+                <SpaceViewInfoCell icon={<Filter className="h-4 w-4" />} label="Quy tắc hiển thị">
+                  <div className="mt-4 space-y-2 leading-5 text-slate-700">
+                    <div>Dòng: {rowModelLabel(activeViewMode.rowModel)} / Đích: {primaryTargetLabel(activeViewMode.primaryTarget)}</div>
+                    {activeViewMode.allowedWorkspaceKinds?.length ? (
+                      <div>Loại Workspace: {activeViewMode.allowedWorkspaceKinds.map(workspaceKindLabel).join(", ")}</div>
+                    ) : null}
+                    {activeViewMode.coreFlowKey ? (
+                      <div>Luồng chính: {activeCoreFlow ? coreFlowLabel(activeCoreFlow) : activeViewMode.coreFlowKey}</div>
+                    ) : null}
+                    <div>
+                      Cột: {activeViewMode.columns.map((column) => columnLabel(column.label)).join(", ")}
                     </div>
                   </div>
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 font-medium text-slate-700">
-                    Item: {activeCoreFlow.itemTargetType}
-                  </span>
-                </div>
-                <div className="mt-3 flex flex-wrap items-center gap-1">
-                  {activeCoreFlow.stages
-                    .slice()
-                    .sort((left, right) => left.sortOrder - right.sortOrder)
-                    .map((stage, index) => (
-                      <span key={stage.key} className="inline-flex items-center gap-1">
-                        {index > 0 ? (
-                          <ChevronRight className="h-3 w-3 text-slate-400" aria-hidden="true" />
-                        ) : null}
-                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 font-medium text-slate-700">
-                          {stage.label}
-                        </span>
+                </SpaceViewInfoCell>
+
+                <SpaceViewInfoCell icon={<RotateCcw className="h-4 w-4" />} label="Quy tắc chuyển tồn" className="lg:after:hidden">
+                  <div className="mt-4 leading-5 text-slate-700">
+                    {carryoverRuleText(data.viewConfig.carryover.processingRule)}
+                  </div>
+                  {data.viewConfig.carryover.terminalStatesByTargetType ? (
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      {Object.entries(data.viewConfig.carryover.terminalStatesByTargetType).map(
+                        ([targetType, states]) => (
+                          <span
+                            key={targetType}
+                            className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 font-semibold text-violet-700"
+                          >
+                            {terminalStatesLabel(targetType, states)}
+                          </span>
+                        ),
+                      )}
+                    </div>
+                  ) : null}
+                </SpaceViewInfoCell>
+              </SpaceViewInfoGrid>
+            ) : null}
+            {activeCoreFlow ? (
+              <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white text-xs text-slate-700 shadow-[0_8px_24px_rgba(30,43,79,0.06)]">
+                <SpaceViewSectionHeader
+                  title={coreFlowLabel(activeCoreFlow)}
+                  badge={
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 font-semibold text-slate-700">
+                      Item: {targetTypeLabel(activeCoreFlow.itemTargetType)}
+                    </span>
+                  }
+                  description={
+                    <>
+                      <span>{coreFlowDescription(activeCoreFlow)}</span>
+                      <span className="mt-3 flex flex-wrap items-center gap-1">
+                        {activeCoreFlow.stages
+                          .slice()
+                          .sort((left, right) => left.sortOrder - right.sortOrder)
+                          .map((stage, index) => (
+                            <span key={stage.key} className="inline-flex items-center gap-1">
+                              {index > 0 ? (
+                                <ChevronRight className="h-3 w-3 text-slate-400" aria-hidden="true" />
+                              ) : null}
+                              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700 shadow-sm">
+                                {stageLabel(stage.label)}
+                              </span>
+                            </span>
+                          ))}
                       </span>
-                    ))}
-                </div>
+                    </>
+                  }
+                  actions={
+                    <>
+                      <button
+                        type="button"
+                        className="inline-flex h-9 items-center justify-center rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm"
+                      >
+                        Tất cả trạng thái
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500"
+                        aria-label="Xem dạng lưới"
+                      >
+                        <Grid2X2 className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-violet-300 bg-white text-violet-700 shadow-sm"
+                        aria-label="Xem dạng danh sách"
+                      >
+                        <List className="h-4 w-4" />
+                      </button>
+                    </>
+                  }
+                />
               </div>
             ) : null}
             {isCreateFormOpen && selectedBlueprint ? (
@@ -740,9 +1154,9 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   </div>
                 </div>
                 <div>
-                  <div className="font-medium text-slate-500">Da dung Blueprint</div>
+                  <div className="font-medium text-slate-500">Đã dùng Blueprint</div>
                   <div className={`mt-1 font-semibold ${selectedBlueprint.usage.active ? "text-amber-700" : "text-slate-900"}`}>
-                    {selectedBlueprint.usage.active} active / {selectedBlueprint.usage.total} total
+                    {selectedBlueprint.usage.active} đang hoạt động / {selectedBlueprint.usage.total} tổng
                   </div>
                 </div>
                 <div className="md:col-span-3 xl:col-span-6">
@@ -760,7 +1174,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                 </div>
                 {selectedBlueprint.operation ? (
                   <div className="md:col-span-3 xl:col-span-6">
-                    <div className="font-medium text-slate-500">Operation model</div>
+                    <div className="font-medium text-slate-500">Mô hình vận hành</div>
                     <div className="mt-1 text-slate-900">
                       {selectedBlueprint.operation.summary}
                     </div>
@@ -772,20 +1186,20 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                             : "border-amber-100 bg-amber-50 text-amber-700"
                         }`}
                       >
-                        Contract validation:{" "}
+                        Kiểm tra hợp đồng:{" "}
                         {selectedBlueprint.operationValidation?.ok
-                          ? "passed"
-                          : `${selectedBlueprint.operationValidation?.errors.length ?? 0} errors`}
+                          ? "đạt"
+                          : `${selectedBlueprint.operationValidation?.errors.length ?? 0} lỗi`}
                       </span>
                       {selectedBlueprint.operationValidation?.warnings.length ? (
                         <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700">
-                          {selectedBlueprint.operationValidation.warnings.length} warnings
+                          {selectedBlueprint.operationValidation.warnings.length} cảnh báo
                         </span>
                       ) : null}
                     </div>
                     <div className="mt-2 grid gap-2 md:grid-cols-5">
                       <div className="rounded-md border border-slate-200 bg-white p-2">
-                        <div className="font-medium text-slate-500">Workspace roles</div>
+                        <div className="font-medium text-slate-500">Vai trò Workspace</div>
                         <div className="mt-1 text-slate-900">
                           {selectedBlueprint.operation.workspaceRoles
                             .map((role) => role.label)
@@ -793,25 +1207,25 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                         </div>
                       </div>
                       <div className="rounded-md border border-slate-200 bg-white p-2">
-                        <div className="font-medium text-slate-500">Actions</div>
+                        <div className="font-medium text-slate-500">Hành động</div>
                         <div className="mt-1 text-slate-900">
                           {selectedBlueprint.operation.actions.length}
                         </div>
                       </div>
                       <div className="rounded-md border border-slate-200 bg-white p-2">
-                        <div className="font-medium text-slate-500">Core flows</div>
+                        <div className="font-medium text-slate-500">Luồng chính</div>
                         <div className="mt-1 text-slate-900">
                           {selectedBlueprint.operation.coreFlows.length}
                         </div>
                       </div>
                       <div className="rounded-md border border-slate-200 bg-white p-2">
-                        <div className="font-medium text-slate-500">Event routes</div>
+                        <div className="font-medium text-slate-500">Tuyến sự kiện</div>
                         <div className="mt-1 text-slate-900">
                           {selectedBlueprint.operation.eventRoutes.length}
                         </div>
                       </div>
                       <div className="rounded-md border border-slate-200 bg-white p-2">
-                        <div className="font-medium text-slate-500">Projections</div>
+                        <div className="font-medium text-slate-500">Projection</div>
                         <div className="mt-1 text-slate-900">
                           {selectedBlueprint.operation.projectionSubscriptions
                             .map((projection) => projection.projectionKey)
@@ -851,13 +1265,13 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                           >
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div>
-                                <div className="font-medium text-slate-500">Projection subscription</div>
+                                <div className="font-medium text-slate-500">Đăng ký projection</div>
                                 <div className="mt-1 font-semibold text-slate-900">
                                   {subscription.projectionKey}
                                 </div>
                               </div>
                               <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700">
-                                Target: {subscription.resolvesToTargetType}
+                                Đích: {targetTypeLabel(subscription.resolvesToTargetType)}
                               </span>
                             </div>
                             <div className="mt-1 text-slate-700">{subscription.description}</div>
@@ -891,54 +1305,95 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
             ) : null}
           </div>
 
-          <div className="divide-y divide-slate-100">
+          <div className="hidden border-y border-slate-100 bg-[#fbfcfe] px-5 py-3 text-xs font-bold uppercase tracking-[0.05em] text-slate-500 lg:grid lg:grid-cols-[2fr_1fr_1.1fr_0.7fr_0.7fr_0.9fr_1.5fr_auto]">
+            <div>Workspace</div>
+            <div>Phụ trách</div>
+            <div>Tiến độ / Item</div>
+            <div className="text-center">Cần chú ý</div>
+            <div className="text-center">Phản hồi</div>
+            <div className="text-center">Cập nhật</div>
+            <div>Hoạt động gần nhất</div>
+            <div />
+          </div>
+
+          <div className="divide-y divide-slate-200 bg-white">
             {displayedWorkTickets.map((ticket) => (
               <Link
                 key={ticket.id}
                 href={`/admin/task-items/${ticket.id}`}
-                className="grid gap-3 px-4 py-4 transition hover:bg-slate-50 lg:grid-cols-[1.3fr_0.8fr_0.8fr_0.9fr_1fr_0.8fr_1.3fr_auto]"
+                className="grid gap-4 px-5 py-4 transition hover:bg-slate-50 lg:grid-cols-[2fr_1fr_1.1fr_0.7fr_0.7fr_0.9fr_1.5fr_auto] lg:items-center"
               >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-semibold text-slate-950">
-                      {prefixedLabel("Workspace", ticket.title)}
-                    </span>
-                    {ticket.needAttention ? (
-                      <MessageSquareWarning className="h-4 w-4 text-amber-600" />
-                    ) : null}
-                  </div>
-                  {ticketFlowStageKey(ticket) &&
-                  activeStageByWorkspaceKey.has(ticketFlowStageKey(ticket) ?? "") ? (
-                    <div className="mt-2">
-                      <span className="rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
-                        {
-                          activeStageByWorkspaceKey.get(ticketFlowStageKey(ticket) ?? "")
-                            ?.label
-                        }
+                <div className="flex min-w-0 items-center gap-4">
+                  <StageIconFrame stageKey={ticketFlowStageKey(ticket)} />
+                  <div className="min-w-0">
+                    <div className="flex min-w-0 items-center">
+                      <span className="truncate text-sm font-semibold text-slate-950">
+                        {prefixedLabel("Workspace", ticket.title)}
                       </span>
                     </div>
-                  ) : null}
+                    {ticketFlowStageKey(ticket) &&
+                    activeStageByWorkspaceKey.has(
+                      normalizeStageKey(ticketFlowStageKey(ticket)),
+                    ) ? (
+                      <div className="mt-2">
+                        <span className="rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                          {stageLabel(
+                            activeStageByWorkspaceKey.get(
+                              normalizeStageKey(ticketFlowStageKey(ticket)),
+                            )?.label ?? "",
+                          )}
+                        </span>
+                      </div>
+                    ) : null}
+                    <div className="mt-2 truncate text-xs text-slate-500">
+                      {stageVisual(ticketFlowStageKey(ticket)).description}
+                    </div>
+                  </div>
                 </div>
 
                 <OwnerCell owner={ticket.owner} />
                 <QueueSummaryCell summary={ticket.queueSummary} />
-                <SummaryCell
-                  label="Cần chú ý"
-                  value={ticket.needAttention ? "Yes" : "No"}
-                />
-                <SummaryCell label="Feedback" value={String(ticket.feedbackCount)} />
-                <SummaryCell label="Cập nhật" value={formatDateTime(ticket.updatedAt)} />
+                <div className="text-sm lg:flex lg:items-center lg:justify-center">
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-500 lg:hidden">
+                    Cần chú ý
+                  </div>
+                  <div className="mt-2 lg:mt-0">
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${ticket.needAttention ? "bg-amber-50 text-amber-700" : "bg-slate-50 text-slate-500"}`}>
+                      {ticket.needAttention ? "Có" : "Không"}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-sm lg:flex lg:items-center lg:justify-center">
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-500 lg:hidden">
+                    Phản hồi
+                  </div>
+                  <div className="mt-2 font-semibold text-slate-900 lg:mt-0">
+                    {ticket.feedbackCount}
+                  </div>
+                </div>
+                <div className="text-sm lg:flex lg:items-center lg:justify-center lg:text-center">
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-500 lg:hidden">
+                    Cập nhật
+                  </div>
+                  <div className="mt-2 text-slate-800 lg:mt-0">
+                    {formatDateTime(ticket.updatedAt)}
+                  </div>
+                </div>
 
-                <div className="min-w-0 text-sm">
-                  <div className="mb-1 flex items-center gap-1 text-xs font-medium text-slate-500">
-                    <Clock3 className="h-3.5 w-3.5" />
-                    Activity gần nhất
-                  </div>
-                  <div className="truncate text-slate-800">
-                    {ticket.lastActivity || "-"}
-                  </div>
-                  <div className="mt-1 text-xs text-slate-500">
-                    {formatDateTime(ticket.lastActivityAt)}
+                <div className="flex min-w-0 items-start gap-3 text-sm lg:items-center">
+                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-violet-50 text-violet-600">
+                    <Zap className="h-3.5 w-3.5" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="mb-1 text-xs font-medium text-slate-500 lg:hidden">
+                      Hoạt động gần nhất
+                    </div>
+                    <div className="truncate font-medium text-slate-800">
+                      {ticket.lastActivity || "-"}
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      {formatDateTime(ticket.lastActivityAt)}
+                    </div>
                   </div>
                 </div>
 
@@ -951,22 +1406,27 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
             {!displayedWorkTickets.length ? (
               <div className="flex items-center gap-3 px-4 py-10 text-sm text-slate-500">
                 <Inbox className="h-5 w-5" />
-                {data.viewConfig.emptyState}
+                {activeEmptyState}
               </div>
             ) : null}
           </div>
-        </section>
-      </div>
-    </main>
-  );
-}
 
-function SummaryCell({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="text-sm">
-      <div className="text-xs font-medium text-slate-500">{label}</div>
-      <div className="mt-1 truncate text-slate-800">{value}</div>
-    </div>
+          <SpaceViewFooterTip
+            icon={<Info className="h-4 w-4" />}
+            action={
+              <button
+                type="button"
+                className="inline-flex h-9 items-center gap-2 rounded-md border border-violet-200 bg-white px-3 text-sm font-semibold text-violet-700"
+              >
+                <BookOpen className="h-4 w-4" />
+                Xem hướng dẫn
+              </button>
+            }
+          >
+            Gợi ý: kéo thả để đổi thứ tự stage. Nhấp vào Workspace để xem chi tiết item và hoạt động.
+          </SpaceViewFooterTip>
+        </SpaceViewPanel>
+    </SpaceViewPage>
   );
 }
 
@@ -975,17 +1435,29 @@ function QueueSummaryCell({
 }: {
   summary: CoordinationDashboardDTO["workTickets"][number]["queueSummary"];
 }) {
+  const total = summary.ready + summary.review + summary.feedback + summary.done;
+  const completed = summary.done + summary.feedback;
+  const progress = total ? Math.round((completed / total) * 100) : 0;
   const items = [
     { label: "Sẵn sàng", value: summary.ready },
-    { label: "Review", value: summary.review },
-    { label: "Feedback", value: summary.feedback },
+    { label: "Đang duyệt", value: summary.review },
+    { label: "Phản hồi", value: summary.feedback },
     { label: "Xong", value: summary.done },
   ];
 
   return (
     <div className="text-sm">
-      <div className="text-xs font-medium text-slate-500">Tóm tắt Item</div>
-      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-slate-600">
+      <div className="flex items-center justify-between gap-2 text-xs font-semibold text-violet-700">
+        <span>{completed} / {total || 0}</span>
+        <span>{progress}%</span>
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+        <div
+          className="h-full rounded-full bg-violet-500"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-slate-600">
         {items.map((item) => (
           <span key={item.label} className="flex items-center justify-between gap-2">
             <span>{item.label}</span>

@@ -25,6 +25,11 @@ const VIETNAMESE_MOJIBAKE_REPLACEMENTS: Array<[string, string]> = [
   ["TÃªn gá»i Item", "Tên gọi Item"],
   ["View máº·c Ä‘á»‹nh", "View mặc định"],
   ["Äang báº­t", "Đang bật"],
+  ["Nháº­n item tá»“n tuáº§n trÆ°á»›c", "Nhận item tồn tuần trước"],
+  ["tuáº§n trÆ°á»›c", "tuần trước"],
+  ["trÆ°á»›c", "trước"],
+  ["tá»“n", "tồn"],
+  ["Nháº­n", "Nhận"],
 ];
 
 export function repairVietnameseMojibake(value: string): string;

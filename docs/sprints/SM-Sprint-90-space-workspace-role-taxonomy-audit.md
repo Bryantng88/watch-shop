@@ -211,13 +211,15 @@ Do not add a schema migration yet.
 2. Add server-only taxonomy helpers. Started through Space view config/types.
 3. Add fallback inference for existing Workspace snapshots. Started through
    snapshot/note readers.
-4. Extend Operational Blueprint workspace roles with `workspaceKind`. Pending
-   editor/contract field; current slice derives it during snapshot creation.
+4. Extend Operational Blueprint workspace roles with `workspaceKind`. Implemented
+   as an optional contract/editor field; older contracts still derive it during
+   snapshot creation.
 5. Add flow-stage metadata for `FLOW_STAGE_WORKSPACE` roles:
    `coreFlowKey`, `flowStageKey`, and `flowStageOrder`. Implemented for new
    operation-created Workspace snapshots.
-6. Extend Blueprint validation with warnings for missing Workspace kind or
-   missing flow-stage view mode when a core flow exists.
+6. Extend Blueprint validation with warnings for missing Workspace kind,
+   case-workspace identity gaps, flow-stage kind mismatches, and missing
+   flow-stage Space view modes when a core flow has stage Workspaces.
 7. Add Space view registry/config driven by approved row models. First slice
    implemented in `space-view.config.ts`.
 8. Ensure each core flow has at least one Space view mode with
@@ -253,6 +255,30 @@ Implemented in code:
   `terminalStatesByTargetType` from the active Space view config and hydrates
   domain status for `SERVICE_REQUEST`, `TECHNICAL_ISSUE`, `WATCH`, and
   `PAYMENT` before moving bindings.
+- Media dashboard queue counts now use the flow-stage contract for the first
+  runtime proof: Media Space rows count active `WATCH` bindings only, exclude
+  cancelled bindings, exclude item-runtime terminal bindings, and exclude
+  terminal Watch targets using the configured `WATCH` terminal states.
+- Technical dashboard queue counts now use the Service composite contract:
+  - legacy `serviceOperationWorkspaceRole: SR_CASE` is treated as
+    `CASE_WORKSPACE`;
+  - legacy `INSPECT`, `PROCESSING`, and `DONE` roles are treated as
+    `FLOW_STAGE_WORKSPACE` rows with matching `flowStageKey`;
+  - SR Case rows count active TechnicalIssues for the ServiceRequest plus
+    service payment rows attached to those TechnicalIssues;
+  - Technical Bench rows count active unfinished `TECHNICAL_ISSUE` bindings
+    only, excluding cancelled bindings, item-runtime terminal bindings, and
+    terminal TechnicalIssues using the configured `TECHNICAL_ISSUE` states.
+- The Coordination Space UI now normalizes flow-stage keys and accepts both
+  `stage.key` and `stage.workspaceKey` so new snapshot metadata and legacy
+  `blueprint.key` rows can render in the same Media Production Flow.
+- The Space view UI now presents the selected mode as a compact operator
+  control with stage chips; render/carryover contract details are collapsed
+  under `Rules` instead of occupying the main working surface.
+- The Coordination Space screen now follows the operator-oriented layout proof:
+  header actions are surfaced at the top, Blueprint/auto-binding/carryover are
+  grouped into a summary card, and Workspace rows use stage icons, table
+  headers, attention badges, activity cues, and item progress bars.
 
 Carryover still moves bindings/items, not whole Workspaces. The current guard
 prevents configured terminal domain objects from being moved into the current
@@ -276,13 +302,20 @@ Implemented in code:
   - old rows can still fall back to `blueprint.key` for stage matching.
 - The Coordination Space UI now filters/sorts active `FLOW_STAGE_WORKSPACE`
   mode rows by `flowStageKey` first, not only by `blueprint.key`.
+- Operation Model authoring now exposes `workspaceKind` on Workspace roles.
+- Operational Blueprint validation now warns when:
+  - a Workspace role has no explicit `workspaceKind`;
+  - a single-cycle core-flow role is not `FLOW_STAGE_WORKSPACE`;
+  - a one-business-object role is not `CASE_WORKSPACE`;
+  - a `CASE_WORKSPACE` role lacks `identityTargetType`;
+  - a core flow with stage Workspaces lacks a matching
+    `FLOW_STAGE_WORKSPACE` Space view mode.
+- Service Operation and Payment Collection registry templates now declare
+  `workspaceKind` and `spaceViewModes` so they validate cleanly under the
+  taxonomy guardrails.
 
 Not implemented yet:
 
-- The Operation Model editor does not yet expose `workspaceKind` as an explicit
-  editable field on each role.
-- Validation does not yet warn when a flow-stage role is missing matching Space
-  view config.
 - Existing Workspace snapshots are not migrated.
 
 ## Guardrails
