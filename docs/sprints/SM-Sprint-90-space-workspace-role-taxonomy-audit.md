@@ -2,9 +2,12 @@
 
 ## Status
 
-Planning and audit.
+Audit plus first runtime view-config and Blueprint snapshot metadata slice.
 
-No implementation should proceed before this taxonomy is reviewed.
+The taxonomy has been reviewed enough to implement the first server-side Space
+view config layer. Runtime behavior is still conservative: existing Workspace
+snapshots are not migrated and old Workspaces continue through fallback
+rendering.
 
 ## Why
 
@@ -98,6 +101,44 @@ If later Media has multiple flows, for example content/media preparation and
 publish/follow-up, each should appear as a separate selectable flow-stage view
 mode or a flow selector inside the same flow view.
 
+Current Media core flow audit:
+
+```text
+coreFlowKey: media-production-flow
+defaultSpaceViewMode: media-production-flow
+rowModel: FLOW_STAGE_WORKSPACE
+primaryTarget: workspace
+itemTargetType: WATCH
+```
+
+Stage order:
+
+| Stage label | Existing workspace key | Sort | Intake/progress evidence |
+| --- | --- | ---: | --- |
+| Photography | `photography` | 10 | `watch.media.photoshoot.requested` |
+| Media Processing | `media-processing` | 20 | `watch.media.photoshoot.completed`, `watch.media.asset.attached`, content/image review events |
+| Publish | `publish` | 30 | `watch.media.ready_for_publish`, `watch.publish.assets.downloaded` |
+
+View naming:
+
+- Space view mode label: `Media Production Flow`.
+- Flow selector label: `Media Production`.
+- Workspace row labels should use the stage labels above.
+- Item preview/counts inside each stage should count unfinished `WATCH` items
+  bound to that Workspace.
+
+Do not promote internal workflow states to Space stages. Examples that must
+remain inside Workspace detail: `NEW`, `REVIEW`, `FEEDBACK`, `DONE`,
+`WAITING_CONTENT`, `CONTENT_REVIEW`, `IMAGE_REVIEW`, `READY_TO_POST`,
+`RECALLED`.
+
+Carryover rule for Media:
+
+- Carry over unfinished `WATCH` items bound to flow-stage Workspaces.
+- Do not carry over items whose media/publish work is already terminal.
+- The terminal definition should come from the item workflow state, not from the
+  Space row label.
+
 ### Technical / Service Operation
 
 Decision: composite Space with two primary modes.
@@ -166,27 +207,83 @@ Do not add a schema migration yet.
 
 ## Implementation Plan
 
-1. Review and approve taxonomy.
-2. Add server-only taxonomy helpers.
-3. Add fallback inference for existing Workspace snapshots.
-4. Extend Operational Blueprint workspace roles with `workspaceKind`.
+1. Review and approve taxonomy. Done for the first slice.
+2. Add server-only taxonomy helpers. Started through Space view config/types.
+3. Add fallback inference for existing Workspace snapshots. Started through
+   snapshot/note readers.
+4. Extend Operational Blueprint workspace roles with `workspaceKind`. Pending
+   editor/contract field; current slice derives it during snapshot creation.
 5. Add flow-stage metadata for `FLOW_STAGE_WORKSPACE` roles:
-   `coreFlowKey`, `flowStageKey`, and `flowStageOrder`.
+   `coreFlowKey`, `flowStageKey`, and `flowStageOrder`. Implemented for new
+   operation-created Workspace snapshots.
 6. Extend Blueprint validation with warnings for missing Workspace kind or
    missing flow-stage view mode when a core flow exists.
-7. Add Space view registry/config driven by approved row models.
+7. Add Space view registry/config driven by approved row models. First slice
+   implemented in `space-view.config.ts`.
 8. Ensure each core flow has at least one Space view mode with
-   `rowModel: FLOW_STAGE_WORKSPACE`.
+   `rowModel: FLOW_STAGE_WORKSPACE`. Started for Media, Technical, and Payment.
 9. Put the current Media core flow into the operation Space view as the first
-   proof of `coreFlowKey`-driven flow-stage rendering.
+   proof of `coreFlowKey`-driven flow-stage rendering. Implemented as
+   `media-production-flow`.
 10. Move Service Operation SR Cases and Technical Bench views onto the shared
-   contract:
+   contract. First config slice implemented:
    - SR Cases: `CASE_WORKSPACE`;
    - Technical Bench: `FLOW_STAGE_WORKSPACE`.
 11. Add Payment Space index discovery using the Payment Collection flow-stage
-    view.
+    view. First config slice implemented as `payment-collection-flow`; adapter
+    execution remains separate.
 12. Leave Sales on standalone view until a Sales Operation Blueprint is
     approved.
+
+## First Runtime Config Slice
+
+Implemented in code:
+
+- `SpaceViewModeConfig.allowedWorkspaceKinds`
+- `SpaceViewCarryoverPolicy.terminalStatesByTargetType`
+- Media `media-production-flow`
+- Technical modes:
+  - `sr-cases` with row model `CASE_WORKSPACE`
+  - `technical-issue-flow` / Technical Bench with row model
+    `FLOW_STAGE_WORKSPACE`
+- Payment `payment-collection-flow`
+- Space view mode selector in the Coordination Workspace UI
+- Flow-stage row filtering and stage-order sorting for active flow modes
+- Rollover/carryover server guard now reads
+  `terminalStatesByTargetType` from the active Space view config and hydrates
+  domain status for `SERVICE_REQUEST`, `TECHNICAL_ISSUE`, `WATCH`, and
+  `PAYMENT` before moving bindings.
+
+Carryover still moves bindings/items, not whole Workspaces. The current guard
+prevents configured terminal domain objects from being moved into the current
+cycle.
+
+## Blueprint Snapshot Metadata Slice
+
+Implemented in code:
+
+- `WorkspaceKind` is now a shared runtime type.
+- New operation-created Workspace snapshots include:
+  - `workspaceKind`
+  - `operationWorkspaceRole`
+  - `coreFlowKey`
+  - `flowStageKey`
+  - `flowStageOrder`
+- The creation plan exposes the same metadata for each planned Workspace.
+- Existing Workspaces remain backward-compatible:
+  - metadata is read from `blueprintSnapshot` when present;
+  - plain note lines are used as fallback;
+  - old rows can still fall back to `blueprint.key` for stage matching.
+- The Coordination Space UI now filters/sorts active `FLOW_STAGE_WORKSPACE`
+  mode rows by `flowStageKey` first, not only by `blueprint.key`.
+
+Not implemented yet:
+
+- The Operation Model editor does not yet expose `workspaceKind` as an explicit
+  editable field on each role.
+- Validation does not yet warn when a flow-stage role is missing matching Space
+  view config.
+- Existing Workspace snapshots are not migrated.
 
 ## Guardrails
 

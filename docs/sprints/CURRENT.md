@@ -156,6 +156,11 @@ Current handoff:
   Space view as the first proof of `coreFlowKey`-driven flow-stage rendering.
   A Space may contain multiple core flows, but each flow-stage view must declare
   the flow it renders so the UI does not mix stage rows from different flows.
+- Media flow audit selected `media-production-flow`:
+  `photography -> media-processing -> publish`. These are Space stages;
+  internal workflow states such as `NEW`, `REVIEW`, `FEEDBACK`,
+  `WAITING_CONTENT`, `IMAGE_REVIEW`, and `READY_TO_POST` stay inside Workspace
+  detail.
 - Sprint 70 adds the SR workspace `Tao TI` modal. Watch List still only
   creates/opens an SR workspace. TI creation happens inside the SR workspace,
   uses the existing Service `createTechnicalIssue` command, records

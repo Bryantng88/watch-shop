@@ -3,6 +3,7 @@ export const WATCH_LIST_PROJECTION_VERSION = 1;
 
 export const WATCH_LIST_PROJECTION_SOURCE_EVENTS = [
   "watch.content.modified",
+  "watch.price.updated",
   "watch.content.submitted",
   "watch.content.approved",
   "watch.content.rejected",

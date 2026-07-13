@@ -1,7 +1,10 @@
 import type {
   OperationalBlueprintContract,
+  OperationalBlueprintCoreFlow,
+  OperationalBlueprintCoreFlowStep,
   OperationalBlueprintWorkspaceRole,
 } from "./operational-blueprint";
+import type { WorkspaceKind } from "@/domains/space-management/server/space-view.types";
 import {
   validateOperationalBlueprintContract,
   type OperationalBlueprintValidationResult,
@@ -28,6 +31,10 @@ export type OperationWorkspacePlanDisposition =
 
 export type OperationWorkspaceCreationPlanItem = {
   workspaceRole: string;
+  workspaceKind: WorkspaceKind;
+  coreFlowKey: string | null;
+  flowStageKey: string | null;
+  flowStageOrder: number | null;
   label: string;
   title: string;
   description: string | null;
@@ -51,6 +58,87 @@ export type OperationSpaceCreationPlan = {
 
 function clean(value: unknown) {
   return String(value ?? "").trim();
+}
+
+function normalizeRoleKey(value: unknown) {
+  return clean(value).toLowerCase().replace(/[_\s]+/g, "-");
+}
+
+function normalizeTarget(value: unknown) {
+  return clean(value).toUpperCase();
+}
+
+function roleFlowStage(input: {
+  operation: OperationalBlueprintContract;
+  role: OperationalBlueprintWorkspaceRole;
+}): {
+  flow: OperationalBlueprintCoreFlow;
+  step: OperationalBlueprintCoreFlowStep;
+  order: number;
+} | null {
+  const roleKey = normalizeTarget(input.role.key);
+
+  for (const flow of input.operation.coreFlows) {
+    const stepIndex = flow.steps.findIndex(
+      (step) => normalizeTarget(step.workspaceRole) === roleKey,
+    );
+
+    if (stepIndex >= 0) {
+      return {
+        flow,
+        step: flow.steps[stepIndex],
+        order: (stepIndex + 1) * 10,
+      };
+    }
+  }
+
+  return null;
+}
+
+function roleWorkspaceMetadata(input: {
+  operation: OperationalBlueprintContract;
+  role: OperationalBlueprintWorkspaceRole;
+}): {
+  workspaceKind: WorkspaceKind;
+  coreFlowKey: string | null;
+  flowStageKey: string | null;
+  flowStageOrder: number | null;
+} {
+  const stage = roleFlowStage(input);
+
+  if (input.role.cardinality === "ONE_PER_BUSINESS_OBJECT") {
+    return {
+      workspaceKind: "CASE_WORKSPACE",
+      coreFlowKey: stage?.flow.key ?? null,
+      flowStageKey: stage ? normalizeRoleKey(stage.step.workspaceRole) : null,
+      flowStageOrder: stage?.order ?? null,
+    };
+  }
+
+  if (stage && input.role.cardinality === "SINGLE_PER_ACTIVE_CYCLE") {
+    return {
+      workspaceKind: "FLOW_STAGE_WORKSPACE",
+      coreFlowKey: stage.flow.key,
+      flowStageKey: normalizeRoleKey(stage.step.workspaceRole),
+      flowStageOrder: stage.order,
+    };
+  }
+
+  if (input.role.cardinality === "MANY_PER_ACTIVE_CYCLE") {
+    return {
+      workspaceKind: "BENCH_WORKSPACE",
+      coreFlowKey: stage?.flow.key ?? null,
+      flowStageKey: stage ? normalizeRoleKey(stage.step.workspaceRole) : null,
+      flowStageOrder: stage?.order ?? null,
+    };
+  }
+
+  return {
+    workspaceKind: "STANDALONE_WORKSPACE",
+    coreFlowKey: null,
+    flowStageKey: null,
+    flowStageOrder: null,
+  };
 }
 
 function roleDisposition(role: OperationalBlueprintWorkspaceRole): {
@@ -87,12 +175,17 @@ function buildRoleSnapshotNote(input: {
   operation: OperationalBlueprintContract;
   role: OperationalBlueprintWorkspaceRole;
 }) {
+  const roleMetadata = roleWorkspaceMetadata({
+    operation: input.operation,
+    role: input.role,
+  });
   const snapshot = {
     blueprintKey: input.blueprintKey,
     blueprintName: input.blueprintName,
     blueprintSource: input.blueprintSource,
     operation: input.operation,
     operationWorkspaceRole: input.role.key,
+    ...roleMetadata,
     workspaceRole: input.role,
     workspaceDefinition: input.workspaceDefinition,
     itemLabel: input.workspaceDefinition.itemLabel,
@@ -107,6 +200,12 @@ function buildRoleSnapshotNote(input: {
     `blueprintSource: ${input.blueprintSource}`,
     `operationKey: ${input.operation.key}`,
     `operationWorkspaceRole: ${input.role.key}`,
+    `workspaceKind: ${roleMetadata.workspaceKind}`,
+    roleMetadata.coreFlowKey ? `coreFlowKey: ${roleMetadata.coreFlowKey}` : null,
+    roleMetadata.flowStageKey ? `flowStageKey: ${roleMetadata.flowStageKey}` : null,
+    roleMetadata.flowStageOrder !== null
+      ? `flowStageOrder: ${roleMetadata.flowStageOrder}`
+      : null,
     `workspaceType: ${input.workspaceDefinition.workspaceType}`,
     `itemLabel: ${input.workspaceDefinition.itemLabel}`,
     `defaultView: ${input.workspaceDefinition.defaultView}`,
@@ -150,8 +249,10 @@ export function buildOperationSpaceCreationPlan(input: {
 
   for (const role of operation.workspaceRoles) {
     const { disposition, reason } = roleDisposition(role);
+    const roleMetadata = roleWorkspaceMetadata({ operation, role });
     const item: OperationWorkspaceCreationPlanItem = {
       workspaceRole: role.key,
+      ...roleMetadata,
       label: role.label,
       title: `${spaceTitle} - ${role.label}`,
       description: role.description || input.workspaceDefinition.defaultDescription,

@@ -65,6 +65,13 @@ export type WatchMediaPipelineEventPayloadInput = {
   } | null;
 };
 
+export type WatchPriceUpdatedEventPayloadInput = {
+  watch: WatchEventWatchSnapshot;
+  changedFields: string[];
+  before?: Record<string, unknown> | null;
+  after?: Record<string, unknown> | null;
+};
+
 export const WATCH_REVIEW_EVENT_CONSUMERS = [
   "timeline",
   "coordination",
@@ -270,6 +277,21 @@ export const WATCH_BUSINESS_EVENT_DEFINITIONS: WatchBusinessEventDefinition[] = 
     autoBindingScope: null,
   },
   {
+    key: "watch.price.updated",
+    label: "Watch price updated",
+    targetType: "WATCH",
+    group: "Watch",
+    status: "ACTIVE",
+    businessMeaning: "Watch pricing was updated and downstream read models should refresh.",
+    producer: "submit-watch-form.application",
+    emitPoint: "updateWatchPricingWithDiff",
+    targetIdPolicy: "watch.id",
+    targetAliasPolicy: "[watch.id, productId]",
+    payloadContract: "WatchPriceUpdatedPayload",
+    knownConsumers: ["projection", "timeline", "workflow"],
+    autoBindingScope: null,
+  },
+  {
     key: "watch.ready",
     label: "Watch ready",
     targetType: "WATCH",
@@ -441,6 +463,27 @@ export function watchMediaPipelineEventPayload(input: WatchMediaPipelineEventPay
     eventInstanceId: sourceId,
     intakeNote: input.note ?? null,
     mediaWorkProgress: input.mediaWorkProgress ?? null,
+  };
+}
+
+export function watchPriceUpdatedEventPayload(input: WatchPriceUpdatedEventPayloadInput) {
+  const product = input.watch.product ?? null;
+
+  return {
+    productId: input.watch.productId,
+    watchId: input.watch.id,
+    title: product?.title ?? null,
+    watchTitle: product?.title ?? null,
+    ref: product?.sku ?? null,
+    sku: product?.sku ?? null,
+    preview: {
+      imageUrl: product?.primaryImageUrl ?? null,
+      href: `/admin/watches/${input.watch.productId}`,
+    },
+    businessStatus: String(input.watch.saleStage || product?.status || ""),
+    changedFields: input.changedFields,
+    before: input.before ?? null,
+    after: input.after ?? null,
   };
 }
 

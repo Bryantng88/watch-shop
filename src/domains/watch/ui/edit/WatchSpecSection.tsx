@@ -141,12 +141,12 @@ export default function WatchSpecSection({ values, onChange }: Props) {
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
-                            <FieldLabel>Case shape</FieldLabel>
+                            <FieldLabel>Case form</FieldLabel>
                             <Select
                                 value={values.caseShape}
                                 onChange={(e) => onChange({ caseShape: e.target.value })}
                                 options={CASE_SHAPE_OPTIONS}
-                                placeholder="Chọn case shape"
+                                placeholder="Round / Square / Tank / ..."
                             />
                         </div>
 
@@ -202,24 +202,6 @@ export default function WatchSpecSection({ values, onChange }: Props) {
                                 value={values.calibre}
                                 onChange={(e) => onChange({ calibre: e.target.value })}
                                 placeholder="7S26 / L993.1 / ..."
-                            />
-                        </div>
-
-                        <div>
-                            <FieldLabel>Power reserve</FieldLabel>
-                            <Input
-                                value={values.powerReserve}
-                                onChange={(e) => onChange({ powerReserve: e.target.value })}
-                                placeholder="40h"
-                            />
-                        </div>
-
-                        <div>
-                            <FieldLabel>Water resistance</FieldLabel>
-                            <Input
-                                value={values.waterResistance}
-                                onChange={(e) => onChange({ waterResistance: e.target.value })}
-                                placeholder="30m / 50m"
                             />
                         </div>
 

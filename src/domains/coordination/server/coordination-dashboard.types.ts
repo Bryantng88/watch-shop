@@ -6,6 +6,7 @@ import type {
   OperationalBlueprintValidationResult,
 } from "@/domains/blueprint/server";
 import type { SpaceViewConfig } from "@/domains/space-management/server/space-view.types";
+import type { WorkspaceKind } from "@/domains/space-management/server/space-view.types";
 
 export type CoordinationReportMetricDTO = {
   key: string;
@@ -39,6 +40,11 @@ export type CoordinationWorkTicketSummaryDTO = {
     key: string;
     source: BlueprintSource;
     isAutoBindingReceiver: boolean;
+    workspaceKind: WorkspaceKind | null;
+    operationWorkspaceRole: string | null;
+    coreFlowKey: string | null;
+    flowStageKey: string | null;
+    flowStageOrder: number | null;
   } | null;
 };
 

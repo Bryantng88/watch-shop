@@ -128,6 +128,8 @@ type SectionCardProps = {
     children: ReactNode;
     actions?: ReactNode;
     defaultOpen?: boolean;
+    collapsible?: boolean;
+    surface?: "card" | "flat";
     onBeforeOpen?: () => boolean | Promise<boolean>;
 };
 
@@ -138,11 +140,15 @@ export function SectionCard({
     children,
     actions,
     defaultOpen = false,
+    collapsible = true,
+    surface = "card",
     onBeforeOpen,
 }: SectionCardProps) {
     const [open, setOpen] = useState(defaultOpen);
+    const contentOpen = collapsible ? open : true;
 
     const handleToggle = async () => {
+        if (!collapsible) return;
         if (!open && onBeforeOpen) {
             const allowed = await onBeforeOpen();
             if (!allowed) return;
@@ -152,7 +158,13 @@ export function SectionCard({
     };
 
     return (
-        <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
+        <section
+            className={
+                surface === "flat"
+                    ? "overflow-hidden bg-white"
+                    : "overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm"
+            }
+        >
             <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
                 <div className="flex min-w-0 items-start gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
@@ -175,22 +187,24 @@ export function SectionCard({
                 <div className="flex shrink-0 items-center gap-2">
                     {actions}
 
-                    <button
-                        type="button"
-                        onClick={handleToggle}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-50 hover:text-slate-700"
-                    >
-                        <ChevronDown
-                            className={[
-                                "h-4 w-4 transition-transform",
-                                open ? "rotate-180" : "",
-                            ].join(" ")}
-                        />
-                    </button>
+                    {collapsible ? (
+                        <button
+                            type="button"
+                            onClick={handleToggle}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-50 hover:text-slate-700"
+                        >
+                            <ChevronDown
+                                className={[
+                                    "h-4 w-4 transition-transform",
+                                    open ? "rotate-180" : "",
+                                ].join(" ")}
+                            />
+                        </button>
+                    ) : null}
                 </div>
             </div>
 
-            {open ? <div className="p-5">{children}</div> : null}
+            {contentOpen ? <div className="p-5">{children}</div> : null}
         </section>
     );
 }

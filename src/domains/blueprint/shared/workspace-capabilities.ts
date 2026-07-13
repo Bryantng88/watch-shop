@@ -1,4 +1,5 @@
 import type { WorkflowDefinition } from "@/domains/workflow-definition/server";
+import type { WorkspaceKind } from "@/domains/space-management/server/space-view.types";
 import type { WorkspaceEventBinding } from "./event-bindings";
 import type { OperationalBlueprintContract } from "./operational-blueprint";
 import type { WorkspaceProvisioningPolicy } from "./workspace-provisioning";
@@ -29,6 +30,11 @@ export type WorkspaceDefinitionSnapshot = {
   eventBindings?: WorkspaceEventBinding[];
   provisioning?: WorkspaceProvisioningPolicy;
   operation?: OperationalBlueprintContract | null;
+  operationWorkspaceRole?: string;
+  workspaceKind?: WorkspaceKind;
+  coreFlowKey?: string | null;
+  flowStageKey?: string | null;
+  flowStageOrder?: number | null;
   appliedWorkflowSnapshot?: WorkflowDefinition | null;
   workspaceDefinition?: {
     defaultName?: string;

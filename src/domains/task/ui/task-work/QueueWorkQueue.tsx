@@ -792,7 +792,7 @@ export function OpenTargetAction({
 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4">
-          <div className="flex h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
+          <div className="flex h-[92vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
             <div className="flex h-12 items-center justify-between border-b border-slate-200 px-4">
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold text-slate-950">

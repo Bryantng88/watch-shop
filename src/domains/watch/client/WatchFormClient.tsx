@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { BookOpen, Camera, ClipboardList } from "lucide-react";
 
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import {
@@ -116,6 +117,35 @@ function missingMediaWorkPartLabels(doneState: Record<MediaWorkPart, boolean>) {
     return MEDIA_WORK_PARTS
         .filter((part) => !doneState[part.key])
         .map((part) => part.label);
+}
+
+function MediaWorkDoneButton({
+    label,
+    done,
+    disabled,
+    onClick,
+}: {
+    label: string;
+    done: boolean;
+    disabled?: boolean;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            disabled={disabled}
+            onClick={onClick}
+            className={[
+                "inline-flex h-9 items-center justify-center rounded-full px-3 text-xs font-semibold ring-1 transition disabled:cursor-not-allowed disabled:opacity-60",
+                done
+                    ? "bg-emerald-100 text-emerald-800 ring-emerald-200 hover:bg-emerald-200"
+                    : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50",
+            ].join(" ")}
+            title={done ? "Bấm để chuyển về chưa xong" : "Xác nhận mục này đã xong"}
+        >
+            {done ? "Đã xong" : "Xác nhận xong"} {label}
+        </button>
+    );
 }
 
 function setStepStatus(
@@ -297,7 +327,6 @@ function useUnsavedChangesGuard({
 export default function WatchFormClient({
     detail,
     brands = [],
-    vendors = [],
     categories = [],
     postTargets = [],
     canViewCost = false,
@@ -334,11 +363,16 @@ export default function WatchFormClient({
         content: searchParams.get("mediaContentDone") === "1",
         image: searchParams.get("mediaImageDone") === "1",
     });
+    const [activeMediaSection, setActiveMediaSection] = useState<
+        "basic" | "content" | "image"
+    >("basic");
 
     const [afterSaveOpen, setAfterSaveOpen] = useState(false);
     const [afterSaveMode, setAfterSaveMode] = useState<AfterSaveMode>("normal");
 
+    const basicRef = useRef<HTMLDivElement | null>(null);
     const contentRef = useRef<HTMLDivElement | null>(null);
+    const imageRef = useRef<HTMLDivElement | null>(null);
     const pricingRef = useRef<HTMLDivElement | null>(null);
 
     const focus = searchParams.get("focus");
@@ -506,6 +540,10 @@ export default function WatchFormClient({
                 ...patch,
             },
         }));
+    };
+
+    const scrollToMediaSection = (target: "basic" | "content" | "image") => {
+        setActiveMediaSection(target);
     };
 
     const patchReviewState = (
@@ -1350,19 +1388,111 @@ export default function WatchFormClient({
         }
     };
 
+    const mediaDoneAction = (part: MediaWorkPart) =>
+        fromMediaWorkspace ? (
+            <MediaWorkDoneButton
+                label={MEDIA_WORK_PARTS.find((item) => item.key === part)?.label ?? part}
+                done={mediaWorkDone[part]}
+                disabled={mediaSubmitPending || isMediaWorkspaceDone}
+                onClick={() => toggleMediaWorkPartDone(part)}
+            />
+        ) : null;
+
+    const mediaImageActions = fromMediaWorkspace ? (
+        <div className="flex flex-wrap items-center justify-end gap-2">
+            {workspaceBindingId && !isMediaWorkspaceDone ? (
+                <button
+                    type="button"
+                    disabled={mediaSubmitPending}
+                    onClick={requestMediaReshootFromModal}
+                    className="inline-flex h-9 items-center justify-center rounded-full border border-amber-200 bg-white px-3 text-xs font-semibold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    Yêu cầu chụp lại
+                </button>
+            ) : null}
+            {mediaDoneAction("image")}
+        </div>
+    ) : null;
+
+    const mediaHeaderActions = fromMediaWorkspace ? (
+        <>
+            {isMediaWorkspaceDone ? (
+                <>
+                    <span className="inline-flex h-10 items-center rounded-xl bg-emerald-100 px-4 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
+                        Đã hoàn tất
+                    </span>
+                    <button
+                        type="button"
+                        disabled={mediaSubmitPending}
+                        onClick={reopenMediaWorkspaceFromModal}
+                        className="inline-flex h-10 items-center justify-center rounded-xl border border-amber-200 bg-white px-4 text-sm font-semibold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {mediaSubmitPending ? "Đang xử lý" : "Mở lại xử lý"}
+                    </button>
+                </>
+            ) : (
+                <>
+                    <button
+                        type="button"
+                        disabled={mediaSubmitPending}
+                        onClick={saveMediaWorkspaceDraft}
+                        className="inline-flex h-10 items-center justify-center rounded-xl border border-emerald-200 bg-white px-4 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {mediaSubmitPending ? "Đang lưu" : "Lưu xử lý dở"}
+                    </button>
+                    {!canApproveMediaWorkspace ? (
+                        <button
+                            type="button"
+                            disabled={mediaSubmitPending}
+                            onClick={completeMediaWorkspaceStepSafe}
+                            className="inline-flex h-10 items-center justify-center rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {mediaSubmitPending ? "Đang xử lý" : "Gửi duyệt"}
+                        </button>
+                    ) : null}
+                    {canReturnMediaWorkspace ? (
+                        <button
+                            type="button"
+                            disabled={mediaSubmitPending}
+                            onClick={returnMediaWorkspaceFromModal}
+                            className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {mediaSubmitPending ? "Đang xử lý" : "Trả về"}
+                        </button>
+                    ) : null}
+                    {canApproveMediaWorkspace ? (
+                        <button
+                            type="button"
+                            disabled={mediaSubmitPending}
+                            onClick={approveMediaWorkspaceFromModal}
+                            className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {mediaSubmitPending ? "Đang duyệt" : "Duyệt xong"}
+                        </button>
+                    ) : null}
+                </>
+            )}
+        </>
+    ) : null;
+
     const basicSection = (
         <WatchBasicSection
             values={values.basic}
             spec={values.spec}
+            pricing={values.pricing}
             brands={brandOptions}
-            vendors={vendors}
             categories={categories}
             postTargets={postTargets}
             onChange={updateBasic}
             onSpecChange={updateSpec}
-            onOpenSpecModal={() => setSpecModalOpen(true)}
+            onPricingChange={updatePricing}
             onBrandsChange={setBrandOptions}
+            canViewCost={canViewCost}
+            canEditPrice={canEditPrice}
             defaultOpen={isMediaMode}
+            actions={mediaDoneAction("profile")}
+            collapsible={!isMediaMode}
+            surface={isMediaMode ? "flat" : "card"}
         />
     );
 
@@ -1384,6 +1514,9 @@ export default function WatchFormClient({
             watchId={values.watchId}
             defaultOpen={isMediaMode}
             hideReviewActions={isMediaMode}
+            completionAction={mediaDoneAction("content")}
+            collapsible={!isMediaMode}
+            surface={isMediaMode ? "flat" : "card"}
         />
     );
 
@@ -1402,6 +1535,9 @@ export default function WatchFormClient({
                 isFormDirty={isDirty}
                 openTaskCount={detail.taskSummary?.watchImage ?? 0}
                 hideReviewActions={isMediaMode}
+                mediaActions={mediaImageActions}
+                collapsible={!isMediaMode}
+                surface={isMediaMode ? "flat" : "card"}
                 onBeforeSubmitReview={saveBeforeReview}
                 onPoolImagesChange={(items) => {
                     updateMedia({
@@ -1419,109 +1555,6 @@ export default function WatchFormClient({
                 }
                 error={mediaError}
             />
-            {fromMediaWorkspace ? (
-                <div className="rounded-3xl border border-emerald-200 bg-emerald-50 px-5 py-4">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div>
-                            <div className="text-sm font-semibold text-emerald-950">
-                                Xử lý Media Workspace
-                            </div>
-                            <p className="mt-1 text-sm text-emerald-800">
-                                Chọn ảnh từ NAS, sau đó bấm xong để gửi item về Workspace chờ duyệt.
-                            </p>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                                {MEDIA_WORK_PARTS.map((part) => {
-                                    const done = mediaWorkDone[part.key];
-
-                                    return (
-                                        <button
-                                            key={part.key}
-                                            type="button"
-                                            disabled={mediaSubmitPending || isMediaWorkspaceDone}
-                                            onClick={() => toggleMediaWorkPartDone(part.key)}
-                                            className={[
-                                                "inline-flex h-8 items-center justify-center rounded-full px-3 text-xs font-semibold ring-1 transition disabled:cursor-not-allowed disabled:opacity-60",
-                                                done
-                                                    ? "bg-emerald-100 text-emerald-800 ring-emerald-200 hover:bg-emerald-200"
-                                                    : "bg-white/80 text-amber-700 ring-amber-200 hover:bg-amber-50",
-                                            ].join(" ")}
-                                            title={done ? "Bấm để chuyển về chưa xong" : "Bấm để chốt mục này đã xong"}
-                                        >
-                                            {done ? "Đã xong" : "Chưa xong"} {part.label}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                        {isMediaWorkspaceDone ? (
-                            <div className="flex flex-wrap gap-2">
-                                <div className="inline-flex h-10 items-center rounded-xl bg-emerald-100 px-4 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
-                                    Đã hoàn tất
-                                </div>
-                                <button
-                                    type="button"
-                                    disabled={mediaSubmitPending}
-                                    onClick={reopenMediaWorkspaceFromModal}
-                                    className="inline-flex h-10 items-center justify-center rounded-xl border border-amber-200 bg-white px-4 text-sm font-semibold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                    {mediaSubmitPending ? "Đang xử lý" : "Mở lại xử lý"}
-                                </button>
-                            </div>
-                        ) : (
-                        <div className="flex flex-wrap gap-2">
-                            <button
-                                type="button"
-                                disabled={mediaSubmitPending}
-                                onClick={saveMediaWorkspaceDraft}
-                                className="inline-flex h-10 items-center justify-center rounded-xl border border-emerald-200 bg-white px-4 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                {mediaSubmitPending ? "Đang lưu" : "Lưu xử lý dở"}
-                            </button>
-                            {workspaceBindingId ? (
-                                <button
-                                    type="button"
-                                    disabled={mediaSubmitPending}
-                                    onClick={requestMediaReshootFromModal}
-                                    className="inline-flex h-10 items-center justify-center rounded-xl border border-amber-200 bg-white px-4 text-sm font-semibold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                    {mediaSubmitPending ? "Đang xử lý" : "Yêu cầu chụp lại"}
-                                </button>
-                            ) : null}
-                            {!canApproveMediaWorkspace ? (
-                        <button
-                            type="button"
-                            disabled={mediaSubmitPending}
-                            onClick={completeMediaWorkspaceStepSafe}
-                            className="inline-flex h-10 items-center justify-center rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            {mediaSubmitPending ? "Đang xử lý" : "Gửi duyệt"}
-                        </button>
-                            ) : null}
-                            {canReturnMediaWorkspace ? (
-                                <button
-                                    type="button"
-                                    disabled={mediaSubmitPending}
-                                    onClick={returnMediaWorkspaceFromModal}
-                                    className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                    {mediaSubmitPending ? "Đang xử lý" : "Trả về"}
-                                </button>
-                            ) : null}
-                            {canApproveMediaWorkspace ? (
-                                <button
-                                    type="button"
-                                    disabled={mediaSubmitPending}
-                                    onClick={approveMediaWorkspaceFromModal}
-                                    className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                    {mediaSubmitPending ? "Đang duyệt" : "Duyệt xong"}
-                                </button>
-                            ) : null}
-                        </div>
-                        )}
-                    </div>
-                </div>
-            ) : null}
         </>
     );
 
@@ -1534,9 +1567,12 @@ export default function WatchFormClient({
                     inlineImage={inlineImage}
                     pending={pending}
                     message=""
-                    onSubmit={onSubmit}
+                    onSubmit={fromMediaWorkspace ? saveMediaWorkspaceDraft : onSubmit}
                     onBack={handleBack}
                     canReviewContent={canReviewContent}
+                    hideBack={isMediaMode}
+                    hideSubmit={fromMediaWorkspace}
+                    headerActions={mediaHeaderActions}
                     breadcrumbs={[
                         { label: "Watches", href: returnTo },
                         { label: values.basic.title || "Edit" },
@@ -1556,9 +1592,108 @@ export default function WatchFormClient({
                         }));
                     }}
                 />
-                {basicSection}
-                {contentSection}
-                {imageSection}
+                <div className="grid min-h-[560px] overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.06)] lg:grid-cols-[190px_minmax(0,1fr)]">
+                    <aside className="border-b border-slate-200 bg-slate-50/60 lg:border-b-0 lg:border-r">
+                        <div className="overflow-x-auto p-2 lg:min-h-[560px] lg:p-3">
+                            <div className="flex gap-1.5 lg:flex-col">
+                                {[
+                                    {
+                                        key: "basic" as const,
+                                        title: "Thông tin chính",
+                                        subtitle: "Spec, giá và định danh",
+                                        done: mediaWorkDone.profile,
+                                        icon: ClipboardList,
+                                    },
+                                    {
+                                        key: "content" as const,
+                                        title: "Content",
+                                        subtitle: "Hook, body và bullet",
+                                        done: mediaWorkDone.content,
+                                        icon: BookOpen,
+                                    },
+                                    {
+                                        key: "image" as const,
+                                        title: "Hình ảnh",
+                                        subtitle: "Gallery và chụp lại",
+                                        done: mediaWorkDone.image,
+                                        icon: Camera,
+                                    },
+                                ].map((item) => {
+                                    const Icon = item.icon;
+                                    const active = activeMediaSection === item.key;
+
+                                    return (
+                                        <button
+                                            key={item.key}
+                                            type="button"
+                                            onClick={() => scrollToMediaSection(item.key)}
+                                            className={[
+                                                "group relative flex min-w-[150px] items-center gap-2.5 rounded-2xl px-3 py-3 text-left transition lg:min-w-0",
+                                                active
+                                                    ? "bg-white text-indigo-700 shadow-sm ring-1 ring-inset ring-indigo-100"
+                                                    : "text-slate-600 hover:bg-white/80 hover:text-slate-900",
+                                            ].join(" ")}
+                                        >
+                                            <span
+                                                className={[
+                                                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition",
+                                                    active
+                                                        ? "bg-indigo-50 text-indigo-600"
+                                                        : "bg-white text-slate-500 ring-1 ring-slate-200 group-hover:text-slate-700",
+                                                ].join(" ")}
+                                            >
+                                                <Icon className="h-4 w-4" />
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span
+                                                    className={[
+                                                        "block text-sm font-semibold",
+                                                        active ? "text-indigo-700" : "text-slate-800",
+                                                    ].join(" ")}
+                                                >
+                                                    {item.title}
+                                                </span>
+                                                <span className="hidden">
+                                                    {item.subtitle}
+                                                </span>
+                                            </span>
+                                            <span
+                                                className={[
+                                                    "h-2 w-2 shrink-0 rounded-full ring-4",
+                                                    item.done
+                                                        ? "bg-emerald-500 ring-emerald-50"
+                                                        : "bg-slate-300 ring-slate-50",
+                                                ].join(" ")}
+                                            />
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="mt-3 hidden border-t border-slate-200/80 pt-3 text-xs text-slate-500 lg:block">
+                                <button
+                                    type="button"
+                                    className="flex w-full items-center justify-between px-3 py-2 text-left font-medium hover:text-slate-800"
+                                >
+                                    <span>Thông tin nâng cao</span>
+                                    <span className="text-slate-400">⌄</span>
+                                </button>
+                            </div>
+                        </div>
+                    </aside>
+
+                    <div className="min-w-0 bg-white">
+                        {activeMediaSection === "basic" ? (
+                            <div ref={basicRef}>{basicSection}</div>
+                        ) : null}
+                        {activeMediaSection === "content" ? (
+                            <div ref={contentRef}>{contentSection}</div>
+                        ) : null}
+                        {activeMediaSection === "image" ? (
+                            <div ref={imageRef}>{imageSection}</div>
+                        ) : null}
+                    </div>
+                </div>
                 <WatchSpecModal
                     open={specModalOpen}
                     values={values.spec}
@@ -1577,9 +1712,11 @@ export default function WatchFormClient({
                 inlineImage={inlineImage}
                 pending={pending}
                 message=""
-                onSubmit={onSubmit}
+                onSubmit={fromMediaWorkspace ? saveMediaWorkspaceDraft : onSubmit}
                 onBack={handleBack}
                 canReviewContent={canReviewContent}
+                hideSubmit={fromMediaWorkspace}
+                headerActions={mediaHeaderActions}
                 breadcrumbs={[
                     { label: "Watches", href: returnTo },
                     { label: values.basic.title || "Edit" },
@@ -1618,6 +1755,8 @@ export default function WatchFormClient({
                         canReviewContent={canReviewContent}
                         isFormDirty={isDirty}
                         openTaskCount={detail.taskSummary?.watchImage ?? 0}
+                        hideReviewActions={fromMediaWorkspace}
+                        mediaActions={mediaImageActions}
                         onBeforeSubmitReview={saveBeforeReview}
                         onPoolImagesChange={(items) => {
                             updateMedia({
@@ -1635,60 +1774,6 @@ export default function WatchFormClient({
                         }
                         error={mediaError}
                     />
-                    {fromMediaWorkspace ? (
-                        <div className="rounded-3xl border border-emerald-200 bg-emerald-50 px-5 py-4">
-                            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                                <div>
-                                    <div className="text-sm font-semibold text-emerald-950">
-                                        Xử lý Media Workspace
-                                    </div>
-                                    <p className="mt-1 text-sm text-emerald-800">
-                                        Xử lý thông tin, content và hình ảnh. Lưu xử lý dở sẽ lưu cả watch và tiến độ Workspace.
-                                    </p>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                    <button
-                                        type="button"
-                                        disabled={mediaSubmitPending}
-                                        onClick={saveMediaWorkspaceDraft}
-                                        className="inline-flex h-10 items-center justify-center rounded-xl border border-emerald-200 bg-white px-4 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                    >
-                                        {mediaSubmitPending ? "Đang lưu" : "Lưu xử lý dở"}
-                                    </button>
-                                    {!canApproveMediaWorkspace ? (
-                                <button
-                                    type="button"
-                                    disabled={mediaSubmitPending}
-                                    onClick={completeMediaWorkspaceStepSafe}
-                                    className="inline-flex h-10 items-center justify-center rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                    {mediaSubmitPending ? "Đang xử lý" : "Gửi duyệt"}
-                                </button>
-                                    ) : null}
-                                    {canReturnMediaWorkspace ? (
-                                        <button
-                                            type="button"
-                                            disabled={mediaSubmitPending}
-                                            onClick={returnMediaWorkspaceFromModal}
-                                            className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                        >
-                                            {mediaSubmitPending ? "Đang xử lý" : "Trả về"}
-                                        </button>
-                                    ) : null}
-                                    {canApproveMediaWorkspace ? (
-                                        <button
-                                            type="button"
-                                            disabled={mediaSubmitPending}
-                                            onClick={approveMediaWorkspaceFromModal}
-                                            className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                                        >
-                                            {mediaSubmitPending ? "Đang duyệt" : "Duyệt xong"}
-                                        </button>
-                                    ) : null}
-                                </div>
-                            </div>
-                        </div>
-                    ) : null}
                 </div>
 
                 <div className="space-y-6 xl:col-span-4">

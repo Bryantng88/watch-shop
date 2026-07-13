@@ -5,10 +5,12 @@ import {
   watchReviewEventAliases,
   watchMediaPipelineEventAliases,
   watchMediaPipelineEventPayload,
+  watchPriceUpdatedEventPayload,
   watchReviewEventKey,
   watchReviewEventPayload,
   type WatchEventWatchSnapshot,
   type WatchMediaPipelineEventPayloadInput,
+  type WatchPriceUpdatedEventPayloadInput,
   type WatchReviewSourceAction,
   type WatchReviewStatus,
   type WatchReviewTargetType,
@@ -77,6 +79,22 @@ export async function emitWatchContentModifiedEvent(
       productId: input.watch.productId,
       watchId: input.watch.id,
     },
+  });
+}
+
+export async function emitWatchPriceUpdatedEvent(
+  db: DB,
+  input: WatchPriceUpdatedEventPayloadInput & {
+    actorUserId?: string | null;
+  },
+) {
+  return recordBusinessEvent(db, {
+    eventKey: "watch.price.updated",
+    targetType: "WATCH",
+    targetId: input.watch.id,
+    targetAliasIds: [input.watch.id, input.watch.productId],
+    actorUserId: input.actorUserId ?? null,
+    payload: watchPriceUpdatedEventPayload(input),
   });
 }
 

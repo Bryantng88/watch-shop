@@ -256,6 +256,28 @@ Current shape:
 - View mode row model: `FLOW_STAGE_WORKSPACE`.
 - Items: Watch/media work items move through stage Workspaces.
 
+Recommended core flow:
+
+```text
+coreFlowKey: media-production-flow
+Photography -> Media Processing -> Publish
+```
+
+Workspace role mapping:
+
+| Workspace role | Existing key | Workspace kind | Notes |
+| --- | --- | --- | --- |
+| Photography | `photography` | `FLOW_STAGE_WORKSPACE` | receives `watch.media.photoshoot.requested` |
+| Media Processing | `media-processing` | `FLOW_STAGE_WORKSPACE` | receives photoshoot/media asset events and owns media review states |
+| Publish | `publish` | `FLOW_STAGE_WORKSPACE` | receives `watch.media.ready_for_publish` |
+
+Important distinction:
+
+- `photography`, `media-processing`, and `publish` are Space flow stages.
+- Workflow states inside those Workspaces are not Space stages. For example,
+  `NEW`, `REVIEW`, `FEEDBACK`, `DONE`, `WAITING_CONTENT`, `IMAGE_REVIEW`, and
+  `READY_TO_POST` are item/workflow states inside a Workspace.
+
 What is already right:
 
 - The flow-stage model matches the business process.
@@ -380,6 +402,16 @@ type OperationalBlueprintSpaceViewMode = {
 
 These fields should start as server-side abstractions and snapshot metadata.
 They do not require immediate database migration.
+
+Current implementation slice:
+
+- New operation-created Workspace snapshots derive and store `workspaceKind`,
+  `operationWorkspaceRole`, `coreFlowKey`, `flowStageKey`, and
+  `flowStageOrder`.
+- Space list DTOs expose those fields to the Coordination UI.
+- `FLOW_STAGE_WORKSPACE` Space modes filter and sort rows by `flowStageKey`
+  when available.
+- Existing snapshots are not migrated; legacy rows keep fallback rendering.
 
 ## Carryover Policy
 

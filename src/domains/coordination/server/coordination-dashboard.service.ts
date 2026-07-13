@@ -15,6 +15,7 @@ import {
 import { getSpaceViewConfig } from "@/domains/space-management/server/space-view.config";
 import { parseWorkspaceDefinitionSnapshot } from "@/domains/blueprint/shared/workspace-capabilities";
 import { workspaceFlowOrder } from "@/domains/task/shared/workspace-flow-policy";
+import type { WorkspaceKind } from "@/domains/space-management/server/space-view.types";
 import type {
   CoordinationDashboardDTO,
   CoordinationWorkTicketSummaryDTO,
@@ -100,6 +101,47 @@ function blueprintIdentityFromNote(note?: string | null) {
   return {
     key: blueprintKey,
     source: String(blueprintSource || "REGISTRY").toUpperCase(),
+  };
+}
+
+function noteLineValue(note: string | null | undefined, key: string) {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return String(note ?? "").match(new RegExp(`^${escaped}:\\s*([^\\r\\n]+)`, "im"))?.[1]?.trim() ?? null;
+}
+
+function workspaceKindValue(value: unknown): WorkspaceKind | null {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (
+    normalized === "STANDALONE_WORKSPACE" ||
+    normalized === "FLOW_STAGE_WORKSPACE" ||
+    normalized === "CASE_WORKSPACE" ||
+    normalized === "BENCH_WORKSPACE"
+  ) {
+    return normalized;
+  }
+
+  return null;
+}
+
+function numericValue(value: unknown) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function workspaceRoleMetadataFromNote(note?: string | null) {
+  const snapshot = parseWorkspaceDefinitionSnapshot(note);
+
+  return {
+    workspaceKind: workspaceKindValue(
+      snapshot?.workspaceKind ?? noteLineValue(note, "workspaceKind"),
+    ),
+    operationWorkspaceRole:
+      snapshot?.operationWorkspaceRole ?? noteLineValue(note, "operationWorkspaceRole"),
+    coreFlowKey: snapshot?.coreFlowKey ?? noteLineValue(note, "coreFlowKey"),
+    flowStageKey: snapshot?.flowStageKey ?? noteLineValue(note, "flowStageKey"),
+    flowStageOrder: numericValue(
+      snapshot?.flowStageOrder ?? noteLineValue(note, "flowStageOrder"),
+    ),
   };
 }
 
@@ -436,6 +478,7 @@ export async function getCoordinationDashboard(input: {
       lastActivityAtByTaskItem.get(item.id) ??
       null;
     const blueprintIdentity = blueprintIdentityFromNote(item.note);
+    const workspaceRoleMetadata = workspaceRoleMetadataFromNote(item.note);
 
     return {
       id: item.id,
@@ -457,6 +500,7 @@ export async function getCoordinationDashboard(input: {
             key: blueprintIdentity.key,
             source: blueprintIdentity.source as BlueprintSource,
             isAutoBindingReceiver: isAutoBindingReceiverNote(item.note),
+            ...workspaceRoleMetadata,
           }
         : null,
     };

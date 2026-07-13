@@ -81,6 +81,12 @@ function prefixedLabel(prefix: "Space" | "Workspace", value: string) {
   return `${prefix} ${cleanValue}`;
 }
 
+function ticketFlowStageKey(
+  ticket: CoordinationDashboardDTO["workTickets"][number],
+) {
+  return ticket.blueprint?.flowStageKey ?? ticket.blueprint?.key ?? null;
+}
+
 function enabledCapabilityLabels(
   capabilities: CoordinationDashboardDTO["blueprints"][number]["workspaceDefinition"]["enabledCapabilities"],
 ) {
@@ -153,6 +159,9 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   const [blueprintKey, setBlueprintKey] = useState(
     data.blueprints[0]?.selectionKey ?? "",
   );
+  const [activeViewModeKey, setActiveViewModeKey] = useState(
+    data.viewConfig.defaultModeKey,
+  );
   const initialTitle = data.blueprints[0]?.workspaceDefinition.defaultName ?? "";
   const [title, setTitle] = useState(initialTitle);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
@@ -172,8 +181,56 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     : [];
   const activeViewMode =
     data.viewConfig.modes.find(
-      (mode) => mode.key === data.viewConfig.defaultModeKey,
+      (mode) => mode.key === activeViewModeKey,
     ) ?? data.viewConfig.modes[0];
+  const activeCoreFlow = activeViewMode?.coreFlowKey
+    ? data.viewConfig.coreFlows?.find(
+        (flow) => flow.key === activeViewMode.coreFlowKey,
+      ) ?? null
+    : null;
+  const activeStageByWorkspaceKey = useMemo(() => {
+    const entries =
+      activeCoreFlow?.stages.map((stage) => [stage.workspaceKey, stage] as const) ??
+      [];
+
+    return new Map(entries);
+  }, [activeCoreFlow]);
+  const displayedWorkTickets = useMemo(() => {
+    if (!activeCoreFlow || activeViewMode?.rowModel !== "FLOW_STAGE_WORKSPACE") {
+      return data.workTickets;
+    }
+
+    const stageOrderByWorkspaceKey = new Map(
+      activeCoreFlow.stages.map((stage) => [stage.workspaceKey, stage.sortOrder] as const),
+    );
+
+    return data.workTickets
+      .filter((ticket) => {
+        if (
+          ticket.blueprint?.workspaceKind &&
+          ticket.blueprint.workspaceKind !== "FLOW_STAGE_WORKSPACE"
+        ) {
+          return false;
+        }
+
+        const stageKey = ticketFlowStageKey(ticket);
+        return stageKey ? stageOrderByWorkspaceKey.has(stageKey) : false;
+      })
+      .slice()
+      .sort((left, right) => {
+        const leftStageKey = ticketFlowStageKey(left);
+        const rightStageKey = ticketFlowStageKey(right);
+        const leftOrder = leftStageKey
+          ? stageOrderByWorkspaceKey.get(leftStageKey) ?? Number.MAX_SAFE_INTEGER
+          : Number.MAX_SAFE_INTEGER;
+        const rightOrder = rightStageKey
+          ? stageOrderByWorkspaceKey.get(rightStageKey) ?? Number.MAX_SAFE_INTEGER
+          : Number.MAX_SAFE_INTEGER;
+
+        if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+        return left.title.localeCompare(right.title);
+      });
+  }, [activeCoreFlow, activeViewMode?.rowModel, data.workTickets]);
 
   function updateDate(date: string) {
     const next = new URLSearchParams(searchParams.toString());
@@ -434,7 +491,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                     className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                   >
                     <RotateCcw className="h-4 w-4" />
-                    Nhận item tồn tuần trước
+                    {data.viewConfig.carryover.actionLabel}
                   </button>
                 <button
                   type="button"
@@ -557,13 +614,43 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                 <div>
                   <div className="font-semibold text-blue-700">Space view</div>
                   <div className="mt-1 font-medium">{data.viewConfig.label}</div>
-                  <div className="mt-1 text-blue-800">{activeViewMode.label}</div>
+                  {data.viewConfig.modes.length > 1 ? (
+                    <select
+                      value={activeViewMode.key}
+                      onChange={(event) => setActiveViewModeKey(event.target.value)}
+                      className="mt-2 h-8 w-full rounded-md border border-blue-200 bg-white px-2 text-xs font-medium text-blue-950 outline-none focus:border-blue-400"
+                    >
+                      {data.viewConfig.modes.map((mode) => (
+                        <option key={mode.key} value={mode.key}>
+                          {mode.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="mt-1 text-blue-800">{activeViewMode.label}</div>
+                  )}
+                  <div className="mt-1 text-blue-800">{activeViewMode.description}</div>
+                  {activeCoreFlow ? (
+                    <div className="mt-1 text-blue-800">
+                      Flow: {activeCoreFlow.label}
+                    </div>
+                  ) : null}
                 </div>
                 <div>
                   <div className="font-semibold text-blue-700">Render rule</div>
                   <div className="mt-1">
                     Row: {activeViewMode.rowModel} / Target: {activeViewMode.primaryTarget}
                   </div>
+                  {activeViewMode.allowedWorkspaceKinds?.length ? (
+                    <div className="mt-1">
+                      Workspace kind: {activeViewMode.allowedWorkspaceKinds.join(", ")}
+                    </div>
+                  ) : null}
+                  {activeViewMode.coreFlowKey ? (
+                    <div className="mt-1">
+                      Core flow: {activeViewMode.coreFlowKey}
+                    </div>
+                  ) : null}
                   <div className="mt-1">
                     Columns: {activeViewMode.columns.map((column) => column.label).join(", ")}
                   </div>
@@ -571,6 +658,52 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                 <div>
                   <div className="font-semibold text-blue-700">Carryover rule</div>
                   <div className="mt-1">{data.viewConfig.carryover.processingRule}</div>
+                  {data.viewConfig.carryover.terminalStatesByTargetType ? (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {Object.entries(data.viewConfig.carryover.terminalStatesByTargetType).map(
+                        ([targetType, states]) => (
+                          <span
+                            key={targetType}
+                            className="rounded-full border border-blue-200 bg-white px-2 py-0.5 font-medium text-blue-800"
+                          >
+                            {targetType}: exclude {states.join(", ")}
+                          </span>
+                        ),
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+            {activeCoreFlow ? (
+              <div className="mt-3 rounded-md border border-slate-200 bg-white p-3 text-xs text-slate-700">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="font-semibold text-slate-900">
+                      {activeCoreFlow.label}
+                    </div>
+                    <div className="mt-1 text-slate-500">
+                      {activeCoreFlow.description}
+                    </div>
+                  </div>
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 font-medium text-slate-700">
+                    Item: {activeCoreFlow.itemTargetType}
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-1">
+                  {activeCoreFlow.stages
+                    .slice()
+                    .sort((left, right) => left.sortOrder - right.sortOrder)
+                    .map((stage, index) => (
+                      <span key={stage.key} className="inline-flex items-center gap-1">
+                        {index > 0 ? (
+                          <ChevronRight className="h-3 w-3 text-slate-400" aria-hidden="true" />
+                        ) : null}
+                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 font-medium text-slate-700">
+                          {stage.label}
+                        </span>
+                      </span>
+                    ))}
                 </div>
               </div>
             ) : null}
@@ -759,7 +892,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
           </div>
 
           <div className="divide-y divide-slate-100">
-            {data.workTickets.map((ticket) => (
+            {displayedWorkTickets.map((ticket) => (
               <Link
                 key={ticket.id}
                 href={`/admin/task-items/${ticket.id}`}
@@ -774,6 +907,17 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                       <MessageSquareWarning className="h-4 w-4 text-amber-600" />
                     ) : null}
                   </div>
+                  {ticketFlowStageKey(ticket) &&
+                  activeStageByWorkspaceKey.has(ticketFlowStageKey(ticket) ?? "") ? (
+                    <div className="mt-2">
+                      <span className="rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                        {
+                          activeStageByWorkspaceKey.get(ticketFlowStageKey(ticket) ?? "")
+                            ?.label
+                        }
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
 
                 <OwnerCell owner={ticket.owner} />
@@ -804,10 +948,10 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
               </Link>
             ))}
 
-            {!data.workTickets.length ? (
+            {!displayedWorkTickets.length ? (
               <div className="flex items-center gap-3 px-4 py-10 text-sm text-slate-500">
                 <Inbox className="h-5 w-5" />
-                Chưa có Workspace trong tuần này.
+                {data.viewConfig.emptyState}
               </div>
             ) : null}
           </div>

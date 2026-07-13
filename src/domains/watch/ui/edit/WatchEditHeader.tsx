@@ -28,6 +28,9 @@ type Props = {
     onSubmit: () => void;
     onBack?: () => void;
     onChange?: (patch: Partial<WatchFormValues>) => void;
+    hideBack?: boolean;
+    headerActions?: React.ReactNode;
+    hideSubmit?: boolean;
 };
 
 function getOverallReviewStatus(values: WatchFormValues) {
@@ -88,6 +91,7 @@ function HeaderImage({
             >
                 {src ? (
                     <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             src={src}
                             alt={title}
@@ -118,6 +122,7 @@ function HeaderImage({
                         <X className="h-5 w-5" />
                     </button>
 
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                         src={src}
                         alt={title}
@@ -139,6 +144,9 @@ export default function WatchEditHeader({
     onSubmit,
     onBack,
     onChange,
+    hideBack = false,
+    headerActions,
+    hideSubmit = false,
     inlineImage = null,
 }: Props) {
     const brandName =
@@ -207,6 +215,7 @@ export default function WatchEditHeader({
                 </div>
 
                 <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                    {!hideBack ? (
                     <button
                         type="button"
                         onClick={onBack}
@@ -215,6 +224,8 @@ export default function WatchEditHeader({
                         <ArrowLeft className="h-4 w-4" />
                         Quay lại
                     </button>
+
+                    ) : null}
 
                     {productId ? (
                         <RegenerateTitleSkuButton
@@ -235,6 +246,9 @@ export default function WatchEditHeader({
                         />
                     ) : null}
 
+                    {headerActions}
+
+                    {!hideSubmit ? (
                     <button
                         type="button"
                         onClick={onSubmit}
@@ -250,6 +264,7 @@ export default function WatchEditHeader({
                             "Lưu thay đổi"
                         )}
                     </button>
+                    ) : null}
                 </div>
             </div>
         </div>

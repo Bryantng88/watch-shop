@@ -46,6 +46,9 @@ type Props = {
     isFormDirty?: boolean;
     openTaskCount?: number;
     hideReviewActions?: boolean;
+    mediaActions?: React.ReactNode;
+    collapsible?: boolean;
+    surface?: "card" | "flat";
 };
 
 function normalizeStatus(status?: string | null): ReviewStatus {
@@ -102,6 +105,9 @@ export default function WatchImageSection({
     isFormDirty,
     openTaskCount = 0,
     hideReviewActions = false,
+    mediaActions,
+    collapsible = true,
+    surface = "card",
 }: Props) {
     const dialog = useAppDialog();
     const notify = useNotify();
@@ -232,8 +238,10 @@ export default function WatchImageSection({
                 icon={<ImageIcon className="h-5 w-5" />}
                 title="Hình ảnh"
                 subtitle="Chỉ quản lý ảnh gallery của watch. Ảnh đại diện dùng role INLINE riêng."
+                collapsible={collapsible}
+                surface={surface}
                 actions={
-                    hideReviewActions ? null :
+                    hideReviewActions ? mediaActions :
                     <div className="flex flex-wrap items-center justify-end gap-2">
                         <TaskSignalIcon
                             title={taskPending ? "Đang tải task..." : "Giao task hình ảnh"}

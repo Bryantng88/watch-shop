@@ -27,6 +27,7 @@ import {
     textOrUndefined,
     toDecimal,
 } from "../../server/shared";
+import { emitWatchPriceUpdatedEvent } from "../../server/events";
 
 type SubmitWatchFormContext = {
     userId?: string | null;
@@ -52,6 +53,20 @@ type SubmitWatchFormResult = {
     imageReviewStatus?: "DRAFT";
 
 };
+
+function priceSnapshot(value: unknown) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    const row = value as Record<string, unknown>;
+
+    return {
+        salePrice: row.salePrice == null ? null : String(row.salePrice),
+        minPrice: row.minPrice == null ? null : String(row.minPrice),
+        costPrice: row.costPrice == null ? null : String(row.costPrice),
+        serviceCost: row.serviceCost == null ? null : String(row.serviceCost),
+        landedCost: row.landedCost == null ? null : String(row.landedCost),
+        pricingNote: row.pricingNote == null ? null : String(row.pricingNote),
+    };
+}
 
 function buildContentSnapshot(input: {
     titleOverride?: string | null;
@@ -651,18 +666,31 @@ export async function submitWatchFormApplication(
         hasGalleryImages,
     });
 
-    const pricingResult = isMediaWorkspaceSave
-        ? { changedFields: [], product: null }
-        : await updateWatchPricingWithDiff(productId, {
-            salePrice: values.pricing.salePrice,
-            minPrice: values.pricing.minPrice,
-            costPrice: values.pricing.costPrice,
-            serviceCost: values.pricing.serviceCost,
-            landedCost: values.pricing.landedCost,
-            pricingNote: values.pricing.pricingNote,
+    const pricingResult = await updateWatchPricingWithDiff(productId, {
+        salePrice: values.pricing.salePrice,
+        minPrice: values.pricing.minPrice,
+        costPrice: values.pricing.costPrice,
+        serviceCost: values.pricing.serviceCost,
+        landedCost: values.pricing.landedCost,
+        pricingNote: values.pricing.pricingNote,
+    });
+
+    if (pricingResult.changedFields.length > 0) {
+        await emitWatchPriceUpdatedEvent(prisma, {
+            watch: {
+                id: pricingResult.watchId,
+                productId,
+                product: {
+                    title: pricingResult.product?.title ?? values.basic.title ?? null,
+                    sku: pricingResult.product?.sku ?? values.header.sku ?? null,
+                },
+            },
+            actorUserId: context.userId ?? null,
+            changedFields: pricingResult.changedFields,
+            before: priceSnapshot(pricingResult.before),
+            after: priceSnapshot(pricingResult.after),
         });
 
-    if (!isMediaWorkspaceSave && pricingResult.changedFields.length > 0) {
         await notifyUsersByRole({
             role: "SALE",
             type: "WATCH_PRICE_UPDATED",

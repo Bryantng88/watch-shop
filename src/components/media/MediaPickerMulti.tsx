@@ -1,13 +1,17 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import * as React from "react";
-import MediaBrowserDialog from "./MediaBrowserDialog";
+import MediaBrowserDialog, {
+    type SharedMediaProfile,
+} from "./MediaBrowserDialog";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 
 
 
 export type PickedMediaItem = {
     key: string;
+    fileKey?: string | null;
     url?: string | null;
     name?: string | null;
 };
@@ -21,7 +25,7 @@ type Props = {
     selectedValue?: PickedMediaItem[];
     onChosenChange: (items: PickedMediaItem[]) => void;
     onSelectedChange: (items: PickedMediaItem[]) => void;
-    profile?: any;
+    profile?: SharedMediaProfile;
     maxFinalSelection?: number;
     title?: string;
     description?: string;
@@ -31,9 +35,6 @@ type Props = {
 type PreviewState = {
     src: string;
     label?: string | null;
-    x: number;
-    y: number;
-    size: number;
 } | null;
 
 function dedupeItems(items: PickedMediaItem[]) {
@@ -67,7 +68,7 @@ function normalizeItems(items?: PickedMediaItem[]) {
     );
 }
 function getItemKey(item: PickedMediaItem) {
-    return String((item as any)?.key ?? (item as any)?.fileKey ?? "").trim();
+    return String(item.key ?? item.fileKey ?? "").trim();
 }
 function toPickedItem(input: string | PickedMediaItem): PickedMediaItem {
     if (typeof input === "string") {
@@ -97,58 +98,35 @@ function getLabel(item: PickedMediaItem) {
     return item.name ?? item.key.split("/").pop() ?? item.key;
 }
 
-function computePreviewPosition(input: {
-    x: number;
-    y: number;
-    size: number;
+function ImagePreviewDialog({
+    preview,
+    onClose,
+}: {
+    preview: PreviewState;
+    onClose: () => void;
 }) {
-    const padding = 18;
-    const labelHeight = 40;
-    const width = input.size;
-    const height = input.size + labelHeight;
-
-    let left = input.x + 24;
-    let top = input.y - height / 2;
-
-    if (typeof window !== "undefined") {
-        if (left + width + padding > window.innerWidth) {
-            left = input.x - width - 24;
-        }
-
-        if (left < padding) left = padding;
-        if (top < padding) top = padding;
-
-        if (top + height + padding > window.innerHeight) {
-            top = window.innerHeight - height - padding;
-        }
-    }
-
-    return { left, top };
-}
-
-function FloatingPreview({ preview }: { preview: PreviewState }) {
     if (!preview?.src) return null;
 
-    const { left, top } = computePreviewPosition({
-        x: preview.x,
-        y: preview.y,
-        size: preview.size,
-    });
-
     return (
-        <div
-            className="pointer-events-none fixed z-[99999]"
-            style={{ left, top }}
-        >
-            <div
-                className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-2 shadow-2xl"
-                style={{ width: preview.size }}
-            >
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 p-4">
+            <button
+                type="button"
+                className="absolute inset-0 cursor-default"
+                aria-label="Close image preview"
+                onClick={onClose}
+            />
+            <div className="relative max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-3xl bg-white p-3 shadow-2xl">
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="absolute right-4 top-4 z-10 rounded-full bg-black/75 px-3 py-1.5 text-xs font-semibold text-white"
+                >
+                    Close
+                </button>
                 <img
                     src={preview.src}
                     alt={preview.label ?? "Preview"}
-                    className="w-full rounded-2xl object-cover"
-                    style={{ height: preview.size }}
+                    className="max-h-[82vh] w-full rounded-2xl object-contain"
                 />
 
                 {preview.label ? (
@@ -168,7 +146,6 @@ function ChosenGrid({
     onRemoveChosen,
     maxFinalSelection,
     onPreview,
-    onPreviewMove,
     onPreviewClose,
 }: {
     items: PickedMediaItem[];
@@ -176,12 +153,7 @@ function ChosenGrid({
     onToggleSelect: (item: PickedMediaItem) => void;
     onRemoveChosen: (key: string) => void;
     maxFinalSelection?: number;
-    onPreview: (payload: {
-        item: PickedMediaItem;
-        event: React.MouseEvent;
-        size: number;
-    }) => void;
-    onPreviewMove: (event: React.MouseEvent) => void;
+    onPreview: (item: PickedMediaItem) => void;
     onPreviewClose: () => void;
 }) {
     const selectedKeySet = new Set(selectedItems.map((item) => item.key));
@@ -213,15 +185,10 @@ function ChosenGrid({
                                             ? "border-blue-500 ring-2 ring-blue-100"
                                             : "border-slate-200",
                                     ].join(" ")}
-                                    onMouseEnter={(event) =>
-                                        onPreview({ item, event, size: 420 })
-                                    }
-                                    onMouseMove={onPreviewMove}
-                                    onMouseLeave={onPreviewClose}
                                 >
                                     <button
                                         type="button"
-                                        onClick={() => onToggleSelect(item)}
+                                        onClick={() => onPreview(item)}
                                         className="block w-full"
                                         title={
                                             active
@@ -237,7 +204,7 @@ function ChosenGrid({
                                                 alt={label}
                                                 loading="lazy"
                                                 decoding="async"
-                                                className="h-full w-full object-cover transition-transform duration-200 hover:scale-[1.04]"
+                                                className="h-full w-full object-cover"
                                             />
                                         </div>
                                     </button>
@@ -291,17 +258,11 @@ function SelectedStrip({
     items,
     onRemove,
     onPreview,
-    onPreviewMove,
     onPreviewClose,
 }: {
     items: PickedMediaItem[];
     onRemove: (key: string) => void;
-    onPreview: (payload: {
-        item: PickedMediaItem;
-        event: React.MouseEvent;
-        size: number;
-    }) => void;
-    onPreviewMove: (event: React.MouseEvent) => void;
+    onPreview: (item: PickedMediaItem) => void;
     onPreviewClose: () => void;
 }) {
     return (
@@ -323,12 +284,16 @@ function SelectedStrip({
                         return (
                             <div
                                 key={item.key}
-                                className="relative h-24 w-24 overflow-hidden rounded-2xl border border-blue-200 bg-white"
-                                onMouseEnter={(event) =>
-                                    onPreview({ item, event, size: 360 })
-                                }
-                                onMouseMove={onPreviewMove}
-                                onMouseLeave={onPreviewClose}
+                                className="relative h-24 w-24 cursor-pointer overflow-hidden rounded-2xl border border-blue-200 bg-white"
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => onPreview(item)}
+                                onKeyDown={(event) => {
+                                    if (event.key === "Enter" || event.key === " ") {
+                                        event.preventDefault();
+                                        onPreview(item);
+                                    }
+                                }}
                             >
                                 <div className="h-full w-full overflow-hidden rounded-2xl">
                                     <img
@@ -336,7 +301,7 @@ function SelectedStrip({
                                         alt={label}
                                         loading="lazy"
                                         decoding="async"
-                                        className="h-full w-full object-cover transition-transform duration-200 hover:scale-[1.05]"
+                                        className="h-full w-full object-cover"
                                     />
                                 </div>
 
@@ -389,40 +354,14 @@ export default function MediaPickerMulti({
         [selectedItems]
     );
 
-    const handlePreview = React.useCallback(
-        ({
-            item,
-            event,
-            size,
-        }: {
-            item: PickedMediaItem;
-            event: React.MouseEvent;
-            size: number;
-        }) => {
-            const src = getImageSrc(item);
-            if (!src) return;
+    const handlePreview = React.useCallback((item: PickedMediaItem) => {
+        const src = getImageSrc(item);
+        if (!src) return;
 
-            setPreview({
-                src,
-                label: getLabel(item),
-                x: event.clientX,
-                y: event.clientY,
-                size,
-            });
-        },
-        []
-    );
-
-    const handlePreviewMove = React.useCallback((event: React.MouseEvent) => {
-        setPreview((prev) =>
-            prev
-                ? {
-                    ...prev,
-                    x: event.clientX,
-                    y: event.clientY,
-                }
-                : null
-        );
+        setPreview({
+            src,
+            label: getLabel(item),
+        });
     }, []);
 
     const handlePreviewClose = React.useCallback(() => {
@@ -520,7 +459,10 @@ export default function MediaPickerMulti({
     );
     return (
         <div className="space-y-4">
-            <FloatingPreview preview={preview} />
+            <ImagePreviewDialog
+                preview={preview}
+                onClose={handlePreviewClose}
+            />
 
             {(title || description) ? (
                 <div className="space-y-1">
@@ -566,7 +508,6 @@ export default function MediaPickerMulti({
                 onRemoveChosen={handleRemoveChosen}
                 maxFinalSelection={maxFinalSelection}
                 onPreview={handlePreview}
-                onPreviewMove={handlePreviewMove}
                 onPreviewClose={handlePreviewClose}
             />
 
@@ -574,7 +515,6 @@ export default function MediaPickerMulti({
                 items={selectedItems}
                 onRemove={handleRemoveSelected}
                 onPreview={handlePreview}
-                onPreviewMove={handlePreviewMove}
                 onPreviewClose={handlePreviewClose}
             />
 

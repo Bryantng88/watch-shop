@@ -21,6 +21,7 @@ export {
   emitWatchMediaReadyForPublishEvent,
   emitWatchPhotoshootCompletedEvent,
   emitWatchPhotoshootRequestedEvent,
+  emitWatchPriceUpdatedEvent,
   emitWatchPublishAssetsDownloadedEvent,
   emitWatchReviewBusinessEvent,
 } from "./watch-business-event.emitter";

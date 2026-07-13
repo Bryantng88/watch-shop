@@ -40,6 +40,7 @@ export async function updateWatchPricingWithDiff(
   ].filter(Boolean) as string[];
 
   return {
+    watchId: before.watchId,
     product: before.product,
     before: before.price,
     after: next,

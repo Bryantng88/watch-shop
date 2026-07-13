@@ -216,12 +216,12 @@ export default function WatchSpecModal({
                     </div>
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
-                            <FieldLabel>Case shape</FieldLabel>
+                            <FieldLabel>Case form</FieldLabel>
                             <Select
                                 value={draft.caseShape}
                                 onChange={(e) => patch({ caseShape: e.target.value })}
                                 options={CASE_SHAPE_OPTIONS}
-                                placeholder="Chọn case shape"
+                                placeholder="Round / Square / Tank / ..."
                             />
                         </div>
 
@@ -259,26 +259,6 @@ export default function WatchSpecModal({
                                 value={draft.calibre}
                                 onChange={(e) => patch({ calibre: e.target.value })}
                                 placeholder="7S26 / L993.1 / ..."
-                            />
-                        </div>
-
-                        <div>
-                            <FieldLabel>Power reserve</FieldLabel>
-                            <Input
-                                value={draft.powerReserve}
-                                onChange={(e) => patch({ powerReserve: e.target.value })}
-                                placeholder="40h"
-                            />
-                        </div>
-
-                        <div className="hidden">
-                            <FieldLabel>Water resistance</FieldLabel>
-                            <Input
-                                value={draft.waterResistance}
-                                onChange={(e) =>
-                                    patch({ waterResistance: e.target.value })
-                                }
-                                placeholder="30m / 50m"
                             />
                         </div>
 

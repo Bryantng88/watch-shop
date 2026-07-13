@@ -41,6 +41,9 @@ type Props = {
     watchId?: string;
     defaultOpen?: boolean;
     hideReviewActions?: boolean;
+    completionAction?: React.ReactNode;
+    collapsible?: boolean;
+    surface?: "card" | "flat";
 };
 
 function normalizeStatus(status?: string | null): ReviewStatus {
@@ -72,6 +75,9 @@ export default function WatchContentSection({
     watchId,
     defaultOpen = false,
     hideReviewActions = false,
+    completionAction,
+    collapsible = true,
+    surface = "card",
 }: Props) {
     const dialog = useAppDialog();
     const notify = useNotify();
@@ -207,8 +213,10 @@ export default function WatchContentSection({
             subtitle="Gen hook & bullet specs từ dữ liệu spec hiện có."
             onBeforeOpen={handleBeforeOpen}
             defaultOpen={defaultOpen}
+            collapsible={collapsible}
+            surface={surface}
             actions={
-                hideReviewActions ? null :
+                hideReviewActions ? completionAction :
                 <SectionReviewActions
                     productId={productId}
                     target="content"

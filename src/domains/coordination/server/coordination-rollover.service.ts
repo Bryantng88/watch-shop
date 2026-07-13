@@ -14,6 +14,7 @@ import { isCoreWorkspaceBlueprint } from "@/domains/task/shared/workspace-flow-p
 import {
   getWorkTypeKeyFromTicketNote,
 } from "./coordination-cycle.service";
+import { getSpaceViewConfig } from "@/domains/space-management/server/space-view.config";
 import {
   listWorkTypes,
   normalizeWorkTypeKey,
@@ -100,6 +101,33 @@ function bindingFinished(metadataJson: unknown) {
   return runtime.currentState === "DONE" || runtime.currentState === "CANCELLED";
 }
 
+function normalizeStatus(value: unknown) {
+  return clean(value).toUpperCase();
+}
+
+function terminalStatesForTarget(
+  terminalStatesByTargetType: Record<string, string[]> | undefined,
+  targetType: string,
+) {
+  return new Set(
+    (terminalStatesByTargetType?.[normalizeStatus(targetType)] ?? [])
+      .map(normalizeStatus)
+      .filter(Boolean),
+  );
+}
+
+function statusListIsProcessing(
+  statuses: unknown[],
+  terminalStates: Set<string>,
+  fallback?: boolean,
+) {
+  const normalized = statuses.map(normalizeStatus).filter(Boolean);
+  if (!normalized.length) return fallback ?? true;
+  if (!terminalStates.size) return fallback ?? true;
+
+  return !normalized.some((status) => terminalStates.has(status));
+}
+
 function targetKey(input: { targetType: string; targetId: string }) {
   return `${input.targetType}:${input.targetId}`;
 }
@@ -126,6 +154,7 @@ function isTechnicalIssueProcessing(
 async function loadProcessingTargetMap(
   client: DB,
   bindings: Array<{ targetType: string; targetId: string }>,
+  terminalStatesByTargetType?: Record<string, string[]>,
 ) {
   const map = new Map<string, boolean>();
   const serviceRequestIds = bindings
@@ -134,8 +163,14 @@ async function loadProcessingTargetMap(
   const technicalIssueIds = bindings
     .filter((binding) => binding.targetType === TaskExecutionTargetType.TECHNICAL_ISSUE)
     .map((binding) => binding.targetId);
+  const watchIds = bindings
+    .filter((binding) => binding.targetType === TaskExecutionTargetType.WATCH)
+    .map((binding) => binding.targetId);
+  const paymentIds = bindings
+    .filter((binding) => binding.targetType === TaskExecutionTargetType.PAYMENT)
+    .map((binding) => binding.targetId);
 
-  const [serviceRequests, technicalIssues] = await Promise.all([
+  const [serviceRequests, technicalIssues, watches, payments] = await Promise.all([
     serviceRequestIds.length
       ? client.serviceRequest.findMany({
           where: { id: { in: serviceRequestIds } },
@@ -148,25 +183,92 @@ async function loadProcessingTargetMap(
           select: { id: true, executionStatus: true },
         })
       : [],
+    watchIds.length
+      ? client.watch.findMany({
+          where: { id: { in: watchIds } },
+          select: {
+            id: true,
+            saleStage: true,
+            isContentDownloaded: true,
+            isImageDownloaded: true,
+          },
+        })
+      : [],
+    paymentIds.length
+      ? client.payment.findMany({
+          where: { id: { in: paymentIds } },
+          select: { id: true, status: true },
+        })
+      : [],
   ]);
 
   for (const row of serviceRequests) {
+    const terminalStates = terminalStatesForTarget(
+      terminalStatesByTargetType,
+      TaskExecutionTargetType.SERVICE_REQUEST,
+    );
     map.set(
       targetKey({
         targetType: TaskExecutionTargetType.SERVICE_REQUEST,
         targetId: row.id,
       }),
-      isServiceRequestProcessing(row.status),
+      statusListIsProcessing(
+        [row.status],
+        terminalStates,
+        isServiceRequestProcessing(row.status),
+      ),
     );
   }
 
   for (const row of technicalIssues) {
+    const terminalStates = terminalStatesForTarget(
+      terminalStatesByTargetType,
+      TaskExecutionTargetType.TECHNICAL_ISSUE,
+    );
     map.set(
       targetKey({
         targetType: TaskExecutionTargetType.TECHNICAL_ISSUE,
         targetId: row.id,
       }),
-      isTechnicalIssueProcessing(row.executionStatus),
+      statusListIsProcessing(
+        [row.executionStatus],
+        terminalStates,
+        isTechnicalIssueProcessing(row.executionStatus),
+      ),
+    );
+  }
+
+  for (const row of watches) {
+    const terminalStates = terminalStatesForTarget(
+      terminalStatesByTargetType,
+      TaskExecutionTargetType.WATCH,
+    );
+    map.set(
+      targetKey({
+        targetType: TaskExecutionTargetType.WATCH,
+        targetId: row.id,
+      }),
+      statusListIsProcessing(
+        [
+          row.saleStage,
+          row.isContentDownloaded && row.isImageDownloaded ? "POSTED" : null,
+        ],
+        terminalStates,
+      ),
+    );
+  }
+
+  for (const row of payments) {
+    const terminalStates = terminalStatesForTarget(
+      terminalStatesByTargetType,
+      TaskExecutionTargetType.PAYMENT,
+    );
+    map.set(
+      targetKey({
+        targetType: TaskExecutionTargetType.PAYMENT,
+        targetId: row.id,
+      }),
+      statusListIsProcessing([row.status], terminalStates),
     );
   }
 
@@ -178,14 +280,7 @@ function targetStillProcessing(input: {
   targetId: string;
   processingTargetMap: Map<string, boolean>;
 }) {
-  if (
-    input.targetType !== TaskExecutionTargetType.SERVICE_REQUEST &&
-    input.targetType !== TaskExecutionTargetType.TECHNICAL_ISSUE
-  ) {
-    return true;
-  }
-
-  return input.processingTargetMap.get(targetKey(input)) === true;
+  return input.processingTargetMap.get(targetKey(input)) ?? true;
 }
 
 function mergeRolloverMetadata(input: {
@@ -224,6 +319,7 @@ export async function rolloverPreviousCycleItems(
   const client = dbOrTx(db);
   const taskId = clean(input.taskId);
   if (!taskId) throw new Error("Missing taskId");
+  const carryoverPolicy = getSpaceViewConfig(input.context).carryover;
 
   const currentTask = await client.task.findUnique({
     where: { id: taskId },
@@ -368,7 +464,11 @@ export async function rolloverPreviousCycleItems(
     },
     orderBy: { createdAt: "asc" },
   });
-  const processingTargetMap = await loadProcessingTargetMap(client, previousBindings);
+  const processingTargetMap = await loadProcessingTargetMap(
+    client,
+    previousBindings,
+    carryoverPolicy.terminalStatesByTargetType,
+  );
 
   const results: CoordinationRolloverItemResult[] = [];
 
