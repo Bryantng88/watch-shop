@@ -38,6 +38,7 @@ import {
   type WorkspaceDefinitionSnapshot,
 } from "@/domains/blueprint/shared/workspace-capabilities";
 import {
+  operationalBlueprintForWorkType,
   selectOperationalActionsForWorkspaceRole,
   selectOperationalCoreFlowForWorkspaceRole,
   type OperationalBlueprintAction,
@@ -95,6 +96,11 @@ type UserSummary = {
   avatarUrl?: string | null;
   roles?: string[];
   permissions?: string[];
+};
+
+type VendorOption = {
+  id: string;
+  name: string;
 };
 
 type TaskItemChecklist = {
@@ -328,6 +334,61 @@ function serviceOperationWorkspaceRoleFromNote(note?: string | null) {
       ?.trim()
       .toUpperCase() ?? null
   );
+}
+
+function normalizeWorkspaceKey(value: unknown) {
+  return String(value ?? "").trim().toUpperCase();
+}
+
+function workspaceNavMetadata(
+  workspace: { note?: string | null },
+  workspaceRoles?: OperationalBlueprintWorkspaceRole[],
+) {
+  const snapshot = parseWorkspaceDefinitionSnapshot(workspace.note);
+  const operationRole =
+    noteTextValue(workspace.note, "operationWorkspaceRole") ??
+    serviceOperationWorkspaceRoleFromNote(workspace.note) ??
+    snapshot?.operationWorkspaceRole ??
+    null;
+  const roleDefinition = (workspaceRoles ?? []).find(
+    (role) => normalizeWorkspaceKey(role.key) === normalizeWorkspaceKey(operationRole),
+  );
+  const workspaceKind =
+    noteTextValue(workspace.note, "workspaceKind") ??
+    snapshot?.workspaceKind ??
+    roleDefinition?.workspaceKind ??
+    null;
+
+  return {
+    operationRole: normalizeWorkspaceKey(operationRole),
+    workspaceKind: normalizeWorkspaceKey(workspaceKind),
+    coreFlowKey: normalizeWorkspaceKey(
+      noteTextValue(workspace.note, "coreFlowKey") ?? snapshot?.coreFlowKey,
+    ),
+    flowStageKey: normalizeWorkspaceKey(
+      noteTextValue(workspace.note, "flowStageKey") ?? snapshot?.flowStageKey,
+    ),
+  };
+}
+
+function isStandaloneLikeWorkspaceKind(kind: string) {
+  return kind === "CASE_WORKSPACE" || kind === "STANDALONE_WORKSPACE";
+}
+
+function effectiveWorkspaceRoleKind(
+  role?: OperationalBlueprintWorkspaceRole | null,
+  isInCoreFlow = false,
+) {
+  if (!role) return "";
+  if (role.identityTargetType) return "CASE_WORKSPACE";
+  const explicitKind = normalizeWorkspaceKey(role.workspaceKind);
+  if (explicitKind) return explicitKind;
+  if (role.cardinality === "ONE_PER_BUSINESS_OBJECT") return "CASE_WORKSPACE";
+  if (isInCoreFlow && role.cardinality === "SINGLE_PER_ACTIVE_CYCLE") {
+    return "FLOW_STAGE_WORKSPACE";
+  }
+  if (role.cardinality === "MULTIPLE_PER_ACTIVE_CYCLE") return "BENCH_WORKSPACE";
+  return "STANDALONE_WORKSPACE";
 }
 
 function noteHasSystemOwner(note?: string | null) {
@@ -1603,19 +1664,17 @@ function SpaceWorkspaceNav({
   );
 }
 
-function workspaceRoleForNavItem(workspace: { note?: string | null }) {
-  return serviceOperationWorkspaceRoleFromNote(workspace.note);
-}
-
 function CoreFlowWorkspaceNav({
   currentItemId,
   currentWorkspaceRole,
+  currentCoreFlowKey,
   steps,
   workspaceRoles,
   parentTask,
 }: {
   currentItemId: string;
   currentWorkspaceRole?: string | null;
+  currentCoreFlowKey?: string | null;
   steps: OperationalBlueprintCoreFlowStep[];
   workspaceRoles?: OperationalBlueprintWorkspaceRole[];
   parentTask?: ParentTask | null;
@@ -1626,14 +1685,41 @@ function CoreFlowWorkspaceNav({
   const roleByKey = new Map(
     (workspaceRoles ?? []).map((role) => [role.key.toUpperCase(), role]),
   );
+  const flowStageSteps = steps.filter((step) => {
+    const roleDefinition = roleByKey.get(step.workspaceRole.toUpperCase());
+    return effectiveWorkspaceRoleKind(roleDefinition, true) === "FLOW_STAGE_WORKSPACE";
+  });
+  const allowedFlowRoles = new Set(
+    flowStageSteps.map((step) => normalizeWorkspaceKey(step.workspaceRole)),
+  );
+  const normalizedCurrentFlowKey = normalizeWorkspaceKey(currentCoreFlowKey);
   const workspaceByRole = new Map<
     string,
     NonNullable<ParentTask["taskItems"]>[number]
   >();
   for (const workspace of workspaces) {
-    const role = workspaceRoleForNavItem(workspace);
-    if (!role || workspaceByRole.has(role)) continue;
-    workspaceByRole.set(role, workspace);
+    const metadata = workspaceNavMetadata(workspace, workspaceRoles);
+    if (!metadata.operationRole || !allowedFlowRoles.has(metadata.operationRole)) {
+      continue;
+    }
+    if (isStandaloneLikeWorkspaceKind(metadata.workspaceKind)) {
+      continue;
+    }
+    if (
+      metadata.workspaceKind &&
+      metadata.workspaceKind !== "FLOW_STAGE_WORKSPACE"
+    ) {
+      continue;
+    }
+    if (
+      normalizedCurrentFlowKey &&
+      metadata.coreFlowKey &&
+      metadata.coreFlowKey !== normalizedCurrentFlowKey
+    ) {
+      continue;
+    }
+    if (workspaceByRole.has(metadata.operationRole)) continue;
+    workspaceByRole.set(metadata.operationRole, workspace);
   }
 
   return (
@@ -1641,7 +1727,7 @@ function CoreFlowWorkspaceNav({
       aria-label="Core flow workspaces"
       className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1"
     >
-      {steps.map((step, index) => {
+      {flowStageSteps.map((step, index) => {
         const stepRole = step.workspaceRole.toUpperCase();
         const roleDefinition = roleByKey.get(stepRole);
         const active = stepRole === currentWorkspaceRole?.toUpperCase();
@@ -1684,7 +1770,7 @@ function CoreFlowWorkspaceNav({
                 {step.label}
               </span>
             )}
-            {index < steps.length - 1 ? (
+            {index < flowStageSteps.length - 1 ? (
               <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300" />
             ) : null}
           </div>
@@ -1929,10 +2015,12 @@ function BlueprintActionDiscoveryPanel({
 export default function TaskItemDetailClient({
   item,
   users,
+  vendors,
   currentUser,
 }: {
   item: TaskItemDetail;
   users: UserSummary[];
+  vendors?: VendorOption[];
   currentUser?: UserSummary | null;
 }) {
   const [activeTab, setActiveTab] = useState<DetailTab>(() =>
@@ -1963,11 +2051,24 @@ export default function TaskItemDetailClient({
     () => workspacePresentation(workspaceSnapshot),
     [workspaceSnapshot],
   );
-  const isServiceOperationWorkspace = workspaceSnapshot?.workTypeKey === "service-operation";
-  const operationContract = workspaceSnapshot?.operation ?? null;
+  const workspaceWorkTypeKey =
+    workspaceSnapshot?.workTypeKey ?? noteTextValue(item.note, "workTypeKey");
+  const isServiceOperationWorkspace = workspaceWorkTypeKey === "service-operation";
+  const operationContract =
+    workspaceSnapshot?.operation ??
+    (workspaceWorkTypeKey
+      ? operationalBlueprintForWorkType({
+          workTypeKey: workspaceWorkTypeKey,
+          coordinationContext: "TECHNICAL",
+        })
+      : null);
   const serviceOperationWorkspaceRole = useMemo(
     () => serviceOperationWorkspaceRoleFromNote(item.note),
     [item.note],
+  );
+  const currentWorkspaceNavMetadata = useMemo(
+    () => workspaceNavMetadata({ note: item.note }, operationContract?.workspaceRoles ?? []),
+    [item.note, operationContract],
   );
   const operationalCoreFlow = useMemo(
     () =>
@@ -1977,18 +2078,26 @@ export default function TaskItemDetailClient({
       }),
     [operationContract, serviceOperationWorkspaceRole],
   );
+  const operationWorkspaceRoleDefinition = useMemo(
+    () =>
+      operationContract?.workspaceRoles.find(
+        (item) =>
+          item.key.toUpperCase() === serviceOperationWorkspaceRole?.toUpperCase(),
+      ) ?? null,
+    [operationContract, serviceOperationWorkspaceRole],
+  );
+  const isServiceOperationCaseWorkspace =
+    isServiceOperationWorkspace &&
+    isStandaloneLikeWorkspaceKind(currentWorkspaceNavMetadata.workspaceKind);
   const operationWorkspaceRoleTargetTypes = useMemo(() => {
-    const role = operationContract?.workspaceRoles.find(
-      (item) =>
-        item.key.toUpperCase() === serviceOperationWorkspaceRole?.toUpperCase(),
-    );
+    const role = operationWorkspaceRoleDefinition;
     if (!role) return [];
 
     return [
       role.identityTargetType,
       ...role.itemTargetTypes,
     ].filter((targetType): targetType is string => Boolean(targetType));
-  }, [operationContract, serviceOperationWorkspaceRole]);
+  }, [operationWorkspaceRoleDefinition]);
   const operationalActions = useMemo(
     () =>
       selectOperationalActionsForWorkspaceRole({
@@ -2089,37 +2198,37 @@ export default function TaskItemDetailClient({
                 <CoreFlowWorkspaceNav
                   currentItemId={item.id}
                   currentWorkspaceRole={serviceOperationWorkspaceRole}
+                  currentCoreFlowKey={
+                    operationalCoreFlow.key || currentWorkspaceNavMetadata.coreFlowKey
+                  }
                   steps={operationalCoreFlow.steps}
                   workspaceRoles={operationContract?.workspaceRoles ?? []}
                   parentTask={parentTask}
                 />
-              ) : (
+              ) : !isServiceOperationCaseWorkspace ? (
                 <div className="flex flex-wrap items-center gap-2">
                   <SpaceWorkspaceNav
                     currentItemId={item.id}
                     parentTask={parentTask}
                   />
                 </div>
-              )}
+              ) : null}
 
               <div className={`${isServiceOperationWorkspace ? "" : "mt-5"} flex flex-wrap items-center gap-2`}>
                 <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
                   {presentation.workspaceType}
                 </span>
-                {isServiceOperationWorkspace ? (
-                  <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">
-                    Technical Issue Operation
-                  </span>
-                ) : null}
                 {presentation.blueprintName ? (
                   <span className="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
                     {presentation.blueprintName}
                     {presentation.blueprintSource ? ` / ${presentation.blueprintSource}` : ""}
                   </span>
                 ) : null}
-                <span className="font-mono text-xs font-semibold text-slate-500">
-                  {taskItemRef(item.id)}
-                </span>
+                {!isServiceOperationWorkspace ? (
+                  <span className="font-mono text-xs font-semibold text-slate-500">
+                    {taskItemRef(item.id)}
+                  </span>
+                ) : null}
               </div>
 
               <div className="mt-4 flex min-w-0 flex-wrap items-center gap-3">
@@ -2258,6 +2367,7 @@ export default function TaskItemDetailClient({
                 workspaceWorkTypeKey={workspaceSnapshot?.workTypeKey ?? null}
                 operationalActions={operationalActions}
                 serviceRequestId={canCreateServiceOperationTechnicalIssue ? serviceRequestId : null}
+                vendorOptions={vendors ?? []}
                 currentUser={currentUser}
                 onOpenQueueActivity={openQueueActivity}
               />
@@ -2282,7 +2392,7 @@ export default function TaskItemDetailClient({
             ) : null}
 
             <DetailInfo item={item} presentation={presentation} />
-            {isServiceOperationWorkspace ? (
+            {!isServiceOperationWorkspace && operationalActions.length ? (
               <BlueprintActionDiscoveryPanel
                 taskItemId={item.id}
                 workspaceRole={serviceOperationWorkspaceRole}

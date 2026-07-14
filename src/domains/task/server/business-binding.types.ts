@@ -42,6 +42,7 @@ export type QueueItemSource = "AUTO" | "MANUAL";
 export type QueueItemStatus =
   | "WAITING"
   | "IN_PROGRESS"
+  | "RETURNED"
   | "FEEDBACK"
   | "DONE";
 
@@ -91,6 +92,8 @@ export type QueueItemDTO = {
     total: number;
     updatedAt?: string | null;
   } | null;
+  serviceRequestId?: string | null;
+  serviceRequestWorkspaceHref?: string | null;
   updatedAt: string;
 };
 

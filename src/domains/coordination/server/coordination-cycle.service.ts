@@ -390,7 +390,7 @@ export async function ensureWorkTickets(
           continue;
         }
 
-        await client.taskItem.create({
+        const createdItem = await client.taskItem.create({
           data: {
             taskId: input.taskId,
             title: technicalWorkspace.title,
@@ -402,6 +402,7 @@ export async function ensureWorkTickets(
           },
         });
 
+        existingByTitle.set(technicalWorkspace.title, createdItem);
         existingTitles.add(technicalWorkspace.title);
         createdCount += 1;
       }
@@ -429,7 +430,7 @@ export async function ensureWorkTickets(
       continue;
     }
 
-    await client.taskItem.create({
+    const createdItem = await client.taskItem.create({
       data: {
         taskId: input.taskId,
         title: workType.title,
@@ -441,6 +442,7 @@ export async function ensureWorkTickets(
       },
     });
 
+    existingByTitle.set(workType.title, createdItem);
     existingTitles.add(workType.title);
     createdCount += 1;
   }

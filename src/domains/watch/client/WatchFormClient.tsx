@@ -385,11 +385,12 @@ export default function WatchFormClient({
     const initialWorkspaceState = searchParams.get("workspaceState") || "";
     const [workspaceState, setWorkspaceState] = useState(initialWorkspaceState);
     const isMediaWorkspaceDone = workspaceState === "DONE";
+    const isMediaWorkspaceReturned = workspaceState === "RETURNED";
     const canApproveMediaWorkspace =
         fromMediaWorkspace &&
         Boolean(workspaceBindingId) &&
         canReviewContent &&
-        !isMediaWorkspaceDone;
+        workspaceState === "REVIEW";
     const canReturnMediaWorkspace =
         canApproveMediaWorkspace && workspaceState === "REVIEW";
     const inlineImage = values.media.inlineImage;
@@ -838,118 +839,6 @@ export default function WatchFormClient({
         });
     };
 
-    const completeMediaWorkspaceStepSafe = async () => {
-        if (mediaSubmitPending) return;
-
-        const submitValues: WatchFormValues = {
-            ...buildSubmitValues(),
-            saveIntent: "MEDIA_WORKSPACE",
-        };
-        const missingWorkParts = missingMediaWorkPartLabels(mediaWorkDone);
-
-        if (fromMediaWorkspace && missingWorkParts.length > 0) {
-            await dialog.alert({
-                title: "Chưa xử lý đủ media package",
-                message: `Bạn cần thao tác đủ 3 phần trước khi gửi về Workspace chờ duyệt: ${missingWorkParts.join(", ")}.`,
-                tone: "warning",
-            });
-            return;
-        }
-
-        if (!hasMediaWorkContent(submitValues)) {
-            await dialog.alert({
-                title: "Chưa có content",
-                message:
-                    "Bạn cần nhập hoặc generate content trước khi gửi item về Workspace chờ duyệt.",
-                tone: "warning",
-            });
-            return;
-        }
-
-        const localGalleryCount = submitValues.media.galleryImages?.length ?? 0;
-
-        if (localGalleryCount <= 0) {
-            await dialog.alert({
-                title: "Chưa có ảnh gallery",
-                message:
-                    "Bạn cần chọn ít nhất một ảnh gallery trước khi gửi item về Workspace chờ duyệt.",
-                tone: "warning",
-            });
-            return;
-        }
-
-        setMediaSubmitPending(true);
-        progress.show({
-            title: "Đang gửi về Workspace",
-            message: "Hệ thống đang lưu dữ liệu và cập nhật workflow xử lý media.",
-        });
-
-        try {
-            const result = await submitWatchForm(submitValues);
-
-            updateValuesAfterSave(result);
-
-            const nextGalleryImages = result?.media?.galleryImages as
-                | WatchFormValues["media"]["galleryImages"]
-                | undefined;
-            const galleryCount =
-                nextGalleryImages?.length ??
-                submitValues.media.galleryImages?.length ??
-                0;
-
-            if (galleryCount <= 0) {
-                await dialog.alert({
-                    title: "Chưa có ảnh gallery",
-                    message:
-                        "Bạn cần chọn ít nhất một ảnh gallery trước khi gửi về Workspace.",
-                    tone: "warning",
-                });
-                return;
-            }
-
-            const workspaceResult =
-                await markWatchMediaAssetAttachedFromWatchAction({
-                    productId: submitValues.productId,
-                    note: "Spec, content, and media submitted from Watch edit workspace modal.",
-                });
-
-            if (workspaceResult?.skipped) {
-                notify.info({
-                    title: "Đã lưu media",
-                    message:
-                        "Không tìm thấy item Xử lý Media đang mở trong Workspace để cập nhật workflow.",
-                });
-            } else {
-                notify.success({
-                    title: "Đã gửi về Workspace",
-                    message:
-                        "Media đã được lưu và item đã chuyển sang trạng thái chờ duyệt trong Workspace.",
-                });
-            }
-
-            if (embedded && window.parent && window.parent !== window) {
-                window.parent.postMessage(
-                    { type: "workspace-target-modal-close" },
-                    window.location.origin,
-                );
-            } else {
-                router.push(returnTo);
-                router.refresh();
-            }
-
-        } catch (error: unknown) {
-            notify.error({
-                title: "Không thể gửi về Workspace",
-                message: errorMessage(
-                    error,
-                    "Có lỗi xảy ra khi lưu media hoặc cập nhật workflow.",
-                ),
-            });
-        } finally {
-            setMediaSubmitPending(false);
-            progress.hide();
-        }
-    };
 
     const saveMediaWorkspaceDraft = async () => {
         if (mediaSubmitPending) return;
@@ -1047,6 +936,7 @@ export default function WatchFormClient({
                 ...prev,
                 image: false,
             }));
+            setWorkspaceState("RETURNED");
 
             notify.success({
                 title: "Đã yêu cầu chụp lại",
@@ -1078,6 +968,14 @@ export default function WatchFormClient({
 
     const approveMediaWorkspaceFromModal = async () => {
         if (mediaSubmitPending || !workspaceBindingId) return;
+        if (isMediaWorkspaceReturned) {
+            await dialog.alert({
+                title: "Item da tra ve chup lai",
+                message: "Can cap nhat anh moi tu Photoshoot truoc khi duyet qua Workspace Dang bai.",
+                tone: "warning",
+            });
+            return;
+        }
 
         const missingWorkParts = missingMediaWorkPartLabels(mediaWorkDone);
 
@@ -1248,7 +1146,7 @@ export default function WatchFormClient({
         const accepted = await dialog.confirm({
             title: "Trả item về xử lý?",
             message:
-                "Item sẽ quay về trạng thái Feedback trong Workspace Xử lý Media để user bổ sung lại.",
+                "Item se quay ve trang thai Returned trong Workspace Xu ly Media de user bo sung lai.",
             tone: "warning",
             confirmText: "Trả về",
             cancelText: "Hủy",
@@ -1271,7 +1169,7 @@ export default function WatchFormClient({
 
             notify.success({
                 title: "Đã trả về",
-                message: "Item đã quay về trạng thái Feedback trong Workspace.",
+                message: "Item da quay ve trang thai Returned trong Workspace.",
             });
 
             if (embedded && window.parent && window.parent !== window) {
@@ -1303,7 +1201,7 @@ export default function WatchFormClient({
         const accepted = await dialog.confirm({
             title: "Má»Ÿ láº¡i xá»­ lÃ½ media?",
             message:
-                "Item nÃ y Ä‘ang bá»‹ khá»‘a á»Ÿ tráº¡ng thÃ¡i hoÃ n táº¥t. Má»Ÿ láº¡i sáº½ chuyá»ƒn vá» Feedback Ä‘á»ƒ xá»­ lÃ½ vÃ  duyá»‡t láº¡i.",
+                "Item nay dang bi khoa o trang thai hoan tat. Mo lai se chuyen ve Returned de xu ly va duyet lai.",
             tone: "warning",
             confirmText: "Má»Ÿ láº¡i",
             cancelText: "Há»§y",
@@ -1314,7 +1212,7 @@ export default function WatchFormClient({
         setMediaSubmitPending(true);
         progress.show({
             title: "Äang má»Ÿ láº¡i xá»­ lÃ½",
-            message: "Há»‡ thá»‘ng Ä‘ang chuyá»ƒn item media vá» tráº¡ng thÃ¡i Feedback.",
+            message: "He thong dang chuyen item media ve trang thai Returned.",
         });
 
         try {
@@ -1324,11 +1222,11 @@ export default function WatchFormClient({
                 note: "Reopened from Watch media workspace modal.",
             });
 
-            if (!result?.result?.applied || result.result.toState !== "FEEDBACK") {
+            if (!result?.result?.applied || result.result.toState !== "RETURNED") {
                 throw new Error(result?.result?.reason ?? "REOPEN_MEDIA_NOT_APPLIED");
             }
 
-            setWorkspaceState("FEEDBACK");
+            setWorkspaceState("RETURNED");
             notify.success({
                 title: "ÄÃ£ má»Ÿ láº¡i xá»­ lÃ½",
                 message: "Báº¡n cÃ³ thá»ƒ cáº­p nháº­t media vÃ  duyá»‡t láº¡i item nÃ y.",
@@ -1339,7 +1237,7 @@ export default function WatchFormClient({
                 title: "KhÃ´ng thá»ƒ má»Ÿ láº¡i xá»­ lÃ½",
                 message: errorMessage(
                     error,
-                    "CÃ³ lá»—i xáº£y ra khi chuyá»ƒn item media vá» Feedback.",
+                    "Co loi xay ra khi chuyen item media ve Returned.",
                 ),
             });
         } finally {
@@ -1393,7 +1291,7 @@ export default function WatchFormClient({
             <MediaWorkDoneButton
                 label={MEDIA_WORK_PARTS.find((item) => item.key === part)?.label ?? part}
                 done={mediaWorkDone[part]}
-                disabled={mediaSubmitPending || isMediaWorkspaceDone}
+                disabled={mediaSubmitPending || isMediaWorkspaceDone || isMediaWorkspaceReturned}
                 onClick={() => toggleMediaWorkPartDone(part)}
             />
         ) : null;
@@ -1403,7 +1301,7 @@ export default function WatchFormClient({
             {workspaceBindingId && !isMediaWorkspaceDone ? (
                 <button
                     type="button"
-                    disabled={mediaSubmitPending}
+                    disabled={mediaSubmitPending || isMediaWorkspaceReturned}
                     onClick={requestMediaReshootFromModal}
                     className="inline-flex h-9 items-center justify-center rounded-full border border-amber-200 bg-white px-3 text-xs font-semibold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -1440,16 +1338,6 @@ export default function WatchFormClient({
                     >
                         {mediaSubmitPending ? "Đang lưu" : "Lưu xử lý dở"}
                     </button>
-                    {!canApproveMediaWorkspace ? (
-                        <button
-                            type="button"
-                            disabled={mediaSubmitPending}
-                            onClick={completeMediaWorkspaceStepSafe}
-                            className="inline-flex h-10 items-center justify-center rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            {mediaSubmitPending ? "Đang xử lý" : "Gửi duyệt"}
-                        </button>
-                    ) : null}
                     {canReturnMediaWorkspace ? (
                         <button
                             type="button"
@@ -1460,16 +1348,15 @@ export default function WatchFormClient({
                             {mediaSubmitPending ? "Đang xử lý" : "Trả về"}
                         </button>
                     ) : null}
-                    {canApproveMediaWorkspace ? (
                         <button
                             type="button"
-                            disabled={mediaSubmitPending}
+                            disabled={mediaSubmitPending || !canApproveMediaWorkspace}
                             onClick={approveMediaWorkspaceFromModal}
-                            className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                            title={isMediaWorkspaceReturned ? "Item dang o trang thai Returned, can xu ly lai anh truoc khi duyet." : undefined}
+                            className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-45"
                         >
                             {mediaSubmitPending ? "Đang duyệt" : "Duyệt xong"}
                         </button>
-                    ) : null}
                 </>
             )}
         </>

@@ -13,13 +13,13 @@ import type {
     BusinessEntityType,
 } from "@/domains/shared/business/business-entity.types";
 import { getBusinessEntityPreviewAction } from "@/domains/shared/business/business-entity-preview.actions";
-import { cn } from "@/lib/utils";
 
 function typeLabel(type: BusinessEntityType) {
     if (type === "WATCH") return "Watch";
     if (type === "ORDER") return "Đơn hàng";
     if (type === "SHIPMENT") return "Vận đơn";
     if (type === "SERVICE") return "Service";
+    if (type === "TECHNICAL_ISSUE") return "Technical Issue";
     if (type === "PAYMENT") return "Payment";
     if (type === "ACQUISITION") return "Phiếu nhập";
     return type;
@@ -129,6 +129,7 @@ export function BusinessEntityPreviewModal({
                             <div className="flex gap-3">
                                 <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
                                     {preview.imageUrl ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
                                         <img
                                             src={preview.imageUrl}
                                             alt={preview.title}
@@ -221,9 +222,9 @@ export function useBusinessEntityPreview() {
                     id: seed.id,
                 });
 
-                if (live) setPreview(live);
-            } catch (err: any) {
-                setError(err?.message || "Không thể tải preview.");
+                if (live) setPreview({ ...live, href: live.href ?? seed.href });
+            } catch (err: unknown) {
+                setError(err instanceof Error ? err.message : "Không thể tải preview.");
             }
         });
     }

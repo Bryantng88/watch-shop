@@ -3,6 +3,7 @@ import TaskItemDetailClient from "@/domains/task/client/TaskItemDetailClient";
 import { getTaskItemDetailPageRepo } from "@/domains/task/server/core/task-item-detail.repo";
 import { authorizeTaskItemDetail } from "@/domains/task/server/core/task-item-detail.service";
 import { listAssignableUsersRepo } from "@/domains/task/server/core/task.repo";
+import { getVendorList } from "@/domains/vendor/server/vendor.service";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
 import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
@@ -27,8 +28,16 @@ export default async function AdminTaskItemDetailPage(props: PageProps) {
   const usersPromise = perfStep("task-item-detail-page", "loadUsers", () =>
     listAssignableUsersRepo(prisma),
   );
+  const vendorsPromise = perfStep("task-item-detail-page", "loadVendors", () =>
+    getVendorList(),
+  );
 
-  const [auth, item, users] = await Promise.all([authPromise, itemPromise, usersPromise]);
+  const [auth, item, users, vendors] = await Promise.all([
+    authPromise,
+    itemPromise,
+    usersPromise,
+    vendorsPromise,
+  ]);
 
   if (!item) notFound();
 
@@ -39,6 +48,7 @@ export default async function AdminTaskItemDetailPage(props: PageProps) {
     <TaskItemDetailClient
       item={serialize(authorizedItem)}
       users={serialize(users)}
+      vendors={serialize(vendors)}
       currentUser={serialize({
         id: auth.id,
         name: auth.name ?? null,

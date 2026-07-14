@@ -22,6 +22,7 @@ export type OperationAdapterBinding = {
 const SERVICE_OPERATION_WORKSPACE_COMMANDS = new Set([
   "service.createTechnicalIssue",
   "service.confirmTechnicalIssue",
+  "service.closeTechnicalIssueNoIssue",
   "service.startTechnicalIssue",
   "service.completeTechnicalIssue",
 ]);

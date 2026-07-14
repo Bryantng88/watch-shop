@@ -422,9 +422,9 @@ const WATCH_MEDIA_PROCESSING_WORKFLOW: WorkflowDefinition = {
       sortOrder: 20,
     },
     {
-      key: "FEEDBACK",
-      title: "Feedback",
-      description: "Media needs changes before approval.",
+      key: "RETURNED",
+      title: "Returned",
+      description: "Media was returned to Photoshoot and needs new images before approval.",
       color: "red",
       icon: "message-square-warning",
       sortOrder: 30,
@@ -466,7 +466,7 @@ const WATCH_MEDIA_PROCESSING_WORKFLOW: WorkflowDefinition = {
       },
     },
     {
-      fromState: "FEEDBACK",
+      fromState: "RETURNED",
       toState: "REVIEW",
       triggerType: "EVENT",
       triggerValue: "watch.media.asset.attached",
@@ -475,8 +475,8 @@ const WATCH_MEDIA_PROCESSING_WORKFLOW: WorkflowDefinition = {
       metadata: null,
     },
     {
-      fromState: "FEEDBACK",
-      toState: "FEEDBACK",
+      fromState: "RETURNED",
+      toState: "RETURNED",
       triggerType: "MANUAL",
       triggerValue: "open-watch-media",
       manualActionLabel: "Cập nhật media",
@@ -493,7 +493,7 @@ const WATCH_MEDIA_PROCESSING_WORKFLOW: WorkflowDefinition = {
     },
     {
       fromState: "REVIEW",
-      toState: "FEEDBACK",
+      toState: "RETURNED",
       triggerType: "MANUAL",
       triggerValue: "request-changes",
       manualActionLabel: "Trả về",
@@ -502,15 +502,6 @@ const WATCH_MEDIA_PROCESSING_WORKFLOW: WorkflowDefinition = {
     },
     {
       fromState: "NEW",
-      toState: "DONE",
-      triggerType: "MANUAL",
-      triggerValue: "approve-media",
-      manualActionLabel: "Duyệt xong",
-      condition: null,
-      metadata: null,
-    },
-    {
-      fromState: "FEEDBACK",
       toState: "DONE",
       triggerType: "MANUAL",
       triggerValue: "approve-media",
@@ -529,7 +520,7 @@ const WATCH_MEDIA_PROCESSING_WORKFLOW: WorkflowDefinition = {
     },
     {
       fromState: "DONE",
-      toState: "FEEDBACK",
+      toState: "RETURNED",
       triggerType: "EVENT",
       triggerValue: "watch.media.recalled",
       manualActionLabel: null,
@@ -538,7 +529,7 @@ const WATCH_MEDIA_PROCESSING_WORKFLOW: WorkflowDefinition = {
     },
     {
       fromState: "DONE",
-      toState: "FEEDBACK",
+      toState: "RETURNED",
       triggerType: "EVENT",
       triggerValue: "watch.content.unapproved",
       manualActionLabel: null,
@@ -547,7 +538,7 @@ const WATCH_MEDIA_PROCESSING_WORKFLOW: WorkflowDefinition = {
     },
     {
       fromState: "DONE",
-      toState: "FEEDBACK",
+      toState: "RETURNED",
       triggerType: "EVENT",
       triggerValue: "watch.image.unapproved",
       manualActionLabel: null,
@@ -556,7 +547,7 @@ const WATCH_MEDIA_PROCESSING_WORKFLOW: WorkflowDefinition = {
     },
     {
       fromState: "DONE",
-      toState: "FEEDBACK",
+      toState: "RETURNED",
       triggerType: "MANUAL",
       triggerValue: "reopen-media",
       manualActionLabel: "Mở lại xử lý",
@@ -625,6 +616,17 @@ const SERVICE_OPERATION_TECHNICAL_BENCH_WORKFLOW: WorkflowDefinition = {
       },
     },
     {
+      fromState: "INSPECT",
+      toState: "DONE",
+      triggerType: "MANUAL",
+      triggerValue: "close-no-issue",
+      manualActionLabel: "Không có vấn đề",
+      condition: null,
+      metadata: {
+        serviceOperationAction: "CLOSE_TECHNICAL_ISSUE_NO_ISSUE",
+      },
+    },
+    {
       fromState: "READY",
       toState: "IN_PROGRESS",
       triggerType: "MANUAL",
@@ -689,6 +691,17 @@ const SERVICE_OPERATION_TECHNICAL_BENCH_WORKFLOW: WorkflowDefinition = {
       toState: "READY",
       triggerType: "EVENT",
       triggerValue: "technical_issue.confirmed",
+      manualActionLabel: null,
+      condition: null,
+      metadata: {
+        contractOnly: true,
+      },
+    },
+    {
+      fromState: "INSPECT",
+      toState: "DONE",
+      triggerType: "EVENT",
+      triggerValue: "technical_issue.completed",
       manualActionLabel: null,
       condition: null,
       metadata: {

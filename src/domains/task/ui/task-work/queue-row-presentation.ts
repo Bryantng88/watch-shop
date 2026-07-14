@@ -91,7 +91,13 @@ export function shouldShowMediaWorkProgress(workspaceWorkTypeKey?: string | null
 function isMediaReworkSignal(queueItem: QueueRowItem) {
   const latest = String(queueItem.latestActivityTitle ?? "").toLowerCase();
 
-  return latest.includes("unapproved") || latest.includes("recalled");
+  return (
+    latest.includes("unapproved") ||
+    latest.includes("recalled") ||
+    latest.includes("reshoot") ||
+    latest.includes("chụp lại") ||
+    latest.includes("chup lai")
+  );
 }
 
 function resolveQueueRowStatus(
@@ -104,7 +110,7 @@ function resolveQueueRowStatus(
     isMediaReworkSignal(queueItem)
   ) {
     return {
-      value: "FEEDBACK",
+      value: "RETURNED",
       source: "activity-signal",
       reason: "Latest media activity indicates rework.",
     };

@@ -6,6 +6,12 @@ import type {
     BusinessEntityType,
 } from "./business-entity.types";
 
+type ProductPreviewImageSource = {
+    primaryImageUrl?: string | null;
+    storefrontImageKey?: string | null;
+    productImage?: Array<{ fileKey?: string | null }> | null;
+};
+
 function mediaUrl(value?: string | null) {
     const raw = String(value ?? "").trim();
     if (!raw) return null;
@@ -21,7 +27,7 @@ function mediaUrl(value?: string | null) {
     return `/api/media/sign?key=${encodeURIComponent(raw)}`;
 }
 
-function imageUrlFromProduct(product: any) {
+function imageUrlFromProduct(product?: ProductPreviewImageSource | null) {
     const img = product?.productImage?.[0];
 
     const key =
@@ -60,7 +66,7 @@ export async function getBusinessEntityPreviewAction(input: {
                         storefrontImageKey: true,
                         brand: { select: { name: true } },
                         productImage: {
-                            where: { role: "INLINE" as any },
+                            where: { role: "INLINE" },
                             orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
                             take: 1,
                             select: {
@@ -201,6 +207,54 @@ export async function getBusinessEntityPreviewAction(input: {
                 { label: "Priority", value: row.priority || "-" },
                 { label: "Khách", value: row.customer?.name || "-" },
                 { label: "Kỹ thuật", value: row.user?.name || row.technicianNameSnap || "-" },
+                { label: "Vendor", value: row.vendor?.name || row.vendorNameSnap || "-" },
+            ],
+        };
+    }
+
+    if (input.type === "TECHNICAL_ISSUE") {
+        const row = await prisma.technicalIssue.findUnique({
+            where: { id },
+            include: {
+                serviceRequest: {
+                    include: {
+                        product: {
+                            include: {
+                                productImage: {
+                                    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+                                    take: 1,
+                                },
+                            },
+                        },
+                    },
+                },
+                vendor: true,
+                user: true,
+            },
+        });
+
+        if (!row) return null;
+
+        const sr = row.serviceRequest;
+
+        return {
+            type: "TECHNICAL_ISSUE",
+            id: row.id,
+            refNo: sr.refNo,
+            title: row.summary || row.note || row.area || "Technical Issue",
+            subtitle: sr.refNo
+                ? `SR: ${sr.refNo}`
+                : sr.skuSnapshot || sr.product?.sku || compactId(sr.id),
+            status: row.executionStatus,
+            imageUrl:
+                mediaUrl(sr.primaryImageUrlSnapshot) ||
+                imageUrlFromProduct(sr.product),
+            href: null,
+            facts: [
+                { label: "SR", value: sr.refNo || "-" },
+                { label: "Nhóm", value: row.area || "-" },
+                { label: "Người xử lý", value: row.actionMode || "-" },
+                { label: "Kỹ thuật", value: row.user?.name || "-" },
                 { label: "Vendor", value: row.vendor?.name || row.vendorNameSnap || "-" },
             ],
         };

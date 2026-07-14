@@ -246,7 +246,7 @@ function technicalSpaceViewConfig(): SpaceViewConfig {
     coreFlows: [TECHNICAL_ISSUE_FLOW],
     carryover: {
       enabled: true,
-      actionLabel: "Nhan item ton tuan truoc",
+      actionLabel: "Nhận item tồn tuần trước",
       source: "PREVIOUS_CYCLE",
       onlyProcessingItems: true,
       processingRule:
@@ -258,10 +258,10 @@ function technicalSpaceViewConfig(): SpaceViewConfig {
     },
     createWorkspace: {
       enabled: true,
-      actionLabel: "Tao Workspace",
-      defaultTitlePlaceholder: "Ten Workspace",
+      actionLabel: "Tạo Workspace",
+      defaultTitlePlaceholder: "Tên Workspace",
     },
-    emptyState: "Chua co Workspace trong Technical Space nay.",
+    emptyState: "Chưa có Workspace trong Technical Space này.",
   };
 }
 
@@ -344,7 +344,7 @@ function paymentSpaceViewConfig(): SpaceViewConfig {
     coreFlows: [PAYMENT_COLLECTION_FLOW],
     carryover: {
       enabled: true,
-      actionLabel: "Nhan item ton tuan truoc",
+      actionLabel: "Nhận item tồn tuần trước",
       source: "PREVIOUS_CYCLE",
       onlyProcessingItems: true,
       processingRule:
@@ -355,8 +355,8 @@ function paymentSpaceViewConfig(): SpaceViewConfig {
     },
     createWorkspace: {
       enabled: true,
-      actionLabel: "Tao Workspace",
-      defaultTitlePlaceholder: "Ten Workspace",
+      actionLabel: "Tạo Workspace",
+      defaultTitlePlaceholder: "Tên Workspace",
     },
     emptyState: "Chua co Workspace trong Payment Collection Flow nay.",
   };

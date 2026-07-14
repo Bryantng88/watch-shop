@@ -193,6 +193,8 @@ function inferredWorkspaceKind(input: {
   role: OperationalBlueprintWorkspaceRole;
   isInCoreFlow: boolean;
 }): OperationalBlueprintWorkspaceKind {
+  if (input.role.identityTargetType) return "CASE_WORKSPACE";
+
   if (input.role.workspaceKind) {
     return workspaceKind(input.role.workspaceKind) ?? "STANDALONE_WORKSPACE";
   }
@@ -720,20 +722,13 @@ const SERVICE_OPERATION_CONTRACT: OperationalBlueprintContract = {
       key: "service-operation-core-flow",
       label: "Service Operation Core Flow",
       description:
-        "Links SR case, Inspect, Processing, and Done/Follow-up workspaces so users can navigate the full service operation from one flow header.",
+        "Links Inspect, Processing, and Done/Follow-up workspaces for Technical Issue stage movement. SR case workspaces stay in the separate SR Cases mode.",
       steps: [
-        {
-          workspaceRole: "SR_CASE",
-          label: "SR Case",
-          description: "Case aggregate workspace for the Service Request.",
-          isEntry: true,
-          isTerminal: false,
-        },
         {
           workspaceRole: "INSPECT",
           label: "Inspect",
           description: "Technical inspection and classification workspace.",
-          isEntry: false,
+          isEntry: true,
           isTerminal: false,
         },
         {
@@ -853,40 +848,58 @@ const SERVICE_OPERATION_CONTRACT: OperationalBlueprintContract = {
     },
     {
       key: "classify_technical_issue",
-      label: "Classify TI",
+      label: "Phân loại lỗi",
       workspaceRole: "INSPECT",
       targetType: "TECHNICAL_ISSUE",
       command: "service.confirmTechnicalIssue",
       emits: ["technical_issue.confirmed"],
       description:
-        "Turns a suspicion into a confirmed technical job with technical area, action, vendor mode, and estimate.",
+        "Xác nhận nghi vấn thành lỗi kỹ thuật cần xử lý.",
       fields: [
         {
           key: "technicalArea",
-          label: "Technical area",
+          label: "Nhóm kỹ thuật",
           kind: "select",
           required: true,
           options: [
-            { value: "GENERAL", label: "General" },
-            { value: "MOVEMENT", label: "Movement" },
-            { value: "CASE", label: "Case" },
-            { value: "CRYSTAL", label: "Crystal" },
-            { value: "BRACELET", label: "Bracelet" },
-            { value: "CROWN", label: "Crown" },
+            { value: "GENERAL", label: "Tổng quát" },
+            { value: "MOVEMENT", label: "Máy" },
+            { value: "CASE", label: "Vỏ" },
+            { value: "CRYSTAL", label: "Kính" },
+            { value: "BRACELET", label: "Dây / bracelet" },
+            { value: "CROWN", label: "Núm" },
           ],
         },
         {
-          key: "actionMode",
-          label: "Action mode",
+          key: "assigneeMode",
+          label: "Người xử lý",
           kind: "select",
           required: true,
           options: [
-            { value: "INTERNAL", label: "Internal" },
+            { value: "INTERNAL", label: "Nội bộ" },
             { value: "VENDOR", label: "Vendor" },
           ],
         },
         { key: "vendorId", label: "Vendor", kind: "select", required: false },
-        { key: "estimatedCost", label: "Estimated cost", kind: "money", required: false },
+        { key: "estimatedCost", label: "Chi phí dự kiến", kind: "money", required: false },
+      ],
+    },
+    {
+      key: "close_no_issue",
+      label: "Không có vấn đề",
+      workspaceRole: "INSPECT",
+      targetType: "TECHNICAL_ISSUE",
+      command: "service.closeTechnicalIssueNoIssue",
+      emits: ["technical_issue.completed"],
+      description:
+        "Kết thúc kiểm tra khi không phát hiện lỗi cần xử lý.",
+      fields: [
+        {
+          key: "resolutionNote",
+          label: "Ghi chú kiểm tra",
+          kind: "textarea",
+          required: true,
+        },
       ],
     },
     {
@@ -1337,13 +1350,25 @@ export function selectOperationalCoreFlowForWorkspaceRole(
   const workspaceRole = normalizeTarget(input.workspaceRole);
   if (!input.contract || !workspaceRole) return null;
 
-  return (
-    input.contract.coreFlows.find((flow) =>
-      flow.steps.some(
-        (step) => normalizeTarget(step.workspaceRole) === workspaceRole,
-      ),
-    ) ?? null
+  const role = input.contract.workspaceRoles.find(
+    (item) => normalizeTarget(item.key) === workspaceRole,
   );
+  const matchingCoreFlow = input.contract.coreFlows.find((flow) =>
+    flow.steps.some(
+      (step) => normalizeTarget(step.workspaceRole) === workspaceRole,
+    ),
+  );
+  if (!matchingCoreFlow || !role) return null;
+  if (
+    inferredWorkspaceKind({
+      role,
+      isInCoreFlow: true,
+    }) !== "FLOW_STAGE_WORKSPACE"
+  ) {
+    return null;
+  }
+
+  return matchingCoreFlow;
 }
 
 export function serviceOperationWorkspaceRoleForStage(stage: string) {

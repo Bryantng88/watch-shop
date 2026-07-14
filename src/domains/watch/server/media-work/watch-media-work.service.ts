@@ -223,7 +223,7 @@ async function reopenMediaProcessingBindingsForRecall(input: {
       continue;
     }
 
-    await updateQueueItemWorkflowState(input.db, binding.id, "FEEDBACK", {
+    await updateQueueItemWorkflowState(input.db, binding.id, "RETURNED", {
       ...(asRecord(runtime.metadata) as Prisma.JsonObject),
       reopenedByEvent: "watch.media.recalled",
       reopenedAt: new Date().toISOString(),
@@ -266,11 +266,18 @@ async function findActivePhotoshootWatchIds(db: DB, watchIds: string[]) {
     },
     select: {
       targetId: true,
+      metadataJson: true,
     },
-    distinct: ["targetId"],
   });
 
-  return new Set(rows.map((row) => row.targetId));
+  return new Set(
+    rows
+      .filter((row) => {
+        const runtime = getQueueItemWorkflowState(row);
+        return runtime?.currentState !== "DONE";
+      })
+      .map((row) => row.targetId),
+  );
 }
 
 export async function requestWatchPhotoshoot(
@@ -928,17 +935,6 @@ export async function requestWatchMediaReshootFromQueueItem(
 
   if (!watch) return { ok: false, skipped: true, reason: "WATCH_NOT_FOUND" };
 
-  const activePhotoshootWatchIds = await findActivePhotoshootWatchIds(db, [watch.id]);
-  if (activePhotoshootWatchIds.has(watch.id)) {
-    return {
-      ok: true,
-      skipped: true,
-      reason: "WATCH_ALREADY_IN_ACTIVE_PHOTOSHOOT",
-      watchId: watch.id,
-      productId: watch.productId,
-    };
-  }
-
   const metadata = asRecord(binding.metadataJson);
   const currentProgress = asRecord(metadata.mediaWorkProgress);
   const currentParts = mediaWorkParts(currentProgress.parts);
@@ -974,6 +970,17 @@ export async function requestWatchMediaReshootFromQueueItem(
     },
   });
 
+  const runtime = getQueueItemWorkflowState(binding);
+  if (runtime?.workflowKey === "watch-media-processing") {
+    await updateQueueItemWorkflowState(db, binding.id, "RETURNED", {
+      ...(asRecord(runtime.metadata) as Prisma.JsonObject),
+      returnedByAction: "request-reshoot",
+      returnedAt: updatedAt,
+      reshootRequested: true,
+      ...(input.actorUserId ? { returnedByUserId: input.actorUserId } : {}),
+    });
+  }
+
   await createSystemActivity({
     taskItemId: binding.taskItem.id,
     sourceId: `media-reshoot-requested:${binding.id}:${updatedAt}`,
@@ -994,6 +1001,20 @@ export async function requestWatchMediaReshootFromQueueItem(
       },
     },
   }, db);
+
+  const activePhotoshootWatchIds = await findActivePhotoshootWatchIds(db, [watch.id]);
+  if (activePhotoshootWatchIds.has(watch.id)) {
+    return {
+      ok: true,
+      skipped: true,
+      reason: "WATCH_ALREADY_IN_ACTIVE_PHOTOSHOOT",
+      watchId: watch.id,
+      productId: watch.productId,
+      parts: nextParts,
+      completed,
+      updatedAt,
+    };
+  }
 
   const event = await emitWatchPhotoshootRequestedEvent(db, {
     watch: toWatchEventSnapshot(watch),
@@ -1031,6 +1052,7 @@ export async function completeWatchMediaProcessingFromQueueItem(
       id: true,
       targetType: true,
       targetId: true,
+      metadataJson: true,
       taskItem: {
         select: {
           id: true,
@@ -1046,6 +1068,11 @@ export async function completeWatchMediaProcessingFromQueueItem(
   }
   if (!/workTypeKey:\s*media-processing/i.test(String(binding.taskItem?.note ?? ""))) {
     return { ok: true, skipped: true, reason: "NOT_MEDIA_PROCESSING_WORKSPACE" };
+  }
+
+  const runtime = getQueueItemWorkflowState(binding);
+  if (runtime?.currentState === "RETURNED") {
+    return { ok: true, skipped: true, reason: "MEDIA_RETURNED_TO_PHOTOSHOOT" };
   }
 
   const watch = await db.watch.findUnique({

@@ -11,6 +11,7 @@ import {
 } from "@/domains/blueprint/shared/operational-blueprint";
 import { parseWorkspaceDefinitionSnapshot } from "@/domains/blueprint/shared/workspace-capabilities";
 import {
+  closeTechnicalIssueNoIssue,
   completeTechnicalIssue,
   confirmTechnicalIssue,
   createTechnicalIssue,
@@ -219,6 +220,16 @@ export async function runServiceOperationManualAction(
       return { ok: true, actionKey, technicalIssueId, result };
     }
 
+    if (actionKey === "close-no-issue") {
+      const result = await closeTechnicalIssueNoIssue({
+        id: technicalIssueId,
+        actorId: input.actorUserId ?? null,
+        actorName: input.actorName ?? null,
+        resolutionNote: input.note ?? null,
+      });
+      return { ok: true, actionKey, technicalIssueId, result };
+    }
+
     if (actionKey === "start-work") {
       const result = await startTechnicalIssue({
         id: technicalIssueId,
@@ -326,10 +337,14 @@ export async function runServiceOperationBlueprintAction(
         actionKey === "classify_technical_issue"
           ? requiredField(fields, "technicalArea")
           : optionalField(fields, "technicalArea");
+      const actionModeFields = {
+        ...fields,
+        actionMode: fields.actionMode ?? fields.assigneeMode,
+      };
       const actionMode =
         actionKey === "classify_technical_issue"
-          ? actionModeField(fields, true)
-          : actionModeField(fields, false);
+          ? actionModeField(actionModeFields, true)
+          : actionModeField(actionModeFields, false);
       const vendorId = optionalField(fields, "vendorId");
       const estimatedCost = moneyField(fields, "estimatedCost", false);
 
@@ -371,6 +386,26 @@ export async function runServiceOperationBlueprintAction(
         id: targetId,
         actorId: input.actorUserId ?? null,
         actorName: input.actorName ?? null,
+      });
+
+      return {
+        ok: true,
+        actionKey,
+        technicalIssueId: targetId,
+        result,
+      };
+    }
+
+    if (action.command === "service.closeTechnicalIssueNoIssue") {
+      if (targetType !== "TECHNICAL_ISSUE" || !targetId) {
+        return { ok: false, actionKey, error: "TECHNICAL_ISSUE_TARGET_REQUIRED" };
+      }
+
+      const result = await closeTechnicalIssueNoIssue({
+        id: targetId,
+        actorId: input.actorUserId ?? null,
+        actorName: input.actorName ?? null,
+        resolutionNote: requiredField(fields, "resolutionNote"),
       });
 
       return {

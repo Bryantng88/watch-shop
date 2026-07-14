@@ -195,6 +195,8 @@ async function listServiceRequestTechnicalIssueQueueItems(
       intakeNote: issue.note ?? null,
       mediaAssetAttachedAt: null,
       mediaWorkProgress: null,
+      serviceRequestId: input.serviceRequestId,
+      serviceRequestWorkspaceHref: `/admin/task-items/${input.taskItemId}`,
       updatedAt: (issue.updatedAt ?? issue.openedAt).toISOString(),
     };
   });
@@ -296,6 +298,143 @@ function bindingHref(
   if (binding.targetType === "ACQUISITION") return `/admin/acquisitions/${binding.targetId}`;
 
   return null;
+}
+
+function isSrCaseWorkspaceNote(note?: string | null) {
+  const text = String(note ?? "");
+  return (
+    /serviceOperationWorkspaceRole:\s*SR_CASE/im.test(text) ||
+    /operationWorkspaceRole:\s*SR_CASE/im.test(text)
+  );
+}
+
+async function resolveTechnicalIssueServiceRequestWorkspaceLinks(
+  db: DB,
+  input: {
+    taskId?: string | null;
+    queueItems: Array<{ targetType: string; targetId: string }>;
+  },
+) {
+  const issueIds = Array.from(
+    new Set(
+      input.queueItems
+        .filter((item) => item.targetType === TaskExecutionTargetType.TECHNICAL_ISSUE)
+        .map((item) => item.targetId)
+        .filter(Boolean),
+    ),
+  );
+
+  if (!issueIds.length) {
+    return new Map<
+      string,
+      {
+        serviceRequestId: string;
+        serviceRequestWorkspaceHref: string | null;
+        technicalIssueWorkspaceHref: string | null;
+      }
+    >();
+  }
+
+  const client = dbOrTx(db);
+  const issues = await perfStep(
+    "task-item-detail-repo",
+    "technicalIssueServiceRequests",
+    () =>
+      client.technicalIssue.findMany({
+        where: { id: { in: issueIds } },
+        select: { id: true, serviceRequestId: true },
+      }),
+  );
+  const serviceRequestIds = Array.from(
+    new Set(issues.map((issue) => issue.serviceRequestId).filter(Boolean)),
+  );
+
+  if (!serviceRequestIds.length) {
+    return new Map<
+      string,
+      {
+        serviceRequestId: string;
+        serviceRequestWorkspaceHref: string | null;
+        technicalIssueWorkspaceHref: string | null;
+      }
+    >();
+  }
+
+  const [srWorkspaceBindings, issueWorkspaceBindings] = await Promise.all([
+    perfStep(
+      "task-item-detail-repo",
+      "srCaseWorkspaceLinks",
+      () =>
+        client.taskExecution.findMany({
+          where: {
+            ...(input.taskId ? { taskId: input.taskId } : {}),
+            targetType: TaskExecutionTargetType.SERVICE_REQUEST,
+            targetId: { in: serviceRequestIds },
+            actionType: { not: TaskExecutionActionType.CANCELLED },
+            taskItemId: { not: null },
+          },
+          select: {
+            targetId: true,
+            taskItemId: true,
+            taskItem: {
+              select: {
+                note: true,
+              },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        }),
+    ),
+    perfStep(
+      "task-item-detail-repo",
+      "technicalIssueWorkspaceLinks",
+      () =>
+        client.taskExecution.findMany({
+        where: {
+          ...(input.taskId ? { taskId: input.taskId } : {}),
+          targetType: TaskExecutionTargetType.TECHNICAL_ISSUE,
+          targetId: { in: issueIds },
+          actionType: { not: TaskExecutionActionType.CANCELLED },
+          taskItemId: { not: null },
+        },
+        select: {
+          targetId: true,
+          taskItemId: true,
+          taskItem: {
+            select: {
+              note: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+    ),
+  ]);
+  const hrefByServiceRequestId = new Map<string, string>();
+  const hrefByIssueId = new Map<string, string>();
+
+  for (const binding of srWorkspaceBindings) {
+    if (!binding.taskItemId || hrefByServiceRequestId.has(binding.targetId)) continue;
+    if (!isSrCaseWorkspaceNote(binding.taskItem?.note)) continue;
+    hrefByServiceRequestId.set(binding.targetId, `/admin/task-items/${binding.taskItemId}`);
+  }
+
+  for (const binding of issueWorkspaceBindings) {
+    if (!binding.taskItemId || hrefByIssueId.has(binding.targetId)) continue;
+    if (isSrCaseWorkspaceNote(binding.taskItem?.note)) continue;
+    hrefByIssueId.set(binding.targetId, `/admin/task-items/${binding.taskItemId}`);
+  }
+
+  return new Map(
+    issues.map((issue) => [
+      issue.id,
+      {
+        serviceRequestId: issue.serviceRequestId,
+        serviceRequestWorkspaceHref: hrefByServiceRequestId.get(issue.serviceRequestId) ?? null,
+        technicalIssueWorkspaceHref: hrefByIssueId.get(issue.id) ?? null,
+      },
+    ]),
+  );
 }
 
 async function resolveWatchProductIds(
@@ -421,6 +560,11 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
       bindingHref(queueItem, watchProductIds),
     ]),
   );
+  const serviceRequestWorkspaceLinks =
+    await resolveTechnicalIssueServiceRequestWorkspaceLinks(db, {
+      taskId: item.taskId,
+      queueItems,
+    });
 
   const result = {
     ...item,
@@ -430,7 +574,18 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
     activities,
     queueItems: queueItems.map((queueItem) => ({
       ...queueItem,
-      href: queueHrefs.get(queueKey(queueItem.targetType, queueItem.targetId)) ?? null,
+      href:
+        serviceRequestWorkspaceLinks.get(queueItem.targetId)?.technicalIssueWorkspaceHref ??
+        queueHrefs.get(queueKey(queueItem.targetType, queueItem.targetId)) ??
+        null,
+      serviceRequestId:
+        serviceRequestWorkspaceLinks.get(queueItem.targetId)?.serviceRequestId ??
+        queueItem.serviceRequestId ??
+        null,
+      serviceRequestWorkspaceHref:
+        serviceRequestWorkspaceLinks.get(queueItem.targetId)?.serviceRequestWorkspaceHref ??
+        queueItem.serviceRequestWorkspaceHref ??
+        null,
     })),
     businessBindings: queueItems.map((queueItem) => ({
       id: queueItem.id,

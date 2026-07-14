@@ -6,6 +6,8 @@ import {
   ServiceType,
   TaskExecutionActionType,
   TaskExecutionTargetType,
+  TechnicalIssueExecutionStatus,
+  WatchServiceStage,
 } from "@prisma/client";
 import { genRefNo } from "@/domains/shared/utils/AutoGenRef";
 import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
@@ -67,6 +69,36 @@ async function markProductInServiceIfNeeded(client: DB, productId: string) {
       data: { status: ProductStatus.IN_SERVICE },
     });
   }
+}
+
+async function markWatchServicePending(client: DB, productId: string) {
+  await client.watch.updateMany({
+    where: { productId },
+    data: {
+      serviceStage: WatchServiceStage.PENDING,
+      updatedAt: new Date(),
+    },
+  });
+}
+
+async function markWatchServicePendingIfNoActiveIssues(
+  client: DB,
+  input: { serviceRequestId: string; productId: string },
+) {
+  const activeIssueCount = await client.technicalIssue.count({
+    where: {
+      serviceRequestId: input.serviceRequestId,
+      executionStatus: {
+        notIn: [
+          TechnicalIssueExecutionStatus.DONE,
+          TechnicalIssueExecutionStatus.CANCELED,
+        ],
+      },
+    },
+  });
+
+  if (activeIssueCount > 0) return;
+  await markWatchServicePending(client, input.productId);
 }
 
 async function findActiveServiceRequest(client: DB, productId: string) {
@@ -149,6 +181,7 @@ async function createQuickServiceRequest(client: DB, productId: string) {
   });
 
   await markProductInServiceIfNeeded(client, productId);
+  await markWatchServicePending(client, productId);
 
   return request;
 }
@@ -181,6 +214,10 @@ export async function getOrCreateServiceOperationWorkspaceForWatch(input: {
   const existing = await findActiveServiceRequestDetail(prisma, productId);
 
   if (existing?.id) {
+    await markWatchServicePendingIfNoActiveIssues(prisma, {
+      serviceRequestId: existing.id,
+      productId,
+    });
     const existingWorkspace = await findServiceRequestWorkspaceBinding(prisma, existing.id);
 
     if (existingWorkspace?.taskItemId && !input.openExisting) {
@@ -279,6 +316,10 @@ export async function watchIntakeWithInitialSuspicion(input: {
   const existing = await findActiveServiceRequestDetail(prisma, productId);
 
   if (existing?.id) {
+    await markWatchServicePendingIfNoActiveIssues(prisma, {
+      serviceRequestId: existing.id,
+      productId,
+    });
     const existingWorkspace = await findServiceRequestWorkspaceBinding(prisma, existing.id);
 
     if (existingWorkspace?.taskItemId && !input.openExisting) {

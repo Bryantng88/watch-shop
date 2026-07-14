@@ -113,6 +113,16 @@ function displayText(value: string | null | undefined) {
   return repairVietnameseMojibake(value ?? "").trim();
 }
 
+function resolveIdentityImageSrc(value?: string | null) {
+  const src = String(value ?? "").trim();
+  if (!src) return null;
+  if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("/")) {
+    return src;
+  }
+
+  return resolveMediaPreviewSrc(src);
+}
+
 function actionLabel(value: string) {
   const cleanValue = displayText(value);
   if (
@@ -388,6 +398,29 @@ function StageIconFrame({ stageKey }: { stageKey: string | null | undefined }) {
   );
 }
 
+function WorkspaceIdentityFrame({
+  ticket,
+}: {
+  ticket: CoordinationDashboardDTO["workTickets"][number];
+}) {
+  const src = resolveIdentityImageSrc(ticket.identityPreview?.imageUrl);
+
+  if (src) {
+    return (
+      <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-slate-100 shadow-sm">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={ticket.identityPreview?.title ?? ticket.title}
+          className="h-full w-full object-cover"
+        />
+      </span>
+    );
+  }
+
+  return <StageIconFrame stageKey={ticketFlowStageKey(ticket)} />;
+}
+
 function OwnerCell({
   owner,
 }: {
@@ -485,7 +518,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
             ? "FLOW_STAGE_WORKSPACE"
             : null);
 
-        if (!inferredWorkspaceKind) return true;
+        if (!inferredWorkspaceKind) return activeViewMode?.rowModel === "WORKSPACE";
         return allowedKinds.includes(inferredWorkspaceKind);
       });
     }
@@ -722,6 +755,33 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
           <span>
             {formatDate(data.week.startDate)} - {formatDate(data.week.endDate)}
           </span>
+          <span className="inline-flex items-center overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+            <select
+              value={data.week.periodKey}
+              onChange={(event) => {
+                const option = data.filters.weekOptions.find(
+                  (item) => item.value === event.target.value,
+                );
+                if (option) updateDate(option.date);
+              }}
+              className="h-8 w-[132px] border-0 bg-white px-2 text-xs font-semibold text-slate-700 outline-none"
+              aria-label="Chọn tuần"
+            >
+              {data.filters.weekOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <span className="h-5 w-px bg-slate-200" />
+            <input
+              type="date"
+              value={data.filters.selectedDate}
+              onChange={(event) => updateDate(event.target.value)}
+              className="h-8 w-[142px] border-0 bg-white px-2 text-xs font-semibold text-slate-700 outline-none"
+              aria-label="Chọn ngày"
+            />
+          </span>
         </>
       }
       actions={
@@ -755,7 +815,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
       }
     >
 
-          <div className="hidden gap-3 sm:grid-cols-[160px_220px]">
+          <div className="hidden">
             <label className="text-sm">
               <span className="mb-1 block font-medium text-slate-600">Tuần</span>
               <select
@@ -1065,33 +1125,51 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                 </SpaceViewInfoCell>
               </SpaceViewInfoGrid>
             ) : null}
-            {activeCoreFlow ? (
+            {activeViewMode ? (
               <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white text-xs text-slate-700 shadow-[0_8px_24px_rgba(30,43,79,0.06)]">
                 <SpaceViewSectionHeader
-                  title={coreFlowLabel(activeCoreFlow)}
+                  title={activeCoreFlow ? coreFlowLabel(activeCoreFlow) : modeLabel(activeViewMode)}
                   badge={
                     <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 font-semibold text-slate-700">
-                      Item: {targetTypeLabel(activeCoreFlow.itemTargetType)}
+                      {activeCoreFlow
+                        ? `Item: ${targetTypeLabel(activeCoreFlow.itemTargetType)}`
+                        : rowModelLabel(activeViewMode.rowModel)}
                     </span>
                   }
                   description={
                     <>
-                      <span>{coreFlowDescription(activeCoreFlow)}</span>
-                      <span className="mt-3 flex flex-wrap items-center gap-1">
-                        {activeCoreFlow.stages
-                          .slice()
-                          .sort((left, right) => left.sortOrder - right.sortOrder)
-                          .map((stage, index) => (
-                            <span key={stage.key} className="inline-flex items-center gap-1">
-                              {index > 0 ? (
-                                <ChevronRight className="h-3 w-3 text-slate-400" aria-hidden="true" />
-                              ) : null}
-                              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700 shadow-sm">
-                                {stageLabel(stage.label)}
-                              </span>
-                            </span>
-                          ))}
+                      <span>
+                        {activeCoreFlow
+                          ? coreFlowDescription(activeCoreFlow)
+                          : modeDescription(activeViewMode)}
                       </span>
+                      {activeCoreFlow ? (
+                        <span className="mt-3 flex flex-wrap items-center gap-1">
+                          {activeCoreFlow.stages
+                            .slice()
+                            .sort((left, right) => left.sortOrder - right.sortOrder)
+                            .map((stage, index) => (
+                              <span key={stage.key} className="inline-flex items-center gap-1">
+                                {index > 0 ? (
+                                  <ChevronRight className="h-3 w-3 text-slate-400" aria-hidden="true" />
+                                ) : null}
+                                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700 shadow-sm">
+                                  {stageLabel(stage.label)}
+                                </span>
+                              </span>
+                            ))}
+                        </span>
+                      ) : (
+                        <span className="mt-3 flex flex-wrap items-center gap-1">
+                          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700 shadow-sm">
+                            {rowModelLabel(activeViewMode.rowModel)}
+                          </span>
+                          <ChevronRight className="h-3 w-3 text-slate-400" aria-hidden="true" />
+                          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700 shadow-sm">
+                            {primaryTargetLabel(activeViewMode.primaryTarget)}
+                          </span>
+                        </span>
+                      )}
                     </>
                   }
                   actions={
@@ -1324,7 +1402,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                 className="grid gap-4 px-5 py-4 transition hover:bg-slate-50 lg:grid-cols-[2fr_1fr_1.1fr_0.7fr_0.7fr_0.9fr_1.5fr_auto] lg:items-center"
               >
                 <div className="flex min-w-0 items-center gap-4">
-                  <StageIconFrame stageKey={ticketFlowStageKey(ticket)} />
+                  <WorkspaceIdentityFrame ticket={ticket} />
                   <div className="min-w-0">
                     <div className="flex min-w-0 items-center">
                       <span className="truncate text-sm font-semibold text-slate-950">

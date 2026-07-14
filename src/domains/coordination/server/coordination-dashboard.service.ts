@@ -41,6 +41,30 @@ function formatDateTime(value?: Date | string | null) {
   return date.toISOString();
 }
 
+function mediaUrl(value?: string | null) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  if (raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("/")) {
+    return raw;
+  }
+
+  return `/api/media/sign?key=${encodeURIComponent(raw)}`;
+}
+
+function imageUrlFromProduct(product?: {
+  primaryImageUrl?: string | null;
+  storefrontImageKey?: string | null;
+  productImage?: Array<{ fileKey?: string | null }> | null;
+} | null) {
+  const key =
+    product?.productImage?.[0]?.fileKey ??
+    product?.primaryImageUrl ??
+    product?.storefrontImageKey ??
+    null;
+
+  return mediaUrl(key);
+}
+
 function parseDateInput(value?: string | null) {
   if (!value) return new Date();
   const date = new Date(`${value}T00:00:00`);
@@ -682,6 +706,193 @@ async function loadTechnicalQueueCountByTaskItem(input: {
   return counts;
 }
 
+async function loadWorkspaceIdentityPreviewMap(input: {
+  db: DB;
+  taskId: string;
+  taskItemIds: string[];
+}) {
+  const result = new Map<
+    string,
+    {
+      targetType: string;
+      targetId: string;
+      title: string | null;
+      ref: string | null;
+      imageUrl: string | null;
+    }
+  >();
+  if (!input.taskItemIds.length) return result;
+
+  const identityBindings = await input.db.taskExecution.findMany({
+    where: {
+      taskId: input.taskId,
+      taskItemId: { in: input.taskItemIds },
+      targetType: {
+        in: [
+          TaskExecutionTargetType.SERVICE_REQUEST,
+          TaskExecutionTargetType.WATCH,
+          TaskExecutionTargetType.ORDER,
+        ],
+      },
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+    },
+    select: {
+      taskItemId: true,
+      targetType: true,
+      targetId: true,
+    },
+    orderBy: { createdAt: "asc" },
+  });
+  const priority: Record<string, number> = {
+    SERVICE_REQUEST: 0,
+    WATCH: 1,
+    ORDER: 2,
+  };
+  const chosen = new Map<string, { targetType: string; targetId: string }>();
+
+  for (const binding of identityBindings) {
+    if (!binding.taskItemId) continue;
+    const current = chosen.get(binding.taskItemId);
+    if (
+      current &&
+      (priority[current.targetType] ?? 99) <= (priority[binding.targetType] ?? 99)
+    ) {
+      continue;
+    }
+    chosen.set(binding.taskItemId, {
+      targetType: binding.targetType,
+      targetId: binding.targetId,
+    });
+  }
+
+  const serviceRequestIds = [...chosen.values()]
+    .filter((item) => item.targetType === TaskExecutionTargetType.SERVICE_REQUEST)
+    .map((item) => item.targetId);
+  const watchIds = [...chosen.values()]
+    .filter((item) => item.targetType === TaskExecutionTargetType.WATCH)
+    .map((item) => item.targetId);
+  const orderIds = [...chosen.values()]
+    .filter((item) => item.targetType === TaskExecutionTargetType.ORDER)
+    .map((item) => item.targetId);
+  const [serviceRequests, watches, orders] = await Promise.all([
+    serviceRequestIds.length
+      ? input.db.serviceRequest.findMany({
+          where: { id: { in: serviceRequestIds } },
+          select: {
+            id: true,
+            refNo: true,
+            skuSnapshot: true,
+            modelSnapshot: true,
+            primaryImageUrlSnapshot: true,
+            product: {
+              select: {
+                title: true,
+                sku: true,
+                primaryImageUrl: true,
+                storefrontImageKey: true,
+                productImage: {
+                  where: { role: "INLINE" },
+                  orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+                  take: 1,
+                  select: { fileKey: true },
+                },
+              },
+            },
+          },
+        })
+      : Promise.resolve([]),
+    watchIds.length
+      ? input.db.watch.findMany({
+          where: { id: { in: watchIds } },
+          select: {
+            id: true,
+            product: {
+              select: {
+                title: true,
+                sku: true,
+                primaryImageUrl: true,
+                storefrontImageKey: true,
+                productImage: {
+                  where: { role: "INLINE" },
+                  orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+                  take: 1,
+                  select: { fileKey: true },
+                },
+              },
+            },
+          },
+        })
+      : Promise.resolve([]),
+    orderIds.length
+      ? input.db.order.findMany({
+          where: { id: { in: orderIds } },
+          select: {
+            id: true,
+            refNo: true,
+            orderItem: {
+              take: 1,
+              select: {
+                product: {
+                  select: {
+                    title: true,
+                    sku: true,
+                    primaryImageUrl: true,
+                    storefrontImageKey: true,
+                    productImage: {
+                      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+                      take: 1,
+                      select: { fileKey: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        })
+      : Promise.resolve([]),
+  ]);
+  const srById = new Map(serviceRequests.map((item) => [item.id, item]));
+  const watchById = new Map(watches.map((item) => [item.id, item]));
+  const orderById = new Map(orders.map((item) => [item.id, item]));
+
+  for (const [taskItemId, identity] of chosen.entries()) {
+    if (identity.targetType === TaskExecutionTargetType.SERVICE_REQUEST) {
+      const row = srById.get(identity.targetId);
+      if (!row) continue;
+      result.set(taskItemId, {
+        targetType: identity.targetType,
+        targetId: identity.targetId,
+        title: row.modelSnapshot ?? row.product?.title ?? row.refNo ?? "Service Request",
+        ref: row.refNo ?? row.skuSnapshot ?? row.product?.sku ?? null,
+        imageUrl: mediaUrl(row.primaryImageUrlSnapshot) ?? imageUrlFromProduct(row.product),
+      });
+    } else if (identity.targetType === TaskExecutionTargetType.WATCH) {
+      const row = watchById.get(identity.targetId);
+      if (!row) continue;
+      result.set(taskItemId, {
+        targetType: identity.targetType,
+        targetId: identity.targetId,
+        title: row.product?.title ?? "Watch",
+        ref: row.product?.sku ?? null,
+        imageUrl: imageUrlFromProduct(row.product),
+      });
+    } else if (identity.targetType === TaskExecutionTargetType.ORDER) {
+      const row = orderById.get(identity.targetId);
+      if (!row) continue;
+      const product = row.orderItem[0]?.product ?? null;
+      result.set(taskItemId, {
+        targetType: identity.targetType,
+        targetId: identity.targetId,
+        title: row.refNo ?? product?.title ?? "Order",
+        ref: product?.sku ?? null,
+        imageUrl: imageUrlFromProduct(product),
+      });
+    }
+  }
+
+  return result;
+}
+
 export async function getCoordinationDashboard(input: {
   context: CoordinationContext;
   db?: DB;
@@ -754,6 +965,7 @@ export async function getCoordinationDashboard(input: {
     feedbackRows,
     activityRows,
     lastActivityMap,
+    identityPreviewMap,
   ] = await Promise.all([
     db.taskExecution.groupBy({
       by: ["taskItemId"],
@@ -795,6 +1007,11 @@ export async function getCoordinationDashboard(input: {
       _max: { occurredAt: true },
     }),
     loadLastActivityMap(db, taskItemIds),
+    loadWorkspaceIdentityPreviewMap({
+      db,
+      taskId: cycle.task.id,
+      taskItemIds,
+    }),
   ]);
 
   const queueCountByTaskItem = new Map(
@@ -831,6 +1048,7 @@ export async function getCoordinationDashboard(input: {
     return {
       id: item.id,
       title: item.title,
+      identityPreview: identityPreviewMap.get(item.id) ?? null,
       ownerLabel: ticketOwner(item, currentUser).label,
       owner: ticketOwner(item, currentUser),
       queueSummary: buildQueueSummary({

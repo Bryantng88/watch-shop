@@ -24,6 +24,13 @@ export type QueueSummaryDTO = {
 export type CoordinationWorkTicketSummaryDTO = {
   id: string;
   title: string;
+  identityPreview?: {
+    targetType: string;
+    targetId: string;
+    title: string | null;
+    ref: string | null;
+    imageUrl: string | null;
+  } | null;
   ownerLabel: string;
   owner: {
     label: string;

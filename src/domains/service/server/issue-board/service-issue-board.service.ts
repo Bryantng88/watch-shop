@@ -64,7 +64,7 @@ async function syncServiceRequestStatusFromIssues(client: any, serviceRequestId?
     const [serviceRequest, issues] = await Promise.all([
         client.serviceRequest.findUnique({
             where: { id: srId },
-            select: { status: true },
+            select: { status: true, productId: true },
         }),
         client.technicalIssue.findMany({
             where: { serviceRequestId: srId },
@@ -86,6 +86,29 @@ async function syncServiceRequestStatusFromIssues(client: any, serviceRequestId?
         where: { id: srId },
         data: {
             status: nextStatus,
+            updatedAt: new Date(),
+        } as any,
+    });
+
+    const productId = cleanId((serviceRequest as any).productId);
+    if (!productId) return;
+
+    const activeIssues = issues.filter(
+        (issue) => !["CANCELED", "CANCELLED"].includes(String(issue.executionStatus ?? "").toUpperCase()),
+    );
+    const allDone =
+        activeIssues.length > 0 &&
+        activeIssues.every((issue) => isTechnicalIssueDone(issue.executionStatus));
+    const nextServiceStage = activeIssues.length === 0
+        ? "NOT_REQUIRED"
+        : allDone
+            ? "DONE"
+            : "IN_SERVICE";
+
+    await client.watch.updateMany({
+        where: { productId },
+        data: {
+            serviceStage: nextServiceStage,
             updatedAt: new Date(),
         } as any,
     });
@@ -508,6 +531,52 @@ export async function completeTechnicalIssue(input: {
             },
         });
     }
+
+    return updated;
+}
+
+export async function closeTechnicalIssueNoIssue(input: {
+    id: string;
+    actorId?: string | null;
+    actorName?: string | null;
+    resolutionNote?: string | null;
+}) {
+    const id = cleanId(input.id);
+    if (!id) throw new Error("Missing issue id");
+
+    const updated = await prisma.technicalIssue.update({
+        where: { id },
+        data: {
+            isConfirmed: true,
+            executionStatus: "DONE" as any,
+            completedAt: new Date(),
+            completedByNameSnap: cleanId(input.actorName),
+            actualCost: 0,
+            resolutionNote: cleanText(input.resolutionNote) ?? "Kiểm tra không phát hiện vấn đề.",
+            updatedAt: new Date(),
+        } as any,
+    });
+
+    await syncServiceRequestStatusFromIssues(prisma as any, (updated as any).serviceRequestId);
+
+    await syncTechnicalIssueToTasks(prisma as any, {
+        technicalIssueId: id,
+        event: "TECHNICAL_ISSUE_DONE",
+        actorUserId: cleanId(input.actorId),
+        note: "Technical Issue không phát hiện vấn đề",
+    });
+
+    await recordTechnicalIssueEvent({
+        eventKey: "technical_issue.completed",
+        technicalIssueId: id,
+        serviceRequestId: (updated as any).serviceRequestId,
+        actorUserId: cleanId(input.actorId),
+        payload: {
+            executionStatus: "DONE",
+            actualCost: 0,
+            noIssue: true,
+        },
+    });
 
     return updated;
 }

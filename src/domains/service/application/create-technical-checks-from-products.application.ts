@@ -4,6 +4,7 @@ import {
   ServiceRequestStatus,
   ServiceScope,
   ServiceType,
+  WatchServiceStage,
 } from "@prisma/client";
 import { genRefNo } from "@/domains/shared/utils/AutoGenRef";
 import * as repo from "../server/repository/service-request.repo";
@@ -31,6 +32,18 @@ async function markProductInServiceIfNeeded(tx: DB, productId?: string | null) {
       data: { status: ProductStatus.IN_SERVICE },
     });
   }
+}
+
+async function markWatchServicePending(tx: DB, productId?: string | null) {
+  if (!productId) return;
+
+  await tx.watch.updateMany({
+    where: { productId },
+    data: {
+      serviceStage: WatchServiceStage.PENDING,
+      updatedAt: new Date(),
+    },
+  });
 }
 
 export async function createTechnicalChecksFromProductsApplication(
@@ -88,6 +101,7 @@ export async function createTechnicalChecksFromProductsApplication(
         });
 
         await markProductInServiceIfNeeded(tx, productId);
+        await markWatchServicePending(tx, productId);
         created.push(request);
       }
 
@@ -128,6 +142,7 @@ export async function createTechnicalCheckFromAcquisitionApplication(
   });
 
   await repo.markProductInService(tx, input.productId);
+  await markWatchServicePending(tx, input.productId);
 
   return request;
 }

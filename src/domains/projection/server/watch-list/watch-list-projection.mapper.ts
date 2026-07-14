@@ -87,11 +87,11 @@ function mapMediaStatus(row: WatchRow, source: WatchListProjectionSourceRow) {
   return { status: "MEDIA_PROCESSING" as const, label: "Đang xử lý media" };
 }
 
-function mapServiceStatus(row: WatchRow): {
+function mapServiceStatus(row: WatchRow, source: WatchListProjectionSourceRow): {
   status: WatchListServiceStatus;
   label: string;
 } {
-  const serviceState = upper(row.serviceState);
+  const serviceState = upper(source.serviceStage ?? row.serviceState);
 
   if (serviceState === "DONE") return { status: "DONE", label: "Đã xong" };
   if (serviceState === "IN_SERVICE") return { status: "IN_SERVICE", label: "Đang service" };
@@ -119,7 +119,7 @@ function mapV2Row(
   source: WatchListProjectionSourceRow,
 ): WatchListProjectionRow {
   const media = mapMediaStatus(row, source);
-  const service = mapServiceStatus(row);
+  const service = mapServiceStatus(row, source);
   const sale = mapSaleStatus(row);
 
   return {
@@ -169,7 +169,10 @@ function withProjectionFriendlyDates(row: WatchRow): WatchRow {
 export function mapWatchListSourceRowToProjectionData(
   source: WatchListProjectionSourceRow,
 ): WatchListProjectionData {
-  const row = withProjectionFriendlyDates(mapWatchRow(source));
+  const row = withProjectionFriendlyDates(mapWatchRow({
+    ...source,
+    serviceState: source.serviceStage ?? (source as { serviceState?: unknown }).serviceState,
+  }));
   const v2Row = mapV2Row(row, source);
 
   return {

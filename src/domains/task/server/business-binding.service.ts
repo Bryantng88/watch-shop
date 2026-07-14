@@ -241,6 +241,10 @@ function resolveWorkflowQueueStatus(input: {
 
   const state = runtime.currentState.toUpperCase();
   const metadata = asRecord(runtime.metadata);
+  if (state.includes("RETURNED")) {
+    return "RETURNED";
+  }
+
   if (
     state.includes("FEEDBACK") ||
     state.includes("REJECTED") ||
@@ -1098,6 +1102,7 @@ export async function summarizeTaskItemQueue(
   const summary: QueueSummaryDTO = {
     WAITING: 0,
     IN_PROGRESS: 0,
+    RETURNED: 0,
     FEEDBACK: 0,
     DONE: 0,
     total: items.length,

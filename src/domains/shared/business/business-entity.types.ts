@@ -3,6 +3,7 @@ export type BusinessEntityType =
     | "ORDER"
     | "SHIPMENT"
     | "SERVICE"
+    | "TECHNICAL_ISSUE"
     | "PAYMENT"
     | "ACQUISITION";
 
