@@ -7,6 +7,10 @@ import {
     type AppProgressStep,
 } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
+import {
+    BusinessEntityPreviewModal,
+    useBusinessEntityPreview,
+} from "@/domains/shared/ui/business/BusinessEntityPreview";
 import React from "react";
 import { WatchListToolbar } from "../ui/list";
 import WatchListFilters from "../ui/list/WatchListFilters";
@@ -284,6 +288,7 @@ export default function WatchListClient(props: WatchListClientProps) {
     const [isPending, startTransition] = useTransition();
     const progress = useAppProgress();
     const notify = useNotify();
+    const previewState = useBusinessEntityPreview();
     const [serviceIntakeProductId, setServiceIntakeProductId] = React.useState<string | null>(null);
     const [serviceIntakeRow, setServiceIntakeRow] = React.useState<WatchRow | null>(null);
     const [serviceSuspicion, setServiceSuspicion] = React.useState("");
@@ -1033,6 +1038,7 @@ export default function WatchListClient(props: WatchListClientProps) {
                     onBuyBack={onBuyBack}
                     onRaiseCase={openWorkCaseFromWatch}
                     onCreateTask={onCreateTask}
+                    onPreview={previewState.openPreview}
                 />
             </div>
 
@@ -1149,6 +1155,13 @@ export default function WatchListClient(props: WatchListClientProps) {
                 />
             ) : null}
 
+            <BusinessEntityPreviewModal
+                open={previewState.open}
+                preview={previewState.preview}
+                loading={previewState.loading}
+                error={previewState.error}
+                onClose={previewState.closePreview}
+            />
         </div>
 
     );

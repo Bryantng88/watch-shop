@@ -649,6 +649,17 @@ const SERVICE_OPERATION_TECHNICAL_BENCH_WORKFLOW: WorkflowDefinition = {
       },
     },
     {
+      fromState: "IN_PROGRESS",
+      toState: "DONE",
+      triggerType: "MANUAL",
+      triggerValue: "cancel-work",
+      manualActionLabel: "Hủy xử lý",
+      condition: null,
+      metadata: {
+        serviceOperationAction: "CANCEL_TECHNICAL_ISSUE",
+      },
+    },
+    {
       fromState: "READY",
       toState: "INSPECT",
       triggerType: "MANUAL",

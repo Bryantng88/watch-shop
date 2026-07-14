@@ -20,6 +20,19 @@ type RecordTaskBusinessEventInput = {
   note?: string | null;
 };
 
+type TaskTypeRuleReader = {
+  findMany(args: {
+    where: {
+      completionMode: "BUSINESS_RULE";
+      completionRuleKey: { in: string[] };
+    };
+    select: {
+      id: true;
+      completionRuleKey: true;
+    };
+  }): Promise<Array<{ id: string; completionRuleKey: string | null }>>;
+};
+
 function eventMarker(ruleKey: string, eventKey: string) {
   return `rule:${ruleKey} event:${eventKey}`;
 }
@@ -60,25 +73,38 @@ export async function recordTaskBusinessEvent(db: DB, input: RecordTaskBusinessE
   if (!relatedRules.length) return { matched: 0, completed: 0, eventKey: cleanEventKey };
 
   const directWhere = buildDirectTargetWhere(input.targetType, cleanTargetId);
+  const relatedRuleKeys = relatedRules.map((rule) => rule.key);
+  const taskTypeReader = (client as unknown as { taskType?: TaskTypeRuleReader }).taskType;
+  const taskTypes = taskTypeReader
+    ? await taskTypeReader.findMany({
+        where: {
+          completionMode: "BUSINESS_RULE",
+          completionRuleKey: { in: relatedRuleKeys },
+        },
+        select: {
+          id: true,
+          completionRuleKey: true,
+        },
+      })
+    : [];
+  const ruleKeyByTaskTypeId = new Map(
+    taskTypes
+      .map((taskType) => [
+        taskType.id,
+        normalizeTaskCompletionRuleKey(taskType.completionRuleKey),
+      ] as const)
+      .filter(([, ruleKey]) => Boolean(ruleKey)),
+  );
+  const taskTypeIds = [...ruleKeyByTaskTypeId.keys()];
+
+  if (!taskTypeIds.length) {
+    return { matched: 0, completed: 0, eventKey: cleanEventKey };
+  }
 
   const tasks = await client.task.findMany({
     where: {
       status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] },
-      OR: [
-        {
-          taskAction: {
-            completionMode: "BUSINESS_RULE",
-            completionRuleKey: { in: relatedRules.map((rule) => rule.key) },
-          },
-        },
-        {
-          taskActionId: null,
-          taskType: {
-            completionMode: "BUSINESS_RULE",
-            completionRuleKey: { in: relatedRules.map((rule) => rule.key) },
-          },
-        },
-      ],
+      taskTypeId: { in: taskTypeIds },
       AND: [
         {
           OR: [
@@ -89,8 +115,6 @@ export async function recordTaskBusinessEvent(db: DB, input: RecordTaskBusinessE
       ],
     },
     include: {
-      taskType: true,
-      taskAction: true,
       executions: true,
     },
   });
@@ -98,7 +122,9 @@ export async function recordTaskBusinessEvent(db: DB, input: RecordTaskBusinessE
   let completed = 0;
 
   for (const task of tasks) {
-    const rule = getTaskCompletionRuleDefinition(task.taskAction?.completionRuleKey ?? task.taskType?.completionRuleKey);
+    const rule = getTaskCompletionRuleDefinition(
+      ruleKeyByTaskTypeId.get(task.taskTypeId ?? ""),
+    );
     if (!rule) continue;
 
     const marker = eventMarker(rule.key, cleanEventKey);

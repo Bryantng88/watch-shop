@@ -196,6 +196,62 @@ function bindingFinished(metadataJson: unknown) {
   return runtime.currentState === "DONE" || runtime.currentState === "CANCELLED";
 }
 
+type MediaFlowStage = "photography" | "media-processing" | "publish";
+
+function mediaStageFromWorkTypeKey(value?: string | null) {
+  const normalized = normalizeWorkTypeKey(value ?? "");
+  if (normalized === "photography") return "photography";
+  if (normalized === "media processing") return "media-processing";
+  if (normalized === "publish") return "publish";
+  return null;
+}
+
+function mediaStageByTaskItem(taskItems: Array<{ id: string; note: string | null }>) {
+  return new Map(
+    taskItems
+      .map((item) => [
+        item.id,
+        mediaStageFromWorkTypeKey(ticketWorkTypeKey(item.note)),
+      ] as const)
+      .filter((entry): entry is [string, MediaFlowStage] => Boolean(entry[1])),
+  );
+}
+
+function mediaWorkflowKeyForStage(stage: MediaFlowStage) {
+  if (stage === "photography") return "watch-photography";
+  if (stage === "media-processing") return "watch-media-processing";
+  return "watch-publish";
+}
+
+function mediaBindingMatchesStage(metadataJson: unknown, stage: MediaFlowStage) {
+  const runtime = getQueueItemWorkflowState({ metadataJson });
+  const metadata = asRecord(metadataJson);
+  const workflowKey = normalizeWorkTypeKey(
+    runtime?.workflowKey ?? metadata.workflowKey,
+  );
+
+  if (!workflowKey) return true;
+  return workflowKey === normalizeWorkTypeKey(mediaWorkflowKeyForStage(stage));
+}
+
+function hasFeedbackSignal(metadataJson: unknown) {
+  if (!metadataJson || typeof metadataJson !== "object" || Array.isArray(metadataJson)) {
+    return false;
+  }
+
+  const metadata = metadataJson as Record<string, unknown>;
+  const eventKey = normalizeStatus(metadata.eventKey).toLowerCase();
+  const feedback = metadata.feedback;
+
+  return (
+    eventKey.includes("rejected") ||
+    eventKey.includes("feedback") ||
+    Boolean(String(metadata.feedbackId ?? "").trim()) ||
+    Boolean(String(metadata.feedbackMessage ?? "").trim()) ||
+    Boolean(feedback && typeof feedback === "object" && !Array.isArray(feedback))
+  );
+}
+
 function serviceOperationWorkspaceRole(note?: string | null) {
   const role = noteLineValue(note, "serviceOperationWorkspaceRole")?.toUpperCase() ?? null;
   if (
@@ -250,6 +306,36 @@ function workspaceRoleMetadataFromNote(note?: string | null) {
       snapshot?.flowStageOrder ?? noteLineValue(note, "flowStageOrder"),
     ),
   };
+}
+
+function workspaceRoleFromNote(note?: string | null) {
+  const snapshot = parseWorkspaceDefinitionSnapshot(note);
+  const roleKey =
+    snapshot?.operationWorkspaceRole ?? noteLineValue(note, "operationWorkspaceRole");
+
+  return (
+    snapshot?.workspaceRole ??
+    snapshot?.operation?.workspaceRoles.find((role) => role.key === roleKey) ??
+    null
+  );
+}
+
+function canShowWorkspaceIdentityPreview(note?: string | null) {
+  const metadata = workspaceRoleMetadataFromNote(note);
+  const workspaceRole = workspaceRoleFromNote(note);
+
+  if (metadata.workspaceKind === "CASE_WORKSPACE") {
+    return Boolean(
+      normalizeStatus(
+        workspaceRole?.identityTargetType ?? noteLineValue(note, "identityTargetType"),
+      ),
+    );
+  }
+
+  if (metadata.workspaceKind !== "STANDALONE_WORKSPACE") return false;
+
+  const itemTargetTypes = workspaceRole?.itemTargetTypes ?? [];
+  return itemTargetTypes.some((targetType) => Boolean(normalizeStatus(targetType)));
 }
 
 function blueprintUsageKey(input: { key: string; source?: string | null }) {
@@ -419,6 +505,56 @@ function buildQueueSummary(input: {
   };
 }
 
+function emptyQueueSummary(): QueueSummaryDTO {
+  return {
+    ready: 0,
+    review: 0,
+    feedback: 0,
+    done: 0,
+  };
+}
+
+function mediaFlowSummaryBucket(metadataJson: unknown): keyof QueueSummaryDTO {
+  const runtime = getQueueItemWorkflowState({ metadataJson });
+  const state = normalizeStatus(runtime?.currentState);
+
+  if (state === "DONE" || state === "CANCELLED") return "done";
+  if (
+    state.includes("RETURN") ||
+    state.includes("FEEDBACK") ||
+    state.includes("REJECT") ||
+    state.includes("RECALL")
+  ) {
+    return "feedback";
+  }
+  if (state.includes("REVIEW")) return "review";
+
+  return "ready";
+}
+
+async function loadFeedbackCountByTaskItem(db: DB, taskItemIds: string[]) {
+  const counts = new Map<string, number>();
+  if (!taskItemIds.length) return counts;
+
+  const rows = await db.taskItemActivity.findMany({
+    where: {
+      taskItemId: { in: taskItemIds },
+      sourceType: ActivitySourceType.BUSINESS_EVENT,
+    },
+    select: {
+      taskItemId: true,
+      metadataJson: true,
+    },
+  });
+
+  for (const row of rows) {
+    if (!hasFeedbackSignal(row.metadataJson)) continue;
+    counts.set(row.taskItemId, (counts.get(row.taskItemId) ?? 0) + 1);
+  }
+
+  return counts;
+}
+
 function buildWeekOptions(selectedDate: Date) {
   const options: CoordinationDashboardDTO["filters"]["weekOptions"] = [];
 
@@ -469,27 +605,32 @@ async function loadLastActivityMap(db: DB, taskItemIds: string[]) {
   return map;
 }
 
-async function loadMediaQueueCountByTaskItem(input: {
+async function loadMediaQueueSummaryByTaskItem(input: {
   db: DB;
   taskId: string;
-  taskItemIds: string[];
+  taskItems: Array<{ id: string; note: string | null }>;
   terminalStatesByTargetType?: Record<string, string[]>;
 }) {
-  const counts = new Map<string, number>();
-  if (!input.taskItemIds.length) return counts;
+  const summaries = new Map<string, QueueSummaryDTO>();
+  if (!input.taskItems.length) return summaries;
+
+  const stageByTaskItem = mediaStageByTaskItem(input.taskItems);
+  if (!stageByTaskItem.size) return summaries;
 
   const bindings = await input.db.taskExecution.findMany({
     where: {
       taskId: input.taskId,
-      taskItemId: { in: input.taskItemIds },
+      taskItemId: { in: [...stageByTaskItem.keys()] },
       targetType: TaskExecutionTargetType.WATCH,
       actionType: { not: TaskExecutionActionType.CANCELLED },
     },
     select: {
+      id: true,
       taskItemId: true,
       targetType: true,
       targetId: true,
       metadataJson: true,
+      createdAt: true,
     },
   });
   const watchIds = [...new Set(bindings.map((binding) => binding.targetId))];
@@ -524,8 +665,17 @@ async function loadMediaQueueCountByTaskItem(input: {
     ]),
   );
 
+  const currentBindingByTarget = new Map<
+    string,
+    (typeof bindings)[number]
+  >();
+
   for (const binding of bindings) {
-    if (!binding.taskItemId || bindingFinished(binding.metadataJson)) continue;
+    if (!binding.taskItemId) continue;
+    const stage = stageByTaskItem.get(binding.taskItemId);
+    if (!stage) continue;
+    if (!mediaBindingMatchesStage(binding.metadataJson, stage)) continue;
+    if (bindingFinished(binding.metadataJson) && stage !== "publish") continue;
     const processing =
       processingByTarget.get(
         targetKey({
@@ -533,8 +683,277 @@ async function loadMediaQueueCountByTaskItem(input: {
           targetId: binding.targetId,
         }),
       ) ?? true;
+    if (!processing && stage !== "publish") continue;
+
+    const key = targetKey({
+      targetType: binding.targetType,
+      targetId: binding.targetId,
+    });
+    const current = currentBindingByTarget.get(key);
+    if (!current || current.createdAt < binding.createdAt) {
+      currentBindingByTarget.set(key, binding);
+    }
+  }
+
+  for (const binding of currentBindingByTarget.values()) {
+    if (!binding.taskItemId) continue;
+    const summary = summaries.get(binding.taskItemId) ?? emptyQueueSummary();
+    const bucket = mediaFlowSummaryBucket(binding.metadataJson);
+    summary[bucket] += 1;
+    summaries.set(binding.taskItemId, summary);
+  }
+
+  return summaries;
+}
+
+async function cleanupMediaFlowStageBindings(input: {
+  db: DB;
+  taskId: string;
+  taskItems: Array<{ id: string; note: string | null }>;
+}) {
+  const stageByTaskItem = mediaStageByTaskItem(input.taskItems);
+  if (!stageByTaskItem.size) return;
+
+  const bindings = await input.db.taskExecution.findMany({
+    where: {
+      taskId: input.taskId,
+      taskItemId: { in: [...stageByTaskItem.keys()] },
+      targetType: TaskExecutionTargetType.WATCH,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+    },
+    select: {
+      id: true,
+      taskItemId: true,
+      targetId: true,
+      metadataJson: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  const bindingsByWatch = new Map<string, typeof bindings>();
+
+  for (const binding of bindings) {
+    if (!binding.taskItemId) continue;
+    const stage = stageByTaskItem.get(binding.taskItemId);
+    if (!stage) continue;
+
+    const rows = bindingsByWatch.get(binding.targetId) ?? [];
+    rows.push(binding);
+    bindingsByWatch.set(binding.targetId, rows);
+  }
+
+  const staleBindingIds: string[] = [];
+  for (const rows of bindingsByWatch.values()) {
+    staleBindingIds.push(
+      ...rows
+        .filter((row) => {
+          if (!row.taskItemId) return false;
+          const stage = stageByTaskItem.get(row.taskItemId);
+          return Boolean(stage && !mediaBindingMatchesStage(row.metadataJson, stage));
+        })
+        .map((row) => row.id),
+    );
+
+    const matchedRows = rows.filter((row) => {
+      if (!row.taskItemId) return false;
+      const stage = stageByTaskItem.get(row.taskItemId);
+      return Boolean(stage && mediaBindingMatchesStage(row.metadataJson, stage));
+    });
+    if (matchedRows.length <= 1) continue;
+
+    const byStage = new Map<MediaFlowStage, (typeof rows)[number]>();
+    for (const row of matchedRows) {
+      if (!row.taskItemId) continue;
+      const stage = stageByTaskItem.get(row.taskItemId);
+      if (!stage) continue;
+
+      const current = byStage.get(stage);
+      if (current && current.createdAt >= row.createdAt) continue;
+      byStage.set(stage, row);
+    }
+
+    const publish = byStage.get("publish");
+    const media = byStage.get("media-processing");
+    const photography = byStage.get("photography");
+    const publishState = publish
+      ? normalizeStatus(getQueueItemWorkflowState(publish)?.currentState)
+      : null;
+    const mediaState = media
+      ? normalizeStatus(getQueueItemWorkflowState(media)?.currentState)
+      : null;
+    const photographyState = photography
+      ? normalizeStatus(getQueueItemWorkflowState(photography)?.currentState)
+      : null;
+
+    const preferredKeep =
+      publish && publishState !== "RECALLED"
+        ? publish
+        : publish && publishState === "RECALLED" && media
+          ? media
+          : media && mediaState === "DONE" && publish
+            ? publish
+            : media && mediaState === "RETURNED" && photography
+              ? photography
+              : media && mediaState !== "DONE" && mediaState !== "RETURNED"
+                ? media
+                : photography && photographyState === "DONE" && media
+                  ? media
+                  : photography ?? media ?? publish ?? rows[0];
+    const keepStage = preferredKeep.taskItemId
+      ? stageByTaskItem.get(preferredKeep.taskItemId)
+      : null;
+    const keep =
+      keepStage
+        ? matchedRows
+            .filter((row) => row.taskItemId && stageByTaskItem.get(row.taskItemId) === keepStage)
+            .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())[0] ??
+          preferredKeep
+        : preferredKeep;
+
+    staleBindingIds.push(...matchedRows.filter((row) => row.id !== keep.id).map((row) => row.id));
+  }
+
+  if (!staleBindingIds.length) return;
+
+  await input.db.taskExecution.updateMany({
+    where: { id: { in: [...new Set(staleBindingIds)] } },
+    data: { taskItemId: null },
+  });
+}
+
+async function restoreMediaFinalStageDoneBindings(input: {
+  db: DB;
+  taskId: string;
+  taskItems: Array<{ id: string; note: string | null }>;
+}) {
+  const stageByTaskItem = mediaStageByTaskItem(input.taskItems);
+  const publishTaskItemId = [...stageByTaskItem.entries()].find(
+    ([, stage]) => stage === "publish",
+  )?.[0];
+  if (!publishTaskItemId) return;
+
+  const linkedBindings = await input.db.taskExecution.findMany({
+    where: {
+      taskId: input.taskId,
+      taskItemId: { in: [...stageByTaskItem.keys()] },
+      targetType: TaskExecutionTargetType.WATCH,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+    },
+    select: {
+      targetId: true,
+    },
+  });
+  const linkedTargetIds = new Set(linkedBindings.map((binding) => binding.targetId));
+
+  const orphanDoneBindings = await input.db.taskExecution.findMany({
+    where: {
+      taskId: input.taskId,
+      taskItemId: null,
+      targetType: TaskExecutionTargetType.WATCH,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+    },
+    select: {
+      id: true,
+      targetId: true,
+      metadataJson: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  const restoreIdsByTarget = new Map<string, string>();
+
+  for (const binding of orphanDoneBindings) {
+    if (linkedTargetIds.has(binding.targetId) || restoreIdsByTarget.has(binding.targetId)) {
+      continue;
+    }
+
+    const runtime = getQueueItemWorkflowState(binding);
+    if (runtime?.workflowKey !== "watch-publish" || runtime.currentState !== "DONE") {
+      continue;
+    }
+
+    restoreIdsByTarget.set(binding.targetId, binding.id);
+  }
+
+  const restoreIds = [...restoreIdsByTarget.values()];
+  if (!restoreIds.length) return;
+
+  await input.db.taskExecution.updateMany({
+    where: { id: { in: restoreIds } },
+    data: { taskItemId: publishTaskItemId },
+  });
+}
+
+async function loadPaymentQueueCountByTaskItem(input: {
+  db: DB;
+  taskId: string;
+  taskItemIds: string[];
+  terminalStatesByTargetType?: Record<string, string[]>;
+}) {
+  const counts = new Map<string, number>();
+  if (!input.taskItemIds.length) return counts;
+
+  const bindings = await input.db.taskExecution.findMany({
+    where: {
+      taskId: input.taskId,
+      taskItemId: { in: input.taskItemIds },
+      targetType: TaskExecutionTargetType.PAYMENT,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+    },
+    select: {
+      id: true,
+      taskItemId: true,
+      targetType: true,
+      targetId: true,
+      metadataJson: true,
+      createdAt: true,
+    },
+  });
+  const paymentIds = [...new Set(bindings.map((binding) => binding.targetId))];
+  const terminalStates = terminalStatesForTarget(
+    input.terminalStatesByTargetType,
+    TaskExecutionTargetType.PAYMENT,
+  );
+  const payments = paymentIds.length
+    ? await input.db.payment.findMany({
+        where: { id: { in: paymentIds } },
+        select: {
+          id: true,
+          status: true,
+        },
+      })
+    : [];
+  const processingByTarget = new Map(
+    payments.map((payment) => [
+      targetKey({
+        targetType: TaskExecutionTargetType.PAYMENT,
+        targetId: payment.id,
+      }),
+      statusListIsProcessing([payment.status], terminalStates),
+    ]),
+  );
+  const currentBindingByTarget = new Map<
+    string,
+    (typeof bindings)[number]
+  >();
+
+  for (const binding of bindings) {
+    if (!binding.taskItemId || bindingFinished(binding.metadataJson)) continue;
+    const key = targetKey({
+      targetType: binding.targetType,
+      targetId: binding.targetId,
+    });
+    const processing = processingByTarget.get(key) ?? true;
     if (!processing) continue;
 
+    const current = currentBindingByTarget.get(key);
+    if (!current || current.createdAt < binding.createdAt) {
+      currentBindingByTarget.set(key, binding);
+    }
+  }
+
+  for (const binding of currentBindingByTarget.values()) {
+    if (!binding.taskItemId) continue;
     counts.set(binding.taskItemId, (counts.get(binding.taskItemId) ?? 0) + 1);
   }
 
@@ -709,7 +1128,7 @@ async function loadTechnicalQueueCountByTaskItem(input: {
 async function loadWorkspaceIdentityPreviewMap(input: {
   db: DB;
   taskId: string;
-  taskItemIds: string[];
+  taskItems: Array<{ id: string; note: string | null }>;
 }) {
   const result = new Map<
     string,
@@ -721,12 +1140,38 @@ async function loadWorkspaceIdentityPreviewMap(input: {
       imageUrl: string | null;
     }
   >();
-  if (!input.taskItemIds.length) return result;
+  if (!input.taskItems.length) return result;
+
+  const taskItemIds = input.taskItems.map((item) => item.id);
+  const priority: Record<string, number> = {
+    SERVICE_REQUEST: 0,
+    WATCH: 1,
+    ORDER: 2,
+  };
+  const chosen = new Map<string, { targetType: string; targetId: string }>();
+
+  for (const item of input.taskItems) {
+    if (workspaceRoleMetadataFromNote(item.note).workspaceKind !== "CASE_WORKSPACE") {
+      continue;
+    }
+
+    const identityTargetType = normalizeStatus(
+      workspaceRoleFromNote(item.note)?.identityTargetType ??
+        noteLineValue(item.note, "identityTargetType"),
+    );
+    const serviceRequestId = noteLineValue(item.note, "serviceRequestId");
+    if (identityTargetType === TaskExecutionTargetType.SERVICE_REQUEST && serviceRequestId) {
+      chosen.set(item.id, {
+        targetType: TaskExecutionTargetType.SERVICE_REQUEST,
+        targetId: serviceRequestId,
+      });
+    }
+  }
 
   const identityBindings = await input.db.taskExecution.findMany({
     where: {
       taskId: input.taskId,
-      taskItemId: { in: input.taskItemIds },
+      taskItemId: { in: taskItemIds },
       targetType: {
         in: [
           TaskExecutionTargetType.SERVICE_REQUEST,
@@ -743,12 +1188,6 @@ async function loadWorkspaceIdentityPreviewMap(input: {
     },
     orderBy: { createdAt: "asc" },
   });
-  const priority: Record<string, number> = {
-    SERVICE_REQUEST: 0,
-    WATCH: 1,
-    ORDER: 2,
-  };
-  const chosen = new Map<string, { targetType: string; targetId: string }>();
 
   for (const binding of identityBindings) {
     if (!binding.taskItemId) continue;
@@ -955,14 +1394,31 @@ export async function getCoordinationDashboard(input: {
     }
     return canViewTicket(item, input?.auth);
   });
+  if (input.context === "MEDIA") {
+    await restoreMediaFinalStageDoneBindings({
+      db,
+      taskId: cycle.task.id,
+      taskItems,
+    });
+    await cleanupMediaFlowStageBindings({
+      db,
+      taskId: cycle.task.id,
+      taskItems,
+    });
+  }
   const taskItemIds = taskItems.map((item) => item.id);
+  const identityPreviewTaskItemIds = taskItems
+    .filter((item) => canShowWorkspaceIdentityPreview(item.note))
+    .map((item) => item.id);
+  const identityPreviewTaskItemIdSet = new Set(identityPreviewTaskItemIds);
   const viewConfig = getSpaceViewConfig(input.context);
 
   const [
     queueRows,
-    mediaQueueCountByTaskItem,
+    mediaQueueSummaryByTaskItem,
     technicalQueueCountByTaskItem,
-    feedbackRows,
+    paymentQueueCountByTaskItem,
+    feedbackCountByTaskItem,
     activityRows,
     lastActivityMap,
     identityPreviewMap,
@@ -976,13 +1432,13 @@ export async function getCoordinationDashboard(input: {
       _count: { _all: true },
     }),
     input.context === "MEDIA"
-      ? loadMediaQueueCountByTaskItem({
+      ? loadMediaQueueSummaryByTaskItem({
           db,
           taskId: cycle.task.id,
-          taskItemIds,
+          taskItems,
           terminalStatesByTargetType: viewConfig.carryover.terminalStatesByTargetType,
         })
-      : Promise.resolve(new Map<string, number>()),
+      : Promise.resolve(new Map<string, QueueSummaryDTO>()),
     input.context === "TECHNICAL"
       ? loadTechnicalQueueCountByTaskItem({
           db,
@@ -991,14 +1447,15 @@ export async function getCoordinationDashboard(input: {
           terminalStatesByTargetType: viewConfig.carryover.terminalStatesByTargetType,
         })
       : Promise.resolve(new Map<string, number>()),
-    db.taskItemActivity.groupBy({
-      by: ["taskItemId"],
-      where: {
-        taskItemId: { in: taskItemIds },
-        sourceType: ActivitySourceType.BUSINESS_EVENT,
-      },
-      _count: { _all: true },
-    }),
+    input.context === "PAYMENT"
+      ? loadPaymentQueueCountByTaskItem({
+          db,
+          taskId: cycle.task.id,
+          taskItemIds,
+          terminalStatesByTargetType: viewConfig.carryover.terminalStatesByTargetType,
+        })
+      : Promise.resolve(new Map<string, number>()),
+    loadFeedbackCountByTaskItem(db, taskItemIds),
     db.taskItemActivity.groupBy({
       by: ["taskItemId"],
       where: {
@@ -1010,21 +1467,18 @@ export async function getCoordinationDashboard(input: {
     loadWorkspaceIdentityPreviewMap({
       db,
       taskId: cycle.task.id,
-      taskItemIds,
+      taskItems: taskItems.filter((item) => identityPreviewTaskItemIdSet.has(item.id)),
     }),
   ]);
 
   const queueCountByTaskItem = new Map(
-    input.context === "MEDIA"
-      ? mediaQueueCountByTaskItem
-      : input.context === "TECHNICAL"
+    input.context === "TECHNICAL"
         ? technicalQueueCountByTaskItem
-        : queueRows
-            .filter((row) => row.taskItemId)
-            .map((row) => [row.taskItemId as string, row._count._all]),
-  );
-  const feedbackCountByTaskItem = new Map(
-    feedbackRows.map((row) => [row.taskItemId, row._count._all]),
+        : input.context === "PAYMENT"
+          ? paymentQueueCountByTaskItem
+          : queueRows
+              .filter((row) => row.taskItemId)
+              .map((row) => [row.taskItemId as string, row._count._all]),
   );
   const lastActivityAtByTaskItem = new Map(
     activityRows.map((row) => [row.taskItemId, row._max.occurredAt ?? null]),
@@ -1035,6 +1489,14 @@ export async function getCoordinationDashboard(input: {
   const workTickets: CoordinationWorkTicketSummaryDTO[] = taskItems.map((item) => {
     const queueCount = queueCountByTaskItem.get(item.id) ?? 0;
     const feedbackCount = feedbackCountByTaskItem.get(item.id) ?? 0;
+    const queueSummary =
+      input.context === "MEDIA"
+        ? mediaQueueSummaryByTaskItem.get(item.id) ?? emptyQueueSummary()
+        : buildQueueSummary({
+            queueCount,
+            feedbackCount,
+            status: item.status,
+          });
     const overdue = Boolean(
       item.dueAt && item.dueAt < now && item.status !== TaskStatus.DONE,
     );
@@ -1051,11 +1513,7 @@ export async function getCoordinationDashboard(input: {
       identityPreview: identityPreviewMap.get(item.id) ?? null,
       ownerLabel: ticketOwner(item, currentUser).label,
       owner: ticketOwner(item, currentUser),
-      queueSummary: buildQueueSummary({
-        queueCount,
-        feedbackCount,
-        status: item.status,
-      }),
+      queueSummary,
       needAttention: feedbackCount > 0 || overdue,
       feedbackCount,
       lastActivity: lastActivity?.title ?? null,

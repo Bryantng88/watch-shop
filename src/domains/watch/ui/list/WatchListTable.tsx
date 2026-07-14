@@ -2,6 +2,7 @@
 
 import type { WatchRow } from "./types";
 import WatchListRow from "./WatchListRow";
+import type { BusinessEntityPreview } from "@/domains/shared/business/business-entity.types";
 
 type Props = {
     items?: WatchRow[];
@@ -21,6 +22,7 @@ type Props = {
     onBuyBack?: (row: WatchRow) => void;
     onRaiseCase?: (row: WatchRow) => void;
     onCreateTask?: (row: WatchRow) => void;
+    onPreview?: (preview: BusinessEntityPreview) => void;
 };
 
 export default function WatchListTable({
@@ -39,6 +41,7 @@ export default function WatchListTable({
     onBuyBack,
     onRaiseCase,
     onCreateTask,
+    onPreview,
 }: Props) {
     const safeItems = Array.isArray(items) ? items : [];
     const safeSelectedIds = Array.isArray(selectedIds) ? selectedIds : [];
@@ -115,6 +118,7 @@ export default function WatchListTable({
                                     onBuyBack={onBuyBack}
                                     onRaiseCase={onRaiseCase}
                                     onCreateTask={onCreateTask}
+                                    onPreview={onPreview}
                                 />
                             ))
                         )}

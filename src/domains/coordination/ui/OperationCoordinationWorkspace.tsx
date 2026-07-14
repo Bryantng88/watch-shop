@@ -1514,7 +1514,7 @@ function QueueSummaryCell({
   summary: CoordinationDashboardDTO["workTickets"][number]["queueSummary"];
 }) {
   const total = summary.ready + summary.review + summary.feedback + summary.done;
-  const completed = summary.done + summary.feedback;
+  const completed = summary.done;
   const progress = total ? Math.round((completed / total) * 100) : 0;
   const items = [
     { label: "Sẵn sàng", value: summary.ready },

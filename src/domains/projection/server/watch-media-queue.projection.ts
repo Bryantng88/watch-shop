@@ -75,6 +75,13 @@ function isWatchMediaQueueItem(item: QueueItemDTO) {
   );
 }
 
+function isActiveMediaProcessingQueueItem(item: QueueItemDTO) {
+  if (!isWatchMediaQueueItem(item)) return false;
+
+  const state = cleanUpper(item.currentWorkflowState ?? item.status);
+  return state !== "DONE";
+}
+
 function itemSearchText(item: QueueItemDTO) {
   return [
     item.id,
@@ -203,7 +210,7 @@ export async function rebuildWatchMediaQueueProjectionForWorkspace(
   if (!workspaceId) return { applied: 0, sourceCount: 0 };
 
   const sourceItems = (await listTaskItemQueueItems(db, workspaceId))
-    .filter(isWatchMediaQueueItem);
+    .filter(isActiveMediaProcessingQueueItem);
   const rowKeys = sourceItems.map((item) => item.id);
 
   await deleteProjectionRecords(db, {
@@ -252,7 +259,9 @@ export async function listWatchMediaQueueProjectionItems(
 
   return records
     .map((record) => asQueueItem(record.dataJson))
-    .filter((item): item is QueueItemDTO => Boolean(item));
+    .filter((item): item is QueueItemDTO =>
+      Boolean(item && isActiveMediaProcessingQueueItem(item)),
+    );
 }
 
 export async function listWatchMediaQueueProjectionItemsWithFallback(
@@ -262,7 +271,10 @@ export async function listWatchMediaQueueProjectionItemsWithFallback(
   },
 ): Promise<WatchMediaQueueProjectionListResult> {
   const workspaceId = clean(input.workspaceId);
-  const sourceItems = () => listTaskItemQueueItems(db, workspaceId);
+  const sourceItems = async () =>
+    (await listTaskItemQueueItems(db, workspaceId)).filter(
+      isActiveMediaProcessingQueueItem,
+    );
 
   if (process.env.WATCH_MEDIA_QUEUE_PROJECTION_READ !== "1") {
     return {

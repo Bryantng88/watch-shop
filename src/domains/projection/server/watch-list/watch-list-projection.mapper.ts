@@ -101,6 +101,44 @@ function mapServiceStatus(row: WatchRow, source: WatchListProjectionSourceRow): 
   return { status: "NOT_REQUIRED", label: "Không cần service" };
 }
 
+function mapServiceStatusForProjection(row: WatchRow, source: WatchListProjectionSourceRow): {
+  status: WatchListServiceStatus;
+  label: string;
+} {
+  if (source.__serviceState) {
+    return {
+      status: source.__serviceState.status,
+      label: source.__serviceState.statusLabel,
+    };
+  }
+
+  return mapServiceStatus(row, source);
+}
+
+function mediaWorkspaceHrefForStatus(
+  source: WatchListProjectionSourceRow,
+  status: string,
+) {
+  const states = source.__mediaState ?? [];
+  const publish = newestMediaState(states, "publish");
+  const media = newestMediaState(states, "media-processing");
+  const photoshoot = newestMediaState(states, "photoshoot");
+
+  switch (upper(status)) {
+    case "POSTED":
+    case "READY_TO_PUBLISH":
+      return publish?.workspaceHref ?? media?.workspaceHref ?? null;
+    case "NEEDS_REWORK":
+      return media?.workspaceHref ?? photoshoot?.workspaceHref ?? null;
+    case "MEDIA_PROCESSING":
+      return media?.workspaceHref ?? null;
+    case "PHOTOSHOOT":
+      return photoshoot?.workspaceHref ?? null;
+    default:
+      return null;
+  }
+}
+
 function mapSaleStatus(row: WatchRow): {
   status: WatchListSaleStatus;
   label: string;
@@ -119,7 +157,7 @@ function mapV2Row(
   source: WatchListProjectionSourceRow,
 ): WatchListProjectionRow {
   const media = mapMediaStatus(row, source);
-  const service = mapServiceStatus(row, source);
+  const service = mapServiceStatusForProjection(row, source);
   const sale = mapSaleStatus(row);
 
   return {
@@ -133,8 +171,11 @@ function mapV2Row(
     vendorName: cleanNullable(source.product?.vendor?.name ?? row.vendorName),
     mediaStatus: media.status,
     mediaStatusLabel: media.label,
+    mediaWorkspaceHref: mediaWorkspaceHrefForStatus(source, media.status),
     serviceStatus: service.status,
     serviceStatusLabel: service.label,
+    serviceRequestId: source.__serviceState?.serviceRequestId ?? null,
+    serviceWorkspaceHref: source.__serviceState?.workspaceHref ?? null,
     saleStatus: sale.status,
     saleStatusLabel: sale.label,
     salePrice: numberNullable(row.salePrice),

@@ -94,6 +94,35 @@ export type QueueItemDTO = {
   } | null;
   serviceRequestId?: string | null;
   serviceRequestWorkspaceHref?: string | null;
+  technicalIssue?: {
+    id: string;
+    summary: string | null;
+    note: string | null;
+    area: string | null;
+    actionMode: string | null;
+    executionStatus: string | null;
+    vendorId: string | null;
+    vendorNameSnap: string | null;
+    estimatedCost: number | null;
+    actualCost: number | null;
+    technicalDetailCatalogId: string | null;
+    technicalDetailCatalog?: {
+      id: string;
+      area: string | null;
+      code: string | null;
+      name: string | null;
+    } | null;
+    supplyCatalog?: {
+      id: string;
+      code: string | null;
+      name: string | null;
+    } | null;
+    mechanicalPartCatalog?: {
+      id: string;
+      code: string | null;
+      name: string | null;
+    } | null;
+  } | null;
   updatedAt: string;
 };
 

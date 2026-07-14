@@ -32,8 +32,11 @@ export type WatchListProjectionRow = {
   vendorName: string | null;
   mediaStatus: WatchListMediaStatus;
   mediaStatusLabel: string;
+  mediaWorkspaceHref: string | null;
   serviceStatus: WatchListServiceStatus;
   serviceStatusLabel: string;
+  serviceRequestId: string | null;
+  serviceWorkspaceHref: string | null;
   saleStatus: WatchListSaleStatus;
   saleStatusLabel: string;
   salePrice: number | null;
@@ -46,6 +49,20 @@ export type WatchListProjectionMediaState = {
   workflowKey: string | null;
   workflowState: string | null;
   taskStatus: string | null;
+  taskItemId: string | null;
+  workspaceHref: string | null;
+  updatedAt: string | null;
+};
+
+export type WatchListProjectionServiceState = {
+  watchId: string;
+  serviceRequestId: string;
+  status: WatchListServiceStatus;
+  statusLabel: string;
+  serviceRequestStatus: string | null;
+  technicalIssueStatus: string | null;
+  taskItemId: string | null;
+  workspaceHref: string | null;
   updatedAt: string | null;
 };
 
@@ -149,6 +166,7 @@ export type WatchListProjectionSourceRow = {
   }>;
   __imagesCount?: number;
   __mediaState?: WatchListProjectionMediaState[];
+  __serviceState?: WatchListProjectionServiceState | null;
 };
 
 export type WatchListProjectionListResult = WatchListResult & {

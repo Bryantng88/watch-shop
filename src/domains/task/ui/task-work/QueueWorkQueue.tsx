@@ -100,6 +100,35 @@ export type TaskItemQueueItem = {
   } | null;
   serviceRequestId?: string | null;
   serviceRequestWorkspaceHref?: string | null;
+  technicalIssue?: {
+    id: string;
+    summary: string | null;
+    note: string | null;
+    area: string | null;
+    actionMode: string | null;
+    executionStatus: string | null;
+    vendorId: string | null;
+    vendorNameSnap: string | null;
+    estimatedCost: number | null;
+    actualCost: number | null;
+    technicalDetailCatalogId: string | null;
+    technicalDetailCatalog?: {
+      id: string;
+      area: string | null;
+      code: string | null;
+      name: string | null;
+    } | null;
+    supplyCatalog?: {
+      id: string;
+      code: string | null;
+      name: string | null;
+    } | null;
+    mechanicalPartCatalog?: {
+      id: string;
+      code: string | null;
+      name: string | null;
+    } | null;
+  } | null;
   updatedAt: string;
   href?: string | null;
 };
@@ -110,6 +139,59 @@ type VendorOption = {
   id: string;
   name: string;
 };
+
+type TechnicalDetailCatalogOption = {
+  id: string;
+  area?: string | null;
+  code?: string | null;
+  name?: string | null;
+};
+
+function normalizeTechnicalArea(value?: string | null) {
+  return String(value ?? "").trim().toUpperCase();
+}
+
+function technicalAreaLabel(value?: string | null) {
+  const area = normalizeTechnicalArea(value);
+  if (area === "MOVEMENT") return "Máy";
+  if (area === "CASE") return "Vỏ";
+  if (area === "CRYSTAL") return "Kính";
+  if (area === "BRACELET" || area === "STRAP") return "Dây / bracelet";
+  if (area === "CROWN") return "Núm";
+  if (area === "DIAL") return "Mặt số";
+  if (area === "HANDS") return "Kim";
+  if (area === "GENERAL") return "Tổng quát";
+  return value || "-";
+}
+
+function actionModeText(value?: string | null) {
+  const mode = String(value ?? "").toUpperCase();
+  if (mode === "VENDOR") return "Vendor";
+  if (mode === "INTERNAL") return "Nội bộ";
+  if (mode === "NONE") return "Không xử lý";
+  return value || "-";
+}
+
+function formatMoneyValue(value?: number | string | null) {
+  if (value === null || value === undefined || value === "") return "-";
+  const number = Number(value);
+  if (!Number.isFinite(number)) return String(value);
+  return new Intl.NumberFormat("vi-VN").format(number);
+}
+
+function technicalCatalogLabel(item?: TechnicalDetailCatalogOption | null) {
+  if (!item) return "-";
+  return [item.code, item.name].filter(Boolean).join(" - ") || item.id;
+}
+
+function fieldKindLabel(kind: OperationalBlueprintActionField["kind"]) {
+  if (kind === "textarea") return "Ghi chú";
+  if (kind === "select") return "Chọn";
+  if (kind === "money") return "Số tiền";
+  if (kind === "boolean") return "Có / không";
+  if (kind === "date") return "Ngày";
+  return "Nội dung";
+}
 
 function objectValue(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -200,12 +282,14 @@ function BlueprintActionFieldControl({
   disabled,
   onChange,
   vendorOptions = [],
+  technicalDetailCatalogOptions = [],
 }: {
   field: OperationalBlueprintActionField;
   value?: string | boolean;
   disabled?: boolean;
   onChange: (value: string | boolean) => void;
   vendorOptions?: VendorOption[];
+  technicalDetailCatalogOptions?: TechnicalDetailCatalogOption[];
 }) {
   const baseClass =
     "h-8 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700 disabled:bg-slate-50 disabled:text-slate-400";
@@ -222,10 +306,34 @@ function BlueprintActionFieldControl({
     );
   }
 
+  if (field.key === "technicalDetailCatalogId") {
+    return (
+      <select
+        className={baseClass}
+        disabled={disabled}
+        value={typeof value === "string" ? value : ""}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        <option value="">Chọn chi tiết kỹ thuật</option>
+        {technicalDetailCatalogOptions.map((item) => (
+          <option key={item.id} value={item.id}>
+            {[item.code, item.name].filter(Boolean).join(" - ") || item.id}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
   if (field.kind === "select") {
-    const options = field.key === "vendorId"
-      ? vendorOptions.map((vendor) => ({ value: vendor.id, label: vendor.name }))
-      : field.options ?? [];
+    const options =
+      field.key === "vendorId"
+        ? vendorOptions.map((vendor) => ({ value: vendor.id, label: vendor.name }))
+        : field.key === "technicalDetailCatalogId"
+          ? technicalDetailCatalogOptions.map((item) => ({
+              value: item.id,
+              label: [item.code, item.name].filter(Boolean).join(" - ") || item.id,
+            }))
+          : field.options ?? [];
 
     return (
       <select
@@ -262,8 +370,10 @@ function BlueprintActionFieldControl({
     <input
       className={baseClass}
       disabled={disabled}
-      type={field.kind === "date" ? "date" : "text"}
-      placeholder={field.kind === "money" ? `${field.label} (money)` : field.label}
+      type={field.kind === "date" ? "date" : field.kind === "money" ? "number" : "text"}
+      min={field.kind === "money" ? 0 : undefined}
+      step={field.kind === "money" ? "1000" : undefined}
+      placeholder={field.kind === "money" ? `${field.label} (số tiền)` : field.label}
       value={typeof value === "string" ? value : ""}
       onChange={(event) => onChange(event.target.value)}
     />
@@ -882,6 +992,7 @@ export function QueueWorkQueue({
   operationalActions = [],
   serviceRequestId,
   vendorOptions = [],
+  technicalDetailCatalogOptions = [],
   onOpenQueueActivity,
 }: {
   taskItemId: string;
@@ -893,6 +1004,7 @@ export function QueueWorkQueue({
   serviceRequestId?: string | null;
   currentUser?: UserSummary | null;
   vendorOptions?: VendorOption[];
+  technicalDetailCatalogOptions?: TechnicalDetailCatalogOption[];
   onOpenQueueActivity?: (queueItemId: string, mode: "activity") => void;
 }) {
   const [filter, setFilter] = useState<QueueFilter>("ALL");
@@ -971,14 +1083,82 @@ export function QueueWorkQueue({
         action.targetType === queueItem.targetType &&
         action.key !== "create_technical_issue",
     );
+  const blueprintActionMatchesState = (
+    queueItem: TaskItemQueueItem,
+    action: OperationalBlueprintAction,
+  ) => {
+    const state = String(queueItem.currentWorkflowState ?? "").toUpperCase();
+    if (workspaceWorkTypeKey !== "service-operation") return true;
+    if (action.command === "service.startTechnicalIssue") return state === "READY";
+    if (
+      action.command === "service.completeTechnicalIssue" ||
+      action.command === "service.cancelTechnicalIssue"
+    ) {
+      return state === "IN_PROGRESS";
+    }
+    if (action.command === "service.createTechnicalIssue") return false;
+    return true;
+  };
   const canSubmitBlueprintAction = (action: OperationalBlueprintAction) =>
     action.command === "service.confirmTechnicalIssue" ||
     action.command === "service.closeTechnicalIssueNoIssue" ||
     action.command === "service.startTechnicalIssue" ||
     action.command === "service.completeTechnicalIssue" ||
+    action.command === "service.cancelTechnicalIssue" ||
     action.command === "service.createTechnicalIssue";
   const blueprintValueKey = (queueItem: TaskItemQueueItem, action: OperationalBlueprintAction) =>
     `${queueItem.id}:${action.key}`;
+  const technicalDetailOptionsForItem = (queueItem: TaskItemQueueItem) => {
+    const issueArea = normalizeTechnicalArea(queueItem.technicalIssue?.area);
+    if (!issueArea) return technicalDetailCatalogOptions;
+    return technicalDetailCatalogOptions.filter(
+      (option) => normalizeTechnicalArea(option.area) === issueArea,
+    );
+  };
+  const defaultBlueprintValues = (
+    queueItem: TaskItemQueueItem,
+    action: OperationalBlueprintAction,
+  ): Record<string, string | boolean> => {
+    const issue = queueItem.technicalIssue;
+    if (!issue) return {};
+
+    if (action.command === "service.startTechnicalIssue") {
+      return {
+        technicalDetailCatalogId: issue.technicalDetailCatalogId ?? "",
+        actionMode: issue.actionMode && issue.actionMode !== "NONE" ? issue.actionMode : "INTERNAL",
+        vendorId: issue.vendorId ?? "",
+        estimatedCost: issue.estimatedCost == null ? "" : String(issue.estimatedCost),
+        startedNote: "",
+        vendorChangeNote: "",
+      };
+    }
+
+    if (action.command === "service.completeTechnicalIssue") {
+      return {
+        actualCost:
+          issue.actualCost == null
+            ? issue.estimatedCost == null
+              ? ""
+              : String(issue.estimatedCost)
+            : String(issue.actualCost),
+        resolutionNote: "",
+        createPayment: true,
+      };
+    }
+
+    return {};
+  };
+  const blueprintValuesFor = (
+    queueItem: TaskItemQueueItem,
+    action: OperationalBlueprintAction,
+  ) => ({
+    ...defaultBlueprintValues(queueItem, action),
+    ...(blueprintValues[blueprintValueKey(queueItem, action)] ?? {}),
+  });
+  const vendorChangedFor = (queueItem: TaskItemQueueItem, action: OperationalBlueprintAction) => {
+    const values = blueprintValuesFor(queueItem, action);
+    return String(values.vendorId ?? "") !== String(queueItem.technicalIssue?.vendorId ?? "");
+  };
   const updateBlueprintValue = (
     queueItem: TaskItemQueueItem,
     action: OperationalBlueprintAction,
@@ -991,7 +1171,8 @@ export function QueueWorkQueue({
       [key]: {
         ...(current[key] ?? {}),
         [fieldKey]: value,
-        ...(fieldKey === "assigneeMode" && String(value).toUpperCase() !== "VENDOR"
+        ...((fieldKey === "assigneeMode" || fieldKey === "actionMode") &&
+        String(value).toUpperCase() !== "VENDOR"
           ? { vendorId: "" }
           : {}),
       },
@@ -1003,7 +1184,7 @@ export function QueueWorkQueue({
     field: OperationalBlueprintActionField,
   ) => {
     if (field.key !== "vendorId") return true;
-    const values = blueprintValues[blueprintValueKey(queueItem, action)] ?? {};
+    const values = blueprintValuesFor(queueItem, action);
     const assigneeMode = String(values.assigneeMode ?? values.actionMode ?? "").toUpperCase();
     return assigneeMode === "VENDOR";
   };
@@ -1012,6 +1193,7 @@ export function QueueWorkQueue({
     if (action.command === "service.closeTechnicalIssueNoIssue") return "Chuyển Done";
     if (action.command === "service.startTechnicalIssue") return "Bắt đầu xử lý";
     if (action.command === "service.completeTechnicalIssue") return "Hoàn tất xử lý";
+    if (action.command === "service.cancelTechnicalIssue") return "Hủy xử lý";
     return "Xác nhận";
   };
   const applyBlueprintAction = (
@@ -1021,6 +1203,18 @@ export function QueueWorkQueue({
     if (!canSubmitBlueprintAction(action) || isPending) return;
 
     const pendingKey = `${queueItem.id}:${action.key}`;
+    const fields = blueprintValuesFor(queueItem, action);
+    if (
+      action.command === "service.startTechnicalIssue" &&
+      vendorChangedFor(queueItem, action) &&
+      !String(fields.vendorChangeNote ?? "").trim()
+    ) {
+      setActionError({
+        itemId: queueItem.id,
+        message: "Vui lòng nhập lý do đổi vendor.",
+      });
+      return;
+    }
     setPendingId(pendingKey);
     setActionError(null);
     startTransition(async () => {
@@ -1030,7 +1224,7 @@ export function QueueWorkQueue({
           actionKey: action.key,
           targetType: queueItem.targetType,
           targetId: queueItem.targetId,
-          fields: blueprintValues[blueprintValueKey(queueItem, action)] ?? {},
+          fields,
         });
         setOpenBlueprintAction(null);
         setBlueprintValues((current) => ({
@@ -1066,15 +1260,19 @@ export function QueueWorkQueue({
   const openBlueprintQueueItem = openBlueprintAction
     ? items.find((item) => item.id === openBlueprintAction.itemId) ?? null
     : null;
+  const openBlueprintModalActions = openBlueprintQueueItem
+    ? blueprintActionsForItem(openBlueprintQueueItem).filter(
+        (action) =>
+          canSubmitBlueprintAction(action) &&
+          blueprintActionMatchesState(openBlueprintQueueItem, action),
+      )
+    : [];
   const openBlueprintModalAction =
     openBlueprintQueueItem && openBlueprintAction
-      ? blueprintActionsForItem(openBlueprintQueueItem).find(
+      ? openBlueprintModalActions.find(
           (action) => action.key === openBlueprintAction.actionKey,
-        ) ?? null
+        ) ?? openBlueprintModalActions[0] ?? null
       : null;
-  const openBlueprintModalActions = openBlueprintQueueItem
-    ? blueprintActionsForItem(openBlueprintQueueItem).filter(canSubmitBlueprintAction)
-    : [];
   const applyManualAction = (queueItem: TaskItemQueueItem, actionKey: string) => {
     if (isPending && pendingId) return;
 
@@ -1348,7 +1546,9 @@ export function QueueWorkQueue({
                       workspaceWorkTypeKey,
                     );
                     const businessPreview = queueItemToBusinessPreview(queueItem);
-                    const blueprintItemActions = blueprintActionsForItem(queueItem);
+                    const blueprintItemActions = blueprintActionsForItem(queueItem).filter(
+                      (action) => blueprintActionMatchesState(queueItem, action),
+                    );
                     const srCaseHref = queueItem.serviceRequestWorkspaceHref;
 
                     return (
@@ -1383,7 +1583,16 @@ export function QueueWorkQueue({
                               {queueItemTitle(queueItem)}
                             </button>
                             <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
-                              <span>{queueItemRef(queueItem)}</span>
+                              {srCaseHref ? (
+                                <Link
+                                  href={srCaseHref}
+                                  className="font-medium text-blue-700 hover:text-blue-800 hover:underline"
+                                >
+                                  {queueItemRef(queueItem)}
+                                </Link>
+                              ) : (
+                                <span>{queueItemRef(queueItem)}</span>
+                              )}
                               <span>-</span>
                               <span>{queueItem.source === "MANUAL" ? "Manual" : "Auto"}</span>
                             </div>
@@ -1435,7 +1644,7 @@ export function QueueWorkQueue({
                               >
                                 Xử lý
                               </button>
-                              {srCaseHref ? (
+                              {false ? (
                                 <Link
                                   href={srCaseHref}
                                   className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
@@ -1616,7 +1825,7 @@ export function QueueWorkQueue({
       />
       {openBlueprintQueueItem && openBlueprintModalAction ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4">
-          <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
+          <div className="w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-slate-950">Xử lý kỹ thuật</div>
@@ -1673,6 +1882,81 @@ export function QueueWorkQueue({
                   </div>
                 </div>
               ) : null}
+              {openBlueprintQueueItem.technicalIssue ? (
+                <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-3 text-xs sm:grid-cols-3">
+                  <div className="sm:col-span-3">
+                    <div className="text-[11px] font-semibold uppercase text-slate-500">
+                      Mô tả kỹ thuật / nghi vấn
+                    </div>
+                    <div className="mt-1 text-sm font-semibold text-slate-900">
+                      {openBlueprintQueueItem.technicalIssue.summary ||
+                        openBlueprintQueueItem.technicalIssue.note ||
+                        queueItemTitle(openBlueprintQueueItem)}
+                    </div>
+                    {openBlueprintQueueItem.technicalIssue.summary &&
+                    openBlueprintQueueItem.technicalIssue.note ? (
+                      <div className="mt-1 text-xs leading-5 text-slate-500">
+                        {openBlueprintQueueItem.technicalIssue.note}
+                      </div>
+                    ) : null}
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase text-slate-500">
+                      Khu vực
+                    </div>
+                    <div className="mt-1 font-semibold text-slate-900">
+                      {technicalAreaLabel(openBlueprintQueueItem.technicalIssue.area)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase text-slate-500">
+                      Vendor hiện tại
+                    </div>
+                    <div className="mt-1 font-semibold text-slate-900">
+                      {openBlueprintQueueItem.technicalIssue.vendorNameSnap ||
+                        vendorOptions.find(
+                          (vendor) =>
+                            vendor.id === openBlueprintQueueItem.technicalIssue?.vendorId,
+                        )?.name ||
+                        "-"}
+                    </div>
+                    <div className="mt-0.5 text-slate-500">
+                      {actionModeText(openBlueprintQueueItem.technicalIssue.actionMode)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase text-slate-500">
+                      Chi phí
+                    </div>
+                    <div className="mt-1 font-semibold text-slate-900">
+                      Dự kiến: {formatMoneyValue(openBlueprintQueueItem.technicalIssue.estimatedCost)}
+                    </div>
+                    <div className="mt-0.5 text-slate-500">
+                      Thực tế: {formatMoneyValue(openBlueprintQueueItem.technicalIssue.actualCost)}
+                    </div>
+                  </div>
+                  <div className="sm:col-span-3">
+                    <div className="text-[11px] font-semibold uppercase text-slate-500">
+                      Chi tiết / linh kiện hiện tại
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-2 text-xs">
+                      <span className="rounded-full bg-slate-100 px-2 py-1 font-medium text-slate-700">
+                        {technicalCatalogLabel(openBlueprintQueueItem.technicalIssue.technicalDetailCatalog)}
+                      </span>
+                      {openBlueprintQueueItem.technicalIssue.supplyCatalog ? (
+                        <span className="rounded-full bg-blue-50 px-2 py-1 font-medium text-blue-700">
+                          {technicalCatalogLabel(openBlueprintQueueItem.technicalIssue.supplyCatalog)}
+                        </span>
+                      ) : null}
+                      {openBlueprintQueueItem.technicalIssue.mechanicalPartCatalog ? (
+                        <span className="rounded-full bg-indigo-50 px-2 py-1 font-medium text-indigo-700">
+                          {technicalCatalogLabel(openBlueprintQueueItem.technicalIssue.mechanicalPartCatalog)}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
                 {openBlueprintModalAction.description}
               </div>
@@ -1685,24 +1969,22 @@ export function QueueWorkQueue({
                   ),
                 )
                 .map((field) => {
-                const valueKey = blueprintValueKey(
-                  openBlueprintQueueItem,
-                  openBlueprintModalAction,
-                );
                 const pendingKey = `${openBlueprintQueueItem.id}:${openBlueprintModalAction.key}`;
                 const pending = isPending && pendingId === pendingKey;
+                const values = blueprintValuesFor(openBlueprintQueueItem, openBlueprintModalAction);
 
                 return (
                   <div key={field.key}>
                     <div className="mb-1.5 flex items-center justify-between gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                       <span>{field.label}</span>
-                      <span>{field.required ? "Bắt buộc" : field.kind}</span>
+                      <span>{field.required ? "Bắt buộc" : fieldKindLabel(field.kind)}</span>
                     </div>
                     <BlueprintActionFieldControl
                       field={field}
                       disabled={pending}
-                      value={blueprintValues[valueKey]?.[field.key]}
+                      value={values[field.key]}
                       vendorOptions={vendorOptions}
+                      technicalDetailCatalogOptions={technicalDetailOptionsForItem(openBlueprintQueueItem)}
                       onChange={(value) =>
                         updateBlueprintValue(
                           openBlueprintQueueItem,
@@ -1715,6 +1997,44 @@ export function QueueWorkQueue({
                   </div>
                 );
               })}
+              {openBlueprintModalAction.command === "service.startTechnicalIssue" &&
+              vendorChangedFor(openBlueprintQueueItem, openBlueprintModalAction) ? (
+                <div>
+                  <div className="mb-1.5 flex items-center justify-between gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    <span>Lý do đổi vendor</span>
+                    <span>Bắt buộc</span>
+                  </div>
+                  <BlueprintActionFieldControl
+                    field={{
+                      key: "vendorChangeNote",
+                      label: "Lý do đổi vendor",
+                      kind: "textarea",
+                      required: true,
+                    }}
+                    value={
+                      blueprintValuesFor(openBlueprintQueueItem, openBlueprintModalAction)
+                        .vendorChangeNote
+                    }
+                    disabled={
+                      isPending &&
+                      pendingId === `${openBlueprintQueueItem.id}:${openBlueprintModalAction.key}`
+                    }
+                    onChange={(value) =>
+                      updateBlueprintValue(
+                        openBlueprintQueueItem,
+                        openBlueprintModalAction,
+                        "vendorChangeNote",
+                        value,
+                      )
+                    }
+                  />
+                </div>
+              ) : null}
+              {actionError?.itemId === openBlueprintQueueItem.id ? (
+                <div className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
+                  {actionError.message}
+                </div>
+              ) : null}
               <div className="flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
                 <button
                   type="button"

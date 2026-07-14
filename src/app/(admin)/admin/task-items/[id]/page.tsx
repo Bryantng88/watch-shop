@@ -4,6 +4,7 @@ import { getTaskItemDetailPageRepo } from "@/domains/task/server/core/task-item-
 import { authorizeTaskItemDetail } from "@/domains/task/server/core/task-item-detail.service";
 import { listAssignableUsersRepo } from "@/domains/task/server/core/task.repo";
 import { getVendorList } from "@/domains/vendor/server/vendor.service";
+import { listTechnicalDetailCatalogOptions } from "@/domains/service/server/issue-board/service-issue-board.service";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
 import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
@@ -31,12 +32,18 @@ export default async function AdminTaskItemDetailPage(props: PageProps) {
   const vendorsPromise = perfStep("task-item-detail-page", "loadVendors", () =>
     getVendorList(),
   );
+  const technicalDetailCatalogPromise = perfStep(
+    "task-item-detail-page",
+    "loadTechnicalDetailCatalog",
+    () => listTechnicalDetailCatalogOptions(),
+  );
 
-  const [auth, item, users, vendors] = await Promise.all([
+  const [auth, item, users, vendors, technicalDetailCatalogOptions] = await Promise.all([
     authPromise,
     itemPromise,
     usersPromise,
     vendorsPromise,
+    technicalDetailCatalogPromise,
   ]);
 
   if (!item) notFound();
@@ -49,6 +56,7 @@ export default async function AdminTaskItemDetailPage(props: PageProps) {
       item={serialize(authorizedItem)}
       users={serialize(users)}
       vendors={serialize(vendors)}
+      technicalDetailCatalogOptions={serialize(technicalDetailCatalogOptions)}
       currentUser={serialize({
         id: auth.id,
         name: auth.name ?? null,

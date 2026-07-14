@@ -1,8 +1,9 @@
-import { ImageRole, Prisma, TaskExecutionTargetType } from "@prisma/client";
+import { ImageRole, Prisma, TaskExecutionActionType, TaskExecutionTargetType } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
 import { getQueueItemWorkflowState } from "@/domains/task/server/business-binding-workflow.service";
 import type {
   WatchListProjectionMediaState,
+  WatchListProjectionServiceState,
   WatchListProjectionSourceRow,
 } from "./watch-list-projection.types";
 
@@ -125,6 +126,7 @@ async function loadMediaStatesByWatchId(
       createdAt: true,
       taskItem: {
         select: {
+          id: true,
           note: true,
           status: true,
           updatedAt: true,
@@ -147,6 +149,8 @@ async function loadMediaStatesByWatchId(
       workflowKey: runtime?.workflowKey ?? null,
       workflowState: runtime?.currentState ?? null,
       taskStatus: clean(binding.taskItem?.status) || null,
+      taskItemId: binding.taskItem?.id ?? null,
+      workspaceHref: binding.taskItem?.id ? `/admin/task-items/${binding.taskItem.id}` : null,
       updatedAt:
         runtime?.updatedAt ??
         binding.taskItem?.updatedAt?.toISOString() ??
@@ -157,6 +161,142 @@ async function loadMediaStatesByWatchId(
       ...(byWatchId.get(binding.targetId) ?? []),
       item,
     ]);
+  }
+
+  return byWatchId;
+}
+
+function serviceStatusFromRequest(input: {
+  serviceRequestStatus?: unknown;
+  technicalIssueStatuses?: unknown[] | null;
+}): Pick<WatchListProjectionServiceState, "status" | "statusLabel" | "technicalIssueStatus"> {
+  const serviceRequestStatus = clean(input.serviceRequestStatus).toUpperCase();
+  const issueStatuses = (input.technicalIssueStatuses ?? [])
+    .map((item) => clean(item).toUpperCase())
+    .filter(Boolean);
+  const hasIssue = (status: string) => issueStatuses.includes(status);
+  const activeIssue = issueStatuses.find((status) =>
+    ["IN_PROGRESS", "CONFIRMED", "OPEN"].includes(status),
+  ) ?? null;
+
+  if (serviceRequestStatus === "CANCELED") {
+    return {
+      status: "NOT_REQUIRED",
+      statusLabel: "Không cần service",
+      technicalIssueStatus: activeIssue,
+    };
+  }
+
+  if (hasIssue("IN_PROGRESS") || serviceRequestStatus === "IN_PROGRESS") {
+    return {
+      status: "IN_SERVICE",
+      statusLabel: "Đang service",
+      technicalIssueStatus: "IN_PROGRESS",
+    };
+  }
+
+  if (["COMPLETED", "DELIVERED"].includes(serviceRequestStatus)) {
+    return {
+      status: "DONE",
+      statusLabel: "Đã xong",
+      technicalIssueStatus: issueStatuses.find((status) => status === "DONE") ?? null,
+    };
+  }
+
+  if (hasIssue("OPEN") || hasIssue("CONFIRMED") || serviceRequestStatus) {
+    return {
+      status: "WAITING",
+      statusLabel: "Chờ service",
+      technicalIssueStatus: activeIssue,
+    };
+  }
+
+  return {
+    status: "NOT_REQUIRED",
+    statusLabel: "Không cần service",
+    technicalIssueStatus: null,
+  };
+}
+
+async function loadServiceStatesByWatchId(
+  db: DB,
+  rows: Array<{ id: string; productId: string }>,
+): Promise<Map<string, WatchListProjectionServiceState>> {
+  const productIdToWatchId = new Map(
+    rows
+      .map((row) => [clean(row.productId), clean(row.id)] as const)
+      .filter(([productId, watchId]) => Boolean(productId && watchId)),
+  );
+  const productIds = [...productIdToWatchId.keys()];
+  if (!productIds.length) return new Map();
+
+  const serviceRequests = await dbOrTx(db).serviceRequest.findMany({
+    where: { productId: { in: productIds } },
+    select: {
+      id: true,
+      productId: true,
+      status: true,
+      updatedAt: true,
+      technicalIssue: {
+        select: {
+          executionStatus: true,
+          updatedAt: true,
+        },
+        orderBy: { updatedAt: "desc" },
+      },
+    },
+    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+  });
+
+  const serviceRequestIds = serviceRequests.map((row) => row.id);
+  const bindings = serviceRequestIds.length
+    ? await dbOrTx(db).taskExecution.findMany({
+      where: {
+        targetType: TaskExecutionTargetType.SERVICE_REQUEST,
+        targetId: { in: serviceRequestIds },
+        actionType: { not: TaskExecutionActionType.CANCELLED },
+        taskItemId: { not: null },
+      },
+      select: {
+        targetId: true,
+        taskItemId: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    })
+    : [];
+  const workspaceByServiceRequestId = new Map<string, string>();
+  for (const binding of bindings) {
+    if (!workspaceByServiceRequestId.has(binding.targetId) && binding.taskItemId) {
+      workspaceByServiceRequestId.set(binding.targetId, binding.taskItemId);
+    }
+  }
+
+  const byWatchId = new Map<string, WatchListProjectionServiceState>();
+  for (const request of serviceRequests) {
+    const watchId = productIdToWatchId.get(clean(request.productId));
+    if (!watchId || byWatchId.has(watchId)) continue;
+
+    const status = serviceStatusFromRequest({
+      serviceRequestStatus: request.status,
+      technicalIssueStatuses: request.technicalIssue.map((issue) => issue.executionStatus),
+    });
+    if (status.status === "NOT_REQUIRED" && clean(request.status).toUpperCase() === "CANCELED") {
+      continue;
+    }
+
+    const taskItemId = workspaceByServiceRequestId.get(request.id) ?? null;
+    byWatchId.set(watchId, {
+      watchId,
+      serviceRequestId: request.id,
+      status: status.status,
+      statusLabel: status.statusLabel,
+      serviceRequestStatus: clean(request.status) || null,
+      technicalIssueStatus: status.technicalIssueStatus,
+      taskItemId,
+      workspaceHref: taskItemId ? `/admin/task-items/${taskItemId}` : null,
+      updatedAt: request.updatedAt.toISOString(),
+    });
   }
 
   return byWatchId;
@@ -194,10 +334,15 @@ export async function loadWatchListProjectionSourceRows(
     db,
     rows.map((row) => row.id),
   );
+  const serviceStatesByWatchId = await loadServiceStatesByWatchId(
+    db,
+    rows.map((row) => ({ id: row.id, productId: row.productId })),
+  );
 
   return rows.map((row) => ({
     ...row,
     __mediaState: mediaStatesByWatchId.get(row.id) ?? [],
+    __serviceState: serviceStatesByWatchId.get(row.id) ?? null,
   })) as WatchListProjectionSourceRow[];
 }
 

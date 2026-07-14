@@ -183,10 +183,40 @@ export async function getBusinessEntityPreviewAction(input: {
                 customer: true,
                 vendor: true,
                 user: true,
+                technicalIssue: {
+                    orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }],
+                    include: {
+                        vendor: { select: { name: true } },
+                        user: { select: { name: true } },
+                        technicalDetailCatalog: {
+                            select: {
+                                area: true,
+                                name: true,
+                                code: true,
+                            },
+                        },
+                    },
+                },
+                TaskExecution: {
+                    where: {
+                        targetType: "SERVICE_REQUEST",
+                        actionType: { not: "CANCELLED" },
+                        taskItemId: { not: null },
+                    },
+                    orderBy: { createdAt: "desc" },
+                    take: 1,
+                    select: {
+                        taskItemId: true,
+                    },
+                },
             },
         });
 
         if (!row) return null;
+
+        const workspaceHref = row.TaskExecution?.[0]?.taskItemId
+            ? `/admin/task-items/${row.TaskExecution[0].taskItemId}`
+            : null;
 
         return {
             type: "SERVICE",
@@ -201,7 +231,7 @@ export async function getBusinessEntityPreviewAction(input: {
             imageUrl:
                 mediaUrl(row.primaryImageUrlSnapshot) ||
                 imageUrlFromProduct(row.product),
-            href: `/admin/service/${row.id}`,
+            href: workspaceHref ?? `/admin/service/${row.id}`,
             facts: [
                 { label: "Status", value: row.status || "-" },
                 { label: "Priority", value: row.priority || "-" },
@@ -209,6 +239,39 @@ export async function getBusinessEntityPreviewAction(input: {
                 { label: "Kỹ thuật", value: row.user?.name || row.technicianNameSnap || "-" },
                 { label: "Vendor", value: row.vendor?.name || row.vendorNameSnap || "-" },
             ],
+            sections: row.technicalIssue.length
+                ? [
+                    {
+                        title: "Technical Issues",
+                        subtitle: "Các dòng TI thuộc SR này",
+                        items: row.technicalIssue.map((issue) => ({
+                            id: issue.id,
+                            title:
+                                issue.summary ||
+                                issue.note ||
+                                issue.technicalDetailCatalog?.name ||
+                                issue.area ||
+                                "Technical Issue",
+                            subtitle:
+                                issue.technicalDetailCatalog?.area ||
+                                issue.area ||
+                                issue.technicalDetailCatalog?.code ||
+                                null,
+                            status: issue.executionStatus,
+                            facts: [
+                                { label: "Vendor", value: issue.vendor?.name || issue.vendorNameSnap || "-" },
+                                { label: "Kỹ thuật", value: issue.user?.name || "-" },
+                                { label: "Chi phí dự kiến", value: issue.estimatedCost?.toString() || "-" },
+                                { label: "Chi phí thực tế", value: issue.actualCost?.toString() || "-" },
+                            ],
+                            href: workspaceHref,
+                        })),
+                    },
+                ]
+                : [],
+            actions: workspaceHref
+                ? [{ label: "Mở workspace SR", href: workspaceHref }]
+                : undefined,
         };
     }
 

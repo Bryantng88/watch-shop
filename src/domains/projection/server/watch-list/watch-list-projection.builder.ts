@@ -177,7 +177,7 @@ export const watchListProjectionBuilder: ProjectionBuilder = {
   version: WATCH_LIST_PROJECTION_VERSION,
   description: "Read model for Admin Watch List rows.",
   sourceEvents: [...WATCH_LIST_PROJECTION_SOURCE_EVENTS],
-  targetTypes: ["WATCH", "PRODUCT"],
+  targetTypes: ["WATCH", "PRODUCT", "SERVICE_REQUEST", "TECHNICAL_ISSUE", "PAYMENT"],
   buildFromEvent: buildWatchListProjectionFromEvent,
   rebuild: rebuildWatchListProjection,
 };

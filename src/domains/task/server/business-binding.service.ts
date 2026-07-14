@@ -1,4 +1,4 @@
-import { TaskExecutionActionType, TaskExecutionTargetType, type Prisma } from "@prisma/client";
+import { TaskExecutionActionType, TaskExecutionTargetType, TaskStatus, type Prisma } from "@prisma/client";
 import { dbOrTx, withDbTransaction, type DB } from "@/server/db/client";
 import { createSystemActivity } from "./activity";
 import {
@@ -17,7 +17,10 @@ import {
   listAvailableManualTransitionsForQueueItem,
   resolveBindingWorkflowDefinition,
 } from "./business-binding-workflow.service";
-import { resolveAppliedWorkflowSnapshot } from "@/domains/blueprint/shared/workspace-capabilities";
+import {
+  parseWorkspaceDefinitionSnapshot,
+  resolveAppliedWorkflowSnapshot,
+} from "@/domains/blueprint/shared/workspace-capabilities";
 import type { WorkflowDefinition } from "@/domains/workflow-definition/server";
 import type {
   BindTaskItemToBusinessObjectInput,
@@ -138,6 +141,81 @@ function noteField(note: string | null | undefined, key: string) {
   return clean(String(note ?? "").match(pattern)?.[1]);
 }
 
+function normalizeKey(value: unknown) {
+  return clean(value).toLowerCase();
+}
+
+function workflowKeyFromTaskItemNote(note: string | null | undefined) {
+  return (
+    clean(resolveAppliedWorkflowSnapshot({ note })?.key) ||
+    noteField(note, "workflowKey") ||
+    null
+  );
+}
+
+function bindingMatchesTaskItemWorkflow(
+  binding: { metadataJson: unknown },
+  expectedWorkflowKey: string | null,
+) {
+  if (!expectedWorkflowKey) return true;
+
+  const runtime = getQueueItemWorkflowState(binding);
+  const metadata = asRecord(binding.metadataJson);
+  const workflowKey = normalizeKey(runtime?.workflowKey ?? metadata.workflowKey);
+
+  if (!workflowKey) return true;
+  return workflowKey === normalizeKey(expectedWorkflowKey);
+}
+
+function serviceOperationWorkspaceRoleFromNote(note: string | null | undefined) {
+  const snapshot = parseWorkspaceDefinitionSnapshot(note);
+  return cleanUpper(
+    snapshot?.operationWorkspaceRole ??
+      snapshot?.workspaceRole?.key ??
+      String(note ?? "").match(/^serviceOperationWorkspaceRole:\s*([A-Z_]+)\s*$/im)?.[1] ??
+      String(note ?? "").match(/^operationWorkspaceRole:\s*([A-Z_]+)\s*$/im)?.[1],
+  );
+}
+
+async function moveCompletedServiceOperationBindingsToDone(input: {
+  db: DB;
+  taskId: string;
+  sourceTaskItemId: string;
+}) {
+  const taskItems = await dbOrTx(input.db).taskItem.findMany({
+    where: {
+      taskId: input.taskId,
+      status: { not: TaskStatus.CANCELLED },
+    },
+    select: { id: true, note: true },
+    orderBy: { sortOrder: "asc" },
+  });
+  const doneTaskItem = taskItems.find(
+    (item) => serviceOperationWorkspaceRoleFromNote(item.note) === "DONE",
+  );
+
+  if (!doneTaskItem) return;
+
+  const bindings = await findBusinessBindingsByTaskItem(input.db, input.sourceTaskItemId);
+  const doneBindingIds = bindings
+    .filter((binding) => {
+      const runtime = getQueueItemWorkflowState(binding);
+      return (
+        binding.targetType === TaskExecutionTargetType.TECHNICAL_ISSUE &&
+        runtime?.workflowKey === "service-operation-technical-bench" &&
+        runtime.currentState === "DONE"
+      );
+    })
+    .map((binding) => binding.id);
+
+  if (!doneBindingIds.length) return;
+
+  await dbOrTx(input.db).taskExecution.updateMany({
+    where: { id: { in: doneBindingIds } },
+    data: { taskItemId: doneTaskItem.id },
+  });
+}
+
 async function metadataWithWorkspaceWorkflowSnapshot(
   db: DB,
   input: {
@@ -242,6 +320,7 @@ function resolveWorkflowQueueStatus(input: {
   const state = runtime.currentState.toUpperCase();
   const metadata = asRecord(runtime.metadata);
   if (state.includes("RETURNED")) {
+    if (runtime.workflowKey === "watch-media-processing") return "IN_PROGRESS";
     return "RETURNED";
   }
 
@@ -330,6 +409,7 @@ type QueueBusinessPreview = {
   imageUrl: string | null;
   imageUrls: string[];
   mediaWorkProgress?: QueueItemDTO["mediaWorkProgress"];
+  technicalIssue?: QueueItemDTO["technicalIssue"];
 };
 
 function hasWatchContentPreview(watch: {
@@ -556,8 +636,33 @@ async function buildQueueBusinessPreviewMap(
           priority: true,
           vendorId: true,
           vendorNameSnap: true,
+          estimatedCost: true,
+          actualCost: true,
+          technicalDetailCatalogId: true,
           supplyCatalogId: true,
           mechanicalPartCatalogId: true,
+          technicalDetailCatalog: {
+            select: {
+              id: true,
+              area: true,
+              code: true,
+              name: true,
+            },
+          },
+          SupplyCatalog: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+            },
+          },
+          MechanicalPartCatalog: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+            },
+          },
           serviceRequest: {
             select: {
               refNo: true,
@@ -647,6 +752,41 @@ async function buildQueueBusinessPreviewMap(
         : String(issue.executionStatus || ""),
       imageUrl,
       imageUrls: imageUrl ? [imageUrl] : [],
+      technicalIssue: {
+        id: issue.id,
+        summary: issue.summary ?? null,
+        note: issue.note ?? null,
+        area: issue.area ?? null,
+        actionMode: issue.actionMode ?? null,
+        executionStatus: issue.executionStatus ?? null,
+        vendorId: issue.vendorId ?? null,
+        vendorNameSnap: issue.vendorNameSnap ?? null,
+        estimatedCost: issue.estimatedCost == null ? null : Number(issue.estimatedCost),
+        actualCost: issue.actualCost == null ? null : Number(issue.actualCost),
+        technicalDetailCatalogId: issue.technicalDetailCatalogId ?? null,
+        technicalDetailCatalog: issue.technicalDetailCatalog
+          ? {
+              id: issue.technicalDetailCatalog.id,
+              area: issue.technicalDetailCatalog.area ?? null,
+              code: issue.technicalDetailCatalog.code ?? null,
+              name: issue.technicalDetailCatalog.name ?? null,
+            }
+          : null,
+        supplyCatalog: issue.SupplyCatalog
+          ? {
+              id: issue.SupplyCatalog.id,
+              code: issue.SupplyCatalog.code ?? null,
+              name: issue.SupplyCatalog.name ?? null,
+            }
+          : null,
+        mechanicalPartCatalog: issue.MechanicalPartCatalog
+          ? {
+              id: issue.MechanicalPartCatalog.id,
+              code: issue.MechanicalPartCatalog.code ?? null,
+              name: issue.MechanicalPartCatalog.name ?? null,
+            }
+          : null,
+      },
     });
   }
 
@@ -795,14 +935,34 @@ export async function listTaskItemQueueItems(
   const cleanTaskItemId = clean(taskItemId);
   assertPresent(cleanTaskItemId, "Missing taskItemId");
 
+  const taskItem = await dbOrTx(db).taskItem.findUnique({
+    where: { id: cleanTaskItemId },
+    select: { taskId: true, note: true },
+  });
+
+  if (
+    taskItem?.taskId &&
+    serviceOperationWorkspaceRoleFromNote(taskItem.note) === "PROCESSING"
+  ) {
+    await moveCompletedServiceOperationBindingsToDone({
+      db,
+      taskId: taskItem.taskId,
+      sourceTaskItemId: cleanTaskItemId,
+    });
+  }
+
   const [bindings, activities] = await Promise.all([
     findBusinessBindingsByTaskItem(db, cleanTaskItemId),
     findQueueActivitiesByTaskItem(db, cleanTaskItemId),
   ]);
+  const expectedWorkflowKey = workflowKeyFromTaskItemNote(taskItem?.note ?? null);
+  const visibleBindings = bindings.filter((binding) =>
+    bindingMatchesTaskItemWorkflow(binding, expectedWorkflowKey),
+  );
   const activityStats = buildQueueActivityStats(activities);
-  const businessPreviews = await buildQueueBusinessPreviewMap(db, bindings);
+  const businessPreviews = await buildQueueBusinessPreviewMap(db, visibleBindings);
 
-  return bindings
+  return visibleBindings
     .filter((binding) => binding.taskItemId)
     .map((binding) => {
       const metadata = asRecord(binding.metadataJson);
@@ -886,6 +1046,7 @@ export async function listTaskItemQueueItems(
         intakeNote: queueItemIntakeNote(metadata),
         mediaAssetAttachedAt: metadataText(metadata, ["mediaAssetAttachedAt"]),
         mediaWorkProgress: progress,
+        technicalIssue: businessPreview?.technicalIssue ?? null,
         updatedAt: formatDate(updatedAt),
       };
     });

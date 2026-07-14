@@ -310,6 +310,19 @@ function isServiceOperationTechnicalRoute(input: {
   );
 }
 
+function workspaceKindFromNote(note: string | null | undefined) {
+  const snapshot = parseWorkspaceDefinitionSnapshot(note);
+  const raw =
+    snapshot?.workspaceKind ??
+    String(note ?? "").match(/^workspaceKind:\s*([^\r\n]+)/im)?.[1]?.trim();
+
+  return clean(raw).toUpperCase();
+}
+
+function isFlowStageWorkTicket(item: { note: string | null }) {
+  return workspaceKindFromNote(item.note) === "FLOW_STAGE_WORKSPACE";
+}
+
 function scopeServiceOperationWorkspaceTickets<T extends { item: { note: string | null } }>(
   tickets: T[],
   input: {
@@ -833,7 +846,7 @@ async function ensureServiceRequestWorkspace(input: {
   };
 }
 
-async function moveExistingServiceOperationBindingToTechnicalWorkspace(input: {
+async function moveExistingFlowStageBindingToWorkspace(input: {
   db: DB;
   taskId: string;
   taskItemId: string;
@@ -841,47 +854,38 @@ async function moveExistingServiceOperationBindingToTechnicalWorkspace(input: {
   targetId: string;
   metadataJson: Prisma.InputJsonObject;
 }) {
-  if (normalizeTargetType(input.targetType) !== "TECHNICAL_ISSUE") return null;
+  const targetType = normalizeTargetType(input.targetType);
+  if (!isSupportedTargetType(targetType)) return null;
 
   const client = dbOrTx(input.db);
-  const existingInWorkspace = await findTaskItemBusinessBinding(input.db, {
-    taskId: input.taskId,
-    taskItemId: input.taskItemId,
-    targetType: input.targetType,
-    targetId: input.targetId,
-    actionType: TaskExecutionActionType.LINKED,
-    metadataJson: input.metadataJson,
-  });
-
-  if (existingInWorkspace) return existingInWorkspace;
-
-  const existingElsewhere = await client.taskExecution.findFirst({
+  const activeBindings = await client.taskExecution.findMany({
     where: {
       taskId: input.taskId,
-      targetType: TaskExecutionTargetType.TECHNICAL_ISSUE,
+      targetType,
       targetId: input.targetId,
       actionType: { not: TaskExecutionActionType.CANCELLED },
       taskItemId: { not: null },
     },
     select: {
       id: true,
+      taskItemId: true,
     },
     orderBy: { createdAt: "desc" },
   });
-
-  if (!existingElsewhere) return null;
-
-  await client.taskExecution.update({
-    where: { id: existingElsewhere.id },
-    data: {
-      taskItemId: input.taskItemId,
-    },
-  });
+  const staleBindingIds = activeBindings
+    .filter((binding) => binding.taskItemId !== input.taskItemId)
+    .map((binding) => binding.id);
+  if (staleBindingIds.length) {
+    await client.taskExecution.updateMany({
+      where: { id: { in: staleBindingIds } },
+      data: { taskItemId: null },
+    });
+  }
 
   return findTaskItemBusinessBinding(input.db, {
     taskId: input.taskId,
     taskItemId: input.taskItemId,
-    targetType: input.targetType,
+    targetType,
     targetId: input.targetId,
     actionType: TaskExecutionActionType.LINKED,
     metadataJson: input.metadataJson,
@@ -1178,9 +1182,9 @@ export async function consumeBusinessEventForCoordination(
 
   if (
     workTicketResolution.eventBinding.mode !== "PROGRESS" &&
-    isServiceOperationTechnicalRoute({ route, targetType })
+    isFlowStageWorkTicket(workTicket)
   ) {
-    await moveExistingServiceOperationBindingToTechnicalWorkspace({
+    await moveExistingFlowStageBindingToWorkspace({
       db,
       taskId: task.id,
       taskItemId: workTicket.id,
@@ -1191,25 +1195,15 @@ export async function consumeBusinessEventForCoordination(
   }
 
   if (workTicketResolution.eventBinding.mode === "PROGRESS") {
-    const existingBinding =
-      isServiceOperationTechnicalRoute({ route, targetType })
-        ? await moveExistingServiceOperationBindingToTechnicalWorkspace({
-            db,
-            taskId: task.id,
-            taskItemId: workTicket.id,
-            targetType,
-            targetId: canonicalTargetId,
-            metadataJson,
-          })
-        : await findTaskItemBusinessBinding(db, {
-            taskId: task.id,
-            taskItemId: workTicket.id,
-            targetType,
-            targetId: canonicalTargetId,
-            actionType: TaskExecutionActionType.LINKED,
-            createdByUserId: input.actorUserId ?? null,
-            metadataJson,
-          });
+    const existingBinding = await findTaskItemBusinessBinding(db, {
+      taskId: task.id,
+      taskItemId: workTicket.id,
+      targetType,
+      targetId: canonicalTargetId,
+      actionType: TaskExecutionActionType.LINKED,
+      createdByUserId: input.actorUserId ?? null,
+      metadataJson,
+    });
 
     if (!existingBinding) {
       return skipped("NO_EXISTING_WORKSPACE_ITEM", route, resolvedScope);

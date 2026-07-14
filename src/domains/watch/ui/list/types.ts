@@ -127,8 +127,11 @@ export type WatchRow = {
         vendorName: string | null;
         mediaStatus: string;
         mediaStatusLabel: string;
+        mediaWorkspaceHref?: string | null;
         serviceStatus: string;
         serviceStatusLabel: string;
+        serviceRequestId?: string | null;
+        serviceWorkspaceHref?: string | null;
         saleStatus: string;
         saleStatusLabel: string;
         salePrice: number | null;

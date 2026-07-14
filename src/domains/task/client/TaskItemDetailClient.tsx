@@ -103,6 +103,13 @@ type VendorOption = {
   name: string;
 };
 
+type TechnicalDetailCatalogOption = {
+  id: string;
+  area?: string | null;
+  code?: string | null;
+  name?: string | null;
+};
+
 type TaskItemChecklist = {
   id: string;
   title: string;
@@ -2016,11 +2023,13 @@ export default function TaskItemDetailClient({
   item,
   users,
   vendors,
+  technicalDetailCatalogOptions,
   currentUser,
 }: {
   item: TaskItemDetail;
   users: UserSummary[];
   vendors?: VendorOption[];
+  technicalDetailCatalogOptions?: TechnicalDetailCatalogOption[];
   currentUser?: UserSummary | null;
 }) {
   const [activeTab, setActiveTab] = useState<DetailTab>(() =>
@@ -2368,6 +2377,7 @@ export default function TaskItemDetailClient({
                 operationalActions={operationalActions}
                 serviceRequestId={canCreateServiceOperationTechnicalIssue ? serviceRequestId : null}
                 vendorOptions={vendors ?? []}
+                technicalDetailCatalogOptions={technicalDetailCatalogOptions ?? []}
                 currentUser={currentUser}
                 onOpenQueueActivity={openQueueActivity}
               />

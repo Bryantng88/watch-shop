@@ -15,6 +15,7 @@ import {
   completeTechnicalIssue,
   confirmTechnicalIssue,
   createTechnicalIssue,
+  cancelTechnicalIssue,
   startTechnicalIssue,
 } from "@/domains/service/server/issue-board/service-issue-board.service";
 
@@ -428,6 +429,9 @@ export async function runServiceOperationBlueprintAction(
         technicalDetailCatalogId: requiredField(fields, "technicalDetailCatalogId"),
         actionMode: actionModeField(fields, true) ?? "INTERNAL",
         vendorId: optionalField(fields, "vendorId"),
+        estimatedCost: moneyField(fields, "estimatedCost", false),
+        startedNote: optionalField(fields, "startedNote"),
+        vendorChangeNote: optionalField(fields, "vendorChangeNote"),
       });
 
       return {
@@ -450,6 +454,23 @@ export async function runServiceOperationBlueprintAction(
         actualCost: moneyField(fields, "actualCost", true),
         resolutionNote: optionalField(fields, "resolutionNote"),
         createPayment: booleanField(fields, "createPayment", false),
+      });
+
+      return {
+        ok: true,
+        actionKey,
+        technicalIssueId: targetId,
+        result,
+      };
+    }
+
+    if (action.command === "service.cancelTechnicalIssue") {
+      if (targetType !== "TECHNICAL_ISSUE" || !targetId) {
+        return { ok: false, actionKey, error: "TECHNICAL_ISSUE_TARGET_REQUIRED" };
+      }
+
+      const result = await cancelTechnicalIssue(targetId, {
+        reason: requiredField(fields, "cancelReason"),
       });
 
       return {

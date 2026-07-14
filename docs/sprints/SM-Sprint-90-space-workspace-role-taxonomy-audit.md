@@ -256,12 +256,32 @@ Implemented in code:
   domain status for `SERVICE_REQUEST`, `TECHNICAL_ISSUE`, `WATCH`, and
   `PAYMENT` before moving bindings.
 - Media dashboard queue counts now use the flow-stage contract for the first
-  runtime proof: Media Space rows count active `WATCH` bindings only, exclude
-  cancelled bindings, exclude item-runtime terminal bindings, and exclude
-  terminal Watch targets using the configured `WATCH` terminal states.
+  runtime proof: Media Space rows count the current active `WATCH` binding only,
+  exclude cancelled bindings, and exclude item-runtime terminal bindings while
+  allowing final-stage DONE to remain in Publish. Terminal Watch targets are
+  excluded using the configured `WATCH` terminal states except when that target
+  is still owned by the final Publish workspace.
+  Historical Media events remain in activity/timeline rows; flow-stage queue
+  rows are current ownership, not cumulative milestone history.
+  Media dashboard load also normalizes legacy duplicate `WATCH` bindings across
+  Photography, Media Processing, and Publish: DONE/RETURNED/RECALLED states are
+  treated as stage transition signals, while the remaining active binding is the
+  stage ownership source of truth. Final-stage DONE remains in the final
+  workspace because no later stage can own the item. Orphaned Publish DONE
+  bindings from the previous cleanup rule are restored to Publish on dashboard
+  load when the Watch is not already owned by another Media stage.
+  The Media Processing projection and fallback read path exclude DONE queue
+  items. RETURNED remains visible as IN_PROGRESS while the item still belongs to
+  Media Processing, and is cleared only after ownership really moves back to
+  Photoshoot.
+- Payment dashboard queue counts follow the same flow-stage ownership contract:
+  Payment Space rows count the current active `PAYMENT` binding only and exclude
+  terminal payments using the configured `PAYMENT` terminal states.
 - Technical dashboard queue counts now use the Service composite contract:
   - legacy `serviceOperationWorkspaceRole: SR_CASE` is treated as
     `CASE_WORKSPACE`;
+  - SR Case rows remain identity-bound workspaces and show their Service
+    Request/watch identity preview;
   - legacy `INSPECT`, `PROCESSING`, and `DONE` roles are treated as
     `FLOW_STAGE_WORKSPACE` rows with matching `flowStageKey`;
   - SR Case rows count active TechnicalIssues for the ServiceRequest plus

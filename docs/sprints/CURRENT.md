@@ -155,9 +155,28 @@ Current handoff:
 - Sprint 90 Media proof slice is implemented: the current Media core flow is in
   the operation Space view, Media flow-stage rows sort/filter by
   `coreFlowKey`/stage metadata with legacy key fallback, and stage item counts
-  use active unfinished `WATCH` bindings instead of generic binding totals. A
-  Space may contain multiple core flows, but each flow-stage view must declare
-  the flow it renders so the UI does not mix stage rows from different flows.
+  use the current stage-owning `WATCH` binding instead of generic binding
+  totals. A Space may contain multiple core flows, but each flow-stage view must
+  declare the flow it renders so the UI does not mix stage rows from different
+  flows.
+- Sprint 90 flow-stage ownership rule is shared by every
+  `FLOW_STAGE_WORKSPACE` Space: item bindings represent the current active stage
+  only. Moving to the next stage moves the active binding out of the previous
+  stage, while activity and timeline rows preserve the historical events.
+- Media dashboard now normalizes legacy duplicate stage bindings on load:
+  completed or returned/recalled item states clear stale stage links when the
+  next/previous stage binding exists. Final-stage `DONE` remains in the final
+  workspace because there is no later stage to own the item. Workflow status
+  remains meaningful inside the current stage, but it is not the source of truth
+  for stage ownership. Media dashboard load also restores orphaned Publish
+  `DONE` bindings that were previously detached by the old cleanup rule.
+- Media Processing item projection/read fallback is active-stage only: `DONE`
+  media-processing items are excluded after ownership moves to Publish.
+  `RETURNED` stays visible as `IN_PROGRESS` while the item still belongs to Media
+  Processing; it is cleared only after ownership really moves back to Photoshoot.
+- Identity previews are still shown for identity-bound `CASE_WORKSPACE` rows
+  such as Service Request cases. Flow-stage rows use stage icons because they
+  represent process stages, not a single business-object workspace identity.
 - Sprint 90 taxonomy guardrail slice is implemented: Operational Blueprint
   Workspace roles can declare `workspaceKind`, Operation Model authoring exposes
   it, validation warns on missing/mismatched role kinds, missing case identity,

@@ -2,6 +2,7 @@ import { dbOrTx, type DB } from "@/server/db/client";
 import { getTaskItemActivityViewModels } from "@/domains/task/server/activity";
 import { listTaskItemQueueItems } from "@/domains/task/server/business-binding.service";
 import type { QueueItemDTO } from "@/domains/task/server/business-binding.types";
+import { getQueueItemWorkflowState } from "@/domains/task/server/business-binding-workflow.service";
 import { listWatchMediaQueueProjectionItemsWithFallback } from "@/domains/projection/server/watch-media-queue.projection";
 import { TaskExecutionActionType, TaskExecutionTargetType } from "@prisma/client";
 import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
@@ -27,6 +28,10 @@ function noteWorkTypeKey(note?: string | null) {
 
 function shouldUseWatchMediaQueueProjection(note?: string | null) {
   return noteWorkTypeKey(note) === "media-processing";
+}
+
+function isMediaFlowWorkType(value?: string | null) {
+  return value === "photography" || value === "media-processing" || value === "publish";
 }
 
 function serviceOperationWorkspaceRole(note?: string | null) {
@@ -205,11 +210,19 @@ async function listServiceRequestTechnicalIssueQueueItems(
 async function listQueueItemsForTaskItemDetail(
   db: DB,
   input: {
+    taskId: string;
     taskItemId: string;
     note?: string | null;
   },
 ) {
   if (!shouldUseWatchMediaQueueProjection(input.note)) {
+    if (noteWorkTypeKey(input.note) === "publish") {
+      await restorePublishDoneQueueItemsForDetail(db, {
+        taskId: input.taskId,
+        publishTaskItemId: input.taskItemId,
+      });
+    }
+
     if (
       noteWorkTypeKey(input.note) === "service-operation" &&
       !["INSPECT", "PROCESSING", "DONE"].includes(
@@ -236,6 +249,70 @@ async function listQueueItemsForTaskItemDetail(
   });
 
   return result.items;
+}
+
+async function restorePublishDoneQueueItemsForDetail(
+  db: DB,
+  input: { taskId: string; publishTaskItemId: string },
+) {
+  const client = dbOrTx(db);
+  const mediaTaskItems = await client.taskItem.findMany({
+    where: { taskId: input.taskId },
+    select: { id: true, note: true },
+  });
+  const mediaTaskItemIds = mediaTaskItems
+    .filter((item) => isMediaFlowWorkType(noteWorkTypeKey(item.note)))
+    .map((item) => item.id);
+  if (!mediaTaskItemIds.includes(input.publishTaskItemId)) return;
+
+  const linkedBindings = await client.taskExecution.findMany({
+    where: {
+      taskId: input.taskId,
+      taskItemId: { in: mediaTaskItemIds },
+      targetType: TaskExecutionTargetType.WATCH,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+    },
+    select: { targetId: true },
+  });
+  const linkedTargetIds = new Set(linkedBindings.map((binding) => binding.targetId));
+
+  const orphanBindings = await client.taskExecution.findMany({
+    where: {
+      taskId: input.taskId,
+      taskItemId: null,
+      targetType: TaskExecutionTargetType.WATCH,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+    },
+    select: {
+      id: true,
+      targetId: true,
+      metadataJson: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  const restoreIdsByTarget = new Map<string, string>();
+
+  for (const binding of orphanBindings) {
+    if (linkedTargetIds.has(binding.targetId) || restoreIdsByTarget.has(binding.targetId)) {
+      continue;
+    }
+
+    const runtime = getQueueItemWorkflowState(binding);
+    if (runtime?.workflowKey !== "watch-publish" || runtime.currentState !== "DONE") {
+      continue;
+    }
+
+    restoreIdsByTarget.set(binding.targetId, binding.id);
+  }
+
+  const restoreIds = [...restoreIdsByTarget.values()];
+  if (!restoreIds.length) return;
+
+  await client.taskExecution.updateMany({
+    where: { id: { in: restoreIds } },
+    data: { taskItemId: input.publishTaskItemId },
+  });
 }
 
 async function listDefaultAdminShareUserIds(db: DB) {
@@ -528,6 +605,7 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
   const [queueItems, sharedUsers] = await Promise.all([
     perfStep("task-item-detail-repo", "queueItems", () =>
       listQueueItemsForTaskItemDetail(db, {
+        taskId: item.taskId,
         taskItemId: item.id,
         note: item.note,
       }),

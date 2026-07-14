@@ -300,7 +300,6 @@ export async function createTechnicalIssue(input: {
     });
 
     await syncServiceRequestStatusFromIssues(prisma as any, serviceRequestId);
-
     await recordTechnicalIssueEvent({
         eventKey: "technical_issue.created",
         technicalIssueId: created.id,
@@ -363,6 +362,9 @@ export async function startTechnicalIssue(input: {
     technicalDetailCatalogId?: string | null;
     actionMode?: string | null;
     vendorId?: string | null;
+    estimatedCost?: unknown;
+    startedNote?: string | null;
+    vendorChangeNote?: string | null;
 }) {
     const id = cleanId(input.id);
     if (!id) throw new Error("Missing issue id");
@@ -375,6 +377,7 @@ export async function startTechnicalIssue(input: {
             executionStatus: true,
             isConfirmed: true,
             serviceRequestId: true,
+            vendorId: true,
         } as any,
     });
 
@@ -391,9 +394,14 @@ export async function startTechnicalIssue(input: {
 
     const vendorId = cleanId(input.vendorId);
     const actionMode = cleanId(input.actionMode) ?? "INTERNAL";
+    const isChangingVendor = vendorId !== cleanId((issue as any).vendorId);
 
     if (String(actionMode).toUpperCase() === "VENDOR" && !vendorId) {
         throw new Error("Vui lòng chọn vendor khi xử lý bởi vendor.");
+    }
+
+    if (isChangingVendor && !cleanText(input.vendorChangeNote)) {
+        throw new Error("Vui lòng nhập lý do đổi vendor.");
     }
 
     const updated = await prisma.technicalIssue.update({
@@ -407,6 +415,7 @@ export async function startTechnicalIssue(input: {
             vendorId,
             vendorNameSnap: await vendorName(vendorId),
             technicalDetailCatalogId: detail.id,
+            estimatedCost: input.estimatedCost === undefined ? undefined : decimalOrNull(input.estimatedCost),
             updatedAt: new Date(),
         } as any,
     });
@@ -419,7 +428,14 @@ export async function startTechnicalIssue(input: {
         actorUserId: cleanId(input.actorId),
         note: "Technical Issue đã bắt đầu xử lý",
     });
-
+    if (cleanText(input.vendorChangeNote)) {
+        await syncTechnicalIssueToTasks(prisma as any, {
+            technicalIssueId: id,
+            event: "TECHNICAL_ISSUE_VENDOR_CHANGED",
+            actorUserId: cleanId(input.actorId),
+            note: `Ly do doi vendor: ${cleanText(input.vendorChangeNote)}`,
+        });
+    }
     await recordTechnicalIssueEvent({
         eventKey: "technical_issue.started",
         technicalIssueId: id,
@@ -429,6 +445,10 @@ export async function startTechnicalIssue(input: {
             executionStatus: "IN_PROGRESS",
             actionMode,
             vendorId,
+            technicalDetailCatalogId: detail.id,
+            estimatedCost: decimalOrNull(input.estimatedCost),
+            startedNote: cleanText(input.startedNote),
+            vendorChangeNote: cleanText(input.vendorChangeNote),
         },
     });
 

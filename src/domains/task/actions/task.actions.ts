@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Prisma, TaskExecutionTargetType, TaskStatus, TaskPriority, TaskKind } from "@prisma/client";
+import { Prisma, TaskExecutionActionType, TaskExecutionTargetType, TaskStatus, TaskPriority, TaskKind } from "@prisma/client";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
 import {
@@ -90,6 +90,15 @@ function cleanText(value: unknown) {
   return String(value ?? "").trim();
 }
 
+function manualActionKeyForBlueprintAction(actionKey: string) {
+  if (actionKey === "classify_technical_issue") return "confirm-issue";
+  if (actionKey === "close_no_issue") return "close-no-issue";
+  if (actionKey === "start_processing") return "start-work";
+  if (actionKey === "complete_processing") return "mark-done";
+  if (actionKey === "cancel_processing") return "cancel-work";
+  return null;
+}
+
 async function resolveActivityTargetTitle(input: {
   targetType: string;
   targetId: string;
@@ -132,6 +141,96 @@ function blueprintIdentityFromNote(note?: string | null) {
   return {
     key: normalizeTextKey(blueprintKey),
     source: String(blueprintSource || "REGISTRY").trim().toUpperCase(),
+  };
+}
+
+function serviceOperationWorkspaceRoleFromNote(note?: string | null) {
+  const snapshot = parseWorkspaceDefinitionSnapshot(note);
+  return cleanText(
+    snapshot?.operationWorkspaceRole ??
+      snapshot?.workspaceRole?.key ??
+      String(note ?? "").match(/^serviceOperationWorkspaceRole:\s*([A-Z_]+)\s*$/im)?.[1] ??
+      String(note ?? "").match(/^operationWorkspaceRole:\s*([A-Z_]+)\s*$/im)?.[1],
+  ).toUpperCase();
+}
+
+async function moveServiceOperationDoneBinding(input: {
+  bindingId: string;
+  actorUserId?: string | null;
+}) {
+  const binding = await prisma.taskExecution.findUnique({
+    where: { id: input.bindingId },
+    select: {
+      id: true,
+      taskId: true,
+      taskItemId: true,
+      targetType: true,
+      targetId: true,
+      actionType: true,
+    },
+  });
+
+  if (!binding || binding.targetType !== TaskExecutionTargetType.TECHNICAL_ISSUE) {
+    return null;
+  }
+
+  const taskItems = await prisma.taskItem.findMany({
+    where: {
+      taskId: binding.taskId,
+      status: { not: TaskStatus.CANCELLED },
+    },
+    select: {
+      id: true,
+      note: true,
+    },
+  });
+  const doneTaskItem = taskItems.find(
+    (item) => serviceOperationWorkspaceRoleFromNote(item.note) === "DONE",
+  );
+
+  if (!doneTaskItem) return null;
+
+  const existingDoneBinding = await prisma.taskExecution.findFirst({
+    where: {
+      taskId: binding.taskId,
+      taskItemId: doneTaskItem.id,
+      targetType: binding.targetType,
+      targetId: binding.targetId,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+    },
+    select: { id: true },
+    orderBy: { createdAt: "desc" },
+  });
+  const keepBindingId = existingDoneBinding?.id ?? binding.id;
+
+  if (existingDoneBinding?.id && existingDoneBinding.id !== binding.id) {
+    await prisma.taskExecution.update({
+      where: { id: binding.id },
+      data: { taskItemId: null },
+    });
+  } else if (binding.taskItemId !== doneTaskItem.id) {
+    await prisma.taskExecution.update({
+      where: { id: binding.id },
+      data: { taskItemId: doneTaskItem.id },
+    });
+  }
+
+  await prisma.taskExecution.updateMany({
+    where: {
+      taskId: binding.taskId,
+      targetType: binding.targetType,
+      targetId: binding.targetId,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+      taskItemId: { not: null },
+      id: { not: keepBindingId },
+    },
+    data: { taskItemId: null },
+  });
+
+  return {
+    taskItemId: doneTaskItem.id,
+    bindingId: keepBindingId,
+    moved: binding.taskItemId !== doneTaskItem.id,
   };
 }
 
@@ -914,6 +1013,15 @@ export async function applyQueueItemManualTransitionAction(input: {
       note: input.note ?? null,
     },
   );
+  const serviceDoneMove =
+    result.applied &&
+    result.workflowKey === "service-operation-technical-bench" &&
+    result.toState === "DONE"
+      ? await moveServiceOperationDoneBinding({
+          bindingId,
+          actorUserId,
+        })
+      : null;
 
   if (workflowProcessorResult.affectedProductIds.length) {
     revalidatePath("/admin/watches");
@@ -927,12 +1035,16 @@ export async function applyQueueItemManualTransitionAction(input: {
   if (result.applied && result.taskItemId) {
     revalidatePath(`/admin/task-items/${result.taskItemId}`);
   }
+  if (serviceDoneMove?.taskItemId) {
+    revalidatePath(`/admin/task-items/${serviceDoneMove.taskItemId}`);
+  }
 
   return {
     ok: true,
     result,
     mediaProcessingResult: workflowProcessorResult.mediaProcessingResult,
     workflowProcessorResult,
+    serviceDoneMove,
   };
 }
 
@@ -1016,6 +1128,49 @@ export async function submitOperationalBlueprintActionAction(input: {
 
   if (!result.ok) {
     throw new Error(result.error ?? "Operational Blueprint action failed");
+  }
+
+  const manualActionKey = manualActionKeyForBlueprintAction(actionKey);
+  if (manualActionKey && input.targetType && input.targetId) {
+    const binding = await prisma.taskExecution.findFirst({
+      where: {
+        taskItemId,
+        targetType: input.targetType as TaskExecutionTargetType,
+        targetId: String(input.targetId),
+      },
+      select: { id: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (binding?.id) {
+      const workflowResult = await applyManualWorkflowAction(prisma, {
+        bindingId: binding.id,
+        actionKey: manualActionKey,
+        actorUserId,
+        actorLabel,
+      });
+
+      await processManualWorkspaceWorkflowTransition(prisma, {
+        bindingId: binding.id,
+        transition: workflowResult,
+        actorUserId,
+        actorLabel,
+      });
+
+      if (
+        workflowResult.applied &&
+        workflowResult.workflowKey === "service-operation-technical-bench" &&
+        workflowResult.toState === "DONE"
+      ) {
+        const serviceDoneMove = await moveServiceOperationDoneBinding({
+          bindingId: binding.id,
+          actorUserId,
+        });
+        if (serviceDoneMove?.taskItemId) {
+          revalidatePath(`/admin/task-items/${serviceDoneMove.taskItemId}`);
+        }
+      }
+    }
   }
 
   revalidatePath("/admin/task-items");

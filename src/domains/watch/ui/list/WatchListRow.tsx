@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import type { BusinessEntityPreview } from "@/domains/shared/business/business-entity.types";
 import RowActions from "@/domains/shared/ui/list/RowActions";
 
 import type { WatchRow } from "./types";
@@ -49,6 +50,7 @@ type Props = {
     onBuyBack?: (row: WatchRow) => void;
     onRaiseCase?: (row: WatchRow) => void;
     onCreateTask?: (row: WatchRow) => void;
+    onPreview?: (preview: BusinessEntityPreview) => void;
 };
 
 type BadgeTone = "slate" | "blue" | "emerald" | "amber" | "rose" | "violet";
@@ -73,7 +75,15 @@ function upper(value: unknown) {
     return String(value ?? "").trim().toUpperCase();
 }
 
-function StatusSignal({ label, tone }: { label: string; tone: BadgeTone }) {
+function StatusSignal({
+    label,
+    onClick,
+    tone,
+}: {
+    label: string;
+    onClick?: (() => void) | null;
+    tone: BadgeTone;
+}) {
     const dotClasses: Record<BadgeTone, string> = {
         slate: "bg-slate-400",
         blue: "bg-blue-500",
@@ -83,6 +93,34 @@ function StatusSignal({ label, tone }: { label: string; tone: BadgeTone }) {
         violet: "bg-violet-500",
     };
 
+    const content = (
+        <>
+            <span
+                aria-hidden="true"
+                className={cn("h-2 w-2 shrink-0 rounded-full", dotClasses[tone])}
+            />
+            <span className="truncate">{label}</span>
+        </>
+    );
+    const className = cn(
+        "inline-flex max-w-[132px] items-center gap-2 text-xs font-medium leading-5",
+        tone === "slate" ? "text-slate-600" : "text-slate-700",
+        onClick ? "rounded-md hover:text-blue-700 hover:underline" : "",
+    );
+
+    if (onClick) {
+        return (
+            <button
+                type="button"
+                onClick={onClick}
+                className={className}
+                title={label}
+            >
+                {content}
+            </button>
+        );
+    }
+
     return (
         <span
             className={cn(
@@ -91,11 +129,7 @@ function StatusSignal({ label, tone }: { label: string; tone: BadgeTone }) {
             )}
             title={label}
         >
-            <span
-                aria-hidden="true"
-                className={cn("h-2 w-2 shrink-0 rounded-full", dotClasses[tone])}
-            />
-            <span className="truncate">{label}</span>
+            {content}
         </span>
     );
 }
@@ -225,6 +259,7 @@ export default function WatchListRow({
     onBuyBack,
     onRaiseCase,
     onCreateTask,
+    onPreview,
 }: Props) {
     const isRecent =
         product.updatedAt &&
@@ -240,19 +275,104 @@ export default function WatchListRow({
         ? {
             label: product.v2Row.mediaStatusLabel,
             tone: mediaTone(product.v2Row.mediaStatus),
+            href: product.v2Row.mediaWorkspaceHref,
         }
-        : legacyMediaStatus(product);
+        : { ...legacyMediaStatus(product), href: null };
     const service = product.v2Row
         ? {
             label: product.v2Row.serviceStatusLabel,
             tone: serviceTone(product.v2Row.serviceStatus),
+            serviceRequestId: product.v2Row.serviceRequestId,
+            href: product.v2Row.serviceWorkspaceHref,
         }
-        : legacyServiceStatus(product);
+        : { ...legacyServiceStatus(product), serviceRequestId: null, href: null };
     const sale = product.v2Row
         ? {
             label: product.v2Row.saleStatusLabel,
         }
         : legacySaleStatus(product);
+    const mediaPreview: BusinessEntityPreview = {
+        type: "WATCH",
+        id: product.id,
+        title: "Media preview",
+        subtitle: product.title,
+        status: media.label,
+        imageUrl: product.imageUrl,
+        href: media.href ?? `/admin/watches/${product.productId}/edit`,
+        facts: [
+            { label: "Watch", value: product.title },
+            { label: "SKU", value: product.sku || "-" },
+            { label: "Trang thai media", value: media.label },
+        ],
+        sections: [
+            {
+                title: "Media workspace",
+                subtitle: "Trang thai media hien tai cua watch",
+                items: [
+                    {
+                        title: media.label,
+                        subtitle: product.sku || product.brandName || null,
+                        status: product.v2Row?.mediaStatus ?? null,
+                        href: media.href,
+                        facts: [
+                            { label: "Brand", value: product.brandName || "-" },
+                        ],
+                    },
+                ],
+            },
+        ],
+        actions: media.href
+            ? [{ label: "Mo workspace media", href: media.href }]
+            : [{ label: "Mo watch", href: `/admin/watches/${product.productId}/edit` }],
+    };
+    const servicePreview: BusinessEntityPreview = service.serviceRequestId
+        ? {
+            type: "SERVICE",
+            id: service.serviceRequestId,
+            title: "Service preview",
+            subtitle: product.title,
+            status: service.label,
+            imageUrl: product.imageUrl,
+            href: service.href ?? `/admin/watches/${product.productId}/edit`,
+            facts: [
+                { label: "Watch", value: product.title },
+                { label: "SKU", value: product.sku || "-" },
+                { label: "Trang thai service", value: service.label },
+            ],
+            actions: service.href ? [{ label: "Mo workspace SR", href: service.href }] : undefined,
+        }
+        : {
+            type: "WATCH",
+            id: product.id,
+            title: "Service preview",
+            subtitle: product.title,
+            status: service.label,
+            imageUrl: product.imageUrl,
+            href: `/admin/watches/${product.productId}/edit`,
+            facts: [
+                { label: "Watch", value: product.title },
+                { label: "SKU", value: product.sku || "-" },
+                { label: "Trang thai service", value: service.label },
+            ],
+            sections: [
+                {
+                    title: "Service",
+                    subtitle: "Watch chua co SR dang theo doi",
+                    items: [
+                        {
+                            title: service.label,
+                            subtitle: product.sku || product.brandName || null,
+                            status: product.v2Row?.serviceStatus ?? product.serviceState ?? null,
+                            facts: [
+                                { label: "Brand", value: product.brandName || "-" },
+                                { label: "Service issues", value: product.serviceIssuesCount ?? 0 },
+                            ],
+                        },
+                    ],
+                },
+            ],
+            actions: [{ label: "Mo watch", href: `/admin/watches/${product.productId}/edit` }],
+        };
 
     const actions = [
         onView && {
@@ -352,11 +472,66 @@ export default function WatchListRow({
             </td>
 
             <td className="px-4 py-3 align-middle">
-                <StatusSignal label={media.label} tone={media.tone} />
+                <StatusSignal
+                    label={media.label}
+                    tone={media.tone}
+                    onClick={onPreview ? () => { onPreview(mediaPreview); /*
+                        onPreview({
+                            type: "WATCH",
+                            id: product.id,
+                            title: "Media",
+                            subtitle: product.title,
+                            status: media.label,
+                            imageUrl: product.imageUrl,
+                            href: media.href ?? `/admin/watches/${product.productId}/edit`,
+                            facts: [
+                                { label: "Watch", value: product.title },
+                                { label: "SKU", value: product.sku || "-" },
+                                { label: "Trạng thái media", value: media.label },
+                            ],
+                            sections: [
+                                {
+                                    title: "Media workspace",
+                                    subtitle: "Trạng thái media hiện tại của watch",
+                                    items: [
+                                        {
+                                            title: media.label,
+                                            subtitle: product.sku || product.brandName || null,
+                                            status: product.v2Row?.mediaStatus ?? null,
+                                            href: media.href,
+                                            facts: [
+                                                { label: "Brand", value: product.brandName || "-" },
+                                            ],
+                                        },
+                                    ],
+                                },
+                            ],
+                            actions: media.href ? [{ label: "Mở workspace media", href: media.href }] : undefined,
+                        */ } : null}
+                />
             </td>
 
             <td className="px-4 py-3 align-middle">
-                <StatusSignal label={service.label} tone={service.tone} />
+                <StatusSignal
+                    label={service.label}
+                    tone={service.tone}
+                    onClick={onPreview ? () => { onPreview(servicePreview); /*
+                        onPreview({
+                            type: service.serviceRequestId ? "SERVICE" : "WATCH",
+                            id: service.serviceRequestId ?? product.id,
+                            title: "Service preview",
+                            subtitle: product.title,
+                            status: service.label,
+                            imageUrl: product.imageUrl,
+                            href: service.href ?? `/admin/watches/${product.productId}/edit`,
+                            facts: [
+                                { label: "Watch", value: product.title },
+                                { label: "SKU", value: product.sku || "-" },
+                                { label: "Trạng thái service", value: service.label },
+                            ],
+                            actions: service.href ? [{ label: "Mở workspace SR", href: service.href }] : undefined,
+                        */ } : null}
+                />
             </td>
 
             <td className="px-4 py-3 align-middle">
