@@ -172,6 +172,12 @@ type TaskItemDetail = {
   userId?: string | null;
   ownerUser?: UserSummary | null;
   sharedUserIds?: string[];
+  sharingScopeUserIds?: {
+    workspace?: string[];
+    coreFlow?: string[];
+    space?: string[];
+    system?: string[];
+  };
   sharedUsers?: UserSummary[];
   assignedToUser?: UserSummary | null;
   task?: ParentTask | null;
@@ -328,7 +334,7 @@ function displayNote(note?: string | null) {
     .split(/\r?\n/)
     .filter((line) => {
       const trimmed = line.trim();
-      return !/^(blueprintKey|blueprintSource|workTypeKey|workflowKey|workspaceType|itemLabel|defaultView|instantiationNotes|ownerType|shareGroupKey|sharedUserIds|blueprintSnapshot):/i.test(trimmed);
+      return !/^(blueprintKey|blueprintSource|workTypeKey|workflowKey|workspaceType|itemLabel|defaultView|instantiationNotes|ownerType|shareGroupKey|sharedUserIds|spaceSharedUserIds|coreFlowSharedUserIds:[a-z0-9-]+|blueprintSnapshot):/i.test(trimmed);
     })
     .join("\n")
     .trim();
@@ -625,18 +631,39 @@ function SharingEditor({
   users,
   sharedUsers,
   sharedUserIds,
+  sharingScopeUserIds,
   currentUser,
 }: {
   taskItemId: string;
   users: UserSummary[];
   sharedUsers: UserSummary[];
   sharedUserIds: string[];
+  sharingScopeUserIds?: {
+    workspace?: string[];
+    coreFlow?: string[];
+    space?: string[];
+    system?: string[];
+  };
   currentUser?: UserSummary | null;
 }) {
   const router = useRouter();
   const [selectedUserId, setSelectedUserId] = useState("");
-  const [localSharedIds, setLocalSharedIds] = useState(sharedUserIds);
+  const [sharingScope, setSharingScope] = useState<"WORKSPACE" | "CORE_FLOW" | "SPACE">("WORKSPACE");
+  const [localScopeIds, setLocalScopeIds] = useState({
+    workspace: sharingScopeUserIds?.workspace ?? sharedUserIds,
+    coreFlow: sharingScopeUserIds?.coreFlow ?? [],
+    space: sharingScopeUserIds?.space ?? [],
+    system: sharingScopeUserIds?.system ?? [],
+  });
   const [isPending, startTransition] = useTransition();
+  const localSharedIds = Array.from(
+    new Set([
+      ...localScopeIds.workspace,
+      ...localScopeIds.coreFlow,
+      ...localScopeIds.space,
+      ...localScopeIds.system,
+    ]),
+  );
   const sharedIdSet = new Set(localSharedIds);
   const visibleSharedUsers = localSharedIds
     .map((id) => sharedUsers.find((user) => user.id === id) ?? users.find((user) => user.id === id))
@@ -646,12 +673,22 @@ function SharingEditor({
     .map((user) => mergeCurrentUserAvatar(user, currentUser) ?? user)
     .filter((user) => !sharedIdSet.has(user.id));
 
-  function update(nextIds: string[]) {
-    setLocalSharedIds(nextIds);
+  function updateScope(
+    nextScopeIds: typeof localScopeIds,
+    scope: "WORKSPACE" | "CORE_FLOW" | "SPACE",
+  ) {
+    const idsForScope =
+      scope === "SPACE"
+        ? nextScopeIds.space
+        : scope === "CORE_FLOW"
+          ? nextScopeIds.coreFlow
+          : nextScopeIds.workspace;
+    setLocalScopeIds(nextScopeIds);
     startTransition(async () => {
       await updateTaskItemSharingAction({
         taskItemId,
-        sharedUserIds: nextIds,
+        sharingScope: scope,
+        sharedUserIds: idsForScope,
       });
       router.refresh();
     });
@@ -659,12 +696,50 @@ function SharingEditor({
 
   function addSelected() {
     if (!selectedUserId) return;
-    update([...localSharedIds, selectedUserId]);
+    const scopeKey =
+      sharingScope === "SPACE"
+        ? "space"
+        : sharingScope === "CORE_FLOW"
+          ? "coreFlow"
+          : "workspace";
+    updateScope(
+      {
+        ...localScopeIds,
+        [scopeKey]: Array.from(new Set([...localScopeIds[scopeKey], selectedUserId])),
+      },
+      sharingScope,
+    );
     setSelectedUserId("");
   }
 
   function removeUser(userId: string) {
-    update(localSharedIds.filter((id) => id !== userId));
+    const nextScopeIds = {
+      workspace: localScopeIds.workspace.filter((id) => id !== userId),
+      coreFlow: localScopeIds.coreFlow.filter((id) => id !== userId),
+      space: localScopeIds.space.filter((id) => id !== userId),
+      system: localScopeIds.system,
+    };
+    setLocalScopeIds(nextScopeIds);
+    startTransition(async () => {
+      await Promise.all([
+        updateTaskItemSharingAction({
+          taskItemId,
+          sharingScope: "WORKSPACE",
+          sharedUserIds: nextScopeIds.workspace,
+        }),
+        updateTaskItemSharingAction({
+          taskItemId,
+          sharingScope: "CORE_FLOW",
+          sharedUserIds: nextScopeIds.coreFlow,
+        }),
+        updateTaskItemSharingAction({
+          taskItemId,
+          sharingScope: "SPACE",
+          sharedUserIds: nextScopeIds.space,
+        }),
+      ]);
+      router.refresh();
+    });
   }
 
   return (
@@ -705,7 +780,22 @@ function SharingEditor({
         )}
       </div>
 
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 grid gap-2">
+        <select
+          value={sharingScope}
+          onChange={(event) =>
+            setSharingScope(event.target.value as "WORKSPACE" | "CORE_FLOW" | "SPACE")
+          }
+          disabled={isPending}
+          className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-slate-400"
+        >
+          <option value="WORKSPACE">Chia sẻ workspace này</option>
+          <option value="CORE_FLOW">Chia sẻ core flow này</option>
+          <option value="SPACE">Chia sẻ cả space</option>
+        </select>
+      </div>
+
+      <div className="mt-2 flex gap-2">
         <select
           value={selectedUserId}
           onChange={(event) => setSelectedUserId(event.target.value)}
@@ -2397,6 +2487,7 @@ export default function TaskItemDetailClient({
                 users={users}
                 sharedUsers={item.sharedUsers ?? []}
                 sharedUserIds={item.sharedUserIds ?? []}
+                sharingScopeUserIds={item.sharingScopeUserIds}
                 currentUser={currentUser}
               />
             ) : null}

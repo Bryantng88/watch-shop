@@ -117,11 +117,19 @@ function workTypeKeyFromNote(note?: string | null) {
 }
 
 function sharedUserIdsFromNote(note?: string | null) {
-  return String(note ?? "")
-    .match(/^sharedUserIds:\s*(.+)$/im)?.[1]
-    ?.split(",")
+  const text = String(note ?? "");
+  const ids = text
+    .split(/\r?\n/)
+    .filter((line) =>
+      /^(sharedUserIds|spaceSharedUserIds|coreFlowSharedUserIds:[a-z0-9-]+):\s*/i.test(
+        line.trim(),
+      ),
+    )
+    .flatMap((line) => line.split(":").slice(-1)[0].split(","))
     .map((id) => id.trim())
-    .filter(Boolean) ?? [];
+    .filter(Boolean);
+
+  return Array.from(new Set(ids));
 }
 
 function defaultShareGroupForTaskKind(kind?: TaskKind | null) {

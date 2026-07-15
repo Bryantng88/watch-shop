@@ -530,16 +530,40 @@ export async function updateTaskItemAction(
   };
 }
 
-function setSharedUserIdsInNote(note: string | null | undefined, userIds: string[]) {
+type TaskItemSharingScope = "WORKSPACE" | "CORE_FLOW" | "SPACE";
+
+function uniqueShareIds(userIds: string[]) {
+  return Array.from(
+    new Set(userIds.map((id) => String(id ?? "").trim()).filter(Boolean)),
+  );
+}
+
+function workTypeKeyFromNote(note?: string | null) {
+  return String(note ?? "").match(/^workTypeKey:\s*([a-z0-9-]+)/im)?.[1] ?? null;
+}
+
+function coreFlowScopeKeyFromNote(note?: string | null) {
+  const explicit = String(note ?? "").match(/^coreFlowKey:\s*([a-z0-9-]+)/im)?.[1] ?? null;
+  const snapshot = parseWorkspaceDefinitionSnapshot(note);
+  return explicit ?? snapshot?.coreFlowKey ?? workTypeKeyFromNote(note);
+}
+
+function setShareUserIdsInNote(
+  note: string | null | undefined,
+  lineKey: string,
+  userIds: string[],
+) {
   const cleanIds = Array.from(
     new Set(userIds.map((id) => String(id ?? "").trim()).filter(Boolean)),
   );
+  const escapedKey = lineKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const linePattern = new RegExp(`^${escapedKey}:\\s*`, "i");
   const lines = String(note ?? "")
     .split(/\r?\n/)
-    .filter((line) => !/^sharedUserIds:\s*/i.test(line.trim()));
+    .filter((line) => !linePattern.test(line.trim()));
 
   if (cleanIds.length) {
-    lines.push(`sharedUserIds: ${cleanIds.join(",")}`);
+    lines.push(`${lineKey}: ${cleanIds.join(",")}`);
   }
 
   return lines.join("\n").trim() || null;
@@ -548,6 +572,7 @@ function setSharedUserIdsInNote(note: string | null | undefined, userIds: string
 export async function updateTaskItemSharingAction(input: {
   taskItemId: string;
   sharedUserIds: string[];
+  sharingScope?: TaskItemSharingScope;
 }) {
   const auth = await getTaskAuth();
   const actorUserId = getAuthUserId(auth);
@@ -556,13 +581,8 @@ export async function updateTaskItemSharingAction(input: {
   const taskItemId = String(input.taskItemId ?? "").trim();
   if (!taskItemId) throw new Error("Missing taskItemId");
 
-  const requestedIds = Array.from(
-    new Set(
-      (input.sharedUserIds ?? [])
-        .map((id) => String(id ?? "").trim())
-        .filter(Boolean),
-    ),
-  );
+  const requestedIds = uniqueShareIds(input.sharedUserIds ?? []);
+  const sharingScope = input.sharingScope ?? "WORKSPACE";
 
   const users = requestedIds.length
     ? await prisma.user.findMany({
@@ -584,6 +604,12 @@ export async function updateTaskItemSharingAction(input: {
         select: {
           createdByUserId: true,
           assignedToUserId: true,
+          taskItems: {
+            select: {
+              id: true,
+              note: true,
+            },
+          },
         },
       },
     },
@@ -600,12 +626,38 @@ export async function updateTaskItemSharingAction(input: {
     throw new Error("Bạn không có quyền chia sẻ phiếu xử lý này.");
   }
 
-  await prisma.taskItem.update({
-    where: { id: taskItemId },
-    data: {
-      note: setSharedUserIdsInNote(item.note, validIds),
-    },
-  });
+  const coreFlowScopeKey = coreFlowScopeKeyFromNote(item.note);
+  if (sharingScope === "CORE_FLOW" && !coreFlowScopeKey) {
+    if (!validIds.length) return { ok: true, sharedUserIds: validIds };
+    throw new Error("Workspace nay chua co coreFlowKey de chia se theo core flow.");
+  }
+
+  const targetItems =
+    sharingScope === "SPACE"
+      ? item.task.taskItems
+      : sharingScope === "CORE_FLOW"
+        ? item.task.taskItems.filter(
+          (taskItem) => coreFlowScopeKeyFromNote(taskItem.note) === coreFlowScopeKey,
+        )
+        : [{ id: item.id, note: item.note }];
+
+  const lineKey =
+    sharingScope === "SPACE"
+      ? "spaceSharedUserIds"
+      : sharingScope === "CORE_FLOW"
+        ? `coreFlowSharedUserIds:${coreFlowScopeKey}`
+        : "sharedUserIds";
+
+  await prisma.$transaction(
+    targetItems.map((targetItem) =>
+      prisma.taskItem.update({
+        where: { id: targetItem.id },
+        data: {
+          note: setShareUserIdsInNote(targetItem.note, lineKey, validIds),
+        },
+      }),
+    ),
+  );
 
   revalidatePath("/admin/coordination/operation");
   revalidatePath(`/admin/task-items/${taskItemId}`);

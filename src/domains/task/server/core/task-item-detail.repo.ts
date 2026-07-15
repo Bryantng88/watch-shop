@@ -6,6 +6,7 @@ import { getQueueItemWorkflowState } from "@/domains/task/server/business-bindin
 import { listWatchMediaQueueProjectionItemsWithFallback } from "@/domains/projection/server/watch-media-queue.projection";
 import { TaskExecutionActionType, TaskExecutionTargetType } from "@prisma/client";
 import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
+import { parseWorkspaceDefinitionSnapshot } from "@/domains/blueprint/shared/workspace-capabilities";
 
 const USER_SELECT = {
   id: true,
@@ -24,6 +25,27 @@ function noteHasCoreWorkspace(note?: string | null) {
 
 function noteWorkTypeKey(note?: string | null) {
   return String(note ?? "").match(/^workTypeKey:\s*([a-z0-9-]+)/im)?.[1] ?? null;
+}
+
+function coreFlowScopeKeyFromNote(note?: string | null) {
+  const explicit = String(note ?? "").match(/^coreFlowKey:\s*([a-z0-9-]+)/im)?.[1] ?? null;
+  const snapshot = parseWorkspaceDefinitionSnapshot(note);
+  return explicit ?? snapshot?.coreFlowKey ?? noteWorkTypeKey(note);
+}
+
+function uniqueShareIds(userIds: Array<string | null | undefined>) {
+  return Array.from(
+    new Set(userIds.map((id) => String(id ?? "").trim()).filter(Boolean)),
+  );
+}
+
+function noteLineValue(note: string | null | undefined, key: string) {
+  const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return String(note ?? "").match(new RegExp(`^${escapedKey}:\\s*(.+)$`, "im"))?.[1] ?? "";
+}
+
+function shareUserIdsFromNoteLine(note: string | null | undefined, key: string) {
+  return uniqueShareIds(noteLineValue(note, key).split(","));
 }
 
 function shouldUseWatchMediaQueueProjection(note?: string | null) {
@@ -585,21 +607,33 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
 
   if (!item) return null;
 
-  const noteSharedUserIds = Array.from(
-    new Set(
-      String(item.note ?? "")
-        .match(/^sharedUserIds:\s*(.+)$/im)?.[1]
-        ?.split(",")
-        .map((id) => id.trim())
-        .filter(Boolean) ?? [],
-    ),
+  const workspaceSharedUserIds = shareUserIdsFromNoteLine(item.note, "sharedUserIds");
+  const taskScopeNotes = [
+    item.note,
+    ...(item.task.taskItems ?? []).map((taskItem) => taskItem.note),
+  ];
+  const currentCoreFlowScopeKey = coreFlowScopeKeyFromNote(item.note);
+  const spaceSharedUserIds = uniqueShareIds(
+    taskScopeNotes.flatMap((note) => shareUserIdsFromNoteLine(note, "spaceSharedUserIds")),
   );
+  const coreFlowSharedUserIds = currentCoreFlowScopeKey
+    ? uniqueShareIds(
+      taskScopeNotes.flatMap((note) =>
+        shareUserIdsFromNoteLine(note, `coreFlowSharedUserIds:${currentCoreFlowScopeKey}`),
+      ),
+    )
+    : [];
   const defaultAdminShareUserIds =
     noteHasSystemOwner(item.note) && noteHasCoreWorkspace(item.note)
       ? await listDefaultAdminShareUserIds(db)
       : [];
-  const sharedUserIds = Array.from(
-    new Set([...noteSharedUserIds, ...defaultAdminShareUserIds]),
+  const sharedUserIds = uniqueShareIds(
+    [
+      ...workspaceSharedUserIds,
+      ...coreFlowSharedUserIds,
+      ...spaceSharedUserIds,
+      ...defaultAdminShareUserIds,
+    ],
   );
 
   const [queueItems, sharedUsers] = await Promise.all([
@@ -648,6 +682,12 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
     ...item,
     ownerUser: item.User,
     sharedUserIds,
+    sharingScopeUserIds: {
+      workspace: workspaceSharedUserIds,
+      coreFlow: coreFlowSharedUserIds,
+      space: spaceSharedUserIds,
+      system: defaultAdminShareUserIds,
+    },
     sharedUsers,
     activities,
     queueItems: queueItems.map((queueItem) => ({

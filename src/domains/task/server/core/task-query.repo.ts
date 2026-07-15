@@ -302,6 +302,13 @@ function buildTaskItemAccessWhere(
     OR: [
       { userId },
       { note: { contains: `sharedUserIds: ${userId}`, mode: "insensitive" } },
+      { note: { contains: `spaceSharedUserIds: ${userId}`, mode: "insensitive" } },
+      {
+        AND: [
+          { note: { contains: "coreFlowSharedUserIds:", mode: "insensitive" } },
+          { note: { contains: userId, mode: "insensitive" } },
+        ],
+      },
       { note: { contains: `,${userId}`, mode: "insensitive" } },
       { assignedToUserId: userId },
       {
