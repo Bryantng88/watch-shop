@@ -78,7 +78,8 @@ function areaLabel(value?: string | null) {
     CASE: "Vỏ",
     CRYSTAL: "Kính",
     DIAL: "Mặt số",
-    HANDS: "Kim",
+    HANDS: "Kim cọc",
+    HANDS_MARKERS: "Kim cọc",
     CROWN: "Núm",
     BRACELET: "Dây / bracelet",
   };
@@ -165,8 +166,17 @@ export default function ServiceRequestDetailClient({
     React.useState("");
   const [note, setNote] = React.useState("");
 
-  const technicalOptions =
-    issueBoard.catalogs?.technicalDetailCatalogOptions ?? [];
+  const technicalOptions = React.useMemo(
+    () => issueBoard.catalogs?.technicalDetailCatalogOptions ?? [],
+    [issueBoard.catalogs?.technicalDetailCatalogOptions],
+  );
+  const technicalOptionsForArea = React.useMemo(() => {
+    const selectedArea = String(area || "").toUpperCase();
+    if (!selectedArea) return technicalOptions;
+    return technicalOptions.filter(
+      (item) => String(item.area || "").toUpperCase() === selectedArea,
+    );
+  }, [area, technicalOptions]);
 
   const totalCost = React.useMemo(() => {
     return (issueBoard.items ?? []).reduce((sum, item: any) => {
@@ -368,7 +378,7 @@ export default function ServiceRequestDetailClient({
               <option value="CASE">Vỏ</option>
               <option value="CRYSTAL">Kính</option>
               <option value="DIAL">Mặt số</option>
-              <option value="HANDS">Kim</option>
+              <option value="HANDS_MARKERS">Kim cọc</option>
               <option value="CROWN">Núm</option>
               <option value="BRACELET">Dây / bracelet</option>
             </select>
@@ -390,7 +400,7 @@ export default function ServiceRequestDetailClient({
               className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
             >
               <option value="">Chi tiết kỹ thuật: chọn sau</option>
-              {technicalOptions.map((item) => (
+              {technicalOptionsForArea.map((item) => (
                 <option key={item.id} value={item.id}>
                   {[item.code, item.name].filter(Boolean).join(" - ") ||
                     "Không tên"}

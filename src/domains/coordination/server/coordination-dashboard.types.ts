@@ -38,6 +38,17 @@ export type CoordinationWorkTicketSummaryDTO = {
     isSystem: boolean;
   };
   queueSummary: QueueSummaryDTO;
+  paymentSummary?: {
+    scope: "TECHNICAL_ISSUE_ROLLUP";
+    direction: "IN" | "OUT";
+    status: "NONE" | "UNPAID" | "PARTIAL" | "PAID";
+    totalAmount: number;
+    paidAmount: number;
+    unpaidAmount: number;
+    remainingAmount: number;
+    paymentCount: number;
+    unpaidIssueCount: number;
+  } | null;
   needAttention: boolean;
   feedbackCount: number;
   lastActivity: string | null;
@@ -53,6 +64,30 @@ export type CoordinationWorkTicketSummaryDTO = {
     flowStageKey: string | null;
     flowStageOrder: number | null;
   } | null;
+};
+
+export type CoordinationTechnicalIssueBoardItemDTO = {
+  id: string;
+  serviceRequestId: string;
+  summary: string;
+  area: string | null;
+  actionMode: string | null;
+  vendorId: string | null;
+  vendorName: string | null;
+  estimatedCost: number | null;
+  executionStatus: string;
+  isConfirmed: boolean;
+  technicalDetailCatalogId: string | null;
+  stage: "INSPECT" | "READY" | "PROCESSING" | "DONE";
+  actualCost: number | null;
+  updatedAt: string | null;
+  workspaceTaskItemId: string | null;
+  serviceRequest: {
+    refNo: string | null;
+    productTitle: string | null;
+    sku: string | null;
+    imageUrl: string | null;
+  };
 };
 
 export type CoordinationDashboardDTO = {
@@ -109,4 +144,14 @@ export type CoordinationDashboardDTO = {
     };
   }>;
   workTickets: CoordinationWorkTicketSummaryDTO[];
+  technicalIssueBoard: {
+    items: CoordinationTechnicalIssueBoardItemDTO[];
+    vendorOptions: Array<{ id: string; name: string }>;
+    technicalDetailCatalogOptions: Array<{
+      id: string;
+      area: string | null;
+      code: string | null;
+      name: string | null;
+    }>;
+  } | null;
 };

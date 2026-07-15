@@ -159,8 +159,11 @@ function normalizeAreaKey(value?: string | null) {
         "MẶT SỐ": "DIAL",
         "MAT SO": "DIAL",
 
-        HANDS: "HANDS",
-        KIM: "HANDS",
+        HANDS: "HANDS_MARKERS",
+        HANDS_MARKERS: "HANDS_MARKERS",
+        HAND_MARKERS: "HANDS_MARKERS",
+        KIM: "HANDS_MARKERS",
+        KIM_COC: "HANDS_MARKERS",
 
         BRACELET: "BRACELET",
         STRAP: "BRACELET",

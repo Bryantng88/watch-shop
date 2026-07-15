@@ -876,6 +876,7 @@ export default function TechnicalCatalogManagerClient({
                                 <option value="CROWN">Núm</option>
                                 <option value="CRYSTAL">Kính</option>
                                 <option value="DIAL">Mặt số</option>
+                                <option value="HANDS_MARKERS">Kim cọc</option>
                                 <option value="BRACELET">Dây / khóa</option>
                                 <option value="GENERAL">Tổng quát</option>
                             </SelectInput>

@@ -517,6 +517,9 @@ export default function TechnicalIssueBoardClient({
               <FilterChip active={areaFilter === "DIAL"} onClick={() => setAreaFilter("DIAL")}>
                 Mặt số
               </FilterChip>
+              <FilterChip active={areaFilter === "HANDS_MARKERS"} onClick={() => setAreaFilter("HANDS_MARKERS")}>
+                Kim cọc
+              </FilterChip>
               <FilterChip active={areaFilter === "CROWN"} onClick={() => setAreaFilter("CROWN")}>
                 Núm
               </FilterChip>

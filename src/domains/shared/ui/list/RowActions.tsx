@@ -27,7 +27,14 @@ export default function RowActions<T>({
     align = "right",
 }: Props<T>) {
     const [open, setOpen] = useState(false);
+    const [menuPosition, setMenuPosition] = useState<{
+        top: number;
+        left?: number;
+        right?: number;
+    } | null>(null);
     const rootRef = useRef<HTMLDivElement | null>(null);
+    const buttonRef = useRef<HTMLButtonElement | null>(null);
+    const menuRef = useRef<HTMLDivElement | null>(null);
 
     const visibleActions = actions.filter(
         (item): item is RowAction<T> => Boolean(item && !item.hidden),
@@ -36,8 +43,26 @@ export default function RowActions<T>({
     useEffect(() => {
         if (!open) return;
 
+        const updateMenuPosition = () => {
+            const rect = buttonRef.current?.getBoundingClientRect();
+            if (!rect) return;
+
+            setMenuPosition({
+                top: rect.bottom + 6,
+                ...(align === "right"
+                    ? { right: window.innerWidth - rect.right }
+                    : { left: rect.left }),
+            });
+        };
+
+        updateMenuPosition();
+
         const handleClick = (event: MouseEvent) => {
-            if (!rootRef.current?.contains(event.target as Node)) {
+            const target = event.target as Node;
+            if (
+                !rootRef.current?.contains(target) &&
+                !menuRef.current?.contains(target)
+            ) {
                 setOpen(false);
             }
         };
@@ -48,18 +73,23 @@ export default function RowActions<T>({
 
         document.addEventListener("mousedown", handleClick);
         document.addEventListener("keydown", handleKeyDown);
+        window.addEventListener("scroll", updateMenuPosition, true);
+        window.addEventListener("resize", updateMenuPosition);
 
         return () => {
             document.removeEventListener("mousedown", handleClick);
             document.removeEventListener("keydown", handleKeyDown);
+            window.removeEventListener("scroll", updateMenuPosition, true);
+            window.removeEventListener("resize", updateMenuPosition);
         };
-    }, [open]);
+    }, [align, open]);
 
     if (visibleActions.length === 0) return null;
 
     return (
         <div ref={rootRef} className="relative flex justify-end">
             <button
+                ref={buttonRef}
                 type="button"
                 onClick={() => setOpen((value) => !value)}
                 className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
@@ -67,11 +97,12 @@ export default function RowActions<T>({
                 <MoreHorizontal className="h-5 w-5" />
             </button>
 
-            {open ? (
+            {open && menuPosition ? (
                 <div
+                    ref={menuRef}
+                    style={menuPosition}
                     className={cn(
-                        "absolute z-30 mt-10 min-w-[180px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl",
-                        align === "right" ? "right-0" : "left-0",
+                        "fixed z-[80] min-w-[180px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl",
                     )}
                 >
                     {visibleActions.map((action) => (

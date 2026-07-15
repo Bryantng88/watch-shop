@@ -16,6 +16,7 @@ export function areaLabel(area?: string | null) {
   if (raw === "CASE") return "Vỏ";
   if (raw === "CRYSTAL") return "Kính";
   if (raw === "DIAL") return "Mặt số";
+  if (raw === "HANDS" || raw === "HANDS_MARKERS") return "Kim cọc";
   if (raw === "CROWN") return "Núm";
   return raw || "-";
 }

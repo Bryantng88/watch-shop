@@ -148,7 +148,9 @@ type TechnicalDetailCatalogOption = {
 };
 
 function normalizeTechnicalArea(value?: string | null) {
-  return String(value ?? "").trim().toUpperCase();
+  const area = String(value ?? "").trim().toUpperCase();
+  if (area === "HANDS" || area === "HAND_MARKERS") return "HANDS_MARKERS";
+  return area;
 }
 
 function technicalAreaLabel(value?: string | null) {
@@ -159,7 +161,7 @@ function technicalAreaLabel(value?: string | null) {
   if (area === "BRACELET" || area === "STRAP") return "Dây / bracelet";
   if (area === "CROWN") return "Núm";
   if (area === "DIAL") return "Mặt số";
-  if (area === "HANDS") return "Kim";
+  if (area === "HANDS_MARKERS") return "Kim cọc";
   if (area === "GENERAL") return "Tổng quát";
   return value || "-";
 }
@@ -816,6 +818,7 @@ function CreateTechnicalIssueModal({
                 <option value="CASE">Vỏ</option>
                 <option value="BRACELET">Dây / bracelet</option>
                 <option value="DIAL">Mặt số</option>
+                <option value="HANDS_MARKERS">Kim cọc</option>
               </select>
             </label>
 

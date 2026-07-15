@@ -320,7 +320,10 @@ function workspaceKindFromNote(note: string | null | undefined) {
 }
 
 function isFlowStageWorkTicket(item: { note: string | null }) {
-  return workspaceKindFromNote(item.note) === "FLOW_STAGE_WORKSPACE";
+  return (
+    workspaceKindFromNote(item.note) === "FLOW_STAGE_WORKSPACE" ||
+    Boolean(serviceOperationWorkspaceRoleFromNote(item.note))
+  );
 }
 
 function scopeServiceOperationWorkspaceTickets<T extends { item: { note: string | null } }>(
@@ -1195,18 +1198,32 @@ export async function consumeBusinessEventForCoordination(
   }
 
   if (workTicketResolution.eventBinding.mode === "PROGRESS") {
-    const existingBinding = await findTaskItemBusinessBinding(db, {
-      taskId: task.id,
-      taskItemId: workTicket.id,
-      targetType,
-      targetId: canonicalTargetId,
-      actionType: TaskExecutionActionType.LINKED,
-      createdByUserId: input.actorUserId ?? null,
-      metadataJson,
-    });
+    if (
+      isServiceOperationTechnicalRoute({ route, targetType }) &&
+      isFlowStageWorkTicket(workTicket)
+    ) {
+      await moveExistingFlowStageBindingToWorkspace({
+        db,
+        taskId: task.id,
+        taskItemId: workTicket.id,
+        targetType,
+        targetId: canonicalTargetId,
+        metadataJson,
+      });
+    } else {
+      const existingBinding = await findTaskItemBusinessBinding(db, {
+        taskId: task.id,
+        taskItemId: workTicket.id,
+        targetType,
+        targetId: canonicalTargetId,
+        actionType: TaskExecutionActionType.LINKED,
+        createdByUserId: input.actorUserId ?? null,
+        metadataJson,
+      });
 
-    if (!existingBinding) {
-      return skipped("NO_EXISTING_WORKSPACE_ITEM", route, resolvedScope);
+      if (!existingBinding) {
+        return skipped("NO_EXISTING_WORKSPACE_ITEM", route, resolvedScope);
+      }
     }
   }
 

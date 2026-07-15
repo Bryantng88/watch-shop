@@ -1,25 +1,42 @@
 "use client";
 
-import { type FormEvent, useMemo, useState, useTransition } from "react";
+import { type FormEvent, useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import {
+  DndContext,
+  DragOverlay,
+  type DragEndEvent,
+  type DragStartEvent,
+  PointerSensor,
+  closestCorners,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 import {
   CalendarDays,
   Camera,
   CheckCircle2,
   ChevronRight,
   BookOpen,
+  CreditCard,
   Filter,
   Grid2X2,
+  GripVertical,
   Info,
   Inbox,
   List,
   Monitor,
   Plus,
+  Receipt,
   RotateCcw,
   Send,
   Settings,
   SlidersHorizontal,
+  XCircle,
   Zap,
 } from "lucide-react";
 import AdminBreadcrumbs from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
@@ -27,8 +44,16 @@ import {
   rolloverPreviousCycleItemsAction,
   setWorkspaceAutoBindingReceiverAction,
 } from "@/domains/coordination/actions/coordination.actions";
-import { createTaskItemAction } from "@/domains/task/actions/task.actions";
+import {
+  createTaskItemAction,
+  submitOperationalBlueprintActionAction,
+} from "@/domains/task/actions/task.actions";
+import type {
+  OperationalBlueprintAction,
+  OperationalBlueprintActionField,
+} from "@/domains/blueprint/shared/operational-blueprint";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
+import { cn } from "@/lib/utils";
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import {
   useAppProgress,
@@ -79,6 +104,12 @@ function formatDateTime(value: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+}
+
+function formatMoneyCompact(value?: number | null) {
+  const amount = Number(value ?? 0);
+  if (!Number.isFinite(amount) || amount <= 0) return "0đ";
+  return `${Math.round(amount).toLocaleString("vi-VN")}đ`;
 }
 
 function initials(label: string) {
@@ -246,7 +277,6 @@ function columnLabel(value: string) {
     Workspace: "Workspace",
     Owner: "Phụ trách",
     Items: "Số item",
-    Attention: "Cần chú ý",
     Feedback: "Phản hồi",
     Updated: "Cập nhật",
     "Last activity": "Hoạt động gần nhất",
@@ -463,6 +493,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   const [title, setTitle] = useState(initialTitle);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [workTicketView, setWorkTicketView] = useState<"LIST" | "TI_BOARD">("LIST");
   const [isPending, startTransition] = useTransition();
   const selectedBlueprint = useMemo(
     () =>
@@ -557,6 +588,20 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
         return left.title.localeCompare(right.title);
       });
   }, [activeCoreFlow, activeViewMode, data.workTickets, flowStageKeys]);
+  const isTechnicalIssueFlowMode = activeViewMode?.key === "technical-issue-flow";
+  const canShowTechnicalIssueBoard =
+    isTechnicalIssueFlowMode && Boolean(data.technicalIssueBoard?.items.length);
+  const isTechnicalIssueBoardView =
+    workTicketView === "TI_BOARD" && canShowTechnicalIssueBoard;
+  useEffect(() => {
+    if (!isTechnicalIssueFlowMode && workTicketView === "TI_BOARD") {
+      setWorkTicketView("LIST");
+    }
+  }, [isTechnicalIssueFlowMode, workTicketView]);
+  const showPaymentColumn = displayedWorkTickets.some((ticket) => ticket.paymentSummary);
+  const workTicketGridClass = showPaymentColumn
+    ? "lg:grid-cols-[1.85fr_0.85fr_1.05fr_1.08fr_0.6fr_0.8fr_1.2fr_auto]"
+    : "lg:grid-cols-[2fr_1fr_1.1fr_0.7fr_0.9fr_1.5fr_auto]";
   const activeEmptyState =
     activeViewMode?.rowModel === "WORKSPACE"
       ? emptyStateText(data.viewConfig.emptyState, "WORKSPACE")
@@ -1174,25 +1219,43 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   }
                   actions={
                     <>
+                      {isTechnicalIssueFlowMode ? (
                       <button
                         type="button"
                         className="inline-flex h-9 items-center justify-center rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm"
                       >
                         Tất cả trạng thái
                       </button>
+                      ) : null}
                       <button
                         type="button"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500"
+                        onClick={() => setWorkTicketView("TI_BOARD")}
+                        disabled={!canShowTechnicalIssueBoard}
+                        className={cn(
+                          "inline-flex h-9 items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium shadow-sm",
+                          isTechnicalIssueBoardView
+                            ? "border-violet-300 bg-white text-violet-700"
+                            : "border-slate-200 bg-white text-slate-500 hover:text-slate-700",
+                          !canShowTechnicalIssueBoard && "cursor-not-allowed opacity-50",
+                        )}
                         aria-label="Xem dạng lưới"
                       >
                         <Grid2X2 className="h-4 w-4" />
+                        <span className="hidden xl:inline">Board TI</span>
                       </button>
                       <button
                         type="button"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-violet-300 bg-white text-violet-700 shadow-sm"
+                        onClick={() => setWorkTicketView("LIST")}
+                        className={cn(
+                          "inline-flex h-9 items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium shadow-sm",
+                          !isTechnicalIssueBoardView
+                            ? "border-violet-300 bg-white text-violet-700"
+                            : "border-slate-200 bg-white text-slate-500 hover:text-slate-700",
+                        )}
                         aria-label="Xem dạng danh sách"
                       >
                         <List className="h-4 w-4" />
+                        <span className="hidden xl:inline">List</span>
                       </button>
                     </>
                   }
@@ -1383,11 +1446,25 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
             ) : null}
           </div>
 
-          <div className="hidden border-y border-slate-100 bg-[#fbfcfe] px-5 py-3 text-xs font-bold uppercase tracking-[0.05em] text-slate-500 lg:grid lg:grid-cols-[2fr_1fr_1.1fr_0.7fr_0.7fr_0.9fr_1.5fr_auto]">
+          {isTechnicalIssueBoardView ? (
+            <TechnicalIssueBoardView
+              items={data.technicalIssueBoard?.items ?? []}
+              actions={selectedBlueprint?.operation?.actions ?? []}
+              vendorOptions={data.technicalIssueBoard?.vendorOptions ?? []}
+              technicalDetailCatalogOptions={data.technicalIssueBoard?.technicalDetailCatalogOptions ?? []}
+            />
+          ) : (
+            <>
+          <div className={cn("hidden border-y border-slate-100 bg-[#fbfcfe] px-5 py-3 text-xs font-bold uppercase tracking-[0.05em] text-slate-500 lg:grid", workTicketGridClass)}>
             <div>Workspace</div>
             <div>Phụ trách</div>
             <div>Tiến độ / Item</div>
-            <div className="text-center">Cần chú ý</div>
+            {showPaymentColumn ? (
+              <div className="flex items-center gap-1 lg:pl-3">
+                <span>Thanh toán</span>
+                <Info className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+              </div>
+            ) : null}
             <div className="text-center">Phản hồi</div>
             <div className="text-center">Cập nhật</div>
             <div>Hoạt động gần nhất</div>
@@ -1399,7 +1476,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
               <Link
                 key={ticket.id}
                 href={`/admin/task-items/${ticket.id}`}
-                className="grid gap-4 px-5 py-4 transition hover:bg-slate-50 lg:grid-cols-[2fr_1fr_1.1fr_0.7fr_0.7fr_0.9fr_1.5fr_auto] lg:items-center"
+                className={cn("grid gap-4 px-5 py-4 transition hover:bg-slate-50 lg:items-center", workTicketGridClass)}
               >
                 <div className="flex min-w-0 items-center gap-4">
                   <WorkspaceIdentityFrame ticket={ticket} />
@@ -1431,16 +1508,9 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
 
                 <OwnerCell owner={ticket.owner} />
                 <QueueSummaryCell summary={ticket.queueSummary} />
-                <div className="text-sm lg:flex lg:items-center lg:justify-center">
-                  <div className="text-xs font-medium uppercase tracking-wide text-slate-500 lg:hidden">
-                    Cần chú ý
-                  </div>
-                  <div className="mt-2 lg:mt-0">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${ticket.needAttention ? "bg-amber-50 text-amber-700" : "bg-slate-50 text-slate-500"}`}>
-                      {ticket.needAttention ? "Có" : "Không"}
-                    </span>
-                  </div>
-                </div>
+                {showPaymentColumn ? (
+                  <PaymentSummaryCell summary={ticket.paymentSummary ?? null} />
+                ) : null}
                 <div className="text-sm lg:flex lg:items-center lg:justify-center">
                   <div className="text-xs font-medium uppercase tracking-wide text-slate-500 lg:hidden">
                     Phản hồi
@@ -1488,6 +1558,8 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
               </div>
             ) : null}
           </div>
+            </>
+          )}
 
           <SpaceViewFooterTip
             icon={<Info className="h-4 w-4" />}
@@ -1508,6 +1580,682 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   );
 }
 
+function TechnicalIssueBoardView({
+  items,
+  actions,
+  vendorOptions,
+  technicalDetailCatalogOptions,
+}: {
+  items: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["items"];
+  actions: OperationalBlueprintAction[];
+  vendorOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["vendorOptions"];
+  technicalDetailCatalogOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["technicalDetailCatalogOptions"];
+}) {
+  const router = useRouter();
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [overStage, setOverStage] = useState<TechnicalIssueBoardStage | null>(null);
+  const [moveRequest, setMoveRequest] = useState<TechnicalIssueBoardMoveRequest | null>(null);
+  const [moveValues, setMoveValues] = useState<Record<string, string | boolean>>({});
+  const [moveError, setMoveError] = useState<string | null>(null);
+  const [isMovePending, startMoveTransition] = useTransition();
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+  );
+  const columns: Array<{
+    key: TechnicalIssueBoardStage;
+    label: string;
+    hint: string;
+  }> = [
+    { key: "INSPECT", label: "Kiểm tra", hint: "TI cần xác nhận hoặc phân loại." },
+    { key: "READY", label: "Chờ xử lý", hint: "TI đã phân loại, chờ bắt đầu xử lý." },
+    { key: "PROCESSING", label: "Xử lý", hint: "TI đang được kỹ thuật/vendor xử lý." },
+    { key: "DONE", label: "Done", hint: "TI đã xong kỹ thuật hoặc theo dõi." },
+  ];
+  const activeItem = activeId ? items.find((item) => item.id === activeId) ?? null : null;
+
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(String(event.active.id));
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const issueId = String(event.active.id);
+    const targetStage = technicalBoardStageValue(event.over?.id);
+    const item = items.find((candidate) => candidate.id === issueId) ?? null;
+    setActiveId(null);
+    setOverStage(null);
+
+    if (!item || !targetStage || item.stage === targetStage) return;
+
+    const action = technicalBoardActionForMove({
+      from: item.stage,
+      to: targetStage,
+      actions,
+    });
+    if (!action) {
+      setMoveRequest({
+        item,
+        targetStage,
+        action: null,
+        unavailableReason: "Chưa có action hợp lệ cho hướng di chuyển này.",
+      });
+      setMoveValues({});
+      setMoveError(null);
+      return;
+    }
+
+    setMoveRequest({ item, targetStage, action, unavailableReason: null });
+    setMoveValues(defaultTechnicalBoardMoveValues(item, action));
+    setMoveError(null);
+  }
+
+  function submitMove() {
+    if (!moveRequest?.action) return;
+    const { item, action } = moveRequest;
+    if (!item.workspaceTaskItemId) {
+      setMoveError("TI này chưa có Workspace stage hiện tại nên không thể đồng bộ workflow.");
+      return;
+    }
+
+    const visibleFields = action.fields.filter((field) =>
+      shouldShowTechnicalBoardField(field, moveValues),
+    );
+    const missingField = visibleFields.find((field) => {
+      if (!field.required) return false;
+      const value = moveValues[field.key];
+      return typeof value === "boolean" ? !value : !String(value ?? "").trim();
+    });
+    if (missingField) {
+      setMoveError(`Vui lòng nhập ${missingField.label}.`);
+      return;
+    }
+    const assigneeMode = String(
+      moveValues.assigneeMode ?? moveValues.actionMode ?? "",
+    ).toUpperCase();
+    if (assigneeMode === "VENDOR" && !String(moveValues.vendorId ?? "").trim()) {
+      setMoveError("Vui lòng chọn vendor.");
+      return;
+    }
+
+    setMoveError(null);
+    startMoveTransition(async () => {
+      try {
+        await submitOperationalBlueprintActionAction({
+          taskItemId: item.workspaceTaskItemId as string,
+          actionKey: action.key,
+          targetType: "TECHNICAL_ISSUE",
+          targetId: item.id,
+          fields: moveValues,
+        });
+        setMoveRequest(null);
+        setMoveValues({});
+        router.refresh();
+      } catch (error) {
+        setMoveError(
+          error instanceof Error ? error.message : "Không thể chuyển trạng thái TI.",
+        );
+      }
+    });
+  }
+
+  return (
+    <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-5">
+      <div className="overflow-x-auto pb-2">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragOver={(event) => setOverStage(technicalBoardStageValue(event.over?.id))}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="grid min-w-[1320px] grid-cols-4 gap-5">
+            {columns.map((column) => {
+              const columnItems = items.filter((item) => item.stage === column.key);
+              return (
+                <TechnicalIssueBoardColumn
+                  key={column.key}
+                  column={column}
+                  items={columnItems}
+                  isOver={overStage === column.key}
+                />
+              );
+            })}
+          </div>
+          <DragOverlay dropAnimation={{ duration: 160, easing: "ease-out" }}>
+            {activeItem ? (
+              <div className="w-[260px]">
+                <TechnicalIssueBoardCard item={activeItem} dragging />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+        </div>
+      <TechnicalIssueBoardMoveModal
+        request={moveRequest}
+        values={moveValues}
+        error={moveError}
+        pending={isMovePending}
+        vendorOptions={vendorOptions}
+        technicalDetailCatalogOptions={technicalDetailCatalogOptions}
+        onChange={(key, value) => {
+          setMoveValues((current) => ({
+            ...current,
+            [key]: value,
+            ...((key === "assigneeMode" || key === "actionMode") &&
+            String(value).toUpperCase() !== "VENDOR"
+              ? { vendorId: "" }
+              : {}),
+          }));
+        }}
+        onSubmit={submitMove}
+        onClose={() => {
+          if (isMovePending) return;
+          setMoveRequest(null);
+          setMoveValues({});
+          setMoveError(null);
+        }}
+      />
+    </div>
+  );
+}
+
+type TechnicalIssueBoardStage =
+  NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["items"][number]["stage"];
+type TechnicalIssueBoardItem =
+  NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["items"][number];
+type TechnicalIssueBoardMoveRequest = {
+  item: TechnicalIssueBoardItem;
+  targetStage: TechnicalIssueBoardStage;
+  action: OperationalBlueprintAction | null;
+  unavailableReason: string | null;
+};
+
+function technicalBoardStageValue(value: unknown): TechnicalIssueBoardStage | null {
+  const stage = String(value ?? "").toUpperCase();
+  if (stage === "INSPECT" || stage === "READY" || stage === "PROCESSING" || stage === "DONE") {
+    return stage;
+  }
+  return null;
+}
+
+function technicalBoardActionForMove(input: {
+  from: TechnicalIssueBoardStage;
+  to: TechnicalIssueBoardStage;
+  actions: OperationalBlueprintAction[];
+}) {
+  const actionKey =
+    input.from === "INSPECT" && input.to === "READY"
+      ? "classify_technical_issue"
+      : input.from === "INSPECT" && input.to === "DONE"
+        ? "close_no_issue"
+        : input.from === "READY" && input.to === "PROCESSING"
+          ? "start_processing"
+          : input.from === "PROCESSING" && input.to === "DONE"
+            ? "complete_processing"
+            : null;
+  if (!actionKey) return null;
+  return input.actions.find((action) => action.key === actionKey) ?? null;
+}
+
+function defaultTechnicalBoardMoveValues(
+  item: TechnicalIssueBoardItem,
+  action: OperationalBlueprintAction,
+): Record<string, string | boolean> {
+  if (action.command === "service.confirmTechnicalIssue") {
+    return {
+      technicalArea: item.area ?? "GENERAL",
+      assigneeMode: item.actionMode && item.actionMode !== "NONE" ? item.actionMode : "INTERNAL",
+      vendorId: item.vendorId ?? "",
+      estimatedCost: item.estimatedCost == null ? "" : String(item.estimatedCost),
+    };
+  }
+  if (action.command === "service.startTechnicalIssue") {
+    return {
+      technicalDetailCatalogId: item.technicalDetailCatalogId ?? "",
+      actionMode: item.actionMode && item.actionMode !== "NONE" ? item.actionMode : "INTERNAL",
+      vendorId: item.vendorId ?? "",
+      estimatedCost: item.estimatedCost == null ? "" : String(item.estimatedCost),
+      startedNote: "",
+      vendorChangeNote: "",
+    };
+  }
+  if (action.command === "service.completeTechnicalIssue") {
+    return {
+      actualCost:
+        item.actualCost == null
+          ? item.estimatedCost == null
+            ? ""
+            : String(item.estimatedCost)
+          : String(item.actualCost),
+      resolutionNote: "",
+      createPayment: true,
+    };
+  }
+  if (action.command === "service.closeTechnicalIssueNoIssue") {
+    return { resolutionNote: "" };
+  }
+  return {};
+}
+
+function shouldShowTechnicalBoardField(
+  field: OperationalBlueprintActionField,
+  values: Record<string, string | boolean>,
+) {
+  if (field.key !== "vendorId") return true;
+  const mode = String(values.assigneeMode ?? values.actionMode ?? "").toUpperCase();
+  return mode === "VENDOR";
+}
+
+function technicalBoardSubmitLabel(action: OperationalBlueprintAction) {
+  if (action.command === "service.confirmTechnicalIssue") return "Xác nhận lỗi";
+  if (action.command === "service.closeTechnicalIssueNoIssue") return "Chuyển Done";
+  if (action.command === "service.startTechnicalIssue") return "Bắt đầu xử lý";
+  if (action.command === "service.completeTechnicalIssue") return "Hoàn tất xử lý";
+  return "Xác nhận";
+}
+
+function fieldKindLabel(kind: OperationalBlueprintActionField["kind"]) {
+  if (kind === "textarea") return "Ghi chú";
+  if (kind === "select") return "Chọn";
+  if (kind === "money") return "Số tiền";
+  if (kind === "boolean") return "Có / không";
+  if (kind === "date") return "Ngày";
+  return "Nội dung";
+}
+
+function TechnicalIssueBoardColumn({
+  column,
+  items,
+  isOver,
+}: {
+  column: { key: TechnicalIssueBoardStage; label: string; hint: string };
+  items: TechnicalIssueBoardItem[];
+  isOver: boolean;
+}) {
+  const { setNodeRef } = useDroppable({ id: column.key });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition",
+        isOver && "border-violet-300 ring-2 ring-violet-100",
+      )}
+    >
+      <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-slate-950">{column.label}</div>
+          <div className="mt-1 line-clamp-2 text-xs text-slate-500">{column.hint}</div>
+        </div>
+        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+          {items.length}
+        </span>
+      </div>
+      <div className="grid min-h-[340px] content-start gap-3 p-4">
+        {items.map((item) => (
+          <DraggableTechnicalIssueBoardCard key={item.id} item={item} />
+        ))}
+        {!items.length ? (
+          <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-8 text-center text-sm text-slate-500">
+            Kéo TI vào đây.
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function DraggableTechnicalIssueBoardCard({ item }: { item: TechnicalIssueBoardItem }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: item.id,
+  });
+  const style = { transform: CSS.Translate.toString(transform) };
+
+  return (
+    <div ref={setNodeRef} style={style} className="min-w-0 max-w-full">
+      <TechnicalIssueBoardCard
+        item={item}
+        dragging={isDragging}
+        dragHandleProps={{ ...attributes, ...listeners }}
+      />
+    </div>
+  );
+}
+
+function TechnicalIssueBoardCard({
+  item,
+  dragging,
+  dragHandleProps,
+}: {
+  item: TechnicalIssueBoardItem;
+  dragging?: boolean;
+  dragHandleProps?: Record<string, unknown>;
+}) {
+  const href = item.workspaceTaskItemId
+    ? `/admin/task-items/${item.workspaceTaskItemId}`
+    : `/admin/services/${item.serviceRequestId}`;
+  const imageSrc = resolveMediaPreviewSrc(item.serviceRequest.imageUrl);
+
+  return (
+    <div
+      className={cn(
+        "w-full min-w-0 max-w-full overflow-hidden rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition hover:border-violet-200 hover:bg-violet-50/30",
+        dragging && "opacity-50",
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md bg-slate-100">
+          {imageSrc ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={imageSrc} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <Monitor className="m-3 h-6 w-6 text-slate-400" aria-hidden="true" />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <Link href={href} className="line-clamp-2 text-sm font-semibold text-slate-950 hover:text-violet-700">
+            {item.summary}
+          </Link>
+          <div className="mt-1 truncate text-xs text-slate-500">
+            {item.serviceRequest.refNo ?? "SR"} · {item.serviceRequest.productTitle ?? item.serviceRequest.sku ?? "Watch"}
+          </div>
+        </div>
+        {dragHandleProps ? (
+          <button
+            type="button"
+            {...dragHandleProps}
+            className="inline-flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded-md border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-700 active:cursor-grabbing"
+            aria-label="Kéo TI"
+          >
+            <GripVertical className="h-4 w-4" aria-hidden="true" />
+          </button>
+        ) : null}
+      </div>
+      <div className="mt-3 flex min-w-0 flex-wrap items-center gap-1.5">
+        <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+          {technicalAreaLabel(item.area)}
+        </span>
+        <span className="rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+          {technicalStatusLabel(item.executionStatus)}
+        </span>
+        {item.actionMode ? (
+          <span className="max-w-full truncate rounded-full border border-violet-100 bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-700">
+            {technicalOwnerLabel(item.actionMode, item.vendorName)}
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-3 grid min-w-0 grid-cols-1 gap-1 text-xs text-slate-500">
+        <span className="min-w-0 truncate">{formatDateTime(item.updatedAt)}</span>
+        <span className="min-w-0 truncate font-semibold text-slate-800">
+          {item.actualCost ? formatMoneyCompact(item.actualCost) : "Chưa có chi phí"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function TechnicalIssueBoardMoveModal({
+  request,
+  values,
+  error,
+  pending,
+  vendorOptions,
+  technicalDetailCatalogOptions,
+  onChange,
+  onSubmit,
+  onClose,
+}: {
+  request: TechnicalIssueBoardMoveRequest | null;
+  values: Record<string, string | boolean>;
+  error: string | null;
+  pending: boolean;
+  vendorOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["vendorOptions"];
+  technicalDetailCatalogOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["technicalDetailCatalogOptions"];
+  onChange: (key: string, value: string | boolean) => void;
+  onSubmit: () => void;
+  onClose: () => void;
+}) {
+  if (!request) return null;
+  const action = request.action;
+  const visibleFields = action?.fields.filter((field) =>
+    shouldShowTechnicalBoardField(field, values),
+  ) ?? [];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4">
+      <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-slate-950">
+              {action?.label ?? "Không thể chuyển trạng thái"}
+            </div>
+            <div className="mt-1 truncate text-xs text-slate-500">
+              {request.item.summary} · Sang {technicalBoardStageLabel(request.targetStage)}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
+            aria-label="Đóng modal"
+          >
+            <XCircle className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+        <form
+          className="space-y-4 px-5 py-5"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSubmit();
+          }}
+        >
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
+            {request.unavailableReason ?? action?.description}
+          </div>
+          {visibleFields.map((field) => (
+            <div key={field.key}>
+              <div className="mb-1.5 flex items-center justify-between gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                <span>{field.label}</span>
+                <span>{field.required ? "Bắt buộc" : fieldKindLabel(field.kind)}</span>
+              </div>
+              <TechnicalBoardFieldControl
+                field={field}
+                value={values[field.key]}
+                disabled={pending}
+                vendorOptions={vendorOptions}
+                technicalDetailCatalogOptions={technicalDetailCatalogOptions}
+                area={request.item.area}
+                onChange={(value) => onChange(field.key, value)}
+              />
+            </div>
+          ))}
+          {error ? (
+            <div className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
+              {error}
+            </div>
+          ) : null}
+          <div className="flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={pending}
+              className="inline-flex h-9 items-center rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              disabled={pending || !action}
+              className="inline-flex h-9 items-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              {pending ? "Đang xử lý" : action ? technicalBoardSubmitLabel(action) : "Không khả dụng"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function TechnicalBoardFieldControl({
+  field,
+  value,
+  disabled,
+  vendorOptions,
+  technicalDetailCatalogOptions,
+  area,
+  onChange,
+}: {
+  field: OperationalBlueprintActionField;
+  value?: string | boolean;
+  disabled?: boolean;
+  vendorOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["vendorOptions"];
+  technicalDetailCatalogOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["technicalDetailCatalogOptions"];
+  area?: string | null;
+  onChange: (value: string | boolean) => void;
+}) {
+  const baseClass =
+    "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-violet-300 disabled:bg-slate-50 disabled:text-slate-400";
+  if (field.kind === "textarea") {
+    return (
+      <textarea
+        className={`${baseClass} min-h-20 py-2`}
+        disabled={disabled}
+        value={typeof value === "string" ? value : ""}
+        placeholder={field.label}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    );
+  }
+  if (field.kind === "boolean") {
+    return (
+      <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+        <input
+          type="checkbox"
+          disabled={disabled}
+          checked={value === true}
+          onChange={(event) => onChange(event.target.checked)}
+        />
+        {field.label}
+      </label>
+    );
+  }
+  if (field.key === "vendorId") {
+    return (
+      <select
+        className={baseClass}
+        disabled={disabled}
+        value={typeof value === "string" ? value : ""}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        <option value="">Chọn vendor</option>
+        {vendorOptions.map((vendor) => (
+          <option key={vendor.id} value={vendor.id}>
+            {vendor.name}
+          </option>
+        ))}
+      </select>
+    );
+  }
+  if (field.key === "technicalDetailCatalogId") {
+    const normalizedArea = normalizeTechnicalArea(area);
+    const options = normalizedArea
+      ? technicalDetailCatalogOptions.filter(
+          (item) => normalizeTechnicalArea(item.area) === normalizedArea,
+        )
+      : technicalDetailCatalogOptions;
+    return (
+      <select
+        className={baseClass}
+        disabled={disabled}
+        value={typeof value === "string" ? value : ""}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        <option value="">Chọn chi tiết kỹ thuật</option>
+        {options.map((item) => (
+          <option key={item.id} value={item.id}>
+            {[item.code, item.name].filter(Boolean).join(" - ") || item.id}
+          </option>
+        ))}
+      </select>
+    );
+  }
+  if (field.kind === "select") {
+    return (
+      <select
+        className={baseClass}
+        disabled={disabled}
+        value={typeof value === "string" ? value : ""}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        <option value="">{field.label}</option>
+        {(field.options ?? []).map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    );
+  }
+  return (
+    <input
+      className={baseClass}
+      disabled={disabled}
+      type={field.kind === "date" ? "date" : field.kind === "money" ? "number" : "text"}
+      min={field.kind === "money" ? 0 : undefined}
+      step={field.kind === "money" ? "1000" : undefined}
+      value={typeof value === "string" ? value : ""}
+      placeholder={field.kind === "money" ? `${field.label} (số tiền)` : field.label}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  );
+}
+
+function technicalBoardStageLabel(stage: TechnicalIssueBoardStage) {
+  if (stage === "INSPECT") return "Kiểm tra";
+  if (stage === "READY") return "Chờ xử lý";
+  if (stage === "PROCESSING") return "Xử lý";
+  return "Done";
+}
+
+function normalizeTechnicalArea(value?: string | null) {
+  const area = String(value ?? "").trim().toUpperCase();
+  if (area === "HANDS" || area === "HAND_MARKERS") return "HANDS_MARKERS";
+  if (area === "STRAP") return "BRACELET";
+  return area;
+}
+
+function technicalAreaLabel(value?: string | null) {
+  const raw = normalizeTechnicalArea(value);
+  const labels: Record<string, string> = {
+    GENERAL: "Tổng quát",
+    MOVEMENT: "Máy",
+    CASE: "Vỏ",
+    CRYSTAL: "Kính",
+    DIAL: "Mặt số",
+    HANDS_MARKERS: "Kim cọc",
+    CROWN: "Núm",
+    BRACELET: "Dây",
+  };
+  return labels[raw] ?? (raw || "Tổng quát");
+}
+
+function technicalStatusLabel(value?: string | null) {
+  const raw = String(value ?? "").trim().toUpperCase();
+  if (raw === "DONE" || raw === "COMPLETED") return "Done";
+  if (raw === "IN_PROGRESS") return "Đang xử lý";
+  if (raw === "CONFIRMED" || raw === "READY") return "Ready";
+  return "Inspect";
+}
+
+function technicalOwnerLabel(actionMode?: string | null, vendorName?: string | null) {
+  const mode = String(actionMode ?? "").trim().toUpperCase();
+  if (mode === "VENDOR") return vendorName ? `Vendor: ${vendorName}` : "Vendor";
+  if (mode === "INTERNAL") return "Nội bộ";
+  return mode || "Chưa chọn";
+}
+
 function QueueSummaryCell({
   summary,
 }: {
@@ -1518,7 +2266,7 @@ function QueueSummaryCell({
   const progress = total ? Math.round((completed / total) * 100) : 0;
   const items = [
     { label: "Sẵn sàng", value: summary.ready },
-    { label: "Đang duyệt", value: summary.review },
+    { label: "Đang xử lý", value: summary.review },
     { label: "Phản hồi", value: summary.feedback },
     { label: "Xong", value: summary.done },
   ];
@@ -1542,6 +2290,86 @@ function QueueSummaryCell({
             <span className="font-medium text-slate-900">{item.value}</span>
           </span>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function PaymentSummaryCell({
+  summary,
+}: {
+  summary: CoordinationDashboardDTO["workTickets"][number]["paymentSummary"];
+}) {
+  const isOut = summary?.direction === "OUT";
+  if (!summary || summary.status === "NONE") {
+    return (
+      <div className="text-sm lg:pl-3">
+        <div className="text-xs font-medium uppercase tracking-wide text-slate-500 lg:hidden">
+          Thanh toán
+        </div>
+        <div className="mt-2 flex min-w-[150px] items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-600 lg:mt-0">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-500">
+            <Receipt className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-xs font-semibold">Chưa phát sinh</span>
+            <span className="mt-0.5 block text-sm font-bold text-slate-950">0đ</span>
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  const frameTone =
+    summary.status === "PAID"
+      ? "border-emerald-100 bg-emerald-50/70 text-emerald-800"
+      : summary.status === "PARTIAL"
+        ? "border-amber-100 bg-amber-50/70 text-amber-800"
+        : "border-rose-100 bg-rose-50/70 text-rose-800";
+  const iconTone =
+    summary.status === "PAID"
+      ? "bg-emerald-100 text-emerald-700"
+      : summary.status === "PARTIAL"
+        ? "bg-amber-100 text-amber-700"
+        : "bg-rose-100 text-rose-700";
+  const label =
+    summary.status === "PAID"
+      ? isOut
+        ? "Đã trả"
+        : "Đã thu"
+      : summary.status === "PARTIAL"
+        ? isOut
+          ? "Trả một phần"
+          : "Thu một phần"
+        : isOut
+          ? "Chưa trả"
+          : "Chưa thu";
+  const amount =
+    summary.status === "PAID"
+      ? summary.paidAmount || summary.totalAmount
+      : summary.remainingAmount || summary.unpaidAmount;
+  const subText =
+    summary.status === "PAID"
+      ? `${summary.paymentCount} payment`
+      : `${summary.paymentCount} TI · còn ${summary.unpaidIssueCount}`;
+  const Icon = summary.status === "PAID" ? CheckCircle2 : CreditCard;
+
+  return (
+    <div className="text-sm lg:pl-3">
+      <div className="text-xs font-medium uppercase tracking-wide text-slate-500 lg:hidden">
+        Thanh toán
+      </div>
+      <div className={cn("mt-2 flex min-w-[150px] items-center gap-3 rounded-lg border px-3 py-2.5 lg:mt-0", frameTone)}>
+        <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-md", iconTone)}>
+          <Icon className="h-4 w-4" aria-hidden="true" />
+        </span>
+        <span className="min-w-0">
+          <span className="block text-xs font-semibold">{label}</span>
+          <span className="mt-0.5 block text-sm font-bold text-slate-950">
+            {formatMoneyCompact(amount)}
+          </span>
+          <span className="mt-0.5 block text-xs font-medium text-slate-600">{subText}</span>
+        </span>
       </div>
     </div>
   );

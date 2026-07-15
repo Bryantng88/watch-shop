@@ -868,6 +868,7 @@ const SERVICE_OPERATION_CONTRACT: OperationalBlueprintContract = {
             { value: "CRYSTAL", label: "Kính" },
             { value: "BRACELET", label: "Dây / bracelet" },
             { value: "CROWN", label: "Núm" },
+            { value: "HANDS_MARKERS", label: "Kim cọc" },
           ],
         },
         {

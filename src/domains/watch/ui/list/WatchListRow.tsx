@@ -3,14 +3,12 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import {
-    AlertCircle,
     BadgeCheck,
     Eye,
     Hammer,
     HandCoins,
     Handshake,
     ImageIcon,
-    ListChecks,
     Lock,
     Pencil,
     RotateCcw,
@@ -257,8 +255,6 @@ export default function WatchListRow({
     onQuickOrder,
     onConsign,
     onBuyBack,
-    onRaiseCase,
-    onCreateTask,
     onPreview,
 }: Props) {
     const isRecent =
@@ -267,7 +263,6 @@ export default function WatchListRow({
     const saleState = upper(product.saleState);
 
     const isLockedForQuickOrder = saleState === "HOLD" || saleState === "SOLD";
-    const isLockedForService = saleState === "HOLD";
     const isLockedForEdit = saleState === "SOLD";
     const canBuyBack = saleState === "SOLD";
 
@@ -395,8 +390,7 @@ export default function WatchListRow({
             icon: <ShoppingCart className="h-4 w-4" />,
             onClick: onQuickOrder,
         },
-        onService &&
-        !isLockedForService && {
+        onService && {
             key: "service",
             label: "Tao phieu ky thuat",
             icon: <Hammer className="h-4 w-4" />,
@@ -408,19 +402,6 @@ export default function WatchListRow({
             label: "Consign",
             icon: <HandCoins className="h-4 w-4" />,
             onClick: onConsign,
-        },
-        onCreateTask && {
-            key: "create-task",
-            label: "Tạo task",
-            icon: <ListChecks className="h-4 w-4" />,
-            separatorBefore: true,
-            onClick: onCreateTask,
-        },
-        onRaiseCase && {
-            key: "raise-case",
-            label: "Tạo phiếu xử lý",
-            icon: <AlertCircle className="h-4 w-4" />,
-            onClick: onRaiseCase,
         },
         onBuyBack &&
         canBuyBack && {

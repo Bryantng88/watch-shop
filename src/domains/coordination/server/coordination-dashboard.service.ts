@@ -1,5 +1,7 @@
 import {
   ActivitySourceType,
+  PaymentDirection,
+  PaymentStatus,
   PaymentType,
   TaskExecutionActionType,
   TaskExecutionTargetType,
@@ -25,6 +27,7 @@ import { workspaceFlowOrder } from "@/domains/task/shared/workspace-flow-policy"
 import type { WorkspaceKind } from "@/domains/space-management/server/space-view.types";
 import type {
   CoordinationDashboardDTO,
+  CoordinationTechnicalIssueBoardItemDTO,
   CoordinationWorkTicketSummaryDTO,
   QueueSummaryDTO,
 } from "./coordination-dashboard.types";
@@ -155,6 +158,12 @@ function workspaceKindValue(value: unknown): WorkspaceKind | null {
 }
 
 function numericValue(value: unknown) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function nullableNumber(value: unknown) {
+  if (value == null) return null;
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : null;
 }
@@ -513,6 +522,15 @@ function emptyQueueSummary(): QueueSummaryDTO {
     done: 0,
   };
 }
+
+type ServiceRequestPaymentSummary = NonNullable<
+  CoordinationWorkTicketSummaryDTO["paymentSummary"]
+>;
+
+type TechnicalServiceRequestRollup = {
+  queueSummary: QueueSummaryDTO;
+  paymentSummary: ServiceRequestPaymentSummary;
+};
 
 function mediaFlowSummaryBucket(metadataJson: unknown): keyof QueueSummaryDTO {
   const runtime = getQueueItemWorkflowState({ metadataJson });
@@ -1125,6 +1143,371 @@ async function loadTechnicalQueueCountByTaskItem(input: {
   return counts;
 }
 
+function technicalIssueSummaryBucket(status: unknown): keyof QueueSummaryDTO | null {
+  const key = normalizeStatus(status);
+  if (key === "CANCELED" || key === "CANCELLED") return null;
+  if (key === "DONE" || key === "COMPLETED") return "done";
+  if (key === "IN_PROGRESS") return "review";
+  return "ready";
+}
+
+function serviceRequestPaymentStatus(input: {
+  totalAmount: number;
+  paidAmount: number;
+  unpaidAmount: number;
+  paymentCount: number;
+}): ServiceRequestPaymentSummary["status"] {
+  if (input.paymentCount === 0 || input.totalAmount <= 0) return "NONE";
+  if (input.unpaidAmount <= 0 && input.paidAmount >= input.totalAmount) return "PAID";
+  if (input.paidAmount > 0) return "PARTIAL";
+  return "UNPAID";
+}
+
+function technicalIssueBoardStage(input: {
+  flowStageKey: string | null;
+  executionStatus: unknown;
+  isConfirmed: boolean;
+}): CoordinationTechnicalIssueBoardItemDTO["stage"] {
+  const flowStage = normalizeStatus(input.flowStageKey);
+  if (flowStage === "DONE") return "DONE";
+
+  const status = normalizeStatus(input.executionStatus);
+  if (status === "DONE" || status === "COMPLETED") return "DONE";
+  if (status === "IN_PROGRESS") return "PROCESSING";
+  if (flowStage === "PROCESSING" || input.isConfirmed) return "READY";
+  if (flowStage === "INSPECT") return "INSPECT";
+  return "INSPECT";
+}
+
+async function loadTechnicalIssueBoard(input: {
+  db: DB;
+  taskId: string;
+}) {
+  const bindings = await input.db.taskExecution.findMany({
+    where: {
+      taskId: input.taskId,
+      targetType: TaskExecutionTargetType.TECHNICAL_ISSUE,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+      taskItemId: { not: null },
+    },
+    select: {
+      targetId: true,
+      taskItemId: true,
+      createdAt: true,
+      taskItem: {
+        select: {
+          id: true,
+          note: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const bindingByIssueId = new Map<
+    string,
+    {
+      taskItemId: string | null;
+      flowStageKey: string | null;
+      createdAt: Date;
+    }
+  >();
+  for (const binding of bindings) {
+    if (bindingByIssueId.has(binding.targetId)) continue;
+    const metadata = workspaceRoleMetadataFromNote(binding.taskItem?.note ?? null);
+    bindingByIssueId.set(binding.targetId, {
+      taskItemId: binding.taskItemId ?? null,
+      flowStageKey: metadata.flowStageKey,
+      createdAt: binding.createdAt,
+    });
+  }
+
+  const issueIds = [...bindingByIssueId.keys()];
+  const [vendorOptions, technicalDetailCatalogOptions] = await Promise.all([
+    input.db.vendor.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+    input.db.technicalDetailCatalog.findMany({
+      where: { isActive: true },
+      select: { id: true, area: true, code: true, name: true },
+      orderBy: [{ area: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
+    }),
+  ]);
+
+  if (!issueIds.length) return { items: [], vendorOptions, technicalDetailCatalogOptions };
+
+  const issues = await input.db.technicalIssue.findMany({
+    where: { id: { in: issueIds } },
+    select: {
+      id: true,
+      serviceRequestId: true,
+      executionStatus: true,
+      isConfirmed: true,
+      summary: true,
+      note: true,
+      area: true,
+      actionMode: true,
+      vendorId: true,
+      vendorNameSnap: true,
+      estimatedCost: true,
+      actualCost: true,
+      technicalDetailCatalogId: true,
+      updatedAt: true,
+      serviceRequest: {
+        select: {
+          refNo: true,
+          skuSnapshot: true,
+          primaryImageUrlSnapshot: true,
+          product: {
+            select: {
+              title: true,
+              sku: true,
+              primaryImageUrl: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const items = issues
+    .map((issue): CoordinationTechnicalIssueBoardItemDTO => {
+      const binding = bindingByIssueId.get(issue.id);
+      return {
+        id: issue.id,
+        serviceRequestId: issue.serviceRequestId,
+        summary: issue.summary ?? issue.note ?? "Technical issue",
+        area: issue.area ?? null,
+        actionMode: issue.actionMode ?? null,
+        vendorId: issue.vendorId ?? null,
+        vendorName: issue.vendorNameSnap ?? null,
+        estimatedCost: nullableNumber(issue.estimatedCost),
+        executionStatus: String(issue.executionStatus ?? "OPEN"),
+        isConfirmed: Boolean(issue.isConfirmed),
+        technicalDetailCatalogId: issue.technicalDetailCatalogId ?? null,
+        stage: technicalIssueBoardStage({
+          flowStageKey: binding?.flowStageKey ?? null,
+          executionStatus: issue.executionStatus,
+          isConfirmed: Boolean(issue.isConfirmed),
+        }),
+        actualCost: nullableNumber(issue.actualCost),
+        updatedAt: formatDateTime(issue.updatedAt),
+        workspaceTaskItemId: binding?.taskItemId ?? null,
+        serviceRequest: {
+          refNo: issue.serviceRequest?.refNo ?? null,
+          productTitle: issue.serviceRequest?.product?.title ?? null,
+          sku:
+            issue.serviceRequest?.skuSnapshot ??
+            issue.serviceRequest?.product?.sku ??
+            null,
+          imageUrl:
+            issue.serviceRequest?.primaryImageUrlSnapshot ??
+            issue.serviceRequest?.product?.primaryImageUrl ??
+            null,
+        },
+      };
+    })
+    .sort((left, right) => {
+      const stageOrder = { INSPECT: 0, READY: 1, PROCESSING: 2, DONE: 3 };
+      const stageDiff = stageOrder[left.stage] - stageOrder[right.stage];
+      if (stageDiff !== 0) return stageDiff;
+      return String(right.updatedAt ?? "").localeCompare(String(left.updatedAt ?? ""));
+    });
+
+  return { items, vendorOptions, technicalDetailCatalogOptions };
+}
+
+async function loadTechnicalServiceRequestRollupByTaskItem(input: {
+  db: DB;
+  taskId: string;
+  taskItems: Array<{ id: string; note: string | null }>;
+}) {
+  const result = new Map<string, TechnicalServiceRequestRollup>();
+  if (!input.taskItems.length) return result;
+
+  const metadataByTaskItem = new Map(
+    input.taskItems.map((item) => [item.id, workspaceRoleMetadataFromNote(item.note)]),
+  );
+  const serviceRequestIdsByTaskItem = new Map<string, Set<string>>();
+
+  for (const item of input.taskItems) {
+    const metadata = metadataByTaskItem.get(item.id);
+    if (metadata?.workspaceKind !== "CASE_WORKSPACE") continue;
+
+    const serviceRequestId = noteLineValue(item.note, "serviceRequestId");
+    if (serviceRequestId) {
+      serviceRequestIdsByTaskItem.set(item.id, new Set([serviceRequestId]));
+    }
+  }
+
+  const caseTaskItemIds = [...serviceRequestIdsByTaskItem.keys()];
+  if (!caseTaskItemIds.length) return result;
+
+  const serviceRequestBindings = await input.db.taskExecution.findMany({
+    where: {
+      taskId: input.taskId,
+      taskItemId: { in: caseTaskItemIds },
+      targetType: TaskExecutionTargetType.SERVICE_REQUEST,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+    },
+    select: {
+      taskItemId: true,
+      targetId: true,
+    },
+  });
+
+  for (const binding of serviceRequestBindings) {
+    if (!binding.taskItemId) continue;
+    const ids = serviceRequestIdsByTaskItem.get(binding.taskItemId) ?? new Set<string>();
+    ids.add(binding.targetId);
+    serviceRequestIdsByTaskItem.set(binding.taskItemId, ids);
+  }
+
+  const serviceRequestIds = [
+    ...new Set([...serviceRequestIdsByTaskItem.values()].flatMap((ids) => [...ids])),
+  ];
+  if (!serviceRequestIds.length) return result;
+
+  const technicalIssues = await input.db.technicalIssue.findMany({
+    where: { serviceRequestId: { in: serviceRequestIds } },
+    select: {
+      id: true,
+      serviceRequestId: true,
+      executionStatus: true,
+    },
+  });
+  const issueToServiceRequest = new Map(
+    technicalIssues.map((issue) => [issue.id, issue.serviceRequestId]),
+  );
+  const issueIds = technicalIssues.map((issue) => issue.id);
+  const payments = issueIds.length
+    ? await input.db.payment.findMany({
+        where: {
+          technical_issue_id: { in: issueIds },
+          type: PaymentType.SERVICE,
+          direction: PaymentDirection.OUT,
+        },
+        select: {
+          technical_issue_id: true,
+          status: true,
+          amount: true,
+        },
+      })
+    : [];
+
+  const queueByServiceRequest = new Map<string, QueueSummaryDTO>();
+  for (const issue of technicalIssues) {
+    const bucket = technicalIssueSummaryBucket(issue.executionStatus);
+    if (!bucket) continue;
+
+    const summary = queueByServiceRequest.get(issue.serviceRequestId) ?? emptyQueueSummary();
+    queueByServiceRequest.set(issue.serviceRequestId, {
+      ...summary,
+      [bucket]: summary[bucket] + 1,
+    });
+  }
+
+  const paymentByServiceRequest = new Map<
+    string,
+    {
+      totalAmount: number;
+      paidAmount: number;
+      unpaidAmount: number;
+      paymentCount: number;
+      unpaidIssueIds: Set<string>;
+    }
+  >();
+  for (const payment of payments) {
+    const issueId = payment.technical_issue_id;
+    const serviceRequestId = issueId ? issueToServiceRequest.get(issueId) : null;
+    if (!issueId || !serviceRequestId) continue;
+
+    const amount = Number(payment.amount ?? 0);
+    const status = String(payment.status ?? "").toUpperCase();
+    const current =
+      paymentByServiceRequest.get(serviceRequestId) ??
+      {
+        totalAmount: 0,
+        paidAmount: 0,
+        unpaidAmount: 0,
+        paymentCount: 0,
+        unpaidIssueIds: new Set<string>(),
+      };
+
+    if (Number.isFinite(amount) && amount > 0) {
+      current.totalAmount += amount;
+      if (status === PaymentStatus.PAID || status === "COLLECTED") {
+        current.paidAmount += amount;
+      } else if (status === PaymentStatus.UNPAID) {
+        current.unpaidAmount += amount;
+        current.unpaidIssueIds.add(issueId);
+      }
+    }
+    current.paymentCount += 1;
+    paymentByServiceRequest.set(serviceRequestId, current);
+  }
+
+  for (const [taskItemId, serviceRequestIdsForTaskItem] of serviceRequestIdsByTaskItem.entries()) {
+    const queueSummary = [...serviceRequestIdsForTaskItem].reduce((acc, serviceRequestId) => {
+      const current = queueByServiceRequest.get(serviceRequestId) ?? emptyQueueSummary();
+      return {
+        ready: acc.ready + current.ready,
+        review: acc.review + current.review,
+        feedback: acc.feedback + current.feedback,
+        done: acc.done + current.done,
+      };
+    }, emptyQueueSummary());
+
+    const payment = [...serviceRequestIdsForTaskItem].reduce(
+      (acc, serviceRequestId) => {
+        const current = paymentByServiceRequest.get(serviceRequestId);
+        if (!current) return acc;
+
+        for (const issueId of current.unpaidIssueIds) acc.unpaidIssueIds.add(issueId);
+        return {
+          totalAmount: acc.totalAmount + current.totalAmount,
+          paidAmount: acc.paidAmount + current.paidAmount,
+          unpaidAmount: acc.unpaidAmount + current.unpaidAmount,
+          paymentCount: acc.paymentCount + current.paymentCount,
+          unpaidIssueIds: acc.unpaidIssueIds,
+        };
+      },
+      {
+        totalAmount: 0,
+        paidAmount: 0,
+        unpaidAmount: 0,
+        paymentCount: 0,
+        unpaidIssueIds: new Set<string>(),
+      },
+    );
+    const remainingAmount = Math.max(0, payment.totalAmount - payment.paidAmount);
+
+    result.set(taskItemId, {
+      queueSummary,
+      paymentSummary: {
+        scope: "TECHNICAL_ISSUE_ROLLUP",
+        direction: "OUT",
+        status: serviceRequestPaymentStatus({
+          totalAmount: payment.totalAmount,
+          paidAmount: payment.paidAmount,
+          unpaidAmount: payment.unpaidAmount,
+          paymentCount: payment.paymentCount,
+        }),
+        totalAmount: payment.totalAmount,
+        paidAmount: payment.paidAmount,
+        unpaidAmount: payment.unpaidAmount,
+        remainingAmount,
+        paymentCount: payment.paymentCount,
+        unpaidIssueCount: payment.unpaidIssueIds.size,
+      },
+    });
+  }
+
+  return result;
+}
+
 async function loadWorkspaceIdentityPreviewMap(input: {
   db: DB;
   taskId: string;
@@ -1422,6 +1805,8 @@ export async function getCoordinationDashboard(input: {
     activityRows,
     lastActivityMap,
     identityPreviewMap,
+    technicalServiceRequestRollupByTaskItem,
+    technicalIssueBoard,
   ] = await Promise.all([
     db.taskExecution.groupBy({
       by: ["taskItemId"],
@@ -1469,6 +1854,19 @@ export async function getCoordinationDashboard(input: {
       taskId: cycle.task.id,
       taskItems: taskItems.filter((item) => identityPreviewTaskItemIdSet.has(item.id)),
     }),
+    input.context === "TECHNICAL"
+      ? loadTechnicalServiceRequestRollupByTaskItem({
+          db,
+          taskId: cycle.task.id,
+          taskItems,
+        })
+      : Promise.resolve(new Map<string, TechnicalServiceRequestRollup>()),
+    input.context === "TECHNICAL"
+      ? loadTechnicalIssueBoard({
+          db,
+          taskId: cycle.task.id,
+        })
+      : Promise.resolve(null),
   ]);
 
   const queueCountByTaskItem = new Map(
@@ -1492,11 +1890,14 @@ export async function getCoordinationDashboard(input: {
     const queueSummary =
       input.context === "MEDIA"
         ? mediaQueueSummaryByTaskItem.get(item.id) ?? emptyQueueSummary()
-        : buildQueueSummary({
+        : technicalServiceRequestRollupByTaskItem.get(item.id)?.queueSummary ??
+          buildQueueSummary({
             queueCount,
             feedbackCount,
             status: item.status,
           });
+    const paymentSummary =
+      technicalServiceRequestRollupByTaskItem.get(item.id)?.paymentSummary ?? null;
     const overdue = Boolean(
       item.dueAt && item.dueAt < now && item.status !== TaskStatus.DONE,
     );
@@ -1514,6 +1915,7 @@ export async function getCoordinationDashboard(input: {
       ownerLabel: ticketOwner(item, currentUser).label,
       owner: ticketOwner(item, currentUser),
       queueSummary,
+      paymentSummary,
       needAttention: feedbackCount > 0 || overdue,
       feedbackCount,
       lastActivity: lastActivity?.title ?? null,
@@ -1654,6 +2056,7 @@ export async function getCoordinationDashboard(input: {
       };
     }),
     workTickets,
+    technicalIssueBoard,
   };
 }
 
