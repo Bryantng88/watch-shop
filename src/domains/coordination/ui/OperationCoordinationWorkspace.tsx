@@ -43,6 +43,7 @@ import AdminBreadcrumbs from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
 import {
   rolloverPreviousCycleItemsAction,
   setWorkspaceAutoBindingReceiverAction,
+  updateSpaceSharingAction,
 } from "@/domains/coordination/actions/coordination.actions";
 import {
   createTaskItemAction,
@@ -200,13 +201,15 @@ function modeDescription(mode: CoordinationDashboardDTO["viewConfig"]["modes"][n
   return displayText(mode.description);
 }
 
-function coreFlowLabel(flow: CoordinationDashboardDTO["viewConfig"]["coreFlows"][number]) {
+type SpaceCoreFlow = NonNullable<CoordinationDashboardDTO["viewConfig"]["coreFlows"]>[number];
+
+function coreFlowLabel(flow: SpaceCoreFlow) {
   if (flow.key === "media-production-flow") return "Sản xuất Media";
   if (flow.key === "technical-issue-flow") return "Xử lý lỗi kỹ thuật";
   return displayText(flow.label);
 }
 
-function coreFlowDescription(flow: CoordinationDashboardDTO["viewConfig"]["coreFlows"][number]) {
+function coreFlowDescription(flow: SpaceCoreFlow) {
   if (flow.key === "media-production-flow") {
     return "Hiển thị đường vận hành Media theo thứ tự stage.";
   }
@@ -474,6 +477,206 @@ function OwnerCell({
         </span>
         <span className="truncate font-medium text-slate-800">{owner.label}</span>
       </div>
+    </div>
+  );
+}
+
+type SpaceShareScope = "SPACE" | "CORE_FLOW";
+
+function shareUserLabel(user?: CoordinationDashboardDTO["spaceSharing"]["users"][number] | null) {
+  return user?.name || user?.email || "Unassigned";
+}
+
+function SpaceShareAvatar({
+  user,
+}: {
+  user: CoordinationDashboardDTO["spaceSharing"]["users"][number];
+}) {
+  const label = shareUserLabel(user);
+  const src = resolveMediaPreviewSrc(user.avatarUrl);
+
+  return (
+    <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-slate-100 text-xs font-semibold text-slate-600">
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt={label} className="h-full w-full object-cover" />
+      ) : (
+        initials(label)
+      )}
+    </span>
+  );
+}
+
+function SpaceSharingEditor({
+  taskId,
+  context,
+  activeCoreFlow,
+  sharing,
+}: {
+  taskId: string;
+  context: CoordinationDashboardDTO["context"];
+  activeCoreFlow: SpaceCoreFlow | null;
+  sharing: CoordinationDashboardDTO["spaceSharing"];
+}) {
+  const router = useRouter();
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [sharingScope, setSharingScope] = useState<SpaceShareScope>(
+    activeCoreFlow ? "CORE_FLOW" : "SPACE",
+  );
+  const [localScopeIds, setLocalScopeIds] = useState(sharing.scopeUserIds);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const activeScope =
+    sharingScope === "CORE_FLOW" && activeCoreFlow ? "CORE_FLOW" : "SPACE";
+  const activeCoreFlowKey = activeCoreFlow?.key ?? null;
+  const activeSharedIds =
+    activeScope === "CORE_FLOW" && activeCoreFlowKey
+      ? localScopeIds.coreFlows[activeCoreFlowKey] ?? []
+      : localScopeIds.space;
+  const sharedIdSet = new Set(activeSharedIds);
+  const visibleSharedUsers = activeSharedIds
+    .map((id) => sharing.sharedUsers.find((user) => user.id === id) ?? sharing.users.find((user) => user.id === id))
+    .filter(Boolean) as CoordinationDashboardDTO["spaceSharing"]["users"];
+  const availableUsers = sharing.users.filter((user) => !sharedIdSet.has(user.id));
+
+  useEffect(() => {
+    if (!activeCoreFlow && sharingScope === "CORE_FLOW") {
+      setSharingScope("SPACE");
+    }
+  }, [activeCoreFlow, sharingScope]);
+
+  function updateSharedUsers(nextSharedIds: string[]) {
+    const nextScopeIds =
+      activeScope === "CORE_FLOW" && activeCoreFlowKey
+        ? {
+            ...localScopeIds,
+            coreFlows: {
+              ...localScopeIds.coreFlows,
+              [activeCoreFlowKey]: nextSharedIds,
+            },
+          }
+        : {
+            ...localScopeIds,
+            space: nextSharedIds,
+          };
+
+    setLocalScopeIds(nextScopeIds);
+    startTransition(async () => {
+      await updateSpaceSharingAction({
+        taskId,
+        context,
+        sharingScope: activeScope,
+        coreFlowKey: activeCoreFlowKey,
+        sharedUserIds: nextSharedIds,
+      });
+      router.refresh();
+    });
+  }
+
+  function addSelected() {
+    if (!selectedUserId) return;
+    updateSharedUsers(Array.from(new Set([...activeSharedIds, selectedUserId])));
+    setSelectedUserId("");
+  }
+
+  function removeUser(userId: string) {
+    updateSharedUsers(activeSharedIds.filter((id) => id !== userId));
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-700 shadow-sm">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h3 className="text-xs font-semibold text-slate-950">Shared with</h3>
+          <div className="mt-2 text-[11px] font-medium text-slate-500">
+            {activeScope === "CORE_FLOW" && activeCoreFlow ? coreFlowLabel(activeCoreFlow) : "Entire space"}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsExpanded((value) => !value)}
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-violet-200 bg-white px-3 text-sm font-semibold text-violet-700 shadow-sm hover:bg-violet-50"
+        >
+          <Plus className="h-4 w-4" />
+          Thêm
+        </button>
+      </div>
+
+      <div className="mt-2 flex flex-wrap items-center gap-0">
+        {visibleSharedUsers.length ? (
+          <>
+            {(isExpanded ? visibleSharedUsers : visibleSharedUsers.slice(0, 3)).map((user) => (
+          <span
+            key={user.id}
+            className="inline-flex max-w-full items-center gap-2 rounded-full text-sm font-medium text-slate-700 -ml-2 first:ml-0"
+          >
+            <SpaceShareAvatar user={user} />
+            {isExpanded ? (
+              <>
+                <span className="max-w-[160px] truncate">{shareUserLabel(user)}</span>
+                <button
+                  type="button"
+                  onClick={() => removeUser(user.id)}
+                  disabled={isPending}
+                  className="rounded-full p-0.5 text-slate-400 hover:bg-white hover:text-rose-600"
+                  aria-label={`Remove shared access for ${shareUserLabel(user)}`}
+                >
+                  <XCircle className="h-4 w-4" />
+                </button>
+              </>
+            ) : null}
+          </span>
+            ))}
+            {visibleSharedUsers.length > 3 && !isExpanded ? (
+              <span className="-ml-2 inline-flex h-7 min-w-7 items-center justify-center rounded-full border-2 border-white bg-slate-100 px-2 text-xs font-semibold text-slate-500">
+                +{visibleSharedUsers.length - 3}
+              </span>
+            ) : null}
+          </>
+        ) : (
+          <div className="text-xs text-slate-500">
+            Not shared with anyone yet.
+          </div>
+        )}
+      </div>
+
+      {isExpanded ? (
+      <div className="mt-3 grid gap-2 border-t border-slate-100 pt-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+        <select
+          value={activeScope}
+          onChange={(event) => setSharingScope(event.target.value as SpaceShareScope)}
+          disabled={isPending}
+          className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-slate-400"
+        >
+          {activeCoreFlow ? (
+            <option value="CORE_FLOW">Share this core flow</option>
+          ) : null}
+          <option value="SPACE">Share entire space</option>
+        </select>
+        <select
+          value={selectedUserId}
+          onChange={(event) => setSelectedUserId(event.target.value)}
+          disabled={isPending || !availableUsers.length}
+          className="h-9 min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-slate-400"
+        >
+          <option value="">Add participant</option>
+          {availableUsers.map((user) => (
+            <option key={user.id} value={user.id}>
+              {shareUserLabel(user)}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={addSelected}
+          disabled={isPending || !selectedUserId}
+          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+        >
+          <Plus className="h-4 w-4" />
+          Add
+        </button>
+      </div>
+      ) : null}
     </div>
   );
 }
@@ -1099,6 +1302,14 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                 </div>
               </SpaceViewSummary>
             ) : null}
+            <div className="mt-4">
+              <SpaceSharingEditor
+                taskId={data.cycle.id}
+                context={data.context}
+                activeCoreFlow={activeCoreFlow}
+                sharing={data.spaceSharing}
+              />
+            </div>
             {activeViewMode ? (
               <SpaceViewInfoGrid>
                 <SpaceViewInfoCell icon={<Monitor className="h-4 w-4" />} label="Chế độ xem Space">

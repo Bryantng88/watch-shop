@@ -44,6 +44,16 @@ function formatDateTime(value?: Date | string | null) {
   return date.toISOString();
 }
 
+function uniqueShareIds(userIds: Array<string | null | undefined>) {
+  return Array.from(
+    new Set(userIds.map((id) => String(id ?? "").trim()).filter(Boolean)),
+  );
+}
+
+function shareUserIdsFromNoteLine(note: string | null | undefined, key: string) {
+  return uniqueShareIds((noteLineValue(note, key) ?? "").split(","));
+}
+
 function mediaUrl(value?: string | null) {
   const raw = String(value ?? "").trim();
   if (!raw) return null;
@@ -1814,6 +1824,7 @@ export async function getCoordinationDashboard(input: {
     identityPreviewMap,
     technicalServiceRequestRollupByTaskItem,
     technicalIssueBoard,
+    allUsers,
   ] = await Promise.all([
     db.taskExecution.groupBy({
       by: ["taskItemId"],
@@ -1874,6 +1885,16 @@ export async function getCoordinationDashboard(input: {
           taskId: cycle.task.id,
         })
       : Promise.resolve(null),
+    db.user.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatarUrl: true,
+      },
+      orderBy: [{ name: "asc" }, { email: "asc" }],
+    }),
   ]);
 
   const queueCountByTaskItem = new Map(
@@ -2004,6 +2025,26 @@ export async function getCoordinationDashboard(input: {
     blueprintUsage.set(key, current);
   }
 
+  const taskScopeNotes = rawTaskItems.map((item) => item.note);
+  const spaceSharedUserIds = uniqueShareIds(
+    taskScopeNotes.flatMap((note) => shareUserIdsFromNoteLine(note, "spaceSharedUserIds")),
+  );
+  const coreFlowSharedUserIds = Object.fromEntries(
+    (viewConfig.coreFlows ?? []).map((flow) => [
+      flow.key,
+      uniqueShareIds(
+        taskScopeNotes.flatMap((note) =>
+          shareUserIdsFromNoteLine(note, `coreFlowSharedUserIds:${flow.key}`),
+        ),
+      ),
+    ]),
+  );
+  const allSharedUserIds = new Set([
+    ...spaceSharedUserIds,
+    ...Object.values(coreFlowSharedUserIds).flat(),
+  ]);
+  const sharedUsers = allUsers.filter((user) => allSharedUserIds.has(user.id));
+
   return {
     context: input.context,
     contextLabel: SPACE_LABELS[input.context].label,
@@ -2036,6 +2077,14 @@ export async function getCoordinationDashboard(input: {
       { key: "done", label: "Done", value: reportValues.done },
       { key: "overdue", label: "Overdue", value: reportValues.overdue },
     ],
+    spaceSharing: {
+      users: allUsers,
+      sharedUsers,
+      scopeUserIds: {
+        space: spaceSharedUserIds,
+        coreFlows: coreFlowSharedUserIds,
+      },
+    },
     blueprints: (await listWorkspaceInstantiationBlueprintOptions(input.context)).map((blueprint) => {
       const usage = blueprintUsage.get(
         blueprintUsageKey({ key: blueprint.key, source: blueprint.source }),

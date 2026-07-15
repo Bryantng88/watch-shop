@@ -29,6 +29,7 @@ export default function RowActions<T>({
     const [open, setOpen] = useState(false);
     const [menuPosition, setMenuPosition] = useState<{
         top: number;
+        maxHeight: number;
         left?: number;
         right?: number;
     } | null>(null);
@@ -39,6 +40,13 @@ export default function RowActions<T>({
     const visibleActions = actions.filter(
         (item): item is RowAction<T> => Boolean(item && !item.hidden),
     );
+    const actionLayoutKey = visibleActions
+        .map((action) => `${action.key}:${action.separatorBefore ? "1" : "0"}`)
+        .join("|");
+    const estimatedMenuHeight = visibleActions.reduce(
+        (height, action) => height + 36 + (action.separatorBefore ? 9 : 0),
+        0,
+    );
 
     useEffect(() => {
         if (!open) return;
@@ -47,8 +55,23 @@ export default function RowActions<T>({
             const rect = buttonRef.current?.getBoundingClientRect();
             if (!rect) return;
 
+            const viewportPadding = 12;
+            const menuGap = 6;
+            const menuHeight = menuRef.current?.offsetHeight ?? estimatedMenuHeight;
+            const spaceBelow = window.innerHeight - rect.bottom - viewportPadding;
+            const spaceAbove = rect.top - viewportPadding;
+            const openUp = spaceBelow < menuHeight && spaceAbove > spaceBelow;
+            const availableHeight = Math.max(
+                120,
+                openUp ? spaceAbove - menuGap : spaceBelow - menuGap,
+            );
+            const top = openUp
+                ? Math.max(viewportPadding, rect.top - Math.min(menuHeight, availableHeight) - menuGap)
+                : Math.min(rect.bottom + menuGap, window.innerHeight - viewportPadding);
+
             setMenuPosition({
-                top: rect.bottom + 6,
+                top,
+                maxHeight: availableHeight,
                 ...(align === "right"
                     ? { right: window.innerWidth - rect.right }
                     : { left: rect.left }),
@@ -56,6 +79,7 @@ export default function RowActions<T>({
         };
 
         updateMenuPosition();
+        const frame = window.requestAnimationFrame(updateMenuPosition);
 
         const handleClick = (event: MouseEvent) => {
             const target = event.target as Node;
@@ -77,12 +101,13 @@ export default function RowActions<T>({
         window.addEventListener("resize", updateMenuPosition);
 
         return () => {
+            window.cancelAnimationFrame(frame);
             document.removeEventListener("mousedown", handleClick);
             document.removeEventListener("keydown", handleKeyDown);
             window.removeEventListener("scroll", updateMenuPosition, true);
             window.removeEventListener("resize", updateMenuPosition);
         };
-    }, [align, open]);
+    }, [actionLayoutKey, align, estimatedMenuHeight, open]);
 
     if (visibleActions.length === 0) return null;
 
@@ -102,7 +127,7 @@ export default function RowActions<T>({
                     ref={menuRef}
                     style={menuPosition}
                     className={cn(
-                        "fixed z-[80] min-w-[180px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl",
+                        "fixed z-[80] min-w-[180px] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl",
                     )}
                 >
                     {visibleActions.map((action) => (

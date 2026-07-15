@@ -90,6 +90,13 @@ export type CoordinationTechnicalIssueBoardItemDTO = {
   };
 };
 
+export type CoordinationUserSummaryDTO = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  avatarUrl: string | null;
+};
+
 export type CoordinationDashboardDTO = {
   context: CoordinationContext;
   contextLabel: string;
@@ -119,6 +126,14 @@ export type CoordinationDashboardDTO = {
     }>;
   };
   report: CoordinationReportMetricDTO[];
+  spaceSharing: {
+    users: CoordinationUserSummaryDTO[];
+    sharedUsers: CoordinationUserSummaryDTO[];
+    scopeUserIds: {
+      space: string[];
+      coreFlows: Record<string, string[]>;
+    };
+  };
   blueprints: Array<{
     selectionKey: string;
     key: string;

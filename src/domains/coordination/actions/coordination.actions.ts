@@ -47,6 +47,41 @@ function setAutoBindingReceiverNote(note: string | null | undefined, enabled: bo
   return lines.join("\n").trim() || null;
 }
 
+function uniqueShareIds(userIds: string[]) {
+  return Array.from(
+    new Set(userIds.map((id) => String(id ?? "").trim()).filter(Boolean)),
+  );
+}
+
+function workTypeKeyFromNote(note?: string | null) {
+  return String(note ?? "").match(/^workTypeKey:\s*([a-z0-9-]+)/im)?.[1] ?? null;
+}
+
+function coreFlowScopeKeyFromNote(note?: string | null) {
+  const explicit = String(note ?? "").match(/^coreFlowKey:\s*([a-z0-9-]+)/im)?.[1] ?? null;
+  const snapshot = parseWorkspaceDefinitionSnapshot(note);
+  return explicit ?? snapshot?.coreFlowKey ?? workTypeKeyFromNote(note);
+}
+
+function setShareUserIdsInNote(
+  note: string | null | undefined,
+  lineKey: string,
+  userIds: string[],
+) {
+  const cleanIds = uniqueShareIds(userIds);
+  const escapedKey = lineKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const linePattern = new RegExp(`^${escapedKey}:\\s*`, "i");
+  const lines = String(note ?? "")
+    .split(/\r?\n/)
+    .filter((line) => !linePattern.test(line.trim()));
+
+  if (cleanIds.length) {
+    lines.push(`${lineKey}: ${cleanIds.join(",")}`);
+  }
+
+  return lines.join("\n").trim() || null;
+}
+
 function contextPath(context: CoordinationContext) {
   if (context === "SALES") return "sales";
   if (context === "TECHNICAL") return "technical";
@@ -115,6 +150,70 @@ export async function setWorkspaceAutoBindingReceiverAction(input: {
   if (taskItemId) revalidatePath(`/admin/task-items/${taskItemId}`);
 
   return { ok: true, receiverId: taskItemId || null };
+}
+
+export async function updateSpaceSharingAction(input: {
+  taskId: string;
+  context: CoordinationContext;
+  sharingScope: "SPACE" | "CORE_FLOW";
+  coreFlowKey?: string | null;
+  sharedUserIds: string[];
+}) {
+  await requirePermission("TASK_VIEW");
+
+  const taskId = clean(input.taskId);
+  const sharingScope = input.sharingScope;
+  const coreFlowKey = normalizeWorkTypeKey(input.coreFlowKey);
+  const requestedIds = uniqueShareIds(input.sharedUserIds ?? []);
+
+  if (!taskId) throw new Error("Missing taskId");
+  if (sharingScope === "CORE_FLOW" && !coreFlowKey) {
+    throw new Error("Missing coreFlowKey");
+  }
+
+  const users = requestedIds.length
+    ? await prisma.user.findMany({
+      where: { id: { in: requestedIds }, isActive: true },
+      select: { id: true },
+    })
+    : [];
+  const validIds = users.map((user) => user.id);
+
+  const items = await prisma.taskItem.findMany({
+    where: {
+      taskId,
+      status: { not: TaskStatus.CANCELLED },
+    },
+    select: {
+      id: true,
+      note: true,
+    },
+  });
+
+  const targetItems =
+    sharingScope === "SPACE"
+      ? items
+      : items.filter((item) => coreFlowScopeKeyFromNote(item.note) === coreFlowKey);
+  const lineKey =
+    sharingScope === "SPACE"
+      ? "spaceSharedUserIds"
+      : `coreFlowSharedUserIds:${coreFlowKey}`;
+
+  await prisma.$transaction(
+    targetItems.map((item) =>
+      prisma.taskItem.update({
+        where: { id: item.id },
+        data: {
+          note: setShareUserIdsInNote(item.note, lineKey, validIds),
+        },
+      }),
+    ),
+  );
+
+  revalidatePath(`/admin/coordination/${contextPath(input.context)}`);
+  revalidatePath("/admin/task-items");
+
+  return { ok: true, sharedUserIds: validIds };
 }
 
 export async function rolloverPreviousCycleItemsAction(input: {

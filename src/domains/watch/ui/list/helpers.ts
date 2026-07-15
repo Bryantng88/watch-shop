@@ -231,7 +231,8 @@ export function mapWatchRow(row: any): WatchRow {
     const hasContent = hasValidContent(row);
     const contentStatus = normalizeContentStatus(row);
     const serviceIssuesCount = getOpenServiceIssuesCount(row);
-    const serviceReady = isWatchServiceReady(row?.serviceState);
+    const serviceState = row?.serviceStage ?? row?.serviceState ?? null;
+    const serviceReady = isWatchServiceReady(serviceState);
     const reviewStatus = buildReadyReviewStatus(row);
     const price = row?.watchPrice ?? row?.price ?? {};
 
@@ -269,13 +270,13 @@ export function mapWatchRow(row: any): WatchRow {
         serviceIssuesCount,
         reviewStatus,
         postReadiness: reviewStatus,
-        serviceState: row?.serviceState ?? null,
+        serviceState,
         stockState: row?.stockState ?? null,
         saleState: row?.saleStage ?? row?.saleState ?? null,
         statusLabel: row?.saleStage ?? row?.saleState ?? row?.stockState ?? null,
         conditionGrade: row?.conditionGrade ?? null,
 
-        serviceLabel: row?.serviceState ?? null,
+        serviceLabel: serviceState,
 
         salePrice: normalizeNumber(price?.salePrice),
         listPrice: normalizeNumber(price?.listPrice),

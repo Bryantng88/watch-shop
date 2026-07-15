@@ -14,12 +14,14 @@ export async function POST(req: Request, context: RouteContext) {
             id,
             actorId: body.actorId ?? null,
             actorName: body.actorName ?? null,
+            summary: body.summary ?? null,
+            note: body.note ?? null,
         });
 
         return NextResponse.json({ ok: true, item });
-    } catch (e: any) {
+    } catch (e: unknown) {
         return NextResponse.json(
-            { error: e?.message ?? "Internal error" },
+            { error: e instanceof Error ? e.message : "Internal error" },
             { status: 500 }
         );
     }

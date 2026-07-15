@@ -320,13 +320,19 @@ export async function confirmTechnicalIssue(input: {
     id: string;
     actorId?: string | null;
     actorName?: string | null;
+    summary?: string | null;
+    note?: string | null;
 }) {
     const id = cleanId(input.id);
     if (!id) throw new Error("Missing issue id");
+    const summary = cleanText(input.summary);
+    const note = cleanText(input.note);
 
     const updated = await prisma.technicalIssue.update({
         where: { id },
         data: {
+            summary: summary || undefined,
+            note: note || undefined,
             isConfirmed: true,
             confirmedAt: new Date(),
             confirmedById: cleanId(input.actorId),

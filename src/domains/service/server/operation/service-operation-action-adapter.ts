@@ -348,12 +348,17 @@ export async function runServiceOperationBlueprintAction(
           : actionModeField(actionModeFields, false);
       const vendorId = optionalField(fields, "vendorId");
       const estimatedCost = moneyField(fields, "estimatedCost", false);
+      const summary =
+        actionKey === "classify_technical_issue"
+          ? requiredField(fields, "summary")
+          : optionalField(fields, "summary");
+      const note = optionalField(fields, "note");
 
       if (actionMode === "VENDOR" && !vendorId) {
         throw new Error("Missing vendorId");
       }
 
-      if (technicalArea || actionMode || vendorId || estimatedCost != null) {
+      if (technicalArea || actionMode || vendorId || estimatedCost != null || summary || note != null) {
         const nextVendorId =
           actionKey === "classify_technical_issue" && actionMode !== "VENDOR"
             ? null
@@ -373,6 +378,8 @@ export async function runServiceOperationBlueprintAction(
         await db.technicalIssue.update({
           where: { id: targetId },
           data: {
+            summary: summary ?? undefined,
+            note: note ?? undefined,
             area: technicalArea ?? undefined,
             actionMode: actionMode ?? undefined,
             vendorId: nextVendorId,

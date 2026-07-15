@@ -15,18 +15,24 @@ import {
   Circle,
   CircleDot,
   Clock3,
+  CreditCard,
   ExternalLink,
   FileText,
   Folder,
   GitBranch,
+  HeartPulse,
   Info,
   ListChecks,
   MessageSquare,
   Paperclip,
+  Play,
   Plus,
+  Search,
   Send,
+  ShieldCheck,
   Tag,
   UserRound,
+  Zap,
   XCircle,
 } from "lucide-react";
 import type { TaskPriority, TaskStatus } from "@prisma/client";
@@ -202,6 +208,7 @@ type TabItem = {
   key: DetailTab;
   label: string;
   icon: ReactNode;
+  badge?: number;
 };
 
 type WorkspacePresentation = {
@@ -334,7 +341,7 @@ function displayNote(note?: string | null) {
     .split(/\r?\n/)
     .filter((line) => {
       const trimmed = line.trim();
-      return !/^(blueprintKey|blueprintSource|workTypeKey|workflowKey|workspaceType|itemLabel|defaultView|instantiationNotes|ownerType|shareGroupKey|sharedUserIds|spaceSharedUserIds|coreFlowSharedUserIds:[a-z0-9-]+|blueprintSnapshot):/i.test(trimmed);
+      return !/^(blueprintKey|blueprintSource|workTypeKey|workflowKey|workspaceType|itemLabel|defaultView|instantiationNotes|ownerType|shareGroupKey|sharedUserIds|spaceSharedUserIds|coreFlowSharedUserIds:[a-z0-9-]+|blueprintSnapshot|serviceOperationWorkspaceRole|operationWorkspaceRole|workspaceKind|identityTargetType|serviceRequestId):/i.test(trimmed);
     })
     .join("\n")
     .trim();
@@ -590,12 +597,12 @@ function HeaderMetric({
   value: ReactNode;
 }) {
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 px-6 first:pl-0 last:pr-0">
       <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-        {icon}
+        <span className="text-slate-400">{icon}</span>
         <span>{label}</span>
       </div>
-      <div className="mt-1 truncate text-sm font-semibold text-slate-950">
+      <div className="mt-2 truncate text-sm font-extrabold text-slate-950">
         {value}
       </div>
     </div>
@@ -631,39 +638,19 @@ function SharingEditor({
   users,
   sharedUsers,
   sharedUserIds,
-  sharingScopeUserIds,
   currentUser,
 }: {
   taskItemId: string;
   users: UserSummary[];
   sharedUsers: UserSummary[];
   sharedUserIds: string[];
-  sharingScopeUserIds?: {
-    workspace?: string[];
-    coreFlow?: string[];
-    space?: string[];
-    system?: string[];
-  };
   currentUser?: UserSummary | null;
 }) {
   const router = useRouter();
   const [selectedUserId, setSelectedUserId] = useState("");
-  const [sharingScope, setSharingScope] = useState<"WORKSPACE" | "CORE_FLOW" | "SPACE">("WORKSPACE");
-  const [localScopeIds, setLocalScopeIds] = useState({
-    workspace: sharingScopeUserIds?.workspace ?? sharedUserIds,
-    coreFlow: sharingScopeUserIds?.coreFlow ?? [],
-    space: sharingScopeUserIds?.space ?? [],
-    system: sharingScopeUserIds?.system ?? [],
-  });
+  const [localSharedIds, setLocalSharedIds] = useState(sharedUserIds);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const localSharedIds = Array.from(
-    new Set([
-      ...localScopeIds.workspace,
-      ...localScopeIds.coreFlow,
-      ...localScopeIds.space,
-      ...localScopeIds.system,
-    ]),
-  );
   const sharedIdSet = new Set(localSharedIds);
   const visibleSharedUsers = localSharedIds
     .map((id) => sharedUsers.find((user) => user.id === id) ?? users.find((user) => user.id === id))
@@ -673,22 +660,12 @@ function SharingEditor({
     .map((user) => mergeCurrentUserAvatar(user, currentUser) ?? user)
     .filter((user) => !sharedIdSet.has(user.id));
 
-  function updateScope(
-    nextScopeIds: typeof localScopeIds,
-    scope: "WORKSPACE" | "CORE_FLOW" | "SPACE",
-  ) {
-    const idsForScope =
-      scope === "SPACE"
-        ? nextScopeIds.space
-        : scope === "CORE_FLOW"
-          ? nextScopeIds.coreFlow
-          : nextScopeIds.workspace;
-    setLocalScopeIds(nextScopeIds);
+  function updateSharedUsers(nextSharedIds: string[]) {
+    setLocalSharedIds(nextSharedIds);
     startTransition(async () => {
       await updateTaskItemSharingAction({
         taskItemId,
-        sharingScope: scope,
-        sharedUserIds: idsForScope,
+        sharedUserIds: nextSharedIds,
       });
       router.refresh();
     });
@@ -696,106 +673,74 @@ function SharingEditor({
 
   function addSelected() {
     if (!selectedUserId) return;
-    const scopeKey =
-      sharingScope === "SPACE"
-        ? "space"
-        : sharingScope === "CORE_FLOW"
-          ? "coreFlow"
-          : "workspace";
-    updateScope(
-      {
-        ...localScopeIds,
-        [scopeKey]: Array.from(new Set([...localScopeIds[scopeKey], selectedUserId])),
-      },
-      sharingScope,
-    );
+    updateSharedUsers(Array.from(new Set([...localSharedIds, selectedUserId])));
     setSelectedUserId("");
   }
 
   function removeUser(userId: string) {
-    const nextScopeIds = {
-      workspace: localScopeIds.workspace.filter((id) => id !== userId),
-      coreFlow: localScopeIds.coreFlow.filter((id) => id !== userId),
-      space: localScopeIds.space.filter((id) => id !== userId),
-      system: localScopeIds.system,
-    };
-    setLocalScopeIds(nextScopeIds);
-    startTransition(async () => {
-      await Promise.all([
-        updateTaskItemSharingAction({
-          taskItemId,
-          sharingScope: "WORKSPACE",
-          sharedUserIds: nextScopeIds.workspace,
-        }),
-        updateTaskItemSharingAction({
-          taskItemId,
-          sharingScope: "CORE_FLOW",
-          sharedUserIds: nextScopeIds.coreFlow,
-        }),
-        updateTaskItemSharingAction({
-          taskItemId,
-          sharingScope: "SPACE",
-          sharedUserIds: nextScopeIds.space,
-        }),
-      ]);
-      router.refresh();
-    });
+    updateSharedUsers(localSharedIds.filter((id) => id !== userId));
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
+    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h3 className="text-sm font-semibold text-slate-950">Shared with</h3>
-          <p className="mt-1 text-xs text-slate-500">People who can participate in this workspace.</p>
+          <h3 className="text-xs font-semibold text-slate-950">Shared with</h3>
         </div>
+        <button
+          type="button"
+          onClick={() => setIsExpanded((value) => !value)}
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-violet-200 bg-white px-3 text-sm font-semibold text-violet-700 shadow-sm hover:bg-violet-50"
+        >
+          <Plus className="h-4 w-4" />
+          Thêm
+        </button>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        {visibleSharedUsers.length ? visibleSharedUsers.map((user) => (
+      <div className="mt-2 flex flex-wrap items-center gap-0">
+        {visibleSharedUsers.length ? (
+          <>
+            {(isExpanded ? visibleSharedUsers : visibleSharedUsers.slice(0, 3)).map((user) => (
           <span
             key={user.id}
-            className="inline-flex max-w-full items-center gap-2 rounded-full border border-slate-200 bg-slate-50 py-1 pl-1 pr-2 text-sm font-medium text-slate-700"
+            className="inline-flex max-w-full items-center gap-2 rounded-full text-sm font-medium text-slate-700 -ml-2 first:ml-0"
           >
             <UserAvatar
               label={userLabel(user)}
               avatarUrl={user.avatarUrl}
-              className="h-7 w-7"
+              className="h-7 w-7 border-2 border-white"
             />
-            <span className="max-w-[160px] truncate">{userLabel(user)}</span>
-            <button
-              type="button"
-              onClick={() => removeUser(user.id)}
-              disabled={isPending}
-              className="rounded-full p-0.5 text-slate-400 hover:bg-white hover:text-rose-600"
-              aria-label={`Bỏ chia sẻ ${userLabel(user)}`}
-            >
-              <XCircle className="h-4 w-4" />
-            </button>
+            {isExpanded ? (
+              <>
+                <span className="max-w-[160px] truncate">{userLabel(user)}</span>
+                <button
+                  type="button"
+                  onClick={() => removeUser(user.id)}
+                  disabled={isPending}
+                  className="rounded-full p-0.5 text-slate-400 hover:bg-white hover:text-rose-600"
+                  aria-label={`Remove shared access for ${userLabel(user)}`}
+                >
+                  <XCircle className="h-4 w-4" />
+                </button>
+              </>
+            ) : null}
           </span>
-        )) : (
+            ))}
+            {visibleSharedUsers.length > 3 && !isExpanded ? (
+              <span className="-ml-2 inline-flex h-7 min-w-7 items-center justify-center rounded-full border-2 border-white bg-slate-100 px-2 text-xs font-semibold text-slate-500">
+                +{visibleSharedUsers.length - 3}
+              </span>
+            ) : null}
+          </>
+        ) : (
           <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
             Not shared with anyone yet.
           </div>
         )}
       </div>
 
-      <div className="mt-3 grid gap-2">
-        <select
-          value={sharingScope}
-          onChange={(event) =>
-            setSharingScope(event.target.value as "WORKSPACE" | "CORE_FLOW" | "SPACE")
-          }
-          disabled={isPending}
-          className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-slate-400"
-        >
-          <option value="WORKSPACE">Chia sẻ workspace này</option>
-          <option value="CORE_FLOW">Chia sẻ core flow này</option>
-          <option value="SPACE">Chia sẻ cả space</option>
-        </select>
-      </div>
-
-      <div className="mt-2 flex gap-2">
+      {isExpanded ? (
+      <div className="mt-3 flex gap-2 border-t border-slate-100 pt-3">
         <select
           value={selectedUserId}
           onChange={(event) => setSelectedUserId(event.target.value)}
@@ -819,6 +764,7 @@ function SharingEditor({
           Thêm
         </button>
       </div>
+      ) : null}
     </div>
   );
 }
@@ -835,10 +781,10 @@ function Panel({
   action?: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-xl border border-slate-200/80 bg-white/95 p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 text-base font-semibold text-slate-950">
-          {icon ? <span className="text-slate-500">{icon}</span> : null}
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-950">
+          {icon ? <span className="text-blue-600">{icon}</span> : null}
           {title}
         </h2>
         {action}
@@ -1535,8 +1481,8 @@ function SectionTabs({
   onChange: (tab: DetailTab) => void;
 }) {
   return (
-    <div className="mt-4 border-b border-slate-200">
-      <nav className="flex flex-wrap items-center gap-2" aria-label="Workspace">
+    <div className="max-w-full overflow-x-auto border-b border-slate-200">
+      <nav className="flex w-max items-center gap-6 px-1" aria-label="Workspace">
         {items.map((item) => {
           const active = item.key === activeTab;
 
@@ -1546,7 +1492,7 @@ function SectionTabs({
               type="button"
               onClick={() => onChange(item.key)}
               className={cn(
-                "inline-flex h-11 items-center gap-2 border-b-2 px-3 text-sm font-semibold",
+                "inline-flex h-11 items-center gap-2 border-b-2 px-1 text-sm font-semibold transition",
                 active
                   ? "border-blue-600 text-blue-700"
                   : "border-transparent text-slate-600 hover:text-slate-900",
@@ -1554,6 +1500,18 @@ function SectionTabs({
             >
               {item.icon}
               {item.label}
+              {item.badge ? (
+                <span
+                  className={cn(
+                    "grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11px] font-extrabold",
+                    active
+                      ? "bg-violet-100 text-violet-700"
+                      : "bg-slate-100 text-slate-500",
+                  )}
+                >
+                  {item.badge}
+                </span>
+              ) : null}
             </button>
           );
         })}
@@ -1635,25 +1593,93 @@ function WorkspaceDefinitionSnapshotPanel({
 
 function OverviewPanel({
   item,
-  activityCount,
-  checklistDone,
-  checklistTotal,
-  bindingCount,
+  activities,
+  checklists,
+  businessBindings,
+  queueItems,
   capabilities,
   presentation,
+  parentTask,
+  serviceRequestId,
+  onTabChange,
 }: {
   item: TaskItemDetail;
-  activityCount: number;
-  checklistDone: number;
-  checklistTotal: number;
-  bindingCount: number;
+  activities: TaskItemActivityViewModel[];
+  checklists: TaskItemChecklist[];
+  businessBindings: TaskItemBinding[];
+  queueItems: TaskItemQueueItem[];
   capabilities: WorkspaceCapabilities;
   presentation: WorkspacePresentation;
+  parentTask?: ParentTask | null;
+  serviceRequestId?: string | null;
+  onTabChange: (tab: DetailTab) => void;
 }) {
-  const note = displayNote(item.note);
   const workspaceSnapshot = parseWorkspaceDefinitionSnapshot(item.note);
-  const description = note || presentation.defaultDescription;
+  const description = displayNote(item.note) || presentation.defaultDescription;
+  const role = serviceOperationWorkspaceRoleFromNote(item.note);
+  const serviceRequestBinding =
+    businessBindings.find((binding) => binding.targetType === "SERVICE_REQUEST") ?? null;
+  const technicalIssueBindings = businessBindings.filter(
+    (binding) => binding.targetType === "TECHNICAL_ISSUE",
+  );
+  const paymentBindings = businessBindings.filter((binding) => binding.targetType === "PAYMENT");
+  const orderBindings = businessBindings.filter((binding) => binding.targetType === "ORDER");
+  const shipmentBindings = businessBindings.filter((binding) => binding.targetType === "SHIPMENT");
+  const checklistDone = checklists.filter((row) => row.isDone).length;
+  const checklistPending = Math.max(0, checklists.length - checklistDone);
+  const waitingItems = queueItems.filter((queueItem) =>
+    ["WAITING", "READY", "OPEN"].includes(
+      String(queueItem.currentWorkflowState ?? queueItem.status).toUpperCase(),
+    ),
+  ).length;
+  const doneItems = queueItems.filter((queueItem) =>
+    ["DONE", "COMPLETED"].includes(
+      String(queueItem.currentWorkflowState ?? queueItem.status).toUpperCase(),
+    ),
+  ).length;
+  const todayActivity = activities.filter((activity) => {
+    const date = new Date(activity.occurredAt);
+    const now = new Date();
+    return !Number.isNaN(date.getTime()) && date.toDateString() === now.toDateString();
+  }).length;
+  const commentCount = activities.reduce(
+    (count, activity) =>
+      count + activity.replies.length + (activity.sourceType === "USER_COMMENT" ? 1 : 0),
+    0,
+  );
+  const latestActivities = activities.slice(0, 3);
+  const issueCount = technicalIssueBindings.length || queueItems.length;
 
+  return (
+    <WorkspaceSummaryDashboard
+      activities={activities}
+      businessBindings={businessBindings}
+      capabilities={capabilities}
+      checklistDone={checklistDone}
+      checklistPending={checklistPending}
+      checklists={checklists}
+      commentCount={commentCount}
+      description={description}
+      doneItems={doneItems}
+      issueCount={issueCount}
+      item={item}
+      latestActivities={latestActivities}
+      onTabChange={onTabChange}
+      orderBindings={orderBindings}
+      parentTask={parentTask}
+      paymentBindings={paymentBindings}
+      presentation={presentation}
+      role={role}
+      serviceRequestBinding={serviceRequestBinding}
+      serviceRequestId={serviceRequestId}
+      shipmentBindings={shipmentBindings}
+      todayActivity={todayActivity}
+      waitingItems={waitingItems}
+      workspaceSnapshot={workspaceSnapshot}
+    />
+  );
+
+  /*
   return (
     <div className="space-y-5">
       {workspaceSnapshot ? (
@@ -1662,7 +1688,7 @@ function OverviewPanel({
 
       <Panel icon={<FileText className="h-4 w-4" />} title="Tổng quan">
         {description ? (
-          <div className="whitespace-pre-wrap rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700">
+          <div className="whitespace-pre-wrap rounded-xl border border-slate-200/80 bg-slate-50/70 px-4 py-3 text-sm leading-6 text-slate-700">
             {description}
           </div>
         ) : (
@@ -1672,7 +1698,7 @@ function OverviewPanel({
 
       <div className="grid gap-4 md:grid-cols-3">
         {capabilities.activity ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
           <div className="text-sm font-semibold text-slate-950">Hoạt động</div>
           <div className="mt-2 text-2xl font-semibold text-slate-950">
             {activityCount}
@@ -1681,7 +1707,7 @@ function OverviewPanel({
         </div>
         ) : null}
         {capabilities.checklist ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
           <div className="text-sm font-semibold text-slate-950">Checklist</div>
           <div className="mt-2 text-2xl font-semibold text-slate-950">
             {checklistDone}/{checklistTotal}
@@ -1690,7 +1716,7 @@ function OverviewPanel({
         </div>
         ) : null}
         {capabilities.items ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
           <div className="text-sm font-semibold text-slate-950">
             {presentation.itemLabel}
           </div>
@@ -1702,6 +1728,389 @@ function OverviewPanel({
         ) : null}
       </div>
     </div>
+  );
+  */
+}
+
+function WorkspaceSummaryDashboard({
+  activities,
+  businessBindings,
+  capabilities,
+  checklistDone,
+  checklistPending,
+  checklists,
+  commentCount,
+  description,
+  doneItems,
+  issueCount,
+  item,
+  latestActivities,
+  onTabChange,
+  orderBindings,
+  parentTask,
+  paymentBindings,
+  presentation,
+  role,
+  serviceRequestBinding,
+  serviceRequestId,
+  shipmentBindings,
+  todayActivity,
+  waitingItems,
+  workspaceSnapshot,
+}: {
+  activities: TaskItemActivityViewModel[];
+  businessBindings: TaskItemBinding[];
+  capabilities: WorkspaceCapabilities;
+  checklistDone: number;
+  checklistPending: number;
+  checklists: TaskItemChecklist[];
+  commentCount: number;
+  description: string | null;
+  doneItems: number;
+  issueCount: number;
+  item: TaskItemDetail;
+  latestActivities: TaskItemActivityViewModel[];
+  onTabChange: (tab: DetailTab) => void;
+  orderBindings: TaskItemBinding[];
+  parentTask?: ParentTask | null;
+  paymentBindings: TaskItemBinding[];
+  presentation: WorkspacePresentation;
+  role?: string | null;
+  serviceRequestBinding?: TaskItemBinding | null;
+  serviceRequestId?: string | null;
+  shipmentBindings: TaskItemBinding[];
+  todayActivity: number;
+  waitingItems: number;
+  workspaceSnapshot: WorkspaceDefinitionSnapshot | null;
+}) {
+  return (
+    <section className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_10px_26px_rgba(15,23,42,0.045)]">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="text-sm font-extrabold text-slate-950">Workspace Summary</h2>
+        {workspaceSnapshot ? (
+          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700 ring-1 ring-blue-100">
+            {presentation.workspaceType}
+          </span>
+        ) : null}
+      </div>
+      {false && workspaceSnapshot ? (
+        <WorkspaceDefinitionSnapshotPanel snapshot={workspaceSnapshot} />
+      ) : null}
+
+      <div className="grid gap-3 lg:grid-cols-4">
+        <OverviewCard icon={<FileText className="h-4 w-4" />} title="Context" tone="emerald">
+          <OverviewFact
+            label="Service Request"
+            value={serviceRequestId ? `SR ${compactId(serviceRequestId)}` : "-"}
+            href={serviceRequestBinding?.href ?? undefined}
+          />
+          <OverviewFact label="Khach hang" value="-" />
+          <OverviewFact label="Dong ho" value={parentTask?.title || "-"} />
+          <OverviewFact label="Technical Issue" value={`${issueCount} issue`} />
+          <OverviewFact label="Payment" value={`${paymentBindings.length} payment`} />
+          {serviceRequestBinding?.href ? (
+            <OverviewLink href={serviceRequestBinding.href}>
+              Xem chi tiet Service Request
+            </OverviewLink>
+          ) : null}
+        </OverviewCard>
+
+        <OverviewCard icon={<HeartPulse className="h-4 w-4" />} title="Health" tone="emerald">
+          <div className="mb-3 flex items-center gap-2 text-sm font-extrabold text-emerald-600">
+            <ShieldCheck className="h-4 w-4" />
+            Healthy
+          </div>
+          <HealthLine ok text="Khong co item qua han" />
+          <HealthLine ok text="Khong co checklist qua han" />
+          <HealthLine ok text={`${issueCount} Technical Issue dang xu ly`} />
+          <HealthLine ok={activityCountIsQuiet(activities)} text="Chua co hoat dong can chu y" />
+        </OverviewCard>
+
+        <OverviewCard icon={<GitBranch className="h-4 w-4" />} title="Runtime" tone="blue">
+          <OverviewFact label="Workflow" value={presentation.blueprintName || "Service Operation"} />
+          <OverviewFact label="Giai doan hien tai" value={role ? `${role} (1 / 3)` : "-"} />
+          <OverviewFact label="Last Event" value={latestActivities[0]?.title || "-"} />
+          <OverviewFact label="Cap nhat lan cuoi" value={formatDateTime(item.updatedAt)} />
+          <button
+            type="button"
+            onClick={() => onTabChange("workflow")}
+            className="mt-auto inline-flex h-8 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 text-xs font-bold text-blue-700 transition hover:border-blue-200 hover:bg-blue-50"
+          >
+            Xem chi tiet workflow
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </OverviewCard>
+
+        <OverviewCard icon={<Folder className="h-4 w-4" />} title="Related" tone="violet">
+          <OverviewFact
+            label="Service Request"
+            value={serviceRequestId ? compactId(serviceRequestId) : "-"}
+            href={serviceRequestBinding?.href ?? undefined}
+          />
+          <OverviewFact label="Technical Issue" value={`${issueCount}`} />
+          <OverviewFact label="Payment" value={`${paymentBindings.length}`} />
+          <OverviewFact label="Order" value={orderBindings.length ? `${orderBindings.length}` : "-"} />
+          <OverviewFact label="Shipment" value={shipmentBindings.length ? `${shipmentBindings.length}` : "-"} />
+          <button
+            type="button"
+            onClick={() => onTabChange("business")}
+            className="mt-auto inline-flex h-8 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 text-xs font-bold text-blue-700 transition hover:border-blue-200 hover:bg-blue-50"
+          >
+            Xem tat ca lien ket
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </OverviewCard>
+      </div>
+
+      {description ? (
+        <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50/40 px-3 py-2.5 text-xs leading-5 text-slate-600">
+          {description}
+        </div>
+      ) : null}
+
+      <div className="mt-3 grid gap-3 lg:grid-cols-[repeat(3,minmax(0,1fr))_minmax(260px,2.15fr)]">
+        <OverviewStatCard
+          icon={<Folder className="h-4 w-4" />}
+          title="Items"
+          value={String(businessBindings.length)}
+          caption="Active"
+          leftLabel="Waiting"
+          leftValue={String(waitingItems)}
+          rightLabel="Done"
+          rightValue={String(doneItems)}
+        />
+        <OverviewStatCard
+          icon={<ListChecks className="h-4 w-4" />}
+          title="Checklist"
+          value={`${checklistDone} / ${checklists.length}`}
+          caption="Completed"
+          leftLabel="Overdue"
+          leftValue="0"
+          rightLabel="Pending"
+          rightValue={String(checklistPending)}
+        />
+        <OverviewStatCard
+          icon={<Zap className="h-4 w-4" />}
+          title="Activity"
+          value={String(todayActivity)}
+          caption="Hom nay"
+          leftLabel="Events"
+          leftValue={String(activities.length)}
+          rightLabel="Comments"
+          rightValue={String(commentCount)}
+        />
+
+        <div className="rounded-xl border border-slate-200/80 bg-white p-3.5">
+          <div className="mb-3 text-sm font-extrabold text-slate-950">Recent Activity</div>
+          {latestActivities.length ? (
+            <div className="space-y-3">
+              {latestActivities.map((activity) => (
+                <div key={activity.id} className="grid grid-cols-[18px_minmax(0,1fr)_92px] gap-3">
+                  <div className="relative flex justify-center">
+                    <span className="mt-1 h-2.5 w-2.5 rounded-full bg-blue-600 ring-4 ring-blue-50" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate text-xs font-bold text-slate-800">{activity.title}</div>
+                    <div className="mt-0.5 truncate text-[11px] text-slate-500">{activity.actorLabel}</div>
+                  </div>
+                  <div className="text-right text-[11px] text-slate-500">
+                    {formatDateTime(activity.occurredAt)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-5 text-center text-xs text-slate-500">
+              Chua co hoat dong.
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => onTabChange("activity")}
+            className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 hover:text-blue-800"
+          >
+            Xem toan bo hoat dong
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2.5 rounded-xl border border-violet-100 bg-violet-50/35 px-3 py-2.5">
+        <div className="mr-auto flex items-center gap-2 text-sm font-extrabold text-slate-800">
+          <Zap className="h-4 w-4 text-violet-600" />
+          Thao tac nhanh
+        </div>
+        {capabilities.items ? (
+          <OverviewQuickAction icon={<Plus className="h-4 w-4" />} onClick={() => onTabChange("business")}>
+            Them Technical Issue
+          </OverviewQuickAction>
+        ) : null}
+        {capabilities.items ? (
+          <OverviewQuickAction icon={<Plus className="h-4 w-4" />} onClick={() => onTabChange("business")}>
+            Them Item
+          </OverviewQuickAction>
+        ) : null}
+        {capabilities.workflow ? (
+          <OverviewQuickAction icon={<Play className="h-4 w-4" />} onClick={() => onTabChange("workflow")}>
+            Bat dau xu ly
+          </OverviewQuickAction>
+        ) : null}
+        {capabilities.workflow ? (
+          <OverviewQuickAction icon={<GitBranch className="h-4 w-4" />} onClick={() => onTabChange("workflow")}>
+            Chuyen giai doan
+          </OverviewQuickAction>
+        ) : null}
+        <OverviewQuickAction icon={<CreditCard className="h-4 w-4" />} onClick={() => onTabChange("business")}>
+          Tao Payment
+        </OverviewQuickAction>
+      </div>
+      {workspaceSnapshot ? <div className="sr-only">{snapshotCapabilityLabels(workspaceSnapshot)}</div> : null}
+    </section>
+  );
+}
+
+function activityCountIsQuiet(activities: TaskItemActivityViewModel[]) {
+  return !activities.some((activity) => activity.tone === "rose");
+}
+
+function OverviewCard({
+  icon,
+  title,
+  tone,
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  tone: "emerald" | "blue" | "violet";
+  children: ReactNode;
+}) {
+  const toneClass =
+    tone === "emerald"
+      ? "bg-emerald-50 text-emerald-600 ring-emerald-100"
+      : tone === "blue"
+        ? "bg-blue-50 text-blue-600 ring-blue-100"
+        : "bg-violet-50 text-violet-600 ring-violet-100";
+
+  return (
+    <div className="flex min-h-[178px] flex-col rounded-xl border border-slate-200/80 bg-white p-3.5">
+      <div className="mb-3 flex items-center gap-2">
+        <span className={cn("grid h-7 w-7 place-items-center rounded-lg ring-1", toneClass)}>
+          {icon}
+        </span>
+        <div className="text-sm font-bold text-slate-900">{title}</div>
+      </div>
+      <div className="flex flex-1 flex-col space-y-2.5">{children}</div>
+    </div>
+  );
+}
+
+function OverviewFact({
+  label,
+  value,
+  href,
+}: {
+  label: string;
+  value: ReactNode;
+  href?: string;
+}) {
+  return (
+    <div className="flex min-h-5 items-center justify-between gap-3 text-xs">
+      <span className="shrink-0 text-slate-500">{label}</span>
+      {href ? (
+        <Link href={href} className="min-w-0 truncate text-right text-xs font-bold text-blue-700 hover:text-blue-800">
+          {value}
+        </Link>
+      ) : (
+        <span className="min-w-0 truncate text-right text-xs font-bold text-slate-950">
+          {value}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function HealthLine({ ok, text }: { ok: boolean; text: string }) {
+  return (
+    <div className="flex min-h-5 items-center gap-2 text-xs text-slate-600">
+      <CheckCircle2 className={cn("h-3.5 w-3.5", ok ? "text-emerald-500" : "text-amber-500")} />
+      <span>{text}</span>
+    </div>
+  );
+}
+
+function OverviewLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="mt-auto inline-flex h-8 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 text-xs font-bold text-blue-700 transition hover:border-blue-200 hover:bg-blue-50"
+    >
+      {children}
+      <ChevronRight className="h-4 w-4" />
+    </Link>
+  );
+}
+
+function OverviewStatCard({
+  icon,
+  title,
+  value,
+  caption,
+  leftLabel,
+  leftValue,
+  rightLabel,
+  rightValue,
+}: {
+  icon: ReactNode;
+  title: string;
+  value: string;
+  caption: string;
+  leftLabel: string;
+  leftValue: string;
+  rightLabel: string;
+  rightValue: string;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200/80 bg-white p-3.5">
+      <div className="mb-4 flex items-center gap-2">
+        <span className="grid h-7 w-7 place-items-center rounded-lg bg-blue-50 text-blue-600 ring-1 ring-blue-100">
+          {icon}
+        </span>
+        <div className="text-sm font-bold text-slate-900">{title}</div>
+      </div>
+      <div className="text-3xl font-bold text-slate-950">{value}</div>
+      <div className="mt-1 text-xs text-slate-500">{caption}</div>
+      <div className="mt-4 grid grid-cols-2 divide-x divide-slate-200 border-t border-slate-100 pt-3">
+        <div>
+          <div className="text-sm font-bold text-slate-950">{leftValue}</div>
+          <div className="mt-0.5 text-xs text-slate-500">{leftLabel}</div>
+        </div>
+        <div className="pl-4">
+          <div className="text-sm font-bold text-slate-950">{rightValue}</div>
+          <div className="mt-0.5 text-xs text-slate-500">{rightLabel}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OverviewQuickAction({
+  icon,
+  children,
+  onClick,
+}: {
+  icon: ReactNode;
+  children: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex h-8 items-center gap-2 rounded-lg border border-violet-100 bg-white px-3 text-xs font-bold text-violet-700 shadow-sm transition hover:border-violet-200 hover:bg-violet-50"
+    >
+      {icon}
+      {children}
+    </button>
   );
 }
 
@@ -1768,6 +2177,8 @@ function CoreFlowWorkspaceNav({
   steps,
   workspaceRoles,
   parentTask,
+  itemCount,
+  itemLabel,
 }: {
   currentItemId: string;
   currentWorkspaceRole?: string | null;
@@ -1775,6 +2186,8 @@ function CoreFlowWorkspaceNav({
   steps: OperationalBlueprintCoreFlowStep[];
   workspaceRoles?: OperationalBlueprintWorkspaceRole[];
   parentTask?: ParentTask | null;
+  itemCount: number;
+  itemLabel: string;
 }) {
   if (!steps.length) return null;
 
@@ -1822,9 +2235,9 @@ function CoreFlowWorkspaceNav({
   return (
     <nav
       aria-label="Core flow workspaces"
-      className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1"
+      className="mt-7 grid gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm lg:grid-cols-[minmax(0,1fr)_32px_minmax(0,1fr)_32px_minmax(0,1fr)_minmax(250px,1.1fr)]"
     >
-      {flowStageSteps.map((step, index) => {
+      {flowStageSteps.slice(0, 3).map((step, index) => {
         const stepRole = step.workspaceRole.toUpperCase();
         const roleDefinition = roleByKey.get(stepRole);
         const active = stepRole === currentWorkspaceRole?.toUpperCase();
@@ -1837,42 +2250,91 @@ function CoreFlowWorkspaceNav({
               ? workspaceByRole.get(stepRole)
               : null;
         const content = (
-          <>
-            <span className="max-w-[150px] truncate">{step.label}</span>
-            {active ? (
-              <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[10px] leading-none">
-                current
+          <div
+            className={cn(
+              "flex min-h-[72px] items-center gap-3 rounded-lg px-4 py-3 transition",
+              active
+                ? "bg-gradient-to-br from-white to-violet-50 shadow-[0_8px_24px_rgba(91,67,241,0.08)] ring-1 ring-violet-200"
+                : "bg-white hover:bg-slate-50",
+            )}
+          >
+            <span
+              className={cn(
+                "grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-extrabold text-white",
+                active
+                  ? "bg-gradient-to-br from-blue-600 to-violet-600"
+                  : "bg-slate-300",
+              )}
+            >
+              {index + 1}
+            </span>
+            <span className="min-w-0">
+              <span className="flex min-w-0 flex-wrap items-center gap-2">
+                <span
+                  className={cn(
+                    "truncate text-sm font-extrabold",
+                    active ? "text-blue-700" : "text-slate-700",
+                  )}
+                >
+                  {step.label}
+                </span>
+                {active ? (
+                  <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-extrabold text-violet-700">
+                    Current
+                  </span>
+                ) : null}
               </span>
-            ) : null}
-          </>
+              <span className="mt-1 block truncate text-xs font-medium text-slate-500">
+                {step.description}
+              </span>
+            </span>
+          </div>
         );
 
         return (
-          <div key={`${step.workspaceRole}:${index}`} className="flex items-center gap-1">
+          <div
+            key={`${step.workspaceRole}:${index}`}
+            className="contents"
+          >
             {workspace?.id ? (
               <Link
                 href={`/admin/task-items/${workspace.id}`}
                 aria-current={active ? "page" : undefined}
-                className={cn(
-                  "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition",
-                  active
-                    ? "bg-slate-950 text-white shadow-sm"
-                    : "text-slate-600 hover:bg-white hover:text-slate-900",
-                )}
+                className="block min-w-0"
               >
                 {content}
               </Link>
             ) : (
-              <span className="inline-flex h-7 shrink-0 items-center rounded-lg px-2.5 text-xs font-semibold text-slate-400">
-                {step.label}
-              </span>
+              <div className="min-w-0">
+                {content}
+              </div>
             )}
-            {index < flowStageSteps.length - 1 ? (
-              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300" />
+            {index < Math.min(flowStageSteps.length, 3) - 1 ? (
+              <div className="hidden place-items-center text-slate-300 lg:grid">
+                <ChevronRight className="h-4 w-4" />
+              </div>
             ) : null}
           </div>
         );
       })}
+      <div className="flex min-h-[72px] items-center gap-4 rounded-lg border-t border-slate-200 px-4 py-3 lg:border-l lg:border-t-0 lg:pl-6">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-violet-50 text-violet-700 ring-1 ring-violet-100">
+          <GitBranch className="h-5 w-5" />
+        </div>
+        <div className="min-w-0">
+          <div className="flex items-baseline gap-3">
+            <span className="text-3xl font-extrabold text-slate-950">
+              {itemCount}
+            </span>
+            <span className="truncate text-sm font-extrabold text-slate-800">
+              {itemLabel}
+            </span>
+          </div>
+          <div className="mt-1 text-xs font-medium text-slate-500">
+            trong Workspace này
+          </div>
+        </div>
+      </div>
     </nav>
   );
 }
@@ -2228,6 +2690,9 @@ export default function TaskItemDetailClient({
   const itemTabLabel = isServiceOperationWorkspace
     ? "Technical Issue Operation"
     : presentation.itemLabel;
+  const businessTabLabel = isServiceOperationWorkspace
+    ? "Technical Issue"
+    : presentation.itemLabel;
   const displayTitle = repairVietnameseMojibake(item.title || "Workspace");
   const backHref = coordinationHref(parentTask);
   const isSystemOwner = noteHasSystemOwner(item.note);
@@ -2243,7 +2708,12 @@ export default function TaskItemDetailClient({
     { key: "overview", label: "Tổng quan", icon: <FileText className="h-4 w-4" /> },
     { key: "activity", label: "Hoạt động", icon: <Clock3 className="h-4 w-4" /> },
     { key: "checklist", label: "Checklist", icon: <ListChecks className="h-4 w-4" /> },
-    { key: "business", label: itemTabLabel, icon: <Folder className="h-4 w-4" /> },
+    {
+      key: "business",
+      label: businessTabLabel,
+      icon: <Folder className="h-4 w-4" />,
+      badge: businessBindings.length || undefined,
+    },
     { key: "info", label: "Thông tin", icon: <Info className="h-4 w-4" /> },
   ];
   const tabByKey = new Map(tabs.map((tab) => [tab.key, tab]));
@@ -2290,73 +2760,57 @@ export default function TaskItemDetailClient({
           />
         </div>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0">
-              {isServiceOperationWorkspace && operationalCoreFlow ? (
-                <CoreFlowWorkspaceNav
-                  currentItemId={item.id}
-                  currentWorkspaceRole={serviceOperationWorkspaceRole}
-                  currentCoreFlowKey={
-                    operationalCoreFlow.key || currentWorkspaceNavMetadata.coreFlowKey
-                  }
-                  steps={operationalCoreFlow.steps}
-                  workspaceRoles={operationContract?.workspaceRoles ?? []}
-                  parentTask={parentTask}
-                />
-              ) : !isServiceOperationCaseWorkspace ? (
-                <div className="flex flex-wrap items-center gap-2">
+        <section className="rounded-2xl border border-slate-200 bg-white px-5 py-6 shadow-[0_12px_32px_rgba(24,36,76,0.06)] lg:px-7">
+          <div className="grid gap-7 lg:grid-cols-[96px_minmax(0,1fr)_280px] lg:items-start">
+            <div className="hidden h-24 w-24 place-items-center rounded-[20px] bg-gradient-to-br from-violet-100 via-violet-50 to-white text-violet-700 ring-1 ring-violet-100 lg:grid">
+              <Search className="h-11 w-11" />
+            </div>
+
+            <div className="min-w-0 pt-1">
+              {!isServiceOperationCaseWorkspace && !isServiceOperationWorkspace ? (
+                <div className="mb-4 flex flex-wrap items-center gap-2">
                   <SpaceWorkspaceNav
                     currentItemId={item.id}
                     parentTask={parentTask}
                   />
                 </div>
               ) : null}
-
-              <div className={`${isServiceOperationWorkspace ? "" : "mt-5"} flex flex-wrap items-center gap-2`}>
-                <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
-                  {presentation.workspaceType}
-                </span>
-                {presentation.blueprintName ? (
-                  <span className="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
-                    {presentation.blueprintName}
-                    {presentation.blueprintSource ? ` / ${presentation.blueprintSource}` : ""}
-                  </span>
-                ) : null}
-                {!isServiceOperationWorkspace ? (
-                  <span className="font-mono text-xs font-semibold text-slate-500">
-                    {taskItemRef(item.id)}
-                  </span>
-                ) : null}
+              <div className="mb-2.5 flex items-center gap-2 text-xs font-extrabold text-slate-700">
+                <GitBranch className="h-3.5 w-3.5 text-blue-600" />
+                <span>{presentation.workspaceType}</span>
               </div>
-
-              <div className="mt-4 flex min-w-0 flex-wrap items-center gap-3">
-                <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
+              <div className="flex min-w-0 flex-wrap items-center gap-3.5">
+                <h1 className="text-3xl font-extrabold leading-tight text-slate-950">
                   {displayTitle}
                 </h1>
                 <TaskStatusSignal status={item.status} />
                 {capabilities.priority ? (
-                  <span className="rounded-xl bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 ring-1 ring-orange-100">
+                  <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-extrabold text-blue-700 ring-1 ring-blue-100">
                     <PrioritySignal priority={item.priority} showLabel />
                   </span>
                 ) : null}
               </div>
               {presentation.defaultDescription ? (
-                <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+                <p className="mt-3 max-w-3xl text-sm font-medium leading-6 text-slate-700">
                   {presentation.defaultDescription}
                 </p>
               ) : null}
             </div>
 
-            <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm ring-1 ring-slate-100">
-              <div className="text-xs font-medium text-slate-500">Workspace ref</div>
-              <div className="mt-1 font-mono text-sm font-semibold text-slate-900">
-                {taskItemRef(item.id)}
+            <div className="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-violet-50/70 p-[18px] shadow-sm shadow-violet-100/40">
+              <div className="text-xs font-semibold text-slate-500">Workspace ref</div>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <div className="min-w-0 truncate font-mono text-lg font-extrabold text-slate-950">
+                  {taskItemRef(item.id)}
+                </div>
+                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white text-violet-600 ring-1 ring-violet-100">
+                  <FileText className="h-4 w-4" />
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="mt-6 grid gap-x-8 gap-y-4 md:grid-cols-2 xl:grid-cols-6">
+          <div className="mt-7 grid gap-y-6 divide-slate-200 md:grid-cols-2 lg:grid-cols-6 lg:divide-x">
             {capabilities.assignee ? (
               <HeaderMetric
                 icon={<UserRound className="h-4 w-4" />}
@@ -2390,25 +2844,44 @@ export default function TaskItemDetailClient({
               value={formatDateTime(item.createdAt)}
             />
           </div>
-        </section>
 
-        <SectionTabs
-          items={capabilityTabs}
-          activeTab={activeTab}
-          onChange={setActiveTab}
-        />
+          {isServiceOperationWorkspace && operationalCoreFlow ? (
+            <CoreFlowWorkspaceNav
+              currentItemId={item.id}
+              currentWorkspaceRole={serviceOperationWorkspaceRole}
+              currentCoreFlowKey={
+                operationalCoreFlow.key || currentWorkspaceNavMetadata.coreFlowKey
+              }
+              steps={operationalCoreFlow.steps}
+              workspaceRoles={operationContract?.workspaceRoles ?? []}
+              parentTask={parentTask}
+              itemCount={businessBindings.length}
+              itemLabel={presentation.itemLabel}
+            />
+          ) : null}
+        </section>
 
         <div className="mt-4 grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
           <div className="min-w-0">
+            <SectionTabs
+              items={capabilityTabs}
+              activeTab={activeTab}
+              onChange={setActiveTab}
+            />
+
+            <div className="mt-4">
             {activeTab === "overview" ? (
               <OverviewPanel
                 item={item}
-                activityCount={activities.length}
-                checklistDone={checklistDone}
-                checklistTotal={checklists.length}
-                bindingCount={businessBindings.length}
+                activities={activities}
+                checklists={checklists}
+                businessBindings={businessBindings}
+                queueItems={queueItems}
                 capabilities={capabilities}
                 presentation={presentation}
+                parentTask={parentTask}
+                serviceRequestId={serviceRequestId}
+                onTabChange={setActiveTab}
               />
             ) : null}
 
@@ -2478,6 +2951,7 @@ export default function TaskItemDetailClient({
             {activeTab === "info" ? (
               <DetailInfo item={item} presentation={presentation} />
             ) : null}
+            </div>
           </div>
 
           <aside className="space-y-5">
@@ -2487,7 +2961,6 @@ export default function TaskItemDetailClient({
                 users={users}
                 sharedUsers={item.sharedUsers ?? []}
                 sharedUserIds={item.sharedUserIds ?? []}
-                sharingScopeUserIds={item.sharingScopeUserIds}
                 currentUser={currentUser}
               />
             ) : null}

@@ -856,6 +856,8 @@ const SERVICE_OPERATION_CONTRACT: OperationalBlueprintContract = {
       description:
         "Xác nhận nghi vấn thành lỗi kỹ thuật cần xử lý.",
       fields: [
+        { key: "summary", label: "Mo ta loi da chuan hoa", kind: "text", required: true },
+        { key: "note", label: "Ghi chu ky thuat", kind: "textarea", required: false },
         {
           key: "technicalArea",
           label: "Nhóm kỹ thuật",
