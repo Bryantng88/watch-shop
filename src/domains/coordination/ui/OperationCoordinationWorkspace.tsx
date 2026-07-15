@@ -34,7 +34,6 @@ import {
   Receipt,
   RotateCcw,
   Send,
-  Settings,
   SlidersHorizontal,
   XCircle,
   Zap,
@@ -584,25 +583,25 @@ function SpaceSharingEditor({
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-700 shadow-sm">
+    <div className="text-xs text-slate-700">
       <div className="flex items-center justify-between gap-4">
-        <div>
-          <h3 className="text-xs font-semibold text-slate-950">Shared with</h3>
+        <div className="min-w-0">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Space members</h3>
           <div className="mt-2 text-[11px] font-medium text-slate-500">
-            {activeScope === "CORE_FLOW" && activeCoreFlow ? coreFlowLabel(activeCoreFlow) : "Entire space"}
+            {activeScope === "CORE_FLOW" && activeCoreFlow ? coreFlowLabel(activeCoreFlow) : "Toàn bộ Space"}
           </div>
         </div>
         <button
           type="button"
           onClick={() => setIsExpanded((value) => !value)}
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-violet-200 bg-white px-3 text-sm font-semibold text-violet-700 shadow-sm hover:bg-violet-50"
+          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-violet-200 bg-white px-2.5 text-xs font-semibold text-violet-700 shadow-sm hover:bg-violet-50"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-3.5 w-3.5" />
           Thêm
         </button>
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-0">
+      <div className="mt-3 flex flex-wrap items-center gap-0">
         {visibleSharedUsers.length ? (
           <>
             {(isExpanded ? visibleSharedUsers : visibleSharedUsers.slice(0, 3)).map((user) => (
@@ -632,50 +631,55 @@ function SpaceSharingEditor({
                 +{visibleSharedUsers.length - 3}
               </span>
             ) : null}
+            {!isExpanded ? (
+              <span className="ml-2 text-xs font-medium text-slate-600">
+                {visibleSharedUsers.length} thành viên
+              </span>
+            ) : null}
           </>
         ) : (
           <div className="text-xs text-slate-500">
-            Not shared with anyone yet.
+            Chưa chia sẻ với ai.
           </div>
         )}
       </div>
 
       {isExpanded ? (
-      <div className="mt-3 grid gap-2 border-t border-slate-100 pt-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-        <select
-          value={activeScope}
-          onChange={(event) => setSharingScope(event.target.value as SpaceShareScope)}
-          disabled={isPending}
-          className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-slate-400"
-        >
-          {activeCoreFlow ? (
-            <option value="CORE_FLOW">Share this core flow</option>
-          ) : null}
-          <option value="SPACE">Share entire space</option>
-        </select>
-        <select
-          value={selectedUserId}
-          onChange={(event) => setSelectedUserId(event.target.value)}
-          disabled={isPending || !availableUsers.length}
-          className="h-9 min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-slate-400"
-        >
-          <option value="">Add participant</option>
-          {availableUsers.map((user) => (
-            <option key={user.id} value={user.id}>
-              {shareUserLabel(user)}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          onClick={addSelected}
-          disabled={isPending || !selectedUserId}
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
-        >
-          <Plus className="h-4 w-4" />
-          Add
-        </button>
-      </div>
+        <div className="mt-3 grid gap-2 border-t border-slate-100 pt-3">
+          <select
+            value={activeScope}
+            onChange={(event) => setSharingScope(event.target.value as SpaceShareScope)}
+            disabled={isPending}
+            className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-slate-400"
+          >
+            {activeCoreFlow ? (
+              <option value="CORE_FLOW">Chia sẻ core flow này</option>
+            ) : null}
+            <option value="SPACE">Chia sẻ toàn bộ Space</option>
+          </select>
+          <select
+            value={selectedUserId}
+            onChange={(event) => setSelectedUserId(event.target.value)}
+            disabled={isPending || !availableUsers.length}
+            className="h-9 min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-slate-400"
+          >
+            <option value="">Thêm thành viên</option>
+            {availableUsers.map((user) => (
+              <option key={user.id} value={user.id}>
+                {shareUserLabel(user)}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={addSelected}
+            disabled={isPending || !selectedUserId}
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            <Plus className="h-4 w-4" />
+            Thêm
+          </button>
+        </div>
       ) : null}
     </div>
   );
@@ -1195,7 +1199,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
             </div>
             {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
             {selectedBlueprint ? (
-              <SpaceViewSummary>
+              <SpaceViewSummary columns="lg:grid-cols-[1.05fr_0.75fr_1fr_1.7fr_0.9fr]">
                 <SpaceViewSummaryCell as="label">
                   <span className="font-bold uppercase tracking-wide text-slate-500">Blueprint</span>
                   <select
@@ -1291,25 +1295,16 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   ) : null}
                 </SpaceViewSummaryCell>
 
-                <div className="flex items-start justify-end p-5">
-                  <button
-                    type="button"
-                    className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-violet-100 bg-violet-50 px-3 text-xs font-semibold text-violet-700"
-                  >
-                    <Settings className="h-3.5 w-3.5" />
-                    Chỉnh sửa cài đặt
-                  </button>
-                </div>
+                <SpaceViewSummaryCell className="lg:after:hidden">
+                  <SpaceSharingEditor
+                    taskId={data.cycle.id}
+                    context={data.context}
+                    activeCoreFlow={activeCoreFlow}
+                    sharing={data.spaceSharing}
+                  />
+                </SpaceViewSummaryCell>
               </SpaceViewSummary>
             ) : null}
-            <div className="mt-4">
-              <SpaceSharingEditor
-                taskId={data.cycle.id}
-                context={data.context}
-                activeCoreFlow={activeCoreFlow}
-                sharing={data.spaceSharing}
-              />
-            </div>
             {activeViewMode ? (
               <SpaceViewInfoGrid>
                 <SpaceViewInfoCell icon={<Monitor className="h-4 w-4" />} label="Chế độ xem Space">
@@ -1669,7 +1664,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
           <div className={cn("hidden border-y border-slate-100 bg-[#fbfcfe] px-5 py-3 text-xs font-bold uppercase tracking-[0.05em] text-slate-500 lg:grid", workTicketGridClass)}>
             <div>Workspace</div>
             <div>Phụ trách</div>
-            <div>Tiến độ / Item</div>
+            <div>Item / Trạng thái</div>
             {showPaymentColumn ? (
               <div className="flex items-center gap-1 lg:pl-3">
                 <span>Thanh toán</span>
@@ -2473,26 +2468,32 @@ function QueueSummaryCell({
   summary: CoordinationDashboardDTO["workTickets"][number]["queueSummary"];
 }) {
   const total = summary.ready + summary.review + summary.feedback + summary.done;
-  const completed = summary.done;
-  const progress = total ? Math.round((completed / total) * 100) : 0;
   const items = [
-    { label: "Sẵn sàng", value: summary.ready },
-    { label: "Đang xử lý", value: summary.review },
-    { label: "Phản hồi", value: summary.feedback },
-    { label: "Xong", value: summary.done },
+    { label: "Sẵn sàng", value: summary.ready, color: "bg-blue-400" },
+    { label: "Đang xử lý", value: summary.review, color: "bg-violet-500" },
+    { label: "Phản hồi", value: summary.feedback, color: "bg-amber-400" },
+    { label: "Xong", value: summary.done, color: "bg-emerald-500" },
   ];
+  const activeItems = items.filter((item) => item.value > 0);
 
   return (
     <div className="text-sm">
       <div className="flex items-center justify-between gap-2 text-xs font-semibold text-violet-700">
-        <span>{completed} / {total || 0}</span>
-        <span>{progress}%</span>
+        <span>{total} item</span>
+        <span>{total ? (summary.done ? `${summary.done} xong` : "Đang mở") : "Trống"}</span>
       </div>
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
-        <div
-          className="h-full rounded-full bg-violet-500"
-          style={{ width: `${progress}%` }}
-        />
+        {total ? (
+          <div className="flex h-full">
+            {activeItems.map((item) => (
+              <div
+                key={item.label}
+                className={item.color}
+                style={{ width: `${Math.max((item.value / total) * 100, 4)}%` }}
+              />
+            ))}
+          </div>
+        ) : null}
       </div>
       <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-slate-600">
         {items.map((item) => (

@@ -1,4 +1,4 @@
-import { Prisma, TaskExecutionTargetType } from "@prisma/client";
+import { Prisma, TaskExecutionActionType, TaskExecutionTargetType } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
 import type { BusinessEventDispatchContext } from "@/domains/event/dispatcher/business-event-consumer.types";
 import { listTaskItemQueueItems } from "@/domains/task/server/business-binding.service";
@@ -107,6 +107,71 @@ function itemSortAt(item: QueueItemDTO) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+async function currentActiveMediaBindingIdsForWorkspace(
+  db: DB,
+  input: {
+    workspaceId: string;
+    targetIds: string[];
+  },
+) {
+  const workspaceId = clean(input.workspaceId);
+  const targetIds = Array.from(new Set(input.targetIds.map(clean).filter(Boolean)));
+  if (!workspaceId || !targetIds.length) return new Set<string>();
+
+  const client = dbOrTx(db);
+  const workspace = await client.taskItem.findUnique({
+    where: { id: workspaceId },
+    select: { taskId: true },
+  });
+  if (!workspace) return new Set<string>();
+
+  const rows = await client.taskExecution.findMany({
+    where: {
+      taskId: workspace.taskId,
+      targetType: TaskExecutionTargetType.WATCH,
+      targetId: { in: targetIds },
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+      taskItemId: { not: null },
+    },
+    select: {
+      id: true,
+      targetId: true,
+      taskItemId: true,
+      createdAt: true,
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+  });
+  const latestByTarget = new Map<string, { id: string; taskItemId: string | null }>();
+
+  for (const row of rows) {
+    if (!latestByTarget.has(row.targetId)) {
+      latestByTarget.set(row.targetId, row);
+    }
+  }
+
+  return new Set(
+    [...latestByTarget.values()]
+      .filter((row) => row.taskItemId === workspaceId)
+      .map((row) => row.id),
+  );
+}
+
+async function onlyCurrentMediaStageItems(
+  db: DB,
+  input: {
+    workspaceId: string;
+    items: QueueItemDTO[];
+  },
+) {
+  const activeItems = input.items.filter(isActiveMediaProcessingQueueItem);
+  const currentIds = await currentActiveMediaBindingIdsForWorkspace(db, {
+    workspaceId: input.workspaceId,
+    targetIds: activeItems.map((item) => item.targetId),
+  });
+
+  return activeItems.filter((item) => currentIds.has(item.id));
+}
+
 function appliedResult(input: {
   context: ProjectionBuildContext;
   scope: ProjectionScope;
@@ -209,8 +274,10 @@ export async function rebuildWatchMediaQueueProjectionForWorkspace(
   const workspaceId = clean(input.workspaceId);
   if (!workspaceId) return { applied: 0, sourceCount: 0 };
 
-  const sourceItems = (await listTaskItemQueueItems(db, workspaceId))
-    .filter(isActiveMediaProcessingQueueItem);
+  const sourceItems = await onlyCurrentMediaStageItems(db, {
+    workspaceId,
+    items: await listTaskItemQueueItems(db, workspaceId),
+  });
   const rowKeys = sourceItems.map((item) => item.id);
 
   await deleteProjectionRecords(db, {
@@ -257,11 +324,16 @@ export async function listWatchMediaQueueProjectionItems(
     offset: input.offset,
   });
 
-  return records
+  const items = records
     .map((record) => asQueueItem(record.dataJson))
     .filter((item): item is QueueItemDTO =>
       Boolean(item && isActiveMediaProcessingQueueItem(item)),
     );
+
+  return onlyCurrentMediaStageItems(db, {
+    workspaceId: input.workspaceId,
+    items,
+  });
 }
 
 export async function listWatchMediaQueueProjectionItemsWithFallback(
@@ -272,9 +344,10 @@ export async function listWatchMediaQueueProjectionItemsWithFallback(
 ): Promise<WatchMediaQueueProjectionListResult> {
   const workspaceId = clean(input.workspaceId);
   const sourceItems = async () =>
-    (await listTaskItemQueueItems(db, workspaceId)).filter(
-      isActiveMediaProcessingQueueItem,
-    );
+    onlyCurrentMediaStageItems(db, {
+      workspaceId,
+      items: await listTaskItemQueueItems(db, workspaceId),
+    });
 
   if (process.env.WATCH_MEDIA_QUEUE_PROJECTION_READ !== "1") {
     return {

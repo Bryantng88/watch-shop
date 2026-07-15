@@ -54,6 +54,30 @@ const SERVICE_OPERATION_TECHNICAL_WORKSPACES = [
   { role: "DONE", title: "Service Operation - Done / Follow-up", sortOrder: 57 },
 ] as const;
 
+const PAYMENT_COLLECTION_WORKSPACES = [
+  {
+    role: "PAYMENT_INBOX",
+    title: "Payment Collection - Inbox",
+    flowStageKey: "payment-inbox",
+    flowStageOrder: 10,
+    sortOrder: 10,
+  },
+  {
+    role: "PAYMENT_REVIEW",
+    title: "Payment Collection - Review",
+    flowStageKey: "payment-review",
+    flowStageOrder: 20,
+    sortOrder: 20,
+  },
+  {
+    role: "PAYMENT_SETTLED",
+    title: "Payment Collection - Settled / Exception",
+    flowStageKey: "payment-settled",
+    flowStageOrder: 30,
+    sortOrder: 30,
+  },
+] as const;
+
 function startOfUtcDate(date: Date) {
   return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
 }
@@ -404,6 +428,71 @@ export async function ensureWorkTickets(
 
         existingByTitle.set(technicalWorkspace.title, createdItem);
         existingTitles.add(technicalWorkspace.title);
+        createdCount += 1;
+      }
+
+      continue;
+    }
+
+    if (
+      input.context === "PAYMENT" &&
+      normalizeWorkTypeKey(workType.key) === "payment"
+    ) {
+      for (const paymentWorkspace of PAYMENT_COLLECTION_WORKSPACES) {
+        const existingItem = existingByTitle.get(paymentWorkspace.title);
+        const extraLines = [
+          `operationWorkspaceRole: ${paymentWorkspace.role}`,
+          "workspaceKind: FLOW_STAGE_WORKSPACE",
+          "coreFlowKey: payment-collection-core-flow",
+          `flowStageKey: ${paymentWorkspace.flowStageKey}`,
+          `flowStageOrder: ${paymentWorkspace.flowStageOrder}`,
+        ];
+        const note = workTypeNote(workType, adminUserIds, {
+          extraLines,
+          eventTargetTypes: ["PAYMENT"],
+          workspaceType: `${paymentWorkspace.title} Workspace`,
+          itemLabel: "Payment",
+        });
+
+        if (existingItem) {
+          const nextSharedUserIds = Array.from(
+            new Set([...sharedUserIdsFromNote(existingItem.note), ...adminUserIds]),
+          );
+          const nextNote = workTypeNote(workType, nextSharedUserIds, {
+            extraLines,
+            eventTargetTypes: ["PAYMENT"],
+            workspaceType: `${paymentWorkspace.title} Workspace`,
+            itemLabel: "Payment",
+          });
+
+          if (
+            nextNote !== existingItem.note &&
+            (nextSharedUserIds.length > sharedUserIdsFromNote(existingItem.note).length ||
+              (nextNote.includes("blueprintSnapshot:") &&
+                !noteHasBlueprintEventBindings(existingItem.note)))
+          ) {
+            await client.taskItem.update({
+              where: { id: existingItem.id },
+              data: { note: nextNote },
+            });
+          }
+          continue;
+        }
+
+        const createdItem = await client.taskItem.create({
+          data: {
+            taskId: input.taskId,
+            title: paymentWorkspace.title,
+            note,
+            status: TaskStatus.TODO,
+            priority: "MEDIUM",
+            assignedToUserId: null,
+            sortOrder: paymentWorkspace.sortOrder,
+          },
+        });
+
+        existingByTitle.set(paymentWorkspace.title, createdItem);
+        existingTitles.add(paymentWorkspace.title);
         createdCount += 1;
       }
 

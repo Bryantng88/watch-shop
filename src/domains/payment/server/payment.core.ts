@@ -512,6 +512,18 @@ export async function completePayment(input: {
     },
   });
 
+  await recordBusinessEvent(prisma, {
+    eventKey: "payment.paid",
+    targetType: "PAYMENT",
+    targetId: result.paymentId,
+    payload: {
+      ownerType: result.ownerType,
+      ownerId: result.ownerId,
+      status: PaymentStatus.PAID,
+      sourceId: `${result.paymentId}:payment.paid`,
+    },
+  });
+
   return result;
 }
 

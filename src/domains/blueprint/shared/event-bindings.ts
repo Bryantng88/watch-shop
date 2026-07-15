@@ -184,6 +184,32 @@ const SERVICE_OPERATION_BINDINGS: Array<{
   },
 ];
 
+const PAYMENT_COLLECTION_BINDINGS: Array<{
+  eventKey: string;
+  mode: WorkspaceEventBindingMode;
+  effects: WorkspaceEventBindingEffect[];
+  status?: WorkspaceEventBindingStatus;
+}> = [
+  {
+    eventKey: "payment.created",
+    mode: "INTAKE",
+    effects: ["AUTO_BIND", "WRITE_ACTIVITY"],
+    status: "ACTIVE",
+  },
+  {
+    eventKey: "payment.status_updated",
+    mode: "PROGRESS",
+    effects: ["APPLY_WORKFLOW", "WRITE_ACTIVITY"],
+    status: "ACTIVE",
+  },
+  {
+    eventKey: "payment.paid",
+    mode: "PROGRESS",
+    effects: ["APPLY_WORKFLOW", "WRITE_ACTIVITY"],
+    status: "ACTIVE",
+  },
+];
+
 export function eventBindingsForWorkType(input: {
   workTypeKey: string;
   coordinationContext: WorkTypeCoordinationContext | "DRAFT";
@@ -199,6 +225,24 @@ export function eventBindingsForWorkType(input: {
       scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
       scopeContext: "TECHNICAL",
       workTypeKey: "service-operation",
+      mode: binding.mode,
+      effects: binding.effects,
+      status: binding.status ?? "DRAFT",
+      source: "BLUEPRINT",
+    }));
+  }
+
+  if (
+    input.coordinationContext === "PAYMENT" &&
+    input.workTypeKey === "payment"
+  ) {
+    return PAYMENT_COLLECTION_BINDINGS.map((binding) => ({
+      eventKey: binding.eventKey,
+      targetType: "PAYMENT",
+      consumer: "coordination",
+      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeContext: "PAYMENT",
+      workTypeKey: "payment",
       mode: binding.mode,
       effects: binding.effects,
       status: binding.status ?? "DRAFT",

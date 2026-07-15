@@ -37,6 +37,7 @@ export const LEGACY_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
     label: "Payment paid",
     targetType: "PAYMENT",
     group: "Payment",
+    knownConsumers: ["timeline", "coordination", "projection"],
   }),
   defineBusinessEventContract({
     key: "payment.created",

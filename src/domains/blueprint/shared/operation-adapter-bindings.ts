@@ -27,6 +27,10 @@ const SERVICE_OPERATION_WORKSPACE_COMMANDS = new Set([
   "service.completeTechnicalIssue",
 ]);
 
+const PAYMENT_OPERATION_WORKSPACE_COMMANDS = new Set([
+  "payment.completePayment",
+]);
+
 const EXTERNAL_ENTRYPOINT_COMMANDS = new Set([
   "service.watchIntakeWithInitialIssue",
 ]);
@@ -42,6 +46,19 @@ function bindingForAction(action: OperationalBlueprintAction): OperationAdapterB
       status: "EXECUTABLE",
       adapterKey: "service-operation-action-adapter",
       note: "Executable through runServiceOperationBlueprintAction.",
+    };
+  }
+
+  if (PAYMENT_OPERATION_WORKSPACE_COMMANDS.has(action.command)) {
+    return {
+      actionKey: action.key,
+      label: action.label,
+      command: action.command,
+      workspaceRole: action.workspaceRole,
+      targetType: action.targetType,
+      status: "EXECUTABLE",
+      adapterKey: "payment-operation-action-adapter",
+      note: "Executable through runPaymentOperationBlueprintAction.",
     };
   }
 

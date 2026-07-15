@@ -73,7 +73,7 @@ one generic Workspace dropdown.
 | Technical - SR Cases | one SR workspace per SR | `CASE_WORKSPACE`, identity target `SERVICE_REQUEST` | make identity binding explicit |
 | Technical - Bench | Inspect/Processing/Done workspaces with TI items | `FLOW_STAGE_WORKSPACE`, row model `FLOW_STAGE_WORKSPACE`; UI label may remain Technical Bench | decide whether SR Case appears inside the same flow-stage view or stays in separate SR Cases mode |
 | Sales | generic workspace rows; quotation/pricing/negotiation definitions exist but no approved Operation contract | keep `STANDALONE_WORKSPACE` until Sales flow is modeled; promote to `FLOW_STAGE_WORKSPACE` only if quote -> pricing -> negotiation is mandatory | create/audit Sales Operation Blueprint before changing runtime view |
-| Payment | Payment Collection contract has Inbox -> Review -> Settled / Exception core flow | `FLOW_STAGE_WORKSPACE`, row model `FLOW_STAGE_WORKSPACE`; `PAYMENT` remains Item | connect published Payment runtime Spaces to Payment Space index; Payment adapter execution remains separate |
+| Payment | Payment Collection contract has Inbox -> Review -> Settled / Exception core flow | `FLOW_STAGE_WORKSPACE`, row model `FLOW_STAGE_WORKSPACE`; `PAYMENT` remains Item | published Payment runtime Spaces are connected; `mark_payment_paid` adapter is wired, while review/exception remain declared-only until domain truth exists |
 | General | generic workspace rows | `STANDALONE_WORKSPACE` | keep default until real process appears |
 
 ## Audit Findings
@@ -277,6 +277,18 @@ Implemented in code:
 - Payment dashboard queue counts follow the same flow-stage ownership contract:
   Payment Space rows count the current active `PAYMENT` binding only and exclude
   terminal payments using the configured `PAYMENT` terminal states.
+- Payment Collection runtime intake is wired for the weekly Payment Space:
+  the Space opens `PAYMENT_INBOX`, `PAYMENT_REVIEW`, and `PAYMENT_SETTLED`
+  flow-stage Workspaces, `payment.created`, `payment.status_updated`, and
+  `payment.paid` are active coordination routes, and progress events move the
+  active `PAYMENT` binding between stage Workspaces. `payment.paid` is emitted
+  after `payment.status_updated` when Payment is completed so the Settled stage
+  has a dedicated event.
+- Payment Collection action execution has a first adapter slice:
+  `mark_payment_paid` dispatches through `payment-operation-action-adapter` and
+  delegates to the Payment domain `completePayment` command. `review_payment`
+  and `mark_payment_exception` stay declared-only because `PaymentStatus` does
+  not currently model review/exception states.
 - Technical dashboard queue counts now use the Service composite contract:
   - legacy `serviceOperationWorkspaceRole: SR_CASE` is treated as
     `CASE_WORKSPACE`;

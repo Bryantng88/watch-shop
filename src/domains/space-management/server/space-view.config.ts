@@ -266,7 +266,7 @@ function technicalSpaceViewConfig(): SpaceViewConfig {
 }
 
 const PAYMENT_COLLECTION_FLOW = {
-  key: "payment-collection-flow",
+  key: "payment-collection-core-flow",
   label: "Payment Collection",
   description:
     "Renders payment collection as ordered Workspace stages. Payment remains the business item.",
@@ -297,14 +297,6 @@ const PAYMENT_COLLECTION_FLOW = {
       sortOrder: 30,
       itemTargetType: "PAYMENT",
       evidenceEvents: ["payment.settled"],
-    },
-    {
-      key: "payment-exception",
-      label: "Exception",
-      workspaceKey: "payment-exception",
-      sortOrder: 40,
-      itemTargetType: "PAYMENT",
-      evidenceEvents: ["payment.exception.created"],
     },
   ],
 } as const satisfies NonNullable<SpaceViewConfig["coreFlows"]>[number];

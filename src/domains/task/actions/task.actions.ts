@@ -55,6 +55,7 @@ import {
   runServiceOperationBlueprintAction,
   runServiceOperationManualAction,
 } from "@/domains/service/server/operation/service-operation-action-adapter";
+import { runPaymentOperationBlueprintAction } from "@/domains/payment/server/payment-operation-action-adapter";
 import {
   addManualQueueItem,
   searchManualQueueTargets,
@@ -81,6 +82,10 @@ function asRecord(value: unknown): Record<string, unknown> {
     ? (value as Record<string, unknown>)
     : {};
 }
+
+const PAYMENT_OPERATION_BLUEPRINT_ACTION_KEYS = new Set([
+  "mark_payment_paid",
+]);
 
 function normalizeTextKey(value: unknown) {
   return String(value ?? "").trim().toLowerCase();
@@ -1128,7 +1133,7 @@ export async function submitOperationalBlueprintActionAction(input: {
   const actorUserId = getAuthUserId(auth);
   const actorLabel =
     auth?.user?.name ?? auth?.name ?? auth?.user?.email ?? auth?.email ?? null;
-  const result = await runServiceOperationBlueprintAction(prisma, {
+  const actionInput = {
     taskItemId,
     actionKey,
     targetType: input.targetType ?? null,
@@ -1136,7 +1141,10 @@ export async function submitOperationalBlueprintActionAction(input: {
     fields: input.fields ?? {},
     actorUserId,
     actorName: actorLabel,
-  });
+  };
+  const result = PAYMENT_OPERATION_BLUEPRINT_ACTION_KEYS.has(actionKey)
+    ? await runPaymentOperationBlueprintAction(prisma, actionInput)
+    : await runServiceOperationBlueprintAction(prisma, actionInput);
 
   if (!result.ok) {
     throw new Error(result.error ?? "Operational Blueprint action failed");

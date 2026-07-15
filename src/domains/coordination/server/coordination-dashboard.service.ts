@@ -225,6 +225,13 @@ function mediaStageFromWorkTypeKey(value?: string | null) {
   return null;
 }
 
+function mediaStageFromWorkflowKey(value?: string | null) {
+  if (value === "watch-photography") return "photography";
+  if (value === "watch-media-processing") return "media-processing";
+  if (value === "watch-publish") return "publish";
+  return null;
+}
+
 function mediaStageByTaskItem(taskItems: Array<{ id: string; note: string | null }>) {
   return new Map(
     taskItems
@@ -234,23 +241,6 @@ function mediaStageByTaskItem(taskItems: Array<{ id: string; note: string | null
       ] as const)
       .filter((entry): entry is [string, MediaFlowStage] => Boolean(entry[1])),
   );
-}
-
-function mediaWorkflowKeyForStage(stage: MediaFlowStage) {
-  if (stage === "photography") return "watch-photography";
-  if (stage === "media-processing") return "watch-media-processing";
-  return "watch-publish";
-}
-
-function mediaBindingMatchesStage(metadataJson: unknown, stage: MediaFlowStage) {
-  const runtime = getQueueItemWorkflowState({ metadataJson });
-  const metadata = asRecord(metadataJson);
-  const workflowKey = normalizeWorkTypeKey(
-    runtime?.workflowKey ?? metadata.workflowKey,
-  );
-
-  if (!workflowKey) return true;
-  return workflowKey === normalizeWorkTypeKey(mediaWorkflowKeyForStage(stage));
 }
 
 function hasFeedbackSignal(metadataJson: unknown) {
@@ -531,6 +521,50 @@ function buildQueueSummary(input: {
   };
 }
 
+function buildFlowStageQueueSummary(input: {
+  queueCount: number;
+  feedbackCount: number;
+  flowStageKey?: string | null;
+  operationWorkspaceRole?: string | null;
+  fallbackStatus: TaskStatus;
+}): QueueSummaryDTO {
+  const stageKey = normalizeStatus(input.flowStageKey);
+  const role = normalizeStatus(input.operationWorkspaceRole);
+  const stage = stageKey || role;
+
+  if (
+    stage.includes("DONE") ||
+    stage.includes("COMPLETED") ||
+    stage.includes("SETTLED")
+  ) {
+    return {
+      ready: 0,
+      review: 0,
+      feedback: input.feedbackCount,
+      done: input.queueCount,
+    };
+  }
+
+  if (
+    stage.includes("PROCESS") ||
+    stage.includes("REVIEW") ||
+    stage.includes("PUBLISH")
+  ) {
+    return {
+      ready: 0,
+      review: input.queueCount,
+      feedback: input.feedbackCount,
+      done: 0,
+    };
+  }
+
+  return buildQueueSummary({
+    queueCount: input.queueCount,
+    feedbackCount: input.feedbackCount,
+    status: input.fallbackStatus,
+  });
+}
+
 function emptyQueueSummary(): QueueSummaryDTO {
   return {
     ready: 0,
@@ -549,11 +583,13 @@ type TechnicalServiceRequestRollup = {
   paymentSummary: ServiceRequestPaymentSummary;
 };
 
-function mediaFlowSummaryBucket(metadataJson: unknown): keyof QueueSummaryDTO {
+function mediaFlowSummaryBucketForStage(
+  metadataJson: unknown,
+  stage: MediaFlowStage,
+): keyof QueueSummaryDTO {
   const runtime = getQueueItemWorkflowState({ metadataJson });
   const state = normalizeStatus(runtime?.currentState);
 
-  if (state === "DONE" || state === "CANCELLED") return "done";
   if (
     state.includes("RETURN") ||
     state.includes("FEEDBACK") ||
@@ -562,7 +598,9 @@ function mediaFlowSummaryBucket(metadataJson: unknown): keyof QueueSummaryDTO {
   ) {
     return "feedback";
   }
-  if (state.includes("REVIEW")) return "review";
+
+  if (stage === "media-processing") return "review";
+  if (stage === "publish") return state === "DONE" || state === "CANCELLED" ? "done" : "ready";
 
   return "ready";
 }
@@ -652,10 +690,18 @@ async function loadMediaQueueSummaryByTaskItem(input: {
   const stageByTaskItem = mediaStageByTaskItem(input.taskItems);
   if (!stageByTaskItem.size) return summaries;
 
+  const taskItemIdByStage = new Map<MediaFlowStage, string>();
+  for (const [taskItemId, stage] of stageByTaskItem) {
+    taskItemIdByStage.set(stage, taskItemId);
+  }
+
   const bindings = await input.db.taskExecution.findMany({
     where: {
       taskId: input.taskId,
-      taskItemId: { in: [...stageByTaskItem.keys()] },
+      OR: [
+        { taskItemId: { in: [...stageByTaskItem.keys()] } },
+        { taskItemId: null },
+      ],
       targetType: TaskExecutionTargetType.WATCH,
       actionType: { not: TaskExecutionActionType.CANCELLED },
     },
@@ -668,192 +714,23 @@ async function loadMediaQueueSummaryByTaskItem(input: {
       createdAt: true,
     },
   });
-  const watchIds = [...new Set(bindings.map((binding) => binding.targetId))];
-  const terminalStates = terminalStatesForTarget(
-    input.terminalStatesByTargetType,
-    TaskExecutionTargetType.WATCH,
-  );
-  const watches = watchIds.length
-    ? await input.db.watch.findMany({
-        where: { id: { in: watchIds } },
-        select: {
-          id: true,
-          saleStage: true,
-          isContentDownloaded: true,
-          isImageDownloaded: true,
-        },
-      })
-    : [];
-  const processingByTarget = new Map(
-    watches.map((watch) => [
-      targetKey({
-        targetType: TaskExecutionTargetType.WATCH,
-        targetId: watch.id,
-      }),
-      statusListIsProcessing(
-        [
-          watch.saleStage,
-          watch.isContentDownloaded && watch.isImageDownloaded ? "POSTED" : null,
-        ],
-        terminalStates,
-      ),
-    ]),
-  );
-
-  const currentBindingByTarget = new Map<
-    string,
-    (typeof bindings)[number]
-  >();
-
   for (const binding of bindings) {
-    if (!binding.taskItemId) continue;
-    const stage = stageByTaskItem.get(binding.taskItemId);
+    const runtime = getQueueItemWorkflowState(binding);
+    const stage =
+      (binding.taskItemId ? stageByTaskItem.get(binding.taskItemId) : null) ??
+      mediaStageFromWorkflowKey(runtime?.workflowKey);
     if (!stage) continue;
-    if (!mediaBindingMatchesStage(binding.metadataJson, stage)) continue;
-    if (bindingFinished(binding.metadataJson) && stage !== "publish") continue;
-    const processing =
-      processingByTarget.get(
-        targetKey({
-          targetType: binding.targetType,
-          targetId: binding.targetId,
-        }),
-      ) ?? true;
-    if (!processing && stage !== "publish") continue;
 
-    const key = targetKey({
-      targetType: binding.targetType,
-      targetId: binding.targetId,
-    });
-    const current = currentBindingByTarget.get(key);
-    if (!current || current.createdAt < binding.createdAt) {
-      currentBindingByTarget.set(key, binding);
-    }
-  }
+    const taskItemId = binding.taskItemId ?? taskItemIdByStage.get(stage);
+    if (!taskItemId) continue;
 
-  for (const binding of currentBindingByTarget.values()) {
-    if (!binding.taskItemId) continue;
-    const summary = summaries.get(binding.taskItemId) ?? emptyQueueSummary();
-    const bucket = mediaFlowSummaryBucket(binding.metadataJson);
+    const summary = summaries.get(taskItemId) ?? emptyQueueSummary();
+    const bucket = mediaFlowSummaryBucketForStage(binding.metadataJson, stage);
     summary[bucket] += 1;
-    summaries.set(binding.taskItemId, summary);
+    summaries.set(taskItemId, summary);
   }
 
   return summaries;
-}
-
-async function cleanupMediaFlowStageBindings(input: {
-  db: DB;
-  taskId: string;
-  taskItems: Array<{ id: string; note: string | null }>;
-}) {
-  const stageByTaskItem = mediaStageByTaskItem(input.taskItems);
-  if (!stageByTaskItem.size) return;
-
-  const bindings = await input.db.taskExecution.findMany({
-    where: {
-      taskId: input.taskId,
-      taskItemId: { in: [...stageByTaskItem.keys()] },
-      targetType: TaskExecutionTargetType.WATCH,
-      actionType: { not: TaskExecutionActionType.CANCELLED },
-    },
-    select: {
-      id: true,
-      taskItemId: true,
-      targetId: true,
-      metadataJson: true,
-      createdAt: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
-  const bindingsByWatch = new Map<string, typeof bindings>();
-
-  for (const binding of bindings) {
-    if (!binding.taskItemId) continue;
-    const stage = stageByTaskItem.get(binding.taskItemId);
-    if (!stage) continue;
-
-    const rows = bindingsByWatch.get(binding.targetId) ?? [];
-    rows.push(binding);
-    bindingsByWatch.set(binding.targetId, rows);
-  }
-
-  const staleBindingIds: string[] = [];
-  for (const rows of bindingsByWatch.values()) {
-    staleBindingIds.push(
-      ...rows
-        .filter((row) => {
-          if (!row.taskItemId) return false;
-          const stage = stageByTaskItem.get(row.taskItemId);
-          return Boolean(stage && !mediaBindingMatchesStage(row.metadataJson, stage));
-        })
-        .map((row) => row.id),
-    );
-
-    const matchedRows = rows.filter((row) => {
-      if (!row.taskItemId) return false;
-      const stage = stageByTaskItem.get(row.taskItemId);
-      return Boolean(stage && mediaBindingMatchesStage(row.metadataJson, stage));
-    });
-    if (matchedRows.length <= 1) continue;
-
-    const byStage = new Map<MediaFlowStage, (typeof rows)[number]>();
-    for (const row of matchedRows) {
-      if (!row.taskItemId) continue;
-      const stage = stageByTaskItem.get(row.taskItemId);
-      if (!stage) continue;
-
-      const current = byStage.get(stage);
-      if (current && current.createdAt >= row.createdAt) continue;
-      byStage.set(stage, row);
-    }
-
-    const publish = byStage.get("publish");
-    const media = byStage.get("media-processing");
-    const photography = byStage.get("photography");
-    const publishState = publish
-      ? normalizeStatus(getQueueItemWorkflowState(publish)?.currentState)
-      : null;
-    const mediaState = media
-      ? normalizeStatus(getQueueItemWorkflowState(media)?.currentState)
-      : null;
-    const photographyState = photography
-      ? normalizeStatus(getQueueItemWorkflowState(photography)?.currentState)
-      : null;
-
-    const preferredKeep =
-      publish && publishState !== "RECALLED"
-        ? publish
-        : publish && publishState === "RECALLED" && media
-          ? media
-          : media && mediaState === "DONE" && publish
-            ? publish
-            : media && mediaState === "RETURNED" && photography
-              ? photography
-              : media && mediaState !== "DONE" && mediaState !== "RETURNED"
-                ? media
-                : photography && photographyState === "DONE" && media
-                  ? media
-                  : photography ?? media ?? publish ?? rows[0];
-    const keepStage = preferredKeep.taskItemId
-      ? stageByTaskItem.get(preferredKeep.taskItemId)
-      : null;
-    const keep =
-      keepStage
-        ? matchedRows
-            .filter((row) => row.taskItemId && stageByTaskItem.get(row.taskItemId) === keepStage)
-            .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())[0] ??
-          preferredKeep
-        : preferredKeep;
-
-    staleBindingIds.push(...matchedRows.filter((row) => row.id !== keep.id).map((row) => row.id));
-  }
-
-  if (!staleBindingIds.length) return;
-
-  await input.db.taskExecution.updateMany({
-    where: { id: { in: [...new Set(staleBindingIds)] } },
-    data: { taskItemId: null },
-  });
 }
 
 async function restoreMediaFinalStageDoneBindings(input: {
@@ -1800,11 +1677,6 @@ export async function getCoordinationDashboard(input: {
       taskId: cycle.task.id,
       taskItems,
     });
-    await cleanupMediaFlowStageBindings({
-      db,
-      taskId: cycle.task.id,
-      taskItems,
-    });
   }
   const taskItemIds = taskItems.map((item) => item.id);
   const identityPreviewTaskItemIds = taskItems
@@ -1915,15 +1787,24 @@ export async function getCoordinationDashboard(input: {
   const workTickets: CoordinationWorkTicketSummaryDTO[] = taskItems.map((item) => {
     const queueCount = queueCountByTaskItem.get(item.id) ?? 0;
     const feedbackCount = feedbackCountByTaskItem.get(item.id) ?? 0;
+    const workspaceRoleMetadata = workspaceRoleMetadataFromNote(item.note);
     const queueSummary =
       input.context === "MEDIA"
         ? mediaQueueSummaryByTaskItem.get(item.id) ?? emptyQueueSummary()
         : technicalServiceRequestRollupByTaskItem.get(item.id)?.queueSummary ??
-          buildQueueSummary({
-            queueCount,
-            feedbackCount,
-            status: item.status,
-          });
+          (workspaceRoleMetadata.workspaceKind === "FLOW_STAGE_WORKSPACE"
+            ? buildFlowStageQueueSummary({
+                queueCount,
+                feedbackCount,
+                flowStageKey: workspaceRoleMetadata.flowStageKey,
+                operationWorkspaceRole: workspaceRoleMetadata.operationWorkspaceRole,
+                fallbackStatus: item.status,
+              })
+            : buildQueueSummary({
+                queueCount,
+                feedbackCount,
+                status: item.status,
+              }));
     const paymentSummary =
       technicalServiceRequestRollupByTaskItem.get(item.id)?.paymentSummary ?? null;
     const overdue = Boolean(
@@ -1934,8 +1815,6 @@ export async function getCoordinationDashboard(input: {
       lastActivityAtByTaskItem.get(item.id) ??
       null;
     const blueprintIdentity = blueprintIdentityFromNote(item.note);
-    const workspaceRoleMetadata = workspaceRoleMetadataFromNote(item.note);
-
     return {
       id: item.id,
       title: item.title,

@@ -303,4 +303,43 @@ registerCoordinationRoutes([
       bindingMode: "PROGRESS",
     },
   },
+  {
+    eventKey: "payment.created",
+    targetType: "PAYMENT",
+    coordinationType: "payment",
+    workTypeKey: "payment",
+    enabled: true,
+    metadata: {
+      note: "Intake newly created Payment records into Payment Collection.",
+      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeContext: "PAYMENT",
+      bindingMode: "INTAKE",
+    },
+  },
+  {
+    eventKey: "payment.status_updated",
+    targetType: "PAYMENT",
+    coordinationType: "payment",
+    workTypeKey: "payment",
+    enabled: true,
+    metadata: {
+      note: "Progress Payment Collection when a Payment status changes before settlement.",
+      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeContext: "PAYMENT",
+      bindingMode: "PROGRESS",
+    },
+  },
+  {
+    eventKey: "payment.paid",
+    targetType: "PAYMENT",
+    coordinationType: "payment",
+    workTypeKey: "payment",
+    enabled: true,
+    metadata: {
+      note: "Move paid Payment records into Settled / Exception follow-up.",
+      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeContext: "PAYMENT",
+      bindingMode: "PROGRESS",
+    },
+  },
 ]);

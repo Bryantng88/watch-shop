@@ -187,6 +187,17 @@ Current handoff:
   count active TechnicalIssues plus service payment rows, and Technical Bench
   counts active unfinished `TECHNICAL_ISSUE` bindings using configured terminal
   states.
+- Sprint 90 Payment runtime intake first slice is implemented: Payment Space
+  opens Inbox, Review, and Settled/Exception as `FLOW_STAGE_WORKSPACE` rows,
+  active `payment.created`, `payment.status_updated`, and `payment.paid`
+  coordination routes bind/move `PAYMENT` items through those stages, and
+  Payment completion now emits `payment.paid` after the status update.
+- Sprint 90 Payment action adapter first slice is implemented: Workspace
+  action submission dispatches `mark_payment_paid` through
+  `payment-operation-action-adapter`, which delegates to the Payment domain
+  `completePayment` command. `review_payment` and `mark_payment_exception`
+  remain declared-only because the current `PaymentStatus` enum has no review
+  or exception truth state.
 - Sprint 90 Space view UI cleanup started: the selected view mode now appears
   as a compact operator control with flow-stage chips, while render/carryover
   contract details are collapsed under `Rules`.
@@ -503,7 +514,10 @@ Sprint 78 scope/status:
   - actions `review_payment`, `mark_payment_paid`, and
     `mark_payment_exception`;
   - validation and Blueprint Library Operation Model visibility.
-- Payment command execution remains future Payment domain adapter work.
+- Payment command execution is partially wired after Sprint 90 follow-up:
+  `mark_payment_paid` is executable through `payment-operation-action-adapter`;
+  `review_payment` and `mark_payment_exception` remain future domain adapter
+  work.
 - Operational Blueprint upgrade Sprints 71-78 are complete.
 
 Sprint 79 scope/status:

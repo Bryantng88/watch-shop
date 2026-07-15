@@ -17,19 +17,22 @@ import {
   Clock3,
   CreditCard,
   ExternalLink,
+  Camera,
+  Filter,
   FileText,
   Folder,
   GitBranch,
   HeartPulse,
   Info,
+  List,
   ListChecks,
   MessageSquare,
   Paperclip,
   Play,
   Plus,
-  Search,
   Send,
   ShieldCheck,
+  SlidersHorizontal,
   Tag,
   UserRound,
   Zap,
@@ -49,6 +52,7 @@ import {
   selectOperationalCoreFlowForWorkspaceRole,
   type OperationalBlueprintAction,
   type OperationalBlueprintActionField,
+  type OperationalBlueprintContract,
   type OperationalBlueprintCoreFlowStep,
   type OperationalBlueprintWorkspaceRole,
 } from "@/domains/blueprint/shared/operational-blueprint";
@@ -388,6 +392,63 @@ function workspaceNavMetadata(
     flowStageKey: normalizeWorkspaceKey(
       noteTextValue(workspace.note, "flowStageKey") ?? snapshot?.flowStageKey,
     ),
+  };
+}
+
+function workspaceStageVisual(input: {
+  note?: string | null;
+  title?: string | null;
+  flowStageKey?: string | null;
+  operationRole?: string | null;
+}) {
+  const snapshot = parseWorkspaceDefinitionSnapshot(input.note);
+  const key = [
+    input.flowStageKey,
+    input.operationRole,
+    noteTextValue(input.note, "flowStageKey"),
+    snapshot?.flowStageKey,
+    snapshot?.workTypeKey,
+    noteTextValue(input.note, "workTypeKey"),
+    input.title,
+  ]
+    .map((value) => String(value ?? "").trim().toLowerCase())
+    .filter(Boolean)
+    .join(" ");
+
+  if (key.includes("photo")) {
+    return {
+      Icon: Camera,
+      frame: "bg-violet-50 text-violet-700 ring-violet-100",
+    };
+  }
+  if (key.includes("media-processing")) {
+    return {
+      Icon: SlidersHorizontal,
+      frame: "bg-sky-50 text-sky-700 ring-sky-100",
+    };
+  }
+  if (key.includes("inspect")) {
+    return {
+      Icon: Filter,
+      frame: "bg-violet-50 text-violet-700 ring-violet-100",
+    };
+  }
+  if (key.includes("processing") || key.includes("process")) {
+    return {
+      Icon: SlidersHorizontal,
+      frame: "bg-sky-50 text-sky-700 ring-sky-100",
+    };
+  }
+  if (key.includes("done") || key.includes("follow") || key.includes("publish")) {
+    return {
+      Icon: key.includes("publish") ? Send : CheckCircle2,
+      frame: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+    };
+  }
+
+  return {
+    Icon: List,
+    frame: "bg-slate-50 text-slate-700 ring-slate-100",
   };
 }
 
@@ -2114,12 +2175,16 @@ function OverviewQuickAction({
   );
 }
 
-function SpaceWorkspaceNav({
+function GenericFlowWorkspaceNav({
   currentItemId,
   parentTask,
+  itemCount,
+  itemLabel,
 }: {
   currentItemId: string;
   parentTask?: ParentTask | null;
+  itemCount: number;
+  itemLabel: string;
 }) {
   const workspaces = (parentTask?.taskItems ?? [])
     .filter((workspace) => workspace.id)
@@ -2138,34 +2203,97 @@ function SpaceWorkspaceNav({
   return (
     <nav
       aria-label="Workspace trong space"
-      className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1"
+      className="mt-7 grid gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm lg:grid-cols-[minmax(0,1fr)_32px_minmax(0,1fr)_32px_minmax(0,1fr)_minmax(250px,1.1fr)]"
     >
-        {workspaces.map((workspace) => {
-          const active = workspace.id === currentItemId;
-
-          return (
-            <Link
-              key={workspace.id}
-              href={`/admin/task-items/${workspace.id}`}
-              aria-current={active ? "page" : undefined}
+      {workspaces.slice(0, 3).map((workspace, index) => {
+        const active = workspace.id === currentItemId;
+        const snapshot = parseWorkspaceDefinitionSnapshot(workspace.note);
+        const workspaceType = repairVietnameseMojibake(
+          snapshot?.workspaceType ?? workspace.title,
+        );
+        const description = repairVietnameseMojibake(
+          snapshot?.defaultDescription ?? workspaceType,
+        );
+        const content = (
+          <div
+            className={cn(
+              "flex min-h-[72px] items-center gap-3 rounded-lg px-4 py-3 transition",
+              active
+                ? "bg-gradient-to-br from-white to-violet-50 shadow-[0_8px_24px_rgba(91,67,241,0.08)] ring-1 ring-violet-200"
+                : "bg-white hover:bg-slate-50",
+            )}
+          >
+            <span
               className={cn(
-                "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition",
+                "grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-extrabold text-white",
                 active
-                  ? "bg-slate-950 text-white shadow-sm"
-                  : "text-slate-600 hover:bg-white hover:text-slate-900",
+                  ? "bg-gradient-to-br from-blue-600 to-violet-600"
+                  : "bg-slate-300",
               )}
             >
-              <span className="max-w-[150px] truncate">
-                {siblingWorkspaceLabel(workspace)}
-              </span>
-              {active ? (
-                <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[10px] leading-none">
-                  hiện tại
+              {index + 1}
+            </span>
+            <span className="min-w-0">
+              <span className="flex min-w-0 flex-wrap items-center gap-2">
+                <span
+                  className={cn(
+                    "truncate text-sm font-extrabold",
+                    active ? "text-blue-700" : "text-slate-700",
+                  )}
+                >
+                  {siblingWorkspaceLabel(workspace)}
                 </span>
-              ) : null}
+                {active ? (
+                  <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-extrabold text-violet-700">
+                    Current
+                  </span>
+                ) : null}
+              </span>
+              <span className="mt-1 block truncate text-xs font-medium text-slate-500">
+                {description}
+              </span>
+            </span>
+          </div>
+        );
+
+        return (
+          <div
+            key={workspace.id}
+            className="contents"
+          >
+            <Link
+              href={`/admin/task-items/${workspace.id}`}
+              aria-current={active ? "page" : undefined}
+              className="block min-w-0"
+            >
+              {content}
             </Link>
-          );
-        })}
+            {index < Math.min(workspaces.length, 3) - 1 ? (
+              <div className="hidden place-items-center text-slate-300 lg:grid">
+                <ChevronRight className="h-4 w-4" />
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+      <div className="flex min-h-[72px] items-center gap-4 rounded-lg border-t border-slate-200 px-4 py-3 lg:border-l lg:border-t-0 lg:pl-6">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-violet-50 text-violet-700 ring-1 ring-violet-100">
+          <GitBranch className="h-5 w-5" />
+        </div>
+        <div className="min-w-0">
+          <div className="flex items-baseline gap-3">
+            <span className="text-3xl font-extrabold text-slate-950">
+              {itemCount}
+            </span>
+            <span className="truncate text-sm font-extrabold text-slate-800">
+              {itemLabel}
+            </span>
+          </div>
+          <div className="mt-1 text-xs font-medium text-slate-500">
+            trong Workspace này
+          </div>
+        </div>
+      </div>
     </nav>
   );
 }
@@ -2571,6 +2699,152 @@ function BlueprintActionDiscoveryPanel({
   );
 }
 
+function WorkspaceDetailHeader({
+  item,
+  parentTask,
+  presentation,
+  capabilities,
+  displayTitle,
+  owner,
+  isSystemOwner,
+  checklistDone,
+  checklistTotal,
+  refLabel,
+  isServiceOperationWorkspace,
+  operationalCoreFlow,
+  currentWorkspaceNavMetadata,
+  currentWorkspaceRole,
+  operationContract,
+  businessItemCount,
+}: {
+  item: TaskItemDetail;
+  parentTask?: ParentTask | null;
+  presentation: ReturnType<typeof workspacePresentation>;
+  capabilities: WorkspaceCapabilities;
+  displayTitle: string;
+  owner?: UserSummary | null;
+  isSystemOwner: boolean;
+  checklistDone: number;
+  checklistTotal: number;
+  refLabel: string;
+  isServiceOperationWorkspace: boolean;
+  operationalCoreFlow: ReturnType<typeof selectOperationalCoreFlowForWorkspaceRole>;
+  currentWorkspaceNavMetadata: ReturnType<typeof workspaceNavMetadata>;
+  currentWorkspaceRole?: string | null;
+  operationContract?: OperationalBlueprintContract | null;
+  businessItemCount: number;
+}) {
+  const stageVisual = workspaceStageVisual({
+    note: item.note,
+    title: item.title,
+    flowStageKey: currentWorkspaceNavMetadata.flowStageKey,
+    operationRole: currentWorkspaceRole,
+  });
+  const HeaderIcon = stageVisual.Icon;
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white px-5 py-6 shadow-[0_12px_32px_rgba(24,36,76,0.06)] lg:px-7">
+      <div className="grid gap-7 lg:grid-cols-[96px_minmax(0,1fr)_280px] lg:items-start">
+        <div className={`hidden h-24 w-24 place-items-center rounded-[20px] ring-1 lg:grid ${stageVisual.frame}`}>
+          <HeaderIcon className="h-11 w-11" />
+        </div>
+
+        <div className="min-w-0 pt-1">
+          <div className="mb-2.5 flex items-center gap-2 text-xs font-extrabold text-slate-700">
+            <GitBranch className="h-3.5 w-3.5 text-blue-600" />
+            <span>{presentation.workspaceType}</span>
+          </div>
+          <div className="flex min-w-0 flex-wrap items-center gap-3.5">
+            <h1 className="text-3xl font-extrabold leading-tight text-slate-950">
+              {displayTitle}
+            </h1>
+            <TaskStatusSignal status={item.status} />
+            {capabilities.priority ? (
+              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-extrabold text-blue-700 ring-1 ring-blue-100">
+                <PrioritySignal priority={item.priority} showLabel />
+              </span>
+            ) : null}
+          </div>
+          {presentation.defaultDescription ? (
+            <p className="mt-3 max-w-3xl text-sm font-medium leading-6 text-slate-700">
+              {presentation.defaultDescription}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-violet-50/70 p-[18px] shadow-sm shadow-violet-100/40">
+          <div className="text-xs font-semibold text-slate-500">Workspace ref</div>
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <div className="min-w-0 truncate font-mono text-lg font-extrabold text-slate-950">
+              {taskItemRef(item.id)}
+            </div>
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white text-violet-600 ring-1 ring-violet-100">
+              <FileText className="h-4 w-4" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-7 grid gap-y-6 divide-slate-200 md:grid-cols-2 lg:grid-cols-6 lg:divide-x">
+        {capabilities.assignee ? (
+          <HeaderMetric
+            icon={<UserRound className="h-4 w-4" />}
+            label="Owner"
+            value={<UserIdentity user={owner} isSystem={isSystemOwner} />}
+          />
+        ) : null}
+        {capabilities.dueDate ? (
+          <HeaderMetric
+            icon={<CalendarDays className="h-4 w-4" />}
+            label="Due date"
+            value={formatDate(item.dueAt)}
+          />
+        ) : null}
+        {capabilities.checklist ? (
+          <HeaderMetric
+            icon={<ListChecks className="h-4 w-4" />}
+            label="Checklist"
+            value={`${checklistDone}/${checklistTotal}`}
+          />
+        ) : null}
+        <HeaderMetric
+          icon={<Folder className="h-4 w-4" />}
+          label="Space"
+          value={parentTask?.title || "-"}
+        />
+        <HeaderMetric icon={<Tag className="h-4 w-4" />} label="Ref" value={refLabel} />
+        <HeaderMetric
+          icon={<Clock3 className="h-4 w-4" />}
+          label="Tạo lúc"
+          value={formatDateTime(item.createdAt)}
+        />
+      </div>
+
+      {isServiceOperationWorkspace && operationalCoreFlow ? (
+        <CoreFlowWorkspaceNav
+          currentItemId={item.id}
+          currentWorkspaceRole={currentWorkspaceRole}
+          currentCoreFlowKey={
+            operationalCoreFlow.key || currentWorkspaceNavMetadata.coreFlowKey
+          }
+          steps={operationalCoreFlow.steps}
+          workspaceRoles={operationContract?.workspaceRoles ?? []}
+          parentTask={parentTask}
+          itemCount={businessItemCount}
+          itemLabel={presentation.itemLabel}
+        />
+      ) : (
+        <GenericFlowWorkspaceNav
+          currentItemId={item.id}
+          parentTask={parentTask}
+          itemCount={businessItemCount}
+          itemLabel={presentation.itemLabel}
+        />
+      )}
+    </section>
+  );
+}
+
 export default function TaskItemDetailClient({
   item,
   users,
@@ -2647,9 +2921,6 @@ export default function TaskItemDetailClient({
       ) ?? null,
     [operationContract, serviceOperationWorkspaceRole],
   );
-  const isServiceOperationCaseWorkspace =
-    isServiceOperationWorkspace &&
-    isStandaloneLikeWorkspaceKind(currentWorkspaceNavMetadata.workspaceKind);
   const operationWorkspaceRoleTargetTypes = useMemo(() => {
     const role = operationWorkspaceRoleDefinition;
     if (!role) return [];
@@ -2760,106 +3031,24 @@ export default function TaskItemDetailClient({
           />
         </div>
 
-        <section className="rounded-2xl border border-slate-200 bg-white px-5 py-6 shadow-[0_12px_32px_rgba(24,36,76,0.06)] lg:px-7">
-          <div className="grid gap-7 lg:grid-cols-[96px_minmax(0,1fr)_280px] lg:items-start">
-            <div className="hidden h-24 w-24 place-items-center rounded-[20px] bg-gradient-to-br from-violet-100 via-violet-50 to-white text-violet-700 ring-1 ring-violet-100 lg:grid">
-              <Search className="h-11 w-11" />
-            </div>
-
-            <div className="min-w-0 pt-1">
-              {!isServiceOperationCaseWorkspace && !isServiceOperationWorkspace ? (
-                <div className="mb-4 flex flex-wrap items-center gap-2">
-                  <SpaceWorkspaceNav
-                    currentItemId={item.id}
-                    parentTask={parentTask}
-                  />
-                </div>
-              ) : null}
-              <div className="mb-2.5 flex items-center gap-2 text-xs font-extrabold text-slate-700">
-                <GitBranch className="h-3.5 w-3.5 text-blue-600" />
-                <span>{presentation.workspaceType}</span>
-              </div>
-              <div className="flex min-w-0 flex-wrap items-center gap-3.5">
-                <h1 className="text-3xl font-extrabold leading-tight text-slate-950">
-                  {displayTitle}
-                </h1>
-                <TaskStatusSignal status={item.status} />
-                {capabilities.priority ? (
-                  <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-extrabold text-blue-700 ring-1 ring-blue-100">
-                    <PrioritySignal priority={item.priority} showLabel />
-                  </span>
-                ) : null}
-              </div>
-              {presentation.defaultDescription ? (
-                <p className="mt-3 max-w-3xl text-sm font-medium leading-6 text-slate-700">
-                  {presentation.defaultDescription}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-violet-50/70 p-[18px] shadow-sm shadow-violet-100/40">
-              <div className="text-xs font-semibold text-slate-500">Workspace ref</div>
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <div className="min-w-0 truncate font-mono text-lg font-extrabold text-slate-950">
-                  {taskItemRef(item.id)}
-                </div>
-                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white text-violet-600 ring-1 ring-violet-100">
-                  <FileText className="h-4 w-4" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-7 grid gap-y-6 divide-slate-200 md:grid-cols-2 lg:grid-cols-6 lg:divide-x">
-            {capabilities.assignee ? (
-              <HeaderMetric
-                icon={<UserRound className="h-4 w-4" />}
-                label="Owner"
-                value={<UserIdentity user={owner} isSystem={isSystemOwner} />}
-              />
-            ) : null}
-            {capabilities.dueDate ? (
-              <HeaderMetric
-                icon={<CalendarDays className="h-4 w-4" />}
-                label="Due date"
-                value={formatDate(item.dueAt)}
-              />
-            ) : null}
-            {capabilities.checklist ? (
-              <HeaderMetric
-                icon={<ListChecks className="h-4 w-4" />}
-                label="Checklist"
-                value={`${checklistDone}/${checklists.length}`}
-              />
-            ) : null}
-            <HeaderMetric
-              icon={<Folder className="h-4 w-4" />}
-              label="Space"
-              value={parentTask?.title || "-"}
-            />
-            <HeaderMetric icon={<Tag className="h-4 w-4" />} label="Ref" value={ref} />
-            <HeaderMetric
-              icon={<Clock3 className="h-4 w-4" />}
-              label="Tạo lúc"
-              value={formatDateTime(item.createdAt)}
-            />
-          </div>
-
-          {isServiceOperationWorkspace && operationalCoreFlow ? (
-            <CoreFlowWorkspaceNav
-              currentItemId={item.id}
-              currentWorkspaceRole={serviceOperationWorkspaceRole}
-              currentCoreFlowKey={
-                operationalCoreFlow.key || currentWorkspaceNavMetadata.coreFlowKey
-              }
-              steps={operationalCoreFlow.steps}
-              workspaceRoles={operationContract?.workspaceRoles ?? []}
-              parentTask={parentTask}
-              itemCount={businessBindings.length}
-              itemLabel={presentation.itemLabel}
-            />
-          ) : null}
-        </section>
+        <WorkspaceDetailHeader
+          item={item}
+          parentTask={parentTask}
+          presentation={presentation}
+          capabilities={capabilities}
+          displayTitle={displayTitle}
+          owner={owner}
+          isSystemOwner={isSystemOwner}
+          checklistDone={checklistDone}
+          checklistTotal={checklists.length}
+          refLabel={ref}
+          isServiceOperationWorkspace={isServiceOperationWorkspace}
+          operationalCoreFlow={operationalCoreFlow}
+          currentWorkspaceNavMetadata={currentWorkspaceNavMetadata}
+          currentWorkspaceRole={serviceOperationWorkspaceRole}
+          operationContract={operationContract}
+          businessItemCount={businessBindings.length}
+        />
 
         <div className="mt-4 grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
           <div className="min-w-0">
