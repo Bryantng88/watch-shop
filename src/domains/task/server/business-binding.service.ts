@@ -1047,6 +1047,9 @@ export async function listTaskItemQueueItems(
         mediaAssetAttachedAt: metadataText(metadata, ["mediaAssetAttachedAt"]),
         mediaWorkProgress: progress,
         technicalIssue: businessPreview?.technicalIssue ?? null,
+        href: metadataText(metadata, ["targetHref", "href"]) ??
+          businessPreview?.href ??
+          null,
         updatedAt: formatDate(updatedAt),
       };
     });

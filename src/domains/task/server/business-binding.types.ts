@@ -94,6 +94,7 @@ export type QueueItemDTO = {
   } | null;
   serviceRequestId?: string | null;
   serviceRequestWorkspaceHref?: string | null;
+  href?: string | null;
   technicalIssue?: {
     id: string;
     summary: string | null;

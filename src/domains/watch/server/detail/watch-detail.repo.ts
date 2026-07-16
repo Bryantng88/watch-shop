@@ -211,10 +211,26 @@ export async function getWatchTradeHistory(db: DB, productId: string) {
     client.acquisitionItem.findMany({
       where: { productId },
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
-      include: {
+      select: {
+        id: true,
+        acquisitionId: true,
+        status: true,
+        unitCost: true,
+        createdAt: true,
+        updatedAt: true,
         acquisition: {
-          include: {
-            vendor: true,
+          select: {
+            refNo: true,
+            accquisitionStt: true,
+            type: true,
+            createdAt: true,
+            updatedAt: true,
+            vendor: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
@@ -223,8 +239,22 @@ export async function getWatchTradeHistory(db: DB, productId: string) {
     client.orderItem.findMany({
       where: { productId },
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
-      include: {
-        order: true,
+      select: {
+        id: true,
+        orderId: true,
+        unitPriceAgreed: true,
+        listPrice: true,
+        createdAt: true,
+        updatedAt: true,
+        order: {
+          select: {
+            refNo: true,
+            status: true,
+            customerName: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
       },
     }),
   ]);
@@ -268,17 +298,38 @@ export async function getWatchServiceHistory(db: DB, productId: string) {
   const rows = await client.serviceRequest.findMany({
     where: { productId },
     orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
-    include: {
-      vendor: true,
+    select: {
+      id: true,
+      refNo: true,
+      status: true,
+      notes: true,
+      createdAt: true,
+      updatedAt: true,
+      serviceCatalog: {
+        select: {
+          name: true,
+        },
+      },
+      orderItem: {
+        select: {
+          customerItemNote: true,
+        },
+      },
+      vendor: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
     },
   });
 
   return rows.map((item) => ({
     id: item.id,
-    issue: item.refNo ?? item.serviceName ?? "Service request",
+    issue: item.refNo ?? item.serviceCatalog?.name ?? "Service request",
     title: item.refNo ?? "Service request",
     status: item.status ?? null,
-    note: item.notes ?? item.customerItemNote ?? null,
+    note: item.notes ?? item.orderItem?.customerItemNote ?? null,
     description: item.notes ?? null,
     vendor: item.vendor ?? null,
     vendorName: item.vendor?.name ?? null,

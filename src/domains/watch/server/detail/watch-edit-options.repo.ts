@@ -51,3 +51,24 @@ export async function listWatchEditOptions() {
         postTargets,
     };
 }
+
+export async function listWatchMediaEditOptions() {
+    const postTargets = await perfStep("watch-edit-options", "mediaPostTargets", () =>
+        prisma.postTarget.findMany({
+            where: { isActive: true },
+            orderBy: [{ platform: "asc" }, { name: "asc" }],
+            select: {
+                id: true,
+                name: true,
+                platform: true,
+            },
+        }),
+    );
+
+    return {
+        brands: [],
+        vendors: [],
+        categories: [],
+        postTargets,
+    };
+}

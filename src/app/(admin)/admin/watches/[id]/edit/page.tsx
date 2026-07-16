@@ -5,7 +5,10 @@ import {
     getWatchEditDetail,
     getWatchMediaEditDetail,
 } from "@/domains/watch/server/detail/watch-detail.service";
-import { listWatchEditOptions } from "@/domains/watch/server/detail/watch-edit-options.repo";
+import {
+    listWatchEditOptions,
+    listWatchMediaEditOptions,
+} from "@/domains/watch/server/detail/watch-edit-options.repo";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
 import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
@@ -126,8 +129,8 @@ export default async function WatchEditPage({
             perfStep("watch-edit-page", "getWatchMediaEditDetail", () =>
                 getWatchMediaEditDetail(id),
             ),
-            perfStep("watch-edit-page", "listWatchEditOptions", () =>
-                listWatchEditOptions(),
+            perfStep("watch-edit-page", "listWatchMediaEditOptions", () =>
+                listWatchMediaEditOptions(),
             ),
         ])
         : await Promise.all([
@@ -140,7 +143,27 @@ export default async function WatchEditPage({
         ]);
 
     if (!detail) notFound();
-    const editOptions = options ?? buildMediaEditOptions(detail);
+    const compactCurrentOptions = buildMediaEditOptions(detail);
+    const editOptions = isEmbeddedMediaMode
+        ? {
+            brands: uniqOptions([
+                ...compactCurrentOptions.brands,
+                ...(options?.brands ?? []),
+            ]),
+            vendors: uniqOptions([
+                ...compactCurrentOptions.vendors,
+                ...(options?.vendors ?? []),
+            ]),
+            categories: uniqOptions([
+                ...compactCurrentOptions.categories,
+                ...(options?.categories ?? []),
+            ]),
+            postTargets: uniqOptions([
+                ...compactCurrentOptions.postTargets,
+                ...(options?.postTargets ?? []),
+            ]),
+        }
+        : options ?? compactCurrentOptions;
 
     perfLog("watch-edit-page", "totalBeforeRender", startedAt);
 

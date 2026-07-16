@@ -1479,10 +1479,9 @@ export default function WatchFormClient({
                         }));
                     }}
                 />
-                <div className="grid min-h-[560px] overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.06)] lg:grid-cols-[190px_minmax(0,1fr)]">
-                    <aside className="border-b border-slate-200 bg-slate-50/60 lg:border-b-0 lg:border-r">
-                        <div className="overflow-x-auto p-2 lg:min-h-[560px] lg:p-3">
-                            <div className="flex gap-1.5 lg:flex-col">
+                <div className="min-h-[560px] overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.06)]">
+                    <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-3 py-3 backdrop-blur">
+                        <div className="flex gap-2 overflow-x-auto">
                                 {[
                                     {
                                         key: "basic" as const,
@@ -1515,38 +1514,27 @@ export default function WatchFormClient({
                                             type="button"
                                             onClick={() => scrollToMediaSection(item.key)}
                                             className={[
-                                                "group relative flex min-w-[150px] items-center gap-2.5 rounded-2xl px-3 py-3 text-left transition lg:min-w-0",
+                                                "group inline-flex h-11 min-w-max items-center gap-2 rounded-lg border px-3 text-sm font-semibold transition",
                                                 active
-                                                    ? "bg-white text-indigo-700 shadow-sm ring-1 ring-inset ring-indigo-100"
-                                                    : "text-slate-600 hover:bg-white/80 hover:text-slate-900",
+                                                    ? "border-blue-200 bg-blue-50 text-blue-700 shadow-sm"
+                                                    : "border-transparent bg-white text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900",
                                             ].join(" ")}
                                         >
                                             <span
                                                 className={[
-                                                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition",
+                                                    "inline-flex h-6 w-6 items-center justify-center rounded-md text-xs font-bold ring-1",
                                                     active
-                                                        ? "bg-indigo-50 text-indigo-600"
-                                                        : "bg-white text-slate-500 ring-1 ring-slate-200 group-hover:text-slate-700",
+                                                        ? "bg-white text-blue-700 ring-blue-200"
+                                                        : "bg-slate-50 text-slate-500 ring-slate-200 group-hover:text-slate-700",
                                                 ].join(" ")}
                                             >
-                                                <Icon className="h-4 w-4" />
+                                                {item.key === "basic" ? "1" : item.key === "content" ? "2" : "3"}
                                             </span>
-                                            <span className="min-w-0 flex-1">
-                                                <span
-                                                    className={[
-                                                        "block text-sm font-semibold",
-                                                        active ? "text-indigo-700" : "text-slate-800",
-                                                    ].join(" ")}
-                                                >
-                                                    {item.title}
-                                                </span>
-                                                <span className="hidden">
-                                                    {item.subtitle}
-                                                </span>
-                                            </span>
+                                            <Icon className="h-4 w-4" aria-hidden="true" />
+                                            <span>{item.title}</span>
                                             <span
                                                 className={[
-                                                    "h-2 w-2 shrink-0 rounded-full ring-4",
+                                                    "h-2 w-2 rounded-full ring-4",
                                                     item.done
                                                         ? "bg-emerald-500 ring-emerald-50"
                                                         : "bg-slate-300 ring-slate-50",
@@ -1557,7 +1545,7 @@ export default function WatchFormClient({
                                 })}
                             </div>
 
-                            <div className="mt-3 hidden border-t border-slate-200/80 pt-3 text-xs text-slate-500 lg:block">
+                            <div className="hidden">
                                 <button
                                     type="button"
                                     className="flex w-full items-center justify-between px-3 py-2 text-left font-medium hover:text-slate-800"
@@ -1567,7 +1555,6 @@ export default function WatchFormClient({
                                 </button>
                             </div>
                         </div>
-                    </aside>
 
                     <div className="min-w-0 bg-white">
                         {activeMediaSection === "basic" ? (

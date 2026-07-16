@@ -1,5 +1,6 @@
 import { prisma } from "@/server/db/client";
 import { perfStep } from "@/lib/server-perf";
+import { TaskExecutionTargetType, TaskStatus } from "@prisma/client";
 import { mapWatchDetail } from "../shared";
 import { listWatchChosenMediaPool } from "@/domains/media/server";
 import {
@@ -44,6 +45,38 @@ async function getLatestAcquisitionUnitCost(
     id: item.id,
     acquisitionId: item.acquisitionId,
     unitCost: item.unitCost?.toString() ?? null,
+  };
+}
+
+async function getActiveMediaWorkspaceItem(watchId?: string | null) {
+  if (!watchId) {
+    return {
+      hasActiveItem: false,
+      bindingId: null,
+    };
+  }
+
+  const binding = await prisma.taskExecution.findFirst({
+    where: {
+      targetType: TaskExecutionTargetType.WATCH,
+      targetId: watchId,
+      taskItem: {
+        status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] },
+        note: {
+          contains: "workTypeKey: media-processing",
+          mode: "insensitive",
+        },
+      },
+    },
+    select: {
+      id: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return {
+    hasActiveItem: Boolean(binding),
+    bindingId: binding?.id ?? null,
   };
 }
 
@@ -125,7 +158,7 @@ export async function getWatchEditDetail(productId: string) {
     throw new Error("Không tìm thấy watch để edit");
   }
 
-  const [rowWithReviewNotes, acq, poolImages] = await Promise.all([
+  const [rowWithReviewNotes, acq, poolImages, mediaWorkspace] = await Promise.all([
     perfStep("watch-edit-detail", "reviewNotes", () =>
       withComposedReviewNotes(row),
     ),
@@ -137,6 +170,9 @@ export async function getWatchEditDetail(productId: string) {
         productId,
         acquisitionId: row.acquisitionId,
       }),
+    ),
+    perfStep("watch-edit-detail", "activeMediaWorkspaceItem", () =>
+      getActiveMediaWorkspaceItem(row.id),
     ),
   ]);
   const mapped = mapWatchDetail(rowWithReviewNotes);
@@ -153,6 +189,7 @@ export async function getWatchEditDetail(productId: string) {
       ...mappedMedia,
       poolImages,
     },
+    mediaWorkspace,
     acquisition: acq,
     price: {
       ...(mapped.price ?? {}),
