@@ -1,6 +1,7 @@
 "use client";
 
-import { FilterBar, type FilterBarField } from "@/domains/shared/ui/filter-bar";
+import { BusinessListFilterBar } from "@/domains/shared/ui/business-list";
+import type { FilterBarField } from "@/domains/shared/ui/filter-bar";
 
 type Option = { label: string; value: string };
 
@@ -156,7 +157,7 @@ export default function WatchListFilters({
     ];
 
     return (
-        <FilterBar
+        <BusinessListFilterBar
             values={filters}
             total={total}
             visibleCount={visibleCount}

@@ -11,3 +11,4 @@ export * from "./inventory-query";
 export * from "./review";
 export * from "./bridge";
 export * from "./media-work";
+export * from "./dashboard";

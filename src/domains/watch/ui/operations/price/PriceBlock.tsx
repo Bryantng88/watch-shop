@@ -3,7 +3,7 @@
 import { Calculator, Wand2 } from "lucide-react";
 import type { WatchWorkbenchPermissions, WatchWorkbenchValues } from "@/domains/watch/client/workbench/types";
 import { maskMoney, moneyText, onlyMoney, updateValues } from "@/domains/watch/client/workbench/workbench-utils";
-import { Field, inputClass, OperationShell, operationButtonClass, Pill } from "../shared/OperationShell";
+import { Field, inputClass, OperationShell, operationButtonClass } from "../shared/OperationShell";
 import PriceLedgerTable, { PriceLedgerItem, PriceSnapshot } from "./PriceLedgerTable";
 import PricePermissionNotice from "./PricePermissionNotice";
 
@@ -78,7 +78,6 @@ export default function PriceBlock({
             description="Thiết lập giá bán và quản lý cost. Field nhạy cảm được gate theo quyền admin."
             actions={
                 <>
-                    <Pill tone="red">Admin only</Pill>
                     <button type="button" className={operationButtonClass({ variant: "softAmber", size: "sm" })}>
                         Phụ phí/chi phí
                     </button>

@@ -52,8 +52,8 @@ export default function WatchListTable({
         safeItems.every((item) => safeSelectedIds.includes(item.id));
 
     return (
-        <div className="relative overflow-visible rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-4">
+        <div className="relative overflow-visible rounded-b-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
+            <div className="hidden">
                 <div>
                     <div className="text-[18px] font-semibold text-slate-900">
                         Danh sách watch

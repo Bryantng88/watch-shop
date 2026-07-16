@@ -308,6 +308,7 @@ export async function watchIntakeWithInitialSuspicion(input: {
   suspicion?: string | null;
   actorUserId?: string | null;
   openExisting?: boolean;
+  deferConsumers?: (work: () => Promise<void>) => void;
 }) {
   const productId = cleanText(input.productId);
   if (!productId) throw new Error("Missing productId");
@@ -389,6 +390,7 @@ export async function watchIntakeWithInitialSuspicion(input: {
     actionMode: "INTERNAL",
     summary: suspicion,
     note: suspicion,
+    deferConsumers: input.deferConsumers,
   });
 
   const event = await recordBusinessEvent(prisma, {
@@ -404,9 +406,11 @@ export async function watchIntakeWithInitialSuspicion(input: {
       refNo: request.refNo ?? null,
     },
     targetAliasIds: [productId],
-  });
+  }, { deferConsumers: input.deferConsumers });
 
-  const binding = await findServiceRequestWorkspaceBinding(prisma, request.id);
+  const binding = input.deferConsumers
+    ? null
+    : await findServiceRequestWorkspaceBinding(prisma, request.id);
   const taskItemId = binding?.taskItemId ?? event.consumers.coordination?.taskItemId ?? null;
 
   return {

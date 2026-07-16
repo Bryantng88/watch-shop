@@ -139,8 +139,8 @@ export default function FilterBar({
     const activeCount = activeFields.length;
 
     return (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="rounded-t-xl border border-b-0 border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.025)]">
+            <div className="hidden">
                 <div className="text-sm font-semibold text-slate-900">
                     {typeof total === "number" ? (
                         <>

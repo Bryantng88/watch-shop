@@ -30,6 +30,7 @@ async function recordTechnicalIssueEvent(input: {
     serviceRequestId?: string | null;
     actorUserId?: string | null;
     payload?: Record<string, unknown>;
+    deferConsumers?: (work: () => Promise<void>) => void;
 }) {
     await recordBusinessEvent(prisma, {
         eventKey: input.eventKey,
@@ -42,7 +43,7 @@ async function recordTechnicalIssueEvent(input: {
             serviceRequestId: cleanId(input.serviceRequestId),
             sourceId: `${input.technicalIssueId}:${input.eventKey}`,
         },
-    });
+    }, { deferConsumers: input.deferConsumers });
 }
 
 async function vendorName(vendorId?: string | null) {
@@ -251,6 +252,7 @@ export async function createTechnicalIssue(input: {
     mechanicalPartCatalogId?: string | null;
     technicalDetailCatalogId?: string | null;
     summary?: string | null;
+    deferConsumers?: (work: () => Promise<void>) => void;
 }) {
     const serviceRequestId = cleanId(input.serviceRequestId);
     if (!serviceRequestId) throw new Error("Missing serviceRequestId");
@@ -311,6 +313,7 @@ export async function createTechnicalIssue(input: {
             executionStatus: "OPEN",
             area: cleanId(input.area),
         },
+        deferConsumers: input.deferConsumers,
     });
 
     return created;

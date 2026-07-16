@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import {
   getServiceOperationCounters,
@@ -105,6 +105,7 @@ export async function POST(request: Request) {
             suspicion: body?.suspicion,
             actorUserId: auth.id ?? auth.userId ?? null,
             openExisting: body?.openExisting === true,
+            deferConsumers: (work) => after(work),
           })
         : await getOrCreateServiceOperationWorkspaceForWatch({
             productId: body?.productId,

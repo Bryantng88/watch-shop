@@ -34,6 +34,10 @@ import TaskQuickCreateModal, {
 } from "@/domains/task/ui/quick-create/TaskQuickCreateModal";
 import type { TaskTypeOption } from "@/domains/task/server/task-type.types";
 import { TaskDomain, TaskMode } from "@prisma/client";
+import {
+    AsyncBusinessListDashboard,
+    BusinessListShell,
+} from "@/domains/shared/ui/business-list";
 
 type WatchListClientProps = Partial<WatchListPageProps> & {
     initialResult?: WatchListResult;
@@ -796,9 +800,30 @@ export default function WatchListClient(props: WatchListClientProps) {
 
         setServiceIntakeProductId(productId);
         setServiceIntakeError(null);
+        let intakeSteps: AppProgressStep[] = [
+            {
+                id: "validate",
+                label: "Kiểm tra thông tin phiếu",
+                detail: "Watch và nghi ngờ kỹ thuật đã hợp lệ.",
+                status: "done",
+            },
+            {
+                id: "create",
+                label: "Tạo Service Request và Technical Issue",
+                detail: "Đang ghi nhận phiếu kỹ thuật.",
+                status: "running",
+            },
+            {
+                id: "background",
+                label: "Đồng bộ Space, timeline và projection",
+                detail: "Sẽ tiếp tục chạy nền sau khi tạo phiếu.",
+                status: "pending",
+            },
+        ];
         progress.show({
-            title: "Dang tao phieu ky thuat",
-            message: "He thong dang mo Service Operation workspace.",
+            title: "Đang tạo phiếu kỹ thuật",
+            message: "Đang ghi nhận Service Request và nghi ngờ kỹ thuật.",
+            steps: intakeSteps,
         });
 
         try {
@@ -823,38 +848,49 @@ export default function WatchListClient(props: WatchListClientProps) {
             }
 
             const data = json.data ?? {};
-            const href = String(data.workspaceHref ?? "").trim();
 
             if (data.status === "EXISTING_WORKSPACE") {
                 progress.hide();
-                const shouldOpen = window.confirm(
-                    "Watch nay da co workspace ky thuat dang active. Ban muon mo workspace do khong?",
-                );
-                if (!shouldOpen) return;
-                if (!href) throw new Error("Workspace dang ton tai nhung chua co duong dan.");
-
                 setServiceIntakeRow(null);
                 setServiceSuspicion("");
-                navigateWithProgress(href, "Dang mo workspace ky thuat");
+                notify.success({
+                    title: "Watch đã có phiếu kỹ thuật",
+                    message: data.refNo
+                        ? `SR ${data.refNo} đang được xử lý.`
+                        : "Bạn có thể mở phiếu từ Service Operation khi cần.",
+                });
                 return;
             }
 
-            if (!href) {
-                throw new Error("Phieu service da duoc xu ly nhung workspace chua san sang.");
-            }
+            intakeSteps = intakeSteps.map((step) =>
+                step.id === "create"
+                    ? { ...step, status: "done", detail: "Phiếu kỹ thuật đã được ghi nhận." }
+                    : step.id === "background"
+                      ? {
+                            ...step,
+                            status: "running",
+                            detail: "Đã chuyển sang xử lý nền; bạn có thể tiếp tục làm việc.",
+                        }
+                      : step,
+            );
+            progress.update({
+                title: "Đã tạo phiếu kỹ thuật",
+                message: "Space và lịch sử đang được đồng bộ nền.",
+                steps: intakeSteps,
+            });
 
             notify.success({
-                title: data.createdServiceRequest ? "Da tao phieu ky thuat" : "Da gan workspace ky thuat",
+                title: data.createdServiceRequest ? "Đã tạo phiếu kỹ thuật" : "Đã ghi nhận phiếu kỹ thuật",
                 message: data.createdInitialIssue
-                    ? "Da tao SR kem nghi ngo ky thuat dau tien."
+                    ? "Đã tạo SR kèm nghi ngờ kỹ thuật đầu tiên."
                     : data.refNo
-                        ? `SR ${data.refNo} da san sang.`
-                        : "Workspace Service Operation da san sang.",
+                        ? `SR ${data.refNo} đã được ghi nhận.`
+                        : "Bạn có thể mở phiếu từ Service Operation khi cần.",
             });
 
             setServiceIntakeRow(null);
             setServiceSuspicion("");
-            navigateWithProgress(href, "Dang mo workspace ky thuat");
+            window.setTimeout(() => progress.hide(), 900);
         } catch (error) {
             progress.hide();
             setServiceIntakeError(
@@ -997,30 +1033,36 @@ export default function WatchListClient(props: WatchListClientProps) {
     const loading = isLoading || isPending;
     const displayRows = rows;
     return (
-        <div className="mx-auto w-full max-w-[1360px] min-w-0 space-y-5 px-4 pt-6 lg:px-5 xl:px-6">
-            <WatchListToolbar
-                selectedCount={selectedIds.length}
-                photoshootEligibleCount={photoshootEligibleRows.length}
-                mediaReviewEligibleCount={mediaReviewEligibleRows.length}
-                submittingPhotoshoot={photoshootSubmitting}
-                submittingMediaReview={mediaReviewSubmitting}
-                onRequestPhotoshoot={requestSelectedPhotoshoot}
-                onRequestMediaReview={requestSelectedMediaReview}
-            />
-
-            <WatchListFilters
-                filters={filters}
-                total={listData.total}
-                visibleCount={displayRows.length}
-                brandOptions={brandOptions}
-                vendorOptions={vendorOptions}
-                onChange={handleFilterChange}
-                onApply={handleApplyFilters}
-                onClear={handleClearFilters}
-                onClearField={handleClearField}
-                onSaveView={handleSaveView}
-            />
-
+        <BusinessListShell
+            header={
+                <WatchListToolbar
+                    selectedCount={selectedIds.length}
+                    photoshootEligibleCount={photoshootEligibleRows.length}
+                    mediaReviewEligibleCount={mediaReviewEligibleRows.length}
+                    submittingPhotoshoot={photoshootSubmitting}
+                    submittingMediaReview={mediaReviewSubmitting}
+                    onRequestPhotoshoot={requestSelectedPhotoshoot}
+                    onRequestMediaReview={requestSelectedMediaReview}
+                />
+            }
+            dashboard={
+                <AsyncBusinessListDashboard endpoint="/api/admin/watches/dashboard" />
+            }
+            filters={
+                <WatchListFilters
+                    filters={filters}
+                    total={listData.total}
+                    visibleCount={displayRows.length}
+                    brandOptions={brandOptions}
+                    vendorOptions={vendorOptions}
+                    onChange={handleFilterChange}
+                    onApply={handleApplyFilters}
+                    onClear={handleClearFilters}
+                    onClearField={handleClearField}
+                    onSaveView={handleSaveView}
+                />
+            }
+        >
             <div className={loading ? "opacity-60 transition" : "transition"}>
                 <WatchListTable
                     items={displayRows}
@@ -1162,7 +1204,7 @@ export default function WatchListClient(props: WatchListClientProps) {
                 error={previewState.error}
                 onClose={previewState.closePreview}
             />
-        </div>
+        </BusinessListShell>
 
     );
 }

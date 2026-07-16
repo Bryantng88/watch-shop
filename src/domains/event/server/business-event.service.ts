@@ -20,6 +20,10 @@ export type BusinessEventInput = {
     targetAliasIds?: string[];
 };
 
+export type BusinessEventDispatchOptions = {
+    deferConsumers?: (work: () => Promise<void>) => void;
+};
+
 function clean(value: unknown) {
     return String(value ?? "").trim();
 }
@@ -42,7 +46,11 @@ function formatValidationErrors(
         .join(" ");
 }
 
-export async function recordBusinessEvent(db: DB, input: BusinessEventInput) {
+export async function recordBusinessEvent(
+    db: DB,
+    input: BusinessEventInput,
+    options?: BusinessEventDispatchOptions,
+) {
     const totalStartedAt = perfNow();
     const client = dbOrTx(db);
 
@@ -124,6 +132,30 @@ export async function recordBusinessEvent(db: DB, input: BusinessEventInput) {
         eventInstanceId,
         idempotencyKey,
     };
+
+    if (options?.deferConsumers) {
+        options.deferConsumers(async () => {
+            await dispatchBusinessEvent({
+                client,
+                context: consumerContext,
+            });
+            perfLog("business-event", `${eventKey}:deferred-total`, totalStartedAt);
+        });
+        perfLog("business-event", `${eventKey}:accepted`, totalStartedAt);
+
+        return {
+            ok: true,
+            eventLog,
+            deferred: true as const,
+            consumers: {
+                coordination: undefined,
+                workflow: undefined,
+                notification: undefined,
+                timeline: undefined,
+                projection: undefined,
+            },
+        };
+    }
 
     const consumerResults = await dispatchBusinessEvent({
         client,
