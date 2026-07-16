@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma, type DB } from "@/server/db/client";
+import { prisma } from "@/server/db/client";
 import {
     enqueueAcquisitionSpecJob,
 } from "../server/acquisition-spec-job.service";
@@ -15,12 +15,23 @@ import {
 } from "../server/acquisition-media.service";
 import { createInitialPaymentForAcquisitionTx } from "@/domains/payment/server";
 import { restoreBuyBackWatchAfterAcquisitionPostTx } from "../server";
+import { emitWatchCreatedEvent } from "@/domains/watch/server/events";
 
 type PendingInlineImageAttach = {
     acquisitionId: string;
+    acquisitionItemId: string;
+    watchId: string;
     productId: string;
     image: AcquisitionInlineImageInput;
     sortOrder: number;
+};
+
+type CreatedWatchEvent = {
+    acquisitionId: string;
+    acquisitionItemId: string;
+    watchId: string;
+    productId: string;
+    saleStage: "DRAFT";
 };
 
 async function resolveVendorIdForPosting(
@@ -77,6 +88,7 @@ export async function postAcquisitionApplication(
     }
 
     const pendingInlineImages: PendingInlineImageAttach[] = [];
+    const createdWatchEvents: CreatedWatchEvent[] = [];
 
     const result = await prisma.$transaction(
         async (tx) => {
@@ -94,6 +106,14 @@ export async function postAcquisitionApplication(
 
                     productId = draft.productId;
 
+                    createdWatchEvents.push({
+                        acquisitionId: acqId,
+                        acquisitionItemId: item.id,
+                        watchId: draft.watchId,
+                        productId: draft.productId,
+                        saleStage: "DRAFT",
+                    });
+
                     const inlineImage = pickFirstAcquisitionInlineImage(
                         getAiMetaFromDescription(item.description)?.images
                     );
@@ -101,6 +121,8 @@ export async function postAcquisitionApplication(
                     if (inlineImage) {
                         pendingInlineImages.push({
                             acquisitionId: acqId,
+                            acquisitionItemId: item.id,
+                            watchId: draft.watchId,
                             productId,
                             image: inlineImage,
                             sortOrder: index,
@@ -142,12 +164,26 @@ export async function postAcquisitionApplication(
         }
     );
 
-    // NON BLOCKING IMAGE ATTACH
-    Promise.allSettled(
-        pendingInlineImages.map((pending) =>
-            attachInlineImageToAcquisitionWatchDraft(pending)
-        )
-    ).catch(console.error);
+    const inlineImagesByWatchId = new Map(
+        pendingInlineImages.map((pending) => [pending.watchId, pending]),
+    );
+
+    for (const event of createdWatchEvents) {
+        const pending = inlineImagesByWatchId.get(event.watchId);
+        if (pending) {
+            await attachInlineImageToAcquisitionWatchDraft(pending);
+        }
+
+        await emitWatchCreatedEvent(prisma, {
+            watch: {
+                id: event.watchId,
+                productId: event.productId,
+                saleStage: event.saleStage,
+            },
+            acquisitionId: event.acquisitionId,
+            acquisitionItemId: event.acquisitionItemId,
+        });
+    }
 
     return result;
 }

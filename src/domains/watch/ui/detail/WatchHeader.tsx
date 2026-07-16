@@ -135,7 +135,7 @@ export default function WatchHeader({ detail, inlineImage }: Props) {
             <Button
               onClick={() =>
                 navigateWithProgress(
-                  `/admin/watches/${productId}/edit?returnTo=${encodeURIComponent(returnTo)}`,
+                  `/admin/watches/${productId}?returnTo=${encodeURIComponent(returnTo)}`,
                   "Đang mở form chỉnh sửa",
                 )
               }

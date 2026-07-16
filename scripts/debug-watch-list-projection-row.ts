@@ -37,6 +37,8 @@ async function main() {
       row: row.dataJson?.row
         ? {
           title: (row.dataJson.row as Record<string, unknown>).title,
+          imageUrl: (row.dataJson.row as Record<string, unknown>).imageUrl,
+          imageKey: (row.dataJson.row as Record<string, unknown>).imageKey,
           serviceState: (row.dataJson.row as Record<string, unknown>).serviceState,
           sku: (row.dataJson.row as Record<string, unknown>).sku,
         }
@@ -44,6 +46,8 @@ async function main() {
       v2Row: row.dataJson?.v2Row
         ? {
           title: (row.dataJson.v2Row as Record<string, unknown>).title,
+          imageUrl: (row.dataJson.v2Row as Record<string, unknown>).imageUrl,
+          imageKey: (row.dataJson.v2Row as Record<string, unknown>).imageKey,
           serviceStatus: (row.dataJson.v2Row as Record<string, unknown>).serviceStatus,
           serviceStatusLabel: (row.dataJson.v2Row as Record<string, unknown>).serviceStatusLabel,
         }

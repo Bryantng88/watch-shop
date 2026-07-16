@@ -7,9 +7,6 @@ export type WatchItemInput = {
     quantity?: number;
     unitCost?: number;
     unitPrice?: number;
-    watchFlags?: {
-        needService?: boolean;
-    };
     quickSpec?: Record<string, unknown> | null;
     aiMeta?: {
         images?: Array<{

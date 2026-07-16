@@ -3,7 +3,6 @@
 import { prisma } from "@/server/db/client";
 import {
     getAiMetaFromDescription,
-    getWatchFlagsFromDescription,
 } from "../shared/acquisition-item-metadata";
 
 function toNumber(value: unknown) {
@@ -55,7 +54,6 @@ export async function getAcquisitionEditDetail(acquisitionId: string) {
 
     const items = acquisition.acquisitionItem.map((item) => {
         const aiMeta = getAiMetaFromDescription(item.description ?? null);
-        const watchFlags = getWatchFlagsFromDescription(item.description ?? null);
         const image = pickImage(item.description, item.product);
 
         return {
@@ -69,7 +67,6 @@ export async function getAcquisitionEditDetail(acquisitionId: string) {
             imageKey: image.imageKey,
             imageUrl: image.imageUrl,
             aiHint: String(aiMeta?.aiHint ?? ""),
-            receiveService: Boolean(watchFlags?.needService ?? true),
             status: item.status ?? null,
         };
     });

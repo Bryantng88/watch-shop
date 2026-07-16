@@ -493,8 +493,52 @@ function dateFromIsoWeekPeriod(periodKey?: string | null) {
   return monday.toISOString().slice(0, 10);
 }
 
-function coordinationHref(parentTask?: ParentTask | null) {
+function coordinationSurfaceFromContext(value?: string | null) {
+  const context = String(value ?? "").trim().toUpperCase();
+  if (context === "MEDIA") return "media";
+  if (context === "PAYMENT") return "payment";
+  if (context === "TECHNICAL") return "technical";
+  if (context === "SALES") return "sales";
+  if (context === "GENERAL") return "general";
+  if (context === "OPERATION") return "operation";
+  return null;
+}
+
+function coordinationSurfaceFromWorkType(value?: string | null) {
+  const workTypeKey = String(value ?? "").trim().toLowerCase();
+  if (
+    workTypeKey === "photography" ||
+    workTypeKey === "media-processing" ||
+    workTypeKey === "publish"
+  ) {
+    return "media";
+  }
+  if (workTypeKey === "payment") return "payment";
+  if (workTypeKey === "service-operation") return "technical";
+  return null;
+}
+
+function coordinationHref(
+  parentTask?: ParentTask | null,
+  workspaceNote?: string | null,
+) {
   if (!parentTask) return "/admin/coordination/operation";
+
+  const snapshot = parseWorkspaceDefinitionSnapshot(workspaceNote);
+  const snapshotDefinition = snapshot?.workspaceDefinition as
+    | { coordinationContext?: string; workTypeKey?: string }
+    | undefined;
+  const context =
+    snapshot?.coordinationContext ??
+    snapshotDefinition?.coordinationContext ??
+    noteTextValue(workspaceNote, "coordinationContext");
+  const workTypeKey =
+    snapshot?.workTypeKey ??
+    snapshotDefinition?.workTypeKey ??
+    noteTextValue(workspaceNote, "workTypeKey");
+  const resolvedWorkspace =
+    coordinationSurfaceFromContext(context) ??
+    coordinationSurfaceFromWorkType(workTypeKey);
 
   const kind = String(parentTask.kind ?? "").toUpperCase();
   const title = String(parentTask.title ?? "").toLowerCase();
@@ -507,6 +551,10 @@ function coordinationHref(parentTask?: ParentTask | null) {
   }
   if (kind === "BUSINESS") {
     workspace = title.includes("khác") || title.includes("khac") ? "general" : "sales";
+  }
+
+  if (resolvedWorkspace) {
+    workspace = resolvedWorkspace;
   }
 
   const date = dateFromIsoWeekPeriod(parentTask.periodKey);
@@ -2965,7 +3013,7 @@ export default function TaskItemDetailClient({
     ? "Technical Issue"
     : presentation.itemLabel;
   const displayTitle = repairVietnameseMojibake(item.title || "Workspace");
-  const backHref = coordinationHref(parentTask);
+  const backHref = coordinationHref(parentTask, item.note);
   const isSystemOwner = noteHasSystemOwner(item.note);
   const owner = isSystemOwner
     ? null

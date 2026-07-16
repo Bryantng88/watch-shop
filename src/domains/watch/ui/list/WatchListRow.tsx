@@ -293,7 +293,7 @@ export default function WatchListRow({
         subtitle: product.title,
         status: media.label,
         imageUrl: product.imageUrl,
-        href: media.href ?? `/admin/watches/${product.productId}/edit`,
+        href: media.href ?? `/admin/watches/${product.productId}`,
         facts: [
             { label: "Watch", value: product.title },
             { label: "SKU", value: product.sku || "-" },
@@ -318,7 +318,7 @@ export default function WatchListRow({
         ],
         actions: media.href
             ? [{ label: "Mo workspace media", href: media.href }]
-            : [{ label: "Mo watch", href: `/admin/watches/${product.productId}/edit` }],
+            : [{ label: "Mo watch", href: `/admin/watches/${product.productId}` }],
     };
     const servicePreview: BusinessEntityPreview = service.serviceRequestId
         ? {
@@ -328,7 +328,7 @@ export default function WatchListRow({
             subtitle: product.title,
             status: service.label,
             imageUrl: product.imageUrl,
-            href: service.href ?? `/admin/watches/${product.productId}/edit`,
+            href: service.href ?? `/admin/watches/${product.productId}`,
             facts: [
                 { label: "Watch", value: product.title },
                 { label: "SKU", value: product.sku || "-" },
@@ -343,7 +343,7 @@ export default function WatchListRow({
             subtitle: product.title,
             status: service.label,
             imageUrl: product.imageUrl,
-            href: `/admin/watches/${product.productId}/edit`,
+            href: `/admin/watches/${product.productId}`,
             facts: [
                 { label: "Watch", value: product.title },
                 { label: "SKU", value: product.sku || "-" },
@@ -366,7 +366,7 @@ export default function WatchListRow({
                     ],
                 },
             ],
-            actions: [{ label: "Mo watch", href: `/admin/watches/${product.productId}/edit` }],
+            actions: [{ label: "Mo watch", href: `/admin/watches/${product.productId}` }],
         };
 
     const actions = [
@@ -438,7 +438,7 @@ export default function WatchListRow({
 
                     <div className="min-w-0 flex-1">
                         <Link
-                            href={`/admin/watches/${product.productId}/edit`}
+                            href={`/admin/watches/${product.productId}`}
                             className="line-clamp-2 text-[15px] font-semibold text-slate-900 hover:text-blue-700"
                         >
                             {product.title}
@@ -464,7 +464,7 @@ export default function WatchListRow({
                             subtitle: product.title,
                             status: media.label,
                             imageUrl: product.imageUrl,
-                            href: media.href ?? `/admin/watches/${product.productId}/edit`,
+                            href: media.href ?? `/admin/watches/${product.productId}`,
                             facts: [
                                 { label: "Watch", value: product.title },
                                 { label: "SKU", value: product.sku || "-" },
@@ -504,7 +504,7 @@ export default function WatchListRow({
                             subtitle: product.title,
                             status: service.label,
                             imageUrl: product.imageUrl,
-                            href: service.href ?? `/admin/watches/${product.productId}/edit`,
+                            href: service.href ?? `/admin/watches/${product.productId}`,
                             facts: [
                                 { label: "Watch", value: product.title },
                                 { label: "SKU", value: product.sku || "-" },

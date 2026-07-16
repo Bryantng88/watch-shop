@@ -97,6 +97,21 @@ export const WATCH_PUBLISH_AUTO_BINDING_SCOPE =
 
 export const WATCH_BUSINESS_EVENT_DEFINITIONS: WatchBusinessEventDefinition[] = [
   {
+    key: "watch.created",
+    label: "Watch created",
+    targetType: "WATCH",
+    group: "Watch",
+    status: "ACTIVE",
+    businessMeaning: "A Watch record was created and should appear in Watch read models.",
+    producer: "acquisition-watch.repo",
+    emitPoint: "createWatchDraftForAcquisitionItem",
+    targetIdPolicy: "watch.id",
+    targetAliasPolicy: "[watch.id, productId, acquisitionId, acquisitionItemId]",
+    payloadContract: "WatchCreatedPayload",
+    knownConsumers: ["projection"],
+    autoBindingScope: null,
+  },
+  {
     key: "watch.media.photoshoot.requested",
     label: "Watch photoshoot requested",
     targetType: "WATCH",
@@ -274,6 +289,21 @@ export const WATCH_BUSINESS_EVENT_DEFINITIONS: WatchBusinessEventDefinition[] = 
     targetAliasPolicy: "[productId]",
     payloadContract: "WatchContentModifiedPayload",
     knownConsumers: ["timeline", "workflow", "projection"],
+    autoBindingScope: null,
+  },
+  {
+    key: "watch.spec.updated",
+    label: "Watch spec updated",
+    targetType: "WATCH",
+    group: "Watch",
+    status: "ACTIVE",
+    businessMeaning: "Watch identity/spec fields were updated and downstream read models should refresh.",
+    producer: "submit-watch-form.application",
+    emitPoint: "submitWatchFormApplication",
+    targetIdPolicy: "watch.id",
+    targetAliasPolicy: "[watch.id, productId]",
+    payloadContract: "WatchSpecUpdatedPayload",
+    knownConsumers: ["projection", "timeline"],
     autoBindingScope: null,
   },
   {

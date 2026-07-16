@@ -27,11 +27,17 @@ import {
     textOrUndefined,
     toDecimal,
 } from "../../server/shared";
-import { emitWatchPriceUpdatedEvent } from "../../server/events";
+import {
+    emitWatchContentModifiedEvent,
+    emitWatchMediaAssetAttachedEvent,
+    emitWatchPriceUpdatedEvent,
+    emitWatchSpecUpdatedEvent,
+} from "../../server/events";
 
 type SubmitWatchFormContext = {
     userId?: string | null;
     canReviewContent: boolean;
+    canEditPrice?: boolean;
 };
 
 type ReviewSubmitTarget = "CONTENT" | "IMAGE";
@@ -81,6 +87,32 @@ function buildContentSnapshot(input: {
         body: normalizeText(input.body),
         bulletSpecs: normalizeArray(input.bulletSpecs as any),
         hashTags: normalizeText(input.hashTags),
+    };
+}
+
+function buildSpecSnapshot(input: {
+    brand?: string | null;
+    model?: string | null;
+    referenceNumber?: string | null;
+    caseShape?: string | null;
+    primaryCaseMaterial?: string | null;
+    dialColor?: string | null;
+    movementType?: string | null;
+    calibre?: string | null;
+    yearText?: string | null;
+    conditionGrade?: string | null;
+}) {
+    return {
+        brand: normalizeText(input.brand),
+        model: normalizeText(input.model),
+        referenceNumber: normalizeText(input.referenceNumber),
+        caseShape: normalizeText(input.caseShape),
+        primaryCaseMaterial: normalizeText(input.primaryCaseMaterial),
+        dialColor: normalizeText(input.dialColor),
+        movementType: normalizeText(input.movementType),
+        calibre: normalizeText(input.calibre),
+        yearText: normalizeText(input.yearText),
+        conditionGrade: normalizeText(input.conditionGrade),
     };
 }
 
@@ -388,6 +420,18 @@ export async function submitWatchFormApplication(
         bulletSpecs: current.watchContent?.bulletSpecs as any,
         hashTags: (current.watchContent as any)?.hashTags,
     });
+    const beforeSpec = buildSpecSnapshot({
+        brand: current.watchSpecV2?.brand,
+        model: current.watchSpecV2?.model,
+        referenceNumber: current.watchSpecV2?.referenceNumber,
+        caseShape: current.watchSpecV2?.caseShape,
+        primaryCaseMaterial: current.watchSpecV2?.primaryCaseMaterial,
+        dialColor: current.watchSpecV2?.dialColor,
+        movementType: current.movementType,
+        calibre: current.watchSpecV2?.calibre,
+        yearText: current.yearText,
+        conditionGrade: current.conditionGrade,
+    });
 
     const saveIntent = String((values as any).saveIntent ?? "NORMAL").toUpperCase();
     const isMediaWorkspaceSave = saveIntent === "MEDIA_WORKSPACE";
@@ -396,6 +440,18 @@ export async function submitWatchFormApplication(
         saveIntent === "SUBMIT_IMAGE"
             ? beforeContent
             : buildContentSnapshot(values.content);
+    const afterSpec = buildSpecSnapshot({
+        brand: values.spec.specBrand || undefined,
+        model: values.spec.model,
+        referenceNumber: values.spec.referenceNumber,
+        caseShape: values.spec.caseShape,
+        primaryCaseMaterial: values.spec.primaryCaseMaterial,
+        dialColor: values.spec.dialColor,
+        movementType: values.basic.movementType,
+        calibre: values.spec.calibre,
+        yearText: values.basic.yearText,
+        conditionGrade: values.basic.conditionGrade,
+    });
     const beforeImageKeys = normalizeImageKeys(
         current.product.productImage.map((x: any) => ({ key: x.fileKey })),
     );
@@ -410,6 +466,7 @@ export async function submitWatchFormApplication(
             : normalizeImageKeys(requestedGalleryImages);
 
     const contentChanged = !sameJson(beforeContent, afterContent);
+    const specChanged = !sameJson(beforeSpec, afterSpec);
     const imagesChanged = !sameJson(beforeImageKeys, afterImageKeysBeforeMove);
 
     const contentReviewStatus = String(
@@ -666,16 +723,60 @@ export async function submitWatchFormApplication(
         hasGalleryImages,
     });
 
-    const pricingResult = await updateWatchPricingWithDiff(productId, {
-        salePrice: values.pricing.salePrice,
-        minPrice: values.pricing.minPrice,
-        costPrice: values.pricing.costPrice,
-        serviceCost: values.pricing.serviceCost,
-        landedCost: values.pricing.landedCost,
-        pricingNote: values.pricing.pricingNote,
-    });
+    if (contentChanged) {
+        await emitWatchContentModifiedEvent(prisma, {
+            watch: {
+                id: current.id,
+                productId,
+            },
+            actorUserId: context.userId ?? null,
+        });
+    }
 
-    if (pricingResult.changedFields.length > 0) {
+    if (specChanged) {
+        await emitWatchSpecUpdatedEvent(prisma, {
+            watch: {
+                id: current.id,
+                productId,
+                product: {
+                    title: current.product?.title ?? values.basic.title ?? null,
+                    sku: current.product?.sku ?? values.header.sku ?? null,
+                },
+            },
+            actorUserId: context.userId ?? null,
+            before: beforeSpec,
+            after: afterSpec,
+        });
+    }
+
+    if (imagesChanged) {
+        await emitWatchMediaAssetAttachedEvent(prisma, {
+            watch: {
+                id: current.id,
+                productId,
+                product: {
+                    title: current.product?.title ?? values.basic.title ?? null,
+                    sku: current.product?.sku ?? values.header.sku ?? null,
+                },
+            },
+            actorUserId: context.userId ?? null,
+            sourceId: productId,
+            note: "Watch Workbench image save.",
+        });
+    }
+
+    const pricingResult = context.canEditPrice
+        ? await updateWatchPricingWithDiff(productId, {
+            salePrice: values.pricing.salePrice,
+            minPrice: values.pricing.minPrice,
+            costPrice: values.pricing.costPrice,
+            serviceCost: values.pricing.serviceCost,
+            landedCost: values.pricing.landedCost,
+            pricingNote: values.pricing.pricingNote,
+        })
+        : null;
+
+    if (pricingResult && pricingResult.changedFields.length > 0) {
         await emitWatchPriceUpdatedEvent(prisma, {
             watch: {
                 id: pricingResult.watchId,

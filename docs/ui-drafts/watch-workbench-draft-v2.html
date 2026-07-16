@@ -1,0 +1,1122 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Watch Workbench UI Draft V2</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --surface: #ffffff;
+      --surface-2: #f8fafc;
+      --ink: #071126;
+      --muted: #61708a;
+      --soft: #8a99b4;
+      --line: #dce5f2;
+      --line-2: #edf2f8;
+      --blue: #2563eb;
+      --indigo: #4f46e5;
+      --violet: #7c3aed;
+      --green: #059669;
+      --amber: #d97706;
+      --red: #e11d48;
+      --shadow: 0 18px 55px rgba(15, 23, 42, .08);
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+      background:
+        linear-gradient(90deg, rgba(37, 99, 235, .08), transparent 18%, transparent 82%, rgba(5, 150, 105, .06)),
+        linear-gradient(180deg, #fbfcff 0, #f3f6fb 38%, #f8fafc 100%);
+    }
+
+    button, input, textarea, select { font: inherit; letter-spacing: 0; }
+    button { cursor: default; }
+
+    .shell {
+      max-width: 1520px;
+      margin: 0 auto;
+      padding: 18px 28px 96px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 38px;
+      margin-bottom: 12px;
+      color: #475569;
+      font-size: 13px;
+    }
+
+    .crumbs {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .crumbs b { color: var(--ink); }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      height: 38px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #1e293b;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 13px;
+      font-size: 13px;
+      font-weight: 750;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+      text-decoration: none;
+    }
+
+    .btn.icon { width: 38px; padding: 0; }
+    .btn.dark { background: #071126; color: #fff; border-color: #071126; }
+    .btn.primary {
+      border-color: transparent;
+      color: #fff;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      box-shadow: 0 12px 26px rgba(79, 70, 229, .24);
+    }
+
+    .hero {
+      background: rgba(255, 255, 255, .94);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 178px minmax(0, 1fr) 496px;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .hero-photo {
+      min-height: 178px;
+      border-radius: 10px;
+      border: 1px solid #d6e0ee;
+      background:
+        radial-gradient(circle at 50% 48%, rgba(255,255,255,.35), transparent 32%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420' viewBox='0 0 420 420'%3E%3Crect width='420' height='420' fill='%23e8eef7'/%3E%3Cpath d='M158 30h104l-24 122h-56L158 30zM182 268h56l24 122H158l24-122z' fill='%23899ab7'/%3E%3Ccircle cx='210' cy='210' r='88' fill='%23101b34'/%3E%3Ccircle cx='210' cy='210' r='68' fill='%23f8fafc'/%3E%3Ccircle cx='210' cy='210' r='54' fill='%23dbeafe'/%3E%3Cpath d='M210 210v-43M210 210l39 21M210 210l-32 24' stroke='%23071126' stroke-width='7' stroke-linecap='round'/%3E%3Ccircle cx='210' cy='210' r='8' fill='%23071126'/%3E%3C/svg%3E");
+      background-size: cover;
+      background-position: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .photo-tag {
+      position: absolute;
+      left: 11px;
+      bottom: 11px;
+      background: rgba(7, 17, 38, .88);
+      color: white;
+      border-radius: 999px;
+      padding: 7px 11px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .identity {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .eyebrow {
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 850;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      margin: 0;
+      color: #020617;
+      font-size: 34px;
+      line-height: 1.05;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin-top: 10px;
+      max-width: 720px;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .meta {
+      border-left: 1px solid var(--line);
+      padding-left: 12px;
+      min-width: 0;
+    }
+
+    .meta:first-child { border-left: 0; padding-left: 0; }
+    .label {
+      font-size: 11px;
+      color: var(--soft);
+      text-transform: uppercase;
+      font-weight: 850;
+    }
+
+    .value {
+      margin-top: 5px;
+      font-size: 13px;
+      font-weight: 850;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      height: 27px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      border: 1px solid;
+      white-space: nowrap;
+    }
+
+    .chip.blue { color: #1d4ed8; background: #eff6ff; border-color: #bfdbfe; }
+    .chip.green { color: #047857; background: #ecfdf5; border-color: #a7f3d0; }
+    .chip.amber { color: #a16207; background: #fffbeb; border-color: #fde68a; }
+    .chip.red { color: #be123c; background: #fff1f2; border-color: #fecdd3; }
+    .chip.slate { color: #475569; background: #f8fafc; border-color: #e2e8f0; }
+    .chip.violet { color: #6d28d9; background: #f5f3ff; border-color: #ddd6fe; }
+
+    .hero-summary {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      align-content: stretch;
+    }
+
+    .summary-card {
+      min-height: 84px;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      min-width: 0;
+    }
+
+    .summary-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: #eef2ff;
+      color: var(--indigo);
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      flex: 0 0 auto;
+    }
+
+    .summary-card strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .operator-nav {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      margin: 12px 0;
+      border: 1px solid rgba(202, 213, 229, .95);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, .94), rgba(248, 250, 252, .88));
+      backdrop-filter: blur(18px);
+      border-radius: 10px;
+      box-shadow: 0 12px 34px rgba(15, 23, 42, .08);
+      padding: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      min-width: 0;
+    }
+
+    .nav-link {
+      height: 36px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      padding: 0 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #334155;
+      background: transparent;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+      transition: background .16s ease, border-color .16s ease, color .16s ease;
+    }
+
+    .nav-link.active, .nav-link:hover {
+      background: #eef4ff;
+      color: #1d4ed8;
+      border-color: #cfe0ff;
+    }
+
+    .nav-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: currentColor;
+      opacity: .75;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 366px;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .main, .aside {
+      display: grid;
+      gap: 12px;
+    }
+
+    .aside {
+      position: sticky;
+      top: 74px;
+    }
+
+    .section, .side-card {
+      background: rgba(255, 255, 255, .96);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      box-shadow: 0 12px 34px rgba(15, 23, 42, .055);
+      overflow: hidden;
+      scroll-margin-top: 82px;
+    }
+
+    .section-head {
+      min-height: 74px;
+      padding: 15px 16px;
+      border-bottom: 1px solid var(--line-2);
+      background:
+        linear-gradient(180deg, #ffffff 0, #fbfdff 100%);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .head-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 9px;
+      background:
+        linear-gradient(180deg, #eef2ff 0, #f7f4ff 100%);
+      color: var(--indigo);
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      flex: 0 0 auto;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.1;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .copy {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .section-body { padding: 16px; }
+
+    label {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 12px;
+      font-weight: 850;
+      color: #0f172a;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid #d4dfed;
+      background: #fff;
+      color: #071126;
+      border-radius: var(--radius);
+      outline: none;
+      padding: 0 12px;
+      transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: #93b4ff;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, .10);
+      background: #ffffff;
+    }
+
+    textarea {
+      min-height: 88px;
+      padding: 11px 12px;
+      resize: vertical;
+    }
+
+    .hint {
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--soft);
+      line-height: 1.35;
+      font-weight: 650;
+    }
+
+    .finance-hero {
+      display: grid;
+      grid-template-columns: 1.05fr 1.35fr;
+      gap: 12px;
+    }
+
+    .cost-total {
+      border: 1px solid #cfe0ff;
+      background:
+        linear-gradient(135deg, #f7fbff 0, #ffffff 58%, #f7fff9 100%);
+      border-radius: 10px;
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cost-total::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 4px;
+      background: linear-gradient(180deg, var(--blue), var(--green));
+    }
+
+    .money-xl {
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 920;
+      letter-spacing: 0;
+      color: #020617;
+    }
+
+    .money-sub {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 6px;
+    }
+
+    .cost-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    .mini-box {
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      border-radius: var(--radius);
+      padding: 10px;
+      min-width: 0;
+    }
+
+    .mini-box b {
+      display: block;
+      margin-top: 4px;
+      font-size: 15px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ledger {
+      border: 1px solid #d7e2f0;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+    }
+
+    .ledger-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 118px 106px 84px;
+      gap: 10px;
+      align-items: center;
+      min-height: 46px;
+      padding: 10px 12px;
+      border-top: 1px solid var(--line-2);
+      font-size: 13px;
+    }
+
+    .ledger-row:not(:first-child):hover {
+      background: #fbfdff;
+    }
+
+    .ledger-row:first-child {
+      border-top: 0;
+      background: #f8fafc;
+      color: var(--soft);
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 900;
+    }
+
+    .money-out { color: var(--red); font-weight: 850; text-align: right; }
+    .money-in { color: var(--green); font-weight: 850; text-align: right; }
+
+    .pricing-grid, .spec-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .projection-warning {
+      margin-top: 12px;
+      border: 1px solid #f8d98b;
+      background:
+        linear-gradient(180deg, #fffaf0 0, #fffdf8 100%);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: center;
+      color: #92400e;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(0, .95fr) minmax(0, 1.25fr);
+      gap: 12px;
+    }
+
+    .field-stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .signal-strip {
+      margin-top: 12px;
+      border: 1px solid #d7e2f0;
+      background:
+        linear-gradient(180deg, #f8fbff 0, #ffffff 100%);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .media-grid {
+      display: grid;
+      grid-template-columns: 230px minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    .image-card {
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(180deg, #f8fafc 0, #ffffff 100%);
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .image-preview {
+      aspect-ratio: 1;
+      border-radius: 9px;
+      border: 1px solid #cbd5e1;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(255,255,255,.42), transparent 30%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360' viewBox='0 0 360 360'%3E%3Crect width='360' height='360' fill='%23e2e8f0'/%3E%3Ccircle cx='180' cy='180' r='82' fill='%23071126'/%3E%3Ccircle cx='180' cy='180' r='63' fill='%23f8fafc'/%3E%3Ccircle cx='180' cy='180' r='47' fill='%23dbeafe'/%3E%3Cpath d='M180 180v-42M180 180l36 19M180 180l-30 23' stroke='%23071126' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-size: cover;
+      background-position: center;
+    }
+
+    .thumbs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .thumb {
+      aspect-ratio: 1;
+      border-radius: 7px;
+      background: #fff;
+      border: 1px solid #d8e1ee;
+      display: grid;
+      place-items: center;
+      color: var(--soft);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .media-list {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .media-row {
+      display: grid;
+      grid-template-columns: 128px minmax(0, 1fr) 118px;
+      gap: 10px;
+      align-items: center;
+      min-height: 46px;
+      padding: 10px 12px;
+      border-top: 1px solid var(--line-2);
+      font-size: 13px;
+    }
+
+    .media-row:first-child {
+      border-top: 0;
+      background: #f8fafc;
+      color: var(--soft);
+      text-transform: uppercase;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .side-card .section-head { min-height: 72px; }
+
+    .side-card {
+      box-shadow: 0 14px 38px rgba(15, 23, 42, .06);
+    }
+
+    .timeline {
+      padding: 2px 14px 14px;
+    }
+
+    .event {
+      display: grid;
+      grid-template-columns: 26px minmax(0, 1fr);
+      gap: 10px;
+      padding: 13px 0;
+      position: relative;
+    }
+
+    .event:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      left: 12px;
+      top: 38px;
+      bottom: -7px;
+      width: 1px;
+      background: #e2e8f0;
+    }
+
+    .dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: var(--indigo);
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 900;
+      z-index: 1;
+    }
+
+    .event-title { font-size: 13px; font-weight: 900; }
+    .event-meta { margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+
+    .kv {
+      margin: 0 14px 14px;
+      border: 1px solid #dbeafe;
+      border-radius: 10px;
+      background: #f8fbff;
+      overflow: hidden;
+    }
+
+    .kv-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-top: 1px solid #e4eefc;
+      font-size: 13px;
+    }
+
+    .kv-row:first-child { border-top: 0; }
+    .kv-row span:first-child { color: var(--muted); }
+    .kv-row span:last-child { text-align: right; font-weight: 850; }
+
+    .feed {
+      display: grid;
+      gap: 8px;
+      padding: 0 14px 14px;
+    }
+
+    .feed-item {
+      min-height: 36px;
+      border: 1px solid var(--line-2);
+      background: #fbfdff;
+      border-radius: var(--radius);
+      padding: 9px 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #475569;
+    }
+
+    .feed-item:hover {
+      border-color: #d5e3f5;
+      background: #ffffff;
+    }
+
+    .modal-demo {
+      border: 1px dashed #c4b5fd;
+      background: #fbfaff;
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    .modal-shell {
+      margin-top: 12px;
+      border: 1px solid #d8b4fe;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 18px 44px rgba(88, 28, 135, .11);
+    }
+
+    .modal-head, .modal-foot {
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: #fcfbff;
+    }
+
+    .modal-head { border-bottom: 1px solid #f3e8ff; }
+    .modal-foot { border-top: 1px solid #f3e8ff; justify-content: flex-end; }
+
+    .segments {
+      display: inline-grid;
+      grid-template-columns: repeat(4, 1fr);
+      border: 1px solid #ddd6fe;
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .segment {
+      min-width: 76px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      color: #6d28d9;
+      border-left: 1px solid #ede9fe;
+      font-size: 12px;
+      font-weight: 850;
+    }
+    .segment:first-child { border-left: 0; }
+    .segment.active { color: #fff; background: #6d5dfc; }
+
+    .modal-body {
+      display: grid;
+      grid-template-columns: 154px minmax(0, 1fr);
+      gap: 12px;
+      padding: 14px;
+    }
+
+    .bottom-bar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 40;
+      border-top: 1px solid var(--line);
+      background: rgba(255, 255, 255, .93);
+      backdrop-filter: blur(16px);
+      box-shadow: 0 -14px 34px rgba(15, 23, 42, .08);
+    }
+
+    .bottom-inner {
+      max-width: 1520px;
+      margin: 0 auto;
+      padding: 12px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .save-state {
+      display: flex;
+      gap: 9px;
+      align-items: center;
+      min-width: 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    @media (max-width: 1240px) {
+      .hero { grid-template-columns: 170px minmax(0, 1fr); }
+      .hero-summary { grid-column: 1 / -1; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .layout { grid-template-columns: 1fr; }
+      .aside { position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .aside .side-card:last-child { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 860px) {
+      .shell { padding: 14px 12px 104px; }
+      .topbar, .operator-nav, .bottom-inner { flex-direction: column; align-items: stretch; }
+      .actions { flex-wrap: wrap; }
+      .hero, .finance-hero, .content-grid, .media-grid, .pricing-grid, .spec-grid, .aside, .hero-summary {
+        grid-template-columns: 1fr;
+      }
+      .hero-photo { min-height: 260px; }
+      .ledger-row, .media-row { grid-template-columns: 1fr; gap: 4px; }
+      .modal-body { grid-template-columns: 1fr; }
+      .nav-links { padding-bottom: 2px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="topbar">
+      <div class="crumbs">
+        <span>Watch Management</span><span>›</span><span>Danh sách watch</span><span>›</span><b>Bulova Computron</b>
+      </div>
+      <div class="actions">
+        <button class="btn">⌘ Mở Media WP</button>
+        <button class="btn">↗ Mở storefront</button>
+        <button class="btn icon">⋯</button>
+      </div>
+    </div>
+
+    <section class="hero">
+      <div class="hero-photo"><div class="photo-tag">Inline image</div></div>
+      <div class="identity">
+        <div>
+          <div class="eyebrow">◇ Watch Workbench</div>
+          <h1>Bulova Computron</h1>
+          <div class="subtitle">Một màn hình duy nhất để xem, sửa và vận hành watch. Media Workspace vẫn giữ modal flow, còn Watch Workbench là master surface.</div>
+          <div class="meta-grid">
+            <div class="meta"><div class="label">SKU</div><div class="value">-</div></div>
+            <div class="meta"><div class="label">Brand</div><div class="value">Bulova</div></div>
+            <div class="meta"><div class="label">Ref</div><div class="value">Chưa có</div></div>
+            <div class="meta"><div class="label">Vendor</div><div class="value">Nhật</div></div>
+          </div>
+        </div>
+        <div class="chips">
+          <span class="chip blue">● DRAFT</span>
+          <span class="chip green">● In stock</span>
+          <span class="chip slate">● Không cần service</span>
+        <span class="chip amber">● Spec pending</span>
+        <span class="chip slate">No review actions on Workbench</span>
+        </div>
+      </div>
+      <div class="hero-summary">
+        <div class="summary-card"><div class="summary-icon">₫</div><div><div class="label">Giá</div><strong>Landed 73.250.000</strong></div></div>
+        <div class="summary-card"><div class="summary-icon">S</div><div><div class="label">Spec</div><strong>PENDING</strong></div></div>
+        <div class="summary-card"><div class="summary-icon">T</div><div><div class="label">Nội dung</div><strong>Draft</strong></div></div>
+        <div class="summary-card"><div class="summary-icon">□</div><div><div class="label">Hình ảnh</div><strong>Inline ready</strong></div></div>
+      </div>
+    </section>
+
+    <nav class="operator-nav">
+      <div class="nav-links">
+        <a class="nav-link active" href="#pricing"><span class="nav-dot"></span>Giá & cost ledger</a>
+        <a class="nav-link" href="#spec"><span class="nav-dot"></span>Spec</a>
+        <a class="nav-link" href="#content"><span class="nav-dot"></span>Nội dung</a>
+        <a class="nav-link" href="#images"><span class="nav-dot"></span>Hình ảnh</a>
+        <a class="nav-link" href="#trade"><span class="nav-dot"></span>Giao dịch</a>
+        <a class="nav-link" href="#service"><span class="nav-dot"></span>Service</a>
+        <a class="nav-link" href="#projection"><span class="nav-dot"></span>Projection</a>
+        <a class="nav-link" href="#media-modal"><span class="nav-dot"></span>Media WP modal</a>
+      </div>
+      <div class="actions">
+        <button class="btn">Lưu block đang mở</button>
+        <button class="btn primary">Lưu tất cả</button>
+      </div>
+    </nav>
+
+    <div class="layout">
+      <div class="main">
+        <section id="pricing" class="section">
+          <div class="section-head">
+            <div class="head-title">
+              <div class="icon">₫</div>
+              <div><h2>1. Giá & cost ledger</h2><div class="copy">Admin-only cho giá mua, ledger amount, margin và nhập giá bán. Giá bán có thể hiển thị read-only cho user thường.</div></div>
+            </div>
+            <div class="actions"><span class="chip red">Admin only</span><span class="chip amber">Projection gap</span><button class="btn dark">Lưu giá</button></div>
+          </div>
+          <div class="section-body">
+            <div class="finance-hero">
+              <div class="cost-total">
+                <div>
+                  <div class="label">Landed cost hiện tại</div>
+                  <div class="money-xl">73.250.000 VND</div>
+                  <div class="money-sub">Giá nhập 72.000.000 + payment OUT đã ghi nhận 1.250.000.</div>
+                </div>
+                <div class="cost-metrics">
+                  <div class="mini-box"><div class="label">Sale price</div><b>-</b></div>
+                  <div class="mini-box"><div class="label">Min price</div><b>76.900.000</b></div>
+                  <div class="mini-box"><div class="label">Margin</div><b>-</b></div>
+                </div>
+              </div>
+              <div class="ledger">
+                <div class="ledger-row"><div>Nguồn cost</div><div>Số tiền</div><div>Status</div><div>Link</div></div>
+                <div class="ledger-row"><div><b>Acquisition payment OUT</b><div class="hint">PN-160726-000012 · vendor Nhật</div></div><div class="money-out">72.000.000</div><div><span class="chip green">PAID</span></div><div><button class="btn">Mở</button></div></div>
+                <div class="ledger-row"><div><b>Service payment OUT</b><div class="hint">SR chưa có, nhưng projection phải hỗ trợ khi phát sinh</div></div><div class="money-out">0</div><div><span class="chip slate">None</span></div><div><button class="btn">SR</button></div></div>
+                <div class="ledger-row"><div><b>Shipment / logistics OUT</b><div class="hint">Payment có shipment_id hoặc fee shipment liên quan order/watch</div></div><div class="money-out">1.250.000</div><div><span class="chip amber">UNPAID</span></div><div><button class="btn">Mở</button></div></div>
+                <div class="ledger-row"><div><b>Other watch-linked OUT</b><div class="hint">Bất kỳ payment OUT resolve được về product/watch</div></div><div class="money-out">0</div><div><span class="chip slate">None</span></div><div><button class="btn">+</button></div></div>
+              </div>
+            </div>
+
+            <div class="pricing-grid">
+              <div><label>Giá nhập</label><input value="72.000.000" /></div>
+              <div><label>Service cost</label><input value="0" /></div>
+              <div><label>Shipment cost</label><input value="1.250.000" /></div>
+              <div><label>Sale price</label><input placeholder="Nhập giá bán" /></div>
+            </div>
+
+            <div class="projection-warning">
+              <div><b>Permission + projection check:</b> non-admin phải bị mask cost/ledger/margin/sale input, nhưng vẫn xem được spec/content/image/history/service. Watch-list projection hiện chưa aggregate payment OUT từ service/shipment/acquisition.</div>
+              <button class="btn">Mở projection plan</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="spec" class="section">
+          <div class="section-head">
+            <div class="head-title">
+              <div class="icon">S</div>
+              <div><h2>2. Spec</h2><div class="copy">Identity, reference và thông số vận hành của watch.</div></div>
+            </div>
+            <div class="actions"><span class="chip amber">6/14 trường</span><button class="btn dark">Lưu spec</button></div>
+          </div>
+          <div class="section-body">
+            <div class="spec-grid">
+              <div><label>Brand</label><input value="Bulova" /></div>
+              <div><label>Model</label><input value="Computron" /></div>
+              <div><label>Reference</label><input placeholder="Chưa có" /></div>
+              <div><label>Movement</label><select><option>Quartz</option><option>Automatic</option></select></div>
+              <div><label>Case shape</label><select><option>Rectangle</option><option>Round</option></select></div>
+              <div><label>Case material</label><input placeholder="Steel / Gold..." /></div>
+              <div><label>Dial</label><input placeholder="LED / blue / black..." /></div>
+              <div><label>Year</label><input placeholder="VD: 1970s" /></div>
+              <div><label>Serial</label><input placeholder="Nhập serial" /></div>
+              <div><label>Box</label><select><option>Không</option><option>Có</option></select></div>
+              <div><label>Papers</label><select><option>Không</option><option>Có</option></select></div>
+              <div><label>Condition</label><select><option>Good</option><option>Excellent</option></select></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="content" class="section">
+          <div class="section-head">
+            <div class="head-title">
+              <div class="icon">T</div>
+              <div><h2>3. Nội dung</h2><div class="copy">Content draft, publish readiness và event sync trong cùng một block.</div></div>
+            </div>
+            <div class="actions"><span class="chip slate">Draft</span><span class="chip blue">Emit event on save</span><button class="btn dark">Lưu draft</button></div>
+          </div>
+          <div class="section-body">
+            <div class="content-grid">
+              <div class="field-stack">
+                <div><label>Title override</label><input value="Bulova Computron LED digital watch" /></div>
+                <div><label>Hook</label><textarea>Thiết kế LED retro nổi bật, form Computron đặc trưng của Bulova.</textarea></div>
+                <div><label>SEO title</label><input value="Bulova Computron LED Watch" /></div>
+              </div>
+              <div class="field-stack">
+                <div><label>Summary</label><textarea>Bulova Computron với dáng vỏ góc cạnh, mặt LED, phù hợp khách thích đồng hồ digital vintage.</textarea></div>
+                <div><label>Bullet specs</label><textarea>• LED display&#10;• Quartz movement&#10;• Vintage-inspired case&#10;• Stainless steel bracelet</textarea></div>
+              </div>
+            </div>
+            <div class="signal-strip">
+              <div><b>Domain event</b><div class="hint">Workbench chỉ lưu nội dung và phát event canonical. Gửi duyệt / duyệt nội dung chỉ nằm trong Workspace container.</div></div>
+              <div class="actions"><span class="chip green">watch.content.updated</span><button class="btn">Mở Media WP</button></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="images" class="section">
+          <div class="section-head">
+            <div class="head-title">
+              <div class="icon">□</div>
+              <div><h2>4. Hình ảnh</h2><div class="copy">Inline, gallery, storefront và projection readiness trong một khu vực.</div></div>
+            </div>
+            <div class="actions"><span class="chip blue">Inline ready</span><button class="btn dark">Lưu ảnh</button></div>
+          </div>
+          <div class="section-body">
+            <div class="media-grid">
+              <div class="image-card">
+                <div class="image-preview"></div>
+                <div class="thumbs"><div class="thumb">1</div><div class="thumb">2</div><div class="thumb">+</div><div class="thumb">...</div></div>
+              </div>
+              <div class="field-stack">
+                <div class="media-list">
+                  <div class="media-row"><div>Loại</div><div>Key / trạng thái</div><div>Action</div></div>
+                  <div class="media-row"><div>Inline</div><div>products/inline/chosen/watch/.../IMG_20260704.jpg</div><button class="btn">Đổi</button></div>
+                  <div class="media-row"><div>Storefront</div><div>Đang dùng ảnh inline</div><button class="btn">Set</button></div>
+                  <div class="media-row"><div>Gallery</div><div>0 ảnh gallery, chưa đủ media readiness</div><button class="btn">Thêm</button></div>
+                </div>
+                <div class="signal-strip">
+                  <div><b>Image event</b><div class="hint">Watch Workbench chỉ lưu ảnh trực tiếp và phát event. Review ảnh vẫn thuộc Media WP modal.</div></div>
+                  <div class="actions"><span class="chip green">watch.image.updated</span><button class="btn">Mở Media WP</button></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="media-modal" class="modal-demo">
+          <div class="head-title">
+            <div class="icon">WP</div>
+            <div><h2>Media Workspace modal mode</h2><div class="copy">Cùng operation block, container khác. Watch page không phá modal xử lý hiện tại.</div></div>
+          </div>
+          <div class="modal-shell">
+            <div class="modal-head">
+              <b>Xử lý Media - Bulova Computron</b>
+              <div class="segments"><div class="segment">Giá</div><div class="segment">Spec</div><div class="segment">Nội dung</div><div class="segment active">Ảnh</div></div>
+            </div>
+            <div class="modal-body">
+              <div class="image-preview"></div>
+              <div>
+                <label>OperationBlock mode="modal"</label>
+                <textarea>Ở Media WP, block này nằm trong modal và dùng footer action của workspace: Lưu, Gửi duyệt, Hoàn tất bước. Watch Workbench render cùng block ở dạng full section.</textarea>
+              </div>
+            </div>
+            <div class="modal-foot"><button class="btn">Đóng</button><button class="btn">Lưu ảnh</button><button class="btn primary">Hoàn tất bước</button></div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="aside">
+        <section id="trade" class="side-card">
+          <div class="section-head">
+            <div class="head-title"><div class="icon">↔</div><div><h2>Lịch sử giao dịch</h2><div class="copy">Transaction context của watch.</div></div></div>
+          </div>
+          <div class="timeline">
+            <div class="event"><div class="dot">1</div><div><div class="event-title">Nhập hàng</div><div class="event-meta">PN-160726-000012 · Vendor Nhật · Payment OUT 72.000.000 VND</div></div></div>
+            <div class="event"><div class="dot">2</div><div><div class="event-title">Shipment fee</div><div class="event-meta">Payment OUT 1.250.000 · đang chờ thanh toán</div></div></div>
+            <div class="event"><div class="dot">3</div><div><div class="event-title">Chưa bán</div><div class="event-meta">Không có order/invoice liên quan.</div></div></div>
+          </div>
+        </section>
+
+        <section id="service" class="side-card">
+          <div class="section-head">
+            <div class="head-title"><div class="icon">⚙</div><div><h2>Service</h2><div class="copy">Luồng SR/TI và workspace liên quan.</div></div></div>
+          </div>
+          <div class="kv">
+            <div class="kv-row"><span>Service status</span><span>Không cần service</span></div>
+            <div class="kv-row"><span>Active SR</span><span>-</span></div>
+            <div class="kv-row"><span>Technical issue</span><span>-</span></div>
+            <div class="kv-row"><span>Service OUT paid</span><span>0</span></div>
+            <div class="kv-row"><span>Projection</span><span style="color:var(--green)">Service status synced</span></div>
+          </div>
+          <div class="actions" style="padding:0 14px 14px"><button class="btn" style="flex:1">Tạo service</button><button class="btn" style="flex:1">Mở SR</button></div>
+        </section>
+
+        <section id="projection" class="side-card">
+          <div class="section-head">
+            <div class="head-title"><div class="icon">P</div><div><h2>Projection feed</h2><div class="copy">Các event làm mới watch-list row.</div></div></div>
+          </div>
+          <div class="feed">
+            <div class="feed-item"><span class="chip green">OK</span> watch.created -> image visible</div>
+            <div class="feed-item"><span class="chip blue">OK</span> watch.price.updated -> sale/list/min price</div>
+            <div class="feed-item"><span class="chip red">GAP</span> payment OUT rollup -> chưa có trong watch-list projection</div>
+            <div class="feed-item"><span class="chip green">OK</span> service_request.created -> service status</div>
+            <div class="feed-item"><span class="chip amber">TODO</span> shipment/payment event -> resolve về watch</div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <div class="bottom-bar">
+    <div class="bottom-inner">
+      <div class="save-state"><span class="chip amber">3 block có thay đổi</span><span>Giá, Spec và Nội dung đang ở draft local.</span></div>
+      <div class="actions"><button class="btn">Hủy thay đổi</button><button class="btn dark">Lưu block đang mở</button><button class="btn primary">Lưu tất cả</button></div>
+    </div>
+  </div>
+</body>
+</html>

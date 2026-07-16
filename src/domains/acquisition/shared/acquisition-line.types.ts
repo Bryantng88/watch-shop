@@ -11,7 +11,6 @@ export type AcquisitionWatchLine = {
     aiHint: string;
     quantity: number;
     cost: number | "";
-    receiveService: boolean;
     imageKey: string | null;
     imageUrl: string | null;
 };

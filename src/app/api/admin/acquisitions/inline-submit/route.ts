@@ -9,7 +9,6 @@ const WatchLineSchema = z.object({
     quickInput: z.string(),
     aiHint: z.string(),
     cost: z.union([z.number(), z.literal("")]),
-    receiveService: z.boolean(),
     imageKey: z.string().nullable(),
     imageUrl: z.string().nullable(),
 });
@@ -46,9 +45,6 @@ export async function POST(req: NextRequest) {
                     title,
                     productTitle: title,
                     unitCost: Number(line.cost === "" ? 0 : line.cost),
-                    watchFlags: {
-                        needService: Boolean(line.receiveService),
-                    },
                     aiMeta: {
                         images:
                             line.imageKey || line.imageUrl

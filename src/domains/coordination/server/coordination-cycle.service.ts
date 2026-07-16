@@ -175,6 +175,7 @@ function workTypeNote(
       blueprintName: workType.title,
       blueprintSource: "REGISTRY",
       workTypeKey: workType.key,
+      coordinationContext: workType.coordinationContext,
       workflowKey: workType.workflowKey ?? null,
       workspaceDefinition,
       provisioning,

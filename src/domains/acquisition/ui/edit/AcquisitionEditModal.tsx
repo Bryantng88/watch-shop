@@ -21,7 +21,6 @@ type EditItem = {
     imageKey: string | null;
     imageUrl: string | null;
     aiHint: string;
-    receiveService: boolean;
 };
 
 type Detail = {
@@ -75,7 +74,6 @@ function createEmptyItem(): EditItem {
         imageKey: null,
         imageUrl: null,
         aiHint: "",
-        receiveService: true,
     };
 }
 
@@ -234,7 +232,6 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
                         title: item.title,
                         productTitle: item.title,
                         unitCost: Number(item.unitCost || 0),
-                        watchFlags: { needService: item.receiveService },
                         aiMeta: {
                             aiHint: item.aiHint || null,
                             images: item.imageKey || item.imageUrl ? [{ key: item.imageKey, url: item.imageUrl }] : [],
@@ -365,7 +362,7 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
                                                 ) : null}
                                             </div>
 
-                                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[92px_minmax(0,1fr)_180px_120px] lg:items-start">
+                                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[92px_minmax(0,1fr)_180px] lg:items-start">
                                                 <div>
                                                     <FieldLabel>Ảnh</FieldLabel>
                                                     {draft ? (
@@ -427,18 +424,6 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
                                                     </div>
                                                 </div>
 
-                                                <div>
-                                                    <FieldLabel>Service</FieldLabel>
-                                                    <label className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-3 text-sm text-slate-700">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={item.receiveService}
-                                                            disabled={posted || submitting}
-                                                            onChange={(event) => updateItem(item.id, { receiveService: event.target.checked })}
-                                                        />
-                                                        Có
-                                                    </label>
-                                                </div>
                                             </div>
                                         </div>
                                     );

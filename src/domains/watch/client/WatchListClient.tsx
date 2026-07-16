@@ -753,7 +753,7 @@ export default function WatchListClient(props: WatchListClientProps) {
     function onEdit(row: WatchRow) {
         const returnTo = `${pathname}?${sanitizeParams(params).toString()}`;
         navigateWithProgress(
-            `/admin/watches/${row.productId}/edit?returnTo=${encodeURIComponent(returnTo)}`,
+            `/admin/watches/${row.productId}?returnTo=${encodeURIComponent(returnTo)}`,
             "Đang mở form chỉnh sửa",
         );
     }

@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import WatchFormClient from "@/domains/watch/client/WatchFormClient";
 import {
@@ -108,13 +108,18 @@ export default async function WatchEditPage({
     searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
     const startedAt = perfNow();
-    const user = await perfStep("watch-edit-page", "requirePermission", () =>
-        requirePermission(PERMISSIONS.PRODUCT_UPDATE),
-    );
     const { id } = await params;
     const query = await searchParams;
     const isEmbeddedMediaMode =
         query.embedded === "1" && query.mode === "media";
+
+    if (!isEmbeddedMediaMode) {
+        redirect(`/admin/watches/${id}`);
+    }
+
+    const user = await perfStep("watch-edit-page", "requirePermission", () =>
+        requirePermission(PERMISSIONS.PRODUCT_UPDATE),
+    );
 
     const [detail, options] = isEmbeddedMediaMode
         ? await Promise.all([

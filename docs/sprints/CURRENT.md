@@ -99,6 +99,7 @@ Current handoff:
 - Read `docs/sprints/SM-Sprint-88-deferred-workspace-runtime.md`.
 - Read `docs/sprints/SM-Sprint-89-operation-authoring-guided-repair.md`.
 - Read `docs/architecture/17-space-workspace-role-taxonomy.md`.
+- Read `docs/architecture/18-business-detail-operation-surface.md`.
 - Read `docs/sprints/SM-Sprint-90-space-workspace-role-taxonomy-audit.md`.
 - Sprint 61 is complete as a first production UI/API slice. Space Management
   Service Operation is a space/workspace index with SR and Technical views;

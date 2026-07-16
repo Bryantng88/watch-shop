@@ -106,7 +106,7 @@ export default function WatchLineCard({
                     ) : null}
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 xl:grid-cols-[92px_minmax(0,1.5fr)_minmax(0,1.2fr)_150px_110px] xl:items-start">
+                <div className="grid grid-cols-1 gap-3 xl:grid-cols-[116px_minmax(0,1.45fr)_minmax(0,1.2fr)_160px] xl:items-start">
                     <div className="space-y-1">
                         <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                             Ảnh
@@ -176,19 +176,6 @@ export default function WatchLineCard({
                         />
                     </div>
 
-                    <div className="space-y-1">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                            Service
-                        </div>
-                        <label className="inline-flex h-[42px] items-center gap-2 rounded-xl border border-slate-200 px-3 text-sm text-slate-700">
-                            <input
-                                type="checkbox"
-                                checked={line.receiveService}
-                                onChange={(e) => setField("receiveService", e.target.checked)}
-                            />
-                            <span>Có</span>
-                        </label>
-                    </div>
                 </div>
             </div>
 

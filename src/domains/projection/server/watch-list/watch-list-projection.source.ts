@@ -25,6 +25,8 @@ const WATCH_LIST_SOURCE_SELECT = {
       title: true,
       sku: true,
       slug: true,
+      primaryImageUrl: true,
+      storefrontImageKey: true,
       brandId: true,
       vendorId: true,
       brand: { select: { id: true, name: true } },

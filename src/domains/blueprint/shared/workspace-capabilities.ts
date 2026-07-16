@@ -1,4 +1,5 @@
 import type { WorkflowDefinition } from "@/domains/workflow-definition/server";
+import type { WorkTypeCoordinationContext } from "@/domains/task/server/work-type.types";
 import type { WorkspaceKind } from "@/domains/space-management/server/space-view.types";
 import type { WorkspaceEventBinding } from "./event-bindings";
 import type {
@@ -24,6 +25,7 @@ export type WorkspaceDefinitionSnapshot = {
   blueprintName?: string;
   blueprintSource?: string;
   workTypeKey?: string;
+  coordinationContext?: WorkTypeCoordinationContext | "DRAFT";
   workflowKey?: string | null;
   itemLabel?: string;
   defaultView?: string;

@@ -15,6 +15,7 @@ export {
 } from "./watch-business-event.contract";
 
 export {
+  emitWatchCreatedEvent,
   emitWatchContentModifiedEvent,
   emitWatchMediaAssetAttachedEvent,
   emitWatchMediaRecalledEvent,
@@ -22,6 +23,7 @@ export {
   emitWatchPhotoshootCompletedEvent,
   emitWatchPhotoshootRequestedEvent,
   emitWatchPriceUpdatedEvent,
+  emitWatchSpecUpdatedEvent,
   emitWatchPublishAssetsDownloadedEvent,
   emitWatchReviewBusinessEvent,
 } from "./watch-business-event.emitter";

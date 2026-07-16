@@ -1,0 +1,971 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Watch Workbench UI Draft</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --line: #dbe3f0;
+      --line-soft: #eef2f7;
+      --text: #07122b;
+      --muted: #64748b;
+      --faint: #94a3b8;
+      --primary: #4f46e5;
+      --primary-2: #6d5dfc;
+      --ink: #081126;
+      --green: #059669;
+      --amber: #d97706;
+      --red: #dc2626;
+      --blue: #2563eb;
+      --purple: #7c3aed;
+      --cyan: #0891b2;
+      --shadow: 0 16px 50px rgba(15, 23, 42, .08);
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 18% 0%, rgba(79, 70, 229, .08), transparent 30%),
+        linear-gradient(180deg, #fbfcff 0%, var(--bg) 28%, #f8fafc 100%);
+      color: var(--text);
+      letter-spacing: 0;
+    }
+
+    button, input, textarea, select { font: inherit; letter-spacing: 0; }
+    button { cursor: default; }
+
+    .page {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 22px 28px 96px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+      color: #475569;
+      font-size: 13px;
+    }
+
+    .crumbs {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+      white-space: nowrap;
+    }
+
+    .crumbs span:last-child { color: var(--text); font-weight: 650; }
+
+    .top-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn {
+      height: 38px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #1e293b;
+      border-radius: var(--radius);
+      padding: 0 13px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-weight: 650;
+      font-size: 13px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+    }
+
+    .btn.icon { width: 38px; padding: 0; }
+    .btn.dark {
+      background: var(--ink);
+      color: #fff;
+      border-color: var(--ink);
+    }
+    .btn.primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 12px 28px rgba(79, 70, 229, .25);
+    }
+
+    .hero {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .92);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 176px minmax(0, 1fr) 450px;
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    .watch-photo {
+      border-radius: 10px;
+      min-height: 176px;
+      overflow: hidden;
+      position: relative;
+      border: 1px solid #d8e1ee;
+      background:
+        linear-gradient(135deg, rgba(8, 17, 38, .08), rgba(79, 70, 229, .05)),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360' viewBox='0 0 360 360'%3E%3Crect width='360' height='360' fill='%23f1f5f9'/%3E%3Ccircle cx='180' cy='180' r='78' fill='%23dbeafe' stroke='%230f172a' stroke-width='10'/%3E%3Ccircle cx='180' cy='180' r='54' fill='%23f8fafc' stroke='%2364748b' stroke-width='3'/%3E%3Cpath d='M165 102l-14-58h58l-14 58M165 258l-14 58h58l-14-58' fill='%2394a3b8'/%3E%3Cpath d='M180 180l-2-42M180 180l36 24M180 180l-25 18' stroke='%230f172a' stroke-width='6' stroke-linecap='round'/%3E%3Ccircle cx='180' cy='180' r='8' fill='%230f172a'/%3E%3C/svg%3E");
+      background-size: cover;
+      background-position: center;
+    }
+
+    .photo-badge {
+      position: absolute;
+      left: 10px;
+      bottom: 10px;
+      border-radius: 999px;
+      background: rgba(8, 17, 38, .86);
+      color: #fff;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .hero-main {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-width: 0;
+      gap: 18px;
+    }
+
+    .eyebrow {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 32px;
+      line-height: 1.12;
+      font-weight: 850;
+      letter-spacing: 0;
+      color: #020617;
+    }
+
+    .subline {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .meta-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .mini-stat {
+      border-left: 1px solid var(--line);
+      padding-left: 13px;
+      min-width: 0;
+    }
+
+    .mini-stat:first-child { border-left: 0; padding-left: 0; }
+    .mini-label {
+      color: var(--faint);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .mini-value {
+      margin-top: 5px;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 800;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .status-card {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: var(--radius);
+      padding: 12px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .status-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: #eef2ff;
+      color: var(--primary);
+      flex: 0 0 auto;
+      font-weight: 900;
+    }
+
+    .status-title {
+      font-size: 12px;
+      color: var(--faint);
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .status-value {
+      margin-top: 4px;
+      font-weight: 850;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 26px;
+      border-radius: 999px;
+      padding: 0 10px;
+      font-size: 12px;
+      font-weight: 750;
+      border: 1px solid;
+      white-space: nowrap;
+    }
+
+    .pill.blue { color: #1d4ed8; background: #eff6ff; border-color: #bfdbfe; }
+    .pill.green { color: #047857; background: #ecfdf5; border-color: #a7f3d0; }
+    .pill.amber { color: #b45309; background: #fffbeb; border-color: #fde68a; }
+    .pill.red { color: #be123c; background: #fff1f2; border-color: #fecdd3; }
+    .pill.slate { color: #475569; background: #f8fafc; border-color: #e2e8f0; }
+    .pill.purple { color: #6d28d9; background: #f5f3ff; border-color: #ddd6fe; }
+
+    .layout {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 352px;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .main-stack, .side-stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .side-stack {
+      position: sticky;
+      top: 16px;
+    }
+
+    .section {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .96);
+      border-radius: 10px;
+      box-shadow: 0 8px 28px rgba(15, 23, 42, .045);
+      overflow: hidden;
+    }
+
+    .section-head {
+      padding: 15px 16px;
+      border-bottom: 1px solid var(--line-soft);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .section-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .section-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: #f3f0ff;
+      color: var(--primary);
+      font-weight: 900;
+      flex: 0 0 auto;
+    }
+
+    .section h2 {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.2;
+      font-weight: 850;
+    }
+
+    .section-copy {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .section-body {
+      padding: 16px;
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    label {
+      display: block;
+      color: #0f172a;
+      font-size: 12px;
+      font-weight: 780;
+      margin-bottom: 7px;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid #d7e0ee;
+      background: #fff;
+      color: var(--text);
+      border-radius: var(--radius);
+      min-height: 40px;
+      padding: 0 11px;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 88px;
+      padding: 10px 11px;
+      resize: vertical;
+    }
+
+    .field-hint {
+      margin-top: 6px;
+      color: var(--faint);
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .metrics {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .metric {
+      border: 1px solid var(--line-soft);
+      background: #f8fafc;
+      border-radius: var(--radius);
+      padding: 11px;
+    }
+
+    .metric b {
+      display: block;
+      margin-top: 4px;
+      font-size: 16px;
+    }
+
+    .spec-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(0, .95fr) minmax(0, 1.25fr);
+      gap: 12px;
+      align-items: start;
+    }
+
+    .review-strip {
+      margin-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 11px;
+      border: 1px solid #dbeafe;
+      background: #f8fbff;
+      border-radius: var(--radius);
+    }
+
+    .media-grid {
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .image-panel {
+      border: 1px solid var(--line);
+      background: #f8fafc;
+      border-radius: var(--radius);
+      padding: 10px;
+    }
+
+    .image-preview {
+      aspect-ratio: 1;
+      border-radius: var(--radius);
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.1), rgba(15,23,42,.1)),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360' viewBox='0 0 360 360'%3E%3Crect width='360' height='360' fill='%23e2e8f0'/%3E%3Ccircle cx='180' cy='180' r='84' fill='%23f8fafc' stroke='%230f172a' stroke-width='9'/%3E%3Ccircle cx='180' cy='180' r='54' fill='%23dbeafe' stroke='%2364748b' stroke-width='3'/%3E%3Cpath d='M158 96l-18-56h80l-18 56M158 264l-18 56h80l-18-56' fill='%2394a3b8'/%3E%3Cpath d='M180 180l0-44M180 180l38 16M180 180l-30 22' stroke='%230f172a' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-size: cover;
+      background-position: center;
+      border: 1px solid #cbd5e1;
+    }
+
+    .thumbs {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .thumb {
+      aspect-ratio: 1;
+      border-radius: 7px;
+      border: 1px solid #d7e0ee;
+      background: #fff;
+      display: grid;
+      place-items: center;
+      color: #94a3b8;
+      font-weight: 900;
+    }
+
+    .media-table {
+      border: 1px solid var(--line-soft);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .media-row {
+      min-height: 44px;
+      display: grid;
+      grid-template-columns: 130px minmax(0, 1fr) 120px;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-top: 1px solid var(--line-soft);
+      font-size: 13px;
+    }
+    .media-row:first-child {
+      border-top: 0;
+      background: #f8fafc;
+      color: var(--faint);
+      font-size: 11px;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .side-card {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .97);
+      border-radius: 10px;
+      box-shadow: 0 8px 26px rgba(15, 23, 42, .05);
+      overflow: hidden;
+    }
+
+    .side-card .section-head {
+      padding: 14px;
+    }
+
+    .timeline {
+      padding: 4px 14px 14px;
+      display: grid;
+      gap: 0;
+    }
+
+    .event {
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr);
+      gap: 10px;
+      position: relative;
+      padding: 12px 0;
+    }
+
+    .event:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      left: 11px;
+      top: 34px;
+      bottom: -6px;
+      width: 1px;
+      background: #e2e8f0;
+    }
+
+    .dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: #eef2ff;
+      color: var(--primary);
+      font-size: 11px;
+      font-weight: 900;
+      z-index: 1;
+    }
+
+    .event-title {
+      font-size: 13px;
+      font-weight: 850;
+    }
+
+    .event-meta {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .service-box {
+      margin: 0 14px 14px;
+      border: 1px solid #dbeafe;
+      background: #f8fbff;
+      border-radius: var(--radius);
+      padding: 12px;
+    }
+
+    .service-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid #e6eefb;
+      font-size: 13px;
+    }
+    .service-line:last-child { border-bottom: 0; }
+    .service-line span:first-child { color: var(--muted); }
+    .service-line span:last-child { font-weight: 800; text-align: right; }
+
+    .projection-log {
+      padding: 0 14px 14px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .log-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      padding: 8px 10px;
+      border: 1px solid var(--line-soft);
+      border-radius: var(--radius);
+      color: #475569;
+      font-size: 12px;
+      background: #fbfdff;
+    }
+
+    .modal-preview {
+      border: 1px dashed #c4b5fd;
+      background: #fbfaff;
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .modal-shell {
+      border: 1px solid #d8b4fe;
+      border-radius: 10px;
+      background: #fff;
+      overflow: hidden;
+      box-shadow: 0 16px 44px rgba(88, 28, 135, .12);
+    }
+
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 14px;
+      border-bottom: 1px solid #f3e8ff;
+    }
+
+    .segments {
+      display: inline-grid;
+      grid-template-columns: repeat(4, 1fr);
+      border: 1px solid #ddd6fe;
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .segment {
+      height: 32px;
+      padding: 0 12px;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 800;
+      color: #6b21a8;
+      border-left: 1px solid #ede9fe;
+    }
+    .segment:first-child { border-left: 0; }
+    .segment.active { background: #6d5dfc; color: #fff; }
+
+    .modal-body {
+      padding: 14px;
+      display: grid;
+      grid-template-columns: 150px minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+    }
+
+    .modal-foot {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 12px 14px;
+      border-top: 1px solid #f3e8ff;
+      background: #fcfbff;
+    }
+
+    .bottom-bar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, .88);
+      border-top: 1px solid var(--line);
+      backdrop-filter: blur(14px);
+      z-index: 20;
+    }
+
+    .bottom-inner {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 12px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .save-state {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    @media (max-width: 1180px) {
+      .hero { grid-template-columns: 150px minmax(0, 1fr); }
+      .status-grid { grid-column: 1 / -1; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .layout { grid-template-columns: 1fr; }
+      .side-stack { position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .side-card:last-child { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 820px) {
+      .page { padding: 16px 14px 92px; }
+      .hero { grid-template-columns: 1fr; }
+      .watch-photo { min-height: 260px; }
+      .meta-row, .status-grid, .pricing-grid, .spec-grid, .content-grid, .media-grid, .side-stack {
+        grid-template-columns: 1fr;
+      }
+      .bottom-inner { padding: 10px 14px; align-items: stretch; flex-direction: column; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .media-row { grid-template-columns: 1fr; gap: 4px; }
+      .modal-body { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="topbar">
+      <div class="crumbs">
+        <span>Watch Management</span><span>›</span><span>Danh sách watch</span><span>›</span><span>Bulova Computron</span>
+      </div>
+      <div class="top-actions">
+        <button class="btn">⌘ Mở Media WP</button>
+        <button class="btn">↗ Mở storefront</button>
+        <button class="btn icon">⋯</button>
+      </div>
+    </div>
+
+    <section class="hero">
+      <div class="watch-photo">
+        <div class="photo-badge">Inline image</div>
+      </div>
+
+      <div class="hero-main">
+        <div>
+          <div class="eyebrow">◇ WATCH WORKBENCH</div>
+          <h1>Bulova Computron</h1>
+          <div class="subline">Một màn hình duy nhất để xem, sửa và vận hành watch. Detail và edit được gom lại thành cùng một work surface.</div>
+          <div class="meta-row">
+            <div class="mini-stat"><div class="mini-label">SKU</div><div class="mini-value">-</div></div>
+            <div class="mini-stat"><div class="mini-label">Brand</div><div class="mini-value">Bulova</div></div>
+            <div class="mini-stat"><div class="mini-label">Ref</div><div class="mini-value">Chưa có</div></div>
+            <div class="mini-stat"><div class="mini-label">Vendor</div><div class="mini-value">Nhật</div></div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span class="pill blue">● DRAFT</span>
+          <span class="pill green">● In stock</span>
+          <span class="pill slate">● Không cần service</span>
+          <span class="pill amber">● Spec pending</span>
+        </div>
+      </div>
+
+      <div class="status-grid">
+        <div class="status-card"><div class="status-icon">₫</div><div><div class="status-title">Giá</div><div class="status-value">Thiếu giá bán</div></div></div>
+        <div class="status-card"><div class="status-icon">S</div><div><div class="status-title">Spec</div><div class="status-value">PENDING</div></div></div>
+        <div class="status-card"><div class="status-icon">T</div><div><div class="status-title">Nội dung</div><div class="status-value">Draft</div></div></div>
+        <div class="status-card"><div class="status-icon">□</div><div><div class="status-title">Hình ảnh</div><div class="status-value">Inline ready</div></div></div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <div class="main-stack">
+        <section class="section">
+          <div class="section-head">
+            <div class="section-title-wrap">
+              <div class="section-icon">₫</div>
+              <div><h2>1. Giá</h2><div class="section-copy">Quản lý cost, landed cost và giá bán ngay tại watch.</div></div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span class="pill red">Thiếu sale price</span>
+              <button class="btn dark">Lưu giá</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="pricing-grid">
+              <div><label>Giá nhập</label><input value="72.000.000" /><div class="field-hint">VND</div></div>
+              <div><label>Service cost</label><input value="0" /></div>
+              <div><label>Landed cost</label><input value="72.000.000" /></div>
+              <div><label>Giá niêm yết</label><input value="" placeholder="VD: 88.000.000" /></div>
+              <div><label>Giá bán</label><input value="" placeholder="Nhập giá bán" /></div>
+            </div>
+            <div class="metrics">
+              <div class="metric"><span class="mini-label">Margin</span><b>-</b></div>
+              <div class="metric"><span class="mini-label">Profit dự kiến</span><b>-</b></div>
+              <div class="metric"><span class="mini-label">Min price</span><b>75.000.000</b></div>
+              <div class="metric"><span class="mini-label">Projection</span><b style="color:var(--green)">watch.price.updated</b></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <div class="section-title-wrap">
+              <div class="section-icon">S</div>
+              <div><h2>2. Spec</h2><div class="section-copy">Identity, reference và thông số vận hành của watch.</div></div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span class="pill amber">6/14 trường</span>
+              <button class="btn dark">Lưu spec</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="spec-grid">
+              <div><label>Brand</label><input value="Bulova" /></div>
+              <div><label>Model</label><input value="Computron" /></div>
+              <div><label>Reference</label><input placeholder="Chưa có" /></div>
+              <div><label>Movement</label><select><option>Quartz</option><option>Automatic</option></select></div>
+              <div><label>Case shape</label><select><option>Rectangle</option><option>Round</option></select></div>
+              <div><label>Case material</label><input placeholder="Steel / Gold..." /></div>
+              <div><label>Dial</label><input placeholder="LED / blue / black..." /></div>
+              <div><label>Year</label><input placeholder="VD: 1970s" /></div>
+              <div><label>Serial</label><input placeholder="Nhập serial" /></div>
+              <div><label>Box</label><select><option>Không</option><option>Có</option></select></div>
+              <div><label>Papers</label><select><option>Không</option><option>Có</option></select></div>
+              <div><label>Condition</label><select><option>Good</option><option>Excellent</option></select></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <div class="section-title-wrap">
+              <div class="section-icon">T</div>
+              <div><h2>3. Nội dung</h2><div class="section-copy">Content draft, review và publish readiness trong cùng một block.</div></div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span class="pill slate">Draft</span>
+              <button class="btn">Gửi duyệt</button>
+              <button class="btn dark">Lưu draft</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="content-grid">
+              <div class="main-stack">
+                <div><label>Title override</label><input value="Bulova Computron LED digital watch" /></div>
+                <div><label>Hook</label><textarea>Thiết kế LED retro nổi bật, form Computron đặc trưng của Bulova.</textarea></div>
+                <div><label>SEO title</label><input value="Bulova Computron LED Watch" /></div>
+              </div>
+              <div class="main-stack">
+                <div><label>Summary</label><textarea>Bulova Computron với dáng vỏ góc cạnh, mặt LED, phù hợp khách thích đồng hồ digital vintage.</textarea></div>
+                <div><label>Bullet specs</label><textarea>• LED display&#10;• Quartz movement&#10;• Vintage-inspired case&#10;• Stainless steel bracelet</textarea></div>
+              </div>
+            </div>
+            <div class="review-strip">
+              <div><b>Content review</b><div class="field-hint">Review action vẫn dùng cùng command hiện tại, không phá Media WP modal.</div></div>
+              <div style="display:flex;gap:8px"><button class="btn">Trả về</button><button class="btn primary">Duyệt nội dung</button></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <div class="section-title-wrap">
+              <div class="section-icon">□</div>
+              <div><h2>4. Hình ảnh</h2><div class="section-copy">Inline, gallery, storefront và media review trong một khu vực.</div></div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span class="pill blue">Inline ready</span>
+              <button class="btn dark">Lưu ảnh</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="media-grid">
+              <div class="image-panel">
+                <div class="image-preview"></div>
+                <div class="thumbs">
+                  <div class="thumb">1</div><div class="thumb">2</div><div class="thumb">+</div><div class="thumb">⋯</div>
+                </div>
+              </div>
+              <div class="main-stack">
+                <div class="media-table">
+                  <div class="media-row"><div>Loại</div><div>Key / trạng thái</div><div>Action</div></div>
+                  <div class="media-row"><div>Inline</div><div>products/inline/chosen/watch/.../IMG_20260704.jpg</div><button class="btn">Đổi</button></div>
+                  <div class="media-row"><div>Storefront</div><div>Đang dùng ảnh inline</div><button class="btn">Set</button></div>
+                  <div class="media-row"><div>Gallery</div><div>0 ảnh gallery, chưa đủ media readiness</div><button class="btn">Thêm</button></div>
+                </div>
+                <div class="review-strip">
+                  <div><b>Image review</b><div class="field-hint">Modal Media WP vẫn mở block này ở mode compact/modal.</div></div>
+                  <div style="display:flex;gap:8px"><button class="btn">Gửi duyệt ảnh</button><button class="btn primary">Duyệt ảnh</button></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="modal-preview">
+          <div class="section-head" style="padding:0 0 12px;border-bottom:0">
+            <div class="section-title-wrap">
+              <div class="section-icon">WP</div>
+              <div><h2>Media Workspace modal mode</h2><div class="section-copy">Cùng 4 block vận hành, nhưng container là modal của Workspace để không phá flow hiện tại.</div></div>
+            </div>
+          </div>
+          <div class="modal-shell">
+            <div class="modal-head">
+              <b>Xử lý Media - Bulova Computron</b>
+              <div class="segments">
+                <div class="segment">Giá</div><div class="segment">Spec</div><div class="segment">Nội dung</div><div class="segment active">Ảnh</div>
+              </div>
+            </div>
+            <div class="modal-body">
+              <div class="image-preview" style="aspect-ratio:1"></div>
+              <div>
+                <label>Operation block mode="modal"</label>
+                <textarea>Ở Media WP, block này mở trong modal, dùng action footer của workspace: Lưu, Gửi duyệt, Hoàn tất bước. Watch Workbench dùng cùng block nhưng render full section.</textarea>
+              </div>
+            </div>
+            <div class="modal-foot">
+              <button class="btn">Đóng</button>
+              <button class="btn">Lưu ảnh</button>
+              <button class="btn primary">Hoàn tất bước</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="side-stack">
+        <section class="side-card">
+          <div class="section-head">
+            <div class="section-title-wrap">
+              <div class="section-icon">↔</div>
+              <div><h2>Lịch sử giao dịch</h2><div class="section-copy">Transaction context của watch.</div></div>
+            </div>
+          </div>
+          <div class="timeline">
+            <div class="event"><div class="dot">1</div><div><div class="event-title">Nhập hàng</div><div class="event-meta">Phiếu PN-160726-000012 · Vendor Nhật · 72.000.000 VND</div></div></div>
+            <div class="event"><div class="dot">2</div><div><div class="event-title">Tạo watch.created</div><div class="event-meta">Projection watch-list đã có imageUrl và imageKey.</div></div></div>
+            <div class="event"><div class="dot">3</div><div><div class="event-title">Chưa bán</div><div class="event-meta">Không có order/invoice liên quan.</div></div></div>
+          </div>
+        </section>
+
+        <section class="side-card">
+          <div class="section-head">
+            <div class="section-title-wrap">
+              <div class="section-icon">⚙</div>
+              <div><h2>Service</h2><div class="section-copy">Luồng SR/TI và workspace liên quan.</div></div>
+            </div>
+          </div>
+          <div class="service-box">
+            <div class="service-line"><span>Service status</span><span>Không cần service</span></div>
+            <div class="service-line"><span>Active SR</span><span>-</span></div>
+            <div class="service-line"><span>Technical issue</span><span>-</span></div>
+            <div class="service-line"><span>Projection</span><span style="color:var(--green)">Synced</span></div>
+          </div>
+          <div style="display:flex;gap:8px;padding:0 14px 14px">
+            <button class="btn" style="flex:1">Tạo service</button>
+            <button class="btn" style="flex:1">Mở SR</button>
+          </div>
+        </section>
+
+        <section class="side-card">
+          <div class="section-head">
+            <div class="section-title-wrap">
+              <div class="section-icon">P</div>
+              <div><h2>Projection feed</h2><div class="section-copy">Các event làm mới watch-list row.</div></div>
+            </div>
+          </div>
+          <div class="projection-log">
+            <div class="log-item"><span class="pill green">OK</span> watch.created → image visible</div>
+            <div class="log-item"><span class="pill blue">READY</span> watch.price.updated</div>
+            <div class="log-item"><span class="pill amber">TODO</span> watch.spec.updated</div>
+            <div class="log-item"><span class="pill green">OK</span> service_request.created → service status</div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <div class="bottom-bar">
+    <div class="bottom-inner">
+      <div class="save-state"><span class="pill amber">3 block có thay đổi</span><span>Giá, Spec và Nội dung đang ở draft local.</span></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn">Hủy thay đổi</button>
+        <button class="btn dark">Lưu block đang mở</button>
+        <button class="btn primary">Lưu tất cả</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

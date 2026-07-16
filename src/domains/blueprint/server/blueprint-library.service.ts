@@ -492,6 +492,7 @@ function snapshotNoteForBlueprint(input: {
   blueprintName: string;
   blueprintSource: BlueprintSource;
   workTypeKey: string;
+  coordinationContext: WorkTypeCoordinationContext | "DRAFT";
   workflowKey: string | null;
   workflowDefinition: WorkflowDefinition | null;
   workspaceDefinition: BlueprintWorkspaceDefinition;
@@ -514,6 +515,7 @@ function snapshotNoteForBlueprint(input: {
     blueprintName: input.blueprintName,
     blueprintSource: input.blueprintSource,
     workTypeKey: input.workTypeKey,
+    coordinationContext: input.coordinationContext,
     workflowKey: input.workflowKey,
     appliedWorkflowSnapshot,
     operation: input.operation,
@@ -532,6 +534,7 @@ function snapshotNoteForBlueprint(input: {
     `blueprintKey: ${input.blueprintKey}`,
     `blueprintSource: ${input.blueprintSource}`,
     `workTypeKey: ${input.workTypeKey}`,
+    `coordinationContext: ${input.coordinationContext}`,
     input.workflowKey ? `workflowKey: ${input.workflowKey}` : null,
     `workspaceType: ${input.workspaceDefinition.workspaceType}`,
     `itemLabel: ${input.workspaceDefinition.itemLabel}`,
@@ -566,6 +569,8 @@ export async function listWorkspaceInstantiationBlueprintOptions(
       blueprintName: blueprint.name,
       blueprintSource: blueprint.source,
       workTypeKey: blueprint.key,
+      coordinationContext:
+        blueprint.businessContext === "DRAFT" ? context : blueprint.businessContext,
       workflowKey: blueprint.workflow.workflowKey,
       workflowDefinition: blueprint.workflow.definition,
       workspaceDefinition: blueprint.workspaceDefinition,
@@ -611,6 +616,8 @@ export async function listWorkspaceInstantiationBlueprintOptions(
           blueprintName: blueprint.name,
           blueprintSource: blueprint.source,
           workTypeKey: sourceRegistryKey,
+          coordinationContext:
+            blueprint.businessContext === "DRAFT" ? context : blueprint.businessContext,
           workflowKey: blueprint.workflow.workflowKey,
           workflowDefinition: blueprint.workflow.definition,
           workspaceDefinition: blueprint.workspaceDefinition,

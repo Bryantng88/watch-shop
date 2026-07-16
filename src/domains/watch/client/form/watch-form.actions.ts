@@ -20,6 +20,17 @@ function authHasPermission(auth: any, permission: string) {
     return Array.isArray(permissions) && permissions.includes(permission);
 }
 
+function authHasRole(auth: any, role: string) {
+    const roles = auth?.roles ?? auth?.user?.roles ?? [];
+    const target = role.toUpperCase();
+
+    return Array.isArray(roles) && roles.some((item) => {
+        if (typeof item === "string") return item.toUpperCase() === target;
+        const value = item?.name ?? item?.code ?? item?.key ?? item?.slug ?? "";
+        return String(value).toUpperCase() === target;
+    });
+}
+
 export async function submitWatchForm(values: WatchFormValues) {
     const auth = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
 
@@ -29,5 +40,6 @@ export async function submitWatchForm(values: WatchFormValues) {
             auth,
             PERMISSIONS.PRODUCT_APPROVE
         ),
+        canEditPrice: authHasRole(auth, "ADMIN"),
     });
 }

@@ -8,15 +8,32 @@ export function formatMoney(value?: number | null) {
 
 export function buildMediaUrl(fileKey?: string | null) {
     if (!fileKey) return null;
+    if (/^(https?:)?\/\//i.test(fileKey) || fileKey.startsWith("/")) return fileKey;
     return `/api/media/sign?key=${encodeURIComponent(fileKey)}`;
 }
 
 function pickImages(row: any) {
     if (Array.isArray(row?.product?.productImage))
-        return row.product.productImage;
+        return row.product.productImage.length
+            ? row.product.productImage
+            : fallbackProductImages(row);
     if (Array.isArray(row?.productImage)) return row.productImage;
     if (Array.isArray(row?.images)) return row.images;
-    return [];
+    return fallbackProductImages(row);
+}
+
+function fallbackProductImages(row: any) {
+    const product = row?.product ?? row ?? {};
+    const key =
+        product?.storefrontImageKey ??
+        product?.primaryImageUrl ??
+        row?.storefrontImageKey ??
+        row?.primaryImageUrl ??
+        null;
+
+    if (!key) return [];
+
+    return [{ role: "INLINE", fileKey: key, sortOrder: 0 }];
 }
 
 function normalizeRole(value: any) {

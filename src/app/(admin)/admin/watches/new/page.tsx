@@ -6,5 +6,5 @@ export default async function NewWatchPage() {
         title: "Untitled watch",
     });
 
-    redirect(`/admin/watches/${watch.productId}/edit`);
+    redirect(`/admin/watches/${watch.productId}`);
 }

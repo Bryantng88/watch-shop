@@ -16,6 +16,38 @@ import {
   type WatchReviewTargetType,
 } from "./watch-business-event.contract";
 
+export async function emitWatchCreatedEvent(
+  db: DB,
+  input: {
+    watch: Pick<WatchEventWatchSnapshot, "id" | "productId" | "saleStage">;
+    acquisitionId?: string | null;
+    acquisitionItemId?: string | null;
+    actorUserId?: string | null;
+  },
+) {
+  const acquisitionId = String(input.acquisitionId ?? "").trim() || null;
+  const acquisitionItemId = String(input.acquisitionItemId ?? "").trim() || null;
+
+  return recordBusinessEvent(db, {
+    eventKey: "watch.created",
+    targetType: "WATCH",
+    targetId: input.watch.id,
+    targetAliasIds: [input.watch.id, input.watch.productId, acquisitionId, acquisitionItemId]
+      .map((id) => String(id ?? "").trim())
+      .filter(Boolean),
+    actorUserId: input.actorUserId ?? null,
+    payload: {
+      productId: input.watch.productId,
+      watchId: input.watch.id,
+      saleStage: input.watch.saleStage ?? null,
+      acquisitionId,
+      acquisitionItemId,
+      sourceId: acquisitionItemId ?? acquisitionId,
+      eventInstanceId: acquisitionItemId ?? acquisitionId,
+    },
+  });
+}
+
 export async function emitWatchReviewBusinessEvent(
   db: DB,
   input: {
@@ -78,6 +110,32 @@ export async function emitWatchContentModifiedEvent(
     payload: {
       productId: input.watch.productId,
       watchId: input.watch.id,
+    },
+  });
+}
+
+export async function emitWatchSpecUpdatedEvent(
+  db: DB,
+  input: {
+    watch: Pick<WatchEventWatchSnapshot, "id" | "productId" | "product">;
+    actorUserId?: string | null;
+    before?: Record<string, unknown> | null;
+    after?: Record<string, unknown> | null;
+  },
+) {
+  return recordBusinessEvent(db, {
+    eventKey: "watch.spec.updated",
+    targetType: "WATCH",
+    targetId: input.watch.id,
+    targetAliasIds: [input.watch.id, input.watch.productId],
+    actorUserId: input.actorUserId ?? null,
+    payload: {
+      productId: input.watch.productId,
+      watchId: input.watch.id,
+      title: input.watch.product?.title ?? null,
+      sku: input.watch.product?.sku ?? null,
+      before: input.before ?? null,
+      after: input.after ?? null,
     },
   });
 }

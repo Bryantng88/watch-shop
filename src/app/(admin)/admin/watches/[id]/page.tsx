@@ -2,11 +2,11 @@ import { notFound } from "next/navigation";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
 import {
-    getWatchDetail,
+    getWatchEditDetail,
     getWatchServiceHistoryDetail,
     getWatchTradeHistoryDetail,
 } from "@/domains/watch/server";
-import WatchDetailClient from "@/domains/watch/client/WatchDetailClient";
+import WatchWorkbenchClient from "@/domains/watch/client/workbench/WatchWorkbenchClient";
 
 type AuthUser = {
     roles?: any[] | null;
@@ -30,15 +30,6 @@ function hasAdmin(user: AuthUser) {
     return roles.includes("ADMIN") || permissions.includes("ADMIN");
 }
 
-function canViewTradeFinancials(user: AuthUser) {
-    const permissions = normalizeAuthValues(user?.permissions);
-
-    return (
-        hasAdmin(user) ||
-        permissions.includes("PRODUCT_COST_VIEW")
-    );
-}
-
 function serialize(obj: any) {
     return JSON.parse(
         JSON.stringify(obj, (_key, value) => {
@@ -51,6 +42,51 @@ function serialize(obj: any) {
     );
 }
 
+function scrubSensitivePrice(detail: any) {
+    if (!detail) return detail;
+
+    return {
+        ...detail,
+        acquisition: detail.acquisition
+            ? {
+                ...detail.acquisition,
+                unitCost: null,
+            }
+            : detail.acquisition,
+        price: detail.price
+            ? {
+                ...detail.price,
+                costPrice: null,
+                serviceCost: null,
+                landedCost: null,
+                minPrice: null,
+                pricingNote: null,
+            }
+            : detail.price,
+    };
+}
+
+function scrubTradeFinancials(tradeHistory: any) {
+    if (!tradeHistory || Array.isArray(tradeHistory)) return tradeHistory;
+
+    return {
+        ...tradeHistory,
+        acquisitions: Array.isArray(tradeHistory.acquisitions)
+            ? tradeHistory.acquisitions.map((item: any) => ({
+                ...item,
+                unitCost: null,
+                amount: null,
+            }))
+            : tradeHistory.acquisitions,
+        orders: Array.isArray(tradeHistory.orders)
+            ? tradeHistory.orders.map((item: any) => ({
+                ...item,
+                amount: item.salePrice ?? item.amount ?? null,
+            }))
+            : tradeHistory.orders,
+    };
+}
+
 export default async function WatchDetailPage({
     params,
 }: {
@@ -61,20 +97,27 @@ export default async function WatchDetailPage({
 
     const [detail, serviceHistory, tradeHistory] =
         await Promise.all([
-            getWatchDetail(id),
+            getWatchEditDetail(id),
             getWatchServiceHistoryDetail(id),
             getWatchTradeHistoryDetail(id),
         ]);
 
     if (!detail) notFound();
+    const isAdmin = hasAdmin(user);
+    const safeDetail = isAdmin ? detail : scrubSensitivePrice(detail);
+    const safeTradeHistory = isAdmin
+        ? tradeHistory
+        : scrubTradeFinancials(tradeHistory);
 
     return (
-        <WatchDetailClient
-            detail={serialize(detail)}
+        <WatchWorkbenchClient
+            detail={serialize(safeDetail)}
             serviceHistory={serialize(serviceHistory)}
-            tradeHistory={serialize(tradeHistory)}
-            canViewTradeFinancials={canViewTradeFinancials(user)}
-            canReviewContent={hasAdmin(user)}
+            tradeHistory={serialize(safeTradeHistory)}
+            permissions={{
+                canViewSensitivePrice: isAdmin,
+                canEditPrice: isAdmin,
+            }}
         />
     );
 }
