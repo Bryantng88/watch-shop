@@ -22,14 +22,10 @@ type ReviewFeedbackTarget = "CONTENT" | "IMAGE";
 
 async function getLatestAcquisitionUnitCost(
   productId: string,
-  acquisitionId?: string | null
 ) {
   const item = await prisma.acquisitionItem.findFirst({
     where: {
-      OR: [
-        { productId },
-        ...(acquisitionId ? [{ acquisitionId }] : []),
-      ],
+      productId,
     },
     orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
     select: {
@@ -48,8 +44,19 @@ async function getLatestAcquisitionUnitCost(
   };
 }
 
-async function getActiveMediaWorkspaceItem(watchId?: string | null) {
-  if (!watchId) {
+async function getActiveMediaWorkspaceItem(productId?: string | null) {
+  if (!productId) {
+    return {
+      hasActiveItem: false,
+      bindingId: null,
+    };
+  }
+
+  const watch = await prisma.watch.findUnique({
+    where: { productId },
+    select: { id: true },
+  });
+  if (!watch) {
     return {
       hasActiveItem: false,
       bindingId: null,
@@ -59,7 +66,7 @@ async function getActiveMediaWorkspaceItem(watchId?: string | null) {
   const binding = await prisma.taskExecution.findFirst({
     where: {
       targetType: TaskExecutionTargetType.WATCH,
-      targetId: watchId,
+      targetId: watch.id,
       taskItem: {
         status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] },
         note: {
@@ -150,6 +157,19 @@ export async function getWatchDetail(productId: string) {
 }
 
 export async function getWatchEditDetail(productId: string) {
+  const acquisitionCostPromise = perfStep(
+    "watch-edit-detail",
+    "acquisitionCost",
+    () => getLatestAcquisitionUnitCost(productId),
+  );
+  const mediaPoolPromise = perfStep("watch-edit-detail", "mediaPool", () =>
+    listWatchChosenMediaPool({ productId }),
+  );
+  const mediaWorkspacePromise = perfStep(
+    "watch-edit-detail",
+    "activeMediaWorkspaceItem",
+    () => getActiveMediaWorkspaceItem(productId),
+  );
   const row = await perfStep("watch-edit-detail", "watchRow", () =>
     getAdminEditWatchDetail(prisma, productId),
   );
@@ -162,18 +182,9 @@ export async function getWatchEditDetail(productId: string) {
     perfStep("watch-edit-detail", "reviewNotes", () =>
       withComposedReviewNotes(row),
     ),
-    perfStep("watch-edit-detail", "acquisitionCost", () =>
-      getLatestAcquisitionUnitCost(productId, row.acquisitionId),
-    ),
-    perfStep("watch-edit-detail", "mediaPool", () =>
-      listWatchChosenMediaPool({
-        productId,
-        acquisitionId: row.acquisitionId,
-      }),
-    ),
-    perfStep("watch-edit-detail", "activeMediaWorkspaceItem", () =>
-      getActiveMediaWorkspaceItem(row.id),
-    ),
+    acquisitionCostPromise,
+    mediaPoolPromise,
+    mediaWorkspacePromise,
   ]);
   const mapped = mapWatchDetail(rowWithReviewNotes);
   const mappedMedia = (mapped as { media?: Record<string, unknown> }).media ?? {};

@@ -15,6 +15,7 @@ type TaskItemAccessShape = {
   note?: string | null;
   userId?: string | null;
   assignedToUserId?: string | null;
+  sharedUserIds?: string[];
   task?: {
     kind?: TaskKind | null;
     createdByUserId?: string | null;
@@ -151,6 +152,7 @@ function assertCanAccessTaskItemDetail(item: TaskItemAccessShape, auth: unknown)
   if (!userId) throw new Error("Khong xac dinh duoc user hien tai");
 
   if (item.userId === userId) return;
+  if (item.sharedUserIds?.includes(userId)) return;
   if (sharedUserIdsFromNote(item.note).includes(userId)) return;
   if (item.assignedToUserId === userId) return;
   if (!item.task) throw new Error("Ban khong co quyen xem task item nay");

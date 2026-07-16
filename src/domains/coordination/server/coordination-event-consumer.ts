@@ -883,6 +883,47 @@ function isServiceRequestWorkspaceIntake(input: {
   );
 }
 
+function sharedUserIdsFromNoteLine(
+  note: string | null | undefined,
+  lineKey: string,
+) {
+  const escapedKey = lineKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = String(note ?? "").match(
+    new RegExp(`^${escapedKey}:\\s*([^\\r\\n]*)$`, "im"),
+  );
+  if (!match?.[1]) return [];
+
+  return match[1]
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+}
+
+async function inheritedServiceOperationSharingLines(db: DB, taskId: string) {
+  const siblingNotes = await dbOrTx(db).taskItem.findMany({
+    where: {
+      taskId,
+      status: { not: TaskStatus.CANCELLED },
+    },
+    select: { note: true },
+  });
+  const lineKeys = [
+    "spaceSharedUserIds",
+    "coreFlowSharedUserIds:service-operation",
+  ];
+
+  return lineKeys.flatMap((lineKey) => {
+    const userIds = Array.from(
+      new Set(
+        siblingNotes.flatMap((item) =>
+          sharedUserIdsFromNoteLine(item.note, lineKey),
+        ),
+      ),
+    );
+    return userIds.length ? [`${lineKey}: ${userIds.join(",")}`] : [];
+  });
+}
+
 async function ensureServiceRequestWorkspace(input: {
   db: DB;
   taskId: string;
@@ -934,6 +975,10 @@ async function ensureServiceRequestWorkspace(input: {
     ? `Service Operation - ${sr.refNo}`
     : `Service Operation - ${input.serviceRequestId.slice(0, 8)}`;
   const watchLabel = sr?.product?.title ?? sr?.skuSnapshot ?? sr?.product?.sku ?? null;
+  const inheritedSharingLines = await inheritedServiceOperationSharingLines(
+    input.db,
+    input.taskId,
+  );
 
   const taskItem = await client.taskItem.create({
     data: {
@@ -949,6 +994,7 @@ async function ensureServiceRequestWorkspace(input: {
         `serviceRequestId: ${input.serviceRequestId}`,
         "blueprintKey: service-operation",
         "blueprintSource: EVENT",
+        ...inheritedSharingLines,
       ].join("\n"),
       status: TaskStatus.TODO,
       priority: "MEDIUM",

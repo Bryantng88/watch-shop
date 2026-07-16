@@ -473,6 +473,7 @@ function canViewTicket(
     assignedToUserId?: string | null;
   },
   auth: unknown,
+  inheritedSharedUserIds: string[] = [],
 ) {
   if (authCanViewAll(auth)) return true;
 
@@ -481,6 +482,7 @@ function canViewTicket(
     return true;
   }
   if (userId && sharedUserIdsFromNote(item.note).includes(userId)) return true;
+  if (userId && inheritedSharedUserIds.includes(userId)) return true;
 
   if (!isSystemTicket(item)) return false;
 
@@ -1659,6 +1661,11 @@ export async function getCoordinationDashboard(input: {
   const activeWorkTypeKeys = new Set(
     listWorkTypes(input.context).map((workType) => normalizeWorkTypeKey(workType.key)),
   );
+  const accessSpaceSharedUserIds = uniqueShareIds(
+    rawTaskItems.flatMap((item) =>
+      shareUserIdsFromNoteLine(item.note, "spaceSharedUserIds"),
+    ),
+  );
   const taskItems = rawTaskItems.filter((item) => {
     const workTypeKey = ticketWorkTypeKey(item.note);
     const blueprintSource = ticketBlueprintSource(item.note);
@@ -1669,7 +1676,24 @@ export async function getCoordinationDashboard(input: {
     ) {
       return false;
     }
-    return canViewTicket(item, input?.auth);
+    const accessCoreFlowSharedUserIds = workTypeKey
+      ? uniqueShareIds(
+        rawTaskItems.flatMap((taskItem) =>
+          shareUserIdsFromNoteLine(
+            taskItem.note,
+            `coreFlowSharedUserIds:${workTypeKey}`,
+          ),
+        ),
+      )
+      : [];
+    return canViewTicket(
+      item,
+      input?.auth,
+      uniqueShareIds([
+        ...accessSpaceSharedUserIds,
+        ...accessCoreFlowSharedUserIds,
+      ]),
+    );
   });
   if (input.context === "MEDIA") {
     await restoreMediaFinalStageDoneBindings({
