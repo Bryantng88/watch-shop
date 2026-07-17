@@ -1,6 +1,6 @@
 "use client";
 
-import { Calculator, Wand2 } from "lucide-react";
+import { Calculator, Loader2, Wand2 } from "lucide-react";
 import type { WatchWorkbenchPermissions, WatchWorkbenchValues } from "@/domains/watch/client/workbench/types";
 import { maskMoney, moneyText, onlyMoney, updateValues } from "@/domains/watch/client/workbench/workbench-utils";
 import { Field, inputClass, OperationShell, operationButtonClass } from "../shared/OperationShell";
@@ -21,12 +21,14 @@ export default function PriceBlock({
     tradeHistory,
     onChange,
     onSave,
+    saving = false,
 }: {
     values: WatchWorkbenchValues;
     permissions: WatchWorkbenchPermissions;
     tradeHistory?: TradeHistory | Array<Record<string, unknown>>;
     onChange: (next: WatchWorkbenchValues) => void;
     onSave: () => void;
+    saving?: boolean;
 }) {
     const acquisitions = !Array.isArray(tradeHistory) && Array.isArray(tradeHistory?.acquisitions)
         ? tradeHistory.acquisitions
@@ -78,10 +80,11 @@ export default function PriceBlock({
             description="Thiết lập giá bán và quản lý cost. Field nhạy cảm được gate theo quyền admin."
             actions={
                 <>
-                    <button type="button" className={operationButtonClass({ variant: "softAmber", size: "sm" })}>
+                    <button type="button" disabled title="Tinh nang nay chua san sang tren Watch Workbench." className={operationButtonClass({ variant: "softAmber", size: "sm", className: "disabled:opacity-60" })}>
                         Phụ phí/chi phí
                     </button>
-                    <button type="button" onClick={onSave} className={operationButtonClass({ variant: "primary", size: "sm" })}>
+                    <button type="button" onClick={onSave} disabled={saving} className={operationButtonClass({ variant: "primary", size: "sm", className: "disabled:opacity-70" })}>
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                         Lưu thay đổi
                     </button>
                 </>
@@ -139,7 +142,7 @@ export default function PriceBlock({
                 <div>
                     <b>Projection advice:</b> cost ledger cần financial rollup từ payment OUT service/shipment/acquisition. UI này không tự ghi projection, chỉ emit event/domain save.
                 </div>
-                <button type="button" className={operationButtonClass({ variant: "softAmber", size: "xs", className: "bg-white text-amber-800" })}>
+                <button type="button" disabled title="Projection dang nam o feed ben canh; nut chi tiet se duoc noi sau." className={operationButtonClass({ variant: "softAmber", size: "xs", className: "bg-white text-amber-800 disabled:opacity-60" })}>
                     <Wand2 className="h-4 w-4" />
                     Xem projection
                 </button>

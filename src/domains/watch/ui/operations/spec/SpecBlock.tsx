@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings2, Sparkles } from "lucide-react";
+import { Loader2, Settings2, Sparkles } from "lucide-react";
 import type { WatchWorkbenchValues } from "@/domains/watch/client/workbench/types";
 import { updateValues } from "@/domains/watch/client/workbench/workbench-utils";
 import { Field, inputClass, OperationShell, operationButtonClass, textareaClass } from "../shared/OperationShell";
@@ -76,10 +76,12 @@ export default function SpecBlock({
     values,
     onChange,
     onSave,
+    saving = false,
 }: {
     values: WatchWorkbenchValues;
     onChange: (next: WatchWorkbenchValues) => void;
     onSave: () => void;
+    saving?: boolean;
 }) {
     const setSpec = (patch: Partial<WatchWorkbenchValues["spec"]>) =>
         onChange(updateValues(values, { spec: patch }));
@@ -96,10 +98,11 @@ export default function SpecBlock({
             description="Subset nhanh theo đúng field của Watch spec modal. Field đầy đủ vẫn xử lý trong modal/workspace."
             actions={
                 <>
-                    <button type="button" className={operationButtonClass({ variant: "softAmber", size: "sm" })}>
+                    <button type="button" disabled title="AI spec suggestion chua duoc noi voi service." className={operationButtonClass({ variant: "softAmber", size: "sm", className: "disabled:opacity-60" })}>
                         AI đề xuất spec
                     </button>
-                    <button type="button" onClick={onSave} className={operationButtonClass({ variant: "primary", size: "sm" })}>
+                    <button type="button" onClick={onSave} disabled={saving} className={operationButtonClass({ variant: "primary", size: "sm", className: "disabled:opacity-70" })}>
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                         Lưu thay đổi
                     </button>
                 </>

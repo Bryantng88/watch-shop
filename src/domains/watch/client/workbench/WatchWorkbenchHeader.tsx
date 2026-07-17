@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Camera, MoreVertical, Pencil, Wrench } from "lucide-react";
+import { Camera, Loader2, MoreVertical, Pencil, Wrench } from "lucide-react";
 import { operationButtonClass } from "@/domains/watch/ui/operations/shared/OperationShell";
 import { cx, moneyText, titleForWatch } from "./workbench-utils";
 import type { WatchWorkbenchPermissions, WatchWorkbenchValues } from "./types";
@@ -81,10 +81,10 @@ export default function WatchWorkbenchHeader({
                         disabled={openingMediaWorkspace}
                         className={operationButtonClass({ variant: "secondary", size: "sm" })}
                     >
-                        <Camera className="h-4 w-4" />
+                        {openingMediaWorkspace ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
                         {openingMediaWorkspace ? "Đang mở..." : "Mở Media WP"}
                     </button>
-                    <Link href="/admin/service" className={operationButtonClass({ variant: "secondary", size: "sm" })}>
+                    <Link href="/admin/services/operation" className={operationButtonClass({ variant: "secondary", size: "sm" })}>
                         <Wrench className="h-4 w-4" />
                         Mở Service Board
                     </Link>
@@ -110,7 +110,7 @@ export default function WatchWorkbenchHeader({
                         disabled={openingMediaWorkspace}
                         className={operationButtonClass({ variant: "primary", size: "xs", className: "absolute bottom-3 left-3 bg-slate-950/85 backdrop-blur hover:bg-slate-900 disabled:opacity-70" })}
                     >
-                        <Camera className="h-4 w-4" />
+                        {openingMediaWorkspace ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
                         Thêm hình ảnh
                     </button>
                 </div>

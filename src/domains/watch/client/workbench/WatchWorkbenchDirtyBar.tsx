@@ -1,6 +1,6 @@
 "use client";
 
-import { Save, X } from "lucide-react";
+import { Loader2, Save, X } from "lucide-react";
 import { operationButtonClass } from "@/domains/watch/ui/operations/shared/OperationShell";
 
 export default function WatchWorkbenchDirtyBar({
@@ -42,7 +42,7 @@ export default function WatchWorkbenchDirtyBar({
                         disabled={saving}
                         className={operationButtonClass({ variant: "primary", size: "md", className: "h-10 disabled:opacity-50" })}
                     >
-                        <Save className="h-4 w-4" />
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         {saving ? "Đang lưu" : "Lưu tất cả"}
                     </button>
                 </div>

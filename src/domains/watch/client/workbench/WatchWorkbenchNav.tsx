@@ -1,6 +1,6 @@
 "use client";
 
-import { Save } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
 import { operationButtonClass } from "@/domains/watch/ui/operations/shared/OperationShell";
 import { cx } from "./workbench-utils";
 import type { WatchWorkbenchSection } from "./types";
@@ -53,7 +53,7 @@ export default function WatchWorkbenchNav({
                     disabled={!dirty || saving}
                     className={operationButtonClass({ variant: "secondary", size: "sm", className: "text-xs disabled:opacity-50" })}
                 >
-                    <Save className="h-4 w-4" />
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                     {saving ? "Đang lưu" : "Lưu thay đổi"}
                 </button>
             </div>

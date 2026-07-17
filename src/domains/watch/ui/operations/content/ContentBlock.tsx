@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, Copy, FileText, Sparkles } from "lucide-react";
+import { Check, Copy, FileText, Loader2, Sparkles } from "lucide-react";
 import { buildPostText } from "@/domains/watch/application/generate-watch-content";
 import type { WatchWorkbenchValues } from "@/domains/watch/client/workbench/types";
 import { updateValues } from "@/domains/watch/client/workbench/workbench-utils";
+import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import {
     Field,
@@ -51,6 +52,7 @@ export default function ContentBlock({
     detail,
     onChange,
     onSave,
+    saving = false,
     onOpenMediaWorkspace,
     openingMediaWorkspace = false,
 }: {
@@ -58,11 +60,14 @@ export default function ContentBlock({
     detail?: UsageDetail;
     onChange: (next: WatchWorkbenchValues) => void;
     onSave: () => void;
+    saving?: boolean;
     onOpenMediaWorkspace: () => void;
     openingMediaWorkspace?: boolean;
 }) {
+    const progress = useAppProgress();
     const notify = useNotify();
     const [copied, setCopied] = useState(false);
+    const [copying, setCopying] = useState(false);
     const [usage, setUsage] = useState({
         isContentDownloaded: Boolean(
             detail?.review?.isContentDownloaded ?? detail?.watch?.isContentDownloaded,
@@ -103,8 +108,13 @@ export default function ContentBlock({
         onChange(updateValues(values, { content: patch }));
 
     async function handleCopyPost() {
-        if (!canCopy || !values.productId || !fullPost.trim()) return;
+        if (!canCopy || !values.productId || !fullPost.trim() || copying) return;
 
+        setCopying(true);
+        progress.show({
+            title: "Dang copy content",
+            message: "He thong dang copy bai dang va ghi nhan trang thai publish assets.",
+        });
         try {
             await navigator.clipboard.writeText(fullPost);
             setCopied(true);
@@ -124,6 +134,8 @@ export default function ContentBlock({
                 message: error instanceof Error ? error.message : "Co loi khi copy content.",
             });
         } finally {
+            progress.hide();
+            setCopying(false);
             window.setTimeout(() => setCopied(false), 1400);
         }
     }
@@ -137,12 +149,13 @@ export default function ContentBlock({
             description="Mo ta, story va ban dang hoan chinh cho luong Dang bai."
             actions={
                 <>
-                    <button type="button" className={operationButtonClass({ variant: "softBlue", size: "sm" })}>
+                    <button type="button" disabled title="AI content generation chua duoc noi voi service." className={operationButtonClass({ variant: "softBlue", size: "sm", className: "disabled:opacity-60" })}>
                         <Sparkles className="h-4 w-4" />
                         Sinh content tu AI
                     </button>
-                    <button type="button" onClick={onSave} className={operationButtonClass({ variant: "primary", size: "sm" })}>
-                        Luu thay doi
+                    <button type="button" onClick={onSave} disabled={saving} className={operationButtonClass({ variant: "primary", size: "sm", className: "disabled:opacity-70" })}>
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                        {saving ? "Dang luu..." : "Luu thay doi"}
                     </button>
                 </>
             }
@@ -197,7 +210,7 @@ export default function ContentBlock({
                     <button
                         type="button"
                         onClick={handleCopyPost}
-                        disabled={!canCopy || !fullPost.trim()}
+                        disabled={!canCopy || !fullPost.trim() || copying}
                         title={canCopy ? "Copy noi dung dang bai" : "Content can duoc duyet truoc khi copy"}
                         className={operationButtonClass({
                             variant: canCopy ? "softViolet" : "secondary",
@@ -205,8 +218,8 @@ export default function ContentBlock({
                             className: "disabled:opacity-60",
                         })}
                     >
-                        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                        {copied ? "Da copy" : usage.isContentDownloaded ? "Copy lai" : "Copy content"}
+                        {copying ? <Loader2 className="h-4 w-4 animate-spin" /> : copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        {copying ? "Dang copy..." : copied ? "Da copy" : usage.isContentDownloaded ? "Copy lai" : "Copy content"}
                     </button>
                 </div>
                 <div

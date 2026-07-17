@@ -41,8 +41,6 @@ import {
 import AdminBreadcrumbs from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
 import {
   rolloverPreviousCycleItemsAction,
-  setWorkspaceAutoBindingReceiverAction,
-  updateSpaceSharingAction,
 } from "@/domains/coordination/actions/coordination.actions";
 import {
   createTaskItemAction,
@@ -60,15 +58,11 @@ import {
   type AppProgressStep,
 } from "@/domains/shared/feedback/AppProgressProvider";
 import { repairVietnameseMojibake } from "@/domains/shared/text/vietnamese-mojibake";
+import BusinessListDashboard from "@/domains/shared/ui/business-list/BusinessListDashboard";
+import type { BusinessListDashboardData } from "@/domains/shared/ui/business-list";
 import {
   SpaceViewFooterTip,
-  SpaceViewInfoCell,
-  SpaceViewInfoGrid,
   SpaceViewPage,
-  SpaceViewPanel,
-  SpaceViewSectionHeader,
-  SpaceViewSummary,
-  SpaceViewSummaryCell,
 } from "@/domains/shared/ui/space/SpaceViewShell";
 import type { CoordinationDashboardDTO } from "../server/coordination-dashboard.types";
 import { isCoreWorkspaceBlueprint } from "@/domains/task/shared/workspace-flow-policy";
@@ -76,18 +70,6 @@ import { isCoreWorkspaceBlueprint } from "@/domains/task/shared/workspace-flow-p
 type Props = {
   data: CoordinationDashboardDTO;
 };
-
-function formatDate(value: string | null) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-
-  return new Intl.DateTimeFormat("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
-}
 
 function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -480,211 +462,6 @@ function OwnerCell({
   );
 }
 
-type SpaceShareScope = "SPACE" | "CORE_FLOW";
-
-function shareUserLabel(user?: CoordinationDashboardDTO["spaceSharing"]["users"][number] | null) {
-  return user?.name || user?.email || "Unassigned";
-}
-
-function SpaceShareAvatar({
-  user,
-}: {
-  user: CoordinationDashboardDTO["spaceSharing"]["users"][number];
-}) {
-  const label = shareUserLabel(user);
-  const src = resolveMediaPreviewSrc(user.avatarUrl);
-
-  return (
-    <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-slate-100 text-xs font-semibold text-slate-600">
-      {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={label} className="h-full w-full object-cover" />
-      ) : (
-        initials(label)
-      )}
-    </span>
-  );
-}
-
-function SpaceSharingEditor({
-  taskId,
-  context,
-  activeCoreFlow,
-  sharing,
-}: {
-  taskId: string;
-  context: CoordinationDashboardDTO["context"];
-  activeCoreFlow: SpaceCoreFlow | null;
-  sharing: CoordinationDashboardDTO["spaceSharing"];
-}) {
-  const router = useRouter();
-  const [selectedUserId, setSelectedUserId] = useState("");
-  const [sharingScope, setSharingScope] = useState<SpaceShareScope>(
-    activeCoreFlow ? "CORE_FLOW" : "SPACE",
-  );
-  const [localScopeIds, setLocalScopeIds] = useState(sharing.scopeUserIds);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const activeScope =
-    sharingScope === "CORE_FLOW" && activeCoreFlow ? "CORE_FLOW" : "SPACE";
-  const activeCoreFlowKey = activeCoreFlow?.key ?? null;
-  const activeSharedIds =
-    activeScope === "CORE_FLOW" && activeCoreFlowKey
-      ? localScopeIds.coreFlows[activeCoreFlowKey] ?? []
-      : localScopeIds.space;
-  const sharedIdSet = new Set(activeSharedIds);
-  const visibleSharedUsers = activeSharedIds
-    .map((id) => sharing.sharedUsers.find((user) => user.id === id) ?? sharing.users.find((user) => user.id === id))
-    .filter(Boolean) as CoordinationDashboardDTO["spaceSharing"]["users"];
-  const availableUsers = sharing.users.filter((user) => !sharedIdSet.has(user.id));
-
-  useEffect(() => {
-    if (!activeCoreFlow && sharingScope === "CORE_FLOW") {
-      setSharingScope("SPACE");
-    }
-  }, [activeCoreFlow, sharingScope]);
-
-  function updateSharedUsers(nextSharedIds: string[]) {
-    const nextScopeIds =
-      activeScope === "CORE_FLOW" && activeCoreFlowKey
-        ? {
-            ...localScopeIds,
-            coreFlows: {
-              ...localScopeIds.coreFlows,
-              [activeCoreFlowKey]: nextSharedIds,
-            },
-          }
-        : {
-            ...localScopeIds,
-            space: nextSharedIds,
-          };
-
-    setLocalScopeIds(nextScopeIds);
-    startTransition(async () => {
-      await updateSpaceSharingAction({
-        taskId,
-        context,
-        sharingScope: activeScope,
-        coreFlowKey: activeCoreFlowKey,
-        sharedUserIds: nextSharedIds,
-      });
-      router.refresh();
-    });
-  }
-
-  function addSelected() {
-    if (!selectedUserId) return;
-    updateSharedUsers(Array.from(new Set([...activeSharedIds, selectedUserId])));
-    setSelectedUserId("");
-  }
-
-  function removeUser(userId: string) {
-    updateSharedUsers(activeSharedIds.filter((id) => id !== userId));
-  }
-
-  return (
-    <div className="text-xs text-slate-700">
-      <div className="flex items-center justify-between gap-4">
-        <div className="min-w-0">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Space members</h3>
-          <div className="mt-2 text-[11px] font-medium text-slate-500">
-            {activeScope === "CORE_FLOW" && activeCoreFlow ? coreFlowLabel(activeCoreFlow) : "Toàn bộ Space"}
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => setIsExpanded((value) => !value)}
-          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-violet-200 bg-white px-2.5 text-xs font-semibold text-violet-700 shadow-sm hover:bg-violet-50"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Thêm
-        </button>
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center gap-0">
-        {visibleSharedUsers.length ? (
-          <>
-            {(isExpanded ? visibleSharedUsers : visibleSharedUsers.slice(0, 3)).map((user) => (
-          <span
-            key={user.id}
-            className="inline-flex max-w-full items-center gap-2 rounded-full text-sm font-medium text-slate-700 -ml-2 first:ml-0"
-          >
-            <SpaceShareAvatar user={user} />
-            {isExpanded ? (
-              <>
-                <span className="max-w-[160px] truncate">{shareUserLabel(user)}</span>
-                <button
-                  type="button"
-                  onClick={() => removeUser(user.id)}
-                  disabled={isPending}
-                  className="rounded-full p-0.5 text-slate-400 hover:bg-white hover:text-rose-600"
-                  aria-label={`Remove shared access for ${shareUserLabel(user)}`}
-                >
-                  <XCircle className="h-4 w-4" />
-                </button>
-              </>
-            ) : null}
-          </span>
-            ))}
-            {visibleSharedUsers.length > 3 && !isExpanded ? (
-              <span className="-ml-2 inline-flex h-7 min-w-7 items-center justify-center rounded-full border-2 border-white bg-slate-100 px-2 text-xs font-semibold text-slate-500">
-                +{visibleSharedUsers.length - 3}
-              </span>
-            ) : null}
-            {!isExpanded ? (
-              <span className="ml-2 text-xs font-medium text-slate-600">
-                {visibleSharedUsers.length} thành viên
-              </span>
-            ) : null}
-          </>
-        ) : (
-          <div className="text-xs text-slate-500">
-            Chưa chia sẻ với ai.
-          </div>
-        )}
-      </div>
-
-      {isExpanded ? (
-        <div className="mt-3 grid gap-2 border-t border-slate-100 pt-3">
-          <select
-            value={activeScope}
-            onChange={(event) => setSharingScope(event.target.value as SpaceShareScope)}
-            disabled={isPending}
-            className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-slate-400"
-          >
-            {activeCoreFlow ? (
-              <option value="CORE_FLOW">Chia sẻ core flow này</option>
-            ) : null}
-            <option value="SPACE">Chia sẻ toàn bộ Space</option>
-          </select>
-          <select
-            value={selectedUserId}
-            onChange={(event) => setSelectedUserId(event.target.value)}
-            disabled={isPending || !availableUsers.length}
-            className="h-9 min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-slate-400"
-          >
-            <option value="">Thêm thành viên</option>
-            {availableUsers.map((user) => (
-              <option key={user.id} value={user.id}>
-                {shareUserLabel(user)}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={addSelected}
-            disabled={isPending || !selectedUserId}
-            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
-          >
-            <Plus className="h-4 w-4" />
-            Thêm
-          </button>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 export default function OperationCoordinationWorkspace({ data }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -795,6 +572,131 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
         return left.title.localeCompare(right.title);
       });
   }, [activeCoreFlow, activeViewMode, data.workTickets, flowStageKeys]);
+  const spaceDashboardData = useMemo<BusinessListDashboardData>(() => {
+    const queueTotals = displayedWorkTickets.reduce(
+      (totals, ticket) => {
+        totals.ready += ticket.queueSummary.ready;
+        totals.review += ticket.queueSummary.review;
+        totals.feedback += ticket.queueSummary.feedback;
+        totals.done += ticket.queueSummary.done;
+        totals.items +=
+          ticket.queueSummary.ready +
+          ticket.queueSummary.review +
+          ticket.queueSummary.feedback +
+          ticket.queueSummary.done;
+        totals.feedbackWorkspaces += ticket.feedbackCount > 0 ? 1 : 0;
+
+        const paymentStatus = ticket.paymentSummary?.status ?? "NONE";
+        if (paymentStatus !== "NONE" && paymentStatus !== "PAID") {
+          totals.unpaidWorkspaces += 1;
+          totals.unpaidAmount += Number(
+            ticket.paymentSummary?.remainingAmount ??
+              ticket.paymentSummary?.unpaidAmount ??
+              0,
+          );
+        }
+
+        return totals;
+      },
+      {
+        ready: 0,
+        review: 0,
+        feedback: 0,
+        done: 0,
+        items: 0,
+        feedbackWorkspaces: 0,
+        unpaidWorkspaces: 0,
+        unpaidAmount: 0,
+      },
+    );
+    const openItems = queueTotals.ready + queueTotals.review + queueTotals.feedback;
+    const activeWorkspaces = displayedWorkTickets.filter((ticket) => {
+      const total =
+        ticket.queueSummary.ready +
+        ticket.queueSummary.review +
+        ticket.queueSummary.feedback;
+      return total > 0;
+    }).length;
+    const activityItems = displayedWorkTickets
+      .filter((ticket) => ticket.lastActivityAt)
+      .slice()
+      .sort((left, right) =>
+        String(right.lastActivityAt ?? "").localeCompare(String(left.lastActivityAt ?? "")),
+      )
+      .slice(0, 3)
+      .map((ticket) => ({
+        id: ticket.id,
+        title: ticket.lastActivity || prefixedLabel("Workspace", ticket.title),
+        description: prefixedLabel("Workspace", ticket.title),
+        occurredAt: ticket.lastActivityAt,
+        href: `/admin/task-items/${ticket.id}`,
+        kind: "updated" as const,
+      }));
+
+    return {
+      periodLabel: `Tuần ${data.week.weekNumber}/${data.week.year}`,
+      metrics: [
+        {
+          key: "workspaces",
+          label: "Workspace",
+          value: displayedWorkTickets.length,
+          helper: `${activeWorkspaces}`,
+          helperSuffix: "đang mở",
+          helperTone: activeWorkspaces > 0 ? "positive" : "neutral",
+        },
+        {
+          key: "open-items",
+          label: "Item mở",
+          value: openItems,
+          helper: `${queueTotals.done}`,
+          helperSuffix: "đã xong",
+          helperTone: queueTotals.done > 0 ? "positive" : "neutral",
+        },
+        {
+          key: "feedback",
+          label: "Cần phản hồi",
+          value: queueTotals.feedback,
+          helper: `${queueTotals.feedbackWorkspaces}`,
+          helperSuffix: "workspace",
+          helperTone: queueTotals.feedback > 0 ? "negative" : "neutral",
+        },
+        {
+          key: "unpaid",
+          label: "Chưa thanh toán",
+          value: queueTotals.unpaidWorkspaces,
+          helper: formatMoneyCompact(queueTotals.unpaidAmount),
+          helperTone: queueTotals.unpaidWorkspaces > 0 ? "negative" : "neutral",
+        },
+      ],
+      inventoryValue: {
+        label: "Khối lượng xử lý",
+        value: queueTotals.items,
+        currency: "item",
+        helper: "Tổng item trong các workspace đang hiển thị.",
+        trend: [
+          queueTotals.ready,
+          queueTotals.review,
+          queueTotals.feedback,
+          queueTotals.done,
+          openItems,
+        ],
+      },
+      breakdown: {
+        label: "Theo trạng thái item",
+        total: Math.max(queueTotals.items, 1),
+        items: [
+          { key: "ready", label: "Sẵn sàng", value: queueTotals.ready, tone: "blue" },
+          { key: "review", label: "Đang xử lý", value: queueTotals.review, tone: "violet" },
+          { key: "feedback", label: "Phản hồi", value: queueTotals.feedback, tone: "amber" },
+          { key: "done", label: "Xong", value: queueTotals.done, tone: "emerald" },
+        ],
+      },
+      activities: {
+        label: "Hoạt động gần đây",
+        items: activityItems,
+      },
+    };
+  }, [data.week.weekNumber, data.week.year, displayedWorkTickets]);
   const isTechnicalIssueFlowMode = activeViewMode?.key === "technical-issue-flow";
   const canShowTechnicalIssueBoard =
     isTechnicalIssueFlowMode && Boolean(data.technicalIssueBoard?.items.length);
@@ -865,42 +767,6 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
         router.refresh();
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : "Không thể tạo Workspace.");
-      }
-    });
-  }
-
-  async function updateAutoBindingReceiver(nextReceiverId: string) {
-    if (!selectedBlueprint) return;
-
-    const nextWorkspace = selectedBlueprint.usage.activeWorkspaces.find(
-      (workspace) => workspace.id === nextReceiverId,
-    );
-    const message = nextWorkspace
-      ? `Workspace "${displayText(nextWorkspace.title)}" sẽ tự động nhận item nghiệp vụ cho Blueprint này.`
-      : "Blueprint này chưa có Workspace tự động nhận item nghiệp vụ.";
-    const ok = await dialog.confirm({
-      title: "Cập nhật Workspace nhận item tự động",
-      message,
-      confirmText: "Cập nhật",
-      cancelText: "Hủy",
-      tone: nextWorkspace ? "warning" : "danger",
-    });
-
-    if (!ok) return;
-
-    setError(null);
-    startTransition(async () => {
-      try {
-        await setWorkspaceAutoBindingReceiverAction({
-          taskId: data.cycle.id,
-          taskItemId: nextReceiverId || null,
-          context: data.context,
-          blueprintKey: selectedBlueprint.key,
-          blueprintSource: selectedBlueprint.source,
-        });
-        router.refresh();
-      } catch (caught) {
-        setError(caught instanceof Error ? caught.message : "Không thể cập nhật Workspace tự động nhận item.");
       }
     });
   }
@@ -998,210 +864,140 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
           Đang hoạt động
         </span>
       }
-      meta={
-        <>
-          <span className="inline-flex items-center gap-1.5">
-            <CalendarDays className="h-4 w-4" />
-            Tuần {data.week.weekNumber}/{data.week.year}
-          </span>
-          <span>
-            {formatDate(data.week.startDate)} - {formatDate(data.week.endDate)}
-          </span>
-          <span className="inline-flex items-center overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-            <select
-              value={data.week.periodKey}
-              onChange={(event) => {
-                const option = data.filters.weekOptions.find(
-                  (item) => item.value === event.target.value,
-                );
-                if (option) updateDate(option.date);
-              }}
-              className="h-8 w-[132px] border-0 bg-white px-2 text-xs font-semibold text-slate-700 outline-none"
-              aria-label="Chọn tuần"
-            >
-              {data.filters.weekOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <span className="h-5 w-px bg-slate-200" />
-            <input
-              type="date"
-              value={data.filters.selectedDate}
-              onChange={(event) => updateDate(event.target.value)}
-              className="h-8 w-[142px] border-0 bg-white px-2 text-xs font-semibold text-slate-700 outline-none"
-              aria-label="Chọn ngày"
-            />
-          </span>
-        </>
-      }
-      actions={
-        !isCreateFormOpen ? (
-          <>
-            <button
-              type="button"
-              disabled={isPending || !data.viewConfig.carryover.enabled}
-              onClick={() => void rolloverPreviousCycle()}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
-            >
-              <RotateCcw className="h-4 w-4" />
-              {actionLabel(data.viewConfig.carryover.actionLabel)}
-            </button>
-            <button
-              type="button"
-              disabled={!data.blueprints.length || !data.viewConfig.createWorkspace.enabled}
-              onClick={() => {
-                setError(null);
-                setBlueprintKey(data.blueprints[0]?.selectionKey ?? "");
-                setTitle(data.blueprints[0]?.workspaceDefinition.defaultName ?? "");
-                setIsCreateFormOpen(true);
-              }}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:bg-slate-300"
-            >
-              <Plus className="h-4 w-4" />
-              Tạo Workspace
-            </button>
-          </>
-        ) : null
-      }
     >
+        <BusinessListDashboard data={spaceDashboardData} />
 
-          <div className="hidden">
-            <label className="text-sm">
-              <span className="mb-1 block font-medium text-slate-600">Tuần</span>
-              <select
-                value={data.week.periodKey}
-                onChange={(event) => {
-                  const option = data.filters.weekOptions.find(
-                    (item) => item.value === event.target.value,
-                  );
-                  if (option) updateDate(option.date);
-                }}
-                className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-sm outline-none focus:border-slate-400"
-              >
-                {data.filters.weekOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="text-sm">
-              <span className="mb-1 block font-medium text-slate-600">Khoảng ngày</span>
-              <input
-                type="date"
-                value={data.filters.selectedDate}
-                onChange={(event) => updateDate(event.target.value)}
-                className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-sm outline-none focus:border-slate-400"
-              />
-            </label>
-          </div>
-
-        <section className="hidden gap-3 sm:grid-cols-2 lg:grid-cols-6">
-          {data.report.map((metric) => (
-            <div
-              key={metric.key}
-              className="rounded-md border border-slate-200 bg-white p-4 shadow-sm"
-            >
-              <div className="text-xs font-medium uppercase text-slate-500">
-                {metric.label}
-              </div>
-              <div className="mt-2 text-2xl font-semibold text-slate-950">
-                {metric.value}
-              </div>
-            </div>
-          ))}
-        </section>
-
-        <SpaceViewPanel>
+        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
           <div className="border-b border-slate-200 px-5 py-4">
-            <div className={`${isCreateFormOpen ? "flex" : "hidden"} flex-col gap-3 lg:flex-row lg:items-center lg:justify-between`}>
-              <h2 className="text-sm font-semibold text-slate-900">
-                {prefixedLabel("Space", data.cycle.title)}
-              </h2>
+            {activeViewMode ? (
+              <div className="rounded-xl border border-sky-100 bg-gradient-to-b from-sky-50/80 to-[#f3f8ff] p-4 text-xs text-slate-700 shadow-[0_8px_24px_rgba(30,43,79,0.04)]">
+                <div className="grid gap-4 xl:grid-cols-[minmax(320px,1fr)_auto] xl:items-center">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="m-0 text-lg font-extrabold text-[#07113d]">
+                        {activeCoreFlow ? coreFlowLabel(activeCoreFlow) : modeLabel(activeViewMode)}
+                      </h2>
+                      <span className="rounded-full border border-violet-200 bg-white/80 px-2.5 py-0.5 font-semibold text-violet-700">
+                        {activeViewMode.key === data.viewConfig.defaultModeKey ? "Mặc định" : "View"}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm text-[#6f7a96]">
+                      {activeCoreFlow ? coreFlowDescription(activeCoreFlow) : modeDescription(activeViewMode)}
+                    </p>
+                  </div>
 
-              {!isCreateFormOpen ? (
-                <div className="hidden flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={isPending || !data.viewConfig.carryover.enabled}
-                    onClick={() => void rolloverPreviousCycle()}
-                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                    {actionLabel(data.viewConfig.carryover.actionLabel)}
-                  </button>
-                <button
-                  type="button"
-                  disabled={!data.blueprints.length || !data.viewConfig.createWorkspace.enabled}
-                  onClick={() => {
-                    setError(null);
-                    setBlueprintKey(data.blueprints[0]?.selectionKey ?? "");
-                    setTitle(data.blueprints[0]?.workspaceDefinition.defaultName ?? "");
-                    setIsCreateFormOpen(true);
-                  }}
-                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-slate-900 px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300"
-                >
-                  <Plus className="h-4 w-4" />
-                  Tạo Workspace
-                </button>
+                  <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+                    <span className="inline-flex h-9 items-center gap-2 rounded-md border border-sky-100 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm">
+                      <CalendarDays className="h-4 w-4 text-slate-400" />
+                      Tuần {data.week.weekNumber}/{data.week.year}
+                    </span>
+                    <select
+                      value={data.week.periodKey}
+                      onChange={(event) => {
+                        const option = data.filters.weekOptions.find(
+                          (item) => item.value === event.target.value,
+                        );
+                        if (option) updateDate(option.date);
+                      }}
+                      className="h-9 rounded-md border border-sky-100 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm outline-none transition focus:border-violet-300"
+                      aria-label="Chọn tuần"
+                    >
+                      {data.filters.weekOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="date"
+                      value={data.filters.selectedDate}
+                      onChange={(event) => updateDate(event.target.value)}
+                      className="h-9 rounded-md border border-sky-100 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm outline-none transition focus:border-violet-300"
+                      aria-label="Chọn ngày"
+                    />
+                    {data.viewConfig.modes.length > 1 ? (
+                      <select
+                        value={activeViewMode.key}
+                        onChange={(event) => setActiveViewModeKey(event.target.value)}
+                        className="h-9 min-w-48 rounded-md border border-sky-100 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm outline-none transition focus:border-violet-300"
+                        aria-label="Chế độ xem Space"
+                      >
+                        {data.viewConfig.modes.map((mode) => (
+                          <option key={mode.key} value={mode.key}>
+                            {modeLabel(mode)}
+                          </option>
+                        ))}
+                      </select>
+                    ) : null}
+                    {isTechnicalIssueFlowMode ? (
+                      <button
+                        type="button"
+                        className="inline-flex h-9 items-center justify-center rounded-md border border-sky-100 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm"
+                      >
+                        Tất cả trạng thái
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => setWorkTicketView("TI_BOARD")}
+                      disabled={!canShowTechnicalIssueBoard}
+                      className={cn(
+                        "inline-flex h-9 items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium shadow-sm",
+                        isTechnicalIssueBoardView
+                          ? "border-violet-300 bg-white text-violet-700"
+                          : "border-sky-100 bg-white text-slate-500 hover:text-slate-700",
+                        !canShowTechnicalIssueBoard && "cursor-not-allowed opacity-50",
+                      )}
+                      aria-label="Xem dạng lưới"
+                    >
+                      <Grid2X2 className="h-4 w-4" />
+                      <span className="hidden xl:inline">Board TI</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setWorkTicketView("LIST")}
+                      className={cn(
+                        "inline-flex h-9 items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium shadow-sm",
+                        !isTechnicalIssueBoardView
+                          ? "border-violet-300 bg-white text-violet-700"
+                          : "border-sky-100 bg-white text-slate-500 hover:text-slate-700",
+                      )}
+                      aria-label="Xem dạng danh sách"
+                    >
+                      <List className="h-4 w-4" />
+                      <span className="hidden xl:inline">List</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isPending || !data.viewConfig.carryover.enabled}
+                      onClick={() => void rolloverPreviousCycle()}
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-violet-200 bg-white px-3 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:bg-white/60 disabled:text-slate-400"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      <span className="hidden 2xl:inline">{actionLabel(data.viewConfig.carryover.actionLabel)}</span>
+                      <span className="2xl:hidden">Nhận tồn</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!data.blueprints.length || !data.viewConfig.createWorkspace.enabled}
+                      onClick={() => {
+                        setError(null);
+                        setBlueprintKey(data.blueprints[0]?.selectionKey ?? "");
+                        setTitle(data.blueprints[0]?.workspaceDefinition.defaultName ?? "");
+                        setIsCreateFormOpen(true);
+                      }}
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span className="hidden xl:inline">Workspace</span>
+                    </button>
+                  </div>
                 </div>
-              ) : null}
-              <form
-                className={`${isCreateFormOpen ? "flex" : "hidden"} min-w-0 flex-col gap-2 sm:flex-row sm:items-center`}
-                onSubmit={createWorkTicket}
-              >
-                <select
-                  value={blueprintKey}
-                  onChange={(event) => {
-                    const nextKey = event.target.value;
-                    const nextBlueprint = data.blueprints.find(
-                      (blueprint) => blueprint.selectionKey === nextKey,
-                    );
-                    setBlueprintKey(nextKey);
-                    setTitle(nextBlueprint?.workspaceDefinition.defaultName ?? "");
-                  }}
-                  className="h-9 min-w-0 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-slate-400 sm:w-56"
+
+                <form
+                  className={`${isCreateFormOpen ? "flex" : "hidden"} mt-4 min-w-0 flex-col gap-2 border-t border-sky-100 pt-4 sm:flex-row sm:items-center`}
+                  onSubmit={createWorkTicket}
                 >
-                  {data.blueprints.map((blueprint) => (
-                    <option key={blueprint.selectionKey} value={blueprint.selectionKey}>
-                      {blueprintSelectLabel(blueprint)}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                placeholder="Tên Workspace"
-                  className="h-9 min-w-0 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-slate-400 sm:w-64"
-                />
-                <button
-                  type="submit"
-                  disabled={isPending || !title.trim()}
-                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-slate-900 px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300"
-                >
-                  <Plus className="h-4 w-4" />
-                  Xác nhận tạo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setError(null);
-                    setIsCreateFormOpen(false);
-                  }}
-                  className="inline-flex h-9 items-center justify-center rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                >
-                  Hủy
-                </button>
-              </form>
-            </div>
-            {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
-            {selectedBlueprint ? (
-              <SpaceViewSummary columns="lg:grid-cols-[1.05fr_0.75fr_1fr_1.7fr_0.9fr]">
-                <SpaceViewSummaryCell as="label">
-                  <span className="font-bold uppercase tracking-wide text-slate-500">Blueprint</span>
                   <select
                     value={blueprintKey}
                     onChange={(event) => {
@@ -1210,11 +1006,9 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                         (blueprint) => blueprint.selectionKey === nextKey,
                       );
                       setBlueprintKey(nextKey);
-                      if (isCreateFormOpen) {
-                        setTitle(nextBlueprint?.workspaceDefinition.defaultName ?? "");
-                      }
+                      setTitle(nextBlueprint?.workspaceDefinition.defaultName ?? "");
                     }}
-                    className="mt-3 h-8 w-full rounded-md border-0 bg-transparent px-0 text-base font-semibold text-slate-950 outline-none focus:ring-0"
+                    className="h-9 min-w-0 rounded-md border border-sky-100 bg-white px-3 text-sm text-slate-800 shadow-sm outline-none focus:border-violet-300 sm:w-56"
                   >
                     {data.blueprints.map((blueprint) => (
                       <option key={blueprint.selectionKey} value={blueprint.selectionKey}>
@@ -1222,250 +1016,32 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                       </option>
                     ))}
                   </select>
-                  <div className="mt-3 inline-flex items-center gap-2 text-sm text-slate-500">
-                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-violet-50 text-violet-700 ring-1 ring-violet-100">
-                      <Monitor className="h-3.5 w-3.5" />
-                    </span>
-                    {viewConfigLabel(data.viewConfig.label)}
-                  </div>
-                </SpaceViewSummaryCell>
-
-                <SpaceViewSummaryCell>
-                  <div className="font-bold uppercase tracking-wide text-slate-500">Workspace đang mở</div>
-                  <div className={`mt-3 text-base font-semibold ${selectedBlueprint.usage.active ? "text-slate-950" : "text-slate-500"}`}>
-                    {selectedBlueprint.usage.active} đang hoạt động / {selectedBlueprint.usage.total} tổng
-                  </div>
-                  <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-violet-100">
-                    <div
-                      className="h-full rounded-full bg-violet-600"
-                      style={{
-                        width: `${Math.min(
-                          100,
-                          Math.max(
-                            0,
-                            selectedBlueprint.usage.total
-                              ? (selectedBlueprint.usage.active / selectedBlueprint.usage.total) * 100
-                              : 0,
-                          ),
-                        )}%`,
-                      }}
-                    />
-                  </div>
-                </SpaceViewSummaryCell>
-
-                <SpaceViewSummaryCell as="label">
-                  <span className="font-bold uppercase tracking-wide text-slate-500">Tự động nhận item</span>
-                  <select
-                    value={selectedBlueprint.usage.receiverId ?? ""}
-                    disabled={isPending || !selectedBlueprint.usage.activeWorkspaces.length}
-                    onChange={(event) => void updateAutoBindingReceiver(event.target.value)}
-                    className="mt-3 h-8 w-full rounded-md border-0 bg-transparent px-0 text-base font-semibold text-slate-950 outline-none focus:ring-0 disabled:cursor-not-allowed disabled:text-slate-400"
-                  >
-                    <option value="">Chưa chọn Workspace nhận item</option>
-                    {selectedBlueprint.usage.activeWorkspaces.map((workspace) => (
-                      <option key={workspace.id} value={workspace.id}>
-                        {prefixedLabel("Workspace", workspace.title)}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    Đang bật
-                  </span>
-                </SpaceViewSummaryCell>
-
-                <SpaceViewSummaryCell>
-                  <div className="font-bold uppercase tracking-wide text-slate-500">Quy tắc chuyển tồn</div>
-                  <div className="mt-3 text-sm leading-5 text-slate-700">
-                    {carryoverRuleText(data.viewConfig.carryover.processingRule)}
-                  </div>
-                  {data.viewConfig.carryover.terminalStatesByTargetType ? (
-                    <div className="mt-3 flex flex-wrap gap-1">
-                      {Object.entries(data.viewConfig.carryover.terminalStatesByTargetType).map(
-                        ([targetType, states]) => (
-                          <span
-                            key={targetType}
-                            className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 font-semibold text-violet-700"
-                          >
-                            {terminalStatesLabel(targetType, states)}
-                          </span>
-                        ),
-                      )}
-                    </div>
-                  ) : null}
-                </SpaceViewSummaryCell>
-
-                <SpaceViewSummaryCell className="lg:after:hidden">
-                  <SpaceSharingEditor
-                    taskId={data.cycle.id}
-                    context={data.context}
-                    activeCoreFlow={activeCoreFlow}
-                    sharing={data.spaceSharing}
+                  <input
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                    placeholder="Tên Workspace"
+                    className="h-9 min-w-0 rounded-md border border-sky-100 bg-white px-3 text-sm text-slate-800 shadow-sm outline-none focus:border-violet-300 sm:w-64"
                   />
-                </SpaceViewSummaryCell>
-              </SpaceViewSummary>
-            ) : null}
-            {activeViewMode ? (
-              <SpaceViewInfoGrid>
-                <SpaceViewInfoCell icon={<Monitor className="h-4 w-4" />} label="Chế độ xem Space">
-                  <div className="mt-3 text-sm font-semibold text-slate-950">
-                    {modeLabel(activeViewMode)}
-                  </div>
-                  <div className="mt-3">
-                    {data.viewConfig.modes.length > 1 ? (
-                      <select
-                        value={activeViewMode.key}
-                        onChange={(event) => setActiveViewModeKey(event.target.value)}
-                        className="h-9 w-full rounded-md border border-sky-200 bg-white px-3 text-sm font-semibold text-slate-950 shadow-sm outline-none focus:border-violet-300"
-                      >
-                        {data.viewConfig.modes.map((mode) => (
-                          <option key={mode.key} value={mode.key}>
-                            {modeLabel(mode)}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className="font-medium text-slate-900">
-                        {modeLabel(activeViewMode)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-3 leading-5 text-slate-600">
-                    {modeDescription(activeViewMode)}
-                  </div>
-                  {activeCoreFlow ? (
-                    <div className="mt-3 font-semibold text-violet-700">
-                      Luồng: {coreFlowLabel(activeCoreFlow)}
-                    </div>
-                  ) : null}
-                </SpaceViewInfoCell>
-
-                <SpaceViewInfoCell icon={<Filter className="h-4 w-4" />} label="Quy tắc hiển thị">
-                  <div className="mt-4 space-y-2 leading-5 text-slate-700">
-                    <div>Dòng: {rowModelLabel(activeViewMode.rowModel)} / Đích: {primaryTargetLabel(activeViewMode.primaryTarget)}</div>
-                    {activeViewMode.allowedWorkspaceKinds?.length ? (
-                      <div>Loại Workspace: {activeViewMode.allowedWorkspaceKinds.map(workspaceKindLabel).join(", ")}</div>
-                    ) : null}
-                    {activeViewMode.coreFlowKey ? (
-                      <div>Luồng chính: {activeCoreFlow ? coreFlowLabel(activeCoreFlow) : activeViewMode.coreFlowKey}</div>
-                    ) : null}
-                    <div>
-                      Cột: {activeViewMode.columns.map((column) => columnLabel(column.label)).join(", ")}
-                    </div>
-                  </div>
-                </SpaceViewInfoCell>
-
-                <SpaceViewInfoCell icon={<RotateCcw className="h-4 w-4" />} label="Quy tắc chuyển tồn" className="lg:after:hidden">
-                  <div className="mt-4 leading-5 text-slate-700">
-                    {carryoverRuleText(data.viewConfig.carryover.processingRule)}
-                  </div>
-                  {data.viewConfig.carryover.terminalStatesByTargetType ? (
-                    <div className="mt-3 flex flex-wrap gap-1">
-                      {Object.entries(data.viewConfig.carryover.terminalStatesByTargetType).map(
-                        ([targetType, states]) => (
-                          <span
-                            key={targetType}
-                            className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 font-semibold text-violet-700"
-                          >
-                            {terminalStatesLabel(targetType, states)}
-                          </span>
-                        ),
-                      )}
-                    </div>
-                  ) : null}
-                </SpaceViewInfoCell>
-              </SpaceViewInfoGrid>
-            ) : null}
-            {activeViewMode ? (
-              <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white text-xs text-slate-700 shadow-[0_8px_24px_rgba(30,43,79,0.06)]">
-                <SpaceViewSectionHeader
-                  title={activeCoreFlow ? coreFlowLabel(activeCoreFlow) : modeLabel(activeViewMode)}
-                  badge={
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 font-semibold text-slate-700">
-                      {activeCoreFlow
-                        ? `Item: ${targetTypeLabel(activeCoreFlow.itemTargetType)}`
-                        : rowModelLabel(activeViewMode.rowModel)}
-                    </span>
-                  }
-                  description={
-                    <>
-                      <span>
-                        {activeCoreFlow
-                          ? coreFlowDescription(activeCoreFlow)
-                          : modeDescription(activeViewMode)}
-                      </span>
-                      {activeCoreFlow ? (
-                        <span className="mt-3 flex flex-wrap items-center gap-1">
-                          {activeCoreFlow.stages
-                            .slice()
-                            .sort((left, right) => left.sortOrder - right.sortOrder)
-                            .map((stage, index) => (
-                              <span key={stage.key} className="inline-flex items-center gap-1">
-                                {index > 0 ? (
-                                  <ChevronRight className="h-3 w-3 text-slate-400" aria-hidden="true" />
-                                ) : null}
-                                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700 shadow-sm">
-                                  {stageLabel(stage.label)}
-                                </span>
-                              </span>
-                            ))}
-                        </span>
-                      ) : (
-                        <span className="mt-3 flex flex-wrap items-center gap-1">
-                          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700 shadow-sm">
-                            {rowModelLabel(activeViewMode.rowModel)}
-                          </span>
-                          <ChevronRight className="h-3 w-3 text-slate-400" aria-hidden="true" />
-                          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700 shadow-sm">
-                            {primaryTargetLabel(activeViewMode.primaryTarget)}
-                          </span>
-                        </span>
-                      )}
-                    </>
-                  }
-                  actions={
-                    <>
-                      {isTechnicalIssueFlowMode ? (
-                      <button
-                        type="button"
-                        className="inline-flex h-9 items-center justify-center rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm"
-                      >
-                        Tất cả trạng thái
-                      </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        onClick={() => setWorkTicketView("TI_BOARD")}
-                        disabled={!canShowTechnicalIssueBoard}
-                        className={cn(
-                          "inline-flex h-9 items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium shadow-sm",
-                          isTechnicalIssueBoardView
-                            ? "border-violet-300 bg-white text-violet-700"
-                            : "border-slate-200 bg-white text-slate-500 hover:text-slate-700",
-                          !canShowTechnicalIssueBoard && "cursor-not-allowed opacity-50",
-                        )}
-                        aria-label="Xem dạng lưới"
-                      >
-                        <Grid2X2 className="h-4 w-4" />
-                        <span className="hidden xl:inline">Board TI</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setWorkTicketView("LIST")}
-                        className={cn(
-                          "inline-flex h-9 items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium shadow-sm",
-                          !isTechnicalIssueBoardView
-                            ? "border-violet-300 bg-white text-violet-700"
-                            : "border-slate-200 bg-white text-slate-500 hover:text-slate-700",
-                        )}
-                        aria-label="Xem dạng danh sách"
-                      >
-                        <List className="h-4 w-4" />
-                        <span className="hidden xl:inline">List</span>
-                      </button>
-                    </>
-                  }
-                />
+                  <button
+                    type="submit"
+                    disabled={isPending || !title.trim()}
+                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-slate-900 px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Xác nhận tạo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError(null);
+                      setIsCreateFormOpen(false);
+                    }}
+                    className="inline-flex h-9 items-center justify-center rounded-md border border-sky-100 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+                  >
+                    Hủy
+                  </button>
+                </form>
+                {error ? <p className="mt-3 text-sm font-medium text-red-600">{error}</p> : null}
               </div>
             ) : null}
             {isCreateFormOpen && selectedBlueprint ? (
@@ -1781,7 +1357,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
           >
             Gợi ý: kéo thả để đổi thứ tự stage. Nhấp vào Workspace để xem chi tiết item và hoạt động.
           </SpaceViewFooterTip>
-        </SpaceViewPanel>
+        </section>
     </SpaceViewPage>
   );
 }

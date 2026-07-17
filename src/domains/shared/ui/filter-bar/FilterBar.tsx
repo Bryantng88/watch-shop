@@ -137,26 +137,11 @@ export default function FilterBar({
         activeFieldValue(field, values),
     );
     const activeCount = activeFields.length;
+    const hasTotal = typeof total === "number" && Number.isFinite(total);
+    const hasVisibleCount = typeof visibleCount === "number" && Number.isFinite(visibleCount);
 
     return (
         <div className="rounded-t-xl border border-b-0 border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.025)]">
-            <div className="hidden">
-                <div className="text-sm font-semibold text-slate-900">
-                    {typeof total === "number" ? (
-                        <>
-                            Tổng <span className="text-blue-600">{total}</span> watch
-                            {typeof visibleCount === "number" ? (
-                                <span className="ml-2 text-xs font-medium text-slate-400">
-                                    Hiển thị {visibleCount}
-                                </span>
-                            ) : null}
-                        </>
-                    ) : (
-                        "Bộ lọc"
-                    )}
-                </div>
-            </div>
-
             <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(280px,1fr)_repeat(2,minmax(170px,220px))_minmax(190px,240px)_auto_auto_auto] xl:items-center">
                 {search ? (
                     <label className="relative block min-w-0">
@@ -251,30 +236,44 @@ export default function FilterBar({
             ) : null}
 
             {activeFields.length ? (
-                <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-                    <span className="mr-1 text-slate-500">Bộ lọc đang áp dụng</span>
-                    {activeFields.map((field) => {
-                        const value = activeFieldValue(field, values);
-                        return (
-                            <button
-                                key={field.key}
-                                type="button"
-                                onClick={() => onClearField(field.key)}
-                                className="inline-flex h-8 items-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50 px-3 text-xs font-semibold text-indigo-700 transition hover:border-indigo-200"
-                            >
-                                {field.label}: {labelFor(field, value)}
-                                <X className="h-3.5 w-3.5" />
-                            </button>
-                        );
-                    })}
-                    <button
-                        type="button"
-                        onClick={onClearAll}
-                        className="inline-flex h-8 items-center gap-1 rounded-xl px-2 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-                    >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Xóa tất cả
-                    </button>
+                <div className="mt-4 flex flex-col gap-2 text-sm lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="mr-1 text-slate-500">Bộ lọc đang áp dụng</span>
+                        {activeFields.map((field) => {
+                            const value = activeFieldValue(field, values);
+                            return (
+                                <button
+                                    key={field.key}
+                                    type="button"
+                                    onClick={() => onClearField(field.key)}
+                                    className="inline-flex h-8 items-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50 px-3 text-xs font-semibold text-indigo-700 transition hover:border-indigo-200"
+                                >
+                                    {field.label}: {labelFor(field, value)}
+                                    <X className="h-3.5 w-3.5" />
+                                </button>
+                            );
+                        })}
+                        <button
+                            type="button"
+                            onClick={onClearAll}
+                            className="inline-flex h-8 items-center gap-1 rounded-xl px-2 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+                        >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Xóa tất cả
+                        </button>
+                    </div>
+
+                    {hasTotal ? (
+                        <div className="inline-flex h-8 shrink-0 items-center gap-2 self-start rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-700 lg:self-auto">
+                            <span className="text-slate-500">Kết quả lọc</span>
+                            <span className="text-slate-950">{total.toLocaleString("vi-VN")}</span>
+                            {hasVisibleCount ? (
+                                <span className="font-medium text-slate-400">
+                                    đang hiển thị {visibleCount.toLocaleString("vi-VN")}
+                                </span>
+                            ) : null}
+                        </div>
+                    ) : null}
                 </div>
             ) : null}
         </div>

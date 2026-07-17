@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Download, ImageIcon, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Download, ImageIcon, Loader2, X } from "lucide-react";
 import type { WatchWorkbenchValues } from "@/domains/watch/client/workbench/types";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
@@ -47,12 +47,14 @@ export default function ImageBlock({
     values,
     detail,
     onSave,
+    saving = false,
     onOpenMediaWorkspace,
     openingMediaWorkspace = false,
 }: {
     values: WatchWorkbenchValues;
     detail?: UsageDetail;
     onSave: () => void;
+    saving?: boolean;
     onOpenMediaWorkspace: () => void;
     openingMediaWorkspace?: boolean;
 }) {
@@ -68,8 +70,10 @@ export default function ImageBlock({
         ),
         isPosted: Boolean(detail?.review?.isPosted ?? detail?.watch?.isPosted),
     });
+    const [previewIndex, setPreviewIndex] = useState<number | null>(null);
 
     const gallery = values.media.galleryImages ?? [];
+    const previewImage = previewIndex == null ? null : gallery[previewIndex] ?? null;
     const imageStatus = String(values.imageReviewStatus ?? "DRAFT").toUpperCase();
     const canDownload = imageStatus === "APPROVED";
     const rows = [
@@ -78,6 +82,17 @@ export default function ImageBlock({
         ["Service board", "-"],
         ["Gallery", gallery.length ? `${gallery.length} images` : "-"],
     ];
+
+    useEffect(() => {
+        if (previewIndex == null) return;
+
+        function handleKeyDown(event: KeyboardEvent) {
+            if (event.key === "Escape") setPreviewIndex(null);
+        }
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [previewIndex]);
 
     async function handleDownloadGallery() {
         if (!values.productId || downloading || !canDownload) return;
@@ -149,8 +164,9 @@ export default function ImageBlock({
                         {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                         {downloading ? "Dang tai..." : usage.isImageDownloaded ? "Tai lai gallery" : "Tai gallery"}
                     </button>
-                    <button type="button" onClick={onSave} className={operationButtonClass({ variant: "primary", size: "sm" })}>
-                        Luu thay doi
+                    <button type="button" onClick={onSave} disabled={saving} className={operationButtonClass({ variant: "primary", size: "sm", className: "disabled:opacity-70" })}>
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                        {saving ? "Dang luu..." : "Luu thay doi"}
                     </button>
                 </>
             }
@@ -170,6 +186,7 @@ export default function ImageBlock({
                                 disabled={openingMediaWorkspace}
                                 className={operationButtonClass({ variant: "softEmerald", size: "xs", className: "disabled:opacity-60" })}
                             >
+                                {openingMediaWorkspace ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                                 {openingMediaWorkspace ? "Dang mo..." : "Mo Media WP"}
                             </button>
                         </div>
@@ -177,7 +194,15 @@ export default function ImageBlock({
                             <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4">
                                 {gallery.map((image, index) => (
                                     <div key={`${image.key}:${index}`} className="group overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-                                        <div className="aspect-square overflow-hidden bg-slate-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (image.url) setPreviewIndex(index);
+                                            }}
+                                            disabled={!image.url}
+                                            title={image.url ? "Phong to hinh anh" : undefined}
+                                            className="block aspect-square w-full overflow-hidden bg-slate-100 text-left disabled:cursor-default"
+                                        >
                                             {image.url ? (
                                                 // eslint-disable-next-line @next/next/no-img-element
                                                 <img src={image.url} alt={image.name ?? `Gallery ${index + 1}`} className="h-full w-full object-cover transition duration-200 group-hover:scale-[1.03]" />
@@ -186,7 +211,7 @@ export default function ImageBlock({
                                                     <ImageIcon className="h-5 w-5 text-slate-400" />
                                                 </div>
                                             )}
-                                        </div>
+                                        </button>
                                         <div className="truncate px-2.5 py-2 text-[11px] font-medium text-slate-500">
                                             {image.name ?? image.key}
                                         </div>
@@ -214,11 +239,46 @@ export default function ImageBlock({
                                     disabled={openingMediaWorkspace}
                                     className={operationButtonClass({ variant: "subtle", size: "xs", className: "disabled:opacity-60" })}
                                 >
-                                    Mo WP
+                                    {openingMediaWorkspace ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                                    {openingMediaWorkspace ? "Dang mo" : "Mo WP"}
                                 </button>
                             </div>
                         ))}
                     </div>
+                    {previewImage?.url ? (
+                        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+                            <button
+                                type="button"
+                                aria-label="Dong preview hinh anh"
+                                className="absolute inset-0 bg-slate-950/75"
+                                onClick={() => setPreviewIndex(null)}
+                            />
+                            <div className="relative z-[1] flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+                                <div className="flex min-h-12 items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
+                                    <div className="min-w-0 truncate text-sm font-semibold text-slate-900">
+                                        {previewImage.name ?? previewImage.key ?? "Gallery image"}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPreviewIndex(null)}
+                                        className={operationButtonClass({ variant: "ghost", size: "xs", className: "w-8 px-0" })}
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                </div>
+                                <div className="flex min-h-0 flex-1 items-center justify-center bg-slate-950 p-3">
+                                    {
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img
+                                            src={previewImage.url}
+                                            alt={previewImage.name ?? previewImage.key ?? "Gallery image"}
+                                            className="max-h-[78vh] w-auto max-w-full object-contain"
+                                        />
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    ) : null}
             </div>
         </OperationShell>
     );
