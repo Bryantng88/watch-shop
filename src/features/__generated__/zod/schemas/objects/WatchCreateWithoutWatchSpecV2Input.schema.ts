@@ -36,6 +36,8 @@ const makeSchema = () => z.object({
   isImageDownloaded: z.boolean().optional(),
   isContentDownloaded: z.boolean().optional(),
   notes: z.string().optional().nullable(),
+  duplicateConfirmedAt: z.coerce.date().optional().nullable(),
+  duplicateConfirmedByUserId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   product: z.lazy(() => ProductCreateNestedOneWithoutWatchInputObjectSchema),

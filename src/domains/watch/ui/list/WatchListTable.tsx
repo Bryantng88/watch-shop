@@ -17,6 +17,11 @@ type Props = {
     onEdit?: (row: WatchRow) => void;
     onDelete?: (row: WatchRow) => void;
     onService?: (row: WatchRow) => void;
+    onMedia?: (row: WatchRow) => void;
+    mediaSubmittingId?: string | null;
+    onConfirmDuplicate?: (row: WatchRow) => void;
+    duplicateSubmittingId?: string | null;
+    onRestoreDuplicate?: (row: WatchRow) => void;
     onQuickOrder?: (row: WatchRow) => void;
     onConsign?: (row: WatchRow) => void;
     onBuyBack?: (row: WatchRow) => void;
@@ -36,6 +41,11 @@ export default function WatchListTable({
     onEdit,
     onDelete,
     onService,
+    onMedia,
+    mediaSubmittingId,
+    onConfirmDuplicate,
+    duplicateSubmittingId,
+    onRestoreDuplicate,
     onQuickOrder,
     onConsign,
     onBuyBack,
@@ -113,6 +123,11 @@ export default function WatchListTable({
                                     onEdit={onEdit}
                                     onDelete={onDelete}
                                     onService={onService}
+                                    onMedia={onMedia}
+                                    mediaSubmitting={mediaSubmittingId === item.id}
+                                    onConfirmDuplicate={onConfirmDuplicate}
+                                    duplicateSubmitting={duplicateSubmittingId === item.id}
+                                    onRestoreDuplicate={onRestoreDuplicate}
                                     onQuickOrder={onQuickOrder}
                                     onConsign={onConsign}
                                     onBuyBack={onBuyBack}

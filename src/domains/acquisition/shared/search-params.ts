@@ -7,15 +7,24 @@ export type AcquisitionListView =
     | "cancelled";
 
 export type AcquisitionListFilters = {
+    /** Legacy tab parameter. New list surfaces should use status. */
     view?: AcquisitionListView;
     q?: string;
     vendorId?: string;
+    type?: string;
     status?: string;
+    sort?:
+        | "updatedDesc"
+        | "updatedAsc"
+        | "createdDesc"
+        | "createdAsc"
+        | "acquiredDesc"
+        | "acquiredAsc";
     page?: number;
     pageSize?: number;
 };
 
-function toPositiveInt(value: any, fallback: number) {
+function toPositiveInt(value: unknown, fallback: number) {
     const n = Number(value);
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
 }
@@ -41,7 +50,9 @@ export function parseAcquisitionListSearchParams(input: {
     view?: string;
     q?: string;
     vendorId?: string;
+    type?: string;
     status?: string;
+    sort?: string;
     page?: string;
     pageSize?: string;
 }): AcquisitionListFilters {
@@ -49,7 +60,16 @@ export function parseAcquisitionListSearchParams(input: {
         view: normalizeView(input.view),
         q: input.q?.trim() ?? "",
         vendorId: input.vendorId?.trim() ?? "",
+        type: input.type?.trim() ?? "",
         status: input.status?.trim() ?? "",
+        sort: ([
+            "updatedDesc",
+            "updatedAsc",
+            "createdDesc",
+            "createdAsc",
+            "acquiredDesc",
+            "acquiredAsc",
+        ] as const).find((value) => value === input.sort) ?? "updatedDesc",
         page: toPositiveInt(input.page, 1),
         pageSize: toPositiveInt(input.pageSize, 20),
     };

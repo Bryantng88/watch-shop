@@ -3,12 +3,12 @@ import { ImageRole, PaymentDirection, PaymentStatus } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import type {
     AcquisitionListFilters,
-    AcquisitionListView,
 } from "../../shared/search-params";
 import {
     cleanAcquisitionItemDescription,
     getAiMetaFromDescription,
 } from "../../shared/acquisition-item-metadata";
+import type { AcquisitionListProjectionResult } from "../../shared/acquisition-list.projection";
 
 function normalizeText(value: unknown) {
     return String(value ?? "").trim();
@@ -72,33 +72,53 @@ function buildWhere(input: AcquisitionListFilters) {
         and.push({ vendorId: normalizeText(input.vendorId) });
     }
 
-    if (normalizeText(input.status)) {
-        and.push({ accquisitionStt: normalizeText(input.status) });
+    if (normalizeText(input.type)) {
+        and.push({ type: normalizeText(input.type) });
+    }
+
+    const legacyView = input.view ?? "all";
+    const requestedStatus = normalizeText(input.status);
+    if (requestedStatus) {
+        if (requestedStatus === "CANCELLED") {
+            and.push({ accquisitionStt: "CANCELED" });
+        } else {
+            and.push({ accquisitionStt: requestedStatus });
+        }
+    } else if (legacyView === "open") {
+        and.push({
+            accquisitionStt: { notIn: ["POSTED", "CANCELED"] },
+        });
+    } else if (legacyView === "returned") {
+        and.push({ id: "__unsupported_returned_acquisition__" });
+    } else if (legacyView !== "all") {
+        const legacyStatus = legacyView === "cancelled" ? "CANCELLED" : legacyView.toUpperCase();
+        if (legacyStatus === "CANCELLED") {
+            and.push({ accquisitionStt: "CANCELED" });
+        } else {
+            and.push({ accquisitionStt: legacyStatus });
+        }
     }
 
     return and.length ? { AND: and } : {};
 }
 
-function matchView(row: any, view: AcquisitionListView) {
-    const status = mapStatus(row?.accquisitionStt);
-
-    switch (view) {
-        case "draft":
-            return status === "DRAFT";
-        case "posted":
-            return status === "POSTED";
-        case "returned":
-            return status === "RETURNED";
-        case "cancelled":
-            return status === "CANCELED" || status === "CANCELLED";
-        case "open":
-            return !["POSTED", "RETURNED", "CANCELED", "CANCELLED"].includes(status);
-        case "all":
+function buildOrderBy(sort: AcquisitionListFilters["sort"]) {
+    switch (sort) {
+        case "updatedAsc":
+            return [{ updatedAt: "asc" as const }];
+        case "createdDesc":
+            return [{ createdAt: "desc" as const }];
+        case "createdAsc":
+            return [{ createdAt: "asc" as const }];
+        case "acquiredDesc":
+            return [{ acquiredAt: "desc" as const }];
+        case "acquiredAsc":
+            return [{ acquiredAt: "asc" as const }];
+        case "updatedDesc":
         default:
-            return true;
+            return [{ updatedAt: "desc" as const }];
     }
 }
-
 
 function toMediaImageUrl(value: unknown) {
     const text = String(value ?? "").trim();
@@ -197,16 +217,23 @@ function buildPaymentSummary(payments: Array<{ status: unknown; amount: unknown 
     };
 }
 
-export async function listAdminAcquisitions(input: AcquisitionListFilters) {
+export async function listAdminAcquisitions(
+    input: AcquisitionListFilters,
+): Promise<AcquisitionListProjectionResult> {
     const page = input.page ?? 1;
     const pageSize = input.pageSize ?? 20;
     const skip = (page - 1) * pageSize;
 
-    const rows = await prisma.acquisition.findMany({
-        where: buildWhere(input),
-        orderBy: [{ updatedAt: "desc" }],
+    const where = buildWhere(input);
+    const [rows, total] = await Promise.all([
+        prisma.acquisition.findMany({
+        where,
+        orderBy: buildOrderBy(input.sort),
+        skip,
+        take: pageSize,
         include: {
             vendor: true,
+            _count: { select: { Invoice: true } },
             acquisitionItem: {
                 include: {
                     product: {
@@ -236,19 +263,11 @@ export async function listAdminAcquisitions(input: AcquisitionListFilters) {
                 orderBy: [{ createdAt: "asc" }],
             },
         },
-    });
+        }),
+        prisma.acquisition.count({ where }),
+    ]);
 
-    const allRows = rows.filter((row) => matchView(row, "all"));
-    const draftRows = rows.filter((row) => matchView(row, "draft"));
-    const openRows = rows.filter((row) => matchView(row, "open"));
-    const postedRows = rows.filter((row) => matchView(row, "posted"));
-    const returnedRows = rows.filter((row) => matchView(row, "returned"));
-    const cancelledRows = rows.filter((row) => matchView(row, "cancelled"));
-
-    const filteredRows = rows.filter((row) => matchView(row, input.view ?? "all"));
-    const total = filteredRows.length;
-    const pagedRows = filteredRows.slice(skip, skip + pageSize);
-    const pagedIds = pagedRows.map((row) => row.id);
+    const pagedIds = rows.map((row) => row.id);
 
     const paymentRows = pagedIds.length
         ? await prisma.payment.findMany({
@@ -280,7 +299,7 @@ export async function listAdminAcquisitions(input: AcquisitionListFilters) {
         paymentsByAcquisitionId.set(payment.acquisition_id, list);
     }
 
-    const items = pagedRows.map((row) => {
+    const items = rows.map((row) => {
         const acquisitionItems = Array.isArray(row.acquisitionItem)
             ? row.acquisitionItem
             : [];
@@ -320,8 +339,8 @@ export async function listAdminAcquisitions(input: AcquisitionListFilters) {
         return {
             id: row.id,
             refNo: row.refNo ?? "-",
-            status: mapStatus(row.accquisitionStt),
-            statusLabel: formatStatusLabel(row.accquisitionStt),
+            approvalStatus: mapStatus(row.accquisitionStt),
+            approvalStatusLabel: formatStatusLabel(row.accquisitionStt),
             vendorName: row.vendor?.name ?? "-",
             itemCount: acquisitionItems.length,
             linkedWatchCount,
@@ -330,7 +349,9 @@ export async function listAdminAcquisitions(input: AcquisitionListFilters) {
             acquiredAt: row.acquiredAt ? row.acquiredAt.toISOString() : "",
             createdAt: row.createdAt ? row.createdAt.toISOString() : "",
             updatedAt: row.updatedAt ? row.updatedAt.toISOString() : "",
-            type: row.type ?? null,
+            acquisitionType: String(row.type ?? "PURCHASE"),
+            currency: row.currency ?? "VND",
+            hasInvoice: row._count.Invoice > 0,
             previewTitles,
             remainingCount: remaining,
             detailItems,
@@ -344,13 +365,5 @@ export async function listAdminAcquisitions(input: AcquisitionListFilters) {
         page,
         pageSize,
         totalPages: Math.max(1, Math.ceil(total / pageSize)),
-        counts: {
-            all: allRows.length,
-            draft: draftRows.length,
-            open: openRows.length,
-            posted: postedRows.length,
-            returned: returnedRows.length,
-            cancelled: cancelledRows.length,
-        },
     };
 }

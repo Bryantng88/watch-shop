@@ -1,3 +1,9 @@
+import type {
+    AcquisitionListProjectionItem,
+    AcquisitionListProjectionRow,
+} from "@/domains/acquisition/shared/acquisition-list.projection";
+import type { BusinessListDashboardData } from "@/domains/shared/ui/business-list";
+
 export type AcquisitionListView = "all" | "draft" | "posted" | "canceled";
 
 export type AcquisitionVendorOption = {
@@ -5,52 +11,8 @@ export type AcquisitionVendorOption = {
     name: string;
 };
 
-export type AcquisitionListItemDetail = {
-    id: string;
-    index: number;
-    title: string;
-    subtitle: string;
-    imageUrl: string | null;
-    linkedWatchProductId: string | null;
-    linkedWatchTitle: string | null;
-    linkedWatchSku: string | null;
-    totalAmount: number | null;
-    quantity: number | null;
-};
-
-export type AcquisitionListItem = {
-    id: string;
-    refNo: string;
-    status: string;
-    statusLabel: string;
-    vendorName: string;
-    type: string;
-    currency: string;
-    itemCount: number;
-    linkedWatchCount: number;
-    totalAmount: number | null;
-    notes: string;
-    hasInvoice: boolean;
-    acquiredAt: string;
-    createdAt: string;
-    updatedAt: string;
-    previewTitles: string[];
-    remainingCount: number;
-    detailItems: AcquisitionListItemDetail[];
-    paymentStatus: "UNPAID" | "PARTIAL_PAID" | "PAID" | string;
-    paymentPaidAmount: number;
-    paymentPendingAmount: number;
-    paymentActiveAmount: number;
-    paymentRemainingAmount: number;
-    paymentIsFullyPaid: boolean;
-};
-
-export type AcquisitionListCounts = {
-    all: number;
-    draft: number;
-    posted: number;
-    canceled: number;
-};
+export type AcquisitionListItemDetail = AcquisitionListProjectionItem;
+export type AcquisitionListItem = AcquisitionListProjectionRow;
 
 export type AcquisitionListClientProps = {
     items: AcquisitionListItem[];
@@ -58,8 +20,8 @@ export type AcquisitionListClientProps = {
     page: number;
     pageSize: number;
     totalPages: number;
-    counts: AcquisitionListCounts;
     vendors: AcquisitionVendorOption[];
+    dashboardData: BusinessListDashboardData;
     selectedIds?: string[];
     onSelectedIdsChange?: React.Dispatch<React.SetStateAction<string[]>>;
 };

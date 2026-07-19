@@ -90,6 +90,7 @@ function buildInitialWatchListInput(searchParams: SearchParams) {
         pricePreset: firstValue(searchParams.pricePreset),
         priceMin: firstValue(searchParams.priceMin),
         priceMax: firstValue(searchParams.priceMax),
+        duplicateScope: firstValue(searchParams.duplicates) === "1" ? "DUPLICATE" as const : "ACTIVE" as const,
 
         sort: firstValue(searchParams.sort) || "updatedDesc",
 

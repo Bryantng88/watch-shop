@@ -24,7 +24,7 @@ function buildHref(
 }
 
 function isSelectable(item: AcquisitionListItem) {
-    return String(item.status).toUpperCase() !== "POSTED";
+    return String(item.approvalStatus).toUpperCase() !== "POSTED";
 }
 
 type Props = {
@@ -64,7 +64,7 @@ export default function AcquisitionListTable({
         selectableIds.some((id) => selectedIds.includes(id)) && !allChecked;
 
     return (
-        <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-b-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.025)]">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
                 <div className="flex items-center gap-2">
                     <h2 className="text-base font-semibold text-slate-950">
@@ -128,7 +128,7 @@ export default function AcquisitionListTable({
 
                         {!items.length ? (
                             <tr>
-                                <td colSpan={8} className="px-5 py-12 text-center text-sm text-slate-500">
+                                <td colSpan={9} className="px-5 py-12 text-center text-sm text-slate-500">
                                     Không có phiếu nhập phù hợp.
                                 </td>
                             </tr>

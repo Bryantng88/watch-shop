@@ -31,6 +31,8 @@ export const WatchInputSchema = z.object({
     isImageDownloaded: z.boolean(),
     isContentDownloaded: z.boolean(),
     notes: z.string().optional().nullable(),
+    duplicateConfirmedAt: z.date().optional().nullable(),
+    duplicateConfirmedByUserId: z.string().optional().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
     product: z.unknown(),

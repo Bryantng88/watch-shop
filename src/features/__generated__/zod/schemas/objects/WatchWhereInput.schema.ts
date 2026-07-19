@@ -19,6 +19,7 @@ import { WatchStyleSchema } from '../enums/WatchStyle.schema';
 import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
 import { EnumWatchSpecStatusFilterObjectSchema as EnumWatchSpecStatusFilterObjectSchema } from './EnumWatchSpecStatusFilter.schema';
 import { WatchSpecStatusSchema } from '../enums/WatchSpecStatus.schema';
+import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { ProductScalarRelationFilterObjectSchema as ProductScalarRelationFilterObjectSchema } from './ProductScalarRelationFilter.schema';
 import { ProductWhereInputObjectSchema as ProductWhereInputObjectSchema } from './ProductWhereInput.schema';
@@ -57,6 +58,8 @@ const watchwhereinputSchema = z.object({
   isImageDownloaded: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   isContentDownloaded: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   notes: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  duplicateConfirmedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  duplicateConfirmedByUserId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   product: z.union([z.lazy(() => ProductScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional(),

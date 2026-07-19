@@ -31,8 +31,8 @@ export type CoordinationWorkTicketSummaryDTO = {
     ref: string | null;
     imageUrl: string | null;
   } | null;
-  ownerLabel: string;
-  owner: {
+  creatorLabel: string;
+  creator: {
     label: string;
     avatarUrl: string | null;
     isSystem: boolean;

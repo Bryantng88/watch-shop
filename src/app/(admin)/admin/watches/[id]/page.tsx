@@ -3,7 +3,7 @@ import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
 import {
     getWatchEditDetail,
-    getWatchServiceHistoryDetail,
+    getWatchServiceProjectionDetail,
     getWatchTradeHistoryDetail,
 } from "@/domains/watch/server";
 import WatchWorkbenchClient from "@/domains/watch/client/workbench/WatchWorkbenchClient";
@@ -95,10 +95,10 @@ export default async function WatchDetailPage({
     const user = await requirePermission(PERMISSIONS.PRODUCT_VIEW);
     const { id } = await params;
 
-    const [detail, serviceHistory, tradeHistory] =
+    const [detail, serviceProjection, tradeHistory] =
         await Promise.all([
             getWatchEditDetail(id),
-            getWatchServiceHistoryDetail(id),
+            getWatchServiceProjectionDetail(id),
             getWatchTradeHistoryDetail(id),
         ]);
 
@@ -111,9 +111,11 @@ export default async function WatchDetailPage({
 
     return (
         <WatchWorkbenchClient
-            detail={serialize(safeDetail)}
-            serviceHistory={serialize(serviceHistory)}
-            tradeHistory={serialize(safeTradeHistory)}
+            projection={{
+                detail: serialize(safeDetail),
+                service: serialize(serviceProjection),
+                tradeHistory: serialize(safeTradeHistory),
+            }}
             permissions={{
                 canViewSensitivePrice: isAdmin,
                 canEditPrice: isAdmin,

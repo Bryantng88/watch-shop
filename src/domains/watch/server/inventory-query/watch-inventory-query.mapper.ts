@@ -133,6 +133,7 @@ export function toWatchInventoryQueryInput(
     pageSize: input.pageSize,
     withTotal: input.withTotal,
     meta: input.meta,
+    duplicateScope: input.duplicateScope,
   };
 }
 
@@ -165,5 +166,6 @@ export function toWatchListFilters(
     pageSize: input.pageSize,
     withTotal: input.withTotal,
     meta: input.meta,
+    duplicateScope: input.duplicateScope,
   };
 }

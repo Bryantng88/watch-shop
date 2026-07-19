@@ -31,6 +31,8 @@ const makeSchema = () => z.object({
   isImageDownloaded: z.boolean().optional(),
   isContentDownloaded: z.boolean().optional(),
   notes: z.boolean().optional(),
+  duplicateConfirmedAt: z.boolean().optional(),
+  duplicateConfirmedByUserId: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
   product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),

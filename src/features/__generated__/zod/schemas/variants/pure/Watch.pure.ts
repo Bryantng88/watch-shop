@@ -31,6 +31,8 @@ export const WatchModelSchema = z.object({
     isImageDownloaded: z.boolean(),
     isContentDownloaded: z.boolean(),
     notes: z.string().nullable(),
+    duplicateConfirmedAt: z.date().nullable(),
+    duplicateConfirmedByUserId: z.string().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
     product: z.unknown(),

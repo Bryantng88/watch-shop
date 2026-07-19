@@ -39,6 +39,10 @@ export async function listWatchListProjectionWithFallback(
   db: DB,
   input: WatchListFilters,
 ): Promise<WatchListProjectionListResult> {
+  if (input.duplicateScope) {
+    return listSourceFallback(input, "DUPLICATE_SCOPE_REQUIRES_SOURCE");
+  }
+
   if (!projectionReadEnabled()) {
     return listSourceFallback(input, "PROJECTION_READ_FLAG_DISABLED");
   }

@@ -23,7 +23,7 @@ import { postAcquisitions } from "@/domains/acquisition/client/list/post-acquisi
 
 import AcquisitionItemsPreview from "./AcquisitionItemsPreview";
 import type { AcquisitionListItem } from "./types";
-import { cx, fmtDateCompact, fmtMoney, statusTone } from "./helpers";
+import { fmtDateCompact, fmtMoney } from "./helpers";
 
 type Props = {
     item: AcquisitionListItem;
@@ -45,8 +45,8 @@ export default function AcquisitionListRow({
     const dialog = useAppDialog();
     const progress = useAppProgress();
 
-    const posted = String(item.status).toUpperCase() === "POSTED";
-    const draft = String(item.status).toUpperCase() === "DRAFT";
+    const posted = String(item.approvalStatus).toUpperCase() === "POSTED";
+    const draft = String(item.approvalStatus).toUpperCase() === "DRAFT";
     const selectable = !posted;
     async function handleCancel() {
         const accepted = await dialog.confirm({
@@ -189,12 +189,10 @@ export default function AcquisitionListRow({
             </td>
             <td className="px-4 py-4 text-center">
                 <PaymentStateSignalIcon
-                    status={(item as any).paymentStatus ?? "UNPAID"}
+                    status={item.paymentStatus ?? "UNPAID"}
                     totalAmount={item.totalAmount}
-                    remainingAmount={
-                        (item as any).paymentRemainingAmount ?? item.totalAmount
-                    }
-                    collectedAmount={(item as any).paymentPaidAmount ?? 0}
+                    remainingAmount={item.paymentRemainingAmount ?? item.totalAmount}
+                    collectedAmount={item.paymentPaidAmount ?? 0}
                 />
             </td>
 
@@ -202,7 +200,7 @@ export default function AcquisitionListRow({
                 <div className="truncate font-semibold text-slate-950">
                     {item.vendorName || "-"}
                 </div>
-                <div className="mt-1 text-xs text-slate-400">{item.type || "-"}</div>
+                <div className="mt-1 text-xs text-slate-400">{item.acquisitionType || "-"}</div>
             </td>
 
             <td className="px-4 py-4">

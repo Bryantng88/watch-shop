@@ -3,9 +3,24 @@
 import { useEffect, useState } from "react";
 
 import BusinessListDashboard, { BusinessListDashboardSkeleton } from "./BusinessListDashboard";
-import type { BusinessListDashboardData } from "./business-list.types";
+import type {
+    BusinessListDashboardData,
+    BusinessListDashboardWidgetKey,
+} from "./business-list.types";
 
-export default function AsyncBusinessListDashboard({ endpoint }: { endpoint: string }) {
+export default function AsyncBusinessListDashboard({
+    endpoint,
+    widgets,
+    storageKey,
+    customizationRequest,
+    showCustomizationTrigger,
+}: {
+    endpoint: string;
+    widgets?: BusinessListDashboardWidgetKey[];
+    storageKey?: string;
+    customizationRequest?: number;
+    showCustomizationTrigger?: boolean;
+}) {
     const [data, setData] = useState<BusinessListDashboardData | null>(null);
     const [failed, setFailed] = useState(false);
 
@@ -34,6 +49,14 @@ export default function AsyncBusinessListDashboard({ endpoint }: { endpoint: str
     }, [endpoint]);
 
     if (failed) return null;
-    if (!data) return <BusinessListDashboardSkeleton />;
-    return <BusinessListDashboard data={data} />;
+    if (!data) return <BusinessListDashboardSkeleton count={widgets?.length} />;
+    return (
+        <BusinessListDashboard
+            data={data}
+            widgets={widgets}
+            storageKey={storageKey}
+            customizationRequest={customizationRequest}
+            showCustomizationTrigger={showCustomizationTrigger}
+        />
+    );
 }

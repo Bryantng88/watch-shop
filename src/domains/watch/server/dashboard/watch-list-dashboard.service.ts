@@ -75,16 +75,31 @@ const getCachedWatchListDashboard = unstable_cache(
     async (): Promise<BusinessListDashboardData> => {
         const twelveDaysAgo = new Date();
         twelveDaysAgo.setDate(twelveDaysAgo.getDate() - 11);
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const fourteenDaysAgo = new Date();
+        fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        const [saleStageGroups, serviceCount, missingImageCount, inventoryValue, recentEvents, recentTrendRows, weeklySpaces] =
+        const [saleStageGroups, serviceStageGroups, missingImageCount, mediaApprovedCount, inventoryValue, recentEvents, recentTrendRows, weeklySpaces, readinessNoContent, readinessNoPrice, agingUnderSeven, agingSevenToFourteen, agingFourteenToThirty, agingOverThirty] =
             await Promise.all([
                 prisma.watch.groupBy({
                     by: ["saleStage"],
                     _count: { _all: true },
                 }),
-                prisma.watch.count({ where: { serviceStage: "IN_SERVICE" } }),
+                prisma.watch.groupBy({
+                    by: ["serviceStage"],
+                    _count: { _all: true },
+                }),
                 prisma.watch.count({
                     where: { product: { productImage: { none: {} } } },
+                }),
+                prisma.watch.count({
+                    where: {
+                        product: { productImage: { some: {} } },
+                        reviewStates: { some: { targetType: "IMAGE", status: "APPROVED" } },
+                    },
                 }),
                 prisma.watchPrice.aggregate({
                     where: { watch: { saleStage: { not: WatchSaleStage.SOLD } } },
@@ -110,6 +125,26 @@ const getCachedWatchListDashboard = unstable_cache(
                     select: { createdAt: true },
                 }),
                 getWeeklyWatchSpaceComparison({ db: prisma }),
+                prisma.watch.count({
+                    where: {
+                        product: { productImage: { some: {} } },
+                        watchContent: null,
+                    },
+                }),
+                prisma.watch.count({
+                    where: {
+                        product: { productImage: { some: {} } },
+                        watchContent: { isNot: null },
+                        OR: [
+                            { watchPrice: null },
+                            { watchPrice: { is: { salePrice: null } } },
+                        ],
+                    },
+                }),
+                prisma.watch.count({ where: { saleStage: { not: WatchSaleStage.SOLD }, updatedAt: { gte: sevenDaysAgo } } }),
+                prisma.watch.count({ where: { saleStage: { not: WatchSaleStage.SOLD }, updatedAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo } } }),
+                prisma.watch.count({ where: { saleStage: { not: WatchSaleStage.SOLD }, updatedAt: { gte: thirtyDaysAgo, lt: fourteenDaysAgo } } }),
+                prisma.watch.count({ where: { saleStage: { not: WatchSaleStage.SOLD }, updatedAt: { lt: thirtyDaysAgo } } }),
             ]);
 
         const counts = new Map(
@@ -122,6 +157,16 @@ const getCachedWatchListDashboard = unstable_cache(
         const processing =
             (counts.get(WatchSaleStage.DRAFT) ?? 0) +
             (counts.get(WatchSaleStage.PROCESSING) ?? 0);
+        const serviceCounts = new Map(
+            serviceStageGroups.map((item) => [item.serviceStage, item._count._all]),
+        );
+        const serviceCount = serviceCounts.get("IN_SERVICE") ?? 0;
+        const mediaProcessingCount = Math.max(0, total - missingImageCount - mediaApprovedCount);
+        const readinessComplete = Math.max(
+            0,
+            total - missingImageCount - readinessNoContent - readinessNoPrice,
+        );
+        const unsoldTotal = agingUnderSeven + agingSevenToFourteen + agingFourteenToThirty + agingOverThirty;
         const trend = Array.from({ length: 12 }, (_, index) => {
             const day = new Date(twelveDaysAgo);
             day.setDate(day.getDate() + index);
@@ -192,6 +237,47 @@ const getCachedWatchListDashboard = unstable_cache(
                     { key: "hold", label: "Giữ hàng", value: hold, tone: "amber" },
                 ],
             },
+            breakdowns: {
+                "watch-media": {
+                    label: "Tình trạng Media",
+                    total,
+                    items: [
+                        { key: "approved", label: "Đã duyệt ảnh", value: mediaApprovedCount, tone: "emerald" },
+                        { key: "processing", label: "Đang xử lý", value: mediaProcessingCount, tone: "blue" },
+                        { key: "missing", label: "Chưa có ảnh", value: missingImageCount, tone: "amber" },
+                    ],
+                },
+                "watch-service": {
+                    label: "Tình trạng Service",
+                    total,
+                    items: [
+                        { key: "not-required", label: "Không cần", value: serviceCounts.get("NOT_REQUIRED") ?? 0, tone: "slate" },
+                        { key: "pending", label: "Chờ xử lý", value: serviceCounts.get("PENDING") ?? 0, tone: "amber" },
+                        { key: "in-service", label: "Đang service", value: serviceCount, tone: "blue" },
+                        { key: "done", label: "Hoàn tất", value: serviceCounts.get("DONE") ?? 0, tone: "emerald" },
+                    ],
+                },
+                "watch-readiness": {
+                    label: "Mức độ hoàn thiện",
+                    total,
+                    items: [
+                        { key: "complete", label: "Đủ dữ liệu", value: readinessComplete, tone: "emerald" },
+                        { key: "no-price", label: "Thiếu giá", value: readinessNoPrice, tone: "violet" },
+                        { key: "no-content", label: "Thiếu nội dung", value: readinessNoContent, tone: "blue" },
+                        { key: "no-image", label: "Thiếu hình ảnh", value: missingImageCount, tone: "amber" },
+                    ],
+                },
+                "watch-aging": {
+                    label: "Tuổi tồn Watch chưa bán",
+                    total: unsoldTotal,
+                    items: [
+                        { key: "under-7", label: "Dưới 7 ngày", value: agingUnderSeven, tone: "emerald" },
+                        { key: "7-14", label: "7–14 ngày", value: agingSevenToFourteen, tone: "blue" },
+                        { key: "14-30", label: "14–30 ngày", value: agingFourteenToThirty, tone: "amber" },
+                        { key: "over-30", label: "Trên 30 ngày", value: agingOverThirty, tone: "rose" },
+                    ],
+                },
+            },
             activities: {
                 label: "Hoạt động gần đây",
                 items: recentEvents.map((event) => {
@@ -219,7 +305,7 @@ const getCachedWatchListDashboard = unstable_cache(
             },
         };
     },
-    ["watch-list-dashboard-v8"],
+    ["watch-list-dashboard-v9"],
     { revalidate: 60 },
 );
 

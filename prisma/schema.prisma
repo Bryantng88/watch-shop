@@ -1151,6 +1151,8 @@ model Watch {
   isImageDownloaded   Boolean         @default(false)
   isContentDownloaded Boolean         @default(false)
   notes               String?
+  duplicateConfirmedAt       DateTime? @db.Timestamptz(6)
+  duplicateConfirmedByUserId String?
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @db.Timestamptz(6)
@@ -1171,6 +1173,7 @@ model Watch {
   @@index([siteChannel])
   @@index([stockStage])
   @@index([specStatus])
+  @@index([duplicateConfirmedAt])
 }
 
 model WatchContent {

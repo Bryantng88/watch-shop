@@ -22,6 +22,7 @@ export { NotificationDispatchResultSchema } from './NotificationDispatch.result'
 export { NotificationChannelDeliveryResultSchema } from './NotificationChannelDelivery.result';
 export { NotificationRecipientGroupResultSchema } from './NotificationRecipientGroup.result';
 export { BusinessEventLogResultSchema } from './BusinessEventLog.result';
+export { ProjectionRecordResultSchema } from './ProjectionRecord.result';
 export { OrderResultSchema } from './Order.result';
 export { OrderItemResultSchema } from './OrderItem.result';
 export { PartVariantSpecResultSchema } from './PartVariantSpec.result';

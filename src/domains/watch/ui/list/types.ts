@@ -168,6 +168,7 @@ export type WatchListFilters = {
     priceMin?: string | number;
     priceMax?: string | number;
     quickFilter?: string;
+    duplicateScope?: "ACTIVE" | "DUPLICATE";
     sort?: string;
     page?: number;
     pageSize?: number;

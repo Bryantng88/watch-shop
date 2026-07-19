@@ -76,6 +76,10 @@ type CacheItem<T> = { expiresAt: number; value: T | Promise<T> };
 const COUNT_CACHE_TTL_MS = 30_000;
 const countCache = new Map<string, CacheItem<unknown>>();
 
+export function invalidateWatchListCountCache() {
+  countCache.clear();
+}
+
 function stableStringify(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
@@ -113,6 +117,7 @@ function buildCountCacheKey(name: string, input: NormalizedWatchListInput, extra
     hasImages: input.hasImages ?? "",
     saleStage: input.saleStage ?? "",
     opsStage: input.opsStage ?? "",
+    duplicateScope: input.duplicateScope ?? "ACTIVE",
   };
 
   return `${name}:${stableStringify(baseInput)}:${stableStringify(extra ?? {})}`;

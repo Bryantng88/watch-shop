@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { ProjectionRecordOrderByWithRelationInputObjectSchema as ProjectionRecordOrderByWithRelationInputObjectSchema } from './objects/ProjectionRecordOrderByWithRelationInput.schema';
+import { ProjectionRecordWhereInputObjectSchema as ProjectionRecordWhereInputObjectSchema } from './objects/ProjectionRecordWhereInput.schema';
+import { ProjectionRecordWhereUniqueInputObjectSchema as ProjectionRecordWhereUniqueInputObjectSchema } from './objects/ProjectionRecordWhereUniqueInput.schema';
+import { ProjectionRecordCountAggregateInputObjectSchema as ProjectionRecordCountAggregateInputObjectSchema } from './objects/ProjectionRecordCountAggregateInput.schema';
+
+export const ProjectionRecordCountSchema: z.ZodType<Prisma.ProjectionRecordCountArgs> = z.object({ orderBy: z.union([ProjectionRecordOrderByWithRelationInputObjectSchema, ProjectionRecordOrderByWithRelationInputObjectSchema.array()]).optional(), where: ProjectionRecordWhereInputObjectSchema.optional(), cursor: ProjectionRecordWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), ProjectionRecordCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.ProjectionRecordCountArgs>;
+
+export const ProjectionRecordCountZodSchema = z.object({ orderBy: z.union([ProjectionRecordOrderByWithRelationInputObjectSchema, ProjectionRecordOrderByWithRelationInputObjectSchema.array()]).optional(), where: ProjectionRecordWhereInputObjectSchema.optional(), cursor: ProjectionRecordWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), ProjectionRecordCountAggregateInputObjectSchema ]).optional() }).strict();

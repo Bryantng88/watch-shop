@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Camera, ChevronDown, Images } from "lucide-react";
+import { ArchiveRestore, Camera, ChevronDown, Images, Settings2 } from "lucide-react";
 
 type Props = {
     selectedCount: number;
@@ -11,6 +11,10 @@ type Props = {
     submittingMediaReview?: boolean;
     onRequestPhotoshoot?: () => void;
     onRequestMediaReview?: () => void;
+    onCustomizeDashboard?: () => void;
+    showSelectionActions?: boolean;
+    duplicateView?: boolean;
+    onToggleDuplicateView?: () => void;
 };
 
 export default function WatchListToolbar({
@@ -21,6 +25,10 @@ export default function WatchListToolbar({
     submittingMediaReview = false,
     onRequestPhotoshoot,
     onRequestMediaReview,
+    onCustomizeDashboard,
+    showSelectionActions = true,
+    duplicateView = false,
+    onToggleDuplicateView,
 }: Props) {
     const canRequestPhotoshoot = selectedCount > 0 && photoshootEligibleCount > 0;
     const canRequestMediaReview = selectedCount > 0 && mediaReviewEligibleCount > 0;
@@ -44,6 +52,11 @@ export default function WatchListToolbar({
                     <h1 className="text-[26px] font-semibold tracking-[-0.035em] text-slate-950">
                         Danh sách watch
                     </h1>
+                    {duplicateView ? (
+                        <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                            Đang xem hàng chờ trùng
+                        </span>
+                    ) : null}
                 </div>
 
                 <p className="mt-1.5 text-[13px] text-slate-500">
@@ -51,9 +64,25 @@ export default function WatchListToolbar({
                 </p>
             </div>
 
-            {selectedCount > 0 ? (
             <div className="flex shrink-0 flex-wrap items-center gap-3 self-start">
-                <div className="relative">
+                <button
+                    type="button"
+                    onClick={onToggleDuplicateView}
+                    className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                    <ArchiveRestore className="h-4 w-4" />
+                    {duplicateView ? "Về danh sách Watch" : "Watch trùng"}
+                </button>
+                <button
+                    type="button"
+                    onClick={onCustomizeDashboard}
+                    className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                    <Settings2 className="h-4 w-4" />
+                    Tùy chỉnh dashboard
+                </button>
+
+                {showSelectionActions && selectedCount > 0 ? <div className="relative">
                     <button
                         type="button"
                         onClick={() => setIsActionMenuOpen((value) => !value)}
@@ -110,17 +139,16 @@ export default function WatchListToolbar({
                             </button>
                         </div>
                     ) : null}
-                </div>
-                <div className="inline-flex h-12 items-center gap-3 rounded-2xl bg-slate-50 px-4">
+                </div> : null}
+                {showSelectionActions && selectedCount > 0 ? <div className="inline-flex h-12 items-center gap-3 rounded-2xl bg-slate-50 px-4">
                     <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">
                         Đã chọn
                     </div>
                     <div className="text-xl font-semibold leading-none text-slate-950">
                         {selectedCount}
                     </div>
-                </div>
+                </div> : null}
             </div>
-            ) : null}
         </div>
     );
 }

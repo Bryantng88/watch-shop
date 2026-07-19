@@ -337,7 +337,11 @@ function partialApprovedWhere(): Prisma.WatchWhereInput {
 export function buildWatchListBaseWhere(
     input: WatchListFilters,
 ): Prisma.WatchWhereInput {
-    const and: Prisma.WatchWhereInput[] = [];
+    const and: Prisma.WatchWhereInput[] = [
+        input.duplicateScope === "DUPLICATE"
+            ? { duplicateConfirmedAt: { not: null } }
+            : { duplicateConfirmedAt: null },
+    ];
 
     if (input.q?.trim()) {
         const q = input.q.trim();

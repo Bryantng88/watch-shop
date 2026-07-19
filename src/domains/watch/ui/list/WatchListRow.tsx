@@ -3,12 +3,15 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import {
+    AlertCircle,
     BadgeCheck,
     Eye,
     Hammer,
     HandCoins,
     Handshake,
     ImageIcon,
+    ImagePlus,
+    CopyX,
     Lock,
     Pencil,
     RotateCcw,
@@ -43,6 +46,11 @@ type Props = {
     onEdit?: (row: WatchRow) => void;
     onDelete?: (row: WatchRow) => void;
     onService?: (row: WatchRow) => void;
+    onMedia?: (row: WatchRow) => void;
+    mediaSubmitting?: boolean;
+    onConfirmDuplicate?: (row: WatchRow) => void;
+    duplicateSubmitting?: boolean;
+    onRestoreDuplicate?: (row: WatchRow) => void;
     onQuickOrder?: (row: WatchRow) => void;
     onConsign?: (row: WatchRow) => void;
     onBuyBack?: (row: WatchRow) => void;
@@ -252,6 +260,11 @@ export default function WatchListRow({
     onEdit,
     onDelete,
     onService,
+    onMedia,
+    mediaSubmitting = false,
+    onConfirmDuplicate,
+    duplicateSubmitting = false,
+    onRestoreDuplicate,
     onQuickOrder,
     onConsign,
     onBuyBack,
@@ -396,6 +409,13 @@ export default function WatchListRow({
             icon: <Hammer className="h-4 w-4" />,
             onClick: onService,
         },
+        onMedia && {
+            key: "media-space",
+            label: "Đưa vào Space Media",
+            icon: <ImagePlus className="h-4 w-4" />,
+            onClick: onMedia,
+            disabled: mediaSubmitting,
+        },
         onConsign &&
         !isLockedForQuickOrder && {
             key: "consign",
@@ -410,6 +430,22 @@ export default function WatchListRow({
             icon: <RotateCcw className="h-4 w-4" />,
             separatorBefore: true,
             onClick: onBuyBack,
+        },
+        onConfirmDuplicate && {
+            key: "confirm-duplicate",
+            label: "Xác nhận trùng",
+            icon: <CopyX className="h-4 w-4" />,
+            onClick: onConfirmDuplicate,
+            disabled: duplicateSubmitting,
+            separatorBefore: true,
+        },
+        onRestoreDuplicate && {
+            key: "restore-duplicate",
+            label: "Đưa lại danh sách Watch",
+            icon: <RotateCcw className="h-4 w-4" />,
+            onClick: onRestoreDuplicate,
+            disabled: duplicateSubmitting,
+            separatorBefore: true,
         },
         onDelete && {
             key: "delete",

@@ -57,6 +57,7 @@ function buildWatchListInput(req: NextRequest) {
         pricePreset: firstValue(params, "pricePreset"),
         priceMin: firstValue(params, "priceMin"),
         priceMax: firstValue(params, "priceMax"),
+        duplicateScope: firstValue(params, "duplicates") === "1" ? "DUPLICATE" as const : "ACTIVE" as const,
 
         sort: firstValue(params, "sort") || "updatedDesc",
         page: toPositiveInt(firstValue(params, "page"), 1),

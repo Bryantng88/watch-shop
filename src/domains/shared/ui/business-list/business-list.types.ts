@@ -60,6 +60,11 @@ export type BusinessListDashboardData = {
         total: number;
         items: BusinessListBreakdownItem[];
     };
+    breakdowns?: Record<string, {
+        label: string;
+        total: number;
+        items: BusinessListBreakdownItem[];
+    }>;
     activities?: {
         label: string;
         items: BusinessListActivityItem[];
@@ -70,3 +75,13 @@ export type BusinessListDashboardView = {
     key: string;
     label: string;
 };
+
+export type BusinessListDashboardWidgetKey =
+    | "overview"
+    | "value-trend"
+    | "status-breakdown"
+    | "recent-activity"
+    | "watch-media"
+    | "watch-service"
+    | "watch-readiness"
+    | "watch-aging";

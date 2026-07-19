@@ -21,6 +21,8 @@ export const WatchAggregateResultSchema = z.object({  _count: z.object({
     isImageDownloaded: z.number(),
     isContentDownloaded: z.number(),
     notes: z.number(),
+    duplicateConfirmedAt: z.number(),
+    duplicateConfirmedByUserId: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
     product: z.number(),
@@ -41,6 +43,8 @@ export const WatchAggregateResultSchema = z.object({  _count: z.object({
     serialNumber: z.string().nullable(),
     yearText: z.string().nullable(),
     notes: z.string().nullable(),
+    duplicateConfirmedAt: z.date().nullable(),
+    duplicateConfirmedByUserId: z.string().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable()
   }).nullable().optional(),
@@ -54,6 +58,8 @@ export const WatchAggregateResultSchema = z.object({  _count: z.object({
     serialNumber: z.string().nullable(),
     yearText: z.string().nullable(),
     notes: z.string().nullable(),
+    duplicateConfirmedAt: z.date().nullable(),
+    duplicateConfirmedByUserId: z.string().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable()
   }).nullable().optional()});

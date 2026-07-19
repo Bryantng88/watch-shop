@@ -73,11 +73,10 @@ function withTimeout<T>(work: Promise<T>, timeoutMs: number, message: string) {
 }
 
 export default function WatchWorkbenchClient({
-    detail,
-    serviceHistory = [],
-    tradeHistory,
+    projection,
     permissions,
 }: WatchWorkbenchProps) {
+    const { detail, service: serviceProjection, tradeHistory } = projection;
     const router = useRouter();
     const dialog = useAppDialog();
     const progress = useAppProgress();
@@ -117,8 +116,8 @@ export default function WatchWorkbenchClient({
 
         setSaving(true);
         progress.show({
-            title: "Dang luu Watch Workbench",
-            message: "He thong dang luu domain data va phat event cho consumer xu ly.",
+            title: "Đang lưu Watch Workbench",
+            message: "Hệ thống đang lưu dữ liệu domain và phát event cho consumer xử lý.",
         });
 
             try {
@@ -148,8 +147,8 @@ export default function WatchWorkbenchClient({
 
         setSaving(true);
         progress.show({
-            title: "Dang luu gia ban",
-            message: "He thong chi cap nhat pricing va emit event gia, khong reload toan bo watch.",
+            title: "Đang lưu giá bán",
+            message: "Hệ thống chỉ cập nhật pricing và phát event giá, không tải lại toàn bộ watch.",
         });
 
         try {
@@ -161,7 +160,7 @@ export default function WatchWorkbenchClient({
                     sku: values.header.sku,
                 }),
                 10000,
-                "Luu gia ban qua lau. He thong da huy trang thai loading, vui long thu lai.",
+                "Lưu giá bán quá lâu. Hệ thống đã hủy trạng thái loading, vui lòng thử lại.",
             );
 
             setSavedValues((current) => ({
@@ -173,15 +172,15 @@ export default function WatchWorkbenchClient({
             }));
 
             notify.success({
-                title: result.changedFields.length ? "Da luu gia ban" : "Gia ban khong doi",
+                title: result.changedFields.length ? "Đã lưu giá bán" : "Giá bán không đổi",
                 message: result.changedFields.length
-                    ? "Pricing da duoc cap nhat rieng, khong refresh watch detail."
-                    : "Khong co thay doi pricing moi can ghi nhan.",
+                    ? "Pricing đã được cập nhật riêng, không refresh Watch Detail."
+                    : "Không có thay đổi pricing mới cần ghi nhận.",
             });
         } catch (error) {
             notify.error({
-                title: "Khong luu duoc gia ban",
-                message: error instanceof Error ? error.message : "Co loi khi luu pricing.",
+                title: "Không lưu được giá bán",
+                message: error instanceof Error ? error.message : "Có lỗi khi lưu pricing.",
             });
         } finally {
             progress.hide();
@@ -213,8 +212,8 @@ export default function WatchWorkbenchClient({
 
             setMediaWorkspaceOpening(true);
             progress.show({
-                title: "Dang dua vao WP Media",
-                message: "He thong dang tao hoac cap nhat item Media Processing cho watch nay.",
+                title: "Đang đưa vào WP Media",
+                message: "Hệ thống đang tạo hoặc cập nhật item Media Processing cho watch này.",
             });
             try {
                 const result = await markWatchMediaAssetAttachedFromWatchAction({
@@ -253,8 +252,8 @@ export default function WatchWorkbenchClient({
 
         setMediaWorkspaceOpening(true);
         progress.show({
-            title: "Dang mo Media Workspace",
-            message: "He thong dang chuyen sang man hinh xu ly anh.",
+            title: "Đang mở Media Workspace",
+            message: "Hệ thống đang chuyển sang màn hình xử lý ảnh.",
         });
         router.push(mediaWorkspaceHref);
         window.setTimeout(() => {
@@ -270,6 +269,11 @@ export default function WatchWorkbenchClient({
                 values={values}
                 permissions={permissions}
                 onOpenMediaWorkspace={openMediaWorkspace}
+                onOpenPricing={() => {
+                    setActiveSection("pricing");
+                    document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+                pricingDirty={stableStringify(values.pricing) !== stableStringify(savedValues.pricing)}
                 openingMediaWorkspace={mediaWorkspaceOpening}
             />
 
@@ -322,7 +326,7 @@ export default function WatchWorkbenchClient({
                         canViewSensitivePrice={permissions.canViewSensitivePrice}
                     />
                     <ServiceCard
-                        serviceHistory={serviceHistory}
+                        projection={serviceProjection}
                         productId={values.productId}
                         title={title}
                         sku={values.header.sku}

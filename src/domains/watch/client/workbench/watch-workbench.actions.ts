@@ -51,7 +51,7 @@ export async function saveWatchWorkbenchPricingAction(input: {
 }) {
     const auth = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
     if (!authHasRole(auth, "ADMIN")) {
-        throw new Error("Ban khong co quyen cap nhat gia watch.");
+        throw new Error("Bạn không có quyền cập nhật giá watch.");
     }
 
     const productId = String(input.productId ?? "").trim();

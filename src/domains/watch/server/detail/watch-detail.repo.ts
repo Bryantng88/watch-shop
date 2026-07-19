@@ -340,3 +340,31 @@ export async function getWatchServiceHistory(db: DB, productId: string) {
     updatedAt: item.updatedAt,
   }));
 }
+
+export async function getWatchServiceProjectionSource(db: DB, productId: string) {
+  const client = dbOrTx(db);
+
+  return client.serviceRequest.findMany({
+    where: { productId },
+    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+    select: {
+      id: true,
+      refNo: true,
+      status: true,
+      notes: true,
+      updatedAt: true,
+      vendor: { select: { name: true } },
+      technicalIssue: {
+        orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+        select: {
+          id: true,
+          summary: true,
+          note: true,
+          executionStatus: true,
+          isConfirmed: true,
+          updatedAt: true,
+        },
+      },
+    },
+  });
+}

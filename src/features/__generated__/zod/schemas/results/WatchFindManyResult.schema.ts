@@ -22,6 +22,8 @@ export const WatchFindManyResultSchema = z.object({
   isImageDownloaded: z.boolean(),
   isContentDownloaded: z.boolean(),
   notes: z.string().optional(),
+  duplicateConfirmedAt: z.date().optional(),
+  duplicateConfirmedByUserId: z.string().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
   product: z.unknown(),

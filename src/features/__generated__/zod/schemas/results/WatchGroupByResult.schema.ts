@@ -13,6 +13,8 @@ export const WatchGroupByResultSchema = z.array(z.object({
   isImageDownloaded: z.boolean(),
   isContentDownloaded: z.boolean(),
   notes: z.string(),
+  duplicateConfirmedAt: z.date(),
+  duplicateConfirmedByUserId: z.string(),
   createdAt: z.date(),
   updatedAt: z.date(),
   _count: z.object({
@@ -37,6 +39,8 @@ export const WatchGroupByResultSchema = z.array(z.object({
     isImageDownloaded: z.number(),
     isContentDownloaded: z.number(),
     notes: z.number(),
+    duplicateConfirmedAt: z.number(),
+    duplicateConfirmedByUserId: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
     product: z.number(),
@@ -57,6 +61,8 @@ export const WatchGroupByResultSchema = z.array(z.object({
     serialNumber: z.string().nullable(),
     yearText: z.string().nullable(),
     notes: z.string().nullable(),
+    duplicateConfirmedAt: z.date().nullable(),
+    duplicateConfirmedByUserId: z.string().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable()
   }).nullable().optional(),
@@ -70,6 +76,8 @@ export const WatchGroupByResultSchema = z.array(z.object({
     serialNumber: z.string().nullable(),
     yearText: z.string().nullable(),
     notes: z.string().nullable(),
+    duplicateConfirmedAt: z.date().nullable(),
+    duplicateConfirmedByUserId: z.string().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable()
   }).nullable().optional()

@@ -1,6 +1,13 @@
 export { default as AsyncBusinessListDashboard } from "./AsyncBusinessListDashboard";
 export { default as BusinessListDashboard } from "./BusinessListDashboard";
 export { BusinessListDashboardSkeleton } from "./BusinessListDashboard";
+export {
+    BUSINESS_LIST_DASHBOARD_WIDGET_REGISTRY,
+    OverviewDashboardWidget,
+    RecentActivityDashboardWidget,
+    StatusBreakdownDashboardWidget,
+    ValueTrendDashboardWidget,
+} from "./widgets/BusinessListDashboardWidgets";
 export { default as BusinessListShell } from "./BusinessListShell";
 export { default as BusinessListFilterBar } from "../filter-bar/FilterBar";
 export type {
@@ -9,5 +16,6 @@ export type {
     BusinessListDashboardData,
     BusinessListDashboardTone,
     BusinessListDashboardView,
+    BusinessListDashboardWidgetKey,
     BusinessListMetric,
 } from "./business-list.types";

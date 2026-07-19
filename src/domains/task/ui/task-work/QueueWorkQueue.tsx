@@ -1302,6 +1302,8 @@ export function QueueWorkQueue({
 
     const pendingKey = `${queueItem.id}:${actionKey}`;
     const isRecallAction = actionKey === "recall-media";
+    const isPhotoshootCompletion =
+      workspaceWorkTypeKey === "photography" && actionKey === "mark-done";
     let recallSteps: AppProgressStep[] = [
       {
         id: "recall",
@@ -1332,6 +1334,36 @@ export function QueueWorkQueue({
       );
       appProgress.update({ steps: recallSteps });
     };
+    let photoshootSteps: AppProgressStep[] = [
+      {
+        id: "complete",
+        label: "Hoàn tất Photoshoot",
+        detail: "Đang ghi nhận kết quả chụp ảnh của watch.",
+        status: "running",
+      },
+      {
+        id: "media-workspace",
+        label: "Đồng bộ Space Media",
+        detail: "Chờ chuyển watch sang Workspace Xử lý Media.",
+        status: "pending",
+      },
+      {
+        id: "refresh",
+        label: "Làm mới Workspace",
+        detail: "Chờ cập nhật lại danh sách Photoshoot Items.",
+        status: "pending",
+      },
+    ];
+    const setPhotoshootStep = (
+      stepId: string,
+      status: AppProgressStep["status"],
+      detail?: string,
+    ) => {
+      photoshootSteps = photoshootSteps.map((step) =>
+        step.id === stepId ? { ...step, status, detail: detail ?? step.detail } : step,
+      );
+      appProgress.update({ steps: photoshootSteps });
+    };
 
     setOpenActionMenuId(null);
     setPendingId(pendingKey);
@@ -1342,18 +1374,26 @@ export function QueueWorkQueue({
         message: "He thong dang dua item ve lai Workspace xu ly media.",
         steps: recallSteps,
       });
+    } else if (isPhotoshootCompletion) {
+      appProgress.show({
+        title: "Đang hoàn tất Photoshoot",
+        message: `${queueItem.preview.title || queueItem.preview.ref || "Watch"} đang được chuyển sang bước xử lý media.`,
+        steps: photoshootSteps,
+      });
     }
 
     startTransition(async () => {
-      let hideProgress = isRecallAction;
+      let hideProgress = isRecallAction || isPhotoshootCompletion;
       let hideDelay = 2200;
       let elapsedSeconds = 0;
-      const heartbeat = isRecallAction
+      const heartbeat = isRecallAction || isPhotoshootCompletion
         ? window.setInterval(() => {
           elapsedSeconds += 6;
           appProgress.update({
-            message: `Server dang thu hoi media va cap nhat workspace... (${elapsedSeconds}s)`,
-            steps: recallSteps,
+            message: isRecallAction
+              ? `Server đang thu hồi media và cập nhật Workspace... (${elapsedSeconds}s)`
+              : `Server đang hoàn tất Photoshoot và đồng bộ Space Media... (${elapsedSeconds}s)`,
+            steps: isRecallAction ? recallSteps : photoshootSteps,
           });
         }, 6000)
         : null;
@@ -1371,6 +1411,11 @@ export function QueueWorkQueue({
           setRecallStep("workspace", "running");
           setRecallStep("workspace", "done", "Workspace da ghi nhan trang thai moi.");
           setRecallStep("refresh", "running", "Dang lam moi danh sach.");
+        } else if (isPhotoshootCompletion) {
+          setPhotoshootStep("complete", "done", "Photoshoot đã được hoàn tất.");
+          setPhotoshootStep("media-workspace", "running", "Đang chuyển watch sang Workspace Xử lý Media.");
+          setPhotoshootStep("media-workspace", "done", "Space Media đã nhận trạng thái mới.");
+          setPhotoshootStep("refresh", "running", "Đang làm mới danh sách Photoshoot Items.");
         }
         if (isRecallAction) {
           setRecallStep("refresh", "done", "Danh sach da duoc lam moi.");
@@ -1378,9 +1423,16 @@ export function QueueWorkQueue({
             message: "Thu hoi media hoan tat.",
             steps: recallSteps,
           });
+        } else if (isPhotoshootCompletion) {
+          setPhotoshootStep("refresh", "done", "Workspace đã được cập nhật.");
+          appProgress.update({
+            title: "Hoàn tất Photoshoot thành công",
+            message: "Watch đã được đồng bộ sang bước Xử lý Media.",
+            steps: photoshootSteps,
+          });
         }
         setActionError(null);
-        window.setTimeout(() => router.refresh(), isRecallAction ? 350 : 0);
+        window.setTimeout(() => router.refresh(), isRecallAction || isPhotoshootCompletion ? 350 : 0);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Khong the cap nhat workflow.";
         if (isRecallAction) {
@@ -1392,6 +1444,18 @@ export function QueueWorkQueue({
             title: "Thu hoi media that bai",
             message,
             steps: recallSteps,
+          });
+          hideProgress = false;
+          window.setTimeout(() => appProgress.hide(), hideDelay);
+        } else if (isPhotoshootCompletion) {
+          hideDelay = 5000;
+          photoshootSteps = photoshootSteps.map((step) =>
+            step.status === "running" ? { ...step, status: "error", detail: message } : step,
+          );
+          appProgress.update({
+            title: "Không thể hoàn tất Photoshoot",
+            message,
+            steps: photoshootSteps,
           });
           hideProgress = false;
           window.setTimeout(() => appProgress.hide(), hideDelay);

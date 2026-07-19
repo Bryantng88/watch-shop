@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Plus } from "lucide-react";
 
 import PaymentWorkspace, {
     type PaymentOwner,
@@ -10,13 +12,22 @@ import PaymentWorkspace, {
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import AcquisitionEditModal from "@/domains/acquisition/ui/edit/AcquisitionEditModal";
+import BusinessListDashboard from "@/domains/shared/ui/business-list/BusinessListDashboard";
+import BusinessListShell from "@/domains/shared/ui/business-list/BusinessListShell";
+import type { BusinessListDashboardWidgetKey } from "@/domains/shared/ui/business-list";
 
 import type { AcquisitionListClientProps } from "../ui/list";
 import {
-    AcquisitionListTabs,
     AcquisitionListToolbar,
     AcquisitionListTable,
 } from "../ui/list";
+
+const ACQUISITION_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = [
+    "overview",
+    "value-trend",
+    "status-breakdown",
+    "recent-activity",
+];
 
 function getBulkPostErrorMessage(data: any) {
     if (!data) return "Có lỗi khi duyệt phiếu!";
@@ -30,8 +41,8 @@ function getBulkPostErrorMessage(data: any) {
     return data?.error || "Có lỗi khi duyệt phiếu!";
 }
 
-function isSelectable(item: { status: string }) {
-    return String(item.status).toUpperCase() !== "POSTED";
+function isSelectable(item: { approvalStatus: string }) {
+    return String(item.approvalStatus).toUpperCase() !== "POSTED";
 }
 
 export default function AcquisitionListClient(props: AcquisitionListClientProps) {
@@ -228,7 +239,8 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
     }
 
     return (
-        <div className="mx-auto w-full max-w-[1360px] min-w-0 space-y-5 px-4 py-6 lg:px-5 xl:px-6">
+        <BusinessListShell
+            header={
             <div className="flex flex-col gap-4 px-1 py-1 md:flex-row md:items-start md:justify-between">
                 <div className="min-w-0">
                     <h1 className="text-[30px] font-semibold tracking-[-0.035em] text-slate-950">
@@ -248,15 +260,29 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
                             {selectedIds.length}
                         </div>
                     </div>
+                    <Link
+                        href="/admin/acquisitions/new"
+                        className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Tạo phiếu nhập
+                    </Link>
                 </div>
             </div>
-
-            <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-                <AcquisitionListTabs counts={props.counts} />
-                <div className="mt-5">
-                    <AcquisitionListToolbar vendors={props.vendors} />
-                </div>
-            </div>
+            }
+            dashboard={<BusinessListDashboard
+                data={props.dashboardData}
+                widgets={ACQUISITION_DASHBOARD_WIDGETS}
+                storageKey="admin-dashboard:acquisition-list"
+            />}
+            filters={
+                <AcquisitionListToolbar
+                    vendors={props.vendors}
+                    total={props.total}
+                    visibleCount={props.items.length}
+                />
+            }
+        >
 
             {selectedIds.length > 0 ? (
                 <div className="flex items-center gap-4 rounded-2xl border border-blue-200 bg-blue-50 p-3">
@@ -317,6 +343,6 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
                     onCancelPayment={cancelAcquisitionPayment}
                 />
             ) : null}
-        </div>
+        </BusinessListShell>
     );
 }

@@ -1,5 +1,8 @@
 //import { getAdminAcquisitionList } from "./_server/core/acquisition.service";
-import { getAdminAcquisitionList } from "@/domains/acquisition/server";
+import {
+    getAcquisitionListDashboard,
+    getAcquisitionListProjection,
+} from "@/domains/acquisition/server";
 //import AcquisitionListClient from "./_client/ListAcq";
 import AcquisitionListClient from "@/domains/acquisition/client/AcquisitionListClient";
 import { requirePermission } from "@/server/auth/requirePermission";
@@ -44,9 +47,10 @@ export default async function AcquisitionListPage({
         pageSize: firstValue(resolvedSearchParams.pageSize),
     });
 
-    const [result, vendors] = await Promise.all([
-        getAdminAcquisitionList(input),
+    const [result, vendors, dashboardData] = await Promise.all([
+        getAcquisitionListProjection(input),
         getListVendors(),
+        getAcquisitionListDashboard(),
     ]);
 
     const vendorOptions = (vendors ?? []).map((vendor: any) => ({
@@ -58,6 +62,7 @@ export default async function AcquisitionListPage({
         <AcquisitionListClient
             {...serialize(result)}
             vendors={serialize(vendorOptions)}
+            dashboardData={serialize(dashboardData)}
         />
     );
 }

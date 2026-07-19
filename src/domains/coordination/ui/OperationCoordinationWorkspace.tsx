@@ -17,7 +17,6 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  CalendarDays,
   Camera,
   CheckCircle2,
   ChevronRight,
@@ -59,17 +58,20 @@ import {
 } from "@/domains/shared/feedback/AppProgressProvider";
 import { repairVietnameseMojibake } from "@/domains/shared/text/vietnamese-mojibake";
 import BusinessListDashboard from "@/domains/shared/ui/business-list/BusinessListDashboard";
-import type { BusinessListDashboardData } from "@/domains/shared/ui/business-list";
+import type { BusinessListDashboardData, BusinessListDashboardWidgetKey } from "@/domains/shared/ui/business-list";
 import {
   SpaceViewFooterTip,
   SpaceViewPage,
 } from "@/domains/shared/ui/space/SpaceViewShell";
+import SpaceFilterBar, { SpaceViewSwitch } from "@/domains/shared/ui/space/SpaceFilterBar";
 import type { CoordinationDashboardDTO } from "../server/coordination-dashboard.types";
 import { isCoreWorkspaceBlueprint } from "@/domains/task/shared/workspace-flow-policy";
 
 type Props = {
   data: CoordinationDashboardDTO;
 };
+
+const SPACE_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = ["overview", "value-trend", "status-breakdown", "recent-activity"];
 
 function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -86,12 +88,6 @@ function formatDateTime(value: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
-}
-
-function formatMoneyCompact(value?: number | null) {
-  const amount = Number(value ?? 0);
-  if (!Number.isFinite(amount) || amount <= 0) return "0đ";
-  return `${Math.round(amount).toLocaleString("vi-VN")}đ`;
 }
 
 function initials(label: string) {
@@ -148,38 +144,12 @@ function actionLabel(value: string) {
   return cleanValue;
 }
 
-function viewConfigLabel(value: string) {
-  const labels: Record<string, string> = {
-    "Technical Service Space": "Không gian kỹ thuật dịch vụ",
-    "Media Production Space": "Không gian sản xuất Media",
-  };
-
-  return labels[displayText(value)] ?? displayText(value);
-}
-
 function modeLabel(mode: CoordinationDashboardDTO["viewConfig"]["modes"][number]) {
   if (mode.key === "media-production-flow") return "Luồng sản xuất Media";
   if (mode.key === "sr-cases") return "Hồ sơ yêu cầu dịch vụ";
   if (mode.key === "technical-issue-flow") return "Bàn xử lý kỹ thuật";
   if (mode.key === "workspace-index") return "Danh sách Workspace";
   return displayText(mode.label);
-}
-
-function modeDescription(mode: CoordinationDashboardDTO["viewConfig"]["modes"][number]) {
-  if (mode.key === "media-production-flow") {
-    return "Chụp ảnh → Xử lý Media → Đăng bài. Mỗi dòng là một Workspace theo stage của luồng.";
-  }
-  if (mode.key === "workspace-index") {
-    return "Danh sách dự phòng cho Workspace thủ công hoặc Workspace độc lập trong Space này.";
-  }
-  if (mode.key === "sr-cases") {
-    return "Mỗi dòng là một Workspace đại diện cho một yêu cầu dịch vụ đang cần theo dõi.";
-  }
-  if (mode.key === "technical-issue-flow") {
-    return "Kiểm tra → Xử lý → Hoàn tất/Theo dõi. Mỗi dòng là một Workspace theo stage kỹ thuật.";
-  }
-
-  return displayText(mode.description);
 }
 
 type SpaceCoreFlow = NonNullable<CoordinationDashboardDTO["viewConfig"]["coreFlows"]>[number];
@@ -224,63 +194,6 @@ function targetTypeLabel(value: string) {
   return labels[value] ?? value;
 }
 
-function rowModelLabel(value: string) {
-  const labels: Record<string, string> = {
-    FLOW_STAGE_WORKSPACE: "Workspace theo stage luồng",
-    CASE_WORKSPACE: "Workspace hồ sơ",
-    WORKSPACE: "Workspace",
-  };
-
-  return labels[value] ?? value;
-}
-
-function primaryTargetLabel(value: string) {
-  const labels: Record<string, string> = {
-    workspace: "Workspace",
-    businessObject: "Đối tượng nghiệp vụ",
-    stage: "Stage",
-  };
-
-  return labels[value] ?? value;
-}
-
-function workspaceKindLabel(value: string) {
-  const labels: Record<string, string> = {
-    FLOW_STAGE_WORKSPACE: "Workspace theo stage luồng",
-    CASE_WORKSPACE: "Workspace hồ sơ",
-    BENCH_WORKSPACE: "Workspace kỹ thuật",
-    STANDALONE_WORKSPACE: "Workspace độc lập",
-    INDEX_WORKSPACE: "Workspace chỉ mục",
-  };
-
-  return labels[value] ?? value;
-}
-
-function columnLabel(value: string) {
-  const labels: Record<string, string> = {
-    Workspace: "Workspace",
-    Owner: "Phụ trách",
-    Items: "Số item",
-    Feedback: "Phản hồi",
-    Updated: "Cập nhật",
-    "Last activity": "Hoạt động gần nhất",
-  };
-
-  return labels[value] ?? displayText(value);
-}
-
-function carryoverRuleText(value: string) {
-  const cleanValue = displayText(value);
-  if (cleanValue.includes("unfinished WATCH items")) {
-    return "Chuyển các item đồng hồ chưa hoàn tất đang gắn với Chụp ảnh, Xử lý Media hoặc Đăng bài. Công việc đã đăng hoặc đã kết thúc sẽ không được chuyển tồn.";
-  }
-  if (cleanValue.includes("active SERVICE_REQUEST cases") || cleanValue.includes("TECHNICAL_ISSUE items")) {
-    return "Chuyển các hồ sơ yêu cầu dịch vụ và lỗi kỹ thuật còn đang xử lý. Hồ sơ hoặc lỗi kỹ thuật đã kết thúc sẽ không được chuyển tồn.";
-  }
-
-  return cleanValue;
-}
-
 function emptyStateText(value: string, modeKey?: string) {
   if (modeKey === "WORKSPACE") return "Chưa có Workspace thủ công trong chế độ xem này.";
 
@@ -293,10 +206,6 @@ function emptyStateText(value: string, modeKey?: string) {
   }
 
   return cleanValue;
-}
-
-function terminalStatesLabel(targetType: string, states: string[]) {
-  return `${targetTypeLabel(targetType)}: bỏ qua ${states.join(", ")}`;
 }
 
 function ticketFlowStageKey(
@@ -435,28 +344,34 @@ function WorkspaceIdentityFrame({
   return <StageIconFrame stageKey={ticketFlowStageKey(ticket)} />;
 }
 
-function OwnerCell({
-  owner,
+function formatMoneyCompact(value?: number | null) {
+  const amount = Number(value ?? 0);
+  if (!Number.isFinite(amount) || amount <= 0) return "0đ";
+  return `${Math.round(amount).toLocaleString("vi-VN")}đ`;
+}
+
+function CreatorCell({
+  creator,
 }: {
-  owner: CoordinationDashboardDTO["workTickets"][number]["owner"];
+  creator: CoordinationDashboardDTO["workTickets"][number]["creator"];
 }) {
-  const src = resolveMediaPreviewSrc(owner.avatarUrl);
+  const src = resolveMediaPreviewSrc(creator.avatarUrl);
 
   return (
     <div className="text-sm">
-      <div className="text-xs font-medium text-slate-500 lg:hidden">Phụ trách</div>
+      <div className="text-xs font-medium text-slate-500 lg:hidden">Người tạo</div>
       <div className="mt-1 inline-flex min-w-0 items-center gap-2 lg:mt-0">
-        <span className={`flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-semibold ${owner.isSystem ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}>
+        <span className={`flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-semibold ${creator.isSystem ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}>
           {src ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={src} alt={owner.label} className="h-full w-full object-cover" />
-          ) : owner.isSystem ? (
+            <img src={src} alt={creator.label} className="h-full w-full object-cover" />
+          ) : creator.isSystem ? (
             "S"
           ) : (
-            initials(owner.label)
+            initials(creator.label)
           )}
         </span>
-        <span className="truncate font-medium text-slate-800">{owner.label}</span>
+        <span className="truncate font-medium text-slate-800">{creator.label}</span>
       </div>
     </div>
   );
@@ -478,6 +393,13 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [workTicketView, setWorkTicketView] = useState<"LIST" | "TI_BOARD">("LIST");
+  const [dashboardCustomizationRequest, setDashboardCustomizationRequest] = useState(0);
+  const [filterQuery, setFilterQuery] = useState("");
+  const [filterCreator, setFilterCreator] = useState("ALL");
+  const [filterWorkStatus, setFilterWorkStatus] = useState("ALL");
+  const [filterPayment, setFilterPayment] = useState("ALL");
+  const [workspacePage, setWorkspacePage] = useState(1);
+  const [workspacePageSize, setWorkspacePageSize] = useState(10);
   const [isPending, startTransition] = useTransition();
   const selectedBlueprint = useMemo(
     () =>
@@ -572,131 +494,99 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
         return left.title.localeCompare(right.title);
       });
   }, [activeCoreFlow, activeViewMode, data.workTickets, flowStageKeys]);
+  const filterFacets = useMemo(() => {
+    const creators = new Map<string, number>();
+    const result = { open: 0, feedback: 0, done: 0, unpaid: 0, paid: 0, none: 0 };
+    displayedWorkTickets.forEach((ticket) => {
+      creators.set(ticket.creator.label, (creators.get(ticket.creator.label) ?? 0) + 1);
+      const openItems = ticket.queueSummary.ready + ticket.queueSummary.review + ticket.queueSummary.feedback;
+      if (openItems > 0) result.open += 1;
+      if (ticket.queueSummary.feedback > 0) result.feedback += 1;
+      if (openItems === 0 && ticket.queueSummary.done > 0) result.done += 1;
+      const paymentStatus = ticket.paymentSummary?.status ?? "NONE";
+      if (["UNPAID", "PARTIAL"].includes(paymentStatus)) result.unpaid += 1;
+      else if (paymentStatus === "PAID") result.paid += 1;
+      else result.none += 1;
+    });
+    return { ...result, creators };
+  }, [displayedWorkTickets]);
+  const creatorFilterOptions = useMemo(() => [
+    { label: `Tất cả người tạo (${displayedWorkTickets.length})`, value: "ALL" },
+    ...Array.from(filterFacets.creators.entries())
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([creator, count]) => ({ label: `${creator} (${count})`, value: creator })),
+  ], [displayedWorkTickets.length, filterFacets.creators]);
+  const filteredWorkTickets = useMemo(() => {
+    const query = filterQuery.trim().toLocaleLowerCase("vi");
+    return displayedWorkTickets.filter((ticket) => {
+      const openItems = ticket.queueSummary.ready + ticket.queueSummary.review + ticket.queueSummary.feedback;
+      const searchable = [ticket.title, ticket.creator.label, ticket.lastActivity, ticket.identityPreview?.title, ticket.identityPreview?.ref]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase("vi");
+      if (query && !searchable.includes(query)) return false;
+      if (filterCreator !== "ALL" && ticket.creator.label !== filterCreator) return false;
+      if (filterWorkStatus === "OPEN" && openItems <= 0) return false;
+      if (filterWorkStatus === "DONE" && (openItems > 0 || ticket.queueSummary.done <= 0)) return false;
+      if (filterWorkStatus === "FEEDBACK" && ticket.queueSummary.feedback <= 0) return false;
+      const paymentStatus = ticket.paymentSummary?.status ?? "NONE";
+      if (filterPayment === "UNPAID" && !["UNPAID", "PARTIAL"].includes(paymentStatus)) return false;
+      if (filterPayment === "PAID" && paymentStatus !== "PAID") return false;
+      if (filterPayment === "NONE" && paymentStatus !== "NONE") return false;
+      return true;
+    });
+  }, [displayedWorkTickets, filterCreator, filterPayment, filterQuery, filterWorkStatus]);
+  const workspacePageCount = Math.max(1, Math.ceil(filteredWorkTickets.length / workspacePageSize));
+  const safeWorkspacePage = Math.min(workspacePage, workspacePageCount);
+  const workspacePageStart = (safeWorkspacePage - 1) * workspacePageSize;
+  const pagedWorkTickets = filteredWorkTickets.slice(workspacePageStart, workspacePageStart + workspacePageSize);
+  useEffect(() => {
+    setWorkspacePage(1);
+  }, [activeViewModeKey, filterCreator, filterPayment, filterQuery, filterWorkStatus, workspacePageSize]);
   const spaceDashboardData = useMemo<BusinessListDashboardData>(() => {
-    const queueTotals = displayedWorkTickets.reduce(
-      (totals, ticket) => {
-        totals.ready += ticket.queueSummary.ready;
-        totals.review += ticket.queueSummary.review;
-        totals.feedback += ticket.queueSummary.feedback;
-        totals.done += ticket.queueSummary.done;
-        totals.items +=
-          ticket.queueSummary.ready +
-          ticket.queueSummary.review +
-          ticket.queueSummary.feedback +
-          ticket.queueSummary.done;
-        totals.feedbackWorkspaces += ticket.feedbackCount > 0 ? 1 : 0;
-
-        const paymentStatus = ticket.paymentSummary?.status ?? "NONE";
-        if (paymentStatus !== "NONE" && paymentStatus !== "PAID") {
-          totals.unpaidWorkspaces += 1;
-          totals.unpaidAmount += Number(
-            ticket.paymentSummary?.remainingAmount ??
-              ticket.paymentSummary?.unpaidAmount ??
-              0,
-          );
-        }
-
-        return totals;
-      },
-      {
-        ready: 0,
-        review: 0,
-        feedback: 0,
-        done: 0,
-        items: 0,
-        feedbackWorkspaces: 0,
-        unpaidWorkspaces: 0,
-        unpaidAmount: 0,
-      },
-    );
-    const openItems = queueTotals.ready + queueTotals.review + queueTotals.feedback;
-    const activeWorkspaces = displayedWorkTickets.filter((ticket) => {
-      const total =
-        ticket.queueSummary.ready +
-        ticket.queueSummary.review +
-        ticket.queueSummary.feedback;
-      return total > 0;
-    }).length;
-    const activityItems = displayedWorkTickets
+    const totals = filteredWorkTickets.reduce((result, ticket) => {
+      result.ready += ticket.queueSummary.ready;
+      result.review += ticket.queueSummary.review;
+      result.feedback += ticket.queueSummary.feedback;
+      result.done += ticket.queueSummary.done;
+      if (ticket.feedbackCount > 0) result.feedbackWorkspaces += 1;
+      const paymentStatus = ticket.paymentSummary?.status ?? "NONE";
+      if (paymentStatus !== "NONE" && paymentStatus !== "PAID") {
+        result.unpaidWorkspaces += 1;
+        result.unpaidAmount += Number(ticket.paymentSummary?.remainingAmount ?? ticket.paymentSummary?.unpaidAmount ?? 0);
+      }
+      return result;
+    }, { ready: 0, review: 0, feedback: 0, done: 0, feedbackWorkspaces: 0, unpaidWorkspaces: 0, unpaidAmount: 0 });
+    const items = totals.ready + totals.review + totals.feedback + totals.done;
+    const openItems = totals.ready + totals.review + totals.feedback;
+    const activeWorkspaces = filteredWorkTickets.filter((ticket) =>
+      ticket.queueSummary.ready + ticket.queueSummary.review + ticket.queueSummary.feedback > 0,
+    ).length;
+    const activities = filteredWorkTickets
       .filter((ticket) => ticket.lastActivityAt)
       .slice()
-      .sort((left, right) =>
-        String(right.lastActivityAt ?? "").localeCompare(String(left.lastActivityAt ?? "")),
-      )
+      .sort((left, right) => String(right.lastActivityAt).localeCompare(String(left.lastActivityAt)))
       .slice(0, 3)
-      .map((ticket) => ({
-        id: ticket.id,
-        title: ticket.lastActivity || prefixedLabel("Workspace", ticket.title),
-        description: prefixedLabel("Workspace", ticket.title),
-        occurredAt: ticket.lastActivityAt,
-        href: `/admin/task-items/${ticket.id}`,
-        kind: "updated" as const,
-      }));
+      .map((ticket) => ({ id: ticket.id, title: ticket.lastActivity || ticket.title, description: prefixedLabel("Workspace", ticket.title), occurredAt: ticket.lastActivityAt, href: `/admin/task-items/${ticket.id}`, kind: "updated" as const }));
 
     return {
       periodLabel: `Tuần ${data.week.weekNumber}/${data.week.year}`,
       metrics: [
-        {
-          key: "workspaces",
-          label: "Workspace",
-          value: displayedWorkTickets.length,
-          helper: `${activeWorkspaces}`,
-          helperSuffix: "đang mở",
-          helperTone: activeWorkspaces > 0 ? "positive" : "neutral",
-        },
-        {
-          key: "open-items",
-          label: "Item mở",
-          value: openItems,
-          helper: `${queueTotals.done}`,
-          helperSuffix: "đã xong",
-          helperTone: queueTotals.done > 0 ? "positive" : "neutral",
-        },
-        {
-          key: "feedback",
-          label: "Cần phản hồi",
-          value: queueTotals.feedback,
-          helper: `${queueTotals.feedbackWorkspaces}`,
-          helperSuffix: "workspace",
-          helperTone: queueTotals.feedback > 0 ? "negative" : "neutral",
-        },
-        {
-          key: "unpaid",
-          label: "Chưa thanh toán",
-          value: queueTotals.unpaidWorkspaces,
-          helper: formatMoneyCompact(queueTotals.unpaidAmount),
-          helperTone: queueTotals.unpaidWorkspaces > 0 ? "negative" : "neutral",
-        },
+        { key: "workspaces", label: "Workspace", value: filteredWorkTickets.length, helper: `${activeWorkspaces}`, helperSuffix: "đang mở", helperTone: activeWorkspaces ? "positive" : "neutral" },
+        { key: "open-items", label: "Item mở", value: openItems, helper: `${totals.done}`, helperSuffix: "đã xong", helperTone: totals.done ? "positive" : "neutral" },
+        { key: "feedback", label: "Cần phản hồi", value: totals.feedback, helper: `${totals.feedbackWorkspaces}`, helperSuffix: "workspace", helperTone: totals.feedback ? "negative" : "neutral" },
+        { key: "unpaid", label: "Chưa thanh toán", value: totals.unpaidWorkspaces, helper: formatMoneyCompact(totals.unpaidAmount), helperTone: totals.unpaidWorkspaces ? "negative" : "neutral" },
       ],
-      inventoryValue: {
-        label: "Khối lượng xử lý",
-        value: queueTotals.items,
-        currency: "item",
-        helper: "Tổng item trong các workspace đang hiển thị.",
-        trend: [
-          queueTotals.ready,
-          queueTotals.review,
-          queueTotals.feedback,
-          queueTotals.done,
-          openItems,
-        ],
-      },
-      breakdown: {
-        label: "Theo trạng thái item",
-        total: Math.max(queueTotals.items, 1),
-        items: [
-          { key: "ready", label: "Sẵn sàng", value: queueTotals.ready, tone: "blue" },
-          { key: "review", label: "Đang xử lý", value: queueTotals.review, tone: "violet" },
-          { key: "feedback", label: "Phản hồi", value: queueTotals.feedback, tone: "amber" },
-          { key: "done", label: "Xong", value: queueTotals.done, tone: "emerald" },
-        ],
-      },
-      activities: {
-        label: "Hoạt động gần đây",
-        items: activityItems,
-      },
+      inventoryValue: { label: "Khối lượng xử lý", value: items, currency: "item", helper: "Tổng item trong các workspace đang hiển thị.", trend: [totals.ready, totals.review, totals.feedback, totals.done, openItems] },
+      breakdown: { label: "Theo trạng thái item", total: Math.max(items, 1), items: [
+        { key: "ready", label: "Sẵn sàng", value: totals.ready, tone: "blue" },
+        { key: "review", label: "Đang xử lý", value: totals.review, tone: "violet" },
+        { key: "feedback", label: "Phản hồi", value: totals.feedback, tone: "amber" },
+        { key: "done", label: "Xong", value: totals.done, tone: "emerald" },
+      ] },
+      activities: { label: "Hoạt động gần đây", items: activities },
     };
-  }, [data.week.weekNumber, data.week.year, displayedWorkTickets]);
+  }, [data.week.weekNumber, data.week.year, filteredWorkTickets]);
   const isTechnicalIssueFlowMode = activeViewMode?.key === "technical-issue-flow";
   const canShowTechnicalIssueBoard =
     isTechnicalIssueFlowMode && Boolean(data.technicalIssueBoard?.items.length);
@@ -864,9 +754,24 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
           Đang hoạt động
         </span>
       }
+      actions={
+        <button
+          type="button"
+          onClick={() => setDashboardCustomizationRequest((request) => request + 1)}
+          className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          Tùy chỉnh dashboard
+        </button>
+      }
     >
-        <BusinessListDashboard data={spaceDashboardData} />
-
+        <BusinessListDashboard
+          data={spaceDashboardData}
+          widgets={SPACE_DASHBOARD_WIDGETS}
+          storageKey="admin-dashboard:technical-space"
+          customizationRequest={dashboardCustomizationRequest}
+          showCustomizationTrigger={false}
+        />
         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
           <div className="border-b border-slate-200 px-5 py-4">
             {activeViewMode ? (
@@ -880,117 +785,59 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                       <span className="rounded-full border border-violet-200 bg-white/80 px-2.5 py-0.5 font-semibold text-violet-700">
                         {activeViewMode.key === data.viewConfig.defaultModeKey ? "Mặc định" : "View"}
                       </span>
+                      {data.viewConfig.modes.length > 1 ? (
+                        <select
+                          value={activeViewMode.key}
+                          onChange={(event) => setActiveViewModeKey(event.target.value)}
+                          className="ml-1 h-8 min-w-48 rounded-md border border-violet-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm outline-none transition focus:border-violet-300"
+                          aria-label="Chế độ xem Space"
+                        >
+                          {data.viewConfig.modes.map((mode) => (
+                            <option key={mode.key} value={mode.key}>
+                              {modeLabel(mode)}
+                            </option>
+                          ))}
+                        </select>
+                      ) : null}
                     </div>
                     <p className="mt-2 text-sm text-[#6f7a96]">
-                      {activeCoreFlow ? coreFlowDescription(activeCoreFlow) : modeDescription(activeViewMode)}
+                      {activeCoreFlow ? coreFlowDescription(activeCoreFlow) : displayText(activeViewMode.description)}
                     </p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-                    <span className="inline-flex h-9 items-center gap-2 rounded-md border border-sky-100 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm">
-                      <CalendarDays className="h-4 w-4 text-slate-400" />
-                      Tuần {data.week.weekNumber}/{data.week.year}
-                    </span>
-                    <select
-                      value={data.week.periodKey}
-                      onChange={(event) => {
-                        const option = data.filters.weekOptions.find(
-                          (item) => item.value === event.target.value,
-                        );
-                        if (option) updateDate(option.date);
-                      }}
-                      className="h-9 rounded-md border border-sky-100 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm outline-none transition focus:border-violet-300"
-                      aria-label="Chọn tuần"
-                    >
-                      {data.filters.weekOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="date"
-                      value={data.filters.selectedDate}
-                      onChange={(event) => updateDate(event.target.value)}
-                      className="h-9 rounded-md border border-sky-100 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm outline-none transition focus:border-violet-300"
-                      aria-label="Chọn ngày"
+                    <SpaceViewSwitch
+                      activeView={isTechnicalIssueBoardView ? "TI_BOARD" : "LIST"}
+                      onChange={(value) => setWorkTicketView(value === "TI_BOARD" ? "TI_BOARD" : "LIST")}
+                      options={[
+                        { value: "TI_BOARD", label: "Board TI", icon: <Grid2X2 className="h-4 w-4" />, disabled: !canShowTechnicalIssueBoard },
+                        { value: "LIST", label: "List", icon: <List className="h-4 w-4" /> },
+                      ]}
                     />
-                    {data.viewConfig.modes.length > 1 ? (
-                      <select
-                        value={activeViewMode.key}
-                        onChange={(event) => setActiveViewModeKey(event.target.value)}
-                        className="h-9 min-w-48 rounded-md border border-sky-100 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm outline-none transition focus:border-violet-300"
-                        aria-label="Chế độ xem Space"
-                      >
-                        {data.viewConfig.modes.map((mode) => (
-                          <option key={mode.key} value={mode.key}>
-                            {modeLabel(mode)}
-                          </option>
-                        ))}
-                      </select>
-                    ) : null}
-                    {isTechnicalIssueFlowMode ? (
-                      <button
+                    <button
                         type="button"
-                        className="inline-flex h-9 items-center justify-center rounded-md border border-sky-100 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm"
+                        disabled={isPending || !data.viewConfig.carryover.enabled}
+                        onClick={() => void rolloverPreviousCycle()}
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-violet-200 bg-white px-3 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:bg-white/60 disabled:text-slate-400"
                       >
-                        Tất cả trạng thái
+                        <RotateCcw className="h-4 w-4" />
+                        <span className="hidden 2xl:inline">{actionLabel(data.viewConfig.carryover.actionLabel)}</span>
+                        <span className="2xl:hidden">Nhận tồn</span>
                       </button>
-                    ) : null}
                     <button
-                      type="button"
-                      onClick={() => setWorkTicketView("TI_BOARD")}
-                      disabled={!canShowTechnicalIssueBoard}
-                      className={cn(
-                        "inline-flex h-9 items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium shadow-sm",
-                        isTechnicalIssueBoardView
-                          ? "border-violet-300 bg-white text-violet-700"
-                          : "border-sky-100 bg-white text-slate-500 hover:text-slate-700",
-                        !canShowTechnicalIssueBoard && "cursor-not-allowed opacity-50",
-                      )}
-                      aria-label="Xem dạng lưới"
-                    >
-                      <Grid2X2 className="h-4 w-4" />
-                      <span className="hidden xl:inline">Board TI</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setWorkTicketView("LIST")}
-                      className={cn(
-                        "inline-flex h-9 items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium shadow-sm",
-                        !isTechnicalIssueBoardView
-                          ? "border-violet-300 bg-white text-violet-700"
-                          : "border-sky-100 bg-white text-slate-500 hover:text-slate-700",
-                      )}
-                      aria-label="Xem dạng danh sách"
-                    >
-                      <List className="h-4 w-4" />
-                      <span className="hidden xl:inline">List</span>
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isPending || !data.viewConfig.carryover.enabled}
-                      onClick={() => void rolloverPreviousCycle()}
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-violet-200 bg-white px-3 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:bg-white/60 disabled:text-slate-400"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                      <span className="hidden 2xl:inline">{actionLabel(data.viewConfig.carryover.actionLabel)}</span>
-                      <span className="2xl:hidden">Nhận tồn</span>
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!data.blueprints.length || !data.viewConfig.createWorkspace.enabled}
-                      onClick={() => {
-                        setError(null);
-                        setBlueprintKey(data.blueprints[0]?.selectionKey ?? "");
-                        setTitle(data.blueprints[0]?.workspaceDefinition.defaultName ?? "");
-                        setIsCreateFormOpen(true);
-                      }}
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span className="hidden xl:inline">Workspace</span>
-                    </button>
+                        type="button"
+                        disabled={!data.blueprints.length || !data.viewConfig.createWorkspace.enabled}
+                        onClick={() => {
+                          setError(null);
+                          setBlueprintKey(data.blueprints[0]?.selectionKey ?? "");
+                          setTitle(data.blueprints[0]?.workspaceDefinition.defaultName ?? "");
+                          setIsCreateFormOpen(true);
+                        }}
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>Workspace</span>
+                      </button>
                   </div>
                 </div>
 
@@ -1044,6 +891,68 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                 {error ? <p className="mt-3 text-sm font-medium text-red-600">{error}</p> : null}
               </div>
             ) : null}
+            <div className="mt-3">
+              <SpaceFilterBar
+                weekValue={data.week.periodKey}
+                weekOptions={data.filters.weekOptions}
+                dateValue={data.filters.selectedDate}
+                searchValue={filterQuery}
+                searchPlaceholder="Tìm Workspace, phụ trách, hoạt động..."
+                onSearchChange={setFilterQuery}
+                selectFilters={[
+                  {
+                    key: "creator",
+                    label: "Người tạo",
+                    value: filterCreator,
+                    options: creatorFilterOptions,
+                    onChange: setFilterCreator,
+                  },
+                  {
+                    key: "work-status",
+                    label: "Trạng thái công việc",
+                    value: filterWorkStatus,
+                    options: [
+                      { label: `Tất cả công việc (${displayedWorkTickets.length})`, value: "ALL" },
+                      { label: `Đang mở (${filterFacets.open})`, value: "OPEN" },
+                      { label: `Cần phản hồi (${filterFacets.feedback})`, value: "FEEDBACK" },
+                      { label: `Đã hoàn tất (${filterFacets.done})`, value: "DONE" },
+                    ],
+                    onChange: setFilterWorkStatus,
+                  },
+                  ...(showPaymentColumn ? [{
+                    key: "payment",
+                    label: "Thanh toán",
+                    value: filterPayment,
+                    options: [
+                      { label: `Tất cả thanh toán (${displayedWorkTickets.length})`, value: "ALL" },
+                      { label: `Chưa thanh toán (${filterFacets.unpaid})`, value: "UNPAID" },
+                      { label: `Đã thanh toán (${filterFacets.paid})`, value: "PAID" },
+                      { label: `Chưa phát sinh (${filterFacets.none})`, value: "NONE" },
+                    ],
+                    onChange: setFilterPayment,
+                  }] : []),
+                  {
+                    key: "page-size",
+                    label: "Số dòng hiển thị",
+                    value: String(workspacePageSize),
+                    options: [10, 20, 50].map((size) => ({ label: `${size} dòng`, value: String(size) })),
+                    onChange: (value) => setWorkspacePageSize(Number(value)),
+                  },
+                ]}
+                onWeekChange={(value) => {
+                  const option = data.filters.weekOptions.find((item) => item.value === value);
+                  if (option) updateDate(option.date);
+                }}
+                onDateChange={updateDate}
+              >
+                <span className="inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-xl bg-slate-50 px-3 text-xs font-semibold text-slate-500">
+                  {filteredWorkTickets.length
+                    ? `${workspacePageStart + 1}–${Math.min(workspacePageStart + workspacePageSize, filteredWorkTickets.length)} / ${filteredWorkTickets.length}`
+                    : "0 / 0"}
+                </span>
+                {filterQuery || filterCreator !== "ALL" || filterWorkStatus !== "ALL" || filterPayment !== "ALL" ? <button type="button" onClick={() => { setFilterQuery(""); setFilterCreator("ALL"); setFilterWorkStatus("ALL"); setFilterPayment("ALL"); }} className="inline-flex h-11 shrink-0 items-center rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800">Xóa lọc</button> : null}
+              </SpaceFilterBar>
+            </div>
             {isCreateFormOpen && selectedBlueprint ? (
               <div className="mt-3 grid gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 md:grid-cols-3 xl:grid-cols-6">
                 <div>
@@ -1239,7 +1148,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
             <>
           <div className={cn("hidden border-y border-slate-100 bg-[#fbfcfe] px-5 py-3 text-xs font-bold uppercase tracking-[0.05em] text-slate-500 lg:grid", workTicketGridClass)}>
             <div>Workspace</div>
-            <div>Phụ trách</div>
+            <div>Người tạo</div>
             <div>Item / Trạng thái</div>
             {showPaymentColumn ? (
               <div className="flex items-center gap-1 lg:pl-3">
@@ -1254,7 +1163,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
           </div>
 
           <div className="divide-y divide-slate-200 bg-white">
-            {displayedWorkTickets.map((ticket) => (
+            {pagedWorkTickets.map((ticket) => (
               <Link
                 key={ticket.id}
                 href={`/admin/task-items/${ticket.id}`}
@@ -1288,7 +1197,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   </div>
                 </div>
 
-                <OwnerCell owner={ticket.owner} />
+                <CreatorCell creator={ticket.creator} />
                 <QueueSummaryCell summary={ticket.queueSummary} />
                 {showPaymentColumn ? (
                   <PaymentSummaryCell summary={ticket.paymentSummary ?? null} />
@@ -1333,13 +1242,32 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
               </Link>
             ))}
 
-            {!displayedWorkTickets.length ? (
+            {!filteredWorkTickets.length ? (
               <div className="flex items-center gap-3 px-4 py-10 text-sm text-slate-500">
                 <Inbox className="h-5 w-5" />
                 {activeEmptyState}
               </div>
             ) : null}
           </div>
+          {!isTechnicalIssueBoardView && filteredWorkTickets.length > 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white px-5 py-4">
+              <div className="text-xs font-medium text-slate-500">
+                Hiển thị {workspacePageStart + 1}–{Math.min(workspacePageStart + workspacePageSize, filteredWorkTickets.length)} trong {filteredWorkTickets.length} Workspace
+              </div>
+              <div className="flex items-center gap-1">
+                <button type="button" onClick={() => setWorkspacePage((page) => Math.max(1, page - 1))} disabled={safeWorkspacePage <= 1} className="h-9 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40">Trước</button>
+                {Array.from({ length: workspacePageCount }, (_, index) => index + 1)
+                  .filter((page) => page === 1 || page === workspacePageCount || Math.abs(page - safeWorkspacePage) <= 1)
+                  .map((page, index, pages) => (
+                    <span key={page} className="contents">
+                      {index > 0 && page - pages[index - 1] > 1 ? <span className="px-1 text-xs text-slate-400">…</span> : null}
+                      <button type="button" onClick={() => setWorkspacePage(page)} className={cn("h-9 min-w-9 rounded-lg border px-2 text-xs font-semibold", page === safeWorkspacePage ? "border-violet-300 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-600 hover:bg-slate-50")}>{page}</button>
+                    </span>
+                  ))}
+                <button type="button" onClick={() => setWorkspacePage((page) => Math.min(workspacePageCount, page + 1))} disabled={safeWorkspacePage >= workspacePageCount} className="h-9 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40">Sau</button>
+              </div>
+            </div>
+          ) : null}
             </>
           )}
 

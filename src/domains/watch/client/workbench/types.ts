@@ -1,4 +1,5 @@
 import type { WatchFormValues } from "../form/watch-form.types";
+import type { WatchDetailProjection } from "../../shared/watch-detail.projection";
 
 export type WatchWorkbenchPermissions = {
     canViewSensitivePrice: boolean;
@@ -6,9 +7,7 @@ export type WatchWorkbenchPermissions = {
 };
 
 export type WatchWorkbenchProps = {
-    detail: Record<string, any>;
-    serviceHistory?: any[];
-    tradeHistory?: { acquisitions?: any[]; orders?: any[] } | any[];
+    projection: WatchDetailProjection;
     permissions: WatchWorkbenchPermissions;
 };
 

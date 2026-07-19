@@ -915,3 +915,43 @@ Older M1 context remains available in:
 - `docs/sprints/SM-M1-blueprint-completion-handoff.md`
 - `docs/architecture/14-blueprint-snapshot-semantics.md`
 - `docs/architecture/13-workspace-capability-enforcement.md`
+- Acquisition List projection cutover started: the active Admin list no longer
+  uses business-status tabs; status is now a projection column/filter, database
+  filtering/sorting/pagination are owned by the Acquisition projection query,
+  and the screen uses the shared Watch-style business list shell. See
+  `docs/architecture/20-acquisition-list-projection.md`. Order and Space/WP are
+  explicitly out of scope.
+- Admin dashboard registry foundation is active across Watch List, Acquisition
+  List, and Technical Space. Widget metadata now declares stable key, label,
+  scope, size, and renderer; the four initial shared renderers are independent
+  components resolved through the business-list registry. See
+  `docs/architecture/21-admin-dashboard-widget-registry.md`.
+- Dashboard customization UI is active for the same three consumers. Each page
+  has an isolated browser-local preference key; users may select up to four
+  widgets, reorder them, save, or restore the code-owned default. No Prisma or
+  account-level preference storage is introduced.
+- Watch List now proves the domain catalog extension with eight available
+  widgets: four shared widgets plus Media, Service, readiness, and unsold-aging
+  breakdowns. The picker only exposes the catalog declared by its consumer, so
+  Watch-only widgets do not leak into Acquisition List or Technical Space.
+- Watch Detail now uses a server-composed `WatchDetailProjection`. Its typed
+  Service projection includes Service Requests, Technical Issues, real active
+  counts, and TaskItem workspace targets; the Service card no longer consumes
+  a separate untyped history array or a hard-coded TI count. No materialized
+  Prisma projection is introduced. See
+  `docs/architecture/22-watch-detail-read-projection.md`.
+- Watch Detail header now presents real Watch identity, pricing, readiness, and
+  product-health data without duplicating the detail blocks. Pricing remains
+  owned by the existing Cost Ledger; the header command scrolls to that block,
+  and unsaved pricing edits are explicitly marked until the pricing action
+  succeeds.
+- Shared Space filtering has started with
+  `src/domains/shared/ui/space/SpaceFilterBar.tsx`. The core primitive owns the
+  week, date, search, select-filter, and view-switch layout; domain-specific
+  filters remain extension content. Technical Space is the first consumer with
+  working owner, work-status, and payment filters. Its dashboard customization
+  trigger is owned by the Space header so the widget grid no longer reserves a
+  separate control row. Workspace List now paginates client-side at 10/20/50
+  rows, reports the visible range, and shows facet counts in owner, work-status,
+  and payment filters. Other Space screens can migrate incrementally without
+  changing their query contracts.

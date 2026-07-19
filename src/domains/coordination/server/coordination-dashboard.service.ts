@@ -88,36 +88,40 @@ function userLabel(user?: { name?: string | null; email?: string | null } | null
   return user?.name || user?.email || "-";
 }
 
-function ticketOwner(item: {
-  note?: string | null;
-  userId?: string | null;
+function ticketCreator(item: {
   User?: { name?: string | null; email?: string | null; avatarUrl?: string | null } | null;
-  assignedToUser?: { name?: string | null; email?: string | null; avatarUrl?: string | null } | null;
+  executions?: Array<{
+    createdByUser?: { name?: string | null; email?: string | null; avatarUrl?: string | null } | null;
+  }>;
 }, fallbackUser?: { name?: string | null; email?: string | null; avatarUrl?: string | null } | null) {
-  if (isSystemTicket(item)) {
-    return { label: "System", avatarUrl: null, isSystem: true };
-  }
-
-  const ownerLabel = userLabel(item.User);
-  if (ownerLabel !== "-") {
+  const directCreatorLabel = userLabel(item.User);
+  if (directCreatorLabel !== "-") {
     const fallbackAvatar =
       item.User?.email && item.User.email === fallbackUser?.email
         ? fallbackUser.avatarUrl
         : null;
 
     return {
-      label: ownerLabel,
+      label: directCreatorLabel,
       avatarUrl: item.User?.avatarUrl ?? fallbackAvatar ?? null,
       isSystem: false,
     };
   }
 
+  const executionCreator = item.executions?.[0]?.createdByUser ?? null;
+  const executionCreatorLabel = userLabel(executionCreator);
+  if (executionCreatorLabel !== "-") {
+    return {
+      label: executionCreatorLabel,
+      avatarUrl: executionCreator?.avatarUrl ?? null,
+      isSystem: false,
+    };
+  }
+
   return {
-    label: userLabel(item.assignedToUser) !== "-"
-      ? userLabel(item.assignedToUser)
-      : userLabel(fallbackUser),
-    avatarUrl: item.assignedToUser?.avatarUrl ?? fallbackUser?.avatarUrl ?? null,
-    isSystem: false,
+    label: "Hệ thống",
+    avatarUrl: null,
+    isSystem: true,
   };
 }
 
@@ -220,7 +224,7 @@ type MediaFlowStage = "photography" | "media-processing" | "publish";
 function mediaStageFromWorkTypeKey(value?: string | null) {
   const normalized = normalizeWorkTypeKey(value ?? "");
   if (normalized === "photography") return "photography";
-  if (normalized === "media processing") return "media-processing";
+  if (normalized === "media-processing") return "media-processing";
   if (normalized === "publish") return "publish";
   return null;
 }
@@ -715,8 +719,15 @@ async function loadMediaQueueSummaryByTaskItem(input: {
       metadataJson: true,
       createdAt: true,
     },
+    orderBy: [
+      { createdAt: "desc" },
+      { id: "desc" },
+    ],
   });
+  const countedTargetIds = new Set<string>();
   for (const binding of bindings) {
+    if (countedTargetIds.has(binding.targetId)) continue;
+
     const runtime = getQueueItemWorkflowState(binding);
     const stage =
       (binding.taskItemId ? stageByTaskItem.get(binding.taskItemId) : null) ??
@@ -726,6 +737,7 @@ async function loadMediaQueueSummaryByTaskItem(input: {
     const taskItemId = binding.taskItemId ?? taskItemIdByStage.get(stage);
     if (!taskItemId) continue;
 
+    countedTargetIds.add(binding.targetId);
     const summary = summaries.get(taskItemId) ?? emptyQueueSummary();
     const bucket = mediaFlowSummaryBucketForStage(binding.metadataJson, stage);
     summary[bucket] += 1;
@@ -1652,6 +1664,19 @@ export async function getCoordinationDashboard(input: {
           avatarUrl: true,
         },
       },
+      executions: {
+        orderBy: { createdAt: "asc" },
+        take: 1,
+        select: {
+          createdByUser: {
+            select: {
+              name: true,
+              email: true,
+              avatarUrl: true,
+            },
+          },
+        },
+      },
     },
     orderBy: [
       { sortOrder: "asc" },
@@ -1843,8 +1868,8 @@ export async function getCoordinationDashboard(input: {
       id: item.id,
       title: item.title,
       identityPreview: identityPreviewMap.get(item.id) ?? null,
-      ownerLabel: ticketOwner(item, currentUser).label,
-      owner: ticketOwner(item, currentUser),
+      creatorLabel: ticketCreator(item, currentUser).label,
+      creator: ticketCreator(item, currentUser),
       queueSummary,
       paymentSummary,
       needAttention: feedbackCount > 0 || overdue,

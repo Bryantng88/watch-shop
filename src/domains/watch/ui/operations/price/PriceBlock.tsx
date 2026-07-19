@@ -142,7 +142,7 @@ export default function PriceBlock({
                 <div>
                     <b>Projection advice:</b> cost ledger cần financial rollup từ payment OUT service/shipment/acquisition. UI này không tự ghi projection, chỉ emit event/domain save.
                 </div>
-                <button type="button" disabled title="Projection dang nam o feed ben canh; nut chi tiet se duoc noi sau." className={operationButtonClass({ variant: "softAmber", size: "xs", className: "bg-white text-amber-800 disabled:opacity-60" })}>
+                <button type="button" disabled title="Projection đang nằm ở feed bên cạnh; nút chi tiết sẽ được nối sau." className={operationButtonClass({ variant: "softAmber", size: "xs", className: "bg-white text-amber-800 disabled:opacity-60" })}>
                     <Wand2 className="h-4 w-4" />
                     Xem projection
                 </button>

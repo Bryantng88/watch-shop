@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Loader2, Wrench, X } from "lucide-react";
 import { Header } from "./TradeHistoryCard";
@@ -10,18 +11,15 @@ import {
 } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { operationButtonClass } from "../shared/OperationShell";
-
-function stringValue(value: unknown) {
-    return typeof value === "string" ? value : "";
-}
+import type { WatchServiceProjection } from "@/domains/watch/shared/watch-detail.projection";
 
 export default function ServiceCard({
-    serviceHistory,
+    projection,
     productId,
     title,
     sku,
 }: {
-    serviceHistory?: Array<Record<string, unknown>>;
+    projection: WatchServiceProjection;
     productId?: string | null;
     title?: string | null;
     sku?: string | null;
@@ -34,10 +32,7 @@ export default function ServiceCard({
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const rows = Array.isArray(serviceHistory) ? serviceHistory.slice(0, 4) : [];
-    const displayRows = rows.length
-        ? rows
-        : [{ issue: "Khong can service", status: "-", id: "empty" }];
+    const rows = projection.requests.slice(0, 4);
     const cleanProductId = String(productId ?? "").trim();
     const watchLabel = title || sku || cleanProductId || "watch";
 
@@ -49,12 +44,12 @@ export default function ServiceCard({
         const trimmedSuspicion = suspicion.trim();
 
         if (!cleanProductId) {
-            setError("Watch nay chua co productId.");
+            setError("Watch này chưa có productId.");
             return;
         }
 
         if (!trimmedSuspicion) {
-            setError("Vui long nhap nghi ngo ky thuat dau tien.");
+            setError("Vui lòng nhập nghi ngờ kỹ thuật đầu tiên.");
             return;
         }
 
@@ -66,27 +61,33 @@ export default function ServiceCard({
         let steps: AppProgressStep[] = [
             {
                 id: "validate",
-                label: "Kiem tra thong tin watch",
-                detail: `${watchLabel} da san sang tao phieu ky thuat.`,
+                label: "Kiểm tra thông tin watch",
+                detail: `${watchLabel} đã sẵn sàng tạo phiếu kỹ thuật.`,
                 status: "done",
             },
             {
                 id: "create",
-                label: "Tao Service Request va Technical Issue",
-                detail: "Dang ghi nhan phieu ky thuat that trong Service Operation.",
+                label: "Tạo Service Request và Technical Issue",
+                detail: "Đang ghi nhận phiếu kỹ thuật trong Service Operation.",
                 status: "running",
             },
             {
                 id: "background",
-                label: "Dong bo workspace va timeline",
-                detail: "technical_issue.created se duoc consumer xu ly nen.",
+                label: "Đồng bộ workspace và timeline",
+                detail: "technical_issue.created sẽ được consumer xử lý nền.",
+                status: "pending",
+            },
+            {
+                id: "projection",
+                label: "Làm mới Watch Detail projection",
+                detail: "Service card sẽ đọc lại Service Request và Technical Issue vừa tạo.",
                 status: "pending",
             },
         ];
 
         progress.show({
-            title: "Dang tao phieu ky thuat",
-            message: "He thong dang tao Service Request va nghi ngo ky thuat dau tien.",
+            title: "Đang tạo phiếu kỹ thuật",
+            message: "Hệ thống đang tạo Service Request và nghi ngờ kỹ thuật đầu tiên.",
             steps,
         });
 
@@ -107,35 +108,41 @@ export default function ServiceCard({
 
             const json = await res.json().catch(() => null);
             if (!res.ok || !json?.ok) {
-                throw new Error(json?.error || "Khong the tao phieu ky thuat.");
+                throw new Error(json?.error || "Không thể tạo phiếu kỹ thuật.");
             }
 
             const data = json.data ?? {};
             steps = steps.map((step) =>
                 step.id === "create"
-                    ? { ...step, status: "done", detail: "Phieu ky thuat da duoc ghi nhan." }
+                    ? { ...step, status: "done", detail: "Phiếu kỹ thuật đã được ghi nhận." }
                     : step.id === "background"
                       ? {
                             ...step,
-                            status: "running",
-                            detail: "Workspace va event dang duoc dong bo nen.",
+                            status: "done",
+                            detail: "Event đã được xếp hàng để đồng bộ workspace và timeline.",
                         }
+                      : step.id === "projection"
+                        ? {
+                              ...step,
+                              status: "running",
+                              detail: "Đang đọc lại projection Service của Watch Detail.",
+                          }
                       : step,
             );
 
             progress.update({
-                title: data.createdInitialIssue ? "Da tao phieu ky thuat" : "Da mo phieu ky thuat",
+                title: data.createdInitialIssue ? "Đã tạo phiếu kỹ thuật" : "Đã mở phiếu kỹ thuật",
                 message: data.workspaceHref
-                    ? "Dang chuyen sang workspace xu ly."
-                    : "Service Operation da nhan yeu cau.",
+                    ? "Đang chuyển sang workspace xử lý."
+                    : "Đang đồng bộ lại Service card trên Watch Detail.",
                 steps,
             });
 
             notify.success({
-                title: data.createdInitialIssue ? "Da tao service" : "Watch da co service",
+                title: data.createdInitialIssue ? "Đã tạo service" : "Watch đã có service",
                 message: data.refNo
-                    ? `SR ${data.refNo} da duoc ghi nhan.`
-                    : "Service Operation da nhan phieu ky thuat.",
+                    ? `SR ${data.refNo} đã được ghi nhận.`
+                    : "Service Operation đã nhận phiếu kỹ thuật.",
             });
 
             setIntakeOpen(false);
@@ -143,14 +150,34 @@ export default function ServiceCard({
 
             if (data.workspaceHref) {
                 router.push(data.workspaceHref);
+            } else {
+                router.refresh();
             }
-            window.setTimeout(() => progress.hide(), 900);
+            window.setTimeout(() => {
+                const completedSteps = steps.map((step) =>
+                    step.id === "projection"
+                        ? {
+                              ...step,
+                              status: "done" as const,
+                              detail: "Đã yêu cầu Watch Detail đọc lại dữ liệu Service mới.",
+                          }
+                        : step,
+                );
+                progress.update({
+                    title: "Đã gửi yêu cầu đồng bộ Service",
+                    message: data.workspaceHref
+                        ? "Workspace đã sẵn sàng. Watch Detail sẽ đọc projection mới khi quay lại."
+                        : "Service card đang được làm mới từ projection.",
+                    steps: completedSteps,
+                });
+                window.setTimeout(() => progress.hide(), 700);
+            }, 650);
         } catch (err) {
             progress.hide();
-            const message = err instanceof Error ? err.message : "Khong the tao phieu ky thuat.";
+            const message = err instanceof Error ? err.message : "Không thể tạo phiếu kỹ thuật.";
             setError(message);
             notify.error({
-                title: "Khong the tao service",
+                title: "Không thể tạo service",
                 message,
             });
         } finally {
@@ -164,33 +191,42 @@ export default function ServiceCard({
                 <Header
                     icon={<Wrench className="h-4 w-4" />}
                     title="Service"
-                    subtitle={`${rows.length} service/TI co phat sinh chi phi`}
+                    subtitle={`${projection.activeRequestCount} SR active · ${projection.activeIssueCount} TI active`}
                 />
                 <div className="p-4">
                     <div className="overflow-hidden rounded-lg border border-slate-200/80">
                         <div className="grid grid-cols-[minmax(0,1fr)_80px_28px] gap-2 bg-slate-50/80 px-3 py-2.5 text-[10px] font-semibold uppercase text-slate-400">
                             <div>Service code</div>
-                            <div>Trang thai</div>
+                            <div>Trạng thái</div>
                             <div>+</div>
                         </div>
-                        {displayRows.map((item) => {
-                            const id = stringValue(item.id) || stringValue(item.issue) || "service";
-
-                            return (
+                        {rows.map((item) => (
                                 <div
-                                    key={id}
+                                    key={item.id}
                                     className="grid min-h-[44px] grid-cols-[minmax(0,1fr)_80px_28px] items-center gap-2 border-t border-slate-100 px-3 py-2 text-xs"
                                 >
-                                    <div className="truncate text-slate-600">
-                                        {stringValue(item.issue) || stringValue(item.title)}
-                                    </div>
+                                    {item.workspaceHref ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => router.push(item.workspaceHref!)}
+                                            className="truncate text-left text-slate-600 hover:text-violet-700"
+                                        >
+                                            {item.refNo}
+                                        </button>
+                                    ) : (
+                                        <div className="truncate text-slate-600">{item.refNo}</div>
+                                    )}
                                     <div className="truncate font-medium text-indigo-600">
-                                        {stringValue(item.status) || "-"}
+                                        {item.status}
                                     </div>
-                                    <div className="font-medium text-slate-500">2</div>
+                                    <div className="font-medium text-slate-500">{item.issueCount}</div>
                                 </div>
-                            );
-                        })}
+                        ))}
+                        {!rows.length ? (
+                            <div className="border-t border-slate-100 px-3 py-4 text-xs text-slate-400">
+                                Chưa có Service Request.
+                            </div>
+                        ) : null}
                     </div>
                     <div className="mt-3 grid grid-cols-2 gap-2">
                         <button
@@ -218,18 +254,18 @@ export default function ServiceCard({
                             })}
                         >
                             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                            {submitting ? "Dang tao..." : "Tao service"}
+                            {submitting ? "Đang tạo..." : "Tạo service"}
                         </button>
                     </div>
                 </div>
             </aside>
 
-            {intakeOpen ? (
+            {intakeOpen && typeof document !== "undefined" ? createPortal(
                 <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
                     <button
                         type="button"
                         className="absolute inset-0 bg-slate-950/35"
-                        aria-label="Dong modal tao service"
+                        aria-label="Đóng modal tạo service"
                         onClick={() => {
                             if (!submitting) setIntakeOpen(false);
                         }}
@@ -237,9 +273,9 @@ export default function ServiceCard({
                     <div className="relative z-[1] w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-2xl">
                         <div className="flex items-start justify-between gap-3">
                             <div>
-                                <div className="text-base font-semibold text-slate-950">Tao service that</div>
+                                <div className="text-base font-semibold text-slate-950">Tạo service</div>
                                 <div className="mt-1 text-sm leading-6 text-slate-500">
-                                    Nhap nghi ngo ky thuat dau tien cho {watchLabel}.
+                                    Nhập nghi ngờ kỹ thuật đầu tiên cho {watchLabel}.
                                 </div>
                             </div>
                             <button
@@ -258,14 +294,14 @@ export default function ServiceCard({
 
                         <label className="mt-4 block">
                             <span className="mb-1.5 block text-[11px] font-semibold uppercase text-slate-500">
-                                Nghi ngo ky thuat
+                                Nghi ngờ kỹ thuật
                             </span>
                             <textarea
                                 value={suspicion}
                                 onChange={(event) => setSuspicion(event.target.value)}
                                 disabled={submitting}
                                 rows={4}
-                                placeholder="VD: Kiem tra may chay cham, lau dau, ve sinh tong the..."
+                                placeholder="VD: Kiểm tra máy chạy chậm, lau dầu, vệ sinh tổng thể..."
                                 className="w-full resize-y rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-400"
                             />
                         </label>
@@ -283,7 +319,7 @@ export default function ServiceCard({
                                 disabled={submitting}
                                 className={operationButtonClass({ variant: "secondary", size: "sm" })}
                             >
-                                Huy
+                                Hủy
                             </button>
                             <button
                                 type="button"
@@ -296,11 +332,12 @@ export default function ServiceCard({
                                 })}
                             >
                                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                                {submitting ? "Dang tao..." : "Tao service"}
+                                {submitting ? "Đang tạo..." : "Tạo service"}
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body,
             ) : null}
         </>
     );

@@ -24,6 +24,8 @@ const makeSchema = () => z.object({
   isImageDownloaded: z.literal(true).optional(),
   isContentDownloaded: z.literal(true).optional(),
   notes: z.literal(true).optional(),
+  duplicateConfirmedAt: z.literal(true).optional(),
+  duplicateConfirmedByUserId: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional()
 }).strict();

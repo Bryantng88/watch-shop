@@ -99,8 +99,8 @@ export default function ImageBlock({
 
         setDownloading(true);
         progress.show({
-            title: "Dang tai gallery",
-            message: "He thong dang dong goi anh gallery thanh file zip.",
+            title: "Đang tải gallery",
+            message: "Hệ thống đang đóng gói ảnh gallery thành file zip.",
         });
 
         try {
@@ -111,7 +111,7 @@ export default function ImageBlock({
 
             if (!res.ok) {
                 const json = await res.json().catch(() => ({}));
-                throw new Error(json?.error || "Khong the tai gallery.");
+                throw new Error(json?.error || "Không thể tải gallery.");
             }
 
             const blob = await res.blob();
@@ -125,14 +125,14 @@ export default function ImageBlock({
             setUsage(nextUsage);
 
             notify.success({
-                title: "Da tai gallery",
+                title: "Đã tải gallery",
                 message: nextUsage.isPosted
-                    ? "Gallery va content da duoc ghi nhan cho luong Dang bai."
+                    ? "Gallery và content đã được ghi nhận cho luồng Đăng bài."
                     : "Gallery da duoc tai va emit event publish assets downloaded.",
             });
         } catch (error) {
             notify.error({
-                title: "Khong the tai gallery",
+                title: "Không thể tải gallery",
                 message: error instanceof Error ? error.message : "Co loi khi tai gallery.",
             });
         } finally {
@@ -147,7 +147,7 @@ export default function ImageBlock({
             number="4"
             title="Hinh anh"
             icon={<ImageIcon className="h-4 w-4" />}
-            description="Gallery, thumbnail va trang thai download phuc vu Workspace Dang bai."
+            description="Gallery, thumbnail và trạng thái download phục vụ Workspace Đăng bài."
             actions={
                 <>
                     <Pill tone={canDownload ? "green" : "slate"}>{imageStatus}</Pill>
@@ -162,11 +162,11 @@ export default function ImageBlock({
                         })}
                     >
                         {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                        {downloading ? "Dang tai..." : usage.isImageDownloaded ? "Tai lai gallery" : "Tai gallery"}
+                        {downloading ? "Đang tải..." : usage.isImageDownloaded ? "Tải lại gallery" : "Tải gallery"}
                     </button>
                     <button type="button" onClick={onSave} disabled={saving} className={operationButtonClass({ variant: "primary", size: "sm", className: "disabled:opacity-70" })}>
                         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                        {saving ? "Dang luu..." : "Luu thay doi"}
+                        {saving ? "Đang lưu..." : "Lưu thay đổi"}
                     </button>
                 </>
             }
@@ -187,7 +187,7 @@ export default function ImageBlock({
                                 className={operationButtonClass({ variant: "softEmerald", size: "xs", className: "disabled:opacity-60" })}
                             >
                                 {openingMediaWorkspace ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                                {openingMediaWorkspace ? "Dang mo..." : "Mo Media WP"}
+                                {openingMediaWorkspace ? "Đang mở..." : "Mở Media WP"}
                             </button>
                         </div>
                         {gallery.length ? (
@@ -200,7 +200,7 @@ export default function ImageBlock({
                                                 if (image.url) setPreviewIndex(index);
                                             }}
                                             disabled={!image.url}
-                                            title={image.url ? "Phong to hinh anh" : undefined}
+                                            title={image.url ? "Phóng to hình ảnh" : undefined}
                                             className="block aspect-square w-full overflow-hidden bg-slate-100 text-left disabled:cursor-default"
                                         >
                                             {image.url ? (
@@ -219,7 +219,7 @@ export default function ImageBlock({
                                 ))}
                             </div>
                         ) : (
-                            <div className="px-4 py-8 text-center text-sm text-slate-500">Chua co anh gallery de xem.</div>
+                            <div className="px-4 py-8 text-center text-sm text-slate-500">Chưa có ảnh gallery để xem.</div>
                         )}
                     </div>
 
@@ -240,7 +240,7 @@ export default function ImageBlock({
                                     className={operationButtonClass({ variant: "subtle", size: "xs", className: "disabled:opacity-60" })}
                                 >
                                     {openingMediaWorkspace ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                                    {openingMediaWorkspace ? "Dang mo" : "Mo WP"}
+                                    {openingMediaWorkspace ? "Đang mở" : "Mở WP"}
                                 </button>
                             </div>
                         ))}
@@ -249,7 +249,7 @@ export default function ImageBlock({
                         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
                             <button
                                 type="button"
-                                aria-label="Dong preview hinh anh"
+                                aria-label="Đóng preview hình ảnh"
                                 className="absolute inset-0 bg-slate-950/75"
                                 onClick={() => setPreviewIndex(null)}
                             />

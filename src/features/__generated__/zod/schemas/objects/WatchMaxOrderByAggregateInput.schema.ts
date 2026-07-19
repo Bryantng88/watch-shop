@@ -24,6 +24,8 @@ const makeSchema = () => z.object({
   isImageDownloaded: SortOrderSchema.optional(),
   isContentDownloaded: SortOrderSchema.optional(),
   notes: SortOrderSchema.optional(),
+  duplicateConfirmedAt: SortOrderSchema.optional(),
+  duplicateConfirmedByUserId: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional()
 }).strict();

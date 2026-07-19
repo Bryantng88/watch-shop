@@ -37,7 +37,7 @@ async function markContentCopied(productId: string) {
 
     const json = await res.json().catch(() => ({}));
     if (!res.ok || !json?.success) {
-        throw new Error(json?.error || "Khong the danh dau da copy content.");
+        throw new Error(json?.error || "Không thể đánh dấu đã copy content.");
     }
 
     return json as {
@@ -112,8 +112,8 @@ export default function ContentBlock({
 
         setCopying(true);
         progress.show({
-            title: "Dang copy content",
-            message: "He thong dang copy bai dang va ghi nhan trang thai publish assets.",
+            title: "Đang copy content",
+            message: "Hệ thống đang copy bài đăng và ghi nhận trạng thái publish assets.",
         });
         try {
             await navigator.clipboard.writeText(fullPost);
@@ -123,14 +123,14 @@ export default function ContentBlock({
             setUsage(next);
 
             notify.success({
-                title: "Da copy content",
+                title: "Đã copy content",
                 message: next.isPosted
-                    ? "Content va gallery da duoc ghi nhan cho luong Dang bai."
+                    ? "Content và gallery đã được ghi nhận cho luồng Đăng bài."
                     : "Content da duoc copy va emit event publish assets downloaded.",
             });
         } catch (error) {
             notify.error({
-                title: "Khong the copy content",
+                title: "Không thể copy content",
                 message: error instanceof Error ? error.message : "Co loi khi copy content.",
             });
         } finally {
@@ -146,7 +146,7 @@ export default function ContentBlock({
             number="3"
             title="Noi dung"
             icon={<FileText className="h-4 w-4" />}
-            description="Mo ta, story va ban dang hoan chinh cho luong Dang bai."
+            description="Mô tả, story và bản đăng hoàn chỉnh cho luồng Đăng bài."
             actions={
                 <>
                     <button type="button" disabled title="AI content generation chua duoc noi voi service." className={operationButtonClass({ variant: "softBlue", size: "sm", className: "disabled:opacity-60" })}>
@@ -155,7 +155,7 @@ export default function ContentBlock({
                     </button>
                     <button type="button" onClick={onSave} disabled={saving} className={operationButtonClass({ variant: "primary", size: "sm", className: "disabled:opacity-70" })}>
                         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                        {saving ? "Dang luu..." : "Luu thay doi"}
+                        {saving ? "Đang lưu..." : "Lưu thay đổi"}
                     </button>
                 </>
             }
@@ -165,7 +165,7 @@ export default function ContentBlock({
                     <Field label="Title override">
                         <input className={inputClass} value={values.content.titleOverride} onChange={(event) => setContent({ titleOverride: event.target.value })} />
                     </Field>
-                    <Field label="Mo ta (VI)">
+                    <Field label="Mô tả (VI)">
                         <textarea className={textareaClass} value={values.content.hookText} onChange={(event) => setContent({ hookText: event.target.value })} />
                     </Field>
                     <Field label="Domain context">
@@ -191,7 +191,7 @@ export default function ContentBlock({
                 <div className="flex flex-col gap-3 border-b border-violet-100/80 px-4 py-3 md:flex-row md:items-center md:justify-between">
                     <div>
                         <div className="flex flex-wrap items-center gap-2">
-                            <div className="text-sm font-semibold text-slate-950">Ban dang de Publish</div>
+                            <div className="text-sm font-semibold text-slate-950">Bản đăng để Publish</div>
                             <span className={[
                                 "inline-flex h-6 items-center rounded-full border px-2.5 text-[11px] font-semibold",
                                 canCopy
@@ -202,16 +202,16 @@ export default function ContentBlock({
                             </span>
                         </div>
                         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                            <span>{usage.isContentDownloaded ? "Da copy content" : "Chua copy content"}</span>
+                            <span>{usage.isContentDownloaded ? "Đã copy content" : "Chưa copy content"}</span>
                             <span className="h-1 w-1 rounded-full bg-slate-300" />
-                            <span>{usage.isImageDownloaded ? "Da tai anh" : "Chua tai anh"}</span>
+                            <span>{usage.isImageDownloaded ? "Đã tải ảnh" : "Chưa tải ảnh"}</span>
                         </div>
                     </div>
                     <button
                         type="button"
                         onClick={handleCopyPost}
                         disabled={!canCopy || !fullPost.trim() || copying}
-                        title={canCopy ? "Copy noi dung dang bai" : "Content can duoc duyet truoc khi copy"}
+                        title={canCopy ? "Copy nội dung đăng bài" : "Content cần được duyệt trước khi copy"}
                         className={operationButtonClass({
                             variant: canCopy ? "softViolet" : "secondary",
                             size: "sm",
@@ -219,7 +219,7 @@ export default function ContentBlock({
                         })}
                     >
                         {copying ? <Loader2 className="h-4 w-4 animate-spin" /> : copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                        {copying ? "Dang copy..." : copied ? "Da copy" : usage.isContentDownloaded ? "Copy lai" : "Copy content"}
+                        {copying ? "Đang copy..." : copied ? "Đã copy" : usage.isContentDownloaded ? "Copy lại" : "Copy content"}
                     </button>
                 </div>
                 <div
@@ -244,21 +244,21 @@ export default function ContentBlock({
                         </div>
                     ) : (
                         <div className="rounded-lg border border-dashed border-slate-200 bg-white/80 px-3 py-6 text-center text-sm text-slate-500">
-                            Chua co noi dung de dang bai.
+                            Chưa có nội dung để đăng bài.
                         </div>
                     )}
                 </div>
             </div>
 
             <div className="mt-3 flex flex-col gap-2 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-700 md:flex-row md:items-center md:justify-between">
-                <span>Copy content o day se emit event publish downloaded cho Workspace Dang bai; sua draft van luu bang Watch Workbench.</span>
+                <span>Copy content ở đây sẽ phát event publish downloaded cho Workspace Đăng bài; sửa draft vẫn lưu bằng Watch Workbench.</span>
                 <button
                     type="button"
                     onClick={onOpenMediaWorkspace}
                     disabled={openingMediaWorkspace}
                     className={operationButtonClass({ variant: "softEmerald", size: "xs" })}
                 >
-                    {openingMediaWorkspace ? "Dang mo..." : "Mo Media WP"}
+                    {openingMediaWorkspace ? "Đang mở..." : "Mở Media WP"}
                 </button>
             </div>
         </OperationShell>

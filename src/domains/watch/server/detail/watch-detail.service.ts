@@ -1,6 +1,11 @@
 import { prisma } from "@/server/db/client";
 import { perfStep } from "@/lib/server-perf";
-import { TaskExecutionTargetType, TaskStatus } from "@prisma/client";
+import {
+  TaskExecutionActionType,
+  TaskExecutionTargetType,
+  TaskStatus,
+} from "@prisma/client";
+import type { WatchServiceProjection } from "../../shared/watch-detail.projection";
 import { mapWatchDetail } from "../shared";
 import { listWatchChosenMediaPool } from "@/domains/media/server";
 import {
@@ -15,6 +20,7 @@ import {
   getLatestWatchVariantForAdmin,
   getOpenServiceWatches,
   getWatchServiceHistory,
+  getWatchServiceProjectionSource,
   getWatchTradeHistory,
 } from "./watch-detail.repo";
 
@@ -256,6 +262,77 @@ export async function getWatchTradeHistoryDetail(productId: string) {
 
 export async function getWatchServiceHistoryDetail(productId: string) {
   return getWatchServiceHistory(prisma, productId);
+}
+
+export async function getWatchServiceProjectionDetail(
+  productId: string,
+): Promise<WatchServiceProjection> {
+  const rows = await getWatchServiceProjectionSource(prisma, productId);
+  const serviceRequestIds = rows.map((row) => row.id);
+  const bindings = serviceRequestIds.length
+    ? await prisma.taskExecution.findMany({
+        where: {
+          targetType: TaskExecutionTargetType.SERVICE_REQUEST,
+          targetId: { in: serviceRequestIds },
+          actionType: { not: TaskExecutionActionType.CANCELLED },
+          taskItemId: { not: null },
+        },
+        select: {
+          targetId: true,
+          taskItemId: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+      })
+    : [];
+  const bindingByServiceRequestId = new Map<string, string>();
+
+  for (const binding of bindings) {
+    if (!binding.targetId || !binding.taskItemId) continue;
+    if (!bindingByServiceRequestId.has(binding.targetId)) {
+      bindingByServiceRequestId.set(binding.targetId, binding.taskItemId);
+    }
+  }
+
+  const terminalRequestStatuses = new Set(["COMPLETED", "DELIVERED", "CANCELED"]);
+  const terminalIssueStatuses = new Set(["DONE", "CANCELED"]);
+  const requests = rows.map((row) => {
+    const workspaceTaskItemId = bindingByServiceRequestId.get(row.id) ?? null;
+    const issues = row.technicalIssue.map((issue) => ({
+      id: issue.id,
+      summary: issue.summary ?? issue.note ?? "Technical issue",
+      status: String(issue.executionStatus),
+      isConfirmed: issue.isConfirmed,
+      updatedAt: issue.updatedAt.toISOString(),
+    }));
+
+    return {
+      id: row.id,
+      refNo: row.refNo ?? row.id.slice(0, 8),
+      status: String(row.status),
+      note: row.notes ?? null,
+      vendorName: row.vendor?.name ?? null,
+      issueCount: issues.length,
+      activeIssueCount: issues.filter((issue) => !terminalIssueStatuses.has(issue.status)).length,
+      workspaceTaskItemId,
+      workspaceHref: workspaceTaskItemId ? `/admin/task-items/${workspaceTaskItemId}` : null,
+      updatedAt: row.updatedAt.toISOString(),
+      issues,
+    };
+  });
+
+  return {
+    requestCount: requests.length,
+    activeRequestCount: requests.filter(
+      (request) => !terminalRequestStatuses.has(request.status),
+    ).length,
+    issueCount: requests.reduce((total, request) => total + request.issueCount, 0),
+    activeIssueCount: requests.reduce(
+      (total, request) => total + request.activeIssueCount,
+      0,
+    ),
+    requests,
+  };
 }
 
 export async function getLatestWatchVariant(productId: string) {

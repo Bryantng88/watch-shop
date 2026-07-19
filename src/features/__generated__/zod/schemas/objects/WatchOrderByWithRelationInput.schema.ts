@@ -32,6 +32,8 @@ const makeSchema = () => z.object({
   isImageDownloaded: SortOrderSchema.optional(),
   isContentDownloaded: SortOrderSchema.optional(),
   notes: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  duplicateConfirmedAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  duplicateConfirmedByUserId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),

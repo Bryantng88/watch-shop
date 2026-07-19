@@ -7,6 +7,7 @@ import {
     type AppProgressStep,
 } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
+import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import {
     BusinessEntityPreviewModal,
     useBusinessEntityPreview,
@@ -26,6 +27,11 @@ import {
     markWatchMediaAssetAttachedFromWatchAction,
     requestWatchPhotoshootAction,
 } from "./media-work/watch-media-work.actions";
+import {
+    confirmDuplicateWatchAction,
+    permanentlyDeleteDuplicateWatchAction,
+    restoreDuplicateWatchAction,
+} from "./duplicate/watch-duplicate.actions";
 import RaiseWorkCaseModal, { type RaiseWorkCaseSourceContext } from "@/domains/work-case/ui/RaiseWorkCaseModal";
 import { getTaskQuickCreateDataAction } from "@/domains/task/actions/task.actions";
 import TaskQuickCreateModal, {
@@ -37,7 +43,19 @@ import { TaskDomain, TaskMode } from "@prisma/client";
 import {
     AsyncBusinessListDashboard,
     BusinessListShell,
+    type BusinessListDashboardWidgetKey,
 } from "@/domains/shared/ui/business-list";
+
+const WATCH_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = [
+    "overview",
+    "value-trend",
+    "status-breakdown",
+    "recent-activity",
+    "watch-media",
+    "watch-service",
+    "watch-readiness",
+    "watch-aging",
+];
 
 type WatchListClientProps = Partial<WatchListPageProps> & {
     initialResult?: WatchListResult;
@@ -292,6 +310,7 @@ export default function WatchListClient(props: WatchListClientProps) {
     const [isPending, startTransition] = useTransition();
     const progress = useAppProgress();
     const notify = useNotify();
+    const dialog = useAppDialog();
     const previewState = useBusinessEntityPreview();
     const [serviceIntakeProductId, setServiceIntakeProductId] = React.useState<string | null>(null);
     const [serviceIntakeRow, setServiceIntakeRow] = React.useState<WatchRow | null>(null);
@@ -317,6 +336,9 @@ export default function WatchListClient(props: WatchListClientProps) {
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [photoshootSubmitting, setPhotoshootSubmitting] = useState(false);
     const [mediaReviewSubmitting, setMediaReviewSubmitting] = useState(false);
+    const [mediaRowSubmittingId, setMediaRowSubmittingId] = useState<string | null>(null);
+    const [duplicateSubmittingId, setDuplicateSubmittingId] = useState<string | null>(null);
+    const [dashboardCustomizationRequest, setDashboardCustomizationRequest] = useState(0);
 
     /**
      * URL state and server props must be synced separately.
@@ -736,6 +758,243 @@ export default function WatchListClient(props: WatchListClientProps) {
         }
     }
 
+    async function sendWatchToMediaSpace(row: WatchRow) {
+        if (mediaRowSubmittingId) return;
+
+        setMediaRowSubmittingId(row.id);
+        const targetLabel = row.hasImages ? "Xử lý Media" : "Chụp ảnh";
+        progress.show({
+            title: "Đang đưa vào Space Media",
+            message: `${row.title || row.sku || "Watch"} đang được chuyển vào Workspace ${targetLabel}.`,
+        });
+
+        try {
+            if (row.hasImages) {
+                const result = await markWatchMediaAssetAttachedFromWatchAction({
+                    productId: row.productId,
+                    note: "Requested Media Workspace from Watch list row action.",
+                });
+
+                if (result.skipped) {
+                    notify.warning({
+                        title: "Chưa thể đưa vào Space Media",
+                        message: result.reason ?? "Watch đã được bỏ qua.",
+                    });
+                    return;
+                }
+            } else {
+                const result = await requestWatchPhotoshootAction({
+                    watchIds: [row.id],
+                    note: "Requested Photoshoot Workspace from Watch list row action.",
+                });
+                const item = result.items[0];
+
+                if (item?.status !== "REQUESTED") {
+                    notify.warning({
+                        title: "Chưa thể đưa vào Space Media",
+                        message: item?.reason ?? "Watch đã được bỏ qua.",
+                    });
+                    return;
+                }
+            }
+
+            notify.success({
+                title: "Đã đưa vào Space Media",
+                message: `Watch đã được đưa vào Workspace ${targetLabel}.`,
+            });
+            await loadList(new URLSearchParams(params.toString()), { meta: "lite" });
+        } catch (error) {
+            notify.error({
+                title: "Không thể đưa vào Space Media",
+                message: error instanceof Error ? error.message : "Có lỗi khi cập nhật Media Workspace.",
+            });
+        } finally {
+            setMediaRowSubmittingId(null);
+            window.setTimeout(() => progress.hide(), 900);
+        }
+    }
+
+    async function confirmDuplicateWatch(row: WatchRow) {
+        if (duplicateSubmittingId) return;
+        const accepted = await dialog.confirm({
+            title: "Xác nhận watch bị trùng?",
+            message: `Watch “${row.title || row.sku || row.productId}” sẽ được đưa ra khỏi danh sách hiện tại và lưu vào hàng chờ xử lý trùng. Dữ liệu chưa bị xóa hoặc hợp nhất.`,
+            confirmText: "Xác nhận trùng",
+            cancelText: "Hủy",
+            tone: "warning",
+        });
+        if (!accepted) return;
+
+        setDuplicateSubmittingId(row.id);
+        progress.show({
+            title: "Đang xác nhận watch trùng",
+            message: "Hệ thống đang chuyển watch vào hàng chờ xử lý trùng.",
+        });
+        try {
+            await confirmDuplicateWatchAction({ productId: row.productId });
+            setSelectedIds((current) => current.filter((id) => id !== row.id));
+            notify.success({
+                title: "Đã xác nhận trùng",
+                message: "Watch đã được đưa ra khỏi danh sách hiện tại. Dữ liệu vẫn được giữ nguyên.",
+            });
+            await loadList(new URLSearchParams(params.toString()), { meta: "full" });
+        } catch (error) {
+            notify.error({
+                title: "Không thể xác nhận trùng",
+                message: error instanceof Error ? error.message : "Có lỗi khi cập nhật watch.",
+            });
+        } finally {
+            setDuplicateSubmittingId(null);
+            window.setTimeout(() => progress.hide(), 900);
+        }
+    }
+
+    async function restoreDuplicateWatch(row: WatchRow) {
+        if (duplicateSubmittingId) return;
+        const accepted = await dialog.confirm({
+            title: "Đưa watch lại danh sách hiện tại?",
+            message: `Watch “${row.title || row.sku || row.productId}” sẽ được gỡ khỏi danh sách trùng và hiển thị lại trong Watch List.`,
+            confirmText: "Đưa lại danh sách",
+            cancelText: "Hủy",
+        });
+        if (!accepted) return;
+
+        setDuplicateSubmittingId(row.id);
+        progress.show({
+            title: "Đang khôi phục watch",
+            message: "Hệ thống đang đưa watch trở lại danh sách hiện tại.",
+        });
+        try {
+            await restoreDuplicateWatchAction({ productId: row.productId });
+            notify.success({
+                title: "Đã đưa lại danh sách Watch",
+                message: "Watch không còn nằm trong hàng chờ trùng.",
+            });
+            await loadList(new URLSearchParams(params.toString()), { meta: "full" });
+        } catch (error) {
+            notify.error({
+                title: "Không thể khôi phục watch",
+                message: error instanceof Error ? error.message : "Có lỗi khi cập nhật watch.",
+            });
+        } finally {
+            setDuplicateSubmittingId(null);
+            window.setTimeout(() => progress.hide(), 900);
+        }
+    }
+
+    async function permanentlyDeleteDuplicateWatch(row: WatchRow) {
+        if (duplicateSubmittingId) return;
+        const accepted = await dialog.confirm({
+            title: "Xóa vĩnh viễn watch trùng?",
+            message: `Watch “${row.title || row.sku || row.productId}” cùng dữ liệu Media, Service và dòng phiếu nhập liên quan sẽ bị xóa. Thao tác này không thể hoàn tác.`,
+            confirmText: "Xóa vĩnh viễn",
+            cancelText: "Hủy",
+            tone: "danger",
+        });
+        if (!accepted) return;
+
+        setDuplicateSubmittingId(row.id);
+        progress.show({
+            title: "Đang xóa watch trùng",
+            message: "Hệ thống đang dọn dữ liệu liên quan trong một transaction.",
+        });
+        try {
+            await permanentlyDeleteDuplicateWatchAction({ productId: row.productId });
+            notify.success({
+                title: "Đã xóa watch trùng",
+                message: "Watch và dữ liệu liên quan đã được xóa.",
+            });
+            await loadList(new URLSearchParams(params.toString()), { meta: "full" });
+        } catch (error) {
+            notify.error({
+                title: "Không thể xóa watch trùng",
+                message: error instanceof Error ? error.message : "Transaction xóa đã thất bại.",
+            });
+        } finally {
+            setDuplicateSubmittingId(null);
+            window.setTimeout(() => progress.hide(), 1200);
+        }
+    }
+
+    async function sendSelectedToMediaSpace() {
+        if (!selectedRows.length || photoshootSubmitting || mediaReviewSubmitting) return;
+
+        setMediaReviewSubmitting(true);
+        const steps: AppProgressStep[] = selectedRows.map((row) => ({
+            id: row.id,
+            label: row.title || row.sku || row.productId,
+            detail: row.hasImages ? "Chờ đưa vào Xử lý Media" : "Chờ đưa vào Chụp ảnh",
+            status: "pending",
+        }));
+
+        progress.show({
+            title: "Đang đưa vào Space Media",
+            message: `0/${selectedRows.length} watch hoàn tất`,
+            steps,
+        });
+
+        let completed = 0;
+        let skipped = 0;
+        for (let index = 0; index < selectedRows.length; index += 1) {
+            const row = selectedRows[index];
+            steps[index] = { ...steps[index], status: "running", detail: "Đang xử lý..." };
+            progress.update({ message: `${index}/${selectedRows.length} watch hoàn tất`, steps: [...steps] });
+
+            try {
+                if (row.hasImages) {
+                    const result = await markWatchMediaAssetAttachedFromWatchAction({
+                        productId: row.productId,
+                        note: "Requested Media Workspace from Watch list bulk action.",
+                    });
+                    if (result.skipped) {
+                        skipped += 1;
+                        steps[index] = { ...steps[index], status: "skipped", detail: result.reason ?? "Watch đã được bỏ qua." };
+                    } else {
+                        completed += 1;
+                        steps[index] = { ...steps[index], status: "done", detail: "Đã đưa vào Workspace Xử lý Media." };
+                    }
+                } else {
+                    const result = await requestWatchPhotoshootAction({
+                        watchIds: [row.id],
+                        note: "Requested Photoshoot Workspace from Watch list bulk action.",
+                    });
+                    const item = result.items[0];
+                    if (item?.status !== "REQUESTED") {
+                        skipped += 1;
+                        steps[index] = { ...steps[index], status: "skipped", detail: item?.reason ?? "Watch đã được bỏ qua." };
+                    } else {
+                        completed += 1;
+                        steps[index] = { ...steps[index], status: "done", detail: "Đã đưa vào Workspace Chụp ảnh." };
+                    }
+                }
+            } catch (error) {
+                skipped += 1;
+                steps[index] = {
+                    ...steps[index],
+                    status: "error",
+                    detail: error instanceof Error ? error.message : "Không thể cập nhật Space Media.",
+                };
+            }
+
+            progress.update({
+                message: `${index + 1}/${selectedRows.length} watch hoàn tất`,
+                steps: [...steps],
+            });
+        }
+
+        try {
+            notify.success({
+                title: "Đã xử lý Space Media",
+                message: `${completed} watch được đưa vào luồng, ${skipped} watch bỏ qua.`,
+            });
+            setSelectedIds([]);
+            await loadList(new URLSearchParams(params.toString()), { meta: "lite" });
+        } finally {
+            setMediaReviewSubmitting(false);
+            window.setTimeout(() => progress.hide(), 1200);
+        }
+    }
+
     function navigateWithProgress(href: string, title = "Đang chuyển trang") {
         progress.show({
             title,
@@ -1032,6 +1291,7 @@ export default function WatchListClient(props: WatchListClientProps) {
 
     const loading = isLoading || isPending;
     const displayRows = rows;
+    const duplicateView = params.get("duplicates") === "1";
     return (
         <BusinessListShell
             header={
@@ -1043,10 +1303,28 @@ export default function WatchListClient(props: WatchListClientProps) {
                     submittingMediaReview={mediaReviewSubmitting}
                     onRequestPhotoshoot={requestSelectedPhotoshoot}
                     onRequestMediaReview={requestSelectedMediaReview}
+                    showSelectionActions={false}
+                    duplicateView={duplicateView}
+                    onToggleDuplicateView={() => {
+                        const next = new URLSearchParams(params.toString());
+                        if (duplicateView) next.delete("duplicates");
+                        else next.set("duplicates", "1");
+                        next.set("page", "1");
+                        void loadList(next, { meta: "full" });
+                    }}
+                    onCustomizeDashboard={() =>
+                        setDashboardCustomizationRequest((request) => request + 1)
+                    }
                 />
             }
             dashboard={
-                <AsyncBusinessListDashboard endpoint="/api/admin/watches/dashboard" />
+                <AsyncBusinessListDashboard
+                    endpoint="/api/admin/watches/dashboard"
+                    widgets={WATCH_DASHBOARD_WIDGETS}
+                    storageKey="admin-dashboard:watch-list"
+                    customizationRequest={dashboardCustomizationRequest}
+                    showCustomizationTrigger={false}
+                />
             }
             filters={
                 <WatchListFilters
@@ -1063,6 +1341,31 @@ export default function WatchListClient(props: WatchListClientProps) {
                 />
             }
         >
+            {selectedRows.length && !duplicateView ? (
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet-200 bg-violet-50/70 px-4 py-3 shadow-sm">
+                    <div className="text-sm text-slate-700">
+                        Đã chọn <span className="font-bold text-violet-700">{selectedRows.length}</span> watch
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => void sendSelectedToMediaSpace()}
+                            disabled={mediaReviewSubmitting || photoshootSubmitting}
+                            className="inline-flex h-9 items-center rounded-lg bg-violet-600 px-4 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-violet-300"
+                        >
+                            {mediaReviewSubmitting ? "Đang xử lý..." : `Đưa vào Space Media (${selectedRows.length})`}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setSelectedIds([])}
+                            disabled={mediaReviewSubmitting || photoshootSubmitting}
+                            className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-semibold text-slate-500 transition hover:bg-white hover:text-slate-800"
+                        >
+                            Bỏ chọn
+                        </button>
+                    </div>
+                </div>
+            ) : null}
             <div className={loading ? "opacity-60 transition" : "transition"}>
                 <WatchListTable
                     items={displayRows}
@@ -1073,8 +1376,13 @@ export default function WatchListClient(props: WatchListClientProps) {
                     onToggleAll={onToggleAll}
                     onView={onView}
                     onEdit={onEdit}
-                    onDelete={onDelete}
+                    onDelete={duplicateView ? permanentlyDeleteDuplicateWatch : onDelete}
                     onService={onService}
+                    onMedia={sendWatchToMediaSpace}
+                    mediaSubmittingId={mediaRowSubmittingId}
+                    onConfirmDuplicate={duplicateView ? undefined : confirmDuplicateWatch}
+                    duplicateSubmittingId={duplicateSubmittingId}
+                    onRestoreDuplicate={duplicateView ? restoreDuplicateWatch : undefined}
                     onQuickOrder={onQuickOrder}
                     onConsign={onConsign}
                     onBuyBack={onBuyBack}
