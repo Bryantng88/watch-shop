@@ -91,6 +91,11 @@ export type CoordinationTechnicalIssueBoardItemDTO = {
   stage: "INSPECT" | "READY" | "PROCESSING" | "DONE";
   actualCost: number | null;
   updatedAt: string | null;
+  lastUpdatedBy: {
+    label: string;
+    avatarUrl: string | null;
+    isSystem: boolean;
+  };
   workspaceTaskItemId: string | null;
   serviceRequest: {
     refNo: string | null;
@@ -129,6 +134,7 @@ export type CoordinationDashboardDTO = {
   viewConfig: SpaceViewConfig;
   filters: {
     selectedDate: string;
+    currentPeriodKey: string;
     weekOptions: Array<{
       label: string;
       value: string;

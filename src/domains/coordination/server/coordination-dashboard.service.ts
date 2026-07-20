@@ -1161,6 +1161,13 @@ async function loadTechnicalIssueBoard(input: {
       targetId: true,
       taskItemId: true,
       createdAt: true,
+      createdByUser: {
+        select: {
+          name: true,
+          email: true,
+          avatarUrl: true,
+        },
+      },
       taskItem: {
         select: {
           id: true,
@@ -1177,6 +1184,11 @@ async function loadTechnicalIssueBoard(input: {
       taskItemId: string | null;
       flowStageKey: string | null;
       createdAt: Date;
+      lastUpdatedBy: {
+        label: string;
+        avatarUrl: string | null;
+        isSystem: boolean;
+      };
     }
   >();
   for (const binding of bindings) {
@@ -1186,6 +1198,14 @@ async function loadTechnicalIssueBoard(input: {
       taskItemId: binding.taskItemId ?? null,
       flowStageKey: metadata.flowStageKey,
       createdAt: binding.createdAt,
+      lastUpdatedBy: (() => {
+        const label = userLabel(binding.createdByUser);
+        return {
+          label: label === "-" ? "Hệ thống" : label,
+          avatarUrl: binding.createdByUser?.avatarUrl ?? null,
+          isSystem: label === "-",
+        };
+      })(),
     });
   }
 
@@ -1263,6 +1283,11 @@ async function loadTechnicalIssueBoard(input: {
         }),
         actualCost: nullableNumber(issue.actualCost),
         updatedAt: formatDateTime(issue.updatedAt),
+        lastUpdatedBy: binding?.lastUpdatedBy ?? {
+          label: "Hệ thống",
+          avatarUrl: null,
+          isSystem: true,
+        },
         workspaceTaskItemId: binding?.taskItemId ?? null,
         serviceRequest: {
           refNo: issue.serviceRequest?.refNo ?? null,
@@ -2043,6 +2068,7 @@ export async function getCoordinationDashboard(input: {
     ...Object.values(coreFlowSharedUserIds).flat(),
   ]);
   const sharedUsers = allUsers.filter((user) => allSharedUserIds.has(user.id));
+  const currentWeek = getWeekRange(new Date());
 
   return {
     context: input.context,
@@ -2066,6 +2092,7 @@ export async function getCoordinationDashboard(input: {
     viewConfig,
     filters: {
       selectedDate: formatDateInput(cycle.week.startDate),
+      currentPeriodKey: currentWeek.periodKey,
       weekOptions: buildWeekOptions(selectedDate),
     },
     report: [

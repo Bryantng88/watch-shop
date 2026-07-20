@@ -408,9 +408,48 @@ type QueueBusinessPreview = {
   status: string | null;
   imageUrl: string | null;
   imageUrls: string[];
+  postTargets?: QueueItemDTO["preview"]["postTargets"];
   mediaWorkProgress?: QueueItemDTO["mediaWorkProgress"];
   technicalIssue?: QueueItemDTO["technicalIssue"];
 };
+
+type ProductPostTargetsShape = {
+  postTargets?: Array<{
+    postTarget?: {
+      id?: string | null;
+      name?: string | null;
+      platform?: string | null;
+    } | null;
+  } | {
+    id?: string | null;
+    name?: string | null;
+    platform?: string | null;
+  }> | null;
+} | null;
+
+function mapPostTargets(product: ProductPostTargetsShape): QueueItemDTO["preview"]["postTargets"] {
+  const relations = Array.isArray(product?.postTargets) ? product.postTargets : [];
+  const byName = new Map<string, { id: string; name: string; platform?: string | null }>();
+
+  for (const item of relations) {
+    const target = item?.postTarget ?? item;
+    const id = clean(target?.id);
+    const name = clean(target?.name);
+
+    if (!id || !name) continue;
+
+    const key = name.toLowerCase();
+    if (byName.has(key)) continue;
+
+    byName.set(key, {
+      id,
+      name,
+      platform: clean(target?.platform) || null,
+    });
+  }
+
+  return Array.from(byName.values());
+}
 
 function hasWatchContentPreview(watch: {
   watchContent?: {
@@ -582,6 +621,18 @@ async function buildQueueBusinessPreviewMap(
                 select: { id: true },
                 take: 1,
               },
+              postTargets: {
+                select: {
+                  postTargetId: true,
+                  postTarget: {
+                    select: {
+                      id: true,
+                      name: true,
+                      platform: true,
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -699,6 +750,7 @@ async function buildQueueBusinessPreviewMap(
       status: String(watch.saleStage || watch.product.status || ""),
       imageUrl,
       imageUrls: imageUrl ? [imageUrl] : [],
+      postTargets: mapPostTargets(watch.product),
       mediaWorkProgress: watchPreviewMediaProgress(watch),
     });
   }
@@ -1022,6 +1074,7 @@ export async function listTaskItemQueueItems(
           imageUrls: businessPreview?.imageUrls?.length
             ? businessPreview.imageUrls
             : queueItemImageUrls(metadata),
+          postTargets: businessPreview?.postTargets ?? [],
         },
         latestActivityTitle: stats.latestActivityTitle,
         feedbackCount: stats.feedbackCount,

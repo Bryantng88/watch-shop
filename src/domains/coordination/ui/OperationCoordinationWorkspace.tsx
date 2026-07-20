@@ -148,12 +148,6 @@ function actionLabel(value: string) {
   return cleanValue;
 }
 
-function periodSortValue(value?: string | null) {
-  const match = String(value ?? "").match(/^(\d{4})-W(\d{1,2})$/i);
-  if (!match) return 0;
-  return Number(match[1]) * 100 + Number(match[2]);
-}
-
 function modeLabel(mode: CoordinationDashboardDTO["viewConfig"]["modes"][number]) {
   if (mode.key === "media-production-flow") return "Luồng sản xuất Media";
   if (mode.key === "sr-cases") return "Hồ sơ yêu cầu dịch vụ";
@@ -516,15 +510,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     () => displayedWorkTickets.filter((ticket) => ticket.rollover?.direction !== "OUT"),
     [displayedWorkTickets],
   );
-  const latestPeriodKey = useMemo(
-    () =>
-      data.filters.weekOptions
-        .map((option) => option.value)
-        .sort((left, right) => periodSortValue(right) - periodSortValue(left))[0] ??
-      data.week.periodKey,
-    [data.filters.weekOptions, data.week.periodKey],
-  );
-  const isLatestCycle = data.week.periodKey === latestPeriodKey;
+  const isCurrentCycle = data.week.periodKey === data.filters.currentPeriodKey;
   const filterFacets = useMemo(() => {
     const creators = new Map<string, number>();
     const result = { open: 0, feedback: 0, done: 0, unpaid: 0, paid: 0, none: 0 };
@@ -946,13 +932,13 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                         <div className="absolute right-0 z-30 mt-2 w-72 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-lg">
                           <button
                             type="button"
-                            disabled={!isLatestCycle}
+                            disabled={!isCurrentCycle}
                             onClick={() => {
                               setIsRolloverMenuOpen(false);
                               void rolloverPreviousCycle();
                             }}
                             className="flex w-full items-center gap-2 px-3 py-2 text-left font-medium text-slate-700 transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-white"
-                            title={isLatestCycle ? undefined : "Chỉ nhận item tồn ở tuần mới nhất"}
+                            title={isCurrentCycle ? undefined : "Chỉ nhận item tồn ở tuần hiện tại"}
                           >
                             <RotateCcw className="h-4 w-4 text-violet-600" />
                             <span>{actionLabel(data.viewConfig.carryover.actionLabel)}</span>
@@ -1807,6 +1793,50 @@ function technicalIssuePriorityWeight(value?: string | null) {
   return technicalIssuePriorityValue(value) === "URGENT" ? 0 : 1;
 }
 
+function technicalBoardAreaAccent(area?: string | null) {
+  const normalized = String(area ?? "").toUpperCase();
+
+  if (normalized === "MOVEMENT") {
+    return {
+      bar: "bg-blue-500",
+      headerBg: "bg-blue-50",
+      headerBorder: "border-blue-100",
+      chip: "border-blue-100 bg-blue-50 text-blue-700",
+    };
+  }
+  if (normalized === "CASE") {
+    return {
+      bar: "bg-cyan-500",
+      headerBg: "bg-cyan-50",
+      headerBorder: "border-cyan-100",
+      chip: "border-cyan-100 bg-cyan-50 text-cyan-700",
+    };
+  }
+  if (normalized === "CRYSTAL") {
+    return {
+      bar: "bg-indigo-500",
+      headerBg: "bg-indigo-50",
+      headerBorder: "border-indigo-100",
+      chip: "border-indigo-100 bg-indigo-50 text-indigo-700",
+    };
+  }
+  if (normalized === "BRACELET" || normalized === "STRAP") {
+    return {
+      bar: "bg-teal-500",
+      headerBg: "bg-teal-50",
+      headerBorder: "border-teal-100",
+      chip: "border-teal-100 bg-teal-50 text-teal-700",
+    };
+  }
+
+  return {
+    bar: "bg-slate-400",
+    headerBg: "bg-slate-50",
+    headerBorder: "border-slate-100",
+    chip: "border-slate-200 bg-slate-50 text-slate-700",
+  };
+}
+
 function technicalBoardItemTimeValue(item: TechnicalIssueBoardItem) {
   const raw = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
   return Number.isFinite(raw) ? raw : 0;
@@ -1972,7 +2002,10 @@ function DraggableTechnicalIssueBoardCard({
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: item.id,
   });
-  const style = { transform: CSS.Translate.toString(transform) };
+  const style = {
+    opacity: isDragging ? 0 : 1,
+    transform: CSS.Translate.toString(transform),
+  };
 
   return (
     <div ref={setNodeRef} style={style} className="min-w-0 max-w-full">
@@ -2005,29 +2038,34 @@ function TechnicalIssueBoardCard({
     : `/admin/services/${item.serviceRequestId}`;
   const imageSrc = resolveMediaPreviewSrc(item.serviceRequest.imageUrl);
   const isUrgent = technicalIssuePriorityValue(item.priority) === "URGENT";
+  const accent = technicalBoardAreaAccent(item.area);
+  const lastUpdatedBy = item.lastUpdatedBy;
+  const lastUpdatedAvatarSrc = resolveMediaPreviewSrc(lastUpdatedBy.avatarUrl);
 
   return (
     <div
       className={cn(
-        "w-full min-w-0 max-w-full overflow-hidden rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition hover:border-violet-200 hover:bg-violet-50/30",
-        dragging && "opacity-50",
+        "relative w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:border-violet-200 hover:shadow-md",
+        isUrgent && "border-rose-200 ring-1 ring-rose-100",
+        dragging && "rotate-[1.5deg] shadow-xl ring-2 ring-violet-200",
       )}
     >
+      <div className={cn("h-1", accent.bar)} />
       {isUrgent ? (
-        <div className="mb-2 text-[11px] font-extrabold uppercase tracking-wide text-rose-600">
+        <div className="pointer-events-none absolute -left-8 top-3 z-10 w-24 -rotate-45 bg-rose-500/70 py-0.5 text-center text-[9px] font-black uppercase tracking-wide text-white/85 shadow-sm">
           Gấp
         </div>
       ) : null}
-      <div className="flex items-start gap-3">
-        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md bg-slate-100">
+      <div className={cn("flex items-start gap-2 border-b px-2.5 py-2.5", accent.headerBg, accent.headerBorder)}>
+        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-slate-100">
           {imageSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={imageSrc} alt="" className="h-full w-full object-cover" />
           ) : (
-            <Monitor className="m-3 h-6 w-6 text-slate-400" aria-hidden="true" />
+            <Monitor className="m-2.5 h-5 w-5 text-slate-400" aria-hidden="true" />
           )}
         </div>
-        <div className="min-w-0 flex-1">
+        <div className={cn("min-w-0 flex-1", isUrgent && "pl-4")}>
           <div className="flex min-w-0 flex-wrap items-start gap-2">
             <Link href={href} className="min-w-0 flex-1 line-clamp-2 text-sm font-semibold text-slate-950 hover:text-violet-700">
               {item.summary}
@@ -2046,29 +2084,29 @@ function TechnicalIssueBoardCard({
               title={isUrgent ? "Bỏ gấp" : "Đánh dấu gấp"}
               aria-label={isUrgent ? "Bỏ gấp" : "Đánh dấu gấp"}
               className={cn(
-                "inline-flex h-7 w-7 items-center justify-center rounded-md border bg-white transition disabled:cursor-wait disabled:opacity-60",
+                "inline-flex h-6 w-6 items-center justify-center rounded-md border bg-white transition disabled:cursor-wait disabled:opacity-60",
                 isUrgent
                   ? "border-rose-200 text-rose-600 hover:bg-rose-50"
                   : "border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-rose-600",
               )}
             >
-              <Zap className="h-3.5 w-3.5" aria-hidden="true" />
+              <Zap className="h-3 w-3" aria-hidden="true" />
             </button>
           ) : null}
           {dragHandleProps ? (
             <button
               type="button"
               {...dragHandleProps}
-              className="inline-flex h-7 w-7 cursor-grab items-center justify-center rounded-md border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-700 active:cursor-grabbing"
+              className="inline-flex h-6 w-6 cursor-grab items-center justify-center rounded-md border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-700 active:cursor-grabbing"
               aria-label="Kéo TI"
             >
-              <GripVertical className="h-4 w-4" aria-hidden="true" />
+              <GripVertical className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           ) : null}
         </div>
       </div>
-      <div className="mt-3 flex min-w-0 flex-wrap items-center gap-1.5">
-        <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5 px-2.5 pt-2">
+        <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", accent.chip)}>
           {technicalAreaLabel(item.area)}
         </span>
         <span className="rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
@@ -2080,11 +2118,29 @@ function TechnicalIssueBoardCard({
           </span>
         ) : null}
       </div>
-      <div className="mt-3 grid min-w-0 grid-cols-1 gap-1 text-xs text-slate-500">
-        <span className="min-w-0 truncate">{formatDateTime(item.updatedAt)}</span>
-        <span className="min-w-0 truncate font-semibold text-slate-800">
+      <div className="flex min-w-0 items-center justify-between gap-2 px-2.5 py-2 text-xs">
+        <div className="flex min-w-0 items-center gap-2">
+          <span
+            className={cn(
+              "flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full text-[9px] font-semibold",
+              lastUpdatedBy.isSystem ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600",
+            )}
+          >
+            {lastUpdatedAvatarSrc ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={lastUpdatedAvatarSrc} alt="" className="h-full w-full object-cover" />
+            ) : (
+              initials(lastUpdatedBy.label)
+            )}
+          </span>
+          <div className="min-w-0 leading-tight">
+            <div className="truncate font-semibold text-slate-800">{lastUpdatedBy.label}</div>
+            <div className="truncate text-[11px] text-slate-400">{formatDateTime(item.updatedAt)}</div>
+          </div>
+        </div>
+        <div className="max-w-[42%] truncate text-right font-semibold text-slate-800">
           {item.actualCost ? formatMoneyCompact(item.actualCost) : "Chưa có chi phí"}
-        </span>
+        </div>
       </div>
     </div>
   );

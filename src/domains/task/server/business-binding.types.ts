@@ -52,6 +52,11 @@ export type QueueItemPreviewDTO = {
   status: string | null;
   imageUrl?: string | null;
   imageUrls?: string[];
+  postTargets?: Array<{
+    id: string;
+    name: string;
+    platform?: string | null;
+  }>;
 };
 
 export type QueueItemManualTransitionDTO = {

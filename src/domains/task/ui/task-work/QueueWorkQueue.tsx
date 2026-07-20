@@ -78,6 +78,11 @@ export type TaskItemQueueItem = {
     status: string | null;
     imageUrl?: string | null;
     imageUrls?: string[];
+    postTargets?: Array<{
+      id: string;
+      name: string;
+      platform?: string | null;
+    }>;
   };
   latestActivityTitle: string | null;
   feedbackCount: number;
@@ -146,6 +151,12 @@ type TechnicalDetailCatalogOption = {
   code?: string | null;
   name?: string | null;
 };
+
+function queuePostTargets(queueItem: TaskItemQueueItem) {
+  return Array.isArray(queueItem.preview.postTargets)
+    ? queueItem.preview.postTargets.filter((target) => String(target.name ?? "").trim())
+    : [];
+}
 
 function normalizeTechnicalArea(value?: string | null) {
   const area = String(value ?? "").trim().toUpperCase();
@@ -1638,6 +1649,7 @@ export function QueueWorkQueue({
                       (action) => blueprintActionMatchesState(queueItem, action),
                     );
                     const srCaseHref = queueItem.serviceRequestWorkspaceHref;
+                    const postTargets = queuePostTargets(queueItem);
 
                     return (
                       <div
@@ -1681,8 +1693,26 @@ export function QueueWorkQueue({
                               ) : (
                                 <span>{queueItemRef(queueItem)}</span>
                               )}
-                              <span>-</span>
-                              <span>{queueItem.source === "MANUAL" ? "Manual" : "Auto"}</span>
+                              {workspaceWorkTypeKey === "publish" && postTargets.length ? (
+                                <>
+                                  <span>-</span>
+                                  <span className="flex min-w-0 flex-wrap items-center gap-1">
+                                    {postTargets.slice(0, 3).map((target) => (
+                                      <span
+                                        key={target.id}
+                                        className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-100"
+                                      >
+                                        {target.name}
+                                      </span>
+                                    ))}
+                                    {postTargets.length > 3 ? (
+                                      <span className="text-[11px] font-semibold text-slate-400">
+                                        +{postTargets.length - 3}
+                                      </span>
+                                    ) : null}
+                                  </span>
+                                </>
+                              ) : null}
                             </div>
                             {queueItem.intakeNote ? (
                               <div className="mt-2 max-w-[360px]">
