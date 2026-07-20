@@ -142,7 +142,9 @@ export default function SpaceFilterBar({
         {children}
 
         {viewOptions.length ? (
-          <div className="ml-auto"><SpaceViewSwitch activeView={activeView} options={viewOptions} onChange={onViewChange} /></div>
+          <div className="ml-auto shrink-0 border-l border-slate-200 pl-2">
+            <SpaceViewSwitch activeView={activeView} options={viewOptions} onChange={onViewChange} />
+          </div>
         ) : null}
       </div>
     </div>

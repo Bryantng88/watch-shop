@@ -41,6 +41,7 @@ import AdminBreadcrumbs from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
 import {
   previewRolloverPreviousCycleItemsAction,
   rolloverPreviousCycleItemsAction,
+  updateSpaceSharingAction,
   updateTechnicalIssuePriorityAction,
 } from "@/domains/coordination/actions/coordination.actions";
 import {
@@ -65,7 +66,11 @@ import {
   SpaceViewFooterTip,
   SpaceViewPage,
 } from "@/domains/shared/ui/space/SpaceViewShell";
-import SpaceFilterBar, { SpaceViewSwitch } from "@/domains/shared/ui/space/SpaceFilterBar";
+import SpaceFilterBar from "@/domains/shared/ui/space/SpaceFilterBar";
+import {
+  BusinessEntityPreviewModal,
+  useBusinessEntityPreview,
+} from "@/domains/shared/ui/business/BusinessEntityPreview";
 import type { CoordinationDashboardDTO } from "../server/coordination-dashboard.types";
 import { isCoreWorkspaceBlueprint } from "@/domains/task/shared/workspace-flow-policy";
 
@@ -377,6 +382,179 @@ function CreatorCell({
         </span>
         <span className="truncate font-medium text-slate-800">{creator.label}</span>
       </div>
+    </div>
+  );
+}
+
+type SpaceShareScope = "SPACE" | "CORE_FLOW";
+
+function shareUserLabel(user?: CoordinationDashboardDTO["spaceSharing"]["users"][number] | null) {
+  return user?.name || user?.email || "Thành viên";
+}
+
+function SpaceShareAvatar({
+  user,
+}: {
+  user: CoordinationDashboardDTO["spaceSharing"]["users"][number];
+}) {
+  const label = shareUserLabel(user);
+  const src = resolveMediaPreviewSrc(user.avatarUrl);
+
+  return (
+    <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-violet-100 text-[10px] font-bold text-violet-700">
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt={label} className="h-full w-full object-cover" />
+      ) : (
+        initials(label)
+      )}
+    </span>
+  );
+}
+
+function SpaceSharingEditor({
+  taskId,
+  context,
+  activeCoreFlow,
+  sharing,
+}: {
+  taskId: string;
+  context: CoordinationDashboardDTO["context"];
+  activeCoreFlow: SpaceCoreFlow | null;
+  sharing: CoordinationDashboardDTO["spaceSharing"];
+}) {
+  const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [sharingScope, setSharingScope] = useState<SpaceShareScope>("SPACE");
+  const [localScopeIds, setLocalScopeIds] = useState(sharing.scopeUserIds);
+  const [isPending, startTransition] = useTransition();
+  const activeScope = sharingScope === "CORE_FLOW" && activeCoreFlow ? "CORE_FLOW" : "SPACE";
+  const activeCoreFlowKey = activeCoreFlow?.key ?? null;
+  const activeSharedIds = activeScope === "CORE_FLOW" && activeCoreFlowKey
+    ? localScopeIds.coreFlows[activeCoreFlowKey] ?? []
+    : localScopeIds.space;
+  const sharedIdSet = new Set(activeSharedIds);
+  const visibleSharedUsers = activeSharedIds
+    .map((id) => sharing.sharedUsers.find((user) => user.id === id) ?? sharing.users.find((user) => user.id === id))
+    .filter(Boolean) as CoordinationDashboardDTO["spaceSharing"]["users"];
+  const availableUsers = sharing.users.filter((user) => !sharedIdSet.has(user.id));
+
+  useEffect(() => {
+    setLocalScopeIds(sharing.scopeUserIds);
+  }, [sharing.scopeUserIds]);
+
+  useEffect(() => {
+    if (!activeCoreFlow && sharingScope === "CORE_FLOW") setSharingScope("SPACE");
+  }, [activeCoreFlow, sharingScope]);
+
+  function updateSharedUsers(nextSharedIds: string[]) {
+    setLocalScopeIds((current) => activeScope === "CORE_FLOW" && activeCoreFlowKey
+      ? { ...current, coreFlows: { ...current.coreFlows, [activeCoreFlowKey]: nextSharedIds } }
+      : { ...current, space: nextSharedIds });
+
+    startTransition(async () => {
+      await updateSpaceSharingAction({
+        taskId,
+        context,
+        sharingScope: activeScope,
+        coreFlowKey: activeCoreFlowKey,
+        sharedUserIds: nextSharedIds,
+      });
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen((open) => !open)}
+        className="inline-flex h-9 items-center rounded-md border border-violet-200 bg-white px-2.5 text-xs font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50"
+        aria-expanded={isOpen}
+        aria-label="Quản lý chia sẻ Space"
+      >
+        <span className="mr-2 flex items-center">
+          {visibleSharedUsers.slice(0, 3).map((user, index) => (
+            <span key={user.id} className={cn(index > 0 && "-ml-2")}>
+              <SpaceShareAvatar user={user} />
+            </span>
+          ))}
+          {visibleSharedUsers.length > 3 ? (
+            <span className="-ml-2 flex h-7 min-w-7 items-center justify-center rounded-full border-2 border-white bg-slate-100 px-1 text-[10px] text-slate-600">
+              +{visibleSharedUsers.length - 3}
+            </span>
+          ) : null}
+          {!visibleSharedUsers.length ? (
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-50">
+              <Plus className="h-3.5 w-3.5" />
+            </span>
+          ) : null}
+        </span>
+        Chia sẻ
+      </button>
+
+      {isOpen ? (
+        <div className="absolute right-0 z-40 mt-2 w-80 rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-700 shadow-xl">
+          <div className="font-semibold text-slate-950">Thành viên Space</div>
+          <div className="mt-1 text-[11px] text-slate-500">
+            {activeScope === "CORE_FLOW" && activeCoreFlow ? coreFlowLabel(activeCoreFlow) : "Toàn bộ Space"}
+          </div>
+
+          <div className="mt-3 space-y-2">
+            {visibleSharedUsers.length ? visibleSharedUsers.map((user) => (
+              <div key={user.id} className="flex items-center gap-2 rounded-lg bg-slate-50 px-2 py-1.5">
+                <SpaceShareAvatar user={user} />
+                <span className="min-w-0 flex-1 truncate font-medium">{shareUserLabel(user)}</span>
+                <button
+                  type="button"
+                  onClick={() => updateSharedUsers(activeSharedIds.filter((id) => id !== user.id))}
+                  disabled={isPending}
+                  className="rounded-full p-1 text-slate-400 hover:bg-white hover:text-rose-600"
+                  aria-label={`Xóa quyền chia sẻ của ${shareUserLabel(user)}`}
+                >
+                  <XCircle className="h-4 w-4" />
+                </button>
+              </div>
+            )) : <div className="rounded-lg bg-slate-50 px-3 py-2 text-slate-500">Chưa chia sẻ với ai.</div>}
+          </div>
+
+          <div className="mt-3 grid gap-2 border-t border-slate-100 pt-3">
+            <select
+              value={activeScope}
+              onChange={(event) => setSharingScope(event.target.value as SpaceShareScope)}
+              disabled={isPending}
+              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-violet-300"
+            >
+              <option value="SPACE">Chia sẻ toàn bộ Space</option>
+              {activeCoreFlow ? <option value="CORE_FLOW">Chỉ core flow này</option> : null}
+            </select>
+            <div className="flex gap-2">
+              <select
+                value={selectedUserId}
+                onChange={(event) => setSelectedUserId(event.target.value)}
+                disabled={isPending || !availableUsers.length}
+                className="h-9 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-violet-300"
+              >
+                <option value="">Thêm thành viên</option>
+                {availableUsers.map((user) => <option key={user.id} value={user.id}>{shareUserLabel(user)}</option>)}
+              </select>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!selectedUserId) return;
+                  updateSharedUsers(Array.from(new Set([...activeSharedIds, selectedUserId])));
+                  setSelectedUserId("");
+                }}
+                disabled={isPending || !selectedUserId}
+                className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-950 px-3 font-semibold text-white disabled:bg-slate-300"
+              >
+                Thêm
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -909,13 +1087,11 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-                    <SpaceViewSwitch
-                      activeView={isTechnicalIssueBoardView ? "TI_BOARD" : "LIST"}
-                      onChange={(value) => setWorkTicketView(value === "TI_BOARD" ? "TI_BOARD" : "LIST")}
-                      options={[
-                        { value: "TI_BOARD", label: "Board TI", icon: <Grid2X2 className="h-4 w-4" />, disabled: !canShowTechnicalIssueBoard },
-                        { value: "LIST", label: "List", icon: <List className="h-4 w-4" /> },
-                      ]}
+                    <SpaceSharingEditor
+                      taskId={data.cycle.id}
+                      context={data.context}
+                      activeCoreFlow={activeCoreFlow}
+                      sharing={data.spaceSharing}
                     />
                     <div className="relative">
                       <button
@@ -1032,6 +1208,12 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                 searchValue={filterQuery}
                 searchPlaceholder="Tìm Workspace, phụ trách, hoạt động..."
                 onSearchChange={setFilterQuery}
+                activeView={isTechnicalIssueBoardView ? "TI_BOARD" : "LIST"}
+                onViewChange={(value) => setWorkTicketView(value === "TI_BOARD" ? "TI_BOARD" : "LIST")}
+                viewOptions={[
+                  { value: "TI_BOARD", label: "Board TI", icon: <Grid2X2 className="h-4 w-4" />, disabled: !canShowTechnicalIssueBoard },
+                  { value: "LIST", label: "List", icon: <List className="h-4 w-4" /> },
+                ]}
                 selectFilters={[
                   {
                     key: "creator",
@@ -1511,6 +1693,7 @@ function TechnicalIssueBoardView({
   priorityFilter: TechnicalIssuePriorityFilter;
 }) {
   const router = useRouter();
+  const previewState = useBusinessEntityPreview();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overStage, setOverStage] = useState<TechnicalIssueBoardStage | null>(null);
   const [moveRequest, setMoveRequest] = useState<TechnicalIssueBoardMoveRequest | null>(null);
@@ -1622,6 +1805,25 @@ function TechnicalIssueBoardView({
       setMoveError("Vui lòng chọn vendor.");
       return;
     }
+    const shouldCreateAdditionalIssue = moveValues.createAdditionalIssue === true;
+    const additionalIssueSummary = String(moveValues.additionalIssueSummary ?? "").trim();
+    const additionalIssueNote = String(moveValues.additionalIssueNote ?? "").trim();
+    if (shouldCreateAdditionalIssue && !additionalIssueSummary) {
+      setMoveError("Vui lòng mô tả Technical Issue cần tạo thêm.");
+      return;
+    }
+    if (shouldCreateAdditionalIssue && !item.srCaseTaskItemId) {
+      setMoveError("Không tìm thấy SR Case Workspace để tạo thêm Technical Issue.");
+      return;
+    }
+
+    const actionFields = Object.fromEntries(
+      Object.entries(moveValues).filter(([key]) => ![
+        "createAdditionalIssue",
+        "additionalIssueSummary",
+        "additionalIssueNote",
+      ].includes(key)),
+    );
 
     setMoveError(null);
     startMoveTransition(async () => {
@@ -1631,8 +1833,18 @@ function TechnicalIssueBoardView({
           actionKey: action.key,
           targetType: "TECHNICAL_ISSUE",
           targetId: item.id,
-          fields: moveValues,
+          fields: actionFields,
         });
+        if (shouldCreateAdditionalIssue && item.srCaseTaskItemId) {
+          await submitOperationalBlueprintActionAction({
+            taskItemId: item.srCaseTaskItemId,
+            actionKey: "create_technical_issue",
+            fields: {
+              summary: additionalIssueSummary,
+              note: additionalIssueNote,
+            },
+          });
+        }
         setMoveRequest(null);
         setMoveValues({});
         router.refresh();
@@ -1665,6 +1877,15 @@ function TechnicalIssueBoardView({
                   isOver={overStage === column.key}
                   onTogglePriority={togglePriority}
                   priorityPendingIssueId={isPriorityPending ? priorityIssueId : null}
+                  onPreview={(item) => previewState.openPreview({
+                    type: "TECHNICAL_ISSUE",
+                    id: item.id,
+                    refNo: item.serviceRequest.refNo,
+                    title: item.summary,
+                    subtitle: item.serviceRequest.refNo ? `SR: ${item.serviceRequest.refNo}` : null,
+                    status: item.executionStatus,
+                    imageUrl: item.serviceRequest.imageUrl,
+                  })}
                 />
               );
             })}
@@ -1702,6 +1923,13 @@ function TechnicalIssueBoardView({
           setMoveValues({});
           setMoveError(null);
         }}
+      />
+      <BusinessEntityPreviewModal
+        open={previewState.open}
+        preview={previewState.preview}
+        loading={previewState.loading}
+        error={previewState.error}
+        onClose={previewState.closePreview}
       />
     </div>
   );
@@ -1943,12 +2171,14 @@ function TechnicalIssueBoardColumn({
   isOver,
   onTogglePriority,
   priorityPendingIssueId,
+  onPreview,
 }: {
   column: { key: TechnicalIssueBoardStage; label: string; hint: string };
   items: TechnicalIssueBoardItem[];
   isOver: boolean;
   onTogglePriority: (item: TechnicalIssueBoardItem) => void;
   priorityPendingIssueId: string | null;
+  onPreview: (item: TechnicalIssueBoardItem) => void;
 }) {
   const { setNodeRef } = useDroppable({ id: column.key });
 
@@ -1956,7 +2186,7 @@ function TechnicalIssueBoardColumn({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex h-[clamp(420px,calc(100vh-380px),760px)] min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition",
+        "flex h-[clamp(480px,calc(100vh-320px),840px)] min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition",
         isOver && "border-violet-300 ring-2 ring-violet-100",
       )}
     >
@@ -1978,6 +2208,7 @@ function TechnicalIssueBoardColumn({
             item={item}
             onTogglePriority={onTogglePriority}
             priorityPending={priorityPendingIssueId === item.id}
+            onPreview={onPreview}
           />
         ))}
         {!items.length ? (
@@ -1994,10 +2225,12 @@ function DraggableTechnicalIssueBoardCard({
   item,
   onTogglePriority,
   priorityPending,
+  onPreview,
 }: {
   item: TechnicalIssueBoardItem;
   onTogglePriority: (item: TechnicalIssueBoardItem) => void;
   priorityPending: boolean;
+  onPreview: (item: TechnicalIssueBoardItem) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: item.id,
@@ -2015,6 +2248,7 @@ function DraggableTechnicalIssueBoardCard({
         dragHandleProps={{ ...attributes, ...listeners }}
         onTogglePriority={onTogglePriority}
         priorityPending={priorityPending}
+        onPreview={onPreview}
       />
     </div>
   );
@@ -2026,16 +2260,15 @@ function TechnicalIssueBoardCard({
   dragHandleProps,
   onTogglePriority,
   priorityPending,
+  onPreview,
 }: {
   item: TechnicalIssueBoardItem;
   dragging?: boolean;
   dragHandleProps?: Record<string, unknown>;
   onTogglePriority?: (item: TechnicalIssueBoardItem) => void;
   priorityPending?: boolean;
+  onPreview?: (item: TechnicalIssueBoardItem) => void;
 }) {
-  const href = item.workspaceTaskItemId
-    ? `/admin/task-items/${item.workspaceTaskItemId}`
-    : `/admin/services/${item.serviceRequestId}`;
   const imageSrc = resolveMediaPreviewSrc(item.serviceRequest.imageUrl);
   const isUrgent = technicalIssuePriorityValue(item.priority) === "URGENT";
   const accent = technicalBoardAreaAccent(item.area);
@@ -2050,6 +2283,12 @@ function TechnicalIssueBoardCard({
         dragging && "rotate-[1.5deg] shadow-xl ring-2 ring-violet-200",
       )}
     >
+      <button
+        type="button"
+        onClick={() => onPreview?.(item)}
+        className="absolute inset-0 z-10 rounded-xl"
+        aria-label={`Xem nhanh TI ${item.summary}`}
+      />
       <div className={cn("h-1", accent.bar)} />
       {isUrgent ? (
         <div className="pointer-events-none absolute -left-8 top-3 z-10 w-24 -rotate-45 bg-rose-500/70 py-0.5 text-center text-[9px] font-black uppercase tracking-wide text-white/85 shadow-sm">
@@ -2067,15 +2306,15 @@ function TechnicalIssueBoardCard({
         </div>
         <div className={cn("min-w-0 flex-1", isUrgent && "pl-4")}>
           <div className="flex min-w-0 flex-wrap items-start gap-2">
-            <Link href={href} className="min-w-0 flex-1 line-clamp-2 text-sm font-semibold text-slate-950 hover:text-violet-700">
+            <div className="min-w-0 flex-1 line-clamp-2 text-sm font-semibold text-slate-950">
               {item.summary}
-            </Link>
+            </div>
           </div>
           <div className="mt-1 truncate text-xs text-slate-500">
             {item.serviceRequest.refNo ?? "SR"} · {item.serviceRequest.productTitle ?? item.serviceRequest.sku ?? "Watch"}
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="relative z-20 flex shrink-0 items-center gap-1">
           {onTogglePriority ? (
             <button
               type="button"
@@ -2172,6 +2411,10 @@ function TechnicalIssueBoardMoveModal({
   const visibleFields = action?.fields.filter((field) =>
     shouldShowTechnicalBoardField(field, values),
   ) ?? [];
+  const canOfferAdditionalIssue =
+    request.item.stage === "INSPECT" &&
+    (request.targetStage === "READY" || request.targetStage === "PROCESSING") &&
+    Boolean(action);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4">
@@ -2221,6 +2464,47 @@ function TechnicalIssueBoardMoveModal({
               />
             </div>
           ))}
+          {canOfferAdditionalIssue ? (
+            <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-4">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={values.createAdditionalIssue === true}
+                  disabled={pending}
+                  onChange={(event) => onChange("createAdditionalIssue", event.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-violet-300 text-violet-600"
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-slate-900">
+                    SR này còn vấn đề khác cần tách thành TI riêng?
+                  </span>
+                  <span className="mt-1 block text-xs leading-5 text-slate-600">
+                    TI mới sẽ được tạo trong cùng SR Case và đưa vào bước Inspect để xử lý độc lập.
+                  </span>
+                </span>
+              </label>
+              {values.createAdditionalIssue === true ? (
+                <div className="mt-3 grid gap-2 border-t border-violet-100 pt-3">
+                  <input
+                    value={String(values.additionalIssueSummary ?? "")}
+                    onChange={(event) => onChange("additionalIssueSummary", event.target.value)}
+                    disabled={pending}
+                    placeholder="Mô tả ngắn vấn đề cần xử lý thêm *"
+                    className="h-10 rounded-lg border border-violet-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-violet-400"
+                    autoFocus
+                  />
+                  <textarea
+                    value={String(values.additionalIssueNote ?? "")}
+                    onChange={(event) => onChange("additionalIssueNote", event.target.value)}
+                    disabled={pending}
+                    placeholder="Ghi chú thêm (không bắt buộc)"
+                    rows={2}
+                    className="resize-none rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-violet-400"
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           {error ? (
             <div className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
               {error}

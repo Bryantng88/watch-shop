@@ -97,6 +97,7 @@ export type CoordinationTechnicalIssueBoardItemDTO = {
     isSystem: boolean;
   };
   workspaceTaskItemId: string | null;
+  srCaseTaskItemId: string | null;
   serviceRequest: {
     refNo: string | null;
     productTitle: string | null;

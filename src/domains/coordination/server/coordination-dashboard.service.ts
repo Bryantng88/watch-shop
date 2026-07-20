@@ -1210,7 +1210,7 @@ async function loadTechnicalIssueBoard(input: {
   }
 
   const issueIds = [...bindingByIssueId.keys()];
-  const [vendorOptions, technicalDetailCatalogOptions] = await Promise.all([
+  const [vendorOptions, technicalDetailCatalogOptions, serviceRequestBindings] = await Promise.all([
     input.db.vendor.findMany({
       where: { isActive: true },
       select: { id: true, name: true },
@@ -1221,9 +1221,32 @@ async function loadTechnicalIssueBoard(input: {
       select: { id: true, area: true, code: true, name: true },
       orderBy: [{ area: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
     }),
+    input.db.taskExecution.findMany({
+      where: {
+        taskId: input.taskId,
+        targetType: TaskExecutionTargetType.SERVICE_REQUEST,
+        actionType: { not: TaskExecutionActionType.CANCELLED },
+        taskItemId: { not: null },
+      },
+      select: {
+        targetId: true,
+        taskItemId: true,
+        createdAt: true,
+        taskItem: { select: { note: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
   if (!issueIds.length) return { items: [], vendorOptions, technicalDetailCatalogOptions };
+
+  const srCaseTaskItemIdByServiceRequestId = new Map<string, string>();
+  for (const binding of serviceRequestBindings) {
+    if (!binding.taskItemId || srCaseTaskItemIdByServiceRequestId.has(binding.targetId)) continue;
+    const metadata = workspaceRoleMetadataFromNote(binding.taskItem?.note ?? null);
+    if (metadata.workspaceRole && metadata.workspaceRole !== "SR_CASE") continue;
+    srCaseTaskItemIdByServiceRequestId.set(binding.targetId, binding.taskItemId);
+  }
 
   const issues = await input.db.technicalIssue.findMany({
     where: { id: { in: issueIds } },
@@ -1289,6 +1312,7 @@ async function loadTechnicalIssueBoard(input: {
           isSystem: true,
         },
         workspaceTaskItemId: binding?.taskItemId ?? null,
+        srCaseTaskItemId: srCaseTaskItemIdByServiceRequestId.get(issue.serviceRequestId) ?? null,
         serviceRequest: {
           refNo: issue.serviceRequest?.refNo ?? null,
           productTitle: issue.serviceRequest?.product?.title ?? null,
