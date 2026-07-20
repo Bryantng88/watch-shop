@@ -62,6 +62,7 @@ Completed:
 
 Current handoff:
 
+- Read `docs/sprints/SM-Public-Storefront-MVP-NAS-handoff.md`.
 - Read `docs/sprints/SM-Sprint-58-service-operation-existing-domain-review-space-readiness.md`.
 - Read `docs/sprints/SM-Sprint-58-service-operation-review-proposal.md`.
 - Read `docs/sprints/SM-Sprint-59-service-operation-read-facade-boundary-cleanup.md`.
