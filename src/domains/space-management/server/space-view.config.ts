@@ -23,6 +23,17 @@ const CONTEXT_LABELS: Record<CoordinationContext, string> = {
   GENERAL: "General",
 };
 
+const DEFAULT_CARRYOVER_TERMINAL_STATES: Record<string, string[]> = {
+  ACQUISITION: ["CANCELED", "CANCELLED"],
+  ORDER: ["COMPLETED", "CANCELLED", "CANCELED", "RETURNED"],
+  PAYMENT: ["PAID", "COLLECTED", "CANCELED", "CANCELLED", "REFUNDED"],
+  SERVICE_REQUEST: ["COMPLETED", "DELIVERED", "CANCELED", "CANCELLED"],
+  SHIPMENT: ["DELIVERED", "CANCELLED", "CANCELED", "RETURNED"],
+  TECHNICAL_ISSUE: ["DONE", "CANCELED", "CANCELLED"],
+  WATCH: ["DONE", "POSTED", "SOLD", "CONSIGNED_TO", "CANCELED", "CANCELLED"],
+  WORK_CASE: ["RESOLVED", "CANCELLED", "CANCELED"],
+};
+
 function defaultSpaceViewConfig(context: CoordinationContext): SpaceViewConfig {
   const label = CONTEXT_LABELS[context];
 
@@ -51,10 +62,7 @@ function defaultSpaceViewConfig(context: CoordinationContext): SpaceViewConfig {
       onlyProcessingItems: true,
       processingRule:
         "Only active workspace bindings are carried over. Service Requests must not be COMPLETED, DELIVERED, or CANCELED; Technical Issues must not be DONE or CANCELED.",
-      terminalStatesByTargetType: {
-        SERVICE_REQUEST: ["COMPLETED", "DELIVERED", "CANCELED"],
-        TECHNICAL_ISSUE: ["DONE", "CANCELED"],
-      },
+      terminalStatesByTargetType: DEFAULT_CARRYOVER_TERMINAL_STATES,
     },
     createWorkspace: {
       enabled: true,
@@ -152,7 +160,8 @@ function mediaSpaceViewConfig(): SpaceViewConfig {
       processingRule:
         "Carry over unfinished WATCH items bound to Photography, Media Processing, or Publish. Terminal media/publish work must stay out of carryover.",
       terminalStatesByTargetType: {
-        WATCH: ["DONE", "POSTED", "SOLD", "CONSIGNED_TO", "CANCELED", "CANCELLED"],
+        ...DEFAULT_CARRYOVER_TERMINAL_STATES,
+        WATCH: DEFAULT_CARRYOVER_TERMINAL_STATES.WATCH,
       },
     },
     createWorkspace: {
@@ -252,8 +261,9 @@ function technicalSpaceViewConfig(): SpaceViewConfig {
       processingRule:
         "Carry over active SERVICE_REQUEST cases and TECHNICAL_ISSUE items only. Do not carry terminal Service Requests or Technical Issues.",
       terminalStatesByTargetType: {
-        SERVICE_REQUEST: ["COMPLETED", "DELIVERED", "CANCELED"],
-        TECHNICAL_ISSUE: ["DONE", "CANCELED"],
+        ...DEFAULT_CARRYOVER_TERMINAL_STATES,
+        SERVICE_REQUEST: DEFAULT_CARRYOVER_TERMINAL_STATES.SERVICE_REQUEST,
+        TECHNICAL_ISSUE: DEFAULT_CARRYOVER_TERMINAL_STATES.TECHNICAL_ISSUE,
       },
     },
     createWorkspace: {
@@ -342,7 +352,8 @@ function paymentSpaceViewConfig(): SpaceViewConfig {
       processingRule:
         "Carry over unsettled PAYMENT items only. Settled, canceled, or voided payments must not be carried over.",
       terminalStatesByTargetType: {
-        PAYMENT: ["PAID", "COLLECTED", "CANCELED", "REFUNDED"],
+        ...DEFAULT_CARRYOVER_TERMINAL_STATES,
+        PAYMENT: DEFAULT_CARRYOVER_TERMINAL_STATES.PAYMENT,
       },
     },
     createWorkspace: {

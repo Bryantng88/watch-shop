@@ -589,6 +589,10 @@ type TechnicalServiceRequestRollup = {
   paymentSummary: ServiceRequestPaymentSummary;
 };
 
+type RolloverOutSummary = NonNullable<
+  CoordinationWorkTicketSummaryDTO["rollover"]
+>;
+
 function mediaFlowSummaryBucketForStage(
   metadataJson: unknown,
   stage: MediaFlowStage,
@@ -682,6 +686,61 @@ async function loadLastActivityMap(db: DB, taskItemIds: string[]) {
   }
 
   return map;
+}
+
+async function loadRolloverOutByTaskItem(db: DB, input: {
+  taskId: string;
+  taskItemIds: string[];
+}) {
+  const result = new Map<string, RolloverOutSummary>();
+  if (!input.taskItemIds.length) return result;
+
+  const rows = await db.taskExecution.findMany({
+    where: {
+      taskId: input.taskId,
+      taskItemId: { in: input.taskItemIds },
+      actionType: TaskExecutionActionType.CANCELLED,
+    },
+    select: {
+      taskItemId: true,
+      metadataJson: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  for (const row of rows) {
+    if (!row.taskItemId) continue;
+    const metadata = asRecord(row.metadataJson);
+    const rollover = asRecord(metadata.rollover);
+    const legacyToTaskId = String(metadata.rolledOverToTaskId ?? "").trim();
+    const isRolloverOut =
+      (rollover.movementKind === "ACTIVE_OWNERSHIP_MOVE" && rollover.direction === "OUT") ||
+      Boolean(legacyToTaskId);
+    if (!isRolloverOut) continue;
+
+    const current = result.get(row.taskItemId);
+    const movedAt = String(rollover.movedAt ?? metadata.rolledOverAt ?? "").trim() || null;
+    if (current) {
+      result.set(row.taskItemId, {
+        ...current,
+        targetCount: current.targetCount + 1,
+        movedAt: current.movedAt ?? movedAt,
+      });
+      continue;
+    }
+
+    result.set(row.taskItemId, {
+      direction: "OUT",
+      movementKind: "ACTIVE_OWNERSHIP_MOVE",
+      targetCount: 1,
+      toTaskId: String(rollover.toTaskId ?? metadata.rolledOverToTaskId ?? "").trim() || null,
+      toTaskItemId: String(rollover.toTaskItemId ?? metadata.rolledOverToTaskItemId ?? "").trim() || null,
+      toTaskItemTitle: String(rollover.toTaskItemTitle ?? "").trim() || null,
+      movedAt,
+    });
+  }
+
+  return result;
 }
 
 async function loadMediaQueueSummaryByTaskItem(input: {
@@ -1162,6 +1221,7 @@ async function loadTechnicalIssueBoard(input: {
       estimatedCost: true,
       actualCost: true,
       technicalDetailCatalogId: true,
+      priority: true,
       updatedAt: true,
       serviceRequest: {
         select: {
@@ -1194,6 +1254,7 @@ async function loadTechnicalIssueBoard(input: {
         estimatedCost: nullableNumber(issue.estimatedCost),
         executionStatus: String(issue.executionStatus ?? "OPEN"),
         isConfirmed: Boolean(issue.isConfirmed),
+        priority: issue.priority ?? "NORMAL",
         technicalDetailCatalogId: issue.technicalDetailCatalogId ?? null,
         stage: technicalIssueBoardStage({
           flowStageKey: binding?.flowStageKey ?? null,
@@ -1742,6 +1803,7 @@ export async function getCoordinationDashboard(input: {
     feedbackCountByTaskItem,
     activityRows,
     lastActivityMap,
+    rolloverOutByTaskItem,
     identityPreviewMap,
     technicalServiceRequestRollupByTaskItem,
     technicalIssueBoard,
@@ -1752,6 +1814,7 @@ export async function getCoordinationDashboard(input: {
       where: {
         taskId: cycle.task.id,
         taskItemId: { in: taskItemIds },
+        actionType: { not: TaskExecutionActionType.CANCELLED },
       },
       _count: { _all: true },
     }),
@@ -1788,6 +1851,10 @@ export async function getCoordinationDashboard(input: {
       _max: { occurredAt: true },
     }),
     loadLastActivityMap(db, taskItemIds),
+    loadRolloverOutByTaskItem(db, {
+      taskId: cycle.task.id,
+      taskItemIds,
+    }),
     loadWorkspaceIdentityPreviewMap({
       db,
       taskId: cycle.task.id,
@@ -1837,7 +1904,10 @@ export async function getCoordinationDashboard(input: {
     const queueCount = queueCountByTaskItem.get(item.id) ?? 0;
     const feedbackCount = feedbackCountByTaskItem.get(item.id) ?? 0;
     const workspaceRoleMetadata = workspaceRoleMetadataFromNote(item.note);
-    const queueSummary =
+    const rollover = rolloverOutByTaskItem.get(item.id) ?? null;
+    const queueSummary = rollover
+      ? emptyQueueSummary()
+      :
       input.context === "MEDIA"
         ? mediaQueueSummaryByTaskItem.get(item.id) ?? emptyQueueSummary()
         : technicalServiceRequestRollupByTaskItem.get(item.id)?.queueSummary ??
@@ -1872,7 +1942,8 @@ export async function getCoordinationDashboard(input: {
       creator: ticketCreator(item, currentUser),
       queueSummary,
       paymentSummary,
-      needAttention: feedbackCount > 0 || overdue,
+      rollover,
+      needAttention: rollover ? false : feedbackCount > 0 || overdue,
       feedbackCount,
       lastActivity: lastActivity?.title ?? null,
       lastActivityAt: formatDateTime(lastActivityAt),

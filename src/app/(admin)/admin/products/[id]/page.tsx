@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { getCurrentUser } from "@/server/auth/getCurrentUser";
 import { PERMISSIONS } from "@/constants/permissions";
+import { ADMIN_DETAIL_CONTENT_CLASS } from "@/domains/shared/ui/layout/admin-content";
 import * as adminProductService from "@/app/(admin)/admin/products/_server/core/product.service";
 
 import ProductDetailClient from "./_client/ProductDetailClient";
@@ -59,7 +60,7 @@ export default async function ProductDetailPage({
     }
 
     return (
-        <div className="mx-auto w-full max-w-[1500px] px-4 py-6 lg:px-6">
+        <div className={ADMIN_DETAIL_CONTENT_CLASS}>
             <ProductDetailClient
                 data={data}
                 canViewTradeFinancials={canViewTradeFinancialsValue} />

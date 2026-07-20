@@ -13,6 +13,7 @@ import type { AdminDashboardData } from "../shared";
 import DashboardMetricCard from "./DashboardMetricCard";
 import { ActionList, DashboardPanel, PipelineList } from "./DashboardPanel";
 import RecentActivityList from "./RecentActivityList";
+import { ADMIN_OPERATION_CONTENT_CLASS } from "@/domains/shared/ui/layout/admin-content";
 
 function money(value: number) {
   return `${new Intl.NumberFormat("vi-VN").format(Number(value ?? 0))} VND`;
@@ -20,7 +21,7 @@ function money(value: number) {
 
 export default function AdminDashboardClient({ data }: { data: AdminDashboardData }) {
   return (
-    <main className="mx-auto w-full max-w-[1440px] px-6 py-8">
+    <main className={ADMIN_OPERATION_CONTENT_CLASS}>
       <div className="mb-8 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-950">Dashboard</h1>

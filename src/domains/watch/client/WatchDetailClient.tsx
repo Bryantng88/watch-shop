@@ -10,6 +10,7 @@ import WatchPricingPanel from "../ui/detail/WatchPricingPanel";
 import WatchContentPanel from "../ui/detail/WatchContentPanel";
 import WatchServicePanel from "../ui/detail/WatchServicePanel";
 import WatchTradePanel from "../ui/detail/WatchTradePanel";
+import { ADMIN_DETAIL_CONTENT_CLASS } from "@/domains/shared/ui/layout/admin-content";
 
 type Props = {
     detail: any;
@@ -101,7 +102,7 @@ export default function WatchDetailClient({
     );
 
     return (
-        <div className="mx-auto w-full max-w-[1600px] space-y-6 px-4 py-6 lg:px-6 xl:px-8">
+        <div className={ADMIN_DETAIL_CONTENT_CLASS}>
             <WatchHeader detail={detail} inlineImage={inlineImage} />
 
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">

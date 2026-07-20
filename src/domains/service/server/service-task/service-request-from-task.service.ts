@@ -13,7 +13,15 @@ export type ServiceRequestFromTaskInput = {
     description?: string | null;
 };
 
-function getAuthUserId(auth: any) {
+type ServiceTaskAuth = {
+    id?: string | null;
+    userId?: string | null;
+    user?: {
+        id?: string | null;
+    } | null;
+} | null | undefined;
+
+function getAuthUserId(auth: ServiceTaskAuth) {
     return auth?.user?.id ?? auth?.id ?? auth?.userId ?? null;
 }
 
@@ -95,6 +103,7 @@ async function linkSrToTask(
             taskId: input.taskId,
             targetType: TaskExecutionTargetType.SERVICE_REQUEST,
             targetId: input.serviceRequestId,
+            actionType: { not: TaskExecutionActionType.CANCELLED },
         },
     });
 
@@ -129,7 +138,7 @@ async function linkSrToTask(
 export async function createOrLinkServiceRequestFromTask(
     db: DB,
     input: ServiceRequestFromTaskInput,
-    auth: any,
+    auth: ServiceTaskAuth,
 ) {
     const userId = getAuthUserId(auth);
     if (!userId) throw new Error("Không xác định được user hiện tại");

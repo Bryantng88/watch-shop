@@ -14,6 +14,7 @@ import {
 
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
+import { ADMIN_OPERATION_PAGE_CLASS } from "@/domains/shared/ui/layout/admin-content";
 
 type MediaAssetItem = {
   id: string;
@@ -83,8 +84,12 @@ function statusClass(status?: string | null) {
   return "border-slate-200 bg-slate-50 text-slate-700";
 }
 
-function normalizeDashboard(input: any): Required<MediaDashboard>["stats"] {
-  const source = input?.stats ?? input ?? {};
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function normalizeDashboard(input: unknown): Required<MediaDashboard>["stats"] {
+  const source = isRecord(input) && isRecord(input.stats) ? input.stats : isRecord(input) ? input : {};
 
   return {
     totalAssets: Number(source.totalAssets ?? 0),
@@ -94,13 +99,15 @@ function normalizeDashboard(input: any): Required<MediaDashboard>["stats"] {
   };
 }
 
-function normalizeAssets(input: any, fallbackPage: number): AssetResponse {
+function normalizeAssets(input: unknown, fallbackPage: number): AssetResponse {
+  const source = isRecord(input) ? input : {};
+
   return {
-    items: Array.isArray(input?.items) ? input.items : [],
-    page: Number(input?.page ?? fallbackPage),
-    pageSize: Number(input?.pageSize ?? 48),
-    total: Number(input?.total ?? 0),
-    pageCount: Math.max(1, Number(input?.pageCount ?? 1)),
+    items: Array.isArray(source.items) ? source.items as AssetResponse["items"] : [],
+    page: Number(source.page ?? fallbackPage),
+    pageSize: Number(source.pageSize ?? 48),
+    total: Number(source.total ?? 0),
+    pageCount: Math.max(1, Number(source.pageCount ?? 1)),
   };
 }
 
@@ -412,8 +419,8 @@ export default function MediaAssetAdminClient() {
   const items = assets.items ?? [];
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-8">
-      <div className="mx-auto max-w-7xl space-y-6">
+    <div className={`${ADMIN_OPERATION_PAGE_CLASS} px-3 py-5 sm:px-4 lg:px-5 xl:px-6 2xl:px-8`}>
+      <div className="mx-auto w-full max-w-none min-w-0 space-y-6">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>

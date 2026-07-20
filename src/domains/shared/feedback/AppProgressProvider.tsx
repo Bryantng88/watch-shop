@@ -13,6 +13,7 @@ export type AppProgressStep = {
 type ProgressOptions = {
     title?: string;
     message?: string;
+    percent?: number;
     steps?: AppProgressStep[];
 };
 
@@ -26,6 +27,7 @@ type ProgressState = {
     open: boolean;
     title?: string;
     message?: string;
+    percent?: number;
     steps: AppProgressStep[];
 };
 
@@ -40,6 +42,7 @@ export function AppProgressProvider({
         open: false,
         title: "",
         message: "",
+        percent: undefined,
         steps: [],
     });
 
@@ -48,6 +51,7 @@ export function AppProgressProvider({
             open: true,
             title: options?.title ?? "Đang xử lý",
             message: options?.message ?? "Vui lòng chờ trong giây lát",
+            percent: options?.percent,
             steps: options?.steps ?? [],
         });
     }, []);
@@ -58,6 +62,7 @@ export function AppProgressProvider({
             open: true,
             title: options?.title ?? prev.title,
             message: options?.message ?? prev.message,
+            percent: options?.percent ?? prev.percent,
             steps: options?.steps ?? prev.steps,
         }));
     }, []);
@@ -67,6 +72,7 @@ export function AppProgressProvider({
             open: false,
             title: "",
             message: "",
+            percent: undefined,
             steps: [],
         });
     }, []);
@@ -125,6 +131,23 @@ export function AppProgressProvider({
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                        ) : null}
+
+                        {typeof state.percent === "number" ? (
+                            <div className="mt-4">
+                                <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+                                    <span>Tiến độ</span>
+                                    <span>{Math.max(0, Math.min(100, Math.round(state.percent)))}%</span>
+                                </div>
+                                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                                    <div
+                                        className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                                        style={{
+                                            width: `${Math.max(0, Math.min(100, state.percent))}%`,
+                                        }}
+                                    />
+                                </div>
                             </div>
                         ) : null}
                     </div>

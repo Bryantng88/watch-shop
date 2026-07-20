@@ -114,6 +114,7 @@ export async function findBusinessBindingsByTarget(
     where: {
       targetType,
       targetId: cleanTargetId,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
     },
     select: BUSINESS_BINDING_SELECT,
     orderBy: { createdAt: "desc" },
@@ -134,6 +135,7 @@ export async function findTaskItemIdsByTarget(
     where: {
       targetType,
       targetId: cleanTargetId,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
       taskItemId: {
         not: null,
       },
@@ -230,6 +232,7 @@ export async function findBusinessBindingByTaskItemTarget(
       taskItemId: cleanTaskItemId,
       targetType: input.targetType,
       targetId: cleanTargetId,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
     },
     select: BUSINESS_BINDING_SELECT,
     orderBy: { createdAt: "asc" },
@@ -255,6 +258,7 @@ export async function findTaskItemIdsByTargetIds(
     where: {
       targetType: input.targetType,
       targetId: { in: targetIds },
+      actionType: { not: TaskExecutionActionType.CANCELLED },
       taskItemId: { not: null },
     },
     select: { taskItemId: true },

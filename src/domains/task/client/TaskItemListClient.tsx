@@ -25,6 +25,7 @@ import {
   TaskPriorityBadge,
   TaskStatusBadge,
 } from "../ui/shared/TaskBadges";
+import { ADMIN_OPERATION_PAGE_CLASS } from "@/domains/shared/ui/layout/admin-content";
 
 type UserOption = {
   id: string;
@@ -433,8 +434,8 @@ export default function TaskItemListClient(props: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-5 text-slate-900 md:px-6">
-      <div className="mx-auto max-w-7xl space-y-4">
+    <div className={`${ADMIN_OPERATION_PAGE_CLASS} px-3 py-5 sm:px-4 lg:px-5 xl:px-6 2xl:px-8`}>
+      <div className="mx-auto w-full max-w-none min-w-0 space-y-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="flex items-center gap-2 text-sm text-slate-500">

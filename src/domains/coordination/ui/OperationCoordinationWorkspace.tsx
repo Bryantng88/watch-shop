@@ -39,7 +39,9 @@ import {
 } from "lucide-react";
 import AdminBreadcrumbs from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
 import {
+  previewRolloverPreviousCycleItemsAction,
   rolloverPreviousCycleItemsAction,
+  updateTechnicalIssuePriorityAction,
 } from "@/domains/coordination/actions/coordination.actions";
 import {
   createTaskItemAction,
@@ -70,6 +72,8 @@ import { isCoreWorkspaceBlueprint } from "@/domains/task/shared/workspace-flow-p
 type Props = {
   data: CoordinationDashboardDTO;
 };
+
+type TechnicalIssuePriorityFilter = "ALL" | "URGENT" | "NORMAL";
 
 const SPACE_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = ["overview", "value-trend", "status-breakdown", "recent-activity"];
 
@@ -144,10 +148,16 @@ function actionLabel(value: string) {
   return cleanValue;
 }
 
+function periodSortValue(value?: string | null) {
+  const match = String(value ?? "").match(/^(\d{4})-W(\d{1,2})$/i);
+  if (!match) return 0;
+  return Number(match[1]) * 100 + Number(match[2]);
+}
+
 function modeLabel(mode: CoordinationDashboardDTO["viewConfig"]["modes"][number]) {
   if (mode.key === "media-production-flow") return "Luồng sản xuất Media";
   if (mode.key === "sr-cases") return "Hồ sơ yêu cầu dịch vụ";
-  if (mode.key === "technical-issue-flow") return "Bàn xử lý kỹ thuật";
+  if (mode.key === "technical-issue-flow") return "Xử lý lỗi kỹ thuật";
   if (mode.key === "workspace-index") return "Danh sách Workspace";
   return displayText(mode.label);
 }
@@ -398,8 +408,12 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   const [filterCreator, setFilterCreator] = useState("ALL");
   const [filterWorkStatus, setFilterWorkStatus] = useState("ALL");
   const [filterPayment, setFilterPayment] = useState("ALL");
+  const [technicalIssuePriorityFilter, setTechnicalIssuePriorityFilter] =
+    useState<TechnicalIssuePriorityFilter>("ALL");
   const [workspacePage, setWorkspacePage] = useState(1);
   const [workspacePageSize, setWorkspacePageSize] = useState(10);
+  const [isRolloverMenuOpen, setIsRolloverMenuOpen] = useState(false);
+  const [isMovedItemsOpen, setIsMovedItemsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const selectedBlueprint = useMemo(
     () =>
@@ -494,10 +508,27 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
         return left.title.localeCompare(right.title);
       });
   }, [activeCoreFlow, activeViewMode, data.workTickets, flowStageKeys]);
+  const movedWorkTickets = useMemo(
+    () => displayedWorkTickets.filter((ticket) => ticket.rollover?.direction === "OUT"),
+    [displayedWorkTickets],
+  );
+  const activeDisplayedWorkTickets = useMemo(
+    () => displayedWorkTickets.filter((ticket) => ticket.rollover?.direction !== "OUT"),
+    [displayedWorkTickets],
+  );
+  const latestPeriodKey = useMemo(
+    () =>
+      data.filters.weekOptions
+        .map((option) => option.value)
+        .sort((left, right) => periodSortValue(right) - periodSortValue(left))[0] ??
+      data.week.periodKey,
+    [data.filters.weekOptions, data.week.periodKey],
+  );
+  const isLatestCycle = data.week.periodKey === latestPeriodKey;
   const filterFacets = useMemo(() => {
     const creators = new Map<string, number>();
     const result = { open: 0, feedback: 0, done: 0, unpaid: 0, paid: 0, none: 0 };
-    displayedWorkTickets.forEach((ticket) => {
+    activeDisplayedWorkTickets.forEach((ticket) => {
       creators.set(ticket.creator.label, (creators.get(ticket.creator.label) ?? 0) + 1);
       const openItems = ticket.queueSummary.ready + ticket.queueSummary.review + ticket.queueSummary.feedback;
       if (openItems > 0) result.open += 1;
@@ -509,16 +540,16 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
       else result.none += 1;
     });
     return { ...result, creators };
-  }, [displayedWorkTickets]);
+  }, [activeDisplayedWorkTickets]);
   const creatorFilterOptions = useMemo(() => [
-    { label: `Tất cả người tạo (${displayedWorkTickets.length})`, value: "ALL" },
+    { label: `Tất cả người tạo (${activeDisplayedWorkTickets.length})`, value: "ALL" },
     ...Array.from(filterFacets.creators.entries())
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([creator, count]) => ({ label: `${creator} (${count})`, value: creator })),
-  ], [displayedWorkTickets.length, filterFacets.creators]);
+  ], [activeDisplayedWorkTickets.length, filterFacets.creators]);
   const filteredWorkTickets = useMemo(() => {
     const query = filterQuery.trim().toLocaleLowerCase("vi");
-    return displayedWorkTickets.filter((ticket) => {
+    return activeDisplayedWorkTickets.filter((ticket) => {
       const openItems = ticket.queueSummary.ready + ticket.queueSummary.review + ticket.queueSummary.feedback;
       const searchable = [ticket.title, ticket.creator.label, ticket.lastActivity, ticket.identityPreview?.title, ticket.identityPreview?.ref]
         .filter(Boolean)
@@ -535,7 +566,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
       if (filterPayment === "NONE" && paymentStatus !== "NONE") return false;
       return true;
     });
-  }, [displayedWorkTickets, filterCreator, filterPayment, filterQuery, filterWorkStatus]);
+  }, [activeDisplayedWorkTickets, filterCreator, filterPayment, filterQuery, filterWorkStatus]);
   const workspacePageCount = Math.max(1, Math.ceil(filteredWorkTickets.length / workspacePageSize));
   const safeWorkspacePage = Math.min(workspacePage, workspacePageCount);
   const workspacePageStart = (safeWorkspacePage - 1) * workspacePageSize;
@@ -592,12 +623,29 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     isTechnicalIssueFlowMode && Boolean(data.technicalIssueBoard?.items.length);
   const isTechnicalIssueBoardView =
     workTicketView === "TI_BOARD" && canShowTechnicalIssueBoard;
+  const technicalIssueBoardItems = useMemo(
+    () => data.technicalIssueBoard?.items ?? [],
+    [data.technicalIssueBoard?.items],
+  );
+  const technicalIssueBoardSummary = useMemo(
+    () => technicalBoardSummary(technicalIssueBoardItems),
+    [technicalIssueBoardItems],
+  );
+  const visibleTechnicalIssueBoardSummary = useMemo(() => {
+    const visibleItems =
+      technicalIssuePriorityFilter === "ALL"
+        ? technicalIssueBoardItems
+        : technicalIssueBoardItems.filter(
+          (item) => technicalIssuePriorityValue(item.priority) === technicalIssuePriorityFilter,
+        );
+    return technicalBoardSummary(visibleItems);
+  }, [technicalIssueBoardItems, technicalIssuePriorityFilter]);
   useEffect(() => {
     if (!isTechnicalIssueFlowMode && workTicketView === "TI_BOARD") {
       setWorkTicketView("LIST");
     }
   }, [isTechnicalIssueFlowMode, workTicketView]);
-  const showPaymentColumn = displayedWorkTickets.some((ticket) => ticket.paymentSummary);
+  const showPaymentColumn = activeDisplayedWorkTickets.some((ticket) => ticket.paymentSummary);
   const workTicketGridClass = showPaymentColumn
     ? "lg:grid-cols-[1.85fr_0.85fr_1.05fr_1.08fr_0.6fr_0.8fr_1.2fr_auto]"
     : "lg:grid-cols-[2fr_1fr_1.1fr_0.7fr_0.9fr_1.5fr_auto]";
@@ -680,6 +728,74 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     });
 
     try {
+      progress.update({
+        percent: 10,
+        steps: [
+          { id: "scan", label: "Quét Space tuần trước", status: "running" },
+          { id: "move", label: "Chuyển item sang tuần hiện tại", status: "pending" },
+        ],
+      });
+
+      const preview = await previewRolloverPreviousCycleItemsAction({
+        taskId: data.cycle.id,
+        context: data.context,
+      });
+      const previewTotal = preview.items.length;
+      const previewMovable = preview.moved;
+      const previewSteps: AppProgressStep[] = preview.items
+        .slice(0, 40)
+        .map((item, index) => {
+          const target = `${item.targetType}:${item.targetId.slice(0, 8)}`;
+          const from = repairVietnameseMojibake(item.fromWorkspaceTitle);
+          const to = repairVietnameseMojibake(item.toWorkspaceTitle ?? "không có workspace nhận");
+          const status =
+            item.status === "MOVED"
+              ? "done"
+              : item.status === "FAILED"
+                ? "error"
+                : "skipped";
+
+          return {
+            id: `preview:${item.targetType}:${item.targetId}:${index}`,
+            label: `${target} - ${from} -> ${to}`,
+            detail: item.reason === "READY_TO_MOVE"
+              ? "Sẵn sàng chuyển"
+              : item.reason
+                ? `${item.status} (${item.reason})`
+                : item.status,
+            status,
+          };
+        });
+
+      if (previewTotal > previewSteps.length) {
+        previewSteps.push({
+          id: "preview-more",
+          label: `Còn ${previewTotal - previewSteps.length} item khác`,
+          detail: "Danh sách đầy đủ sẽ hiển thị sau khi xử lý xong.",
+          status: "pending",
+        });
+      }
+
+      progress.update({
+        message: `Tìm thấy ${previewTotal} item: ${previewMovable} có thể chuyển, ${preview.skipped} bỏ qua, ${preview.failed} lỗi rule. Đang chạy server action...`,
+        percent: previewTotal ? 35 : 100,
+        steps: [
+          {
+            id: "scan",
+            label: "Quét Space tuần trước",
+            status: "done",
+            detail: `${previewTotal} item được đánh giá`,
+          },
+          {
+            id: "move",
+            label: "Chuyển item sang tuần hiện tại",
+            status: previewTotal ? "running" : "skipped",
+            detail: previewTotal ? `${previewMovable} item có thể chuyển` : "Không có item cần chuyển",
+          },
+          ...previewSteps,
+        ],
+      });
+
       const result = await rolloverPreviousCycleItemsAction({
         taskId: data.cycle.id,
         context: data.context,
@@ -705,6 +821,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
       progress.update({
         title: "Đã xử lý item tồn",
         message: `Moved: ${result.moved} · Skipped: ${result.skipped} · Failed: ${result.failed}`,
+        percent: 100,
         steps,
       });
       await sleep(result.items.length ? 1800 : 700);
@@ -814,16 +931,46 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                         { value: "LIST", label: "List", icon: <List className="h-4 w-4" /> },
                       ]}
                     />
-                    <button
+                    <div className="relative">
+                      <button
                         type="button"
                         disabled={isPending || !data.viewConfig.carryover.enabled}
-                        onClick={() => void rolloverPreviousCycle()}
+                        onClick={() => setIsRolloverMenuOpen((open) => !open)}
                         className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-violet-200 bg-white px-3 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:bg-white/60 disabled:text-slate-400"
                       >
                         <RotateCcw className="h-4 w-4" />
-                        <span className="hidden 2xl:inline">{actionLabel(data.viewConfig.carryover.actionLabel)}</span>
-                        <span className="2xl:hidden">Nhận tồn</span>
+                        <span>Xử lý tồn</span>
+                        <ChevronRight className={cn("h-4 w-4 transition", isRolloverMenuOpen && "rotate-90")} />
                       </button>
+                      {isRolloverMenuOpen ? (
+                        <div className="absolute right-0 z-30 mt-2 w-72 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-lg">
+                          <button
+                            type="button"
+                            disabled={!isLatestCycle}
+                            onClick={() => {
+                              setIsRolloverMenuOpen(false);
+                              void rolloverPreviousCycle();
+                            }}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left font-medium text-slate-700 transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-white"
+                            title={isLatestCycle ? undefined : "Chỉ nhận item tồn ở tuần mới nhất"}
+                          >
+                            <RotateCcw className="h-4 w-4 text-violet-600" />
+                            <span>{actionLabel(data.viewConfig.carryover.actionLabel)}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsRolloverMenuOpen(false);
+                              setIsMovedItemsOpen(true);
+                            }}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left font-medium text-slate-700 transition hover:bg-slate-50"
+                          >
+                            <List className="h-4 w-4 text-slate-500" />
+                            <span>Xem item đã chuyển ({movedWorkTickets.length})</span>
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
                     <button
                         type="button"
                         disabled={!data.blueprints.length || !data.viewConfig.createWorkspace.enabled}
@@ -866,7 +1013,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   <input
                     value={title}
                     onChange={(event) => setTitle(event.target.value)}
-                    placeholder="Tên Workspace"
+                    placeholder="Workspace"
                     className="h-9 min-w-0 rounded-md border border-sky-100 bg-white px-3 text-sm text-slate-800 shadow-sm outline-none focus:border-violet-300 sm:w-64"
                   />
                   <button
@@ -912,32 +1059,43 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                     label: "Trạng thái công việc",
                     value: filterWorkStatus,
                     options: [
-                      { label: `Tất cả công việc (${displayedWorkTickets.length})`, value: "ALL" },
+                      { label: `Tất cả công việc (${activeDisplayedWorkTickets.length})`, value: "ALL" },
                       { label: `Đang mở (${filterFacets.open})`, value: "OPEN" },
                       { label: `Cần phản hồi (${filterFacets.feedback})`, value: "FEEDBACK" },
                       { label: `Đã hoàn tất (${filterFacets.done})`, value: "DONE" },
                     ],
                     onChange: setFilterWorkStatus,
                   },
-                  ...(showPaymentColumn ? [{
+                  ...(isTechnicalIssueBoardView ? [{
+                    key: "ti-priority",
+                    label: "Độ ưu tiên",
+                    value: technicalIssuePriorityFilter,
+                    options: [
+                      { label: `Tất cả ưu tiên (${technicalIssueBoardSummary.total})`, value: "ALL" },
+                      { label: `Gấp (${technicalIssueBoardSummary.urgent})`, value: "URGENT" },
+                      { label: `Không ưu tiên (${technicalIssueBoardSummary.total - technicalIssueBoardSummary.urgent})`, value: "NORMAL" },
+                    ],
+                    onChange: (value) => setTechnicalIssuePriorityFilter(value as TechnicalIssuePriorityFilter),
+                  }] : []),
+                  ...(showPaymentColumn && !isTechnicalIssueBoardView ? [{
                     key: "payment",
                     label: "Thanh toán",
                     value: filterPayment,
                     options: [
-                      { label: `Tất cả thanh toán (${displayedWorkTickets.length})`, value: "ALL" },
+                      { label: `Tất cả thanh toán (${activeDisplayedWorkTickets.length})`, value: "ALL" },
                       { label: `Chưa thanh toán (${filterFacets.unpaid})`, value: "UNPAID" },
                       { label: `Đã thanh toán (${filterFacets.paid})`, value: "PAID" },
                       { label: `Chưa phát sinh (${filterFacets.none})`, value: "NONE" },
                     ],
                     onChange: setFilterPayment,
                   }] : []),
-                  {
+                  ...(!isTechnicalIssueBoardView ? [{
                     key: "page-size",
                     label: "Số dòng hiển thị",
                     value: String(workspacePageSize),
                     options: [10, 20, 50].map((size) => ({ label: `${size} dòng`, value: String(size) })),
                     onChange: (value) => setWorkspacePageSize(Number(value)),
-                  },
+                  }] : []),
                 ]}
                 onWeekChange={(value) => {
                   const option = data.filters.weekOptions.find((item) => item.value === value);
@@ -945,12 +1103,19 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                 }}
                 onDateChange={updateDate}
               >
-                <span className="inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-xl bg-slate-50 px-3 text-xs font-semibold text-slate-500">
-                  {filteredWorkTickets.length
-                    ? `${workspacePageStart + 1}–${Math.min(workspacePageStart + workspacePageSize, filteredWorkTickets.length)} / ${filteredWorkTickets.length}`
-                    : "0 / 0"}
-                </span>
-                {filterQuery || filterCreator !== "ALL" || filterWorkStatus !== "ALL" || filterPayment !== "ALL" ? <button type="button" onClick={() => { setFilterQuery(""); setFilterCreator("ALL"); setFilterWorkStatus("ALL"); setFilterPayment("ALL"); }} className="inline-flex h-11 shrink-0 items-center rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800">Xóa lọc</button> : null}
+                {isTechnicalIssueBoardView ? (
+                  <TechnicalIssueBoardControlStrip
+                    summary={technicalIssueBoardSummary}
+                    visibleSummary={visibleTechnicalIssueBoardSummary}
+                  />
+                ) : (
+                  <span className="inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-xl bg-slate-50 px-3 text-xs font-semibold text-slate-500">
+                    {filteredWorkTickets.length
+                      ? `${workspacePageStart + 1}-${Math.min(workspacePageStart + workspacePageSize, filteredWorkTickets.length)} / ${filteredWorkTickets.length}`
+                      : "0 / 0"}
+                  </span>
+                )}
+                {filterQuery || filterCreator !== "ALL" || filterWorkStatus !== "ALL" || filterPayment !== "ALL" || technicalIssuePriorityFilter !== "ALL" ? <button type="button" onClick={() => { setFilterQuery(""); setFilterCreator("ALL"); setFilterWorkStatus("ALL"); setFilterPayment("ALL"); setTechnicalIssuePriorityFilter("ALL"); }} className="inline-flex h-11 shrink-0 items-center rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800">Xóa lọc</button> : null}
               </SpaceFilterBar>
             </div>
             {isCreateFormOpen && selectedBlueprint ? (
@@ -986,7 +1151,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   </div>
                 </div>
                 <div>
-                  <div className="font-medium text-slate-500">Đã dùng Blueprint</div>
+                  <div className="font-medium text-slate-500">Đang bật</div>
                   <div className={`mt-1 font-semibold ${selectedBlueprint.usage.active ? "text-amber-700" : "text-slate-900"}`}>
                     {selectedBlueprint.usage.active} đang hoạt động / {selectedBlueprint.usage.total} tổng
                   </div>
@@ -1143,6 +1308,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
               actions={selectedBlueprint?.operation?.actions ?? []}
               vendorOptions={data.technicalIssueBoard?.vendorOptions ?? []}
               technicalDetailCatalogOptions={data.technicalIssueBoard?.technicalDetailCatalogOptions ?? []}
+              priorityFilter={technicalIssuePriorityFilter}
             />
           ) : (
             <>
@@ -1167,7 +1333,10 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
               <Link
                 key={ticket.id}
                 href={`/admin/task-items/${ticket.id}`}
-                className={cn("grid gap-4 px-5 py-4 transition hover:bg-slate-50 lg:items-center", workTicketGridClass)}
+                className={cn(
+                  "grid gap-4 px-5 py-4 transition hover:bg-slate-50 lg:items-center",
+                  workTicketGridClass,
+                )}
               >
                 <div className="flex min-w-0 items-center gap-4">
                   <WorkspaceIdentityFrame ticket={ticket} />
@@ -1252,7 +1421,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
           {!isTechnicalIssueBoardView && filteredWorkTickets.length > 0 ? (
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white px-5 py-4">
               <div className="text-xs font-medium text-slate-500">
-                Hiển thị {workspacePageStart + 1}–{Math.min(workspacePageStart + workspacePageSize, filteredWorkTickets.length)} trong {filteredWorkTickets.length} Workspace
+                Hiển thị {workspacePageStart + 1}-{Math.min(workspacePageStart + workspacePageSize, filteredWorkTickets.length)} trong {filteredWorkTickets.length} Workspace
               </div>
               <div className="flex items-center gap-1">
                 <button type="button" onClick={() => setWorkspacePage((page) => Math.max(1, page - 1))} disabled={safeWorkspacePage <= 1} className="h-9 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40">Trước</button>
@@ -1260,7 +1429,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   .filter((page) => page === 1 || page === workspacePageCount || Math.abs(page - safeWorkspacePage) <= 1)
                   .map((page, index, pages) => (
                     <span key={page} className="contents">
-                      {index > 0 && page - pages[index - 1] > 1 ? <span className="px-1 text-xs text-slate-400">…</span> : null}
+                      {index > 0 && page - pages[index - 1] > 1 ? <span className="px-1 text-xs text-slate-400">...</span> : null}
                       <button type="button" onClick={() => setWorkspacePage(page)} className={cn("h-9 min-w-9 rounded-lg border px-2 text-xs font-semibold", page === safeWorkspacePage ? "border-violet-300 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-600 hover:bg-slate-50")}>{page}</button>
                     </span>
                   ))}
@@ -1286,6 +1455,58 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
             Gợi ý: kéo thả để đổi thứ tự stage. Nhấp vào Workspace để xem chi tiết item và hoạt động.
           </SpaceViewFooterTip>
         </section>
+        {isMovedItemsOpen ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 py-6">
+            <div className="max-h-[82vh] w-full max-w-3xl overflow-hidden rounded-xl bg-white shadow-xl">
+              <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+                <div>
+                  <h3 className="text-base font-bold text-slate-950">Item đã chuyển</h3>
+                  <p className="mt-1 text-sm text-slate-500">{movedWorkTickets.length} workspace đã được chuyển khỏi tuần này.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMovedItemsOpen(false)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
+                  aria-label="Đóng danh sách item đã chuyển"
+                >
+                  <XCircle className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="max-h-[62vh] overflow-auto p-4">
+                {movedWorkTickets.length ? (
+                  <div className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+                    {movedWorkTickets.map((ticket) => (
+                      <Link
+                        key={ticket.id}
+                        href={`/admin/task-items/${ticket.id}`}
+                        onClick={() => setIsMovedItemsOpen(false)}
+                        className="grid gap-3 px-4 py-3 transition hover:bg-slate-50 md:grid-cols-[1.4fr_1fr_0.8fr] md:items-center"
+                      >
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-semibold text-slate-950">{prefixedLabel("Workspace", ticket.title)}</div>
+                          <div className="mt-1 truncate text-xs text-slate-500">{ticket.identityPreview?.ref ?? ticket.identityPreview?.title ?? "-"}</div>
+                        </div>
+                        <div className="min-w-0 text-sm text-slate-600">
+                          <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Chuyển sang</div>
+                          <div className="mt-1 truncate font-medium text-slate-800">{ticket.rollover?.toTaskItemTitle ?? "Tuần sau"}</div>
+                        </div>
+                        <div className="text-sm text-slate-600 md:text-right">
+                          <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Thời điểm</div>
+                          <div className="mt-1 font-medium text-slate-800">{formatDateTime(ticket.rollover?.movedAt)}</div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 rounded-lg border border-dashed border-slate-200 px-4 py-10 text-sm text-slate-500">
+                    <Inbox className="h-5 w-5" />
+                    Chưa có item nào đã chuyển khỏi tuần này.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : null}
     </SpaceViewPage>
   );
 }
@@ -1295,11 +1516,13 @@ function TechnicalIssueBoardView({
   actions,
   vendorOptions,
   technicalDetailCatalogOptions,
+  priorityFilter,
 }: {
   items: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["items"];
   actions: OperationalBlueprintAction[];
   vendorOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["vendorOptions"];
   technicalDetailCatalogOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["technicalDetailCatalogOptions"];
+  priorityFilter: TechnicalIssuePriorityFilter;
 }) {
   const router = useRouter();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -1307,7 +1530,9 @@ function TechnicalIssueBoardView({
   const [moveRequest, setMoveRequest] = useState<TechnicalIssueBoardMoveRequest | null>(null);
   const [moveValues, setMoveValues] = useState<Record<string, string | boolean>>({});
   const [moveError, setMoveError] = useState<string | null>(null);
+  const [priorityIssueId, setPriorityIssueId] = useState<string | null>(null);
   const [isMovePending, startMoveTransition] = useTransition();
+  const [isPriorityPending, startPriorityTransition] = useTransition();
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
@@ -1323,7 +1548,31 @@ function TechnicalIssueBoardView({
     { key: "PROCESSING", label: "Xử lý", hint: "TI đang được kỹ thuật/vendor xử lý." },
     { key: "DONE", label: "Done", hint: "TI đã xong kỹ thuật hoặc theo dõi." },
   ];
-  const activeItem = activeId ? items.find((item) => item.id === activeId) ?? null : null;
+  const visibleItems = useMemo(() => {
+    const filtered =
+      priorityFilter === "ALL"
+        ? items
+        : items.filter((item) => technicalIssuePriorityValue(item.priority) === priorityFilter);
+    return sortTechnicalBoardItems(filtered);
+  }, [items, priorityFilter]);
+  const activeItem = activeId ? visibleItems.find((item) => item.id === activeId) ?? null : null;
+
+  function togglePriority(item: TechnicalIssueBoardItem) {
+    const nextPriority = technicalIssuePriorityValue(item.priority) === "URGENT" ? "NORMAL" : "URGENT";
+    setPriorityIssueId(item.id);
+    startPriorityTransition(async () => {
+      try {
+        await updateTechnicalIssuePriorityAction({
+          issueId: item.id,
+          priority: nextPriority,
+          context: "TECHNICAL",
+        });
+        router.refresh();
+      } finally {
+        setPriorityIssueId(null);
+      }
+    });
+  }
 
   function handleDragStart(event: DragStartEvent) {
     setActiveId(String(event.active.id));
@@ -1332,7 +1581,7 @@ function TechnicalIssueBoardView({
   function handleDragEnd(event: DragEndEvent) {
     const issueId = String(event.active.id);
     const targetStage = technicalBoardStageValue(event.over?.id);
-    const item = items.find((candidate) => candidate.id === issueId) ?? null;
+    const item = visibleItems.find((candidate) => candidate.id === issueId) ?? null;
     setActiveId(null);
     setOverStage(null);
 
@@ -1364,7 +1613,7 @@ function TechnicalIssueBoardView({
     if (!moveRequest?.action) return;
     const { item, action } = moveRequest;
     if (!item.workspaceTaskItemId) {
-      setMoveError("TI này chưa có Workspace stage hiện tại nên không thể đồng bộ workflow.");
+      setMoveError("TI này chưa có Workspace stage hiện tại nên không thể đóng bộ workflow.");
       return;
     }
 
@@ -1410,7 +1659,7 @@ function TechnicalIssueBoardView({
   }
 
   return (
-    <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-5">
+    <div className="border-t border-slate-100 bg-slate-50/70 px-3 py-4 sm:px-4">
       <div className="overflow-x-auto pb-2">
         <DndContext
           sensors={sensors}
@@ -1419,15 +1668,17 @@ function TechnicalIssueBoardView({
           onDragOver={(event) => setOverStage(technicalBoardStageValue(event.over?.id))}
           onDragEnd={handleDragEnd}
         >
-          <div className="grid min-w-[1320px] grid-cols-4 gap-5">
+          <div className="grid min-w-[1320px] grid-cols-4 gap-6 xl:gap-7 2xl:gap-8">
             {columns.map((column) => {
-              const columnItems = items.filter((item) => item.stage === column.key);
+              const columnItems = visibleItems.filter((item) => item.stage === column.key);
               return (
                 <TechnicalIssueBoardColumn
                   key={column.key}
                   column={column}
                   items={columnItems}
                   isOver={overStage === column.key}
+                  onTogglePriority={togglePriority}
+                  priorityPendingIssueId={isPriorityPending ? priorityIssueId : null}
                 />
               );
             })}
@@ -1548,6 +1799,47 @@ function defaultTechnicalBoardMoveValues(
   return {};
 }
 
+function technicalIssuePriorityValue(value?: string | null) {
+  return String(value ?? "NORMAL").toUpperCase() === "URGENT" ? "URGENT" : "NORMAL";
+}
+
+function technicalIssuePriorityWeight(value?: string | null) {
+  return technicalIssuePriorityValue(value) === "URGENT" ? 0 : 1;
+}
+
+function technicalBoardItemTimeValue(item: TechnicalIssueBoardItem) {
+  const raw = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+  return Number.isFinite(raw) ? raw : 0;
+}
+
+function sortTechnicalBoardItems(items: TechnicalIssueBoardItem[]) {
+  return [...items].sort((left, right) => {
+    const priorityDiff =
+      technicalIssuePriorityWeight(left.priority) - technicalIssuePriorityWeight(right.priority);
+    if (priorityDiff !== 0) return priorityDiff;
+
+    const timeDiff = technicalBoardItemTimeValue(right) - technicalBoardItemTimeValue(left);
+    if (timeDiff !== 0) return timeDiff;
+
+    return left.summary.localeCompare(right.summary, "vi");
+  });
+}
+
+function technicalBoardSummary(items: TechnicalIssueBoardItem[]) {
+  const total = items.length;
+  const done = items.filter((item) => item.stage === "DONE").length;
+  const urgent = items.filter((item) => technicalIssuePriorityValue(item.priority) === "URGENT").length;
+  const percent = total ? Math.round((done / total) * 100) : 0;
+  const stageCounts = {
+    INSPECT: items.filter((item) => item.stage === "INSPECT").length,
+    READY: items.filter((item) => item.stage === "READY").length,
+    PROCESSING: items.filter((item) => item.stage === "PROCESSING").length,
+    DONE: done,
+  };
+
+  return { total, done, urgent, percent, stageCounts };
+}
+
 function shouldShowTechnicalBoardField(
   field: OperationalBlueprintActionField,
   values: Record<string, string | boolean>,
@@ -1574,14 +1866,59 @@ function fieldKindLabel(kind: OperationalBlueprintActionField["kind"]) {
   return "Nội dung";
 }
 
+function TechnicalIssueBoardControlStrip({
+  summary,
+  visibleSummary,
+}: {
+  summary: ReturnType<typeof technicalBoardSummary>;
+  visibleSummary: ReturnType<typeof technicalBoardSummary>;
+}) {
+  const segments = [
+    { key: "INSPECT", label: "Kiểm tra", value: visibleSummary.stageCounts.INSPECT, className: "bg-blue-500" },
+    { key: "READY", label: "Chờ xử lý", value: visibleSummary.stageCounts.READY, className: "bg-violet-500" },
+    { key: "PROCESSING", label: "Xử lý", value: visibleSummary.stageCounts.PROCESSING, className: "bg-amber-500" },
+    { key: "DONE", label: "Done", value: visibleSummary.stageCounts.DONE, className: "bg-emerald-500" },
+  ];
+  return (
+    <div className="flex h-11 min-w-[420px] shrink-0 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/70 px-3">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <span className="shrink-0 text-xs font-bold text-slate-950">Tiến độ</span>
+        <span className="shrink-0 text-xs font-extrabold text-slate-950">{visibleSummary.percent}%</span>
+        <div className="h-2 min-w-[120px] flex-1 overflow-hidden rounded-full bg-slate-200">
+          <div className="flex h-full w-full">
+            {segments.map((segment) => {
+              const width = visibleSummary.total ? Math.max(2, (segment.value / visibleSummary.total) * 100) : 0;
+              return segment.value ? (
+                <div
+                  key={segment.key}
+                  className={segment.className}
+                  style={{ width: `${width}%` }}
+                  title={`${segment.label}: ${segment.value}`}
+                />
+              ) : null;
+            })}
+          </div>
+        </div>
+        <span className="shrink-0 text-[11px] font-medium text-slate-500">
+          {visibleSummary.done}/{visibleSummary.total} xong
+        </span>
+        <span className="shrink-0 text-[11px] font-semibold text-rose-600">{summary.urgent} gấp</span>
+      </div>
+    </div>
+  );
+}
 function TechnicalIssueBoardColumn({
   column,
   items,
   isOver,
+  onTogglePriority,
+  priorityPendingIssueId,
 }: {
   column: { key: TechnicalIssueBoardStage; label: string; hint: string };
   items: TechnicalIssueBoardItem[];
   isOver: boolean;
+  onTogglePriority: (item: TechnicalIssueBoardItem) => void;
+  priorityPendingIssueId: string | null;
 }) {
   const { setNodeRef } = useDroppable({ id: column.key });
 
@@ -1589,11 +1926,12 @@ function TechnicalIssueBoardColumn({
     <div
       ref={setNodeRef}
       className={cn(
-        "min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition",
+        "flex h-[clamp(420px,calc(100vh-380px),760px)] min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition",
         isOver && "border-violet-300 ring-2 ring-violet-100",
       )}
     >
-      <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
+      <div className="shrink-0 border-b border-slate-100 bg-white px-4 py-3">
+        <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-sm font-semibold text-slate-950">{column.label}</div>
           <div className="mt-1 line-clamp-2 text-xs text-slate-500">{column.hint}</div>
@@ -1601,10 +1939,16 @@ function TechnicalIssueBoardColumn({
         <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
           {items.length}
         </span>
+        </div>
       </div>
-      <div className="grid min-h-[340px] content-start gap-3 p-4">
+      <div className="grid min-h-0 flex-1 content-start gap-3 overflow-y-auto overscroll-contain p-3 pr-2 sm:p-4 sm:pr-2">
         {items.map((item) => (
-          <DraggableTechnicalIssueBoardCard key={item.id} item={item} />
+          <DraggableTechnicalIssueBoardCard
+            key={item.id}
+            item={item}
+            onTogglePriority={onTogglePriority}
+            priorityPending={priorityPendingIssueId === item.id}
+          />
         ))}
         {!items.length ? (
           <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-8 text-center text-sm text-slate-500">
@@ -1616,7 +1960,15 @@ function TechnicalIssueBoardColumn({
   );
 }
 
-function DraggableTechnicalIssueBoardCard({ item }: { item: TechnicalIssueBoardItem }) {
+function DraggableTechnicalIssueBoardCard({
+  item,
+  onTogglePriority,
+  priorityPending,
+}: {
+  item: TechnicalIssueBoardItem;
+  onTogglePriority: (item: TechnicalIssueBoardItem) => void;
+  priorityPending: boolean;
+}) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: item.id,
   });
@@ -1628,6 +1980,8 @@ function DraggableTechnicalIssueBoardCard({ item }: { item: TechnicalIssueBoardI
         item={item}
         dragging={isDragging}
         dragHandleProps={{ ...attributes, ...listeners }}
+        onTogglePriority={onTogglePriority}
+        priorityPending={priorityPending}
       />
     </div>
   );
@@ -1637,15 +1991,20 @@ function TechnicalIssueBoardCard({
   item,
   dragging,
   dragHandleProps,
+  onTogglePriority,
+  priorityPending,
 }: {
   item: TechnicalIssueBoardItem;
   dragging?: boolean;
   dragHandleProps?: Record<string, unknown>;
+  onTogglePriority?: (item: TechnicalIssueBoardItem) => void;
+  priorityPending?: boolean;
 }) {
   const href = item.workspaceTaskItemId
     ? `/admin/task-items/${item.workspaceTaskItemId}`
     : `/admin/services/${item.serviceRequestId}`;
   const imageSrc = resolveMediaPreviewSrc(item.serviceRequest.imageUrl);
+  const isUrgent = technicalIssuePriorityValue(item.priority) === "URGENT";
 
   return (
     <div
@@ -1654,6 +2013,11 @@ function TechnicalIssueBoardCard({
         dragging && "opacity-50",
       )}
     >
+      {isUrgent ? (
+        <div className="mb-2 text-[11px] font-extrabold uppercase tracking-wide text-rose-600">
+          Gấp
+        </div>
+      ) : null}
       <div className="flex items-start gap-3">
         <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md bg-slate-100">
           {imageSrc ? (
@@ -1664,23 +2028,44 @@ function TechnicalIssueBoardCard({
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <Link href={href} className="line-clamp-2 text-sm font-semibold text-slate-950 hover:text-violet-700">
-            {item.summary}
-          </Link>
+          <div className="flex min-w-0 flex-wrap items-start gap-2">
+            <Link href={href} className="min-w-0 flex-1 line-clamp-2 text-sm font-semibold text-slate-950 hover:text-violet-700">
+              {item.summary}
+            </Link>
+          </div>
           <div className="mt-1 truncate text-xs text-slate-500">
             {item.serviceRequest.refNo ?? "SR"} · {item.serviceRequest.productTitle ?? item.serviceRequest.sku ?? "Watch"}
           </div>
         </div>
-        {dragHandleProps ? (
-          <button
-            type="button"
-            {...dragHandleProps}
-            className="inline-flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded-md border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-700 active:cursor-grabbing"
-            aria-label="Kéo TI"
-          >
-            <GripVertical className="h-4 w-4" aria-hidden="true" />
-          </button>
-        ) : null}
+        <div className="flex shrink-0 items-center gap-1">
+          {onTogglePriority ? (
+            <button
+              type="button"
+              disabled={priorityPending}
+              onClick={() => onTogglePriority(item)}
+              title={isUrgent ? "Bỏ gấp" : "Đánh dấu gấp"}
+              aria-label={isUrgent ? "Bỏ gấp" : "Đánh dấu gấp"}
+              className={cn(
+                "inline-flex h-7 w-7 items-center justify-center rounded-md border bg-white transition disabled:cursor-wait disabled:opacity-60",
+                isUrgent
+                  ? "border-rose-200 text-rose-600 hover:bg-rose-50"
+                  : "border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-rose-600",
+              )}
+            >
+              <Zap className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          ) : null}
+          {dragHandleProps ? (
+            <button
+              type="button"
+              {...dragHandleProps}
+              className="inline-flex h-7 w-7 cursor-grab items-center justify-center rounded-md border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-700 active:cursor-grabbing"
+              aria-label="Kéo TI"
+            >
+              <GripVertical className="h-4 w-4" aria-hidden="true" />
+            </button>
+          ) : null}
+        </div>
       </div>
       <div className="mt-3 flex min-w-0 flex-wrap items-center gap-1.5">
         <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600">
@@ -1793,7 +2178,7 @@ function TechnicalIssueBoardMoveModal({
               className="inline-flex h-9 items-center rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
             >
               Hủy
-            </button>
+                  </button>
             <button
               type="submit"
               disabled={pending || !action}

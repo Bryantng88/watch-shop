@@ -49,6 +49,15 @@ export type CoordinationWorkTicketSummaryDTO = {
     paymentCount: number;
     unpaidIssueCount: number;
   } | null;
+  rollover?: {
+    direction: "OUT";
+    movementKind: "ACTIVE_OWNERSHIP_MOVE";
+    targetCount: number;
+    toTaskId: string | null;
+    toTaskItemId: string | null;
+    toTaskItemTitle: string | null;
+    movedAt: string | null;
+  } | null;
   needAttention: boolean;
   feedbackCount: number;
   lastActivity: string | null;
@@ -77,6 +86,7 @@ export type CoordinationTechnicalIssueBoardItemDTO = {
   estimatedCost: number | null;
   executionStatus: string;
   isConfirmed: boolean;
+  priority: string | null;
   technicalDetailCatalogId: string | null;
   stage: "INSPECT" | "READY" | "PROCESSING" | "DONE";
   actualCost: number | null;

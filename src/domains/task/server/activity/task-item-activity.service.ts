@@ -76,6 +76,18 @@ function activityEventKey(activity: { metadataJson?: unknown }) {
   return clean(asRecord(activity.metadataJson).eventKey).toLowerCase();
 }
 
+function isRolloverActivity(activity: { metadataJson?: unknown }) {
+  const metadata = asRecord(activity.metadataJson);
+  const direction = clean(metadata.rolloverDirection).toUpperCase();
+  const rollover = asRecord(metadata.rollover);
+  const nestedDirection = clean(rollover.direction).toUpperCase();
+
+  return direction === "IN" ||
+    direction === "OUT" ||
+    nestedDirection === "IN" ||
+    nestedDirection === "OUT";
+}
+
 function eventMatchesWorkspaceScope(eventKey: string, workspaceWorkTypeKey?: string | null) {
   const workTypeKey = clean(workspaceWorkTypeKey).toLowerCase();
   if (!eventKey || !workTypeKey) return true;
@@ -110,6 +122,8 @@ function activityMatchesScope(
   scope?: TaskItemActivityScope,
 ) {
   if (!scope) return true;
+
+  if (isRolloverActivity(activity)) return true;
 
   const keys = activityTargetKeys(activity);
   const eventKey = activityEventKey(activity);

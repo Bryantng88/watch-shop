@@ -19,6 +19,7 @@ import {
   OrderTimelinePanel,
   type OrderDetailData,
 } from "@/domains/order/ui/detail";
+import { ADMIN_DETAIL_CONTENT_CLASS } from "@/domains/shared/ui/layout/admin-content";
 
 type ActionName = "post" | "verify" | "cancel";
 
@@ -86,7 +87,7 @@ export default function OrderDetailClient({ data }: { data: OrderDetailData }) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1500px] space-y-6 px-4 pt-6 lg:px-6">
+    <div className={ADMIN_DETAIL_CONTENT_CLASS}>
       <OrderHeader data={data} />
 
       <OrderInventoryNotice status={data.status} productTitle={firstProductTitle} compact />

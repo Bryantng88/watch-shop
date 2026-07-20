@@ -6,7 +6,7 @@ import {
   TechnicalIssueExecutionStatus,
   type Prisma,
 } from "@prisma/client";
-import { dbOrTx, type DB } from "@/server/db/client";
+import { dbOrTx, withDbTransaction, type DB } from "@/server/db/client";
 import { createSystemActivity } from "@/domains/task/server/activity";
 import { ensureTaskItemBusinessBinding } from "@/domains/task/server/business-binding.service";
 import { getQueueItemWorkflowState } from "@/domains/task/server/business-binding-workflow.service";
@@ -78,11 +78,17 @@ function contextMatchesTask(input: {
 }
 
 function activeCoreWorkTypeKeys(context: CoordinationContext) {
-  return new Set(
+  const keys = new Set(
     listWorkTypes(context)
       .map((workType) => normalizeWorkTypeKey(workType.key))
       .filter((key) => isCoreWorkspaceBlueprint({ key, source: "REGISTRY" })),
   );
+
+  if (context === "TECHNICAL") {
+    keys.add("service-operation");
+  }
+
+  return keys;
 }
 
 function countMatchingCoreWorkspaces(
@@ -132,6 +138,43 @@ function targetKey(input: { targetType: string; targetId: string }) {
   return `${input.targetType}:${input.targetId}`;
 }
 
+function noteLineValue(note: string | null | undefined, key: string) {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = String(note ?? "").match(new RegExp(`^${escaped}:\\s*([^\\r\\n]+)\\s*$`, "im"));
+  return match?.[1]?.trim() ?? null;
+}
+
+function serviceOperationWorkspaceRole(note?: string | null) {
+  const role = String(note ?? "")
+    .match(/^serviceOperationWorkspaceRole:\s*(SR_CASE|INSPECT|PROCESSING|DONE)\s*$/im)?.[1]
+    ?.toUpperCase();
+
+  if (role === "SR_CASE" || role === "INSPECT" || role === "PROCESSING" || role === "DONE") {
+    return role;
+  }
+
+  return null;
+}
+
+function currentItemKey(input: {
+  context: CoordinationContext;
+  workTypeKey: string;
+  note?: string | null;
+}) {
+  const workTypeKey = normalizeWorkTypeKey(input.workTypeKey);
+
+  if (input.context === "TECHNICAL" && workTypeKey === "service-operation") {
+    const role = serviceOperationWorkspaceRole(input.note);
+    if (role === "SR_CASE") {
+      return `${workTypeKey}:SR_CASE:${noteLineValue(input.note, "serviceRequestId") ?? ""}`;
+    }
+
+    return `${workTypeKey}:${role ?? "PROCESSING"}`;
+  }
+
+  return workTypeKey;
+}
+
 function isServiceRequestProcessing(status: ServiceRequestStatus | null | undefined) {
   return Boolean(
     status &&
@@ -169,8 +212,29 @@ async function loadProcessingTargetMap(
   const paymentIds = bindings
     .filter((binding) => binding.targetType === TaskExecutionTargetType.PAYMENT)
     .map((binding) => binding.targetId);
+  const orderIds = bindings
+    .filter((binding) => binding.targetType === TaskExecutionTargetType.ORDER)
+    .map((binding) => binding.targetId);
+  const shipmentIds = bindings
+    .filter((binding) => binding.targetType === TaskExecutionTargetType.SHIPMENT)
+    .map((binding) => binding.targetId);
+  const acquisitionIds = bindings
+    .filter((binding) => binding.targetType === TaskExecutionTargetType.ACQUISITION)
+    .map((binding) => binding.targetId);
+  const workCaseIds = bindings
+    .filter((binding) => binding.targetType === TaskExecutionTargetType.WORK_CASE)
+    .map((binding) => binding.targetId);
 
-  const [serviceRequests, technicalIssues, watches, payments] = await Promise.all([
+  const [
+    serviceRequests,
+    technicalIssues,
+    watches,
+    payments,
+    orders,
+    shipments,
+    acquisitions,
+    workCases,
+  ] = await Promise.all([
     serviceRequestIds.length
       ? client.serviceRequest.findMany({
           where: { id: { in: serviceRequestIds } },
@@ -197,6 +261,30 @@ async function loadProcessingTargetMap(
     paymentIds.length
       ? client.payment.findMany({
           where: { id: { in: paymentIds } },
+          select: { id: true, status: true },
+        })
+      : [],
+    orderIds.length
+      ? client.order.findMany({
+          where: { id: { in: orderIds } },
+          select: { id: true, status: true },
+        })
+      : [],
+    shipmentIds.length
+      ? client.shipment.findMany({
+          where: { id: { in: shipmentIds } },
+          select: { id: true, status: true },
+        })
+      : [],
+    acquisitionIds.length
+      ? client.acquisition.findMany({
+          where: { id: { in: acquisitionIds } },
+          select: { id: true, accquisitionStt: true },
+        })
+      : [],
+    workCaseIds.length
+      ? client.workCase.findMany({
+          where: { id: { in: workCaseIds } },
           select: { id: true, status: true },
         })
       : [],
@@ -272,6 +360,62 @@ async function loadProcessingTargetMap(
     );
   }
 
+  for (const row of orders) {
+    const terminalStates = terminalStatesForTarget(
+      terminalStatesByTargetType,
+      TaskExecutionTargetType.ORDER,
+    );
+    map.set(
+      targetKey({
+        targetType: TaskExecutionTargetType.ORDER,
+        targetId: row.id,
+      }),
+      statusListIsProcessing([row.status], terminalStates),
+    );
+  }
+
+  for (const row of shipments) {
+    const terminalStates = terminalStatesForTarget(
+      terminalStatesByTargetType,
+      TaskExecutionTargetType.SHIPMENT,
+    );
+    map.set(
+      targetKey({
+        targetType: TaskExecutionTargetType.SHIPMENT,
+        targetId: row.id,
+      }),
+      statusListIsProcessing([row.status], terminalStates),
+    );
+  }
+
+  for (const row of acquisitions) {
+    const terminalStates = terminalStatesForTarget(
+      terminalStatesByTargetType,
+      TaskExecutionTargetType.ACQUISITION,
+    );
+    map.set(
+      targetKey({
+        targetType: TaskExecutionTargetType.ACQUISITION,
+        targetId: row.id,
+      }),
+      statusListIsProcessing([row.accquisitionStt], terminalStates),
+    );
+  }
+
+  for (const row of workCases) {
+    const terminalStates = terminalStatesForTarget(
+      terminalStatesByTargetType,
+      TaskExecutionTargetType.WORK_CASE,
+    );
+    map.set(
+      targetKey({
+        targetType: TaskExecutionTargetType.WORK_CASE,
+        targetId: row.id,
+      }),
+      statusListIsProcessing([row.status], terminalStates),
+    );
+  }
+
   return map;
 }
 
@@ -296,6 +440,8 @@ function mergeRolloverMetadata(input: {
   return {
     ...asRecord(input.metadataJson),
     rollover: {
+      movementKind: "ACTIVE_OWNERSHIP_MOVE",
+      direction: "IN",
       fromTaskId: input.fromTaskId,
       fromTaskItemId: input.fromTaskItemId,
       fromTaskItemTitle: input.fromTaskItemTitle,
@@ -314,6 +460,7 @@ export async function rolloverPreviousCycleItems(
     taskId: string;
     context: CoordinationContext;
     actorUserId?: string | null;
+    dryRun?: boolean;
   },
 ) {
   const client = dbOrTx(db);
@@ -419,11 +566,18 @@ export async function rolloverPreviousCycleItems(
         const workTypeKey = getWorkTypeKeyFromTicketNote(item.note);
         if (
           !workTypeKey ||
-          !isCoreWorkspaceBlueprint({ key: workTypeKey, source: "REGISTRY" })
+          !coreWorkTypeKeys.has(workTypeKey)
         ) {
           return null;
         }
-        return [workTypeKey, item] as const;
+        return [
+          currentItemKey({
+            context: input.context,
+            workTypeKey,
+            note: item.note,
+          }),
+          item,
+        ] as const;
       })
       .filter((item): item is NonNullable<typeof item> => Boolean(item)),
   );
@@ -475,7 +629,18 @@ export async function rolloverPreviousCycleItems(
   for (const binding of previousBindings) {
     const fromItem = binding.taskItem;
     const workTypeKey = getWorkTypeKeyFromTicketNote(fromItem?.note);
-    const toItem = workTypeKey ? currentByWorkType.get(workTypeKey) : null;
+    const toItemKey = workTypeKey
+      ? currentItemKey({
+        context: input.context,
+        workTypeKey,
+        note: fromItem?.note,
+      })
+      : null;
+    let toItem = toItemKey
+      ? currentByWorkType.get(
+        toItemKey,
+      )
+      : null;
     const baseResult = {
       targetType: binding.targetType,
       targetId: binding.targetId,
@@ -505,12 +670,56 @@ export async function rolloverPreviousCycleItems(
       continue;
     }
 
+    if (
+      !toItem &&
+      input.context === "TECHNICAL" &&
+      workTypeKey === "service-operation" &&
+      serviceOperationWorkspaceRole(fromItem.note) === "SR_CASE" &&
+      binding.targetType === TaskExecutionTargetType.SERVICE_REQUEST
+    ) {
+      if (input.dryRun) {
+        toItem = {
+          id: `dry-run:${binding.targetId}`,
+          title: fromItem.title,
+          note: fromItem.note,
+          status: TaskStatus.TODO,
+        };
+      } else {
+        const createdItem = await client.taskItem.create({
+          data: {
+            taskId: currentTask.id,
+            title: fromItem.title,
+            note: fromItem.note,
+            status: TaskStatus.TODO,
+            priority: "MEDIUM",
+            assignedToUserId: null,
+            sortOrder: 56,
+          },
+          select: { id: true, title: true, note: true, status: true },
+        });
+
+        toItem = createdItem;
+        if (toItemKey) currentByWorkType.set(toItemKey, createdItem);
+      }
+    }
+
+    if (toItem && !baseResult.toWorkspaceTitle) {
+      baseResult.toWorkspaceTitle = toItem.title;
+    }
+
     if (!toItem) {
       results.push({ ...baseResult, status: "FAILED", reason: "MISSING_TARGET_WORKSPACE" });
       continue;
     }
 
+    if (input.dryRun) {
+      results.push({ ...baseResult, status: "MOVED", reason: "READY_TO_MOVE" });
+      continue;
+    }
+
     try {
+      let createdTargetBinding = false;
+      await withDbTransaction(client, async (tx) => {
       const metadataJson = mergeRolloverMetadata({
         metadataJson: binding.metadataJson,
         fromTaskId: previousTask.id,
@@ -522,7 +731,7 @@ export async function rolloverPreviousCycleItems(
         actorUserId: input.actorUserId ?? null,
       });
 
-      const bindingResult = await ensureTaskItemBusinessBinding(client, {
+      const bindingResult = await ensureTaskItemBusinessBinding(tx, {
         taskId: currentTask.id,
         taskItemId: toItem.id,
         targetType: binding.targetType,
@@ -532,13 +741,27 @@ export async function rolloverPreviousCycleItems(
         metadataJson,
         note: binding.note,
       });
+      createdTargetBinding = bindingResult.created;
 
-      await client.taskExecution.update({
+      await tx.taskExecution.update({
         where: { id: binding.id },
         data: {
           actionType: TaskExecutionActionType.CANCELLED,
           metadataJson: {
             ...asRecord(binding.metadataJson),
+            rollover: {
+              movementKind: "ACTIVE_OWNERSHIP_MOVE",
+              direction: "OUT",
+              fromTaskId: previousTask.id,
+              fromTaskItemId: fromItem.id,
+              fromTaskItemTitle: fromItem.title,
+              toTaskId: currentTask.id,
+              toTaskItemId: toItem.id,
+              toTaskItemTitle: toItem.title,
+              toBindingId: bindingResult.binding.id,
+              actorUserId: input.actorUserId ?? null,
+              movedAt: new Date().toISOString(),
+            },
             rolledOverToTaskId: currentTask.id,
             rolledOverToTaskItemId: toItem.id,
             rolledOverToBindingId: bindingResult.binding.id,
@@ -561,7 +784,7 @@ export async function rolloverPreviousCycleItems(
           toTaskItemId: toItem.id,
           toBindingId: bindingResult.binding.id,
         },
-      }, client);
+      }, tx);
 
       await createSystemActivity({
         taskItemId: toItem.id,
@@ -578,12 +801,13 @@ export async function rolloverPreviousCycleItems(
           fromBindingId: binding.id,
           bindingId: bindingResult.binding.id,
         },
-      }, client);
+      }, tx);
+      });
 
       results.push({
         ...baseResult,
-        status: bindingResult.created ? "MOVED" : "SKIPPED",
-        reason: bindingResult.created ? undefined : "ALREADY_EXISTS",
+        status: "MOVED",
+        reason: createdTargetBinding ? undefined : "ALREADY_LINKED",
       });
     } catch (error) {
       results.push({

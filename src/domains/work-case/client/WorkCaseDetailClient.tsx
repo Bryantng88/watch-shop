@@ -20,6 +20,7 @@ import TaskQuickCreateModal, {
     type TaskUserOption,
 } from "@/domains/task/ui/quick-create/TaskQuickCreateModal";
 import type { TaskTypeOption } from "@/domains/task/server/task-type.types";
+import { ADMIN_DETAIL_CONTENT_CLASS } from "@/domains/shared/ui/layout/admin-content";
 import type { WorkCaseWithRelations } from "../server/work-case.repo";
 import { updateWorkCaseAction } from "../actions/work-case.actions";
 import { WORK_CASE_STATUS_LABEL } from "../utils/work-case-labels";
@@ -120,7 +121,7 @@ export default function WorkCaseDetailClient({
     }
 
     return (
-        <div className="mx-auto w-full max-w-[1600px] space-y-6 px-4 py-6 lg:px-6 xl:px-8">
+        <div className={ADMIN_DETAIL_CONTENT_CLASS}>
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_260px]">
                     <div className="min-w-0">

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ADMIN_OPERATION_PAGE_CLASS } from "@/domains/shared/ui/layout/admin-content";
 
 type SpaceViewPageProps = {
   breadcrumbs?: ReactNode;
@@ -49,8 +50,8 @@ export function SpaceViewPage({
   children,
 }: SpaceViewPageProps) {
   return (
-    <main className="min-h-screen bg-[#f6f7fb] px-4 py-7 text-[#111a3d] sm:px-6 lg:px-8">
-      <div className="mx-auto flex max-w-[1500px] flex-col gap-4">
+    <main className={`${ADMIN_OPERATION_PAGE_CLASS} bg-[#f6f7fb] px-3 py-5 text-[#111a3d] sm:px-4 lg:px-5 xl:px-6 2xl:px-8`}>
+      <div className="mx-auto flex w-full max-w-none min-w-0 flex-col gap-4">
         {breadcrumbs}
         <section className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
           <div>

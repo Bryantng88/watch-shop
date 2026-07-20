@@ -232,3 +232,39 @@ export async function rolloverPreviousCycleItemsAction(input: {
 
   return result;
 }
+
+export async function previewRolloverPreviousCycleItemsAction(input: {
+  taskId: string;
+  context: CoordinationContext;
+}) {
+  await requirePermission("TASK_VIEW");
+
+  return rolloverPreviousCycleItems(prisma, {
+    taskId: input.taskId,
+    context: input.context,
+    dryRun: true,
+  });
+}
+
+export async function updateTechnicalIssuePriorityAction(input: {
+  issueId: string;
+  priority: "URGENT" | "NORMAL";
+  context: CoordinationContext;
+}) {
+  await requirePermission("TASK_VIEW");
+
+  const issueId = clean(input.issueId);
+  const priority = input.priority === "URGENT" ? "URGENT" : "NORMAL";
+
+  if (!issueId) throw new Error("Missing issueId");
+
+  await prisma.technicalIssue.update({
+    where: { id: issueId },
+    data: { priority },
+  });
+
+  revalidatePath(`/admin/coordination/${contextPath(input.context)}`);
+  revalidatePath("/admin/services");
+
+  return { ok: true, issueId, priority };
+}
