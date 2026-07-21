@@ -1065,6 +1065,46 @@ export async function applyQueueItemManualTransitionAction(input: {
   };
 }
 
+export async function addPhotoshootReshootNoteAction(input: {
+  bindingId: string;
+  note: string;
+}) {
+  await getTaskAuth();
+  const bindingId = String(input.bindingId ?? "").trim();
+  const note = String(input.note ?? "").trim();
+  if (!bindingId) throw new Error("Missing bindingId");
+  if (!note) throw new Error("Vui lòng nhập nội dung note.");
+
+  const binding = await prisma.taskExecution.findUnique({
+    where: { id: bindingId },
+    select: {
+      metadataJson: true,
+      taskItemId: true,
+      taskItem: { select: { note: true } },
+    },
+  });
+  if (!binding?.taskItemId) throw new Error("Không tìm thấy Photoshoot item.");
+  if (!/workTypeKey:\s*photography/i.test(String(binding.taskItem?.note ?? ""))) {
+    throw new Error("Item không thuộc Photoshoot Workspace.");
+  }
+
+  const metadata = asRecord(binding.metadataJson);
+  await prisma.taskExecution.update({
+    where: { id: bindingId },
+    data: {
+      metadataJson: {
+        ...metadata,
+        reshootNote: note,
+        reshootNoteAddedAt: metadata.reshootNoteAddedAt ?? new Date().toISOString(),
+        reshootNoteUpdatedAt: new Date().toISOString(),
+      },
+    },
+  });
+
+  revalidatePath(`/admin/task-items/${binding.taskItemId}`);
+  return { ok: true };
+}
+
 export async function applyQueueItemManualTransitionsAction(input: {
   items: Array<{
     bindingId: string;

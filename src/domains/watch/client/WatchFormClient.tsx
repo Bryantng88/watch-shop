@@ -356,6 +356,8 @@ export default function WatchFormClient({
     const [specModalOpen, setSpecModalOpen] = useState(false);
     const [brandOptions, setBrandOptions] = useState<SimpleOption[]>(brands);
     const [mediaSubmitPending, setMediaSubmitPending] = useState(false);
+    const [reshootNoteOpen, setReshootNoteOpen] = useState(false);
+    const [reshootNote, setReshootNote] = useState("");
     const [mediaWorkDone, setMediaWorkDone] = useState<
         Record<MediaWorkPart, boolean>
     >({
@@ -377,6 +379,7 @@ export default function WatchFormClient({
 
     const focus = searchParams.get("focus");
     const fromMediaWorkspace = searchParams.get("from") === "media-workspace";
+    const fromPhotoshootWorkspace = searchParams.get("from") === "photoshoot-workspace";
     const embedded = searchParams.get("embedded") === "1";
     const viewMode = searchParams.get("mode") || "full";
     const isMediaMode = viewMode === "media";
@@ -886,24 +889,13 @@ export default function WatchFormClient({
 
     const requestMediaReshootFromModal = async () => {
         if (mediaSubmitPending || !workspaceBindingId) return;
-
-        const accepted = await dialog.confirm({
-            title: "Yêu cầu chụp lại ảnh?",
-            message:
-                "Item sẽ được đưa về Photoshoot để chụp lại. Phần Hình ảnh trong tiến độ media sẽ chuyển về chưa xong và activity sẽ ghi rõ yêu cầu này.",
-            confirmText: "Yêu cầu chụp lại",
-            cancelText: "Hủy",
-            tone: "warning",
-        });
-
-        if (!accepted) return;
+        const note = reshootNote.trim();
+        if (!note) return;
 
         const submitValues: WatchFormValues = {
             ...buildSubmitValues(),
             saveIntent: "MEDIA_WORKSPACE",
         };
-        const note = "Hình ảnh chưa đạt, yêu cầu chụp lại từ modal Xử lý Media.";
-
         setMediaSubmitPending(true);
         progress.show({
             title: "Đang yêu cầu chụp lại",
@@ -937,6 +929,8 @@ export default function WatchFormClient({
                 image: false,
             }));
             setWorkspaceState("RETURNED");
+            setReshootNoteOpen(false);
+            setReshootNote("");
 
             notify.success({
                 title: "Đã yêu cầu chụp lại",
@@ -1302,11 +1296,66 @@ export default function WatchFormClient({
                 <button
                     type="button"
                     disabled={mediaSubmitPending || isMediaWorkspaceReturned}
-                    onClick={requestMediaReshootFromModal}
+                    onClick={() => setReshootNoteOpen(true)}
                     className="inline-flex h-9 items-center justify-center rounded-full border border-amber-200 bg-white px-3 text-xs font-semibold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     Yêu cầu chụp lại
                 </button>
+            ) : null}
+            {reshootNoteOpen ? (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-[1px]">
+                    <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                        <div className="flex items-start justify-between border-b border-slate-100 px-5 py-4">
+                            <div>
+                                <h3 className="text-base font-semibold text-slate-950">Yêu cầu chụp lại ảnh</h3>
+                                <p className="mt-1 text-sm text-slate-500">Ghi rõ phần Photoshoot cần chụp lại.</p>
+                            </div>
+                            <button
+                                type="button"
+                                disabled={mediaSubmitPending}
+                                onClick={() => setReshootNoteOpen(false)}
+                                className="rounded-lg px-2 py-1 text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                                aria-label="Đóng"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className="p-5">
+                            <label htmlFor="reshoot-note" className="text-sm font-semibold text-slate-800">
+                                Nội dung cần chụp lại
+                            </label>
+                            <textarea
+                                id="reshoot-note"
+                                autoFocus
+                                rows={4}
+                                maxLength={500}
+                                value={reshootNote}
+                                disabled={mediaSubmitPending}
+                                onChange={(event) => setReshootNote(event.target.value)}
+                                placeholder="Ví dụ: Chụp lại chính diện vì mặt kính bị phản sáng."
+                                className="mt-2 w-full resize-none rounded-xl border border-slate-300 px-3 py-2.5 text-sm leading-6 text-slate-900 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100 disabled:bg-slate-50"
+                            />
+                        </div>
+                        <div className="flex justify-end gap-2 border-t border-slate-100 bg-slate-50 px-5 py-4">
+                            <button
+                                type="button"
+                                disabled={mediaSubmitPending}
+                                onClick={() => setReshootNoteOpen(false)}
+                                className="h-9 rounded-lg px-3 text-sm font-semibold text-slate-600 hover:bg-slate-200/70"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                type="button"
+                                disabled={mediaSubmitPending || !reshootNote.trim()}
+                                onClick={requestMediaReshootFromModal}
+                                className="h-9 rounded-lg bg-amber-500 px-4 text-sm font-semibold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {mediaSubmitPending ? "Đang xử lý" : "Yêu cầu chụp lại"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             ) : null}
             {mediaDoneAction("image")}
         </div>
@@ -1458,7 +1507,7 @@ export default function WatchFormClient({
                     onBack={handleBack}
                     canReviewContent={canReviewContent}
                     hideBack={isMediaMode}
-                    hideSubmit={fromMediaWorkspace}
+                    hideSubmit={fromMediaWorkspace || fromPhotoshootWorkspace}
                     headerActions={mediaHeaderActions}
                     breadcrumbs={[
                         { label: "Watches", href: returnTo },

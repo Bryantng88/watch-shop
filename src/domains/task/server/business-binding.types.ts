@@ -88,6 +88,7 @@ export type QueueItemDTO = {
   isWorkflowDone: boolean;
   manualTransitions: QueueItemManualTransitionDTO[];
   intakeNote: string | null;
+  reshootNote: string | null;
   mediaAssetAttachedAt?: string | null;
   mediaWorkProgress?: {
     profile: boolean;

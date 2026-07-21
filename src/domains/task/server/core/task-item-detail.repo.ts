@@ -220,6 +220,7 @@ async function listServiceRequestTechnicalIssueQueueItems(
       isWorkflowDone: issue.executionStatus === "DONE",
       manualTransitions: [],
       intakeNote: issue.note ?? null,
+      reshootNote: null,
       mediaAssetAttachedAt: null,
       mediaWorkProgress: null,
       serviceRequestId: input.serviceRequestId,

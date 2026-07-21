@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import {
   ExternalLink,
   Folder,
+  Images,
+  MessageSquareText,
   MoreHorizontal,
   Plus,
   XCircle,
@@ -29,6 +31,7 @@ import { targetLabel } from "@/domains/task/ui/execution/execution-ui.utils";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 import { cn } from "@/lib/utils";
 import {
+  addPhotoshootReshootNoteAction,
   applyQueueItemManualTransitionsAction,
   applyQueueItemManualTransitionAction,
   submitOperationalBlueprintActionAction,
@@ -94,6 +97,7 @@ export type TaskItemQueueItem = {
   isWorkflowDone?: boolean;
   manualTransitions?: TaskItemQueueTransition[];
   intakeNote?: string | null;
+  reshootNote?: string | null;
   mediaAssetAttachedAt?: string | null;
   mediaWorkProgress?: {
     profile: boolean;
@@ -399,6 +403,9 @@ function openTargetActionLabel(
 ) {
   const metadata = objectValue(transition.metadata);
   if (metadataTextValue(metadata, "targetMode") === "media") {
+    if (metadataTextValue(metadata, "from") === "photoshoot-workspace") {
+      return "Ảnh";
+    }
     if (
       queueItem?.currentWorkflowState === "DONE" ||
       queueItem?.status === "DONE"
@@ -410,6 +417,28 @@ function openTargetActionLabel(
   }
 
   return transitionLabel(transition);
+}
+
+function photoshootMediaPreviewTransition(
+  queueItem: TaskItemQueueItem,
+): TaskItemQueueTransition {
+  return {
+    actionKey: "open-watch-photoshoot-media-preview",
+    label: "Ảnh",
+    fromState: queueItem.currentWorkflowState || "NEW",
+    toState: queueItem.currentWorkflowState || "NEW",
+    manualActionLabel: "Ảnh",
+    enabled: true,
+    reason: null,
+    metadata: {
+      intent: "OPEN_TARGET",
+      presentation: "MODAL",
+      targetRoute: "watch.edit",
+      targetMode: "media",
+      focus: "image",
+      from: "photoshoot-workspace",
+    },
+  };
 }
 
 function mediaOpenTargetTransition(
@@ -888,6 +917,7 @@ export function OpenTargetAction({
   transition,
   className,
   iconClassName = "h-3.5 w-3.5",
+  iconOnly = false,
   onActivate,
 }: {
   queueItem: TaskItemQueueItem;
@@ -895,6 +925,7 @@ export function OpenTargetAction({
   transition: TaskItemQueueTransition;
   className: string;
   iconClassName?: string;
+  iconOnly?: boolean;
   onActivate?: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -931,9 +962,9 @@ export function OpenTargetAction({
 
   if (!modal) {
     return (
-      <Link href={href} onClick={onActivate} className={className}>
-        <ExternalLink className={iconClassName} />
-        {label}
+      <Link href={href} onClick={onActivate} className={className} title={iconOnly ? "Xem ảnh hiện có" : undefined} aria-label={iconOnly ? "Xem ảnh hiện có" : undefined}>
+        {iconOnly ? <Images className={iconClassName} /> : <ExternalLink className={iconClassName} />}
+        {iconOnly ? null : label}
       </Link>
     );
   }
@@ -947,9 +978,11 @@ export function OpenTargetAction({
           setOpen(true);
         }}
         className={className}
+        title={iconOnly ? "Xem ảnh hiện có" : undefined}
+        aria-label={iconOnly ? "Xem ảnh hiện có" : undefined}
       >
-        <ExternalLink className={iconClassName} />
-        {label}
+        {iconOnly ? <Images className={iconClassName} /> : <ExternalLink className={iconClassName} />}
+        {iconOnly ? null : label}
       </button>
 
       {open ? (
@@ -1026,6 +1059,14 @@ export function QueueWorkQueue({
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
   const [createIssueOpen, setCreateIssueOpen] = useState(false);
+  const [reshootNoteDialog, setReshootNoteDialog] = useState<{
+    itemId: string;
+    title: string;
+    note: string;
+  } | null>(null);
+  const [reshootNoteDraft, setReshootNoteDraft] = useState("");
+  const [reshootNoteSaving, setReshootNoteSaving] = useState(false);
+  const [reshootNoteError, setReshootNoteError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<{
     itemId: string;
     message: string;
@@ -1523,6 +1564,24 @@ export function QueueWorkQueue({
     });
   };
 
+  async function saveReshootNote() {
+    if (!reshootNoteDialog || !reshootNoteDraft.trim()) return;
+    setReshootNoteSaving(true);
+    setReshootNoteError(null);
+    try {
+      await addPhotoshootReshootNoteAction({
+        bindingId: reshootNoteDialog.itemId,
+        note: reshootNoteDraft.trim(),
+      });
+      setReshootNoteDialog(null);
+      router.refresh();
+    } catch (error) {
+      setReshootNoteError(error instanceof Error ? error.message : "Không thể lưu note.");
+    } finally {
+      setReshootNoteSaving(false);
+    }
+  }
+
   const isBulkPending = isPending && pendingId === "bulk";
 
   return (
@@ -1693,6 +1752,39 @@ export function QueueWorkQueue({
                               ) : (
                                 <span>{queueItemRef(queueItem)}</span>
                               )}
+                              {workspaceWorkTypeKey === "photography" ? (
+                                <button
+                                  type="button"
+                                  aria-label={queueItem.reshootNote ? `Note chụp lại: ${queueItem.reshootNote}` : "Thêm note chụp lại"}
+                                  onClick={() => {
+                                    const note = queueItem.reshootNote?.trim() ?? "";
+                                    setReshootNoteDialog({
+                                      itemId: queueItem.id,
+                                      title: queueItemTitle(queueItem),
+                                      note,
+                                    });
+                                    setReshootNoteDraft(note);
+                                    setReshootNoteError(null);
+                                  }}
+                                  className={cn(
+                                    "group relative inline-flex h-5 shrink-0 items-center gap-1 rounded-full px-2 text-[10px] font-semibold ring-1 ring-inset transition focus:outline-none focus:ring-2",
+                                    queueItem.reshootNote
+                                      ? "bg-amber-50 text-amber-700 ring-amber-200 hover:bg-amber-100 focus:ring-amber-400"
+                                      : "bg-slate-50 text-slate-500 ring-slate-200 hover:bg-slate-100 focus:ring-slate-300",
+                                  )}
+                                >
+                                  <MessageSquareText className="h-3 w-3" />
+                                  Note
+                                  {queueItem.reshootNote ? (
+                                    <span
+                                      role="tooltip"
+                                      className="pointer-events-none absolute left-0 top-full z-30 mt-2 hidden w-max max-w-[320px] whitespace-normal rounded-lg bg-slate-950 px-3 py-2 text-left text-xs font-normal leading-5 text-white shadow-xl group-hover:block group-focus:block"
+                                    >
+                                      {queueItem.reshootNote}
+                                    </span>
+                                  ) : null}
+                                </button>
+                              ) : null}
                               {workspaceWorkTypeKey === "publish" && postTargets.length ? (
                                 <>
                                   <span>-</span>
@@ -1811,6 +1903,17 @@ export function QueueWorkQueue({
                                     </button>
                                   );
                                 })()}
+
+                                {workspaceWorkTypeKey === "photography" ? (
+                                  <OpenTargetAction
+                                    queueItem={queueItem}
+                                    taskItemId={taskItemId}
+                                    transition={photoshootMediaPreviewTransition(queueItem)}
+                                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-blue-600 transition hover:border-blue-200 hover:bg-blue-50"
+                                    iconClassName="h-3.5 w-3.5"
+                                    iconOnly
+                                  />
+                                ) : null}
 
                                 {secondaryNextStepActions.length ? (
                                   <div className="relative">
@@ -2172,6 +2275,65 @@ export function QueueWorkQueue({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      ) : null}
+      {reshootNoteDialog ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/45 p-4">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
+            <div className="flex items-start justify-between border-b border-slate-200 px-5 py-4">
+              <div className="min-w-0">
+                <h3 className="text-base font-semibold text-slate-950">Note chụp lại</h3>
+                <p className="mt-1 truncate text-sm text-slate-500">{reshootNoteDialog.title}</p>
+              </div>
+              <button
+                type="button"
+                disabled={reshootNoteSaving}
+                onClick={() => setReshootNoteDialog(null)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Đóng"
+              >
+                <XCircle className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="p-5">
+              <label htmlFor="photoshoot-reshoot-note" className="text-sm font-semibold text-slate-800">
+                Nội dung lý do chụp lại
+              </label>
+              <textarea
+                id="photoshoot-reshoot-note"
+                autoFocus
+                rows={4}
+                maxLength={500}
+                value={reshootNoteDraft}
+                onChange={(event) => setReshootNoteDraft(event.target.value)}
+                placeholder="Nhập nội dung cần chụp lại..."
+                className="mt-2 w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm leading-6 text-slate-900 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
+              />
+              {reshootNoteError ? (
+                <div className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
+                  {reshootNoteError}
+                </div>
+              ) : null}
+            </div>
+            <div className="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 px-5 py-4">
+              <button
+                type="button"
+                disabled={reshootNoteSaving}
+                onClick={() => setReshootNoteDialog(null)}
+                className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={reshootNoteSaving || !reshootNoteDraft.trim()}
+                onClick={saveReshootNote}
+                className="h-9 rounded-lg bg-amber-500 px-4 text-sm font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {reshootNoteSaving ? "Đang lưu" : "Lưu note"}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

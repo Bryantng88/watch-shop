@@ -1011,6 +1011,30 @@ export async function listTaskItemQueueItems(
   const visibleBindings = bindings.filter((binding) =>
     bindingMatchesTaskItemWorkflow(binding, expectedWorkflowKey),
   );
+  const photoshootTargetIds = visibleBindings
+    .filter((binding) => binding.targetType === TaskExecutionTargetType.WATCH)
+    .map((binding) => binding.targetId);
+  const reshootEvents = photoshootTargetIds.length &&
+    noteField(taskItem?.note, "workTypeKey") === "photography"
+    ? await dbOrTx(db).businessEventLog.findMany({
+      where: {
+        eventKey: "watch.media.photoshoot.requested",
+        targetType: TaskExecutionTargetType.WATCH,
+        targetId: { in: photoshootTargetIds },
+      },
+      select: { targetId: true, metadataJson: true },
+    })
+    : [];
+  const reshootNoteByTargetId = new Map(
+    reshootEvents.flatMap((event) => {
+      const eventMetadata = asRecord(event.metadataJson);
+      const sourceId = clean(eventMetadata.sourceId);
+      const note = clean(eventMetadata.intakeNote);
+      return sourceId.startsWith("media-reshoot:") && note
+        ? [[event.targetId, note] as const]
+        : [];
+    }),
+  );
   const activityStats = buildQueueActivityStats(activities);
   const businessPreviews = await buildQueueBusinessPreviewMap(db, visibleBindings);
 
@@ -1097,6 +1121,8 @@ export async function listTaskItemQueueItems(
           currentState: workflowRuntime?.currentState ?? null,
         }),
         intakeNote: queueItemIntakeNote(metadata),
+        reshootNote: metadataText(metadata, ["reshootNote"]) ??
+          (queueStatus !== "DONE" ? reshootNoteByTargetId.get(binding.targetId) ?? null : null),
         mediaAssetAttachedAt: metadataText(metadata, ["mediaAssetAttachedAt"]),
         mediaWorkProgress: progress,
         technicalIssue: businessPreview?.technicalIssue ?? null,

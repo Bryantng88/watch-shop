@@ -472,6 +472,24 @@ export async function completeWatchPhotoshootFromQueueItem(
 
   if (!watch) return { ok: false, skipped: true, reason: "WATCH_NOT_FOUND" };
 
+  const completedBinding = await db.taskExecution.findUnique({
+    where: { id: binding.id },
+    select: { metadataJson: true },
+  });
+  const completedBindingMetadata = asRecord(completedBinding?.metadataJson);
+  if (clean(completedBindingMetadata.reshootNote)) {
+    await db.taskExecution.update({
+      where: { id: binding.id },
+      data: {
+        metadataJson: {
+          ...completedBindingMetadata,
+          reshootNote: null,
+          reshootCompletedAt: new Date().toISOString(),
+        },
+      },
+    });
+  }
+
   const event = await emitWatchPhotoshootCompletedEvent(db, {
     watch: toWatchEventSnapshot(watch),
     actorUserId: input.actorUserId ?? null,
@@ -1022,6 +1040,29 @@ export async function requestWatchMediaReshootFromQueueItem(
     sourceId: `media-reshoot:${binding.id}`,
     note,
   });
+
+  const photoshootBindingId = event.consumers.coordination?.skipped === false
+    ? event.consumers.coordination.bindingId
+    : null;
+  if (photoshootBindingId) {
+    const photoshootBinding = await db.taskExecution.findUnique({
+      where: { id: photoshootBindingId },
+      select: { metadataJson: true },
+    });
+    const photoshootMetadata = asRecord(photoshootBinding?.metadataJson);
+
+    await db.taskExecution.update({
+      where: { id: photoshootBindingId },
+      data: {
+        metadataJson: {
+          ...photoshootMetadata,
+          reshootNote: note,
+          reshootRequestedAt: updatedAt,
+          reshootRequestedByUserId: input.actorUserId ?? null,
+        },
+      },
+    });
+  }
 
   return {
     ok: true,
