@@ -103,8 +103,12 @@ export async function POST(request: Request) {
         ? await watchIntakeWithInitialSuspicion({
             productId: body?.productId,
             suspicion: body?.suspicion,
+            area: body?.area,
+            note: body?.note,
+            priority: body?.priority,
             actorUserId: auth.id ?? auth.userId ?? null,
             openExisting: body?.openExisting === true,
+            createIssueIfExisting: body?.createIssueIfExisting === true,
             deferConsumers: (work) => after(work),
           })
         : await getOrCreateServiceOperationWorkspaceForWatch({

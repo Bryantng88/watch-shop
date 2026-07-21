@@ -1,6 +1,4 @@
 import {
-  PaymentStatus,
-  PaymentType,
   Prisma,
   ServiceRequestStatus,
   TaskStatus,
@@ -10,6 +8,7 @@ import {
 } from "@prisma/client";
 
 import { prisma } from "@/server/db/client";
+import { getPaymentOwnerSummaryProjections } from "@/domains/projection/server/payment-owner-summary.projection";
 import { resolveCurrentCoordinationCycle } from "@/domains/coordination/server/coordination-cycle.service";
 import {
   getTechnicalIssueOperationStage,
@@ -286,19 +285,6 @@ function creator(row: { technicianNameSnap?: string | null; user?: { name?: stri
   return { kind: "SYSTEM" as const, name: "System" };
 }
 
-function paymentTotals(rows: Array<{ status: unknown; amount: unknown }>) {
-  return rows.reduce(
-    (acc, row) => {
-      const amount = toNumber(row.amount);
-      const status = String(row.status ?? "").toUpperCase();
-      if (status === PaymentStatus.PAID) acc.paid += amount;
-      if (status === PaymentStatus.UNPAID) acc.unpaid += amount;
-      return acc;
-    },
-    { paid: 0, unpaid: 0 },
-  );
-}
-
 function attention(input: {
   completed: boolean;
   unpaid: number;
@@ -381,22 +367,14 @@ export async function listServiceOperationSrCases(input: ServiceOperationListInp
   }
 
   const issueIds = Array.from(issueToSr.keys());
-  const payments = issueIds.length
-    ? await prisma.payment.findMany({
-      where: {
-        technical_issue_id: { in: issueIds },
-        type: PaymentType.SERVICE,
-      },
-      select: { technical_issue_id: true, status: true, amount: true },
-    })
-    : [];
-
-  const paymentsBySr = new Map<string, Array<{ status: unknown; amount: unknown }>>();
-  for (const payment of payments) {
-    const srId = issueToSr.get(payment.technical_issue_id);
+  const issuePaymentSummaries = await getPaymentOwnerSummaryProjections(prisma, "TECHNICAL_ISSUE", issueIds);
+  const paymentsBySr = new Map<string, { paid: number; unpaid: number }>();
+  for (const [issueId, summary] of issuePaymentSummaries) {
+    const srId = issueToSr.get(issueId);
     if (!srId) continue;
-    const current = paymentsBySr.get(srId) ?? [];
-    current.push(payment);
+    const current = paymentsBySr.get(srId) ?? { paid: 0, unpaid: 0 };
+    current.paid += summary.paidTotal + summary.collectedTotal;
+    current.unpaid += summary.unpaidTotal;
     paymentsBySr.set(srId, current);
   }
 
@@ -414,7 +392,7 @@ export async function listServiceOperationSrCases(input: ServiceOperationListInp
     const completed = activeIssues.length > 0 && doneIssues.length === activeIssues.length;
     const actualTotal = activeIssues.reduce((sum, issue) => sum + toNumber(issue.actualCost), 0);
     const estimatedTotal = activeIssues.reduce((sum, issue) => sum + toNumber(issue.estimatedCost), 0);
-    const payment = paymentTotals(paymentsBySr.get(row.id) ?? []);
+    const payment = paymentsBySr.get(row.id) ?? { paid: 0, unpaid: 0 };
     const payableTotal = actualTotal > 0 ? actualTotal : estimatedTotal;
 
     return {
@@ -622,7 +600,7 @@ export async function getServiceOperationCounters(
   const scope = resolveServiceOperationScope(input);
   const tiScopeWhere = buildTiScopeWhere(scope);
 
-  const [srRows, tiRows, unpaidPayments] = await Promise.all([
+  const [srRows, tiRows] = await Promise.all([
     prisma.serviceRequest.findMany({
       where: buildSrCounterWhere(scope),
       select: {
@@ -649,20 +627,14 @@ export async function getServiceOperationCounters(
         isConfirmed: true,
       },
     }),
-    prisma.payment.findMany({
-      where: {
-        type: PaymentType.SERVICE,
-        status: PaymentStatus.UNPAID,
-        technical_issue_id: { not: null },
-      },
-      select: {
-        technical_issue_id: true,
-      },
-    }),
   ]);
-
+  const counterIssueIds = [...new Set([
+    ...tiRows.map((issue) => issue.id),
+    ...srRows.flatMap((sr) => (sr.technicalIssue ?? []).map((issue) => issue.id)),
+  ])];
+  const counterPaymentSummaries = await getPaymentOwnerSummaryProjections(prisma, "TECHNICAL_ISSUE", counterIssueIds);
   const unpaidIssueIds = new Set(
-    unpaidPayments.map((payment) => payment.technical_issue_id),
+    [...counterPaymentSummaries].filter(([, summary]) => summary.pendingCount > 0).map(([issueId]) => issueId),
   );
   const srIdsWaitingPayment = new Set<string>();
 

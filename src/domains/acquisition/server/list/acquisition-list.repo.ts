@@ -1,6 +1,7 @@
-import { ImageRole, PaymentDirection, PaymentStatus } from "@prisma/client";
+import { ImageRole } from "@prisma/client";
 
 import { prisma } from "@/server/db/client";
+import { getPaymentOwnerSummaryProjections } from "@/domains/projection/server/payment-owner-summary.projection";
 import type {
     AcquisitionListFilters,
 } from "../../shared/search-params";
@@ -183,40 +184,6 @@ function buildItemSubtitle(item: any) {
     return cleanAcquisitionItemDescription(item?.description) || item?.product?.sku || "";
 }
 
-function toNumber(value: unknown) {
-    const n = Number(value ?? 0);
-    return Number.isFinite(n) ? n : 0;
-}
-
-function buildPaymentSummary(payments: Array<{ status: unknown; amount: unknown }>, totalAmount: number) {
-    const paidAmount = payments
-        .filter((payment) => String(payment.status ?? "").toUpperCase() === "PAID")
-        .reduce((sum, payment) => sum + toNumber(payment.amount), 0);
-
-    const pendingAmount = payments
-        .filter((payment) => String(payment.status ?? "").toUpperCase() === "UNPAID")
-        .reduce((sum, payment) => sum + toNumber(payment.amount), 0);
-
-    const activeAmount = payments
-        .filter((payment) => {
-            const status = String(payment.status ?? "").toUpperCase();
-            return status === "PAID" || status === "UNPAID" || status === "COLLECTED";
-        })
-        .reduce((sum, payment) => sum + toNumber(payment.amount), 0);
-
-    const remainingAmount = Math.max(0, totalAmount - paidAmount);
-    const isFullyPaid = totalAmount > 0 && remainingAmount <= 0;
-
-    return {
-        paymentStatus: isFullyPaid ? "PAID" : paidAmount > 0 ? "PARTIAL_PAID" : "UNPAID",
-        paymentPaidAmount: paidAmount,
-        paymentPendingAmount: pendingAmount,
-        paymentActiveAmount: activeAmount,
-        paymentRemainingAmount: remainingAmount,
-        paymentIsFullyPaid: isFullyPaid,
-    };
-}
-
 export async function listAdminAcquisitions(
     input: AcquisitionListFilters,
 ): Promise<AcquisitionListProjectionResult> {
@@ -269,35 +236,7 @@ export async function listAdminAcquisitions(
 
     const pagedIds = rows.map((row) => row.id);
 
-    const paymentRows = pagedIds.length
-        ? await prisma.payment.findMany({
-            where: {
-                acquisition_id: { in: pagedIds },
-                direction: PaymentDirection.OUT,
-                status: {
-                    in: [
-                        PaymentStatus.UNPAID,
-                        PaymentStatus.PAID,
-                        "COLLECTED" as any,
-                    ],
-                },
-            },
-            select: {
-                acquisition_id: true,
-                status: true,
-                amount: true,
-            },
-        })
-        : [];
-
-    const paymentsByAcquisitionId = new Map<string, typeof paymentRows>();
-
-    for (const payment of paymentRows) {
-        if (!payment.acquisition_id) continue;
-        const list = paymentsByAcquisitionId.get(payment.acquisition_id) ?? [];
-        list.push(payment);
-        paymentsByAcquisitionId.set(payment.acquisition_id, list);
-    }
+    const paymentSummaries = await getPaymentOwnerSummaryProjections(prisma, "ACQUISITION", pagedIds);
 
     const items = rows.map((row) => {
         const acquisitionItems = Array.isArray(row.acquisitionItem)
@@ -331,10 +270,17 @@ export async function listAdminAcquisitions(
         const previewTitles = detailItems.slice(0, 2).map((item) => item.title);
         const remaining = Math.max(detailItems.length - previewTitles.length, 0);
         const totalAmount = row.totalAmount != null ? Number(row.totalAmount) : 0;
-        const paymentSummary = buildPaymentSummary(
-            paymentsByAcquisitionId.get(row.id) ?? [],
-            totalAmount,
-        );
+        const projection = paymentSummaries.get(row.id);
+        const recognizedPaid = (projection?.paidTotal ?? 0) + (projection?.collectedTotal ?? 0);
+        const remainingAmount = projection?.remaining ?? totalAmount;
+        const paymentSummary = {
+            paymentStatus: totalAmount > 0 && remainingAmount <= 0 ? "PAID" : recognizedPaid > 0 ? "PARTIAL_PAID" : "UNPAID",
+            paymentPaidAmount: recognizedPaid,
+            paymentPendingAmount: projection?.unpaidTotal ?? 0,
+            paymentActiveAmount: recognizedPaid + (projection?.unpaidTotal ?? 0),
+            paymentRemainingAmount: remainingAmount,
+            paymentIsFullyPaid: totalAmount > 0 && remainingAmount <= 0,
+        };
 
         return {
             id: row.id,

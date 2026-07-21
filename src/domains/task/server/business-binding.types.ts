@@ -130,6 +130,23 @@ export type QueueItemDTO = {
       name: string | null;
     } | null;
   } | null;
+  payment?: {
+    status: string;
+    direction: string | null;
+    type: string | null;
+    purpose: string | null;
+    amount: number;
+    currency: string;
+    method: string | null;
+    ownerType: string;
+    ownerRef: string | null;
+    counterparty: string | null;
+    contact: string | null;
+    createdAt: string | null;
+    paidAt: string | null;
+    itemCount: number;
+    relatedItems: Array<{ title: string; ref: string | null }>;
+  } | null;
   updatedAt: string;
 };
 

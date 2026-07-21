@@ -2,6 +2,7 @@
 
 import { type FormEvent, useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   DndContext,
@@ -73,14 +74,18 @@ import {
 } from "@/domains/shared/ui/business/BusinessEntityPreview";
 import type { CoordinationDashboardDTO } from "../server/coordination-dashboard.types";
 import { isCoreWorkspaceBlueprint } from "@/domains/task/shared/workspace-flow-policy";
+import WatchSearchPicker, { type WatchSearchResult } from "@/domains/watch/ui/search/WatchSearchPicker";
 
 type Props = {
   data: CoordinationDashboardDTO;
 };
 
 type TechnicalIssuePriorityFilter = "ALL" | "URGENT" | "NORMAL";
+type TechnicalBoardFieldValue = string | boolean | string[];
 
 const SPACE_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = ["overview", "value-trend", "status-breakdown", "recent-activity"];
+const PAYMENT_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = ["overview", "cash-flow", "status-breakdown", "recent-activity"];
+type CashFlowPeriod = "WEEK" | "MONTH" | "YEAR" | "ALL";
 
 function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -574,8 +579,14 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   const [title, setTitle] = useState(initialTitle);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [workTicketView, setWorkTicketView] = useState<"LIST" | "TI_BOARD">("LIST");
+  const [workTicketView, setWorkTicketView] = useState<"LIST" | "TI_BOARD">(() =>
+    data.viewConfig.defaultModeKey === "technical-issue-flow"
+      ? "TI_BOARD"
+      : "LIST",
+  );
+  const [isTechnicalIntakeOpen, setIsTechnicalIntakeOpen] = useState(false);
   const [dashboardCustomizationRequest, setDashboardCustomizationRequest] = useState(0);
+  const [cashFlowPeriod, setCashFlowPeriod] = useState<CashFlowPeriod>("WEEK");
   const [filterQuery, setFilterQuery] = useState("");
   const [filterCreator, setFilterCreator] = useState("ALL");
   const [filterWorkStatus, setFilterWorkStatus] = useState("ALL");
@@ -780,11 +791,16 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
         { key: "done", label: "Xong", value: totals.done, tone: "emerald" },
       ] },
       activities: { label: "Hoạt động gần đây", items: activities },
+      cashFlow: data.paymentCashFlow ? {
+        period: cashFlowPeriod,
+        ...data.paymentCashFlow[cashFlowPeriod],
+        onPeriodChange: setCashFlowPeriod,
+      } : undefined,
     };
-  }, [data.week.weekNumber, data.week.year, filteredWorkTickets]);
+  }, [cashFlowPeriod, data.paymentCashFlow, data.week.weekNumber, data.week.year, filteredWorkTickets]);
   const isTechnicalIssueFlowMode = activeViewMode?.key === "technical-issue-flow";
   const canShowTechnicalIssueBoard =
-    isTechnicalIssueFlowMode && Boolean(data.technicalIssueBoard?.items.length);
+    isTechnicalIssueFlowMode && Boolean(data.technicalIssueBoard);
   const isTechnicalIssueBoardView =
     workTicketView === "TI_BOARD" && canShowTechnicalIssueBoard;
   const technicalIssueBoardItems = useMemo(
@@ -1048,12 +1064,12 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     >
         <BusinessListDashboard
           data={spaceDashboardData}
-          widgets={SPACE_DASHBOARD_WIDGETS}
-          storageKey="admin-dashboard:technical-space"
+          widgets={data.context === "PAYMENT" ? PAYMENT_DASHBOARD_WIDGETS : SPACE_DASHBOARD_WIDGETS}
+          storageKey={`admin-dashboard:${data.context.toLowerCase()}-space`}
           customizationRequest={dashboardCustomizationRequest}
           showCustomizationTrigger={false}
         />
-        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
+        <section className="rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
           <div className="border-b border-slate-200 px-5 py-4">
             {activeViewMode ? (
               <div className="rounded-xl border border-sky-100 bg-gradient-to-b from-sky-50/80 to-[#f3f8ff] p-4 text-xs text-slate-700 shadow-[0_8px_24px_rgba(30,43,79,0.04)]">
@@ -1133,6 +1149,16 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                         </div>
                       ) : null}
                     </div>
+                    {data.context === "TECHNICAL" ? (
+                      <button
+                        type="button"
+                        onClick={() => setIsTechnicalIntakeOpen(true)}
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>Tiếp nhận kỹ thuật</span>
+                      </button>
+                    ) : null}
                     <button
                         type="button"
                         disabled={!data.blueprints.length || !data.viewConfig.createWorkspace.enabled}
@@ -1675,7 +1701,266 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
             </div>
           </div>
         ) : null}
+        {isTechnicalIntakeOpen ? (
+          <TechnicalIntakeModal onClose={() => setIsTechnicalIntakeOpen(false)} />
+        ) : null}
     </SpaceViewPage>
+  );
+}
+
+function TechnicalIntakeModal({ onClose }: { onClose: () => void }) {
+  const router = useRouter();
+  const [step, setStep] = useState(1);
+  const [selectedWatch, setSelectedWatch] = useState<WatchSearchResult | null>(null);
+  const [activeServiceRequest, setActiveServiceRequest] = useState<{ id: string; refNo?: string | null; status?: string | null } | null>(null);
+  const [summary, setSummary] = useState("");
+  const [note, setNote] = useState("");
+  const [area, setArea] = useState("GENERAL");
+  const [priority, setPriority] = useState("NORMAL");
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [createdResult, setCreatedResult] = useState<{ serviceRequestRef?: string | null; technicalIssueId?: string | null } | null>(null);
+
+  const steps = ["Tìm Watch", "Xác nhận", "Thông tin SR + TI", "Hoàn tất"];
+
+  async function selectWatch(item: WatchSearchResult) {
+    setSelectedWatch(item);
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/service-requests/watch-active?productId=${encodeURIComponent(item.productId)}`, { cache: "no-store" });
+      const json = await response.json().catch(() => null);
+      if (!response.ok || !json?.ok) throw new Error(json?.error || "Không thể kiểm tra SR đang mở.");
+      setActiveServiceRequest(json.data?.serviceRequest ?? null);
+    } catch (previewError) {
+      setError(previewError instanceof Error ? previewError.message : "Không thể kiểm tra SR đang mở.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function submitIntake() {
+    if (!selectedWatch || !summary.trim()) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const response = activeServiceRequest
+        ? await fetch("/api/admin/service-requests/watch-active", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ productId: selectedWatch.productId, serviceRequestId: activeServiceRequest.id, area, summary, note, issueType: "CHECK", priority }),
+          })
+        : await fetch("/api/admin/service-operation", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ action: "watch_intake_with_suspicion", productId: selectedWatch.productId, suspicion: summary, area, note, priority, createIssueIfExisting: true }),
+          });
+      const json = await response.json().catch(() => null);
+      if (!response.ok || !json?.ok) throw new Error(json?.error || "Không thể tạo phiếu kỹ thuật.");
+      const data = json.data ?? {};
+      setCreatedResult({
+        serviceRequestRef: data.refNo ?? data.serviceRequest?.refNo ?? activeServiceRequest?.refNo ?? null,
+        technicalIssueId: data.technicalIssueId ?? data.createdTechnicalIssueId ?? null,
+      });
+      setStep(4);
+      router.refresh();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Không thể tạo phiếu kỹ thuật.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[1px]">
+      <div role="dialog" aria-modal="true" aria-label="Tiếp nhận kỹ thuật" className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-violet-100 text-violet-700">
+                <Zap className="h-4 w-4" />
+              </span>
+              <div>
+                <h3 className="text-lg font-bold text-slate-950">Tiếp nhận kỹ thuật</h3>
+                <p className="text-sm text-slate-500">Tạo nhanh Service Request và Technical Issue cho Watch.</p>
+              </div>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50" aria-label="Đóng">
+            <XCircle className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="border-b border-slate-100 bg-slate-50/70 px-6 py-4">
+          <div className="grid grid-cols-4 gap-2">
+            {steps.map((label, index) => {
+              const number = index + 1;
+              const active = number === step;
+              const done = number < step;
+              return (
+                <div key={label} className="min-w-0">
+                  <div className={cn("mb-2 h-1 rounded-full", done || active ? "bg-violet-500" : "bg-slate-200")} />
+                  <div className={cn("truncate text-xs font-semibold", active ? "text-violet-700" : done ? "text-slate-700" : "text-slate-400")}>
+                    {number}. {label}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="overflow-y-auto px-6 py-5">
+          {step === 1 ? (
+            <div>
+              <h4 className="text-base font-bold text-slate-950">Tìm đồng hồ cần tiếp nhận</h4>
+              <p className="mt-1 text-sm text-slate-500">Tìm theo mã Watch, serial, tên sản phẩm, khách hàng hoặc số điện thoại.</p>
+              <div className="mt-4"><WatchSearchPicker selectedProductId={selectedWatch?.productId} onSelect={selectWatch} placeholder="Ví dụ: W-10241, Rolex Datejust, Raymond..." /></div>
+            </div>
+          ) : null}
+
+          {step === 2 ? (
+            <div className="grid gap-5 md:grid-cols-[1fr_0.9fr]">
+              <div>
+                <h4 className="text-base font-bold text-slate-950">Xác nhận Watch và khách hàng</h4>
+                <div className="mt-4 rounded-xl border border-slate-200 p-4">
+                  <div className="text-sm font-bold text-slate-950">{selectedWatch?.title}</div>
+                  <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                    <div><dt className="text-xs text-slate-400">Mã Watch</dt><dd className="mt-1 font-semibold text-slate-700">{selectedWatch?.sku || selectedWatch?.productId}</dd></div>
+                    <div><dt className="text-xs text-slate-400">Thương hiệu</dt><dd className="mt-1 font-semibold text-slate-700">{selectedWatch?.brandName || "-"}</dd></div>
+                    <div className="col-span-2"><dt className="text-xs text-slate-400">Trạng thái service</dt><dd className="mt-1 font-semibold text-slate-700">{selectedWatch?.serviceState || "Chưa tiếp nhận"}</dd></div>
+                  </dl>
+                </div>
+              </div>
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <div className="flex items-center gap-2 font-bold text-amber-900"><Info className="h-4 w-4" /> Kiểm tra phiếu hiện tại</div>
+                {activeServiceRequest ? <><p className="mt-2 text-sm leading-6 text-amber-800">Watch đang có SR <strong>{activeServiceRequest.refNo || activeServiceRequest.id}</strong>. TI mới sẽ được thêm vào phiếu này để tránh tạo SR trùng.</p><div className="mt-4 rounded-lg bg-white/70 p-3 text-xs text-amber-800">Trạng thái hiện tại: {activeServiceRequest.status || "Đang xử lý"}</div></> : <p className="mt-2 text-sm leading-6 text-amber-800">Watch chưa có Service Request đang mở. Hệ thống sẽ tạo SR mới cùng TI đầu tiên.</p>}
+              </div>
+            </div>
+          ) : null}
+
+          {step === 3 ? (
+            <div>
+              <h4 className="text-base font-bold text-slate-950">Thông tin tiếp nhận</h4>
+              <p className="mt-1 text-sm text-slate-500">Một lần xác nhận sẽ tạo đồng thời SR và TI ở cột Kiểm tra.</p>
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <label className="grid gap-1.5 text-xs font-semibold text-slate-600 md:col-span-2">Yêu cầu của khách hàng<textarea value={summary} onChange={(event) => setSummary(event.target.value)} placeholder="Mô tả lỗi hoặc yêu cầu cần kiểm tra..." rows={3} className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-normal text-slate-800 outline-none focus:border-violet-300" /></label>
+                <label className="grid gap-1.5 text-xs font-semibold text-slate-600">Nhóm lỗi<select value={area} onChange={(event) => setArea(event.target.value)} className="h-11 rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-700 outline-none focus:border-violet-300"><option value="GENERAL">Tổng quát</option><option value="MOVEMENT">Máy</option><option value="CASE">Vỏ</option><option value="CRYSTAL">Kính</option><option value="BRACELET">Dây</option></select></label>
+                <label className="grid gap-1.5 text-xs font-semibold text-slate-600">Mức ưu tiên<select value={priority} onChange={(event) => setPriority(event.target.value)} className="h-11 rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-700 outline-none focus:border-violet-300"><option value="NORMAL">Bình thường</option><option value="URGENT">Gấp</option></select></label>
+                <label className="grid gap-1.5 text-xs font-semibold text-slate-600 md:col-span-2">Ghi chú kỹ thuật<textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Tình trạng khi nhận, phụ kiện đi kèm..." rows={2} className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-normal text-slate-800 outline-none focus:border-violet-300" /></label>
+                <div className="flex h-20 items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200 bg-slate-50 text-sm font-medium text-slate-400 md:col-span-2"><Camera className="h-5 w-5" /> Ảnh tiếp nhận sẽ bổ sung ở phiên bản tiếp theo</div>
+              </div>
+            </div>
+          ) : null}
+
+          {step === 4 ? (
+            <div className="py-8 text-center">
+              <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-100 text-emerald-600"><CheckCircle2 className="h-8 w-8" /></span>
+              <h4 className="mt-4 text-xl font-bold text-slate-950">Đã tiếp nhận kỹ thuật</h4>
+              <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-500">Technical Issue đã được tạo và đang được đồng bộ vào cột Kiểm tra trên board.</p>
+              <div className="mx-auto mt-5 grid max-w-md grid-cols-2 gap-3 text-left text-sm">
+                <div className="rounded-xl border border-slate-200 p-3"><div className="text-xs text-slate-400">Service Request</div><div className="mt-1 truncate font-bold text-slate-800">{createdResult?.serviceRequestRef || "Đã tạo"}</div></div>
+                <div className="rounded-xl border border-slate-200 p-3"><div className="text-xs text-slate-400">Technical Issue</div><div className="mt-1 truncate font-bold text-slate-800">{createdResult?.technicalIssueId || "Đã tạo"}</div></div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        {error ? <div className="border-t border-rose-100 bg-rose-50 px-6 py-2.5 text-sm font-medium text-rose-700">{error}</div> : null}
+        <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-white px-6 py-4">
+          <button type="button" onClick={() => step === 1 ? onClose() : setStep((current) => current - 1)} className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+            {step === 1 ? "Hủy" : "Quay lại"}
+          </button>
+          {step < 4 ? (
+            <button type="button" disabled={loading || submitting || (step === 1 && !selectedWatch) || (step === 3 && !summary.trim())} onClick={() => step === 3 ? void submitIntake() : setStep((current) => current + 1)} className="inline-flex h-10 items-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300">
+              {submitting ? "Đang tạo..." : step === 3 ? activeServiceRequest ? "Thêm TI vào SR" : "Tạo SR + TI" : "Tiếp tục"}<ChevronRight className="h-4 w-4" />
+            </button>
+          ) : (
+            <button type="button" onClick={onClose} className="h-10 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800">Đóng</button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type PaymentBoardItem = {
+  id: string; refNo: string | null; status: string; stage: "INBOX" | "REVIEW" | "SETTLED";
+  amount: number; currency: string; method: string | null; workspaceTaskItemId: string;
+  owner: { label: string; sublabel: string | null; imageUrl: string | null };
+};
+
+export function PaymentCollectionBoard({ items }: { items: PaymentBoardItem[] }) {
+  const router = useRouter();
+  const progress = useAppProgress();
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [boardItems, setBoardItems] = useState(items);
+  useEffect(() => setBoardItems(items), [items]);
+  const columns = [
+    { key: "INBOX", label: "Chờ thu", hint: "Payment mới, cần kiểm tra thông tin." },
+    { key: "REVIEW", label: "Đang đối soát", hint: "Đã kiểm tra, chờ xác nhận tiền về." },
+    { key: "SETTLED", label: "Hoàn tất / Ngoại lệ", hint: "Đã thu, đã ghi nhận hoặc đã hủy." },
+  ] as const;
+
+  async function runAction(item: PaymentBoardItem) {
+    const reviewing = item.stage === "INBOX";
+    const nextStage = reviewing ? "REVIEW" : "SETTLED";
+    setPendingId(item.id);
+    progress.show({
+      title: reviewing ? "Đang đưa Payment sang đối soát" : "Đang xác nhận đã thu tiền",
+      message: `${item.owner.label} · ${new Intl.NumberFormat("vi-VN").format(item.amount)} ${item.currency}`,
+      percent: 25,
+    });
+    try {
+      await submitOperationalBlueprintActionAction({
+        taskItemId: item.workspaceTaskItemId,
+        actionKey: reviewing ? "review_payment" : "mark_payment_paid",
+        targetType: "PAYMENT",
+        targetId: item.id,
+        fields: reviewing ? {} : { paidAt: new Date().toISOString(), method: item.method ?? "BANK_TRANSFER" },
+      });
+      setBoardItems((current) => current.map((candidate) => candidate.id === item.id
+        ? { ...candidate, stage: nextStage, status: reviewing ? candidate.status : "PAID" }
+        : candidate));
+      progress.update({ percent: 90, message: "Đã cập nhật Payment, đang đồng bộ dashboard." });
+      window.setTimeout(() => router.refresh(), 100);
+      window.setTimeout(() => progress.hide(), 900);
+    } catch (error) {
+      progress.update({ message: error instanceof Error ? error.message : "Không thể cập nhật Payment." });
+      window.setTimeout(() => progress.hide(), 1500);
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  return (
+    <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div><h3 className="font-bold text-slate-900">Payment Collection</h3><p className="text-xs text-slate-500">{boardItems.length} payment trong flow</p></div>
+        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
+          Chưa thu: {new Intl.NumberFormat("vi-VN").format(boardItems.filter((item) => item.stage !== "SETTLED").reduce((sum, item) => sum + item.amount, 0))}đ
+        </div>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        {columns.map((column) => {
+          const columnItems = boardItems.filter((item) => item.stage === column.key);
+          return <section key={column.key} className="min-h-[420px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <header className="border-b border-slate-200 px-4 py-3"><div className="flex items-center justify-between"><h4 className="font-bold text-slate-900">{column.label}</h4><span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">{columnItems.length}</span></div><p className="mt-1 text-xs text-slate-500">{column.hint}</p></header>
+            <div className="space-y-3 p-3">
+              {columnItems.slice(0, 30).map((item) => <article key={item.id} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                <div className="flex gap-3">
+                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-100">{item.owner.imageUrl ? <Image src={resolveMediaPreviewSrc(item.owner.imageUrl) ?? item.owner.imageUrl} alt="" fill sizes="48px" unoptimized className="object-cover" /> : <CreditCard className="m-3 h-6 w-6 text-slate-400" />}</div>
+                  <div className="min-w-0 flex-1"><div className="truncate text-sm font-bold text-slate-900">{item.owner.label}</div><div className="truncate text-xs text-slate-500">{item.owner.sublabel ?? item.refNo ?? item.id}</div></div>
+                </div>
+                <div className="mt-3 flex items-end justify-between gap-3 border-t border-slate-100 pt-3"><div><div className="text-base font-black text-slate-950">{new Intl.NumberFormat("vi-VN").format(item.amount)} {item.currency === "VND" ? "đ" : item.currency}</div><div className="mt-0.5 text-[11px] text-slate-500">{item.method ?? "Chưa có phương thức"}</div></div>{item.stage !== "SETTLED" ? <button type="button" disabled={pendingId === item.id} onClick={() => void runAction(item)} className="h-9 rounded-lg bg-slate-950 px-3 text-xs font-bold text-white hover:bg-slate-800 disabled:bg-slate-300">{pendingId === item.id ? "Đang xử lý" : item.stage === "INBOX" ? "Đối soát" : "Xác nhận đã thu"}</button> : <span className={cn("rounded-full px-2 py-1 text-[11px] font-bold", item.status === "PAID" || item.status === "COLLECTED" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700")}>{item.status}</span>}</div>
+              </article>)}
+              {!columnItems.length ? <div className="rounded-xl border border-dashed border-slate-200 py-12 text-center text-sm text-slate-400">Chưa có payment</div> : null}
+              {columnItems.length > 30 ? <div className="text-center text-xs font-medium text-slate-500">Đang hiển thị 30/{columnItems.length} payment</div> : null}
+            </div>
+          </section>;
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -1693,13 +1978,15 @@ function TechnicalIssueBoardView({
   priorityFilter: TechnicalIssuePriorityFilter;
 }) {
   const router = useRouter();
+  const progress = useAppProgress();
   const previewState = useBusinessEntityPreview();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overStage, setOverStage] = useState<TechnicalIssueBoardStage | null>(null);
   const [moveRequest, setMoveRequest] = useState<TechnicalIssueBoardMoveRequest | null>(null);
-  const [moveValues, setMoveValues] = useState<Record<string, string | boolean>>({});
+  const [moveValues, setMoveValues] = useState<Record<string, TechnicalBoardFieldValue>>({});
   const [moveError, setMoveError] = useState<string | null>(null);
   const [priorityIssueId, setPriorityIssueId] = useState<string | null>(null);
+  const [boardItems, setBoardItems] = useState(items);
   const [isMovePending, startMoveTransition] = useTransition();
   const [isPriorityPending, startPriorityTransition] = useTransition();
   const sensors = useSensors(
@@ -1707,6 +1994,9 @@ function TechnicalIssueBoardView({
       activationConstraint: { distance: 8 },
     }),
   );
+  useEffect(() => {
+    setBoardItems(items);
+  }, [items]);
   const columns: Array<{
     key: TechnicalIssueBoardStage;
     label: string;
@@ -1720,10 +2010,10 @@ function TechnicalIssueBoardView({
   const visibleItems = useMemo(() => {
     const filtered =
       priorityFilter === "ALL"
-        ? items
-        : items.filter((item) => technicalIssuePriorityValue(item.priority) === priorityFilter);
+        ? boardItems
+        : boardItems.filter((item) => technicalIssuePriorityValue(item.priority) === priorityFilter);
     return sortTechnicalBoardItems(filtered);
-  }, [items, priorityFilter]);
+  }, [boardItems, priorityFilter]);
   const activeItem = activeId ? visibleItems.find((item) => item.id === activeId) ?? null : null;
 
   function togglePriority(item: TechnicalIssueBoardItem) {
@@ -1780,18 +2070,19 @@ function TechnicalIssueBoardView({
 
   function submitMove() {
     if (!moveRequest?.action) return;
-    const { item, action } = moveRequest;
+    const { item, action, targetStage } = moveRequest;
     if (!item.workspaceTaskItemId) {
       setMoveError("TI này chưa có Workspace stage hiện tại nên không thể đóng bộ workflow.");
       return;
     }
 
     const visibleFields = action.fields.filter((field) =>
-      shouldShowTechnicalBoardField(field, moveValues),
+      shouldShowTechnicalBoardField(field, moveValues, technicalDetailCatalogOptions),
     );
     const missingField = visibleFields.find((field) => {
       if (!field.required) return false;
       const value = moveValues[field.key];
+      if (Array.isArray(value)) return value.length === 0;
       return typeof value === "boolean" ? !value : !String(value ?? "").trim();
     });
     if (missingField) {
@@ -1825,6 +2116,19 @@ function TechnicalIssueBoardView({
       ].includes(key)),
     );
 
+    let moveProgressSteps: AppProgressStep[] = [
+      { id: "validate", label: "Kiểm tra thông tin xử lý", detail: `${item.summary} · ${technicalBoardStageLabel(moveRequest.targetStage)}`, status: "done" },
+      { id: "move", label: "Cập nhật TI và Workspace", detail: "Đang ghi nhận action và chuyển stage.", status: "running" },
+      { id: "additional", label: "Tạo Technical Issue bổ sung", detail: shouldCreateAdditionalIssue ? additionalIssueSummary : "Không có TI bổ sung.", status: shouldCreateAdditionalIssue ? "pending" : "skipped" },
+      { id: "sync", label: "Đồng bộ board và số liệu", detail: "Cập nhật projection, timeline và dashboard.", status: "pending" },
+    ];
+    progress.show({
+      title: "Đang chuyển trạng thái TI",
+      message: `${item.summary} · Sang ${technicalBoardStageLabel(moveRequest.targetStage)}`,
+      percent: 20,
+      steps: moveProgressSteps,
+    });
+
     setMoveError(null);
     startMoveTransition(async () => {
       try {
@@ -1835,6 +2139,9 @@ function TechnicalIssueBoardView({
           targetId: item.id,
           fields: actionFields,
         });
+        moveProgressSteps = moveProgressSteps.map((step) => step.id === "move" ? { ...step, status: "done" } : step);
+        moveProgressSteps = moveProgressSteps.map((step) => step.id === "additional" && shouldCreateAdditionalIssue ? { ...step, status: "running" } : step);
+        progress.update({ message: "Đã chuyển stage, đang xử lý dữ liệu liên quan.", percent: shouldCreateAdditionalIssue ? 55 : 75, steps: moveProgressSteps });
         if (shouldCreateAdditionalIssue && item.srCaseTaskItemId) {
           await submitOperationalBlueprintActionAction({
             taskItemId: item.srCaseTaskItemId,
@@ -1844,11 +2151,49 @@ function TechnicalIssueBoardView({
               note: additionalIssueNote,
             },
           });
+          moveProgressSteps = moveProgressSteps.map((step) => step.id === "additional" ? { ...step, status: "done" } : step);
         }
+        setBoardItems((current) => current.map((candidate) =>
+          candidate.id === item.id
+            ? {
+                ...candidate,
+                stage: targetStage,
+                estimatedCost: moveValues.estimatedCost === "" || moveValues.estimatedCost == null
+                  ? candidate.estimatedCost
+                  : Number(moveValues.estimatedCost),
+                technicalDetailCatalogId: typeof moveValues.technicalDetailCatalogId === "string"
+                  ? moveValues.technicalDetailCatalogId
+                  : candidate.technicalDetailCatalogId,
+                processingDetails: (() => {
+                  const detail = technicalDetailCatalogOptions.find(
+                    (option) => option.id === moveValues.technicalDetailCatalogId,
+                  );
+                  const partLabels: Record<string, string> = {
+                    MOVEMENT_COMPLETE: "Thay nguyên máy",
+                    MAINSPRING: "Thay cót",
+                    GEAR: "Thay bánh răng",
+                    BALANCE_WHEEL: "Thay vành tóc",
+                    BALANCE_STAFF: "Thay trụ tóc",
+                    HAIRSPRING: "Thay cả dây tóc",
+                  };
+                  const selectedParts = Array.isArray(moveValues.replacementPartCodes)
+                    ? moveValues.replacementPartCodes.map((code) => partLabels[code]).filter(Boolean)
+                    : [];
+                  return [detail?.name, ...selectedParts].filter((value): value is string => Boolean(value));
+                })(),
+              }
+            : candidate,
+        ));
         setMoveRequest(null);
         setMoveValues({});
-        router.refresh();
+        moveProgressSteps = moveProgressSteps.map((step) => step.id === "sync" ? { ...step, status: "running" } : step);
+        progress.update({ message: "Đã cập nhật card. Dashboard đang đồng bộ nền.", percent: 90, steps: moveProgressSteps });
+        window.setTimeout(() => router.refresh(), 100);
+        window.setTimeout(() => progress.hide(), 1000);
       } catch (error) {
+        moveProgressSteps = moveProgressSteps.map((step) => step.status === "running" ? { ...step, status: "error" } : step);
+        progress.update({ message: error instanceof Error ? error.message : "Không thể chuyển trạng thái TI.", steps: moveProgressSteps });
+        window.setTimeout(() => progress.hide(), 1400);
         setMoveError(
           error instanceof Error ? error.message : "Không thể chuyển trạng thái TI.",
         );
@@ -1976,7 +2321,7 @@ function technicalBoardActionForMove(input: {
 function defaultTechnicalBoardMoveValues(
   item: TechnicalIssueBoardItem,
   action: OperationalBlueprintAction,
-): Record<string, string | boolean> {
+): Record<string, TechnicalBoardFieldValue> {
   if (action.command === "service.confirmTechnicalIssue") {
     return {
       technicalArea: item.area ?? "GENERAL",
@@ -1988,6 +2333,7 @@ function defaultTechnicalBoardMoveValues(
   if (action.command === "service.startTechnicalIssue") {
     return {
       technicalDetailCatalogId: item.technicalDetailCatalogId ?? "",
+      replacementPartCodes: [],
       actionMode: item.actionMode && item.actionMode !== "NONE" ? item.actionMode : "INTERNAL",
       vendorId: item.vendorId ?? "",
       estimatedCost: item.estimatedCost == null ? "" : String(item.estimatedCost),
@@ -2034,10 +2380,10 @@ function technicalBoardAreaAccent(area?: string | null) {
   }
   if (normalized === "CASE") {
     return {
-      bar: "bg-cyan-500",
-      headerBg: "bg-cyan-50",
-      headerBorder: "border-cyan-100",
-      chip: "border-cyan-100 bg-cyan-50 text-cyan-700",
+      bar: "bg-amber-500",
+      headerBg: "bg-amber-50",
+      headerBorder: "border-amber-100",
+      chip: "border-amber-200 bg-amber-50 text-amber-700",
     };
   }
   if (normalized === "CRYSTAL") {
@@ -2100,8 +2446,15 @@ function technicalBoardSummary(items: TechnicalIssueBoardItem[]) {
 
 function shouldShowTechnicalBoardField(
   field: OperationalBlueprintActionField,
-  values: Record<string, string | boolean>,
+  values: Record<string, TechnicalBoardFieldValue>,
+  technicalDetailCatalogOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["technicalDetailCatalogOptions"],
 ) {
+  if (field.key === "replacementPartCodes") {
+    const selectedDetailId = typeof values.technicalDetailCatalogId === "string" ? values.technicalDetailCatalogId : "";
+    return technicalDetailCatalogOptions.some(
+      (item) => item.id === selectedDetailId && item.code === "MOVEMENT_REPLACE_PARTS",
+    );
+  }
   if (field.key !== "vendorId") return true;
   const mode = String(values.assigneeMode ?? values.actionMode ?? "").toUpperCase();
   return mode === "VENDOR";
@@ -2165,6 +2518,8 @@ function TechnicalIssueBoardControlStrip({
     </div>
   );
 }
+const TECHNICAL_BOARD_COLUMN_PAGE_SIZE = 10;
+
 function TechnicalIssueBoardColumn({
   column,
   items,
@@ -2181,16 +2536,19 @@ function TechnicalIssueBoardColumn({
   onPreview: (item: TechnicalIssueBoardItem) => void;
 }) {
   const { setNodeRef } = useDroppable({ id: column.key });
+  const [visibleCount, setVisibleCount] = useState(TECHNICAL_BOARD_COLUMN_PAGE_SIZE);
+  const visibleItems = items.slice(0, visibleCount);
+  const remainingCount = Math.max(0, items.length - visibleItems.length);
 
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        "flex h-[clamp(480px,calc(100vh-320px),840px)] min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition",
+        "flex min-h-[480px] min-w-0 flex-col rounded-xl border border-slate-200 bg-white shadow-sm transition",
         isOver && "border-violet-300 ring-2 ring-violet-100",
       )}
     >
-      <div className="shrink-0 border-b border-slate-100 bg-white px-4 py-3">
+      <div className="sticky top-0 z-10 shrink-0 rounded-t-xl border-b border-slate-100 bg-white px-4 py-3">
         <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-sm font-semibold text-slate-950">{column.label}</div>
@@ -2201,8 +2559,8 @@ function TechnicalIssueBoardColumn({
         </span>
         </div>
       </div>
-      <div className="grid min-h-0 flex-1 content-start gap-3 overflow-y-auto overscroll-contain p-3 pr-2 sm:p-4 sm:pr-2">
-        {items.map((item) => (
+      <div className="grid flex-1 content-start gap-3 p-3 sm:p-4">
+        {visibleItems.map((item) => (
           <DraggableTechnicalIssueBoardCard
             key={item.id}
             item={item}
@@ -2215,6 +2573,15 @@ function TechnicalIssueBoardColumn({
           <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-8 text-center text-sm text-slate-500">
             Kéo TI vào đây.
           </div>
+        ) : null}
+        {remainingCount > 0 ? (
+          <button
+            type="button"
+            onClick={() => setVisibleCount((current) => current + TECHNICAL_BOARD_COLUMN_PAGE_SIZE)}
+            className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-600 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
+          >
+            Xem thêm {Math.min(TECHNICAL_BOARD_COLUMN_PAGE_SIZE, remainingCount)} · Còn {remainingCount} TI
+          </button>
         ) : null}
       </div>
     </div>
@@ -2348,15 +2715,18 @@ function TechnicalIssueBoardCard({
         <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", accent.chip)}>
           {technicalAreaLabel(item.area)}
         </span>
-        <span className="rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
-          {technicalStatusLabel(item.executionStatus)}
-        </span>
         {item.actionMode ? (
           <span className="max-w-full truncate rounded-full border border-violet-100 bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-700">
             {technicalOwnerLabel(item.actionMode, item.vendorName)}
           </span>
         ) : null}
       </div>
+      {item.processingDetails.length ? (
+        <div className="px-2.5 pt-2 text-xs leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">Xử lý:</span>{" "}
+          {item.processingDetails.join(" · ")}
+        </div>
+      ) : null}
       <div className="flex min-w-0 items-center justify-between gap-2 px-2.5 py-2 text-xs">
         <div className="flex min-w-0 items-center gap-2">
           <span
@@ -2378,7 +2748,11 @@ function TechnicalIssueBoardCard({
           </div>
         </div>
         <div className="max-w-[42%] truncate text-right font-semibold text-slate-800">
-          {item.actualCost ? formatMoneyCompact(item.actualCost) : "Chưa có chi phí"}
+          {item.actualCost != null
+            ? formatMoneyCompact(item.actualCost)
+            : item.estimatedCost != null
+              ? `Dự kiến ${formatMoneyCompact(item.estimatedCost)}`
+              : "Chưa có chi phí"}
         </div>
       </div>
     </div>
@@ -2397,19 +2771,19 @@ function TechnicalIssueBoardMoveModal({
   onClose,
 }: {
   request: TechnicalIssueBoardMoveRequest | null;
-  values: Record<string, string | boolean>;
+  values: Record<string, TechnicalBoardFieldValue>;
   error: string | null;
   pending: boolean;
   vendorOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["vendorOptions"];
   technicalDetailCatalogOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["technicalDetailCatalogOptions"];
-  onChange: (key: string, value: string | boolean) => void;
+  onChange: (key: string, value: TechnicalBoardFieldValue) => void;
   onSubmit: () => void;
   onClose: () => void;
 }) {
   if (!request) return null;
   const action = request.action;
   const visibleFields = action?.fields.filter((field) =>
-    shouldShowTechnicalBoardField(field, values),
+    shouldShowTechnicalBoardField(field, values, technicalDetailCatalogOptions),
   ) ?? [];
   const canOfferAdditionalIssue =
     request.item.stage === "INSPECT" &&
@@ -2543,12 +2917,12 @@ function TechnicalBoardFieldControl({
   onChange,
 }: {
   field: OperationalBlueprintActionField;
-  value?: string | boolean;
+  value?: TechnicalBoardFieldValue;
   disabled?: boolean;
   vendorOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["vendorOptions"];
   technicalDetailCatalogOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["technicalDetailCatalogOptions"];
   area?: string | null;
-  onChange: (value: string | boolean) => void;
+  onChange: (value: TechnicalBoardFieldValue) => void;
 }) {
   const baseClass =
     "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-violet-300 disabled:bg-slate-50 disabled:text-slate-400";
@@ -2601,19 +2975,21 @@ function TechnicalBoardFieldControl({
         )
       : technicalDetailCatalogOptions;
     return (
-      <select
-        className={baseClass}
-        disabled={disabled}
-        value={typeof value === "string" ? value : ""}
-        onChange={(event) => onChange(event.target.value)}
-      >
+      <select className={baseClass} disabled={disabled} value={typeof value === "string" ? value : ""} onChange={(event) => onChange(event.target.value)}>
         <option value="">Chọn chi tiết kỹ thuật</option>
-        {options.map((item) => (
-          <option key={item.id} value={item.id}>
-            {[item.code, item.name].filter(Boolean).join(" - ") || item.id}
-          </option>
-        ))}
+        {options.map((item) => <option key={item.id} value={item.id}>{[item.code, item.name].filter(Boolean).join(" - ") || item.id}</option>)}
       </select>
+    );
+  }
+  if (field.kind === "multiselect") {
+    const selectedValues = Array.isArray(value) ? value : [];
+    return (
+      <div className="space-y-1 rounded-lg border border-slate-200 bg-white p-2">
+        {(field.options ?? []).map((option) => {
+          const checked = selectedValues.includes(option.value);
+          return <label key={option.value} className={cn("flex cursor-pointer items-center gap-2 rounded-md px-2.5 py-2 text-sm transition", checked ? "bg-amber-50 text-amber-900" : "text-slate-700 hover:bg-slate-50")}><input type="checkbox" disabled={disabled} checked={checked} onChange={(event) => onChange(event.target.checked ? [...selectedValues, option.value] : selectedValues.filter((item) => item !== option.value))} className="h-4 w-4 rounded border-slate-300 text-amber-600" /><span className="font-medium">{option.label}</span></label>;
+        })}
+      </div>
     );
   }
   if (field.kind === "select") {
@@ -2701,14 +3077,6 @@ function technicalAreaLabel(value?: string | null) {
     BRACELET: "Dây",
   };
   return labels[raw] ?? (raw || "Tổng quát");
-}
-
-function technicalStatusLabel(value?: string | null) {
-  const raw = String(value ?? "").trim().toUpperCase();
-  if (raw === "DONE" || raw === "COMPLETED") return "Done";
-  if (raw === "IN_PROGRESS") return "Đang xử lý";
-  if (raw === "CONFIRMED" || raw === "READY") return "Ready";
-  return "Inspect";
 }
 
 function technicalOwnerLabel(actionMode?: string | null, vendorName?: string | null) {

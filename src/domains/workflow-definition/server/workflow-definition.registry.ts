@@ -164,6 +164,61 @@ const PUBLISH_WORKFLOW: WorkflowDefinition = {
   ],
 };
 
+const PAYMENT_COLLECTION_WORKFLOW: WorkflowDefinition = {
+  key: "payment-collection-workflow",
+  title: "Payment Collection Workflow",
+  description: "Đối soát Payment và theo dõi các khoản đã tất toán hoặc ngoại lệ.",
+  initialState: "READY",
+  terminalStates: ["PAID", "EXCEPTION"],
+  metadata: null,
+  states: [
+    {
+      key: "READY",
+      title: "Cần đối soát",
+      description: "Payment đang chờ kiểm tra thông tin và chứng từ.",
+      color: "blue",
+      icon: "credit-card",
+      sortOrder: 10,
+    },
+    {
+      key: "PAID",
+      title: "Đã tất toán",
+      description: "Khoản thu hoặc chi đã được xác nhận.",
+      color: "green",
+      icon: "check-circle",
+      sortOrder: 20,
+    },
+    {
+      key: "EXCEPTION",
+      title: "Ngoại lệ",
+      description: "Payment cần xử lý sai lệch, tranh chấp hoặc thiếu chứng từ.",
+      color: "red",
+      icon: "circle-alert",
+      sortOrder: 30,
+    },
+  ],
+  transitions: [
+    {
+      fromState: "READY",
+      toState: "PAID",
+      triggerType: "EVENT",
+      triggerValue: "payment.paid",
+      manualActionLabel: null,
+      condition: null,
+      metadata: null,
+    },
+    {
+      fromState: "READY",
+      toState: "EXCEPTION",
+      triggerType: "EVENT",
+      triggerValue: "payment.exception_marked",
+      manualActionLabel: "Đánh dấu ngoại lệ",
+      condition: null,
+      metadata: null,
+    },
+  ],
+};
+
 const QUOTATION_WORKFLOW: WorkflowDefinition = {
   key: "sales-quotation",
   title: "Quotation Workflow",
@@ -820,6 +875,7 @@ function createSimpleWorkflowDefinition(input: {
 
 const WORKFLOW_DEFINITIONS: WorkflowDefinition[] = [
   PUBLISH_WORKFLOW,
+  PAYMENT_COLLECTION_WORKFLOW,
   createSimpleWorkflowDefinition({
     key: "watch-content-review",
     title: "Content Review Workflow",

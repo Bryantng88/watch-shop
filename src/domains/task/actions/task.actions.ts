@@ -85,6 +85,9 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 const PAYMENT_OPERATION_BLUEPRINT_ACTION_KEYS = new Set([
   "mark_payment_paid",
+  "reconcile_payment",
+  "review_payment",
+  "mark_payment_exception",
 ]);
 
 function normalizeTextKey(value: unknown) {

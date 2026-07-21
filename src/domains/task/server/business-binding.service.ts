@@ -411,6 +411,7 @@ type QueueBusinessPreview = {
   postTargets?: QueueItemDTO["preview"]["postTargets"];
   mediaWorkProgress?: QueueItemDTO["mediaWorkProgress"];
   technicalIssue?: QueueItemDTO["technicalIssue"];
+  payment?: QueueItemDTO["payment"];
 };
 
 type ProductPostTargetsShape = {
@@ -584,8 +585,16 @@ async function buildQueueBusinessPreviewMap(
         .filter(Boolean),
     ),
   );
+  const paymentIds = Array.from(
+    new Set(
+      bindings
+        .filter((binding) => binding.targetType === TaskExecutionTargetType.PAYMENT)
+        .map((binding) => clean(binding.targetId))
+        .filter(Boolean),
+    ),
+  );
 
-  const [watches, orders, technicalIssues] = await Promise.all([
+  const [watches, orders, technicalIssues, payments] = await Promise.all([
     watchIds.length
       ? client.watch.findMany({
         where: { id: { in: watchIds } },
@@ -740,7 +749,106 @@ async function buildQueueBusinessPreviewMap(
         },
       })
       : Promise.resolve([]),
+    paymentIds.length
+      ? client.payment.findMany({
+        where: { id: { in: paymentIds } },
+        select: {
+          id: true,
+          refNo: true,
+          status: true,
+          amount: true,
+          currency: true,
+          method: true,
+          direction: true,
+          type: true,
+          purpose: true,
+          createdAt: true,
+          paidAt: true,
+          order_id: true,
+          acquisition_id: true,
+          service_request_id: true,
+          technical_issue_id: true,
+          technicalIssue: {
+            select: {
+              summary: true,
+              serviceRequest: {
+                select: {
+                  refNo: true,
+                  skuSnapshot: true,
+                  primaryImageUrlSnapshot: true,
+                  product: {
+                    select: {
+                      title: true,
+                      sku: true,
+                      primaryImageUrl: true,
+                      storefrontImageKey: true,
+                      productImage: {
+                        where: { role: "INLINE" },
+                        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+                        take: 1,
+                        select: { fileKey: true },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      })
+      : Promise.resolve([]),
   ]);
+  const acquisitionIds = payments.map((payment) => clean(payment.acquisition_id)).filter(Boolean);
+  const paymentOrderIds = payments.map((payment) => clean(payment.order_id)).filter(Boolean);
+  const acquisitions = acquisitionIds.length
+    ? await client.acquisition.findMany({
+      where: { id: { in: acquisitionIds } },
+      select: {
+        id: true,
+        refNo: true,
+        _count: { select: { acquisitionItem: true } },
+        vendor: { select: { name: true } },
+        customer: { select: { name: true, phone: true } },
+        acquisitionItem: {
+          orderBy: { createdAt: "asc" },
+          select: {
+            productTitle: true,
+            product: {
+              select: {
+                title: true,
+                sku: true,
+                primaryImageUrl: true,
+                storefrontImageKey: true,
+                productImage: {
+                  where: { role: "INLINE" },
+                  orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+                  take: 1,
+                  select: { fileKey: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+    : [];
+  const acquisitionById = new Map(acquisitions.map((acquisition) => [acquisition.id, acquisition]));
+  const paymentOrders = paymentOrderIds.length
+    ? await client.order.findMany({
+      where: { id: { in: paymentOrderIds } },
+      select: {
+        id: true, refNo: true, customerName: true, shipPhone: true, createdAt: true,
+        _count: { select: { orderItem: true } },
+        orderItem: {
+          orderBy: { createdAt: "asc" },
+          select: { title: true, img: true, product: { select: {
+            title: true, sku: true, primaryImageUrl: true, storefrontImageKey: true,
+            productImage: { where: { role: "INLINE" }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }], take: 1, select: { fileKey: true } },
+          } } },
+        },
+      },
+    }) : [];
+  const paymentOrderById = new Map(paymentOrders.map((order) => [order.id, order]));
 
   for (const watch of watches) {
     const imageUrl = productPreviewImage(watch.product);
@@ -838,6 +946,77 @@ async function buildQueueBusinessPreviewMap(
               name: issue.MechanicalPartCatalog.name ?? null,
             }
           : null,
+      },
+    });
+  }
+
+  for (const payment of payments) {
+    const sr = payment.technicalIssue?.serviceRequest ?? null;
+    const product = sr?.product ?? null;
+    const acquisition = payment.acquisition_id ? acquisitionById.get(payment.acquisition_id) : null;
+    const paymentOrder = payment.order_id ? paymentOrderById.get(payment.order_id) : null;
+    const acquisitionProduct = acquisition?.acquisitionItem[0]?.product ?? null;
+    const acquisitionImages = acquisition?.acquisitionItem
+      .map((item) => productPreviewImage(item.product))
+      .filter((value): value is string => Boolean(value)) ?? [];
+    const orderImages = paymentOrder?.orderItem.map((item) => productPreviewImage(item.product) || mediaUrl(item.img)).filter((value): value is string => Boolean(value)) ?? [];
+    const imageUrl = productPreviewImage(product) || acquisitionImages[0] || productPreviewImage(acquisitionProduct) || orderImages[0] || mediaUrl(sr?.primaryImageUrlSnapshot ?? null);
+    const ownerTitle = payment.technicalIssue?.summary
+      || product?.title
+      || acquisitionProduct?.title
+      || acquisition?.acquisitionItem[0]?.productTitle
+      || acquisition?.vendor?.name
+      || acquisition?.customer?.name
+      || (payment.type === "ORDER" ? "Thanh toán đơn hàng" : null)
+      || (payment.type === "SHIPMENT" ? "Chi phí vận chuyển" : null)
+      || "Payment";
+    const ref = [payment.refNo, sr?.refNo, acquisition?.refNo, product?.sku || sr?.skuSnapshot || acquisitionProduct?.sku]
+      .map(clean)
+      .filter(Boolean)
+      .join(" / ");
+
+    map.set(queueKey(TaskExecutionTargetType.PAYMENT, payment.id), {
+      title: ownerTitle,
+      ref: ref || payment.id,
+      status: [String(payment.status), String(payment.method)].filter(Boolean).join(" / "),
+      imageUrl,
+      imageUrls: orderImages.length ? orderImages : acquisitionImages.length ? acquisitionImages : imageUrl ? [imageUrl] : [],
+      payment: {
+        status: String(payment.status),
+        direction: payment.direction ? String(payment.direction) : null,
+        type: payment.type ? String(payment.type) : null,
+        purpose: payment.purpose ? String(payment.purpose) : null,
+        amount: Number(payment.amount),
+        currency: payment.currency,
+        method: payment.method ? String(payment.method) : null,
+        ownerType: payment.technical_issue_id
+          ? "TECHNICAL_ISSUE"
+          : payment.service_request_id
+            ? "SERVICE_REQUEST"
+            : payment.order_id
+              ? "ORDER"
+              : payment.acquisition_id
+                ? "ACQUISITION"
+                : "UNKNOWN",
+        ownerRef: sr?.refNo ?? acquisition?.refNo ?? payment.refNo ?? null,
+        counterparty: paymentOrder?.customerName ?? acquisition?.vendor?.name ?? acquisition?.customer?.name ?? null,
+        contact: paymentOrder?.shipPhone ?? acquisition?.customer?.phone ?? null,
+        createdAt: payment.createdAt?.toISOString?.() ?? null,
+        paidAt: payment.paidAt?.toISOString?.() ?? null,
+        itemCount: paymentOrder?._count.orderItem ?? acquisition?._count.acquisitionItem ?? 1,
+        relatedItems: paymentOrder
+          ? paymentOrder.orderItem.map((item) => ({
+            title: item.product?.title ?? item.title,
+            ref: item.product?.sku ?? null,
+          }))
+          : acquisition
+            ? acquisition.acquisitionItem.map((item) => ({
+              title: item.product?.title ?? item.productTitle,
+              ref: item.product?.sku ?? null,
+            }))
+            : product
+              ? [{ title: product.title, ref: product.sku ?? sr?.skuSnapshot ?? null }]
+              : [],
       },
     });
   }
@@ -1138,6 +1317,7 @@ export async function listTaskItemQueueItems(
         mediaAssetAttachedAt: metadataText(metadata, ["mediaAssetAttachedAt"]),
         mediaWorkProgress: progress,
         technicalIssue: businessPreview?.technicalIssue ?? null,
+        payment: businessPreview?.payment ?? null,
         href: metadataText(metadata, ["targetHref", "href"]) ??
           businessPreview?.href ??
           null,

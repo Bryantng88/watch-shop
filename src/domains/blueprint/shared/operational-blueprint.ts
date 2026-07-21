@@ -56,7 +56,7 @@ export type OperationalBlueprintEventRoute = {
 export type OperationalBlueprintActionField = {
   key: string;
   label: string;
-  kind: "text" | "textarea" | "select" | "money" | "boolean" | "date";
+  kind: "text" | "textarea" | "select" | "multiselect" | "money" | "boolean" | "date";
   required: boolean;
   options?: Array<{
     value: string;
@@ -921,6 +921,20 @@ const SERVICE_OPERATION_CONTRACT: OperationalBlueprintContract = {
           required: true,
         },
         {
+          key: "replacementPartCodes",
+          label: "Linh kiện máy cần thay",
+          kind: "multiselect",
+          required: true,
+          options: [
+            { value: "MOVEMENT_COMPLETE", label: "Thay nguyên máy" },
+            { value: "MAINSPRING", label: "Thay cót" },
+            { value: "GEAR", label: "Thay bánh răng" },
+            { value: "BALANCE_WHEEL", label: "Thay vành tóc" },
+            { value: "BALANCE_STAFF", label: "Thay trụ tóc" },
+            { value: "HAIRSPRING", label: "Thay cả dây tóc" },
+          ],
+        },
+        {
           key: "actionMode",
           label: "Hình thức xử lý",
           kind: "select",
@@ -1043,16 +1057,6 @@ const PAYMENT_COLLECTION_CONTRACT: OperationalBlueprintContract = {
   ],
   workspaceRoles: [
     {
-      key: "PAYMENT_INBOX",
-      workspaceKind: "FLOW_STAGE_WORKSPACE",
-      label: "Payment Inbox",
-      cardinality: "SINGLE_PER_ACTIVE_CYCLE",
-      identityTargetType: null,
-      itemTargetTypes: ["PAYMENT"],
-      description:
-        "Receives newly created payment records that need collection or payment team attention.",
-    },
-    {
       key: "PAYMENT_REVIEW",
       workspaceKind: "FLOW_STAGE_WORKSPACE",
       label: "Payment Review",
@@ -1081,17 +1085,10 @@ const PAYMENT_COLLECTION_CONTRACT: OperationalBlueprintContract = {
         "Links payment intake, review, and settlement workspaces for the Payment team.",
       steps: [
         {
-          workspaceRole: "PAYMENT_INBOX",
-          label: "Inbox",
-          description: "Newly created payments enter the payment team inbox.",
-          isEntry: true,
-          isTerminal: false,
-        },
-        {
           workspaceRole: "PAYMENT_REVIEW",
-          label: "Review",
+          label: "Cần đối soát",
           description: "Payment team verifies amount, method, and settlement readiness.",
-          isEntry: false,
+          isEntry: true,
           isTerminal: false,
         },
         {
@@ -1111,7 +1108,7 @@ const PAYMENT_COLLECTION_CONTRACT: OperationalBlueprintContract = {
       rowModel: "FLOW_STAGE_WORKSPACE",
       primaryTarget: "workspace",
       coreFlowKey: "payment-collection-core-flow",
-      workspaceRoles: ["PAYMENT_INBOX", "PAYMENT_REVIEW", "PAYMENT_SETTLED"],
+      workspaceRoles: ["PAYMENT_REVIEW", "PAYMENT_SETTLED"],
       description:
         "Renders Payment records as items inside ordered collection stage Workspaces.",
     },
@@ -1120,18 +1117,10 @@ const PAYMENT_COLLECTION_CONTRACT: OperationalBlueprintContract = {
     {
       eventKey: "payment.created",
       targetType: "PAYMENT",
-      workspaceRole: "PAYMENT_INBOX",
+      workspaceRole: "PAYMENT_REVIEW",
       effect: "BIND_ITEM",
       description:
-        "Places a newly created payment into Payment Inbox for collection attention.",
-    },
-    {
-      eventKey: "payment.status_updated",
-      targetType: "PAYMENT",
-      workspaceRole: "PAYMENT_REVIEW",
-      effect: "MOVE_ITEM",
-      description:
-        "Moves payment work into Review when payment status changes before settlement.",
+        "Places a newly created payment directly into Payment Review for reconciliation.",
     },
     {
       eventKey: "payment.paid",
@@ -1141,34 +1130,48 @@ const PAYMENT_COLLECTION_CONTRACT: OperationalBlueprintContract = {
       description:
         "Moves paid payment records into Settled / Exception for closure follow-up.",
     },
+    {
+      eventKey: "payment.exception_marked",
+      targetType: "PAYMENT",
+      workspaceRole: "PAYMENT_SETTLED",
+      effect: "MOVE_ITEM",
+      description: "Moves an exception Payment into settlement follow-up without marking it paid.",
+    },
   ],
   actions: [
     {
-      key: "review_payment",
-      label: "Review payment",
-      workspaceRole: "PAYMENT_INBOX",
-      targetType: "PAYMENT",
-      command: "payment.reviewPayment",
-      emits: ["payment.status_updated"],
-      description:
-        "Moves a payment into review after the Payment team checks owner, amount, and method.",
-      fields: [
-        { key: "reviewNote", label: "Review note", kind: "textarea", required: false },
-      ],
-    },
-    {
-      key: "mark_payment_paid",
-      label: "Mark paid",
+      key: "reconcile_payment",
+      label: "Đối soát payment",
       workspaceRole: "PAYMENT_REVIEW",
       targetType: "PAYMENT",
       command: "payment.completePayment",
       emits: ["payment.paid", "payment.status_updated"],
       description:
-        "Delegates settlement to the Payment domain and records the expected paid event.",
+        "Đối soát đầy đủ chứng từ, số tiền và đối tác trước khi xác nhận khoản Thu/Chi hoàn tất.",
       fields: [
-        { key: "paidAt", label: "Paid at", kind: "date", required: false },
-        { key: "method", label: "Payment method", kind: "select", required: false },
-        { key: "settlementNote", label: "Settlement note", kind: "textarea", required: false },
+        { key: "reviewedAmount", label: "Số tiền đối soát", kind: "money", required: true },
+        { key: "method", label: "Phương thức", kind: "select", required: true, options: [
+          { value: "BANK_TRANSFER", label: "Chuyển khoản" },
+          { value: "CASH", label: "Tiền mặt" },
+          { value: "COD", label: "COD" },
+          { value: "CREDIT_CARD", label: "Thẻ" },
+          { value: "MOMO", label: "MoMo" },
+          { value: "PAYPAL", label: "PayPal" },
+        ] },
+        { key: "occurredAt", label: "Ngày dự kiến / ngày giao dịch", kind: "date", required: true },
+        { key: "transactionReference", label: "Mã giao dịch / chứng từ", kind: "text", required: false },
+        { key: "counterparty", label: "Người / đơn vị giao nhận tiền", kind: "text", required: true },
+        { key: "contact", label: "Thông tin liên hệ", kind: "text", required: false },
+        { key: "reconciliationResult", label: "Kết quả đối soát", kind: "select", required: true, options: [
+          { value: "MATCHED", label: "Khớp đủ" },
+          { value: "PARTIAL", label: "Thiếu / một phần" },
+          { value: "OVERPAID", label: "Thừa tiền" },
+          { value: "PENDING_EVIDENCE", label: "Chờ chứng từ" },
+          { value: "DISPUTED", label: "Có tranh chấp" },
+        ] },
+        { key: "evidenceReference", label: "Link / mã chứng từ đối soát", kind: "text", required: false },
+        { key: "followUpDueAt", label: "Hạn cần hối", kind: "date", required: false },
+        { key: "reviewNote", label: "Ghi chú đối soát", kind: "textarea", required: false },
       ],
     },
     {
@@ -1177,7 +1180,7 @@ const PAYMENT_COLLECTION_CONTRACT: OperationalBlueprintContract = {
       workspaceRole: "PAYMENT_REVIEW",
       targetType: "PAYMENT",
       command: "payment.markException",
-      emits: ["payment.status_updated"],
+      emits: ["payment.exception_marked"],
       description:
         "Moves a payment into exception follow-up when settlement cannot be completed normally.",
       fields: [
@@ -1189,30 +1192,31 @@ const PAYMENT_COLLECTION_CONTRACT: OperationalBlueprintContract = {
     {
       key: "payment-collection-workflow",
       workspaceRole: "PAYMENT_REVIEW",
-      states: ["READY", "IN_REVIEW", "PAID", "EXCEPTION"],
+      states: ["READY", "PAID", "EXCEPTION"],
       transitions: [
         {
           from: "READY",
-          to: "IN_REVIEW",
-          actionKey: "review_payment",
-          eventKey: "payment.status_updated",
-        },
-        {
-          from: "IN_REVIEW",
           to: "PAID",
-          actionKey: "mark_payment_paid",
+          actionKey: "reconcile_payment",
           eventKey: "payment.paid",
         },
         {
-          from: "IN_REVIEW",
+          from: "READY",
           to: "EXCEPTION",
           actionKey: "mark_payment_exception",
-          eventKey: "payment.status_updated",
+          eventKey: "payment.exception_marked",
         },
       ],
     },
   ],
-  projectionSubscriptions: [],
+  projectionSubscriptions: [
+    {
+      projectionKey: "payment-owner-summary",
+      eventKeys: ["payment.created", "payment.status_updated", "payment.paid", "payment.refunded", "payment.exception_marked"],
+      resolvesToTargetType: "PAYMENT_OWNER",
+      description: "Payment owns settlement totals and publishes owner summaries for downstream domains.",
+    },
+  ],
 };
 
 const BLANK_OPERATION_CONTRACT: OperationalBlueprintContract = {

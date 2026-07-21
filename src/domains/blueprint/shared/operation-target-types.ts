@@ -80,7 +80,7 @@ export const OPERATION_TARGET_TYPE_OPTIONS: OperationTargetTypeOption[] = [
       { key: "payment.paid", label: "Payment đã thanh toán" },
       { key: "payment.status_updated", label: "Cập nhật trạng thái payment" },
     ],
-    defaultActionKey: "review_payment",
+    defaultActionKey: "reconcile_payment",
     defaultCommand: "domain.reviewPayment",
   },
   {

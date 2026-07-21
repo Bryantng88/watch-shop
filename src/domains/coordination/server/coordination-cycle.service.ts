@@ -49,32 +49,25 @@ const DEFAULT_SYSTEM_SHARE_GROUP_BY_CONTEXT: Record<CoordinationContext, string>
 };
 
 const SERVICE_OPERATION_TECHNICAL_WORKSPACES = [
-  { role: "INSPECT", title: "Service Operation - Inspect", sortOrder: 55 },
-  { role: "PROCESSING", title: "Service Operation - Processing", sortOrder: 56 },
-  { role: "DONE", title: "Service Operation - Done / Follow-up", sortOrder: 57 },
+  { role: "INSPECT", title: "Service Operation - Inspect", flowStageKey: "service-inspect", flowStageOrder: 10, sortOrder: 55 },
+  { role: "PROCESSING", title: "Service Operation - Processing", flowStageKey: "service-processing", flowStageOrder: 20, sortOrder: 56 },
+  { role: "DONE", title: "Service Operation - Done / Follow-up", flowStageKey: "service-done", flowStageOrder: 30, sortOrder: 57 },
 ] as const;
 
 const PAYMENT_COLLECTION_WORKSPACES = [
   {
-    role: "PAYMENT_INBOX",
-    title: "Payment Collection - Inbox",
-    flowStageKey: "payment-inbox",
-    flowStageOrder: 10,
-    sortOrder: 10,
-  },
-  {
     role: "PAYMENT_REVIEW",
     title: "Payment Collection - Review",
     flowStageKey: "payment-review",
-    flowStageOrder: 20,
-    sortOrder: 20,
+    flowStageOrder: 10,
+    sortOrder: 10,
   },
   {
     role: "PAYMENT_SETTLED",
     title: "Payment Collection - Settled / Exception",
     flowStageKey: "payment-settled",
-    flowStageOrder: 30,
-    sortOrder: 30,
+    flowStageOrder: 20,
+    sortOrder: 20,
   },
 ] as const;
 
@@ -382,6 +375,11 @@ export async function ensureWorkTickets(
         const note = workTypeNote(workType, adminUserIds, {
           extraLines: [
             `serviceOperationWorkspaceRole: ${technicalWorkspace.role}`,
+            `operationWorkspaceRole: ${technicalWorkspace.role}`,
+            "workspaceKind: FLOW_STAGE_WORKSPACE",
+            "coreFlowKey: service-operation-core-flow",
+            `flowStageKey: ${technicalWorkspace.flowStageKey}`,
+            `flowStageOrder: ${technicalWorkspace.flowStageOrder}`,
           ],
           eventTargetTypes: ["TECHNICAL_ISSUE"],
           workspaceType: `${technicalWorkspace.title} Workspace`,
@@ -395,6 +393,11 @@ export async function ensureWorkTickets(
           const nextNote = workTypeNote(workType, nextSharedUserIds, {
             extraLines: [
               `serviceOperationWorkspaceRole: ${technicalWorkspace.role}`,
+              `operationWorkspaceRole: ${technicalWorkspace.role}`,
+              "workspaceKind: FLOW_STAGE_WORKSPACE",
+              "coreFlowKey: service-operation-core-flow",
+              `flowStageKey: ${technicalWorkspace.flowStageKey}`,
+              `flowStageOrder: ${technicalWorkspace.flowStageOrder}`,
             ],
             eventTargetTypes: ["TECHNICAL_ISSUE"],
             workspaceType: `${technicalWorkspace.title} Workspace`,
@@ -543,6 +546,35 @@ export async function ensureWorkTickets(
   };
 }
 
+const UNIFIED_OPERATION_CONTEXTS: CoordinationContext[] = [
+  "OPERATION",
+  "SALES",
+  "TECHNICAL",
+  "MEDIA",
+  "PAYMENT",
+  "GENERAL",
+];
+
+async function listAllWorkTicketsForTask(db: DB, taskId: string) {
+  return dbOrTx(db).taskItem.findMany({
+    where: { taskId, status: { not: TaskStatus.CANCELLED } },
+    select: COORDINATION_WORK_TICKET_SELECT,
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  });
+}
+
+export async function ensureUnifiedOperationWorkTickets(db: DB, taskId: string) {
+  let createdCount = 0;
+  for (const context of UNIFIED_OPERATION_CONTEXTS) {
+    const result = await ensureWorkTickets(db, { taskId, context });
+    createdCount += result.createdCount;
+  }
+  return {
+    items: await listAllWorkTicketsForTask(db, taskId),
+    createdCount,
+  };
+}
+
 export async function ensureCoordinationCycle(
   db: DB,
   input: EnsureCoordinationCycleInput,
@@ -556,10 +588,9 @@ export async function ensureCoordinationCycle(
   });
 
   if (existing) {
-    const workTickets = await ensureWorkTickets(client, {
-      taskId: existing.id,
-      context: input.context,
-    });
+    const workTickets = input.context === "OPERATION"
+      ? await ensureUnifiedOperationWorkTickets(client, existing.id)
+      : await ensureWorkTickets(client, { taskId: existing.id, context: input.context });
 
     return {
       task: existing,
@@ -589,10 +620,9 @@ export async function ensureCoordinationCycle(
     select: COORDINATION_CYCLE_TASK_SELECT,
   });
 
-  const workTickets = await ensureWorkTickets(client, {
-    taskId: task.id,
-    context: input.context,
-  });
+  const workTickets = input.context === "OPERATION"
+    ? await ensureUnifiedOperationWorkTickets(client, task.id)
+    : await ensureWorkTickets(client, { taskId: task.id, context: input.context });
 
   return {
     task,

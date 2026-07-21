@@ -32,6 +32,7 @@ import type {
   QueueSummaryDTO,
 } from "./coordination-dashboard.types";
 import type { CoordinationContext } from "./coordination-cycle.types";
+import { getPaymentOwnerSummaryProjections } from "@/domains/projection/server/payment-owner-summary.projection";
 
 function formatDateInput(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -86,6 +87,108 @@ function parseDateInput(value?: string | null) {
 
 function userLabel(user?: { name?: string | null; email?: string | null } | null) {
   return user?.name || user?.email || "-";
+}
+
+function paymentCashFlowPeriods(
+  payments: Array<{ amount: unknown; direction: PaymentDirection | null; paidAt: Date | null; createdAt: Date }>,
+) {
+  const now = new Date();
+  const week = getWeekRange(now);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const yearStart = new Date(now.getFullYear(), 0, 1);
+  const periods = {
+    WEEK: { start: week.startDate, label: `Tuần ${week.weekNumber}/${week.year}` },
+    MONTH: { start: monthStart, label: `Tháng ${now.getMonth() + 1}/${now.getFullYear()}` },
+    YEAR: { start: yearStart, label: `Năm ${now.getFullYear()}` },
+    ALL: { start: null, label: "Toàn thời gian" },
+  } as const;
+
+  return Object.fromEntries(Object.entries(periods).map(([key, period]) => {
+    const rows = period.start
+      ? payments.filter((payment) => (payment.paidAt ?? payment.createdAt) >= period.start)
+      : payments;
+    const income = rows.reduce((sum, payment) => sum + (payment.direction === PaymentDirection.IN ? Number(payment.amount) : 0), 0);
+    const expense = rows.reduce((sum, payment) => sum + (payment.direction === PaymentDirection.OUT ? Number(payment.amount) : 0), 0);
+    return [key, {
+      periodLabel: period.label,
+      income,
+      expense,
+      net: income - expense,
+      transactionCount: rows.length,
+    }];
+  })) as CoordinationDashboardDTO["paymentCashFlow"];
+}
+
+function paymentWorkspaceRole(note?: string | null) {
+  return noteLineValue(note, "operationWorkspaceRole")?.toUpperCase() ?? null;
+}
+
+async function reconcilePaymentCollectionBindings(input: {
+  db: DB;
+  taskId: string;
+  taskItems: Array<{ id: string; title: string; note: string | null }>;
+}) {
+  const inboxItems = input.taskItems.filter((item) => paymentWorkspaceRole(item.note) === "PAYMENT_INBOX");
+  const reviewItems = input.taskItems.filter((item) => paymentWorkspaceRole(item.note) === "PAYMENT_REVIEW");
+  const settledItems = input.taskItems.filter((item) => paymentWorkspaceRole(item.note) === "PAYMENT_SETTLED");
+  const canonicalReview = reviewItems.find((item) => item.title === "Payment Collection - Review") ?? reviewItems[0];
+  const canonicalSettled = settledItems.find((item) => item.title === "Payment Collection - Settled / Exception") ?? settledItems[0];
+  const reviewId = canonicalReview?.id;
+  const settledId = canonicalSettled?.id;
+  if (!reviewId || !settledId) return;
+
+  const [payments, existing] = await Promise.all([
+    input.db.payment.findMany({ select: { id: true, status: true } }),
+    input.db.taskExecution.findMany({
+      where: { taskId: input.taskId, targetType: TaskExecutionTargetType.PAYMENT },
+      select: { targetId: true, taskItemId: true },
+    }),
+  ]);
+  const existingIds = new Set(existing.map((binding) => binding.targetId));
+  const terminalStatuses = new Set(["PAID", "COLLECTED", "CANCELED", "CANCELLED", "FAILED"]);
+  const statusById = new Map(payments.map((payment) => [payment.id, String(payment.status).toUpperCase()]));
+  const staleReviewIds = existing.filter((binding) => !terminalStatuses.has(statusById.get(binding.targetId) ?? "")).map((binding) => binding.targetId);
+  const staleSettledIds = existing.filter((binding) => terminalStatuses.has(statusById.get(binding.targetId) ?? "")).map((binding) => binding.targetId);
+  if (staleReviewIds.length) {
+    await input.db.taskExecution.updateMany({
+      where: { taskId: input.taskId, targetType: TaskExecutionTargetType.PAYMENT, targetId: { in: staleReviewIds } },
+      data: { taskItemId: reviewId },
+    });
+  }
+  if (staleSettledIds.length) {
+    await input.db.taskExecution.updateMany({
+      where: { taskId: input.taskId, targetType: TaskExecutionTargetType.PAYMENT, targetId: { in: staleSettledIds } },
+      data: { taskItemId: settledId },
+    });
+  }
+  const obsoleteWorkspaceIds = [
+    ...inboxItems.map((item) => item.id),
+    ...reviewItems.filter((item) => item.id !== reviewId).map((item) => item.id),
+    ...settledItems.filter((item) => item.id !== settledId).map((item) => item.id),
+  ];
+  if (obsoleteWorkspaceIds.length) {
+    await input.db.taskItem.updateMany({ where: { id: { in: obsoleteWorkspaceIds } }, data: { status: TaskStatus.CANCELLED } });
+  }
+  const missing = payments.filter((payment) => !existingIds.has(payment.id));
+  if (!missing.length) return;
+
+  await input.db.taskExecution.createMany({
+    data: missing.map((payment) => {
+      const status = String(payment.status).toUpperCase();
+      const terminal = ["PAID", "COLLECTED", "CANCELED", "CANCELLED", "FAILED"].includes(status);
+      return {
+        taskId: input.taskId,
+        taskItemId: terminal ? settledId : reviewId,
+        targetType: TaskExecutionTargetType.PAYMENT,
+        targetId: payment.id,
+        actionType: TaskExecutionActionType.LINKED,
+        metadataJson: {
+          source: "PAYMENT_FLOW_RECONCILE",
+          paymentStatus: status,
+        },
+      };
+    }),
+  });
 }
 
 function ticketCreator(item: {
@@ -894,29 +997,6 @@ async function loadPaymentQueueCountByTaskItem(input: {
       createdAt: true,
     },
   });
-  const paymentIds = [...new Set(bindings.map((binding) => binding.targetId))];
-  const terminalStates = terminalStatesForTarget(
-    input.terminalStatesByTargetType,
-    TaskExecutionTargetType.PAYMENT,
-  );
-  const payments = paymentIds.length
-    ? await input.db.payment.findMany({
-        where: { id: { in: paymentIds } },
-        select: {
-          id: true,
-          status: true,
-        },
-      })
-    : [];
-  const processingByTarget = new Map(
-    payments.map((payment) => [
-      targetKey({
-        targetType: TaskExecutionTargetType.PAYMENT,
-        targetId: payment.id,
-      }),
-      statusListIsProcessing([payment.status], terminalStates),
-    ]),
-  );
   const currentBindingByTarget = new Map<
     string,
     (typeof bindings)[number]
@@ -928,9 +1008,6 @@ async function loadPaymentQueueCountByTaskItem(input: {
       targetType: binding.targetType,
       targetId: binding.targetId,
     });
-    const processing = processingByTarget.get(key) ?? true;
-    if (!processing) continue;
-
     const current = currentBindingByTarget.get(key);
     if (!current || current.createdAt < binding.createdAt) {
       currentBindingByTarget.set(key, binding);
@@ -1248,7 +1325,7 @@ async function loadTechnicalIssueBoard(input: {
     srCaseTaskItemIdByServiceRequestId.set(binding.targetId, binding.taskItemId);
   }
 
-  const issues = await input.db.technicalIssue.findMany({
+  const [issues, startedEvents] = await Promise.all([input.db.technicalIssue.findMany({
     where: { id: { in: issueIds } },
     select: {
       id: true,
@@ -1264,6 +1341,9 @@ async function loadTechnicalIssueBoard(input: {
       estimatedCost: true,
       actualCost: true,
       technicalDetailCatalogId: true,
+      technicalDetailCatalog: {
+        select: { code: true, name: true },
+      },
       priority: true,
       updatedAt: true,
       serviceRequest: {
@@ -1281,11 +1361,34 @@ async function loadTechnicalIssueBoard(input: {
         },
       },
     },
-  });
+  }), input.db.businessEventLog.findMany({
+    where: {
+      eventKey: "technical_issue.started",
+      targetType: "TECHNICAL_ISSUE",
+      targetId: { in: issueIds },
+    },
+    select: { targetId: true, metadataJson: true },
+  })]);
+  const startedEventByIssueId = new Map(startedEvents.map((event) => [event.targetId, event.metadataJson]));
+  const replacementPartLabels: Record<string, string> = {
+    MOVEMENT_COMPLETE: "Thay nguyên máy",
+    MAINSPRING: "Thay cót",
+    GEAR: "Thay bánh răng",
+    BALANCE_WHEEL: "Thay vành tóc",
+    BALANCE_STAFF: "Thay trụ tóc",
+    HAIRSPRING: "Thay cả dây tóc",
+  };
 
   const items = issues
     .map((issue): CoordinationTechnicalIssueBoardItemDTO => {
       const binding = bindingByIssueId.get(issue.id);
+      const startedMetadata = startedEventByIssueId.get(issue.id);
+      const replacementPartCodes = startedMetadata && typeof startedMetadata === "object" && !Array.isArray(startedMetadata)
+        ? (startedMetadata as { replacementPartCodes?: unknown }).replacementPartCodes
+        : null;
+      const replacementParts = Array.isArray(replacementPartCodes)
+        ? replacementPartCodes.map((code) => replacementPartLabels[String(code)]).filter(Boolean)
+        : [];
       return {
         id: issue.id,
         serviceRequestId: issue.serviceRequestId,
@@ -1299,6 +1402,7 @@ async function loadTechnicalIssueBoard(input: {
         isConfirmed: Boolean(issue.isConfirmed),
         priority: issue.priority ?? "NORMAL",
         technicalDetailCatalogId: issue.technicalDetailCatalogId ?? null,
+        processingDetails: [issue.technicalDetailCatalog?.name, ...replacementParts].filter((value): value is string => Boolean(value)),
         stage: technicalIssueBoardStage({
           flowStageKey: binding?.flowStageKey ?? null,
           executionStatus: issue.executionStatus,
@@ -1400,20 +1504,7 @@ async function loadTechnicalServiceRequestRollupByTaskItem(input: {
     technicalIssues.map((issue) => [issue.id, issue.serviceRequestId]),
   );
   const issueIds = technicalIssues.map((issue) => issue.id);
-  const payments = issueIds.length
-    ? await input.db.payment.findMany({
-        where: {
-          technical_issue_id: { in: issueIds },
-          type: PaymentType.SERVICE,
-          direction: PaymentDirection.OUT,
-        },
-        select: {
-          technical_issue_id: true,
-          status: true,
-          amount: true,
-        },
-      })
-    : [];
+  const paymentSummaries = await getPaymentOwnerSummaryProjections(input.db, "TECHNICAL_ISSUE", issueIds);
 
   const queueByServiceRequest = new Map<string, QueueSummaryDTO>();
   for (const issue of technicalIssues) {
@@ -1437,13 +1528,9 @@ async function loadTechnicalServiceRequestRollupByTaskItem(input: {
       unpaidIssueIds: Set<string>;
     }
   >();
-  for (const payment of payments) {
-    const issueId = payment.technical_issue_id;
+  for (const [issueId, summary] of paymentSummaries) {
     const serviceRequestId = issueId ? issueToServiceRequest.get(issueId) : null;
     if (!issueId || !serviceRequestId) continue;
-
-    const amount = Number(payment.amount ?? 0);
-    const status = String(payment.status ?? "").toUpperCase();
     const current =
       paymentByServiceRequest.get(serviceRequestId) ??
       {
@@ -1454,16 +1541,11 @@ async function loadTechnicalServiceRequestRollupByTaskItem(input: {
         unpaidIssueIds: new Set<string>(),
       };
 
-    if (Number.isFinite(amount) && amount > 0) {
-      current.totalAmount += amount;
-      if (status === PaymentStatus.PAID || status === "COLLECTED") {
-        current.paidAmount += amount;
-      } else if (status === PaymentStatus.UNPAID) {
-        current.unpaidAmount += amount;
-        current.unpaidIssueIds.add(issueId);
-      }
-    }
-    current.paymentCount += 1;
+    current.totalAmount += summary.paidTotal + summary.collectedTotal + summary.unpaidTotal;
+    current.paidAmount += summary.paidTotal + summary.collectedTotal;
+    current.unpaidAmount += summary.unpaidTotal;
+    if (summary.pendingCount > 0) current.unpaidIssueIds.add(issueId);
+    current.paymentCount += summary.paymentCount;
     paymentByServiceRequest.set(serviceRequestId, current);
   }
 
@@ -1793,8 +1875,16 @@ export async function getCoordinationDashboard(input: {
       { createdAt: "asc" },
     ],
   });
+  if (input.context === "PAYMENT" || input.context === "OPERATION") {
+    await reconcilePaymentCollectionBindings({ db, taskId: cycle.task.id, taskItems: rawTaskItems });
+  }
+  const workTypeContexts: CoordinationContext[] = input.context === "OPERATION"
+    ? ["OPERATION", "SALES", "TECHNICAL", "MEDIA", "PAYMENT", "GENERAL"]
+    : [input.context];
   const activeWorkTypeKeys = new Set(
-    listWorkTypes(input.context).map((workType) => normalizeWorkTypeKey(workType.key)),
+    workTypeContexts.flatMap((context) =>
+      listWorkTypes(context).map((workType) => normalizeWorkTypeKey(workType.key)),
+    ),
   );
   const accessSpaceSharedUserIds = uniqueShareIds(
     rawTaskItems.flatMap((item) =>
@@ -1802,6 +1892,9 @@ export async function getCoordinationDashboard(input: {
     ),
   );
   const taskItems = rawTaskItems.filter((item) => {
+    if ((input.context === "PAYMENT" || input.context === "OPERATION") && paymentWorkspaceRole(item.note) === "PAYMENT_INBOX") {
+      return false;
+    }
     const workTypeKey = ticketWorkTypeKey(item.note);
     const blueprintSource = ticketBlueprintSource(item.note);
     if (
@@ -1830,7 +1923,7 @@ export async function getCoordinationDashboard(input: {
       ]),
     );
   });
-  if (input.context === "MEDIA") {
+  if (input.context === "MEDIA" || input.context === "OPERATION") {
     await restoreMediaFinalStageDoneBindings({
       db,
       taskId: cycle.task.id,
@@ -1867,7 +1960,7 @@ export async function getCoordinationDashboard(input: {
       },
       _count: { _all: true },
     }),
-    input.context === "MEDIA"
+    (input.context === "MEDIA" || input.context === "OPERATION")
       ? loadMediaQueueSummaryByTaskItem({
           db,
           taskId: cycle.task.id,
@@ -1875,7 +1968,7 @@ export async function getCoordinationDashboard(input: {
           terminalStatesByTargetType: viewConfig.carryover.terminalStatesByTargetType,
         })
       : Promise.resolve(new Map<string, QueueSummaryDTO>()),
-    input.context === "TECHNICAL"
+    (input.context === "TECHNICAL" || input.context === "OPERATION")
       ? loadTechnicalQueueCountByTaskItem({
           db,
           taskId: cycle.task.id,
@@ -1883,7 +1976,7 @@ export async function getCoordinationDashboard(input: {
           terminalStatesByTargetType: viewConfig.carryover.terminalStatesByTargetType,
         })
       : Promise.resolve(new Map<string, number>()),
-    input.context === "PAYMENT"
+    (input.context === "PAYMENT" || input.context === "OPERATION")
       ? loadPaymentQueueCountByTaskItem({
           db,
           taskId: cycle.task.id,
@@ -1909,14 +2002,14 @@ export async function getCoordinationDashboard(input: {
       taskId: cycle.task.id,
       taskItems: taskItems.filter((item) => identityPreviewTaskItemIdSet.has(item.id)),
     }),
-    input.context === "TECHNICAL"
+    (input.context === "TECHNICAL" || input.context === "OPERATION")
       ? loadTechnicalServiceRequestRollupByTaskItem({
           db,
           taskId: cycle.task.id,
           taskItems,
         })
       : Promise.resolve(new Map<string, TechnicalServiceRequestRollup>()),
-    input.context === "TECHNICAL"
+    (input.context === "TECHNICAL" || input.context === "OPERATION")
       ? loadTechnicalIssueBoard({
           db,
           taskId: cycle.task.id,
@@ -1935,14 +2028,16 @@ export async function getCoordinationDashboard(input: {
   ]);
 
   const queueCountByTaskItem = new Map(
-    input.context === "TECHNICAL"
-        ? technicalQueueCountByTaskItem
-        : input.context === "PAYMENT"
-          ? paymentQueueCountByTaskItem
-          : queueRows
-              .filter((row) => row.taskItemId)
-              .map((row) => [row.taskItemId as string, row._count._all]),
+    queueRows
+      .filter((row) => row.taskItemId)
+      .map((row) => [row.taskItemId as string, row._count._all]),
   );
+  for (const [taskItemId, count] of technicalQueueCountByTaskItem) {
+    queueCountByTaskItem.set(taskItemId, count);
+  }
+  for (const [taskItemId, count] of paymentQueueCountByTaskItem) {
+    queueCountByTaskItem.set(taskItemId, count);
+  }
   const lastActivityAtByTaskItem = new Map(
     activityRows.map((row) => [row.taskItemId, row._max.occurredAt ?? null]),
   );
@@ -2093,6 +2188,12 @@ export async function getCoordinationDashboard(input: {
   ]);
   const sharedUsers = allUsers.filter((user) => allSharedUserIds.has(user.id));
   const currentWeek = getWeekRange(new Date());
+  const paymentCashFlow = (input.context === "PAYMENT" || input.context === "OPERATION")
+    ? paymentCashFlowPeriods(await db.payment.findMany({
+        where: { status: { in: [PaymentStatus.PAID, PaymentStatus.COLLECTED] } },
+        select: { amount: true, direction: true, paidAt: true, createdAt: true },
+      }))
+    : null;
 
   return {
     context: input.context,
@@ -2127,6 +2228,7 @@ export async function getCoordinationDashboard(input: {
       { key: "done", label: "Done", value: reportValues.done },
       { key: "overdue", label: "Overdue", value: reportValues.overdue },
     ],
+    paymentCashFlow,
     spaceSharing: {
       users: allUsers,
       sharedUsers,

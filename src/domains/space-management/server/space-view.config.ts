@@ -186,7 +186,7 @@ const TECHNICAL_ISSUE_FLOW = {
     {
       key: "inspect",
       label: "Inspect",
-      workspaceKey: "inspect",
+      workspaceKey: "service-inspect",
       sortOrder: 10,
       itemTargetType: "TECHNICAL_ISSUE",
       evidenceEvents: ["technical.issue.created", "technical.issue.inspect.requested"],
@@ -194,7 +194,7 @@ const TECHNICAL_ISSUE_FLOW = {
     {
       key: "processing",
       label: "Processing",
-      workspaceKey: "processing",
+      workspaceKey: "service-processing",
       sortOrder: 20,
       itemTargetType: "TECHNICAL_ISSUE",
       evidenceEvents: ["technical.issue.processing.started"],
@@ -202,7 +202,7 @@ const TECHNICAL_ISSUE_FLOW = {
     {
       key: "done",
       label: "Done / Follow-up",
-      workspaceKey: "done",
+      workspaceKey: "service-done",
       sortOrder: 30,
       itemTargetType: "TECHNICAL_ISSUE",
       evidenceEvents: ["technical.issue.done", "technical.issue.payment.follow_up"],
@@ -217,7 +217,7 @@ function technicalSpaceViewConfig(): SpaceViewConfig {
     label: "Technical Service Space",
     description:
       "Technical Space separates SR case Workspaces from Technical Issue flow-stage Workspaces.",
-    defaultModeKey: "sr-cases",
+    defaultModeKey: "technical-issue-flow",
     defaultCoreFlowKey: TECHNICAL_ISSUE_FLOW.key,
     modes: [
       {
@@ -285,26 +285,18 @@ const PAYMENT_COLLECTION_FLOW = {
   itemTargetType: "PAYMENT",
   stages: [
     {
-      key: "payment-inbox",
-      label: "Inbox",
-      workspaceKey: "payment-inbox",
+      key: "payment-review",
+      label: "Cần đối soát",
+      workspaceKey: "payment-review",
       sortOrder: 10,
       itemTargetType: "PAYMENT",
-      evidenceEvents: ["payment.created", "payment.collection.requested"],
-    },
-    {
-      key: "payment-review",
-      label: "Review",
-      workspaceKey: "payment-review",
-      sortOrder: 20,
-      itemTargetType: "PAYMENT",
-      evidenceEvents: ["payment.review.requested", "payment.review.started"],
+      evidenceEvents: ["payment.created", "payment.review.requested", "payment.review.started"],
     },
     {
       key: "payment-settled",
       label: "Settled",
       workspaceKey: "payment-settled",
-      sortOrder: 30,
+      sortOrder: 20,
       itemTargetType: "PAYMENT",
       evidenceEvents: ["payment.settled"],
     },
@@ -325,7 +317,7 @@ function paymentSpaceViewConfig(): SpaceViewConfig {
         key: "payment-collection-flow",
         label: "Payment Collection Flow",
         description:
-          "Inbox -> Review -> Settled / Exception. One row represents one flow-stage Workspace.",
+          "Cần đối soát -> Hoàn tất / Ngoại lệ. Payment mới đi thẳng vào bước đối soát.",
         rowModel: "FLOW_STAGE_WORKSPACE",
         primaryTarget: "workspace",
         coreFlowKey: PAYMENT_COLLECTION_FLOW.key,
@@ -365,8 +357,70 @@ function paymentSpaceViewConfig(): SpaceViewConfig {
   };
 }
 
+function unifiedOperationSpaceViewConfig(): SpaceViewConfig {
+  return {
+    ...defaultSpaceViewConfig("OPERATION"),
+    key: "unified-operation-space-view",
+    label: "Unified Operation Space",
+    description: "One weekly Space hosts the available operational Core Flows; only the selected flow is rendered.",
+    defaultModeKey: "technical-issue-flow",
+    defaultCoreFlowKey: TECHNICAL_ISSUE_FLOW.key,
+    modes: [
+      {
+        key: "technical-issue-flow",
+        label: "Kỹ thuật",
+        description: "Inspect -> Processing -> Done / Follow-up.",
+        rowModel: "FLOW_STAGE_WORKSPACE",
+        primaryTarget: "workspace",
+        coreFlowKey: TECHNICAL_ISSUE_FLOW.key,
+        allowedWorkspaceKinds: ["FLOW_STAGE_WORKSPACE"],
+        columns: WORKSPACE_COLUMNS,
+      },
+      {
+        key: "payment-collection-flow",
+        label: "Thanh toán",
+        description: "Cần đối soát -> Settled / Exception.",
+        rowModel: "FLOW_STAGE_WORKSPACE",
+        primaryTarget: "workspace",
+        coreFlowKey: PAYMENT_COLLECTION_FLOW.key,
+        allowedWorkspaceKinds: ["FLOW_STAGE_WORKSPACE"],
+        columns: WORKSPACE_COLUMNS,
+      },
+      {
+        key: "media-production-flow",
+        label: "Media",
+        description: "Photography -> Media Processing -> Publish.",
+        rowModel: "FLOW_STAGE_WORKSPACE",
+        primaryTarget: "workspace",
+        coreFlowKey: MEDIA_PRODUCTION_FLOW.key,
+        allowedWorkspaceKinds: ["FLOW_STAGE_WORKSPACE"],
+        columns: WORKSPACE_COLUMNS,
+      },
+      {
+        key: "sr-cases",
+        label: "SR Cases",
+        description: "Service Request case Workspaces inside the unified operation Space.",
+        rowModel: "CASE_WORKSPACE",
+        primaryTarget: "workspace",
+        allowedWorkspaceKinds: ["CASE_WORKSPACE"],
+        columns: WORKSPACE_COLUMNS,
+      },
+      {
+        key: "workspaces",
+        label: "Tất cả Workspace",
+        description: "Fallback index for Core Flows that do not yet define ordered stages.",
+        rowModel: "WORKSPACE",
+        primaryTarget: "workspace",
+        allowedWorkspaceKinds: ["STANDALONE_WORKSPACE", "BENCH_WORKSPACE"],
+        columns: WORKSPACE_COLUMNS,
+      },
+    ],
+    coreFlows: [TECHNICAL_ISSUE_FLOW, PAYMENT_COLLECTION_FLOW, MEDIA_PRODUCTION_FLOW],
+  };
+}
+
 const SPACE_VIEW_CONFIGS: Record<CoordinationContext, SpaceViewConfig> = {
-  OPERATION: defaultSpaceViewConfig("OPERATION"),
+  OPERATION: unifiedOperationSpaceViewConfig(),
   SALES: defaultSpaceViewConfig("SALES"),
   TECHNICAL: technicalSpaceViewConfig(),
   MEDIA: mediaSpaceViewConfig(),

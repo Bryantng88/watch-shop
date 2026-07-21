@@ -306,8 +306,12 @@ export async function getOrCreateServiceOperationWorkspaceForWatch(input: {
 export async function watchIntakeWithInitialSuspicion(input: {
   productId: string;
   suspicion?: string | null;
+  area?: string | null;
+  note?: string | null;
+  priority?: string | null;
   actorUserId?: string | null;
   openExisting?: boolean;
+  createIssueIfExisting?: boolean;
   deferConsumers?: (work: () => Promise<void>) => void;
 }) {
   const productId = cleanText(input.productId);
@@ -322,6 +326,33 @@ export async function watchIntakeWithInitialSuspicion(input: {
       productId,
     });
     const existingWorkspace = await findServiceRequestWorkspaceBinding(prisma, existing.id);
+
+    if (input.createIssueIfExisting && suspicion) {
+      const issue = await createTechnicalIssue({
+        serviceRequestId: existing.id,
+        area: normalizeArea(input.area),
+        issueType: "CHECK",
+        actionMode: "INTERNAL",
+        summary: suspicion,
+        note: cleanText(input.note) ?? suspicion,
+        priority: normalizePriority(input.priority),
+        deferConsumers: input.deferConsumers,
+      });
+
+      return {
+        status: "ADDED_ISSUE_TO_EXISTING_SERVICE_REQUEST" as const,
+        createdServiceRequest: false,
+        createdWorkspace: false,
+        createdInitialIssue: true,
+        serviceRequestId: existing.id,
+        technicalIssueId: issue.id,
+        refNo: existing.refNo ?? null,
+        taskItemId: existingWorkspace?.taskItemId ?? null,
+        workspaceHref: existingWorkspace?.taskItemId
+          ? `/admin/task-items/${existingWorkspace.taskItemId}`
+          : null,
+      };
+    }
 
     if (existingWorkspace?.taskItemId && !input.openExisting) {
       return {
@@ -385,11 +416,12 @@ export async function watchIntakeWithInitialSuspicion(input: {
 
   const issue = await createTechnicalIssue({
     serviceRequestId: request.id,
-    area: "GENERAL",
+    area: normalizeArea(input.area),
     issueType: "CHECK",
     actionMode: "INTERNAL",
     summary: suspicion,
-    note: suspicion,
+    note: cleanText(input.note) ?? suspicion,
+    priority: normalizePriority(input.priority),
     deferConsumers: input.deferConsumers,
   });
 
@@ -585,48 +617,31 @@ export async function createQuickIssueForActiveWatchService(input: {
     serviceRequestId = await getOrCreateActiveServiceRequestId(productId);
   }
 
-  await prisma.$transaction(
-    async (tx) => {
-      const assessment = await ensureAssessment(tx, serviceRequestId!);
-      const now = new Date();
+  const createdIssue = await createTechnicalIssue({
+    serviceRequestId,
+    area: normalizeArea(input.area),
+    summary,
+    note: cleanText(input.note),
+    issueType: normalizeIssueType(input.issueType),
+    actionMode: "INTERNAL",
+    priority: normalizedPriority,
+  });
 
-      await tx.technicalIssue.create({
-        data: {
-          serviceRequestId,
-          assessmentId: assessment.id,
-          area: normalizeArea(input.area),
-          summary,
-          note: cleanText(input.note),
-          issueType: normalizeIssueType(input.issueType) as any,
-          actionMode: "INTERNAL" as any,
-          executionStatus: "OPEN" as any,
-          isConfirmed: false,
-          priority: normalizedPriority as any,
-          openedAt: now,
-          updatedAt: now,
-        } as any,
-      });
+  const now = new Date();
+  await prisma.serviceRequest.update({
+    where: { id: serviceRequestId },
+    data: {
+      status: ServiceRequestStatus.IN_PROGRESS,
+      priority: normalizedPriority as any,
+      prioritySource: "WATCH_QUICK_ISSUE",
+      priorityMarkedAt: now,
+      updatedAt: now,
+    } as any,
+  });
+  await markProductInServiceIfNeeded(prisma, productId);
 
-      await tx.serviceRequest.update({
-        where: { id: serviceRequestId! },
-        data: {
-          status: ServiceRequestStatus.IN_PROGRESS,
-          priority: normalizedPriority as any,
-          prioritySource: "WATCH_QUICK_ISSUE",
-          priorityMarkedAt: now,
-          updatedAt: now,
-        } as any,
-      });
-
-      await markProductInServiceIfNeeded(tx, productId);
-    },
-    {
-      maxWait: 5000,
-      timeout: 15000,
-    },
-  );
-
-  return getQuickServiceById(serviceRequestId);
+  const detail = await getQuickServiceById(serviceRequestId);
+  return detail ? { ...detail, createdTechnicalIssueId: createdIssue.id } : detail;
 }
 
 export { ACTIVE_SERVICE_STATUSES };

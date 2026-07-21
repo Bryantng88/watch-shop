@@ -1,6 +1,5 @@
-import { PaymentDirection } from "@prisma/client";
-
 import { prisma } from "@/server/db/client";
+import { getPaymentOwnerSummaryProjections } from "@/domains/projection/server/payment-owner-summary.projection";
 import type { OrderSearchInput } from "../shared";
 import { toNumberPrice, toPlain } from "../shared";
 import { buildOrderPaymentFlow } from "../../shared";
@@ -81,60 +80,20 @@ function buildKeywordWhere(q?: string | null) {
 
 async function getPaymentSummaries(orderIds: string[], totalsByOrderId: Map<string, number>) {
   if (!orderIds.length) return new Map<string, PaymentSummary>();
-
-  const payments = await prisma.payment.findMany({
-    where: {
-      order_id: { in: orderIds },
-      direction: PaymentDirection.IN,
-      type: "ORDER",
-      purpose: { in: ["ORDER_DEPOSIT", "ORDER_FULL", "ORDER_REMAIN"] },
-      status: { not: "CANCELED" as any },
-    },
-    select: {
-      order_id: true,
-      amount: true,
-      status: true,
-    },
-  });
-
+  const projections = await getPaymentOwnerSummaryProjections(prisma, "ORDER", orderIds);
   const map = new Map<string, PaymentSummary>();
-
   for (const id of orderIds) {
-    map.set(id, emptyPaymentSummary(totalsByOrderId.get(id) ?? 0));
+    const projection = projections.get(id);
+    const total = totalsByOrderId.get(id) ?? 0;
+    map.set(id, projection ? {
+      paidAmount: projection.paidTotal,
+      collectedAmount: projection.collectedTotal,
+      unpaidAmount: projection.unpaidTotal,
+      remainingAmount: projection.remaining,
+      hasPendingPayment: projection.pendingCount > 0,
+      isFullyPaid: total > 0 && projection.remaining <= 0,
+    } : emptyPaymentSummary(total));
   }
-
-  for (const payment of payments) {
-    if (!payment.order_id) continue;
-
-    const current =
-      map.get(payment.order_id) ??
-      emptyPaymentSummary(totalsByOrderId.get(payment.order_id) ?? 0);
-
-    const amount = toNumberPrice(payment.amount);
-    const status = normalizeStatus(payment.status);
-
-    // PAID và COLLECTED đều là tiền đã ghi nhận cho order.
-    // COD đã giao thành công thường nằm ở COLLECTED, nên phải tính vào đã nhận.
-    if (status === "PAID") {
-      current.paidAmount += amount;
-    } else if (status === "COLLECTED") {
-      current.collectedAmount += amount;
-    } else if (status === "UNPAID") {
-      current.unpaidAmount += amount;
-      current.hasPendingPayment = true;
-    }
-
-    map.set(payment.order_id, current);
-  }
-
-  for (const [orderId, summary] of map.entries()) {
-    const total = totalsByOrderId.get(orderId) ?? 0;
-    const recognizedPaid = summary.paidAmount + summary.collectedAmount;
-
-    summary.remainingAmount = Math.max(0, total - recognizedPaid);
-    summary.isFullyPaid = total > 0 && recognizedPaid >= total;
-  }
-
   return map;
 }
 

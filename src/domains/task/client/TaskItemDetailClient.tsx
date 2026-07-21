@@ -354,7 +354,7 @@ function displayNote(note?: string | null) {
 function serviceOperationWorkspaceRoleFromNote(note?: string | null) {
   return (
     String(note ?? "")
-      .match(/^serviceOperationWorkspaceRole:\s*([A-Z_]+)\s*$/im)?.[1]
+      .match(/^(?:serviceOperationWorkspaceRole|operationWorkspaceRole):\s*([A-Z_]+)\s*$/im)?.[1]
       ?.trim()
       .toUpperCase() ?? null
   );
@@ -2263,7 +2263,7 @@ function GenericFlowWorkspaceNav({
   return (
     <nav
       aria-label="Workspace trong space"
-      className="mt-4 grid gap-2 border-t border-slate-100 bg-slate-50/70 px-2 py-3 lg:grid-cols-[minmax(0,1fr)_24px_minmax(0,1fr)_24px_minmax(0,1fr)_minmax(220px,0.9fr)]"
+      className="mt-4 flex flex-col gap-2 border-t border-slate-100 bg-slate-50/70 px-2 py-3 lg:flex-row lg:items-stretch"
     >
       {workspaces.slice(0, 3).map((workspace, index) => {
         const active = workspace.id === currentItemId;
@@ -2319,37 +2319,37 @@ function GenericFlowWorkspaceNav({
         return (
           <div
             key={workspace.id}
-            className="contents"
+            className="flex min-w-0 flex-1 items-center gap-2"
           >
             <Link
               href={`/admin/task-items/${workspace.id}`}
               aria-current={active ? "page" : undefined}
-              className="block min-w-0"
+              className="block min-w-0 flex-1"
             >
               {content}
             </Link>
             {index < Math.min(workspaces.length, 3) - 1 ? (
-              <div className="hidden place-items-center text-slate-300 lg:grid">
+              <div className="hidden w-5 shrink-0 place-items-center text-slate-300 lg:grid">
                 <ChevronRight className="h-4 w-4" />
               </div>
             ) : null}
           </div>
         );
       })}
-      <div className="flex min-h-[60px] items-center gap-3 rounded-xl border-t border-indigo-100 bg-indigo-50/60 px-4 py-2.5 lg:border-l lg:border-t-0">
-        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-violet-50 text-violet-700 ring-1 ring-violet-100">
-          <GitBranch className="h-5 w-5" />
+      <div className="flex min-h-[60px] shrink-0 items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5 lg:w-[210px]">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-violet-50 text-violet-700 ring-1 ring-violet-100">
+          <GitBranch className="h-4 w-4" />
         </div>
         <div className="min-w-0">
           <div className="flex items-baseline gap-3">
-            <span className="text-3xl font-extrabold text-slate-950">
+            <span className="text-2xl font-extrabold text-slate-950">
               {itemCount}
             </span>
             <span className="truncate text-sm font-extrabold text-slate-800">
               {itemLabel}
             </span>
           </div>
-          <div className="mt-1 text-xs font-medium text-slate-500">
+          <div className="text-[11px] font-medium text-slate-500">
             trong Workspace này
           </div>
         </div>
@@ -2423,7 +2423,7 @@ function CoreFlowWorkspaceNav({
   return (
     <nav
       aria-label="Core flow workspaces"
-      className="mt-4 grid gap-2 border-t border-slate-100 bg-slate-50/70 px-2 py-3 lg:grid-cols-[minmax(0,1fr)_24px_minmax(0,1fr)_24px_minmax(0,1fr)_minmax(220px,0.9fr)]"
+      className="mt-4 flex flex-col gap-2 border-t border-slate-100 bg-slate-50/70 px-3 py-3 lg:flex-row lg:items-stretch"
     >
       {flowStageSteps.slice(0, 3).map((step, index) => {
         const stepRole = step.workspaceRole.toUpperCase();
@@ -2482,45 +2482,43 @@ function CoreFlowWorkspaceNav({
         return (
           <div
             key={`${step.workspaceRole}:${index}`}
-            className="contents"
+            className="flex min-w-0 flex-1 items-center gap-2"
           >
             {workspace?.id ? (
               <Link
                 href={`/admin/task-items/${workspace.id}`}
                 aria-current={active ? "page" : undefined}
-                className="block min-w-0"
+                className="block min-w-0 flex-1"
               >
                 {content}
               </Link>
             ) : (
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 {content}
               </div>
             )}
             {index < Math.min(flowStageSteps.length, 3) - 1 ? (
-              <div className="hidden place-items-center text-slate-300 lg:grid">
+              <div className="hidden w-5 shrink-0 place-items-center text-slate-300 lg:grid">
                 <ChevronRight className="h-4 w-4" />
               </div>
             ) : null}
           </div>
         );
       })}
-      <div className="flex min-h-[60px] items-center gap-3 rounded-xl border-t border-indigo-100 bg-indigo-50/60 px-4 py-2.5 lg:border-l lg:border-t-0">
-        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-violet-50 text-violet-700 ring-1 ring-violet-100">
-          <GitBranch className="h-5 w-5" />
+      <div className="flex min-h-[60px] shrink-0 items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5 lg:w-[210px]">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-violet-50 text-violet-700 ring-1 ring-violet-100">
+          <GitBranch className="h-4 w-4" />
         </div>
         <div className="min-w-0">
           <div className="flex items-baseline gap-3">
-            <span className="text-3xl font-extrabold text-slate-950">
+            <span className="text-2xl font-extrabold text-slate-950">
               {itemCount}
             </span>
             <span className="truncate text-sm font-extrabold text-slate-800">
               {itemLabel}
             </span>
           </div>
-          <div className="mt-1 text-xs font-medium text-slate-500">
-            trong Workspace này
-          </div>
+          <div className="text-[11px] font-medium text-slate-500">trong Workspace này</div>
         </div>
       </div>
     </nav>
@@ -2944,18 +2942,23 @@ export default function TaskItemDetailClient({
   const workspaceWorkTypeKey =
     workspaceSnapshot?.workTypeKey ?? noteTextValue(item.note, "workTypeKey");
   const isServiceOperationWorkspace = workspaceWorkTypeKey === "service-operation";
-  const operationContract =
-    workspaceSnapshot?.operation ??
-    (workspaceWorkTypeKey
-      ? operationalBlueprintForWorkType({
-          workTypeKey: workspaceWorkTypeKey,
-          coordinationContext: "TECHNICAL",
-        })
-      : null);
   const serviceOperationWorkspaceRole = useMemo(
     () => serviceOperationWorkspaceRoleFromNote(item.note),
     [item.note],
   );
+  const isPaymentOperation = serviceOperationWorkspaceRole
+    ?.toUpperCase()
+    .startsWith("PAYMENT_");
+  const currentOperationContract = workspaceWorkTypeKey
+    ? operationalBlueprintForWorkType({
+        workTypeKey: workspaceWorkTypeKey,
+        coordinationContext: isPaymentOperation ? "PAYMENT" : "TECHNICAL",
+      })
+    : null;
+  const operationContract =
+    (isPaymentOperation ? currentOperationContract : null) ??
+    workspaceSnapshot?.operation ??
+    currentOperationContract;
   const currentWorkspaceNavMetadata = useMemo(
     () => workspaceNavMetadata({ note: item.note }, operationContract?.workspaceRoles ?? []),
     [item.note, operationContract],

@@ -203,7 +203,7 @@ async function findActiveCoordinationTask(
   if (!context) return { task: null, context: null, unsupported: true };
 
   const cycle = await resolveCurrentCoordinationCycle(db, {
-    context,
+    context: "OPERATION",
     createIfMissing: true,
   });
 

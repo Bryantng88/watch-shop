@@ -2,10 +2,12 @@ import type { ProjectionBuilder } from "./projection.types";
 import { watchMediaQueueProjectionBuilder } from "./watch-media-queue.projection";
 import { watchListProjectionBuilder } from "./watch-list";
 import { hasOperationalProjectionSubscriptionForEvent } from "./operation-projection-subscriptions";
+import { paymentOwnerSummaryProjectionBuilder } from "./payment-owner-summary.projection";
 
 const PROJECTION_BUILDERS: ProjectionBuilder[] = [
   watchMediaQueueProjectionBuilder,
   watchListProjectionBuilder,
+  paymentOwnerSummaryProjectionBuilder,
 ];
 
 function clean(value: unknown) {

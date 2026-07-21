@@ -4,6 +4,7 @@ import { genRefNo } from "@/domains/shared/utils/AutoGenRef";
 import * as serviceRequestService from "@/app/(admin)/admin/services/_server/service_request.service";
 import { createFromOrderTx } from "@/domains/shipment/server";
 import { createInitialPaymentsForOrderApplicationTx } from "@/domains/payment/application";
+import { cancelPendingOwnerPaymentsTx, publishPaymentMutations, type PaymentMutation } from "@/domains/payment/server";
 import { toPlain } from "../shared";
 import {
   cancelOrderRepo,
@@ -95,7 +96,7 @@ async function cancelOrderSideEffectsTx(
   tx: Prisma.TransactionClient,
   orderId: string,
   reason?: string | null,
-) {
+): Promise<PaymentMutation[]> {
   await tx.shipment.updateMany({
     where: {
       orderId,
@@ -110,19 +111,7 @@ async function cancelOrderSideEffectsTx(
     },
   });
 
-  await tx.payment.updateMany({
-    where: {
-      order_id: orderId,
-      status: {
-        notIn: ["PAID", "CANCELED"] as any,
-      },
-    },
-    data: {
-      status: "CANCELED" as any,
-      note: reason ?? undefined,
-      updatedAt: new Date(),
-    },
-  });
+  const paymentMutations = await cancelPendingOwnerPaymentsTx(tx as any, { ownerType: "ORDER", ownerId: orderId, note: reason });
 
   await tx.order.update({
     where: { id: orderId },
@@ -132,18 +121,21 @@ async function cancelOrderSideEffectsTx(
       updatedAt: new Date(),
     },
   });
+  return paymentMutations;
 }
 
 export async function cancelOrder(input: { id: string; reason?: string | null }) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const updated = await cancelOrderRepo(tx as any, input.id, input.reason ?? null);
 
-    await cancelOrderSideEffectsTx(tx, input.id, input.reason ?? null);
+    const paymentMutations = await cancelOrderSideEffectsTx(tx, input.id, input.reason ?? null);
 
     await syncWatchInventoryFromOrderId(tx, input.id);
 
-    return toPlain(updated);
+    return { updated: toPlain(updated), paymentMutations };
   });
+  await publishPaymentMutations(result.paymentMutations);
+  return result.updated;
 }
 
 export async function verifyOrder(input: { id: string; status: "VERIFIED" | "REJECTED" }) {

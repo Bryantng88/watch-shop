@@ -246,7 +246,7 @@ const WORK_TYPES: WorkTypeDefinition[] = [
     icon: "credit-card",
     defaultOwnerRole: "PAYMENT",
     defaultParticipants: ["PAYMENT"],
-    workflowKey: null,
+    workflowKey: "payment-collection-workflow",
     routingKeys: ["payment", "payments"],
     enabled: true,
     sortOrder: 10,

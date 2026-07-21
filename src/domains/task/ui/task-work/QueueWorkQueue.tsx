@@ -139,11 +139,28 @@ export type TaskItemQueueItem = {
       name: string | null;
     } | null;
   } | null;
+  payment?: {
+    status: string;
+    direction: string | null;
+    type: string | null;
+    purpose: string | null;
+    amount: number;
+    currency: string;
+    method: string | null;
+    ownerType: string;
+    ownerRef: string | null;
+    counterparty: string | null;
+    contact: string | null;
+    createdAt: string | null;
+    paidAt: string | null;
+    itemCount: number;
+    relatedItems: Array<{ title: string; ref: string | null }>;
+  } | null;
   updatedAt: string;
   href?: string | null;
 };
 
-type QueueFilter = "ALL" | QueueItemStatus | `WF:${string}`;
+type QueueFilter = "ALL" | QueueItemStatus | `WF:${string}` | `DIR:${"IN" | "OUT"}`;
 
 type VendorOption = {
   id: string;
@@ -195,6 +212,47 @@ function formatMoneyValue(value?: number | string | null) {
   const number = Number(value);
   if (!Number.isFinite(number)) return String(value);
   return new Intl.NumberFormat("vi-VN").format(number);
+}
+
+function paymentDirectionLabel(value?: string | null) {
+  const direction = String(value ?? "").toUpperCase();
+  if (direction === "IN") return "Thu";
+  if (direction === "OUT") return "Chi";
+  return "Chưa xác định";
+}
+
+function paymentPurposeLabel(value?: string | null) {
+  const labels: Record<string, string> = {
+    ORDER_FULL: "Thanh toán toàn bộ",
+    ORDER_DEPOSIT: "Đặt cọc",
+    ORDER_REMAIN: "Thanh toán còn lại",
+    ACQUISITION_FULL: "Thanh toán toàn bộ",
+    MAINTENANCE_COST: "Chi phí kỹ thuật",
+    SHIPMENT_COST: "Chi phí giao hàng",
+    REFUND: "Hoàn tiền",
+  };
+  const key = String(value ?? "").toUpperCase();
+  return labels[key] ?? (key.replaceAll("_", " ") || "Khác");
+}
+
+function paymentTypeLabel(value?: string | null) {
+  const labels: Record<string, string> = {
+    ORDER: "Đơn hàng",
+    ACQUISITION: "Thu mua",
+    SERVICE: "Dịch vụ kỹ thuật",
+    SHIPMENT: "Vận chuyển",
+    REFUND: "Hoàn tiền",
+  };
+  const key = String(value ?? "").toUpperCase();
+  return labels[key] ?? (key.replaceAll("_", " ") || "Khác");
+}
+
+function paymentAgeLabel(createdAt?: string | null, status?: string | null) {
+  if (!createdAt || ["PAID", "COLLECTED", "CANCELED", "CANCELLED"].includes(String(status ?? "").toUpperCase())) return null;
+  const created = new Date(createdAt).getTime();
+  if (!Number.isFinite(created)) return null;
+  const days = Math.max(0, Math.floor((Date.now() - created) / 86_400_000));
+  return days === 0 ? "Mới tạo hôm nay" : `${days} ngày chưa xử lý`;
 }
 
 function technicalCatalogLabel(item?: TechnicalDetailCatalogOption | null) {
@@ -654,6 +712,27 @@ function queueItemToBusinessPreview(item: TaskItemQueueItem): BusinessEntityPrev
     status: item.preview.status,
     imageUrl: item.preview.imageUrl ?? item.preview.imageUrls?.[0] ?? null,
     href: item.href,
+    facts: item.payment ? [
+      { label: "Hướng tiền", value: paymentDirectionLabel(item.payment.direction) },
+      { label: "Loại khoản", value: paymentPurposeLabel(item.payment.purpose) },
+      { label: "Nghiệp vụ", value: paymentTypeLabel(item.payment.type) },
+      { label: "Số tiền", value: `${formatMoneyValue(item.payment.amount)}${item.payment.currency === "VND" ? "đ" : ` ${item.payment.currency}`}` },
+      { label: "Phương thức", value: item.payment.method },
+      { label: "Đối tác", value: item.payment.counterparty },
+      { label: "Liên hệ", value: item.payment.contact },
+      { label: "Ngày tạo", value: item.payment.createdAt ? formatDateTime(item.payment.createdAt, "-") : null },
+      { label: "Ngày thực hiện", value: item.payment.paidAt ? formatDateTime(item.payment.paidAt, "-") : null },
+      { label: "Số sản phẩm", value: item.payment.itemCount },
+    ] : undefined,
+    sections: item.payment?.relatedItems.length ? [{
+      title: "Sản phẩm liên quan",
+      subtitle: `${item.payment.itemCount} sản phẩm trong chứng từ`,
+      items: item.payment.relatedItems.map((related, index) => ({
+        id: `${item.targetId}:${index}`,
+        title: related.title,
+        subtitle: related.ref,
+      })),
+    }] : undefined,
   };
 }
 
@@ -666,7 +745,7 @@ export function QueueItemThumbnail({ item }: { item: TaskItemQueueItem }) {
   const src = resolveQueuePreviewSrc(imageUrls[0]);
   const label = queueItemTitle(item);
 
-  if (item.targetType === "ORDER" && imageUrls.length > 1) {
+  if ((item.targetType === "ORDER" && imageUrls.length > 1) || (item.targetType === "PAYMENT" && (item.payment?.itemCount ?? imageUrls.length) > 1)) {
     return (
       <div className="relative h-11 w-14 shrink-0">
         {imageUrls.slice(0, 3).map((url, index) => {
@@ -686,6 +765,11 @@ export function QueueItemThumbnail({ item }: { item: TaskItemQueueItem }) {
             </div>
           );
         })}
+        {item.targetType === "PAYMENT" && (item.payment?.itemCount ?? 0) > 1 ? (
+          <span className="absolute -bottom-1 -right-1 z-10 rounded-full bg-slate-950 px-1.5 py-0.5 text-[9px] font-bold text-white ring-2 ring-white">
+            +{(item.payment?.itemCount ?? 1) - 1}
+          </span>
+        ) : null}
       </div>
     );
   }
@@ -1056,6 +1140,7 @@ export function QueueWorkQueue({
   onOpenQueueActivity?: (queueItemId: string, mode: "activity") => void;
 }) {
   const [filter, setFilter] = useState<QueueFilter>("ALL");
+  const [paymentTypeFilter, setPaymentTypeFilter] = useState("ALL");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
@@ -1068,6 +1153,12 @@ export function QueueWorkQueue({
   const [reshootNoteDraft, setReshootNoteDraft] = useState("");
   const [reshootNoteSaving, setReshootNoteSaving] = useState(false);
   const [reshootNoteError, setReshootNoteError] = useState<string | null>(null);
+  const [bulkPaymentConfirm, setBulkPaymentConfirm] = useState<{
+    actionLabel: string;
+    count: number;
+    total: number;
+    directionLabel: string;
+  } | null>(null);
   const [actionError, setActionError] = useState<{
     itemId: string;
     message: string;
@@ -1084,12 +1175,16 @@ export function QueueWorkQueue({
   const router = useRouter();
   const appProgress = useAppProgress();
   const isServiceOperationWorkspace = workspaceWorkTypeKey === "service-operation";
+  const isPaymentWorkspace = workspaceWorkTypeKey === "payment";
   const canCreateTechnicalIssue = Boolean(serviceRequestId);
   const statusCount = (status: QueueItemStatus) => items.filter(
     (item) => normalizeQueueStatusForWorkspace(item.status, workspaceWorkTypeKey) === status,
   ).length;
   const workflowStateCount = (state: string) => items.filter(
     (item) => item.currentWorkflowState === state,
+  ).length;
+  const directionCount = (direction: "IN" | "OUT") => items.filter(
+    (item) => String(item.payment?.direction ?? "").toUpperCase() === direction,
   ).length;
   const filters: Array<{ key: QueueFilter; label: string; count: number }> = isServiceOperationWorkspace
     ? [
@@ -1099,20 +1194,38 @@ export function QueueWorkQueue({
       { key: "WF:IN_PROGRESS", label: "Đang xử lý", count: workflowStateCount("IN_PROGRESS") },
       { key: "WF:DONE", label: "Hoàn tất", count: workflowStateCount("DONE") },
     ]
-    : [
+    : isPaymentWorkspace
+      ? [
+        { key: "ALL", label: "Tất cả", count: items.length },
+        { key: "DIR:IN", label: "Thu", count: directionCount("IN") },
+        { key: "DIR:OUT", label: "Chi", count: directionCount("OUT") },
+        { key: "WAITING", label: "Cần xử lý", count: statusCount("WAITING") },
+        { key: "DONE", label: "Hoàn tất", count: statusCount("DONE") },
+      ]
+      : [
       { key: "ALL", label: "Tất cả", count: items.length },
       { key: "WAITING", label: "Cần xử lý", count: statusCount("WAITING") },
       { key: "IN_PROGRESS", label: "Đang xử lý", count: statusCount("IN_PROGRESS") },
       { key: "DONE", label: "Hoàn tất", count: statusCount("DONE") },
     ];
-  const visibleItems = filter === "ALL"
+  const statusFilteredItems = filter === "ALL"
     ? items
     : filter.startsWith("WF:")
       ? items.filter((item) => item.currentWorkflowState === filter.slice(3))
+      : filter.startsWith("DIR:")
+        ? items.filter((item) => String(item.payment?.direction ?? "").toUpperCase() === filter.slice(4))
       : items.filter(
         (item) =>
           normalizeQueueStatusForWorkspace(item.status, workspaceWorkTypeKey) === filter,
       );
+  const paymentTypeOptions = Array.from(
+    new Set(items.map((item) => String(item.payment?.type ?? "").toUpperCase()).filter(Boolean)),
+  ).sort();
+  const visibleItems = isPaymentWorkspace && paymentTypeFilter !== "ALL"
+    ? statusFilteredItems.filter(
+        (item) => String(item.payment?.type ?? "").toUpperCase() === paymentTypeFilter,
+      )
+    : statusFilteredItems;
   const isMediaProcessingWorkspace = workspaceWorkTypeKey === "media-processing";
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const selectedItems = visibleItems.filter((item) => selectedIdSet.has(item.id));
@@ -1166,7 +1279,37 @@ export function QueueWorkQueue({
     action.command === "service.startTechnicalIssue" ||
     action.command === "service.completeTechnicalIssue" ||
     action.command === "service.cancelTechnicalIssue" ||
-    action.command === "service.createTechnicalIssue";
+    action.command === "service.createTechnicalIssue" ||
+    action.command === "payment.reviewPayment" ||
+    action.command === "payment.completePayment" ||
+    action.command === "payment.markException";
+  const paymentBulkActionForItem = (queueItem: TaskItemQueueItem) => {
+    if (!queueItem.payment?.counterparty || !queueItem.payment.method) return null;
+    return blueprintActionsForItem(queueItem).find(
+      (action) =>
+        action.key === "reconcile_payment" &&
+        action.command === "payment.completePayment" &&
+        blueprintActionMatchesState(queueItem, action),
+    ) ?? null;
+  };
+  const technicalBulkActionForItem = (queueItem: TaskItemQueueItem) => {
+    if (!isServiceOperationWorkspace) return null;
+    return blueprintActionsForItem(queueItem).find((action) => {
+      if (!canSubmitBlueprintAction(action) || !blueprintActionMatchesState(queueItem, action)) return false;
+      if (action.command === "service.cancelTechnicalIssue") return false;
+      const values = blueprintValuesFor(queueItem, action);
+      return action.fields
+        .filter((field) => field.required)
+        .every((field) => String(values[field.key] ?? "").trim());
+    }) ?? null;
+  };
+  const paymentActionLabel = (queueItem: TaskItemQueueItem, action: OperationalBlueprintAction) => {
+    if (action.command === "payment.reviewPayment") return "Đưa sang đối soát";
+    if (action.command === "payment.completePayment") {
+      return String(queueItem.payment?.direction).toUpperCase() === "OUT" ? "Xác nhận đã chi" : "Xác nhận đã thu";
+    }
+    return action.label;
+  };
   const blueprintValueKey = (queueItem: TaskItemQueueItem, action: OperationalBlueprintAction) =>
     `${queueItem.id}:${action.key}`;
   const technicalDetailOptionsForItem = (queueItem: TaskItemQueueItem) => {
@@ -1180,6 +1323,20 @@ export function QueueWorkQueue({
     queueItem: TaskItemQueueItem,
     action: OperationalBlueprintAction,
   ): Record<string, string | boolean> => {
+    if (action.key === "reconcile_payment" && queueItem.payment) {
+      return {
+        reviewedAmount: String(queueItem.payment.amount),
+        method: queueItem.payment.method ?? "BANK_TRANSFER",
+        occurredAt: new Date().toISOString().slice(0, 10),
+        transactionReference: "",
+        counterparty: queueItem.payment.counterparty ?? "",
+        contact: queueItem.payment.contact ?? "",
+        reconciliationResult: "MATCHED",
+        evidenceReference: "",
+        followUpDueAt: "",
+        reviewNote: "",
+      };
+    }
     const issue = queueItem.technicalIssue;
     if (!issue) return {};
 
@@ -1276,6 +1433,33 @@ export function QueueWorkQueue({
 
     const pendingKey = `${queueItem.id}:${action.key}`;
     const fields = blueprintValuesFor(queueItem, action);
+    if (action.key === "reconcile_payment") {
+      const requiredKeys = ["reviewedAmount", "method", "occurredAt", "counterparty", "reconciliationResult"];
+      const missing = requiredKeys.find((key) => !String(fields[key] ?? "").trim());
+      if (missing) {
+        setActionError({ itemId: queueItem.id, message: "Vui lòng nhập đủ số tiền, phương thức, ngày giao dịch, đối tác và kết quả đối soát." });
+        return;
+      }
+      const reviewedAmount = Number(fields.reviewedAmount);
+      if (!Number.isFinite(reviewedAmount) || reviewedAmount < 0) {
+        setActionError({ itemId: queueItem.id, message: "Số tiền đối soát không hợp lệ." });
+        return;
+      }
+      if (
+        reviewedAmount !== Number(queueItem.payment?.amount ?? 0) &&
+        String(fields.reconciliationResult) === "MATCHED"
+      ) {
+        setActionError({ itemId: queueItem.id, message: "Số tiền đang chênh lệch; không thể chọn kết quả Khớp đủ." });
+        return;
+      }
+      if (
+        ["PARTIAL", "OVERPAID", "PENDING_EVIDENCE", "DISPUTED"].includes(String(fields.reconciliationResult)) &&
+        !String(fields.reviewNote ?? "").trim()
+      ) {
+        setActionError({ itemId: queueItem.id, message: "Vui lòng ghi chú nguyên nhân và hướng xử lý cho khoản chưa khớp." });
+        return;
+      }
+    }
     if (
       action.command === "service.confirmTechnicalIssue" &&
       !String(fields.summary ?? "").trim()
@@ -1324,21 +1508,36 @@ export function QueueWorkQueue({
       }
     });
   };
-  const selectableItems = visibleItems.filter((item) => Boolean(transitionForItem(item)));
+  const selectableItems = visibleItems.filter((item) =>
+    isPaymentWorkspace
+      ? Boolean(paymentBulkActionForItem(item))
+      : isServiceOperationWorkspace
+        ? Boolean(technicalBulkActionForItem(item))
+        : Boolean(transitionForItem(item)),
+  );
   const selectedTransitions = selectedItems
     .map((item) => ({ queueItem: item, transition: transitionForItem(item) }))
     .filter((item): item is { queueItem: TaskItemQueueItem; transition: TaskItemQueueTransition } =>
       Boolean(item.transition),
     );
+  const selectedTechnicalItems = isServiceOperationWorkspace
+    ? selectedItems
+        .map((queueItem) => ({ queueItem, action: technicalBulkActionForItem(queueItem) }))
+        .filter((entry): entry is { queueItem: TaskItemQueueItem; action: OperationalBlueprintAction } => Boolean(entry.action))
+    : [];
   const bulkLabel = selectedTransitions[0]?.transition
     ? effectiveTransitionLabel(selectedTransitions[0].transition, workspaceWorkTypeKey)
     : "Áp dụng";
   const allSelectableSelected =
     selectableItems.length > 0 && selectableItems.every((item) => selectedIdSet.has(item.id));
-  const gridClass = capabilities.workflow
-    ? "grid-cols-[42px_minmax(270px,1.45fr)_120px_180px_160px_96px_108px]"
-    : "grid-cols-[42px_minmax(270px,1.45fr)_120px_180px_96px_108px]";
-  const detailColumnLabel = isServiceOperationWorkspace ? "Issue detail" : "Progress";
+  const gridClass = isPaymentWorkspace
+    ? capabilities.workflow
+      ? "grid-cols-[42px_minmax(300px,1.5fr)_76px_160px_130px_104px_210px_160px_80px_108px]"
+      : "grid-cols-[42px_minmax(300px,1.5fr)_76px_160px_130px_104px_210px_80px_108px]"
+    : capabilities.workflow
+      ? "grid-cols-[42px_minmax(270px,1.45fr)_120px_180px_160px_96px_108px]"
+      : "grid-cols-[42px_minmax(270px,1.45fr)_120px_180px_96px_108px]";
+  const detailColumnLabel = isPaymentWorkspace ? "Đối tác / thời điểm" : isServiceOperationWorkspace ? "Issue detail" : "Progress";
   const openBlueprintQueueItem = openBlueprintAction
     ? items.find((item) => item.id === openBlueprintAction.itemId) ?? null
     : null;
@@ -1667,6 +1866,136 @@ export function QueueWorkQueue({
     }
   }
 
+  const selectedPaymentItems = isPaymentWorkspace
+    ? selectedItems.map((queueItem) => ({ queueItem, action: paymentBulkActionForItem(queueItem) }))
+      .filter((entry): entry is { queueItem: TaskItemQueueItem; action: OperationalBlueprintAction } => Boolean(entry.action))
+    : [];
+
+  const applyBulkTechnicalAction = () => {
+    if (!selectedTechnicalItems.length || isPending) return;
+    const actionKey = selectedTechnicalItems[0].action.key;
+    if (!selectedTechnicalItems.every((entry) => entry.action.key === actionKey)) {
+      setActionError({
+        itemId: "bulk",
+        message: "Các dòng kỹ thuật đã chọn không cùng bước xử lý. Hãy lọc theo trạng thái trước khi thao tác hàng loạt.",
+      });
+      return;
+    }
+    const actionLabel = blueprintSubmitLabel(selectedTechnicalItems[0].action);
+    setPendingId("bulk");
+    setActionError(null);
+    appProgress.show({
+      title: `Đang ${actionLabel.toLowerCase()} hàng loạt`,
+      message: `0/${selectedTechnicalItems.length} Technical Issue`,
+      percent: 5,
+    });
+    startTransition(async () => {
+      const failures: string[] = [];
+      for (let index = 0; index < selectedTechnicalItems.length; index += 1) {
+        const { queueItem, action } = selectedTechnicalItems[index];
+        try {
+          await submitOperationalBlueprintActionAction({
+            taskItemId,
+            actionKey: action.key,
+            targetType: queueItem.targetType,
+            targetId: queueItem.targetId,
+            fields: blueprintValuesFor(queueItem, action),
+          });
+        } catch (error) {
+          failures.push(`${queueItem.preview.ref ?? queueItem.targetId}: ${error instanceof Error ? error.message : "Lỗi xử lý"}`);
+        }
+        appProgress.update({
+          message: `${index + 1}/${selectedTechnicalItems.length} Technical Issue`,
+          percent: Math.round(((index + 1) / selectedTechnicalItems.length) * 90),
+        });
+      }
+      setSelectedIds([]);
+      router.refresh();
+      setActionError(
+        failures.length
+          ? { itemId: "bulk", message: `${failures.length} dòng lỗi: ${failures.slice(0, 3).join("; ")}` }
+          : null,
+      );
+      appProgress.update({
+        title: failures.length ? "Xử lý kỹ thuật hoàn tất một phần" : "Xử lý kỹ thuật hoàn tất",
+        message: failures.length
+          ? `${selectedTechnicalItems.length - failures.length} thành công, ${failures.length} lỗi`
+          : `${selectedTechnicalItems.length} Technical Issue đã được cập nhật`,
+        percent: 100,
+      });
+      window.setTimeout(() => appProgress.hide(), failures.length ? 4000 : 1800);
+      setPendingId(null);
+    });
+  };
+
+  const applyBulkPaymentAction = (confirmed = false) => {
+    if (!selectedPaymentItems.length || isPending) return;
+    const command = selectedPaymentItems[0].action.command;
+    if (!selectedPaymentItems.every((entry) => entry.action.command === command)) {
+      setActionError({ itemId: "bulk", message: "Các Payment đã chọn không cùng bước xử lý." });
+      return;
+    }
+    const directions = new Set(selectedPaymentItems.map((entry) => String(entry.queueItem.payment?.direction ?? "")));
+    if (command === "payment.completePayment" && directions.size !== 1) {
+      setActionError({ itemId: "bulk", message: "Không thể xác nhận Thu và Chi trong cùng một bulk action. Hãy lọc Thu hoặc Chi trước." });
+      return;
+    }
+    const total = selectedPaymentItems.reduce((sum, entry) => sum + Number(entry.queueItem.payment?.amount ?? 0), 0);
+    const direction = String(selectedPaymentItems[0].queueItem.payment?.direction).toUpperCase();
+    const actionLabel = command === "payment.reviewPayment" ? "đưa sang đối soát" : direction === "OUT" ? "xác nhận đã chi" : "xác nhận đã thu";
+    if (!confirmed) {
+      setBulkPaymentConfirm({
+        actionLabel,
+        count: selectedPaymentItems.length,
+        total,
+        directionLabel: direction === "OUT" ? "Chi" : "Thu",
+      });
+      return;
+    }
+
+    setPendingId("bulk");
+    setActionError(null);
+    appProgress.show({ title: "Đang xử lý Payment hàng loạt", message: `0/${selectedPaymentItems.length} Payment`, percent: 5 });
+    startTransition(async () => {
+      const failures: string[] = [];
+      for (let index = 0; index < selectedPaymentItems.length; index += 1) {
+        const { queueItem, action } = selectedPaymentItems[index];
+        try {
+          await submitOperationalBlueprintActionAction({
+            taskItemId,
+            actionKey: action.key,
+            targetType: "PAYMENT",
+            targetId: queueItem.targetId,
+            fields: action.command === "payment.completePayment"
+              ? {
+                  reviewedAmount: String(queueItem.payment?.amount ?? 0),
+                  method: queueItem.payment?.method ?? "BANK_TRANSFER",
+                  occurredAt: new Date().toISOString(),
+                  counterparty: queueItem.payment?.counterparty ?? "",
+                  contact: queueItem.payment?.contact ?? "",
+                  reconciliationResult: "MATCHED",
+                  reviewNote: "Đối soát hàng loạt từ Payment Review Workspace",
+                }
+              : {},
+          });
+        } catch (error) {
+          failures.push(`${queueItem.preview.ref ?? queueItem.targetId}: ${error instanceof Error ? error.message : "Lỗi xử lý"}`);
+        }
+        appProgress.update({ message: `${index + 1}/${selectedPaymentItems.length} Payment`, percent: Math.round(((index + 1) / selectedPaymentItems.length) * 90) });
+      }
+      setSelectedIds([]);
+      router.refresh();
+      setActionError(failures.length ? { itemId: "bulk", message: `${failures.length} Payment lỗi: ${failures.slice(0, 3).join("; ")}` } : null);
+      appProgress.update({
+        title: failures.length ? "Bulk Payment hoàn tất một phần" : "Bulk Payment hoàn tất",
+        message: failures.length ? `${selectedPaymentItems.length - failures.length} thành công, ${failures.length} lỗi` : `${selectedPaymentItems.length} Payment đã được cập nhật`,
+        percent: 100,
+      });
+      window.setTimeout(() => appProgress.hide(), 1800);
+      setPendingId(null);
+    });
+  };
+
   const isBulkPending = isPending && pendingId === "bulk";
 
   return (
@@ -1712,24 +2041,45 @@ export function QueueWorkQueue({
                 </button>
               </div>
             ) : null}
-            {selectedTransitions.length ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-slate-50/70 px-3 py-2">
-                <div className="text-sm font-semibold text-slate-700">
-                  Đã chọn {selectedTransitions.length} item
+            {selectedTransitions.length || selectedPaymentItems.length || selectedTechnicalItems.length ? (
+              <div className="sticky top-2 z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.12)] backdrop-blur">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="grid h-8 min-w-8 place-items-center rounded-full bg-blue-600 px-2 text-xs font-bold text-white">
+                    {isPaymentWorkspace
+                      ? selectedPaymentItems.length
+                      : isServiceOperationWorkspace
+                        ? selectedTechnicalItems.length
+                        : selectedTransitions.length}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold text-slate-900">Đã chọn item để xử lý hàng loạt</div>
+                    {isPaymentWorkspace ? <div className="mt-0.5 text-xs text-slate-500">Tổng giá trị {formatMoneyValue(selectedPaymentItems.reduce((sum, entry) => sum + Number(entry.queueItem.payment?.amount ?? 0), 0))}đ</div> : null}
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  disabled={isBulkPending}
-                  onClick={applyBulkManualAction}
-                  className="inline-flex h-9 items-center rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                >
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => setSelectedIds([])} disabled={isBulkPending} className="h-9 rounded-lg px-3 text-xs font-semibold text-slate-500 hover:bg-slate-100">Bỏ chọn</button>
+                  <button
+                    type="button"
+                    disabled={isBulkPending}
+                    onClick={isPaymentWorkspace
+                      ? () => applyBulkPaymentAction()
+                      : isServiceOperationWorkspace
+                        ? applyBulkTechnicalAction
+                        : applyBulkManualAction}
+                    className="inline-flex h-9 items-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
                   {isBulkPending ? (
                     <>
                       <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
                       Đang xử lý
                     </>
-                  ) : bulkLabel}
-                </button>
+                  ) : isPaymentWorkspace
+                    ? paymentActionLabel(selectedPaymentItems[0].queueItem, selectedPaymentItems[0].action)
+                    : isServiceOperationWorkspace
+                      ? blueprintSubmitLabel(selectedTechnicalItems[0].action)
+                    : bulkLabel}
+                  </button>
+                </div>
               </div>
             ) : null}
             <div className="flex items-center justify-between gap-3">
@@ -1762,6 +2112,26 @@ export function QueueWorkQueue({
                   );
                 })}
               </div>
+              {isPaymentWorkspace ? (
+                <label className="flex shrink-0 items-center gap-2 text-xs font-semibold text-slate-600">
+                  <span>Loại nghiệp vụ</span>
+                  <select
+                    value={paymentTypeFilter}
+                    onChange={(event) => {
+                      setPaymentTypeFilter(event.target.value);
+                      setSelectedIds([]);
+                    }}
+                    className="h-9 min-w-[180px] rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="ALL">Tất cả nghiệp vụ</option>
+                    {paymentTypeOptions.map((type) => (
+                      <option key={type} value={type}>
+                        {paymentTypeLabel(type)} ({items.filter((item) => String(item.payment?.type ?? "").toUpperCase() === type).length})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
             </div>
 
             {visibleItems.length ? (
@@ -1779,6 +2149,7 @@ export function QueueWorkQueue({
                       />
                     </div>
                     <div>{itemLabel}</div>
+                    {isPaymentWorkspace ? <><div>Thu / Chi</div><div>Loại khoản</div><div>Số tiền</div></> : null}
                     <div>Status</div>
                     <div>{detailColumnLabel}</div>
                     {capabilities.workflow ? <div>Next step</div> : null}
@@ -1817,7 +2188,11 @@ export function QueueWorkQueue({
                           <input
                             type="checkbox"
                             checked={selectedIdSet.has(queueItem.id)}
-                            disabled={!transitionForItem(queueItem) || isPending}
+                            disabled={!(isPaymentWorkspace
+                              ? paymentBulkActionForItem(queueItem)
+                              : isServiceOperationWorkspace
+                                ? technicalBulkActionForItem(queueItem)
+                                : transitionForItem(queueItem)) || isPending}
                             onChange={() => toggleSelected(queueItem.id)}
                             aria-label={`Select ${queueItemTitle(queueItem)}`}
                             className="h-4 w-4 rounded border-slate-300"
@@ -1850,6 +2225,28 @@ export function QueueWorkQueue({
                               ) : (
                                 <span>{queueItemRef(queueItem)}</span>
                               )}
+                              {false && queueItem.payment ? (
+                                <div className="mt-1.5 flex w-full flex-wrap items-center gap-1.5">
+                                  <span className={cn(
+                                    "rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset",
+                                    String(queueItem.payment.direction).toUpperCase() === "OUT"
+                                      ? "bg-rose-50 text-rose-700 ring-rose-200"
+                                      : "bg-emerald-50 text-emerald-700 ring-emerald-200",
+                                  )}>
+                                    {paymentDirectionLabel(queueItem.payment.direction)}
+                                  </span>
+                                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                                    {paymentPurposeLabel(queueItem.payment.purpose)}
+                                  </span>
+                                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+                                    {paymentTypeLabel(queueItem.payment.type)}
+                                  </span>
+                                  <span className="font-bold text-slate-900">
+                                    {formatMoneyValue(queueItem.payment.amount)}{queueItem.payment.currency === "VND" ? "đ" : ` ${queueItem.payment.currency}`}
+                                  </span>
+                                  <span className="text-slate-400">· {queueItem.payment.method ?? "Chưa có phương thức"}</span>
+                                </div>
+                              ) : null}
                               {workspaceWorkTypeKey === "photography" ? (
                                 <button
                                   type="button"
@@ -1917,8 +2314,37 @@ export function QueueWorkQueue({
                           </div>
                         </div>
 
+                        {isPaymentWorkspace ? (
+                          <>
+                            <div className="self-center">
+                              <span className={cn(
+                                "rounded-full px-2 py-1 text-[11px] font-bold ring-1 ring-inset",
+                                String(queueItem.payment?.direction).toUpperCase() === "OUT"
+                                  ? "bg-rose-50 text-rose-700 ring-rose-200"
+                                  : "bg-emerald-50 text-emerald-700 ring-emerald-200",
+                              )}>{paymentDirectionLabel(queueItem.payment?.direction)}</span>
+                            </div>
+                            <div className="min-w-0 self-center">
+                              <div className="truncate text-xs font-semibold text-slate-800">{paymentTypeLabel(queueItem.payment?.type)}</div>
+                              <div className="mt-1 text-[11px] text-slate-500">{paymentPurposeLabel(queueItem.payment?.purpose)}</div>
+                            </div>
+                            <div className="self-center text-sm font-bold tabular-nums text-slate-950">
+                              {formatMoneyValue(queueItem.payment?.amount)}{queueItem.payment?.currency === "VND" ? "đ" : ` ${queueItem.payment?.currency ?? ""}`}
+                            </div>
+                          </>
+                        ) : null}
+
                         <div className="flex min-w-0 flex-wrap items-center gap-1.5 self-center">
-                          {isServiceOperationWorkspace ? (
+                          {queueItem.payment ? (
+                            <span className={cn(
+                              "rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ring-inset",
+                              ["PAID", "COLLECTED"].includes(queueItem.payment.status)
+                                ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                : ["CANCELED", "CANCELLED", "FAILED"].includes(queueItem.payment.status)
+                                  ? "bg-rose-50 text-rose-700 ring-rose-200"
+                                  : "bg-amber-50 text-amber-700 ring-amber-200",
+                            )}>{queueItem.payment.status}</span>
+                          ) : isServiceOperationWorkspace ? (
                             <WorkflowStateBadge
                               value={queueItem.currentWorkflowState}
                               label={queueItem.currentWorkflowStateLabel}
@@ -1929,7 +2355,14 @@ export function QueueWorkQueue({
                         </div>
 
                         <div className="min-w-0 self-center">
-                          {isServiceOperationWorkspace ? (
+                          {queueItem.payment ? (
+                            <div className="space-y-1 text-xs">
+                              <div className="font-semibold text-slate-700">{queueItem.payment.method ?? "Chưa có phương thức"}</div>
+                              <div className="truncate text-slate-500">{queueItem.payment.counterparty ?? "Chưa xác định đối tác"}{queueItem.payment.contact ? ` · ${queueItem.payment.contact}` : ""}</div>
+                              <div className="text-[11px] text-slate-400">{queueItem.payment.paidAt ? `Thực hiện ${formatDateTime(queueItem.payment.paidAt, "-")}` : `Tạo ${formatDateTime(queueItem.payment.createdAt, "-")}`}</div>
+                              {paymentAgeLabel(queueItem.payment.createdAt, queueItem.payment.status) ? <div className="text-[11px] font-semibold text-amber-600">{paymentAgeLabel(queueItem.payment.createdAt, queueItem.payment.status)}</div> : null}
+                            </div>
+                          ) : isServiceOperationWorkspace ? (
                             <QueueIssueDetailCell item={queueItem} />
                           ) : (
                             <QueueProgressCell progress={rowPresentation.progress} />
@@ -2092,7 +2525,7 @@ export function QueueWorkQueue({
                                         className="inline-flex h-7 min-w-0 items-center rounded-lg border border-blue-100 bg-blue-50 px-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400"
                                         title={submitSupported ? action.description : `Adapter pending: ${action.command}`}
                                       >
-                                        {action.label}
+                                        {isPaymentWorkspace ? paymentActionLabel(queueItem, action) : action.label}
                                       </button>
                                     );
                                   })}
@@ -2142,12 +2575,87 @@ export function QueueWorkQueue({
         error={previewState.error}
         onClose={previewState.closePreview}
       />
+      {bulkPaymentConfirm ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[1px]"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="bulk-payment-confirm-title"
+        >
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+              <div>
+                <h3 id="bulk-payment-confirm-title" className="text-base font-bold text-slate-950">
+                  Xác nhận xử lý Payment hàng loạt
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Kiểm tra lại thông tin trước khi cập nhật.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBulkPaymentConfirm(null)}
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Đóng"
+              >
+                <XCircle className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-3 px-5 py-5">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-xs font-medium text-slate-500">Thao tác</div>
+                    <div className="mt-1 text-sm font-bold text-slate-900">{bulkPaymentConfirm.actionLabel}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-medium text-slate-500">Loại giao dịch</div>
+                    <div className="mt-1 text-sm font-bold text-slate-900">{bulkPaymentConfirm.directionLabel}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-medium text-slate-500">Số Payment</div>
+                    <div className="mt-1 text-lg font-extrabold text-slate-950">{bulkPaymentConfirm.count}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-medium text-slate-500">Tổng giá trị</div>
+                    <div className="mt-1 text-lg font-extrabold text-slate-950">{formatMoneyValue(bulkPaymentConfirm.total)}đ</div>
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs leading-5 text-slate-500">
+                Hệ thống sẽ xử lý từng Payment và hiển thị tiến độ. Các item lỗi sẽ được giữ lại để xử lý tiếp.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 px-5 py-4">
+              <button
+                type="button"
+                onClick={() => setBulkPaymentConfirm(null)}
+                className="h-9 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setBulkPaymentConfirm(null);
+                  applyBulkPaymentAction(true);
+                }}
+                className="h-9 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+              >
+                Xác nhận {bulkPaymentConfirm.directionLabel.toLowerCase()}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {openBlueprintQueueItem && openBlueprintModalAction ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4">
-          <div className="w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
+          <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
               <div className="min-w-0">
-                <div className="text-sm font-semibold text-slate-950">Xử lý kỹ thuật</div>
+                <div className="text-sm font-semibold text-slate-950">
+                  {openBlueprintQueueItem.payment ? "Đối soát Payment" : "Xử lý kỹ thuật"}
+                </div>
                 <div className="mt-1 truncate text-xs text-slate-500">
                   {queueItemTitle(openBlueprintQueueItem)}
                 </div>
@@ -2276,9 +2784,41 @@ export function QueueWorkQueue({
                   </div>
                 </div>
               ) : null}
+              {openBlueprintQueueItem.payment ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className={cn("rounded-full px-2 py-1 text-[11px] font-bold", openBlueprintQueueItem.payment.direction === "OUT" ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700")}>
+                          {paymentDirectionLabel(openBlueprintQueueItem.payment.direction)}
+                        </span>
+                        <span className="text-xs font-semibold text-slate-600">{paymentTypeLabel(openBlueprintQueueItem.payment.type)} · {paymentPurposeLabel(openBlueprintQueueItem.payment.purpose)}</span>
+                      </div>
+                      <div className="mt-3 text-2xl font-black tabular-nums text-slate-950">
+                        {formatMoneyValue(openBlueprintQueueItem.payment.amount)}{openBlueprintQueueItem.payment.currency === "VND" ? "đ" : ` ${openBlueprintQueueItem.payment.currency}`}
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">Theo chứng từ · {openBlueprintQueueItem.payment.ownerRef ?? openBlueprintQueueItem.preview.ref}</div>
+                    </div>
+                    <div className="grid min-w-[260px] gap-2 text-xs sm:grid-cols-2">
+                      <div><div className="text-slate-400">Đối tác</div><div className="mt-0.5 font-semibold text-slate-800">{openBlueprintQueueItem.payment.counterparty ?? "Chưa xác định"}</div></div>
+                      <div><div className="text-slate-400">Liên hệ</div><div className="mt-0.5 font-semibold text-slate-800">{openBlueprintQueueItem.payment.contact ?? "-"}</div></div>
+                      <div><div className="text-slate-400">Phương thức hiện tại</div><div className="mt-0.5 font-semibold text-slate-800">{openBlueprintQueueItem.payment.method ?? "-"}</div></div>
+                      <div><div className="text-slate-400">Sản phẩm</div><div className="mt-0.5 font-semibold text-slate-800">{openBlueprintQueueItem.payment.itemCount}</div></div>
+                    </div>
+                  </div>
+                  {(() => {
+                    const values = blueprintValuesFor(openBlueprintQueueItem, openBlueprintModalAction);
+                    const reviewed = Number(values.reviewedAmount ?? openBlueprintQueueItem.payment?.amount ?? 0);
+                    const expected = Number(openBlueprintQueueItem.payment?.amount ?? 0);
+                    const difference = reviewed - expected;
+                    return <div className={cn("mt-4 flex items-center justify-between rounded-lg border px-3 py-2 text-xs", difference === 0 ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700")}><span>Chênh lệch sau đối soát</span><strong className="text-sm tabular-nums">{difference > 0 ? "+" : ""}{formatMoneyValue(difference)}đ</strong></div>;
+                  })()}
+                </div>
+              ) : null}
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
                 {openBlueprintModalAction.description}
               </div>
+              <div className={cn(openBlueprintQueueItem.payment ? "grid gap-4 sm:grid-cols-2" : "space-y-4")}>
               {openBlueprintModalAction.fields
                 .filter((field) =>
                   shouldShowBlueprintField(
@@ -2293,7 +2833,7 @@ export function QueueWorkQueue({
                 const values = blueprintValuesFor(openBlueprintQueueItem, openBlueprintModalAction);
 
                 return (
-                  <div key={field.key}>
+                  <div key={field.key} className={cn(field.kind === "textarea" && openBlueprintQueueItem.payment ? "sm:col-span-2" : null)}>
                     <div className="mb-1.5 flex items-center justify-between gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                       <span>{field.label}</span>
                       <span>{field.required ? "Bắt buộc" : fieldKindLabel(field.kind)}</span>
@@ -2316,6 +2856,7 @@ export function QueueWorkQueue({
                   </div>
                 );
               })}
+              </div>
               {openBlueprintModalAction.command === "service.startTechnicalIssue" &&
               vendorChangedFor(openBlueprintQueueItem, openBlueprintModalAction) ? (
                 <div>

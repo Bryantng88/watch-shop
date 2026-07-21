@@ -425,10 +425,10 @@ function areaAccent(area: Card["area"]) {
   }
   if (area === "CASE") {
     return {
-      bar: "bg-cyan-500",
-      headerBg: "bg-cyan-50",
-      headerBorder: "border-cyan-100",
-      chip: "border-cyan-100 bg-cyan-50 text-cyan-700",
+      bar: "bg-amber-500",
+      headerBg: "bg-amber-50",
+      headerBorder: "border-amber-100",
+      chip: "border-amber-200 bg-amber-50 text-amber-700",
     };
   }
   if (area === "CRYSTAL") {

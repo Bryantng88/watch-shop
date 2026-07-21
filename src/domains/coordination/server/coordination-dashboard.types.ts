@@ -88,6 +88,7 @@ export type CoordinationTechnicalIssueBoardItemDTO = {
   isConfirmed: boolean;
   priority: string | null;
   technicalDetailCatalogId: string | null;
+  processingDetails: string[];
   stage: "INSPECT" | "READY" | "PROCESSING" | "DONE";
   actualCost: number | null;
   updatedAt: string | null;
@@ -143,6 +144,13 @@ export type CoordinationDashboardDTO = {
     }>;
   };
   report: CoordinationReportMetricDTO[];
+  paymentCashFlow: Record<"WEEK" | "MONTH" | "YEAR" | "ALL", {
+    periodLabel: string;
+    income: number;
+    expense: number;
+    net: number;
+    transactionCount: number;
+  }> | null;
   spaceSharing: {
     users: CoordinationUserSummaryDTO[];
     sharedUsers: CoordinationUserSummaryDTO[];

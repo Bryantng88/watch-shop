@@ -2,15 +2,16 @@ import {
   OrderStatus,
   PaymentDirection,
   PaymentMethod,
+  PaymentPurpose,
   PaymentStatus,
   PaymentType,
   ShipmentStatus,
   ShippingFeePayer,
 } from "@prisma/client";
-import { buildPaymentRef } from "./shipment.utils";
 import { prisma } from "@/server/db/client";
 
 import { recomputeOrderPaymentRollupTx } from "@/domains/payment/payment/server";
+import { publishPaymentMutations, replaceShipmentExpenseTx, setOrderCodCollectedTx } from "@/domains/payment/server";
 import { syncWatchInventoryFromOrderId } from "@/domains/order/server/order-watch-sync.service";
 import type {
   CompleteShipmentInput,
@@ -22,10 +23,6 @@ import type {
   UpdateShipmentInput,
 } from "../shared";
 import {
-  cancelActiveShipmentCostPaymentsRepo,
-  cancelActiveShipmentReturnCostPaymentsRepo,
-  createCompletedShipmentCostPaymentRepo,
-  createCompletedShipmentReturnCostPaymentRepo,
   createManualShipmentRepo,
   createShipmentFromOrderRepo,
   getShipmentByIdRepo,
@@ -97,7 +94,7 @@ export async function updateShipment(input: { shipmentId: string; data: UpdateSh
 }
 
 export async function createShipmentFeeAndShip(input: CreateShipmentFeeInput) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const shipment = await requireShipmentTx(tx, input.shipmentId);
 
     if (
@@ -122,12 +119,18 @@ export async function createShipmentFeeAndShip(input: CreateShipmentFeeInput) {
         ? ShippingFeePayer.CUSTOMER
         : ShippingFeePayer.BUSINESS;
 
-    await cancelActiveShipmentCostPaymentsRepo(tx, shipment.id);
-
-    const payment =
-      payer === ShippingFeePayer.BUSINESS && amount > 0
-        ? await createCompletedShipmentCostPaymentRepo(tx, shipment, input)
-        : null;
+    const paymentResult = await replaceShipmentExpenseTx(tx, {
+      shipmentId: shipment.id,
+      orderId: shipment.orderId,
+      amount: payer === ShippingFeePayer.BUSINESS ? amount : 0,
+      currency: shipment.currency,
+      purpose: PaymentPurpose.SHIPMENT_COST,
+      method: input.method,
+      paidAt: input.paidAt,
+      reference: input.reference,
+      note: input.note,
+    });
+    const payment = paymentResult.payment;
 
     const updated = await (tx as any).shipment.update({
       where: { id: shipment.id },
@@ -150,88 +153,43 @@ export async function createShipmentFeeAndShip(input: CreateShipmentFeeInput) {
     const summary = await recomputeOrderPaymentRollupTx(tx, shipment.orderId);
     await syncWatchInventoryFromOrderId(tx, shipment.orderId);
 
-    return toPlain({ shipment: updated, payment, summary });
+    return toPlain({ shipment: updated, payment, summary, paymentMutations: paymentResult.mutations });
   });
+  await publishPaymentMutations(result.paymentMutations);
+  return result;
 }
 
 export async function markShipmentDelivered(input: CompleteShipmentInput) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const shipment = await requireShipmentTx(tx, input.shipmentId);
     if (shipment.status !== ShipmentStatus.SHIPPED) {
       throw new Error(`Chỉ được xác nhận đã giao khi shipment SHIPPED. Hiện tại: ${shipment.status}.`);
     }
-
     const isCod = shipment.order?.paymentMethod === PaymentMethod.COD || (await hasPendingCodPaymentTx(tx, shipment.orderId));
-
     const updated = await (tx as any).shipment.update({
       where: { id: shipment.id },
-      data: {
-        status: ShipmentStatus.DELIVERED,
-        deliveredAt: new Date(),
-        notes: input.note ?? shipment.notes ?? null,
-        updatedAt: new Date(),
-      },
+      data: { status: ShipmentStatus.DELIVERED, deliveredAt: new Date(), notes: input.note ?? shipment.notes ?? null, updatedAt: new Date() },
     });
-
+    let paymentMutations = [];
     if (isCod) {
-      const updateResult = await tx.payment.updateMany({
-        where: {
-          order_id: shipment.orderId,
-          type: PaymentType.ORDER,
-          direction: PaymentDirection.IN,
-          method: PaymentMethod.COD,
-          status: PaymentStatus.UNPAID,
-        },
-        data: {
-          status: "COLLECTED" as any,
-          note:
-            input.note ??
-            "COD đã giao thành công, chờ đối soát/nhận tiền từ đơn vị vận chuyển.",
-          updatedAt: new Date(),
-        } as any,
+      const summary = await recomputeOrderPaymentRollupTx(tx, shipment.orderId);
+      paymentMutations = await setOrderCodCollectedTx(tx, {
+        orderId: shipment.orderId,
+        amountIfMissing: Math.max(0, Number(summary.totalDue) - Number(summary.paidTotal) - Number(summary.collectedTotal)),
+        currency: shipment.currency,
+        note: input.note ?? "COD đã giao thành công, chờ đối soát/nhận tiền từ đơn vị vận chuyển.",
+        collected: true,
       });
-
-      if (updateResult.count === 0) {
-        const summary = await recomputeOrderPaymentRollupTx(tx, shipment.orderId);
-        const remainingCodAmount = Math.max(
-          0,
-          Number(summary.totalDue ?? 0) -
-          Number(summary.paidTotal ?? 0) -
-          Number(summary.collectedTotal ?? 0)
-        );
-
-        if (remainingCodAmount > 0) {
-          await tx.payment.create({
-            data: {
-              refNo: await buildPaymentRef(tx),
-              type: PaymentType.ORDER,
-              direction: PaymentDirection.IN,
-              purpose: "ORDER_REMAIN" as any,
-              method: PaymentMethod.COD,
-              amount: money(remainingCodAmount),
-              currency: shipment.currency ?? "VND",
-              status: "COLLECTED" as any,
-              note:
-                input.note ??
-                "COD đã giao thành công, chờ đối soát/nhận tiền từ đơn vị vận chuyển.",
-              order_id: shipment.orderId,
-              updatedAt: new Date(),
-            } as any,
-          });
-        }
-      }
-
-      await tx.order.update({
-        where: { id: shipment.orderId },
-        data: { status: OrderStatus.SHIPPED, updatedAt: new Date() },
-      });
+      await tx.order.update({ where: { id: shipment.orderId }, data: { status: OrderStatus.SHIPPED, updatedAt: new Date() } });
     }
-
     const summary = await recomputeOrderPaymentRollupTx(tx, shipment.orderId);
     await syncWatchInventoryFromOrderId(tx, shipment.orderId);
-    return toPlain({ shipment: updated, isCod, summary });
+    return toPlain({ shipment: updated, isCod, summary, paymentMutations });
   });
+  await publishPaymentMutations(result.paymentMutations);
+  return result;
 }
+
 
 export async function markShipmentReturned(input: CompleteShipmentInput) {
   return prisma.$transaction(async (tx) => {
@@ -265,61 +223,44 @@ export async function markShipmentReturned(input: CompleteShipmentInput) {
 }
 
 export async function receiveShipmentReturn(input: ReceiveShipmentReturnInput) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const shipment = await requireShipmentTx(tx, input.shipmentId);
-
     if (shipment.status !== SHIPMENT_STATUS_RETURNING) {
       throw new Error(`Chỉ được nhận hàng hoàn khi shipment đang RETURNING. Hiện tại: ${shipment.status}.`);
     }
-
     const amount = Number(input.amount ?? 0);
-    if (!Number.isFinite(amount) || amount < 0) {
-      throw new Error("Phí hoàn hàng không hợp lệ.");
-    }
-
-    await cancelActiveShipmentReturnCostPaymentsRepo(tx, shipment.id);
-
-    const payment = amount > 0
-      ? await createCompletedShipmentReturnCostPaymentRepo(tx, shipment, { ...input, amount })
-      : null;
-
+    if (!Number.isFinite(amount) || amount < 0) throw new Error("Phí hoàn hàng không hợp lệ.");
+    const paymentResult = await replaceShipmentExpenseTx(tx, {
+      shipmentId: shipment.id,
+      orderId: shipment.orderId,
+      amount,
+      currency: shipment.currency,
+      purpose: PaymentPurpose.SHIPMENT_RETURN_COST,
+      method: input.method,
+      paidAt: input.paidAt,
+      reference: input.reference,
+      note: input.note,
+    });
     const updated = await (tx as any).shipment.update({
       where: { id: shipment.id },
-      data: {
-        status: SHIPMENT_STATUS_RETURNED,
-        notes: input.note ?? shipment.notes ?? null,
-        updatedAt: new Date(),
-      },
+      data: { status: SHIPMENT_STATUS_RETURNED, notes: input.note ?? shipment.notes ?? null, updatedAt: new Date() },
     });
-
-    await tx.payment.updateMany({
-      where: {
-        order_id: shipment.orderId,
-        type: PaymentType.ORDER,
-        direction: PaymentDirection.IN,
-        method: PaymentMethod.COD,
-        status: "COLLECTED" as any,
-      },
-      data: {
-        status: PaymentStatus.UNPAID,
-        note: input.note ?? "Shipment đã nhận hàng hoàn, COD quay lại trạng thái chưa thu.",
-        updatedAt: new Date(),
-      } as any,
+    const codMutations = await setOrderCodCollectedTx(tx, {
+      orderId: shipment.orderId,
+      amountIfMissing: 0,
+      note: input.note ?? "Shipment đã nhận hàng hoàn, COD quay lại trạng thái chưa thu.",
+      collected: false,
     });
-
-    await tx.order.update({
-      where: { id: shipment.orderId },
-      data: { status: ORDER_STATUS_RETURNED, updatedAt: new Date() },
-    });
-
+    await tx.order.update({ where: { id: shipment.orderId }, data: { status: ORDER_STATUS_RETURNED, updatedAt: new Date() } });
     const summary = await recomputeOrderPaymentRollupTx(tx, shipment.orderId);
     await syncWatchInventoryFromOrderId(tx, shipment.orderId);
-
-    return toPlain({ shipment: updated, payment, summary });
+    return toPlain({ shipment: updated, payment: paymentResult.payment, summary, paymentMutations: [...paymentResult.mutations, ...codMutations] });
   });
+  await publishPaymentMutations(result.paymentMutations);
+  return result;
 }
 
-// Backward-compatible name for code that already imports createShipmentReturnFee.
+
 export async function createShipmentReturnFee(input: ReceiveShipmentReturnInput) {
   return receiveShipmentReturn(input);
 }

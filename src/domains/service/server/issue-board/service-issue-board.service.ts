@@ -252,6 +252,7 @@ export async function createTechnicalIssue(input: {
     mechanicalPartCatalogId?: string | null;
     technicalDetailCatalogId?: string | null;
     summary?: string | null;
+    priority?: string | null;
     deferConsumers?: (work: () => Promise<void>) => void;
 }) {
     const serviceRequestId = cleanId(input.serviceRequestId);
@@ -299,6 +300,7 @@ export async function createTechnicalIssue(input: {
             mechanicalPartCatalogId: cleanId(input.mechanicalPartCatalogId),
             technicalDetailCatalogId: cleanId(input.technicalDetailCatalogId),
             executionStatus: "OPEN" as any,
+            priority: (cleanId(input.priority) ?? "NORMAL") as any,
             openedAt: now,
             updatedAt: now,
         } as any,
@@ -372,6 +374,7 @@ export async function startTechnicalIssue(input: {
     actorId?: string | null;
     actorName?: string | null;
     technicalDetailCatalogId?: string | null;
+    replacementPartCodes?: string[];
     actionMode?: string | null;
     vendorId?: string | null;
     estimatedCost?: unknown;
@@ -399,9 +402,14 @@ export async function startTechnicalIssue(input: {
         technicalDetailCatalogId: input.technicalDetailCatalogId,
         area: (issue as any).area,
     });
+    const allowedReplacementPartCodes = new Set(["MOVEMENT_COMPLETE", "MAINSPRING", "GEAR", "BALANCE_WHEEL", "BALANCE_STAFF", "HAIRSPRING"]);
+    const replacementPartCodes = Array.from(new Set((input.replacementPartCodes ?? []).filter((code) => allowedReplacementPartCodes.has(code))));
 
     if (!detail?.id) {
         throw new Error("Vui lòng chọn chi tiết kỹ thuật trước khi bắt đầu xử lý.");
+    }
+    if (detail.code === "MOVEMENT_REPLACE_PARTS" && !replacementPartCodes.length) {
+        throw new Error("Vui lòng chọn ít nhất một linh kiện máy cần thay.");
     }
 
     const vendorId = cleanId(input.vendorId);
@@ -438,7 +446,7 @@ export async function startTechnicalIssue(input: {
         technicalIssueId: id,
         event: "TECHNICAL_ISSUE_STARTED",
         actorUserId: cleanId(input.actorId),
-        note: "Technical Issue đã bắt đầu xử lý",
+        note: `Technical Issue đã bắt đầu xử lý: ${detail.name}`,
     });
     if (cleanText(input.vendorChangeNote)) {
         await syncTechnicalIssueToTasks(prisma as any, {
@@ -458,6 +466,7 @@ export async function startTechnicalIssue(input: {
             actionMode,
             vendorId,
             technicalDetailCatalogId: detail.id,
+            replacementPartCodes,
             estimatedCost: decimalOrNull(input.estimatedCost),
             startedNote: cleanText(input.startedNote),
             vendorChangeNote: cleanText(input.vendorChangeNote),

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
     ArrowDownToLine,
+    ArrowDownLeft,
     ArrowUpRight,
     Check,
     ChevronDown,
@@ -24,6 +25,13 @@ import type {
 } from "../business-list.types";
 
 type WidgetProps = { data: BusinessListDashboardData };
+
+const CASH_FLOW_PERIODS = [
+    { key: "WEEK", label: "Tuần này" },
+    { key: "MONTH", label: "Tháng này" },
+    { key: "YEAR", label: "Năm nay" },
+    { key: "ALL", label: "Toàn thời gian" },
+] as const;
 
 const toneClass: Record<BusinessListDashboardTone, string> = {
     slate: "bg-slate-500",
@@ -223,6 +231,48 @@ export function ValueTrendDashboardWidget({ data }: WidgetProps) {
     );
 }
 
+export function CashFlowDashboardWidget({ data }: WidgetProps) {
+    const cashFlow = data.cashFlow;
+    const income = cashFlow?.income ?? 0;
+    const expense = cashFlow?.expense ?? 0;
+    const totalFlow = Math.max(income + expense, 1);
+    return (
+        <DashboardWidgetCard>
+            <div className="flex items-center justify-between gap-2">
+                <h2 className="text-xs font-semibold text-slate-800">Tổng thu / Tổng chi</h2>
+                <select
+                    value={cashFlow?.period ?? "WEEK"}
+                    onChange={(event) => cashFlow?.onPeriodChange?.(event.target.value as NonNullable<typeof cashFlow>["period"])}
+                    className="h-8 max-w-[126px] rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-semibold text-slate-600 outline-none focus:border-slate-400"
+                    aria-label="Kỳ xem dòng tiền"
+                >
+                    {CASH_FLOW_PERIODS.map((period) => <option key={period.key} value={period.key}>{period.label}</option>)}
+                </select>
+            </div>
+            <div className="mt-4 space-y-2.5">
+                <div className="flex items-center gap-3">
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-emerald-50 text-emerald-600"><ArrowDownLeft className="h-3.5 w-3.5" /></span>
+                    <span className="min-w-0 flex-1 text-[11px] font-semibold text-slate-600">Tổng thu</span>
+                    <span className="shrink-0 whitespace-nowrap text-sm font-bold tabular-nums text-emerald-700">{formatCurrency(income)}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-rose-50 text-rose-600"><ArrowUpRight className="h-3.5 w-3.5" /></span>
+                    <span className="min-w-0 flex-1 text-[11px] font-semibold text-slate-600">Tổng chi</span>
+                    <span className="shrink-0 whitespace-nowrap text-sm font-bold tabular-nums text-rose-700">{formatCurrency(expense)}</span>
+                </div>
+                <div className="flex h-1.5 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
+                    <span className="bg-emerald-400" style={{ width: `${(income / totalFlow) * 100}%` }} />
+                    <span className="bg-rose-400" style={{ width: `${(expense / totalFlow) * 100}%` }} />
+                </div>
+            </div>
+            <div className="mt-3 flex items-end justify-between gap-3 border-t border-slate-100 pt-2.5">
+                <div className="min-w-0"><div className="text-[10px] text-slate-400">Dòng tiền thuần</div><div className={`mt-0.5 whitespace-nowrap text-sm font-extrabold tabular-nums ${(cashFlow?.net ?? 0) < 0 ? "text-rose-600" : "text-slate-900"}`}>{(cashFlow?.net ?? 0) > 0 ? "+" : ""}{formatCurrency(cashFlow?.net ?? 0)}</div></div>
+                <div className="shrink-0 text-right text-[10px] text-slate-400"><div>{cashFlow?.periodLabel}</div><div className="mt-0.5 font-semibold text-slate-600">{formatNumber(cashFlow?.transactionCount ?? 0)} giao dịch</div></div>
+            </div>
+        </DashboardWidgetCard>
+    );
+}
+
 export function StatusBreakdownDashboardWidget({ data }: WidgetProps) {
     return (
         <DashboardWidgetCard>
@@ -303,6 +353,13 @@ export const BUSINESS_LIST_DASHBOARD_WIDGET_REGISTRY: DashboardWidgetRegistry<
         scope: "SHARED",
         size: "1x1",
         component: ValueTrendDashboardWidget,
+    },
+    "cash-flow": {
+        key: "cash-flow",
+        label: "Tổng thu / Tổng chi",
+        scope: "PAYMENT",
+        size: "1x1",
+        component: CashFlowDashboardWidget,
     },
     "status-breakdown": {
         key: "status-breakdown",

@@ -447,10 +447,14 @@ export async function updateQueueItemWorkflowState(
   nextState: string,
   metadata?: Prisma.JsonObject | null,
 ) {
-  const binding = await findBusinessBindingById(db, bindingId);
+  let binding = await findBusinessBindingById(db, bindingId);
   if (!binding) throw new Error(`BusinessBinding "${bindingId}" was not found.`);
 
-  const runtime = getQueueItemWorkflowState(binding);
+  let runtime = getQueueItemWorkflowState(binding);
+  if (!runtime) {
+    binding = await ensureQueueItemWorkflowState(db, binding);
+    runtime = getQueueItemWorkflowState(binding);
+  }
   if (!runtime) {
     throw new Error(
       `BusinessBinding "${bindingId}" does not have workflowRuntime initialized.`,

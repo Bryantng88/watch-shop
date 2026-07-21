@@ -54,6 +54,13 @@ export const LEGACY_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
     knownConsumers: ["timeline", "projection"],
   }),
   defineBusinessEventContract({
+    key: "payment.exception_marked",
+    label: "Payment exception marked",
+    targetType: "PAYMENT",
+    group: "Payment",
+    knownConsumers: ["timeline", "coordination", "projection"],
+  }),
+  defineBusinessEventContract({
     key: "service_request.created",
     label: "Service request created",
     targetType: "SERVICE_REQUEST",

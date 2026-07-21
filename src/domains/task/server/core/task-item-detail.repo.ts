@@ -590,6 +590,9 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
             createdByUserId: true,
             assignedToUserId: true,
             taskItems: {
+              where: {
+                status: { not: "CANCELLED" },
+              },
               select: {
                 id: true,
                 title: true,

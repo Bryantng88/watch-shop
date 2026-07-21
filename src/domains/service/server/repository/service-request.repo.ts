@@ -1,4 +1,4 @@
-import { prisma, DB, dbOrTx } from "@/server/db/client";
+import { DB, dbOrTx } from "@/server/db/client";
 import {
   Prisma,
   ServiceRequestStatus,
@@ -7,6 +7,7 @@ import {
   ServiceType,
   ContentStatus,
 } from "@prisma/client";
+import { getPaymentOwnerSummaryProjections } from "@/domains/projection/server/payment-owner-summary.projection";
 
 export type ServiceRequestListRow = {
   id: string;
@@ -101,29 +102,17 @@ export async function getServiceRequestList(
   }
 
   const technicalIssueIds = Array.from(issueToServiceRequestId.keys());
-  const paymentRows = technicalIssueIds.length
-    ? await db.payment.findMany({
-      where: {
-        technical_issue_id: { in: technicalIssueIds },
-        type: "SERVICE" as any,
-        direction: "OUT" as any,
-      } as any,
-      select: { technical_issue_id: true, status: true, amount: true } as any,
-    })
-    : [];
+  const paymentSummaries = await getPaymentOwnerSummaryProjections(tx, "TECHNICAL_ISSUE", technicalIssueIds);
 
   const paymentByServiceRequestId = new Map<string, { paid: number; collected: number; unpaid: number; canceled: number }>();
-  for (const payment of paymentRows as any[]) {
-    const issueId = payment.technical_issue_id;
+  for (const [issueId, summary] of paymentSummaries) {
     const key = issueId ? issueToServiceRequestId.get(issueId) : null;
     if (!key) continue;
     const current = paymentByServiceRequestId.get(key) ?? { paid: 0, collected: 0, unpaid: 0, canceled: 0 };
-    const amount = Number(payment.amount ?? 0);
-    const status = String(payment.status ?? "").toUpperCase();
-    if (status === "PAID") current.paid += amount;
-    else if (status === "COLLECTED") current.collected += amount;
-    else if (status === "UNPAID") current.unpaid += amount;
-    else if (status === "CANCELED" || status === "CANCELLED") current.canceled += amount;
+    current.paid += summary.paidTotal;
+    current.collected += summary.collectedTotal;
+    current.unpaid += summary.unpaidTotal;
+    current.canceled += summary.canceledTotal;
     paymentByServiceRequestId.set(key, current);
   }
 
@@ -165,7 +154,7 @@ export async function getServiceRequestList(
       collectedAmount: payment.collected,
       unpaidPaymentAmount: payment.unpaid,
       canceledPaymentAmount: payment.canceled,
-      remainingAmount: Math.max(0, payableTotal - payment.paid),
+      remainingAmount: Math.max(0, payableTotal - payment.paid - payment.collected),
       orderItem: r.orderItem
         ? {
           id: r.orderItem.id,

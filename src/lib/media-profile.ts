@@ -21,6 +21,6 @@ export function getMediaProfileRoot(profile: MediaProfile) {
 
 export function resolveMediaPreviewSrc(value?: string | null) {
     if (!value) return null;
-    if (value.startsWith("http")) return value;
+    if (value.startsWith("http") || value.startsWith("/") || value.startsWith("data:") || value.startsWith("blob:")) return value;
     return `/api/media/sign?key=${encodeURIComponent(value)}`;
 }

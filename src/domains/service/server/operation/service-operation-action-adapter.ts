@@ -106,6 +106,12 @@ function optionalField(fields: Record<string, unknown>, key: string) {
   return clean(fields[key]) || null;
 }
 
+function stringArrayField(fields: Record<string, unknown>, key: string) {
+  const value = fields[key];
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => clean(item)).filter(Boolean);
+}
+
 function booleanField(fields: Record<string, unknown>, key: string, fallback = false) {
   const value = fields[key];
   if (typeof value === "boolean") return value;
@@ -434,6 +440,7 @@ export async function runServiceOperationBlueprintAction(
         actorId: input.actorUserId ?? null,
         actorName: input.actorName ?? null,
         technicalDetailCatalogId: requiredField(fields, "technicalDetailCatalogId"),
+        replacementPartCodes: stringArrayField(fields, "replacementPartCodes"),
         actionMode: actionModeField(fields, true) ?? "INTERNAL",
         vendorId: optionalField(fields, "vendorId"),
         estimatedCost: moneyField(fields, "estimatedCost", false),

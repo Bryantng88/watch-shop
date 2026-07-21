@@ -1,5 +1,4 @@
 import {
-  OrderStatus,
   PaymentDirection,
   PaymentMethod,
   PaymentPurpose,
@@ -8,8 +7,8 @@ import {
 } from "@prisma/client";
 
 import { prisma } from "@/server/db/client";
-import { syncWatchInventoryFromOrderId } from "@/domains/order/server/order-watch-sync.service";
 import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
+import { buildPaymentOwnerSummary, getPaymentOwnerSummaryProjection } from "@/domains/projection/server/payment-owner-summary.projection";
 import type {
   CreatePaymentInput,
   PaymentListItem,
@@ -60,11 +59,11 @@ export function resolvePaymentOwner(payment: any): {
   ownerType: PaymentOwnerType;
   ownerId: string;
 } {
+  if (payment.shipment_id) return { ownerType: "SHIPMENT", ownerId: payment.shipment_id };
   if (payment.order_id) return { ownerType: "ORDER", ownerId: payment.order_id };
   if (payment.acquisition_id) return { ownerType: "ACQUISITION", ownerId: payment.acquisition_id };
   if (payment.technical_issue_id) return { ownerType: "TECHNICAL_ISSUE", ownerId: payment.technical_issue_id };
   if (payment.service_request_id) return { ownerType: "SERVICE", ownerId: payment.service_request_id }; // legacy only
-  if (payment.shipment_id) return { ownerType: "SHIPMENT", ownerId: payment.shipment_id };
   throw new Error("Payment chưa có owner.");
 }
 
@@ -314,57 +313,12 @@ export async function createPaymentRowTx(
   });
 }
 
-async function recomputeOrderPaymentRollupTx(tx: Tx, orderId: string) {
-  const summary = await getPaymentSummaryTx(tx, "ORDER", orderId);
-
-  const order = await tx.order.findUnique({
-    where: { id: orderId },
-    select: {
-      id: true,
-      status: true,
-      hasShipment: true,
-      shipments: {
-        orderBy: { updatedAt: "desc" },
-        select: { status: true },
-      },
-    },
-  });
-
-  if (!order) throw new Error("Order không tồn tại.");
-  if (order.status === OrderStatus.CANCELLED) return summary;
-
-  const status = String(order.status ?? "").toUpperCase();
-  const lockedStatuses = ["RETURNING", "RETURNED"];
-  const fullyPaid = summary.totalDue > 0 && summary.paidTotal >= summary.totalDue;
-  const shipmentCompleted =
-    !order.hasShipment ||
-    (order.shipments ?? []).some(
-      (shipment) => String(shipment.status ?? "").toUpperCase() === "DELIVERED",
-    );
-
-  const completed = fullyPaid && shipmentCompleted && !lockedStatuses.includes(status);
-
-  await tx.order.update({
-    where: { id: orderId },
-    data: {
-      depositPaid: summary.depositRequired > 0 ? money(summary.depositPaid) : null,
-      paymentStatus: fullyPaid ? PaymentStatus.PAID : PaymentStatus.UNPAID,
-      status: completed ? OrderStatus.COMPLETED : order.status,
-      updatedAt: new Date(),
-    },
-  });
-
-  await syncWatchInventoryFromOrderId(tx, orderId);
-  return getPaymentSummaryTx(tx, "ORDER", orderId);
-}
-
 export async function recomputePaymentOwnerRollupTx(
   tx: Tx,
   ownerType: PaymentOwnerType,
   ownerId: string,
 ) {
-  if (ownerType === "ORDER") return recomputeOrderPaymentRollupTx(tx, ownerId);
-  return getPaymentSummaryTx(tx, ownerType, ownerId);
+  return buildPaymentOwnerSummary(tx, ownerType, ownerId);
 }
 
 export async function createPayment(input: CreatePaymentInput) {
@@ -449,6 +403,10 @@ export async function createPayment(input: CreatePaymentInput) {
       ownerId: payment.ownerId ?? input.ownerId,
       status: payment.status ?? PaymentStatus.UNPAID,
       amount: payment.amount ?? null,
+      direction: payment.direction ?? null,
+      type: payment.type ?? null,
+      purpose: payment.purpose ?? null,
+      currency: payment.currency ?? "VND",
       sourceId: `${payment.id}:payment.created`,
     },
   });
@@ -459,6 +417,7 @@ export async function createPayment(input: CreatePaymentInput) {
 export async function completePayment(input: {
   paymentId: string;
   paidAt?: Date | string | null;
+  method?: string | null;
   reference?: string | null;
   note?: string | null;
 }) {
@@ -485,10 +444,11 @@ export async function completePayment(input: {
     }
 
     const owner = resolvePaymentOwner(payment);
-    await tx.payment.update({
+    const updatedPayment = await tx.payment.update({
       where: { id: payment.id },
       data: {
         status: PaymentStatus.PAID,
+        method: input.method ? (input.method as PaymentMethod) : undefined,
         paidAt: input.paidAt ? new Date(input.paidAt) : new Date(),
         reference: input.reference ?? undefined,
         note: input.note ?? undefined,
@@ -497,7 +457,17 @@ export async function completePayment(input: {
     });
 
     const summary = await recomputePaymentOwnerRollupTx(tx, owner.ownerType, owner.ownerId);
-    return toPlain({ paymentId: payment.id, ownerType: owner.ownerType, ownerId: owner.ownerId, summary });
+    return toPlain({
+      paymentId: payment.id,
+      ownerType: owner.ownerType,
+      ownerId: owner.ownerId,
+      direction: updatedPayment.direction,
+      amount: updatedPayment.amount,
+      currency: updatedPayment.currency,
+      method: updatedPayment.method,
+      occurredAt: updatedPayment.paidAt,
+      summary,
+    });
   });
 
   await recordBusinessEvent(prisma, {
@@ -508,6 +478,12 @@ export async function completePayment(input: {
       ownerType: result.ownerType,
       ownerId: result.ownerId,
       status: PaymentStatus.PAID,
+      direction: result.direction,
+      amount: result.amount,
+      currency: result.currency,
+      method: result.method,
+      occurredAt: result.occurredAt,
+      summary: result.summary,
       sourceId: `${result.paymentId}:payment.status_updated:PAID`,
     },
   });
@@ -520,6 +496,12 @@ export async function completePayment(input: {
       ownerType: result.ownerType,
       ownerId: result.ownerId,
       status: PaymentStatus.PAID,
+      direction: result.direction,
+      amount: result.amount,
+      currency: result.currency,
+      method: result.method,
+      occurredAt: result.occurredAt,
+      summary: result.summary,
       sourceId: `${result.paymentId}:payment.paid`,
     },
   });
@@ -567,6 +549,7 @@ export async function cancelPayment(input: { paymentId: string; note?: string | 
       ownerType: result.ownerType,
       ownerId: result.ownerId,
       status: "CANCELED",
+      summary: result.summary,
       sourceId: `${result.paymentId}:payment.status_updated:CANCELED`,
     },
   });
@@ -579,5 +562,5 @@ export async function listPayments(ownerType: PaymentOwnerType, ownerId: string)
 }
 
 export async function getPaymentSummary(ownerType: PaymentOwnerType, ownerId: string) {
-  return prisma.$transaction(async (tx) => toPlain(await getPaymentSummaryTx(tx, ownerType, ownerId)));
+  return toPlain(await getPaymentOwnerSummaryProjection(prisma, ownerType, ownerId));
 }

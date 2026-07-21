@@ -1,4 +1,5 @@
 import type { DB } from "@/server/db/client";
+import { PaymentMethod } from "@prisma/client";
 import {
   operationalBlueprintForWorkType,
   selectOperationalActionsForWorkspaceRole,
@@ -6,6 +7,7 @@ import {
 import { parseWorkspaceDefinitionSnapshot } from "@/domains/blueprint/shared/workspace-capabilities";
 import { findBusinessBindingsByTaskItem } from "@/domains/task/server/business-binding.repo";
 import { completePayment } from "./payment.core";
+import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
 
 export type PaymentOperationActionAdapterResult = {
   ok: boolean;
@@ -40,7 +42,10 @@ function noteValue(note: string | null | undefined, key: string) {
 }
 
 function paymentCollectionWorkspaceRoleFromNote(note?: string | null) {
-  return noteValue(note, "paymentCollectionWorkspaceRole")?.toUpperCase() ?? null;
+  return (
+    noteValue(note, "operationWorkspaceRole") ??
+    noteValue(note, "paymentCollectionWorkspaceRole")
+  )?.toUpperCase() ?? null;
 }
 
 function workTypeKeyFromNote(note?: string | null) {
@@ -115,6 +120,76 @@ export async function runPaymentOperationBlueprintAction(
     return { ok: false, actionKey, error: "ACTION_NOT_AVAILABLE_FOR_WORKSPACE" };
   }
 
+  if (action.command === "payment.reviewPayment") {
+    if (targetType !== "PAYMENT" || !targetId) {
+      return { ok: false, actionKey, error: "PAYMENT_TARGET_REQUIRED" };
+    }
+    try {
+      const reviewFields = input.fields ?? {};
+      const method = optionalField(reviewFields, "method");
+      const transactionReference = optionalField(reviewFields, "transactionReference");
+      await db.payment.update({
+        where: { id: targetId },
+        data: {
+          method: method ? (method as PaymentMethod) : undefined,
+          reference: transactionReference ?? undefined,
+          updatedAt: new Date(),
+        },
+      });
+      await recordBusinessEvent(db, {
+        eventKey: "payment.status_updated",
+        targetType: "PAYMENT",
+        targetId,
+        actorUserId: input.actorUserId ?? null,
+        payload: {
+          status: "IN_REVIEW",
+          reviewedAmount: optionalField(reviewFields, "reviewedAmount"),
+          method,
+          occurredAt: optionalField(reviewFields, "occurredAt"),
+          transactionReference,
+          counterparty: optionalField(reviewFields, "counterparty"),
+          contact: optionalField(reviewFields, "contact"),
+          reconciliationResult: optionalField(reviewFields, "reconciliationResult"),
+          evidenceReference: optionalField(reviewFields, "evidenceReference"),
+          followUpDueAt: optionalField(reviewFields, "followUpDueAt"),
+          reviewNote: optionalField(reviewFields, "reviewNote"),
+          sourceId: `${targetId}:payment.status_updated:IN_REVIEW`,
+        },
+      });
+      return { ok: true, actionKey, paymentId: targetId };
+    } catch (error) {
+      return { ok: false, actionKey, paymentId: targetId, error: error instanceof Error ? error.message : "PAYMENT_REVIEW_FAILED" };
+    }
+  }
+
+  if (action.command === "payment.markException") {
+    if (targetType !== "PAYMENT" || !targetId) {
+      return { ok: false, actionKey, error: "PAYMENT_TARGET_REQUIRED" };
+    }
+    const reason = optionalField(input.fields ?? {}, "reason");
+    if (!reason) return { ok: false, actionKey, paymentId: targetId, error: "PAYMENT_EXCEPTION_REASON_REQUIRED" };
+    try {
+      await db.payment.update({
+        where: { id: targetId },
+        data: { note: reason, updatedAt: new Date() },
+      });
+      await recordBusinessEvent(db, {
+        eventKey: "payment.exception_marked",
+        targetType: "PAYMENT",
+        targetId,
+        actorUserId: input.actorUserId ?? null,
+        payload: {
+          status: "EXCEPTION",
+          reason,
+          sourceId: `${targetId}:payment.exception_marked:${Date.now()}`,
+        },
+      });
+      return { ok: true, actionKey, paymentId: targetId, result: { exception: true } };
+    } catch (error) {
+      return { ok: false, actionKey, paymentId: targetId, error: error instanceof Error ? error.message : "PAYMENT_EXCEPTION_FAILED" };
+    }
+  }
+
   if (action.command !== "payment.completePayment") {
     return {
       ok: false,
@@ -129,11 +204,77 @@ export async function runPaymentOperationBlueprintAction(
 
   try {
     const fields = input.fields ?? {};
+    const isReconciliation = action.key === "reconcile_payment";
+    if (isReconciliation) {
+      const reviewedAmount = Number(fields.reviewedAmount);
+      const reviewedMethod = optionalField(fields, "method");
+      const counterparty = optionalField(fields, "counterparty");
+      const payment = await db.payment.findUnique({ where: { id: targetId }, select: { amount: true } });
+      if (!payment || !Number.isFinite(reviewedAmount) || reviewedAmount < 0 || !reviewedMethod || !counterparty) {
+        return { ok: false, actionKey, paymentId: targetId, error: "INVALID_RECONCILIATION_AMOUNT" };
+      }
+      const reconciliationResult = optionalField(fields, "reconciliationResult");
+      if (reviewedAmount !== Number(payment.amount) && reconciliationResult === "MATCHED") {
+        return { ok: false, actionKey, paymentId: targetId, error: "PAYMENT_RECONCILIATION_NOT_MATCHED" };
+      }
+      if (reconciliationResult !== "MATCHED") {
+        await db.payment.update({
+          where: { id: targetId },
+          data: {
+            method: reviewedMethod as PaymentMethod,
+            reference: optionalField(fields, "transactionReference") ?? undefined,
+            updatedAt: new Date(),
+          },
+        });
+        await recordBusinessEvent(db, {
+          eventKey: "payment.status_updated",
+          targetType: "PAYMENT",
+          targetId,
+          actorUserId: input.actorUserId ?? null,
+          payload: {
+            status: "REVIEW_FOLLOW_UP",
+            reviewedAmount: optionalField(fields, "reviewedAmount"),
+            method: optionalField(fields, "method"),
+            occurredAt: optionalField(fields, "occurredAt"),
+            transactionReference: optionalField(fields, "transactionReference"),
+            counterparty: optionalField(fields, "counterparty"),
+            contact: optionalField(fields, "contact"),
+            reconciliationResult,
+            evidenceReference: optionalField(fields, "evidenceReference"),
+            followUpDueAt: optionalField(fields, "followUpDueAt"),
+            reviewNote: optionalField(fields, "reviewNote"),
+            sourceId: `${targetId}:payment.status_updated:REVIEW_FOLLOW_UP:${Date.now()}`,
+          },
+        });
+        return { ok: true, actionKey, paymentId: targetId, result: { reconciliationResult, settled: false } };
+      }
+      await recordBusinessEvent(db, {
+        eventKey: "payment.status_updated",
+        targetType: "PAYMENT",
+        targetId,
+        actorUserId: input.actorUserId ?? null,
+        payload: {
+          status: "RECONCILED",
+          reviewedAmount: optionalField(fields, "reviewedAmount"),
+          method: optionalField(fields, "method"),
+          occurredAt: optionalField(fields, "occurredAt"),
+          transactionReference: optionalField(fields, "transactionReference"),
+          counterparty: optionalField(fields, "counterparty"),
+          contact: optionalField(fields, "contact"),
+          reconciliationResult: optionalField(fields, "reconciliationResult"),
+          evidenceReference: optionalField(fields, "evidenceReference"),
+          followUpDueAt: optionalField(fields, "followUpDueAt"),
+          reviewNote: optionalField(fields, "reviewNote"),
+          sourceId: `${targetId}:payment.status_updated:RECONCILED:${Date.now()}`,
+        },
+      });
+    }
     const result = await completePayment({
       paymentId: targetId,
-      paidAt: optionalField(fields, "paidAt"),
-      reference: optionalField(fields, "reference"),
-      note: optionalField(fields, "settlementNote"),
+      paidAt: optionalField(fields, isReconciliation ? "occurredAt" : "paidAt"),
+      method: optionalField(fields, "method"),
+      reference: optionalField(fields, isReconciliation ? "transactionReference" : "reference"),
+      note: optionalField(fields, isReconciliation ? "reviewNote" : "settlementNote"),
     });
 
     return { ok: true, actionKey, paymentId: targetId, result };

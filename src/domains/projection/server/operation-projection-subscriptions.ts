@@ -1,5 +1,6 @@
 import {
   operationalBlueprintForWorkType,
+  type OperationalBlueprintContract,
   type OperationalBlueprintProjectionSubscription,
 } from "@/domains/blueprint/shared/operational-blueprint";
 
@@ -22,7 +23,11 @@ function operationContracts() {
       workTypeKey: "service-operation",
       coordinationContext: "TECHNICAL",
     }),
-  ].filter(Boolean);
+    operationalBlueprintForWorkType({
+      workTypeKey: "payment",
+      coordinationContext: "PAYMENT",
+    }),
+  ].filter((contract): contract is OperationalBlueprintContract => Boolean(contract));
 }
 
 export function listOperationalProjectionSubscriptionsForEvent(input: {

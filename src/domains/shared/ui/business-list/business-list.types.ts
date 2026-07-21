@@ -69,6 +69,15 @@ export type BusinessListDashboardData = {
         label: string;
         items: BusinessListActivityItem[];
     };
+    cashFlow?: {
+        period: "WEEK" | "MONTH" | "YEAR" | "ALL";
+        periodLabel: string;
+        income: number;
+        expense: number;
+        net: number;
+        transactionCount: number;
+        onPeriodChange?: (period: "WEEK" | "MONTH" | "YEAR" | "ALL") => void;
+    };
 };
 
 export type BusinessListDashboardView = {
@@ -81,6 +90,7 @@ export type BusinessListDashboardWidgetKey =
     | "value-trend"
     | "status-breakdown"
     | "recent-activity"
+    | "cash-flow"
     | "watch-media"
     | "watch-service"
     | "watch-readiness"

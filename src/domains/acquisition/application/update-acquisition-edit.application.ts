@@ -1,15 +1,9 @@
 "use server";
 
-import {
-    PaymentDirection,
-    PaymentMethod,
-    PaymentStatus,
-    Prisma,
-    ProductType,
-} from "@prisma/client";
+import { Prisma, ProductType } from "@prisma/client";
 
 import { prisma, type DB } from "@/server/db/client";
-import { buildPaymentRef, money, toNumber, type Tx } from "@/domains/payment/server";
+import { publishPaymentMutations, syncAcquisitionPaymentDueTx, type PaymentMutation, type Tx } from "@/domains/payment/server";
 import {
     getAiMetaFromDescription,
     stringifyAcquisitionItemMeta,
@@ -93,106 +87,6 @@ async function recomputeAcquisitionTotalTx(tx: DB, acquisitionId: string) {
     });
 
     return total;
-}
-
-async function buildPaymentRefSafe(tx: Tx) {
-    try {
-        return await buildPaymentRef(tx);
-    } catch {
-        return null;
-    }
-}
-
-async function syncPostedAcquisitionPaymentTx(
-    tx: Tx,
-    input: { acquisitionId: string; totalAmount: number; currency?: string | null },
-) {
-    const totalAmount = normalizeCost(input.totalAmount);
-
-    const payments = await tx.payment.findMany({
-        where: {
-            acquisition_id: input.acquisitionId,
-            direction: PaymentDirection.OUT,
-            status: { in: [PaymentStatus.PAID, PaymentStatus.UNPAID, PaymentStatus.COLLECTED] as any },
-        },
-        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-        select: {
-            id: true,
-            amount: true,
-            status: true,
-            method: true,
-            currency: true,
-        },
-    });
-
-    const paidTotal = payments
-        .filter((payment) => payment.status === PaymentStatus.PAID || String(payment.status) === "COLLECTED")
-        .reduce((sum, payment) => sum + toNumber(payment.amount), 0);
-
-    if (paidTotal > totalAmount) {
-        throw new Error(
-            `Tổng payment đã thanh toán (${Math.round(paidTotal).toLocaleString("vi-VN")} VND) đang lớn hơn tổng phiếu mới (${Math.round(totalAmount).toLocaleString("vi-VN")} VND). Cần xử lý hoàn/hủy payment trước khi giảm giá trị phiếu.`,
-        );
-    }
-
-    const targetUnpaid = Math.max(0, totalAmount - paidTotal);
-    const unpaidPayments = payments.filter((payment) => payment.status === PaymentStatus.UNPAID);
-    const [primaryUnpaid, ...extraUnpaid] = unpaidPayments;
-
-    if (targetUnpaid <= 0) {
-        if (unpaidPayments.length) {
-            await tx.payment.updateMany({
-                where: { id: { in: unpaidPayments.map((payment) => payment.id) } },
-                data: {
-                    status: PaymentStatus.CANCELED,
-                    note: "Payment UNPAID được hủy tự động vì tổng phiếu đã được thanh toán đủ sau khi chỉnh acquisition.",
-                    updatedAt: new Date(),
-                },
-            });
-        }
-        return;
-    }
-
-    if (primaryUnpaid) {
-        await tx.payment.update({
-            where: { id: primaryUnpaid.id },
-            data: {
-                amount: money(targetUnpaid),
-                currency: input.currency ?? primaryUnpaid.currency ?? "VND",
-                note: "Payment UNPAID được đồng bộ theo tổng giá trị phiếu nhập sau chỉnh sửa.",
-                updatedAt: new Date(),
-            },
-        });
-
-        if (extraUnpaid.length) {
-            await tx.payment.updateMany({
-                where: { id: { in: extraUnpaid.map((payment) => payment.id) } },
-                data: {
-                    status: PaymentStatus.CANCELED,
-                    note: "Payment UNPAID dư được hủy tự động sau khi đồng bộ acquisition.",
-                    updatedAt: new Date(),
-                },
-            });
-        }
-
-        return;
-    }
-
-    await tx.payment.create({
-        data: {
-            refNo: await buildPaymentRefSafe(tx),
-            acquisition_id: input.acquisitionId,
-            direction: PaymentDirection.OUT,
-            type: "ACQUISITION" as any,
-            purpose: "ACQUISITION_FULL" as any,
-            method: PaymentMethod.BANK_TRANSFER,
-            amount: money(targetUnpaid),
-            currency: input.currency ?? "VND",
-            status: PaymentStatus.UNPAID,
-            paidAt: null,
-            note: "Payment UNPAID bổ sung do chỉnh giá trị phiếu nhập đã POSTED.",
-        } as any,
-    });
 }
 
 async function updateDraftItemsTx(
@@ -283,7 +177,7 @@ async function updatePostedItemCostsTx(
 }
 
 export async function updateAcquisitionEditApplication(input: UpdateAcquisitionEditInput) {
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
         const db = tx as unknown as DB;
         const acquisition = await db.acquisition.findUnique({
             where: { id: input.acquisitionId },
@@ -316,8 +210,9 @@ export async function updateAcquisitionEditApplication(input: UpdateAcquisitionE
 
         const total = await recomputeAcquisitionTotalTx(db, input.acquisitionId);
 
+        let paymentMutations: PaymentMutation[] = [];
         if (status === "POSTED") {
-            await syncPostedAcquisitionPaymentTx(tx as unknown as Tx, {
+            paymentMutations = await syncAcquisitionPaymentDueTx(tx as unknown as Tx, {
                 acquisitionId: input.acquisitionId,
                 totalAmount: total,
                 currency: acquisition.currency,
@@ -329,6 +224,9 @@ export async function updateAcquisitionEditApplication(input: UpdateAcquisitionE
             acquisitionId: input.acquisitionId,
             status,
             totalAmount: total,
+            paymentMutations,
         };
     });
+    await publishPaymentMutations(result.paymentMutations);
+    return result;
 }

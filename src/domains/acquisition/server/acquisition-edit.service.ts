@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/server/db/client";
+import { getPaymentOwnerSummaryProjection } from "@/domains/projection/server/payment-owner-summary.projection";
 import {
     getAiMetaFromDescription,
 } from "../shared/acquisition-item-metadata";
@@ -71,23 +72,7 @@ export async function getAcquisitionEditDetail(acquisitionId: string) {
         };
     });
 
-    const paid = await prisma.payment.aggregate({
-        where: {
-            acquisition_id: acquisitionId,
-            direction: "OUT" as any,
-            status: "PAID" as any,
-        },
-        _sum: { amount: true },
-    });
-
-    const unpaid = await prisma.payment.aggregate({
-        where: {
-            acquisition_id: acquisitionId,
-            direction: "OUT" as any,
-            status: "UNPAID" as any,
-        },
-        _sum: { amount: true },
-    });
+    const paymentSummary = await getPaymentOwnerSummaryProjection(prisma, "ACQUISITION", acquisitionId);
 
     return {
         id: acquisition.id,
@@ -99,8 +84,8 @@ export async function getAcquisitionEditDetail(acquisitionId: string) {
         type: acquisition.type,
         notes: acquisition.notes ?? "",
         totalAmount: toNumber(acquisition.totalAmount),
-        paidAmount: toNumber(paid._sum.amount),
-        unpaidAmount: toNumber(unpaid._sum.amount),
+        paidAmount: paymentSummary.paidTotal + paymentSummary.collectedTotal,
+        unpaidAmount: paymentSummary.unpaidTotal,
         items,
     };
 }

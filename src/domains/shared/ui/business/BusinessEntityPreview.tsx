@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import {
     ExternalLink,
     ImageIcon,
     Loader2,
     X,
+    ZoomIn,
 } from "lucide-react";
 import type {
     BusinessEntityPreview,
@@ -84,6 +85,17 @@ export function BusinessEntityPreviewModal({
     error?: string | null;
     onClose: () => void;
 }) {
+    const [imageOpen, setImageOpen] = useState(false);
+
+    useEffect(() => {
+        if (!open || !imageOpen) return;
+        const closeOnEscape = (event: KeyboardEvent) => {
+            if (event.key === "Escape") setImageOpen(false);
+        };
+        window.addEventListener("keydown", closeOnEscape);
+        return () => window.removeEventListener("keydown", closeOnEscape);
+    }, [imageOpen, open]);
+
     if (!open) return null;
 
     return (
@@ -129,12 +141,11 @@ export function BusinessEntityPreviewModal({
                             <div className="flex gap-3">
                                 <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
                                     {preview.imageUrl ? (
-                                        // eslint-disable-next-line @next/next/no-img-element
-                                        <img
-                                            src={preview.imageUrl}
-                                            alt={preview.title}
-                                            className="h-full w-full object-cover"
-                                        />
+                                        <button type="button" onClick={() => setImageOpen(true)} className="group/image relative h-full w-full cursor-zoom-in" aria-label="Phóng lớn ảnh">
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img src={preview.imageUrl} alt={preview.title} className="h-full w-full object-cover transition group-hover/image:scale-105" />
+                                            <span className="absolute inset-0 grid place-items-center bg-slate-950/0 text-white opacity-0 transition group-hover/image:bg-slate-950/30 group-hover/image:opacity-100"><ZoomIn className="h-5 w-5" /></span>
+                                        </button>
                                     ) : (
                                         <ImageIcon className="h-5 w-5 text-slate-400" />
                                     )}
@@ -295,6 +306,13 @@ export function BusinessEntityPreviewModal({
                     )}
                 </div>
             </div>
+            {imageOpen && preview?.imageUrl ? (
+                <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/90 p-4 sm:p-8" onClick={(event) => { event.stopPropagation(); setImageOpen(false); }}>
+                    <button type="button" onClick={() => setImageOpen(false)} className="absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-white/10 text-white backdrop-blur transition hover:bg-white/20" aria-label="Đóng ảnh phóng lớn"><X className="h-6 w-6" /></button>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={preview.imageUrl} alt={preview.title} onClick={(event) => event.stopPropagation()} className="max-h-full max-w-full rounded-xl object-contain shadow-2xl" />
+                </div>
+            ) : null}
         </div>
     );
 }
