@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Folder,
   Images,
+  Loader2,
   MessageSquareText,
   MoreHorizontal,
   Plus,
@@ -1084,20 +1085,25 @@ export function QueueWorkQueue({
   const appProgress = useAppProgress();
   const isServiceOperationWorkspace = workspaceWorkTypeKey === "service-operation";
   const canCreateTechnicalIssue = Boolean(serviceRequestId);
-  const filters: Array<{ key: QueueFilter; label: string }> = isServiceOperationWorkspace
+  const statusCount = (status: QueueItemStatus) => items.filter(
+    (item) => normalizeQueueStatusForWorkspace(item.status, workspaceWorkTypeKey) === status,
+  ).length;
+  const workflowStateCount = (state: string) => items.filter(
+    (item) => item.currentWorkflowState === state,
+  ).length;
+  const filters: Array<{ key: QueueFilter; label: string; count: number }> = isServiceOperationWorkspace
     ? [
-      { key: "ALL", label: "All" },
-      { key: "WF:INSPECT", label: "Inspect" },
-      { key: "WF:READY", label: "Ready" },
-      { key: "WF:IN_PROGRESS", label: "In Progress" },
-      { key: "WF:DONE", label: "Done" },
+      { key: "ALL", label: "Tất cả", count: items.length },
+      { key: "WF:INSPECT", label: "Kiểm tra", count: workflowStateCount("INSPECT") },
+      { key: "WF:READY", label: "Sẵn sàng", count: workflowStateCount("READY") },
+      { key: "WF:IN_PROGRESS", label: "Đang xử lý", count: workflowStateCount("IN_PROGRESS") },
+      { key: "WF:DONE", label: "Hoàn tất", count: workflowStateCount("DONE") },
     ]
     : [
-      { key: "ALL", label: "All" },
-      { key: "WAITING", label: "Waiting" },
-      { key: "IN_PROGRESS", label: "In Progress" },
-      { key: "RETURNED", label: "Trả về" },
-      { key: "DONE", label: "Done" },
+      { key: "ALL", label: "Tất cả", count: items.length },
+      { key: "WAITING", label: "Cần xử lý", count: statusCount("WAITING") },
+      { key: "IN_PROGRESS", label: "Đang xử lý", count: statusCount("IN_PROGRESS") },
+      { key: "DONE", label: "Hoàn tất", count: statusCount("DONE") },
     ];
   const visibleItems = filter === "ALL"
     ? items
@@ -1547,17 +1553,96 @@ export function QueueWorkQueue({
   const applyBulkManualAction = () => {
     if (!selectedTransitions.length) return;
 
+    const isBulkPhotoshootCompletion =
+      workspaceWorkTypeKey === "photography" &&
+      selectedTransitions.every(({ transition }) => transition.actionKey === "mark-done");
+    const selectedCount = selectedTransitions.length;
+    let bulkProgressSteps: AppProgressStep[] = [
+      {
+        id: "complete",
+        label: `Hoàn tất ${selectedCount} Photoshoot Items`,
+        detail: "Đang ghi nhận kết quả chụp ảnh cho các watch đã chọn.",
+        status: "running",
+      },
+      {
+        id: "media-workspace",
+        label: "Đồng bộ Space Media",
+        detail: "Chờ chuyển các watch sang Workspace Xử lý Media.",
+        status: "pending",
+      },
+      {
+        id: "refresh",
+        label: "Làm mới Workspace",
+        detail: "Chờ cập nhật lại danh sách Photoshoot Items.",
+        status: "pending",
+      },
+    ];
+    const setBulkProgressStep = (
+      stepId: string,
+      status: AppProgressStep["status"],
+      detail?: string,
+    ) => {
+      bulkProgressSteps = bulkProgressSteps.map((step) =>
+        step.id === stepId ? { ...step, status, detail: detail ?? step.detail } : step,
+      );
+      appProgress.update({ steps: bulkProgressSteps });
+    };
+
     setPendingId("bulk");
+    setActionError(null);
+    if (isBulkPhotoshootCompletion) {
+      appProgress.show({
+        title: "Đang hoàn tất Photoshoot",
+        message: `Đang xử lý ${selectedCount} item đã chọn.`,
+        percent: 10,
+        steps: bulkProgressSteps,
+      });
+    }
     startTransition(async () => {
       try {
-        await applyQueueItemManualTransitionsAction({
+        const result = await applyQueueItemManualTransitionsAction({
           items: selectedTransitions.map(({ queueItem, transition }) => ({
             bindingId: queueItem.id,
             actionKey: transition.actionKey,
           })),
         });
+        if (!result.ok) {
+          throw new Error(`${result.failed}/${selectedCount} Photoshoot Items không thể hoàn tất.`);
+        }
+        if (isBulkPhotoshootCompletion) {
+          setBulkProgressStep("complete", "done", `Đã hoàn tất ${selectedCount} Photoshoot Items.`);
+          setBulkProgressStep("media-workspace", "running", "Đang đồng bộ các watch sang Space Media.");
+          appProgress.update({ percent: 70 });
+          setBulkProgressStep("media-workspace", "done", "Space Media đã nhận trạng thái mới.");
+          setBulkProgressStep("refresh", "running", "Đang làm mới danh sách Photoshoot Items.");
+          appProgress.update({ percent: 90 });
+        }
         setSelectedIds([]);
         router.refresh();
+        if (isBulkPhotoshootCompletion) {
+          setBulkProgressStep("refresh", "done", "Workspace đã được cập nhật.");
+          appProgress.update({
+            title: "Hoàn tất Photoshoot thành công",
+            message: `Đã chuyển ${selectedCount} watch sang bước Xử lý Media.`,
+            percent: 100,
+            steps: bulkProgressSteps,
+          });
+          window.setTimeout(() => appProgress.hide(), 2200);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Không thể cập nhật workflow.";
+        setActionError({ itemId: "bulk", message });
+        if (isBulkPhotoshootCompletion) {
+          bulkProgressSteps = bulkProgressSteps.map((step) =>
+            step.status === "running" ? { ...step, status: "error", detail: message } : step,
+          );
+          appProgress.update({
+            title: "Không thể hoàn tất Photoshoot",
+            message,
+            steps: bulkProgressSteps,
+          });
+          window.setTimeout(() => appProgress.hide(), 5000);
+        }
       } finally {
         setPendingId(null);
       }
@@ -1638,7 +1723,12 @@ export function QueueWorkQueue({
                   onClick={applyBulkManualAction}
                   className="inline-flex h-9 items-center rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isBulkPending ? "Đang xử lý" : bulkLabel}
+                  {isBulkPending ? (
+                    <>
+                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                      Đang xử lý
+                    </>
+                  ) : bulkLabel}
                 </button>
               </div>
             ) : null}
@@ -1659,7 +1749,15 @@ export function QueueWorkQueue({
                           : "text-slate-500 hover:text-slate-900",
                       )}
                     >
-                      {item.label}
+                      <span>{item.label}</span>
+                      <span
+                        className={cn(
+                          "ml-1.5 tabular-nums",
+                          active ? "text-blue-500" : "text-slate-400",
+                        )}
+                      >
+                        {item.count}
+                      </span>
                     </button>
                   );
                 })}

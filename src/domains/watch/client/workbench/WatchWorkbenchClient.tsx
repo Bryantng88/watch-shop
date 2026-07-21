@@ -2,12 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { submitWatchForm } from "../form/watch-form.actions";
 import { mapWatchDetailToFormValues } from "../form/watch-form.mapper";
-import { markWatchMediaAssetAttachedFromWatchAction } from "../media-work/watch-media-work.actions";
 import { saveWatchWorkbenchPricingAction } from "./watch-workbench.actions";
 import PriceBlock from "../../ui/operations/price/PriceBlock";
 import SpecBlock from "../../ui/operations/spec/SpecBlock";
@@ -75,10 +73,10 @@ function withTimeout<T>(work: Promise<T>, timeoutMs: number, message: string) {
 export default function WatchWorkbenchClient({
     projection,
     permissions,
+    postTargets,
 }: WatchWorkbenchProps) {
     const { detail, service: serviceProjection, tradeHistory } = projection;
     const router = useRouter();
-    const dialog = useAppDialog();
     const progress = useAppProgress();
     const notify = useNotify();
     const initialValues = useMemo(() => mapWatchDetailToFormValues(detail), [detail]);
@@ -190,65 +188,10 @@ export default function WatchWorkbenchClient({
 
     const title = titleForWatch(detail, values);
     const imageUrl = firstImageUrl(values, detail);
-    const mediaWorkspaceHref = `/admin/watches/${values.productId}/edit?embedded=1&mode=media`;
-    const hasActiveMediaWorkspaceItem = Boolean(
-        detail?.mediaWorkspace?.hasActiveItem,
-    );
-
+    const watchDetailHref = `/admin/watches/${values.productId}`;
+    const mediaWorkspaceHref = `/admin/watches/${values.productId}/edit?embedded=1&mode=media&returnTo=${encodeURIComponent(watchDetailHref)}`;
     const openMediaWorkspace = async () => {
         if (mediaWorkspaceOpening) return;
-
-        if (!hasActiveMediaWorkspaceItem) {
-            const accepted = await dialog.confirm({
-                title: "Đưa watch vào WP Media?",
-                message:
-                    "Watch này chưa có item Media Processing đang mở. Bạn có muốn đưa watch vào WP Media rồi mở workspace xử lý ảnh không?",
-                confirmText: "Đưa vào WP Media",
-                cancelText: "Hủy",
-                tone: "warning",
-            });
-
-            if (!accepted) return;
-
-            setMediaWorkspaceOpening(true);
-            progress.show({
-                title: "Đang đưa vào WP Media",
-                message: "Hệ thống đang tạo hoặc cập nhật item Media Processing cho watch này.",
-            });
-            try {
-                const result = await markWatchMediaAssetAttachedFromWatchAction({
-                    productId: values.productId,
-                    note: "Requested Media Workspace from Watch detail.",
-                });
-
-                if (result?.skipped) {
-                    notify.warning({
-                        title: "Chưa thể đưa vào WP Media",
-                        message:
-                            result.reason ?? "Không thể tạo hoặc cập nhật item Media Processing cho watch này.",
-                    });
-                    progress.hide();
-                    setMediaWorkspaceOpening(false);
-                    return;
-                }
-
-                notify.success({
-                    title: "Đã đưa vào WP Media",
-                    message: "Watch đã được đưa vào luồng Media Processing.",
-                });
-            } catch (error) {
-                notify.error({
-                    title: "Không mở được WP Media",
-                    message:
-                        error instanceof Error
-                            ? error.message
-                            : "Có lỗi khi đưa watch vào WP Media.",
-                });
-                progress.hide();
-                setMediaWorkspaceOpening(false);
-                return;
-            }
-        }
 
         setMediaWorkspaceOpening(true);
         progress.show({
@@ -294,7 +237,13 @@ export default function WatchWorkbenchClient({
                         onSave={savePricing}
                         saving={saving}
                     />
-                    <SpecBlock values={values} onChange={setValues} onSave={save} saving={saving} />
+                    <SpecBlock
+                        values={values}
+                        postTargets={postTargets}
+                        onChange={setValues}
+                        onSave={save}
+                        saving={saving}
+                    />
                     <ContentBlock
                         values={values}
                         detail={detail}

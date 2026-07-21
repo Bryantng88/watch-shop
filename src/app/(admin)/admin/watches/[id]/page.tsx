@@ -3,6 +3,7 @@ import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
 import {
     getWatchEditDetail,
+    listWatchMediaEditOptions,
     getWatchServiceProjectionDetail,
     getWatchTradeHistoryDetail,
 } from "@/domains/watch/server";
@@ -95,11 +96,12 @@ export default async function WatchDetailPage({
     const user = await requirePermission(PERMISSIONS.PRODUCT_VIEW);
     const { id } = await params;
 
-    const [detail, serviceProjection, tradeHistory] =
+    const [detail, serviceProjection, tradeHistory, editOptions] =
         await Promise.all([
             getWatchEditDetail(id),
             getWatchServiceProjectionDetail(id),
             getWatchTradeHistoryDetail(id),
+            listWatchMediaEditOptions(),
         ]);
 
     if (!detail) notFound();
@@ -120,6 +122,7 @@ export default async function WatchDetailPage({
                 canViewSensitivePrice: isAdmin,
                 canEditPrice: isAdmin,
             }}
+            postTargets={serialize(editOptions.postTargets ?? [])}
         />
     );
 }

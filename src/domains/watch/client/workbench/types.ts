@@ -9,6 +9,11 @@ export type WatchWorkbenchPermissions = {
 export type WatchWorkbenchProps = {
     projection: WatchDetailProjection;
     permissions: WatchWorkbenchPermissions;
+    postTargets: Array<{
+        id: string;
+        name: string;
+        platform?: string | null;
+    }>;
 };
 
 export type WatchWorkbenchSection =

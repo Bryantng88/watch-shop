@@ -16,6 +16,7 @@ import {
   emitWatchMediaRecalledEvent,
   emitWatchPhotoshootCompletedEvent,
   emitWatchPhotoshootRequestedEvent,
+  emitWatchPostedEvent,
   type WatchMediaPipelineEventPayloadInput,
 } from "@/domains/watch/server/events";
 import {
@@ -1265,6 +1266,70 @@ export async function recallWatchMediaFromPublishQueueItem(
     actorUserId: input.actorUserId ?? null,
     sourceId: `media-recalled:${binding.id}`,
     note: input.note ?? null,
+  });
+
+  return {
+    ok: true,
+    skipped: false,
+    event,
+    watchId: watch.id,
+    productId: watch.productId,
+  };
+}
+
+export async function completeWatchPublishFromQueueItem(
+  input: {
+    bindingId: string;
+    actorUserId?: string | null;
+    note?: string | null;
+  },
+  db: DB = prisma,
+) {
+  const bindingId = clean(input.bindingId);
+  if (!bindingId) return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
+
+  const binding = await db.taskExecution.findUnique({
+    where: { id: bindingId },
+    select: {
+      id: true,
+      targetType: true,
+      targetId: true,
+      taskItem: { select: { note: true } },
+    },
+  });
+
+  if (!binding) return { ok: false, skipped: true, reason: "BINDING_NOT_FOUND" };
+  if (binding.targetType !== TaskExecutionTargetType.WATCH) {
+    return { ok: true, skipped: true, reason: "NOT_WATCH_BINDING" };
+  }
+  if (!/workTypeKey:\s*publish/i.test(String(binding.taskItem?.note ?? ""))) {
+    return { ok: true, skipped: true, reason: "NOT_PUBLISH_WORKSPACE" };
+  }
+
+  const watch = await db.watch.findUnique({
+    where: { id: binding.targetId },
+    select: {
+      id: true,
+      productId: true,
+      saleStage: true,
+      product: {
+        select: {
+          title: true,
+          sku: true,
+          primaryImageUrl: true,
+          status: true,
+        },
+      },
+    },
+  });
+
+  if (!watch) return { ok: false, skipped: true, reason: "WATCH_NOT_FOUND" };
+
+  const event = await emitWatchPostedEvent(db, {
+    watch: toWatchEventSnapshot(watch),
+    actorUserId: input.actorUserId ?? null,
+    sourceId: `publish-posted:${binding.id}`,
+    note: input.note ?? "Watch đã được xác nhận đăng bài.",
   });
 
   return {

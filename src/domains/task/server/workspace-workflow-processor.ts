@@ -2,6 +2,7 @@ import type { DB } from "@/server/db/client";
 import {
   completeWatchMediaProcessingFromQueueItem,
   completeWatchPhotoshootFromQueueItem,
+  completeWatchPublishFromQueueItem,
   recallWatchMediaFromPublishQueueItem,
 } from "@/domains/watch/server/media-work";
 import type {
@@ -14,7 +15,8 @@ import { applyEventTriggerToQueueItem } from "./business-binding-workflow.servic
 type ProcessorEffectType =
   | "watch-photoshoot-completed"
   | "watch-media-ready-for-publish"
-  | "watch-media-recalled";
+  | "watch-media-recalled"
+  | "watch-posted";
 
 type ProcessorEffectStatus = "applied" | "skipped" | "failed";
 
@@ -189,6 +191,11 @@ export async function processManualWorkspaceWorkflowTransition(
           result: mediaProcessingResult,
         }),
       );
+    }
+
+    if (input.transition.workflowKey === "watch-publish") {
+      const result = await completeWatchPublishFromQueueItem(commonInput, db);
+      effects.push(effectFromResult({ type: "watch-posted", result }));
     }
   }
 

@@ -38,6 +38,7 @@ type SubmitWatchFormContext = {
     userId?: string | null;
     canReviewContent: boolean;
     canEditPrice?: boolean;
+    deferConsumers?: (work: () => Promise<void>) => void;
 };
 
 type ReviewSubmitTarget = "CONTENT" | "IMAGE";
@@ -656,7 +657,7 @@ export async function submitWatchFormApplication(
         return key && !galleryOriginalKeys.has(key);
     });
 
-    if (isMediaWorkspaceSave) {
+    if (isMediaWorkspaceSave && imagesChanged) {
         await assertMediaWorkspaceAssetsAvailable({
             productId,
             keys: [...remainingPoolImages, ...requestedGalleryImages]
@@ -665,57 +666,63 @@ export async function submitWatchFormApplication(
         });
     }
 
-    // Release persisted pool images that the user removed before moving/saving
-    // the new gallery/pool state. This keeps MediaAsset + NAS in sync.
-    await releaseRemovedWatchPoolImagesToActive({
-        productId,
-        keepItems: [...remainingPoolImages, ...requestedGalleryImages],
-    });
+    let normalizedGalleryImages = requestedGalleryImages;
+    let normalizedPoolImages = remainingPoolImages;
 
-    const normalizedGalleryImages = await moveWatchGalleryImagesToChosen(
-        requestedGalleryImages,
-        { productId, acquisitionId: current.acquisitionId },
-    );
+    if (imagesChanged) {
+        // NAS/media reconciliation is comparatively expensive. Only run it when
+        // gallery keys actually changed; content/progress-only saves must not
+        // move and re-attach every existing image again.
+        await releaseRemovedWatchPoolImagesToActive({
+            productId,
+            keepItems: [...remainingPoolImages, ...requestedGalleryImages],
+        });
 
-    const normalizedPoolImages = await moveWatchPoolImagesToChosenPool(
-        remainingPoolImages,
-        { productId },
-    );
+        normalizedGalleryImages = await moveWatchGalleryImagesToChosen(
+            requestedGalleryImages,
+            { productId, acquisitionId: current.acquisitionId },
+        );
 
-    const galleryImageInputs = normalizedGalleryImages
-        .map((item, index) => {
-            const key = mediaKey(item);
+        normalizedPoolImages = await moveWatchPoolImagesToChosenPool(
+            remainingPoolImages,
+            { productId },
+        );
 
-            if (!key) return null;
+        const galleryImageInputs = normalizedGalleryImages
+            .map((item, index) => {
+                const key = mediaKey(item);
 
-            return {
-                fileKey: key,
-                isForAdmin: true,
-                isForStorefront: true,
-                sortOrder: index,
-            };
-        })
-        .filter(Boolean) as Array<{
-            fileKey: string;
-            isForAdmin: boolean;
-            isForStorefront: boolean;
-            sortOrder: number;
-        }>;
+                if (!key) return null;
 
-    await replaceWatchGalleryImagesRepo(prisma as any, {
-        productId,
-        images: galleryImageInputs,
-    });
+                return {
+                    fileKey: key,
+                    isForAdmin: true,
+                    isForStorefront: true,
+                    sortOrder: index,
+                };
+            })
+            .filter(Boolean) as Array<{
+                fileKey: string;
+                isForAdmin: boolean;
+                isForStorefront: boolean;
+                sortOrder: number;
+            }>;
 
-    await markGalleryMediaAssetsAttached({
-        productId,
-        images: galleryImageInputs,
-    });
-    await ensureWatchInlineImageFromFirstGallery({
-        productId,
-    });
+        await replaceWatchGalleryImagesRepo(prisma as any, {
+            productId,
+            images: galleryImageInputs,
+        });
+
+        await markGalleryMediaAssetsAttached({
+            productId,
+            images: galleryImageInputs,
+        });
+        await ensureWatchInlineImageFromFirstGallery({
+            productId,
+        });
+    }
     const hasContentData = hasContentSnapshotData(afterContent);
-    const hasGalleryImages = galleryImageInputs.length > 0;
+    const hasGalleryImages = normalizedGalleryImages.length > 0;
 
     await syncWatchSaleStageAfterPostAssets({
         productId,
@@ -730,7 +737,7 @@ export async function submitWatchFormApplication(
                 productId,
             },
             actorUserId: context.userId ?? null,
-        });
+        }, { deferConsumers: context.deferConsumers });
     }
 
     if (specChanged) {
@@ -746,7 +753,7 @@ export async function submitWatchFormApplication(
             actorUserId: context.userId ?? null,
             before: beforeSpec,
             after: afterSpec,
-        });
+        }, { deferConsumers: context.deferConsumers });
     }
 
     if (imagesChanged) {
@@ -762,7 +769,7 @@ export async function submitWatchFormApplication(
             actorUserId: context.userId ?? null,
             sourceId: productId,
             note: "Watch Workbench image save.",
-        });
+        }, { deferConsumers: context.deferConsumers });
     }
 
     const pricingResult = context.canEditPrice
@@ -790,7 +797,7 @@ export async function submitWatchFormApplication(
             changedFields: pricingResult.changedFields,
             before: priceSnapshot(pricingResult.before),
             after: priceSnapshot(pricingResult.after),
-        });
+        }, { deferConsumers: context.deferConsumers });
 
         await notifyUsersByRole({
             role: "SALE",

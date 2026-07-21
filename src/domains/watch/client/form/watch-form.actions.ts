@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { requirePermission } from "@/server/auth/requirePermission";
 
@@ -41,5 +42,6 @@ export async function submitWatchForm(values: WatchFormValues) {
             PERMISSIONS.PRODUCT_APPROVE
         ),
         canEditPrice: authHasRole(auth, "ADMIN"),
+        deferConsumers: (work) => after(work),
     });
 }

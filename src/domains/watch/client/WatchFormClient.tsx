@@ -141,9 +141,9 @@ function MediaWorkDoneButton({
                     ? "bg-emerald-100 text-emerald-800 ring-emerald-200 hover:bg-emerald-200"
                     : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50",
             ].join(" ")}
-            title={done ? "Bấm để chuyển về chưa xong" : "Xác nhận mục này đã xong"}
+            title={done ? "Bấm để mở lại và lưu mục này" : "Lưu và xác nhận mục này đã xong"}
         >
-            {done ? "Đã xong" : "Xác nhận xong"} {label}
+            {done ? "Đã lưu & xong" : "Lưu & đánh dấu xong"} {label}
         </button>
     );
 }
@@ -383,7 +383,11 @@ export default function WatchFormClient({
     const embedded = searchParams.get("embedded") === "1";
     const viewMode = searchParams.get("mode") || "full";
     const isMediaMode = viewMode === "media";
-    const returnTo = searchParams.get("returnTo") || "/admin/watches";
+    const returnTo =
+        searchParams.get("returnTo") ||
+        (isMediaMode
+            ? `/admin/watches/${initialValues.productId}`
+            : "/admin/watches");
     const workspaceBindingId = searchParams.get("workspaceBindingId") || "";
     const initialWorkspaceState = searchParams.get("workspaceState") || "";
     const [workspaceState, setWorkspaceState] = useState(initialWorkspaceState);
@@ -393,7 +397,7 @@ export default function WatchFormClient({
         fromMediaWorkspace &&
         Boolean(workspaceBindingId) &&
         canReviewContent &&
-        workspaceState === "REVIEW";
+        (workspaceState === "NEW" || workspaceState === "REVIEW");
     const canReturnMediaWorkspace =
         canApproveMediaWorkspace && workspaceState === "REVIEW";
     const inlineImage = values.media.inlineImage;
@@ -406,13 +410,56 @@ export default function WatchFormClient({
         });
     };
 
-    const toggleMediaWorkPartDone = (part: MediaWorkPart) => {
-        if (!isMediaMode || !fromMediaWorkspace) return;
+    const saveMediaWorkspacePart = async (part: MediaWorkPart) => {
+        if (!isMediaMode || !fromMediaWorkspace || mediaSubmitPending) return;
 
-        setMediaWorkDone((prev) => ({
-            ...prev,
-            [part]: !prev[part],
-        }));
+        const nextDone = !mediaWorkDone[part];
+        const submitValues: WatchFormValues = {
+            ...buildSubmitValues(),
+            saveIntent: "MEDIA_WORKSPACE",
+        };
+        const partLabel = MEDIA_WORK_PARTS.find((item) => item.key === part)?.label ?? part;
+
+        setMediaSubmitPending(true);
+        progress.show({
+            title: `Đang lưu ${partLabel}`,
+            message: "Hệ thống đang lưu mục này và cập nhật tiến độ Workspace.",
+        });
+
+        try {
+            const result = await submitWatchForm(submitValues);
+            updateValuesAfterSave(result);
+
+            const progressResult = await saveWatchMediaWorkDraftFromWatchAction({
+                productId: submitValues.productId,
+                parts: { [part]: nextDone },
+                note: `${partLabel} saved from Watch edit workspace modal.`,
+            });
+            if (progressResult.skipped || !("parts" in progressResult)) {
+                throw new Error("Không tìm thấy item Xử lý Media đang mở để lưu tiến độ.");
+            }
+
+            setMediaWorkDone({
+                profile: Boolean(progressResult.parts?.profile),
+                content: Boolean(progressResult.parts?.content),
+                image: Boolean(progressResult.parts?.image),
+            });
+
+            notify.success({
+                title: nextDone ? `Đã lưu ${partLabel}` : `Đã mở lại ${partLabel}`,
+                message: nextDone
+                    ? "Mục này đã được lưu và đánh dấu hoàn tất."
+                    : "Mục này đã được chuyển về trạng thái cần xử lý.",
+            });
+        } catch (error: unknown) {
+            notify.error({
+                title: `Không thể lưu ${partLabel}`,
+                message: errorMessage(error, "Có lỗi xảy ra khi lưu mục này."),
+            });
+        } finally {
+            setMediaSubmitPending(false);
+            progress.hide();
+        }
     };
 
     useEffect(() => {
@@ -1286,7 +1333,7 @@ export default function WatchFormClient({
                 label={MEDIA_WORK_PARTS.find((item) => item.key === part)?.label ?? part}
                 done={mediaWorkDone[part]}
                 disabled={mediaSubmitPending || isMediaWorkspaceDone || isMediaWorkspaceReturned}
-                onClick={() => toggleMediaWorkPartDone(part)}
+                onClick={() => void saveMediaWorkspacePart(part)}
             />
         ) : null;
 
@@ -1379,14 +1426,6 @@ export default function WatchFormClient({
                 </>
             ) : (
                 <>
-                    <button
-                        type="button"
-                        disabled={mediaSubmitPending}
-                        onClick={saveMediaWorkspaceDraft}
-                        className="inline-flex h-10 items-center justify-center rounded-xl border border-emerald-200 bg-white px-4 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                        {mediaSubmitPending ? "Đang lưu" : "Lưu xử lý dở"}
-                    </button>
                     {canReturnMediaWorkspace ? (
                         <button
                             type="button"
@@ -1506,7 +1545,7 @@ export default function WatchFormClient({
                     onSubmit={fromMediaWorkspace ? saveMediaWorkspaceDraft : onSubmit}
                     onBack={handleBack}
                     canReviewContent={canReviewContent}
-                    hideBack={isMediaMode}
+                    hideBack={false}
                     hideSubmit={fromMediaWorkspace || fromPhotoshootWorkspace}
                     headerActions={mediaHeaderActions}
                     breadcrumbs={[

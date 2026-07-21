@@ -28,6 +28,9 @@ type UsageDetail = {
     } | null;
 };
 
+const META_POST_CHARACTER_LIMIT = 2000;
+const META_POST_WARNING_THRESHOLD = 1800;
+
 async function markContentCopied(productId: string) {
     const res = await fetch(`/api/admin/watches/${productId}/post-usage`, {
         method: "POST",
@@ -103,6 +106,19 @@ export default function ContentBlock({
         ],
     );
     const [postTitle, ...postRest] = fullPost.split("\n\n");
+    const postCharacterCount = Array.from(fullPost).length;
+    // Meta's composer can report a larger count for Vietnamese/emoji than a
+    // Unicode code-point count. Use the UTF-8 payload size as a conservative
+    // estimate while still showing the human-readable character count.
+    const metaEstimatedCount = new TextEncoder().encode(
+        fullPost.replace(/\n/g, "\r\n"),
+    ).length;
+    const charactersOverLimit = Math.max(
+        0,
+        metaEstimatedCount - META_POST_CHARACTER_LIMIT,
+    );
+    const isNearMetaLimit = metaEstimatedCount >= META_POST_WARNING_THRESHOLD;
+    const isOverMetaLimit = charactersOverLimit > 0;
 
     const setContent = (patch: Partial<WatchWorkbenchValues["content"]>) =>
         onChange(updateValues(values, { content: patch }));
@@ -205,13 +221,35 @@ export default function ContentBlock({
                             <span>{usage.isContentDownloaded ? "Đã copy content" : "Chưa copy content"}</span>
                             <span className="h-1 w-1 rounded-full bg-slate-300" />
                             <span>{usage.isImageDownloaded ? "Đã tải ảnh" : "Chưa tải ảnh"}</span>
+                            <span className="h-1 w-1 rounded-full bg-slate-300" />
+                            <span
+                                className={[
+                                    "rounded-full px-2 py-0.5 font-semibold",
+                                    isOverMetaLimit
+                                        ? "bg-rose-100 text-rose-700"
+                                        : isNearMetaLimit
+                                            ? "bg-amber-100 text-amber-700"
+                                            : "bg-slate-100 text-slate-600",
+                                ].join(" ")}
+                            >
+                                Meta ~{metaEstimatedCount.toLocaleString("vi-VN")}/{META_POST_CHARACTER_LIMIT.toLocaleString("vi-VN")}
+                            </span>
+                            <span title="Số ký tự Unicode thực của đúng nội dung được copy">
+                                {postCharacterCount.toLocaleString("vi-VN")} ký tự thực
+                            </span>
                         </div>
                     </div>
                     <button
                         type="button"
                         onClick={handleCopyPost}
                         disabled={!canCopy || !fullPost.trim() || copying}
-                        title={canCopy ? "Copy nội dung đăng bài" : "Content cần được duyệt trước khi copy"}
+                        title={
+                            !canCopy
+                                ? "Content cần được duyệt trước khi copy"
+                                : isOverMetaLimit
+                                    ? `Nội dung đang vượt giới hạn Meta-safe khoảng ${charactersOverLimit} đơn vị`
+                                    : "Copy nội dung đăng bài"
+                        }
                         className={operationButtonClass({
                             variant: canCopy ? "softViolet" : "secondary",
                             size: "sm",
@@ -222,6 +260,20 @@ export default function ContentBlock({
                         {copying ? "Đang copy..." : copied ? "Đã copy" : usage.isContentDownloaded ? "Copy lại" : "Copy content"}
                     </button>
                 </div>
+                {isNearMetaLimit ? (
+                    <div
+                        className={[
+                            "border-b px-4 py-2 text-xs font-medium",
+                            isOverMetaLimit
+                                ? "border-rose-200 bg-rose-50 text-rose-700"
+                                : "border-amber-200 bg-amber-50 text-amber-700",
+                        ].join(" ")}
+                    >
+                        {isOverMetaLimit
+                            ? `Đang vượt giới hạn Meta-safe khoảng ${charactersOverLimit.toLocaleString("vi-VN")} đơn vị. Hãy rút gọn trước khi đăng.`
+                            : `Còn khoảng ${(META_POST_CHARACTER_LIMIT - metaEstimatedCount).toLocaleString("vi-VN")} đơn vị theo bộ đếm Meta-safe.`}
+                    </div>
+                ) : null}
                 <div
                     className={[
                         "max-h-[280px] overflow-auto px-4 py-4 text-sm leading-7 text-slate-800",

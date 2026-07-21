@@ -49,6 +49,7 @@ export type WatchMediaPipelineEventPayloadInput = {
     | "ATTACH_MEDIA_ASSET"
     | "READY_FOR_PUBLISH"
     | "RECALL_MEDIA"
+    | "MARK_POSTED"
     | "DOWNLOAD_PUBLISH_ASSETS";
   sourceId?: string | null;
   note?: string | null;
@@ -386,14 +387,14 @@ export const WATCH_BUSINESS_EVENT_DEFINITIONS: WatchBusinessEventDefinition[] = 
     label: "Watch sale stage posted",
     targetType: "WATCH",
     group: "Watch",
-    status: "DRAFT",
+    status: "ACTIVE",
     businessMeaning: "Watch sale stage changed to posted.",
-    producer: null,
-    emitPoint: null,
+    producer: "workspace-workflow-processor",
+    emitPoint: "completeWatchPublishFromQueueItem",
     targetIdPolicy: "watch.id",
     targetAliasPolicy: "[watch.id, productId]",
-    payloadContract: "TBD",
-    knownConsumers: ["projection"],
+    payloadContract: "WatchMediaPipelinePayload",
+    knownConsumers: ["notification", "projection"],
     autoBindingScope: null,
   },
   {

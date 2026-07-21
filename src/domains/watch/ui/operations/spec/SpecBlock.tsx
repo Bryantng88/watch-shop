@@ -3,6 +3,7 @@
 import { Loader2, Settings2, Sparkles } from "lucide-react";
 import type { WatchWorkbenchValues } from "@/domains/watch/client/workbench/types";
 import { updateValues } from "@/domains/watch/client/workbench/workbench-utils";
+import { PostTargetMultiSelect } from "@/domains/watch/ui/edit/WatchBasicSection";
 import { Field, inputClass, OperationShell, operationButtonClass, textareaClass } from "../shared/OperationShell";
 
 const MOVEMENT_OPTIONS = ["QUARTZ", "AUTOMATIC", "MANUAL", "MECA_QUARTZ"];
@@ -74,11 +75,17 @@ function SelectField({
 
 export default function SpecBlock({
     values,
+    postTargets,
     onChange,
     onSave,
     saving = false,
 }: {
     values: WatchWorkbenchValues;
+    postTargets: Array<{
+        id: string;
+        name: string;
+        platform?: string | null;
+    }>;
     onChange: (next: WatchWorkbenchValues) => void;
     onSave: () => void;
     saving?: boolean;
@@ -171,6 +178,14 @@ export default function SpecBlock({
                     <div className="grid gap-3 md:grid-cols-4">
                         <SelectField label="Material profile" value={materialProfile} options={MATERIAL_PROFILE_OPTIONS} onChange={(value) => setSpec({ materialProfile: value })} />
                         <SelectField label="Primary material" value={values.spec.primaryCaseMaterial} options={MATERIAL_OPTIONS} onChange={(value) => setSpec({ primaryCaseMaterial: value })} />
+                        <div className="md:col-span-2">
+                            <span className="mb-1.5 block text-[11px] font-semibold uppercase text-slate-500">Kênh đăng</span>
+                            <PostTargetMultiSelect
+                                value={values.basic.postTargetIds ?? []}
+                                options={postTargets}
+                                onChange={(postTargetIds) => setBasic({ postTargetIds })}
+                            />
+                        </div>
                         {materialProfile === "BIMETAL" ? (
                             <SelectField label="Secondary material" value={values.spec.secondaryCaseMaterial} options={MATERIAL_OPTIONS} onChange={(value) => setSpec({ secondaryCaseMaterial: value })} />
                         ) : null}
@@ -215,6 +230,7 @@ export default function SpecBlock({
                         </div>
                     </div>
                 </section>
+
             </div>
 
             <div className="mt-4 flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">

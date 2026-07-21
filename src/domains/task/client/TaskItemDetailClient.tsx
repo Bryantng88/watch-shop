@@ -706,12 +706,12 @@ function HeaderMetric({
   value: ReactNode;
 }) {
   return (
-    <div className="min-w-0 px-6 first:pl-0 last:pr-0">
-      <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-        <span className="text-slate-400">{icon}</span>
+    <div className="min-w-0 border-l border-slate-200 px-4 py-1 first:border-l-0 first:pl-0 last:pr-0">
+      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+        <span>{icon}</span>
         <span>{label}</span>
       </div>
-      <div className="mt-2 truncate text-sm font-extrabold text-slate-950">
+      <div className="mt-1 truncate text-xs font-extrabold text-slate-900">
         {value}
       </div>
     </div>
@@ -748,12 +748,14 @@ function SharingEditor({
   sharedUsers,
   sharedUserIds,
   currentUser,
+  compact = false,
 }: {
   taskItemId: string;
   users: UserSummary[];
   sharedUsers: UserSummary[];
   sharedUserIds: string[];
   currentUser?: UserSummary | null;
+  compact?: boolean;
 }) {
   const router = useRouter();
   const [selectedUserId, setSelectedUserId] = useState("");
@@ -791,21 +793,30 @@ function SharingEditor({
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h3 className="text-xs font-semibold text-slate-950">Shared with</h3>
-        </div>
+    <div className={cn(compact ? "min-w-0 px-1 py-1" : "rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm")}>
+      <div className={cn("flex items-center gap-3", compact ? "justify-end" : "justify-between gap-4")}>
+        <h3 className="shrink-0 text-xs font-semibold text-slate-500">Shared with</h3>
+        {compact ? (
+          <div className="flex min-w-0 flex-wrap items-center gap-0">
+            {visibleSharedUsers.length ? visibleSharedUsers.slice(0, 3).map((user) => (
+              <UserAvatar key={user.id} label={userLabel(user)} avatarUrl={user.avatarUrl} className="-ml-2 h-7 w-7 border-2 border-slate-50 first:ml-0" />
+            )) : <span className="text-xs text-slate-400">Chưa chia sẻ</span>}
+            {visibleSharedUsers.length > 3 ? (
+              <span className="-ml-2 inline-flex h-7 min-w-7 items-center justify-center rounded-full border-2 border-slate-50 bg-slate-200 px-1.5 text-[11px] font-semibold text-slate-600">+{visibleSharedUsers.length - 3}</span>
+            ) : null}
+          </div>
+        ) : null}
         <button
           type="button"
           onClick={() => setIsExpanded((value) => !value)}
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-violet-200 bg-white px-3 text-sm font-semibold text-violet-700 shadow-sm hover:bg-violet-50"
+          className={cn("inline-flex shrink-0 items-center gap-1.5 rounded-lg font-semibold text-violet-700 hover:bg-violet-50", compact ? "h-8 px-2.5 text-xs ring-1 ring-violet-200" : "h-9 border border-violet-200 bg-white px-3 text-sm shadow-sm")}
         >
           <Plus className="h-4 w-4" />
           Thêm
         </button>
       </div>
 
+      {!compact ? (
       <div className="mt-2 flex flex-wrap items-center gap-0">
         {visibleSharedUsers.length ? (
           <>
@@ -847,6 +858,7 @@ function SharingEditor({
           </div>
         )}
       </div>
+      ) : null}
 
       {isExpanded ? (
       <div className="mt-3 flex gap-2 border-t border-slate-100 pt-3">
@@ -2251,7 +2263,7 @@ function GenericFlowWorkspaceNav({
   return (
     <nav
       aria-label="Workspace trong space"
-      className="mt-7 grid gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm lg:grid-cols-[minmax(0,1fr)_32px_minmax(0,1fr)_32px_minmax(0,1fr)_minmax(250px,1.1fr)]"
+      className="mt-4 grid gap-2 border-t border-slate-100 bg-slate-50/70 px-2 py-3 lg:grid-cols-[minmax(0,1fr)_24px_minmax(0,1fr)_24px_minmax(0,1fr)_minmax(220px,0.9fr)]"
     >
       {workspaces.slice(0, 3).map((workspace, index) => {
         const active = workspace.id === currentItemId;
@@ -2265,7 +2277,7 @@ function GenericFlowWorkspaceNav({
         const content = (
           <div
             className={cn(
-              "flex min-h-[72px] items-center gap-3 rounded-lg px-4 py-3 transition",
+              "flex min-h-[60px] items-center gap-3 rounded-xl px-3 py-2.5 transition",
               active
                 ? "bg-gradient-to-br from-white to-violet-50 shadow-[0_8px_24px_rgba(91,67,241,0.08)] ring-1 ring-violet-200"
                 : "bg-white hover:bg-slate-50",
@@ -2324,7 +2336,7 @@ function GenericFlowWorkspaceNav({
           </div>
         );
       })}
-      <div className="flex min-h-[72px] items-center gap-4 rounded-lg border-t border-slate-200 px-4 py-3 lg:border-l lg:border-t-0 lg:pl-6">
+      <div className="flex min-h-[60px] items-center gap-3 rounded-xl border-t border-indigo-100 bg-indigo-50/60 px-4 py-2.5 lg:border-l lg:border-t-0">
         <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-violet-50 text-violet-700 ring-1 ring-violet-100">
           <GitBranch className="h-5 w-5" />
         </div>
@@ -2411,7 +2423,7 @@ function CoreFlowWorkspaceNav({
   return (
     <nav
       aria-label="Core flow workspaces"
-      className="mt-7 grid gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm lg:grid-cols-[minmax(0,1fr)_32px_minmax(0,1fr)_32px_minmax(0,1fr)_minmax(250px,1.1fr)]"
+      className="mt-4 grid gap-2 border-t border-slate-100 bg-slate-50/70 px-2 py-3 lg:grid-cols-[minmax(0,1fr)_24px_minmax(0,1fr)_24px_minmax(0,1fr)_minmax(220px,0.9fr)]"
     >
       {flowStageSteps.slice(0, 3).map((step, index) => {
         const stepRole = step.workspaceRole.toUpperCase();
@@ -2428,7 +2440,7 @@ function CoreFlowWorkspaceNav({
         const content = (
           <div
             className={cn(
-              "flex min-h-[72px] items-center gap-3 rounded-lg px-4 py-3 transition",
+              "flex min-h-[60px] items-center gap-3 rounded-xl px-3 py-2.5 transition",
               active
                 ? "bg-gradient-to-br from-white to-violet-50 shadow-[0_8px_24px_rgba(91,67,241,0.08)] ring-1 ring-violet-200"
                 : "bg-white hover:bg-slate-50",
@@ -2493,7 +2505,7 @@ function CoreFlowWorkspaceNav({
           </div>
         );
       })}
-      <div className="flex min-h-[72px] items-center gap-4 rounded-lg border-t border-slate-200 px-4 py-3 lg:border-l lg:border-t-0 lg:pl-6">
+      <div className="flex min-h-[60px] items-center gap-3 rounded-xl border-t border-indigo-100 bg-indigo-50/60 px-4 py-2.5 lg:border-l lg:border-t-0">
         <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-violet-50 text-violet-700 ring-1 ring-violet-100">
           <GitBranch className="h-5 w-5" />
         </div>
@@ -2791,81 +2803,76 @@ function WorkspaceDetailHeader({
   const HeaderIcon = stageVisual.Icon;
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white px-5 py-6 shadow-[0_12px_32px_rgba(24,36,76,0.06)] lg:px-7">
-      <div className="grid gap-7 lg:grid-cols-[96px_minmax(0,1fr)_280px] lg:items-start">
-        <div className={`hidden h-24 w-24 place-items-center rounded-[20px] ring-1 lg:grid ${stageVisual.frame}`}>
-          <HeaderIcon className="h-11 w-11" />
+    <section className="overflow-hidden rounded-[22px] border border-slate-200 bg-gradient-to-br from-white via-white to-indigo-50/35 shadow-[0_14px_40px_rgba(30,41,59,0.07)]">
+      <div className="grid gap-5 px-5 py-5 xl:grid-cols-[350px_minmax(0,1fr)_220px] xl:items-center">
+        <div className="flex min-w-0 items-center gap-4">
+          <div className={`grid h-16 w-16 shrink-0 place-items-center rounded-2xl ring-1 ${stageVisual.frame}`}>
+            <HeaderIcon className="h-7 w-7" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-[11px] font-extrabold text-blue-700">
+              <GitBranch className="h-3.5 w-3.5" />
+              <span className="truncate">{presentation.workspaceType}</span>
+            </div>
+            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
+              <h1 className="truncate text-2xl font-black tracking-tight text-slate-950">
+                {displayTitle}
+              </h1>
+              <TaskStatusSignal status={item.status} />
+              {capabilities.priority ? (
+                <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-extrabold text-blue-700">
+                  <PrioritySignal priority={item.priority} showLabel />
+                </span>
+              ) : null}
+            </div>
+          </div>
         </div>
 
-        <div className="min-w-0 pt-1">
-          <div className="mb-2.5 flex items-center gap-2 text-xs font-extrabold text-slate-700">
-            <GitBranch className="h-3.5 w-3.5 text-blue-600" />
-            <span>{presentation.workspaceType}</span>
-          </div>
-          <div className="flex min-w-0 flex-wrap items-center gap-3.5">
-            <h1 className="text-3xl font-extrabold leading-tight text-slate-950">
-              {displayTitle}
-            </h1>
-            <TaskStatusSignal status={item.status} />
-            {capabilities.priority ? (
-              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-extrabold text-blue-700 ring-1 ring-blue-100">
-                <PrioritySignal priority={item.priority} showLabel />
-              </span>
-            ) : null}
-          </div>
-          {presentation.defaultDescription ? (
-            <p className="mt-3 max-w-3xl text-sm font-medium leading-6 text-slate-700">
-              {presentation.defaultDescription}
-            </p>
+        <div className="grid grid-cols-2 gap-y-4 md:grid-cols-4">
+          {capabilities.assignee ? (
+            <HeaderMetric
+              icon={<UserRound className="h-3.5 w-3.5" />}
+              label="Owner"
+              value={<UserIdentity user={owner} isSystem={isSystemOwner} />}
+            />
           ) : null}
+          {capabilities.dueDate ? (
+            <HeaderMetric
+              icon={<CalendarDays className="h-3.5 w-3.5" />}
+              label="Due date"
+              value={formatDate(item.dueAt)}
+            />
+          ) : null}
+          {capabilities.checklist ? (
+            <HeaderMetric
+              icon={<ListChecks className="h-3.5 w-3.5" />}
+              label="Checklist"
+              value={`${checklistDone}/${checklistTotal}`}
+            />
+          ) : null}
+          <HeaderMetric
+            icon={<Folder className="h-3.5 w-3.5" />}
+            label="Space"
+            value={parentTask?.title || "-"}
+          />
         </div>
 
-        <div className="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-violet-50/70 p-[18px] shadow-sm shadow-violet-100/40">
-          <div className="text-xs font-semibold text-slate-500">Workspace ref</div>
-          <div className="mt-2 flex items-center justify-between gap-3">
-            <div className="min-w-0 truncate font-mono text-lg font-extrabold text-slate-950">
+        <div className="border-l border-slate-200 py-1 pl-5">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+            Workspace ref
+          </div>
+          <div className="mt-1.5 flex items-center justify-between gap-2">
+            <div className="min-w-0 truncate font-mono text-sm font-extrabold text-slate-950">
               {taskItemRef(item.id)}
             </div>
-            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white text-violet-600 ring-1 ring-violet-100">
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-violet-600 hover:bg-violet-50">
               <FileText className="h-4 w-4" />
             </div>
           </div>
+          <div className="mt-1 truncate text-[10px] font-semibold text-slate-400">
+            {refLabel} · {formatDateTime(item.createdAt)}
+          </div>
         </div>
-      </div>
-
-      <div className="mt-7 grid gap-y-6 divide-slate-200 md:grid-cols-2 lg:grid-cols-6 lg:divide-x">
-        {capabilities.assignee ? (
-          <HeaderMetric
-            icon={<UserRound className="h-4 w-4" />}
-            label="Owner"
-            value={<UserIdentity user={owner} isSystem={isSystemOwner} />}
-          />
-        ) : null}
-        {capabilities.dueDate ? (
-          <HeaderMetric
-            icon={<CalendarDays className="h-4 w-4" />}
-            label="Due date"
-            value={formatDate(item.dueAt)}
-          />
-        ) : null}
-        {capabilities.checklist ? (
-          <HeaderMetric
-            icon={<ListChecks className="h-4 w-4" />}
-            label="Checklist"
-            value={`${checklistDone}/${checklistTotal}`}
-          />
-        ) : null}
-        <HeaderMetric
-          icon={<Folder className="h-4 w-4" />}
-          label="Space"
-          value={parentTask?.title || "-"}
-        />
-        <HeaderMetric icon={<Tag className="h-4 w-4" />} label="Ref" value={refLabel} />
-        <HeaderMetric
-          icon={<Clock3 className="h-4 w-4" />}
-          label="Tạo lúc"
-          value={formatDateTime(item.createdAt)}
-        />
       </div>
 
       {isServiceOperationWorkspace && operationalCoreFlow ? (
@@ -3066,7 +3073,7 @@ export default function TaskItemDetailClient({
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="mx-auto w-full max-w-[1680px] px-5 py-5 lg:px-8">
-        <div className="mb-5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <AdminBreadcrumbs
             items={[
               { label: "Space Management", href: backHref },
@@ -3077,6 +3084,16 @@ export default function TaskItemDetailClient({
               { label: displayTitle },
             ]}
           />
+          {capabilities.assignee ? (
+            <SharingEditor
+              taskItemId={item.id}
+              users={users}
+              sharedUsers={item.sharedUsers ?? []}
+              sharedUserIds={item.sharedUserIds ?? []}
+              currentUser={currentUser}
+              compact
+            />
+          ) : null}
         </div>
 
         <WorkspaceDetailHeader
@@ -3098,7 +3115,7 @@ export default function TaskItemDetailClient({
           businessItemCount={businessBindings.length}
         />
 
-        <div className="mt-4 grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <div className="mt-4">
           <div className="min-w-0">
             <SectionTabs
               items={capabilityTabs}
@@ -3108,18 +3125,27 @@ export default function TaskItemDetailClient({
 
             <div className="mt-4">
             {activeTab === "overview" ? (
-              <OverviewPanel
-                item={item}
-                activities={activities}
-                checklists={checklists}
-                businessBindings={businessBindings}
-                queueItems={queueItems}
-                capabilities={capabilities}
-                presentation={presentation}
-                parentTask={parentTask}
-                serviceRequestId={serviceRequestId}
-                onTabChange={setActiveTab}
-              />
+              <div className="space-y-4">
+                <OverviewPanel
+                  item={item}
+                  activities={activities}
+                  checklists={checklists}
+                  businessBindings={businessBindings}
+                  queueItems={queueItems}
+                  capabilities={capabilities}
+                  presentation={presentation}
+                  parentTask={parentTask}
+                  serviceRequestId={serviceRequestId}
+                  onTabChange={setActiveTab}
+                />
+                {!isServiceOperationWorkspace && operationalActions.length ? (
+                  <BlueprintActionDiscoveryPanel
+                    taskItemId={item.id}
+                    workspaceRole={serviceOperationWorkspaceRole}
+                    actions={operationalActions}
+                  />
+                ) : null}
+              </div>
             ) : null}
 
             {activeTab === "workflow" ? (
@@ -3191,17 +3217,7 @@ export default function TaskItemDetailClient({
             </div>
           </div>
 
-          <aside className="space-y-5">
-            {capabilities.assignee ? (
-              <SharingEditor
-                taskItemId={item.id}
-                users={users}
-                sharedUsers={item.sharedUsers ?? []}
-                sharedUserIds={item.sharedUserIds ?? []}
-                currentUser={currentUser}
-              />
-            ) : null}
-
+          <aside className="hidden">
             <DetailInfo item={item} presentation={presentation} />
             {!isServiceOperationWorkspace && operationalActions.length ? (
               <BlueprintActionDiscoveryPanel

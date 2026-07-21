@@ -1008,9 +1008,21 @@ export async function listTaskItemQueueItems(
     findQueueActivitiesByTaskItem(db, cleanTaskItemId),
   ]);
   const expectedWorkflowKey = workflowKeyFromTaskItemNote(taskItem?.note ?? null);
-  const visibleBindings = bindings.filter((binding) =>
-    bindingMatchesTaskItemWorkflow(binding, expectedWorkflowKey),
-  );
+  const visibleBindings = bindings.filter((binding) => {
+    if (!bindingMatchesTaskItemWorkflow(binding, expectedWorkflowKey)) return false;
+
+    // A recalled Publish item belongs to Media Processing again. The upstream
+    // binding is reopened by the recall effect, so keeping this binding visible
+    // would incorrectly leave the same watch in Publish as "Feedback".
+    if (
+      expectedWorkflowKey === "watch-publish" &&
+      getQueueItemWorkflowState(binding)?.currentState === "RECALLED"
+    ) {
+      return false;
+    }
+
+    return true;
+  });
   const photoshootTargetIds = visibleBindings
     .filter((binding) => binding.targetType === TaskExecutionTargetType.WATCH)
     .map((binding) => binding.targetId);

@@ -6,7 +6,7 @@ import type { WatchFormValues } from "../../client/form/watch-form.types";
 import { Button, cx, FieldLabel, Input, moneyPreview, SectionCard, Select, Textarea, Toggle } from "./shared";
 import WatchBrandField from "./WatchBrandField";
 
-type SimpleOption = {
+export type SimpleOption = {
     id: string;
     name: string;
     slug?: string | null;
@@ -161,7 +161,7 @@ function buildPostTargetGroups(options: SimpleOption[]) {
     return Array.from(byName.values());
 }
 
-function PostTargetMultiSelect({
+export function PostTargetMultiSelect({
     value,
     options,
     onChange,
@@ -214,14 +214,14 @@ function PostTargetMultiSelect({
                             type="button"
                             onClick={() => toggleGroup(group.key)}
                             className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-2.5 py-1 text-xs font-medium text-white"
-                            title="Bo chon"
+                            title="Bỏ chọn"
                         >
                             {group.name}
                             <span className="text-slate-300">x</span>
                         </button>
                     ))
                 ) : (
-                    <div className="text-sm text-slate-400">Chua chon page/kenh dang</div>
+                    <div className="text-sm text-slate-400">Chưa chọn page/kênh đăng</div>
                 )}
             </div>
 
@@ -233,7 +233,7 @@ function PostTargetMultiSelect({
                 }}
                 className="block h-[40px] w-full border-0 border-b border-slate-200 bg-transparent px-0 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
             >
-                <option value="">Them page/kenh dang</option>
+                <option value="">Thêm page/kênh đăng</option>
                 {groups.map((group) => {
                     const selectedGroup = group.ids.some((id) => selectedSet.has(id));
 

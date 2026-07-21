@@ -1,6 +1,7 @@
 export {
   completeWatchMediaProcessingFromQueueItem,
   completeWatchPhotoshootFromQueueItem,
+  completeWatchPublishFromQueueItem,
   markWatchMediaAssetAttachedFromQueueItem,
   markWatchMediaAssetAttachedFromWatch,
   recallWatchMediaFromPublishQueueItem,

@@ -1,4 +1,8 @@
-import { recordBusinessEvent, type BusinessEventEffect } from "@/domains/event/server/business-event.service";
+import {
+  recordBusinessEvent,
+  type BusinessEventDispatchOptions,
+  type BusinessEventEffect,
+} from "@/domains/event/server/business-event.service";
 import type { DB } from "@/server/db/client";
 
 import {
@@ -100,6 +104,7 @@ export async function emitWatchContentModifiedEvent(
     watch: Pick<WatchEventWatchSnapshot, "id" | "productId">;
     actorUserId?: string | null;
   },
+  options?: BusinessEventDispatchOptions,
 ) {
   return recordBusinessEvent(db, {
     eventKey: "watch.content.modified",
@@ -111,7 +116,7 @@ export async function emitWatchContentModifiedEvent(
       productId: input.watch.productId,
       watchId: input.watch.id,
     },
-  });
+  }, options);
 }
 
 export async function emitWatchSpecUpdatedEvent(
@@ -122,6 +127,7 @@ export async function emitWatchSpecUpdatedEvent(
     before?: Record<string, unknown> | null;
     after?: Record<string, unknown> | null;
   },
+  options?: BusinessEventDispatchOptions,
 ) {
   return recordBusinessEvent(db, {
     eventKey: "watch.spec.updated",
@@ -137,7 +143,7 @@ export async function emitWatchSpecUpdatedEvent(
       before: input.before ?? null,
       after: input.after ?? null,
     },
-  });
+  }, options);
 }
 
 export async function emitWatchPriceUpdatedEvent(
@@ -145,6 +151,7 @@ export async function emitWatchPriceUpdatedEvent(
   input: WatchPriceUpdatedEventPayloadInput & {
     actorUserId?: string | null;
   },
+  options?: BusinessEventDispatchOptions,
 ) {
   return recordBusinessEvent(db, {
     eventKey: "watch.price.updated",
@@ -153,7 +160,7 @@ export async function emitWatchPriceUpdatedEvent(
     targetAliasIds: [input.watch.id, input.watch.productId],
     actorUserId: input.actorUserId ?? null,
     payload: watchPriceUpdatedEventPayload(input),
-  });
+  }, options);
 }
 
 export async function emitWatchPhotoshootRequestedEvent(
@@ -203,6 +210,7 @@ export async function emitWatchMediaAssetAttachedEvent(
   input: Omit<WatchMediaPipelineEventPayloadInput, "sourceAction"> & {
     actorUserId?: string | null;
   },
+  options?: BusinessEventDispatchOptions,
 ) {
   return recordBusinessEvent(db, {
     eventKey: "watch.media.asset.attached",
@@ -216,7 +224,7 @@ export async function emitWatchMediaAssetAttachedEvent(
       sourceId: input.sourceId ?? null,
       note: input.note ?? null,
     }),
-  });
+  }, options);
 }
 
 export async function emitWatchMediaReadyForPublishEvent(
@@ -286,6 +294,28 @@ export async function emitWatchPublishAssetsDownloadedEvent(
     actorUserId: input.actorUserId ?? null,
     payload,
   });
+}
+
+export async function emitWatchPostedEvent(
+  db: DB,
+  input: Omit<WatchMediaPipelineEventPayloadInput, "sourceAction"> & {
+    actorUserId?: string | null;
+  },
+  options?: BusinessEventDispatchOptions,
+) {
+  return recordBusinessEvent(db, {
+    eventKey: "watch.saleStage.posted",
+    targetType: "WATCH",
+    targetId: input.watch.id,
+    targetAliasIds: watchMediaPipelineEventAliases(input.watch, input.sourceId),
+    actorUserId: input.actorUserId ?? null,
+    payload: watchMediaPipelineEventPayload({
+      watch: input.watch,
+      sourceAction: "MARK_POSTED",
+      sourceId: input.sourceId ?? null,
+      note: input.note ?? null,
+    }),
+  }, options);
 }
 
 export {

@@ -54,6 +54,13 @@ function defaultZaloTemplatesForEvent(eventKey: string) {
         };
     }
 
+    if (eventKey === "watch.saleStage.posted") {
+        return {
+            titleTemplate: "Watch đã đăng bài",
+            messageTemplate: "Watch: {{watchTitle}}\nSKU: {{sku}}\nĐã xác nhận đăng bài thành công.",
+        };
+    }
+
     return {
         titleTemplate: "{{eventKey}}",
         messageTemplate: "New event: {{eventKey}}\n{{targetType}}: {{targetId}}",

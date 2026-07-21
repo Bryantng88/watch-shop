@@ -2655,10 +2655,37 @@ function technicalBoardStageLabel(stage: TechnicalIssueBoardStage) {
 }
 
 function normalizeTechnicalArea(value?: string | null) {
-  const area = String(value ?? "").trim().toUpperCase();
-  if (area === "HANDS" || area === "HAND_MARKERS") return "HANDS_MARKERS";
-  if (area === "STRAP") return "BRACELET";
-  return area;
+  const area = String(value ?? "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  const aliases: Record<string, string> = {
+    MAY: "MOVEMENT",
+    MOVEMENT: "MOVEMENT",
+    VO: "CASE",
+    CASE: "CASE",
+    KINH: "CRYSTAL",
+    GLASS: "CRYSTAL",
+    CRYSTAL: "CRYSTAL",
+    NUM: "CROWN",
+    CROWN: "CROWN",
+    MAT_SO: "DIAL",
+    DIAL: "DIAL",
+    HANDS: "HANDS_MARKERS",
+    HAND_MARKERS: "HANDS_MARKERS",
+    HANDS_MARKERS: "HANDS_MARKERS",
+    KIM: "HANDS_MARKERS",
+    KIM_COC: "HANDS_MARKERS",
+    DAY: "BRACELET",
+    STRAP: "BRACELET",
+    BRACELET: "BRACELET",
+    TONG_QUAT: "GENERAL",
+    GENERAL: "GENERAL",
+  };
+  return aliases[area] ?? area;
 }
 
 function technicalAreaLabel(value?: string | null) {
