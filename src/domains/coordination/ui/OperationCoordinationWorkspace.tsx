@@ -54,6 +54,7 @@ import type {
   OperationalBlueprintAction,
   OperationalBlueprintActionField,
 } from "@/domains/blueprint/shared/operational-blueprint";
+import { operationalBlueprintTemplateByKey } from "@/domains/blueprint/shared/operational-blueprint";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 import { cn } from "@/lib/utils";
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
@@ -83,6 +84,7 @@ type Props = {
 
 type TechnicalIssuePriorityFilter = "ALL" | "URGENT" | "NORMAL";
 type TechnicalBoardFieldValue = string | boolean | string[];
+type TechnicalBoardAdditionalIssue = { summary: string; note: string };
 
 const SPACE_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = ["overview", "value-trend", "status-breakdown", "recent-activity"];
 const PAYMENT_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = ["overview", "cash-flow", "status-breakdown", "recent-activity"];
@@ -782,6 +784,18 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     setWorkspacePage(1);
   }, [activeViewModeKey, filterCreator, filterPayment, filterQuery, filterWorkStatus, workspacePageSize]);
   const isTechnicalIssueFlowMode = activeViewMode?.key === "technical-issue-flow";
+  const technicalIssueBoardActions = useMemo(() => {
+    const actionsByKey = new Map<string, OperationalBlueprintAction>();
+    const defaultActions =
+      operationalBlueprintTemplateByKey("service-operation")?.contract.actions ?? [];
+
+    defaultActions.forEach((action) => actionsByKey.set(action.key, action));
+    data.blueprints.forEach((blueprint) => {
+      blueprint.operation?.actions?.forEach((action) => actionsByKey.set(action.key, action));
+    });
+
+    return Array.from(actionsByKey.values());
+  }, [data.blueprints]);
   const canShowTechnicalIssueBoard =
     isTechnicalIssueFlowMode && Boolean(asyncTechnicalIssueBoard);
   const isTechnicalIssueBoardView =
@@ -1134,7 +1148,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                         </div>
                       ) : null}
                     </div>
-                    {data.context === "TECHNICAL" ? (
+                    {isTechnicalIssueFlowMode ? (
                       <button
                         type="button"
                         onClick={() => setIsTechnicalIntakeOpen(true)}
@@ -1487,7 +1501,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
           {isTechnicalIssueBoardView ? (
             <TechnicalIssueBoardView
               items={asyncTechnicalIssueBoard?.items ?? []}
-              actions={selectedBlueprint?.operation?.actions ?? []}
+              actions={technicalIssueBoardActions}
               vendorOptions={asyncTechnicalIssueBoard?.vendorOptions ?? []}
               technicalDetailCatalogOptions={asyncTechnicalIssueBoard?.technicalDetailCatalogOptions ?? []}
               priorityFilter={technicalIssuePriorityFilter}
@@ -1977,10 +1991,12 @@ function TechnicalIssueBoardView({
   const [overStage, setOverStage] = useState<TechnicalIssueBoardStage | null>(null);
   const [moveRequest, setMoveRequest] = useState<TechnicalIssueBoardMoveRequest | null>(null);
   const [moveValues, setMoveValues] = useState<Record<string, TechnicalBoardFieldValue>>({});
+  const [additionalIssues, setAdditionalIssues] = useState<TechnicalBoardAdditionalIssue[]>([]);
   const [moveError, setMoveError] = useState<string | null>(null);
   const [priorityIssueId, setPriorityIssueId] = useState<string | null>(null);
   const [boardItems, setBoardItems] = useState(items);
   const [isMovePending, startMoveTransition] = useTransition();
+  const [isCostApprovalPending, startCostApprovalTransition] = useTransition();
   const [isPriorityPending, startPriorityTransition] = useTransition();
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -2052,12 +2068,14 @@ function TechnicalIssueBoardView({
         unavailableReason: "Chưa có action hợp lệ cho hướng di chuyển này.",
       });
       setMoveValues({});
+      setAdditionalIssues([]);
       setMoveError(null);
       return;
     }
 
     setMoveRequest({ item, targetStage, action, unavailableReason: null });
     setMoveValues(defaultTechnicalBoardMoveValues(item, action));
+    setAdditionalIssues([]);
     setMoveError(null);
   }
 
@@ -2089,30 +2107,26 @@ function TechnicalIssueBoardView({
       setMoveError("Vui lòng chọn vendor.");
       return;
     }
-    const shouldCreateAdditionalIssue = moveValues.createAdditionalIssue === true;
-    const additionalIssueSummary = String(moveValues.additionalIssueSummary ?? "").trim();
-    const additionalIssueNote = String(moveValues.additionalIssueNote ?? "").trim();
-    if (shouldCreateAdditionalIssue && !additionalIssueSummary) {
-      setMoveError("Vui lòng mô tả Technical Issue cần tạo thêm.");
+    const normalizedAdditionalIssues = additionalIssues.map((issue) => ({
+      summary: issue.summary.trim(),
+      note: issue.note.trim(),
+    }));
+    const incompleteAdditionalIssueIndex = normalizedAdditionalIssues.findIndex((issue) => !issue.summary);
+    if (incompleteAdditionalIssueIndex >= 0) {
+      setMoveError(`Vui lòng mô tả Technical Issue bổ sung số ${incompleteAdditionalIssueIndex + 1}.`);
       return;
     }
-    if (shouldCreateAdditionalIssue && !item.srCaseTaskItemId) {
+    if (normalizedAdditionalIssues.length > 0 && !item.srCaseTaskItemId) {
       setMoveError("Không tìm thấy SR Case Workspace để tạo thêm Technical Issue.");
       return;
     }
 
-    const actionFields = Object.fromEntries(
-      Object.entries(moveValues).filter(([key]) => ![
-        "createAdditionalIssue",
-        "additionalIssueSummary",
-        "additionalIssueNote",
-      ].includes(key)),
-    );
+    const actionFields = { ...moveValues };
 
     let moveProgressSteps: AppProgressStep[] = [
       { id: "validate", label: "Kiểm tra thông tin xử lý", detail: `${item.summary} · ${technicalBoardStageLabel(moveRequest.targetStage)}`, status: "done" },
       { id: "move", label: "Cập nhật TI và Workspace", detail: "Đang ghi nhận action và chuyển stage.", status: "running" },
-      { id: "additional", label: "Tạo Technical Issue bổ sung", detail: shouldCreateAdditionalIssue ? additionalIssueSummary : "Không có TI bổ sung.", status: shouldCreateAdditionalIssue ? "pending" : "skipped" },
+      { id: "additional", label: "Tạo Technical Issue bổ sung", detail: normalizedAdditionalIssues.length ? `${normalizedAdditionalIssues.length} TI mới` : "Không có TI bổ sung.", status: normalizedAdditionalIssues.length ? "pending" : "skipped" },
       { id: "sync", label: "Đồng bộ board và số liệu", detail: "Cập nhật projection, timeline và dashboard.", status: "pending" },
     ];
     progress.show({
@@ -2133,17 +2147,16 @@ function TechnicalIssueBoardView({
           fields: actionFields,
         });
         moveProgressSteps = moveProgressSteps.map((step) => step.id === "move" ? { ...step, status: "done" } : step);
-        moveProgressSteps = moveProgressSteps.map((step) => step.id === "additional" && shouldCreateAdditionalIssue ? { ...step, status: "running" } : step);
-        progress.update({ message: "Đã chuyển stage, đang xử lý dữ liệu liên quan.", percent: shouldCreateAdditionalIssue ? 55 : 75, steps: moveProgressSteps });
-        if (shouldCreateAdditionalIssue && item.srCaseTaskItemId) {
-          await submitOperationalBlueprintActionAction({
-            taskItemId: item.srCaseTaskItemId,
-            actionKey: "create_technical_issue",
-            fields: {
-              summary: additionalIssueSummary,
-              note: additionalIssueNote,
-            },
-          });
+        moveProgressSteps = moveProgressSteps.map((step) => step.id === "additional" && normalizedAdditionalIssues.length ? { ...step, status: "running" } : step);
+        progress.update({ message: "Đã chuyển stage, đang xử lý dữ liệu liên quan.", percent: normalizedAdditionalIssues.length ? 55 : 75, steps: moveProgressSteps });
+        if (normalizedAdditionalIssues.length && item.srCaseTaskItemId) {
+          for (const additionalIssue of normalizedAdditionalIssues) {
+            await submitOperationalBlueprintActionAction({
+              taskItemId: item.srCaseTaskItemId,
+              actionKey: "create_technical_issue",
+              fields: additionalIssue,
+            });
+          }
           moveProgressSteps = moveProgressSteps.map((step) => step.id === "additional" ? { ...step, status: "done" } : step);
         }
         setBoardItems((current) => current.map((candidate) =>
@@ -2179,6 +2192,7 @@ function TechnicalIssueBoardView({
         ));
         setMoveRequest(null);
         setMoveValues({});
+        setAdditionalIssues([]);
         moveProgressSteps = moveProgressSteps.map((step) => step.id === "sync" ? { ...step, status: "running" } : step);
         progress.update({ message: "Đã cập nhật card. Dashboard đang đồng bộ nền.", percent: 90, steps: moveProgressSteps });
         window.setTimeout(() => router.refresh(), 100);
@@ -2190,6 +2204,41 @@ function TechnicalIssueBoardView({
         setMoveError(
           error instanceof Error ? error.message : "Không thể chuyển trạng thái TI.",
         );
+      }
+    });
+  }
+
+  function submitCostApproval() {
+    if (!moveRequest?.action || moveRequest.action.command !== "service.completeTechnicalIssue") return;
+    const actualCost = Number(moveValues.actualCost);
+    if (!Number.isFinite(actualCost) || actualCost < 0) {
+      setMoveError("Vui lòng nhập chi phí thực tế hợp lệ trước khi gửi duyệt.");
+      return;
+    }
+
+    setMoveError(null);
+    startCostApprovalTransition(async () => {
+      try {
+        const response = await fetch(`/api/admin/technical-issues/${encodeURIComponent(moveRequest.item.id)}/maintenance-log`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({
+            eventType: "COST",
+            totalCost: actualCost,
+            notes: String(moveValues.resolutionNote ?? "").trim() || "Gửi duyệt chi phí hoàn tất xử lý.",
+            needApproval: true,
+          }),
+        });
+        const result = await response.json().catch(() => null);
+        if (!response.ok || !result?.ok) {
+          throw new Error(result?.error || "Không thể gửi duyệt chi phí.");
+        }
+        setMoveRequest(null);
+        setMoveValues({});
+        setAdditionalIssues([]);
+        router.refresh();
+      } catch (error) {
+        setMoveError(error instanceof Error ? error.message : "Không thể gửi duyệt chi phí.");
       }
     });
   }
@@ -2240,8 +2289,10 @@ function TechnicalIssueBoardView({
       <TechnicalIssueBoardMoveModal
         request={moveRequest}
         values={moveValues}
+        additionalIssues={additionalIssues}
         error={moveError}
-        pending={isMovePending}
+        pending={isMovePending || isCostApprovalPending}
+        costApprovalPending={isCostApprovalPending}
         vendorOptions={vendorOptions}
         technicalDetailCatalogOptions={technicalDetailCatalogOptions}
         onChange={(key, value) => {
@@ -2254,11 +2305,14 @@ function TechnicalIssueBoardView({
               : {}),
           }));
         }}
+        onAdditionalIssuesChange={setAdditionalIssues}
+        onRequestCostApproval={submitCostApproval}
         onSubmit={submitMove}
         onClose={() => {
-          if (isMovePending) return;
+          if (isMovePending || isCostApprovalPending) return;
           setMoveRequest(null);
           setMoveValues({});
+          setAdditionalIssues([]);
           setMoveError(null);
         }}
       />
@@ -2755,21 +2809,29 @@ function TechnicalIssueBoardCard({
 function TechnicalIssueBoardMoveModal({
   request,
   values,
+  additionalIssues,
   error,
   pending,
+  costApprovalPending,
   vendorOptions,
   technicalDetailCatalogOptions,
   onChange,
+  onAdditionalIssuesChange,
+  onRequestCostApproval,
   onSubmit,
   onClose,
 }: {
   request: TechnicalIssueBoardMoveRequest | null;
   values: Record<string, TechnicalBoardFieldValue>;
+  additionalIssues: TechnicalBoardAdditionalIssue[];
   error: string | null;
   pending: boolean;
+  costApprovalPending: boolean;
   vendorOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["vendorOptions"];
   technicalDetailCatalogOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["technicalDetailCatalogOptions"];
   onChange: (key: string, value: TechnicalBoardFieldValue) => void;
+  onAdditionalIssuesChange: (issues: TechnicalBoardAdditionalIssue[]) => void;
+  onRequestCostApproval: () => void;
   onSubmit: () => void;
   onClose: () => void;
 }) {
@@ -2833,41 +2895,59 @@ function TechnicalIssueBoardMoveModal({
           ))}
           {canOfferAdditionalIssue ? (
             <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-4">
-              <label className="flex cursor-pointer items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={values.createAdditionalIssue === true}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-slate-900">Tách thêm Technical Issue</div>
+                  <div className="mt-1 text-xs leading-5 text-slate-600">
+                    Mỗi TI mới thuộc cùng SR Case và được đưa vào Inspect để xử lý độc lập.
+                  </div>
+                </div>
+                <button
+                  type="button"
                   disabled={pending}
-                  onChange={(event) => onChange("createAdditionalIssue", event.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-violet-300 text-violet-600"
-                />
-                <span>
-                  <span className="block text-sm font-semibold text-slate-900">
-                    SR này còn vấn đề khác cần tách thành TI riêng?
-                  </span>
-                  <span className="mt-1 block text-xs leading-5 text-slate-600">
-                    TI mới sẽ được tạo trong cùng SR Case và đưa vào bước Inspect để xử lý độc lập.
-                  </span>
-                </span>
-              </label>
-              {values.createAdditionalIssue === true ? (
-                <div className="mt-3 grid gap-2 border-t border-violet-100 pt-3">
-                  <input
-                    value={String(values.additionalIssueSummary ?? "")}
-                    onChange={(event) => onChange("additionalIssueSummary", event.target.value)}
-                    disabled={pending}
-                    placeholder="Mô tả ngắn vấn đề cần xử lý thêm *"
-                    className="h-10 rounded-lg border border-violet-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-violet-400"
-                    autoFocus
-                  />
-                  <textarea
-                    value={String(values.additionalIssueNote ?? "")}
-                    onChange={(event) => onChange("additionalIssueNote", event.target.value)}
-                    disabled={pending}
-                    placeholder="Ghi chú thêm (không bắt buộc)"
-                    rows={2}
-                    className="resize-none rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-violet-400"
-                  />
+                  onClick={() => onAdditionalIssuesChange([...additionalIssues, { summary: "", note: "" }])}
+                  className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-violet-200 bg-white px-3 text-xs font-semibold text-violet-700 transition hover:bg-violet-100 disabled:opacity-60"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Thêm TI
+                </button>
+              </div>
+              {additionalIssues.length ? (
+                <div className="mt-3 space-y-3 border-t border-violet-100 pt-3">
+                  {additionalIssues.map((issue, index) => (
+                    <div key={index} className="rounded-xl border border-violet-200 bg-white p-3">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-violet-700">TI bổ sung #{index + 1}</span>
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => onAdditionalIssuesChange(additionalIssues.filter((_, issueIndex) => issueIndex !== index))}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-60"
+                          aria-label={`Xóa TI bổ sung ${index + 1}`}
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="grid gap-2">
+                        <input
+                          value={issue.summary}
+                          onChange={(event) => onAdditionalIssuesChange(additionalIssues.map((candidate, issueIndex) => issueIndex === index ? { ...candidate, summary: event.target.value } : candidate))}
+                          disabled={pending}
+                          placeholder="Mô tả ngắn vấn đề cần xử lý thêm *"
+                          className="h-10 rounded-lg border border-violet-200 px-3 text-sm text-slate-800 outline-none focus:border-violet-400"
+                          autoFocus={index === additionalIssues.length - 1}
+                        />
+                        <textarea
+                          value={issue.note}
+                          onChange={(event) => onAdditionalIssuesChange(additionalIssues.map((candidate, issueIndex) => issueIndex === index ? { ...candidate, note: event.target.value } : candidate))}
+                          disabled={pending}
+                          placeholder="Ghi chú thêm (không bắt buộc)"
+                          rows={2}
+                          className="resize-none rounded-lg border border-violet-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-violet-400"
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : null}
             </div>
@@ -2886,13 +2966,25 @@ function TechnicalIssueBoardMoveModal({
             >
               Hủy
                   </button>
-            <button
-              type="submit"
-              disabled={pending || !action}
-              className="inline-flex h-9 items-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-            >
-              {pending ? "Đang xử lý" : action ? technicalBoardSubmitLabel(action) : "Không khả dụng"}
-            </button>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {action?.command === "service.completeTechnicalIssue" ? (
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={onRequestCostApproval}
+                  className="inline-flex h-9 items-center rounded-lg border border-amber-300 bg-amber-50 px-4 text-sm font-semibold text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {costApprovalPending ? "Đang gửi duyệt..." : "Gửi duyệt chi phí"}
+                </button>
+              ) : null}
+              <button
+                type="submit"
+                disabled={pending || !action}
+                className="inline-flex h-9 items-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                {pending && !costApprovalPending ? "Đang xử lý" : action ? technicalBoardSubmitLabel(action) : "Không khả dụng"}
+              </button>
+            </div>
           </div>
         </form>
       </div>

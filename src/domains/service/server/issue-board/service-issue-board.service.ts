@@ -511,6 +511,18 @@ export async function completeTechnicalIssue(input: {
             throw new Error("Issue chưa có chi tiết kỹ thuật. Vui lòng bắt đầu xử lý đúng luồng trước khi hoàn tất.");
         }
 
+        const pendingCostApproval = await tx.maintenanceRecord.findFirst({
+            where: {
+                technicalIssueId: id,
+                eventType: "COST",
+                approvalStatus: "PENDING",
+            },
+            select: { id: true },
+        });
+        if (pendingCostApproval) {
+            throw new Error("Chi phí đang chờ duyệt. Vui lòng duyệt chi phí trước khi hoàn tất Technical Issue.");
+        }
+
         const updated = await tx.technicalIssue.update({
             where: { id },
             data: {
@@ -1066,6 +1078,20 @@ export async function createTechnicalIssueMaintenanceLog(input: {
     if (!issue) throw new Error("Không tìm thấy issue.");
 
     const approvalStatus = input.needApproval ? "PENDING" : "NOT_REQUIRED";
+
+    if (input.needApproval && input.eventType === "COST") {
+        const existingPendingApproval = await prisma.maintenanceRecord.findFirst({
+            where: {
+                technicalIssueId,
+                eventType: "COST",
+                approvalStatus: "PENDING",
+            },
+            select: { id: true },
+        });
+        if (existingPendingApproval) {
+            throw new Error("Technical Issue này đã có một yêu cầu duyệt chi phí đang chờ xử lý.");
+        }
+    }
 
     return prisma.maintenanceRecord.create({
         data: {
