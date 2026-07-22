@@ -10,6 +10,7 @@ export type BusinessEntityType =
 export type BusinessEntityFact = {
     label: string;
     value: string | number | null;
+    href?: string | null;
 };
 
 export type BusinessEntityPreviewAction = {
@@ -42,6 +43,12 @@ export type BusinessEntityPreviewActivity = {
     taskItemId: string;
     discussionEnabled: boolean;
     items: TaskItemActivityViewModel[];
+    viewerUserId?: string | null;
+    mentionableUsers?: Array<{
+        id: string;
+        label: string;
+        avatarUrl?: string | null;
+    }>;
 };
 
 export type BusinessEntityPreview = {

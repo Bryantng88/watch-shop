@@ -42,22 +42,22 @@ function booleanFromForm(value: FormDataEntryValue | null) {
 function defaultZaloTemplatesForEvent(eventKey: string) {
     if (eventKey === "task.item.activity.commented") {
         return {
-            titleTemplate: "🔔 Thảo luận mới",
-            messageTemplate: "⌚ Watch: {{watchTitle}}\n💬 Nội dung: {{replyBody}}\n🧭 Activity: {{activityTitle}}\n👤 Người gửi: {{actorName}}\n🔗 Mở xử lý: {{route}}",
+            titleTemplate: "👤 User ({{actorName}}) vừa tạo 1 thảo luận mới:",
+            messageTemplate: "💬 Nội dung: {{replyBody}}\n⌚ Đối tượng: đồng hồ {{watchTitle}}\n🧭 Ngữ cảnh: {{contextTitle}}\n⚡ Activity: {{activityTitle}}\n🔗 Mở xử lý: {{route}}",
         };
     }
 
     if (eventKey === "watch.media.ready_for_publish") {
         return {
-            titleTemplate: "Media san sang dang bai",
-            messageTemplate: "Watch: {{watchTitle}}\nSKU: {{sku}}\nTrang thai: {{businessStatus}}\nMedia da duyet xong va chuyen sang Workspace Dang bai.",
+            titleTemplate: "👤 {{actorName}} vừa duyệt xong media:",
+            messageTemplate: "⌚ Watch: {{watchTitle}}\n🏷️ SKU: {{sku}}\n📣 Kênh đăng: {{publishChannels}}",
         };
     }
 
     if (eventKey === "watch.saleStage.posted") {
         return {
-            titleTemplate: "Watch đã đăng bài",
-            messageTemplate: "Watch: {{watchTitle}}\nSKU: {{sku}}\nĐã xác nhận đăng bài thành công.",
+            titleTemplate: "👤 {{actorName}} vừa hoàn tất đăng bài:",
+            messageTemplate: "⌚ Watch: {{watchTitle}}\n🏷️ SKU: {{sku}}\n📣 Kênh đăng: {{publishChannels}}",
         };
     }
 

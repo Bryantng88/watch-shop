@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma, TaskExecutionActionType, TaskExecutionTargetType, TaskStatus, TaskPriority, TaskKind } from "@prisma/client";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
+import { upsertTaskNotification } from "@/domains/notification/notification.repo";
 import {
   changeTaskStatus,
   completeTasksByIds,
@@ -97,6 +98,12 @@ function normalizeTextKey(value: unknown) {
 
 function cleanText(value: unknown) {
   return String(value ?? "").trim();
+}
+
+function activityContextLabel(targetType: string) {
+  if (targetType === TaskExecutionTargetType.TECHNICAL_ISSUE) return "Board TI kỹ thuật";
+  if (targetType === TaskExecutionTargetType.WATCH) return "Workspace đồng hồ";
+  return "Workspace nghiệp vụ";
 }
 
 function manualActionKeyForBlueprintAction(actionKey: string) {
@@ -968,6 +975,7 @@ export async function addTaskItemActivityReplyAction(input: {
         targetId: targetId || null,
         targetTitle,
         watchTitle,
+        contextTitle: activityContextLabel(targetType),
         route: `/admin/task-items/${activity.taskItemId}?tab=activity`,
         taskId: activity.taskItem?.taskId ?? null,
         taskTitle: activity.taskItem?.task?.title ?? null,
@@ -998,6 +1006,7 @@ export async function addTaskItemDiscussionAction(input: {
   targetType: string;
   targetId: string;
   body: string;
+  mentionedUserIds?: string[];
 }) {
   const auth = await getTaskAuth();
   const taskItemId = cleanText(input.taskItemId);
@@ -1007,6 +1016,13 @@ export async function addTaskItemDiscussionAction(input: {
 
   if (!taskItemId || !targetType || !targetId) throw new Error("Thiếu ngữ cảnh trao đổi.");
   if (!body) throw new Error("Vui lòng nhập nội dung trao đổi.");
+  const requestedMentionIds = Array.from(new Set((input.mentionedUserIds ?? []).map(cleanText).filter(Boolean)));
+  const mentionedUsers = requestedMentionIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: requestedMentionIds }, isActive: true },
+        select: { id: true, name: true, email: true },
+      })
+    : [];
 
   const taskItem = await prisma.taskItem.findUnique({
     where: { id: taskItemId },
@@ -1044,6 +1060,8 @@ export async function addTaskItemDiscussionAction(input: {
     metadataJson: {
       targetType,
       targetId,
+      mentionedUserIds: mentionedUsers.map((user) => user.id),
+      mentions: mentionedUsers.map((user) => ({ id: user.id, label: user.name || user.email })),
     },
   });
 
@@ -1073,6 +1091,7 @@ export async function addTaskItemDiscussionAction(input: {
       targetId,
       targetTitle,
       watchTitle,
+      contextTitle: activityContextLabel(targetType),
       route: `/admin/task-items/${taskItemId}?tab=activity`,
       taskId: taskItem.task.id,
       taskTitle: taskItem.task.title,
@@ -1085,12 +1104,85 @@ export async function addTaskItemDiscussionAction(input: {
       replyId: activity.id,
       replyBody: body,
       actorName,
+      mentionedUserIds: mentionedUsers.map((user) => user.id),
+      mentionedUsers: mentionedUsers.map((user) => ({ id: user.id, label: user.name || user.email })),
       message: `${actorName} commented on ${taskItem.title}: ${body}`,
     },
   });
 
+  await Promise.all(mentionedUsers
+    .filter((user) => user.id !== getAuthUserId(auth))
+    .map((user) => upsertTaskNotification(prisma, {
+      userId: user.id,
+      taskId: taskItem.task.id,
+      type: "DISCUSSION_MENTION",
+      title: `${actorName} đã nhắc đến bạn`,
+      message: body,
+      priority: "HIGH",
+      metadata: {
+        route: `/admin/task-items/${taskItemId}?tab=activity`,
+        taskItemId,
+        activityId: activity.id,
+        targetType,
+        targetId,
+      },
+    })));
+
   revalidatePath(`/admin/task-items/${taskItemId}`);
   return { ok: true, activityId: activity.id };
+}
+
+export async function markTaskItemMentionsReadAction(input: {
+  taskItemId: string;
+  targetType: string;
+  targetId: string;
+}) {
+  const auth = await getTaskAuth();
+  const userId = getAuthUserId(auth);
+  const taskItemId = cleanText(input.taskItemId);
+  const targetType = cleanText(input.targetType);
+  const targetId = cleanText(input.targetId);
+  if (!userId || !taskItemId || !targetType || !targetId) return { ok: true, updated: 0 };
+
+  const taskItem = await prisma.taskItem.findUnique({
+    where: { id: taskItemId },
+    select: { id: true, note: true, userId: true, assignedToUserId: true, task: { select: { createdByUserId: true, assignedToUserId: true } } },
+  });
+  if (!taskItem) return { ok: true, updated: 0 };
+  authorizeTaskItemDetail(taskItem, auth);
+
+  const activities = await prisma.taskItemActivity.findMany({
+    where: { taskItemId },
+    select: { id: true, metadataJson: true, replies: { select: { id: true, metadataJson: true } } },
+  });
+  let updated = 0;
+  await prisma.$transaction(async (tx) => {
+    for (const activity of activities) {
+      const metadata = asRecord(activity.metadataJson);
+      if (cleanText(metadata.targetType) !== targetType || cleanText(metadata.targetId) !== targetId) continue;
+      const mentionedIds = Array.isArray(metadata.mentionedUserIds) ? metadata.mentionedUserIds.map(String) : [];
+      const readIds = Array.isArray(metadata.mentionReadByUserIds) ? metadata.mentionReadByUserIds.map(String) : [];
+      if (mentionedIds.includes(userId) && !readIds.includes(userId)) {
+        await tx.taskItemActivity.update({ where: { id: activity.id }, data: { metadataJson: { ...metadata, mentionReadByUserIds: [...readIds, userId] } } });
+        updated += 1;
+      }
+      for (const reply of activity.replies) {
+        const replyMetadata = asRecord(reply.metadataJson);
+        const replyMentionIds = Array.isArray(replyMetadata.mentionedUserIds) ? replyMetadata.mentionedUserIds.map(String) : [];
+        const replyReadIds = Array.isArray(replyMetadata.mentionReadByUserIds) ? replyMetadata.mentionReadByUserIds.map(String) : [];
+        if (!replyMentionIds.includes(userId) || replyReadIds.includes(userId)) continue;
+        await tx.taskItemActivityReply.update({ where: { id: reply.id }, data: { metadataJson: { ...replyMetadata, mentionReadByUserIds: [...replyReadIds, userId] } } });
+        updated += 1;
+      }
+    }
+  });
+  if (updated) {
+    await prisma.notification.updateMany({
+      where: { userId, taskId: taskItem.task.id, type: "DISCUSSION_MENTION" },
+      data: { isRead: true, updatedAt: new Date() },
+    });
+  }
+  return { ok: true, updated };
 }
 
 export async function applyQueueItemManualTransitionAction(input: {

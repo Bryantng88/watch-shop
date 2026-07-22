@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
       auth,
       includeDashboardDetails: true,
       includeTechnicalBoard: modeKey === "technical-issue-flow",
+      includeMediaBoard: modeKey === "media-production-flow",
     });
     const flow = data.viewConfig.modes.find((mode) => mode.key === modeKey);
     const scopeLabel = data.viewConfig.coreFlows?.find(
@@ -97,6 +98,8 @@ export async function GET(request: NextRequest) {
       data: dashboard,
       technicalIssueBoard: data.technicalIssueBoard,
       technicalIssueBoardItemCount: data.technicalIssueBoard?.items.length ?? 0,
+      mediaBoard: data.mediaBoard,
+      mediaBoardItemCount: data.mediaBoard?.items.length ?? 0,
     }, {
       headers: { "Cache-Control": "no-store, max-age=0" },
     });

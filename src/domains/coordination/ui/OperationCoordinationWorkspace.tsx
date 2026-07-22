@@ -19,6 +19,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   Camera,
+  AtSign,
   CheckCircle2,
   ChevronRight,
   BookOpen,
@@ -48,6 +49,7 @@ import {
   updateTechnicalIssuePriorityAction,
 } from "@/domains/coordination/actions/coordination.actions";
 import {
+  applyQueueItemManualTransitionAction,
   createTaskItemAction,
   submitOperationalBlueprintActionAction,
 } from "@/domains/task/actions/task.actions";
@@ -84,7 +86,7 @@ type Props = {
 };
 
 type TechnicalIssuePriorityFilter = "ALL" | "URGENT" | "NORMAL";
-type TechnicalIssueCommentFilter = "ALL" | "COMMENTED";
+type TechnicalIssueCommentFilter = "ALL" | "COMMENTED" | "MENTIONED_ME" | "UNREAD_MENTION";
 type TechnicalBoardFieldValue = string | boolean | string[];
 type TechnicalBoardAdditionalIssue = { summary: string; note: string };
 
@@ -586,9 +588,11 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   const [title, setTitle] = useState(initialTitle);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [workTicketView, setWorkTicketView] = useState<"LIST" | "TI_BOARD">(() =>
+  const [workTicketView, setWorkTicketView] = useState<"LIST" | "TI_BOARD" | "MEDIA_BOARD">(() =>
     data.viewConfig.defaultModeKey === "technical-issue-flow"
       ? "TI_BOARD"
+      : data.viewConfig.defaultModeKey === "media-production-flow"
+        ? "MEDIA_BOARD"
       : "LIST",
   );
   const [isTechnicalIntakeOpen, setIsTechnicalIntakeOpen] = useState(false);
@@ -605,6 +609,9 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   const [asyncTechnicalIssueBoard, setAsyncTechnicalIssueBoard] = useState(
     data.technicalIssueBoard,
   );
+  const [asyncMediaBoard, setAsyncMediaBoard] = useState(data.mediaBoard);
+  const [isBoardRefreshing, setIsBoardRefreshing] = useState(false);
+  const [boardRefreshedAt, setBoardRefreshedAt] = useState<Date | null>(null);
   const [workspacePage, setWorkspacePage] = useState(1);
   const [workspacePageSize, setWorkspacePageSize] = useState(10);
   const [isRolloverMenuOpen, setIsRolloverMenuOpen] = useState(false);
@@ -614,7 +621,11 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   function changeActiveViewMode(nextModeKey: string) {
     startViewTransition(() => {
       setActiveViewModeKey(nextModeKey);
-      setWorkTicketView(nextModeKey === "technical-issue-flow" ? "TI_BOARD" : "LIST");
+      setWorkTicketView(nextModeKey === "technical-issue-flow"
+        ? "TI_BOARD"
+        : nextModeKey === "media-production-flow"
+          ? "MEDIA_BOARD"
+          : "LIST");
       const params = new URLSearchParams(searchParams.toString());
       params.set("context", data.context);
       params.set("dashboardVersion", "2");
@@ -653,11 +664,35 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   }, [activeViewMode?.key, data.context, searchParams]);
   const handleDashboardResult = useCallback((result: unknown) => {
     if (!result || typeof result !== "object") return;
-    const board = (result as {
+    const nested = "data" in result && result.data && typeof result.data === "object"
+      ? result.data
+      : null;
+    const source = { ...(nested ?? {}), ...result };
+    const board = (source as {
       technicalIssueBoard?: CoordinationDashboardDTO["technicalIssueBoard"];
     }).technicalIssueBoard;
     if (board) setAsyncTechnicalIssueBoard(board);
+    const mediaBoard = (source as {
+      mediaBoard?: CoordinationDashboardDTO["mediaBoard"];
+    }).mediaBoard;
+    if (mediaBoard) setAsyncMediaBoard(mediaBoard);
   }, []);
+  const refreshTechnicalIssueBoard = useCallback(async () => {
+    if (isBoardRefreshing) return;
+    setError(null);
+    setIsBoardRefreshing(true);
+    try {
+      const response = await fetch(dashboardEndpoint, { cache: "no-store" });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error("Không thể tải lại board.");
+      handleDashboardResult(result);
+      setBoardRefreshedAt(new Date());
+    } catch (refreshError) {
+      setError(refreshError instanceof Error ? refreshError.message : "Không thể tải lại board.");
+    } finally {
+      setIsBoardRefreshing(false);
+    }
+  }, [dashboardEndpoint, handleDashboardResult, isBoardRefreshing]);
   const handleTechnicalIntakeCompleted = useCallback(async (technicalIssueId: string | null) => {
     setActiveViewModeKey("technical-issue-flow");
     setWorkTicketView("TI_BOARD");
@@ -675,7 +710,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     try {
       const response = await fetch(technicalDashboardEndpoint, { cache: "no-store" });
       const result = await response.json().catch(() => null);
-      if (response.ok) handleDashboardResult(result?.data ?? result);
+      if (response.ok) handleDashboardResult(result);
     } finally {
       router.refresh();
     }
@@ -811,6 +846,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     setWorkspacePage(1);
   }, [activeViewModeKey, filterCreator, filterPayment, filterQuery, filterWorkStatus, workspacePageSize]);
   const isTechnicalIssueFlowMode = activeViewMode?.key === "technical-issue-flow";
+  const isMediaFlowMode = activeViewMode?.key === "media-production-flow";
   const technicalIssueBoardActions = useMemo(() => {
     const actionsByKey = new Map<string, OperationalBlueprintAction>();
     const defaultActions =
@@ -827,6 +863,9 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     isTechnicalIssueFlowMode && Boolean(asyncTechnicalIssueBoard);
   const isTechnicalIssueBoardView =
     workTicketView === "TI_BOARD" && canShowTechnicalIssueBoard;
+  const canShowMediaBoard = isMediaFlowMode && Boolean(asyncMediaBoard);
+  const isMediaBoardView = workTicketView === "MEDIA_BOARD" && canShowMediaBoard;
+  const isOperationalBoardView = isTechnicalIssueBoardView || isMediaBoardView;
   const technicalIssueBoardItems = useMemo(
     () => asyncTechnicalIssueBoard?.items ?? [],
     [asyncTechnicalIssueBoard?.items],
@@ -835,6 +874,23 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     () => technicalBoardSummary(technicalIssueBoardItems),
     [technicalIssueBoardItems],
   );
+  const mediaBoardItems = useMemo(() => asyncMediaBoard?.items ?? [], [asyncMediaBoard?.items]);
+  const mediaBoardCommentSummary = useMemo(() => ({
+    total: mediaBoardItems.length,
+    commented: mediaBoardItems.filter((item) => item.commentCount > 0).length,
+    mentionedMe: mediaBoardItems.filter((item) => item.mentionedMeCount > 0).length,
+    unreadMentionedMe: mediaBoardItems.filter((item) => item.unreadMentionCount > 0).length,
+  }), [mediaBoardItems]);
+  const visibleMediaBoardItems = useMemo(() => {
+    const filtered = technicalIssueCommentFilter === "COMMENTED"
+      ? mediaBoardItems.filter((item) => item.commentCount > 0)
+      : technicalIssueCommentFilter === "MENTIONED_ME"
+        ? mediaBoardItems.filter((item) => item.mentionedMeCount > 0)
+        : technicalIssueCommentFilter === "UNREAD_MENTION"
+          ? mediaBoardItems.filter((item) => item.unreadMentionCount > 0)
+          : mediaBoardItems;
+    return [...filtered].sort((left, right) => Number(right.unreadMentionCount > 0) - Number(left.unreadMentionCount > 0));
+  }, [mediaBoardItems, technicalIssueCommentFilter]);
   const visibleTechnicalIssueBoardSummary = useMemo(() => {
     const visibleItems =
       technicalIssuePriorityFilter === "ALL"
@@ -845,11 +901,18 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     return technicalBoardSummary(
       technicalIssueCommentFilter === "COMMENTED"
         ? visibleItems.filter((item) => item.commentCount > 0)
-        : visibleItems,
+        : technicalIssueCommentFilter === "MENTIONED_ME"
+          ? visibleItems.filter((item) => item.mentionedMeCount > 0)
+          : technicalIssueCommentFilter === "UNREAD_MENTION"
+            ? visibleItems.filter((item) => item.unreadMentionCount > 0)
+          : visibleItems,
     );
   }, [technicalIssueBoardItems, technicalIssueCommentFilter, technicalIssuePriorityFilter]);
   useEffect(() => {
     if (activeViewMode?.key !== "technical-issue-flow" && workTicketView === "TI_BOARD") {
+      setWorkTicketView("LIST");
+    }
+    if (activeViewMode?.key !== "media-production-flow" && workTicketView === "MEDIA_BOARD") {
       setWorkTicketView("LIST");
     }
   }, [activeViewMode?.key, workTicketView]);
@@ -1099,7 +1162,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
           cashFlowPeriods={isPaymentCollectionFlow}
           onResult={handleDashboardResult}
         />
-        <section className="rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
+        <section className="min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
           <div className="border-b border-slate-200 px-5 py-4">
             {activeViewMode ? (
               <div className="rounded-xl border border-sky-100 bg-gradient-to-b from-sky-50/80 to-[#f3f8ff] p-4 text-xs text-slate-700 shadow-[0_8px_24px_rgba(30,43,79,0.04)]">
@@ -1265,10 +1328,12 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                 searchValue={filterQuery}
                 searchPlaceholder="Tìm Workspace, phụ trách, hoạt động..."
                 onSearchChange={setFilterQuery}
-                activeView={isTechnicalIssueBoardView ? "TI_BOARD" : "LIST"}
-                onViewChange={(value) => setWorkTicketView(value === "TI_BOARD" ? "TI_BOARD" : "LIST")}
+                activeView={isTechnicalIssueBoardView ? "TI_BOARD" : isMediaBoardView ? "MEDIA_BOARD" : "LIST"}
+                onViewChange={(value) => setWorkTicketView(value === "TI_BOARD" ? "TI_BOARD" : value === "MEDIA_BOARD" ? "MEDIA_BOARD" : "LIST")}
                 viewOptions={[
-                  { value: "TI_BOARD", label: "Board TI", icon: <Grid2X2 className="h-4 w-4" />, disabled: !canShowTechnicalIssueBoard },
+                  ...(isMediaFlowMode
+                    ? [{ value: "MEDIA_BOARD", label: "Board Media", icon: <Grid2X2 className="h-4 w-4" />, disabled: !canShowMediaBoard }]
+                    : [{ value: "TI_BOARD", label: "Board TI", icon: <Grid2X2 className="h-4 w-4" />, disabled: !canShowTechnicalIssueBoard }]),
                   { value: "LIST", label: "List", icon: <List className="h-4 w-4" /> },
                 ]}
                 selectFilters={[
@@ -1300,7 +1365,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                       { label: `Gấp (${technicalIssueBoardSummary.urgent})`, value: "URGENT" },
                       { label: `Không ưu tiên (${technicalIssueBoardSummary.total - technicalIssueBoardSummary.urgent})`, value: "NORMAL" },
                     ],
-                    onChange: (value) => setTechnicalIssuePriorityFilter(value as TechnicalIssuePriorityFilter),
+                    onChange: (value: string) => setTechnicalIssuePriorityFilter(value as TechnicalIssuePriorityFilter),
                   }, {
                     key: "ti-comment",
                     label: "Trao đổi",
@@ -1308,10 +1373,23 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                     options: [
                       { label: `Tất cả TI (${technicalIssueBoardSummary.total})`, value: "ALL" },
                       { label: `Có comment (${technicalIssueBoardSummary.commented})`, value: "COMMENTED" },
+                      { label: `Nhắc đến tôi (${technicalIssueBoardSummary.mentionedMe})`, value: "MENTIONED_ME" },
+                      { label: `Chưa đọc (${technicalIssueBoardSummary.unreadMentionedMe})`, value: "UNREAD_MENTION" },
                     ],
-                    onChange: (value) => setTechnicalIssueCommentFilter(value as TechnicalIssueCommentFilter),
+                    onChange: (value: string) => setTechnicalIssueCommentFilter(value as TechnicalIssueCommentFilter),
+                  }] : isMediaBoardView ? [{
+                    key: "media-comment",
+                    label: "Trao đổi",
+                    value: technicalIssueCommentFilter,
+                    options: [
+                      { label: `Tất cả Watch (${mediaBoardCommentSummary.total})`, value: "ALL" },
+                      { label: `Có comment (${mediaBoardCommentSummary.commented})`, value: "COMMENTED" },
+                      { label: `Nhắc đến tôi (${mediaBoardCommentSummary.mentionedMe})`, value: "MENTIONED_ME" },
+                      { label: `Chưa đọc (${mediaBoardCommentSummary.unreadMentionedMe})`, value: "UNREAD_MENTION" },
+                    ],
+                    onChange: (value: string) => setTechnicalIssueCommentFilter(value as TechnicalIssueCommentFilter),
                   }] : []),
-                  ...(showPaymentColumn && !isTechnicalIssueBoardView ? [{
+                  ...(showPaymentColumn && !isOperationalBoardView ? [{
                     key: "payment",
                     label: "Thanh toán",
                     value: filterPayment,
@@ -1323,12 +1401,12 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                     ],
                     onChange: setFilterPayment,
                   }] : []),
-                  ...(!isTechnicalIssueBoardView ? [{
+                  ...(!isOperationalBoardView ? [{
                     key: "page-size",
                     label: "Số dòng hiển thị",
                     value: String(workspacePageSize),
                     options: [10, 20, 50].map((size) => ({ label: `${size} dòng`, value: String(size) })),
-                    onChange: (value) => setWorkspacePageSize(Number(value)),
+                    onChange: (value: string) => setWorkspacePageSize(Number(value)),
                   }] : []),
                 ]}
                 onWeekChange={(value) => {
@@ -1342,6 +1420,10 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                     summary={technicalIssueBoardSummary}
                     visibleSummary={visibleTechnicalIssueBoardSummary}
                   />
+                ) : isMediaBoardView ? (
+                  <span className="inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-xl bg-slate-50 px-3 text-xs font-semibold text-slate-600">
+                    {asyncMediaBoard?.items.length ?? 0} Watch
+                  </span>
                 ) : (
                   <span className="inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-xl bg-slate-50 px-3 text-xs font-semibold text-slate-500">
                     {isViewPending
@@ -1352,6 +1434,27 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   </span>
                 )}
                 {filterQuery || filterCreator !== "ALL" || filterWorkStatus !== "ALL" || filterPayment !== "ALL" || technicalIssuePriorityFilter !== "ALL" || technicalIssueCommentFilter !== "ALL" ? <button type="button" onClick={() => { setFilterQuery(""); setFilterCreator("ALL"); setFilterWorkStatus("ALL"); setFilterPayment("ALL"); setTechnicalIssuePriorityFilter("ALL"); setTechnicalIssueCommentFilter("ALL"); }} className="inline-flex h-11 shrink-0 items-center rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800">Xóa lọc</button> : null}
+                {isOperationalBoardView ? (
+                  <button
+                    type="button"
+                    onClick={() => void refreshTechnicalIssueBoard()}
+                    disabled={isBoardRefreshing}
+                    title={boardRefreshedAt
+                      ? `Tải lại board · Cập nhật lúc ${boardRefreshedAt.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`
+                      : "Tải lại board"}
+                    aria-label="Tải lại board"
+                    className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 disabled:cursor-wait disabled:text-slate-400"
+                  >
+                    <RotateCcw className={`h-4 w-4 ${isBoardRefreshing ? "animate-spin" : ""}`} />
+                    <span className="hidden 2xl:inline">
+                      {isBoardRefreshing
+                        ? "Đang tải..."
+                        : boardRefreshedAt
+                          ? boardRefreshedAt.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
+                          : "Tải lại"}
+                    </span>
+                  </button>
+                ) : null}
               </SpaceFilterBar>
             </div>
             {isCreateFormOpen && selectedBlueprint ? (
@@ -1548,6 +1651,14 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
               commentFilter={technicalIssueCommentFilter}
               focusedIssueId={focusedTechnicalIssueId}
             />
+          ) : isMediaBoardView ? (
+            <MediaProductionBoardView
+              items={visibleMediaBoardItems}
+              onChanged={(items) => setAsyncMediaBoard((current) => current ? {
+                ...current,
+                items: current.items.map((item) => items.find((updated) => updated.id === item.id) ?? item),
+              } : current)}
+            />
           ) : (
             <>
           <div className={cn("hidden border-y border-slate-100 bg-[#fbfcfe] px-5 py-3 text-xs font-bold uppercase tracking-[0.05em] text-slate-500 lg:grid", workTicketGridClass)}>
@@ -1661,7 +1772,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
               </div>
             ) : null}
           </div>
-          {!isTechnicalIssueBoardView && filteredWorkTickets.length > 0 ? (
+          {!isOperationalBoardView && filteredWorkTickets.length > 0 ? (
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white px-5 py-4">
               <div className="text-xs font-medium text-slate-500">
                 Hiển thị {workspacePageStart + 1}-{Math.min(workspacePageStart + workspacePageSize, filteredWorkTickets.length)} trong {filteredWorkTickets.length} Workspace
@@ -2021,6 +2132,190 @@ export function PaymentCollectionBoard({ items }: { items: PaymentBoardItem[] })
   );
 }
 
+type MediaBoardItem = NonNullable<CoordinationDashboardDTO["mediaBoard"]>["items"][number];
+type MediaBoardStage = MediaBoardItem["stage"];
+
+function MediaProductionBoardView({
+  items,
+  onChanged,
+}: {
+  items: MediaBoardItem[];
+  onChanged: (items: MediaBoardItem[]) => void;
+}) {
+  const router = useRouter();
+  const previewState = useBusinessEntityPreview();
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const columns: Array<{ key: MediaBoardStage; label: string; hint: string }> = [
+    { key: "PHOTOGRAPHY", label: "Chụp ảnh", hint: "Watch đang chờ hoặc thực hiện chụp ảnh." },
+    { key: "MEDIA_PROCESSING", label: "Xử lý media", hint: "Gắn media, kiểm tra và duyệt nội dung/hình ảnh." },
+    { key: "PUBLISH", label: "Đăng bài", hint: "Media đã duyệt, chờ đăng lên các kênh." },
+    { key: "DONE", label: "Done", hint: "Watch đã hoàn tất đăng bài." },
+  ];
+  const stageOrder: MediaBoardStage[] = ["PHOTOGRAPHY", "MEDIA_PROCESSING", "PUBLISH", "DONE"];
+
+  async function moveItem(item: MediaBoardItem, targetStage: MediaBoardStage) {
+    const currentIndex = stageOrder.indexOf(item.stage);
+    const targetIndex = stageOrder.indexOf(targetStage);
+    if (targetIndex !== currentIndex + 1) {
+      setError("Media chỉ được chuyển lần lượt: Chụp ảnh → Xử lý media → Đăng bài → Done.");
+      return;
+    }
+    const actionKey = item.stage === "PHOTOGRAPHY"
+      ? "start-work"
+      : item.stage === "MEDIA_PROCESSING"
+        ? "approve-media"
+        : item.stage === "PUBLISH"
+          ? "mark-posted"
+          : null;
+    if (!actionKey) return;
+    setError(null);
+    setPendingId(item.id);
+    try {
+      await applyQueueItemManualTransitionAction({ bindingId: item.bindingId, actionKey });
+      onChanged(items.map((candidate) => candidate.id === item.id
+        ? { ...candidate, stage: targetStage }
+        : candidate));
+      window.setTimeout(() => router.refresh(), 100);
+    } catch (moveError) {
+      setError(moveError instanceof Error ? moveError.message : "Không thể chuyển Media sang stage tiếp theo.");
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  return (
+    <div className="min-w-0 max-w-full border-t border-slate-100 bg-slate-50/70 px-3 py-4 sm:px-4">
+      {error ? <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">{error}</div> : null}
+      <div className="max-w-full overflow-x-auto overscroll-x-contain pb-2">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={(event) => setActiveId(String(event.active.id))}
+          onDragEnd={(event) => {
+            const item = items.find((candidate) => candidate.id === String(event.active.id));
+            const targetStage = String(event.over?.id ?? "") as MediaBoardStage;
+            setActiveId(null);
+            if (item && stageOrder.includes(targetStage) && item.stage !== targetStage) void moveItem(item, targetStage);
+          }}
+        >
+          <div className="grid w-full min-w-[960px] grid-cols-4 gap-3">
+            {columns.map((column) => (
+              <MediaBoardColumn
+                key={column.key}
+                column={column}
+                items={items.filter((item) => item.stage === column.key)}
+                pendingId={pendingId}
+                onPreview={(item) => previewState.openPreview({
+                  type: "WATCH",
+                  id: item.id,
+                  title: item.title,
+                  subtitle: item.sku ? `SKU: ${item.sku}` : null,
+                  imageUrl: item.imageUrl,
+                })}
+              />
+            ))}
+          </div>
+          <DragOverlay>{activeId && items.find((item) => item.id === activeId) ? (
+            <div className="w-72 opacity-90">
+              <MediaBoardCard item={items.find((item) => item.id === activeId)!} />
+            </div>
+          ) : null}</DragOverlay>
+        </DndContext>
+      </div>
+      <BusinessEntityPreviewModal
+        open={previewState.open}
+        preview={previewState.preview}
+        loading={previewState.loading}
+        error={previewState.error}
+        onClose={previewState.closePreview}
+        onActivityChanged={previewState.refreshPreview}
+      />
+    </div>
+  );
+}
+
+function MediaBoardColumn({
+  column,
+  items,
+  pendingId,
+  onPreview,
+}: {
+  column: { key: MediaBoardStage; label: string; hint: string };
+  items: MediaBoardItem[];
+  pendingId: string | null;
+  onPreview: (item: MediaBoardItem) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: column.key });
+  const appearance = mediaStageAppearance(column.key);
+  const StageIcon = appearance.icon;
+  return (
+    <section ref={setNodeRef} className={cn("min-h-[480px] overflow-hidden rounded-2xl border bg-white/90 shadow-[0_8px_28px_-20px_rgba(15,23,42,0.45)] transition", appearance.columnBorder, isOver && "scale-[1.005] ring-2 ring-violet-200")}>
+      <header className={cn("border-b px-4 py-3.5", appearance.header)}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 gap-2.5">
+            <span className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white shadow-sm", appearance.iconColor)}><StageIcon className="h-4.5 w-4.5" /></span>
+            <div><div className="text-sm font-bold text-slate-950">{column.label}</div><div className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-slate-500">{column.hint}</div></div>
+          </div>
+          <span className="grid h-7 min-w-7 place-items-center rounded-full bg-white px-2 text-xs font-bold text-slate-700 shadow-sm">{items.length}</span>
+        </div>
+      </header>
+      <div className="grid content-start gap-4 p-3.5">
+        {items.map((item) => <DraggableMediaBoardCard key={item.id} item={item} pending={pendingId === item.id} onPreview={() => onPreview(item)} />)}
+        {!items.length ? <div className={cn("grid min-h-32 place-items-center rounded-2xl border border-dashed text-xs", appearance.empty)}><div className="text-center"><StageIcon className="mx-auto mb-2 h-5 w-5 opacity-50" />Kéo Watch vào đây</div></div> : null}
+      </div>
+    </section>
+  );
+}
+
+function mediaStageAppearance(stage: MediaBoardStage) {
+  if (stage === "PHOTOGRAPHY") return { icon: Camera, header: "border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50/60", columnBorder: "border-amber-100", iconColor: "text-amber-600", accent: "bg-amber-400", badge: "bg-amber-50 text-amber-700 ring-amber-200", empty: "border-amber-200 bg-amber-50/30 text-amber-500" };
+  if (stage === "MEDIA_PROCESSING") return { icon: Monitor, header: "border-violet-100 bg-gradient-to-r from-violet-50 to-fuchsia-50/50", columnBorder: "border-violet-100", iconColor: "text-violet-600", accent: "bg-violet-500", badge: "bg-violet-50 text-violet-700 ring-violet-200", empty: "border-violet-200 bg-violet-50/30 text-violet-500" };
+  if (stage === "PUBLISH") return { icon: Send, header: "border-sky-100 bg-gradient-to-r from-sky-50 to-cyan-50/50", columnBorder: "border-sky-100", iconColor: "text-sky-600", accent: "bg-sky-500", badge: "bg-sky-50 text-sky-700 ring-sky-200", empty: "border-sky-200 bg-sky-50/30 text-sky-500" };
+  return { icon: CheckCircle2, header: "border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50/50", columnBorder: "border-emerald-100", iconColor: "text-emerald-600", accent: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700 ring-emerald-200", empty: "border-emerald-200 bg-emerald-50/30 text-emerald-500" };
+}
+
+function DraggableMediaBoardCard({ item, pending, onPreview }: { item: MediaBoardItem; pending: boolean; onPreview: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: item.id, disabled: pending });
+  return <div ref={setNodeRef} style={{ transform: CSS.Translate.toString(transform) }} {...listeners} {...attributes} className={cn(isDragging && "opacity-30")}><MediaBoardCard item={item} pending={pending} onPreview={onPreview} /></div>;
+}
+
+function MediaBoardCard({ item, pending = false, onPreview }: { item: MediaBoardItem; pending?: boolean; onPreview?: () => void }) {
+  const appearance = mediaStageAppearance(item.stage);
+  const StageIcon = appearance.icon;
+  return (
+    <article onDoubleClick={onPreview} className="group relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_7px_18px_-14px_rgba(15,23,42,0.7)] transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_14px_30px_-16px_rgba(15,23,42,0.45)]">
+      <span className={cn("absolute inset-x-0 top-0 z-10 h-1", appearance.accent)} />
+      <div className="flex gap-3 p-3 pt-4">
+        <div className="relative h-[68px] w-[68px] shrink-0 overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200/80">
+          {item.imageUrl ? <Image src={resolveMediaPreviewSrc(item.imageUrl) ?? item.imageUrl} alt={item.title} fill sizes="68px" unoptimized className="object-cover transition duration-300 group-hover:scale-105" /> : <Camera className="m-[22px] h-6 w-6 text-slate-400" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-1">
+            <div className="line-clamp-2 text-sm font-bold leading-5 text-slate-950">{item.title}</div>
+            {pending ? <LoaderCircle className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-violet-500" /> : <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-slate-500" />}
+          </div>
+          <div className="mt-1 truncate text-[11px] font-medium text-slate-500">{item.sku ?? "Chưa có SKU"}</div>
+          <span className={cn("mt-2 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ring-1 ring-inset", appearance.badge)}><StageIcon className="h-3 w-3" />{item.workflowState ?? "Sẵn sàng"}</span>
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/55 px-3 py-2.5 text-[11px] text-slate-500">
+        <div className="flex min-w-0 items-center gap-2">
+          {item.lastUpdatedBy.avatarUrl ? <span className="relative h-5 w-5 shrink-0 overflow-hidden rounded-full ring-1 ring-white"><Image src={resolveMediaPreviewSrc(item.lastUpdatedBy.avatarUrl) ?? item.lastUpdatedBy.avatarUrl} alt="" fill sizes="20px" unoptimized className="object-cover" /></span> : <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-slate-200 text-[8px] font-bold text-slate-600">{item.lastUpdatedBy.label.slice(0, 1)}</span>}
+          <span className="truncate">{item.lastUpdatedBy.label}</span>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {item.unreadMentionCount ? <span className="inline-flex items-center gap-0.5 rounded-full bg-violet-100 px-1.5 py-1 font-bold text-violet-700 ring-1 ring-violet-200"><AtSign className="h-3 w-3" />{item.unreadMentionCount}</span> : null}
+          {item.commentCount ? <span className="inline-flex items-center gap-1 font-bold text-slate-600"><MessageCircle className="h-3.5 w-3.5 fill-slate-500 text-slate-500" />{item.commentCount}</span> : null}
+          {onPreview ? <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={onPreview} className="rounded-lg bg-white px-2 py-1 font-semibold text-violet-600 shadow-sm ring-1 ring-slate-200 transition hover:bg-violet-50">Xem</button> : null}
+        </div>
+      </div>
+    </article>
+  );
+}
+
 function TechnicalIssueBoardView({
   items,
   actions,
@@ -2078,7 +2373,11 @@ function TechnicalIssueBoardView({
     return sortTechnicalBoardItems(
       commentFilter === "COMMENTED"
         ? filtered.filter((item) => item.commentCount > 0)
-        : filtered,
+        : commentFilter === "MENTIONED_ME"
+          ? filtered.filter((item) => item.mentionedMeCount > 0)
+          : commentFilter === "UNREAD_MENTION"
+            ? filtered.filter((item) => item.unreadMentionCount > 0)
+          : filtered,
     );
   }, [boardItems, commentFilter, priorityFilter]);
   const activeItem = activeId ? visibleItems.find((item) => item.id === activeId) ?? null : null;
@@ -2113,12 +2412,16 @@ function TechnicalIssueBoardView({
 
   function handleDragEnd(event: DragEndEvent) {
     const issueId = String(event.active.id);
-    const targetStage = technicalBoardStageValue(event.over?.id);
+    const droppedStage = technicalBoardStageValue(event.over?.id);
     const item = visibleItems.find((candidate) => candidate.id === issueId) ?? null;
     setActiveId(null);
     setOverStage(null);
 
-    if (!item || !targetStage || item.stage === targetStage) return;
+    if (!item || !droppedStage || item.stage === droppedStage) return;
+
+    const requiresClassificationBeforeProcessing =
+      item.stage === "INSPECT" && droppedStage === "PROCESSING";
+    const targetStage = requiresClassificationBeforeProcessing ? "READY" : droppedStage;
 
     const action = technicalBoardActionForMove({
       from: item.stage,
@@ -2138,7 +2441,14 @@ function TechnicalIssueBoardView({
       return;
     }
 
-    setMoveRequest({ item, targetStage, action, unavailableReason: null });
+    setMoveRequest({
+      item,
+      targetStage,
+      action,
+      unavailableReason: requiresClassificationBeforeProcessing
+        ? "TI cần được phân loại và nhập đủ thông tin trước. Sau khi xác nhận, TI sẽ được đưa vào Chờ xử lý."
+        : null,
+    });
     setMoveValues(defaultTechnicalBoardMoveValues(item, action));
     setAdditionalIssues([]);
     setMoveError(null);
@@ -2309,8 +2619,8 @@ function TechnicalIssueBoardView({
   }
 
   return (
-    <div className="border-t border-slate-100 bg-slate-50/70 px-3 py-4 sm:px-4">
-      <div className="overflow-x-auto pb-2">
+    <div className="min-w-0 max-w-full border-t border-slate-100 bg-slate-50/70 px-3 py-4 sm:px-4">
+      <div className="max-w-full overflow-x-auto overscroll-x-contain pb-2">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
@@ -2318,7 +2628,7 @@ function TechnicalIssueBoardView({
           onDragOver={(event) => setOverStage(technicalBoardStageValue(event.over?.id))}
           onDragEnd={handleDragEnd}
         >
-          <div className="grid min-w-[1320px] grid-cols-4 gap-6 xl:gap-7 2xl:gap-8">
+          <div className="grid w-full min-w-[960px] grid-cols-4 gap-3">
             {columns.map((column) => {
               const columnItems = visibleItems.filter((item) => item.stage === column.key);
               return (
@@ -2393,14 +2703,9 @@ function TechnicalIssueBoardView({
             ? previewState.preview.id
             : null;
           if (issueId) {
-            setAsyncTechnicalIssueBoard((current) => current
-              ? {
-                  ...current,
-                  items: current.items.map((item) => item.id === issueId
-                    ? { ...item, commentCount: item.commentCount + 1 }
-                    : item),
-                }
-              : current);
+            setBoardItems((current) => current.map((item) => item.id === issueId
+              ? { ...item, commentCount: item.commentCount + 1 }
+              : item));
           }
           previewState.refreshPreview();
         }}
@@ -2438,6 +2743,8 @@ function technicalBoardActionForMove(input: {
       ? "classify_technical_issue"
       : input.from === "INSPECT" && input.to === "DONE"
         ? "close_no_issue"
+        : input.from === "READY" && input.to === "DONE"
+          ? "cancel_processing"
         : input.from === "READY" && input.to === "PROCESSING"
           ? "start_processing"
           : input.from === "PROCESSING" && input.to === "DONE"
@@ -2486,6 +2793,9 @@ function defaultTechnicalBoardMoveValues(
   }
   if (action.command === "service.closeTechnicalIssueNoIssue") {
     return { resolutionNote: "" };
+  }
+  if (action.command === "service.cancelTechnicalIssue") {
+    return { cancelReason: "" };
   }
   return {};
 }
@@ -2553,6 +2863,9 @@ function sortTechnicalBoardItems(items: TechnicalIssueBoardItem[]) {
       technicalIssuePriorityWeight(left.priority) - technicalIssuePriorityWeight(right.priority);
     if (priorityDiff !== 0) return priorityDiff;
 
+    const unreadMentionDiff = Number(right.unreadMentionCount > 0) - Number(left.unreadMentionCount > 0);
+    if (unreadMentionDiff !== 0) return unreadMentionDiff;
+
     const commentDiff = Number(right.commentCount > 0) - Number(left.commentCount > 0);
     if (commentDiff !== 0) return commentDiff;
 
@@ -2568,6 +2881,8 @@ function technicalBoardSummary(items: TechnicalIssueBoardItem[]) {
   const done = items.filter((item) => item.stage === "DONE").length;
   const urgent = items.filter((item) => technicalIssuePriorityValue(item.priority) === "URGENT").length;
   const commented = items.filter((item) => item.commentCount > 0).length;
+  const mentionedMe = items.filter((item) => item.mentionedMeCount > 0).length;
+  const unreadMentionedMe = items.filter((item) => item.unreadMentionCount > 0).length;
   const percent = total ? Math.round((done / total) * 100) : 0;
   const stageCounts = {
     INSPECT: items.filter((item) => item.stage === "INSPECT").length,
@@ -2576,7 +2891,7 @@ function technicalBoardSummary(items: TechnicalIssueBoardItem[]) {
     DONE: done,
   };
 
-  return { total, done, urgent, commented, percent, stageCounts };
+  return { total, done, urgent, commented, mentionedMe, unreadMentionedMe, percent, stageCounts };
 }
 
 function shouldShowTechnicalBoardField(
@@ -2597,9 +2912,10 @@ function shouldShowTechnicalBoardField(
 
 function technicalBoardSubmitLabel(action: OperationalBlueprintAction) {
   if (action.command === "service.confirmTechnicalIssue") return "Xác nhận lỗi";
-  if (action.command === "service.closeTechnicalIssueNoIssue") return "Chuyển Done";
+  if (action.command === "service.closeTechnicalIssueNoIssue") return "Xác nhận không có lỗi";
   if (action.command === "service.startTechnicalIssue") return "Bắt đầu xử lý";
   if (action.command === "service.completeTechnicalIssue") return "Hoàn tất xử lý";
+  if (action.command === "service.cancelTechnicalIssue") return "Xác nhận không xử lý nữa";
   return "Xác nhận";
 }
 
@@ -2830,6 +3146,12 @@ function TechnicalIssueBoardCard({
           </div>
         </div>
         <div className="relative z-20 flex shrink-0 items-center gap-1">
+          {item.unreadMentionCount > 0 ? (
+            <span title={`${item.unreadMentionCount} lượt nhắc bạn chưa đọc`} className="inline-flex h-6 items-center gap-0.5 rounded-full bg-violet-100 px-1.5 text-[11px] font-bold text-violet-700 ring-1 ring-violet-200">
+              <AtSign className="h-3.5 w-3.5" aria-hidden="true" />
+              {item.unreadMentionCount > 99 ? "99+" : item.unreadMentionCount}
+            </span>
+          ) : null}
           {item.commentCount > 0 ? (
             <span
               title={`${item.commentCount} comment`}

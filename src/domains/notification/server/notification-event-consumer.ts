@@ -9,6 +9,7 @@ type NotificationEventLog = {
     eventKey: string;
     targetType: string;
     targetId: string;
+    actorUserId?: string | null;
     metadataJson?: Prisma.JsonValue | null;
 };
 
@@ -51,8 +52,49 @@ function normalizeEventLog(value: unknown): NotificationEventLog {
         eventKey: clean(row.eventKey),
         targetType: clean(row.targetType),
         targetId: clean(row.targetId),
+        actorUserId: clean(row.actorUserId) || null,
         metadataJson: (row.metadataJson ?? null) as Prisma.JsonValue | null,
     };
+}
+
+async function enrichNotificationEvent(
+    client: Prisma.TransactionClient,
+    event: NotificationEventLog,
+) {
+    const metadata = asRecord(event.metadataJson);
+    const enriched: Record<string, unknown> = { ...metadata };
+
+    if (!clean(enriched.actorName) && event.actorUserId) {
+        const actor = await client.user.findUnique({
+            where: { id: event.actorUserId },
+            select: { name: true, email: true },
+        });
+        enriched.actorName = clean(actor?.name) || clean(actor?.email) || "System";
+    }
+
+    if (
+        event.targetType === "WATCH" &&
+        ["watch.media.ready_for_publish", "watch.saleStage.posted"].includes(event.eventKey)
+    ) {
+        const watch = await client.watch.findUnique({
+            where: { id: event.targetId },
+            select: {
+                product: {
+                    select: {
+                        postTargets: {
+                            select: { postTarget: { select: { name: true, platform: true } } },
+                        },
+                    },
+                },
+            },
+        });
+        enriched.publishChannels = watch?.product?.postTargets
+            .map(({ postTarget }) => clean(postTarget.name) || clean(postTarget.platform))
+            .filter(Boolean)
+            .join(", ") || "Chưa chọn";
+    }
+
+    return { ...event, metadataJson: enriched as Prisma.JsonObject };
 }
 
 function renderTemplate(template: string, event: NotificationEventLog) {
@@ -213,7 +255,7 @@ export async function consumeBusinessEventForNotification(
     client: Prisma.TransactionClient,
     eventLogInput: unknown,
 ) {
-    const eventLog = normalizeEventLog(eventLogInput);
+    let eventLog = normalizeEventLog(eventLogInput);
 
     if (!eventLog.id || !eventLog.eventKey || !eventLog.targetType || !eventLog.targetId) {
         return {
@@ -223,6 +265,8 @@ export async function consumeBusinessEventForNotification(
             eventKey: eventLog.eventKey,
         };
     }
+
+    eventLog = await enrichNotificationEvent(client, eventLog);
 
     const rules = await client.notificationRule.findMany({
         where: {

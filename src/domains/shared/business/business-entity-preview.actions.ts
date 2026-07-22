@@ -1,10 +1,12 @@
 "use server";
 
+import { TaskExecutionActionType, TaskExecutionTargetType } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { authorizeTaskItemDetail } from "@/domains/task/server/core/task-item-detail.service";
 import { getTaskItemActivityViewModels } from "@/domains/task/server/activity";
 import { resolveWorkspaceCapabilities } from "@/domains/blueprint/shared/workspace-capabilities";
+import { getAuthUserId } from "@/domains/task/server/core/task.service";
 import type {
     BusinessEntityPreview,
     BusinessEntityType,
@@ -87,6 +89,49 @@ export async function getBusinessEntityPreviewAction(input: {
         if (!row) return null;
 
         const product = row.product;
+        const watchWorkspace = await prisma.taskExecution.findFirst({
+            where: {
+                targetType: TaskExecutionTargetType.WATCH,
+                targetId: row.id,
+                actionType: { not: TaskExecutionActionType.CANCELLED },
+                taskItemId: { not: null },
+            },
+            orderBy: { createdAt: "desc" },
+            select: {
+                taskItem: {
+                    select: {
+                        id: true,
+                        note: true,
+                        userId: true,
+                        assignedToUserId: true,
+                        task: { select: { kind: true, createdByUserId: true, assignedToUserId: true } },
+                    },
+                },
+            },
+        });
+        let activity: BusinessEntityPreview["activity"];
+        if (watchWorkspace?.taskItem) {
+            try {
+                authorizeTaskItemDetail(watchWorkspace.taskItem, auth);
+                const capabilities = resolveWorkspaceCapabilities({ note: watchWorkspace.taskItem.note });
+                activity = {
+                    taskItemId: watchWorkspace.taskItem.id,
+                    discussionEnabled: capabilities.discussion,
+                    viewerUserId: getAuthUserId(auth),
+                    mentionableUsers: (await prisma.user.findMany({
+                        where: { isActive: true },
+                        orderBy: [{ name: "asc" }, { email: "asc" }],
+                        select: { id: true, name: true, email: true, avatarUrl: true },
+                    })).map((user) => ({ id: user.id, label: user.name || user.email, avatarUrl: user.avatarUrl })),
+                    items: await getTaskItemActivityViewModels(watchWorkspace.taskItem.id, {
+                        limit: 20,
+                        scope: { targets: [{ targetType: "WATCH", targetId: row.id }], includeWorkspaceLevel: false },
+                    }),
+                };
+            } catch {
+                activity = undefined;
+            }
+        }
 
         return {
             type: "WATCH",
@@ -95,6 +140,7 @@ export async function getBusinessEntityPreviewAction(input: {
             subtitle: product?.sku ? `SKU: ${product.sku}` : compactId(row.id),
             status: row.saleStage,
             imageUrl: imageUrlFromProduct(product),
+            activity,
             href: `/admin/watches/${product?.id}/edit`, facts: [
                 { label: "Brand", value: product?.brand?.name || "-" },
                 { label: "Product status", value: product?.status || "-" },
@@ -363,6 +409,16 @@ export async function getBusinessEntityPreviewAction(input: {
                 activity = {
                     taskItemId: technicalWorkspaceItem.id,
                     discussionEnabled: capabilities.discussion,
+                    viewerUserId: getAuthUserId(auth),
+                    mentionableUsers: (await prisma.user.findMany({
+                        where: { isActive: true },
+                        orderBy: [{ name: "asc" }, { email: "asc" }],
+                        select: { id: true, name: true, email: true, avatarUrl: true },
+                    })).map((user) => ({
+                        id: user.id,
+                        label: user.name || user.email,
+                        avatarUrl: user.avatarUrl,
+                    })),
                     items: await getTaskItemActivityViewModels(technicalWorkspaceItem.id, {
                         limit: 20,
                         scope: {
@@ -388,9 +444,12 @@ export async function getBusinessEntityPreviewAction(input: {
             imageUrl:
                 mediaUrl(sr.primaryImageUrlSnapshot) ||
                 imageUrlFromProduct(sr.product),
-            href: workspaceHref ?? `/admin/services/${sr.id}`,
             facts: [
-                { label: "SR", value: sr.refNo || "-" },
+                {
+                    label: "SR",
+                    value: sr.refNo || "-",
+                    href: workspaceHref ?? `/admin/services/${sr.id}`,
+                },
                 { label: "Trạng thái SR", value: sr.status || "-" },
                 { label: "Ưu tiên", value: row.priority || "NORMAL" },
                 { label: "Nhóm", value: row.area || "-" },
@@ -423,9 +482,6 @@ export async function getBusinessEntityPreviewAction(input: {
                     })),
                 },
             ],
-            actions: workspaceHref
-                ? [{ label: "Mở workspace SR", href: workspaceHref }]
-                : [{ label: "Mở Service Request", href: `/admin/services/${sr.id}` }],
         };
     }
 

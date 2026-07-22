@@ -53,8 +53,8 @@ const PRESETS: TemplatePreset[] = [
     {
         key: "comment",
         label: "Comment",
-        title: "🔔 Thảo luận mới",
-        message: "⌚ Watch: {{watchTitle}}\n💬 Nội dung: {{replyBody}}\n🧭 Activity: {{activityTitle}}\n👤 Người gửi: {{actorName}}\n🔗 Mở xử lý: {{route}}",
+        title: "👤 User ({{actorName}}) vừa tạo 1 thảo luận mới:",
+        message: "💬 Nội dung: {{replyBody}}\n⌚ Đối tượng: đồng hồ {{watchTitle}}\n🧭 Ngữ cảnh: {{contextTitle}}\n⚡ Activity: {{activityTitle}}\n🔗 Mở xử lý: {{route}}",
     },
     {
         key: "work",

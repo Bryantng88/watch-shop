@@ -91,6 +91,8 @@ export type CoordinationTechnicalIssueBoardItemDTO = {
   technicalDetailCatalogId: string | null;
   processingDetails: string[];
   commentCount: number;
+  mentionedMeCount: number;
+  unreadMentionCount: number;
   stage: "INSPECT" | "READY" | "PROCESSING" | "DONE";
   actualCost: number | null;
   updatedAt: string | null;
@@ -106,6 +108,26 @@ export type CoordinationTechnicalIssueBoardItemDTO = {
     productTitle: string | null;
     sku: string | null;
     imageUrl: string | null;
+  };
+};
+
+export type CoordinationMediaBoardItemDTO = {
+  id: string;
+  bindingId: string;
+  workspaceTaskItemId: string;
+  title: string;
+  sku: string | null;
+  imageUrl: string | null;
+  stage: "PHOTOGRAPHY" | "MEDIA_PROCESSING" | "PUBLISH" | "DONE";
+  workflowState: string | null;
+  commentCount: number;
+  mentionedMeCount: number;
+  unreadMentionCount: number;
+  updatedAt: string | null;
+  lastUpdatedBy: {
+    label: string;
+    avatarUrl: string | null;
+    isSystem: boolean;
   };
 };
 
@@ -195,5 +217,8 @@ export type CoordinationDashboardDTO = {
       code: string | null;
       name: string | null;
     }>;
+  } | null;
+  mediaBoard: {
+    items: CoordinationMediaBoardItemDTO[];
   } | null;
 };

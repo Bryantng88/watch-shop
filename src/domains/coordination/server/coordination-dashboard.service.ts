@@ -27,6 +27,7 @@ import { workspaceFlowOrder } from "@/domains/task/shared/workspace-flow-policy"
 import type { WorkspaceKind } from "@/domains/space-management/server/space-view.types";
 import type {
   CoordinationDashboardDTO,
+  CoordinationMediaBoardItemDTO,
   CoordinationTechnicalIssueBoardItemDTO,
   CoordinationWorkTicketSummaryDTO,
   QueueSummaryDTO,
@@ -34,6 +35,7 @@ import type {
 import type { CoordinationContext } from "./coordination-cycle.types";
 import { getPaymentOwnerSummaryProjections } from "@/domains/projection/server/payment-owner-summary.projection";
 import { perfStep } from "@/lib/server-perf";
+import { getAuthUserId } from "@/domains/task/server/core/task.service";
 
 function dashboardStep<T>(label: string, run: () => Promise<T>) {
   return perfStep("coordination-dashboard", label, run);
@@ -1250,6 +1252,122 @@ function serviceRequestPaymentStatus(input: {
   return "UNPAID";
 }
 
+async function loadMediaBoard(input: { db: DB; taskId: string; viewerUserId?: string | null }) {
+  const bindings = await input.db.taskExecution.findMany({
+    where: {
+      taskId: input.taskId,
+      targetType: TaskExecutionTargetType.WATCH,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+      taskItemId: { not: null },
+    },
+    select: {
+      id: true,
+      targetId: true,
+      taskItemId: true,
+      metadataJson: true,
+      createdAt: true,
+      createdByUser: { select: { name: true, email: true, avatarUrl: true } },
+      taskItem: { select: { note: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const bindingByWatchId = new Map<string, (typeof bindings)[number]>();
+  for (const binding of bindings) {
+    const stage = mediaStageFromWorkTypeKey(ticketWorkTypeKey(binding.taskItem?.note));
+    if (!stage || bindingByWatchId.has(binding.targetId)) continue;
+    bindingByWatchId.set(binding.targetId, binding);
+  }
+  const watchIds = [...bindingByWatchId.keys()];
+  if (!watchIds.length) return { items: [] as CoordinationMediaBoardItemDTO[] };
+
+  const [watches, discussionActivities] = await Promise.all([
+    input.db.watch.findMany({
+      where: { id: { in: watchIds } },
+      select: {
+        id: true,
+        updatedAt: true,
+        product: { select: { title: true, sku: true, primaryImageUrl: true } },
+      },
+    }),
+    input.db.taskItemActivity.findMany({
+      where: { taskItemId: { in: bindings.map((binding) => binding.taskItemId).filter((id): id is string => Boolean(id)) } },
+      select: { sourceType: true, metadataJson: true, replies: { select: { metadataJson: true } }, _count: { select: { replies: true } } },
+    }),
+  ]);
+  const commentCountByWatchId = new Map<string, number>();
+  const mentionCountByWatchId = new Map<string, number>();
+  const unreadMentionCountByWatchId = new Map<string, number>();
+  for (const activity of discussionActivities) {
+    if (!activity.metadataJson || typeof activity.metadataJson !== "object" || Array.isArray(activity.metadataJson)) continue;
+    const metadata = activity.metadataJson as { targetType?: unknown; targetId?: unknown; mentionedUserIds?: unknown; mentionReadByUserIds?: unknown };
+    if (String(metadata.targetType ?? "") !== "WATCH") continue;
+    const targetId = String(metadata.targetId ?? "").trim();
+    if (!targetId) continue;
+    commentCountByWatchId.set(
+      targetId,
+      (commentCountByWatchId.get(targetId) ?? 0) +
+        (String(activity.sourceType) === "DISCUSSION" ? 1 : 0) + activity._count.replies,
+    );
+    if (input.viewerUserId) {
+      const mentionIds = Array.isArray(metadata.mentionedUserIds) ? metadata.mentionedUserIds.map(String) : [];
+      const readIds = Array.isArray((metadata as { mentionReadByUserIds?: unknown }).mentionReadByUserIds)
+        ? ((metadata as { mentionReadByUserIds: unknown[] }).mentionReadByUserIds).map(String)
+        : [];
+      let mentions = mentionIds.includes(input.viewerUserId) ? 1 : 0;
+      let unread = mentions && !readIds.includes(input.viewerUserId) ? 1 : 0;
+      for (const reply of activity.replies) {
+        if (!reply.metadataJson || typeof reply.metadataJson !== "object" || Array.isArray(reply.metadataJson)) continue;
+        const replyMetadata = reply.metadataJson as { mentionedUserIds?: unknown; mentionReadByUserIds?: unknown };
+        const replyMentionIds = Array.isArray(replyMetadata.mentionedUserIds) ? replyMetadata.mentionedUserIds.map(String) : [];
+        const replyReadIds = Array.isArray(replyMetadata.mentionReadByUserIds) ? replyMetadata.mentionReadByUserIds.map(String) : [];
+        if (replyMentionIds.includes(input.viewerUserId)) {
+          mentions += 1;
+          if (!replyReadIds.includes(input.viewerUserId)) unread += 1;
+        }
+      }
+      if (mentions) mentionCountByWatchId.set(targetId, (mentionCountByWatchId.get(targetId) ?? 0) + mentions);
+      if (unread) unreadMentionCountByWatchId.set(targetId, (unreadMentionCountByWatchId.get(targetId) ?? 0) + unread);
+    }
+  }
+
+  const items = watches
+    .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime())
+    .map((watch): CoordinationMediaBoardItemDTO => {
+    const binding = bindingByWatchId.get(watch.id)!;
+    const workType = mediaStageFromWorkTypeKey(ticketWorkTypeKey(binding.taskItem?.note));
+    const runtime = getQueueItemWorkflowState({ metadataJson: binding.metadataJson });
+    const stage = workType === "photography"
+      ? "PHOTOGRAPHY"
+      : workType === "media-processing"
+        ? "MEDIA_PROCESSING"
+        : runtime?.currentState === "DONE" || runtime?.currentState === "CANCELLED"
+          ? "DONE"
+          : "PUBLISH";
+    const actorLabel = userLabel(binding.createdByUser);
+    return {
+      id: watch.id,
+      bindingId: binding.id,
+      workspaceTaskItemId: binding.taskItemId!,
+      title: watch.product?.title ?? "Watch",
+      sku: watch.product?.sku ?? null,
+      imageUrl: watch.product?.primaryImageUrl ?? null,
+      stage,
+      workflowState: runtime?.currentState ?? null,
+      commentCount: commentCountByWatchId.get(watch.id) ?? 0,
+      mentionedMeCount: mentionCountByWatchId.get(watch.id) ?? 0,
+      unreadMentionCount: unreadMentionCountByWatchId.get(watch.id) ?? 0,
+      updatedAt: formatDateTime(watch.updatedAt),
+      lastUpdatedBy: {
+        label: actorLabel === "-" ? "Hệ thống" : actorLabel,
+        avatarUrl: binding.createdByUser?.avatarUrl ?? null,
+        isSystem: actorLabel === "-",
+      },
+    };
+    });
+  return { items };
+}
+
 function technicalIssueBoardStage(input: {
   flowStageKey: string | null;
   executionStatus: unknown;
@@ -1269,6 +1387,7 @@ function technicalIssueBoardStage(input: {
 async function loadTechnicalIssueBoard(input: {
   db: DB;
   taskId: string;
+  viewerUserId?: string | null;
 }) {
   const bindings = await input.db.taskExecution.findMany({
     where: {
@@ -1418,14 +1537,17 @@ async function loadTechnicalIssueBoard(input: {
     select: {
       sourceType: true,
       metadataJson: true,
+      replies: { select: { metadataJson: true } },
       _count: { select: { replies: true } },
     },
   })]);
   const startedEventByIssueId = new Map(startedEvents.map((event) => [event.targetId, event.metadataJson]));
   const commentCountByIssueId = new Map<string, number>();
+  const mentionedMeCountByIssueId = new Map<string, number>();
+  const unreadMentionCountByIssueId = new Map<string, number>();
   for (const activity of discussionActivities) {
     if (!activity.metadataJson || typeof activity.metadataJson !== "object" || Array.isArray(activity.metadataJson)) continue;
-    const metadata = activity.metadataJson as { targetType?: unknown; targetId?: unknown };
+    const metadata = activity.metadataJson as { targetType?: unknown; targetId?: unknown; mentionedUserIds?: unknown; mentionReadByUserIds?: unknown };
     if (String(metadata.targetType ?? "") !== "TECHNICAL_ISSUE") continue;
     const targetId = String(metadata.targetId ?? "").trim();
     if (!targetId) continue;
@@ -1434,6 +1556,26 @@ async function loadTechnicalIssueBoard(input: {
       targetId,
       (commentCountByIssueId.get(targetId) ?? 0) + directCommentCount + activity._count.replies,
     );
+    if (input.viewerUserId) {
+      const directlyMentioned = Array.isArray(metadata.mentionedUserIds) && metadata.mentionedUserIds.map(String).includes(input.viewerUserId);
+      const directlyRead = Array.isArray(metadata.mentionReadByUserIds) && metadata.mentionReadByUserIds.map(String).includes(input.viewerUserId);
+      const replyMentions = activity.replies.filter((reply) => {
+        if (!reply.metadataJson || typeof reply.metadataJson !== "object" || Array.isArray(reply.metadataJson)) return false;
+        const ids = (reply.metadataJson as { mentionedUserIds?: unknown }).mentionedUserIds;
+        return Array.isArray(ids) && ids.map(String).includes(input.viewerUserId!);
+      }).length;
+      const unreadReplyMentions = activity.replies.filter((reply) => {
+        if (!reply.metadataJson || typeof reply.metadataJson !== "object" || Array.isArray(reply.metadataJson)) return false;
+        const replyMetadata = reply.metadataJson as { mentionedUserIds?: unknown; mentionReadByUserIds?: unknown };
+        const ids = Array.isArray(replyMetadata.mentionedUserIds) ? replyMetadata.mentionedUserIds.map(String) : [];
+        const readIds = Array.isArray(replyMetadata.mentionReadByUserIds) ? replyMetadata.mentionReadByUserIds.map(String) : [];
+        return ids.includes(input.viewerUserId!) && !readIds.includes(input.viewerUserId!);
+      }).length;
+      const mentionCount = (directlyMentioned ? 1 : 0) + replyMentions;
+      if (mentionCount) mentionedMeCountByIssueId.set(targetId, (mentionedMeCountByIssueId.get(targetId) ?? 0) + mentionCount);
+      const unreadCount = (directlyMentioned && !directlyRead ? 1 : 0) + unreadReplyMentions;
+      if (unreadCount) unreadMentionCountByIssueId.set(targetId, (unreadMentionCountByIssueId.get(targetId) ?? 0) + unreadCount);
+    }
   }
   const replacementPartLabels: Record<string, string> = {
     MOVEMENT_COMPLETE: "Thay nguyên máy",
@@ -1470,6 +1612,8 @@ async function loadTechnicalIssueBoard(input: {
         technicalDetailCatalogId: issue.technicalDetailCatalogId ?? null,
         processingDetails: [issue.technicalDetailCatalog?.name, ...replacementParts].filter((value): value is string => Boolean(value)),
         commentCount: commentCountByIssueId.get(issue.id) ?? 0,
+        mentionedMeCount: mentionedMeCountByIssueId.get(issue.id) ?? 0,
+        unreadMentionCount: unreadMentionCountByIssueId.get(issue.id) ?? 0,
         stage: technicalIssueBoardStage({
           flowStageKey: binding?.flowStageKey ?? null,
           executionStatus: issue.executionStatus,
@@ -1889,6 +2033,7 @@ export async function getCoordinationDashboard(input: {
   modeKey?: string | null;
   includeDashboardDetails?: boolean;
   includeTechnicalBoard?: boolean;
+  includeMediaBoard?: boolean;
   auth?: unknown;
 }): Promise<CoordinationDashboardDTO> {
   const db = input?.db ?? prisma;
@@ -2039,6 +2184,7 @@ export async function getCoordinationDashboard(input: {
     technicalIssueBoard,
     allUsers,
     paymentCashFlow,
+    mediaBoard,
   ] = await Promise.all([
     dashboardStep("queueCounts", () => db.taskExecution.groupBy({
       by: ["taskItemId"],
@@ -2094,6 +2240,7 @@ export async function getCoordinationDashboard(input: {
       ? dashboardStep("technicalBoard", () => loadTechnicalIssueBoard({
           db,
           taskId: cycle.task.id,
+          viewerUserId: getAuthUserId(input.auth),
         }))
       : Promise.resolve(null),
     dashboardStep("users", () => db.user.findMany({
@@ -2111,6 +2258,9 @@ export async function getCoordinationDashboard(input: {
           where: { status: { in: [PaymentStatus.PAID, PaymentStatus.COLLECTED] } },
           select: { amount: true, direction: true, paidAt: true, createdAt: true },
         }).then(paymentCashFlowPeriods))
+      : Promise.resolve(null),
+    isMediaFlow && input.includeMediaBoard !== false
+      ? dashboardStep("mediaBoard", () => loadMediaBoard({ db, taskId: cycle.task.id, viewerUserId: getAuthUserId(input.auth) }))
       : Promise.resolve(null),
   ]);
   const feedbackCountByTaskItem = activitySummary.feedbackCounts;
@@ -2342,6 +2492,7 @@ export async function getCoordinationDashboard(input: {
     }),
     workTickets,
     technicalIssueBoard,
+    mediaBoard,
   };
 }
 
