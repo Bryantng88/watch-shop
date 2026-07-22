@@ -95,6 +95,7 @@ import { repairVietnameseMojibake } from "@/domains/shared/text/vietnamese-mojib
 import { workspaceFlowOrder } from "@/domains/task/shared/workspace-flow-policy";
 import {
   applyQueueItemManualTransitionAction,
+  markTaskItemMentionsReadAction,
   submitOperationalBlueprintActionAction,
   updateTaskItemSharingAction,
 } from "../actions/task.actions";
@@ -3195,6 +3196,11 @@ export default function TaskItemDetailClient({
                   queueItems={queueItems}
                   mode={activityMode}
                   discussionEnabled={capabilities.discussion}
+                  viewerUserId={currentUser?.id}
+                  onMarkMentionsRead={async () => {
+                    await markTaskItemMentionsReadAction({ taskItemId: item.id });
+                    router.refresh();
+                  }}
                   jumpTarget={activityJumpTarget}
                 />
               </Panel>

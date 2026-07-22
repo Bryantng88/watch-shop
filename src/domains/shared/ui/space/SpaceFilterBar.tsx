@@ -71,6 +71,7 @@ export default function SpaceFilterBar({
   onSearchChange,
   children,
   frameless = false,
+  filterBadgeCount = 0,
 }: {
   weekValue: string;
   weekOptions: SpaceFilterOption[];
@@ -86,6 +87,7 @@ export default function SpaceFilterBar({
   onSearchChange?: (value: string) => void;
   children?: ReactNode;
   frameless?: boolean;
+  filterBadgeCount?: number;
 }) {
   const activeFilterCount = selectFilters.filter(
     (filter) => filter.value !== filter.options[0]?.value,
@@ -150,12 +152,21 @@ export default function SpaceFilterBar({
 
         {selectFilters.length ? (
           <details className="group relative shrink-0">
-            <summary className="flex h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+            <summary className="relative flex h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
               <SlidersHorizontal className="h-4 w-4 text-slate-500" />
               Bộ lọc
               {activeFilterCount ? (
                 <span className="grid h-5 min-w-5 place-items-center rounded-full bg-violet-100 px-1 text-[11px] font-bold text-violet-700">
                   {activeFilterCount}
+                </span>
+              ) : null}
+              {filterBadgeCount > 0 ? (
+                <span
+                  title={`${filterBadgeCount} comment nhắc đến bạn chưa đọc`}
+                  aria-label={`${filterBadgeCount} comment nhắc đến bạn chưa đọc`}
+                  className="absolute -right-2 -top-2 grid h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-extrabold leading-none text-white shadow-sm ring-2 ring-white"
+                >
+                  {filterBadgeCount > 99 ? "99+" : filterBadgeCount}
                 </span>
               ) : null}
               <ChevronDown className="h-4 w-4 text-slate-400 transition group-open:rotate-180" />

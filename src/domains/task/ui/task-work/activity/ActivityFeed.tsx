@@ -32,6 +32,7 @@ import {
 } from "../QueueWorkQueue";
 
 export type ActivityMode = "ALL" | "QUEUE";
+type ActivityCommentFilter = "ALL" | "MENTIONED" | "UNREAD";
 export type ActivityMentionUser = { id: string; name?: string | null; email?: string | null };
 
 export type ActivityJumpTarget = {
@@ -58,6 +59,30 @@ function metadataRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
+}
+
+function mentionFlags(metadataJson: unknown, viewerUserId?: string | null) {
+  if (!viewerUserId) return { mentioned: false, unread: false };
+  const metadata = metadataRecord(metadataJson);
+  const mentionedIds = Array.isArray(metadata.mentionedUserIds)
+    ? metadata.mentionedUserIds.map(String)
+    : [];
+  const readIds = Array.isArray(metadata.mentionReadByUserIds)
+    ? metadata.mentionReadByUserIds.map(String)
+    : [];
+  const mentioned = mentionedIds.includes(viewerUserId);
+  return { mentioned, unread: mentioned && !readIds.includes(viewerUserId) };
+}
+
+function activityMentionFlags(activity: TaskItemActivityViewModel, viewerUserId?: string | null) {
+  const own = mentionFlags(activity.metadataJson, viewerUserId);
+  return activity.replies.reduce((result, reply) => {
+    const flags = mentionFlags(reply.metadataJson, viewerUserId);
+    return {
+      mentioned: result.mentioned || flags.mentioned,
+      unread: result.unread || flags.unread,
+    };
+  }, own);
 }
 
 function businessQueueKey(targetType?: string | null, targetId?: string | null) {
@@ -648,6 +673,8 @@ export function ActivityViewModelFeed({
   discussionEnabled,
   jumpTarget,
   onActivityChanged,
+  viewerUserId,
+  onMarkMentionsRead,
 }: {
   items: TaskItemActivityViewModel[];
   mentionUsers?: ActivityMentionUser[];
@@ -657,20 +684,74 @@ export function ActivityViewModelFeed({
   discussionEnabled: boolean;
   jumpTarget?: ActivityJumpTarget | null;
   onActivityChanged?: () => void;
+  viewerUserId?: string | null;
+  onMarkMentionsRead?: () => Promise<void>;
 }) {
+  const [commentFilter, setCommentFilter] = useState<ActivityCommentFilter>("ALL");
+  const [markingRead, setMarkingRead] = useState(false);
+  const mentionCount = items.filter((activity) => activityMentionFlags(activity, viewerUserId).mentioned).length;
+  const unreadCount = items.filter((activity) => activityMentionFlags(activity, viewerUserId).unread).length;
+  const filteredItems = items.filter((activity) => {
+    if (commentFilter === "ALL") return true;
+    const flags = activityMentionFlags(activity, viewerUserId);
+    return commentFilter === "MENTIONED" ? flags.mentioned : flags.unread;
+  });
+
   if (!items.length) {
     return <EmptyState>Chưa có hoạt động nào.</EmptyState>;
   }
 
+  const filterBar = viewerUserId ? (
+    <div className="mb-4 flex flex-wrap items-center gap-2">
+      {([
+        { key: "ALL", label: "Tất cả", count: items.length },
+        { key: "MENTIONED", label: "Nhắc đến tôi", count: mentionCount },
+        { key: "UNREAD", label: "Chưa đọc", count: unreadCount },
+      ] as Array<{ key: ActivityCommentFilter; label: string; count: number }>).map((filter) => (
+        <button
+          key={filter.key}
+          type="button"
+          onClick={() => setCommentFilter(filter.key)}
+          className={cn(
+            "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition",
+            commentFilter === filter.key
+              ? "border-violet-300 bg-violet-100 text-violet-800"
+              : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50",
+          )}
+        >
+          {filter.label}
+          <span className="rounded-full bg-white/80 px-1.5 py-0.5 text-[10px]">{filter.count}</span>
+        </button>
+      ))}
+      {unreadCount > 0 && onMarkMentionsRead ? (
+        <button
+          type="button"
+          disabled={markingRead}
+          onClick={() => {
+            setMarkingRead(true);
+            void onMarkMentionsRead().finally(() => setMarkingRead(false));
+          }}
+          className="ml-auto h-8 rounded-full px-3 text-xs font-semibold text-violet-700 hover:bg-violet-50 disabled:opacity-60"
+        >
+          {markingRead ? "Đang cập nhật..." : "Đánh dấu đã đọc"}
+        </button>
+      ) : null}
+    </div>
+  ) : null;
+
+  if (!filteredItems.length) {
+    return <>{filterBar}<EmptyState>Không có comment phù hợp bộ lọc.</EmptyState></>;
+  }
+
   if (mode === "QUEUE") {
     return (
-      <ActivityGroupedByQueue
-        items={items}
-        mentionUsers={mentionUsers}
-        queueItems={queueItems}
-        discussionEnabled={discussionEnabled}
-        jumpTarget={jumpTarget}
-      />
+      <>{filterBar}<ActivityGroupedByQueue
+          items={filteredItems}
+          mentionUsers={mentionUsers}
+          queueItems={queueItems}
+          discussionEnabled={discussionEnabled}
+          jumpTarget={jumpTarget}
+        /></>
     );
   }
 
@@ -681,8 +762,8 @@ export function ActivityViewModelFeed({
   );
 
   return (
-    <div className="space-y-4">
-      {items.map((activity) => (
+    <><div>{filterBar}</div><div className="space-y-4">
+      {filteredItems.map((activity) => (
         <ActivityViewModelCard
           key={activity.id}
           activity={activity}
@@ -694,7 +775,7 @@ export function ActivityViewModelFeed({
           onActivityChanged={onActivityChanged}
         />
       ))}
-    </div>
+    </div></>
   );
 }
 

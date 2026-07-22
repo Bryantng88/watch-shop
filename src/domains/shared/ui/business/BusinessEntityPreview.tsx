@@ -32,16 +32,6 @@ function BusinessEntityActivityPanel({
     const [commentError, setCommentError] = useState<string | null>(null);
     const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
     const activity = preview.activity;
-    useEffect(() => {
-        if (!activity?.viewerUserId) return;
-        void markTaskItemMentionsReadAction({
-            taskItemId: activity.taskItemId,
-            targetType: preview.type,
-            targetId: preview.id,
-        }).then((result) => {
-            if (result.updated) onActivityChanged?.();
-        });
-    }, [activity?.taskItemId, activity?.viewerUserId, onActivityChanged, preview.id, preview.type]);
     if (!activity) return null;
     const activityTaskItemId = activity.taskItemId;
     const mentionQuery = body.match(/(?:^|\s)@([^@\s]*)$/)?.[1]?.toLocaleLowerCase("vi") ?? null;
@@ -52,6 +42,14 @@ function BusinessEntityActivityPanel({
     function addMention(user: { id: string; label: string }) {
         setBody((current) => current.replace(/(?:^|\s)@([^@\s]*)$/, (match) => `${match.startsWith(" ") ? " " : ""}@${user.label} `));
         setMentionedUserIds((current) => [...current, user.id]);
+    }
+
+    function updateBody(nextBody: string) {
+        setBody(nextBody);
+        setMentionedUserIds((current) => current.filter((userId) => {
+            const user = activity.mentionableUsers?.find((candidate) => candidate.id === userId);
+            return Boolean(user?.label) && nextBody.includes(`@${user?.label}`);
+        }));
     }
 
     async function submitComment() {
@@ -89,7 +87,7 @@ function BusinessEntityActivityPanel({
                         <MessageSquare className="mt-2 h-4 w-4 shrink-0 text-slate-400" />
                         <textarea
                             value={body}
-                            onChange={(event) => setBody(event.target.value)}
+                            onChange={(event) => updateBody(event.target.value)}
                             rows={2}
                             disabled={submitting}
                             placeholder="Thêm trao đổi về nghiệp vụ này..."
@@ -140,6 +138,15 @@ function BusinessEntityActivityPanel({
                     queueItems={[]}
                     mode="ALL"
                     discussionEnabled={activity.discussionEnabled}
+                    viewerUserId={activity.viewerUserId}
+                    onMarkMentionsRead={async () => {
+                        await markTaskItemMentionsReadAction({
+                            taskItemId: activity.taskItemId,
+                            targetType: preview.type,
+                            targetId: preview.id,
+                        });
+                        onActivityChanged?.();
+                    }}
                     onActivityChanged={onActivityChanged}
                 />
             </div>

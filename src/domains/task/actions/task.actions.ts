@@ -1165,15 +1165,15 @@ export async function addTaskItemDiscussionAction(input: {
 
 export async function markTaskItemMentionsReadAction(input: {
   taskItemId: string;
-  targetType: string;
-  targetId: string;
+  targetType?: string;
+  targetId?: string;
 }) {
   const auth = await getTaskAuth();
   const userId = getAuthUserId(auth);
   const taskItemId = cleanText(input.taskItemId);
   const targetType = cleanText(input.targetType);
   const targetId = cleanText(input.targetId);
-  if (!userId || !taskItemId || !targetType || !targetId) return { ok: true, updated: 0 };
+  if (!userId || !taskItemId) return { ok: true, updated: 0 };
 
   const taskItem = await prisma.taskItem.findUnique({
     where: { id: taskItemId },
@@ -1190,7 +1190,9 @@ export async function markTaskItemMentionsReadAction(input: {
   await prisma.$transaction(async (tx) => {
     for (const activity of activities) {
       const metadata = asRecord(activity.metadataJson);
-      if (cleanText(metadata.targetType) !== targetType || cleanText(metadata.targetId) !== targetId) continue;
+      if (targetType && targetId && (
+        cleanText(metadata.targetType) !== targetType || cleanText(metadata.targetId) !== targetId
+      )) continue;
       const mentionedIds = Array.isArray(metadata.mentionedUserIds) ? metadata.mentionedUserIds.map(String) : [];
       const readIds = Array.isArray(metadata.mentionReadByUserIds) ? metadata.mentionReadByUserIds.map(String) : [];
       if (mentionedIds.includes(userId) && !readIds.includes(userId)) {

@@ -875,6 +875,10 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     [technicalIssueBoardItems],
   );
   const mediaBoardItems = useMemo(() => asyncMediaBoard?.items ?? [], [asyncMediaBoard?.items]);
+  const unreadMentionBadgeCount = useMemo(() => {
+    const items = isTechnicalIssueBoardView ? technicalIssueBoardItems : isMediaBoardView ? mediaBoardItems : [];
+    return items.reduce((total, item) => total + item.unreadMentionCount, 0);
+  }, [isMediaBoardView, isTechnicalIssueBoardView, mediaBoardItems, technicalIssueBoardItems]);
   const mediaBoardCommentSummary = useMemo(() => ({
     total: mediaBoardItems.length,
     commented: mediaBoardItems.filter((item) => item.commentCount > 0).length,
@@ -1322,6 +1326,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
             <div className="mt-3">
               <SpaceFilterBar
                 frameless
+                filterBadgeCount={unreadMentionBadgeCount}
                 weekValue={data.week.periodKey}
                 weekOptions={data.filters.weekOptions}
                 dateValue={data.filters.selectedDate}
