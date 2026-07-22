@@ -724,6 +724,7 @@ export default function SubtaskManageModal({
                 loading={previewState.loading}
                 error={previewState.error}
                 onClose={previewState.closePreview}
+                onActivityChanged={previewState.refreshPreview}
             />
         </div>
     );

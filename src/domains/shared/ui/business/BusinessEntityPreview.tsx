@@ -6,6 +6,8 @@ import {
     ExternalLink,
     ImageIcon,
     Loader2,
+    MessageSquare,
+    Send,
     X,
     ZoomIn,
 } from "lucide-react";
@@ -14,6 +16,89 @@ import type {
     BusinessEntityType,
 } from "@/domains/shared/business/business-entity.types";
 import { getBusinessEntityPreviewAction } from "@/domains/shared/business/business-entity-preview.actions";
+import { ActivityViewModelFeed } from "@/domains/task/ui/task-work/activity/ActivityFeed";
+import { addTaskItemDiscussionAction } from "@/domains/task/actions/task.actions";
+
+function BusinessEntityActivityPanel({
+    preview,
+    onActivityChanged,
+}: {
+    preview: BusinessEntityPreview;
+    onActivityChanged?: () => void;
+}) {
+    const [body, setBody] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+    const [commentError, setCommentError] = useState<string | null>(null);
+    const activity = preview.activity;
+    if (!activity) return null;
+
+    async function submitComment() {
+        const text = body.trim();
+        if (!text || submitting) return;
+        setSubmitting(true);
+        setCommentError(null);
+        try {
+            await addTaskItemDiscussionAction({
+                taskItemId: activity.taskItemId,
+                targetType: preview.type,
+                targetId: preview.id,
+                body: text,
+            });
+            setBody("");
+            onActivityChanged?.();
+        } catch (error) {
+            setCommentError(error instanceof Error ? error.message : "Không thể gửi trao đổi.");
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    return (
+        <section className="rounded-3xl border border-slate-200 bg-white p-4">
+            <div>
+                <div className="text-sm font-semibold text-slate-950">Activity & trao đổi</div>
+                <div className="mt-0.5 text-xs text-slate-500">Lịch sử nghiệp vụ trong đúng ngữ cảnh đang xem.</div>
+            </div>
+            {activity.discussionEnabled ? (
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex items-start gap-2">
+                        <MessageSquare className="mt-2 h-4 w-4 shrink-0 text-slate-400" />
+                        <textarea
+                            value={body}
+                            onChange={(event) => setBody(event.target.value)}
+                            rows={2}
+                            disabled={submitting}
+                            placeholder="Thêm trao đổi về nghiệp vụ này..."
+                            className="min-h-[68px] flex-1 resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                        />
+                    </div>
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                        <div className="text-xs font-medium text-rose-600">{commentError}</div>
+                        <button
+                            type="button"
+                            disabled={!body.trim() || submitting}
+                            onClick={() => void submitComment()}
+                            className="inline-flex h-9 items-center gap-2 rounded-xl bg-slate-950 px-3 text-sm font-semibold text-white disabled:bg-slate-300"
+                        >
+                            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                            Gửi
+                        </button>
+                    </div>
+                </div>
+            ) : null}
+            <div className="mt-4">
+                <ActivityViewModelFeed
+                    items={activity.items}
+                    businessBindings={[]}
+                    queueItems={[]}
+                    mode="ALL"
+                    discussionEnabled={activity.discussionEnabled}
+                    onActivityChanged={onActivityChanged}
+                />
+            </div>
+        </section>
+    );
+}
 
 function typeLabel(type: BusinessEntityType) {
     if (type === "WATCH") return "Watch";
@@ -78,12 +163,14 @@ export function BusinessEntityPreviewModal({
     loading,
     error,
     onClose,
+    onActivityChanged,
 }: {
     open: boolean;
     preview?: BusinessEntityPreview | null;
     loading?: boolean;
     error?: string | null;
     onClose: () => void;
+    onActivityChanged?: () => void;
 }) {
     const [imageOpen, setImageOpen] = useState(false);
 
@@ -104,7 +191,7 @@ export function BusinessEntityPreviewModal({
             onClick={onClose}
         >
             <div
-                className="w-full max-w-lg overflow-hidden rounded-[28px] bg-white shadow-2xl"
+                className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl"
                 onClick={(event) => event.stopPropagation()}
             >
                 <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
@@ -126,7 +213,7 @@ export function BusinessEntityPreviewModal({
                     </button>
                 </div>
 
-                <div className="px-5 py-4">
+                <div className="overflow-y-auto px-5 py-4">
                     {loading ? (
                         <div className="flex h-40 items-center justify-center text-slate-500">
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -190,6 +277,24 @@ export function BusinessEntityPreviewModal({
                                                 {fact.value ?? "-"}
                                             </span>
                                         </div>
+                                    ))}
+                                </div>
+                            ) : null}
+
+                            {preview.notes?.length ? (
+                                <div className="space-y-2">
+                                    {preview.notes.map((note) => (
+                                        <section
+                                            key={note.label}
+                                            className={note.tone === "warning"
+                                                ? "rounded-2xl border border-amber-200 bg-amber-50 p-3"
+                                                : note.tone === "info"
+                                                    ? "rounded-2xl border border-blue-100 bg-blue-50 p-3"
+                                                    : "rounded-2xl border border-slate-200 bg-white p-3"}
+                                        >
+                                            <div className="text-xs font-bold uppercase tracking-[0.08em] text-slate-500">{note.label}</div>
+                                            <div className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-800">{note.body}</div>
+                                        </section>
                                     ))}
                                 </div>
                             ) : null}
@@ -274,6 +379,11 @@ export function BusinessEntityPreviewModal({
                                 </div>
                             ) : null}
 
+                            <BusinessEntityActivityPanel
+                                preview={preview}
+                                onActivityChanged={onActivityChanged}
+                            />
+
                             {preview.actions?.length ? (
                                 <div className="flex flex-wrap gap-2">
                                     {preview.actions.map((action) => (
@@ -354,12 +464,30 @@ export function useBusinessEntityPreview() {
         setError(null);
     }
 
+    function refreshPreview() {
+        if (!preview) return;
+        const current = preview;
+
+        startTransition(async () => {
+            try {
+                const live = await getBusinessEntityPreviewAction({
+                    type: current.type,
+                    id: current.id,
+                });
+                if (live) setPreview(live);
+            } catch (err: unknown) {
+                setError(err instanceof Error ? err.message : "Không thể tải lại preview.");
+            }
+        });
+    }
+
     return {
         open,
         preview,
         loading,
         error,
         openPreview,
+        refreshPreview,
         closePreview,
     };
 }

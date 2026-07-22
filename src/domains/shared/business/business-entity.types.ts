@@ -32,6 +32,18 @@ export type BusinessEntityPreviewSection = {
     items: BusinessEntityPreviewItem[];
 };
 
+export type BusinessEntityPreviewNote = {
+    label: string;
+    body: string;
+    tone?: "neutral" | "info" | "warning";
+};
+
+export type BusinessEntityPreviewActivity = {
+    taskItemId: string;
+    discussionEnabled: boolean;
+    items: TaskItemActivityViewModel[];
+};
+
 export type BusinessEntityPreview = {
     type: BusinessEntityType;
     id: string;
@@ -42,6 +54,9 @@ export type BusinessEntityPreview = {
     imageUrl?: string | null;
     href?: string | null;
     facts?: BusinessEntityFact[];
+    notes?: BusinessEntityPreviewNote[];
+    activity?: BusinessEntityPreviewActivity;
     sections?: BusinessEntityPreviewSection[];
     actions?: BusinessEntityPreviewAction[];
 };
+import type { TaskItemActivityViewModel } from "@/domains/task/server/activity";

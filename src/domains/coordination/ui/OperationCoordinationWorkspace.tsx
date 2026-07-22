@@ -590,6 +590,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
       : "LIST",
   );
   const [isTechnicalIntakeOpen, setIsTechnicalIntakeOpen] = useState(false);
+  const [focusedTechnicalIssueId, setFocusedTechnicalIssueId] = useState<string | null>(null);
   const [dashboardCustomizationRequest, setDashboardCustomizationRequest] = useState(0);
   const [filterQuery, setFilterQuery] = useState("");
   const [filterCreator, setFilterCreator] = useState("ALL");
@@ -653,6 +654,27 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     }).technicalIssueBoard;
     if (board) setAsyncTechnicalIssueBoard(board);
   }, []);
+  const handleTechnicalIntakeCompleted = useCallback(async (technicalIssueId: string | null) => {
+    setActiveViewModeKey("technical-issue-flow");
+    setWorkTicketView("TI_BOARD");
+    setTechnicalIssuePriorityFilter("ALL");
+    setFocusedTechnicalIssueId(technicalIssueId);
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("context", data.context);
+    params.set("dashboardVersion", "2");
+    params.set("view", "technical-issue-flow");
+    const technicalDashboardEndpoint = `/api/admin/coordination/operation/dashboard?${params.toString()}`;
+    router.replace(`/admin/coordination/${contextPath(data.context)}?${params.toString()}`);
+
+    try {
+      const response = await fetch(technicalDashboardEndpoint, { cache: "no-store" });
+      const result = await response.json().catch(() => null);
+      if (response.ok) handleDashboardResult(result?.data ?? result);
+    } finally {
+      router.refresh();
+    }
+  }, [data.context, handleDashboardResult, router, searchParams]);
   const activeStageByWorkspaceKey = useMemo(() => {
     const entries =
       activeCoreFlow?.stages.flatMap((stage) => [
@@ -1505,6 +1527,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
               vendorOptions={asyncTechnicalIssueBoard?.vendorOptions ?? []}
               technicalDetailCatalogOptions={asyncTechnicalIssueBoard?.technicalDetailCatalogOptions ?? []}
               priorityFilter={technicalIssuePriorityFilter}
+              focusedIssueId={focusedTechnicalIssueId}
             />
           ) : (
             <>
@@ -1709,14 +1732,22 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
           </div>
         ) : null}
         {isTechnicalIntakeOpen ? (
-          <TechnicalIntakeModal onClose={() => setIsTechnicalIntakeOpen(false)} />
+          <TechnicalIntakeModal
+            onClose={() => setIsTechnicalIntakeOpen(false)}
+            onCompleted={handleTechnicalIntakeCompleted}
+          />
         ) : null}
     </SpaceViewPage>
   );
 }
 
-function TechnicalIntakeModal({ onClose }: { onClose: () => void }) {
-  const router = useRouter();
+function TechnicalIntakeModal({
+  onClose,
+  onCompleted,
+}: {
+  onClose: () => void;
+  onCompleted: (technicalIssueId: string | null) => void | Promise<void>;
+}) {
   const [step, setStep] = useState(1);
   const [selectedWatch, setSelectedWatch] = useState<WatchSearchResult | null>(null);
   const [activeServiceRequest, setActiveServiceRequest] = useState<{ id: string; refNo?: string | null; status?: string | null } | null>(null);
@@ -1771,7 +1802,7 @@ function TechnicalIntakeModal({ onClose }: { onClose: () => void }) {
         technicalIssueId: data.technicalIssueId ?? data.createdTechnicalIssueId ?? null,
       });
       setStep(4);
-      router.refresh();
+      await onCompleted(data.technicalIssueId ?? data.createdTechnicalIssueId ?? null);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Không thể tạo phiếu kỹ thuật.");
     } finally {
@@ -1977,12 +2008,14 @@ function TechnicalIssueBoardView({
   vendorOptions,
   technicalDetailCatalogOptions,
   priorityFilter,
+  focusedIssueId,
 }: {
   items: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["items"];
   actions: OperationalBlueprintAction[];
   vendorOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["vendorOptions"];
   technicalDetailCatalogOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["technicalDetailCatalogOptions"];
   priorityFilter: TechnicalIssuePriorityFilter;
+  focusedIssueId: string | null;
 }) {
   const router = useRouter();
   const progress = useAppProgress();
@@ -2024,6 +2057,13 @@ function TechnicalIssueBoardView({
     return sortTechnicalBoardItems(filtered);
   }, [boardItems, priorityFilter]);
   const activeItem = activeId ? visibleItems.find((item) => item.id === activeId) ?? null : null;
+  useEffect(() => {
+    if (!focusedIssueId || !visibleItems.some((item) => item.id === focusedIssueId)) return;
+
+    const card = Array.from(document.querySelectorAll<HTMLElement>("[data-technical-issue-id]"))
+      .find((element) => element.dataset.technicalIssueId === focusedIssueId);
+    card?.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+  }, [focusedIssueId, visibleItems]);
 
   function togglePriority(item: TechnicalIssueBoardItem) {
     const nextPriority = technicalIssuePriorityValue(item.priority) === "URGENT" ? "NORMAL" : "URGENT";
@@ -2264,6 +2304,7 @@ function TechnicalIssueBoardView({
                   isOver={overStage === column.key}
                   onTogglePriority={togglePriority}
                   priorityPendingIssueId={isPriorityPending ? priorityIssueId : null}
+                  focusedIssueId={focusedIssueId}
                   onPreview={(item) => previewState.openPreview({
                     type: "TECHNICAL_ISSUE",
                     id: item.id,
@@ -2322,6 +2363,7 @@ function TechnicalIssueBoardView({
         loading={previewState.loading}
         error={previewState.error}
         onClose={previewState.closePreview}
+        onActivityChanged={previewState.refreshPreview}
       />
     </div>
   );
@@ -2371,6 +2413,8 @@ function defaultTechnicalBoardMoveValues(
 ): Record<string, TechnicalBoardFieldValue> {
   if (action.command === "service.confirmTechnicalIssue") {
     return {
+      summary: item.summary,
+      note: item.note ?? "",
       technicalArea: item.area ?? "GENERAL",
       assigneeMode: item.actionMode && item.actionMode !== "NONE" ? item.actionMode : "INTERNAL",
       vendorId: item.vendorId ?? "",
@@ -2573,6 +2617,7 @@ function TechnicalIssueBoardColumn({
   isOver,
   onTogglePriority,
   priorityPendingIssueId,
+  focusedIssueId,
   onPreview,
 }: {
   column: { key: TechnicalIssueBoardStage; label: string; hint: string };
@@ -2580,6 +2625,7 @@ function TechnicalIssueBoardColumn({
   isOver: boolean;
   onTogglePriority: (item: TechnicalIssueBoardItem) => void;
   priorityPendingIssueId: string | null;
+  focusedIssueId: string | null;
   onPreview: (item: TechnicalIssueBoardItem) => void;
 }) {
   const { setNodeRef } = useDroppable({ id: column.key });
@@ -2613,6 +2659,7 @@ function TechnicalIssueBoardColumn({
             item={item}
             onTogglePriority={onTogglePriority}
             priorityPending={priorityPendingIssueId === item.id}
+            focused={focusedIssueId === item.id}
             onPreview={onPreview}
           />
         ))}
@@ -2639,11 +2686,13 @@ function DraggableTechnicalIssueBoardCard({
   item,
   onTogglePriority,
   priorityPending,
+  focused,
   onPreview,
 }: {
   item: TechnicalIssueBoardItem;
   onTogglePriority: (item: TechnicalIssueBoardItem) => void;
   priorityPending: boolean;
+  focused: boolean;
   onPreview: (item: TechnicalIssueBoardItem) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -2655,7 +2704,15 @@ function DraggableTechnicalIssueBoardCard({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="min-w-0 max-w-full">
+    <div
+      ref={setNodeRef}
+      style={style}
+      data-technical-issue-id={item.id}
+      className={cn(
+        "min-w-0 max-w-full rounded-xl transition",
+        focused && "ring-4 ring-violet-300 ring-offset-2",
+      )}
+    >
       <TechnicalIssueBoardCard
         item={item}
         dragging={isDragging}

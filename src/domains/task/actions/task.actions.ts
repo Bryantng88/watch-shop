@@ -38,14 +38,14 @@ import {
 
 } from "../server/core/task.repo";
 import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
-import { parseWorkspaceDefinitionSnapshot } from "@/domains/blueprint/shared/workspace-capabilities";
+import { parseWorkspaceDefinitionSnapshot, resolveWorkspaceCapabilities } from "@/domains/blueprint/shared/workspace-capabilities";
 import { setTargetTagsRepo } from "../server/core/task.repo";
 
 import {
   AppTagOwnerType,
   AppTagTargetType,
 } from "@prisma/client";
-import { addActivityReply } from "../server/activity";
+import { addActivityReply, createDiscussionActivity } from "../server/activity";
 import {
   applyManualWorkflowAction,
   resolveManualWorkflowAction,
@@ -62,6 +62,7 @@ import {
 } from "../server/business-binding.service";
 import type { BusinessBindingTargetType } from "../server/business-binding.types";
 import { isCoreWorkspaceBlueprint } from "../shared/workspace-flow-policy";
+import { authorizeTaskItemDetail } from "../server/core/task-item-detail.service";
 
 function authActorLabel(auth: unknown) {
   const root = auth && typeof auth === "object" && !Array.isArray(auth)
@@ -884,6 +885,9 @@ export async function addTaskItemActivityReplyAction(input: {
         select: {
           id: true,
           title: true,
+          note: true,
+          userId: true,
+          assignedToUserId: true,
           status: true,
           taskId: true,
           task: {
@@ -891,12 +895,21 @@ export async function addTaskItemActivityReplyAction(input: {
               id: true,
               title: true,
               periodKey: true,
+              kind: true,
+              createdByUserId: true,
+              assignedToUserId: true,
             },
           },
         },
       },
     },
   });
+
+  if (!activity?.taskItem) throw new Error("Activity không tồn tại.");
+  authorizeTaskItemDetail(activity.taskItem, auth);
+  if (!resolveWorkspaceCapabilities({ note: activity.taskItem.note }).discussion) {
+    throw new Error("Workspace này không bật trao đổi.");
+  }
 
   const reply = await addActivityReply({
     activityId,
@@ -956,6 +969,59 @@ export async function addTaskItemActivityReplyAction(input: {
   }
 
   return { ok: true, reply };
+}
+
+export async function addTaskItemDiscussionAction(input: {
+  taskItemId: string;
+  targetType: string;
+  targetId: string;
+  body: string;
+}) {
+  const auth = await getTaskAuth();
+  const taskItemId = cleanText(input.taskItemId);
+  const targetType = cleanText(input.targetType);
+  const targetId = cleanText(input.targetId);
+  const body = cleanText(input.body);
+
+  if (!taskItemId || !targetType || !targetId) throw new Error("Thiếu ngữ cảnh trao đổi.");
+  if (!body) throw new Error("Vui lòng nhập nội dung trao đổi.");
+
+  const taskItem = await prisma.taskItem.findUnique({
+    where: { id: taskItemId },
+    select: {
+      id: true,
+      note: true,
+      userId: true,
+      assignedToUserId: true,
+      task: {
+        select: {
+          kind: true,
+          createdByUserId: true,
+          assignedToUserId: true,
+        },
+      },
+    },
+  });
+
+  if (!taskItem) throw new Error("Workspace không tồn tại.");
+  authorizeTaskItemDetail(taskItem, auth);
+  if (!resolveWorkspaceCapabilities({ note: taskItem.note }).discussion) {
+    throw new Error("Workspace này không bật trao đổi.");
+  }
+
+  const activity = await createDiscussionActivity({
+    taskItemId,
+    title: "Trao đổi nghiệp vụ",
+    body,
+    actorUserId: getAuthUserId(auth),
+    metadataJson: {
+      targetType,
+      targetId,
+    },
+  });
+
+  revalidatePath(`/admin/task-items/${taskItemId}`);
+  return { ok: true, activityId: activity.id };
 }
 
 export async function applyQueueItemManualTransitionAction(input: {

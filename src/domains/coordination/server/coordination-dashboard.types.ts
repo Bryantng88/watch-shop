@@ -79,6 +79,7 @@ export type CoordinationTechnicalIssueBoardItemDTO = {
   id: string;
   serviceRequestId: string;
   summary: string;
+  note: string | null;
   area: string | null;
   actionMode: string | null;
   vendorId: string | null;

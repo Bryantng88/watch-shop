@@ -488,10 +488,12 @@ function ActivityViewModelCard({
   activity,
   businessContext,
   discussionEnabled,
+  onActivityChanged,
 }: {
   activity: TaskItemActivityViewModel;
   businessContext?: TaskItemBinding | null;
   discussionEnabled: boolean;
+  onActivityChanged?: () => void;
 }) {
   const classes = toneClasses(activity.tone);
   const actor = activity.actorLabel || "Hệ thống";
@@ -515,6 +517,7 @@ function ActivityViewModelCard({
     setOptimisticReplyCount((count) => count + 1);
     setComposerOpen(false);
     setRepliesOpen(false);
+    onActivityChanged?.();
   }
 
   return (
@@ -594,6 +597,7 @@ export function ActivityViewModelFeed({
   mode,
   discussionEnabled,
   jumpTarget,
+  onActivityChanged,
 }: {
   items: TaskItemActivityViewModel[];
   businessBindings: TaskItemBinding[];
@@ -601,6 +605,7 @@ export function ActivityViewModelFeed({
   mode: ActivityMode;
   discussionEnabled: boolean;
   jumpTarget?: ActivityJumpTarget | null;
+  onActivityChanged?: () => void;
 }) {
   if (!items.length) {
     return <EmptyState>Chưa có hoạt động nào.</EmptyState>;
@@ -633,6 +638,7 @@ export function ActivityViewModelFeed({
             .map((key) => bindingByTarget.get(key))
             .find(Boolean)}
           discussionEnabled={discussionEnabled}
+          onActivityChanged={onActivityChanged}
         />
       ))}
     </div>

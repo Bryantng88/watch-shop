@@ -121,7 +121,7 @@ export const LEGACY_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
     label: "Technical issue created",
     targetType: "TECHNICAL_ISSUE",
     group: "Service",
-    knownConsumers: ["timeline", "coordination", "projection"],
+    knownConsumers: ["notification", "timeline", "coordination", "projection"],
     autoBindingScope: "CURRENT_ACTIVE_WEEKLY_SPACE:TECHNICAL:service-operation",
   }),
   defineBusinessEventContract({

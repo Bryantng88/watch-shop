@@ -24,6 +24,11 @@ function decimalOrNull(v: unknown): number | null {
     return Number.isFinite(n) ? n : null;
 }
 
+function adminRoute(path: string) {
+    const appUrl = String(process.env.APP_URL ?? "").trim().replace(/\/$/, "");
+    return appUrl ? `${appUrl}${path}` : path;
+}
+
 async function recordTechnicalIssueEvent(input: {
     eventKey: string;
     technicalIssueId: string;
@@ -306,6 +311,22 @@ export async function createTechnicalIssue(input: {
         } as any,
     });
 
+    const serviceRequest = await prisma.serviceRequest.findUnique({
+        where: { id: serviceRequestId },
+        select: {
+            refNo: true,
+            skuSnapshot: true,
+            brandSnapshot: true,
+            modelSnapshot: true,
+        },
+    });
+
+    const summary = cleanId(input.summary) ?? cleanId(input.note) ?? "Yêu cầu kiểm tra kỹ thuật";
+    const watchTitle = [serviceRequest?.brandSnapshot, serviceRequest?.modelSnapshot]
+        .map((value) => cleanId(value))
+        .filter(Boolean)
+        .join(" ") || serviceRequest?.skuSnapshot || "Chưa có thông tin đồng hồ";
+
     await syncServiceRequestStatusFromIssues(prisma as any, serviceRequestId);
     await recordTechnicalIssueEvent({
         eventKey: "technical_issue.created",
@@ -313,7 +334,13 @@ export async function createTechnicalIssue(input: {
         serviceRequestId,
         payload: {
             executionStatus: "OPEN",
-            area: cleanId(input.area),
+            area: cleanId(input.area) ?? "GENERAL",
+            priority: cleanId(input.priority) ?? "NORMAL",
+            summary,
+            watchTitle,
+            sku: serviceRequest?.skuSnapshot ?? "N/A",
+            serviceRequestRef: serviceRequest?.refNo ?? serviceRequestId,
+            route: adminRoute(`/admin/services/issues-board?serviceRequestId=${encodeURIComponent(serviceRequestId)}`),
         },
         deferConsumers: input.deferConsumers,
     });

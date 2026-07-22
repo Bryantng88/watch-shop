@@ -1,6 +1,10 @@
 "use server";
 
 import { prisma } from "@/server/db/client";
+import { requirePermission } from "@/server/auth/requirePermission";
+import { authorizeTaskItemDetail } from "@/domains/task/server/core/task-item-detail.service";
+import { getTaskItemActivityViewModels } from "@/domains/task/server/activity";
+import { resolveWorkspaceCapabilities } from "@/domains/blueprint/shared/workspace-capabilities";
 import type {
     BusinessEntityPreview,
     BusinessEntityType,
@@ -49,6 +53,7 @@ export async function getBusinessEntityPreviewAction(input: {
     type: BusinessEntityType;
     id: string;
 }): Promise<BusinessEntityPreview | null> {
+    const auth = await requirePermission("TASK_VIEW");
     const id = input.id?.trim();
     if (!id) return null;
 
@@ -289,16 +294,87 @@ export async function getBusinessEntityPreviewAction(input: {
                                 },
                             },
                         },
+                        technicalIssue: {
+                            orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }],
+                            include: {
+                                vendor: { select: { name: true } },
+                                user: { select: { name: true } },
+                                technicalDetailCatalog: {
+                                    select: { area: true, name: true, code: true },
+                                },
+                            },
+                        },
+                        TaskExecution: {
+                            where: {
+                                targetType: "SERVICE_REQUEST",
+                                actionType: { not: "CANCELLED" },
+                                taskItemId: { not: null },
+                            },
+                            orderBy: { createdAt: "desc" },
+                            take: 1,
+                            select: { taskItemId: true },
+                        },
                     },
                 },
                 vendor: true,
                 user: true,
+                TaskExecution: {
+                    where: {
+                        targetType: "TECHNICAL_ISSUE",
+                        actionType: { not: "CANCELLED" },
+                        taskItemId: { not: null },
+                    },
+                    orderBy: { createdAt: "desc" },
+                    take: 1,
+                    select: {
+                        taskItem: {
+                            select: {
+                                id: true,
+                                note: true,
+                                userId: true,
+                                assignedToUserId: true,
+                                task: {
+                                    select: {
+                                        kind: true,
+                                        createdByUserId: true,
+                                        assignedToUserId: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
             },
         });
 
         if (!row) return null;
 
         const sr = row.serviceRequest;
+        const workspaceHref = sr.TaskExecution?.[0]?.taskItemId
+            ? `/admin/task-items/${sr.TaskExecution[0].taskItemId}`
+            : null;
+        const technicalWorkspaceItem = row.TaskExecution?.[0]?.taskItem ?? null;
+        let activity: BusinessEntityPreview["activity"];
+
+        if (technicalWorkspaceItem) {
+            try {
+                authorizeTaskItemDetail(technicalWorkspaceItem, auth);
+                const capabilities = resolveWorkspaceCapabilities({ note: technicalWorkspaceItem.note });
+                activity = {
+                    taskItemId: technicalWorkspaceItem.id,
+                    discussionEnabled: capabilities.discussion,
+                    items: await getTaskItemActivityViewModels(technicalWorkspaceItem.id, {
+                        limit: 20,
+                        scope: {
+                            targets: [{ targetType: "TECHNICAL_ISSUE", targetId: row.id }],
+                            includeWorkspaceLevel: false,
+                        },
+                    }),
+                };
+            } catch {
+                activity = undefined;
+            }
+        }
 
         return {
             type: "TECHNICAL_ISSUE",
@@ -312,14 +388,44 @@ export async function getBusinessEntityPreviewAction(input: {
             imageUrl:
                 mediaUrl(sr.primaryImageUrlSnapshot) ||
                 imageUrlFromProduct(sr.product),
-            href: null,
+            href: workspaceHref ?? `/admin/services/${sr.id}`,
             facts: [
                 { label: "SR", value: sr.refNo || "-" },
+                { label: "Trạng thái SR", value: sr.status || "-" },
+                { label: "Ưu tiên", value: row.priority || "NORMAL" },
                 { label: "Nhóm", value: row.area || "-" },
                 { label: "Người xử lý", value: row.actionMode || "-" },
                 { label: "Kỹ thuật", value: row.user?.name || "-" },
                 { label: "Vendor", value: row.vendor?.name || row.vendorNameSnap || "-" },
+                { label: "Chi phí dự kiến", value: row.estimatedCost?.toString() || "-" },
             ],
+            notes: row.note
+                ? [{ label: "Ghi chú kỹ thuật", body: row.note, tone: "info" as const }]
+                : undefined,
+            activity,
+            sections: [
+                {
+                    title: `Các Technical Issue trong ${sr.refNo || "Service Request"}`,
+                    subtitle: "Toàn bộ vấn đề kỹ thuật cùng thuộc một hồ sơ SR",
+                    items: sr.technicalIssue.map((issue) => ({
+                        id: issue.id,
+                        title: issue.summary || issue.note || issue.technicalDetailCatalog?.name || "Technical Issue",
+                        subtitle: issue.id === row.id
+                            ? "TI đang xem"
+                            : issue.technicalDetailCatalog?.name || issue.area || null,
+                        status: String(issue.executionStatus),
+                        facts: [
+                            { label: "Nhóm", value: issue.area || issue.technicalDetailCatalog?.area || "-" },
+                            { label: "Xử lý", value: issue.actionMode || "-" },
+                            { label: "Kỹ thuật", value: issue.user?.name || "-" },
+                            { label: "Vendor", value: issue.vendor?.name || issue.vendorNameSnap || "-" },
+                        ],
+                    })),
+                },
+            ],
+            actions: workspaceHref
+                ? [{ label: "Mở workspace SR", href: workspaceHref }]
+                : [{ label: "Mở Service Request", href: `/admin/services/${sr.id}` }],
         };
     }
 

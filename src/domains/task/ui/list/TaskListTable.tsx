@@ -573,6 +573,7 @@ export default function TaskListTable({
         loading={previewState.loading}
         error={previewState.error}
         onClose={previewState.closePreview}
+        onActivityChanged={previewState.refreshPreview}
       />
     </div>
   );

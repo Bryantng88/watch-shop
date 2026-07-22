@@ -61,6 +61,13 @@ function defaultZaloTemplatesForEvent(eventKey: string) {
         };
     }
 
+    if (eventKey === "technical_issue.created") {
+        return {
+            titleTemplate: "🔧 Yêu cầu kiểm tra TI mới",
+            messageTemplate: "Đồng hồ: {{watchTitle}}\nMã SR: {{serviceRequestRef}}\nNội dung: {{summary}}\nKhu vực: {{area}}\nƯu tiên: {{priority}}\nMở xử lý: {{route}}",
+        };
+    }
+
     return {
         titleTemplate: "{{eventKey}}",
         messageTemplate: "New event: {{eventKey}}\n{{targetType}}: {{targetId}}",

@@ -2574,6 +2574,7 @@ export function QueueWorkQueue({
         loading={previewState.loading}
         error={previewState.error}
         onClose={previewState.closePreview}
+        onActivityChanged={previewState.refreshPreview}
       />
       {bulkPaymentConfirm ? (
         <div

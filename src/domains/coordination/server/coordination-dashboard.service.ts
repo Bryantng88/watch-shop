@@ -1436,6 +1436,7 @@ async function loadTechnicalIssueBoard(input: {
         id: issue.id,
         serviceRequestId: issue.serviceRequestId,
         summary: issue.summary ?? issue.note ?? "Technical issue",
+        note: issue.note ?? null,
         area: issue.area ?? null,
         actionMode: issue.actionMode ?? null,
         vendorId: issue.vendorId ?? null,

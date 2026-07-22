@@ -1511,6 +1511,7 @@ export default function WatchListClient(props: WatchListClientProps) {
                 loading={previewState.loading}
                 error={previewState.error}
                 onClose={previewState.closePreview}
+                onActivityChanged={previewState.refreshPreview}
             />
         </BusinessListShell>
 
