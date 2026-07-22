@@ -30,6 +30,7 @@ import {
   Inbox,
   List,
   LoaderCircle,
+  MessageCircle,
   Monitor,
   Plus,
   Receipt,
@@ -2363,7 +2364,22 @@ function TechnicalIssueBoardView({
         loading={previewState.loading}
         error={previewState.error}
         onClose={previewState.closePreview}
-        onActivityChanged={previewState.refreshPreview}
+        onActivityChanged={() => {
+          const issueId = previewState.preview?.type === "TECHNICAL_ISSUE"
+            ? previewState.preview.id
+            : null;
+          if (issueId) {
+            setAsyncTechnicalIssueBoard((current) => current
+              ? {
+                  ...current,
+                  items: current.items.map((item) => item.id === issueId
+                    ? { ...item, commentCount: item.commentCount + 1 }
+                    : item),
+                }
+              : current);
+          }
+          previewState.refreshPreview();
+        }}
       />
     </div>
   );
@@ -2786,6 +2802,16 @@ function TechnicalIssueBoardCard({
           </div>
         </div>
         <div className="relative z-20 flex shrink-0 items-center gap-1">
+          {item.commentCount > 0 ? (
+            <span
+              title={`${item.commentCount} comment`}
+              aria-label={`${item.commentCount} comment`}
+              className="inline-flex h-6 items-center gap-1 px-1 text-[11px] font-semibold text-slate-500"
+            >
+              <span>{item.commentCount > 999 ? "999+" : item.commentCount}</span>
+              <MessageCircle className="h-3.5 w-3.5 fill-slate-500 text-slate-500" aria-hidden="true" />
+            </span>
+          ) : null}
           {onTogglePriority ? (
             <button
               type="button"

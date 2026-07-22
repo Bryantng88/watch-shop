@@ -133,6 +133,28 @@ async function resolveActivityTargetTitle(input: {
     return cleanText(watch?.product?.title) || null;
   }
 
+  if (input.targetType === TaskExecutionTargetType.TECHNICAL_ISSUE && input.targetId) {
+    const issue = await prisma.technicalIssue.findUnique({
+      where: { id: input.targetId },
+      select: {
+        serviceRequest: {
+          select: {
+            modelSnapshot: true,
+            skuSnapshot: true,
+            product: { select: { title: true, sku: true } },
+          },
+        },
+      },
+    });
+
+    return cleanText(
+      issue?.serviceRequest?.product?.title ??
+      issue?.serviceRequest?.modelSnapshot ??
+      issue?.serviceRequest?.skuSnapshot ??
+      issue?.serviceRequest?.product?.sku,
+    ) || null;
+  }
+
   return null;
 }
 
@@ -928,7 +950,7 @@ export async function addTaskItemActivityReplyAction(input: {
       targetId,
       metadata: activityMetadata,
     });
-    const watchTitle = targetType === TaskExecutionTargetType.WATCH
+    const watchTitle = [TaskExecutionTargetType.WATCH, TaskExecutionTargetType.TECHNICAL_ISSUE].includes(targetType as TaskExecutionTargetType)
       ? targetTitle
       : null;
 
@@ -990,11 +1012,16 @@ export async function addTaskItemDiscussionAction(input: {
     where: { id: taskItemId },
     select: {
       id: true,
+      title: true,
+      status: true,
       note: true,
       userId: true,
       assignedToUserId: true,
       task: {
         select: {
+          id: true,
+          title: true,
+          periodKey: true,
           kind: true,
           createdByUserId: true,
           assignedToUserId: true,
@@ -1017,6 +1044,48 @@ export async function addTaskItemDiscussionAction(input: {
     metadataJson: {
       targetType,
       targetId,
+    },
+  });
+
+  const actor = authActorLabel(auth);
+  const actorName = String(actor.name || actor.email || "System");
+  const targetTitle = await resolveActivityTargetTitle({
+    targetType,
+    targetId,
+    metadata: {},
+  });
+  const watchTitle = [TaskExecutionTargetType.WATCH, TaskExecutionTargetType.TECHNICAL_ISSUE]
+    .includes(targetType as TaskExecutionTargetType)
+    ? targetTitle
+    : null;
+
+  await recordBusinessEvent(prisma, {
+    eventKey: "task.item.activity.commented",
+    targetType: "TASK_ITEM",
+    targetId: activity.id,
+    actorUserId: getAuthUserId(auth),
+    payload: {
+      taskItemId,
+      targetTaskItemId: taskItemId,
+      taskItemTitle: taskItem.title,
+      taskItemStatus: taskItem.status,
+      targetType,
+      targetId,
+      targetTitle,
+      watchTitle,
+      route: `/admin/task-items/${taskItemId}?tab=activity`,
+      taskId: taskItem.task.id,
+      taskTitle: taskItem.task.title,
+      periodKey: taskItem.task.periodKey,
+      activityId: activity.id,
+      activityTitle: activity.title,
+      activityBody: activity.body ?? null,
+      activitySourceType: activity.sourceType,
+      activitySourceId: activity.sourceId ?? null,
+      replyId: activity.id,
+      replyBody: body,
+      actorName,
+      message: `${actorName} commented on ${taskItem.title}: ${body}`,
     },
   });
 

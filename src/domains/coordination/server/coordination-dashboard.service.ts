@@ -1368,7 +1368,7 @@ async function loadTechnicalIssueBoard(input: {
     srCaseTaskItemIdByServiceRequestId.set(binding.targetId, binding.taskItemId);
   }
 
-  const [issues, startedEvents] = await Promise.all([input.db.technicalIssue.findMany({
+  const [issues, startedEvents, discussionActivities] = await Promise.all([input.db.technicalIssue.findMany({
     where: { id: { in: issueIds } },
     select: {
       id: true,
@@ -1411,8 +1411,30 @@ async function loadTechnicalIssueBoard(input: {
       targetId: { in: issueIds },
     },
     select: { targetId: true, metadataJson: true },
+  }), input.db.taskItemActivity.findMany({
+    where: {
+      taskItemId: { in: bindings.map((binding) => binding.taskItemId).filter((id): id is string => Boolean(id)) },
+    },
+    select: {
+      sourceType: true,
+      metadataJson: true,
+      _count: { select: { replies: true } },
+    },
   })]);
   const startedEventByIssueId = new Map(startedEvents.map((event) => [event.targetId, event.metadataJson]));
+  const commentCountByIssueId = new Map<string, number>();
+  for (const activity of discussionActivities) {
+    if (!activity.metadataJson || typeof activity.metadataJson !== "object" || Array.isArray(activity.metadataJson)) continue;
+    const metadata = activity.metadataJson as { targetType?: unknown; targetId?: unknown };
+    if (String(metadata.targetType ?? "") !== "TECHNICAL_ISSUE") continue;
+    const targetId = String(metadata.targetId ?? "").trim();
+    if (!targetId) continue;
+    const directCommentCount = String(activity.sourceType) === "DISCUSSION" ? 1 : 0;
+    commentCountByIssueId.set(
+      targetId,
+      (commentCountByIssueId.get(targetId) ?? 0) + directCommentCount + activity._count.replies,
+    );
+  }
   const replacementPartLabels: Record<string, string> = {
     MOVEMENT_COMPLETE: "Thay nguyên máy",
     MAINSPRING: "Thay cót",
@@ -1447,6 +1469,7 @@ async function loadTechnicalIssueBoard(input: {
         priority: issue.priority ?? "NORMAL",
         technicalDetailCatalogId: issue.technicalDetailCatalogId ?? null,
         processingDetails: [issue.technicalDetailCatalog?.name, ...replacementParts].filter((value): value is string => Boolean(value)),
+        commentCount: commentCountByIssueId.get(issue.id) ?? 0,
         stage: technicalIssueBoardStage({
           flowStageKey: binding?.flowStageKey ?? null,
           executionStatus: issue.executionStatus,

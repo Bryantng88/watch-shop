@@ -90,6 +90,7 @@ export type CoordinationTechnicalIssueBoardItemDTO = {
   priority: string | null;
   technicalDetailCatalogId: string | null;
   processingDetails: string[];
+  commentCount: number;
   stage: "INSPECT" | "READY" | "PROCESSING" | "DONE";
   actualCost: number | null;
   updatedAt: string | null;
