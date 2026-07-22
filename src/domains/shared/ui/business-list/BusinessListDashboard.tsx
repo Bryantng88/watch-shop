@@ -81,7 +81,7 @@ export default function BusinessListDashboard({
         () => normalizeWidgets(widgets, registryWidgets, registryWidgets.length) ?? defaultWidgets,
         [widgets],
     );
-    const configuredWidgets = availableWidgets.slice(0, 4);
+    const configuredWidgets = useMemo(() => availableWidgets.slice(0, 4), [availableWidgets]);
     const [selectedWidgets, setSelectedWidgets] = useState(configuredWidgets);
     const [draftWidgets, setDraftWidgets] = useState(configuredWidgets);
     const [customizing, setCustomizing] = useState(false);
@@ -92,6 +92,8 @@ export default function BusinessListDashboard({
     }, [selectedWidgets]);
 
     useEffect(() => {
+        setSelectedWidgets(configuredWidgets);
+        setDraftWidgets(configuredWidgets);
         if (!storageKey) return;
         try {
             const stored = window.localStorage.getItem(storageKey);
@@ -103,7 +105,7 @@ export default function BusinessListDashboard({
         } catch {
             window.localStorage.removeItem(storageKey);
         }
-    }, [storageKey, availableWidgets]);
+    }, [storageKey, availableWidgets, configuredWidgets]);
 
     useEffect(() => {
         if (customizationRequest <= 0) return;

@@ -1,10 +1,9 @@
 import { PaymentDirection, PaymentMethod } from "@prisma/client";
 
-import { prisma } from "@/server/db/client";
 import { getPaymentOwnerSeedTx, createPaymentRowTx, getPaymentSummary, listPayments } from "./payment.core";
 import type { Tx } from "./payment.utils";
 
-export async function createInitialPaymentForAcquisitionTx(tx: Tx, acquisitionId: string) {
+export async function ensureInitialPaymentForAcquisitionTx(tx: Tx, acquisitionId: string) {
   const seed = await getPaymentOwnerSeedTx(tx, "ACQUISITION", acquisitionId);
 
   if (seed.totalDue <= 0) {
@@ -20,9 +19,9 @@ export async function createInitialPaymentForAcquisitionTx(tx: Tx, acquisitionId
     select: { id: true },
   });
 
-  if (existing) return existing;
+  if (existing) return { payment: existing, created: false };
 
-  return createPaymentRowTx(tx, {
+  const payment = await createPaymentRowTx(tx, {
     ownerType: "ACQUISITION",
     ownerId: acquisitionId,
     amount: seed.totalDue,
@@ -32,6 +31,14 @@ export async function createInitialPaymentForAcquisitionTx(tx: Tx, acquisitionId
     method: PaymentMethod.BANK_TRANSFER,
     note: "Payment mặc định cho phiếu nhập.",
   });
+
+  if (!payment) throw new Error("Không thể tạo payment mặc định cho phiếu nhập.");
+
+  return { payment, created: true };
+}
+
+export async function createInitialPaymentForAcquisitionTx(tx: Tx, acquisitionId: string) {
+  return (await ensureInitialPaymentForAcquisitionTx(tx, acquisitionId)).payment;
 }
 
 export async function listAcquisitionPayments(acquisitionId: string) {

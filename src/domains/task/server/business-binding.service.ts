@@ -800,8 +800,9 @@ async function buildQueueBusinessPreviewMap(
   ]);
   const acquisitionIds = payments.map((payment) => clean(payment.acquisition_id)).filter(Boolean);
   const paymentOrderIds = payments.map((payment) => clean(payment.order_id)).filter(Boolean);
-  const acquisitions = acquisitionIds.length
-    ? await client.acquisition.findMany({
+  const [acquisitions, paymentOrders] = await Promise.all([
+    acquisitionIds.length
+    ? client.acquisition.findMany({
       where: { id: { in: acquisitionIds } },
       select: {
         id: true,
@@ -831,10 +832,9 @@ async function buildQueueBusinessPreviewMap(
         },
       },
     })
-    : [];
-  const acquisitionById = new Map(acquisitions.map((acquisition) => [acquisition.id, acquisition]));
-  const paymentOrders = paymentOrderIds.length
-    ? await client.order.findMany({
+    : Promise.resolve([]),
+    paymentOrderIds.length
+    ? client.order.findMany({
       where: { id: { in: paymentOrderIds } },
       select: {
         id: true, refNo: true, customerName: true, shipPhone: true, createdAt: true,
@@ -847,7 +847,9 @@ async function buildQueueBusinessPreviewMap(
           } } },
         },
       },
-    }) : [];
+    }) : Promise.resolve([]),
+  ]);
+  const acquisitionById = new Map(acquisitions.map((acquisition) => [acquisition.id, acquisition]));
   const paymentOrderById = new Map(paymentOrders.map((order) => [order.id, order]));
 
   for (const watch of watches) {
@@ -1162,11 +1164,12 @@ export async function listTaskItemBusinessBindings(
 export async function listTaskItemQueueItems(
   db: DB,
   taskItemId: string,
+  taskItemContext?: { taskId: string; note?: string | null },
 ): Promise<QueueItemDTO[]> {
   const cleanTaskItemId = clean(taskItemId);
   assertPresent(cleanTaskItemId, "Missing taskItemId");
 
-  const taskItem = await dbOrTx(db).taskItem.findUnique({
+  const taskItem = taskItemContext ?? await dbOrTx(db).taskItem.findUnique({
     where: { id: cleanTaskItemId },
     select: { taskId: true, note: true },
   });

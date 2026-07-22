@@ -1,6 +1,7 @@
 import { AcquisitionStatus, OrderStatus, AcquisitionType, Prisma, ProductStatus, WatchSaleStage, WatchStockStage } from "@prisma/client";
 
 import { prisma, type DB, dbOrTx } from "@/server/db/client";
+import { emitAcquisitionBusinessEvent } from "./acquisition-business-event";
 
 function money(value: unknown) {
     const amount = Number(value ?? 0);
@@ -151,7 +152,7 @@ export async function createBuyBackFromProduct(input: {
         throw new Error("Thiếu productId.");
     }
 
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
         const watch = await tx.watch.findUnique({
             where: { productId },
             select: {
@@ -248,6 +249,13 @@ export async function createBuyBackFromProduct(input: {
             type: acquisition.type,
         };
     });
+
+    await emitAcquisitionBusinessEvent(prisma, {
+        eventKey: "acquisition.created",
+        acquisitionId: result.acquisitionId,
+    });
+
+    return result;
 }
 
 export async function createConsignToFromProduct(input: {
@@ -266,7 +274,7 @@ export async function createConsignToFromProduct(input: {
         throw new Error("Thieu vendorId.");
     }
 
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
         const watch = await tx.watch.findUnique({
             where: { productId },
             select: {
@@ -332,6 +340,13 @@ export async function createConsignToFromProduct(input: {
 
         return acquisition;
     });
+
+    await emitAcquisitionBusinessEvent(prisma, {
+        eventKey: "acquisition.created",
+        acquisitionId: result.id,
+    });
+
+    return result;
 }
 
 export async function restoreBuyBackWatchAfterAcquisitionPostTx(tx: DB, acquisitionId: string) {

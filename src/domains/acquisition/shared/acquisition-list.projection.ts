@@ -17,6 +17,7 @@ export type AcquisitionListProjectionRow = {
     approvalStatus: string;
     approvalStatusLabel: string;
     paymentStatus: "UNPAID" | "PARTIAL_PAID" | "PAID" | string;
+    vendorId: string | null;
     vendorName: string;
     acquisitionType: string;
     currency: string;

@@ -13,7 +13,7 @@ import {
     pickFirstAcquisitionInlineImage,
     type AcquisitionInlineImageInput,
 } from "../server/acquisition-media.service";
-import { createInitialPaymentForAcquisitionTx } from "@/domains/payment/server";
+import { ensureInitialPaymentForAcquisitionTx, publishPaymentMutations } from "@/domains/payment/server";
 import { restoreBuyBackWatchAfterAcquisitionPostTx } from "../server";
 import { emitWatchCreatedEvent } from "@/domains/watch/server/events";
 
@@ -149,14 +149,14 @@ export async function postAcquisitionApplication(
 
             const posted = await repoAcq.changeDraftToPost(tx as any, acqId);
 
-            await createInitialPaymentForAcquisitionTx(tx as any, acqId);
+            const paymentResult = await ensureInitialPaymentForAcquisitionTx(tx as any, acqId);
 
             // BUY_BACK: chỉ khi phiếu nhập được POST mới trả watch về kho.
             // SaleStage không bị hard-code; helper sẽ quyết định READY/PROCESSING
             // theo dữ liệu content + gallery hiện có.
             await restoreBuyBackWatchAfterAcquisitionPostTx(tx as any, acqId);
 
-            return posted;
+            return { posted, paymentResult };
         },
         {
             maxWait: 5000,
@@ -167,6 +167,17 @@ export async function postAcquisitionApplication(
     const inlineImagesByWatchId = new Map(
         pendingInlineImages.map((pending) => [pending.watchId, pending]),
     );
+
+    if (result.paymentResult.created) {
+        await publishPaymentMutations([
+            { paymentId: result.paymentResult.payment.id, eventKey: "payment.created" },
+        ]);
+    }
+
+    await repoAcq.emitAcquisitionBusinessEvent(prisma, {
+        eventKey: "acquisition.posted",
+        acquisitionId: acqId,
+    });
 
     for (const event of createdWatchEvents) {
         const pending = inlineImagesByWatchId.get(event.watchId);
@@ -185,5 +196,5 @@ export async function postAcquisitionApplication(
         });
     }
 
-    return result;
+    return result.posted;
 }

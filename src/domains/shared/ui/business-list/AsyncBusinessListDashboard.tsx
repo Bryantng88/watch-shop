@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import BusinessListDashboard, { BusinessListDashboardSkeleton } from "./BusinessListDashboard";
 import type {
     BusinessListDashboardData,
+    BusinessListDashboardView,
     BusinessListDashboardWidgetKey,
 } from "./business-list.types";
 
@@ -14,22 +15,38 @@ export default function AsyncBusinessListDashboard({
     storageKey,
     customizationRequest,
     showCustomizationTrigger,
+    views = [],
+    activeView,
+    onViewChange,
+    cashFlowPeriods = false,
+    onResult,
 }: {
     endpoint: string;
     widgets?: BusinessListDashboardWidgetKey[];
     storageKey?: string;
     customizationRequest?: number;
     showCustomizationTrigger?: boolean;
+    views?: BusinessListDashboardView[];
+    activeView?: string;
+    onViewChange?: (view: string) => void;
+    cashFlowPeriods?: boolean;
+    onResult?: (result: unknown) => void;
 }) {
     const [data, setData] = useState<BusinessListDashboardData | null>(null);
     const [failed, setFailed] = useState(false);
+    const [cashPeriod, setCashPeriod] = useState<"WEEK" | "MONTH" | "YEAR" | "ALL">("WEEK");
 
     useEffect(() => {
         const controller = new AbortController();
+        const url = new URL(endpoint, window.location.origin);
+        if (cashFlowPeriods) url.searchParams.set("cashPeriod", cashPeriod);
+        setData(null);
+        setFailed(false);
 
-        void fetch(endpoint, {
+        void fetch(url.toString(), {
             method: "GET",
             headers: { Accept: "application/json" },
+            cache: "no-store",
             signal: controller.signal,
         })
             .then(async (response) => {
@@ -37,7 +54,12 @@ export default function AsyncBusinessListDashboard({
                 if (!response.ok || !result?.ok) {
                     throw new Error(result?.error || "Không thể tải dashboard");
                 }
-                setData(result.data);
+                const nextData = result.data as BusinessListDashboardData;
+                if (cashFlowPeriods && nextData.cashFlow) {
+                    nextData.cashFlow.onPeriodChange = setCashPeriod;
+                }
+                onResult?.(result);
+                setData(nextData);
             })
             .catch((error) => {
                 if (error instanceof DOMException && error.name === "AbortError") return;
@@ -46,7 +68,7 @@ export default function AsyncBusinessListDashboard({
             });
 
         return () => controller.abort();
-    }, [endpoint]);
+    }, [cashFlowPeriods, cashPeriod, endpoint, onResult]);
 
     if (failed) return null;
     if (!data) return <BusinessListDashboardSkeleton count={widgets?.length} />;
@@ -57,6 +79,9 @@ export default function AsyncBusinessListDashboard({
             storageKey={storageKey}
             customizationRequest={customizationRequest}
             showCustomizationTrigger={showCustomizationTrigger}
+            views={views}
+            activeView={activeView}
+            onViewChange={onViewChange}
         />
     );
 }

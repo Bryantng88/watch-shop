@@ -1,4 +1,5 @@
 export * from "./acquisition.repo";
+export * from "./acquisition-business-event";
 export * from "./acquisition-item.repo";
 export * from "./acquisition-watch.repo";
 export * from "./acquisition-media.service";

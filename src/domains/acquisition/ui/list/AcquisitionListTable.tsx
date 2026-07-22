@@ -3,7 +3,6 @@
 import Link from "next/link";
 
 import { cn } from "@/lib/utils";
-import type { PaymentOwner } from "@/domains/payment/ui/PaymentWorkspace";
 
 import AcquisitionListRow from "./AcquisitionListRow";
 import type { AcquisitionListItem } from "./types";
@@ -37,7 +36,6 @@ type Props = {
     selectedIds: string[];
     onToggleOne: (id: string, checked: boolean) => void;
     onToggleAll: (checked: boolean) => void;
-    onOpenPayment?: (owner: PaymentOwner) => void;
     onOpenEdit?: (id: string) => void;
 };
 
@@ -51,7 +49,6 @@ export default function AcquisitionListTable({
     selectedIds,
     onToggleOne,
     onToggleAll,
-    onOpenPayment,
     onOpenEdit,
 }: Props) {
     const selectableIds = items.filter(isSelectable).map((item) => item.id);
@@ -80,11 +77,11 @@ export default function AcquisitionListTable({
                 <table className="w-full min-w-[1180px] table-fixed text-sm">
                     <colgroup>
                         <col className="w-[44px]" />
+                        <col className="w-[300px]" />
+                        <col className="w-[200px]" />
+                        <col className="w-[170px]" />
                         <col className="w-[220px]" />
-                        <col className="w-[120px]" />
-                        <col className="w-[150px]" />
                         <col />
-                        <col className="w-[120px]" />
                         <col className="w-[150px]" />
                         <col className="w-[130px]" />
                         <col className="w-[70px]" />
@@ -103,11 +100,11 @@ export default function AcquisitionListTable({
                                     onChange={(event) => onToggleAll(event.target.checked)}
                                 />
                             </th>
+                            <th className="px-3 py-4">Sản phẩm</th>
                             <th className="px-4 py-4">Phiếu nhập</th>
-                            <th className="px-4 py-4">Trạng thái duyệt</th>
-                            <th className="px-4 py-4 text-center">Thanh toán</th>
+                            <th className="px-4 py-4">Trạng thái phiếu</th>
+                            <th className="px-4 py-4">Thanh toán</th>
                             <th className="px-4 py-4">Vendor</th>
-                            <th className="px-4 py-4">Item</th>
                             <th className="px-4 py-4 text-right">Tổng tiền</th>
                             <th className="px-4 py-4">Cập nhật</th>
                             <th className="px-3 py-4 text-right">Action</th>
@@ -121,7 +118,6 @@ export default function AcquisitionListTable({
                                 item={item}
                                 checked={selectedIds.includes(item.id)}
                                 onCheckedChange={(checked) => onToggleOne(item.id, checked)}
-                                onOpenPayment={onOpenPayment}
                                 onOpenEdit={onOpenEdit}
                             />
                         ))}

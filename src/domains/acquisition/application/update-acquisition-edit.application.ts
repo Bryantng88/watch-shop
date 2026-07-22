@@ -4,6 +4,7 @@ import { Prisma, ProductType } from "@prisma/client";
 
 import { prisma, type DB } from "@/server/db/client";
 import { publishPaymentMutations, syncAcquisitionPaymentDueTx, type PaymentMutation, type Tx } from "@/domains/payment/server";
+import { emitAcquisitionBusinessEvent } from "../server/acquisition-business-event";
 import {
     getAiMetaFromDescription,
     stringifyAcquisitionItemMeta,
@@ -228,5 +229,10 @@ export async function updateAcquisitionEditApplication(input: UpdateAcquisitionE
         };
     });
     await publishPaymentMutations(result.paymentMutations);
+    await emitAcquisitionBusinessEvent(prisma, {
+        eventKey: result.status === "DRAFT" ? "acquisition.items.updated" : "acquisition.updated",
+        acquisitionId: result.acquisitionId,
+        payload: { totalAmount: result.totalAmount },
+    });
     return result;
 }

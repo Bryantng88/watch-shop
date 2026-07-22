@@ -28,6 +28,9 @@ export default async function OperationCoordinationPage(props: PageProps) {
         context: "OPERATION",
         db: prisma,
         date: first(searchParams.date) ?? null,
+        modeKey: first(searchParams.view) ?? null,
+        includeDashboardDetails: false,
+        includeTechnicalBoard: false,
         auth,
       }),
   );

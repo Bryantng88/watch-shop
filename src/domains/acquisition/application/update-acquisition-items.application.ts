@@ -69,9 +69,17 @@ async function updateAcquisitionItemsTx(
 export async function updateAcquisitionItemsApplication(
     input: UpdateAcquisitionItemsInput
 ) {
-    return prisma.$transaction((tx) =>
+    const result = await prisma.$transaction((tx) =>
         updateAcquisitionItemsTx(tx as unknown as DB, input)
     );
+
+    await repoAcq.emitAcquisitionBusinessEvent(prisma, {
+        eventKey: "acquisition.items.updated",
+        acquisitionId: input.acquisitionId,
+        payload: { totalAmount: result.total },
+    });
+
+    return result;
 }
 
 /**

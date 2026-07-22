@@ -588,6 +588,17 @@ export async function ensureCoordinationCycle(
   });
 
   if (existing) {
+    if (input.provisionWorkTickets === false) {
+      return {
+        task: existing,
+        week,
+        context: input.context,
+        created: false,
+        workTickets: [],
+        workTicketsCreated: 0,
+      };
+    }
+
     const workTickets = input.context === "OPERATION"
       ? await ensureUnifiedOperationWorkTickets(client, existing.id)
       : await ensureWorkTickets(client, { taskId: existing.id, context: input.context });

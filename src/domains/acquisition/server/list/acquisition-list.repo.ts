@@ -37,8 +37,12 @@ function formatStatusLabel(value: unknown) {
     }
 }
 
-function buildWhere(input: AcquisitionListFilters) {
+function buildWhere(input: AcquisitionListFilters, acquisitionIds: string[] = []) {
     const and: any[] = [];
+
+    if (acquisitionIds.length) {
+        and.push({ id: { in: acquisitionIds } });
+    }
 
     if (normalizeText(input.q)) {
         const q = normalizeText(input.q);
@@ -184,14 +188,15 @@ function buildItemSubtitle(item: any) {
     return cleanAcquisitionItemDescription(item?.description) || item?.product?.sku || "";
 }
 
-export async function listAdminAcquisitions(
+export async function listAdminAcquisitionsFromSource(
     input: AcquisitionListFilters,
+    acquisitionIds: string[] = [],
 ): Promise<AcquisitionListProjectionResult> {
     const page = input.page ?? 1;
     const pageSize = input.pageSize ?? 20;
     const skip = (page - 1) * pageSize;
 
-    const where = buildWhere(input);
+    const where = buildWhere(input, acquisitionIds);
     const [rows, total] = await Promise.all([
         prisma.acquisition.findMany({
         where,
@@ -287,6 +292,7 @@ export async function listAdminAcquisitions(
             refNo: row.refNo ?? "-",
             approvalStatus: mapStatus(row.accquisitionStt),
             approvalStatusLabel: formatStatusLabel(row.accquisitionStt),
+            vendorId: row.vendorId ?? null,
             vendorName: row.vendor?.name ?? "-",
             itemCount: acquisitionItems.length,
             linkedWatchCount,

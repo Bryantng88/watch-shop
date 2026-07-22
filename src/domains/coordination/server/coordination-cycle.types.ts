@@ -20,7 +20,9 @@ export type ResolveCurrentCoordinationCycleInput = {
   date?: Date;
 };
 
-export type EnsureCoordinationCycleInput = ResolveCurrentCoordinationCycleInput;
+export type EnsureCoordinationCycleInput = ResolveCurrentCoordinationCycleInput & {
+  provisionWorkTickets?: boolean;
+};
 
 export type CoordinationCycleTask = {
   id: string;

@@ -1,14 +1,8 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Plus } from "lucide-react";
 
-import PaymentWorkspace, {
-    type PaymentOwner,
-    type PaymentOwnerType,
-} from "@/domains/payment/ui/PaymentWorkspace";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import AcquisitionEditModal from "@/domains/acquisition/ui/edit/AcquisitionEditModal";
@@ -53,9 +47,7 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
     const progress = useAppProgress();
 
     const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
-    const [paymentOwner, setPaymentOwner] = React.useState<PaymentOwner | null>(null);
     const [editAcquisitionId, setEditAcquisitionId] = React.useState<string | null>(null);
-    const [paymentSubmitting, setPaymentSubmitting] = React.useState(false);
 
     React.useEffect(() => {
         setSelectedIds([]);
@@ -74,110 +66,6 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
 
     function toggleAll(checked: boolean) {
         setSelectedIds(checked ? selectableIds : []);
-    }
-
-    async function createAcquisitionPayment(payload: {
-        ownerType: PaymentOwnerType;
-        ownerId: string;
-        amount: number;
-        method: string;
-        note?: string | null;
-        markPaidNow: boolean;
-    }) {
-        setPaymentSubmitting(true);
-
-        try {
-            const res = await fetch(`/api/admin/acquisitions/${payload.ownerId}/payment`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
-
-            const json = await res.json().catch(() => ({}));
-            if (!res.ok) throw new Error(json?.error || "Không thể tạo payment.");
-
-            notify.success({
-                title: "Đã tạo payment",
-                message: "Payment phiếu nhập đã được tạo.",
-            });
-
-            router.refresh();
-        } catch (error: any) {
-            notify.error({
-                title: "Không thể tạo payment",
-                message: error?.message || "Thao tác thất bại.",
-            });
-            throw error;
-        } finally {
-            setPaymentSubmitting(false);
-        }
-    }
-
-    async function completeAcquisitionPayment(payload: {
-        paymentId: string;
-        reference?: string | null;
-        note?: string | null;
-    }) {
-        setPaymentSubmitting(true);
-
-        try {
-            const res = await fetch(`/api/admin/payments/${payload.paymentId}/complete`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
-
-            const json = await res.json().catch(() => ({}));
-            if (!res.ok) throw new Error(json?.error || "Không thể hoàn tất payment.");
-
-            notify.success({
-                title: "Đã hoàn tất payment",
-                message: "Payment phiếu nhập đã được ghi nhận.",
-            });
-
-            router.refresh();
-        } catch (error: any) {
-            notify.error({
-                title: "Không thể hoàn tất payment",
-                message: error?.message || "Thao tác thất bại.",
-            });
-            throw error;
-        } finally {
-            setPaymentSubmitting(false);
-        }
-    }
-
-    async function cancelAcquisitionPayment(payload: {
-        paymentId: string;
-        note?: string | null;
-    }) {
-        setPaymentSubmitting(true);
-
-        try {
-            const res = await fetch(`/api/admin/payments/${payload.paymentId}/cancel`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
-
-            const json = await res.json().catch(() => ({}));
-            if (!res.ok) throw new Error(json?.error || "Không thể hủy payment.");
-
-            notify.success({
-                title: "Đã hủy payment",
-                message: "Payment phiếu nhập đã được hủy.",
-            });
-
-            router.refresh();
-        } catch (error: any) {
-            notify.error({
-                title: "Không thể hủy payment",
-                message: error?.message || "Thao tác thất bại.",
-            });
-            throw error;
-        } finally {
-            setPaymentSubmitting(false);
-        }
     }
 
     async function handleBulkPost() {
@@ -241,7 +129,7 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
     return (
         <BusinessListShell
             header={
-            <div className="flex flex-col gap-4 px-1 py-1 md:flex-row md:items-start md:justify-between">
+            <div className="px-1 py-1">
                 <div className="min-w-0">
                     <h1 className="text-[30px] font-semibold tracking-[-0.035em] text-slate-950">
                         Danh sách phiếu nhập
@@ -249,24 +137,6 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
                     <p className="mt-2 text-sm text-slate-500">
                         Quản lý phiếu nhập, duyệt tồn kho và thanh toán đầu vào.
                     </p>
-                </div>
-
-                <div className="flex shrink-0 items-center gap-3 self-start">
-                    <div className="inline-flex h-12 items-center gap-3 rounded-2xl bg-slate-50 px-4">
-                        <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">
-                            Đã chọn
-                        </div>
-                        <div className="text-xl font-semibold leading-none text-slate-950">
-                            {selectedIds.length}
-                        </div>
-                    </div>
-                    <Link
-                        href="/admin/acquisitions/new"
-                        className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Tạo phiếu nhập
-                    </Link>
                 </div>
             </div>
             }
@@ -280,6 +150,7 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
                     vendors={props.vendors}
                     total={props.total}
                     visibleCount={props.items.length}
+                    selectedCount={selectedIds.length}
                 />
             }
         >
@@ -318,7 +189,6 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
                 selectedIds={selectedIds}
                 onToggleOne={toggleOne}
                 onToggleAll={toggleAll}
-                onOpenPayment={setPaymentOwner}
                 onOpenEdit={setEditAcquisitionId}
             />
 
@@ -331,18 +201,6 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
                 />
             ) : null}
 
-            {paymentOwner ? (
-                <PaymentWorkspace
-                    open={!!paymentOwner}
-                    owner={paymentOwner}
-                    submitting={paymentSubmitting}
-                    onClose={() => setPaymentOwner(null)}
-                    onUpdated={() => router.refresh()}
-                    onCreatePayment={createAcquisitionPayment}
-                    onCompletePayment={completeAcquisitionPayment}
-                    onCancelPayment={cancelAcquisitionPayment}
-                />
-            ) : null}
         </BusinessListShell>
     );
 }

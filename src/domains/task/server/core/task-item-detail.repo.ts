@@ -264,7 +264,10 @@ async function listQueueItemsForTaskItemDetail(
       }
     }
 
-    return listTaskItemQueueItems(db, input.taskItemId);
+    return listTaskItemQueueItems(db, input.taskItemId, {
+      taskId: input.taskId,
+      note: input.note,
+    });
   }
 
   const result = await listWatchMediaQueueProjectionItemsWithFallback(db, {

@@ -28,6 +28,7 @@ export default async function GeneralCoordinationPage(props: PageProps) {
         context: "GENERAL",
         db: prisma,
         date: first(searchParams.date) ?? null,
+        includeDashboardDetails: false,
         auth,
       }),
   );

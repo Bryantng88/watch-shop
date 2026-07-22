@@ -28,6 +28,7 @@ export default async function TechnicalCoordinationPage(props: PageProps) {
         context: "TECHNICAL",
         db: prisma,
         date: first(searchParams.date) ?? null,
+        includeDashboardDetails: false,
         auth,
       }),
   );

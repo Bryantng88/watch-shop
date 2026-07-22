@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Plus } from "lucide-react";
 
 import { BusinessListFilterBar } from "@/domains/shared/ui/business-list";
 import type { FilterBarField, FilterBarValues } from "@/domains/shared/ui/filter-bar";
@@ -51,10 +53,12 @@ export default function AcquisitionListToolbar({
     vendors,
     total,
     visibleCount,
+    selectedCount,
 }: {
     vendors: AcquisitionVendorOption[];
     total: number;
     visibleCount: number;
+    selectedCount: number;
 }) {
     const router = useRouter();
     const pathname = usePathname();
@@ -129,6 +133,22 @@ export default function AcquisitionListToolbar({
             onApply={() => apply()}
             onClearField={clearField}
             onClearAll={clearAll}
+            trailingActions={
+                <>
+                    {selectedCount > 0 ? (
+                        <span className="whitespace-nowrap rounded-lg bg-blue-50 px-2.5 py-2 text-xs font-semibold text-blue-700">
+                            Đã chọn {selectedCount}
+                        </span>
+                    ) : null}
+                    <Link
+                        href="/admin/acquisitions/new"
+                        className="inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-slate-950 px-3.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Tạo phiếu nhập
+                    </Link>
+                </>
+            }
         />
     );
 }

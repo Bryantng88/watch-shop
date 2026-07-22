@@ -28,6 +28,7 @@ export default async function MediaCoordinationPage(props: PageProps) {
         context: "MEDIA",
         db: prisma,
         date: first(searchParams.date) ?? null,
+        includeDashboardDetails: false,
         auth,
       }),
   );

@@ -496,7 +496,7 @@ function dateFromIsoWeekPeriod(periodKey?: string | null) {
 function coordinationSurfaceFromContext(value?: string | null) {
   const context = String(value ?? "").trim().toUpperCase();
   if (context === "MEDIA") return "media";
-  if (context === "PAYMENT") return "payment";
+  if (context === "PAYMENT") return "operation";
   if (context === "TECHNICAL") return "technical";
   if (context === "SALES") return "sales";
   if (context === "GENERAL") return "general";
@@ -513,7 +513,7 @@ function coordinationSurfaceFromWorkType(value?: string | null) {
   ) {
     return "media";
   }
-  if (workTypeKey === "payment") return "payment";
+  if (workTypeKey === "payment") return "operation";
   if (workTypeKey === "service-operation") return "technical";
   return null;
 }
@@ -547,7 +547,7 @@ function coordinationHref(
   if (kind === "SERVICE") workspace = "technical";
   if (title.includes("media")) workspace = "media";
   if (title.includes("thanh toán") || title.includes("thanh toán")) {
-    workspace = "payment";
+    workspace = "operation";
   }
   if (kind === "BUSINESS") {
     workspace = title.includes("khác") || title.includes("khac") ? "general" : "sales";
@@ -558,9 +558,17 @@ function coordinationHref(
   }
 
   const date = dateFromIsoWeekPeriod(parentTask.periodKey);
-  return date
-    ? `/admin/coordination/${workspace}?date=${date}`
-    : `/admin/coordination/${workspace}`;
+  const params = new URLSearchParams();
+  if (date) params.set("date", date);
+  if (
+    workspace === "operation" &&
+    (String(context ?? "").toUpperCase() === "PAYMENT" ||
+      String(workTypeKey ?? "").toLowerCase() === "payment")
+  ) {
+    params.set("view", "payment-collection-flow");
+  }
+  const query = params.toString();
+  return `/admin/coordination/${workspace}${query ? `?${query}` : ""}`;
 }
 
 function siblingWorkspaceLabel(input: { title: string; note?: string | null }) {
@@ -2768,7 +2776,6 @@ function WorkspaceDetailHeader({
   checklistDone,
   checklistTotal,
   refLabel,
-  isServiceOperationWorkspace,
   operationalCoreFlow,
   currentWorkspaceNavMetadata,
   currentWorkspaceRole,
@@ -2785,7 +2792,6 @@ function WorkspaceDetailHeader({
   checklistDone: number;
   checklistTotal: number;
   refLabel: string;
-  isServiceOperationWorkspace: boolean;
   operationalCoreFlow: ReturnType<typeof selectOperationalCoreFlowForWorkspaceRole>;
   currentWorkspaceNavMetadata: ReturnType<typeof workspaceNavMetadata>;
   currentWorkspaceRole?: string | null;
@@ -2873,7 +2879,7 @@ function WorkspaceDetailHeader({
         </div>
       </div>
 
-      {isServiceOperationWorkspace && operationalCoreFlow ? (
+      {operationalCoreFlow ? (
         <CoreFlowWorkspaceNav
           currentItemId={item.id}
           currentWorkspaceRole={currentWorkspaceRole}
@@ -3110,7 +3116,6 @@ export default function TaskItemDetailClient({
           checklistDone={checklistDone}
           checklistTotal={checklists.length}
           refLabel={ref}
-          isServiceOperationWorkspace={isServiceOperationWorkspace}
           operationalCoreFlow={operationalCoreFlow}
           currentWorkspaceNavMetadata={currentWorkspaceNavMetadata}
           currentWorkspaceRole={serviceOperationWorkspaceRole}

@@ -3,6 +3,41 @@ import type { BusinessEventContract } from "@/domains/event/contract/business-ev
 
 export const LEGACY_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
   defineBusinessEventContract({
+    key: "acquisition.created",
+    label: "Acquisition created",
+    targetType: "ACQUISITION",
+    group: "Acquisition",
+    knownConsumers: ["timeline", "projection"],
+  }),
+  defineBusinessEventContract({
+    key: "acquisition.updated",
+    label: "Acquisition updated",
+    targetType: "ACQUISITION",
+    group: "Acquisition",
+    knownConsumers: ["timeline", "projection"],
+  }),
+  defineBusinessEventContract({
+    key: "acquisition.items.updated",
+    label: "Acquisition items updated",
+    targetType: "ACQUISITION",
+    group: "Acquisition",
+    knownConsumers: ["timeline", "projection"],
+  }),
+  defineBusinessEventContract({
+    key: "acquisition.posted",
+    label: "Acquisition posted",
+    targetType: "ACQUISITION",
+    group: "Acquisition",
+    knownConsumers: ["timeline", "projection"],
+  }),
+  defineBusinessEventContract({
+    key: "acquisition.canceled",
+    label: "Acquisition canceled",
+    targetType: "ACQUISITION",
+    group: "Acquisition",
+    knownConsumers: ["timeline", "projection"],
+  }),
+  defineBusinessEventContract({
     key: "order.posted",
     label: "Order posted",
     targetType: "ORDER",

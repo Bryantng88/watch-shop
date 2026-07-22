@@ -31,6 +31,7 @@ import {
 import { createInvoiceFromAcquisition } from "../../../invoices/_servers/invoices.repo";
 import { createTechnicalCheckFromAcquisitionTx } from "../../../services/_server/service_request.service";
 import { genUniqueProductSku } from "../../../products/_server/shared/helper";
+import { emitAcquisitionBusinessEvent } from "@/domains/acquisition/server/acquisition-business-event";
 
 type ExistingAcqItem = Awaited<ReturnType<typeof repoAcq.findAcqItems>>[number];
 
@@ -339,7 +340,7 @@ export async function getAcquisitionDetail(id: string) {
 }
 
 export async function createAcquisitionWithItem(input: dto.CreateAcquisitionInput) {
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
         let vendorId = input.vendorId;
 
         if (!vendorId && input.quickVendorName) {
@@ -372,6 +373,12 @@ export async function createAcquisitionWithItem(input: dto.CreateAcquisitionInpu
         await repoAcq.updateAcquisitionCost(tx, acq.id, total);
         return { id: acq.id };
     });
+
+    await emitAcquisitionBusinessEvent(prisma, {
+        eventKey: "acquisition.created",
+        acquisitionId: result.id,
+    });
+    return result;
 }
 
 export async function postAcquisition(acqId: string, vendorName?: string | null) {
@@ -473,6 +480,10 @@ export async function postAcquisition(acqId: string, vendorName?: string | null)
             processed: jobResult?.processed ?? 0,
         });
     }
+    await emitAcquisitionBusinessEvent(prisma, {
+        eventKey: "acquisition.posted",
+        acquisitionId: acqId,
+    });
     return result;
 }
 
@@ -517,10 +528,15 @@ export async function cancelAcquisition(id: string) {
         throw new Error("Không thể hủy phiếu đã đăng");
     }
 
-    return prisma.acquisition.update({
+    const result = await prisma.acquisition.update({
         where: { id },
         data: { accquisitionStt: "CANCELED" as any },
     });
+    await emitAcquisitionBusinessEvent(prisma, {
+        eventKey: "acquisition.canceled",
+        acquisitionId: id,
+    });
+    return result;
 }
 
 export async function updateAcqItem(tx: DB, it: any) {
@@ -573,7 +589,7 @@ export async function updateAcquisitionWithItems(
         throw new Error("Phiếu nhập phải còn ít nhất 1 dòng sản phẩm");
     }
 
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
         await tx.acquisition.update({
             where: { id: acqId },
             data: {
@@ -591,6 +607,11 @@ export async function updateAcquisitionWithItems(
         const updated = await repoAcq.getAcqtById(acqId, tx);
         return { success: true, id: acqId, acquisition: updated };
     });
+    await emitAcquisitionBusinessEvent(prisma, {
+        eventKey: "acquisition.items.updated",
+        acquisitionId: acqId,
+    });
+    return result;
 }
 
 export async function createBuyBackFromProduct(input: {

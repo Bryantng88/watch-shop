@@ -70,6 +70,7 @@ export default function SpaceFilterBar({
   onViewChange,
   onSearchChange,
   children,
+  frameless = false,
 }: {
   weekValue: string;
   weekOptions: SpaceFilterOption[];
@@ -84,6 +85,7 @@ export default function SpaceFilterBar({
   onViewChange?: (value: string) => void;
   onSearchChange?: (value: string) => void;
   children?: ReactNode;
+  frameless?: boolean;
 }) {
   const activeFilterCount = selectFilters.filter(
     (filter) => filter.value !== filter.options[0]?.value,
@@ -92,7 +94,12 @@ export default function SpaceFilterBar({
     weekOptions.find((option) => option.value === weekValue)?.label ?? "Chọn thời gian";
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.025)]">
+    <div className={cn(
+      "rounded-xl bg-white",
+      frameless
+        ? "border-0 p-0 shadow-none"
+        : "border border-slate-200 p-3 shadow-[0_1px_2px_rgba(15,23,42,0.025)]",
+    )}>
       <div className="flex flex-wrap items-center gap-2">
         <details className="group relative shrink-0">
           <summary className="flex h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">

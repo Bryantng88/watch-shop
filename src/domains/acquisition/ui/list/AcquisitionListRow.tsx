@@ -2,20 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import {
-    DomainSignalGroup,
-    DomainSignalIcon,
     PaymentStateSignalIcon,
     WatchReadinessSignalIcon
 } from "@/domains/shared/ui/icons";
 import {
     BadgeCheck,
-    CreditCard,
-    FileText,
-    PackageCheck,
     XCircle
 } from "lucide-react";
 import RowActionMenu from "@/app/(admin)/admin/__components/RowActionMenu";
-import type { PaymentOwner } from "@/domains/payment/ui/PaymentWorkspace";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
@@ -29,7 +23,6 @@ type Props = {
     item: AcquisitionListItem;
     checked: boolean;
     onCheckedChange: (checked: boolean) => void;
-    onOpenPayment?: (owner: PaymentOwner) => void;
     onOpenEdit?: (id: string) => void;
 };
 
@@ -37,7 +30,6 @@ export default function AcquisitionListRow({
     item,
     checked,
     onCheckedChange,
-    onOpenPayment,
     onOpenEdit,
 }: Props) {
     const router = useRouter();
@@ -145,20 +137,6 @@ export default function AcquisitionListRow({
         }
     }
 
-    function openPayment() {
-        onOpenPayment?.({
-            type: "ACQUISITION",
-            id: item.id,
-            code: item.refNo,
-            title: item.vendorName,
-            direction: "OUT",
-            totalAmount: item.totalAmount ?? 0,
-            remainingAmount: null,
-            codAmount: 0,
-            listEndpoint: `/api/admin/acquisitions/${item.id}/payment`,
-        });
-    }
-
     const updated = fmtDateCompact(item.updatedAt);
 
     return (
@@ -172,28 +150,38 @@ export default function AcquisitionListRow({
                 />
             </td>
 
+            <td className="px-3 py-3">
+                <AcquisitionItemsPreview row={item} />
+            </td>
+
             <td className="px-4 py-4">
                 <div className="min-w-0">
                     <div className="truncate font-bold text-slate-950">{item.refNo}</div>
-
-                    <div className="mt-2 flex items-center gap-1.5">
-                        <DomainSignalGroup>
-                            <DomainSignalIcon title="Phiếu nhập" icon={<FileText />} />
-                            <DomainSignalIcon title="Tồn kho" icon={<PackageCheck />} />
-                        </DomainSignalGroup>
-                    </div>
                 </div>
             </td>
-            <td className="px-4 py-4 text-center">
-                <WatchReadinessSignalIcon state={posted ? "APPROVED" : "DRAFT"} />
+            <td className="px-4 py-4">
+                <div className="flex items-center gap-2">
+                    <WatchReadinessSignalIcon state={posted ? "APPROVED" : "DRAFT"} />
+                    <span className="text-xs font-semibold text-slate-800">
+                        {posted ? "Đã nhập kho" : draft ? "Bản nháp" : "Đã hủy"}
+                    </span>
+                </div>
             </td>
-            <td className="px-4 py-4 text-center">
-                <PaymentStateSignalIcon
-                    status={item.paymentStatus ?? "UNPAID"}
-                    totalAmount={item.totalAmount}
-                    remainingAmount={item.paymentRemainingAmount ?? item.totalAmount}
-                    collectedAmount={item.paymentPaidAmount ?? 0}
-                />
+            <td className="px-4 py-4">
+                <div className="flex items-center gap-2">
+                    <PaymentStateSignalIcon
+                        status={item.paymentStatus ?? "UNPAID"}
+                        totalAmount={item.totalAmount}
+                        remainingAmount={item.paymentRemainingAmount ?? item.totalAmount}
+                        collectedAmount={item.paymentPaidAmount ?? 0}
+                    />
+                    <div>
+                        <div className="text-xs font-semibold text-slate-800">
+                            {item.paymentIsFullyPaid ? "Đã thanh toán" : item.paymentPaidAmount > 0 ? "Một phần" : "Chưa thanh toán"}
+                        </div>
+                        {!item.paymentIsFullyPaid ? <div className="mt-0.5 text-[11px] text-slate-500">Còn {fmtMoney(item.paymentRemainingAmount)}</div> : null}
+                    </div>
+                </div>
             </td>
 
             <td className="px-4 py-4">
@@ -201,10 +189,6 @@ export default function AcquisitionListRow({
                     {item.vendorName || "-"}
                 </div>
                 <div className="mt-1 text-xs text-slate-400">{item.acquisitionType || "-"}</div>
-            </td>
-
-            <td className="px-4 py-4">
-                <AcquisitionItemsPreview row={item} />
             </td>
 
             <td className="px-4 py-4 text-right whitespace-nowrap">
@@ -227,16 +211,10 @@ export default function AcquisitionListRow({
                         },
                         {
                             key: "edit",
-                            label: posted ? "Chỉnh giá nhập" : "Chỉnh sửa",
+                            label: "Chỉnh giá nhập & item",
                             onClick: () => onOpenEdit?.(item.id),
                             icon: "edit",
-                        },
-                        {
-                            key: "payment",
-                            label: "Quản lý payment",
-                            onClick: openPayment,
-                            icon: <CreditCard className="h-4 w-4" />,
-                            hidden: !posted,
+                            hidden: !draft,
                         },
                         {
                             key: "approve",

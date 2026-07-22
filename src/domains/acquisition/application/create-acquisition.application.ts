@@ -20,7 +20,7 @@ function parseLocalDateVN(value?: string | null) {
 export async function createAcquisitionWithItemApplication(
     input: dto.CreateAcquisitionInput
 ) {
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
         let vendorId = input.vendorId;
 
         if (!vendorId && input.quickVendorName) {
@@ -54,6 +54,13 @@ export async function createAcquisitionWithItemApplication(
 
         return { id: acq.id };
     });
+
+    await repoAcq.emitAcquisitionBusinessEvent(prisma, {
+        eventKey: "acquisition.created",
+        acquisitionId: result.id,
+    });
+
+    return result;
 }
 
 export const createAcquisitionWithItem = createAcquisitionWithItemApplication;

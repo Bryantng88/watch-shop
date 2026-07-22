@@ -28,6 +28,7 @@ export default async function SalesCoordinationPage(props: PageProps) {
         context: "SALES",
         db: prisma,
         date: first(searchParams.date) ?? null,
+        includeDashboardDetails: false,
         auth,
       }),
   );

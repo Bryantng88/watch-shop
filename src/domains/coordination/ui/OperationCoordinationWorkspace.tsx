@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useMemo, useState, useTransition } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -29,6 +29,7 @@ import {
   Info,
   Inbox,
   List,
+  LoaderCircle,
   Monitor,
   Plus,
   Receipt,
@@ -61,8 +62,8 @@ import {
   type AppProgressStep,
 } from "@/domains/shared/feedback/AppProgressProvider";
 import { repairVietnameseMojibake } from "@/domains/shared/text/vietnamese-mojibake";
-import BusinessListDashboard from "@/domains/shared/ui/business-list/BusinessListDashboard";
-import type { BusinessListDashboardData, BusinessListDashboardWidgetKey } from "@/domains/shared/ui/business-list";
+import { AsyncBusinessListDashboard } from "@/domains/shared/ui/business-list";
+import type { BusinessListDashboardWidgetKey } from "@/domains/shared/ui/business-list";
 import {
   SpaceViewFooterTip,
   SpaceViewPage,
@@ -85,7 +86,6 @@ type TechnicalBoardFieldValue = string | boolean | string[];
 
 const SPACE_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = ["overview", "value-trend", "status-breakdown", "recent-activity"];
 const PAYMENT_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = ["overview", "cash-flow", "status-breakdown", "recent-activity"];
-type CashFlowPeriod = "WEEK" | "MONTH" | "YEAR" | "ALL";
 
 function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -572,9 +572,12 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   const [blueprintKey, setBlueprintKey] = useState(
     data.blueprints[0]?.selectionKey ?? "",
   );
-  const [activeViewModeKey, setActiveViewModeKey] = useState(
-    data.viewConfig.defaultModeKey,
-  );
+  const [activeViewModeKey, setActiveViewModeKey] = useState(() => {
+    const requestedView = searchParams.get("view");
+    return data.viewConfig.modes.some((mode) => mode.key === requestedView)
+      ? requestedView as string
+      : data.viewConfig.defaultModeKey;
+  });
   const initialTitle = data.blueprints[0]?.workspaceDefinition.defaultName ?? "";
   const [title, setTitle] = useState(initialTitle);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
@@ -586,18 +589,32 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   );
   const [isTechnicalIntakeOpen, setIsTechnicalIntakeOpen] = useState(false);
   const [dashboardCustomizationRequest, setDashboardCustomizationRequest] = useState(0);
-  const [cashFlowPeriod, setCashFlowPeriod] = useState<CashFlowPeriod>("WEEK");
   const [filterQuery, setFilterQuery] = useState("");
   const [filterCreator, setFilterCreator] = useState("ALL");
   const [filterWorkStatus, setFilterWorkStatus] = useState("ALL");
   const [filterPayment, setFilterPayment] = useState("ALL");
   const [technicalIssuePriorityFilter, setTechnicalIssuePriorityFilter] =
     useState<TechnicalIssuePriorityFilter>("ALL");
+  const [asyncTechnicalIssueBoard, setAsyncTechnicalIssueBoard] = useState(
+    data.technicalIssueBoard,
+  );
   const [workspacePage, setWorkspacePage] = useState(1);
   const [workspacePageSize, setWorkspacePageSize] = useState(10);
   const [isRolloverMenuOpen, setIsRolloverMenuOpen] = useState(false);
   const [isMovedItemsOpen, setIsMovedItemsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [isViewPending, startViewTransition] = useTransition();
+  function changeActiveViewMode(nextModeKey: string) {
+    startViewTransition(() => {
+      setActiveViewModeKey(nextModeKey);
+      setWorkTicketView(nextModeKey === "technical-issue-flow" ? "TI_BOARD" : "LIST");
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("context", data.context);
+      params.set("dashboardVersion", "2");
+      params.set("view", nextModeKey);
+      router.replace(`/admin/coordination/${contextPath(data.context)}?${params.toString()}`);
+    });
+  }
   const selectedBlueprint = useMemo(
     () =>
       data.blueprints.find((blueprint) => blueprint.selectionKey === blueprintKey) ??
@@ -619,6 +636,21 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
         (flow) => flow.key === activeViewMode.coreFlowKey,
       ) ?? null
     : null;
+  const isPaymentCollectionFlow =
+    activeCoreFlow?.key === "payment-collection-core-flow";
+  const dashboardEndpoint = useMemo(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("context", data.context);
+    if (activeViewMode?.key) params.set("view", activeViewMode.key);
+    return `/api/admin/coordination/operation/dashboard?${params.toString()}`;
+  }, [activeViewMode?.key, data.context, searchParams]);
+  const handleDashboardResult = useCallback((result: unknown) => {
+    if (!result || typeof result !== "object") return;
+    const board = (result as {
+      technicalIssueBoard?: CoordinationDashboardDTO["technicalIssueBoard"];
+    }).technicalIssueBoard;
+    if (board) setAsyncTechnicalIssueBoard(board);
+  }, []);
   const activeStageByWorkspaceKey = useMemo(() => {
     const entries =
       activeCoreFlow?.stages.flatMap((stage) => [
@@ -749,63 +781,14 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   useEffect(() => {
     setWorkspacePage(1);
   }, [activeViewModeKey, filterCreator, filterPayment, filterQuery, filterWorkStatus, workspacePageSize]);
-  const spaceDashboardData = useMemo<BusinessListDashboardData>(() => {
-    const totals = filteredWorkTickets.reduce((result, ticket) => {
-      result.ready += ticket.queueSummary.ready;
-      result.review += ticket.queueSummary.review;
-      result.feedback += ticket.queueSummary.feedback;
-      result.done += ticket.queueSummary.done;
-      if (ticket.feedbackCount > 0) result.feedbackWorkspaces += 1;
-      const paymentStatus = ticket.paymentSummary?.status ?? "NONE";
-      if (paymentStatus !== "NONE" && paymentStatus !== "PAID") {
-        result.unpaidWorkspaces += 1;
-        result.unpaidAmount += Number(ticket.paymentSummary?.remainingAmount ?? ticket.paymentSummary?.unpaidAmount ?? 0);
-      }
-      return result;
-    }, { ready: 0, review: 0, feedback: 0, done: 0, feedbackWorkspaces: 0, unpaidWorkspaces: 0, unpaidAmount: 0 });
-    const items = totals.ready + totals.review + totals.feedback + totals.done;
-    const openItems = totals.ready + totals.review + totals.feedback;
-    const activeWorkspaces = filteredWorkTickets.filter((ticket) =>
-      ticket.queueSummary.ready + ticket.queueSummary.review + ticket.queueSummary.feedback > 0,
-    ).length;
-    const activities = filteredWorkTickets
-      .filter((ticket) => ticket.lastActivityAt)
-      .slice()
-      .sort((left, right) => String(right.lastActivityAt).localeCompare(String(left.lastActivityAt)))
-      .slice(0, 3)
-      .map((ticket) => ({ id: ticket.id, title: ticket.lastActivity || ticket.title, description: prefixedLabel("Workspace", ticket.title), occurredAt: ticket.lastActivityAt, href: `/admin/task-items/${ticket.id}`, kind: "updated" as const }));
-
-    return {
-      periodLabel: `Tuần ${data.week.weekNumber}/${data.week.year}`,
-      metrics: [
-        { key: "workspaces", label: "Workspace", value: filteredWorkTickets.length, helper: `${activeWorkspaces}`, helperSuffix: "đang mở", helperTone: activeWorkspaces ? "positive" : "neutral" },
-        { key: "open-items", label: "Item mở", value: openItems, helper: `${totals.done}`, helperSuffix: "đã xong", helperTone: totals.done ? "positive" : "neutral" },
-        { key: "feedback", label: "Cần phản hồi", value: totals.feedback, helper: `${totals.feedbackWorkspaces}`, helperSuffix: "workspace", helperTone: totals.feedback ? "negative" : "neutral" },
-        { key: "unpaid", label: "Chưa thanh toán", value: totals.unpaidWorkspaces, helper: formatMoneyCompact(totals.unpaidAmount), helperTone: totals.unpaidWorkspaces ? "negative" : "neutral" },
-      ],
-      inventoryValue: { label: "Khối lượng xử lý", value: items, currency: "item", helper: "Tổng item trong các workspace đang hiển thị.", trend: [totals.ready, totals.review, totals.feedback, totals.done, openItems] },
-      breakdown: { label: "Theo trạng thái item", total: Math.max(items, 1), items: [
-        { key: "ready", label: "Sẵn sàng", value: totals.ready, tone: "blue" },
-        { key: "review", label: "Đang xử lý", value: totals.review, tone: "violet" },
-        { key: "feedback", label: "Phản hồi", value: totals.feedback, tone: "amber" },
-        { key: "done", label: "Xong", value: totals.done, tone: "emerald" },
-      ] },
-      activities: { label: "Hoạt động gần đây", items: activities },
-      cashFlow: data.paymentCashFlow ? {
-        period: cashFlowPeriod,
-        ...data.paymentCashFlow[cashFlowPeriod],
-        onPeriodChange: setCashFlowPeriod,
-      } : undefined,
-    };
-  }, [cashFlowPeriod, data.paymentCashFlow, data.week.weekNumber, data.week.year, filteredWorkTickets]);
   const isTechnicalIssueFlowMode = activeViewMode?.key === "technical-issue-flow";
   const canShowTechnicalIssueBoard =
-    isTechnicalIssueFlowMode && Boolean(data.technicalIssueBoard);
+    isTechnicalIssueFlowMode && Boolean(asyncTechnicalIssueBoard);
   const isTechnicalIssueBoardView =
     workTicketView === "TI_BOARD" && canShowTechnicalIssueBoard;
   const technicalIssueBoardItems = useMemo(
-    () => data.technicalIssueBoard?.items ?? [],
-    [data.technicalIssueBoard?.items],
+    () => asyncTechnicalIssueBoard?.items ?? [],
+    [asyncTechnicalIssueBoard?.items],
   );
   const technicalIssueBoardSummary = useMemo(
     () => technicalBoardSummary(technicalIssueBoardItems),
@@ -821,10 +804,10 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     return technicalBoardSummary(visibleItems);
   }, [technicalIssueBoardItems, technicalIssuePriorityFilter]);
   useEffect(() => {
-    if (!isTechnicalIssueFlowMode && workTicketView === "TI_BOARD") {
+    if (activeViewMode?.key !== "technical-issue-flow" && workTicketView === "TI_BOARD") {
       setWorkTicketView("LIST");
     }
-  }, [isTechnicalIssueFlowMode, workTicketView]);
+  }, [activeViewMode?.key, workTicketView]);
   const showPaymentColumn = activeDisplayedWorkTickets.some((ticket) => ticket.paymentSummary);
   const workTicketGridClass = showPaymentColumn
     ? "lg:grid-cols-[1.85fr_0.85fr_1.05fr_1.08fr_0.6fr_0.8fr_1.2fr_auto]"
@@ -1062,12 +1045,14 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
         </button>
       }
     >
-        <BusinessListDashboard
-          data={spaceDashboardData}
-          widgets={data.context === "PAYMENT" ? PAYMENT_DASHBOARD_WIDGETS : SPACE_DASHBOARD_WIDGETS}
-          storageKey={`admin-dashboard:${data.context.toLowerCase()}-space`}
+        <AsyncBusinessListDashboard
+          endpoint={dashboardEndpoint}
+          widgets={isPaymentCollectionFlow ? PAYMENT_DASHBOARD_WIDGETS : SPACE_DASHBOARD_WIDGETS}
+          storageKey={`admin-dashboard:${data.context.toLowerCase()}-space:${activeCoreFlow?.key ?? activeViewMode?.key ?? "default"}`}
           customizationRequest={dashboardCustomizationRequest}
           showCustomizationTrigger={false}
+          cashFlowPeriods={isPaymentCollectionFlow}
+          onResult={handleDashboardResult}
         />
         <section className="rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
           <div className="border-b border-slate-200 px-5 py-4">
@@ -1085,7 +1070,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                       {data.viewConfig.modes.length > 1 ? (
                         <select
                           value={activeViewMode.key}
-                          onChange={(event) => setActiveViewModeKey(event.target.value)}
+                          onChange={(event) => changeActiveViewMode(event.target.value)}
                           className="ml-1 h-8 min-w-48 rounded-md border border-violet-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm outline-none transition focus:border-violet-300"
                           aria-label="Chế độ xem Space"
                         >
@@ -1228,6 +1213,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
             ) : null}
             <div className="mt-3">
               <SpaceFilterBar
+                frameless
                 weekValue={data.week.periodKey}
                 weekOptions={data.filters.weekOptions}
                 dateValue={data.filters.selectedDate}
@@ -1304,7 +1290,9 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   />
                 ) : (
                   <span className="inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-xl bg-slate-50 px-3 text-xs font-semibold text-slate-500">
-                    {filteredWorkTickets.length
+                    {isViewPending
+                      ? "Đang tải..."
+                      : filteredWorkTickets.length
                       ? `${workspacePageStart + 1}-${Math.min(workspacePageStart + workspacePageSize, filteredWorkTickets.length)} / ${filteredWorkTickets.length}`
                       : "0 / 0"}
                   </span>
@@ -1498,10 +1486,10 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
 
           {isTechnicalIssueBoardView ? (
             <TechnicalIssueBoardView
-              items={data.technicalIssueBoard?.items ?? []}
+              items={asyncTechnicalIssueBoard?.items ?? []}
               actions={selectedBlueprint?.operation?.actions ?? []}
-              vendorOptions={data.technicalIssueBoard?.vendorOptions ?? []}
-              technicalDetailCatalogOptions={data.technicalIssueBoard?.technicalDetailCatalogOptions ?? []}
+              vendorOptions={asyncTechnicalIssueBoard?.vendorOptions ?? []}
+              technicalDetailCatalogOptions={asyncTechnicalIssueBoard?.technicalDetailCatalogOptions ?? []}
               priorityFilter={technicalIssuePriorityFilter}
             />
           ) : (
@@ -1523,7 +1511,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
           </div>
 
           <div className="divide-y divide-slate-200 bg-white">
-            {pagedWorkTickets.map((ticket) => (
+            {!isViewPending ? pagedWorkTickets.map((ticket) => (
               <Link
                 key={ticket.id}
                 href={`/admin/task-items/${ticket.id}`}
@@ -1603,9 +1591,14 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   <ChevronRight className="h-4 w-4" />
                 </div>
               </Link>
-            ))}
+            )) : null}
 
-            {!filteredWorkTickets.length ? (
+            {isViewPending ? (
+              <div className="flex items-center gap-3 px-4 py-10 text-sm font-medium text-slate-500">
+                <LoaderCircle className="h-5 w-5 animate-spin text-violet-500" />
+                Đang tải dữ liệu Workspace...
+              </div>
+            ) : !filteredWorkTickets.length ? (
               <div className="flex items-center gap-3 px-4 py-10 text-sm text-slate-500">
                 <Inbox className="h-5 w-5" />
                 {activeEmptyState}

@@ -25,6 +25,38 @@ function ItemThumb({ src, title }: { src?: string | null; title: string }) {
     );
 }
 
+function ItemThumbStack({ row }: { row: AcquisitionListItem }) {
+    const items = row.detailItems.slice(0, 3);
+
+    if (items.length <= 1) {
+        return <ItemThumb src={items[0]?.imageUrl} title={items[0]?.title || row.refNo} />;
+    }
+
+    return (
+        <span className="relative h-12 w-[60px] shrink-0">
+            {items.map((item, index) => (
+                <span
+                    key={item.id}
+                    className="absolute top-0 flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border-2 border-white bg-slate-100 text-xs font-semibold text-slate-400 ring-1 ring-slate-200"
+                    style={{ left: index * 6, zIndex: items.length - index }}
+                >
+                    {item.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
+                    ) : (
+                        <ImageIcon className="h-4 w-4" />
+                    )}
+                </span>
+            ))}
+            {row.itemCount > 1 ? (
+                <span className="absolute -bottom-1 -right-1 z-10 rounded-full bg-slate-950 px-1.5 py-0.5 text-[9px] font-bold text-white ring-2 ring-white">
+                    +{row.itemCount - 1}
+                </span>
+            ) : null}
+        </span>
+    );
+}
+
 export default function AcquisitionItemsPreview({ row }: { row: AcquisitionListItem }) {
     const btnRef = React.useRef<HTMLButtonElement | null>(null);
     const [open, setOpen] = React.useState(false);
@@ -88,16 +120,17 @@ export default function AcquisitionItemsPreview({ row }: { row: AcquisitionListI
                 ref={btnRef}
                 type="button"
                 onClick={() => setOpen((prev) => !prev)}
-                className="inline-flex max-w-[190px] flex-col items-start rounded-lg px-1 py-0.5 text-left transition hover:bg-sky-50"
+                className="flex w-full min-w-0 items-center gap-3 rounded-xl p-1.5 text-left transition hover:bg-sky-50"
             >
-                <span className="text-xs font-semibold leading-5 text-sky-700">
-                    {row.itemCount} dòng · {row.linkedWatchCount} đã link watch
-                </span>
-                {row.remainingCount > 0 ? (
-                    <span className="mt-0.5 text-[11px] font-medium leading-4 text-slate-400">
-                        +{row.remainingCount} dòng khác
+                <ItemThumbStack row={row} />
+                <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-slate-900">
+                        {row.detailItems[0]?.title || "Chưa có thông tin sản phẩm"}
                     </span>
-                ) : null}
+                    <span className="mt-1 block text-xs text-sky-700">
+                        {row.itemCount} dòng · {row.linkedWatchCount} đã liên kết
+                    </span>
+                </span>
             </button>
 
             {open && rect && typeof window !== "undefined"

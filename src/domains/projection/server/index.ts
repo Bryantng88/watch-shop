@@ -9,4 +9,5 @@ export * from "./projection.registry";
 export * from "./projection.runner";
 export * from "./projection-event-consumer";
 export * from "./payment-owner-summary.projection";
+export * from "./acquisition-list";
 export * from "./operation-projection-subscriptions";

@@ -33,6 +33,11 @@ import type {
 } from "./coordination-dashboard.types";
 import type { CoordinationContext } from "./coordination-cycle.types";
 import { getPaymentOwnerSummaryProjections } from "@/domains/projection/server/payment-owner-summary.projection";
+import { perfStep } from "@/lib/server-perf";
+
+function dashboardStep<T>(label: string, run: () => Promise<T>) {
+  return perfStep("coordination-dashboard", label, run);
+}
 
 function formatDateInput(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -123,7 +128,7 @@ function paymentWorkspaceRole(note?: string | null) {
   return noteLineValue(note, "operationWorkspaceRole")?.toUpperCase() ?? null;
 }
 
-async function reconcilePaymentCollectionBindings(input: {
+export async function reconcilePaymentCollectionBindings(input: {
   db: DB;
   taskId: string;
   taskItems: Array<{ id: string; title: string; note: string | null }>;
@@ -718,7 +723,7 @@ function mediaFlowSummaryBucketForStage(
   return "ready";
 }
 
-async function loadFeedbackCountByTaskItem(db: DB, taskItemIds: string[]) {
+export async function loadFeedbackCountByTaskItem(db: DB, taskItemIds: string[]) {
   const counts = new Map<string, number>();
   if (!taskItemIds.length) return counts;
 
@@ -759,7 +764,7 @@ function buildWeekOptions(selectedDate: Date) {
   return options;
 }
 
-async function loadLastActivityMap(db: DB, taskItemIds: string[]) {
+export async function loadLastActivityMap(db: DB, taskItemIds: string[]) {
   if (!taskItemIds.length) return new Map<string, { title: string; occurredAt: Date }>();
 
   const rows = await db.taskItemActivity.findMany({
@@ -789,6 +794,44 @@ async function loadLastActivityMap(db: DB, taskItemIds: string[]) {
   }
 
   return map;
+}
+
+async function loadActivitySummaryByTaskItem(db: DB, taskItemIds: string[]) {
+  const feedbackCounts = new Map<string, number>();
+  const lastActivities = new Map<string, { title: string; occurredAt: Date }>();
+  if (!taskItemIds.length) return { feedbackCounts, lastActivities };
+
+  const rows = await db.taskItemActivity.findMany({
+    where: { taskItemId: { in: taskItemIds } },
+    select: {
+      taskItemId: true,
+      sourceType: true,
+      title: true,
+      occurredAt: true,
+      metadataJson: true,
+    },
+    orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
+  });
+
+  for (const row of rows) {
+    if (!lastActivities.has(row.taskItemId)) {
+      lastActivities.set(row.taskItemId, {
+        title: row.title,
+        occurredAt: row.occurredAt,
+      });
+    }
+    if (
+      row.sourceType === ActivitySourceType.BUSINESS_EVENT &&
+      hasFeedbackSignal(row.metadataJson)
+    ) {
+      feedbackCounts.set(
+        row.taskItemId,
+        (feedbackCounts.get(row.taskItemId) ?? 0) + 1,
+      );
+    }
+  }
+
+  return { feedbackCounts, lastActivities };
 }
 
 async function loadRolloverOutByTaskItem(db: DB, input: {
@@ -909,7 +952,7 @@ async function loadMediaQueueSummaryByTaskItem(input: {
   return summaries;
 }
 
-async function restoreMediaFinalStageDoneBindings(input: {
+export async function restoreMediaFinalStageDoneBindings(input: {
   db: DB;
   taskId: string;
   taskItems: Array<{ id: string; note: string | null }>;
@@ -1819,16 +1862,20 @@ export async function getCoordinationDashboard(input: {
   context: CoordinationContext;
   db?: DB;
   date?: string | null;
+  modeKey?: string | null;
+  includeDashboardDetails?: boolean;
+  includeTechnicalBoard?: boolean;
   auth?: unknown;
 }): Promise<CoordinationDashboardDTO> {
   const db = input?.db ?? prisma;
   const selectedDate = parseDateInput(input?.date);
-  const cycle = await ensureCoordinationCycle(db, {
+  const cycle = await dashboardStep("ensureCycle", () => ensureCoordinationCycle(db, {
     context: input.context,
     date: selectedDate,
-  });
+    provisionWorkTickets: false,
+  }));
 
-  const rawTaskItems = await db.taskItem.findMany({
+  const rawTaskItems = await dashboardStep("loadTaskItems", () => db.taskItem.findMany({
     where: {
       taskId: cycle.task.id,
       status: { not: TaskStatus.CANCELLED },
@@ -1874,10 +1921,7 @@ export async function getCoordinationDashboard(input: {
       { sortOrder: "asc" },
       { createdAt: "asc" },
     ],
-  });
-  if (input.context === "PAYMENT" || input.context === "OPERATION") {
-    await reconcilePaymentCollectionBindings({ db, taskId: cycle.task.id, taskItems: rawTaskItems });
-  }
+  }));
   const workTypeContexts: CoordinationContext[] = input.context === "OPERATION"
     ? ["OPERATION", "SALES", "TECHNICAL", "MEDIA", "PAYMENT", "GENERAL"]
     : [input.context];
@@ -1891,7 +1935,7 @@ export async function getCoordinationDashboard(input: {
       shareUserIdsFromNoteLine(item.note, "spaceSharedUserIds"),
     ),
   );
-  const taskItems = rawTaskItems.filter((item) => {
+  let taskItems = rawTaskItems.filter((item) => {
     if ((input.context === "PAYMENT" || input.context === "OPERATION") && paymentWorkspaceRole(item.note) === "PAYMENT_INBOX") {
       return false;
     }
@@ -1923,11 +1967,30 @@ export async function getCoordinationDashboard(input: {
       ]),
     );
   });
-  if (input.context === "MEDIA" || input.context === "OPERATION") {
-    await restoreMediaFinalStageDoneBindings({
-      db,
-      taskId: cycle.task.id,
-      taskItems,
+  const viewConfig = getSpaceViewConfig(input.context);
+  const requestedMode = input.modeKey
+    ? viewConfig.modes.find((mode) => mode.key === input.modeKey)
+    : null;
+  const activeMode = requestedMode ?? viewConfig.modes.find(
+    (mode) => mode.key === viewConfig.defaultModeKey,
+  );
+  const activeFlow = activeMode?.coreFlowKey
+    ? viewConfig.coreFlows?.find((flow) => flow.key === activeMode.coreFlowKey)
+    : null;
+
+  if (input.context === "OPERATION" && activeFlow) {
+    const activeStageKeys = new Set(activeFlow.stages.flatMap((stage) => [
+      normalizeWorkTypeKey(stage.key),
+      normalizeWorkTypeKey(stage.workspaceKey),
+    ]));
+    taskItems = taskItems.filter((item) => {
+      const metadata = workspaceRoleMetadataFromNote(item.note);
+      const stageKey = normalizeWorkTypeKey(
+        metadata.flowStageKey ?? ticketWorkTypeKey(item.note) ?? "",
+      );
+      return activeStageKeys.has(stageKey) && (
+        metadata.workspaceKind === "FLOW_STAGE_WORKSPACE" || !metadata.workspaceKind
+      );
     });
   }
   const taskItemIds = taskItems.map((item) => item.id);
@@ -1935,23 +1998,25 @@ export async function getCoordinationDashboard(input: {
     .filter((item) => canShowWorkspaceIdentityPreview(item.note))
     .map((item) => item.id);
   const identityPreviewTaskItemIdSet = new Set(identityPreviewTaskItemIds);
-  const viewConfig = getSpaceViewConfig(input.context);
+  const isTechnicalFlow = input.context === "TECHNICAL" || activeFlow?.key === "technical-issue-flow";
+  const isMediaFlow = input.context === "MEDIA" || activeFlow?.key === "media-production-flow";
+  const isPaymentFlow = input.context === "PAYMENT" || activeFlow?.key === "payment-collection-core-flow";
+  const isServiceRequestCaseMode = activeMode?.key === "sr-cases";
 
   const [
     queueRows,
     mediaQueueSummaryByTaskItem,
     technicalQueueCountByTaskItem,
     paymentQueueCountByTaskItem,
-    feedbackCountByTaskItem,
-    activityRows,
-    lastActivityMap,
+    activitySummary,
     rolloverOutByTaskItem,
     identityPreviewMap,
     technicalServiceRequestRollupByTaskItem,
     technicalIssueBoard,
     allUsers,
+    paymentCashFlow,
   ] = await Promise.all([
-    db.taskExecution.groupBy({
+    dashboardStep("queueCounts", () => db.taskExecution.groupBy({
       by: ["taskItemId"],
       where: {
         taskId: cycle.task.id,
@@ -1959,63 +2024,55 @@ export async function getCoordinationDashboard(input: {
         actionType: { not: TaskExecutionActionType.CANCELLED },
       },
       _count: { _all: true },
-    }),
-    (input.context === "MEDIA" || input.context === "OPERATION")
-      ? loadMediaQueueSummaryByTaskItem({
+    })),
+    isMediaFlow
+      ? dashboardStep("mediaQueue", () => loadMediaQueueSummaryByTaskItem({
           db,
           taskId: cycle.task.id,
           taskItems,
           terminalStatesByTargetType: viewConfig.carryover.terminalStatesByTargetType,
-        })
+        }))
       : Promise.resolve(new Map<string, QueueSummaryDTO>()),
-    (input.context === "TECHNICAL" || input.context === "OPERATION")
-      ? loadTechnicalQueueCountByTaskItem({
+    isTechnicalFlow
+      ? dashboardStep("technicalQueue", () => loadTechnicalQueueCountByTaskItem({
           db,
           taskId: cycle.task.id,
           taskItems,
           terminalStatesByTargetType: viewConfig.carryover.terminalStatesByTargetType,
-        })
+        }))
       : Promise.resolve(new Map<string, number>()),
-    (input.context === "PAYMENT" || input.context === "OPERATION")
-      ? loadPaymentQueueCountByTaskItem({
+    isPaymentFlow
+      ? dashboardStep("paymentQueue", () => loadPaymentQueueCountByTaskItem({
           db,
           taskId: cycle.task.id,
           taskItemIds,
           terminalStatesByTargetType: viewConfig.carryover.terminalStatesByTargetType,
-        })
+        }))
       : Promise.resolve(new Map<string, number>()),
-    loadFeedbackCountByTaskItem(db, taskItemIds),
-    db.taskItemActivity.groupBy({
-      by: ["taskItemId"],
-      where: {
-        taskItemId: { in: taskItemIds },
-      },
-      _max: { occurredAt: true },
-    }),
-    loadLastActivityMap(db, taskItemIds),
-    loadRolloverOutByTaskItem(db, {
+    dashboardStep("activitySummary", () => loadActivitySummaryByTaskItem(db, taskItemIds)),
+    dashboardStep("rollover", () => loadRolloverOutByTaskItem(db, {
       taskId: cycle.task.id,
       taskItemIds,
-    }),
-    loadWorkspaceIdentityPreviewMap({
+    })),
+    dashboardStep("identityPreviews", () => loadWorkspaceIdentityPreviewMap({
       db,
       taskId: cycle.task.id,
       taskItems: taskItems.filter((item) => identityPreviewTaskItemIdSet.has(item.id)),
-    }),
-    (input.context === "TECHNICAL" || input.context === "OPERATION")
-      ? loadTechnicalServiceRequestRollupByTaskItem({
+    })),
+    isTechnicalFlow || isServiceRequestCaseMode
+      ? dashboardStep("technicalRollup", () => loadTechnicalServiceRequestRollupByTaskItem({
           db,
           taskId: cycle.task.id,
           taskItems,
-        })
+        }))
       : Promise.resolve(new Map<string, TechnicalServiceRequestRollup>()),
-    (input.context === "TECHNICAL" || input.context === "OPERATION")
-      ? loadTechnicalIssueBoard({
+    isTechnicalFlow && input.includeTechnicalBoard !== false
+      ? dashboardStep("technicalBoard", () => loadTechnicalIssueBoard({
           db,
           taskId: cycle.task.id,
-        })
+        }))
       : Promise.resolve(null),
-    db.user.findMany({
+    dashboardStep("users", () => db.user.findMany({
       where: { isActive: true },
       select: {
         id: true,
@@ -2024,8 +2081,16 @@ export async function getCoordinationDashboard(input: {
         avatarUrl: true,
       },
       orderBy: [{ name: "asc" }, { email: "asc" }],
-    }),
+    })),
+    isPaymentFlow && input.includeDashboardDetails !== false
+      ? dashboardStep("paymentCashFlow", () => db.payment.findMany({
+          where: { status: { in: [PaymentStatus.PAID, PaymentStatus.COLLECTED] } },
+          select: { amount: true, direction: true, paidAt: true, createdAt: true },
+        }).then(paymentCashFlowPeriods))
+      : Promise.resolve(null),
   ]);
+  const feedbackCountByTaskItem = activitySummary.feedbackCounts;
+  const lastActivityMap = activitySummary.lastActivities;
 
   const queueCountByTaskItem = new Map(
     queueRows
@@ -2038,9 +2103,6 @@ export async function getCoordinationDashboard(input: {
   for (const [taskItemId, count] of paymentQueueCountByTaskItem) {
     queueCountByTaskItem.set(taskItemId, count);
   }
-  const lastActivityAtByTaskItem = new Map(
-    activityRows.map((row) => [row.taskItemId, row._max.occurredAt ?? null]),
-  );
   const now = new Date();
   const currentUser = authUserSummary(input?.auth);
 
@@ -2074,9 +2136,7 @@ export async function getCoordinationDashboard(input: {
       item.dueAt && item.dueAt < now && item.status !== TaskStatus.DONE,
     );
     const lastActivity = lastActivityMap.get(item.id);
-    const lastActivityAt = lastActivity?.occurredAt ??
-      lastActivityAtByTaskItem.get(item.id) ??
-      null;
+    const lastActivityAt = lastActivity?.occurredAt ?? null;
     const blueprintIdentity = blueprintIdentityFromNote(item.note);
     return {
       id: item.id,
@@ -2188,13 +2248,6 @@ export async function getCoordinationDashboard(input: {
   ]);
   const sharedUsers = allUsers.filter((user) => allSharedUserIds.has(user.id));
   const currentWeek = getWeekRange(new Date());
-  const paymentCashFlow = (input.context === "PAYMENT" || input.context === "OPERATION")
-    ? paymentCashFlowPeriods(await db.payment.findMany({
-        where: { status: { in: [PaymentStatus.PAID, PaymentStatus.COLLECTED] } },
-        select: { amount: true, direction: true, paidAt: true, createdAt: true },
-      }))
-    : null;
-
   return {
     context: input.context,
     contextLabel: SPACE_LABELS[input.context].label,

@@ -604,6 +604,7 @@ model Payment {
   @@index([direction], map: "idx_payment_direction")
   @@index([order_id], map: "idx_payment_order")
   @@index([paidAt], map: "idx_payment_paidat")
+  @@index([status, paidAt], map: "idx_payment_status_paidat")
   @@index([service_request_id], map: "idx_payment_service_request")
   @@index([type], map: "idx_payment_type")
   @@index([vendor_id], map: "idx_payment_vendor")
@@ -2107,6 +2108,7 @@ model TaskItem {
   User   User?   @relation(fields: [userId], references: [id])
 
   @@index([taskId])
+  @@index([taskId, status, sortOrder])
   @@index([status])
   @@index([priority])
   @@index([assignedToUserId])
@@ -2203,6 +2205,8 @@ model TaskExecution {
   technicalIssue   TechnicalIssue? @relation(fields: [technicalIssueId], references: [id], onDelete: SetNull)
 
   @@index([taskId])
+  @@index([taskId, targetType, taskItemId])
+  @@index([taskId, taskItemId, actionType])
   @@index([targetType, targetId])
   @@index([createdByUserId])
   @@index([createdAt])

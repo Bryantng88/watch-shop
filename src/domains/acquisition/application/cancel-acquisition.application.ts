@@ -17,7 +17,7 @@ export async function cancelAcquisitionApplication(
         throw new Error("Thiếu id phiếu nhập");
     }
 
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
         const acq = await repoAcq.getAcqtById(acquisitionId, tx as any);
 
         if (!acq) {
@@ -36,6 +36,13 @@ export async function cancelAcquisitionApplication(
 
         return repoAcq.cancelDraftAcquisition(tx as any, acquisitionId);
     });
+
+    await repoAcq.emitAcquisitionBusinessEvent(prisma, {
+        eventKey: "acquisition.canceled",
+        acquisitionId,
+    });
+
+    return result;
 }
 
 export const cancelAcquisition = cancelAcquisitionApplication;
