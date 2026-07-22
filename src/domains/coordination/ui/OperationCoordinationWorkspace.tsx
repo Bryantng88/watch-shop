@@ -84,6 +84,7 @@ type Props = {
 };
 
 type TechnicalIssuePriorityFilter = "ALL" | "URGENT" | "NORMAL";
+type TechnicalIssueCommentFilter = "ALL" | "COMMENTED";
 type TechnicalBoardFieldValue = string | boolean | string[];
 type TechnicalBoardAdditionalIssue = { summary: string; note: string };
 
@@ -599,6 +600,8 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   const [filterPayment, setFilterPayment] = useState("ALL");
   const [technicalIssuePriorityFilter, setTechnicalIssuePriorityFilter] =
     useState<TechnicalIssuePriorityFilter>("ALL");
+  const [technicalIssueCommentFilter, setTechnicalIssueCommentFilter] =
+    useState<TechnicalIssueCommentFilter>("ALL");
   const [asyncTechnicalIssueBoard, setAsyncTechnicalIssueBoard] = useState(
     data.technicalIssueBoard,
   );
@@ -659,6 +662,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     setActiveViewModeKey("technical-issue-flow");
     setWorkTicketView("TI_BOARD");
     setTechnicalIssuePriorityFilter("ALL");
+    setTechnicalIssueCommentFilter("ALL");
     setFocusedTechnicalIssueId(technicalIssueId);
 
     const params = new URLSearchParams(searchParams.toString());
@@ -838,8 +842,12 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
         : technicalIssueBoardItems.filter(
           (item) => technicalIssuePriorityValue(item.priority) === technicalIssuePriorityFilter,
         );
-    return technicalBoardSummary(visibleItems);
-  }, [technicalIssueBoardItems, technicalIssuePriorityFilter]);
+    return technicalBoardSummary(
+      technicalIssueCommentFilter === "COMMENTED"
+        ? visibleItems.filter((item) => item.commentCount > 0)
+        : visibleItems,
+    );
+  }, [technicalIssueBoardItems, technicalIssueCommentFilter, technicalIssuePriorityFilter]);
   useEffect(() => {
     if (activeViewMode?.key !== "technical-issue-flow" && workTicketView === "TI_BOARD") {
       setWorkTicketView("LIST");
@@ -1293,6 +1301,15 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                       { label: `Không ưu tiên (${technicalIssueBoardSummary.total - technicalIssueBoardSummary.urgent})`, value: "NORMAL" },
                     ],
                     onChange: (value) => setTechnicalIssuePriorityFilter(value as TechnicalIssuePriorityFilter),
+                  }, {
+                    key: "ti-comment",
+                    label: "Trao đổi",
+                    value: technicalIssueCommentFilter,
+                    options: [
+                      { label: `Tất cả TI (${technicalIssueBoardSummary.total})`, value: "ALL" },
+                      { label: `Có comment (${technicalIssueBoardSummary.commented})`, value: "COMMENTED" },
+                    ],
+                    onChange: (value) => setTechnicalIssueCommentFilter(value as TechnicalIssueCommentFilter),
                   }] : []),
                   ...(showPaymentColumn && !isTechnicalIssueBoardView ? [{
                     key: "payment",
@@ -1334,7 +1351,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                       : "0 / 0"}
                   </span>
                 )}
-                {filterQuery || filterCreator !== "ALL" || filterWorkStatus !== "ALL" || filterPayment !== "ALL" || technicalIssuePriorityFilter !== "ALL" ? <button type="button" onClick={() => { setFilterQuery(""); setFilterCreator("ALL"); setFilterWorkStatus("ALL"); setFilterPayment("ALL"); setTechnicalIssuePriorityFilter("ALL"); }} className="inline-flex h-11 shrink-0 items-center rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800">Xóa lọc</button> : null}
+                {filterQuery || filterCreator !== "ALL" || filterWorkStatus !== "ALL" || filterPayment !== "ALL" || technicalIssuePriorityFilter !== "ALL" || technicalIssueCommentFilter !== "ALL" ? <button type="button" onClick={() => { setFilterQuery(""); setFilterCreator("ALL"); setFilterWorkStatus("ALL"); setFilterPayment("ALL"); setTechnicalIssuePriorityFilter("ALL"); setTechnicalIssueCommentFilter("ALL"); }} className="inline-flex h-11 shrink-0 items-center rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800">Xóa lọc</button> : null}
               </SpaceFilterBar>
             </div>
             {isCreateFormOpen && selectedBlueprint ? (
@@ -1528,6 +1545,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
               vendorOptions={asyncTechnicalIssueBoard?.vendorOptions ?? []}
               technicalDetailCatalogOptions={asyncTechnicalIssueBoard?.technicalDetailCatalogOptions ?? []}
               priorityFilter={technicalIssuePriorityFilter}
+              commentFilter={technicalIssueCommentFilter}
               focusedIssueId={focusedTechnicalIssueId}
             />
           ) : (
@@ -2009,6 +2027,7 @@ function TechnicalIssueBoardView({
   vendorOptions,
   technicalDetailCatalogOptions,
   priorityFilter,
+  commentFilter,
   focusedIssueId,
 }: {
   items: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["items"];
@@ -2016,6 +2035,7 @@ function TechnicalIssueBoardView({
   vendorOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["vendorOptions"];
   technicalDetailCatalogOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["technicalDetailCatalogOptions"];
   priorityFilter: TechnicalIssuePriorityFilter;
+  commentFilter: TechnicalIssueCommentFilter;
   focusedIssueId: string | null;
 }) {
   const router = useRouter();
@@ -2055,8 +2075,12 @@ function TechnicalIssueBoardView({
       priorityFilter === "ALL"
         ? boardItems
         : boardItems.filter((item) => technicalIssuePriorityValue(item.priority) === priorityFilter);
-    return sortTechnicalBoardItems(filtered);
-  }, [boardItems, priorityFilter]);
+    return sortTechnicalBoardItems(
+      commentFilter === "COMMENTED"
+        ? filtered.filter((item) => item.commentCount > 0)
+        : filtered,
+    );
+  }, [boardItems, commentFilter, priorityFilter]);
   const activeItem = activeId ? visibleItems.find((item) => item.id === activeId) ?? null : null;
   useEffect(() => {
     if (!focusedIssueId || !visibleItems.some((item) => item.id === focusedIssueId)) return;
@@ -2529,6 +2553,9 @@ function sortTechnicalBoardItems(items: TechnicalIssueBoardItem[]) {
       technicalIssuePriorityWeight(left.priority) - technicalIssuePriorityWeight(right.priority);
     if (priorityDiff !== 0) return priorityDiff;
 
+    const commentDiff = Number(right.commentCount > 0) - Number(left.commentCount > 0);
+    if (commentDiff !== 0) return commentDiff;
+
     const timeDiff = technicalBoardItemTimeValue(right) - technicalBoardItemTimeValue(left);
     if (timeDiff !== 0) return timeDiff;
 
@@ -2540,6 +2567,7 @@ function technicalBoardSummary(items: TechnicalIssueBoardItem[]) {
   const total = items.length;
   const done = items.filter((item) => item.stage === "DONE").length;
   const urgent = items.filter((item) => technicalIssuePriorityValue(item.priority) === "URGENT").length;
+  const commented = items.filter((item) => item.commentCount > 0).length;
   const percent = total ? Math.round((done / total) * 100) : 0;
   const stageCounts = {
     INSPECT: items.filter((item) => item.stage === "INSPECT").length,
@@ -2548,7 +2576,7 @@ function technicalBoardSummary(items: TechnicalIssueBoardItem[]) {
     DONE: done,
   };
 
-  return { total, done, urgent, percent, stageCounts };
+  return { total, done, urgent, commented, percent, stageCounts };
 }
 
 function shouldShowTechnicalBoardField(
