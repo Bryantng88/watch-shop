@@ -3190,6 +3190,7 @@ export default function TaskItemDetailClient({
               >
                 <ActivityViewModelFeed
                   items={activities}
+                  mentionUsers={users}
                   businessBindings={businessBindings}
                   queueItems={queueItems}
                   mode={activityMode}

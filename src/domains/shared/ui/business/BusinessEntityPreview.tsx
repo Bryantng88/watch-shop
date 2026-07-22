@@ -132,6 +132,10 @@ function BusinessEntityActivityPanel({
             <div className="mt-5 [&>div]:!space-y-5 [&_article]:border-slate-200/80 [&_article]:shadow-[0_3px_12px_rgba(15,23,42,0.045)]">
                 <ActivityViewModelFeed
                     items={activity.items}
+                    mentionUsers={(activity.mentionableUsers ?? []).map((user) => ({
+                        id: user.id,
+                        name: user.label,
+                    }))}
                     businessBindings={[]}
                     queueItems={[]}
                     mode="ALL"

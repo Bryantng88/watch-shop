@@ -32,6 +32,7 @@ import {
 } from "../QueueWorkQueue";
 
 export type ActivityMode = "ALL" | "QUEUE";
+export type ActivityMentionUser = { id: string; name?: string | null; email?: string | null };
 
 export type ActivityJumpTarget = {
   queueItemId: string;
@@ -303,10 +304,12 @@ function ActivityBusinessContextChip({
 
 function ActivityReplyComposer({
   activityId,
+  mentionUsers = [],
   onCancel,
   onSubmitted,
 }: {
   activityId: string;
+  mentionUsers?: ActivityMentionUser[];
   onCancel: () => void;
   onSubmitted: () => void;
 }) {
@@ -314,6 +317,15 @@ function ActivityReplyComposer({
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
+  const mentionMatch = body.match(/(?:^|\s)@([^@\s]*)$/);
+  const mentionQuery = String(mentionMatch?.[1] ?? "").toLocaleLowerCase("vi");
+  const mentionOptions = mentionMatch
+    ? mentionUsers.filter((user) => {
+        const label = String(user.name || user.email || "").toLocaleLowerCase("vi");
+        return label.includes(mentionQuery) && !mentionedUserIds.includes(user.id);
+      }).slice(0, 6)
+    : [];
   const canSubmit = body.trim().length > 0 && !submitting;
 
   async function submitReply() {
@@ -326,6 +338,7 @@ function ActivityReplyComposer({
       await addTaskItemActivityReplyAction({
         activityId,
         body: text,
+        mentionedUserIds,
       });
       setBody("");
       onSubmitted();
@@ -335,6 +348,21 @@ function ActivityReplyComposer({
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function selectMention(user: ActivityMentionUser) {
+    const label = String(user.name || user.email || "User").trim();
+    setBody((current) => current.replace(/(?:^|\s)@([^@\s]*)$/, (match) => `${match.startsWith(" ") ? " " : ""}@${label} `));
+    setMentionedUserIds((current) => Array.from(new Set([...current, user.id])));
+  }
+
+  function updateBody(nextBody: string) {
+    setBody(nextBody);
+    setMentionedUserIds((current) => current.filter((userId) => {
+      const user = mentionUsers.find((candidate) => candidate.id === userId);
+      const label = String(user?.name || user?.email || "").trim();
+      return Boolean(label) && nextBody.includes(`@${label}`);
+    }));
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -350,15 +378,30 @@ function ActivityReplyComposer({
           <MessageSquare className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <textarea
+           <textarea
             value={body}
-            onChange={(event) => setBody(event.target.value)}
+            onChange={(event) => updateBody(event.target.value)}
             onKeyDown={handleKeyDown}
             rows={2}
             disabled={submitting}
             placeholder="Discuss this activity..."
             className="min-h-[72px] w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm leading-6 text-slate-800 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
-          />
+           />
+          {mentionOptions.length ? (
+            <div className="mt-1 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+              {mentionOptions.map((user) => (
+                <button
+                  key={user.id}
+                  type="button"
+                  onClick={() => selectMention(user)}
+                  className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-violet-50"
+                >
+                  <span className="font-semibold text-slate-800">{user.name || user.email}</span>
+                  {user.name && user.email ? <span className="truncate text-xs text-slate-400">{user.email}</span> : null}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
             {error ? (
               <div className="text-xs font-medium text-rose-600">{error}</div>
@@ -395,6 +438,7 @@ function ActivityReplyComposer({
 
 function ActivityReplies({
   activity,
+  mentionUsers,
   open,
   composerOpen,
   onToggleOpen,
@@ -405,6 +449,7 @@ function ActivityReplies({
   discussionEnabled,
 }: {
   activity: TaskItemActivityViewModel;
+  mentionUsers: ActivityMentionUser[];
   open: boolean;
   composerOpen: boolean;
   onToggleOpen: () => void;
@@ -465,6 +510,7 @@ function ActivityReplies({
           {discussionEnabled && composerOpen ? (
             <ActivityReplyComposer
               activityId={activity.id}
+              mentionUsers={mentionUsers}
               onCancel={onCloseComposer}
               onSubmitted={onSubmitted}
             />
@@ -486,11 +532,13 @@ function ActivityReplies({
 
 function ActivityViewModelCard({
   activity,
+  mentionUsers,
   businessContext,
   discussionEnabled,
   onActivityChanged,
 }: {
   activity: TaskItemActivityViewModel;
+  mentionUsers: ActivityMentionUser[];
   businessContext?: TaskItemBinding | null;
   discussionEnabled: boolean;
   onActivityChanged?: () => void;
@@ -573,6 +621,7 @@ function ActivityViewModelCard({
         <ActivityFeedback feedback={activity.feedback} />
         <ActivityReplies
           activity={activity}
+          mentionUsers={mentionUsers}
           open={repliesOpen}
           composerOpen={composerOpen}
           onToggleOpen={toggleReplies}
@@ -592,6 +641,7 @@ function ActivityViewModelCard({
 
 export function ActivityViewModelFeed({
   items,
+  mentionUsers = [],
   businessBindings,
   queueItems,
   mode,
@@ -600,6 +650,7 @@ export function ActivityViewModelFeed({
   onActivityChanged,
 }: {
   items: TaskItemActivityViewModel[];
+  mentionUsers?: ActivityMentionUser[];
   businessBindings: TaskItemBinding[];
   queueItems: TaskItemQueueItem[];
   mode: ActivityMode;
@@ -615,6 +666,7 @@ export function ActivityViewModelFeed({
     return (
       <ActivityGroupedByQueue
         items={items}
+        mentionUsers={mentionUsers}
         queueItems={queueItems}
         discussionEnabled={discussionEnabled}
         jumpTarget={jumpTarget}
@@ -634,6 +686,7 @@ export function ActivityViewModelFeed({
         <ActivityViewModelCard
           key={activity.id}
           activity={activity}
+          mentionUsers={mentionUsers}
           businessContext={activityBusinessKeys(activity)
             .map((key) => bindingByTarget.get(key))
             .find(Boolean)}
@@ -647,9 +700,11 @@ export function ActivityViewModelFeed({
 
 function ActivityCompactRow({
   activity,
+  mentionUsers,
   discussionEnabled,
 }: {
   activity: TaskItemActivityViewModel;
+  mentionUsers: ActivityMentionUser[];
   discussionEnabled: boolean;
 }) {
   const classes = toneClasses(activity.tone);
@@ -776,6 +831,7 @@ function ActivityCompactRow({
           {discussionEnabled && composerOpen ? (
             <ActivityReplyComposer
               activityId={activity.id}
+              mentionUsers={mentionUsers}
               onCancel={() => {
                 setComposerOpen(false);
                 if (!optimisticReplyCount) setRepliesOpen(false);
@@ -800,11 +856,13 @@ function ActivityCompactRow({
 
 function ActivityGroupedByQueue({
   items,
+  mentionUsers,
   queueItems,
   discussionEnabled,
   jumpTarget,
 }: {
   items: TaskItemActivityViewModel[];
+  mentionUsers: ActivityMentionUser[];
   queueItems: TaskItemQueueItem[];
   discussionEnabled: boolean;
   jumpTarget?: ActivityJumpTarget | null;
@@ -950,6 +1008,7 @@ function ActivityGroupedByQueue({
                     <ActivityCompactRow
                       key={activity.id}
                       activity={activity}
+                      mentionUsers={mentionUsers}
                       discussionEnabled={discussionEnabled}
                     />
                   ))}

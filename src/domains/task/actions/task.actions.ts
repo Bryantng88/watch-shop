@@ -892,6 +892,7 @@ export async function moveTaskItemAction(input: {
 export async function addTaskItemActivityReplyAction(input: {
   activityId: string;
   body: string;
+  mentionedUserIds?: string[];
 }) {
   const auth = await getTaskAuth();
   const activityId = String(input.activityId ?? "").trim();
@@ -899,6 +900,13 @@ export async function addTaskItemActivityReplyAction(input: {
 
   if (!activityId) throw new Error("Missing activityId");
   if (!body) throw new Error("Vui lòng nhập nội dung trao đổi.");
+  const requestedMentionIds = Array.from(new Set((input.mentionedUserIds ?? []).map(cleanText).filter(Boolean)));
+  const mentionedUsers = requestedMentionIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: requestedMentionIds }, isActive: true },
+        select: { id: true, name: true, email: true },
+      })
+    : [];
 
   const activity = await prisma.taskItemActivity.findUnique({
     where: { id: activityId },
@@ -944,6 +952,10 @@ export async function addTaskItemActivityReplyAction(input: {
     activityId,
     body,
     actorUserId: getAuthUserId(auth),
+    metadataJson: {
+      mentionedUserIds: mentionedUsers.map((user) => user.id),
+      mentions: mentionedUsers.map((user) => ({ id: user.id, label: user.name || user.email })),
+    },
   });
 
   if (activity?.taskItemId) {
@@ -987,10 +999,29 @@ export async function addTaskItemActivityReplyAction(input: {
         activitySourceId: activity.sourceId ?? null,
         replyId: reply.id,
         replyBody: reply.body,
+        mentionedUserIds: mentionedUsers.map((user) => user.id),
+        mentionedUsers: mentionedUsers.map((user) => ({ id: user.id, label: user.name || user.email })),
         actorName,
         message: `${actorName} commented on ${activity.taskItem?.title ?? "workspace activity"}: ${reply.body}`,
       },
     });
+
+    await Promise.all(mentionedUsers
+      .filter((user) => user.id !== getAuthUserId(auth))
+      .map((user) => upsertTaskNotification(prisma, {
+        userId: user.id,
+        taskId: activity.taskItem.task.id,
+        type: "DISCUSSION_MENTION",
+        title: `${actorName} đã nhắc đến bạn`,
+        message: body,
+        priority: "HIGH",
+        metadata: {
+          route: `/admin/task-items/${activity.taskItemId}?tab=activity`,
+          taskItemId: activity.taskItemId,
+          activityId: activity.id,
+          replyId: reply.id,
+        },
+      })));
   }
 
   revalidatePath("/admin/task-items");
