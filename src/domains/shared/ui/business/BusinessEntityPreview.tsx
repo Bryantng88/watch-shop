@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
     ExternalLink,
     AtSign,
@@ -25,13 +26,31 @@ function BusinessEntityActivityPanel({
     onActivityChanged,
 }: {
     preview: BusinessEntityPreview;
-    onActivityChanged?: () => void;
+    onActivityChanged?: (reason?: "COMMENT" | "READ") => void;
 }) {
+    const router = useRouter();
     const [body, setBody] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [commentError, setCommentError] = useState<string | null>(null);
     const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
+    const markedReadKeyRef = useRef<string | null>(null);
     const activity = preview.activity;
+    useEffect(() => {
+        if (!activity?.viewerUserId) return;
+        const readKey = `${activity.taskItemId}:${preview.type}:${preview.id}`;
+        if (markedReadKeyRef.current === readKey) return;
+        markedReadKeyRef.current = readKey;
+        void markTaskItemMentionsReadAction({
+            taskItemId: activity.taskItemId,
+            targetType: preview.type,
+            targetId: preview.id,
+        }).then((result) => {
+            if (result.updated) {
+                onActivityChanged?.("READ");
+                router.refresh();
+            }
+        });
+    }, [activity?.taskItemId, activity?.viewerUserId, onActivityChanged, preview.id, preview.type, router]);
     if (!activity) return null;
     const activityTaskItemId = activity.taskItemId;
     const mentionQuery = body.match(/(?:^|\s)@([^@\s]*)$/)?.[1]?.toLocaleLowerCase("vi") ?? null;
@@ -67,7 +86,7 @@ function BusinessEntityActivityPanel({
             });
             setBody("");
             setMentionedUserIds([]);
-            onActivityChanged?.();
+            onActivityChanged?.("COMMENT");
         } catch (error) {
             setCommentError(error instanceof Error ? error.message : "Không thể gửi trao đổi.");
         } finally {
@@ -145,9 +164,10 @@ function BusinessEntityActivityPanel({
                             targetType: preview.type,
                             targetId: preview.id,
                         });
-                        onActivityChanged?.();
+                        onActivityChanged?.("READ");
+                        router.refresh();
                     }}
-                    onActivityChanged={onActivityChanged}
+                    onActivityChanged={() => onActivityChanged?.("COMMENT")}
                 />
             </div>
         </section>
@@ -218,7 +238,7 @@ export function BusinessEntityPreviewModal({
     loading?: boolean;
     error?: string | null;
     onClose: () => void;
-    onActivityChanged?: () => void;
+    onActivityChanged?: (reason?: "COMMENT" | "READ") => void;
 }) {
     const [imageOpen, setImageOpen] = useState(false);
 

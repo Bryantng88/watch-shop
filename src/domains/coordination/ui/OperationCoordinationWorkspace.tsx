@@ -19,7 +19,6 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   Camera,
-  AtSign,
   CheckCircle2,
   ChevronRight,
   BookOpen,
@@ -2312,8 +2311,20 @@ function MediaBoardCard({ item, pending = false, onPreview }: { item: MediaBoard
           <span className="truncate">{item.lastUpdatedBy.label}</span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {item.unreadMentionCount ? <span className="inline-flex items-center gap-0.5 rounded-full bg-violet-100 px-1.5 py-1 font-bold text-violet-700 ring-1 ring-violet-200"><AtSign className="h-3 w-3" />{item.unreadMentionCount}</span> : null}
-          {item.commentCount ? <span className="inline-flex items-center gap-1 font-bold text-slate-600"><MessageCircle className="h-3.5 w-3.5 fill-slate-500 text-slate-500" />{item.commentCount}</span> : null}
+          {item.commentCount ? (
+            <span
+              title={item.unreadMentionCount ? `${item.unreadMentionCount} nhắc bạn chưa đọc` : `${item.commentCount} comment`}
+              className="relative inline-flex items-center gap-1 font-bold text-slate-600"
+            >
+              <MessageCircle className="h-3.5 w-3.5 fill-slate-500 text-slate-500" />
+              {item.commentCount}
+              {item.unreadMentionCount > 0 ? (
+                <span className="absolute -left-1.5 -top-1.5 grid h-3.5 min-w-3.5 place-items-center rounded-full bg-rose-500 px-0.5 text-[8px] font-extrabold leading-none text-white ring-1 ring-white">
+                  {item.unreadMentionCount > 9 ? "9+" : item.unreadMentionCount}
+                </span>
+              ) : null}
+            </span>
+          ) : null}
           {onPreview ? <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={onPreview} className="rounded-lg bg-white px-2 py-1 font-semibold text-violet-600 shadow-sm ring-1 ring-slate-200 transition hover:bg-violet-50">Xem</button> : null}
         </div>
       </div>
@@ -2703,13 +2714,17 @@ function TechnicalIssueBoardView({
         loading={previewState.loading}
         error={previewState.error}
         onClose={previewState.closePreview}
-        onActivityChanged={() => {
+        onActivityChanged={(reason) => {
           const issueId = previewState.preview?.type === "TECHNICAL_ISSUE"
             ? previewState.preview.id
             : null;
           if (issueId) {
             setBoardItems((current) => current.map((item) => item.id === issueId
-              ? { ...item, commentCount: item.commentCount + 1 }
+              ? {
+                  ...item,
+                  commentCount: reason === "COMMENT" ? item.commentCount + 1 : item.commentCount,
+                  unreadMentionCount: reason === "READ" ? 0 : item.unreadMentionCount,
+                }
               : item));
           }
           previewState.refreshPreview();
@@ -3151,20 +3166,23 @@ function TechnicalIssueBoardCard({
           </div>
         </div>
         <div className="relative z-20 flex shrink-0 items-center gap-1">
-          {item.unreadMentionCount > 0 ? (
-            <span title={`${item.unreadMentionCount} lượt nhắc bạn chưa đọc`} className="inline-flex h-6 items-center gap-0.5 rounded-full bg-violet-100 px-1.5 text-[11px] font-bold text-violet-700 ring-1 ring-violet-200">
-              <AtSign className="h-3.5 w-3.5" aria-hidden="true" />
-              {item.unreadMentionCount > 99 ? "99+" : item.unreadMentionCount}
-            </span>
-          ) : null}
           {item.commentCount > 0 ? (
             <span
-              title={`${item.commentCount} comment`}
-              aria-label={`${item.commentCount} comment`}
-              className="inline-flex h-6 items-center gap-1 px-1 text-[11px] font-semibold text-slate-500"
+              title={item.unreadMentionCount
+                ? `${item.commentCount} comment · ${item.unreadMentionCount} nhắc bạn chưa đọc`
+                : `${item.commentCount} comment`}
+              aria-label={item.unreadMentionCount
+                ? `${item.commentCount} comment, ${item.unreadMentionCount} nhắc bạn chưa đọc`
+                : `${item.commentCount} comment`}
+              className="pointer-events-none relative inline-flex h-6 items-center gap-1 px-1 text-[11px] font-semibold text-slate-500"
             >
               <span>{item.commentCount > 999 ? "999+" : item.commentCount}</span>
               <MessageCircle className="h-3.5 w-3.5 fill-slate-500 text-slate-500" aria-hidden="true" />
+              {item.unreadMentionCount > 0 ? (
+                <span className="absolute -right-1.5 -top-1 grid h-3.5 min-w-3.5 place-items-center rounded-full bg-rose-500 px-0.5 text-[8px] font-extrabold leading-none text-white ring-1 ring-white">
+                  {item.unreadMentionCount > 9 ? "9+" : item.unreadMentionCount}
+                </span>
+              ) : null}
             </span>
           ) : null}
           {onTogglePriority ? (

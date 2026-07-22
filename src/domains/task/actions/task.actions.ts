@@ -1187,6 +1187,8 @@ export async function markTaskItemMentionsReadAction(input: {
     select: { id: true, metadataJson: true, replies: { select: { id: true, metadataJson: true } } },
   });
   let updated = 0;
+  const readActivityIds: string[] = [];
+  const readReplyIds: string[] = [];
   await prisma.$transaction(async (tx) => {
     for (const activity of activities) {
       const metadata = asRecord(activity.metadataJson);
@@ -1198,6 +1200,7 @@ export async function markTaskItemMentionsReadAction(input: {
       if (mentionedIds.includes(userId) && !readIds.includes(userId)) {
         await tx.taskItemActivity.update({ where: { id: activity.id }, data: { metadataJson: { ...metadata, mentionReadByUserIds: [...readIds, userId] } } });
         updated += 1;
+        readActivityIds.push(activity.id);
       }
       for (const reply of activity.replies) {
         const replyMetadata = asRecord(reply.metadataJson);
@@ -1206,12 +1209,24 @@ export async function markTaskItemMentionsReadAction(input: {
         if (!replyMentionIds.includes(userId) || replyReadIds.includes(userId)) continue;
         await tx.taskItemActivityReply.update({ where: { id: reply.id }, data: { metadataJson: { ...replyMetadata, mentionReadByUserIds: [...replyReadIds, userId] } } });
         updated += 1;
+        readReplyIds.push(reply.id);
       }
     }
   });
   if (updated) {
+    const mentionNotifications = await prisma.notification.findMany({
+      where: { userId, taskId: taskItem.task.id, type: "DISCUSSION_MENTION", isRead: false },
+      select: { id: true, metadata: true },
+    });
+    const notificationIds = mentionNotifications
+      .filter((notification) => {
+        const metadata = asRecord(notification.metadata);
+        return readActivityIds.includes(cleanText(metadata.activityId)) ||
+          readReplyIds.includes(cleanText(metadata.replyId));
+      })
+      .map((notification) => notification.id);
     await prisma.notification.updateMany({
-      where: { userId, taskId: taskItem.task.id, type: "DISCUSSION_MENTION" },
+      where: { id: { in: notificationIds } },
       data: { isRead: true, updatedAt: new Date() },
     });
   }
