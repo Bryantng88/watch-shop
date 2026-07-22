@@ -662,14 +662,6 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
   const activities = await perfStep("task-item-detail-repo", "activities", () =>
     getTaskItemActivityViewModels(item.id, {
       limit: 50,
-      scope: {
-        targets: queueItems.map((queueItem) => ({
-          targetType: queueItem.targetType,
-          targetId: queueItem.targetId,
-        })),
-        includeWorkspaceLevel: true,
-        workspaceWorkTypeKey: noteWorkTypeKey(item.note),
-      },
     }),
   );
   const watchProductIds = await resolveWatchProductIds(db, queueItems);
