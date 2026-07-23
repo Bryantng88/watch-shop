@@ -61,6 +61,11 @@ function hasPermission(user: unknown, permission: string) {
 }
 
 function buildInitialWatchListInput(searchParams: SearchParams) {
+    const requestedSegment = firstValue(searchParams.segment).toUpperCase();
+    const audienceSegment =
+        requestedSegment === "WOMEN" || requestedSegment === "UNISEX"
+            ? requestedSegment
+            : "MEN";
     const view = "all" as
         | "draft"
         | "processing"
@@ -70,6 +75,7 @@ function buildInitialWatchListInput(searchParams: SearchParams) {
         | "all";
     return {
         view,
+        audienceSegment: audienceSegment as "MEN" | "WOMEN" | "UNISEX",
 
         subFilter: "",
 

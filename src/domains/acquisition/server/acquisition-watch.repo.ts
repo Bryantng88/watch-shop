@@ -1,4 +1,11 @@
-import { ContentStatus, Prisma, ProductStatus, ProductType } from "@prisma/client";
+import {
+    AudienceSegment,
+    ContentStatus,
+    MediaPipelineKey,
+    Prisma,
+    ProductStatus,
+    ProductType,
+} from "@prisma/client";
 import { type DB, dbOrTx } from "@/server/db/client";
 import { getPricingFromDescription } from "../shared/acquisition-item-metadata";
 
@@ -15,6 +22,7 @@ export async function createWatchDraftForAcquisitionItem(
         title: string;
         unitCost?: number | null;
         salePrice?: number | null;
+        audienceSegment?: AudienceSegment;
     }
 ) {
     const db = getDb(tx);
@@ -41,7 +49,17 @@ export async function createWatchDraftForAcquisitionItem(
         data: {
             productId: product.id,
             acquisitionId: input.acquisitionId,
-            gender: "MEN",
+            gender: input.audienceSegment === AudienceSegment.WOMEN
+                ? "WOMEN"
+                : input.audienceSegment === AudienceSegment.UNISEX
+                    ? "UNISEX"
+                    : "MEN",
+            audienceSegment: input.audienceSegment ?? AudienceSegment.MEN,
+            mediaPipelineKey: input.audienceSegment === AudienceSegment.WOMEN
+                ? MediaPipelineKey.WOMEN_LITE
+                : input.audienceSegment === AudienceSegment.UNISEX
+                    ? MediaPipelineKey.UNISEX_STANDARD
+                    : MediaPipelineKey.MEN_STANDARD,
             siteChannel: "AFFORDABLE",
             stockStage: "IN_STOCK",
             saleStage: "DRAFT",

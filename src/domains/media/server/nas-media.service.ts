@@ -1,15 +1,8 @@
 // src/domains/media/server/nas-media.service.ts
 
-import {
-    CopyObjectCommand,
-    DeleteObjectCommand,
-    GetObjectCommand,
-    ListObjectsV2Command,
-    type _Object,
-} from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-
-import { s3, S3_BUCKET } from "@/server/s3";
+import type { StoredMediaListItem } from "@/domains/media/storage";
+import { mediaStorage } from "@/domains/media/storage";
+import { executeMediaMove } from "@/domains/media/application";
 import {
     type MediaProfile,
     getProfileRoot,
@@ -60,21 +53,21 @@ function shouldHideName(name: string) {
     );
 }
 
-function toNasFile(item: _Object): NasMediaFile | null {
-    const key = normalizeKey(item.Key);
+function toNasFile(item: StoredMediaListItem): NasMediaFile | null {
+    const key = normalizeKey(item.key);
 
     if (!key) return null;
     if (!IMAGE_EXT_RE.test(key)) return null;
     if (shouldHideName(nameFromKey(key))) return null;
 
-    const lastModifiedDate = item.LastModified ?? null;
+    const lastModifiedDate = item.lastModified ?? null;
 
     return {
         key,
         fileKey: key,
         name: nameFromKey(key),
-        sizeBytes: typeof item.Size === "number" ? item.Size : null,
-        etag: item.ETag?.replaceAll('"', "") ?? null,
+        sizeBytes: item.sizeBytes,
+        etag: item.etag,
         lastModified: lastModifiedDate?.getTime() ?? 0,
         lastModifiedDate,
         url: `/api/media/sign?key=${encodeURIComponent(key)}`,
@@ -83,27 +76,31 @@ function toNasFile(item: _Object): NasMediaFile | null {
 
 export async function browseMediaFolder(input: {
     profile?: MediaProfile | string | null;
+    segment?: string | null;
     prefix?: string | null;
     maxKeys?: number;
     continuationToken?: string | null;
 }) {
     const profile = resolveMediaProfile(String(input.profile ?? "inline"));
-    const root = normalizeKey(getProfileRoot(profile));
-    const prefix = sanitizeBrowsePrefix(input.prefix ?? null, profile) || root;
+    const segment =
+        input.segment === "WOMEN" || input.segment === "UNISEX"
+            ? input.segment
+            : input.segment === "MEN"
+              ? "MEN"
+              : null;
+    const root = normalizeKey(getProfileRoot(profile, segment));
+    const prefix = sanitizeBrowsePrefix(input.prefix ?? null, profile, segment) || root;
     const maxKeys = Math.min(Math.max(Number(input.maxKeys ?? 1000), 1), 1000);
 
-    const result = await s3.send(
-        new ListObjectsV2Command({
-            Bucket: S3_BUCKET,
-            Prefix: prefix ? `${prefix}/` : undefined,
-            Delimiter: "/",
-            MaxKeys: maxKeys,
-            ContinuationToken: input.continuationToken || undefined,
-        })
-    );
+    const result = await mediaStorage.list({
+        prefix: prefix ? `${prefix}/` : undefined,
+        delimiter: "/",
+        maxKeys,
+        cursor: input.continuationToken,
+    });
 
-    const folders: NasMediaFolder[] = (result.CommonPrefixes || [])
-        .map((item) => normalizeKey(item.Prefix))
+    const folders: NasMediaFolder[] = result.prefixes
+        .map((item) => normalizeKey(item))
         .filter(Boolean)
         .filter((item) => item !== prefix)
         .filter((item) => !shouldHideName(nameFromKey(item)))
@@ -115,7 +112,7 @@ export async function browseMediaFolder(input: {
 
     const dedup = new Set<string>();
 
-    const files = (result.Contents || [])
+    const files = result.items
         .map(toNasFile)
         .filter((item): item is NasMediaFile => Boolean(item))
         .filter((item) => item.key !== prefix && item.key !== `${prefix}/`)
@@ -125,7 +122,14 @@ export async function browseMediaFolder(input: {
             return true;
         })
         .sort((a, b) => b.lastModified - a.lastModified)
-        .map(({ lastModifiedDate: _lastModifiedDate, etag: _etag, ...item }) => item);
+        .map((item) => ({
+            key: item.key,
+            fileKey: item.fileKey,
+            name: item.name,
+            sizeBytes: item.sizeBytes,
+            lastModified: item.lastModified,
+            url: item.url,
+        }));
 
     return {
         success: true,
@@ -135,10 +139,10 @@ export async function browseMediaFolder(input: {
         folders,
         files,
         total: files.length,
-        nextCursor: result.NextContinuationToken ?? null,
-        nextToken: result.NextContinuationToken ?? null,
-        hasMore: Boolean(result.IsTruncated),
-        truncated: Boolean(result.IsTruncated),
+        nextCursor: result.nextCursor,
+        nextToken: result.nextCursor,
+        hasMore: result.truncated,
+        truncated: result.truncated,
     };
 }
 
@@ -152,16 +156,7 @@ export async function signMediaUrl(input: {
         throw new Error("Thiếu key.");
     }
 
-    const url = await getSignedUrl(
-        s3,
-        new GetObjectCommand({
-            Bucket: S3_BUCKET,
-            Key: key,
-        }),
-        {
-            expiresIn: input.expiresIn ?? 60 * 10,
-        }
-    );
+    const url = await mediaStorage.sign(key, input.expiresIn ?? 60 * 10);
 
     return {
         key,
@@ -192,20 +187,12 @@ export async function moveMediaFile(input: {
         };
     }
 
-    await s3.send(
-        new CopyObjectCommand({
-            Bucket: S3_BUCKET,
-            CopySource: `${S3_BUCKET}/${encodeURIComponent(fromKey).replace(/%2F/g, "/")}`,
-            Key: toKey,
-        })
-    );
-
-    await s3.send(
-        new DeleteObjectCommand({
-            Bucket: S3_BUCKET,
-            Key: fromKey,
-        })
-    );
+    await executeMediaMove({
+        idempotencyKey: `legacy-move:${fromKey}:${toKey}`,
+        sourceKey: fromKey,
+        destinationKey: toKey,
+        deleteSource: true,
+    });
 
     return {
         success: true,
@@ -214,10 +201,11 @@ export async function moveMediaFile(input: {
     };
 }
 
-export async function organizeActiveLooseNasFiles(_input: {
+export async function organizeActiveLooseNasFiles(input: {
     dryRun?: boolean;
     maxFiles?: number;
 } = {}) {
+    void input;
     throw new Error(
         "organizeActiveLooseNasFiles is not implemented for the current NAS media service.",
     );

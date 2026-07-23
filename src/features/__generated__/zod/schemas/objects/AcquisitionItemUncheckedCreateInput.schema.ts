@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { AcquisitionItemKindSchema } from '../enums/AcquisitionItemKind.schema';
 import { AcquisitionItemStatusSchema } from '../enums/AcquisitionItemStatus.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
+import { AudienceSegmentSchema } from '../enums/AudienceSegment.schema';
 import { AcquisitionSpecJobUncheckedCreateNestedOneWithoutAcquisitionItemInputObjectSchema as AcquisitionSpecJobUncheckedCreateNestedOneWithoutAcquisitionItemInputObjectSchema } from './AcquisitionSpecJobUncheckedCreateNestedOneWithoutAcquisitionItemInput.schema'
 
 const makeSchema = () => z.object({
@@ -27,6 +28,7 @@ const makeSchema = () => z.object({
   capitalizeToProduct: z.boolean().optional().nullable(),
   productType: ProductTypeSchema.optional(),
   productTitle: z.string(),
+  audienceSegment: AudienceSegmentSchema.optional(),
   acquisitionSpecJob: z.lazy(() => AcquisitionSpecJobUncheckedCreateNestedOneWithoutAcquisitionItemInputObjectSchema).optional()
 }).strict();
 export const AcquisitionItemUncheckedCreateInputObjectSchema: z.ZodType<Prisma.AcquisitionItemUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemUncheckedCreateInput>;

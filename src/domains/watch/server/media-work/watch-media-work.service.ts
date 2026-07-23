@@ -19,6 +19,7 @@ import {
   emitWatchPostedEvent,
   type WatchMediaPipelineEventPayloadInput,
 } from "@/domains/watch/server/events";
+import type { BusinessEventDispatchOptions } from "@/domains/event/server/business-event.service";
 import {
   approveWatchReview,
   resetWatchReviewToDraft,
@@ -28,6 +29,8 @@ type WatchPhotoshootRow = {
   id: string;
   productId: string;
   saleStage: unknown;
+  audienceSegment?: "MEN" | "WOMEN" | "UNISEX";
+  mediaPipelineKey?: "MEN_STANDARD" | "WOMEN_LITE" | "UNISEX_STANDARD";
   watchContent?: {
     titleOverride: string | null;
     summary: string | null;
@@ -241,6 +244,8 @@ function toWatchEventSnapshot(watch: WatchPhotoshootRow) {
     id: watch.id,
     productId: watch.productId,
     saleStage: watch.saleStage,
+    audienceSegment: watch.audienceSegment ?? null,
+    mediaPipelineKey: watch.mediaPipelineKey ?? null,
     product: {
       title: watch.product.title,
       sku: watch.product.sku,
@@ -305,6 +310,8 @@ export async function requestWatchPhotoshoot(
       id: true,
       productId: true,
       saleStage: true,
+      audienceSegment: true,
+      mediaPipelineKey: true,
       watchContent: {
         select: {
           titleOverride: true,
@@ -402,6 +409,7 @@ export async function completeWatchPhotoshootFromQueueItem(
     bindingId: string;
     actorUserId?: string | null;
     note?: string | null;
+    deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
   },
   db: DB = prisma,
 ) {
@@ -437,6 +445,8 @@ export async function completeWatchPhotoshootFromQueueItem(
       id: true,
       productId: true,
       saleStage: true,
+      audienceSegment: true,
+      mediaPipelineKey: true,
       watchContent: {
         select: {
           titleOverride: true,
@@ -496,7 +506,7 @@ export async function completeWatchPhotoshootFromQueueItem(
     actorUserId: input.actorUserId ?? null,
     sourceId: `photoshoot-completed:${binding.id}`,
     note: input.note ?? null,
-  });
+  }, { deferConsumers: input.deferConsumers });
 
   return {
     ok: true,

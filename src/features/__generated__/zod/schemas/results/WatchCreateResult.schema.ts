@@ -9,6 +9,8 @@ export const WatchCreateResultSchema = z.object({
   stockStage: z.unknown(),
   siteChannel: z.unknown(),
   gender: z.unknown(),
+  audienceSegment: z.unknown(),
+  mediaPipelineKey: z.unknown(),
   conditionGrade: z.string().optional(),
   movementType: z.unknown().optional(),
   movementCalibre: z.string().optional(),

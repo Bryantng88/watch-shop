@@ -3,6 +3,7 @@ import type { WatchItemInput } from "./acquisition.dto";
 export function toDraftItem(input: WatchItemInput) {
     return {
         id: input.id,
+        audienceSegment: input.audienceSegment,
         title: input.title,
         productTitle: input.productTitle ?? input.title ?? "",
         quantity: 1,

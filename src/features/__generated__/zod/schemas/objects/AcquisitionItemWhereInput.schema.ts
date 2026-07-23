@@ -14,6 +14,8 @@ import { IntNullableFilterObjectSchema as IntNullableFilterObjectSchema } from '
 import { BoolNullableFilterObjectSchema as BoolNullableFilterObjectSchema } from './BoolNullableFilter.schema';
 import { EnumProductTypeFilterObjectSchema as EnumProductTypeFilterObjectSchema } from './EnumProductTypeFilter.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
+import { EnumAudienceSegmentFilterObjectSchema as EnumAudienceSegmentFilterObjectSchema } from './EnumAudienceSegmentFilter.schema';
+import { AudienceSegmentSchema } from '../enums/AudienceSegment.schema';
 import { AcquisitionScalarRelationFilterObjectSchema as AcquisitionScalarRelationFilterObjectSchema } from './AcquisitionScalarRelationFilter.schema';
 import { AcquisitionWhereInputObjectSchema as AcquisitionWhereInputObjectSchema } from './AcquisitionWhereInput.schema';
 import { ProductNullableScalarRelationFilterObjectSchema as ProductNullableScalarRelationFilterObjectSchema } from './ProductNullableScalarRelationFilter.schema';
@@ -50,6 +52,7 @@ const acquisitionitemwhereinputSchema = z.object({
   capitalizeToProduct: z.union([z.lazy(() => BoolNullableFilterObjectSchema), z.boolean()]).optional().nullable(),
   productType: z.union([z.lazy(() => EnumProductTypeFilterObjectSchema), ProductTypeSchema]).optional(),
   productTitle: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
+  audienceSegment: z.union([z.lazy(() => EnumAudienceSegmentFilterObjectSchema), AudienceSegmentSchema]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   acquisition: z.union([z.lazy(() => AcquisitionScalarRelationFilterObjectSchema), z.lazy(() => AcquisitionWhereInputObjectSchema)]).optional(),
   product: z.union([z.lazy(() => ProductNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional(),

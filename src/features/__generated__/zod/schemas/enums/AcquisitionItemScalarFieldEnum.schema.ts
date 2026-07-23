@@ -1,5 +1,5 @@
 import * as z from 'zod';
 
-export const AcquisitionItemScalarFieldEnumSchema = z.enum(['id', 'acquisitionId', 'productId', 'variantId', 'quantity', 'unitCost', 'currency', 'notes', 'sourceOrderItemId', 'createdAt', 'kind', 'status', 'description', 'expectedReturnAt', 'returnedAt', 'vendorRmaNo', 'warrantyMonths', 'serviceRequestId', 'capitalizeToProduct', 'productType', 'productTitle', 'updatedAt'])
+export const AcquisitionItemScalarFieldEnumSchema = z.enum(['id', 'acquisitionId', 'productId', 'variantId', 'quantity', 'unitCost', 'currency', 'notes', 'sourceOrderItemId', 'createdAt', 'kind', 'status', 'description', 'expectedReturnAt', 'returnedAt', 'vendorRmaNo', 'warrantyMonths', 'serviceRequestId', 'capitalizeToProduct', 'productType', 'productTitle', 'audienceSegment', 'updatedAt'])
 
 export type AcquisitionItemScalarFieldEnum = z.infer<typeof AcquisitionItemScalarFieldEnumSchema>;

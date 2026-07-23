@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { WatchSaleStage } from "@prisma/client";
+import { WatchSaleStage, type AudienceSegment } from "@prisma/client";
 
 import { getWeeklyWatchSpaceComparison } from "@/domains/coordination/server";
 import type { BusinessListDashboardData } from "@/domains/shared/ui/business-list";
@@ -72,7 +72,7 @@ function metricDelta(
 }
 
 const getCachedWatchListDashboard = unstable_cache(
-    async (): Promise<BusinessListDashboardData> => {
+    async (audienceSegment: AudienceSegment): Promise<BusinessListDashboardData> => {
         const twelveDaysAgo = new Date();
         twelveDaysAgo.setDate(twelveDaysAgo.getDate() - 11);
         const sevenDaysAgo = new Date();
@@ -81,33 +81,48 @@ const getCachedWatchListDashboard = unstable_cache(
         fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const segmentTargetIds = (
+            await prisma.watch.findMany({
+                where: { audienceSegment },
+                select: { id: true },
+            })
+        ).map((watch) => watch.id);
 
         const [saleStageGroups, serviceStageGroups, missingImageCount, mediaApprovedCount, inventoryValue, recentEvents, recentTrendRows, weeklySpaces, readinessNoContent, readinessNoPrice, agingUnderSeven, agingSevenToFourteen, agingFourteenToThirty, agingOverThirty] =
             await Promise.all([
                 prisma.watch.groupBy({
                     by: ["saleStage"],
+                    where: { audienceSegment },
                     _count: { _all: true },
                 }),
                 prisma.watch.groupBy({
                     by: ["serviceStage"],
+                    where: { audienceSegment },
                     _count: { _all: true },
                 }),
                 prisma.watch.count({
-                    where: { product: { productImage: { none: {} } } },
+                    where: { audienceSegment, product: { productImage: { none: {} } } },
                 }),
                 prisma.watch.count({
                     where: {
                         product: { productImage: { some: {} } },
+                        audienceSegment,
                         reviewStates: { some: { targetType: "IMAGE", status: "APPROVED" } },
                     },
                 }),
                 prisma.watchPrice.aggregate({
-                    where: { watch: { saleStage: { not: WatchSaleStage.SOLD } } },
+                    where: {
+                        watch: {
+                            audienceSegment,
+                            saleStage: { not: WatchSaleStage.SOLD },
+                        },
+                    },
                     _sum: { salePrice: true },
                 }),
                 prisma.businessEventLog.findMany({
                     where: {
                         targetType: "WATCH",
+                        targetId: { in: segmentTargetIds },
                         eventKey: { in: Object.keys(WATCH_ACTIVITY_LABELS) },
                     },
                     take: 4,
@@ -121,19 +136,21 @@ const getCachedWatchListDashboard = unstable_cache(
                     },
                 }),
                 prisma.watch.findMany({
-                    where: { createdAt: { gte: twelveDaysAgo } },
+                    where: { audienceSegment, createdAt: { gte: twelveDaysAgo } },
                     select: { createdAt: true },
                 }),
-                getWeeklyWatchSpaceComparison({ db: prisma }),
+                getWeeklyWatchSpaceComparison({ db: prisma, audienceSegment }),
                 prisma.watch.count({
                     where: {
                         product: { productImage: { some: {} } },
+                        audienceSegment,
                         watchContent: null,
                     },
                 }),
                 prisma.watch.count({
                     where: {
                         product: { productImage: { some: {} } },
+                        audienceSegment,
                         watchContent: { isNot: null },
                         OR: [
                             { watchPrice: null },
@@ -141,10 +158,10 @@ const getCachedWatchListDashboard = unstable_cache(
                         ],
                     },
                 }),
-                prisma.watch.count({ where: { saleStage: { not: WatchSaleStage.SOLD }, updatedAt: { gte: sevenDaysAgo } } }),
-                prisma.watch.count({ where: { saleStage: { not: WatchSaleStage.SOLD }, updatedAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo } } }),
-                prisma.watch.count({ where: { saleStage: { not: WatchSaleStage.SOLD }, updatedAt: { gte: thirtyDaysAgo, lt: fourteenDaysAgo } } }),
-                prisma.watch.count({ where: { saleStage: { not: WatchSaleStage.SOLD }, updatedAt: { lt: thirtyDaysAgo } } }),
+                prisma.watch.count({ where: { audienceSegment, saleStage: { not: WatchSaleStage.SOLD }, updatedAt: { gte: sevenDaysAgo } } }),
+                prisma.watch.count({ where: { audienceSegment, saleStage: { not: WatchSaleStage.SOLD }, updatedAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo } } }),
+                prisma.watch.count({ where: { audienceSegment, saleStage: { not: WatchSaleStage.SOLD }, updatedAt: { gte: thirtyDaysAgo, lt: fourteenDaysAgo } } }),
+                prisma.watch.count({ where: { audienceSegment, saleStage: { not: WatchSaleStage.SOLD }, updatedAt: { lt: thirtyDaysAgo } } }),
             ]);
 
         const counts = new Map(
@@ -309,6 +326,8 @@ const getCachedWatchListDashboard = unstable_cache(
     { revalidate: 60 },
 );
 
-export async function getWatchListDashboard() {
-    return getCachedWatchListDashboard();
+export async function getWatchListDashboard(
+    audienceSegment: AudienceSegment = "MEN",
+) {
+    return getCachedWatchListDashboard(audienceSegment);
 }

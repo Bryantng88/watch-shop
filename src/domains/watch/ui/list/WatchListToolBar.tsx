@@ -1,9 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { ArchiveRestore, Camera, ChevronDown, Images, Settings2 } from "lucide-react";
+import { ArchiveRestore, Camera, ChevronDown, Images, Watch as WatchIcon } from "lucide-react";
+import {
+    BusinessListPageHeader,
+    DashboardCustomizeButton,
+} from "@/domains/shared/ui/business-list";
 
 type Props = {
+    audienceSegment?: "MEN" | "WOMEN";
+    onAudienceSegmentChange?: (segment: "MEN" | "WOMEN") => void;
     selectedCount: number;
     photoshootEligibleCount?: number;
     mediaReviewEligibleCount?: number;
@@ -18,6 +24,8 @@ type Props = {
 };
 
 export default function WatchListToolbar({
+    audienceSegment = "MEN",
+    onAudienceSegmentChange,
     selectedCount,
     photoshootEligibleCount = 0,
     mediaReviewEligibleCount = 0,
@@ -46,25 +54,41 @@ export default function WatchListToolbar({
     }
 
     return (
-        <div className="flex flex-col gap-4 px-1 py-1 md:flex-row md:items-start md:justify-between">
-            <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-3">
-                    <h1 className="text-[26px] font-semibold tracking-[-0.035em] text-slate-950">
-                        Danh sách watch
-                    </h1>
+        <BusinessListPageHeader
+            title={
+                <span className="flex flex-wrap items-center gap-3">
+                    Watch
                     {duplicateView ? (
                         <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
                             Đang xem hàng chờ trùng
                         </span>
                     ) : null}
+                </span>
+            }
+            icon={<WatchIcon className="h-5 w-5" />}
+            meta={<span>Danh mục đồng hồ · Nội dung, media và trạng thái sẵn sàng</span>}
+            actions={
+                <>
+                <div
+                    className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-slate-50 p-1 text-xs font-semibold"
+                    aria-label="Chọn danh sách Watch"
+                >
+                    {(["MEN", "WOMEN"] as const).map((segment) => (
+                        <button
+                            key={segment}
+                            type="button"
+                            onClick={() => onAudienceSegmentChange?.(segment)}
+                            aria-pressed={audienceSegment === segment}
+                            className={`h-8 rounded-lg px-3 transition ${
+                                audienceSegment === segment
+                                    ? "bg-white text-violet-700 shadow-sm ring-1 ring-slate-200/70"
+                                    : "text-slate-500 hover:text-slate-800"
+                            }`}
+                        >
+                            {segment === "MEN" ? "Nam" : "Nữ"}
+                        </button>
+                    ))}
                 </div>
-
-                <p className="mt-1.5 text-[13px] text-slate-500">
-                    Quản lý domain watch riêng, nhưng giữ đúng cảm giác thao tác nhanh như list sản phẩm cũ.
-                </p>
-            </div>
-
-            <div className="flex shrink-0 flex-wrap items-center gap-3 self-start">
                 <button
                     type="button"
                     onClick={onToggleDuplicateView}
@@ -73,14 +97,7 @@ export default function WatchListToolbar({
                     <ArchiveRestore className="h-4 w-4" />
                     {duplicateView ? "Về danh sách Watch" : "Watch trùng"}
                 </button>
-                <button
-                    type="button"
-                    onClick={onCustomizeDashboard}
-                    className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-                >
-                    <Settings2 className="h-4 w-4" />
-                    Tùy chỉnh dashboard
-                </button>
+                <DashboardCustomizeButton onClick={onCustomizeDashboard} />
 
                 {showSelectionActions && selectedCount > 0 ? <div className="relative">
                     <button
@@ -148,7 +165,8 @@ export default function WatchListToolbar({
                         {selectedCount}
                     </div>
                 </div> : null}
-            </div>
-        </div>
+                </>
+            }
+        />
     );
 }

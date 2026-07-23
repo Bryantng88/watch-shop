@@ -360,6 +360,7 @@ export async function createAcquisitionWithItem(input: dto.CreateAcquisitionInpu
             type: input.type,
             createdAt: input.createdAt ? new Date(input.createdAt) : undefined,
             notes: input.notes,
+            audienceSegment: input.audienceSegment,
         });
 
         let total = 0;

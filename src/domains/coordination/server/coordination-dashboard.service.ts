@@ -2036,6 +2036,10 @@ export async function getCoordinationDashboard(input: {
   includeDashboardDetails?: boolean;
   includeTechnicalBoard?: boolean;
   includeMediaBoard?: boolean;
+  includeFlowItems?: boolean;
+  includeManagementDetails?: boolean;
+  includeWorkspaceSummaries?: boolean;
+  reconcileBindings?: boolean;
   auth?: unknown;
 }): Promise<CoordinationDashboardDTO> {
   const db = input?.db ?? prisma;
@@ -2094,6 +2098,7 @@ export async function getCoordinationDashboard(input: {
     ],
   }));
   if (
+    input.reconcileBindings !== false &&
     (input.context === "PAYMENT" || input.context === "OPERATION") &&
     rawTaskItems.some((item) => paymentWorkspaceRole(item.note)?.startsWith("PAYMENT_"))
   ) {
@@ -2199,8 +2204,10 @@ export async function getCoordinationDashboard(input: {
     allUsers,
     paymentCashFlow,
     mediaBoard,
+    flowItemGroups,
   ] = await Promise.all([
-    dashboardStep("queueCounts", () => db.taskExecution.groupBy({
+    input.includeWorkspaceSummaries !== false
+      ? dashboardStep("queueCounts", () => db.taskExecution.groupBy({
       by: ["taskItemId"],
       where: {
         taskId: cycle.task.id,
@@ -2208,8 +2215,9 @@ export async function getCoordinationDashboard(input: {
         actionType: { not: TaskExecutionActionType.CANCELLED },
       },
       _count: { _all: true },
-    })),
-    isMediaFlow
+        }))
+      : Promise.resolve([]),
+    input.includeWorkspaceSummaries !== false && isMediaFlow
       ? dashboardStep("mediaQueue", () => loadMediaQueueSummaryByTaskItem({
           db,
           taskId: cycle.task.id,
@@ -2217,7 +2225,7 @@ export async function getCoordinationDashboard(input: {
           terminalStatesByTargetType: viewConfig.carryover.terminalStatesByTargetType,
         }))
       : Promise.resolve(new Map<string, QueueSummaryDTO>()),
-    isTechnicalFlow
+    input.includeWorkspaceSummaries !== false && isTechnicalFlow
       ? dashboardStep("technicalQueue", () => loadTechnicalQueueCountByTaskItem({
           db,
           taskId: cycle.task.id,
@@ -2225,7 +2233,7 @@ export async function getCoordinationDashboard(input: {
           terminalStatesByTargetType: viewConfig.carryover.terminalStatesByTargetType,
         }))
       : Promise.resolve(new Map<string, number>()),
-    isPaymentFlow
+    input.includeWorkspaceSummaries !== false && isPaymentFlow
       ? dashboardStep("paymentQueue", () => loadPaymentQueueCountByTaskItem({
           db,
           taskId: cycle.task.id,
@@ -2233,17 +2241,23 @@ export async function getCoordinationDashboard(input: {
           terminalStatesByTargetType: viewConfig.carryover.terminalStatesByTargetType,
         }))
       : Promise.resolve(new Map<string, number>()),
-    dashboardStep("activitySummary", () => loadActivitySummaryByTaskItem(db, taskItemIds)),
-    dashboardStep("rollover", () => loadRolloverOutByTaskItem(db, {
-      taskId: cycle.task.id,
-      taskItemIds,
-    })),
-    dashboardStep("identityPreviews", () => loadWorkspaceIdentityPreviewMap({
-      db,
-      taskId: cycle.task.id,
-      taskItems: taskItems.filter((item) => identityPreviewTaskItemIdSet.has(item.id)),
-    })),
-    isTechnicalFlow || isServiceRequestCaseMode
+    input.includeWorkspaceSummaries !== false
+      ? dashboardStep("activitySummary", () => loadActivitySummaryByTaskItem(db, taskItemIds))
+      : Promise.resolve({ feedbackCounts: new Map<string, number>(), lastActivities: new Map() }),
+    input.includeWorkspaceSummaries !== false
+      ? dashboardStep("rollover", () => loadRolloverOutByTaskItem(db, {
+          taskId: cycle.task.id,
+          taskItemIds,
+        }))
+      : Promise.resolve(new Map()),
+    input.includeWorkspaceSummaries !== false
+      ? dashboardStep("identityPreviews", () => loadWorkspaceIdentityPreviewMap({
+          db,
+          taskId: cycle.task.id,
+          taskItems: taskItems.filter((item) => identityPreviewTaskItemIdSet.has(item.id)),
+        }))
+      : Promise.resolve(new Map()),
+    input.includeWorkspaceSummaries !== false && (isTechnicalFlow || isServiceRequestCaseMode)
       ? dashboardStep("technicalRollup", () => loadTechnicalServiceRequestRollupByTaskItem({
           db,
           taskId: cycle.task.id,
@@ -2257,16 +2271,18 @@ export async function getCoordinationDashboard(input: {
           viewerUserId: getAuthUserId(input.auth),
         }))
       : Promise.resolve(null),
-    dashboardStep("users", () => db.user.findMany({
-      where: { isActive: true },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        avatarUrl: true,
-      },
-      orderBy: [{ name: "asc" }, { email: "asc" }],
-    })),
+    input.includeManagementDetails !== false
+      ? dashboardStep("users", () => db.user.findMany({
+          where: { isActive: true },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatarUrl: true,
+          },
+          orderBy: [{ name: "asc" }, { email: "asc" }],
+        }))
+      : Promise.resolve([]),
     isPaymentFlow && input.includeDashboardDetails !== false
       ? dashboardStep("paymentCashFlow", () => db.payment.findMany({
           where: { status: { in: [PaymentStatus.PAID, PaymentStatus.COLLECTED] } },
@@ -2276,6 +2292,23 @@ export async function getCoordinationDashboard(input: {
     isMediaFlow && input.includeMediaBoard !== false
       ? dashboardStep("mediaBoard", () => loadMediaBoard({ db, taskId: cycle.task.id, viewerUserId: getAuthUserId(input.auth) }))
       : Promise.resolve(null),
+    input.includeFlowItems !== false
+      ? dashboardStep("flowItems", () =>
+          Promise.all(taskItems.map(async (item) => {
+            const metadata = workspaceRoleMetadataFromNote(item.note);
+            const items = await listTaskItemQueueItems(db, item.id, {
+              taskId: cycle.task.id,
+              note: item.note,
+            });
+            return items.map((queueItem) => ({
+              ...queueItem,
+              workspaceTitle: item.title,
+              flowStageKey: metadata.flowStageKey ?? ticketWorkTypeKey(item.note),
+              flowStageOrder: metadata.flowStageOrder,
+            }));
+          })),
+        )
+      : Promise.resolve([]),
   ]);
   const feedbackCountByTaskItem = activitySummary.feedbackCounts;
   const lastActivityMap = activitySummary.lastActivities;
@@ -2356,23 +2389,7 @@ export async function getCoordinationDashboard(input: {
     if (leftOrder !== rightOrder) return leftOrder - rightOrder;
     return left.title.localeCompare(right.title);
   });
-  const flowItems: CoordinationFlowListItemDTO[] = (
-    await dashboardStep("flowItems", async () =>
-      Promise.all(taskItems.map(async (item) => {
-        const metadata = workspaceRoleMetadataFromNote(item.note);
-        const items = await listTaskItemQueueItems(db, item.id, {
-          taskId: cycle.task.id,
-          note: item.note,
-        });
-        return items.map((queueItem) => ({
-          ...queueItem,
-          workspaceTitle: item.title,
-          flowStageKey: metadata.flowStageKey ?? ticketWorkTypeKey(item.note),
-          flowStageOrder: metadata.flowStageOrder,
-        }));
-      })),
-    )
-  ).flat().sort((left, right) => {
+  const flowItems: CoordinationFlowListItemDTO[] = flowItemGroups.flat().sort((left, right) => {
     const stageOrder = (left.flowStageOrder ?? Number.MAX_SAFE_INTEGER) -
       (right.flowStageOrder ?? Number.MAX_SAFE_INTEGER);
     if (stageOrder !== 0) return stageOrder;
@@ -2500,7 +2517,9 @@ export async function getCoordinationDashboard(input: {
         coreFlows: coreFlowSharedUserIds,
       },
     },
-    blueprints: (await listWorkspaceInstantiationBlueprintOptions(input.context)).map((blueprint) => {
+    blueprints: (input.includeManagementDetails === false
+      ? []
+      : await listWorkspaceInstantiationBlueprintOptions(input.context)).map((blueprint) => {
       const usage = blueprintUsage.get(
         blueprintUsageKey({ key: blueprint.key, source: blueprint.source }),
       ) ?? {

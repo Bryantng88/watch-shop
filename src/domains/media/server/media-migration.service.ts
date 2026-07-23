@@ -1,9 +1,8 @@
 // src/domains/media/server/media-migration.service.ts
 
-import { ListObjectsV2Command, type _Object } from "@aws-sdk/client-s3";
-
+import type { StoredMediaListItem } from "@/domains/media/storage";
+import { mediaStorage } from "@/domains/media/storage";
 import { prisma } from "@/server/db/client";
-import { s3, S3_BUCKET } from "@/server/s3";
 import { normalizeKey } from "@/server/lib/product-image-storage";
 
 import {
@@ -49,20 +48,20 @@ function getExtFromName(fileName: string) {
     return parts.length > 1 ? parts.pop()?.toLowerCase() ?? null : null;
 }
 
-function toNasFile(item: _Object): NasMediaFile | null {
-    const key = normalizeKey(item.Key);
+function toNasFile(item: StoredMediaListItem): NasMediaFile | null {
+    const key = normalizeKey(item.key);
 
     if (!key) return null;
     if (!IMAGE_EXT_RE.test(key)) return null;
 
-    const lastModifiedDate = item.LastModified ?? null;
+    const lastModifiedDate = item.lastModified;
 
     return {
         key,
         fileKey: key,
         name: nameFromKey(key),
-        sizeBytes: typeof item.Size === "number" ? item.Size : null,
-        etag: item.ETag?.replaceAll('"', "") ?? null,
+        sizeBytes: item.sizeBytes,
+        etag: item.etag,
         lastModified: lastModifiedDate?.getTime() ?? 0,
         lastModifiedDate,
         url: `/api/media/sign?key=${encodeURIComponent(key)}`,
@@ -109,17 +108,14 @@ async function listAllRootActiveFiles() {
     let continuationToken: string | undefined;
 
     do {
-        const result = await s3.send(
-            new ListObjectsV2Command({
-                Bucket: S3_BUCKET,
-                Prefix: `${ACTIVE_EDIT_ROOT}/`,
-                Delimiter: "/",
-                MaxKeys: 1000,
-                ContinuationToken: continuationToken,
-            })
-        );
+        const result = await mediaStorage.list({
+            prefix: `${ACTIVE_EDIT_ROOT}/`,
+            delimiter: "/",
+            maxKeys: 1000,
+            cursor: continuationToken,
+        });
 
-        for (const item of result.Contents || []) {
+        for (const item of result.items) {
             const file = toNasFile(item);
             if (!file) continue;
 
@@ -129,7 +125,7 @@ async function listAllRootActiveFiles() {
             files.push(file);
         }
 
-        continuationToken = result.NextContinuationToken;
+        continuationToken = result.nextCursor ?? undefined;
     } while (continuationToken);
 
     return files;
@@ -143,17 +139,14 @@ async function listAllFlatChosenFiles() {
         let continuationToken: string | undefined;
 
         do {
-            const result = await s3.send(
-                new ListObjectsV2Command({
-                    Bucket: S3_BUCKET,
-                    Prefix: `${root}/`,
-                    Delimiter: "/",
-                    MaxKeys: 1000,
-                    ContinuationToken: continuationToken,
-                })
-            );
+            const result = await mediaStorage.list({
+                prefix: `${root}/`,
+                delimiter: "/",
+                maxKeys: 1000,
+                cursor: continuationToken,
+            });
 
-            for (const item of result.Contents || []) {
+            for (const item of result.items) {
                 const file = toNasFile(item);
                 if (!file) continue;
                 if (!isFlatChosenImage(file.key)) continue;
@@ -161,7 +154,7 @@ async function listAllFlatChosenFiles() {
                 files.push(file);
             }
 
-            continuationToken = result.NextContinuationToken;
+            continuationToken = result.nextCursor ?? undefined;
         } while (continuationToken);
     }
 

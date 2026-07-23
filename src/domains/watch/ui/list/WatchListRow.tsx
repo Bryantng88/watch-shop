@@ -3,16 +3,12 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import {
-    AlertCircle,
-    BadgeCheck,
     Eye,
     Hammer,
     HandCoins,
-    Handshake,
     ImageIcon,
     ImagePlus,
     CopyX,
-    Lock,
     Pencil,
     RotateCcw,
     ShoppingCart,
@@ -101,11 +97,16 @@ function WatchStatusSignal({
 }) {
     const normalized = upper(status);
     const icon: VisualStatusIcon = kind === "media"
-        ? tone === "emerald" ? "success" : tone === "amber" || tone === "rose" ? "warning" : "image"
+        ? normalized === "POSTED" ? "published"
+            : normalized === "READY_TO_PUBLISH" || normalized === "MEDIA_READY" ? "neutral"
+                : tone === "emerald" ? "success"
+                    : tone === "amber" || tone === "rose" ? "warning"
+                        : "image"
         : tone === "emerald" ? "success" : tone === "amber" || tone === "rose" ? "waiting" : tone === "blue" ? "service" : "neutral";
     const detail = kind === "media"
-        ? normalized === "POSTED" ? "Đã hoàn tất đăng bài"
-            : normalized === "READY_TO_PUBLISH" ? "Sẵn sàng đăng"
+        ? normalized === "POSTED" ? "Đã hoàn tất"
+            : normalized === "READY_TO_PUBLISH" ? "Chưa xử lý"
+                : normalized === "MEDIA_READY" ? "Chờ xử lý media"
                 : normalized === "NEEDS_REWORK" ? "Cần xử lý lại"
                     : normalized === "PHOTOSHOOT" ? "Đang chụp ảnh"
                         : normalized === "MEDIA_PROCESSING" ? "Đang xử lý"
@@ -130,53 +131,68 @@ function SaleStatusBadge({
         switch (normalized) {
             case "READY":
                 return {
-                    icon: ShoppingCart,
-                    className: "border-blue-200 bg-blue-50 text-blue-700",
+                    icon: "sale" as VisualStatusIcon,
+                    tone: "blue" as BadgeTone,
+                    detail: "Sẵn sàng bán",
                 };
             case "HOLD":
                 return {
-                    icon: Lock,
-                    className: "border-amber-200 bg-amber-50 text-amber-700",
+                    icon: "reserved" as VisualStatusIcon,
+                    tone: "amber" as BadgeTone,
+                    detail: "Đang giữ hàng",
                 };
             case "SOLD":
                 return {
-                    icon: BadgeCheck,
-                    className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+                    icon: "success" as VisualStatusIcon,
+                    tone: "emerald" as BadgeTone,
+                    detail: "Đã hoàn tất bán",
                 };
             case "CONSIGNED":
+            case "CONSIGNED_TO":
                 return {
-                    icon: Handshake,
-                    className: "border-violet-200 bg-violet-50 text-violet-700",
+                    icon: "consignment" as VisualStatusIcon,
+                    tone: "violet" as BadgeTone,
+                    detail: "Đang ký gửi",
+                };
+            case "PROCESSING":
+                return {
+                    icon: "waiting" as VisualStatusIcon,
+                    tone: "blue" as BadgeTone,
+                    detail: "Đang chuẩn bị bán",
                 };
             default:
                 return {
-                    icon: AlertCircle,
-                    className: "border-slate-200 bg-slate-50 text-slate-600",
+                    icon: "neutral" as VisualStatusIcon,
+                    tone: "slate" as BadgeTone,
+                    detail: "Chưa sẵn sàng bán",
                 };
         }
     })();
-    const Icon = config.icon;
 
     return (
-        <span
-            className={cn(
-                "inline-flex max-w-[132px] items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold leading-5",
-                config.className,
-            )}
-            title={label}
-        >
-            <Icon className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{label || "Không rõ"}</span>
-        </span>
+        <VisualStatusSignal
+            label={label || "Không rõ"}
+            detail={config.detail}
+            tone={config.tone}
+            icon={config.icon}
+        />
     );
 }
 
 function legacyMediaStatus(row: WatchRow) {
     if (row.isPosted) return { label: "Đã đăng", tone: "emerald" as BadgeTone };
-    if (!row.hasImages && Number(row.imagesCount ?? 0) <= 0) {
-        return { label: "Chưa có ảnh", tone: "slate" as BadgeTone };
+    return { label: "Chưa gửi photoshoot", tone: "slate" as BadgeTone };
+}
+
+function mediaStatusLabel(status: string | null | undefined, fallback: string) {
+    switch (upper(status)) {
+        case "NO_IMAGE":
+            return "Chưa gửi photoshoot";
+        case "MEDIA_READY":
+            return "Đã chụp xong";
+        default:
+            return fallback;
     }
-    return { label: "Đang xử lý media", tone: "blue" as BadgeTone };
 }
 
 function mediaTone(status?: string | null): BadgeTone {
@@ -185,6 +201,8 @@ function mediaTone(status?: string | null): BadgeTone {
             return "emerald";
         case "READY_TO_PUBLISH":
             return "violet";
+        case "MEDIA_READY":
+            return "slate";
         case "NEEDS_REWORK":
         case "NO_IMAGE":
             return "amber";
@@ -259,12 +277,19 @@ export default function WatchListRow({
 
     const media = product.v2Row
         ? {
-            label: product.v2Row.mediaStatusLabel,
+            label: mediaStatusLabel(
+                product.v2Row.mediaStatus,
+                product.v2Row.mediaStatusLabel,
+            ),
             status: product.v2Row.mediaStatus,
             tone: mediaTone(product.v2Row.mediaStatus),
             href: product.v2Row.mediaWorkspaceHref,
         }
-        : { ...legacyMediaStatus(product), status: product.isPosted ? "POSTED" : product.hasImages ? "MEDIA_PROCESSING" : "NO_IMAGE", href: null };
+        : {
+            ...legacyMediaStatus(product),
+            status: product.isPosted ? "POSTED" : "NO_IMAGE",
+            href: null,
+        };
     const service = product.v2Row
         ? {
             label: product.v2Row.serviceStatusLabel,

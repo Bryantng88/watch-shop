@@ -78,6 +78,7 @@ export async function getAcquisitionEditDetail(acquisitionId: string) {
         id: acquisition.id,
         refNo: acquisition.refNo ?? null,
         status: acquisition.accquisitionStt,
+        audienceSegment: acquisition.audienceSegment,
         vendorId: acquisition.vendorId ?? null,
         vendorName: acquisition.vendor?.name ?? null,
         currency: acquisition.currency ?? "VND",

@@ -1,4 +1,5 @@
 import {
+  type AudienceSegment,
   TaskExecutionActionType,
   TaskExecutionTargetType,
   TaskPeriod,
@@ -33,7 +34,11 @@ function isContext(description: string | null, context: "MEDIA" | "TECHNICAL") {
   return String(description ?? "").startsWith(`Coordination cycle ${context} `);
 }
 
-async function readWeek(db: DB, periodKey: string): Promise<WeeklyWatchFlow> {
+async function readWeek(
+  db: DB,
+  periodKey: string,
+  audienceSegment?: AudienceSegment,
+): Promise<WeeklyWatchFlow> {
   const rows = await db.taskExecution.findMany({
     where: {
       actionType: { not: TaskExecutionActionType.CANCELLED },
@@ -77,6 +82,32 @@ async function readWeek(db: DB, periodKey: string): Promise<WeeklyWatchFlow> {
     }
   }
 
+  if (audienceSegment && mediaWatchIds.size) {
+    const matchingWatches = await db.watch.findMany({
+      where: {
+        id: { in: [...mediaWatchIds] },
+        audienceSegment,
+      },
+      select: { id: true },
+    });
+    const allowed = new Set(matchingWatches.map((watch) => watch.id));
+    for (const id of mediaWatchIds) if (!allowed.has(id)) mediaWatchIds.delete(id);
+    for (const id of publishWatchIds) if (!allowed.has(id)) publishWatchIds.delete(id);
+    for (const id of photographyWatchIds) {
+      if (!allowed.has(id)) photographyWatchIds.delete(id);
+    }
+  }
+
+  const serviceCount =
+    audienceSegment && serviceRequestIds.size
+      ? await db.serviceRequest.count({
+          where: {
+            id: { in: [...serviceRequestIds] },
+            product: { watch: { is: { audienceSegment } } },
+          },
+        })
+      : serviceRequestIds.size;
+
   const inventory = mediaWatchIds.size
     ? await db.watchPrice.aggregate({
         where: { watchId: { in: [...mediaWatchIds] } },
@@ -87,7 +118,7 @@ async function readWeek(db: DB, periodKey: string): Promise<WeeklyWatchFlow> {
   return {
     total: mediaWatchIds.size,
     ready: publishWatchIds.size,
-    service: serviceRequestIds.size,
+    service: serviceCount,
     missingImage: photographyWatchIds.size,
     inventoryValue: Number(inventory?._sum.salePrice ?? 0),
   };
@@ -97,14 +128,15 @@ async function readWeek(db: DB, periodKey: string): Promise<WeeklyWatchFlow> {
 export async function getWeeklyWatchSpaceComparison(input?: {
   db?: DB;
   date?: Date;
+  audienceSegment?: AudienceSegment;
 }) {
   const db = input?.db ?? prisma;
   const date = input?.date ?? new Date();
   const currentWeek = getWeekRange(date);
   const previousWeek = getWeekRange(previousWeekDate(currentWeek.startDate));
   const [current, previous] = await Promise.all([
-    readWeek(db, currentWeek.periodKey),
-    readWeek(db, previousWeek.periodKey),
+    readWeek(db, currentWeek.periodKey, input?.audienceSegment),
+    readWeek(db, previousWeek.periodKey, input?.audienceSegment),
   ]);
 
   return {

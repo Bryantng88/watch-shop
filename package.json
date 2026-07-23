@@ -7,6 +7,12 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
+    "check:media-boundaries": "node scripts/check-media-boundaries.mjs",
+    "media:reconcile": "tsx scripts/media-reconcile.ts",
+    "media:verify": "tsx scripts/verify-media-core.ts",
+    "media:verify-segments": "tsx scripts/verify-segment-dashboards.ts",
+    "media:verify-policy": "tsx scripts/verify-media-policy.ts",
+    "media:verify-empty-women": "tsx scripts/verify-empty-women-lists.ts",
     "gen": "prisma generate && node scripts/trim-zod.js"
   },
   "prisma": {

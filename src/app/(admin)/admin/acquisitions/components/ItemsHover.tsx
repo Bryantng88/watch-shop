@@ -92,7 +92,7 @@ export default function ItemsHover({
                         <div className="flex items-center justify-between mb-2">
                             <div className="text-xs text-gray-600">Dòng sản phẩm</div>
                             <a
-                                href={`/admin/acquisitions/${acqId}`}
+                                href={`/admin/acquisitions/${acqId}/edit`}
                                 className="text-xs underline text-blue-600 hover:text-blue-700"
                             >
                                 Xem chi tiết

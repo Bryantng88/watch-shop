@@ -21,6 +21,7 @@ const makeSchema = () => z.object({
   notes: z.boolean().optional(),
   condition: z.boolean().optional(),
   warrantyUntil: z.boolean().optional(),
+  audienceSegment: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
   sentAt: z.boolean().optional(),

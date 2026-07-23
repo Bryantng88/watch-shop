@@ -1,0 +1,14 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { MediaBindingOrderByWithRelationInputObjectSchema as MediaBindingOrderByWithRelationInputObjectSchema } from './objects/MediaBindingOrderByWithRelationInput.schema';
+import { MediaBindingWhereInputObjectSchema as MediaBindingWhereInputObjectSchema } from './objects/MediaBindingWhereInput.schema';
+import { MediaBindingWhereUniqueInputObjectSchema as MediaBindingWhereUniqueInputObjectSchema } from './objects/MediaBindingWhereUniqueInput.schema';
+import { MediaBindingCountAggregateInputObjectSchema as MediaBindingCountAggregateInputObjectSchema } from './objects/MediaBindingCountAggregateInput.schema';
+import { MediaBindingMinAggregateInputObjectSchema as MediaBindingMinAggregateInputObjectSchema } from './objects/MediaBindingMinAggregateInput.schema';
+import { MediaBindingMaxAggregateInputObjectSchema as MediaBindingMaxAggregateInputObjectSchema } from './objects/MediaBindingMaxAggregateInput.schema';
+import { MediaBindingAvgAggregateInputObjectSchema as MediaBindingAvgAggregateInputObjectSchema } from './objects/MediaBindingAvgAggregateInput.schema';
+import { MediaBindingSumAggregateInputObjectSchema as MediaBindingSumAggregateInputObjectSchema } from './objects/MediaBindingSumAggregateInput.schema';
+
+export const MediaBindingAggregateSchema: z.ZodType<Prisma.MediaBindingAggregateArgs> = z.object({ orderBy: z.union([MediaBindingOrderByWithRelationInputObjectSchema, MediaBindingOrderByWithRelationInputObjectSchema.array()]).optional(), where: MediaBindingWhereInputObjectSchema.optional(), cursor: MediaBindingWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), MediaBindingCountAggregateInputObjectSchema ]).optional(), _min: MediaBindingMinAggregateInputObjectSchema.optional(), _max: MediaBindingMaxAggregateInputObjectSchema.optional(), _avg: MediaBindingAvgAggregateInputObjectSchema.optional(), _sum: MediaBindingSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.MediaBindingAggregateArgs>;
+
+export const MediaBindingAggregateZodSchema = z.object({ orderBy: z.union([MediaBindingOrderByWithRelationInputObjectSchema, MediaBindingOrderByWithRelationInputObjectSchema.array()]).optional(), where: MediaBindingWhereInputObjectSchema.optional(), cursor: MediaBindingWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), MediaBindingCountAggregateInputObjectSchema ]).optional(), _min: MediaBindingMinAggregateInputObjectSchema.optional(), _max: MediaBindingMaxAggregateInputObjectSchema.optional(), _avg: MediaBindingAvgAggregateInputObjectSchema.optional(), _sum: MediaBindingSumAggregateInputObjectSchema.optional() }).strict();

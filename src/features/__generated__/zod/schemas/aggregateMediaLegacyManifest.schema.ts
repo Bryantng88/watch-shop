@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { MediaLegacyManifestOrderByWithRelationInputObjectSchema as MediaLegacyManifestOrderByWithRelationInputObjectSchema } from './objects/MediaLegacyManifestOrderByWithRelationInput.schema';
+import { MediaLegacyManifestWhereInputObjectSchema as MediaLegacyManifestWhereInputObjectSchema } from './objects/MediaLegacyManifestWhereInput.schema';
+import { MediaLegacyManifestWhereUniqueInputObjectSchema as MediaLegacyManifestWhereUniqueInputObjectSchema } from './objects/MediaLegacyManifestWhereUniqueInput.schema';
+import { MediaLegacyManifestCountAggregateInputObjectSchema as MediaLegacyManifestCountAggregateInputObjectSchema } from './objects/MediaLegacyManifestCountAggregateInput.schema';
+import { MediaLegacyManifestMinAggregateInputObjectSchema as MediaLegacyManifestMinAggregateInputObjectSchema } from './objects/MediaLegacyManifestMinAggregateInput.schema';
+import { MediaLegacyManifestMaxAggregateInputObjectSchema as MediaLegacyManifestMaxAggregateInputObjectSchema } from './objects/MediaLegacyManifestMaxAggregateInput.schema';
+
+export const MediaLegacyManifestAggregateSchema: z.ZodType<Prisma.MediaLegacyManifestAggregateArgs> = z.object({ orderBy: z.union([MediaLegacyManifestOrderByWithRelationInputObjectSchema, MediaLegacyManifestOrderByWithRelationInputObjectSchema.array()]).optional(), where: MediaLegacyManifestWhereInputObjectSchema.optional(), cursor: MediaLegacyManifestWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), MediaLegacyManifestCountAggregateInputObjectSchema ]).optional(), _min: MediaLegacyManifestMinAggregateInputObjectSchema.optional(), _max: MediaLegacyManifestMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.MediaLegacyManifestAggregateArgs>;
+
+export const MediaLegacyManifestAggregateZodSchema = z.object({ orderBy: z.union([MediaLegacyManifestOrderByWithRelationInputObjectSchema, MediaLegacyManifestOrderByWithRelationInputObjectSchema.array()]).optional(), where: MediaLegacyManifestWhereInputObjectSchema.optional(), cursor: MediaLegacyManifestWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), MediaLegacyManifestCountAggregateInputObjectSchema ]).optional(), _min: MediaLegacyManifestMinAggregateInputObjectSchema.optional(), _max: MediaLegacyManifestMaxAggregateInputObjectSchema.optional() }).strict();

@@ -7,7 +7,7 @@ import {
 } from "@prisma/client";
 import type { WatchServiceProjection } from "../../shared/watch-detail.projection";
 import { mapWatchDetail } from "../shared";
-import { listWatchChosenMediaPool } from "@/domains/media/server";
+import { listSelectedWatchMedia } from "@/domains/media/application";
 import {
   getLatestBusinessFeedbackByTargets,
   getWatchReviewFeedbackTargetType,
@@ -169,7 +169,7 @@ export async function getWatchEditDetail(productId: string) {
     () => getLatestAcquisitionUnitCost(productId),
   );
   const mediaPoolPromise = perfStep("watch-edit-detail", "mediaPool", () =>
-    listWatchChosenMediaPool({ productId }),
+    listSelectedWatchMedia({ productId }),
   );
   const mediaWorkspacePromise = perfStep(
     "watch-edit-detail",
@@ -225,9 +225,8 @@ export async function getWatchMediaEditDetail(productId: string) {
   }
 
   const poolImages = await perfStep("watch-media-edit-detail", "mediaPool", () =>
-    listWatchChosenMediaPool({
+    listSelectedWatchMedia({
       productId,
-      acquisitionId: row.acquisitionId,
     }),
   );
   const mapped = mapWatchDetail({

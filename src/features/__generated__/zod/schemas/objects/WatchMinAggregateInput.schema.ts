@@ -12,6 +12,8 @@ const makeSchema = () => z.object({
   stockStage: z.literal(true).optional(),
   siteChannel: z.literal(true).optional(),
   gender: z.literal(true).optional(),
+  audienceSegment: z.literal(true).optional(),
+  mediaPipelineKey: z.literal(true).optional(),
   conditionGrade: z.literal(true).optional(),
   movementType: z.literal(true).optional(),
   movementCalibre: z.literal(true).optional(),

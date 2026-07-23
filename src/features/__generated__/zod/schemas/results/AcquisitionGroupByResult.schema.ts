@@ -29,6 +29,7 @@ export const AcquisitionGroupByResultSchema = z.array(z.object({
     notes: z.number(),
     condition: z.number(),
     warrantyUntil: z.number(),
+    audienceSegment: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
     sentAt: z.number(),

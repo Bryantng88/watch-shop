@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { MediaLegacyManifestOrderByWithRelationInputObjectSchema as MediaLegacyManifestOrderByWithRelationInputObjectSchema } from './objects/MediaLegacyManifestOrderByWithRelationInput.schema';
+import { MediaLegacyManifestWhereInputObjectSchema as MediaLegacyManifestWhereInputObjectSchema } from './objects/MediaLegacyManifestWhereInput.schema';
+import { MediaLegacyManifestWhereUniqueInputObjectSchema as MediaLegacyManifestWhereUniqueInputObjectSchema } from './objects/MediaLegacyManifestWhereUniqueInput.schema';
+import { MediaLegacyManifestCountAggregateInputObjectSchema as MediaLegacyManifestCountAggregateInputObjectSchema } from './objects/MediaLegacyManifestCountAggregateInput.schema';
+
+export const MediaLegacyManifestCountSchema: z.ZodType<Prisma.MediaLegacyManifestCountArgs> = z.object({ orderBy: z.union([MediaLegacyManifestOrderByWithRelationInputObjectSchema, MediaLegacyManifestOrderByWithRelationInputObjectSchema.array()]).optional(), where: MediaLegacyManifestWhereInputObjectSchema.optional(), cursor: MediaLegacyManifestWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), MediaLegacyManifestCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.MediaLegacyManifestCountArgs>;
+
+export const MediaLegacyManifestCountZodSchema = z.object({ orderBy: z.union([MediaLegacyManifestOrderByWithRelationInputObjectSchema, MediaLegacyManifestOrderByWithRelationInputObjectSchema.array()]).optional(), where: MediaLegacyManifestWhereInputObjectSchema.optional(), cursor: MediaLegacyManifestWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), MediaLegacyManifestCountAggregateInputObjectSchema ]).optional() }).strict();

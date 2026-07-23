@@ -34,6 +34,11 @@ function conditions(input: AcquisitionListFilters) {
   const status = statusCondition(input);
   if (status) result.push(status);
   if (clean(input.q)) result.push(Prisma.sql`COALESCE("searchText", '') ILIKE ${`%${clean(input.q)}%`}`);
+  if (clean(input.audienceSegment)) {
+    result.push(
+      Prisma.sql`COALESCE("dataJson"->>'audienceSegment', 'MEN') = ${clean(input.audienceSegment).toUpperCase()}`,
+    );
+  }
   if (clean(input.vendorId)) result.push(Prisma.sql`"dataJson"->>'vendorId' = ${clean(input.vendorId)}`);
   if (clean(input.type)) result.push(Prisma.sql`"dataJson"->>'acquisitionType' = ${clean(input.type)}`);
   return result;

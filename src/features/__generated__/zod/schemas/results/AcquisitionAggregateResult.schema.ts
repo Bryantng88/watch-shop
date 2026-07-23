@@ -13,6 +13,7 @@ export const AcquisitionAggregateResultSchema = z.object({  _count: z.object({
     notes: z.number(),
     condition: z.number(),
     warrantyUntil: z.number(),
+    audienceSegment: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
     sentAt: z.number(),

@@ -1,4 +1,5 @@
 import { normalizeKey } from "@/server/lib/storage-key";
+import { mediaSourceRoot } from "@/domains/media/core/media-source-path";
 
 export type MediaProfile =
     | "inline"
@@ -15,15 +16,22 @@ const PROFILE_ROOTS: Record<MediaProfile, string> = {
     "storefront-chosen": "products/storefront/chosen",
 };
 
-export function getProfileRoot(profile: MediaProfile) {
+export function getProfileRoot(
+    profile: MediaProfile,
+    segment?: "MEN" | "WOMEN" | "UNISEX" | null,
+) {
+    if (segment && (profile === "inline" || profile === "edit")) {
+        return mediaSourceRoot(segment, profile);
+    }
     return PROFILE_ROOTS[profile];
 }
 
 export function sanitizeBrowsePrefix(
     input: string | null | undefined,
-    profile: MediaProfile
+    profile: MediaProfile,
+    segment?: "MEN" | "WOMEN" | "UNISEX" | null,
 ) {
-    const root = normalizeKey(getProfileRoot(profile)).replace(/^\/+|\/+$/g, "");
+    const root = normalizeKey(getProfileRoot(profile, segment)).replace(/^\/+|\/+$/g, "");
     const raw = normalizeKey(String(input ?? "")).replace(/^\/+|\/+$/g, "");
 
     if (!raw) return root;

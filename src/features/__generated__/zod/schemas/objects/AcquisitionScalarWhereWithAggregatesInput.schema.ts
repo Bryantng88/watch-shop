@@ -8,7 +8,9 @@ import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilte
 import { DecimalNullableWithAggregatesFilterObjectSchema as DecimalNullableWithAggregatesFilterObjectSchema } from './DecimalNullableWithAggregatesFilter.schema';
 import { EnumAcquisitionStatusWithAggregatesFilterObjectSchema as EnumAcquisitionStatusWithAggregatesFilterObjectSchema } from './EnumAcquisitionStatusWithAggregatesFilter.schema';
 import { AcquisitionStatusSchema } from '../enums/AcquisitionStatus.schema';
-import { DateTimeNullableWithAggregatesFilterObjectSchema as DateTimeNullableWithAggregatesFilterObjectSchema } from './DateTimeNullableWithAggregatesFilter.schema'
+import { DateTimeNullableWithAggregatesFilterObjectSchema as DateTimeNullableWithAggregatesFilterObjectSchema } from './DateTimeNullableWithAggregatesFilter.schema';
+import { EnumAudienceSegmentWithAggregatesFilterObjectSchema as EnumAudienceSegmentWithAggregatesFilterObjectSchema } from './EnumAudienceSegmentWithAggregatesFilter.schema';
+import { AudienceSegmentSchema } from '../enums/AudienceSegment.schema'
 
 const acquisitionscalarwherewithaggregatesinputSchema = z.object({
   AND: z.union([z.lazy(() => AcquisitionScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => AcquisitionScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
@@ -27,6 +29,7 @@ const acquisitionscalarwherewithaggregatesinputSchema = z.object({
   notes: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   condition: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   warrantyUntil: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  audienceSegment: z.union([z.lazy(() => EnumAudienceSegmentWithAggregatesFilterObjectSchema), AudienceSegmentSchema]).optional(),
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
   sentAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),

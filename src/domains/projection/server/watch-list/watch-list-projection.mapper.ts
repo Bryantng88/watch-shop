@@ -34,6 +34,25 @@ function upper(value: unknown) {
   return clean(value).toUpperCase();
 }
 
+function workflowState(state: WatchListProjectionMediaState | null) {
+  return upper(state?.workflowState) || upper(state?.taskStatus);
+}
+
+function isDone(state: string) {
+  return ["DONE", "COMPLETED", "COMPLETE"].includes(state);
+}
+
+function isCancelled(state: string) {
+  return ["CANCELED", "CANCELLED", "REMOVED", "ARCHIVED"].includes(state);
+}
+
+function hasGalleryImages(row: WatchRow) {
+  return Boolean(
+    row.hasImages ||
+    Number(row.imagesCount ?? 0) > 0,
+  );
+}
+
 function newestMediaState(
   states: WatchListProjectionMediaState[] | undefined,
   workTypeKey: WatchListProjectionMediaState["workTypeKey"],
@@ -48,43 +67,60 @@ function mapMediaStatus(row: WatchRow, source: WatchListProjectionSourceRow) {
   const publish = newestMediaState(states, "publish");
   const media = newestMediaState(states, "media-processing");
   const photoshoot = newestMediaState(states, "photoshoot");
-  const publishState = upper(publish?.workflowState ?? publish?.taskStatus);
-  const mediaState = upper(media?.workflowState ?? media?.taskStatus);
-  const photoshootState = upper(photoshoot?.workflowState ?? photoshoot?.taskStatus);
+  const publishState = workflowState(publish);
+  const mediaState = workflowState(media);
+  const photoshootState = workflowState(photoshoot);
 
-  if (row.isPosted || publishState === "DONE") {
-    return { status: "POSTED" as const, label: "Đã đăng" };
+  if (row.isPosted || isDone(publishState)) {
+    return { status: "POSTED" as const, label: "Đã hoàn tất" };
   }
 
-  if (publish && publishState !== "RECALLED") {
-    return { status: "READY_TO_PUBLISH" as const, label: "Chờ đăng bài" };
+  if (publish && ["CONTENT_FEEDBACK", "IMAGE_FEEDBACK", "RECALLED", "BLOCKED"].includes(publishState)) {
+    return { status: "NEEDS_REWORK" as const, label: "Cần xử lý lại" };
   }
 
-  if (media) {
+  if (publish && !isCancelled(publishState)) {
+    const publishLabel: Record<string, string> = {
+      WAITING_CONTENT: "Waiting Content",
+      CONTENT_REVIEW: "Content Review",
+      WAITING_IMAGE: "Waiting Image",
+      IMAGE_REVIEW: "Image Review",
+      READY_TO_POST: "Ready To Post",
+    };
+    return {
+      status: "READY_TO_PUBLISH" as const,
+      label: publishLabel[publishState] ?? "Ready To Post",
+    };
+  }
+
+  if (media && !isCancelled(mediaState)) {
     if (["FEEDBACK", "RECALLED", "BLOCKED"].includes(mediaState)) {
       return { status: "NEEDS_REWORK" as const, label: "Cần xử lý lại" };
     }
 
-    if (mediaState === "DONE") {
-      return { status: "READY_TO_PUBLISH" as const, label: "Chờ đăng bài" };
+    if (isDone(mediaState)) {
+      return { status: "READY_TO_PUBLISH" as const, label: "Ready To Post" };
     }
 
     return { status: "MEDIA_PROCESSING" as const, label: "Đang xử lý media" };
   }
 
-  if (photoshoot) {
+  if (photoshoot && !isCancelled(photoshootState)) {
     if (["FEEDBACK", "RECALLED", "BLOCKED"].includes(photoshootState)) {
       return { status: "NEEDS_REWORK" as const, label: "Cần chụp lại" };
+    }
+
+    if (isDone(photoshootState)) {
+      return { status: "MEDIA_READY" as const, label: "Đã chụp xong" };
     }
 
     return { status: "PHOTOSHOOT" as const, label: "Đang chụp hình" };
   }
 
-  if (!row.hasImages && Number(row.imagesCount ?? 0) <= 0) {
-    return { status: "NO_IMAGE" as const, label: "Chưa có ảnh" };
-  }
-
-  return { status: "MEDIA_PROCESSING" as const, label: "Đang xử lý media" };
+  // An inline/acquisition image is product identity data, not evidence that the
+  // watch entered the media workflow. Only photoshoot events may advance the
+  // media status.
+  return { status: "NO_IMAGE" as const, label: "Chưa gửi photoshoot" };
 }
 
 function mapServiceStatus(row: WatchRow, source: WatchListProjectionSourceRow): {
@@ -132,6 +168,8 @@ function mediaWorkspaceHrefForStatus(
       return media?.workspaceHref ?? photoshoot?.workspaceHref ?? null;
     case "MEDIA_PROCESSING":
       return media?.workspaceHref ?? null;
+    case "MEDIA_READY":
+      return photoshoot?.workspaceHref ?? null;
     case "PHOTOSHOOT":
       return photoshoot?.workspaceHref ?? null;
     default:
@@ -228,11 +266,13 @@ export function mapWatchListSourceRowToProjectionData(
       brandName: cleanNullable(source.product?.brand?.name ?? row.brandName),
       vendorId: cleanNullable(source.product?.vendorId),
       vendorName: cleanNullable(source.product?.vendor?.name ?? row.vendorName),
+      audienceSegment: cleanNullable(source.audienceSegment),
+      mediaPipelineKey: cleanNullable(source.mediaPipelineKey),
       saleStage: cleanNullable(source.saleStage),
       serviceStage: cleanNullable(source.serviceStage),
       stockStage: cleanNullable(source.stockStage),
       hasContent: Boolean(row.hasContent),
-      hasImages: Boolean(row.hasImages),
+      hasImages: hasGalleryImages(row),
       isPosted: Boolean(row.isPosted),
       reviewStatus: cleanNullable(row.reviewStatus),
       contentStatus: cleanNullable(row.contentStatus),

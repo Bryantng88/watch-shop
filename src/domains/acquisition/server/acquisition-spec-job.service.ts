@@ -9,9 +9,8 @@ import {
     WatchCaseMaterialFamily,
     WatchGoldColorV2,
 } from "@prisma/client";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { mediaStorage } from "@/domains/media/storage";
 import { prisma } from "@/server/db/client";
-import { s3, S3_BUCKET } from "@/server/s3";
 import { normalizeKey } from "@/server/lib/storage-key";
 import { generateAcquisitionSpec } from "./acquisition-ai.service";
 import { resolveBrandFromAcquisitionAi } from "./acquisition-brand-resolver";
@@ -267,26 +266,6 @@ function pickPreferredImages(images: any[]) {
     return sorted;
 }
 
-async function bodyToBuffer(body: any): Promise<Buffer> {
-    if (!body) throw new Error("Empty S3 body");
-
-    if (typeof body.transformToByteArray === "function") {
-        const bytes = await body.transformToByteArray();
-        return Buffer.from(bytes);
-    }
-
-    if (typeof body.arrayBuffer === "function") {
-        const arr = await body.arrayBuffer();
-        return Buffer.from(arr);
-    }
-
-    const chunks: Buffer[] = [];
-    for await (const chunk of body) {
-        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-    }
-    return Buffer.concat(chunks);
-}
-
 function inferMimeType(input?: string | null) {
     const value = String(input ?? "").toLowerCase();
 
@@ -318,16 +297,8 @@ async function fileKeyToDataUrl(
     if (!key) return null;
 
     try {
-        const obj = await s3.send(
-            new GetObjectCommand({
-                Bucket: S3_BUCKET,
-                Key: key,
-            })
-        );
-
-        if (!obj.Body) return null;
-
-        const buffer = await bodyToBuffer(obj.Body);
+        const obj = await mediaStorage.read(key);
+        const buffer = Buffer.from(obj.bytes);
         if (!buffer.length) return null;
 
         const mime = inferMimeType(obj.ContentType ?? mimeHint ?? key);

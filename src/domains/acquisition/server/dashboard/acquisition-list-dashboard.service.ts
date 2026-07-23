@@ -19,8 +19,11 @@ function statusLabel(status: string) {
     }
 }
 
-export async function getAcquisitionListDashboard(): Promise<BusinessListDashboardData> {
+export async function getAcquisitionListDashboard(
+    audienceSegment?: "MEN" | "WOMEN",
+): Promise<BusinessListDashboardData> {
     const rows = await prisma.acquisition.findMany({
+        where: audienceSegment ? { audienceSegment } : undefined,
         orderBy: { updatedAt: "desc" },
         select: {
             id: true,

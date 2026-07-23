@@ -40,6 +40,7 @@ export async function createAcquisitionWithItemApplication(
             type: input.type,
             createdAt: parseLocalDateVN(input.createdAt),
             notes: input.notes,
+            audienceSegment: input.audienceSegment,
         });
 
         let total = 0;

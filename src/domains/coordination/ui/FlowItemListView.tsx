@@ -10,12 +10,13 @@ import {
   Activity,
   MessageCircle,
   PackageSearch,
+  Radio,
 } from "lucide-react";
 import type { CoordinationFlowListItemDTO } from "../server/coordination-dashboard.types";
 import { cn } from "@/lib/utils";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
+import { WorkflowStatusSignal } from "@/domains/shared/ui/signals";
 import {
-  applyQueueItemManualTransitionAction,
   applyQueueItemManualTransitionsAction,
 } from "@/domains/task/actions/task.actions";
 import {
@@ -40,6 +41,7 @@ type Props = {
   activeStage: string;
   imageOverrides?: Record<string, string | null>;
   pending?: boolean;
+  completedIcon?: "success" | "published";
 };
 
 function normalize(value?: string | null) {
@@ -63,9 +65,36 @@ function itemStatus(item: CoordinationFlowListItemDTO) {
   return "OPEN";
 }
 
-function statusLabel(item: CoordinationFlowListItemDTO) {
-  return item.currentWorkflowStateLabel || item.preview.status ||
-    (item.status === "DONE" ? "Hoàn tất" : item.status === "FEEDBACK" ? "Cần phản hồi" : "Đang xử lý");
+function UserAvatar({
+  label,
+  avatarUrl,
+  isSystem = false,
+}: {
+  label: string;
+  avatarUrl?: string | null;
+  isSystem?: boolean;
+}) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const imageSrc = avatarUrl
+    ? resolveMediaPreviewSrc(avatarUrl) ?? avatarUrl
+    : null;
+  const fallback = isSystem ? "S" : label.trim().slice(0, 1).toUpperCase() || "?";
+
+  return (
+    <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-900 text-[10px] font-bold text-white">
+      {imageSrc && !imageFailed ? (
+        <Image
+          src={imageSrc}
+          alt=""
+          fill
+          sizes="28px"
+          unoptimized
+          className="object-cover"
+          onError={() => setImageFailed(true)}
+        />
+      ) : fallback}
+    </span>
+  );
 }
 
 export default function FlowItemListView({
@@ -77,21 +106,27 @@ export default function FlowItemListView({
   activeStage,
   imageOverrides = {},
   pending = false,
+  completedIcon,
 }: Props) {
   const router = useRouter();
   const [isActionPending, startActionTransition] = useTransition();
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [optimisticallyMovedIds, setOptimisticallyMovedIds] = useState<string[]>([]);
   const stageByKey = useMemo(() => new Map(
     stages.flatMap((stage) => [
       [normalize(stage.key), stage],
       [normalize(stage.workspaceKey), stage],
     ]),
   ), [stages]);
+  const showStatusColumn = !normalize(activeStage).includes("photography");
+  const showProgressColumn = normalize(activeStage).includes("media-processing");
+  const showPublishChannels = normalize(activeStage).includes("publish");
   const visibleItems = useMemo(() => {
     const cleanQuery = query.trim().toLocaleLowerCase("vi");
     return items.filter((item) => {
+      if (optimisticallyMovedIds.includes(item.id)) return false;
       const stage = stageByKey.get(normalize(item.flowStageKey));
       if (activeStage !== "ALL" && stage?.key !== activeStage) return false;
       if (statusFilter !== "ALL" && itemStatus(item) !== statusFilter) return false;
@@ -109,7 +144,7 @@ export default function FlowItemListView({
         item.payment?.ownerRef,
       ].filter(Boolean).join(" ").toLocaleLowerCase("vi").includes(cleanQuery);
     });
-  }, [activeStage, items, paymentFilter, query, stageByKey, statusFilter]);
+  }, [activeStage, items, optimisticallyMovedIds, paymentFilter, query, stageByKey, statusFilter]);
   const visibleIds = visibleItems.map((item) => item.id);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
   const selectedItems = items.filter((item) => selectedIds.includes(item.id));
@@ -117,10 +152,13 @@ export default function FlowItemListView({
     ? selectedItems[0].manualTransitions.filter(
         (transition) =>
           transition.enabled &&
+          !isOpenTargetTransition(transition) &&
           selectedItems.every((item) =>
             item.manualTransitions.some(
               (candidate) =>
-                candidate.enabled && candidate.actionKey === transition.actionKey,
+                candidate.enabled &&
+                !isOpenTargetTransition(candidate) &&
+                candidate.actionKey === transition.actionKey,
             ),
           ),
       )
@@ -129,17 +167,29 @@ export default function FlowItemListView({
   function runAction(item: CoordinationFlowListItemDTO, actionKey: string) {
     setActionError(null);
     setPendingActionId(item.id);
+    const shouldMoveOptimistically = normalize(item.flowStageKey).includes("photography");
+    if (shouldMoveOptimistically) {
+      setOptimisticallyMovedIds((current) => [...current, item.id]);
+    }
     startActionTransition(async () => {
       try {
-        const result = await applyQueueItemManualTransitionAction({
-          bindingId: item.id,
-          actionKey,
+        const response = await fetch("/api/admin/task-items/manual-transition", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bindingId: item.id, actionKey }),
         });
+        const result = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(result?.error ?? "Không thể thực hiện action.");
+        }
         if (!result?.result?.applied) {
           throw new Error(result?.result?.reason ?? "Không thể thực hiện action.");
         }
-        router.refresh();
+        window.setTimeout(() => router.refresh(), 6000);
       } catch (error) {
+        if (shouldMoveOptimistically) {
+          setOptimisticallyMovedIds((current) => current.filter((id) => id !== item.id));
+        }
         setActionError(error instanceof Error ? error.message : "Không thể cập nhật workflow.");
       } finally {
         setPendingActionId(null);
@@ -198,16 +248,16 @@ export default function FlowItemListView({
       ) : null}
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[980px] border-collapse">
+        <table className={cn("w-full border-collapse", showPublishChannels ? "min-w-[1120px]" : "min-w-[980px]")}>
           <thead>
             <tr className="border-b border-slate-200 bg-[#fbfcfe] text-left text-[11px] font-bold uppercase tracking-[0.05em] text-slate-500">
               <th className="w-12 px-5 py-3">
                 <input type="checkbox" aria-label="Chọn tất cả item đang hiển thị" checked={allVisibleSelected} onChange={(event) => setSelectedIds(event.target.checked ? Array.from(new Set([...selectedIds, ...visibleIds])) : selectedIds.filter((id) => !visibleIds.includes(id)))} />
               </th>
               <th className="px-2 py-3">Item</th>
-              <th className="px-4 py-3">Bước hiện tại</th>
-              <th className="px-4 py-3">Trạng thái</th>
-              <th className="w-40 px-4 py-3">Progress</th>
+              {showStatusColumn ? <th className="px-4 py-3">Trạng thái</th> : null}
+              {showProgressColumn ? <th className="w-40 px-4 py-3">Progress</th> : null}
+              {showPublishChannels ? <th className="w-56 px-4 py-3">Kênh đăng</th> : null}
               <th className="w-44 px-4 py-3">Thao tác</th>
               <th className="px-4 py-3">Người thao tác</th>
               <th className="px-4 py-3 text-center">Cập nhật</th>
@@ -261,16 +311,16 @@ export default function FlowItemListView({
                       </span>
                     </Link>
                   </td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">{stage?.label || item.workspaceTitle}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={cn("inline-flex items-center gap-1.5 text-xs font-semibold", itemStatus(item) === "DONE" ? "text-emerald-700" : itemStatus(item) === "FEEDBACK" ? "text-amber-700" : "text-slate-700")}>
-                      <span className={cn("h-2 w-2 rounded-full", itemStatus(item) === "DONE" ? "bg-emerald-500" : itemStatus(item) === "FEEDBACK" ? "bg-amber-500" : "bg-violet-500")} />
-                      {statusLabel(item)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
+                  {showStatusColumn ? (
+                    <td className="px-4 py-3">
+                      <WorkflowStatusSignal
+                        status={item.currentWorkflowState || item.status}
+                        label={item.currentWorkflowStateLabel || item.preview.status}
+                        completedIcon={completedIcon}
+                      />
+                    </td>
+                  ) : null}
+                  {showProgressColumn ? <td className="px-4 py-3">
                     {item.mediaWorkProgress?.total ? (
                       <div className="w-36">
                         <div className="mb-1.5 flex items-center justify-between text-[11px] font-semibold">
@@ -303,14 +353,42 @@ export default function FlowItemListView({
                         </div>
                       </div>
                     ) : <span className="text-xs text-slate-400">-</span>}
-                  </td>
+                  </td> : null}
+                  {showPublishChannels ? (
+                    <td className="px-4 py-3">
+                      {item.preview.postTargets?.length ? (
+                        <div className="flex max-w-52 flex-wrap items-center gap-1.5">
+                          {item.preview.postTargets.slice(0, 2).map((target) => (
+                            <span
+                              key={target.id}
+                              title={target.platform ? `${target.name} · ${target.platform}` : target.name}
+                              className="inline-flex max-w-36 items-center gap-1.5 rounded-md border border-violet-100 bg-violet-50/70 px-2 py-1 text-[11px] font-semibold text-violet-700"
+                            >
+                              <Radio className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{target.name}</span>
+                            </span>
+                          ))}
+                          {item.preview.postTargets.length > 2 ? (
+                            <span
+                              title={item.preview.postTargets.slice(2).map((target) => target.name).join(", ")}
+                              className="text-[11px] font-semibold text-slate-400"
+                            >
+                              +{item.preview.postTargets.length - 2}
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">Chưa chọn kênh</span>
+                      )}
+                    </td>
+                  ) : null}
                   <td className="px-4 py-3">
                     {primaryAction && isOpenTargetTransition(primaryAction) ? (
                       <OpenTargetAction
                         queueItem={item as TaskItemQueueItem}
                         taskItemId={item.taskItemId}
                         transition={primaryAction}
-                        className="inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50 px-3 text-xs font-semibold text-violet-700 transition hover:bg-violet-100"
+                        className="inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-violet-200 hover:bg-slate-50 hover:text-violet-700"
                       />
                     ) : primaryAction ? (
                       <button
@@ -318,7 +396,7 @@ export default function FlowItemListView({
                         disabled={isActionPending}
                         onClick={() => runAction(item, primaryAction.actionKey)}
                         title={primaryAction.manualActionLabel}
-                        className="h-8 max-w-36 truncate rounded-lg border border-violet-200 bg-violet-50 px-3 text-xs font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"
+                        className="h-8 max-w-36 truncate rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
                       >
                         {pendingActionId === item.id ? "Đang xử lý..." : primaryAction.manualActionLabel || primaryAction.label}
                       </button>
@@ -327,11 +405,11 @@ export default function FlowItemListView({
                   <td className="px-4 py-3">
                     {item.lastUpdatedBy ? (
                       <div className="flex items-center gap-2">
-                        <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-900 text-[10px] font-bold text-white">
-                          {item.lastUpdatedBy.avatarUrl ? (
-                            <Image src={item.lastUpdatedBy.avatarUrl} alt="" fill sizes="28px" unoptimized className="object-cover" />
-                          ) : item.lastUpdatedBy.isSystem ? "S" : item.lastUpdatedBy.label.slice(0, 1).toUpperCase()}
-                        </span>
+                        <UserAvatar
+                          label={item.lastUpdatedBy.label}
+                          avatarUrl={item.lastUpdatedBy.avatarUrl}
+                          isSystem={item.lastUpdatedBy.isSystem}
+                        />
                         <span className="max-w-36 truncate text-xs font-medium text-slate-700">{item.lastUpdatedBy.label}</span>
                       </div>
                     ) : <span className="text-xs text-slate-400">Hệ thống</span>}

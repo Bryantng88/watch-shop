@@ -1,9 +1,5 @@
-import {
-    CopyObjectCommand,
-    DeleteObjectCommand,
-    HeadObjectCommand,
-} from "@aws-sdk/client-s3";
-import { s3, S3_BUCKET } from "@/server/s3";
+import { mediaStorage } from "@/domains/media/storage";
+import { executeMediaMove } from "@/domains/media/application";
 import { normalizeKey } from "@/server/lib/storage-key";
 
 export type MoveMediaInput = {
@@ -40,27 +36,7 @@ export function splitMediaFilename(filename: string) {
 }
 
 export async function mediaObjectExists(key: string) {
-    const normalized = normalizeKey(key);
-    if (!normalized) return false;
-
-    try {
-        await s3.send(
-            new HeadObjectCommand({
-                Bucket: S3_BUCKET,
-                Key: normalized,
-            })
-        );
-        return true;
-    } catch (error: any) {
-        const statusCode = error?.$metadata?.httpStatusCode;
-        const errorName = error?.name;
-
-        if (statusCode === 404 || errorName === "NotFound" || errorName === "NoSuchKey") {
-            return false;
-        }
-
-        throw error;
-    }
+    return mediaStorage.exists(normalizeKey(key));
 }
 
 export async function buildAvailableMediaKey(baseKey: string) {
@@ -99,28 +75,18 @@ export async function moveMediaObject(input: MoveMediaInput): Promise<MoveMediaR
         };
     }
 
-    await s3.send(
-        new CopyObjectCommand({
-            Bucket: S3_BUCKET,
-            Key: targetKey,
-            CopySource: `${S3_BUCKET}/${sourceKey}`,
-        })
-    );
-
     const shouldDeleteSource = input.deleteSource !== false;
-    if (shouldDeleteSource) {
-        await s3.send(
-            new DeleteObjectCommand({
-                Bucket: S3_BUCKET,
-                Key: sourceKey,
-            })
-        );
-    }
+    await executeMediaMove({
+        idempotencyKey: `legacy-move:${sourceKey}:${targetKey}`,
+        sourceKey,
+        destinationKey: targetKey,
+        deleteSource: shouldDeleteSource,
+    });
 
     return {
         key: targetKey,
         fromKey: sourceKey,
-        copied: true,
-        deleted: shouldDeleteSource,
+        copied: sourceKey !== targetKey,
+        deleted: shouldDeleteSource && sourceKey !== targetKey,
     };
 }

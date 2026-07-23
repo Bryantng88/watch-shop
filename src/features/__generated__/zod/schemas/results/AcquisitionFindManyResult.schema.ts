@@ -14,6 +14,7 @@ export const AcquisitionFindManyResultSchema = z.object({
   notes: z.string().optional(),
   condition: z.string().optional(),
   warrantyUntil: z.date().optional(),
+  audienceSegment: z.unknown(),
   createdAt: z.date(),
   updatedAt: z.date(),
   sentAt: z.date().optional(),

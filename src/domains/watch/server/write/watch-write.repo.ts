@@ -1,4 +1,6 @@
 import {
+  AudienceSegment,
+  MediaPipelineKey,
   WatchSaleStage,
   WatchServiceStage,
   WatchStockStage,
@@ -13,6 +15,8 @@ export async function createWatchDraftRepo(
     productId: string;
     acquisitionId?: string | null;
     gender?: any;
+    audienceSegment?: AudienceSegment;
+    mediaPipelineKey?: MediaPipelineKey;
     siteChannel?: any;
     conditionGrade?: string | null;
     stockStage?: WatchStockStage | null;
@@ -26,6 +30,13 @@ export async function createWatchDraftRepo(
       productId: input.productId,
       acquisitionId: input.acquisitionId ?? null,
       gender: input.gender ?? "MEN",
+      audienceSegment: input.audienceSegment ?? AudienceSegment.MEN,
+      mediaPipelineKey: input.mediaPipelineKey
+        ?? (input.audienceSegment === AudienceSegment.WOMEN
+          ? MediaPipelineKey.WOMEN_LITE
+          : input.audienceSegment === AudienceSegment.UNISEX
+            ? MediaPipelineKey.UNISEX_STANDARD
+            : MediaPipelineKey.MEN_STANDARD),
       siteChannel: input.siteChannel ?? "AFFORDABLE",
       conditionGrade: input.conditionGrade ?? null,
       stockStage: input.stockStage ?? WatchStockStage.IN_STOCK,

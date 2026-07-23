@@ -63,6 +63,10 @@ export { technicalAssessmentsResultSchema } from './technicalAssessments.result'
 export { technicalPartCatalogResultSchema } from './technicalPartCatalog.result';
 export { AcquisitionSpecJobLogResultSchema } from './AcquisitionSpecJobLog.result';
 export { MediaAssetResultSchema } from './MediaAsset.result';
+export { MediaObjectResultSchema } from './MediaObject.result';
+export { MediaBindingResultSchema } from './MediaBinding.result';
+export { MediaOperationResultSchema } from './MediaOperation.result';
+export { MediaLegacyManifestResultSchema } from './MediaLegacyManifest.result';
 export { WorkCaseCategoryResultSchema } from './WorkCaseCategory.result';
 export { WorkCaseResultSchema } from './WorkCase.result';
 export { WorkCaseActivityResultSchema } from './WorkCaseActivity.result';

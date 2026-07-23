@@ -343,6 +343,10 @@ export function buildWatchListBaseWhere(
             : { duplicateConfirmedAt: null },
     ];
 
+    if (input.audienceSegment) {
+        and.push({ audienceSegment: input.audienceSegment });
+    }
+
     if (input.q?.trim()) {
         const q = input.q.trim();
 

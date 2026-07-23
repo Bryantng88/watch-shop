@@ -110,6 +110,7 @@ export function toWatchInventoryQueryInput(
   input: WatchListFilters,
 ): WatchInventoryQueryInput {
   return {
+    audienceSegment: input.audienceSegment,
     view: input.view,
     subFilter: input.subFilter,
     text: clean(input.q),
@@ -143,6 +144,7 @@ export function toWatchListFilters(
   const price = input.price;
 
   return {
+    audienceSegment: input.audienceSegment,
     view: input.view,
     subFilter: input.subFilter,
     q: input.text ?? input.q,

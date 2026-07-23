@@ -24,6 +24,7 @@ const makeSchema = () => z.object({
   capitalizeToProduct: z.literal(true).optional(),
   productType: z.literal(true).optional(),
   productTitle: z.literal(true).optional(),
+  audienceSegment: z.literal(true).optional(),
   updatedAt: z.literal(true).optional()
 }).strict();
 export const AcquisitionItemMaxAggregateInputObjectSchema: z.ZodType<Prisma.AcquisitionItemMaxAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemMaxAggregateInputType>;

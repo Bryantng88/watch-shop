@@ -1,4 +1,4 @@
-import { Prisma, type AcquisitionType } from "@prisma/client";
+import { AudienceSegment, Prisma, type AcquisitionType } from "@prisma/client";
 import { type DB, dbOrTx } from "@/server/db/client";
 
 export type CreateDraftInput = {
@@ -7,6 +7,7 @@ export type CreateDraftInput = {
     type?: AcquisitionType;
     createdAt?: Date;
     notes?: string | null;
+    audienceSegment?: AudienceSegment;
 };
 
 function getDb(tx?: DB) {
@@ -74,6 +75,7 @@ export async function createDraft(tx: DB, input: CreateDraftInput) {
             accquisitionStt: "DRAFT",
             type: input.type ?? "PURCHASE",
             notes: input.notes ?? null,
+            audienceSegment: input.audienceSegment ?? AudienceSegment.MEN,
             totalAmount: new Prisma.Decimal(0),
         },
         select: { id: true },

@@ -7,6 +7,7 @@ export type AcquisitionListView =
     | "cancelled";
 
 export type AcquisitionListFilters = {
+    audienceSegment?: "MEN" | "WOMEN" | "UNISEX";
     /** Legacy tab parameter. New list surfaces should use status. */
     view?: AcquisitionListView;
     q?: string;
@@ -47,6 +48,7 @@ function normalizeView(value?: string): AcquisitionListView {
 }
 
 export function parseAcquisitionListSearchParams(input: {
+    segment?: string;
     view?: string;
     q?: string;
     vendorId?: string;
@@ -57,6 +59,14 @@ export function parseAcquisitionListSearchParams(input: {
     pageSize?: string;
 }): AcquisitionListFilters {
     return {
+        audienceSegment:
+            input.segment?.toUpperCase() === "WOMEN"
+                ? "WOMEN"
+                : input.segment?.toUpperCase() === "MEN"
+                    ? "MEN"
+                    : input.segment?.toUpperCase() === "UNISEX"
+                        ? "UNISEX"
+                        : undefined,
         view: normalizeView(input.view),
         q: input.q?.trim() ?? "",
         vendorId: input.vendorId?.trim() ?? "",

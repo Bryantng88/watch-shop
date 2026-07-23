@@ -7,14 +7,28 @@ import {
     Check,
     CircleDot,
     Clock3,
+    Handshake,
     ImageIcon,
+    Lock,
+    Send,
+    ShoppingCart,
     Wrench,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 export type VisualStatusTone = "slate" | "blue" | "emerald" | "amber" | "rose" | "violet";
-export type VisualStatusIcon = "image" | "success" | "warning" | "service" | "waiting" | "neutral";
+export type VisualStatusIcon =
+    | "image"
+    | "success"
+    | "warning"
+    | "service"
+    | "waiting"
+    | "neutral"
+    | "sale"
+    | "reserved"
+    | "consignment"
+    | "published";
 
 const TONE_CLASSES: Record<VisualStatusTone, { icon: string; detail: string }> = {
     slate: { icon: "border-slate-200 bg-slate-50 text-slate-400", detail: "text-slate-400" },
@@ -32,6 +46,10 @@ const ICONS = {
     service: Wrench,
     waiting: Clock3,
     neutral: CircleDot,
+    sale: ShoppingCart,
+    reserved: Lock,
+    consignment: Handshake,
+    published: Send,
 } satisfies Record<VisualStatusIcon, typeof Check>;
 
 type Props = {
@@ -57,8 +75,8 @@ export function VisualStatusSignal({
     const styles = TONE_CLASSES[tone];
     const content = (
         <>
-            <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-xl border transition group-hover:-translate-y-0.5 group-hover:shadow-sm", styles.icon)}>
-                <Icon aria-hidden="true" className="h-[18px] w-[18px]" strokeWidth={2} />
+            <span className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-lg border transition group-hover:-translate-y-0.5 group-hover:shadow-sm", styles.icon)}>
+                <Icon aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2} />
             </span>
             <span className="min-w-0 text-left">
                 <span className="block truncate text-[13px] font-semibold leading-5 text-slate-800">{label}</span>
@@ -67,7 +85,7 @@ export function VisualStatusSignal({
         </>
     );
     const rootClassName = cn(
-        "group inline-flex min-w-[180px] max-w-[220px] items-center gap-3 rounded-xl",
+        "group inline-flex min-w-[160px] max-w-[210px] items-center gap-2.5 rounded-lg",
         onClick && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
         className,
     );

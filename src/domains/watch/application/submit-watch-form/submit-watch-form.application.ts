@@ -1,13 +1,13 @@
 import { prisma } from "@/server/db/client";
-import { markGalleryMediaAssetsAttached } from "@/domains/media/server";
+import { attachWatchMedia } from "@/domains/media/application";
 import { notifyUsersByRole } from "@/app/(admin)/admin/notifications/notification.service";
 
-import { WatchSpecStatus } from "@prisma/client";
+import { MediaRole, WatchSpecStatus } from "@prisma/client";
 import type { WatchFormValues } from "../../client/form/watch-form.types";
 import { replaceWatchGalleryImagesRepo } from "../../server/media";
 import {
-    moveWatchGalleryImagesToChosen,
-    moveWatchPoolImagesToChosenPool,
+    selectWatchGalleryImages,
+    selectWatchPoolImages,
     releaseRemovedWatchPoolImagesToActive,
     ensureWatchInlineImageFromFirstGallery,
 } from "../../server/media";
@@ -678,12 +678,12 @@ export async function submitWatchFormApplication(
             keepItems: [...remainingPoolImages, ...requestedGalleryImages],
         });
 
-        normalizedGalleryImages = await moveWatchGalleryImagesToChosen(
+        normalizedGalleryImages = await selectWatchGalleryImages(
             requestedGalleryImages,
             { productId, acquisitionId: current.acquisitionId },
         );
 
-        normalizedPoolImages = await moveWatchPoolImagesToChosenPool(
+        normalizedPoolImages = await selectWatchPoolImages(
             remainingPoolImages,
             { productId },
         );
@@ -713,9 +713,13 @@ export async function submitWatchFormApplication(
             images: galleryImageInputs,
         });
 
-        await markGalleryMediaAssetsAttached({
+        await attachWatchMedia({
             productId,
-            images: galleryImageInputs,
+            images: galleryImageInputs.map((image) => ({
+                storageKey: image.fileKey,
+                role: MediaRole.GALLERY,
+                sortOrder: image.sortOrder,
+            })),
         });
         await ensureWatchInlineImageFromFirstGallery({
             productId,

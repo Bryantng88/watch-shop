@@ -27,6 +27,11 @@ function serialize(obj: unknown) {
 }
 function buildWatchListInput(req: NextRequest) {
     const params = req.nextUrl.searchParams;
+    const requestedSegment = firstValue(params, "segment").toUpperCase();
+    const audienceSegment =
+        requestedSegment === "WOMEN" || requestedSegment === "UNISEX"
+            ? requestedSegment
+            : "MEN";
 
     const view = "all" as
         | "draft"
@@ -38,6 +43,7 @@ function buildWatchListInput(req: NextRequest) {
 
     return {
         view,
+        audienceSegment: audienceSegment as "MEN" | "WOMEN" | "UNISEX",
         subFilter: "" as WatchListSubFilter,
 
         q: firstValue(params, "q"),

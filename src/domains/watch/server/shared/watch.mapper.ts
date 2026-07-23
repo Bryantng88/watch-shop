@@ -130,6 +130,8 @@ export function mapAdminWatchListItem(row: any): WatchListComputedItem {
         saleState: row?.saleState ?? null,
         serviceState: row?.serviceState ?? null,
         gender: row?.gender ?? null,
+        audienceSegment: row?.audienceSegment ?? "MEN",
+        mediaPipelineKey: row?.mediaPipelineKey ?? "MEN_STANDARD",
         siteChannel: row?.siteChannel ?? null,
 
         primaryCaseMaterial: row?.watchSpecV2?.primaryCaseMaterial ?? null,

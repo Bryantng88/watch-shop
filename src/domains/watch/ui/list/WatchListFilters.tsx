@@ -47,11 +47,12 @@ const advancedFields: FilterBarField[] = [
         options: [
             { label: "Tất cả", value: "" },
             { label: "Đang chụp", value: "PHOTOSHOOT" },
+            { label: "Có ảnh · Chưa xử lý", value: "MEDIA_READY" },
             { label: "Đang xử lý media", value: "MEDIA_PROCESSING" },
             { label: "Sẵn sàng đăng", value: "READY_TO_PUBLISH" },
             { label: "Đã đăng", value: "POSTED" },
             { label: "Cần xử lý lại", value: "NEEDS_REWORK" },
-            { label: "Chưa có ảnh", value: "NO_IMAGE" },
+            { label: "Chưa gửi photoshoot", value: "NO_IMAGE" },
         ],
     },
     {

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { Prisma, TaskExecutionActionType, TaskExecutionTargetType, TaskStatus, TaskPriority, TaskKind } from "@prisma/client";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
@@ -1307,6 +1308,7 @@ export async function applyQueueItemManualTransitionAction(input: {
       actorUserId,
       actorLabel,
       note: input.note ?? null,
+      deferConsumers: (work) => after(work),
     },
   );
   const serviceDoneMove =

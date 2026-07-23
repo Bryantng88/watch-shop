@@ -1,7 +1,8 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { AcquisitionTypeSchema } from '../enums/AcquisitionType.schema';
-import { AcquisitionStatusSchema } from '../enums/AcquisitionStatus.schema'
+import { AcquisitionStatusSchema } from '../enums/AcquisitionStatus.schema';
+import { AudienceSegmentSchema } from '../enums/AudienceSegment.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -16,6 +17,7 @@ const makeSchema = () => z.object({
   notes: z.string().optional().nullable(),
   condition: z.string().optional().nullable(),
   warrantyUntil: z.coerce.date().optional().nullable(),
+  audienceSegment: AudienceSegmentSchema.optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   sentAt: z.coerce.date().optional().nullable(),

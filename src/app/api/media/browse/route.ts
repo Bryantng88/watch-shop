@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
     try {
         const result = await browseMediaFolder({
             profile: req.nextUrl.searchParams.get("profile"),
+            segment: req.nextUrl.searchParams.get("segment"),
             prefix: req.nextUrl.searchParams.get("prefix"),
             maxKeys: Number(
                 req.nextUrl.searchParams.get("maxKeys") ??

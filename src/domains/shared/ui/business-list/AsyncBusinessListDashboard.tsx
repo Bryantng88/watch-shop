@@ -63,7 +63,9 @@ export default function AsyncBusinessListDashboard({
             })
             .catch((error) => {
                 if (error instanceof DOMException && error.name === "AbortError") return;
-                console.error("[BUSINESS_LIST_DASHBOARD][LOAD_ERROR]", error);
+                if (process.env.NODE_ENV !== "production") {
+                    console.warn("[BUSINESS_LIST_DASHBOARD][LOAD_FALLBACK]", error);
+                }
                 setFailed(true);
             });
 

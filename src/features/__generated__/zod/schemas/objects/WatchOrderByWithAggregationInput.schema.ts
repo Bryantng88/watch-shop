@@ -16,6 +16,8 @@ const makeSchema = () => z.object({
   stockStage: SortOrderSchema.optional(),
   siteChannel: SortOrderSchema.optional(),
   gender: SortOrderSchema.optional(),
+  audienceSegment: SortOrderSchema.optional(),
+  mediaPipelineKey: SortOrderSchema.optional(),
   conditionGrade: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   movementType: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   movementCalibre: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),

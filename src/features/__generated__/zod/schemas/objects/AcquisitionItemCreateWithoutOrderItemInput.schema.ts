@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { AcquisitionItemKindSchema } from '../enums/AcquisitionItemKind.schema';
 import { AcquisitionItemStatusSchema } from '../enums/AcquisitionItemStatus.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
+import { AudienceSegmentSchema } from '../enums/AudienceSegment.schema';
 import { AcquisitionCreateNestedOneWithoutAcquisitionItemInputObjectSchema as AcquisitionCreateNestedOneWithoutAcquisitionItemInputObjectSchema } from './AcquisitionCreateNestedOneWithoutAcquisitionItemInput.schema';
 import { ProductCreateNestedOneWithoutAcquisitionItemInputObjectSchema as ProductCreateNestedOneWithoutAcquisitionItemInputObjectSchema } from './ProductCreateNestedOneWithoutAcquisitionItemInput.schema';
 import { ProductVariantCreateNestedOneWithoutAcquisitionItemInputObjectSchema as ProductVariantCreateNestedOneWithoutAcquisitionItemInputObjectSchema } from './ProductVariantCreateNestedOneWithoutAcquisitionItemInput.schema';
@@ -26,6 +27,7 @@ const makeSchema = () => z.object({
   capitalizeToProduct: z.boolean().optional().nullable(),
   productType: ProductTypeSchema.optional(),
   productTitle: z.string(),
+  audienceSegment: AudienceSegmentSchema.optional(),
   updatedAt: z.coerce.date().optional(),
   acquisition: z.lazy(() => AcquisitionCreateNestedOneWithoutAcquisitionItemInputObjectSchema),
   product: z.lazy(() => ProductCreateNestedOneWithoutAcquisitionItemInputObjectSchema).optional(),

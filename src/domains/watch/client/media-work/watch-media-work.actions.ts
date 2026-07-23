@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { PERMISSIONS } from "@/constants/permissions";
+import { routeWatchesToMedia } from "@/domains/media/pipeline";
 import { ensureCoordinationCycle } from "@/domains/coordination/server";
 import {
   markWatchMediaAssetAttachedFromQueueItem,
   markWatchMediaAssetAttachedFromWatch,
   requestWatchMediaReshootFromQueueItem,
-  requestWatchPhotoshoot,
   saveWatchMediaWorkDraftFromWatch,
 } from "@/domains/watch/server";
 import { requirePermission } from "@/server/auth/requirePermission";
@@ -24,11 +24,11 @@ export async function requestWatchPhotoshootAction(input: {
     date: new Date(),
   });
 
-  const result = await requestWatchPhotoshoot(
+  const result = await routeWatchesToMedia(
     {
       watchIds: input.watchIds,
       actorUserId: user.id,
-      note: input.note ?? null,
+      reason: input.note ?? null,
     },
     prisma,
   );

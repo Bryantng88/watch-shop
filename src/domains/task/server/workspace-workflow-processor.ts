@@ -4,6 +4,7 @@ import {
   completeWatchPhotoshootFromQueueItem,
   completeWatchPublishFromQueueItem,
   recallWatchMediaFromPublishQueueItem,
+  requestWatchMediaReshootFromQueueItem,
 } from "@/domains/watch/server/media-work";
 import type {
   ApplyEventTriggerToQueueItemInput,
@@ -14,6 +15,7 @@ import { applyEventTriggerToQueueItem } from "./business-binding-workflow.servic
 
 type ProcessorEffectType =
   | "watch-photoshoot-completed"
+  | "watch-media-reshoot-requested"
   | "watch-media-ready-for-publish"
   | "watch-media-recalled"
   | "watch-posted";
@@ -47,6 +49,7 @@ type ManualProcessorInput = {
   actorUserId?: string | null;
   actorLabel?: string | null;
   note?: string | null;
+  deferConsumers?: (work: () => Promise<void>) => void;
 };
 
 export type WorkspaceWorkflowEventProcessorResult = {
@@ -162,6 +165,7 @@ export async function processManualWorkspaceWorkflowTransition(
     bindingId: input.bindingId,
     actorUserId: input.actorUserId ?? null,
     note: input.note ?? null,
+    deferConsumers: input.deferConsumers,
   };
 
   if (
@@ -170,6 +174,17 @@ export async function processManualWorkspaceWorkflowTransition(
   ) {
     const result = await recallWatchMediaFromPublishQueueItem(commonInput, db);
     effects.push(effectFromResult({ type: "watch-media-recalled", result }));
+  }
+
+  if (
+    input.transition.workflowKey === "watch-media-processing" &&
+    input.transition.toState === "RETURNED"
+  ) {
+    const result = await requestWatchMediaReshootFromQueueItem({
+      ...commonInput,
+      note: input.note ?? "Trả về Photography từ danh sách Media Processing.",
+    }, db);
+    effects.push(effectFromResult({ type: "watch-media-reshoot-requested", result }));
   }
 
   if (input.transition.toState === "DONE") {

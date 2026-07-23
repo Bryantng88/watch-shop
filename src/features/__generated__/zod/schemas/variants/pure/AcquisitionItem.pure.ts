@@ -3,6 +3,7 @@ import * as z from 'zod';
 import { AcquisitionItemKindSchema } from '../../enums/AcquisitionItemKind.schema';
 import { AcquisitionItemStatusSchema } from '../../enums/AcquisitionItemStatus.schema';
 import { ProductTypeSchema } from '../../enums/ProductType.schema';
+import { AudienceSegmentSchema } from '../../enums/AudienceSegment.schema';
 // prettier-ignore
 export const AcquisitionItemModelSchema = z.object({
     id: z.string(),
@@ -26,6 +27,7 @@ export const AcquisitionItemModelSchema = z.object({
     capitalizeToProduct: z.boolean().nullable(),
     productType: ProductTypeSchema,
     productTitle: z.string(),
+    audienceSegment: AudienceSegmentSchema,
     updatedAt: z.date(),
     acquisition: z.unknown(),
     product: z.unknown().nullable(),

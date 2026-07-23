@@ -109,6 +109,7 @@ async function getCachedCountValue<T>(key: string, loader: () => Promise<T>): Pr
 
 function buildCountCacheKey(name: string, input: NormalizedWatchListInput, extra?: unknown) {
   const baseInput = {
+    audienceSegment: input.audienceSegment ?? "MEN",
     q: input.q ?? "",
     sku: input.sku ?? "",
     brandId: input.brandId ?? "",

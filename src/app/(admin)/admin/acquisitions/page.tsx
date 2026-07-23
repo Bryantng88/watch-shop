@@ -37,6 +37,7 @@ export default async function AcquisitionListPage({
     const resolvedSearchParams = await searchParams;
 
     const input = parseAcquisitionListSearchParams({
+        segment: firstValue(resolvedSearchParams.segment),
         view: firstValue(resolvedSearchParams.view),
         q: firstValue(resolvedSearchParams.q),
         vendorId: firstValue(resolvedSearchParams.vendorId),
@@ -50,7 +51,7 @@ export default async function AcquisitionListPage({
     const [result, vendors, dashboardData] = await Promise.all([
         getAcquisitionListProjection(input),
         getListVendors(),
-        getAcquisitionListDashboard(),
+        getAcquisitionListDashboard(input.audienceSegment),
     ]);
 
     const vendorOptions = (vendors ?? []).map((vendor: any) => ({

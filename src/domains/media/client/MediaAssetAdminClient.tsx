@@ -54,6 +54,24 @@ type MediaDashboard = {
   };
 };
 
+type ReconciliationSummary = {
+  totalLegacyAssets: number;
+  totalManifestRecords: number;
+  remainingToAudit: number;
+  resumeCursor: string | null;
+  totalCanonicalObjects: number;
+  totalBindings: number;
+  groups: Array<{
+    classification: string;
+    decision: string;
+    _count: { _all: number };
+  }>;
+  operations: Array<{
+    status: string;
+    _count: { _all: number };
+  }>;
+};
+
 function cx(...items: Array<string | false | null | undefined>) {
   return items.filter(Boolean).join(" ");
 }
@@ -183,6 +201,8 @@ export default function MediaAssetAdminClient() {
   const progress = useAppProgress();
 
   const [dashboard, setDashboard] = React.useState<MediaDashboard | null>(null);
+  const [reconciliation, setReconciliation] = React.useState<ReconciliationSummary | null>(null);
+  const [manifestCursor, setManifestCursor] = React.useState<string | null>(null);
   const [assets, setAssets] = React.useState<AssetResponse>({
     items: [],
     page: 1,
@@ -203,7 +223,7 @@ export default function MediaAssetAdminClient() {
     setLoading(true);
 
     try {
-      const [dashboardRes, assetsRes] = await Promise.all([
+      const [dashboardRes, assetsRes, reconciliationRes] = await Promise.all([
         fetch("/api/media/assets/dashboard", { cache: "no-store" }),
         fetch(
           buildAssetsUrl({
@@ -215,11 +235,13 @@ export default function MediaAssetAdminClient() {
             missingOnly,
           }),
           { cache: "no-store" }
-        )
+        ),
+        fetch("/api/admin/media/reconciliation/manifest", { cache: "no-store" }),
       ]);
 
       const dashboardJson = await dashboardRes.json().catch(() => ({}));
       const assetsJson = await assetsRes.json().catch(() => ({}));
+      const reconciliationJson = await reconciliationRes.json().catch(() => ({}));
 
       if (!dashboardRes.ok) {
         throw new Error(dashboardJson?.error || "Không tải được media dashboard");
@@ -234,6 +256,11 @@ export default function MediaAssetAdminClient() {
       });
 
       setAssets(normalizeAssets(assetsJson, page));
+      if (reconciliationRes.ok) {
+        const summary = reconciliationJson.data ?? null;
+        setReconciliation(summary);
+        setManifestCursor((current) => current ?? summary?.resumeCursor ?? null);
+      }
     } catch (error) {
       setDashboard({
         stats: normalizeDashboard({}),
@@ -254,6 +281,69 @@ export default function MediaAssetAdminClient() {
       setLoading(false);
     }
   }, [missingOnly, notify, page, prefix, profile, q, status]);
+
+  async function runManifestScan() {
+    progress.show({
+      title: "Đang audit MediaAsset legacy",
+      message: "Chỉ đọc NAS và ghi manifest phân loại; không move hoặc xóa file.",
+    });
+    try {
+      const res = await fetch("/api/admin/media/reconciliation/manifest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cursor: manifestCursor, take: 100 }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) throw new Error(json?.error || "Không thể scan manifest.");
+      setManifestCursor(json.data.nextCursor ?? null);
+      notify.success({
+        title: "Đã audit một batch",
+        message: `Đã phân loại ${json.data.manifestWritten ?? 0} record. ${
+          json.data.nextCursor ? "Còn batch tiếp theo." : "Đã đến cuối danh sách."
+        }`,
+      });
+      await load();
+    } catch (error) {
+      notify.error({
+        title: "Audit thất bại",
+        message: error instanceof Error ? error.message : "Vui lòng thử lại.",
+      });
+    } finally {
+      progress.hide();
+    }
+  }
+
+  async function runCanonicalImport(dryRun: boolean) {
+    progress.show({
+      title: dryRun ? "Đang preview canonical import" : "Đang import media đã xác minh",
+      message: dryRun
+        ? "Không ghi MediaObject/MediaBinding."
+        : "Chỉ đăng ký file hiện hữu; không đổi đường dẫn và không xóa NAS.",
+    });
+    try {
+      const res = await fetch("/api/admin/media/reconciliation/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dryRun, take: 50 }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) throw new Error(json?.error || "Không thể import media.");
+      notify.success({
+        title: dryRun ? "Dry-run hoàn tất" : "Import batch hoàn tất",
+        message: dryRun
+          ? `${json.data.eligible ?? 0}/${json.data.scanned ?? 0} record đủ điều kiện.`
+          : `${json.data.migrated ?? 0} thành công, ${json.data.failed ?? 0} lỗi.`,
+      });
+      await load();
+    } catch (error) {
+      notify.error({
+        title: "Canonical import thất bại",
+        message: error instanceof Error ? error.message : "Vui lòng thử lại.",
+      });
+    } finally {
+      progress.hide();
+    }
+  }
 
   React.useEffect(() => {
     load();
@@ -428,10 +518,10 @@ export default function MediaAssetAdminClient() {
                 Admin / Media
               </div>
               <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">
-                Media Asset Center
+                Media Reconciliation Console
               </h1>
               <p className="mt-2 max-w-3xl text-sm text-slate-500">
-                Quản lý index ảnh trên NAS, trạng thái ACTIVE/CHOSEN/ATTACHED/MISSING và quan hệ ảnh với watch.
+                Đối chiếu legacy MediaAsset với NAS và chuyển có kiểm soát sang Media Core chuẩn.
               </p>
             </div>
 
@@ -439,40 +529,20 @@ export default function MediaAssetAdminClient() {
               <div className="flex flex-wrap justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => runReconcile()}
+                  onClick={runManifestScan}
                   className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   <ServerCrash className="h-4 w-4" />
-                  Check NAS
+                  {manifestCursor ? "Scan batch tiếp" : "Bắt đầu audit"}
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => runOrganizeActive()}
+                  onClick={() => runCanonicalImport(true)}
                   className="inline-flex items-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
                 >
                   <ImageIcon className="h-4 w-4" />
-                  Organize active
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => runRebuild(true)}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Rebuild index
-                </button>
-              </div>
-
-              <div className="flex flex-wrap justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => runMigrateChosen(true)}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-100"
-                >
-                  <ImageIcon className="h-4 w-4" />
-                  Check chosen
+                  Preview import
                 </button>
 
                 <button
@@ -480,18 +550,49 @@ export default function MediaAssetAdminClient() {
                   onClick={() => {
                     if (
                       window.confirm(
-                        "Migrate chosen sẽ move file trên NAS và update ProductImage.fileKey. Bạn chắc chắn muốn chạy?"
+                        "Import 50 record đã xác minh sang Media Core? Thao tác không move hoặc xóa file NAS.",
                       )
                     ) {
-                      runMigrateChosen(false);
+                      void runCanonicalImport(false);
                     }
                   }}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100"
+                  className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
                 >
-                  <ImageIcon className="h-4 w-4" />
-                  Migrate chosen
+                  <RefreshCw className="h-4 w-4" />
+                  Import batch
                 </button>
               </div>
+
+              <details className="hidden" aria-hidden="true">
+                <summary className="cursor-pointer text-xs font-semibold text-slate-400">
+                  Công cụ legacy
+                </summary>
+                <div className="mt-2 flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => runReconcile()}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-100"
+                >
+                  <ImageIcon className="h-4 w-4" />
+                  Check NAS legacy
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => runMigrateChosen(true)}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-600"
+                >
+                  <ImageIcon className="h-4 w-4" />
+                  Dry-run chosen
+                </button>
+                <button type="button" disabled onClick={runOrganizeActive} className="hidden">
+                  Organize deprecated
+                </button>
+                <button type="button" disabled onClick={() => runRebuild(true)} className="hidden">
+                  Rebuild deprecated
+                </button>
+                </div>
+              </details>
             </div>
           </div>
         </div>
@@ -520,6 +621,37 @@ export default function MediaAssetAdminClient() {
             label="Missing"
             value={stats.missingCount ?? 0}
             hint="DB có nhưng NAS thiếu"
+          />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-4">
+          <StatCard
+            icon={<RefreshCw className="h-5 w-5" />}
+            label="Audit progress"
+            value={`${reconciliation?.totalManifestRecords ?? 0}/${reconciliation?.totalLegacyAssets ?? 0}`}
+            hint={`${reconciliation?.remainingToAudit ?? 0} legacy record còn lại`}
+          />
+          <StatCard
+            icon={<Database className="h-5 w-5" />}
+            label="Canonical objects"
+            value={reconciliation?.totalCanonicalObjects ?? 0}
+            hint="File đã đăng ký trong Media Core"
+          />
+          <StatCard
+            icon={<ImageIcon className="h-5 w-5" />}
+            label="Canonical bindings"
+            value={reconciliation?.totalBindings ?? 0}
+            hint="Quan hệ asset với Watch/Acquisition"
+          />
+          <StatCard
+            icon={<AlertTriangle className="h-5 w-5" />}
+            label="Quarantine"
+            value={
+              reconciliation?.groups
+                ?.filter((item) => item.decision === "QUARANTINE")
+                .reduce((sum, item) => sum + Number(item._count?._all ?? 0), 0) ?? 0
+            }
+            hint="Không tự động migrate"
           />
         </div>
 

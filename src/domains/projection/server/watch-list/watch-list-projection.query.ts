@@ -135,16 +135,13 @@ function jsonNumber(path: string) {
 function projectionMediaCondition(status: string) {
   switch (status) {
     case "POSTED":
-      return Prisma.sql`(${jsonText("mediaStatus")} = 'POSTED' OR ${jsonBool("isPosted")} = true)`;
     case "NO_IMAGE":
     case "PHOTOSHOOT":
-      return Prisma.sql`(${jsonText("mediaStatus")} = ${status} OR ${jsonBool("hasImages")} = false)`;
+    case "MEDIA_READY":
     case "READY_TO_PUBLISH":
-      return Prisma.sql`(${jsonText("mediaStatus")} = 'READY_TO_PUBLISH' OR (${jsonBool("isPosted")} = false AND ${jsonText("reviewStatus")} = 'APPROVED'))`;
     case "MEDIA_PROCESSING":
-      return Prisma.sql`(${jsonText("mediaStatus")} = 'MEDIA_PROCESSING' OR (${jsonBool("hasImages")} = true AND ${jsonBool("isPosted")} = false))`;
     case "NEEDS_REWORK":
-      return Prisma.sql`${jsonText("mediaStatus")} = 'NEEDS_REWORK'`;
+      return Prisma.sql`${jsonText("mediaStatus")} = ${status}`;
     default:
       return null;
   }
@@ -259,6 +256,11 @@ function filterConditions(input: NormalizedProjectionInput) {
   if (quickFilterCondition) conditions.push(quickFilterCondition);
   if (clean(input.brandId)) conditions.push(Prisma.sql`${jsonText("brandId")} = ${clean(input.brandId)}`);
   if (clean(input.vendorId)) conditions.push(Prisma.sql`${jsonText("vendorId")} = ${clean(input.vendorId)}`);
+  if (clean(input.audienceSegment)) {
+    conditions.push(
+      Prisma.sql`COALESCE(${jsonText("audienceSegment")}, 'MEN') = ${clean(input.audienceSegment).toUpperCase()}`,
+    );
+  }
   if (clean(input.q)) conditions.push(Prisma.sql`"searchText" ILIKE ${`%${clean(input.q).toLowerCase()}%`}`);
   if (clean(input.sku)) conditions.push(Prisma.sql`"searchText" ILIKE ${`%${clean(input.sku).toLowerCase()}%`}`);
 
@@ -378,6 +380,7 @@ async function viewCounts(db: DB, input: NormalizedProjectionInput): Promise<Wat
         AND (${clean(input.sku)}::text = '' OR "searchText" ILIKE ${`%${clean(input.sku).toLowerCase()}%`})
         AND (${clean(input.brandId)}::text = '' OR ${jsonText("brandId")} = ${clean(input.brandId)})
         AND (${clean(input.vendorId)}::text = '' OR ${jsonText("vendorId")} = ${clean(input.vendorId)})
+        AND COALESCE(${jsonText("audienceSegment")}, 'MEN') = ${clean(input.audienceSegment || "MEN").toUpperCase()}
       GROUP BY "status"
     `,
   );

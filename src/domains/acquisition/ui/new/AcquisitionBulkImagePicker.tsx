@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Folder, Image as ImageIcon, RefreshCw, X } from "lucide-react";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import type { AcquisitionPreparedImage } from "../../client/form/acquisition-form.types";
+import { mediaSourceRoot } from "@/domains/media/core/media-source-path";
 
 type BrowseFolder = { prefix: string };
 type BrowseFile = { key: string; url: string };
@@ -19,6 +20,7 @@ type BrowseResponse = {
 type Props = {
     onImport: (images: AcquisitionPreparedImage[]) => void;
     disabled?: boolean;
+    audienceSegment?: "MEN" | "WOMEN";
 };
 
 function nameFromKey(key: string) {
@@ -32,13 +34,17 @@ function parentPrefix(prefix: string, root: string) {
     return parts.join("/") || root;
 }
 
-export default function AcquisitionBulkImagePicker({ onImport, disabled }: Props) {
+export default function AcquisitionBulkImagePicker({
+    onImport,
+    disabled,
+    audienceSegment = "MEN",
+}: Props) {
     const notify = useNotify();
 
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<BrowseResponse | null>(null);
-    const [prefix, setPrefix] = useState("products/inline/active");
+    const [prefix, setPrefix] = useState(() => mediaSourceRoot(audienceSegment, "inline"));
     const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
 
     async function load(nextPrefix?: string) {
@@ -47,7 +53,7 @@ export default function AcquisitionBulkImagePicker({ onImport, disabled }: Props
 
         try {
             const res = await fetch(
-                `/api/media/browse?profile=inline&prefix=${encodeURIComponent(target)}`,
+                `/api/media/browse?profile=inline&segment=${audienceSegment}&prefix=${encodeURIComponent(target)}`,
                 { cache: "no-store" },
             );
 
@@ -72,6 +78,12 @@ export default function AcquisitionBulkImagePicker({ onImport, disabled }: Props
         void load(prefix);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
+
+    useEffect(() => {
+        setData(null);
+        setSelectedKeys([]);
+        setPrefix(mediaSourceRoot(audienceSegment, "inline"));
+    }, [audienceSegment]);
 
     function toggleKey(key: string) {
         setSelectedKeys((prev) =>
@@ -106,11 +118,11 @@ export default function AcquisitionBulkImagePicker({ onImport, disabled }: Props
         setSelectedKeys([]);
         setOpen(false);
         setData(null);
-        setPrefix("products/inline/active");
+        setPrefix(mediaSourceRoot(audienceSegment, "inline"));
     }
 
     const currentPrefix = data?.prefix || prefix;
-    const root = data?.root || "products/inline/active";
+    const root = data?.root || mediaSourceRoot(audienceSegment, "inline");
     const folders = data?.folders || [];
     const files = data?.files || [];
 

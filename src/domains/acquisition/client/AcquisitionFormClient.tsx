@@ -254,9 +254,10 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
     );
     const [currency, setCurrency] = useState("VND");
     const [type, setType] = useState("PURCHASE");
+    const [audienceSegment, setAudienceSegment] = useState<"MEN" | "WOMEN">("MEN");
     const [notes, setNotes] = useState("");
     const [watchLines, setWatchLines] = useState<AcquisitionWatchLine[]>([
-        createEmptyWatchLine(),
+        createEmptyWatchLine("MEN"),
     ]);
     const [submitting, setSubmitting] = useState(false);
 
@@ -284,8 +285,9 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
         setCreatedAt(toLocalDateTimeInputValue(new Date()));
         setCurrency("VND");
         setType("PURCHASE");
+        setAudienceSegment("MEN");
         setNotes("");
-        setWatchLines([createEmptyWatchLine()]);
+        setWatchLines([createEmptyWatchLine("MEN")]);
     }
 
     function updateLine(id: string, next: AcquisitionWatchLine) {
@@ -295,16 +297,23 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
     function removeLine(id: string) {
         setWatchLines((prev) => {
             const next = prev.filter((line) => line.id !== id);
-            return next.length ? next : [createEmptyWatchLine()];
+            return next.length ? next : [createEmptyWatchLine(audienceSegment)];
         });
     }
 
     function addWatchLine() {
-        setWatchLines((prev) => [...prev, createEmptyWatchLine()]);
+        setWatchLines((prev) => [...prev, createEmptyWatchLine(audienceSegment)]);
     }
 
     function importPreparedImages(images: AcquisitionPreparedImage[]) {
-        setWatchLines((prev) => applyPreparedImagesTopDown(prev, images));
+        setWatchLines((prev) => applyPreparedImagesTopDown(prev, images, audienceSegment));
+    }
+
+    function applyAudienceSegmentToAll(segment: "MEN" | "WOMEN") {
+        setAudienceSegment(segment);
+        setWatchLines((prev) =>
+            prev.map((line) => ({ ...line, audienceSegment: segment })),
+        );
     }
 
     async function postCreatedAcquisition(acquisitionId: string) {
@@ -374,6 +383,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
 
         try {
             const result = await submitInlineAcquisition({
+                audienceSegment,
                 vendorId,
                 createdAt: new Date(createdAt).toISOString(),
                 currency,
@@ -405,12 +415,28 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
 
             if (shouldPost) {
                 await postCreatedAcquisition(acquisitionId);
-                notify.success({
+                progress.hide();
+
+                const goToWatchList = await dialog.confirm({
                     title: "Da duyet phieu nhap",
-                    message: "Watch moi da duoc tao va Watch List projection se cap nhat.",
+                    message:
+                        "Watch moi da duoc tao. Ban muon qua danh sach Watch de kiem tra, hay tao mot phieu nhap moi?",
+                    confirmText: "Qua danh sach Watch",
+                    cancelText: "Tao phieu moi",
+                    tone: "success",
                 });
-                router.push(`/admin/acquisitions/${acquisitionId}`);
-                router.refresh();
+
+                if (goToWatchList) {
+                    router.push(`/admin/watches?segment=${audienceSegment}`);
+                    router.refresh();
+                    return;
+                }
+
+                resetForm();
+                notify.success({
+                    title: "San sang tao phieu moi",
+                    message: "Form da duoc lam moi.",
+                });
                 return;
             }
 
@@ -504,6 +530,31 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
                         />
 
                         <div className="grid grid-cols-1 gap-5 p-5 md:grid-cols-2">
+                            <div className="md:col-span-2">
+                                <label className="mb-2 block text-sm font-semibold text-slate-900">
+                                    Giới tính mặc định
+                                </label>
+                                <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+                                    {(["MEN", "WOMEN"] as const).map((segment) => (
+                                        <button
+                                            key={segment}
+                                            type="button"
+                                            disabled={submitting}
+                                            onClick={() => applyAudienceSegmentToAll(segment)}
+                                            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                                                audienceSegment === segment
+                                                    ? "bg-white text-violet-700 shadow-sm"
+                                                    : "text-slate-500 hover:text-slate-800"
+                                            }`}
+                                        >
+                                            {segment === "MEN" ? "Nam" : "Nữ"}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="mt-2 text-xs text-slate-500">
+                                    Áp dụng cho toàn bộ danh sách. Bạn vẫn có thể đổi riêng từng dòng.
+                                </p>
+                            </div>
                             <VendorQuickField
                                 value={vendorId}
                                 vendors={vendors}
@@ -586,6 +637,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
                                     <AcquisitionBulkImagePicker
                                         onImport={importPreparedImages}
                                         disabled={submitting}
+                                        audienceSegment={audienceSegment}
                                     />
                                     <button
                                         type="button"

@@ -33,6 +33,8 @@ type CreatedWatchEvent = {
     watchId: string;
     productId: string;
     saleStage: "DRAFT";
+    audienceSegment: "MEN" | "WOMEN" | "UNISEX";
+    mediaPipelineKey: "MEN_STANDARD" | "WOMEN_LITE" | "UNISEX_STANDARD";
 };
 
 async function resolveVendorIdForPosting(
@@ -95,6 +97,7 @@ export async function postAcquisitionApplication(
         async (tx) => {
             for (const [index, item] of items.entries()) {
                 let productId = item.productId;
+                const audienceSegment = item.audienceSegment ?? acq.audienceSegment;
 
                 if (!productId) {
                     const draft = await repoAcq.createWatchDraftForAcquisitionItem(tx as any, {
@@ -104,6 +107,7 @@ export async function postAcquisitionApplication(
                         title: item.productTitle ?? "Watch draft",
                         unitCost: Number(item.unitCost ?? 0),
                         salePrice: getPricingFromDescription(item.description)?.proposedSalePrice ?? null,
+                        audienceSegment,
                     });
 
                     productId = draft.productId;
@@ -114,6 +118,13 @@ export async function postAcquisitionApplication(
                         watchId: draft.watchId,
                         productId: draft.productId,
                         saleStage: "DRAFT",
+                        audienceSegment,
+                        mediaPipelineKey:
+                            audienceSegment === "WOMEN"
+                                ? "WOMEN_LITE"
+                                : audienceSegment === "UNISEX"
+                                    ? "UNISEX_STANDARD"
+                                    : "MEN_STANDARD",
                     });
 
                     const inlineImage = pickFirstAcquisitionInlineImage(
@@ -192,6 +203,8 @@ export async function postAcquisitionApplication(
                 id: event.watchId,
                 productId: event.productId,
                 saleStage: event.saleStage,
+                audienceSegment: event.audienceSegment,
+                mediaPipelineKey: event.mediaPipelineKey,
             },
             acquisitionId: event.acquisitionId,
             acquisitionItemId: event.acquisitionItemId,

@@ -12,6 +12,10 @@ import { WatchSiteChannelSchema } from '../enums/WatchSiteChannel.schema';
 import { EnumWatchSiteChannelFieldUpdateOperationsInputObjectSchema as EnumWatchSiteChannelFieldUpdateOperationsInputObjectSchema } from './EnumWatchSiteChannelFieldUpdateOperationsInput.schema';
 import { GenderSchema } from '../enums/Gender.schema';
 import { EnumGenderFieldUpdateOperationsInputObjectSchema as EnumGenderFieldUpdateOperationsInputObjectSchema } from './EnumGenderFieldUpdateOperationsInput.schema';
+import { AudienceSegmentSchema } from '../enums/AudienceSegment.schema';
+import { EnumAudienceSegmentFieldUpdateOperationsInputObjectSchema as EnumAudienceSegmentFieldUpdateOperationsInputObjectSchema } from './EnumAudienceSegmentFieldUpdateOperationsInput.schema';
+import { MediaPipelineKeySchema } from '../enums/MediaPipelineKey.schema';
+import { EnumMediaPipelineKeyFieldUpdateOperationsInputObjectSchema as EnumMediaPipelineKeyFieldUpdateOperationsInputObjectSchema } from './EnumMediaPipelineKeyFieldUpdateOperationsInput.schema';
 import { MovementTypeSchema } from '../enums/MovementType.schema';
 import { NullableEnumMovementTypeFieldUpdateOperationsInputObjectSchema as NullableEnumMovementTypeFieldUpdateOperationsInputObjectSchema } from './NullableEnumMovementTypeFieldUpdateOperationsInput.schema';
 import { WatchStyleSchema } from '../enums/WatchStyle.schema';
@@ -32,6 +36,8 @@ const makeSchema = () => z.object({
   stockStage: z.union([WatchStockStageSchema, z.lazy(() => EnumWatchStockStageFieldUpdateOperationsInputObjectSchema)]).optional(),
   siteChannel: z.union([WatchSiteChannelSchema, z.lazy(() => EnumWatchSiteChannelFieldUpdateOperationsInputObjectSchema)]).optional(),
   gender: z.union([GenderSchema, z.lazy(() => EnumGenderFieldUpdateOperationsInputObjectSchema)]).optional(),
+  audienceSegment: z.union([AudienceSegmentSchema, z.lazy(() => EnumAudienceSegmentFieldUpdateOperationsInputObjectSchema)]).optional(),
+  mediaPipelineKey: z.union([MediaPipelineKeySchema, z.lazy(() => EnumMediaPipelineKeyFieldUpdateOperationsInputObjectSchema)]).optional(),
   conditionGrade: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   movementType: z.union([MovementTypeSchema, z.lazy(() => NullableEnumMovementTypeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   movementCalibre: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),

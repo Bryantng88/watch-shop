@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, RotateCcw, Settings2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, RotateCcw, X } from "lucide-react";
 
 import { DashboardWidgetGrid } from "@/domains/shared/ui/dashboard";
 import type {
@@ -10,6 +10,7 @@ import type {
     BusinessListDashboardWidgetKey,
 } from "./business-list.types";
 import { BUSINESS_LIST_DASHBOARD_WIDGET_REGISTRY } from "./widgets/BusinessListDashboardWidgets";
+import DashboardCustomizeButton from "./DashboardCustomizeButton";
 
 const defaultWidgets: BusinessListDashboardWidgetKey[] = [
     "overview",
@@ -177,14 +178,7 @@ export default function BusinessListDashboard({
                     </select>
                     ) : null}
                     {storageKey && showCustomizationTrigger ? (
-                        <button
-                            type="button"
-                            onClick={openCustomization}
-                            className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-                        >
-                            <Settings2 className="h-4 w-4" />
-                            Tùy chỉnh dashboard
-                        </button>
+                        <DashboardCustomizeButton onClick={openCustomization} />
                     ) : null}
 
                     {customizing ? (

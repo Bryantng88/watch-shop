@@ -2,6 +2,7 @@ import * as z from 'zod';
 
 import { AcquisitionTypeSchema } from '../../enums/AcquisitionType.schema';
 import { AcquisitionStatusSchema } from '../../enums/AcquisitionStatus.schema';
+import { AudienceSegmentSchema } from '../../enums/AudienceSegment.schema';
 // prettier-ignore
 export const AcquisitionInputSchema = z.object({
     id: z.string(),
@@ -17,6 +18,7 @@ export const AcquisitionInputSchema = z.object({
     notes: z.string().optional().nullable(),
     condition: z.string().optional().nullable(),
     warrantyUntil: z.date().optional().nullable(),
+    audienceSegment: AudienceSegmentSchema,
     createdAt: z.date(),
     updatedAt: z.date(),
     sentAt: z.date().optional().nullable(),

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { mediaSourceRoot } from "@/domains/media/core/media-source-path";
 import {
     Check,
     ChevronLeft,
@@ -44,6 +45,7 @@ type Props = {
     onSelect?: (fileKey: string) => void;
     onSubmit?: (fileKeys: string[]) => void;
     profile?: SharedMediaProfile;
+    audienceSegment?: "MEN" | "WOMEN";
     selectedKey?: string | null;
     selectedKeys?: string[];
     disabledKeys?: string[];
@@ -59,7 +61,13 @@ function cx(...classes: Array<string | false | null | undefined>) {
     return classes.filter(Boolean).join(" ");
 }
 
-function getRootPrefix(profile: SharedMediaProfile) {
+function getRootPrefix(
+    profile: SharedMediaProfile,
+    audienceSegment?: "MEN" | "WOMEN",
+) {
+    if (audienceSegment && (profile === "inline" || profile === "edit")) {
+        return mediaSourceRoot(audienceSegment, profile);
+    }
     switch (profile) {
         case "edit":
             return "products/edit/active";
@@ -124,6 +132,7 @@ export default function MediaBrowserDialog({
     onSubmit,
     contextImage,
     profile = "inline",
+    audienceSegment,
     selectedKey,
     selectedKeys = [],
     disabledKeys = [],
@@ -140,11 +149,16 @@ export default function MediaBrowserDialog({
     const [internalSelectedKeys, setInternalSelectedKeys] = React.useState<
         string[]
     >([]);
-    const [prefix, setPrefix] = React.useState<string>(getRootPrefix(profile));
+    const [prefix, setPrefix] = React.useState<string>(
+        getRootPrefix(profile, audienceSegment),
+    );
     const [nextCursor, setNextCursor] = React.useState<string | null>(null);
     const [hasMore, setHasMore] = React.useState(false);
     const [totalCount, setTotalCount] = React.useState(0);
-    const rootPrefix = React.useMemo(() => getRootPrefix(profile), [profile]);
+    const rootPrefix = React.useMemo(
+        () => getRootPrefix(profile, audienceSegment),
+        [audienceSegment, profile],
+    );
     const profileLabel = getLabel(profile);
     const disabledKeySet = React.useMemo(
         () => new Set(disabledKeys.map((key) => String(key).trim()).filter(Boolean)),
@@ -162,12 +176,12 @@ export default function MediaBrowserDialog({
     }, [open, selectedKeys]);
 
     React.useEffect(() => {
-        setPrefix(getRootPrefix(profile));
+        setPrefix(getRootPrefix(profile, audienceSegment));
         setItems([]);
         setFolders([]);
         setError(null);
         resetPagination();
-    }, [profile, resetPagination]);
+    }, [audienceSegment, profile, resetPagination]);
 
     React.useEffect(() => {
         if (!open) return;
@@ -175,9 +189,9 @@ export default function MediaBrowserDialog({
         let cancelled = false;
 
         async function resolveInitialPrefix() {
-            const fallbackRoot = getRootPrefix(profile);
+            const fallbackRoot = getRootPrefix(profile, audienceSegment);
 
-            if (profile !== "edit") {
+            if (profile !== "edit" || audienceSegment) {
                 setPrefix(fallbackRoot);
                 resetPagination();
                 return;
@@ -206,7 +220,7 @@ export default function MediaBrowserDialog({
         return () => {
             cancelled = true;
         };
-    }, [open, profile, resetPagination]);
+    }, [audienceSegment, open, profile, resetPagination]);
 
     const helpText =
         description ??
@@ -226,6 +240,7 @@ export default function MediaBrowserDialog({
                     maxKeys: "1000",
                     _t: String(Date.now()),
                 });
+                if (audienceSegment) qs.set("segment", audienceSegment);
 
                 if (mode === "more" && cursor) {
                     qs.set("cursor", cursor);
@@ -291,7 +306,7 @@ export default function MediaBrowserDialog({
                 setLoading(false);
             }
         },
-        [profile, prefix]
+        [audienceSegment, profile, prefix]
     );
 
     React.useEffect(() => {

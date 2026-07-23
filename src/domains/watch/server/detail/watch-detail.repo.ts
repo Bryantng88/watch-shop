@@ -94,6 +94,8 @@ export async function getAdminWatchMediaEditDetail(db: DB, productId: string) {
       productId: true,
       acquisitionId: true,
       gender: true,
+      audienceSegment: true,
+      mediaPipelineKey: true,
       siteChannel: true,
       stockStage: true,
       saleStage: true,

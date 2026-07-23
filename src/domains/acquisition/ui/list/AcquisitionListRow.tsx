@@ -206,7 +206,7 @@ export default function AcquisitionListRow({
                         {
                             key: "view",
                             label: "Xem chi tiết",
-                            href: `/admin/acquisitions/${item.id}`,
+                            href: `/admin/acquisitions/${item.id}/edit`,
                             icon: "view",
                         },
                         {

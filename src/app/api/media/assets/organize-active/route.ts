@@ -1,26 +1,14 @@
 import { NextResponse } from "next/server";
-import { organizeActiveMedia } from "@/domains/media/server";
 
 export const dynamic = "force-dynamic";
 
 export async function POST() {
-    try {
-        const result = await organizeActiveMedia();
-
-        return NextResponse.json({
-            success: true,
-            ...result,
-        });
-    } catch (error) {
-        return NextResponse.json(
-            {
-                success: false,
-                error:
-                    error instanceof Error
-                        ? error.message
-                        : "Không thể organize active.",
-            },
-            { status: 500 }
-        );
-    }
+  return NextResponse.json(
+    {
+      success: false,
+      code: "LEGACY_MEDIA_WRITE_RETIRED",
+      error: "Organize active legacy đã ngừng; Media Core không move file theo trạng thái.",
+    },
+    { status: 410 },
+  );
 }

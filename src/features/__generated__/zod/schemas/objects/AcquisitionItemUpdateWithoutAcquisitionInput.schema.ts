@@ -14,6 +14,8 @@ import { NullableIntFieldUpdateOperationsInputObjectSchema as NullableIntFieldUp
 import { NullableBoolFieldUpdateOperationsInputObjectSchema as NullableBoolFieldUpdateOperationsInputObjectSchema } from './NullableBoolFieldUpdateOperationsInput.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
 import { EnumProductTypeFieldUpdateOperationsInputObjectSchema as EnumProductTypeFieldUpdateOperationsInputObjectSchema } from './EnumProductTypeFieldUpdateOperationsInput.schema';
+import { AudienceSegmentSchema } from '../enums/AudienceSegment.schema';
+import { EnumAudienceSegmentFieldUpdateOperationsInputObjectSchema as EnumAudienceSegmentFieldUpdateOperationsInputObjectSchema } from './EnumAudienceSegmentFieldUpdateOperationsInput.schema';
 import { ProductUpdateOneWithoutAcquisitionItemNestedInputObjectSchema as ProductUpdateOneWithoutAcquisitionItemNestedInputObjectSchema } from './ProductUpdateOneWithoutAcquisitionItemNestedInput.schema';
 import { OrderItemUpdateOneWithoutAcquisitionItemNestedInputObjectSchema as OrderItemUpdateOneWithoutAcquisitionItemNestedInputObjectSchema } from './OrderItemUpdateOneWithoutAcquisitionItemNestedInput.schema';
 import { ProductVariantUpdateOneWithoutAcquisitionItemNestedInputObjectSchema as ProductVariantUpdateOneWithoutAcquisitionItemNestedInputObjectSchema } from './ProductVariantUpdateOneWithoutAcquisitionItemNestedInput.schema';
@@ -37,6 +39,7 @@ const makeSchema = () => z.object({
   capitalizeToProduct: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   productType: z.union([ProductTypeSchema, z.lazy(() => EnumProductTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
   productTitle: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  audienceSegment: z.union([AudienceSegmentSchema, z.lazy(() => EnumAudienceSegmentFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   product: z.lazy(() => ProductUpdateOneWithoutAcquisitionItemNestedInputObjectSchema).optional(),
   orderItem: z.lazy(() => OrderItemUpdateOneWithoutAcquisitionItemNestedInputObjectSchema).optional(),

@@ -13,6 +13,8 @@ const WATCH_LIST_SOURCE_SELECT = {
   saleStage: true,
   serviceStage: true,
   stockStage: true,
+  audienceSegment: true,
+  mediaPipelineKey: true,
   conditionGrade: true,
   specStatus: true,
   isContentDownloaded: true,

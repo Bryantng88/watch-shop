@@ -9,6 +9,8 @@ export const WatchAggregateResultSchema = z.object({  _count: z.object({
     stockStage: z.number(),
     siteChannel: z.number(),
     gender: z.number(),
+    audienceSegment: z.number(),
+    mediaPipelineKey: z.number(),
     conditionGrade: z.number(),
     movementType: z.number(),
     movementCalibre: z.number(),

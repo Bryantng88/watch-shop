@@ -16,6 +16,7 @@ const makeSchema = () => z.object({
   notes: z.literal(true).optional(),
   condition: z.literal(true).optional(),
   warrantyUntil: z.literal(true).optional(),
+  audienceSegment: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
   sentAt: z.literal(true).optional(),

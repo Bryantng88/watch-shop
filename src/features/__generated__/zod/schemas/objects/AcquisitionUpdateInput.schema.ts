@@ -9,6 +9,8 @@ import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringF
 import { AcquisitionStatusSchema } from '../enums/AcquisitionStatus.schema';
 import { EnumAcquisitionStatusFieldUpdateOperationsInputObjectSchema as EnumAcquisitionStatusFieldUpdateOperationsInputObjectSchema } from './EnumAcquisitionStatusFieldUpdateOperationsInput.schema';
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
+import { AudienceSegmentSchema } from '../enums/AudienceSegment.schema';
+import { EnumAudienceSegmentFieldUpdateOperationsInputObjectSchema as EnumAudienceSegmentFieldUpdateOperationsInputObjectSchema } from './EnumAudienceSegmentFieldUpdateOperationsInput.schema';
 import { CustomerUpdateOneWithoutAcquisitionNestedInputObjectSchema as CustomerUpdateOneWithoutAcquisitionNestedInputObjectSchema } from './CustomerUpdateOneWithoutAcquisitionNestedInput.schema';
 import { VendorUpdateOneWithoutAcquisitionNestedInputObjectSchema as VendorUpdateOneWithoutAcquisitionNestedInputObjectSchema } from './VendorUpdateOneWithoutAcquisitionNestedInput.schema';
 import { AcquisitionItemUpdateManyWithoutAcquisitionNestedInputObjectSchema as AcquisitionItemUpdateManyWithoutAcquisitionNestedInputObjectSchema } from './AcquisitionItemUpdateManyWithoutAcquisitionNestedInput.schema';
@@ -27,6 +29,7 @@ const makeSchema = () => z.object({
   notes: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   condition: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   warrantyUntil: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  audienceSegment: z.union([AudienceSegmentSchema, z.lazy(() => EnumAudienceSegmentFieldUpdateOperationsInputObjectSchema)]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   sentAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),

@@ -24,14 +24,19 @@ export async function GET(request: NextRequest) {
       ? requestedContext as CoordinationContext
       : "OPERATION";
     const cashPeriod = request.nextUrl.searchParams.get("cashPeriod") ?? "WEEK";
+    const flowItemsOnly = request.nextUrl.searchParams.get("includeFlowItems") === "1";
     const data = await getCoordinationDashboard({
       context,
       modeKey,
       date,
       auth,
       includeDashboardDetails: true,
-      includeTechnicalBoard: modeKey === "technical-issue-flow",
-      includeMediaBoard: modeKey === "media-production-flow",
+      includeTechnicalBoard: !flowItemsOnly && modeKey === "technical-issue-flow",
+      includeMediaBoard: !flowItemsOnly && modeKey === "media-production-flow",
+      includeFlowItems: flowItemsOnly,
+      includeManagementDetails: false,
+      includeWorkspaceSummaries: !flowItemsOnly,
+      reconcileBindings: false,
     });
     const flow = data.viewConfig.modes.find((mode) => mode.key === modeKey);
     const scopeLabel = data.viewConfig.coreFlows?.find(
@@ -100,6 +105,7 @@ export async function GET(request: NextRequest) {
       technicalIssueBoardItemCount: data.technicalIssueBoard?.items.length ?? 0,
       mediaBoard: data.mediaBoard,
       mediaBoardItemCount: data.mediaBoard?.items.length ?? 0,
+      flowItems: flowItemsOnly ? data.flowItems : undefined,
     }, {
       headers: { "Cache-Control": "no-store, max-age=0" },
     });

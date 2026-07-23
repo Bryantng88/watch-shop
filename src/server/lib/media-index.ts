@@ -1,6 +1,5 @@
-import { ListObjectsV2Command } from "@aws-sdk/client-s3";
+import { mediaStorage } from "@/domains/media/storage";
 import { prisma } from "@/server/db/client";
-import { s3, S3_BUCKET } from "@/server/s3";
 import {
     type MediaProfile,
     getProfileRoot,
@@ -92,31 +91,28 @@ export async function syncMediaIndexByPrefix(prefix: string) {
     let count = 0;
 
     do {
-        const result = await s3.send(
-            new ListObjectsV2Command({
-                Bucket: S3_BUCKET,
-                Prefix: `${root}/`,
-                MaxKeys: 1000,
-                ContinuationToken: continuationToken,
-            })
-        );
+        const result = await mediaStorage.list({
+            prefix: `${root}/`,
+            maxKeys: 1000,
+            cursor: continuationToken,
+        });
 
-        for (const item of result.Contents ?? []) {
-            const key = normalizeKey(item.Key);
+        for (const item of result.items) {
+            const key = normalizeKey(item.key);
 
             if (!key || !isImageKey(key) || isHiddenOrThumbKey(key)) continue;
 
             await upsertMediaAsset({
                 key,
-                sizeBytes: item.Size ?? null,
-                etag: item.ETag ?? null,
-                lastModified: item.LastModified ?? null,
+                sizeBytes: item.sizeBytes,
+                etag: item.etag,
+                lastModified: item.lastModified,
             });
 
             count += 1;
         }
 
-        continuationToken = result.NextContinuationToken;
+        continuationToken = result.nextCursor ?? undefined;
     } while (continuationToken);
 
     return { root, count };

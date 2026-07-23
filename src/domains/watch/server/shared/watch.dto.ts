@@ -1,5 +1,7 @@
 import type {
     Gender,
+    AudienceSegment,
+    MediaPipelineKey,
     MovementType,
     ProductStatus,
     WatchCaseMaterialFamily,
@@ -23,6 +25,8 @@ export type CreateWatchDraftInput = {
     sku?: string | null;
     status?: ProductStatus;
     gender?: Gender;
+    audienceSegment?: AudienceSegment;
+    mediaPipelineKey?: MediaPipelineKey;
     siteChannel?: WatchSiteChannel;
 };
 

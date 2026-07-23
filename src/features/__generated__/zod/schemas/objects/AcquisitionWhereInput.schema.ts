@@ -9,6 +9,8 @@ import { DecimalNullableFilterObjectSchema as DecimalNullableFilterObjectSchema 
 import { EnumAcquisitionStatusFilterObjectSchema as EnumAcquisitionStatusFilterObjectSchema } from './EnumAcquisitionStatusFilter.schema';
 import { AcquisitionStatusSchema } from '../enums/AcquisitionStatus.schema';
 import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
+import { EnumAudienceSegmentFilterObjectSchema as EnumAudienceSegmentFilterObjectSchema } from './EnumAudienceSegmentFilter.schema';
+import { AudienceSegmentSchema } from '../enums/AudienceSegment.schema';
 import { CustomerNullableScalarRelationFilterObjectSchema as CustomerNullableScalarRelationFilterObjectSchema } from './CustomerNullableScalarRelationFilter.schema';
 import { CustomerWhereInputObjectSchema as CustomerWhereInputObjectSchema } from './CustomerWhereInput.schema';
 import { VendorNullableScalarRelationFilterObjectSchema as VendorNullableScalarRelationFilterObjectSchema } from './VendorNullableScalarRelationFilter.schema';
@@ -34,6 +36,7 @@ const acquisitionwhereinputSchema = z.object({
   notes: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   condition: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   warrantyUntil: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  audienceSegment: z.union([z.lazy(() => EnumAudienceSegmentFilterObjectSchema), AudienceSegmentSchema]).optional(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   sentAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),

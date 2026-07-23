@@ -1,7 +1,6 @@
-import { ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { ImageRole, type MediaAssetStatus } from "@prisma/client";
+import { mediaStorage } from "@/domains/media/storage";
 import { prisma } from "@/server/db/client";
-import { s3, S3_BUCKET } from "@/server/s3";
 import { moveMediaObject } from "@/server/lib/media-storage";
 import {
   type MediaProfile,
@@ -41,17 +40,14 @@ export async function indexMediaPrefix(input: {
   const root = normalizeKey(getProfileRoot(profile));
   const prefix = sanitizeBrowsePrefix(input.prefix ?? null, profile) || root;
 
-  const result = await s3.send(
-    new ListObjectsV2Command({
-      Bucket: S3_BUCKET,
-      Prefix: prefix ? `${prefix}/` : undefined,
-      Delimiter: "/",
-      MaxKeys: 1000,
-    })
-  );
+  const result = await mediaStorage.list({
+    prefix: prefix ? `${prefix}/` : undefined,
+    delimiter: "/",
+    maxKeys: 1000,
+  });
 
-  const folders = (result.CommonPrefixes || [])
-    .map((item) => normalizeKey(item.Prefix))
+  const folders = result.prefixes
+    .map((item) => normalizeKey(item))
     .filter(Boolean)
     .filter((item) => item !== prefix)
     .filter((item) => !shouldHideMediaName(getFileNameFromKey(item)))
@@ -59,12 +55,12 @@ export async function indexMediaPrefix(input: {
     .sort((a, b) => a.prefix.localeCompare(b.prefix));
 
   const dedup = new Set<string>();
-  const rawFiles = (result.Contents || [])
+  const rawFiles = result.items
     .map((item) => ({
-      key: normalizeKey(item.Key),
-      sizeBytes: item.Size ?? null,
-      etag: item.ETag?.replaceAll('"', "") ?? null,
-      lastModified: item.LastModified ?? null,
+      key: normalizeKey(item.key),
+      sizeBytes: item.sizeBytes,
+      etag: item.etag,
+      lastModified: item.lastModified,
     }))
     .filter((item) => item.key && item.key !== prefix && item.key !== `${prefix}/`)
     .filter((item) => !shouldHideMediaName(getFileNameFromKey(item.key)))

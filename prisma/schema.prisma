@@ -34,6 +34,7 @@ model Acquisition {
   notes           String?
   condition       String?
   warrantyUntil   DateTime?
+  audienceSegment AudienceSegment   @default(MEN)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   sentAt          DateTime?         @db.Timestamp(6)
@@ -48,6 +49,7 @@ model Acquisition {
   @@index([vendorId, acquiredAt])
   @@index([returnedAt], map: "acquisition_returned_idx")
   @@index([sentAt], map: "acquisition_sent_idx")
+  @@index([audienceSegment, acquiredAt])
 }
 
 model AcquisitionItem {
@@ -72,6 +74,7 @@ model AcquisitionItem {
   capitalizeToProduct Boolean?               @default(true)
   productType         ProductType            @default(WATCH)
   productTitle        String
+  audienceSegment     AudienceSegment        @default(MEN)
   updatedAt           DateTime               @updatedAt
   acquisition         Acquisition            @relation(fields: [acquisitionId], references: [id], onDelete: Cascade)
   product             Product?               @relation(fields: [productId], references: [id])
@@ -80,6 +83,7 @@ model AcquisitionItem {
   acquisitionSpecJob  AcquisitionSpecJob?
 
   @@index([acquisitionId])
+  @@index([audienceSegment])
   @@index([variantId])
   @@index([serviceRequestId], map: "acqitem_serviceRequest_idx")
   @@index([status], map: "acqitem_status_idx")
@@ -466,9 +470,9 @@ model ProjectionRecord {
 
   dataJson        Json
   sourceUpdatedAt DateTime?
-  projectedAt     DateTime @default(now())
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  projectedAt     DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@unique([projectionKey, rowKey])
   @@index([projectionKey, workspaceId, status, sortAt])
@@ -1138,21 +1142,23 @@ model Watch {
   stockStage      WatchStockStage   @default(IN_STOCK)
   siteChannel     WatchSiteChannel  @default(AFFORDABLE)
 
-  gender          Gender        @default(MEN)
-  conditionGrade  String?
-  movementType    MovementType?
-  movementCalibre String?
-  serialNumber    String?
-  yearText        String?
-  style           WatchStyle?
-  hasBox          Boolean       @default(false)
-  hasPapers       Boolean       @default(false)
+  gender           Gender           @default(MEN)
+  audienceSegment  AudienceSegment  @default(MEN)
+  mediaPipelineKey MediaPipelineKey @default(MEN_STANDARD)
+  conditionGrade   String?
+  movementType     MovementType?
+  movementCalibre  String?
+  serialNumber     String?
+  yearText         String?
+  style            WatchStyle?
+  hasBox           Boolean          @default(false)
+  hasPapers        Boolean          @default(false)
 
-  specStatus          WatchSpecStatus @default(PENDING)
-  isImageDownloaded   Boolean         @default(false)
-  isContentDownloaded Boolean         @default(false)
-  notes               String?
-  duplicateConfirmedAt       DateTime? @db.Timestamptz(6)
+  specStatus                 WatchSpecStatus @default(PENDING)
+  isImageDownloaded          Boolean         @default(false)
+  isContentDownloaded        Boolean         @default(false)
+  notes                      String?
+  duplicateConfirmedAt       DateTime?       @db.Timestamptz(6)
   duplicateConfirmedByUserId String?
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
@@ -1168,6 +1174,8 @@ model Watch {
   workCases    WorkCase[]
 
   @@index([gender])
+  @@index([audienceSegment, updatedAt])
+  @@index([mediaPipelineKey, updatedAt])
   @@index([saleStage])
   @@index([saleStage, updatedAt])
   @@index([serviceStage])
@@ -1572,6 +1580,97 @@ model MediaAsset {
   @@index([status, acquisitionId])
   @@index([productId, role, sortOrder])
   @@index([isMissing, parentPrefix])
+}
+
+/// Canonical identity for one physical media object. Unlike legacy MediaAsset,
+/// this identity does not change when a file is selected, attached, or published.
+model MediaObject {
+  id               String                  @id @default(dbgenerated("(gen_random_uuid())::text"))
+  bucket           String
+  storageKey       String                  @unique
+  originalFileName String?
+  mimeType         String?
+  sizeBytes        BigInt?
+  checksum         String?
+  etag             String?
+  availability     MediaObjectAvailability @default(UNVERIFIED)
+  verifiedAt       DateTime?
+  missingAt        DateTime?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  bindings         MediaBinding[]
+  operations       MediaOperation[]
+
+  @@index([availability, updatedAt])
+  @@index([checksum])
+}
+
+/// Business usage of a media object. Segment, role, and lifecycle belong here,
+/// not in the physical NAS path.
+model MediaBinding {
+  id              String                @id @default(dbgenerated("(gen_random_uuid())::text"))
+  mediaObjectId   String
+  ownerType       MediaOwnerType
+  ownerId         String
+  role            MediaRole
+  sortOrder       Int                   @default(0)
+  audienceSegment AudienceSegment
+  lifecycle       MediaBindingLifecycle @default(DRAFT)
+  pipelineKey     MediaPipelineKey?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  mediaObject     MediaObject           @relation(fields: [mediaObjectId], references: [id], onDelete: Restrict)
+
+  @@unique([mediaObjectId, ownerType, ownerId, role])
+  @@index([mediaObjectId, lifecycle])
+  @@index([ownerType, ownerId, lifecycle])
+  @@index([audienceSegment, pipelineKey])
+}
+
+/// Durable journal for every storage mutation. idempotencyKey makes retries safe.
+model MediaOperation {
+  id                String               @id @default(dbgenerated("(gen_random_uuid())::text"))
+  idempotencyKey    String               @unique
+  mediaObjectId     String?
+  type              MediaOperationType
+  status            MediaOperationStatus @default(PENDING)
+  sourceKey         String?
+  destinationKey    String?
+  attempts          Int                  @default(0)
+  lastError         String?
+  requestedByUserId String?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  mediaObject       MediaObject?         @relation(fields: [mediaObjectId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([mediaObjectId, createdAt])
+}
+
+/// Durable reconciliation decision for one legacy MediaAsset row.
+/// This table is append/update-only during migration and never drives runtime media.
+model MediaLegacyManifest {
+  id                 String                    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  legacyMediaAssetId String                    @unique
+  legacyKey          String
+  classification     MediaLegacyClassification
+  decision           MediaLegacyDecision       @default(PENDING)
+  physicalExists     Boolean
+  productImageId     String?
+  productId          String?
+  acquisitionId      String?
+  movedFromKey       String?
+  mediaObjectId      String?
+  note               String?
+  scannedAt          DateTime                  @default(now())
+  migratedAt         DateTime?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+
+  @@index([classification, decision])
+  @@index([mediaObjectId])
 }
 
 enum WorkCaseScope {
@@ -2376,6 +2475,86 @@ enum Gender {
   MEN
   WOMEN
   UNISEX
+}
+
+enum AudienceSegment {
+  MEN
+  WOMEN
+  UNISEX
+}
+
+enum MediaPipelineKey {
+  MEN_STANDARD
+  WOMEN_LITE
+  UNISEX_STANDARD
+}
+
+enum MediaObjectAvailability {
+  UNVERIFIED
+  AVAILABLE
+  MOVE_PENDING
+  MISSING
+  QUARANTINED
+  DELETED
+}
+
+enum MediaOwnerType {
+  WATCH
+  ACQUISITION
+  PRODUCT
+  LISTING
+}
+
+enum MediaRole {
+  COVER
+  GALLERY
+  INLINE
+  SOCIAL
+  THUMBNAIL
+}
+
+enum MediaBindingLifecycle {
+  DRAFT
+  SELECTED
+  ATTACHED
+  APPROVED
+  PUBLISHED
+  REMOVED
+}
+
+enum MediaOperationType {
+  COPY
+  MOVE
+  DELETE
+  VERIFY
+  INGEST
+  EXPORT
+}
+
+enum MediaOperationStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum MediaLegacyClassification {
+  DB_AND_NAS_OK
+  WATCH_POOL_SELECTED
+  LEGACY_SOURCE_MOVED
+  DB_PRESENT_NAS_MISSING
+  PRODUCT_REFERENCE_BROKEN
+  UNBOUND
+  NEEDS_REVIEW
+}
+
+enum MediaLegacyDecision {
+  PENDING
+  MIGRATE
+  MIGRATED
+  QUARANTINE
+  IGNORE
 }
 
 enum Glass {

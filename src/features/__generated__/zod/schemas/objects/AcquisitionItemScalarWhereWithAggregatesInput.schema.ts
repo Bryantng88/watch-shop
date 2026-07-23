@@ -13,7 +13,9 @@ import { DateTimeNullableWithAggregatesFilterObjectSchema as DateTimeNullableWit
 import { IntNullableWithAggregatesFilterObjectSchema as IntNullableWithAggregatesFilterObjectSchema } from './IntNullableWithAggregatesFilter.schema';
 import { BoolNullableWithAggregatesFilterObjectSchema as BoolNullableWithAggregatesFilterObjectSchema } from './BoolNullableWithAggregatesFilter.schema';
 import { EnumProductTypeWithAggregatesFilterObjectSchema as EnumProductTypeWithAggregatesFilterObjectSchema } from './EnumProductTypeWithAggregatesFilter.schema';
-import { ProductTypeSchema } from '../enums/ProductType.schema'
+import { ProductTypeSchema } from '../enums/ProductType.schema';
+import { EnumAudienceSegmentWithAggregatesFilterObjectSchema as EnumAudienceSegmentWithAggregatesFilterObjectSchema } from './EnumAudienceSegmentWithAggregatesFilter.schema';
+import { AudienceSegmentSchema } from '../enums/AudienceSegment.schema'
 
 const acquisitionitemscalarwherewithaggregatesinputSchema = z.object({
   AND: z.union([z.lazy(() => AcquisitionItemScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => AcquisitionItemScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
@@ -40,6 +42,7 @@ const acquisitionitemscalarwherewithaggregatesinputSchema = z.object({
   capitalizeToProduct: z.union([z.lazy(() => BoolNullableWithAggregatesFilterObjectSchema), z.boolean()]).optional().nullable(),
   productType: z.union([z.lazy(() => EnumProductTypeWithAggregatesFilterObjectSchema), ProductTypeSchema]).optional(),
   productTitle: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
+  audienceSegment: z.union([z.lazy(() => EnumAudienceSegmentWithAggregatesFilterObjectSchema), AudienceSegmentSchema]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional()
 }).strict();
 export const AcquisitionItemScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.AcquisitionItemScalarWhereWithAggregatesInput> = acquisitionitemscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.AcquisitionItemScalarWhereWithAggregatesInput>;

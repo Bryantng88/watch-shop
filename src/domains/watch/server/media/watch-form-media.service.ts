@@ -1,9 +1,8 @@
+import { MediaRole } from "@prisma/client";
 import {
-    moveMediaAssetToWatchChosen,
-    moveMediaToWatchPool,
-    releaseMediaAssetsToActive,
-} from "@/domains/media/server";
-import { prisma } from "@/server/db/client";
+    releaseWatchMediaNotIn,
+    selectExistingMediaForWatch,
+} from "@/domains/media/application";
 
 import {
     dedupeMediaItems,
@@ -12,9 +11,9 @@ import {
     type WatchFormMediaItem,
 } from "../shared/watch-form-value";
 
-export async function moveWatchPoolImagesToChosenPool(
+export async function selectWatchPoolImages(
     items: WatchFormMediaItem[],
-    input: { productId: string }
+    input: { productId: string },
 ) {
     const normalized = dedupeMediaItems(items);
     const result: WatchFormMediaItem[] = [];
@@ -23,26 +22,28 @@ export async function moveWatchPoolImagesToChosenPool(
         const key = mediaKey(item);
         if (!key) continue;
 
-        const moved = await moveMediaToWatchPool({
-            fromKey: key,
+        const selected = await selectExistingMediaForWatch({
+            storageKey: key,
             productId: input.productId,
+            role: MediaRole.GALLERY,
+            sortOrder: result.length,
         });
 
         result.push({
             ...item,
-            key: moved.key,
-            fileKey: moved.key,
-            url: moved.url ?? item.url ?? null,
-            name: moved.name ?? item.name ?? fileNameFromKey(moved.key),
+            key: selected.key,
+            fileKey: selected.fileKey,
+            url: selected.url ?? item.url ?? null,
+            name: selected.name ?? item.name ?? fileNameFromKey(selected.key),
         });
     }
 
     return result;
 }
 
-export async function moveWatchGalleryImagesToChosen(
+export async function selectWatchGalleryImages(
     items: WatchFormMediaItem[],
-    input: { productId: string; acquisitionId?: string | null }
+    input: { productId: string; acquisitionId?: string | null },
 ) {
     const normalized = dedupeMediaItems(items);
     const result: WatchFormMediaItem[] = [];
@@ -52,75 +53,36 @@ export async function moveWatchGalleryImagesToChosen(
         const key = mediaKey(item);
         if (!key) continue;
 
-        const moved = await moveMediaAssetToWatchChosen({
-            key,
+        const selected = await selectExistingMediaForWatch({
+            storageKey: key,
             productId: input.productId,
-            acquisitionId: input.acquisitionId ?? null,
+            role: MediaRole.GALLERY,
             sortOrder: index,
         });
 
         result.push({
             ...item,
-            key: moved.key,
-            fileKey: moved.key,
-            url: moved.url ?? item.url ?? null,
-            name: moved.name ?? item.name ?? fileNameFromKey(moved.key),
+            key: selected.key,
+            fileKey: selected.fileKey,
+            url: selected.url ?? item.url ?? null,
+            name: selected.name ?? item.name ?? fileNameFromKey(selected.key),
         });
     }
 
     return result;
 }
 
-
 export async function releaseRemovedWatchPoolImagesToActive(input: {
     productId: string;
     keepItems: WatchFormMediaItem[];
 }) {
-    const keepKeys = new Set(
-        dedupeMediaItems(input.keepItems)
-            .map(mediaKey)
-            .filter(Boolean),
-    );
+    const keepStorageKeys = dedupeMediaItems(input.keepItems)
+        .map(mediaKey)
+        .filter(Boolean);
 
-    const poolPrefix = `products/edit/chosen/watch/${input.productId}/pool/`;
-
-    const currentPoolAssets = await prisma.mediaAsset.findMany({
-        where: {
-            productId: input.productId,
-            status: "CHOSEN" as any,
-
-            // Chỉ release ảnh pool tạm.
-            // Tuyệt đối không đụng INLINE/GALLERY.
-            key: {
-                startsWith: poolPrefix,
-            },
-        },
-        select: {
-            key: true,
-            movedFromKey: true,
-        },
-    });
-
-    const removedKeys = currentPoolAssets
-        .filter((asset) => {
-            const key = String(asset.key ?? "").trim();
-            const movedFromKey = String(asset.movedFromKey ?? "").trim();
-
-            if (!key) return false;
-
-            if (keepKeys.has(key)) return false;
-            if (movedFromKey && keepKeys.has(movedFromKey)) return false;
-
-            return true;
-        })
-        .map((asset) => asset.key);
-
-    if (removedKeys.length === 0) {
-        return [];
-    }
-
-    return releaseMediaAssetsToActive({
-        keys: removedKeys,
+    return releaseWatchMediaNotIn({
         productId: input.productId,
+        role: MediaRole.GALLERY,
+        keepStorageKeys,
     });
 }

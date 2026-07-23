@@ -97,6 +97,20 @@ export default function WatchLineCard({
                             </div>
                         ) : null}
 
+                        <select
+                            value={line.audienceSegment}
+                            onChange={(event) =>
+                                setField(
+                                    "audienceSegment",
+                                    event.target.value as AcquisitionWatchLine["audienceSegment"],
+                                )
+                            }
+                            className="h-7 rounded-full border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700 outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
+                            aria-label={`Giới tính Watch #${index + 1}`}
+                        >
+                            <option value="MEN">Nam</option>
+                            <option value="WOMEN">Nữ</option>
+                        </select>
                     </div>
 
                     {canRemove ? (
@@ -124,6 +138,7 @@ export default function WatchLineCard({
                                 pending={false}
                                 disabled={false}
                                 profile="inline"
+                                audienceSegment={line.audienceSegment}
                                 compact
                                 className="h-[72px] w-[72px] rounded-xl"
                             />

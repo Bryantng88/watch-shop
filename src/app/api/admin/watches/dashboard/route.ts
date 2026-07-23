@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import type { AudienceSegment } from "@prisma/client";
 
 import { PERMISSIONS } from "@/constants/permissions";
 import { getWatchListDashboard } from "@/domains/watch/server";
@@ -6,10 +7,14 @@ import { requirePermission } from "@/server/auth/requirePermission";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
         await requirePermission(PERMISSIONS.PRODUCT_VIEW);
-        const data = await getWatchListDashboard();
+        const data = await getWatchListDashboard(
+            (req.nextUrl.searchParams.get("segment") === "WOMEN"
+                ? "WOMEN"
+                : "MEN") as AudienceSegment,
+        );
 
         return NextResponse.json(
             { ok: true, data },

@@ -9,6 +9,8 @@ export {
     ValueTrendDashboardWidget,
 } from "./widgets/BusinessListDashboardWidgets";
 export { default as BusinessListShell } from "./BusinessListShell";
+export { default as BusinessListPageHeader } from "./BusinessListPageHeader";
+export { default as DashboardCustomizeButton } from "./DashboardCustomizeButton";
 export { default as BusinessListFilterBar } from "../filter-bar/FilterBar";
 export type {
     BusinessListActivityItem,

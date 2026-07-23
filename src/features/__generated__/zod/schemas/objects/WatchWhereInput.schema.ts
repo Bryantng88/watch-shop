@@ -12,6 +12,10 @@ import { EnumWatchSiteChannelFilterObjectSchema as EnumWatchSiteChannelFilterObj
 import { WatchSiteChannelSchema } from '../enums/WatchSiteChannel.schema';
 import { EnumGenderFilterObjectSchema as EnumGenderFilterObjectSchema } from './EnumGenderFilter.schema';
 import { GenderSchema } from '../enums/Gender.schema';
+import { EnumAudienceSegmentFilterObjectSchema as EnumAudienceSegmentFilterObjectSchema } from './EnumAudienceSegmentFilter.schema';
+import { AudienceSegmentSchema } from '../enums/AudienceSegment.schema';
+import { EnumMediaPipelineKeyFilterObjectSchema as EnumMediaPipelineKeyFilterObjectSchema } from './EnumMediaPipelineKeyFilter.schema';
+import { MediaPipelineKeySchema } from '../enums/MediaPipelineKey.schema';
 import { EnumMovementTypeNullableFilterObjectSchema as EnumMovementTypeNullableFilterObjectSchema } from './EnumMovementTypeNullableFilter.schema';
 import { MovementTypeSchema } from '../enums/MovementType.schema';
 import { EnumWatchStyleNullableFilterObjectSchema as EnumWatchStyleNullableFilterObjectSchema } from './EnumWatchStyleNullableFilter.schema';
@@ -46,6 +50,8 @@ const watchwhereinputSchema = z.object({
   stockStage: z.union([z.lazy(() => EnumWatchStockStageFilterObjectSchema), WatchStockStageSchema]).optional(),
   siteChannel: z.union([z.lazy(() => EnumWatchSiteChannelFilterObjectSchema), WatchSiteChannelSchema]).optional(),
   gender: z.union([z.lazy(() => EnumGenderFilterObjectSchema), GenderSchema]).optional(),
+  audienceSegment: z.union([z.lazy(() => EnumAudienceSegmentFilterObjectSchema), AudienceSegmentSchema]).optional(),
+  mediaPipelineKey: z.union([z.lazy(() => EnumMediaPipelineKeyFilterObjectSchema), MediaPipelineKeySchema]).optional(),
   conditionGrade: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   movementType: z.union([z.lazy(() => EnumMovementTypeNullableFilterObjectSchema), MovementTypeSchema]).optional().nullable(),
   movementCalibre: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),

@@ -19,6 +19,7 @@ export default async function OperationCoordinationPage(props: PageProps) {
   const auth = await perfStep("coordination-operation-page", "requirePermission", () =>
     requirePermission("TASK_VIEW"),
   );
+  const modeKey = first(searchParams.view) ?? null;
 
   const data = await perfStep(
     "coordination-operation-page",
@@ -28,9 +29,10 @@ export default async function OperationCoordinationPage(props: PageProps) {
         context: "OPERATION",
         db: prisma,
         date: first(searchParams.date) ?? null,
-        modeKey: first(searchParams.view) ?? null,
+        modeKey,
         includeDashboardDetails: false,
         includeTechnicalBoard: false,
+        includeFlowItems: modeKey !== "technical-issue-flow",
         auth,
       }),
   );

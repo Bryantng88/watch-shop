@@ -8,7 +8,12 @@ import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import AcquisitionEditModal from "@/domains/acquisition/ui/edit/AcquisitionEditModal";
 import BusinessListDashboard from "@/domains/shared/ui/business-list/BusinessListDashboard";
 import BusinessListShell from "@/domains/shared/ui/business-list/BusinessListShell";
+import {
+    BusinessListPageHeader,
+    DashboardCustomizeButton,
+} from "@/domains/shared/ui/business-list";
 import type { BusinessListDashboardWidgetKey } from "@/domains/shared/ui/business-list";
+import { PackagePlus } from "lucide-react";
 
 import type { AcquisitionListClientProps } from "../ui/list";
 import {
@@ -48,7 +53,7 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
 
     const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
     const [editAcquisitionId, setEditAcquisitionId] = React.useState<string | null>(null);
-
+    const [dashboardCustomizationRequest, setDashboardCustomizationRequest] = React.useState(0);
     React.useEffect(() => {
         setSelectedIds([]);
     }, [sp.toString(), props.page]);
@@ -129,21 +134,23 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
     return (
         <BusinessListShell
             header={
-            <div className="px-1 py-1">
-                <div className="min-w-0">
-                    <h1 className="text-[30px] font-semibold tracking-[-0.035em] text-slate-950">
-                        Danh sách phiếu nhập
-                    </h1>
-                    <p className="mt-2 text-sm text-slate-500">
-                        Quản lý phiếu nhập, duyệt tồn kho và thanh toán đầu vào.
-                    </p>
-                </div>
-            </div>
+                <BusinessListPageHeader
+                    title="Phiếu nhập"
+                    icon={<PackagePlus className="h-5 w-5" />}
+                    meta={<span>Quản lý nhập kho · Duyệt phiếu và thanh toán đầu vào</span>}
+                    actions={
+                        <DashboardCustomizeButton
+                            onClick={() => setDashboardCustomizationRequest((request) => request + 1)}
+                        />
+                    }
+                />
             }
             dashboard={<BusinessListDashboard
                 data={props.dashboardData}
                 widgets={ACQUISITION_DASHBOARD_WIDGETS}
                 storageKey="admin-dashboard:acquisition-list"
+                customizationRequest={dashboardCustomizationRequest}
+                showCustomizationTrigger={false}
             />}
             filters={
                 <AcquisitionListToolbar

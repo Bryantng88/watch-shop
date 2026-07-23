@@ -150,6 +150,7 @@ export type WatchListResult = {
 };
 
 export type WatchListFilters = {
+    audienceSegment?: "MEN" | "WOMEN" | "UNISEX";
     view?: WatchListView;
     subFilter?: WatchListSubFilter;
     q?: string;

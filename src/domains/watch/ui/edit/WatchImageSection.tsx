@@ -49,6 +49,7 @@ type Props = {
     mediaActions?: React.ReactNode;
     collapsible?: boolean;
     surface?: "card" | "flat";
+    audienceSegment?: "MEN" | "WOMEN";
 };
 
 function normalizeStatus(status?: string | null): ReviewStatus {
@@ -108,6 +109,7 @@ export default function WatchImageSection({
     mediaActions,
     collapsible = true,
     surface = "card",
+    audienceSegment = "MEN",
 }: Props) {
     const dialog = useAppDialog();
     const notify = useNotify();
@@ -312,6 +314,7 @@ export default function WatchImageSection({
 
                             maxFinalSelection={10}
                             profile="edit"
+                            audienceSegment={audienceSegment}
                             title="Ảnh gallery"
                             description="Chỉ chọn ảnh gallery. Ảnh đại diện INLINE được quản lý riêng cho header/list thumbnail."
                             contextImage={{

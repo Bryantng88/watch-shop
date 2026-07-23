@@ -12,6 +12,8 @@ const makeSchema = () => z.object({
   stockStage: SortOrderSchema.optional(),
   siteChannel: SortOrderSchema.optional(),
   gender: SortOrderSchema.optional(),
+  audienceSegment: SortOrderSchema.optional(),
+  mediaPipelineKey: SortOrderSchema.optional(),
   conditionGrade: SortOrderSchema.optional(),
   movementType: SortOrderSchema.optional(),
   movementCalibre: SortOrderSchema.optional(),

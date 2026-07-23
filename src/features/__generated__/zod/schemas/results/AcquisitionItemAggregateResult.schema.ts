@@ -21,6 +21,7 @@ export const AcquisitionItemAggregateResultSchema = z.object({  _count: z.object
     capitalizeToProduct: z.number(),
     productType: z.number(),
     productTitle: z.number(),
+    audienceSegment: z.number(),
     updatedAt: z.number(),
     acquisition: z.number(),
     product: z.number(),

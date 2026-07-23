@@ -37,6 +37,7 @@ import {
   RotateCcw,
   Send,
   SlidersHorizontal,
+  Workflow,
   XCircle,
   Zap,
 } from "lucide-react";
@@ -65,7 +66,10 @@ import {
   type AppProgressStep,
 } from "@/domains/shared/feedback/AppProgressProvider";
 import { repairVietnameseMojibake } from "@/domains/shared/text/vietnamese-mojibake";
-import { AsyncBusinessListDashboard } from "@/domains/shared/ui/business-list";
+import {
+  AsyncBusinessListDashboard,
+  DashboardCustomizeButton,
+} from "@/domains/shared/ui/business-list";
 import type { BusinessListDashboardWidgetKey } from "@/domains/shared/ui/business-list";
 import {
   SpaceViewFooterTip,
@@ -602,7 +606,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   const [filterCreator, setFilterCreator] = useState("ALL");
   const [filterWorkStatus, setFilterWorkStatus] = useState("ALL");
   const [filterPayment, setFilterPayment] = useState("ALL");
-  const [flowListStageFilter, setFlowListStageFilter] = useState("ALL");
+  const [flowListStageFilter, setFlowListStageFilter] = useState("");
   const [technicalIssuePriorityFilter, setTechnicalIssuePriorityFilter] =
     useState<TechnicalIssuePriorityFilter>("ALL");
   const [technicalIssueCommentFilter, setTechnicalIssueCommentFilter] =
@@ -611,6 +615,9 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     data.technicalIssueBoard,
   );
   const [asyncMediaBoard, setAsyncMediaBoard] = useState(data.mediaBoard);
+  const [asyncFlowItems, setAsyncFlowItems] = useState(data.flowItems);
+  const [flowItemsModeKey, setFlowItemsModeKey] = useState(activeViewModeKey);
+  const [isFlowItemsLoading, setIsFlowItemsLoading] = useState(false);
   const [isBoardRefreshing, setIsBoardRefreshing] = useState(false);
   const [boardRefreshedAt, setBoardRefreshedAt] = useState<Date | null>(null);
   const [workspacePage, setWorkspacePage] = useState(1);
@@ -622,7 +629,9 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   function changeActiveViewMode(nextModeKey: string) {
     startViewTransition(() => {
       setActiveViewModeKey(nextModeKey);
-      setFlowListStageFilter("ALL");
+      setAsyncFlowItems([]);
+      setFlowItemsModeKey(nextModeKey);
+      setFlowListStageFilter("");
       setWorkTicketView(nextModeKey === "technical-issue-flow"
         ? "TI_BOARD"
         : nextModeKey === "media-production-flow"
@@ -656,9 +665,16 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
         (flow) => flow.key === activeViewMode.coreFlowKey,
       ) ?? null
     : null;
+  const orderedFlowStages = useMemo(
+    () => activeCoreFlow?.stages.slice().sort((left, right) => left.sortOrder - right.sortOrder) ?? [],
+    [activeCoreFlow],
+  );
+  const activeFlowListStage = orderedFlowStages.some((stage) => stage.key === flowListStageFilter)
+    ? flowListStageFilter
+    : orderedFlowStages[0]?.key ?? "";
   const flowListStageCounts = useMemo(() => {
     const counts = new Map<string, number>();
-    data.flowItems.forEach((item) => {
+    asyncFlowItems.forEach((item) => {
       const itemStageKey = normalizeStageKey(item.flowStageKey);
       const stage = activeCoreFlow?.stages.find(
         (candidate) =>
@@ -668,10 +684,10 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
       if (stage) counts.set(stage.key, (counts.get(stage.key) ?? 0) + 1);
     });
     return counts;
-  }, [activeCoreFlow, data.flowItems]);
-  const flowListVisibleCount = flowListStageFilter === "ALL"
-    ? data.flowItems.length
-    : flowListStageCounts.get(flowListStageFilter) ?? 0;
+  }, [activeCoreFlow, asyncFlowItems]);
+  const flowListVisibleCount = activeFlowListStage
+    ? flowListStageCounts.get(activeFlowListStage) ?? 0
+    : asyncFlowItems.length;
   const isPaymentCollectionFlow =
     activeCoreFlow?.key === "payment-collection-core-flow";
   const dashboardEndpoint = useMemo(() => {
@@ -695,6 +711,44 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     }).mediaBoard;
     if (mediaBoard) setAsyncMediaBoard(mediaBoard);
   }, []);
+  const loadFlowItems = useCallback(async () => {
+    if (
+      (flowItemsModeKey === activeViewModeKey && asyncFlowItems.length) ||
+      isFlowItemsLoading
+    ) return;
+    setIsFlowItemsLoading(true);
+    setError(null);
+    try {
+      const separator = dashboardEndpoint.includes("?") ? "&" : "?";
+      const response = await fetch(`${dashboardEndpoint}${separator}includeFlowItems=1`, {
+        cache: "no-store",
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error("Không thể tải danh sách item.");
+      const items = Array.isArray(result?.flowItems) ? result.flowItems : [];
+      setAsyncFlowItems(items);
+      setFlowItemsModeKey(activeViewModeKey);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Không thể tải danh sách item.");
+    } finally {
+      setIsFlowItemsLoading(false);
+    }
+  }, [
+    activeViewModeKey,
+    asyncFlowItems.length,
+    dashboardEndpoint,
+    flowItemsModeKey,
+    isFlowItemsLoading,
+  ]);
+  const changeWorkTicketView = useCallback((value: string) => {
+    const nextView = value === "TI_BOARD"
+      ? "TI_BOARD"
+      : value === "MEDIA_BOARD"
+        ? "MEDIA_BOARD"
+        : "LIST";
+    setWorkTicketView(nextView);
+    if (nextView === "LIST") void loadFlowItems();
+  }, [loadFlowItems]);
   const refreshTechnicalIssueBoard = useCallback(async () => {
     if (isBoardRefreshing) return;
     setError(null);
@@ -1152,21 +1206,26 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
           ]}
         />
       }
-      title={prefixedLabel("Space", data.cycle.title)}
-      status={
-        <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">
-          Đang hoạt động
-        </span>
+      title={
+        activeCoreFlow
+          ? coreFlowLabel(activeCoreFlow)
+          : activeViewMode
+            ? modeLabel(activeViewMode)
+            : data.contextLabel
+      }
+      headerVariant="compact"
+      headerIcon={<Workflow className="h-5 w-5" />}
+      meta={
+        <>
+          <span className="font-medium text-slate-600">Vận hành</span>
+          <span aria-hidden="true" className="h-1 w-1 rounded-full bg-slate-300" />
+          <span>{data.week.label}</span>
+        </>
       }
       actions={
-        <button
-          type="button"
+        <DashboardCustomizeButton
           onClick={() => setDashboardCustomizationRequest((request) => request + 1)}
-          className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-          Tùy chỉnh dashboard
-        </button>
+        />
       }
     >
         <AsyncBusinessListDashboard
@@ -1348,7 +1407,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   : "Tìm item, mã tham chiếu, đối tượng..."}
                 onSearchChange={setFilterQuery}
                 activeView={isTechnicalIssueBoardView ? "TI_BOARD" : isMediaBoardView ? "MEDIA_BOARD" : "LIST"}
-                onViewChange={(value) => setWorkTicketView(value === "TI_BOARD" ? "TI_BOARD" : value === "MEDIA_BOARD" ? "MEDIA_BOARD" : "LIST")}
+                onViewChange={changeWorkTicketView}
                 viewOptions={[
                   ...(isMediaFlowMode
                     ? [{ value: "MEDIA_BOARD", label: "Board Media", icon: <Grid2X2 className="h-4 w-4" />, disabled: !canShowMediaBoard }]
@@ -1438,24 +1497,6 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   </span>
                 ) : (
                   <>
-                    {activeCoreFlow?.stages.length ? (
-                      <select
-                        value={flowListStageFilter}
-                        onChange={(event) => setFlowListStageFilter(event.target.value)}
-                        aria-label="Lọc theo bước"
-                        className="h-11 max-w-52 shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition focus:border-violet-300"
-                      >
-                        <option value="ALL">Tất cả bước</option>
-                        {activeCoreFlow.stages
-                          .slice()
-                          .sort((left, right) => left.sortOrder - right.sortOrder)
-                          .map((stage) => (
-                            <option key={stage.key} value={stage.key}>
-                              {stage.label} · {flowListStageCounts.get(stage.key) ?? 0}
-                            </option>
-                          ))}
-                      </select>
-                    ) : null}
                     <span className="inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-xl bg-slate-50 px-3 text-xs font-semibold text-slate-500">
                       {isViewPending ? "Đang tải..." : `${flowListVisibleCount} item`}
                     </span>
@@ -1484,6 +1525,55 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   </button>
                 ) : null}
               </SpaceFilterBar>
+              {!isOperationalBoardView && orderedFlowStages.length ? (
+                <div
+                  className="mt-3 flex min-w-0 items-center overflow-x-auto rounded-xl border border-slate-200 bg-slate-50/70 p-1.5"
+                  aria-label="Lọc theo bước"
+                >
+                  {orderedFlowStages.map((stage, index) => {
+                    const isActive = stage.key === activeFlowListStage;
+                    return (
+                      <button
+                        key={stage.key}
+                        type="button"
+                        onClick={() => setFlowListStageFilter(stage.key)}
+                        aria-current={isActive ? "step" : undefined}
+                        className={cn(
+                          "group flex min-w-0 flex-1 items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-all duration-200",
+                          isActive
+                            ? "border-violet-300 bg-violet-50 text-violet-700 shadow-sm"
+                            : "border-transparent text-slate-500 hover:border-slate-200 hover:bg-white/80 hover:text-slate-800",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition-colors duration-200",
+                            isActive
+                              ? "bg-violet-600 text-white"
+                              : "bg-slate-200 text-slate-600 group-hover:bg-slate-300",
+                          )}
+                        >
+                          {index + 1}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-[10px] font-bold uppercase tracking-wide opacity-70">
+                            Bước {index + 1}
+                          </span>
+                          <span className="block truncate text-xs font-semibold">{stage.label}</span>
+                        </span>
+                        <span className={cn(
+                          "ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold",
+                          isActive
+                            ? "bg-violet-100 text-violet-700"
+                            : "bg-slate-100 text-slate-500",
+                        )}>
+                          {flowListStageCounts.get(stage.key) ?? 0}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
             </div>
             {isCreateFormOpen && selectedBlueprint ? (
               <div className="mt-3 grid gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 md:grid-cols-3 xl:grid-cols-6">
@@ -1691,16 +1781,17 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
             <>
           <FlowItemListView
             key={activeCoreFlow?.key ?? activeViewModeKey}
-            items={data.flowItems}
+            items={asyncFlowItems}
             stages={activeCoreFlow?.stages ?? []}
             query={filterQuery}
             statusFilter={filterWorkStatus}
             paymentFilter={filterPayment}
-            activeStage={flowListStageFilter}
+            activeStage={activeFlowListStage}
+            completedIcon={activeCoreFlow?.key === "media-production-flow" ? "published" : undefined}
             imageOverrides={Object.fromEntries(
               (asyncMediaBoard?.items ?? []).map((item) => [item.id, item.imageUrl]),
             )}
-            pending={isViewPending}
+            pending={isViewPending || isFlowItemsLoading}
           />
           <div className="hidden">
           <div className={cn("hidden border-y border-slate-100 bg-[#fbfcfe] px-5 py-3 text-xs font-bold uppercase tracking-[0.05em] text-slate-500 lg:grid", workTicketGridClass)}>

@@ -1,0 +1,15 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { MediaBindingWhereInputObjectSchema as MediaBindingWhereInputObjectSchema } from './objects/MediaBindingWhereInput.schema';
+import { MediaBindingOrderByWithAggregationInputObjectSchema as MediaBindingOrderByWithAggregationInputObjectSchema } from './objects/MediaBindingOrderByWithAggregationInput.schema';
+import { MediaBindingScalarWhereWithAggregatesInputObjectSchema as MediaBindingScalarWhereWithAggregatesInputObjectSchema } from './objects/MediaBindingScalarWhereWithAggregatesInput.schema';
+import { MediaBindingScalarFieldEnumSchema } from './enums/MediaBindingScalarFieldEnum.schema';
+import { MediaBindingCountAggregateInputObjectSchema as MediaBindingCountAggregateInputObjectSchema } from './objects/MediaBindingCountAggregateInput.schema';
+import { MediaBindingMinAggregateInputObjectSchema as MediaBindingMinAggregateInputObjectSchema } from './objects/MediaBindingMinAggregateInput.schema';
+import { MediaBindingMaxAggregateInputObjectSchema as MediaBindingMaxAggregateInputObjectSchema } from './objects/MediaBindingMaxAggregateInput.schema';
+import { MediaBindingAvgAggregateInputObjectSchema as MediaBindingAvgAggregateInputObjectSchema } from './objects/MediaBindingAvgAggregateInput.schema';
+import { MediaBindingSumAggregateInputObjectSchema as MediaBindingSumAggregateInputObjectSchema } from './objects/MediaBindingSumAggregateInput.schema';
+
+export const MediaBindingGroupBySchema: z.ZodType<Prisma.MediaBindingGroupByArgs> = z.object({ where: MediaBindingWhereInputObjectSchema.optional(), orderBy: z.union([MediaBindingOrderByWithAggregationInputObjectSchema, MediaBindingOrderByWithAggregationInputObjectSchema.array()]).optional(), having: MediaBindingScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(MediaBindingScalarFieldEnumSchema), _count: z.union([ z.literal(true), MediaBindingCountAggregateInputObjectSchema ]).optional(), _min: MediaBindingMinAggregateInputObjectSchema.optional(), _max: MediaBindingMaxAggregateInputObjectSchema.optional(), _avg: MediaBindingAvgAggregateInputObjectSchema.optional(), _sum: MediaBindingSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.MediaBindingGroupByArgs>;
+
+export const MediaBindingGroupByZodSchema = z.object({ where: MediaBindingWhereInputObjectSchema.optional(), orderBy: z.union([MediaBindingOrderByWithAggregationInputObjectSchema, MediaBindingOrderByWithAggregationInputObjectSchema.array()]).optional(), having: MediaBindingScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(MediaBindingScalarFieldEnumSchema), _count: z.union([ z.literal(true), MediaBindingCountAggregateInputObjectSchema ]).optional(), _min: MediaBindingMinAggregateInputObjectSchema.optional(), _max: MediaBindingMaxAggregateInputObjectSchema.optional(), _avg: MediaBindingAvgAggregateInputObjectSchema.optional(), _sum: MediaBindingSumAggregateInputObjectSchema.optional() }).strict();

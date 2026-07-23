@@ -21,6 +21,7 @@ export const AcquisitionItemCreateResultSchema = z.object({
   capitalizeToProduct: z.boolean().optional(),
   productType: z.unknown(),
   productTitle: z.string(),
+  audienceSegment: z.unknown(),
   updatedAt: z.date(),
   acquisition: z.unknown(),
   product: z.unknown().optional(),

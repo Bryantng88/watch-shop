@@ -1296,6 +1296,13 @@ export default function WatchListClient(props: WatchListClientProps) {
         <BusinessListShell
             header={
                 <WatchListToolbar
+                    audienceSegment={params.get("segment") === "WOMEN" ? "WOMEN" : "MEN"}
+                    onAudienceSegmentChange={(segment) => {
+                        const next = new URLSearchParams(params.toString());
+                        next.set("segment", segment);
+                        next.set("page", "1");
+                        void loadList(next, { meta: "full" });
+                    }}
                     selectedCount={selectedIds.length}
                     photoshootEligibleCount={photoshootEligibleRows.length}
                     mediaReviewEligibleCount={mediaReviewEligibleRows.length}
@@ -1319,7 +1326,9 @@ export default function WatchListClient(props: WatchListClientProps) {
             }
             dashboard={
                 <AsyncBusinessListDashboard
-                    endpoint="/api/admin/watches/dashboard"
+                    endpoint={`/api/admin/watches/dashboard?segment=${
+                        params.get("segment") === "WOMEN" ? "WOMEN" : "MEN"
+                    }`}
                     widgets={WATCH_DASHBOARD_WIDGETS}
                     storageKey="admin-dashboard:watch-list"
                     customizationRequest={dashboardCustomizationRequest}

@@ -10,9 +10,12 @@ function uid() {
     return Math.random().toString(36).slice(2, 10);
 }
 
-export function createEmptyWatchLine(): AcquisitionWatchLine {
+export function createEmptyWatchLine(
+    audienceSegment: "MEN" | "WOMEN" = "MEN",
+): AcquisitionWatchLine {
     return {
         id: uid(),
+        audienceSegment,
         quickInput: "",
         aiHint: "",
         cost: "",
@@ -23,10 +26,12 @@ export function createEmptyWatchLine(): AcquisitionWatchLine {
 }
 
 export function createWatchLineFromPreparedImage(
-    image: AcquisitionPreparedImage
+    image: AcquisitionPreparedImage,
+    audienceSegment: "MEN" | "WOMEN" = "MEN",
 ): AcquisitionWatchLine {
     return {
         id: uid(),
+        audienceSegment,
         quickInput: "",
         aiHint: "",
         cost: "",
@@ -55,7 +60,8 @@ export function isBlankWatchLine(line: AcquisitionWatchLine) {
 
 export function applyPreparedImagesTopDown(
     lines: AcquisitionWatchLine[],
-    images: AcquisitionPreparedImage[]
+    images: AcquisitionPreparedImage[],
+    audienceSegment: "MEN" | "WOMEN" = "MEN",
 ): AcquisitionWatchLine[] {
     if (!images.length) return lines;
 
@@ -75,7 +81,7 @@ export function applyPreparedImagesTopDown(
     }
 
     while (imageIndex < images.length) {
-        next.push(createWatchLineFromPreparedImage(images[imageIndex]));
+        next.push(createWatchLineFromPreparedImage(images[imageIndex], audienceSegment));
         imageIndex += 1;
     }
 

@@ -2,6 +2,7 @@ import type { WatchListFilters, WatchListResult, WatchRow } from "@/domains/watc
 
 export type WatchListMediaStatus =
   | "PHOTOSHOOT"
+  | "MEDIA_READY"
   | "MEDIA_PROCESSING"
   | "READY_TO_PUBLISH"
   | "POSTED"
@@ -78,6 +79,8 @@ export type WatchListProjectionData = {
     brandName: string | null;
     vendorId: string | null;
     vendorName: string | null;
+    audienceSegment: string | null;
+    mediaPipelineKey: string | null;
     saleStage: string | null;
     serviceStage: string | null;
     stockStage: string | null;
@@ -103,6 +106,8 @@ export type WatchListProjectionSourceRow = {
   saleStage: unknown;
   serviceStage: unknown;
   stockStage: unknown;
+  audienceSegment: unknown;
+  mediaPipelineKey: unknown;
   conditionGrade: unknown;
   specStatus: unknown;
   isContentDownloaded: boolean;

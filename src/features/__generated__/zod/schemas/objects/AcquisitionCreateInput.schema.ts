@@ -2,6 +2,7 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { AcquisitionTypeSchema } from '../enums/AcquisitionType.schema';
 import { AcquisitionStatusSchema } from '../enums/AcquisitionStatus.schema';
+import { AudienceSegmentSchema } from '../enums/AudienceSegment.schema';
 import { CustomerCreateNestedOneWithoutAcquisitionInputObjectSchema as CustomerCreateNestedOneWithoutAcquisitionInputObjectSchema } from './CustomerCreateNestedOneWithoutAcquisitionInput.schema';
 import { VendorCreateNestedOneWithoutAcquisitionInputObjectSchema as VendorCreateNestedOneWithoutAcquisitionInputObjectSchema } from './VendorCreateNestedOneWithoutAcquisitionInput.schema';
 import { AcquisitionItemCreateNestedManyWithoutAcquisitionInputObjectSchema as AcquisitionItemCreateNestedManyWithoutAcquisitionInputObjectSchema } from './AcquisitionItemCreateNestedManyWithoutAcquisitionInput.schema';
@@ -20,6 +21,7 @@ const makeSchema = () => z.object({
   notes: z.string().optional().nullable(),
   condition: z.string().optional().nullable(),
   warrantyUntil: z.coerce.date().optional().nullable(),
+  audienceSegment: AudienceSegmentSchema.optional(),
   createdAt: z.coerce.date().optional(),
   sentAt: z.coerce.date().optional().nullable(),
   returnedAt: z.coerce.date().optional().nullable(),

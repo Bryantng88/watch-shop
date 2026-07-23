@@ -27,6 +27,7 @@ type Detail = {
     id: string;
     refNo?: string | null;
     status: string;
+    audienceSegment: "MEN" | "WOMEN";
     vendorName?: string | null;
     currency: string;
     notes: string;
@@ -324,7 +325,11 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
 
                                 {draft ? (
                                     <div className="flex items-center gap-2">
-                                        <AcquisitionBulkImagePicker onImport={importImages} disabled={submitting} />
+                                        <AcquisitionBulkImagePicker
+                                            onImport={importImages}
+                                            disabled={submitting}
+                                            audienceSegment={detail.audienceSegment}
+                                        />
                                         <Button type="button" variant="outline" onClick={addItem}>
                                             <Plus className="mr-2 h-4 w-4" />
                                             Thêm watch

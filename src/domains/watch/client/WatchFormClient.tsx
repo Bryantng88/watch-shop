@@ -1502,6 +1502,7 @@ export default function WatchFormClient({
                 inlineImage={inlineImage}
                 watchId={values.watchId}
                 productId={values.productId}
+                audienceSegment={detail.audienceSegment === "WOMEN" ? "WOMEN" : "MEN"}
                 poolImages={values.media.poolImages || []}
                 galleryImages={values.media.galleryImages || []}
                 imageReviewStatus={values.imageReviewStatus}
@@ -1710,6 +1711,7 @@ export default function WatchFormClient({
                         inlineImage={inlineImage}
                         watchId={values.watchId}
                         productId={values.productId}
+                        audienceSegment={detail.audienceSegment === "WOMEN" ? "WOMEN" : "MEN"}
                         poolImages={values.media.poolImages || []}
                         galleryImages={values.media.galleryImages || []}
                         imageReviewStatus={values.imageReviewStatus}

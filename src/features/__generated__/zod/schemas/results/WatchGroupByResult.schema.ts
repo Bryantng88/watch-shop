@@ -27,6 +27,8 @@ export const WatchGroupByResultSchema = z.array(z.object({
     stockStage: z.number(),
     siteChannel: z.number(),
     gender: z.number(),
+    audienceSegment: z.number(),
+    mediaPipelineKey: z.number(),
     conditionGrade: z.number(),
     movementType: z.number(),
     movementCalibre: z.number(),

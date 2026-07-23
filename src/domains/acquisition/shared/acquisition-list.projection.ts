@@ -13,6 +13,7 @@ export type AcquisitionListProjectionItem = {
 
 export type AcquisitionListProjectionRow = {
     id: string;
+    audienceSegment: "MEN" | "WOMEN" | "UNISEX";
     refNo: string;
     approvalStatus: string;
     approvalStatusLabel: string;

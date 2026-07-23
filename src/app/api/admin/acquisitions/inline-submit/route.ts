@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import type { AcquisitionType } from "@prisma/client";
 
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 import { PERMISSIONS } from "@/constants/permissions";
 import { createAcquisitionWithItemApplication } from "@/domains/acquisition/application";
 const WatchLineSchema = z.object({
     id: z.string(),
+    audienceSegment: z.enum(["MEN", "WOMEN"]).optional(),
     quickInput: z.string(),
     aiHint: z.string(),
     cost: z.union([z.number(), z.literal("")]),
@@ -15,6 +17,7 @@ const WatchLineSchema = z.object({
 });
 
 const BodySchema = z.object({
+    audienceSegment: z.enum(["MEN", "WOMEN"]).default("MEN"),
     vendorId: z.string().min(1),
     currency: z.string(),
     type: z.string(),
@@ -32,8 +35,9 @@ export async function POST(req: NextRequest) {
 
         const result = await createAcquisitionWithItemApplication({
             vendorId: body.vendorId,
+            audienceSegment: body.audienceSegment,
             currency: body.currency,
-            type: body.type as any,
+            type: body.type as AcquisitionType,
             createdAt: body.createdAt,
             notes: body.notes ?? null,
             quickVendorName: "",
@@ -43,6 +47,7 @@ export async function POST(req: NextRequest) {
 
                 return {
                     id: `tmp-${line.id}`,
+                    audienceSegment: line.audienceSegment ?? body.audienceSegment,
                     title,
                     productTitle: title,
                     unitCost: Number(line.cost === "" ? 0 : line.cost),
@@ -61,9 +66,9 @@ export async function POST(req: NextRequest) {
         });
 
         return NextResponse.json({ success: true, ...result });
-    } catch (e: any) {
+    } catch (e: unknown) {
         return NextResponse.json(
-            { error: e?.message || "Inline submit failed" },
+            { error: e instanceof Error ? e.message : "Inline submit failed" },
             { status: 400 }
         );
     }

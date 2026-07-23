@@ -5,6 +5,8 @@ import { WatchServiceStageSchema } from '../enums/WatchServiceStage.schema';
 import { WatchStockStageSchema } from '../enums/WatchStockStage.schema';
 import { WatchSiteChannelSchema } from '../enums/WatchSiteChannel.schema';
 import { GenderSchema } from '../enums/Gender.schema';
+import { AudienceSegmentSchema } from '../enums/AudienceSegment.schema';
+import { MediaPipelineKeySchema } from '../enums/MediaPipelineKey.schema';
 import { MovementTypeSchema } from '../enums/MovementType.schema';
 import { WatchStyleSchema } from '../enums/WatchStyle.schema';
 import { WatchSpecStatusSchema } from '../enums/WatchSpecStatus.schema';
@@ -25,6 +27,8 @@ const makeSchema = () => z.object({
   stockStage: WatchStockStageSchema.optional(),
   siteChannel: WatchSiteChannelSchema.optional(),
   gender: GenderSchema.optional(),
+  audienceSegment: AudienceSegmentSchema.optional(),
+  mediaPipelineKey: MediaPipelineKeySchema.optional(),
   conditionGrade: z.string().optional().nullable(),
   movementType: MovementTypeSchema.optional().nullable(),
   movementCalibre: z.string().optional().nullable(),

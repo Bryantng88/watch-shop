@@ -1,8 +1,7 @@
 "use server";
 
 import OpenAI from "openai";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
-import { s3, S3_BUCKET } from "@/server/s3";
+import { mediaStorage } from "@/domains/media/storage";
 import { normalizeKey } from "@/server/lib/product-image-storage";
 
 type GenerateAcquisitionDraftInput = {
@@ -34,14 +33,6 @@ function toAbsoluteUrl(input: string, origin: string) {
     return `${origin}/${input.replace(/^\/+/, "")}`;
 }
 
-async function streamToBuffer(body: any): Promise<Buffer> {
-    const chunks: Buffer[] = [];
-    for await (const chunk of body as any) {
-        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-    }
-    return Buffer.concat(chunks);
-}
-
 async function fetchImageAsDataUrl(imageUrl: string, origin: string) {
     const absoluteUrl = toAbsoluteUrl(imageUrl, origin);
     const res = await fetch(absoluteUrl);
@@ -62,19 +53,9 @@ async function fetchImageEntryAsDataUrl(
 
     if (normalized) {
         try {
-            const object = await s3.send(
-                new GetObjectCommand({
-                    Bucket: S3_BUCKET,
-                    Key: normalized,
-                })
-            );
-
-            if (!object.Body) {
-                throw new Error("S3 object body empty");
-            }
-
-            const contentType = object.ContentType || "image/jpeg";
-            const buffer = await streamToBuffer(object.Body);
+            const object = await mediaStorage.read(normalized);
+            const contentType = object.contentType || "image/jpeg";
+            const buffer = Buffer.from(object.bytes);
             const base64 = buffer.toString("base64");
             return `data:${contentType};base64,${base64}`;
         } catch (error) {

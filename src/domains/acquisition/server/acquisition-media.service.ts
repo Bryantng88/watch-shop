@@ -1,10 +1,11 @@
-import { ImageRole } from "@prisma/client";
+import { ImageRole, MediaRole } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import { normalizeKey } from "@/server/lib/product-image-storage";
 import {
-    moveAndTrackMediaAsset,
-    upsertMediaAssetRepo,
-} from "@/domains/media/server";
+    attachWatchMedia,
+    selectExistingMediaForAcquisition,
+    selectExistingMediaForWatch,
+} from "@/domains/media/application";
 
 export type AcquisitionInlineImageInput = {
     key?: string | null;
@@ -47,45 +48,25 @@ export async function moveAcquisitionInlineImageToChosen(input: {
         throw new Error("Media key không hợp lệ");
     }
 
-    const targetPrefix = getAcquisitionInlineChosenPrefix(input.productId);
-
-    if (key.startsWith(`${targetPrefix}/`)) {
-        const asset = await upsertMediaAssetRepo(prisma as any, {
-            key,
-            status: "CHOSEN",
-            productId: input.productId,
-            acquisitionId: input.acquisitionId,
-            role: ImageRole.INLINE,
-            sortOrder: input.sortOrder ?? 0,
-        });
-
-        return {
-            key: asset.key,
-            fileKey: asset.key,
-            url: `/api/media/sign?key=${encodeURIComponent(asset.key)}`,
-            name: asset.fileName,
-            sortOrder: asset.sortOrder,
-        };
-    }
-
-    const moved = await moveAndTrackMediaAsset({
-        fromKey: key,
-        toPrefix: targetPrefix,
-        deleteSource: true,
-        overwrite: true,
-        productId: input.productId,
+    const selected = await selectExistingMediaForAcquisition({
+        storageKey: key,
         acquisitionId: input.acquisitionId,
-        role: ImageRole.INLINE,
-        status: "CHOSEN",
+        role: MediaRole.INLINE,
+        sortOrder: input.sortOrder ?? 0,
+    });
+    await selectExistingMediaForWatch({
+        storageKey: selected.key,
+        productId: input.productId,
+        role: MediaRole.INLINE,
         sortOrder: input.sortOrder ?? 0,
     });
 
     return {
-        key: moved.key,
-        fileKey: moved.key,
-        url: moved.url,
-        name: moved.asset?.fileName ?? null,
-        sortOrder: moved.asset?.sortOrder ?? input.sortOrder ?? 0,
+        key: selected.key,
+        fileKey: selected.fileKey,
+        url: selected.url,
+        name: selected.name,
+        sortOrder: selected.sortOrder,
     };
 }
 
@@ -152,12 +133,13 @@ export async function syncInlineImageToProduct(input: {
         },
     });
 
-    await upsertMediaAssetRepo(prisma as any, {
-        key,
-        status: "CHOSEN",
+    await attachWatchMedia({
         productId: input.productId,
-        role: ImageRole.INLINE,
-        sortOrder: input.sortOrder ?? 0,
+        images: [{
+            storageKey: key,
+            role: MediaRole.INLINE,
+            sortOrder: input.sortOrder ?? 0,
+        }],
     });
     await prisma.productImage.deleteMany({
         where: {

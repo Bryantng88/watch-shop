@@ -16,6 +16,7 @@ const makeSchema = () => z.object({
   notes: SortOrderSchema.optional(),
   condition: SortOrderSchema.optional(),
   warrantyUntil: SortOrderSchema.optional(),
+  audienceSegment: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   sentAt: SortOrderSchema.optional(),

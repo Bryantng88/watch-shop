@@ -23,7 +23,10 @@ import {
 export async function emitWatchCreatedEvent(
   db: DB,
   input: {
-    watch: Pick<WatchEventWatchSnapshot, "id" | "productId" | "saleStage">;
+    watch: Pick<
+      WatchEventWatchSnapshot,
+      "id" | "productId" | "saleStage" | "audienceSegment" | "mediaPipelineKey"
+    >;
     acquisitionId?: string | null;
     acquisitionItemId?: string | null;
     actorUserId?: string | null;
@@ -44,6 +47,8 @@ export async function emitWatchCreatedEvent(
       productId: input.watch.productId,
       watchId: input.watch.id,
       saleStage: input.watch.saleStage ?? null,
+      audienceSegment: input.watch.audienceSegment ?? null,
+      mediaPipelineKey: input.watch.mediaPipelineKey ?? null,
       acquisitionId,
       acquisitionItemId,
       sourceId: acquisitionItemId ?? acquisitionId,
@@ -189,6 +194,7 @@ export async function emitWatchPhotoshootCompletedEvent(
   input: Omit<WatchMediaPipelineEventPayloadInput, "sourceAction"> & {
     actorUserId?: string | null;
   },
+  options?: BusinessEventDispatchOptions,
 ) {
   return recordBusinessEvent(db, {
     eventKey: "watch.media.photoshoot.completed",
@@ -202,7 +208,7 @@ export async function emitWatchPhotoshootCompletedEvent(
       sourceId: input.sourceId ?? null,
       note: input.note ?? null,
     }),
-  });
+  }, options);
 }
 
 export async function emitWatchMediaAssetAttachedEvent(

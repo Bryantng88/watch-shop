@@ -12,6 +12,10 @@ import { EnumWatchSiteChannelWithAggregatesFilterObjectSchema as EnumWatchSiteCh
 import { WatchSiteChannelSchema } from '../enums/WatchSiteChannel.schema';
 import { EnumGenderWithAggregatesFilterObjectSchema as EnumGenderWithAggregatesFilterObjectSchema } from './EnumGenderWithAggregatesFilter.schema';
 import { GenderSchema } from '../enums/Gender.schema';
+import { EnumAudienceSegmentWithAggregatesFilterObjectSchema as EnumAudienceSegmentWithAggregatesFilterObjectSchema } from './EnumAudienceSegmentWithAggregatesFilter.schema';
+import { AudienceSegmentSchema } from '../enums/AudienceSegment.schema';
+import { EnumMediaPipelineKeyWithAggregatesFilterObjectSchema as EnumMediaPipelineKeyWithAggregatesFilterObjectSchema } from './EnumMediaPipelineKeyWithAggregatesFilter.schema';
+import { MediaPipelineKeySchema } from '../enums/MediaPipelineKey.schema';
 import { EnumMovementTypeNullableWithAggregatesFilterObjectSchema as EnumMovementTypeNullableWithAggregatesFilterObjectSchema } from './EnumMovementTypeNullableWithAggregatesFilter.schema';
 import { MovementTypeSchema } from '../enums/MovementType.schema';
 import { EnumWatchStyleNullableWithAggregatesFilterObjectSchema as EnumWatchStyleNullableWithAggregatesFilterObjectSchema } from './EnumWatchStyleNullableWithAggregatesFilter.schema';
@@ -35,6 +39,8 @@ const watchscalarwherewithaggregatesinputSchema = z.object({
   stockStage: z.union([z.lazy(() => EnumWatchStockStageWithAggregatesFilterObjectSchema), WatchStockStageSchema]).optional(),
   siteChannel: z.union([z.lazy(() => EnumWatchSiteChannelWithAggregatesFilterObjectSchema), WatchSiteChannelSchema]).optional(),
   gender: z.union([z.lazy(() => EnumGenderWithAggregatesFilterObjectSchema), GenderSchema]).optional(),
+  audienceSegment: z.union([z.lazy(() => EnumAudienceSegmentWithAggregatesFilterObjectSchema), AudienceSegmentSchema]).optional(),
+  mediaPipelineKey: z.union([z.lazy(() => EnumMediaPipelineKeyWithAggregatesFilterObjectSchema), MediaPipelineKeySchema]).optional(),
   conditionGrade: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   movementType: z.union([z.lazy(() => EnumMovementTypeNullableWithAggregatesFilterObjectSchema), MovementTypeSchema]).optional().nullable(),
   movementCalibre: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),

@@ -21,6 +21,8 @@ export type WatchEventWatchSnapshot = {
   id: string;
   productId: string;
   saleStage?: unknown;
+  audienceSegment?: "MEN" | "WOMEN" | "UNISEX" | null;
+  mediaPipelineKey?: "MEN_STANDARD" | "WOMEN_LITE" | "UNISEX_STANDARD" | null;
   product?: {
     title?: string | null;
     sku?: string | null;
@@ -124,7 +126,7 @@ export const WATCH_BUSINESS_EVENT_DEFINITIONS: WatchBusinessEventDefinition[] = 
     targetIdPolicy: "watch.id",
     targetAliasPolicy: "[watch.id, productId]",
     payloadContract: "WatchMediaPipelinePayload",
-    knownConsumers: [...WATCH_REVIEW_EVENT_CONSUMERS],
+    knownConsumers: [...WATCH_MEDIA_QUEUE_PROJECTION_CONSUMERS],
     autoBindingScope: WATCH_PHOTOSHOOT_AUTO_BINDING_SCOPE,
   },
   {
@@ -452,6 +454,8 @@ export function watchReviewEventPayload(input: WatchReviewEventPayloadInput) {
       href: `/admin/watches/${input.watch.productId}`,
     },
     businessStatus: String(input.watch.saleStage || product?.status || ""),
+    audienceSegment: input.watch.audienceSegment ?? null,
+    mediaPipelineKey: input.watch.mediaPipelineKey ?? null,
     reviewTargetType: input.reviewTargetType,
     sourceAction: input.sourceAction,
     fromStatus: input.fromStatus ?? null,

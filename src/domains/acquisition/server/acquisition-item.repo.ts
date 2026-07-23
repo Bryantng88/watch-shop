@@ -1,4 +1,4 @@
-import { ProductType } from "@prisma/client";
+import { AudienceSegment, ProductType } from "@prisma/client";
 import { type DB, dbOrTx } from "@/server/db/client";
 import {
     stringifyAcquisitionItemMeta,
@@ -15,6 +15,7 @@ export type CreateOrUpdateAcqItemInput = {
     quickSpec?: any;
     aiMeta?: any;
     pricing?: AcquisitionPricingMeta;
+    audienceSegment?: AudienceSegment;
 };
 
 function getDb(tx?: DB) {
@@ -48,6 +49,7 @@ export async function createAcqItem(
         data: {
             acquisitionId: acqId,
             productTitle: resolveItemTitle(item),
+            audienceSegment: item.audienceSegment ?? AudienceSegment.MEN,
             quantity: 1,
             unitCost: resolveItemUnitCost(item),
             productType: ProductType.WATCH,
@@ -64,6 +66,7 @@ export async function createAcqItem(
             productId: true,
             variantId: true,
             description: true,
+            audienceSegment: true,
         },
     });
 }

@@ -7,6 +7,8 @@ type SpaceViewPageProps = {
   status?: ReactNode;
   meta?: ReactNode;
   actions?: ReactNode;
+  headerIcon?: ReactNode;
+  headerVariant?: "default" | "compact";
   children: ReactNode;
 };
 
@@ -47,25 +49,61 @@ export function SpaceViewPage({
   status,
   meta,
   actions,
+  headerIcon,
+  headerVariant = "default",
   children,
 }: SpaceViewPageProps) {
+  const compactHeader = headerVariant === "compact";
+
   return (
     <main className={`${ADMIN_OPERATION_PAGE_CLASS} bg-[#f6f7fb] px-3 py-5 text-[#111a3d] sm:px-4 lg:px-5 xl:px-6 2xl:px-8`}>
       <div className="mx-auto flex w-full max-w-none min-w-0 flex-col gap-4">
         {breadcrumbs}
-        <section className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-3 text-3xl font-semibold tracking-normal text-slate-950">
-              {title}
-              {status}
-            </div>
-            {meta ? (
-              <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-500">
-                {meta}
-              </div>
+        <section
+          className={
+            compactHeader
+              ? "relative flex flex-col gap-4 overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-r from-white via-white to-violet-50/50 p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] lg:flex-row lg:items-center lg:justify-between"
+              : "flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between"
+          }
+        >
+          {compactHeader ? (
+            <span className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-violet-500 to-indigo-500" />
+          ) : null}
+          <div className={compactHeader ? "flex min-w-0 items-center gap-3 pl-1" : undefined}>
+            {headerIcon ? (
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-sm shadow-violet-200">
+                {headerIcon}
+              </span>
             ) : null}
+            <div className="min-w-0">
+              <div
+                className={
+                  compactHeader
+                    ? "flex flex-wrap items-center gap-2.5 text-2xl font-semibold tracking-[-0.02em] text-slate-950"
+                    : "flex flex-wrap items-center gap-3 text-3xl font-semibold tracking-normal text-slate-950"
+                }
+              >
+                {title}
+                {status}
+              </div>
+              {meta ? (
+                <div
+                  className={
+                    compactHeader
+                      ? "mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500"
+                      : "mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-500"
+                  }
+                >
+                  {meta}
+                </div>
+              ) : null}
+            </div>
           </div>
-          {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+          {actions ? (
+            <div className={`flex flex-wrap items-center gap-2 ${compactHeader ? "pl-14 lg:pl-0" : ""}`}>
+              {actions}
+            </div>
+          ) : null}
         </section>
         {children}
       </div>

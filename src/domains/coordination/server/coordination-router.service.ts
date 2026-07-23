@@ -37,6 +37,35 @@ function normalizeBusinessEvent(
   };
 }
 
+function payloadRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function applyMediaPipelineRoute(
+  event: CoordinationBusinessEvent,
+  route: CoordinationRoute,
+): CoordinationRoute {
+  const payload = payloadRecord(event.payload);
+  if (
+    event.eventKey === "watch.media.photoshoot.completed" &&
+    payload.mediaPipelineKey === "WOMEN_LITE"
+  ) {
+    return {
+      ...route,
+      workTypeKey: "publish",
+      metadata: {
+        ...(route.metadata ?? {}),
+        pipelineKey: "WOMEN_LITE",
+        pipelineBypass: ["media-processing"],
+        note: "WOMEN_LITE routes Photography directly to Publish.",
+      },
+    };
+  }
+  return route;
+}
+
 export function resolveRoute(
   event: CoordinationBusinessEvent,
 ): CoordinationRoute | null {
@@ -48,7 +77,7 @@ export function resolveRoute(
 
   if (!route?.enabled) return null;
 
-  return route;
+  return applyMediaPipelineRoute(normalizedEvent, route);
 }
 
 export function resolveWorkType(

@@ -40,6 +40,10 @@ function formatStatusLabel(value: unknown) {
 function buildWhere(input: AcquisitionListFilters, acquisitionIds: string[] = []) {
     const and: any[] = [];
 
+    if (input.audienceSegment) {
+        and.push({ audienceSegment: input.audienceSegment });
+    }
+
     if (acquisitionIds.length) {
         and.push({ id: { in: acquisitionIds } });
     }
@@ -289,6 +293,7 @@ export async function listAdminAcquisitionsFromSource(
 
         return {
             id: row.id,
+            audienceSegment: row.audienceSegment ?? "MEN",
             refNo: row.refNo ?? "-",
             approvalStatus: mapStatus(row.accquisitionStt),
             approvalStatusLabel: formatStatusLabel(row.accquisitionStt),

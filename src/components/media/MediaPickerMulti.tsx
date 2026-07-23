@@ -26,6 +26,7 @@ type Props = {
     onChosenChange: (items: PickedMediaItem[]) => void;
     onSelectedChange: (items: PickedMediaItem[]) => void;
     profile?: SharedMediaProfile;
+    audienceSegment?: "MEN" | "WOMEN";
     maxFinalSelection?: number;
     title?: string;
     description?: string;
@@ -332,6 +333,7 @@ export default function MediaPickerMulti({
     onChosenChange,
     onSelectedChange,
     profile = "inline",
+    audienceSegment,
     maxFinalSelection,
     title,
     description,
@@ -522,6 +524,7 @@ export default function MediaPickerMulti({
                 open={open}
                 onClose={() => setOpen(false)}
                 profile={profile}
+                audienceSegment={audienceSegment}
                 selectionMode="multiple"
                 selectedKeys={chosenItems.map((item) => item.key)}
                 disabledKeys={[

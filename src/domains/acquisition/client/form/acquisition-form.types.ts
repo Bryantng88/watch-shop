@@ -6,6 +6,7 @@ export type AcquisitionPreparedImage = {
 
 export type AcquisitionWatchLine = {
     id: string;
+    audienceSegment: "MEN" | "WOMEN";
     quickInput: string;
     aiHint: string;
     cost: number | "";
@@ -21,6 +22,8 @@ export type AcquisitionFormVendor = {
 };
 
 export type AcquisitionInlineSubmitPayload = {
+    /** Default for the whole receipt; each item persists its own resolved segment. */
+    audienceSegment: "MEN" | "WOMEN";
     vendorId: string;
     createdAt: string;
     currency: string;

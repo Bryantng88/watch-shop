@@ -8,12 +8,22 @@ type Props = {
     value: string | null;
     onChange: (key: string) => void;
     profile?: SharedMediaProfile;
+    audienceSegment?: "MEN" | "WOMEN";
+    pending?: boolean;
+    disabled?: boolean;
+    compact?: boolean;
+    className?: string;
 };
 
 export default function MediaPickerInline({
     value,
     onChange,
     profile = "inline",
+    audienceSegment = "MEN",
+    pending = false,
+    disabled = false,
+    compact = false,
+    className = "",
 }: Props) {
     const [open, setOpen] = React.useState(false);
 
@@ -22,8 +32,12 @@ export default function MediaPickerInline({
     return (
         <>
             <div
-                onClick={() => setOpen(true)}
-                className="w-20 h-20 border rounded-lg overflow-hidden cursor-pointer"
+                onClick={() => {
+                    if (!disabled && !pending) setOpen(true);
+                }}
+                className={`${compact ? "h-[72px] w-[72px]" : "h-20 w-20"} overflow-hidden rounded-lg border ${
+                    disabled || pending ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+                } ${className}`}
             >
                 {src ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -39,6 +53,7 @@ export default function MediaPickerInline({
                 open={open}
                 onClose={() => setOpen(false)}
                 profile={profile}
+                audienceSegment={audienceSegment}
                 selectedKey={value}
                 selectedKeys={value ? [value] : []}
                 onSelect={(key) => {

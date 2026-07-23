@@ -1,7 +1,8 @@
-import type { AcquisitionType } from "@prisma/client";
+import type { AcquisitionType, AudienceSegment } from "@prisma/client";
 
 export type WatchItemInput = {
     id: string;
+    audienceSegment?: AudienceSegment;
     title?: string;
     productTitle?: string;
     quantity?: number;
@@ -25,5 +26,6 @@ export type CreateAcquisitionInput = {
     type?: AcquisitionType;
     createdAt?: string;
     notes?: string | null;
+    audienceSegment?: AudienceSegment;
     items: WatchItemInput[];
 };

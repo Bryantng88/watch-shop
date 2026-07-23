@@ -108,7 +108,7 @@ export default function DrawerHost() {
 
                 <div className="border-t px-4 py-3 flex justify-end gap-2">
                     {id && (
-                        <a href={`/admin/acquisitions/${id}`} className="rounded border px-3 py-2 text-sm hover:bg-gray-50">
+                        <a href={`/admin/acquisitions/${id}/edit`} className="rounded border px-3 py-2 text-sm hover:bg-gray-50">
                             Xem chi tiết
                         </a>
                     )}
