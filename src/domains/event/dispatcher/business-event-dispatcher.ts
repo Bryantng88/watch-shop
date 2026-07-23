@@ -133,6 +133,7 @@ function logConsumerResult(
   };
 
   if (result.status === "skipped") {
+    if (result.reason === "NO_RELATED_TASK_ITEM") return;
     console.info("[business-event] consumer skipped", payload);
     return;
   }

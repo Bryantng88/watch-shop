@@ -47,6 +47,7 @@ export default function WatchLineCard({
 
     const previewSrc = useMemo(() => getPreviewSrc(line), [line]);
     const formattedCost = formatMoneyDisplay(line.cost);
+    const formattedSalePrice = formatMoneyDisplay(line.salePrice);
 
     const setField = <K extends keyof AcquisitionWatchLine>(
         key: K,
@@ -75,6 +76,10 @@ export default function WatchLineCard({
 
     const handleCostChange = (raw: string) => {
         setField("cost", parseMoneyInput(raw) as AcquisitionWatchLine["cost"]);
+    };
+
+    const handleSalePriceChange = (raw: string) => {
+        setField("salePrice", parseMoneyInput(raw) as AcquisitionWatchLine["salePrice"]);
     };
 
     return (
@@ -106,9 +111,9 @@ export default function WatchLineCard({
                     ) : null}
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 xl:grid-cols-[116px_minmax(0,1.45fr)_minmax(0,1.2fr)_160px] xl:items-start">
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-[72px_minmax(210px,1.35fr)_minmax(170px,1fr)_104px_114px] xl:items-start">
                     <div className="space-y-1">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                        <div className="flex h-7 items-end text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                             Ảnh
                         </div>
 
@@ -139,7 +144,7 @@ export default function WatchLineCard({
                     </div>
 
                     <div className="space-y-1">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                        <div className="flex h-7 items-end whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                             Mô tả nhanh / tên đồng hồ
                         </div>
                         <input
@@ -151,7 +156,7 @@ export default function WatchLineCard({
                     </div>
 
                     <div className="space-y-1">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                        <div className="flex h-7 items-end whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                             Gợi ý thêm cho AI
                         </div>
                         <input
@@ -163,7 +168,7 @@ export default function WatchLineCard({
                     </div>
 
                     <div className="space-y-1">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                        <div className="flex h-7 items-end whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                             Giá nhập
                         </div>
                         <input
@@ -173,6 +178,23 @@ export default function WatchLineCard({
                             onChange={(e) => handleCostChange(e.target.value)}
                             placeholder="0"
                             className="h-[42px] w-full rounded-xl border border-slate-200 px-3 text-right text-sm font-medium tabular-nums outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+                        />
+                    </div>
+
+                    <div className="space-y-1">
+                        <div
+                            className="flex h-7 items-end whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-500"
+                            title="Không bắt buộc"
+                        >
+                            Giá bán đề xuất
+                        </div>
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            value={formattedSalePrice}
+                            onChange={(e) => handleSalePriceChange(e.target.value)}
+                            placeholder="Để trống"
+                            className="h-[42px] w-full rounded-xl border border-emerald-200 bg-emerald-50/30 px-3 text-right text-sm font-semibold tabular-nums text-emerald-800 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
                         />
                     </div>
 

@@ -90,8 +90,8 @@ export default function WatchListTable({
                                 />
                             </th>
                             <th className="w-[35%] px-4 py-3">Watch</th>
-                            <th className="w-[12%] px-4 py-3">Media</th>
-                            <th className="w-[13%] px-4 py-3">Service</th>
+                            <th className="min-w-[220px] px-4 py-3">Media</th>
+                            <th className="min-w-[220px] px-4 py-3">Service</th>
                             <th className="w-[11%] px-4 py-3">Bán hàng</th>
                             <th className="w-[9%] px-4 py-3">Giá bán</th>
                             <th className="w-[9%] px-4 py-3">Cập nhật</th>

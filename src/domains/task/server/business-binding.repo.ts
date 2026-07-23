@@ -28,6 +28,13 @@ const QUEUE_ACTIVITY_SELECT = {
   metadataJson: true,
   occurredAt: true,
   updatedAt: true,
+  actorUser: {
+    select: {
+      name: true,
+      email: true,
+      avatarUrl: true,
+    },
+  },
   _count: {
     select: {
       replies: true,
@@ -258,6 +265,39 @@ export async function findTaskItemIdsByTargetIds(
     where: {
       targetType: input.targetType,
       targetId: { in: targetIds },
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+      taskItemId: { not: null },
+    },
+    select: { taskItemId: true },
+    distinct: ["taskItemId"],
+  });
+
+  return rows
+    .map((row) => row.taskItemId)
+    .filter((id): id is string => Boolean(id));
+}
+
+export async function findTaskItemIdsByTargets(
+  db: DB,
+  targets: Array<{
+    targetType: BusinessBindingTargetType;
+    targetIds: string[];
+  }>,
+) {
+  const client = dbOrTx(db);
+  const clauses = targets.flatMap((target) => {
+    const targetIds = Array.from(
+      new Set(target.targetIds.map((id) => String(id ?? "").trim()).filter(Boolean)),
+    );
+    if (!targetIds.length || !isBusinessBindingTargetType(target.targetType)) return [];
+    return [{ targetType: target.targetType, targetId: { in: targetIds } }];
+  });
+
+  if (!clauses.length) return [];
+
+  const rows = await client.taskExecution.findMany({
+    where: {
+      OR: clauses,
       actionType: { not: TaskExecutionActionType.CANCELLED },
       taskItemId: { not: null },
     },

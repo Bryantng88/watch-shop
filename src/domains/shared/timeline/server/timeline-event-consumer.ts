@@ -5,7 +5,7 @@ import {
 } from "@prisma/client";
 import type { DB } from "@/server/db/client";
 import {
-    findRelatedTaskItemIdsForBusinessTargets,
+    findRelatedTaskItemIdsForBusinessTargetGroups,
 } from "@/domains/task/server/business-binding.service";
 import type { BusinessBindingTargetType } from "@/domains/task/server/business-binding.types";
 import { createBusinessEventActivityLoose } from "@/domains/task/server/activity";
@@ -108,15 +108,33 @@ async function findRelatedTaskItemIdsForBusinessEvent(
         ),
     );
 
-    return findRelatedTaskItemIdsForBusinessTargets(client, {
-        targetType,
-        targetIds,
-    });
+    const targets: Array<{
+        targetType: BusinessBindingTargetType;
+        targetIds: string[];
+    }> = [{ targetType, targetIds }];
+
+    if (targetType === TaskExecutionTargetType.PAYMENT) {
+        const ownerId = clean(metadata.ownerId);
+        const rawOwnerType = clean(metadata.ownerType).toUpperCase();
+        const ownerType =
+            rawOwnerType === "SERVICE"
+                ? TaskExecutionTargetType.SERVICE_REQUEST
+                : isBusinessBindingTargetType(rawOwnerType)
+                    ? rawOwnerType
+                    : null;
+
+        if (ownerType && ownerId) {
+            targets.push({ targetType: ownerType, targetIds: [ownerId] });
+        }
+    }
+
+    return findRelatedTaskItemIdsForBusinessTargetGroups(client, targets);
 }
 
 export async function projectBusinessEventToTaskItemTimeline(
     client: DB,
     event: TimelineBusinessEventLog,
+    resolvedTaskItemIds?: string[],
 ) {
     const metadata = asRecord(event.metadataJson);
     const businessEventLogId = clean(event.id);
@@ -132,11 +150,7 @@ export async function projectBusinessEventToTaskItemTimeline(
         };
     }
 
-    const taskItemIds = await findRelatedTaskItemIdsForBusinessEvent(
-        client,
-        event,
-        metadata,
-    );
+    const taskItemIds = resolvedTaskItemIds ?? await findRelatedTaskItemIdsForBusinessEvent(client, event, metadata);
 
     if (!taskItemIds.length) {
         return {
@@ -184,6 +198,7 @@ export async function projectBusinessEventToTaskItemTimeline(
 export async function projectBusinessFeedbackEventToTaskItemTimeline(
     client: DB,
     event: TimelineBusinessEventLog,
+    resolvedTaskItemIds?: string[],
 ) {
     const metadata = asRecord(event.metadataJson);
     const feedbackId = clean(metadata.feedbackId);
@@ -202,11 +217,7 @@ export async function projectBusinessFeedbackEventToTaskItemTimeline(
         };
     }
 
-    const taskItemIds = await findRelatedTaskItemIdsForBusinessEvent(
-        client,
-        event,
-        metadata,
-    );
+    const taskItemIds = resolvedTaskItemIds ?? await findRelatedTaskItemIdsForBusinessEvent(client, event, metadata);
 
     if (!taskItemIds.length) {
         return {
@@ -257,6 +268,7 @@ export async function projectBusinessFeedbackEventToTaskItemTimeline(
 export async function projectBusinessEventToTaskItemActivity(
     client: DB,
     event: TimelineBusinessEventLog,
+    resolvedTaskItemIds?: string[],
 ) {
     const metadata = asRecord(event.metadataJson);
     const businessEventLogId = clean(event.id);
@@ -272,11 +284,7 @@ export async function projectBusinessEventToTaskItemActivity(
         };
     }
 
-    const taskItemIds = await findRelatedTaskItemIdsForBusinessEvent(
-        client,
-        event,
-        metadata,
-    );
+    const taskItemIds = resolvedTaskItemIds ?? await findRelatedTaskItemIdsForBusinessEvent(client, event, metadata);
 
     if (!taskItemIds.length) {
         return {
@@ -334,17 +342,25 @@ export async function consumeBusinessEventForTimeline(
     const event = eventLog as TimelineBusinessEventLog;
 
     try {
+        const resolvedTaskItemIds = await findRelatedTaskItemIdsForBusinessEvent(
+            client,
+            event,
+            asRecord(event.metadataJson),
+        );
         const businessEventResult = await projectBusinessEventToTaskItemTimeline(
             client,
             event,
+            resolvedTaskItemIds,
         );
         const feedbackResult = await projectBusinessFeedbackEventToTaskItemTimeline(
             client,
             event,
+            resolvedTaskItemIds,
         );
         const activityResult = await projectBusinessEventToTaskItemActivity(
             client,
             event,
+            resolvedTaskItemIds,
         );
 
         const timelineEntries = [

@@ -16,6 +16,7 @@ export function createEmptyWatchLine(): AcquisitionWatchLine {
         quickInput: "",
         aiHint: "",
         cost: "",
+        salePrice: "",
         imageKey: null,
         imageUrl: null,
     };
@@ -29,6 +30,7 @@ export function createWatchLineFromPreparedImage(
         quickInput: "",
         aiHint: "",
         cost: "",
+        salePrice: "",
         imageKey: image.key ?? null,
         imageUrl: image.url ?? null,
     };
@@ -45,6 +47,7 @@ export function isBlankWatchLine(line: AcquisitionWatchLine) {
         !line.quickInput?.trim() &&
         !line.aiHint?.trim() &&
         (line.cost === "" || Number(line.cost || 0) === 0) &&
+        (line.salePrice === "" || Number(line.salePrice || 0) === 0) &&
         !line.imageKey &&
         !line.imageUrl
     );

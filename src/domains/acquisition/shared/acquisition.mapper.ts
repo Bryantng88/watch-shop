@@ -10,5 +10,6 @@ export function toDraftItem(input: WatchItemInput) {
         unitPrice: Number(input.unitPrice ?? input.unitCost ?? 0),
         quickSpec: input.quickSpec,
         aiMeta: input.aiMeta,
+        pricing: input.salePrice == null ? undefined : { proposedSalePrice: input.salePrice },
     };
 }

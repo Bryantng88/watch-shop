@@ -34,7 +34,7 @@ import type {
   QueueSummaryDTO,
   WorkflowRuntimeState,
 } from "./business-binding.types";
-import { findTaskItemIdsByTargetIds } from "./business-binding.repo";
+import { findTaskItemIdsByTargetIds, findTaskItemIdsByTargets } from "./business-binding.repo";
 import type { BusinessBindingTargetType } from "./business-binding.types";
 function clean(value: unknown) {
   return String(value ?? "").trim();
@@ -395,6 +395,7 @@ type QueueActivityStats = {
   latestActivityTitle: string | null;
   latestActivityAt: Date | null;
   latestUpdatedAt: Date | null;
+  lastUpdatedBy: QueueItemDTO["lastUpdatedBy"];
   activityCount: number;
   feedbackCount: number;
   discussionCount: number;
@@ -412,6 +413,7 @@ type QueueBusinessPreview = {
   mediaWorkProgress?: QueueItemDTO["mediaWorkProgress"];
   technicalIssue?: QueueItemDTO["technicalIssue"];
   payment?: QueueItemDTO["payment"];
+  href?: string | null;
 };
 
 type ProductPostTargetsShape = {
@@ -524,6 +526,7 @@ function buildQueueActivityStats(
       latestActivityTitle: null,
       latestActivityAt: null,
       latestUpdatedAt: null,
+      lastUpdatedBy: null,
       activityCount: 0,
       feedbackCount: 0,
       discussionCount: 0,
@@ -536,7 +539,9 @@ function buildQueueActivityStats(
 
     current.activityCount += 1;
     if (hasFeedback) current.feedbackCount += 1;
-    current.discussionCount += activity._count.replies;
+    current.discussionCount +=
+      activity._count.replies +
+      (String(activity.sourceType) === "DISCUSSION" ? 1 : 0);
     current.hasRejectedOrFeedback ||= hasFeedback;
     current.hasDoneSignal ||= activityHasDoneSignal(activity);
 
@@ -547,6 +552,14 @@ function buildQueueActivityStats(
 
     if (updatedAt && (!current.latestUpdatedAt || updatedAt > current.latestUpdatedAt)) {
       current.latestUpdatedAt = updatedAt;
+      const label = clean(activity.actorUser?.name) ||
+        clean(activity.actorUser?.email) ||
+        "Hệ thống";
+      current.lastUpdatedBy = {
+        label,
+        avatarUrl: activity.actorUser?.avatarUrl ?? null,
+        isSystem: !activity.actorUser,
+      };
     }
 
     map.set(key, current);
@@ -600,6 +613,7 @@ async function buildQueueBusinessPreviewMap(
         where: { id: { in: watchIds } },
         select: {
           id: true,
+          productId: true,
           saleStage: true,
           watchContent: {
             select: {
@@ -862,6 +876,7 @@ async function buildQueueBusinessPreviewMap(
       imageUrls: imageUrl ? [imageUrl] : [],
       postTargets: mapPostTargets(watch.product),
       mediaWorkProgress: watchPreviewMediaProgress(watch),
+      href: watchPreviewHref(watch.productId),
     });
   }
 
@@ -1033,6 +1048,16 @@ export async function findRelatedTaskItemIdsForBusinessTargets(
   },
 ) {
   return findTaskItemIdsByTargetIds(db, input);
+}
+
+export async function findRelatedTaskItemIdsForBusinessTargetGroups(
+  db: DB,
+  targets: Array<{
+    targetType: BusinessBindingTargetType;
+    targetIds: string[];
+  }>,
+) {
+  return findTaskItemIdsByTargets(db, targets);
 }
 function assertPresent(value: unknown, message: string) {
   if (!clean(value)) throw new Error(message);
@@ -1246,6 +1271,7 @@ export async function listTaskItemQueueItems(
         latestActivityTitle: null,
         latestActivityAt: null,
         latestUpdatedAt: null,
+        lastUpdatedBy: null,
         activityCount: 0,
         feedbackCount: 0,
         discussionCount: 0,
@@ -1298,6 +1324,7 @@ export async function listTaskItemQueueItems(
         feedbackCount: stats.feedbackCount,
         discussionCount: stats.discussionCount,
         activityCount: stats.activityCount,
+        lastUpdatedBy: stats.lastUpdatedBy,
         workflowKey: workflowRuntime?.workflowKey ?? null,
         currentWorkflowState: workflowRuntime?.currentState ?? null,
         currentWorkflowStateLabel: getWorkflowStateLabel(
@@ -1321,9 +1348,13 @@ export async function listTaskItemQueueItems(
         mediaWorkProgress: progress,
         technicalIssue: businessPreview?.technicalIssue ?? null,
         payment: businessPreview?.payment ?? null,
-        href: metadataText(metadata, ["targetHref", "href"]) ??
-          businessPreview?.href ??
-          null,
+        href: binding.targetType === TaskExecutionTargetType.WATCH
+          ? businessPreview?.href ??
+            metadataText(metadata, ["targetHref", "href"]) ??
+            null
+          : metadataText(metadata, ["targetHref", "href"]) ??
+            businessPreview?.href ??
+            null,
         updatedAt: formatDate(updatedAt),
       };
     });

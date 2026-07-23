@@ -274,7 +274,8 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
                 line.imageUrl ||
                 line.quickInput.trim() ||
                 line.aiHint.trim() ||
-                Number(line.cost || 0) > 0,
+                Number(line.cost || 0) > 0 ||
+                Number(line.salePrice || 0) > 0,
         ).length;
     }, [watchLines]);
 
@@ -349,7 +350,8 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
                 line.imageUrl ||
                 line.quickInput.trim() ||
                 line.aiHint.trim() ||
-                Number(line.cost || 0) > 0,
+                Number(line.cost || 0) > 0 ||
+                Number(line.salePrice || 0) > 0,
         );
 
         if (!validLines.length) {

@@ -79,3 +79,37 @@ export async function saveWatchWorkbenchPricingAction(input: {
         pricing: priceSnapshot(result.after),
     };
 }
+
+export async function saveWatchWorkbenchTitleAction(input: {
+    productId: string;
+    title: string;
+}) {
+    await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+
+    const productId = String(input.productId ?? "").trim();
+    const title = String(input.title ?? "").trim().replace(/\s+/g, " ");
+    if (!productId) throw new Error("Missing productId.");
+    if (!title) throw new Error("Tên watch không được để trống.");
+    if (title.length > 180) throw new Error("Tên watch không được dài quá 180 ký tự.");
+
+    const watch = await prisma.watch.findUnique({
+        where: { productId },
+        select: { id: true },
+    });
+    if (!watch) throw new Error("Không tìm thấy watch cần cập nhật.");
+
+    const product = await prisma.product.update({
+        where: { id: productId },
+        data: { title },
+        select: { title: true },
+    });
+
+    await rebuildWatchListProjectionRows(prisma, {
+        watchIds: [watch.id],
+        limit: 1,
+    });
+    revalidatePath("/admin/watches");
+    revalidatePath(`/admin/watches/${productId}`);
+
+    return { ok: true, title: product.title };
+}

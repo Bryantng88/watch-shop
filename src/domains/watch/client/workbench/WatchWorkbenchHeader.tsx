@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
     BadgeDollarSign,
@@ -9,7 +10,10 @@ import {
     Circle,
     FileText,
     Loader2,
+    Pencil,
+    Save,
     Wrench,
+    X,
 } from "lucide-react";
 
 import { operationButtonClass } from "@/domains/watch/ui/operations/shared/OperationShell";
@@ -111,6 +115,7 @@ export default function WatchWorkbenchHeader({
     values,
     permissions,
     onOpenMediaWorkspace,
+    onSaveTitle,
     onOpenPricing,
     pricingDirty = false,
     openingMediaWorkspace = false,
@@ -119,11 +124,50 @@ export default function WatchWorkbenchHeader({
     values: WatchWorkbenchValues;
     permissions: WatchWorkbenchPermissions;
     onOpenMediaWorkspace: () => void;
+    onSaveTitle: (title: string) => Promise<string>;
     onOpenPricing: () => void;
     pricingDirty?: boolean;
     openingMediaWorkspace?: boolean;
 }) {
     const title = titleForWatch(detail, values);
+    const [editingTitle, setEditingTitle] = useState(false);
+    const [titleDraft, setTitleDraft] = useState(title);
+    const [savingTitle, setSavingTitle] = useState(false);
+    const [titleError, setTitleError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!editingTitle) setTitleDraft(title);
+    }, [editingTitle, title]);
+
+    const cancelTitleEdit = () => {
+        setTitleDraft(title);
+        setTitleError(null);
+        setEditingTitle(false);
+    };
+
+    const saveTitle = async () => {
+        const cleanTitle = titleDraft.trim().replace(/\s+/g, " ");
+        if (!cleanTitle) {
+            setTitleError("Tên watch không được để trống.");
+            return;
+        }
+        if (cleanTitle === title) {
+            cancelTitleEdit();
+            return;
+        }
+
+        setSavingTitle(true);
+        setTitleError(null);
+        try {
+            const savedTitle = await onSaveTitle(cleanTitle);
+            setTitleDraft(savedTitle);
+            setEditingTitle(false);
+        } catch (error) {
+            setTitleError(error instanceof Error ? error.message : "Không thể lưu tên watch.");
+        } finally {
+            setSavingTitle(false);
+        }
+    };
     const src = imageUrl(detail, values);
     const brand = asRecord(detail.brand);
     const vendor = asRecord(detail.vendor);
@@ -208,7 +252,64 @@ export default function WatchWorkbenchHeader({
                         <div className="flex min-w-0 flex-col justify-between gap-6 p-4 md:p-5">
                             <div>
                                 <span className="inline-flex rounded-full bg-violet-50 px-3 py-1.5 text-[10px] font-bold text-violet-700 ring-1 ring-violet-100">WATCH-{(values.header.sku || values.productId).slice(0, 10).toUpperCase()}</span>
-                                <h1 className="mt-4 text-[25px] font-semibold leading-tight tracking-[-0.025em] text-slate-950">{title}</h1>
+                                <div className="mt-4">
+                                    {editingTitle ? (
+                                        <div className="max-w-2xl">
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    autoFocus
+                                                    value={titleDraft}
+                                                    maxLength={180}
+                                                    disabled={savingTitle}
+                                                    onChange={(event) => {
+                                                        setTitleDraft(event.target.value);
+                                                        setTitleError(null);
+                                                    }}
+                                                    onKeyDown={(event) => {
+                                                        if (event.key === "Enter") {
+                                                            event.preventDefault();
+                                                            void saveTitle();
+                                                        }
+                                                        if (event.key === "Escape") cancelTitleEdit();
+                                                    }}
+                                                    className="h-11 min-w-0 flex-1 rounded-lg border border-violet-300 bg-white px-3 text-lg font-semibold text-slate-950 outline-none ring-4 ring-violet-50 focus:border-violet-500"
+                                                    aria-label="Tên watch"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => void saveTitle()}
+                                                    disabled={savingTitle || !titleDraft.trim()}
+                                                    className="inline-flex h-11 items-center gap-2 rounded-lg bg-slate-950 px-4 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    {savingTitle ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                                    Lưu
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={cancelTitleEdit}
+                                                    disabled={savingTitle}
+                                                    className="grid h-11 w-11 place-items-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-50"
+                                                    aria-label="Hủy sửa tên"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                            {titleError ? <p className="mt-2 text-xs font-medium text-rose-600">{titleError}</p> : null}
+                                        </div>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditingTitle(true)}
+                                            className="group flex max-w-full items-center gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                                            title="Sửa nhanh tên watch"
+                                        >
+                                            <h1 className="truncate text-[25px] font-semibold leading-tight tracking-[-0.025em] text-slate-950">{title}</h1>
+                                            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-400 opacity-60 transition group-hover:bg-slate-100 group-hover:text-violet-700 group-hover:opacity-100 group-focus-visible:opacity-100">
+                                                <Pencil className="h-4 w-4" />
+                                            </span>
+                                        </button>
+                                    )}
+                                </div>
                                 {values.content.hookText ? <p className="mt-2 text-sm text-slate-500">{values.content.hookText}</p> : null}
 
                                 <div className="mt-7 grid grid-cols-2 border-y border-slate-100 sm:grid-cols-3 xl:grid-cols-6">

@@ -7,6 +7,7 @@ export type WatchItemInput = {
     quantity?: number;
     unitCost?: number;
     unitPrice?: number;
+    salePrice?: number | null;
     quickSpec?: Record<string, unknown> | null;
     aiMeta?: {
         images?: Array<{

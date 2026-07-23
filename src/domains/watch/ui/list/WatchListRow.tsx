@@ -22,6 +22,11 @@ import {
 import { cn } from "@/lib/utils";
 import type { BusinessEntityPreview } from "@/domains/shared/business/business-entity.types";
 import RowActions from "@/domains/shared/ui/list/RowActions";
+import {
+    VisualStatusSignal,
+    type VisualStatusIcon,
+    type VisualStatusTone,
+} from "@/domains/shared/ui/signals";
 
 import type { WatchRow } from "./types";
 import { formatDateTime, formatMoney } from "./helpers";
@@ -59,7 +64,7 @@ type Props = {
     onPreview?: (preview: BusinessEntityPreview) => void;
 };
 
-type BadgeTone = "slate" | "blue" | "emerald" | "amber" | "rose" | "violet";
+type BadgeTone = VisualStatusTone;
 
 function Thumb({ src, alt }: { src?: string | null; alt: string }) {
     if (!src) {
@@ -81,63 +86,36 @@ function upper(value: unknown) {
     return String(value ?? "").trim().toUpperCase();
 }
 
-function StatusSignal({
+function WatchStatusSignal({
+    kind,
     label,
     onClick,
+    status,
     tone,
 }: {
+    kind: "media" | "service";
     label: string;
     onClick?: (() => void) | null;
+    status?: string | null;
     tone: BadgeTone;
 }) {
-    const dotClasses: Record<BadgeTone, string> = {
-        slate: "bg-slate-400",
-        blue: "bg-blue-500",
-        emerald: "bg-emerald-500",
-        amber: "bg-amber-500",
-        rose: "bg-rose-500",
-        violet: "bg-violet-500",
-    };
-
-    const content = (
-        <>
-            <span
-                aria-hidden="true"
-                className={cn("h-2 w-2 shrink-0 rounded-full", dotClasses[tone])}
-            />
-            <span className="truncate">{label}</span>
-        </>
-    );
-    const className = cn(
-        "inline-flex max-w-[132px] items-center gap-2 text-xs font-medium leading-5",
-        tone === "slate" ? "text-slate-600" : "text-slate-700",
-        onClick ? "rounded-md hover:text-blue-700 hover:underline" : "",
-    );
-
-    if (onClick) {
-        return (
-            <button
-                type="button"
-                onClick={onClick}
-                className={className}
-                title={label}
-            >
-                {content}
-            </button>
-        );
-    }
-
-    return (
-        <span
-            className={cn(
-                "inline-flex max-w-[132px] items-center gap-2 text-xs font-medium leading-5",
-                tone === "slate" ? "text-slate-600" : "text-slate-700",
-            )}
-            title={label}
-        >
-            {content}
-        </span>
-    );
+    const normalized = upper(status);
+    const icon: VisualStatusIcon = kind === "media"
+        ? tone === "emerald" ? "success" : tone === "amber" || tone === "rose" ? "warning" : "image"
+        : tone === "emerald" ? "success" : tone === "amber" || tone === "rose" ? "waiting" : tone === "blue" ? "service" : "neutral";
+    const detail = kind === "media"
+        ? normalized === "POSTED" ? "Đã hoàn tất đăng bài"
+            : normalized === "READY_TO_PUBLISH" ? "Sẵn sàng đăng"
+                : normalized === "NEEDS_REWORK" ? "Cần xử lý lại"
+                    : normalized === "PHOTOSHOOT" ? "Đang chụp ảnh"
+                        : normalized === "MEDIA_PROCESSING" ? "Đang xử lý"
+                            : "Bắt đầu photoshoot"
+        : normalized === "DONE" ? "Đã hoàn tất kỹ thuật"
+            : normalized === "IN_SERVICE" ? "Đang xử lý kỹ thuật"
+                : normalized === "WAITING" || normalized === "PENDING" ? "Chờ tiếp nhận"
+                    : normalized === "ISSUE" ? "Cần kiểm tra"
+                        : "Đã kiểm tra";
+    return <VisualStatusSignal label={label} detail={detail} tone={tone} icon={icon} onClick={onClick ?? undefined} />;
 }
 
 function SaleStatusBadge({
@@ -282,18 +260,20 @@ export default function WatchListRow({
     const media = product.v2Row
         ? {
             label: product.v2Row.mediaStatusLabel,
+            status: product.v2Row.mediaStatus,
             tone: mediaTone(product.v2Row.mediaStatus),
             href: product.v2Row.mediaWorkspaceHref,
         }
-        : { ...legacyMediaStatus(product), href: null };
+        : { ...legacyMediaStatus(product), status: product.isPosted ? "POSTED" : product.hasImages ? "MEDIA_PROCESSING" : "NO_IMAGE", href: null };
     const service = product.v2Row
         ? {
             label: product.v2Row.serviceStatusLabel,
+            status: product.v2Row.serviceStatus,
             tone: serviceTone(product.v2Row.serviceStatus),
             serviceRequestId: product.v2Row.serviceRequestId,
             href: product.v2Row.serviceWorkspaceHref,
         }
-        : { ...legacyServiceStatus(product), serviceRequestId: null, href: null };
+        : { ...legacyServiceStatus(product), status: product.serviceState, serviceRequestId: null, href: null };
     const sale = product.v2Row
         ? {
             label: product.v2Row.saleStatusLabel,
@@ -489,8 +469,10 @@ export default function WatchListRow({
             </td>
 
             <td className="px-4 py-3 align-middle">
-                <StatusSignal
+                <WatchStatusSignal
+                    kind="media"
                     label={media.label}
+                    status={media.status}
                     tone={media.tone}
                     onClick={onPreview ? () => { onPreview(mediaPreview); /*
                         onPreview({
@@ -529,8 +511,10 @@ export default function WatchListRow({
             </td>
 
             <td className="px-4 py-3 align-middle">
-                <StatusSignal
+                <WatchStatusSignal
+                    kind="service"
                     label={service.label}
+                    status={service.status}
                     tone={service.tone}
                     onClick={onPreview ? () => { onPreview(servicePreview); /*
                         onPreview({

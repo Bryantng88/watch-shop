@@ -6,6 +6,7 @@ import {
 } from "../server/acquisition-spec-job.service";
 import {
     getAiMetaFromDescription,
+    getPricingFromDescription,
 } from "../shared/acquisition-item-metadata";
 import * as repoAcq from "../server";
 import {
@@ -102,6 +103,7 @@ export async function postAcquisitionApplication(
                         vendorId,
                         title: item.productTitle ?? "Watch draft",
                         unitCost: Number(item.unitCost ?? 0),
+                        salePrice: getPricingFromDescription(item.description)?.proposedSalePrice ?? null,
                     });
 
                     productId = draft.productId;
