@@ -109,6 +109,7 @@ function activityContextLabel(targetType: string) {
 function manualActionKeyForBlueprintAction(actionKey: string) {
   if (actionKey === "classify_technical_issue") return "confirm-issue";
   if (actionKey === "close_no_issue") return "close-no-issue";
+  if (actionKey === "skip_processing") return "skip-work";
   if (actionKey === "start_processing") return "start-work";
   if (actionKey === "complete_processing") return "mark-done";
   if (actionKey === "cancel_processing") return "cancel-work";

@@ -296,10 +296,25 @@ export async function runServiceOperationBlueprintAction(
     return { ok: false, actionKey, error: "WORKSPACE_ROLE_NOT_FOUND" };
   }
 
-  const action = selectOperationalActionsForWorkspaceRole({
+  let action = selectOperationalActionsForWorkspaceRole({
     contract: context.contract,
     workspaceRole: context.workspaceRole,
   }).find((candidate) => candidate.key === actionKey);
+
+  // Existing workspaces retain a blueprint snapshot. Allow this newly added
+  // semantic action without requiring those workspaces to be recreated.
+  if (!action && actionKey === "skip_processing" && context.workTypeKey) {
+    const currentContract = operationalBlueprintForWorkType({
+      workTypeKey: context.workTypeKey,
+      coordinationContext: "TECHNICAL",
+    });
+    action = currentContract
+      ? selectOperationalActionsForWorkspaceRole({
+          contract: currentContract,
+          workspaceRole: context.workspaceRole,
+        }).find((candidate) => candidate.key === actionKey)
+      : undefined;
+  }
   if (!action) {
     return { ok: false, actionKey, error: "ACTION_NOT_AVAILABLE_FOR_WORKSPACE" };
   }

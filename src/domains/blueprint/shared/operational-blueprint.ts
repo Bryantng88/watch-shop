@@ -965,6 +965,24 @@ const SERVICE_OPERATION_CONTRACT: OperationalBlueprintContract = {
       ],
     },
     {
+      key: "skip_processing",
+      label: "Không cần xử lý",
+      workspaceRole: "PROCESSING",
+      targetType: "TECHNICAL_ISSUE",
+      command: "service.closeTechnicalIssueNoIssue",
+      emits: ["technical_issue.completed"],
+      description:
+        "Kết thúc TI đã phân loại khi xác nhận không cần thực hiện công việc kỹ thuật.",
+      fields: [
+        {
+          key: "resolutionNote",
+          label: "Lý do không cần xử lý",
+          kind: "textarea",
+          required: true,
+        },
+      ],
+    },
+    {
       key: "cancel_processing",
       label: "Hủy xử lý",
       workspaceRole: "PROCESSING",
@@ -1003,6 +1021,12 @@ const SERVICE_OPERATION_CONTRACT: OperationalBlueprintContract = {
           to: "IN_PROGRESS",
           actionKey: "start_processing",
           eventKey: "technical_issue.started",
+        },
+        {
+          from: "READY",
+          to: "DONE",
+          actionKey: "skip_processing",
+          eventKey: "technical_issue.completed",
         },
         {
           from: "IN_PROGRESS",

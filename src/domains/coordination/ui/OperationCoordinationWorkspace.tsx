@@ -2764,7 +2764,7 @@ function technicalBoardActionForMove(input: {
       : input.from === "INSPECT" && input.to === "DONE"
         ? "close_no_issue"
         : input.from === "READY" && input.to === "DONE"
-          ? "cancel_processing"
+          ? "skip_processing"
         : input.from === "READY" && input.to === "PROCESSING"
           ? "start_processing"
           : input.from === "PROCESSING" && input.to === "DONE"
@@ -2931,6 +2931,7 @@ function shouldShowTechnicalBoardField(
 }
 
 function technicalBoardSubmitLabel(action: OperationalBlueprintAction) {
+  if (action.key === "skip_processing") return "Xác nhận không cần xử lý";
   if (action.command === "service.confirmTechnicalIssue") return "Xác nhận lỗi";
   if (action.command === "service.closeTechnicalIssueNoIssue") return "Xác nhận không có lỗi";
   if (action.command === "service.startTechnicalIssue") return "Bắt đầu xử lý";
