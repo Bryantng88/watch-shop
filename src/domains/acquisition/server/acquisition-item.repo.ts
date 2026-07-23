@@ -2,6 +2,7 @@ import { ProductType } from "@prisma/client";
 import { type DB, dbOrTx } from "@/server/db/client";
 import {
     stringifyAcquisitionItemMeta,
+    type AcquisitionPricingMeta,
 } from "../shared/acquisition-item-metadata";
 
 export type CreateOrUpdateAcqItemInput = {
@@ -13,6 +14,7 @@ export type CreateOrUpdateAcqItemInput = {
     unitPrice?: number;
     quickSpec?: any;
     aiMeta?: any;
+    pricing?: AcquisitionPricingMeta;
 };
 
 function getDb(tx?: DB) {
@@ -31,6 +33,7 @@ function buildItemDescription(input: CreateOrUpdateAcqItemInput) {
     return stringifyAcquisitionItemMeta({
         quickSpec: input.quickSpec,
         aiMeta: input.aiMeta,
+        pricing: input.pricing,
     });
 }
 

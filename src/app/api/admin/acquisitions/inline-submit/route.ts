@@ -9,6 +9,7 @@ const WatchLineSchema = z.object({
     quickInput: z.string(),
     aiHint: z.string(),
     cost: z.union([z.number(), z.literal("")]),
+    salePrice: z.union([z.number().nonnegative(), z.literal("")]).optional(),
     imageKey: z.string().nullable(),
     imageUrl: z.string().nullable(),
 });
@@ -45,6 +46,9 @@ export async function POST(req: NextRequest) {
                     title,
                     productTitle: title,
                     unitCost: Number(line.cost === "" ? 0 : line.cost),
+                    salePrice: line.salePrice === "" || line.salePrice == null
+                        ? null
+                        : Number(line.salePrice),
                     aiMeta: {
                         images:
                             line.imageKey || line.imageUrl

@@ -36,6 +36,8 @@ import type { CoordinationContext } from "./coordination-cycle.types";
 import { getPaymentOwnerSummaryProjections } from "@/domains/projection/server/payment-owner-summary.projection";
 import { perfStep } from "@/lib/server-perf";
 import { getAuthUserId } from "@/domains/task/server/core/task.service";
+import { listTaskItemQueueItems } from "@/domains/task/server/business-binding.service";
+import type { CoordinationFlowListItemDTO } from "./coordination-dashboard.types";
 
 function dashboardStep<T>(label: string, run: () => Promise<T>) {
   return perfStep("coordination-dashboard", label, run);
@@ -2091,6 +2093,18 @@ export async function getCoordinationDashboard(input: {
       { createdAt: "asc" },
     ],
   }));
+  if (
+    (input.context === "PAYMENT" || input.context === "OPERATION") &&
+    rawTaskItems.some((item) => paymentWorkspaceRole(item.note)?.startsWith("PAYMENT_"))
+  ) {
+    await dashboardStep("reconcilePaymentBindings", () =>
+      reconcilePaymentCollectionBindings({
+        db,
+        taskId: cycle.task.id,
+        taskItems: rawTaskItems,
+      }),
+    );
+  }
   const workTypeContexts: CoordinationContext[] = input.context === "OPERATION"
     ? ["OPERATION", "SALES", "TECHNICAL", "MEDIA", "PAYMENT", "GENERAL"]
     : [input.context];
@@ -2342,6 +2356,28 @@ export async function getCoordinationDashboard(input: {
     if (leftOrder !== rightOrder) return leftOrder - rightOrder;
     return left.title.localeCompare(right.title);
   });
+  const flowItems: CoordinationFlowListItemDTO[] = (
+    await dashboardStep("flowItems", async () =>
+      Promise.all(taskItems.map(async (item) => {
+        const metadata = workspaceRoleMetadataFromNote(item.note);
+        const items = await listTaskItemQueueItems(db, item.id, {
+          taskId: cycle.task.id,
+          note: item.note,
+        });
+        return items.map((queueItem) => ({
+          ...queueItem,
+          workspaceTitle: item.title,
+          flowStageKey: metadata.flowStageKey ?? ticketWorkTypeKey(item.note),
+          flowStageOrder: metadata.flowStageOrder,
+        }));
+      })),
+    )
+  ).flat().sort((left, right) => {
+    const stageOrder = (left.flowStageOrder ?? Number.MAX_SAFE_INTEGER) -
+      (right.flowStageOrder ?? Number.MAX_SAFE_INTEGER);
+    if (stageOrder !== 0) return stageOrder;
+    return right.updatedAt.localeCompare(left.updatedAt);
+  });
 
   const reportValues = {
     workTickets: workTickets.length,
@@ -2491,6 +2527,7 @@ export async function getCoordinationDashboard(input: {
       };
     }),
     workTickets,
+    flowItems,
     technicalIssueBoard,
     mediaBoard,
   };

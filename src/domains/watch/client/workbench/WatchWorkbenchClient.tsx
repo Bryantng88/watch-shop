@@ -6,7 +6,10 @@ import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { submitWatchForm } from "../form/watch-form.actions";
 import { mapWatchDetailToFormValues } from "../form/watch-form.mapper";
-import { saveWatchWorkbenchPricingAction } from "./watch-workbench.actions";
+import {
+    saveWatchWorkbenchPricingAction,
+    saveWatchWorkbenchTitleAction,
+} from "./watch-workbench.actions";
 import PriceBlock from "../../ui/operations/price/PriceBlock";
 import SpecBlock from "../../ui/operations/spec/SpecBlock";
 import ContentBlock from "../../ui/operations/content/ContentBlock";
@@ -205,6 +208,27 @@ export default function WatchWorkbenchClient({
         }, 1200);
     };
 
+    const saveTitle = async (nextTitle: string) => {
+        const result = await saveWatchWorkbenchTitleAction({
+            productId: values.productId,
+            title: nextTitle,
+        });
+        setValues((current) => ({
+            ...current,
+            basic: { ...current.basic, title: result.title },
+        }));
+        setSavedValues((current) => ({
+            ...current,
+            basic: { ...current.basic, title: result.title },
+        }));
+        notify.success({
+            title: "Đã cập nhật tên watch",
+            message: result.title,
+        });
+        router.refresh();
+        return result.title;
+    };
+
     return (
         <main className="mx-auto w-full max-w-[1600px] space-y-4 px-4 py-5 pb-28 text-slate-900 lg:px-6 xl:px-8">
             <WatchWorkbenchHeader
@@ -212,6 +236,7 @@ export default function WatchWorkbenchClient({
                 values={values}
                 permissions={permissions}
                 onOpenMediaWorkspace={openMediaWorkspace}
+                onSaveTitle={saveTitle}
                 onOpenPricing={() => {
                     setActiveSection("pricing");
                     document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth", block: "start" });

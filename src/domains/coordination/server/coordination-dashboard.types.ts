@@ -7,6 +7,7 @@ import type {
 } from "@/domains/blueprint/server";
 import type { SpaceViewConfig } from "@/domains/space-management/server/space-view.types";
 import type { WorkspaceKind } from "@/domains/space-management/server/space-view.types";
+import type { QueueItemDTO } from "@/domains/task/server/business-binding.types";
 
 export type CoordinationReportMetricDTO = {
   key: string;
@@ -111,6 +112,12 @@ export type CoordinationTechnicalIssueBoardItemDTO = {
   };
 };
 
+export type CoordinationFlowListItemDTO = QueueItemDTO & {
+  workspaceTitle: string;
+  flowStageKey: string | null;
+  flowStageOrder: number | null;
+};
+
 export type CoordinationMediaBoardItemDTO = {
   id: string;
   bindingId: string;
@@ -208,6 +215,7 @@ export type CoordinationDashboardDTO = {
     };
   }>;
   workTickets: CoordinationWorkTicketSummaryDTO[];
+  flowItems: CoordinationFlowListItemDTO[];
   technicalIssueBoard: {
     items: CoordinationTechnicalIssueBoardItemDTO[];
     vendorOptions: Array<{ id: string; name: string }>;

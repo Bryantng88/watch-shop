@@ -9,6 +9,7 @@ export type AcquisitionWatchLine = {
     quickInput: string;
     aiHint: string;
     cost: number | "";
+    salePrice: number | "";
     imageKey: string | null;
     imageUrl: string | null;
 };

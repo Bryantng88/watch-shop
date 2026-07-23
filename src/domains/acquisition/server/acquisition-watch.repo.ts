@@ -1,5 +1,6 @@
 import { ContentStatus, Prisma, ProductStatus, ProductType } from "@prisma/client";
 import { type DB, dbOrTx } from "@/server/db/client";
+import { getPricingFromDescription } from "../shared/acquisition-item-metadata";
 
 function getDb(tx?: DB) {
     return dbOrTx(tx);
@@ -13,6 +14,7 @@ export async function createWatchDraftForAcquisitionItem(
         vendorId: string;
         title: string;
         unitCost?: number | null;
+        salePrice?: number | null;
     }
 ) {
     const db = getDb(tx);
@@ -57,10 +59,12 @@ export async function createWatchDraftForAcquisitionItem(
             watchId: watch.id,
             costPrice: new Prisma.Decimal(unitCost),
             landedCost: new Prisma.Decimal(unitCost),
+            salePrice: input.salePrice == null ? undefined : new Prisma.Decimal(input.salePrice),
         },
         update: {
             costPrice: new Prisma.Decimal(unitCost),
             landedCost: new Prisma.Decimal(unitCost),
+            salePrice: input.salePrice == null ? undefined : new Prisma.Decimal(input.salePrice),
         },
     });
 
@@ -96,6 +100,7 @@ export async function syncLinkedProductFromAcquisitionItem(tx: DB, itemId: strin
             productId: true,
             productTitle: true,
             unitCost: true,
+            description: true,
         },
     });
 
@@ -114,16 +119,19 @@ export async function syncLinkedProductFromAcquisitionItem(tx: DB, itemId: strin
     });
 
     if (watch?.id) {
+        const proposedSalePrice = getPricingFromDescription(item.description)?.proposedSalePrice;
         await db.watchPrice.upsert({
             where: { watchId: watch.id },
             create: {
                 watchId: watch.id,
                 costPrice: item.unitCost ?? undefined,
                 landedCost: item.unitCost ?? undefined,
+                salePrice: proposedSalePrice == null ? undefined : new Prisma.Decimal(proposedSalePrice),
             },
             update: {
                 costPrice: item.unitCost ?? undefined,
                 landedCost: item.unitCost ?? undefined,
+                salePrice: proposedSalePrice == null ? undefined : new Prisma.Decimal(proposedSalePrice),
             },
         });
     }

@@ -79,6 +79,7 @@ import {
 import type { CoordinationDashboardDTO } from "../server/coordination-dashboard.types";
 import { isCoreWorkspaceBlueprint } from "@/domains/task/shared/workspace-flow-policy";
 import WatchSearchPicker, { type WatchSearchResult } from "@/domains/watch/ui/search/WatchSearchPicker";
+import FlowItemListView from "./FlowItemListView";
 
 type Props = {
   data: CoordinationDashboardDTO;
@@ -601,6 +602,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   const [filterCreator, setFilterCreator] = useState("ALL");
   const [filterWorkStatus, setFilterWorkStatus] = useState("ALL");
   const [filterPayment, setFilterPayment] = useState("ALL");
+  const [flowListStageFilter, setFlowListStageFilter] = useState("ALL");
   const [technicalIssuePriorityFilter, setTechnicalIssuePriorityFilter] =
     useState<TechnicalIssuePriorityFilter>("ALL");
   const [technicalIssueCommentFilter, setTechnicalIssueCommentFilter] =
@@ -620,6 +622,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   function changeActiveViewMode(nextModeKey: string) {
     startViewTransition(() => {
       setActiveViewModeKey(nextModeKey);
+      setFlowListStageFilter("ALL");
       setWorkTicketView(nextModeKey === "technical-issue-flow"
         ? "TI_BOARD"
         : nextModeKey === "media-production-flow"
@@ -653,6 +656,22 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
         (flow) => flow.key === activeViewMode.coreFlowKey,
       ) ?? null
     : null;
+  const flowListStageCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    data.flowItems.forEach((item) => {
+      const itemStageKey = normalizeStageKey(item.flowStageKey);
+      const stage = activeCoreFlow?.stages.find(
+        (candidate) =>
+          normalizeStageKey(candidate.key) === itemStageKey ||
+          normalizeStageKey(candidate.workspaceKey) === itemStageKey,
+      );
+      if (stage) counts.set(stage.key, (counts.get(stage.key) ?? 0) + 1);
+    });
+    return counts;
+  }, [activeCoreFlow, data.flowItems]);
+  const flowListVisibleCount = flowListStageFilter === "ALL"
+    ? data.flowItems.length
+    : flowListStageCounts.get(flowListStageFilter) ?? 0;
   const isPaymentCollectionFlow =
     activeCoreFlow?.key === "payment-collection-core-flow";
   const dashboardEndpoint = useMemo(() => {
@@ -811,12 +830,6 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     });
     return { ...result, creators };
   }, [activeDisplayedWorkTickets]);
-  const creatorFilterOptions = useMemo(() => [
-    { label: `Tất cả người tạo (${activeDisplayedWorkTickets.length})`, value: "ALL" },
-    ...Array.from(filterFacets.creators.entries())
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([creator, count]) => ({ label: `${creator} (${count})`, value: creator })),
-  ], [activeDisplayedWorkTickets.length, filterFacets.creators]);
   const filteredWorkTickets = useMemo(() => {
     const query = filterQuery.trim().toLocaleLowerCase("vi");
     return activeDisplayedWorkTickets.filter((ticket) => {
@@ -1330,7 +1343,9 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                 weekOptions={data.filters.weekOptions}
                 dateValue={data.filters.selectedDate}
                 searchValue={filterQuery}
-                searchPlaceholder="Tìm Workspace, phụ trách, hoạt động..."
+                searchPlaceholder={isOperationalBoardView
+                  ? "Tìm item, mã tham chiếu..."
+                  : "Tìm item, mã tham chiếu, đối tượng..."}
                 onSearchChange={setFilterQuery}
                 activeView={isTechnicalIssueBoardView ? "TI_BOARD" : isMediaBoardView ? "MEDIA_BOARD" : "LIST"}
                 onViewChange={(value) => setWorkTicketView(value === "TI_BOARD" ? "TI_BOARD" : value === "MEDIA_BOARD" ? "MEDIA_BOARD" : "LIST")}
@@ -1341,13 +1356,6 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   { value: "LIST", label: "List", icon: <List className="h-4 w-4" /> },
                 ]}
                 selectFilters={[
-                  {
-                    key: "creator",
-                    label: "Người tạo",
-                    value: filterCreator,
-                    options: creatorFilterOptions,
-                    onChange: setFilterCreator,
-                  },
                   {
                     key: "work-status",
                     label: "Trạng thái công việc",
@@ -1429,13 +1437,29 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                     {asyncMediaBoard?.items.length ?? 0} Watch
                   </span>
                 ) : (
-                  <span className="inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-xl bg-slate-50 px-3 text-xs font-semibold text-slate-500">
-                    {isViewPending
-                      ? "Đang tải..."
-                      : filteredWorkTickets.length
-                      ? `${workspacePageStart + 1}-${Math.min(workspacePageStart + workspacePageSize, filteredWorkTickets.length)} / ${filteredWorkTickets.length}`
-                      : "0 / 0"}
-                  </span>
+                  <>
+                    {activeCoreFlow?.stages.length ? (
+                      <select
+                        value={flowListStageFilter}
+                        onChange={(event) => setFlowListStageFilter(event.target.value)}
+                        aria-label="Lọc theo bước"
+                        className="h-11 max-w-52 shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition focus:border-violet-300"
+                      >
+                        <option value="ALL">Tất cả bước</option>
+                        {activeCoreFlow.stages
+                          .slice()
+                          .sort((left, right) => left.sortOrder - right.sortOrder)
+                          .map((stage) => (
+                            <option key={stage.key} value={stage.key}>
+                              {stage.label} · {flowListStageCounts.get(stage.key) ?? 0}
+                            </option>
+                          ))}
+                      </select>
+                    ) : null}
+                    <span className="inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-xl bg-slate-50 px-3 text-xs font-semibold text-slate-500">
+                      {isViewPending ? "Đang tải..." : `${flowListVisibleCount} item`}
+                    </span>
+                  </>
                 )}
                 {filterQuery || filterCreator !== "ALL" || filterWorkStatus !== "ALL" || filterPayment !== "ALL" || technicalIssuePriorityFilter !== "ALL" || technicalIssueCommentFilter !== "ALL" ? <button type="button" onClick={() => { setFilterQuery(""); setFilterCreator("ALL"); setFilterWorkStatus("ALL"); setFilterPayment("ALL"); setTechnicalIssuePriorityFilter("ALL"); setTechnicalIssueCommentFilter("ALL"); }} className="inline-flex h-11 shrink-0 items-center rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800">Xóa lọc</button> : null}
                 {isOperationalBoardView ? (
@@ -1665,6 +1689,20 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
             />
           ) : (
             <>
+          <FlowItemListView
+            key={activeCoreFlow?.key ?? activeViewModeKey}
+            items={data.flowItems}
+            stages={activeCoreFlow?.stages ?? []}
+            query={filterQuery}
+            statusFilter={filterWorkStatus}
+            paymentFilter={filterPayment}
+            activeStage={flowListStageFilter}
+            imageOverrides={Object.fromEntries(
+              (asyncMediaBoard?.items ?? []).map((item) => [item.id, item.imageUrl]),
+            )}
+            pending={isViewPending}
+          />
+          <div className="hidden">
           <div className={cn("hidden border-y border-slate-100 bg-[#fbfcfe] px-5 py-3 text-xs font-bold uppercase tracking-[0.05em] text-slate-500 lg:grid", workTicketGridClass)}>
             <div>Workspace</div>
             <div>Người tạo</div>
@@ -1795,6 +1833,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
               </div>
             </div>
           ) : null}
+          </div>
             </>
           )}
 

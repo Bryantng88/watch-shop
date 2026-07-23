@@ -13,11 +13,16 @@ export type AcquisitionWatchFlags = {
     needService?: boolean;
 };
 
+export type AcquisitionPricingMeta = {
+    proposedSalePrice?: number | null;
+};
+
 export type AcquisitionQuickSpec = Record<string, unknown> | null | undefined;
 
 export type AcquisitionItemMeta = {
     aiMeta?: AcquisitionAiMeta;
     watchFlags?: AcquisitionWatchFlags;
+    pricing?: AcquisitionPricingMeta;
     quickSpec?: AcquisitionQuickSpec;
 };
 
@@ -80,6 +85,13 @@ function normalizeWatchFlags(value: unknown): AcquisitionWatchFlags | undefined 
     return { needService };
 }
 
+function normalizePricing(value: unknown): AcquisitionPricingMeta | undefined {
+    if (!isPlainObject(value)) return undefined;
+    const proposedSalePrice = Number(value.proposedSalePrice);
+    if (!Number.isFinite(proposedSalePrice) || proposedSalePrice < 0) return undefined;
+    return { proposedSalePrice };
+}
+
 function normalizeObjectLike<T extends Record<string, unknown>>(
     value: unknown
 ): T | undefined {
@@ -96,6 +108,9 @@ function normalizeMeta(input: AcquisitionItemMeta): AcquisitionItemMeta {
 
     const watchFlags = normalizeWatchFlags(input.watchFlags);
     if (watchFlags) next.watchFlags = watchFlags;
+
+    const pricing = normalizePricing(input.pricing);
+    if (pricing) next.pricing = pricing;
 
     const quickSpec = normalizeObjectLike(input.quickSpec);
     if (quickSpec) next.quickSpec = quickSpec;
@@ -147,6 +162,7 @@ export function parseAcquisitionItemMeta(
         return normalizeMeta({
             aiMeta: parsed.aiMeta,
             watchFlags: parsed.watchFlags,
+            pricing: parsed.pricing,
             quickSpec: parsed.quickSpec,
         });
     } catch {
@@ -184,6 +200,12 @@ export function getQuickSpecFromDescription(
     description: string | null | undefined
 ): AcquisitionQuickSpec {
     return parseAcquisitionItemMeta(description).quickSpec;
+}
+
+export function getPricingFromDescription(
+    description: string | null | undefined
+): AcquisitionPricingMeta | undefined {
+    return parseAcquisitionItemMeta(description).pricing;
 }
 
 export function cleanAcquisitionItemDescription(

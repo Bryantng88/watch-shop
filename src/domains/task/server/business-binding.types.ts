@@ -82,6 +82,11 @@ export type QueueItemDTO = {
   feedbackCount: number;
   discussionCount: number;
   activityCount: number;
+  lastUpdatedBy?: {
+    label: string;
+    avatarUrl: string | null;
+    isSystem: boolean;
+  } | null;
   workflowKey: string | null;
   currentWorkflowState: string | null;
   currentWorkflowStateLabel: string | null;

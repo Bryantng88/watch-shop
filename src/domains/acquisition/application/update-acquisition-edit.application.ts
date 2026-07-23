@@ -7,6 +7,7 @@ import { publishPaymentMutations, syncAcquisitionPaymentDueTx, type PaymentMutat
 import { emitAcquisitionBusinessEvent } from "../server/acquisition-business-event";
 import {
     getAiMetaFromDescription,
+    getPricingFromDescription,
     stringifyAcquisitionItemMeta,
 } from "../shared/acquisition-item-metadata";
 import type { WatchItemInput } from "../shared/acquisition.dto";
@@ -45,9 +46,13 @@ function resolveAiMeta(input: WatchItemInput, existing?: ExistingItem | null) {
 
 
 function buildDescription(input: WatchItemInput, existing?: ExistingItem | null) {
+    const existingPricing = getPricingFromDescription(existing?.description ?? null);
     return stringifyAcquisitionItemMeta({
         quickSpec: input.quickSpec ?? null,
         aiMeta: resolveAiMeta(input, existing),
+        pricing: input.salePrice === undefined
+            ? existingPricing
+            : input.salePrice == null ? undefined : { proposedSalePrice: input.salePrice },
     });
 }
 
