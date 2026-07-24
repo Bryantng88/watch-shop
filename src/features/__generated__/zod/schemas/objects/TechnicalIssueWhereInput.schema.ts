@@ -13,6 +13,7 @@ import { EnumTechnicalIssueExecutionStatusFilterObjectSchema as EnumTechnicalIss
 import { TechnicalIssueExecutionStatusSchema } from '../enums/TechnicalIssueExecutionStatus.schema';
 import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
 import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
+import { IntNullableFilterObjectSchema as IntNullableFilterObjectSchema } from './IntNullableFilter.schema';
 import { MaintenanceRecordListRelationFilterObjectSchema as MaintenanceRecordListRelationFilterObjectSchema } from './MaintenanceRecordListRelationFilter.schema';
 import { TechnicalAssessmentScalarRelationFilterObjectSchema as TechnicalAssessmentScalarRelationFilterObjectSchema } from './TechnicalAssessmentScalarRelationFilter.schema';
 import { TechnicalAssessmentWhereInputObjectSchema as TechnicalAssessmentWhereInputObjectSchema } from './TechnicalAssessmentWhereInput.schema';
@@ -70,6 +71,8 @@ const technicalissuewhereinputSchema = z.object({
   confirmedById: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   confirmedByNameSnap: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   technicalDetailCatalogId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  expectedWorkingDays: z.union([z.lazy(() => IntNullableFilterObjectSchema), z.number().int()]).optional().nullable(),
+  expectedCompletionAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
   technicalAssessment: z.union([z.lazy(() => TechnicalAssessmentScalarRelationFilterObjectSchema), z.lazy(() => TechnicalAssessmentWhereInputObjectSchema)]).optional(),
   MechanicalPartCatalog: z.union([z.lazy(() => MechanicalPartCatalogNullableScalarRelationFilterObjectSchema), z.lazy(() => MechanicalPartCatalogWhereInputObjectSchema)]).optional(),

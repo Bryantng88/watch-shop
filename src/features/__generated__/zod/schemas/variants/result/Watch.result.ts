@@ -18,6 +18,8 @@ export const WatchResultSchema = z.object({
     acquisitionId: z.string().nullable(),
     saleStage: WatchSaleStageSchema,
     serviceStage: WatchServiceStageSchema,
+    serviceExpectedWorkingDays: z.number().int().nullable(),
+    serviceExpectedCompletionAt: z.date().nullable(),
     stockStage: WatchStockStageSchema,
     siteChannel: WatchSiteChannelSchema,
     gender: GenderSchema,

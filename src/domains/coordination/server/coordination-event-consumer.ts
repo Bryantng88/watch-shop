@@ -2,9 +2,9 @@ import {
   TaskExecutionActionType,
   TaskExecutionTargetType,
   TaskStatus,
-  type Prisma,
+  Prisma,
 } from "@prisma/client";
-import { dbOrTx, type DB } from "@/server/db/client";
+import { dbOrTx, withDbTransaction, type DB } from "@/server/db/client";
 import {
   ensureTaskItemBusinessBinding,
   findTaskItemBusinessBinding,
@@ -1041,38 +1041,59 @@ async function moveExistingFlowStageBindingToWorkspace(input: {
   const targetType = normalizeTargetType(input.targetType);
   if (!isSupportedTargetType(targetType)) return null;
 
-  const client = dbOrTx(input.db);
-  const activeBindings = await client.taskExecution.findMany({
-    where: {
+  return withDbTransaction(input.db, async (tx) => {
+    const lockKey = [
+      "flow-stage-binding",
+      input.taskId,
+      targetType,
+      input.targetId,
+    ].join(":");
+    await tx.$queryRaw<Array<{ locked: string }>>(
+      Prisma.sql`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))::text AS locked`,
+    );
+
+    const activeBindings = await tx.taskExecution.findMany({
+      where: {
+        taskId: input.taskId,
+        targetType,
+        targetId: input.targetId,
+        actionType: { not: TaskExecutionActionType.CANCELLED },
+        taskItemId: { not: null },
+      },
+      select: {
+        id: true,
+        taskItemId: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    const bindingToKeep =
+      activeBindings.find((binding) => binding.taskItemId === input.taskItemId) ??
+      activeBindings[0];
+    const staleBindingIds = activeBindings
+      .filter((binding) => binding.id !== bindingToKeep?.id)
+      .map((binding) => binding.id);
+    if (staleBindingIds.length) {
+      await tx.taskExecution.updateMany({
+        where: { id: { in: staleBindingIds } },
+        data: { actionType: TaskExecutionActionType.CANCELLED },
+      });
+    }
+    if (bindingToKeep && bindingToKeep.taskItemId !== input.taskItemId) {
+      await tx.taskExecution.update({
+        where: { id: bindingToKeep.id },
+        data: { taskItemId: input.taskItemId },
+      });
+    }
+
+    const bindingResult = await ensureTaskItemBusinessBinding(tx, {
       taskId: input.taskId,
+      taskItemId: input.taskItemId,
       targetType,
       targetId: input.targetId,
-      actionType: { not: TaskExecutionActionType.CANCELLED },
-      taskItemId: { not: null },
-    },
-    select: {
-      id: true,
-      taskItemId: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
-  const staleBindingIds = activeBindings
-    .filter((binding) => binding.taskItemId !== input.taskItemId)
-    .map((binding) => binding.id);
-  if (staleBindingIds.length) {
-    await client.taskExecution.updateMany({
-      where: { id: { in: staleBindingIds } },
-      data: { taskItemId: null },
+      actionType: TaskExecutionActionType.LINKED,
+      metadataJson: input.metadataJson,
     });
-  }
-
-  return findTaskItemBusinessBinding(input.db, {
-    taskId: input.taskId,
-    taskItemId: input.taskItemId,
-    targetType,
-    targetId: input.targetId,
-    actionType: TaskExecutionActionType.LINKED,
-    metadataJson: input.metadataJson,
+    return bindingResult.binding;
   });
 }
 

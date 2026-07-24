@@ -41,6 +41,8 @@ const makeSchema = () => z.object({
   confirmedById: z.string().optional().nullable(),
   confirmedByNameSnap: z.string().optional().nullable(),
   technicalDetailCatalogId: z.string().optional().nullable(),
+  expectedWorkingDays: z.number().int().optional().nullable(),
+  expectedCompletionAt: z.coerce.date().optional().nullable(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema),
   task: z.lazy(() => TaskUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema),
   payments: z.lazy(() => PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema),

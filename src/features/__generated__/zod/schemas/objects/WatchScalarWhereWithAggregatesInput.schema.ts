@@ -6,6 +6,8 @@ import { EnumWatchSaleStageWithAggregatesFilterObjectSchema as EnumWatchSaleStag
 import { WatchSaleStageSchema } from '../enums/WatchSaleStage.schema';
 import { EnumWatchServiceStageWithAggregatesFilterObjectSchema as EnumWatchServiceStageWithAggregatesFilterObjectSchema } from './EnumWatchServiceStageWithAggregatesFilter.schema';
 import { WatchServiceStageSchema } from '../enums/WatchServiceStage.schema';
+import { IntNullableWithAggregatesFilterObjectSchema as IntNullableWithAggregatesFilterObjectSchema } from './IntNullableWithAggregatesFilter.schema';
+import { DateTimeNullableWithAggregatesFilterObjectSchema as DateTimeNullableWithAggregatesFilterObjectSchema } from './DateTimeNullableWithAggregatesFilter.schema';
 import { EnumWatchStockStageWithAggregatesFilterObjectSchema as EnumWatchStockStageWithAggregatesFilterObjectSchema } from './EnumWatchStockStageWithAggregatesFilter.schema';
 import { WatchStockStageSchema } from '../enums/WatchStockStage.schema';
 import { EnumWatchSiteChannelWithAggregatesFilterObjectSchema as EnumWatchSiteChannelWithAggregatesFilterObjectSchema } from './EnumWatchSiteChannelWithAggregatesFilter.schema';
@@ -23,7 +25,6 @@ import { WatchStyleSchema } from '../enums/WatchStyle.schema';
 import { BoolWithAggregatesFilterObjectSchema as BoolWithAggregatesFilterObjectSchema } from './BoolWithAggregatesFilter.schema';
 import { EnumWatchSpecStatusWithAggregatesFilterObjectSchema as EnumWatchSpecStatusWithAggregatesFilterObjectSchema } from './EnumWatchSpecStatusWithAggregatesFilter.schema';
 import { WatchSpecStatusSchema } from '../enums/WatchSpecStatus.schema';
-import { DateTimeNullableWithAggregatesFilterObjectSchema as DateTimeNullableWithAggregatesFilterObjectSchema } from './DateTimeNullableWithAggregatesFilter.schema';
 import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema'
 
 const watchscalarwherewithaggregatesinputSchema = z.object({
@@ -36,6 +37,8 @@ const watchscalarwherewithaggregatesinputSchema = z.object({
   acquisitionId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   saleStage: z.union([z.lazy(() => EnumWatchSaleStageWithAggregatesFilterObjectSchema), WatchSaleStageSchema]).optional(),
   serviceStage: z.union([z.lazy(() => EnumWatchServiceStageWithAggregatesFilterObjectSchema), WatchServiceStageSchema]).optional(),
+  serviceExpectedWorkingDays: z.union([z.lazy(() => IntNullableWithAggregatesFilterObjectSchema), z.number().int()]).optional().nullable(),
+  serviceExpectedCompletionAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   stockStage: z.union([z.lazy(() => EnumWatchStockStageWithAggregatesFilterObjectSchema), WatchStockStageSchema]).optional(),
   siteChannel: z.union([z.lazy(() => EnumWatchSiteChannelWithAggregatesFilterObjectSchema), WatchSiteChannelSchema]).optional(),
   gender: z.union([z.lazy(() => EnumGenderWithAggregatesFilterObjectSchema), GenderSchema]).optional(),

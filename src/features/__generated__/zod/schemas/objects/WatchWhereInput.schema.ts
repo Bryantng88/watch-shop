@@ -6,6 +6,8 @@ import { EnumWatchSaleStageFilterObjectSchema as EnumWatchSaleStageFilterObjectS
 import { WatchSaleStageSchema } from '../enums/WatchSaleStage.schema';
 import { EnumWatchServiceStageFilterObjectSchema as EnumWatchServiceStageFilterObjectSchema } from './EnumWatchServiceStageFilter.schema';
 import { WatchServiceStageSchema } from '../enums/WatchServiceStage.schema';
+import { IntNullableFilterObjectSchema as IntNullableFilterObjectSchema } from './IntNullableFilter.schema';
+import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
 import { EnumWatchStockStageFilterObjectSchema as EnumWatchStockStageFilterObjectSchema } from './EnumWatchStockStageFilter.schema';
 import { WatchStockStageSchema } from '../enums/WatchStockStage.schema';
 import { EnumWatchSiteChannelFilterObjectSchema as EnumWatchSiteChannelFilterObjectSchema } from './EnumWatchSiteChannelFilter.schema';
@@ -23,7 +25,6 @@ import { WatchStyleSchema } from '../enums/WatchStyle.schema';
 import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
 import { EnumWatchSpecStatusFilterObjectSchema as EnumWatchSpecStatusFilterObjectSchema } from './EnumWatchSpecStatusFilter.schema';
 import { WatchSpecStatusSchema } from '../enums/WatchSpecStatus.schema';
-import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { ProductScalarRelationFilterObjectSchema as ProductScalarRelationFilterObjectSchema } from './ProductScalarRelationFilter.schema';
 import { ProductWhereInputObjectSchema as ProductWhereInputObjectSchema } from './ProductWhereInput.schema';
@@ -47,6 +48,8 @@ const watchwhereinputSchema = z.object({
   acquisitionId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   saleStage: z.union([z.lazy(() => EnumWatchSaleStageFilterObjectSchema), WatchSaleStageSchema]).optional(),
   serviceStage: z.union([z.lazy(() => EnumWatchServiceStageFilterObjectSchema), WatchServiceStageSchema]).optional(),
+  serviceExpectedWorkingDays: z.union([z.lazy(() => IntNullableFilterObjectSchema), z.number().int()]).optional().nullable(),
+  serviceExpectedCompletionAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   stockStage: z.union([z.lazy(() => EnumWatchStockStageFilterObjectSchema), WatchStockStageSchema]).optional(),
   siteChannel: z.union([z.lazy(() => EnumWatchSiteChannelFilterObjectSchema), WatchSiteChannelSchema]).optional(),
   gender: z.union([z.lazy(() => EnumGenderFilterObjectSchema), GenderSchema]).optional(),

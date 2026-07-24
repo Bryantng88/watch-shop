@@ -212,6 +212,8 @@ function mapV2Row(
     mediaWorkspaceHref: mediaWorkspaceHrefForStatus(source, media.status),
     serviceStatus: service.status,
     serviceStatusLabel: service.label,
+    serviceExpectedWorkingDays: source.serviceExpectedWorkingDays ?? null,
+    serviceExpectedCompletionAt: isoDate(source.serviceExpectedCompletionAt),
     serviceRequestId: source.__serviceState?.serviceRequestId ?? null,
     serviceWorkspaceHref: source.__serviceState?.workspaceHref ?? null,
     saleStatus: sale.status,

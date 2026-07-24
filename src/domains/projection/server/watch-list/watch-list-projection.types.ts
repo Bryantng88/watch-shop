@@ -36,6 +36,8 @@ export type WatchListProjectionRow = {
   mediaWorkspaceHref: string | null;
   serviceStatus: WatchListServiceStatus;
   serviceStatusLabel: string;
+  serviceExpectedWorkingDays: number | null;
+  serviceExpectedCompletionAt: string | null;
   serviceRequestId: string | null;
   serviceWorkspaceHref: string | null;
   saleStatus: WatchListSaleStatus;
@@ -105,6 +107,8 @@ export type WatchListProjectionSourceRow = {
   productId: string;
   saleStage: unknown;
   serviceStage: unknown;
+  serviceExpectedWorkingDays: number | null;
+  serviceExpectedCompletionAt: Date | null;
   stockStage: unknown;
   audienceSegment: unknown;
   mediaPipelineKey: unknown;

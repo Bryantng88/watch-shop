@@ -161,6 +161,7 @@ export async function findTaskItemIdsByTarget(
 export async function findBusinessBindingsByTaskItem(
   db: DB,
   taskItemId: string,
+  pagination?: { skip?: number; take?: number },
 ) {
   const client = dbOrTx(db);
   const cleanTaskItemId = clean(taskItemId);
@@ -173,6 +174,8 @@ export async function findBusinessBindingsByTaskItem(
     },
     select: BUSINESS_BINDING_SELECT,
     orderBy: { createdAt: "desc" },
+    skip: pagination?.skip,
+    take: pagination?.take,
   });
 }
 
@@ -214,6 +217,40 @@ export async function findQueueActivitiesByTaskItem(
   return client.taskItemActivity.findMany({
     where: {
       taskItemId: cleanTaskItemId,
+    },
+    select: QUEUE_ACTIVITY_SELECT,
+    orderBy: [
+      { occurredAt: "asc" },
+      { id: "asc" },
+    ],
+  });
+}
+
+export async function findQueueActivitiesByTaskItemTargets(
+  db: DB,
+  input: {
+    taskItemId: string;
+    targetType: BusinessBindingTargetType;
+    targetIds: string[];
+  },
+) {
+  const client = dbOrTx(db);
+  const taskItemId = clean(input.taskItemId);
+  const targetIds = Array.from(
+    new Set(input.targetIds.map(clean).filter(Boolean)),
+  );
+  assertPresent(taskItemId, "Missing taskItemId");
+  if (!targetIds.length) return [];
+
+  return client.taskItemActivity.findMany({
+    where: {
+      taskItemId,
+      OR: targetIds.map((targetId) => ({
+        AND: [
+          { metadataJson: { path: ["targetType"], equals: input.targetType } },
+          { metadataJson: { path: ["targetId"], equals: targetId } },
+        ],
+      })),
     },
     select: QUEUE_ACTIVITY_SELECT,
     orderBy: [

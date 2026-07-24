@@ -63,8 +63,15 @@ function defaultZaloTemplatesForEvent(eventKey: string) {
 
     if (eventKey === "technical_issue.created") {
         return {
-            titleTemplate: "🔧 Yêu cầu kiểm tra TI mới",
-            messageTemplate: "Đồng hồ: {{watchTitle}}\nMã SR: {{serviceRequestRef}}\nNội dung: {{summary}}\nKhu vực: {{area}}\nƯu tiên: {{priority}}\nMở xử lý: {{route}}",
+            titleTemplate: "🔧 TI mới được đưa vào Kiểm tra",
+            messageTemplate: "Đồng hồ: {{watchTitle}}\nSKU: {{sku}}\nMã SR: {{serviceRequestRef}}\nNội dung: {{summary}}\nKhu vực: {{area}}\nƯu tiên: {{priority}}\nMở xử lý: {{route}}",
+        };
+    }
+
+    if (eventKey === "technical_issue.completed") {
+        return {
+            titleTemplate: "✅ TI đã hoàn tất",
+            messageTemplate: "Đồng hồ: {{watchTitle}}\nSKU: {{sku}}\nMã SR: {{serviceRequestRef}}\nNội dung: {{summary}}\nKết quả: {{resolutionNote}}\nChi phí thực tế: {{actualCost}}\nNgười thao tác: {{actorName}}\nXem chi tiết: {{route}}",
         };
     }
 

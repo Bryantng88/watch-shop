@@ -45,6 +45,8 @@ export const TechnicalIssueResultSchema = z.object({
     user: z.unknown().nullable(),
     vendor: z.unknown().nullable(),
     technicalDetailCatalogId: z.string().nullable(),
+    expectedWorkingDays: z.number().int().nullable(),
+    expectedCompletionAt: z.date().nullable(),
     technicalDetailCatalog: z.unknown().nullable(),
     task: z.array(z.unknown()),
     payments: z.array(z.unknown()),

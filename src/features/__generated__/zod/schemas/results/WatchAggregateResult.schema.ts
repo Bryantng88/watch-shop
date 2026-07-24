@@ -6,6 +6,8 @@ export const WatchAggregateResultSchema = z.object({  _count: z.object({
     acquisitionId: z.number(),
     saleStage: z.number(),
     serviceStage: z.number(),
+    serviceExpectedWorkingDays: z.number(),
+    serviceExpectedCompletionAt: z.number(),
     stockStage: z.number(),
     siteChannel: z.number(),
     gender: z.number(),
@@ -35,11 +37,19 @@ export const WatchAggregateResultSchema = z.object({  _count: z.object({
     tasks: z.number(),
     workCases: z.number()
   }).optional(),
+  _sum: z.object({
+    serviceExpectedWorkingDays: z.number().nullable()
+  }).nullable().optional(),
+  _avg: z.object({
+    serviceExpectedWorkingDays: z.number().nullable()
+  }).nullable().optional(),
   _min: z.object({
     id: z.string().nullable(),
     productId: z.string().nullable(),
     legacyVariantId: z.string().nullable(),
     acquisitionId: z.string().nullable(),
+    serviceExpectedWorkingDays: z.number().int().nullable(),
+    serviceExpectedCompletionAt: z.date().nullable(),
     conditionGrade: z.string().nullable(),
     movementCalibre: z.string().nullable(),
     serialNumber: z.string().nullable(),
@@ -55,6 +65,8 @@ export const WatchAggregateResultSchema = z.object({  _count: z.object({
     productId: z.string().nullable(),
     legacyVariantId: z.string().nullable(),
     acquisitionId: z.string().nullable(),
+    serviceExpectedWorkingDays: z.number().int().nullable(),
+    serviceExpectedCompletionAt: z.date().nullable(),
     conditionGrade: z.string().nullable(),
     movementCalibre: z.string().nullable(),
     serialNumber: z.string().nullable(),

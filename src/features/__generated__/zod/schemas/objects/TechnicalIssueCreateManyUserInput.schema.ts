@@ -35,7 +35,9 @@ const makeSchema = () => z.object({
   confirmedAt: z.coerce.date().optional().nullable(),
   confirmedById: z.string().optional().nullable(),
   confirmedByNameSnap: z.string().optional().nullable(),
-  technicalDetailCatalogId: z.string().optional().nullable()
+  technicalDetailCatalogId: z.string().optional().nullable(),
+  expectedWorkingDays: z.number().int().optional().nullable(),
+  expectedCompletionAt: z.coerce.date().optional().nullable()
 }).strict();
 export const TechnicalIssueCreateManyUserInputObjectSchema: z.ZodType<Prisma.TechnicalIssueCreateManyUserInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueCreateManyUserInput>;
 export const TechnicalIssueCreateManyUserInputObjectZodSchema = makeSchema();

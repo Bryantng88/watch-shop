@@ -36,7 +36,11 @@ import type { CoordinationContext } from "./coordination-cycle.types";
 import { getPaymentOwnerSummaryProjections } from "@/domains/projection/server/payment-owner-summary.projection";
 import { perfStep } from "@/lib/server-perf";
 import { getAuthUserId } from "@/domains/task/server/core/task.service";
-import { listTaskItemQueueItems } from "@/domains/task/server/business-binding.service";
+import {
+  isPaymentCollectionSettledStatus,
+  listPaymentCollectionQueueItems,
+  listTaskItemQueueItems,
+} from "@/domains/task/server/business-binding.service";
 import type { CoordinationFlowListItemDTO } from "./coordination-dashboard.types";
 
 function dashboardStep<T>(label: string, run: () => Promise<T>) {
@@ -132,6 +136,22 @@ function paymentWorkspaceRole(note?: string | null) {
   return noteLineValue(note, "operationWorkspaceRole")?.toUpperCase() ?? null;
 }
 
+function overdueCalendarDays(
+  expectedCompletionAt?: Date | string | null,
+  completedAt?: Date | string | null,
+) {
+  if (!expectedCompletionAt || !completedAt) return null;
+  const expected = new Date(expectedCompletionAt);
+  const completed = new Date(completedAt);
+  if (Number.isNaN(expected.getTime()) || Number.isNaN(completed.getTime())) return null;
+  expected.setHours(0, 0, 0, 0);
+  completed.setHours(0, 0, 0, 0);
+  return Math.max(
+    0,
+    Math.round((completed.getTime() - expected.getTime()) / 86_400_000),
+  );
+}
+
 const paymentReconcileLocks = new Map<string, Promise<void>>();
 
 async function withPaymentReconcileLock<T>(
@@ -195,13 +215,25 @@ export async function reconcilePaymentCollectionBindings(input: {
     .map((binding) => binding.targetId);
   const validExisting = existing.filter((binding) => statusById.has(binding.targetId));
   const duplicateBindingIds: string[] = [];
-  const uniqueExisting = Array.from(
-    validExisting.reduce((byTargetId, binding) => {
-      if (byTargetId.has(binding.targetId)) duplicateBindingIds.push(binding.id);
-      else byTargetId.set(binding.targetId, binding);
-      return byTargetId;
-    }, new Map<string, (typeof validExisting)[number]>()),
-  ).map(([, binding]) => binding);
+  const bindingsByTargetId = validExisting.reduce((groups, binding) => {
+    const group = groups.get(binding.targetId) ?? [];
+    group.push(binding);
+    groups.set(binding.targetId, group);
+    return groups;
+  }, new Map<string, Array<(typeof validExisting)[number]>>());
+  const uniqueExisting = Array.from(bindingsByTargetId.entries()).map(([targetId, bindings]) => {
+    const terminal = terminalStatuses.has(statusById.get(targetId) ?? "");
+    const expectedTaskItemId = terminal ? settledId : reviewId;
+    const bindingToKeep =
+      bindings.find((binding) => binding.taskItemId === expectedTaskItemId) ??
+      bindings[0];
+    duplicateBindingIds.push(
+      ...bindings
+        .filter((binding) => binding.id !== bindingToKeep.id)
+        .map((binding) => binding.id),
+    );
+    return bindingToKeep;
+  });
   const existingIds = new Set(uniqueExisting.map((binding) => binding.targetId));
   const staleReviewIds = uniqueExisting.filter((binding) => !terminalStatuses.has(statusById.get(binding.targetId) ?? "")).map((binding) => binding.targetId);
   const staleSettledIds = uniqueExisting.filter((binding) => terminalStatuses.has(statusById.get(binding.targetId) ?? "")).map((binding) => binding.targetId);
@@ -223,13 +255,23 @@ export async function reconcilePaymentCollectionBindings(input: {
   }
   if (staleReviewIds.length) {
     await db.taskExecution.updateMany({
-      where: { taskId: input.taskId, targetType: TaskExecutionTargetType.PAYMENT, targetId: { in: staleReviewIds } },
+      where: {
+        taskId: input.taskId,
+        targetType: TaskExecutionTargetType.PAYMENT,
+        targetId: { in: staleReviewIds },
+        actionType: { not: TaskExecutionActionType.CANCELLED },
+      },
       data: { taskItemId: reviewId },
     });
   }
   if (staleSettledIds.length) {
     await db.taskExecution.updateMany({
-      where: { taskId: input.taskId, targetType: TaskExecutionTargetType.PAYMENT, targetId: { in: staleSettledIds } },
+      where: {
+        taskId: input.taskId,
+        targetType: TaskExecutionTargetType.PAYMENT,
+        targetId: { in: staleSettledIds },
+        actionType: { not: TaskExecutionActionType.CANCELLED },
+      },
       data: { taskItemId: settledId },
     });
   }
@@ -245,6 +287,7 @@ export async function reconcilePaymentCollectionBindings(input: {
   if (!missing.length) return;
 
   await db.taskExecution.createMany({
+    skipDuplicates: true,
     data: missing.map((payment) => {
       const status = String(payment.status).toUpperCase();
       const terminal = ["PAID", "COLLECTED", "CANCELED", "CANCELLED", "FAILED"].includes(status);
@@ -360,10 +403,6 @@ function nullableNumber(value: unknown) {
 
 function normalizeStatus(value: unknown) {
   return String(value ?? "").trim().toUpperCase();
-}
-
-function targetKey(input: { targetType: string; targetId: string }) {
-  return `${normalizeStatus(input.targetType)}:${input.targetId}`;
 }
 
 function terminalStatesForTarget(
@@ -1085,49 +1124,27 @@ export async function restoreMediaFinalStageDoneBindings(input: {
 
 async function loadPaymentQueueCountByTaskItem(input: {
   db: DB;
-  taskId: string;
-  taskItemIds: string[];
-  terminalStatesByTargetType?: Record<string, string[]>;
+  taskItems: Array<{ id: string; note: string | null }>;
 }) {
   const counts = new Map<string, number>();
-  if (!input.taskItemIds.length) return counts;
+  const reviewTaskItemId = input.taskItems.find(
+    (item) => paymentWorkspaceRole(item.note) === "PAYMENT_REVIEW",
+  )?.id;
+  const settledTaskItemId = input.taskItems.find(
+    (item) => paymentWorkspaceRole(item.note) === "PAYMENT_SETTLED",
+  )?.id;
+  if (!reviewTaskItemId || !settledTaskItemId) return counts;
 
-  const bindings = await input.db.taskExecution.findMany({
-    where: {
-      taskId: input.taskId,
-      taskItemId: { in: input.taskItemIds },
-      targetType: TaskExecutionTargetType.PAYMENT,
-      actionType: { not: TaskExecutionActionType.CANCELLED },
-    },
-    select: {
-      id: true,
-      taskItemId: true,
-      targetType: true,
-      targetId: true,
-      metadataJson: true,
-      createdAt: true,
-    },
+  const paymentCounts = await input.db.payment.groupBy({
+    by: ["status"],
+    where: { amount: { gt: 0 } },
+    _count: { _all: true },
   });
-  const currentBindingByTarget = new Map<
-    string,
-    (typeof bindings)[number]
-  >();
-
-  for (const binding of bindings) {
-    if (!binding.taskItemId || bindingFinished(binding.metadataJson)) continue;
-    const key = targetKey({
-      targetType: binding.targetType,
-      targetId: binding.targetId,
-    });
-    const current = currentBindingByTarget.get(key);
-    if (!current || current.createdAt < binding.createdAt) {
-      currentBindingByTarget.set(key, binding);
-    }
-  }
-
-  for (const binding of currentBindingByTarget.values()) {
-    if (!binding.taskItemId) continue;
-    counts.set(binding.taskItemId, (counts.get(binding.taskItemId) ?? 0) + 1);
+  for (const row of paymentCounts) {
+    const taskItemId = isPaymentCollectionSettledStatus(row.status)
+      ? settledTaskItemId
+      : reviewTaskItemId;
+    counts.set(taskItemId, (counts.get(taskItemId) ?? 0) + row._count._all);
   }
 
   return counts;
@@ -1459,12 +1476,12 @@ async function loadTechnicalIssueBoard(input: {
     where: {
       taskId: input.taskId,
       targetType: TaskExecutionTargetType.TECHNICAL_ISSUE,
-      actionType: { not: TaskExecutionActionType.CANCELLED },
       taskItemId: { not: null },
     },
     select: {
       targetId: true,
       taskItemId: true,
+      actionType: true,
       createdAt: true,
       createdByUser: {
         select: {
@@ -1497,6 +1514,7 @@ async function loadTechnicalIssueBoard(input: {
     }
   >();
   for (const binding of bindings) {
+    if (binding.actionType === TaskExecutionActionType.CANCELLED) continue;
     if (bindingByIssueId.has(binding.targetId)) continue;
     const metadata = workspaceRoleMetadataFromNote(binding.taskItem?.note ?? null);
     bindingByIssueId.set(binding.targetId, {
@@ -1567,6 +1585,9 @@ async function loadTechnicalIssueBoard(input: {
       vendorId: true,
       vendorNameSnap: true,
       estimatedCost: true,
+      expectedWorkingDays: true,
+      expectedCompletionAt: true,
+      completedAt: true,
       actualCost: true,
       technicalDetailCatalogId: true,
       technicalDetailCatalog: {
@@ -1602,21 +1623,48 @@ async function loadTechnicalIssueBoard(input: {
     },
     select: {
       sourceType: true,
+      occurredAt: true,
       metadataJson: true,
+      actorUser: {
+        select: {
+          name: true,
+          email: true,
+          avatarUrl: true,
+        },
+      },
       replies: { select: { metadataJson: true } },
       _count: { select: { replies: true } },
     },
+    orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
   })]);
   const startedEventByIssueId = new Map(startedEvents.map((event) => [event.targetId, event.metadataJson]));
   const commentCountByIssueId = new Map<string, number>();
   const mentionedMeCountByIssueId = new Map<string, number>();
   const unreadMentionCountByIssueId = new Map<string, number>();
+  const lastUpdateByIssueId = new Map<string, {
+    label: string;
+    avatarUrl: string | null;
+    isSystem: boolean;
+    occurredAt: Date;
+  }>();
   for (const activity of discussionActivities) {
     if (!activity.metadataJson || typeof activity.metadataJson !== "object" || Array.isArray(activity.metadataJson)) continue;
     const metadata = activity.metadataJson as { targetType?: unknown; targetId?: unknown; mentionedUserIds?: unknown; mentionReadByUserIds?: unknown };
     if (String(metadata.targetType ?? "") !== "TECHNICAL_ISSUE") continue;
     const targetId = String(metadata.targetId ?? "").trim();
     if (!targetId) continue;
+    if (
+      String(activity.sourceType) !== "DISCUSSION" &&
+      !lastUpdateByIssueId.has(targetId)
+    ) {
+      const label = userLabel(activity.actorUser);
+      lastUpdateByIssueId.set(targetId, {
+        label: label === "-" ? "Hệ thống" : label,
+        avatarUrl: activity.actorUser?.avatarUrl ?? null,
+        isSystem: label === "-",
+        occurredAt: activity.occurredAt,
+      });
+    }
     const directCommentCount = String(activity.sourceType) === "DISCUSSION" ? 1 : 0;
     commentCountByIssueId.set(
       targetId,
@@ -1655,6 +1703,7 @@ async function loadTechnicalIssueBoard(input: {
   const items = issues
     .map((issue): CoordinationTechnicalIssueBoardItemDTO => {
       const binding = bindingByIssueId.get(issue.id);
+      const lastUpdate = lastUpdateByIssueId.get(issue.id);
       const startedMetadata = startedEventByIssueId.get(issue.id);
       const replacementPartCodes = startedMetadata && typeof startedMetadata === "object" && !Array.isArray(startedMetadata)
         ? (startedMetadata as { replacementPartCodes?: unknown }).replacementPartCodes
@@ -1672,6 +1721,13 @@ async function loadTechnicalIssueBoard(input: {
         vendorId: issue.vendorId ?? null,
         vendorName: issue.vendorNameSnap ?? null,
         estimatedCost: nullableNumber(issue.estimatedCost),
+        expectedWorkingDays: issue.expectedWorkingDays ?? null,
+        expectedCompletionAt: formatDateTime(issue.expectedCompletionAt),
+        completedAt: formatDateTime(issue.completedAt),
+        overdueDays: overdueCalendarDays(
+          issue.expectedCompletionAt,
+          issue.completedAt,
+        ),
         executionStatus: String(issue.executionStatus ?? "OPEN"),
         isConfirmed: Boolean(issue.isConfirmed),
         priority: issue.priority ?? "NORMAL",
@@ -1686,8 +1742,12 @@ async function loadTechnicalIssueBoard(input: {
           isConfirmed: Boolean(issue.isConfirmed),
         }),
         actualCost: nullableNumber(issue.actualCost),
-        updatedAt: formatDateTime(issue.updatedAt),
-        lastUpdatedBy: binding?.lastUpdatedBy ?? {
+        updatedAt: formatDateTime(lastUpdate?.occurredAt ?? issue.updatedAt),
+        lastUpdatedBy: lastUpdate ? {
+          label: lastUpdate.label,
+          avatarUrl: lastUpdate.avatarUrl,
+          isSystem: lastUpdate.isSystem,
+        } : binding?.lastUpdatedBy ?? {
           label: "Hệ thống",
           avatarUrl: null,
           isSystem: true,
@@ -2101,12 +2161,16 @@ export async function getCoordinationDashboard(input: {
   includeTechnicalBoard?: boolean;
   includeMediaBoard?: boolean;
   includeFlowItems?: boolean;
+  flowStageKey?: string | null;
+  flowPage?: number | null;
+  flowPageSize?: number | null;
   includeManagementDetails?: boolean;
   includeWorkspaceSummaries?: boolean;
-  reconcileBindings?: boolean;
   auth?: unknown;
 }): Promise<CoordinationDashboardDTO> {
   const db = input?.db ?? prisma;
+  const flowPage = Math.max(1, Math.trunc(input.flowPage ?? 1));
+  const flowPageSize = Math.min(100, Math.max(10, Math.trunc(input.flowPageSize ?? 20)));
   const selectedDate = parseDateInput(input?.date);
   const cycle = await dashboardStep("ensureCycle", () => ensureCoordinationCycle(db, {
     context: input.context,
@@ -2161,19 +2225,6 @@ export async function getCoordinationDashboard(input: {
       { createdAt: "asc" },
     ],
   }));
-  if (
-    input.reconcileBindings !== false &&
-    (input.context === "PAYMENT" || input.context === "OPERATION") &&
-    rawTaskItems.some((item) => paymentWorkspaceRole(item.note)?.startsWith("PAYMENT_"))
-  ) {
-    await dashboardStep("reconcilePaymentBindings", () =>
-      reconcilePaymentCollectionBindings({
-        db,
-        taskId: cycle.task.id,
-        taskItems: rawTaskItems,
-      }),
-    );
-  }
   const workTypeContexts: CoordinationContext[] = input.context === "OPERATION"
     ? ["OPERATION", "SALES", "TECHNICAL", "MEDIA", "PAYMENT", "GENERAL"]
     : [input.context];
@@ -2254,6 +2305,23 @@ export async function getCoordinationDashboard(input: {
   const isMediaFlow = input.context === "MEDIA" || activeFlow?.key === "media-production-flow";
   const isPaymentFlow = input.context === "PAYMENT" || activeFlow?.key === "payment-collection-core-flow";
   const isServiceRequestCaseMode = activeMode?.key === "sr-cases";
+  const requestedFlowStage = activeFlow?.stages.find(
+    (stage) =>
+      normalizeWorkTypeKey(stage.key) === normalizeWorkTypeKey(input.flowStageKey ?? "") ||
+      normalizeWorkTypeKey(stage.workspaceKey) === normalizeWorkTypeKey(input.flowStageKey ?? ""),
+  ) ?? activeFlow?.stages[0] ?? null;
+  const flowLoadTaskItems = requestedFlowStage
+    ? taskItems.filter((item) => {
+        const metadata = workspaceRoleMetadataFromNote(item.note);
+        const stageKey = normalizeWorkTypeKey(
+          metadata.flowStageKey ?? metadata.operationWorkspaceRole ?? ticketWorkTypeKey(item.note) ?? "",
+        );
+        return (
+          stageKey === normalizeWorkTypeKey(requestedFlowStage.key) ||
+          stageKey === normalizeWorkTypeKey(requestedFlowStage.workspaceKey)
+        );
+      })
+    : taskItems;
 
   const [
     queueRows,
@@ -2300,9 +2368,7 @@ export async function getCoordinationDashboard(input: {
     input.includeWorkspaceSummaries !== false && isPaymentFlow
       ? dashboardStep("paymentQueue", () => loadPaymentQueueCountByTaskItem({
           db,
-          taskId: cycle.task.id,
-          taskItemIds,
-          terminalStatesByTargetType: viewConfig.carryover.terminalStatesByTargetType,
+          taskItems,
         }))
       : Promise.resolve(new Map<string, number>()),
     input.includeWorkspaceSummaries !== false
@@ -2358,19 +2424,63 @@ export async function getCoordinationDashboard(input: {
       : Promise.resolve(null),
     input.includeFlowItems !== false
       ? dashboardStep("flowItems", () =>
-          Promise.all(taskItems.map(async (item) => {
-            const metadata = workspaceRoleMetadataFromNote(item.note);
-            const items = await listTaskItemQueueItems(db, item.id, {
-              taskId: cycle.task.id,
-              note: item.note,
-            });
-            return items.map((queueItem) => ({
-              ...queueItem,
-              workspaceTitle: item.title,
-              flowStageKey: metadata.flowStageKey ?? ticketWorkTypeKey(item.note),
-              flowStageOrder: metadata.flowStageOrder,
-            }));
-          })),
+          isPaymentFlow
+            ? (() => {
+                const reviewItem = taskItems.find(
+                  (item) => paymentWorkspaceRole(item.note) === "PAYMENT_REVIEW",
+                );
+                const settledItem = taskItems.find(
+                  (item) => paymentWorkspaceRole(item.note) === "PAYMENT_SETTLED",
+                );
+                if (!reviewItem || !settledItem) return Promise.resolve([]);
+                const metadataByTaskItemId = new Map(
+                  [reviewItem, settledItem].map((item) => [
+                    item.id,
+                    workspaceRoleMetadataFromNote(item.note),
+                  ]),
+                );
+                const titleByTaskItemId = new Map([
+                  [reviewItem.id, reviewItem.title],
+                  [settledItem.id, settledItem.title],
+                ]);
+                return listPaymentCollectionQueueItems(db, {
+                  taskId: cycle.task.id,
+                  reviewTaskItemId: reviewItem.id,
+                  settledTaskItemId: settledItem.id,
+                  stage: normalizeStatus(input.flowStageKey).includes("SETTLED")
+                    ? "SETTLED"
+                    : "REVIEW",
+                  page: flowPage,
+                  pageSize: flowPageSize,
+                }).then((items) => [
+                  items.map((queueItem) => {
+                    const metadata = metadataByTaskItemId.get(queueItem.taskItemId);
+                    return {
+                      ...queueItem,
+                      workspaceTitle: titleByTaskItemId.get(queueItem.taskItemId) ?? "",
+                      flowStageKey: metadata?.flowStageKey ??
+                        metadata?.operationWorkspaceRole ??
+                        null,
+                      flowStageOrder: metadata?.flowStageOrder ?? null,
+                    };
+                  }),
+                ]);
+              })()
+            : Promise.all(flowLoadTaskItems.map(async (item) => {
+                const metadata = workspaceRoleMetadataFromNote(item.note);
+                const items = await listTaskItemQueueItems(db, item.id, {
+                  taskId: cycle.task.id,
+                  note: item.note,
+                  page: flowPage,
+                  pageSize: flowPageSize,
+                });
+                return items.map((queueItem) => ({
+                  ...queueItem,
+                  workspaceTitle: item.title,
+                  flowStageKey: metadata.flowStageKey ?? ticketWorkTypeKey(item.note),
+                  flowStageOrder: metadata.flowStageOrder,
+                }));
+              })),
         )
       : Promise.resolve([]),
   ]);
@@ -2459,6 +2569,26 @@ export async function getCoordinationDashboard(input: {
     if (stageOrder !== 0) return stageOrder;
     return right.updatedAt.localeCompare(left.updatedAt);
   });
+  const flowItemsTotal = input.includeFlowItems === false
+    ? 0
+    : await dashboardStep("flowItemsTotal", () =>
+        isPaymentFlow
+          ? db.payment.count({
+              where: {
+                amount: { gt: 0 },
+                status: normalizeStatus(input.flowStageKey).includes("SETTLED")
+                  ? { not: PaymentStatus.UNPAID }
+                  : PaymentStatus.UNPAID,
+              },
+            })
+          : db.taskExecution.count({
+              where: {
+                taskId: cycle.task.id,
+                taskItemId: { in: flowLoadTaskItems.map((item) => item.id) },
+                actionType: { not: TaskExecutionActionType.CANCELLED },
+              },
+            }),
+      );
 
   const reportValues = {
     workTickets: workTickets.length,
@@ -2611,6 +2741,12 @@ export async function getCoordinationDashboard(input: {
     }),
     workTickets,
     flowItems,
+    flowItemsPagination: {
+      page: flowPage,
+      pageSize: flowPageSize,
+      total: flowItemsTotal,
+      totalPages: Math.max(1, Math.ceil(flowItemsTotal / flowPageSize)),
+    },
     technicalIssueBoard,
     mediaBoard,
   };

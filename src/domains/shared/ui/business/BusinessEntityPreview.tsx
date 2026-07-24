@@ -9,6 +9,8 @@ import {
     ImageIcon,
     Loader2,
     MessageSquare,
+    Pencil,
+    Save,
     Send,
     X,
     ZoomIn,
@@ -17,9 +19,125 @@ import type {
     BusinessEntityPreview,
     BusinessEntityType,
 } from "@/domains/shared/business/business-entity.types";
-import { getBusinessEntityPreviewAction } from "@/domains/shared/business/business-entity-preview.actions";
+import {
+    getBusinessEntityPreviewAction,
+    updateTechnicalIssuePreviewAction,
+} from "@/domains/shared/business/business-entity-preview.actions";
 import { ActivityViewModelFeed } from "@/domains/task/ui/task-work/activity/ActivityFeed";
 import { addTaskItemDiscussionAction, markTaskItemMentionsReadAction } from "@/domains/task/actions/task.actions";
+
+const TECHNICAL_AREAS = [
+    ["GENERAL", "Tổng quát"],
+    ["MOVEMENT", "Máy"],
+    ["CASE", "Vỏ"],
+    ["CRYSTAL", "Kính"],
+    ["BRACELET", "Dây / bracelet"],
+    ["CROWN", "Núm"],
+    ["HANDS_MARKERS", "Kim cọc"],
+] as const;
+
+function TechnicalIssueEditPanel({ preview }: { preview: BusinessEntityPreview }) {
+    const router = useRouter();
+    const edit = preview.edit;
+    const [editing, setEditing] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [values, setValues] = useState(edit?.values);
+
+    useEffect(() => {
+        setValues(edit?.values);
+        setEditing(false);
+        setError(null);
+    }, [edit, preview.id]);
+
+    if (!edit || !values) return null;
+    const inputClass = "h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100";
+
+    async function save() {
+        if (!values.summary.trim()) {
+            setError("Vui lòng nhập nội dung TI.");
+            return;
+        }
+        setSaving(true);
+        setError(null);
+        try {
+            await updateTechnicalIssuePreviewAction({
+                id: preview.id,
+                ...values,
+            });
+            setEditing(false);
+            router.refresh();
+        } catch (saveError) {
+            setError(saveError instanceof Error ? saveError.message : "Không thể cập nhật TI.");
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    return (
+        <section className="rounded-2xl border border-blue-100 bg-blue-50/40 p-3">
+            <div className="flex items-center justify-between gap-3">
+                <div>
+                    <div className="text-sm font-semibold text-slate-950">Thông tin Technical Issue</div>
+                    <div className="mt-0.5 text-xs text-slate-500">Có thể chỉnh sửa khi TI chưa Done.</div>
+                </div>
+                <button type="button" onClick={() => setEditing((current) => !current)} disabled={saving} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-blue-200 bg-white px-3 text-sm font-semibold text-blue-700 hover:bg-blue-50">
+                    <Pencil className="h-4 w-4" />
+                    {editing ? "Đóng chỉnh sửa" : "Chỉnh sửa"}
+                </button>
+            </div>
+            {editing ? (
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <label className="sm:col-span-2">
+                        <span className="mb-1 block text-xs font-semibold text-slate-600">Nội dung TI</span>
+                        <input className={inputClass} value={values.summary} onChange={(event) => setValues({ ...values, summary: event.target.value })} />
+                    </label>
+                    <label>
+                        <span className="mb-1 block text-xs font-semibold text-slate-600">Khu vực kỹ thuật</span>
+                        <select className={inputClass} value={values.area} onChange={(event) => setValues({ ...values, area: event.target.value })}>
+                            {TECHNICAL_AREAS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                        </select>
+                    </label>
+                    <label>
+                        <span className="mb-1 block text-xs font-semibold text-slate-600">Hình thức xử lý</span>
+                        <select className={inputClass} value={values.actionMode} onChange={(event) => setValues({ ...values, actionMode: event.target.value, vendorId: event.target.value === "VENDOR" ? values.vendorId : "" })}>
+                            <option value="INTERNAL">Nội bộ</option>
+                            <option value="VENDOR">Vendor</option>
+                        </select>
+                    </label>
+                    {values.actionMode === "VENDOR" ? (
+                        <label>
+                            <span className="mb-1 block text-xs font-semibold text-slate-600">Vendor</span>
+                            <select className={inputClass} value={values.vendorId} onChange={(event) => setValues({ ...values, vendorId: event.target.value })}>
+                                <option value="">Chọn vendor</option>
+                                {edit.vendorOptions.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}
+                            </select>
+                        </label>
+                    ) : null}
+                    <label>
+                        <span className="mb-1 block text-xs font-semibold text-slate-600">Chi phí dự kiến</span>
+                        <input type="number" min={0} step={1000} className={inputClass} value={values.estimatedCost} onChange={(event) => setValues({ ...values, estimatedCost: event.target.value })} />
+                    </label>
+                    <label>
+                        <span className="mb-1 block text-xs font-semibold text-slate-600">Số ngày dự kiến</span>
+                        <input type="number" min={1} max={365} step={1} className={inputClass} value={values.expectedWorkingDays} onChange={(event) => setValues({ ...values, expectedWorkingDays: event.target.value })} />
+                    </label>
+                    <label className="sm:col-span-2">
+                        <span className="mb-1 block text-xs font-semibold text-slate-600">Ghi chú kỹ thuật</span>
+                        <textarea rows={3} className={`${inputClass} h-auto py-2`} value={values.note} onChange={(event) => setValues({ ...values, note: event.target.value })} />
+                    </label>
+                    {error ? <div className="sm:col-span-2 text-sm font-medium text-rose-600">{error}</div> : null}
+                    <div className="flex justify-end sm:col-span-2">
+                        <button type="button" disabled={saving} onClick={() => void save()} className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:bg-slate-300">
+                            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                            Lưu thay đổi
+                        </button>
+                    </div>
+                </div>
+            ) : null}
+        </section>
+    );
+}
 
 function BusinessEntityActivityPanel({
     preview,
@@ -363,6 +481,8 @@ export function BusinessEntityPreviewModal({
                                 </div>
                               ) : null}
                             </section>
+
+                            <TechnicalIssueEditPanel preview={preview} />
 
                             {preview.notes?.length ? (
                                 <div className="space-y-3">

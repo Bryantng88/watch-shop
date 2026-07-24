@@ -86,6 +86,10 @@ export type CoordinationTechnicalIssueBoardItemDTO = {
   vendorId: string | null;
   vendorName: string | null;
   estimatedCost: number | null;
+  expectedWorkingDays: number | null;
+  expectedCompletionAt: string | null;
+  completedAt: string | null;
+  overdueDays: number | null;
   executionStatus: string;
   isConfirmed: boolean;
   priority: string | null;
@@ -216,6 +220,12 @@ export type CoordinationDashboardDTO = {
   }>;
   workTickets: CoordinationWorkTicketSummaryDTO[];
   flowItems: CoordinationFlowListItemDTO[];
+  flowItemsPagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
   technicalIssueBoard: {
     items: CoordinationTechnicalIssueBoardItemDTO[];
     vendorOptions: Array<{ id: string; name: string }>;

@@ -34,7 +34,9 @@ const makeSchema = () => z.object({
   confirmedAt: z.literal(true).optional(),
   confirmedById: z.literal(true).optional(),
   confirmedByNameSnap: z.literal(true).optional(),
-  technicalDetailCatalogId: z.literal(true).optional()
+  technicalDetailCatalogId: z.literal(true).optional(),
+  expectedWorkingDays: z.literal(true).optional(),
+  expectedCompletionAt: z.literal(true).optional()
 }).strict();
 export const TechnicalIssueMinAggregateInputObjectSchema: z.ZodType<Prisma.TechnicalIssueMinAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueMinAggregateInputType>;
 export const TechnicalIssueMinAggregateInputObjectZodSchema = makeSchema();

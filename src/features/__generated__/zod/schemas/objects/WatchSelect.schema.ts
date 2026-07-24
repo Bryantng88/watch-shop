@@ -16,6 +16,8 @@ const makeSchema = () => z.object({
   acquisitionId: z.boolean().optional(),
   saleStage: z.boolean().optional(),
   serviceStage: z.boolean().optional(),
+  serviceExpectedWorkingDays: z.boolean().optional(),
+  serviceExpectedCompletionAt: z.boolean().optional(),
   stockStage: z.boolean().optional(),
   siteChannel: z.boolean().optional(),
   gender: z.boolean().optional(),

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { RotateCcw } from "lucide-react";
 
 import BusinessListDashboard, { BusinessListDashboardSkeleton } from "./BusinessListDashboard";
 import type {
@@ -34,6 +35,7 @@ export default function AsyncBusinessListDashboard({
 }) {
     const [data, setData] = useState<BusinessListDashboardData | null>(null);
     const [failed, setFailed] = useState(false);
+    const [retryKey, setRetryKey] = useState(0);
     const [cashPeriod, setCashPeriod] = useState<"WEEK" | "MONTH" | "YEAR" | "ALL">("WEEK");
 
     useEffect(() => {
@@ -70,9 +72,22 @@ export default function AsyncBusinessListDashboard({
             });
 
         return () => controller.abort();
-    }, [cashFlowPeriods, cashPeriod, endpoint, onResult]);
+    }, [cashFlowPeriods, cashPeriod, endpoint, onResult, retryKey]);
 
-    if (failed) return null;
+    if (failed) {
+        return (
+            <div className="flex min-h-24 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/70">
+                <button
+                    type="button"
+                    onClick={() => setRetryKey((current) => current + 1)}
+                    className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-violet-200 hover:text-violet-700"
+                >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Tải lại dashboard
+                </button>
+            </div>
+        );
+    }
     if (!data) return <BusinessListDashboardSkeleton count={widgets?.length} />;
     return (
         <BusinessListDashboard

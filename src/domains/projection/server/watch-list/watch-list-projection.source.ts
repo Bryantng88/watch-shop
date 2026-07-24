@@ -12,6 +12,8 @@ const WATCH_LIST_SOURCE_SELECT = {
   productId: true,
   saleStage: true,
   serviceStage: true,
+  serviceExpectedWorkingDays: true,
+  serviceExpectedCompletionAt: true,
   stockStage: true,
   audienceSegment: true,
   mediaPipelineKey: true,

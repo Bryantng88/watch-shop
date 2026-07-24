@@ -48,6 +48,8 @@ const makeSchema = () => z.object({
   confirmedById: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   confirmedByNameSnap: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   technicalDetailCatalogId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  expectedWorkingDays: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  expectedCompletionAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordOrderByRelationAggregateInputObjectSchema).optional(),
   technicalAssessment: z.lazy(() => TechnicalAssessmentOrderByWithRelationInputObjectSchema).optional(),
   MechanicalPartCatalog: z.lazy(() => MechanicalPartCatalogOrderByWithRelationInputObjectSchema).optional(),

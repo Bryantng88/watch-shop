@@ -29,6 +29,8 @@ export const TechnicalIssueGroupByResultSchema = z.array(z.object({
   confirmedById: z.string(),
   confirmedByNameSnap: z.string(),
   technicalDetailCatalogId: z.string(),
+  expectedWorkingDays: z.number().int(),
+  expectedCompletionAt: z.date(),
   _count: z.object({
     id: z.number(),
     assessmentId: z.number(),
@@ -70,6 +72,8 @@ export const TechnicalIssueGroupByResultSchema = z.array(z.object({
     user: z.number(),
     vendor: z.number(),
     technicalDetailCatalogId: z.number(),
+    expectedWorkingDays: z.number(),
+    expectedCompletionAt: z.number(),
     technicalDetailCatalog: z.number(),
     task: z.number(),
     payments: z.number(),
@@ -78,12 +82,14 @@ export const TechnicalIssueGroupByResultSchema = z.array(z.object({
   _sum: z.object({
     estimatedCost: z.number().nullable(),
     sortOrder: z.number().nullable(),
-    actualCost: z.number().nullable()
+    actualCost: z.number().nullable(),
+    expectedWorkingDays: z.number().nullable()
   }).nullable().optional(),
   _avg: z.object({
     estimatedCost: z.number().nullable(),
     sortOrder: z.number().nullable(),
-    actualCost: z.number().nullable()
+    actualCost: z.number().nullable(),
+    expectedWorkingDays: z.number().nullable()
   }).nullable().optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -113,7 +119,9 @@ export const TechnicalIssueGroupByResultSchema = z.array(z.object({
     confirmedAt: z.date().nullable(),
     confirmedById: z.string().nullable(),
     confirmedByNameSnap: z.string().nullable(),
-    technicalDetailCatalogId: z.string().nullable()
+    technicalDetailCatalogId: z.string().nullable(),
+    expectedWorkingDays: z.number().int().nullable(),
+    expectedCompletionAt: z.date().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -143,6 +151,8 @@ export const TechnicalIssueGroupByResultSchema = z.array(z.object({
     confirmedAt: z.date().nullable(),
     confirmedById: z.string().nullable(),
     confirmedByNameSnap: z.string().nullable(),
-    technicalDetailCatalogId: z.string().nullable()
+    technicalDetailCatalogId: z.string().nullable(),
+    expectedWorkingDays: z.number().int().nullable(),
+    expectedCompletionAt: z.date().nullable()
   }).nullable().optional()
 }));

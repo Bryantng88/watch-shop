@@ -94,6 +94,77 @@ async function enrichNotificationEvent(
             .join(", ") || "Chưa chọn";
     }
 
+    if (
+        event.targetType === "TECHNICAL_ISSUE" &&
+        ["technical_issue.created", "technical_issue.completed"].includes(event.eventKey)
+    ) {
+        const issue = await client.technicalIssue.findUnique({
+            where: { id: event.targetId },
+            select: {
+                summary: true,
+                note: true,
+                area: true,
+                priority: true,
+                actualCost: true,
+                resolutionNote: true,
+                serviceRequest: {
+                    select: {
+                        id: true,
+                        refNo: true,
+                        skuSnapshot: true,
+                        brandSnapshot: true,
+                        modelSnapshot: true,
+                    },
+                },
+            },
+        });
+
+        const serviceRequest = issue?.serviceRequest;
+        const watchTitle = [
+            clean(serviceRequest?.brandSnapshot),
+            clean(serviceRequest?.modelSnapshot),
+        ].filter(Boolean).join(" ");
+
+        enriched.watchTitle =
+            clean(enriched.watchTitle) ||
+            watchTitle ||
+            clean(serviceRequest?.skuSnapshot) ||
+            "Chưa có thông tin đồng hồ";
+        enriched.sku =
+            clean(enriched.sku) ||
+            clean(serviceRequest?.skuSnapshot) ||
+            "N/A";
+        enriched.serviceRequestRef =
+            clean(enriched.serviceRequestRef) ||
+            clean(serviceRequest?.refNo) ||
+            clean(serviceRequest?.id);
+        enriched.summary =
+            clean(enriched.summary) ||
+            clean(issue?.summary) ||
+            clean(issue?.note) ||
+            "Yêu cầu kiểm tra kỹ thuật";
+        enriched.area = clean(enriched.area) || clean(issue?.area) || "GENERAL";
+        enriched.priority =
+            clean(enriched.priority) ||
+            clean(issue?.priority) ||
+            "NORMAL";
+        enriched.actorName = clean(enriched.actorName) || "Hệ thống";
+        enriched.actualCost =
+            enriched.actualCost ??
+            (issue?.actualCost === null || issue?.actualCost === undefined
+                ? 0
+                : Number(issue.actualCost));
+        enriched.resolutionNote =
+            clean(enriched.resolutionNote) ||
+            clean(issue?.resolutionNote) ||
+            "Đã hoàn tất xử lý";
+        enriched.route =
+            clean(enriched.route) ||
+            `/admin/services/issues-board?serviceRequestId=${encodeURIComponent(
+                clean(serviceRequest?.id),
+            )}`;
+    }
+
     return { ...event, metadataJson: enriched as Prisma.JsonObject };
 }
 

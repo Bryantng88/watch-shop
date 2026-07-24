@@ -398,10 +398,16 @@ export default function WatchListClient(props: WatchListClientProps) {
         [pathname],
     );
 
-    async function loadList(next: URLSearchParams, options?: { meta?: "full" | "lite" }) {
+    async function loadList(
+        next: URLSearchParams,
+        options?: { meta?: "full" | "lite"; withTotal?: boolean },
+    ) {
         const sanitized = replaceUrl(next);
         const requestParams = new URLSearchParams(sanitized.toString());
         if (options?.meta) requestParams.set("meta", options.meta);
+        if (options?.withTotal !== undefined) {
+            requestParams.set("withTotal", String(options.withTotal));
+        }
 
         setSelectedIds([]);
         setIsLoading(true);
@@ -443,7 +449,7 @@ export default function WatchListClient(props: WatchListClientProps) {
 
     function pushParams(
         mutator: (next: URLSearchParams) => void,
-        options?: { meta?: "full" | "lite" },
+        options?: { meta?: "full" | "lite"; withTotal?: boolean },
     ) {
         const next = new URLSearchParams(params.toString());
         mutator(next);
@@ -1301,7 +1307,10 @@ export default function WatchListClient(props: WatchListClientProps) {
                         const next = new URLSearchParams(params.toString());
                         next.set("segment", segment);
                         next.set("page", "1");
-                        void loadList(next, { meta: "lite" });
+                        void loadList(next, {
+                            meta: "lite",
+                            withTotal: false,
+                        });
                     }}
                     selectedCount={selectedIds.length}
                     photoshootEligibleCount={photoshootEligibleRows.length}

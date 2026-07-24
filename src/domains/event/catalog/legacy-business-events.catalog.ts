@@ -3,6 +3,20 @@ import type { BusinessEventContract } from "@/domains/event/contract/business-ev
 
 export const LEGACY_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
   defineBusinessEventContract({
+    key: "watch.service.eta.updated",
+    label: "Watch service ETA updated",
+    targetType: "WATCH",
+    group: "Watch",
+    knownConsumers: ["timeline", "projection"],
+  }),
+  defineBusinessEventContract({
+    key: "technical_issue.updated",
+    label: "Technical issue updated",
+    targetType: "TECHNICAL_ISSUE",
+    group: "Service",
+    knownConsumers: ["timeline"],
+  }),
+  defineBusinessEventContract({
     key: "acquisition.created",
     label: "Acquisition created",
     targetType: "ACQUISITION",

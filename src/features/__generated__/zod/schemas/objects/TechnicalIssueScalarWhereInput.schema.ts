@@ -12,7 +12,8 @@ import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './Date
 import { EnumTechnicalIssueExecutionStatusFilterObjectSchema as EnumTechnicalIssueExecutionStatusFilterObjectSchema } from './EnumTechnicalIssueExecutionStatusFilter.schema';
 import { TechnicalIssueExecutionStatusSchema } from '../enums/TechnicalIssueExecutionStatus.schema';
 import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
-import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema'
+import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
+import { IntNullableFilterObjectSchema as IntNullableFilterObjectSchema } from './IntNullableFilter.schema'
 
 const technicalissuescalarwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => TechnicalIssueScalarWhereInputObjectSchema), z.lazy(() => TechnicalIssueScalarWhereInputObjectSchema).array()]).optional(),
@@ -49,7 +50,9 @@ const technicalissuescalarwhereinputSchema = z.object({
   confirmedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   confirmedById: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   confirmedByNameSnap: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  technicalDetailCatalogId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable()
+  technicalDetailCatalogId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  expectedWorkingDays: z.union([z.lazy(() => IntNullableFilterObjectSchema), z.number().int()]).optional().nullable(),
+  expectedCompletionAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable()
 }).strict();
 export const TechnicalIssueScalarWhereInputObjectSchema: z.ZodType<Prisma.TechnicalIssueScalarWhereInput> = technicalissuescalarwhereinputSchema as unknown as z.ZodType<Prisma.TechnicalIssueScalarWhereInput>;
 export const TechnicalIssueScalarWhereInputObjectZodSchema = technicalissuescalarwhereinputSchema;

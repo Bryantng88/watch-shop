@@ -6,6 +6,8 @@ export const WatchDeleteResultSchema = z.nullable(z.object({
   acquisitionId: z.string().optional(),
   saleStage: z.unknown(),
   serviceStage: z.unknown(),
+  serviceExpectedWorkingDays: z.number().int().optional(),
+  serviceExpectedCompletionAt: z.date().optional(),
   stockStage: z.unknown(),
   siteChannel: z.unknown(),
   gender: z.unknown(),

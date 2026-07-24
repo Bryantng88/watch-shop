@@ -134,6 +134,8 @@ const WATCH_LIST_ROW_SELECT = {
   productId: true,
   saleStage: true,
   serviceStage: true,
+  serviceExpectedWorkingDays: true,
+  serviceExpectedCompletionAt: true,
   stockStage: true,
   conditionGrade: true,
   specStatus: true,

@@ -65,5 +65,18 @@ export type BusinessEntityPreview = {
     activity?: BusinessEntityPreviewActivity;
     sections?: BusinessEntityPreviewSection[];
     actions?: BusinessEntityPreviewAction[];
+    edit?: {
+        kind: "TECHNICAL_ISSUE";
+        values: {
+            summary: string;
+            note: string;
+            area: string;
+            actionMode: string;
+            vendorId: string;
+            estimatedCost: string;
+            expectedWorkingDays: string;
+        };
+        vendorOptions: Array<{ id: string; name: string }>;
+    };
 };
 import type { TaskItemActivityViewModel } from "@/domains/task/server/activity";

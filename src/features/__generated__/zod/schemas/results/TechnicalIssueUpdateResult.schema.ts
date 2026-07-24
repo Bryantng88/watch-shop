@@ -40,6 +40,8 @@ export const TechnicalIssueUpdateResultSchema = z.nullable(z.object({
   user: z.unknown().optional(),
   vendor: z.unknown().optional(),
   technicalDetailCatalogId: z.string().optional(),
+  expectedWorkingDays: z.number().int().optional(),
+  expectedCompletionAt: z.date().optional(),
   technicalDetailCatalog: z.unknown().optional(),
   task: z.array(z.unknown()),
   payments: z.array(z.unknown()),

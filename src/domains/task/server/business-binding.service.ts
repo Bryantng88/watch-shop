@@ -1,4 +1,10 @@
-import { TaskExecutionActionType, TaskExecutionTargetType, TaskStatus, type Prisma } from "@prisma/client";
+import {
+  PaymentStatus,
+  TaskExecutionActionType,
+  TaskExecutionTargetType,
+  TaskStatus,
+  type Prisma,
+} from "@prisma/client";
 import { dbOrTx, withDbTransaction, type DB } from "@/server/db/client";
 import { createSystemActivity } from "./activity";
 import {
@@ -6,6 +12,7 @@ import {
   findBusinessBindingByTaskItemTarget,
   findBusinessBindingsByTaskItem,
   findQueueActivitiesByTaskItem,
+  findQueueActivitiesByTaskItemTargets,
   findTaskItemIdsByTarget,
   updateBusinessBindingMetadata,
 } from "./business-binding.repo";
@@ -570,7 +577,7 @@ function buildQueueActivityStats(
 
 async function buildQueueBusinessPreviewMap(
   db: DB,
-  bindings: BusinessBinding[],
+  bindings: Array<Pick<BusinessBinding, "targetType" | "targetId">>,
 ) {
   const client = dbOrTx(db);
   const map = new Map<string, QueueBusinessPreview>();
@@ -982,15 +989,19 @@ async function buildQueueBusinessPreviewMap(
       .filter((value): value is string => Boolean(value)) ?? [];
     const orderImages = paymentOrder?.orderItem.map((item) => productPreviewImage(item.product) || mediaUrl(item.img)).filter((value): value is string => Boolean(value)) ?? [];
     const imageUrl = productPreviewImage(product) || acquisitionImages[0] || productPreviewImage(acquisitionProduct) || orderImages[0] || mediaUrl(sr?.primaryImageUrlSnapshot ?? null);
-    const ownerTitle = payment.technicalIssue?.summary
-      || product?.title
-      || acquisitionProduct?.title
-      || acquisition?.acquisitionItem[0]?.productTitle
-      || acquisition?.vendor?.name
-      || acquisition?.customer?.name
-      || (payment.type === "ORDER" ? "Thanh toán đơn hàng" : null)
-      || (payment.type === "SHIPMENT" ? "Chi phí vận chuyển" : null)
-      || "Payment";
+    const technicalWorkLabel = clean(payment.technicalIssue?.summary);
+    const isIncome = String(payment.direction ?? "").toUpperCase() === "IN";
+    const ownerTitle = payment.acquisition_id
+      ? isIncome ? "Thu tiền thu mua" : "Thanh toán thu mua"
+      : payment.order_id
+        ? isIncome ? "Thu tiền đơn hàng" : "Thanh toán đơn hàng"
+        : payment.technical_issue_id || payment.service_request_id
+          ? `${isIncome ? "Thu tiền" : "Thanh toán"} xử lý kỹ thuật${technicalWorkLabel ? `: ${technicalWorkLabel}` : ""}`
+          : payment.type === "ORDER"
+            ? isIncome ? "Thu tiền đơn hàng" : "Thanh toán đơn hàng"
+          : payment.type === "SHIPMENT"
+            ? isIncome ? "Thu tiền vận chuyển" : "Chi phí vận chuyển"
+            : isIncome ? "Thu tiền" : "Thanh toán";
     const ref = [payment.refNo, sr?.refNo, acquisition?.refNo, product?.sku || sr?.skuSnapshot || acquisitionProduct?.sku]
       .map(clean)
       .filter(Boolean)
@@ -1203,10 +1214,162 @@ export async function listTaskItemBusinessBindings(
   return bindings.map(toBusinessBindingDTO);
 }
 
+const PAYMENT_COLLECTION_TERMINAL_STATUSES = new Set([
+  "PAID",
+  "COLLECTED",
+  "REFUNDED",
+  "CANCELED",
+  "CANCELLED",
+  "FAILED",
+]);
+
+export function isPaymentCollectionSettledStatus(status: unknown) {
+  return PAYMENT_COLLECTION_TERMINAL_STATUSES.has(cleanUpper(status));
+}
+
+export async function listPaymentCollectionQueueItems(
+  db: DB,
+  input: {
+    taskId: string;
+    reviewTaskItemId: string;
+    settledTaskItemId: string;
+    stage?: "REVIEW" | "SETTLED";
+    page?: number;
+    pageSize?: number;
+  },
+): Promise<QueueItemDTO[]> {
+  const client = dbOrTx(db);
+  const page = Math.max(1, Math.trunc(input.page ?? 1));
+  const pageSize = Math.min(100, Math.max(10, Math.trunc(input.pageSize ?? 20)));
+  const activityTaskItemIds = input.stage === "REVIEW"
+    ? [input.reviewTaskItemId]
+    : input.stage === "SETTLED"
+      ? [input.settledTaskItemId]
+      : [input.reviewTaskItemId, input.settledTaskItemId];
+  const payments = await client.payment.findMany({
+    where: {
+      amount: { gt: 0 },
+      status: input.stage === "REVIEW"
+        ? PaymentStatus.UNPAID
+        : input.stage === "SETTLED"
+          ? { not: PaymentStatus.UNPAID }
+          : undefined,
+    },
+    select: {
+      id: true,
+      status: true,
+      updatedAt: true,
+    },
+    orderBy: { updatedAt: "desc" },
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+  });
+  const paymentIds = payments.map((payment) => payment.id);
+  const previewTargets = payments.map((payment) => ({
+    targetType: TaskExecutionTargetType.PAYMENT,
+    targetId: payment.id,
+  }));
+  const [bindings, activityGroups, businessPreviews] = await Promise.all([
+    client.taskExecution.findMany({
+      where: {
+        taskId: input.taskId,
+        targetType: TaskExecutionTargetType.PAYMENT,
+        targetId: { in: paymentIds },
+        actionType: { not: TaskExecutionActionType.CANCELLED },
+      },
+      select: {
+        id: true,
+        targetType: true,
+        targetId: true,
+        taskItemId: true,
+        actionType: true,
+        metadataJson: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    Promise.all(
+      activityTaskItemIds.map((taskItemId) =>
+        findQueueActivitiesByTaskItemTargets(db, {
+          taskItemId,
+          targetType: TaskExecutionTargetType.PAYMENT,
+          targetIds: paymentIds,
+        }),
+      ),
+    ),
+    buildQueueBusinessPreviewMap(db, previewTargets),
+  ]);
+
+  const bindingByPaymentId = new Map<string, BusinessBinding>();
+  for (const binding of bindings) {
+    if (!bindingByPaymentId.has(binding.targetId)) {
+      bindingByPaymentId.set(binding.targetId, binding);
+    }
+  }
+  const activityStats = buildQueueActivityStats(activityGroups.flat());
+
+  return payments.map((payment) => {
+    const binding = bindingByPaymentId.get(payment.id);
+    const metadata = asRecord(binding?.metadataJson);
+    const key = queueKey(TaskExecutionTargetType.PAYMENT, payment.id);
+    const preview = businessPreviews.get(key);
+    const stats = activityStats.get(key);
+    const settled = isPaymentCollectionSettledStatus(payment.status);
+    const taskItemId = settled
+      ? input.settledTaskItemId
+      : input.reviewTaskItemId;
+    const updatedAt = latestDate(
+      stats?.latestUpdatedAt,
+      stats?.latestActivityAt,
+      payment.updatedAt,
+      binding?.createdAt,
+    );
+
+    return {
+      id: binding?.id ?? `payment:${payment.id}`,
+      taskItemId,
+      targetType: TaskExecutionTargetType.PAYMENT,
+      targetId: payment.id,
+      source: resolveQueueSource(metadata),
+      status: settled ? "DONE" : "WAITING",
+      preview: {
+        title: preview?.title ?? null,
+        ref: preview?.ref ?? null,
+        status: preview?.status ?? clean(payment.status),
+        imageUrl: preview?.imageUrl ?? null,
+        imageUrls: preview?.imageUrls ?? [],
+        postTargets: [],
+      },
+      latestActivityTitle: stats?.latestActivityTitle ?? null,
+      feedbackCount: stats?.feedbackCount ?? 0,
+      discussionCount: stats?.discussionCount ?? 0,
+      activityCount: stats?.activityCount ?? 0,
+      lastUpdatedBy: stats?.lastUpdatedBy ?? null,
+      workflowKey: null,
+      currentWorkflowState: clean(payment.status),
+      currentWorkflowStateLabel: settled ? "Settled" : "Cần đối soát",
+      isWorkflowDone: settled,
+      manualTransitions: [],
+      intakeNote: queueItemIntakeNote(metadata),
+      reshootNote: null,
+      mediaWorkProgress: null,
+      technicalIssue: null,
+      payment: preview?.payment ?? null,
+      href: preview?.href ?? null,
+      updatedAt: formatDate(updatedAt),
+    };
+  });
+}
+
 export async function listTaskItemQueueItems(
   db: DB,
   taskItemId: string,
-  taskItemContext?: { taskId: string; note?: string | null },
+  taskItemContext?: {
+    taskId: string;
+    note?: string | null;
+    page?: number;
+    pageSize?: number;
+  },
 ): Promise<QueueItemDTO[]> {
   const cleanTaskItemId = clean(taskItemId);
   assertPresent(cleanTaskItemId, "Missing taskItemId");
@@ -1227,10 +1390,28 @@ export async function listTaskItemQueueItems(
     });
   }
 
-  const [bindings, activities] = await Promise.all([
-    findBusinessBindingsByTaskItem(db, cleanTaskItemId),
-    findQueueActivitiesByTaskItem(db, cleanTaskItemId),
-  ]);
+  const page = Math.max(1, Math.trunc(taskItemContext?.page ?? 1));
+  const pageSize = Math.min(100, Math.max(10, Math.trunc(taskItemContext?.pageSize ?? 20)));
+  const bindings = await findBusinessBindingsByTaskItem(db, cleanTaskItemId, {
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+  });
+  const activities = (
+    await Promise.all(
+      Object.entries(
+        bindings.reduce<Record<string, string[]>>((groups, binding) => {
+          (groups[binding.targetType] ??= []).push(binding.targetId);
+          return groups;
+        }, {}),
+      ).map(([targetType, targetIds]) =>
+        findQueueActivitiesByTaskItemTargets(db, {
+          taskItemId: cleanTaskItemId,
+          targetType: targetType as BusinessBindingTargetType,
+          targetIds,
+        }),
+      ),
+    )
+  ).flat();
   const expectedWorkflowKey = workflowKeyFromTaskItemNote(taskItem?.note ?? null);
   const visibleBindings = bindings.filter((binding) => {
     if (!bindingMatchesTaskItemWorkflow(binding, expectedWorkflowKey)) return false;

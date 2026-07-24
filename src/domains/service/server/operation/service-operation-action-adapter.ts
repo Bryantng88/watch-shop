@@ -7,6 +7,7 @@ import {
 import type { ApplyManualTriggerToQueueItemResult } from "@/domains/task/server/business-binding-workflow.service";
 import {
   operationalBlueprintForWorkType,
+  operationalBlueprintTemplateByKey,
   selectOperationalActionsForWorkspaceRole,
 } from "@/domains/blueprint/shared/operational-blueprint";
 import { parseWorkspaceDefinitionSnapshot } from "@/domains/blueprint/shared/workspace-capabilities";
@@ -301,19 +302,21 @@ export async function runServiceOperationBlueprintAction(
     workspaceRole: context.workspaceRole,
   }).find((candidate) => candidate.key === actionKey);
 
-  // Existing workspaces retain a blueprint snapshot. Allow this newly added
-  // semantic action without requiring those workspaces to be recreated.
-  if (!action && actionKey === "skip_processing" && context.workTypeKey) {
-    const currentContract = operationalBlueprintForWorkType({
-      workTypeKey: context.workTypeKey,
-      coordinationContext: "TECHNICAL",
-    });
-    action = currentContract
-      ? selectOperationalActionsForWorkspaceRole({
-          contract: currentContract,
-          workspaceRole: context.workspaceRole,
-        }).find((candidate) => candidate.key === actionKey)
-      : undefined;
+  // Existing workspaces retain a blueprint snapshot. Resolve READY-state
+  // actions from the current contract without requiring workspace recreation.
+  if (
+    !action &&
+    ["start_processing", "skip_processing"].includes(actionKey) &&
+    targetType === "TECHNICAL_ISSUE" &&
+    targetId &&
+    context.bindings.some(
+      (binding) =>
+        binding.targetType === "TECHNICAL_ISSUE" &&
+        binding.targetId === targetId,
+    )
+  ) {
+    action = operationalBlueprintTemplateByKey("service-operation")
+      ?.contract.actions.find((candidate) => candidate.key === actionKey);
   }
   if (!action) {
     return { ok: false, actionKey, error: "ACTION_NOT_AVAILABLE_FOR_WORKSPACE" };
@@ -454,7 +457,9 @@ export async function runServiceOperationBlueprintAction(
         id: targetId,
         actorId: input.actorUserId ?? null,
         actorName: input.actorName ?? null,
+        technicalArea: requiredField(fields, "technicalArea"),
         technicalDetailCatalogId: requiredField(fields, "technicalDetailCatalogId"),
+        expectedWorkingDays: moneyField(fields, "expectedWorkingDays", true),
         replacementPartCodes: stringArrayField(fields, "replacementPartCodes"),
         actionMode: actionModeField(fields, true) ?? "INTERNAL",
         vendorId: optionalField(fields, "vendorId"),

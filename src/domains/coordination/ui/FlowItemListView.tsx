@@ -5,11 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
   CheckCircle2,
   ChevronRight,
   Activity,
-  MessageCircle,
-  PackageSearch,
   Radio,
 } from "lucide-react";
 import type { CoordinationFlowListItemDTO } from "../server/coordination-dashboard.types";
@@ -23,6 +23,7 @@ import {
 import {
   isOpenTargetTransition,
   OpenTargetAction,
+  QueueItemThumbnail,
   type TaskItemQueueItem,
 } from "@/domains/task/ui/task-work/QueueWorkQueue";
 import { PAYMENT_PURPOSE_LABEL } from "@/domains/payment/shared/payment.constants";
@@ -44,6 +45,13 @@ type Props = {
   imageOverrides?: Record<string, string | null>;
   pending?: boolean;
   completedIcon?: "success" | "published";
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+  onPageChange: (page: number) => void;
 };
 
 function normalize(value?: string | null) {
@@ -147,6 +155,8 @@ export default function FlowItemListView({
   imageOverrides = {},
   pending = false,
   completedIcon,
+  pagination,
+  onPageChange,
 }: Props) {
   const router = useRouter();
   const [isActionPending, startActionTransition] = useTransition();
@@ -178,10 +188,11 @@ export default function FlowItemListView({
       [normalize(stage.workspaceKey), stage],
     ]),
   ), [stages]);
-  const showStatusColumn = !normalize(activeStage).includes("photography");
+  const showPaymentAmount = items.some((item) => Boolean(item.payment));
+  const showStatusColumn =
+    !showPaymentAmount && !normalize(activeStage).includes("photography");
   const showProgressColumn = normalize(activeStage).includes("media-processing");
   const showPublishChannels = normalize(activeStage).includes("publish");
-  const showPaymentAmount = items.some((item) => Boolean(item.payment));
   const visibleItems = useMemo(() => {
     const cleanQuery = query.trim().toLocaleLowerCase("vi");
     return items.filter((item) => {
@@ -208,7 +219,11 @@ export default function FlowItemListView({
   }, [activeStage, items, optimisticallyMovedIds, paymentFilter, query, stageByKey, statusFilter]);
   const visibleIds = visibleItems.map((item) => item.id);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
-  const selectedItems = items.filter((item) => selectedIds.includes(item.id));
+  const selectedItems = items.filter(
+    (item) =>
+      selectedIds.includes(item.id) &&
+      !optimisticallyMovedIds.includes(item.id),
+  );
   const selectedPaymentItems = selectedItems.filter(
     (item) => item.payment && !["PAID", "COLLECTED", "CANCELED", "CANCELLED"].includes(item.payment.status),
   );
@@ -227,6 +242,32 @@ export default function FlowItemListView({
           ),
       )
     : [];
+  const reconciliationIsIncome =
+    String(reconcileItem?.payment?.direction ?? "").toUpperCase() !== "OUT";
+  const reconciliationExpectedAmount = Number(reconcileItem?.payment?.amount ?? 0);
+  const reconciliationReviewedAmount = Number(reconcileFields.reviewedAmount || 0);
+  const reconciliationIsSplit =
+    reconciliationReviewedAmount < reconciliationExpectedAmount;
+  const bulkAllIncome =
+    selectedPaymentItems.length > 0 &&
+    selectedPaymentItems.every(
+      (item) => String(item.payment?.direction ?? "").toUpperCase() !== "OUT",
+    );
+  const bulkAllExpense =
+    selectedPaymentItems.length > 0 &&
+    selectedPaymentItems.every(
+      (item) => String(item.payment?.direction ?? "").toUpperCase() === "OUT",
+    );
+  const bulkExpectedTotal = selectedPaymentItems.reduce(
+    (total, item) => total + Number(item.payment?.amount ?? 0),
+    0,
+  );
+  const bulkReviewedTotal = selectedPaymentItems.reduce(
+    (total, item) => total + Number(bulkReconcileAmounts[item.id] ?? 0),
+    0,
+  );
+  const bulkRemainingTotal = Math.max(0, bulkExpectedTotal - bulkReviewedTotal);
+  const bulkCurrency = selectedPaymentItems[0]?.payment?.currency ?? "VND";
 
   function runAction(item: CoordinationFlowListItemDTO, actionKey: string) {
     setActionError(null);
@@ -338,6 +379,7 @@ export default function FlowItemListView({
           },
         });
         setOptimisticallyMovedIds((current) => [...current, reconcileItem.id]);
+        setSelectedIds((current) => current.filter((id) => id !== reconcileItem.id));
         setReconcileItem(null);
         router.refresh();
       } catch (error) {
@@ -433,9 +475,9 @@ export default function FlowItemListView({
 
   return (
     <div className="bg-white">
-      {selectedIds.length ? (
+      {selectedItems.length ? (
         <div className="flex flex-wrap items-center gap-3 border-b border-violet-100 bg-violet-50 px-5 py-3">
-          <span className="text-sm font-semibold text-violet-900">Đã chọn {selectedIds.length} item</span>
+          <span className="text-sm font-semibold text-violet-900">Đã chọn {selectedItems.length} item</span>
           {selectedPaymentItems.length ? (
             <button
               type="button"
@@ -471,7 +513,7 @@ export default function FlowItemListView({
         <table className={cn(
           "w-full border-collapse",
           showPaymentAmount
-            ? "min-w-[1500px]"
+            ? "min-w-[1080px]"
             : showPublishChannels
               ? "min-w-[1120px]"
               : "min-w-[980px]",
@@ -486,14 +528,12 @@ export default function FlowItemListView({
               {showProgressColumn ? <th className="w-40 px-4 py-3">Progress</th> : null}
               {showPublishChannels ? <th className="w-56 px-4 py-3">Kênh đăng</th> : null}
               {showPaymentAmount ? <th className="w-52 px-4 py-3">Đối tượng</th> : null}
-              {showPaymentAmount ? <th className="w-24 px-4 py-3">Thu / Chi</th> : null}
               {showPaymentAmount ? <th className="w-44 px-4 py-3">Loại khoản</th> : null}
               {showPaymentAmount ? <th className="w-40 px-4 py-3 text-right">Số tiền</th> : null}
-              <th className="w-44 px-4 py-3">Thao tác</th>
+              {!showPaymentAmount ? <th className="w-44 px-4 py-3">Thao tác</th> : null}
               <th className="px-4 py-3">Người thao tác</th>
               <th className="px-4 py-3 text-center">Cập nhật</th>
-              <th className="px-4 py-3 text-center">Activity</th>
-              <th className="px-4 py-3 text-center">Comment</th>
+              <th className="w-64 px-4 py-3">Thao tác cuối</th>
               <th className="w-10" />
             </tr>
           </thead>
@@ -503,7 +543,16 @@ export default function FlowItemListView({
               const href = item.href || `/admin/task-items/${item.taskItemId}`;
               const checked = selectedIds.includes(item.id);
               const imageUrl = imageOverrides[item.targetId] || item.preview.imageUrl;
-              const imageSrc = resolveMediaPreviewSrc(imageUrl) ?? imageUrl;
+              const thumbnailItem = imageOverrides[item.targetId]
+                ? {
+                    ...item,
+                    preview: {
+                      ...item.preview,
+                      imageUrl,
+                      imageUrls: imageUrl ? [imageUrl] : [],
+                    },
+                  }
+                : item;
               const enabledActions = item.manualTransitions.filter((transition) => transition.enabled);
               const mediaOpenTransition = item.targetType === "WATCH" && stage?.key === "media-processing"
                 ? {
@@ -526,6 +575,11 @@ export default function FlowItemListView({
                   }
                 : null;
               const primaryAction = mediaOpenTransition ?? enabledActions[0] ?? null;
+              const canOpenReconciliation = Boolean(
+                item.payment &&
+                itemStatus(item) !== "DONE" &&
+                !normalize(item.flowStageKey).includes("settled"),
+              );
               return (
                 <tr key={item.id} className={cn("group transition hover:bg-slate-50", checked && "bg-violet-50/50")}>
                   <td className="px-5 py-3">
@@ -533,9 +587,7 @@ export default function FlowItemListView({
                   </td>
                   <td className="px-2 py-3">
                     <Link href={href} className="flex min-w-0 items-center gap-3">
-                      <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 text-slate-400">
-                        {imageSrc ? <Image src={imageSrc} alt="" fill sizes="44px" unoptimized className="object-cover" /> : <PackageSearch className="h-5 w-5" />}
-                      </span>
+                      <QueueItemThumbnail item={thumbnailItem as TaskItemQueueItem} />
                       <span className="min-w-0">
                         <span className="block max-w-[340px] truncate text-sm font-semibold text-slate-950">{item.preview.title || "Item chưa đặt tên"}</span>
                         <span className="mt-1 block truncate text-xs text-slate-500">{item.preview.ref || item.targetType}</span>
@@ -631,18 +683,6 @@ export default function FlowItemListView({
                   {showPaymentAmount ? (
                     <td className="px-4 py-3">
                       {item.payment ? (
-                        <span className={cn(
-                          "inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ring-inset",
-                          paymentDirection(item.payment.direction).className,
-                        )}>
-                          {paymentDirection(item.payment.direction).label}
-                        </span>
-                      ) : <span className="text-xs text-slate-400">-</span>}
-                    </td>
-                  ) : null}
-                  {showPaymentAmount ? (
-                    <td className="px-4 py-3">
-                      {item.payment ? (
                         <>
                           <div className="text-xs font-semibold text-slate-800">
                             {paymentPurpose(item.payment.purpose)}
@@ -658,18 +698,39 @@ export default function FlowItemListView({
                     <td className="px-4 py-3 text-right">
                       {item.payment ? (
                         <>
-                          <div className={cn(
-                            "text-sm font-bold tabular-nums",
-                            String(item.payment.direction).toUpperCase() === "OUT"
-                              ? "text-rose-700"
-                              : "text-emerald-700",
-                          )}>
-                            {formatMoney(
-                              item.payment.amount,
-                              item.payment.currency,
-                              paymentDirection(item.payment.direction).sign,
-                            )}
-                          </div>
+                          {canOpenReconciliation ? (
+                            <button
+                              type="button"
+                              disabled={isActionPending}
+                              onClick={() => openReconcileModal(item)}
+                              title={`Mở đối soát ${paymentDirection(item.payment?.direction).label.toLowerCase()}`}
+                              className={cn(
+                                "ml-auto block text-sm font-bold tabular-nums underline-offset-4 transition hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-200 disabled:cursor-wait disabled:opacity-60",
+                                String(item.payment.direction).toUpperCase() === "OUT"
+                                  ? "text-rose-700 hover:text-rose-800"
+                                  : "text-emerald-700 hover:text-emerald-800",
+                              )}
+                            >
+                              {formatMoney(
+                                item.payment.amount,
+                                item.payment.currency,
+                                paymentDirection(item.payment.direction).sign,
+                              )}
+                            </button>
+                          ) : (
+                            <div className={cn(
+                              "text-sm font-bold tabular-nums",
+                              String(item.payment.direction).toUpperCase() === "OUT"
+                                ? "text-rose-700"
+                                : "text-emerald-700",
+                            )}>
+                              {formatMoney(
+                                item.payment.amount,
+                                item.payment.currency,
+                                paymentDirection(item.payment.direction).sign,
+                              )}
+                            </div>
+                          )}
                           <div className="mt-1 text-[11px] font-medium text-slate-500">
                             {item.payment.method ?? "Chưa có phương thức"}
                           </div>
@@ -677,13 +738,13 @@ export default function FlowItemListView({
                       ) : <span className="text-xs text-slate-400">-</span>}
                     </td>
                   ) : null}
-                  <td className="px-4 py-3">
+                  {!showPaymentAmount ? <td className="px-4 py-3">
                     {primaryAction && isOpenTargetTransition(primaryAction) ? (
                       <OpenTargetAction
                         queueItem={item as TaskItemQueueItem}
                         taskItemId={item.taskItemId}
                         transition={primaryAction}
-                        className="inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-violet-200 hover:bg-slate-50 hover:text-violet-700"
+                        className="inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"
                       />
                     ) : primaryAction ? (
                       <button
@@ -691,21 +752,12 @@ export default function FlowItemListView({
                         disabled={isActionPending}
                         onClick={() => runAction(item, primaryAction.actionKey)}
                         title={primaryAction.manualActionLabel}
-                        className="h-8 max-w-36 truncate rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
+                        className="h-8 max-w-36 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"
                       >
                         {pendingActionId === item.id ? "Đang xử lý..." : primaryAction.manualActionLabel || primaryAction.label}
                       </button>
-                    ) : item.payment ? (
-                      <button
-                        type="button"
-                        disabled={isActionPending}
-                        onClick={() => openReconcileModal(item)}
-                        className="inline-flex h-8 items-center rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white transition hover:bg-slate-800"
-                      >
-                        Đối soát {paymentDirection(item.payment.direction).label.toLowerCase()}
-                      </button>
                     ) : null}
-                  </td>
+                  </td> : null}
                   <td className="px-4 py-3">
                     {item.lastUpdatedBy ? (
                       <div className="flex items-center gap-2">
@@ -719,11 +771,13 @@ export default function FlowItemListView({
                     ) : <span className="text-xs text-slate-400">Hệ thống</span>}
                   </td>
                   <td className="px-4 py-3 text-center text-xs text-slate-500">{formatTime(item.updatedAt)}</td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600"><Activity className="h-3.5 w-3.5 text-slate-400" />{item.activityCount}</span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600"><MessageCircle className="h-3.5 w-3.5 text-slate-400" />{item.discussionCount}</span>
+                  <td className="px-4 py-3">
+                    <span className="flex max-w-64 items-center gap-2 text-xs text-slate-600">
+                      <Activity className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      <span className="truncate">
+                        {item.latestActivityTitle || "Chưa có thao tác"}
+                      </span>
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <Link href={href} aria-label="Mở item" className="text-slate-400 transition group-hover:text-violet-600"><ChevronRight className="h-4 w-4" /></Link>
@@ -742,19 +796,72 @@ export default function FlowItemListView({
           <p className="mt-1 text-xs text-slate-500">Thử chọn bước khác hoặc xóa bớt bộ lọc.</p>
         </div>
       ) : null}
-      <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-500">Hiển thị {visibleItems.length} / {items.length} item</div>
+      <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-5 py-3 text-xs text-slate-500">
+        <span>Hiển thị {visibleItems.length} / {pagination.total} item</span>
+        {pagination.totalPages > 1 ? (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={pending || pagination.page <= 1}
+              onClick={() => onPageChange(pagination.page - 1)}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-600 transition hover:border-violet-200 hover:text-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Trước
+            </button>
+            <span className="min-w-20 text-center font-semibold text-slate-700">
+              {pagination.page} / {pagination.totalPages}
+            </span>
+            <button
+              type="button"
+              disabled={pending || pagination.page >= pagination.totalPages}
+              onClick={() => onPageChange(pagination.page + 1)}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-600 transition hover:border-violet-200 hover:text-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Sau
+            </button>
+          </div>
+        ) : null}
+      </div>
 
       {isBulkReconcileOpen ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-slate-200">
-            <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
-              <div>
+          <div className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-[0_28px_90px_rgba(15,23,42,0.28)] ring-1 ring-slate-200">
+            <div className={cn(
+              "flex items-start justify-between border-b px-6 py-5",
+              bulkAllIncome
+                ? "border-emerald-100 bg-gradient-to-r from-emerald-50/90 via-white to-white"
+                : bulkAllExpense
+                  ? "border-rose-100 bg-gradient-to-r from-rose-50/80 via-white to-white"
+                  : "border-violet-100 bg-gradient-to-r from-violet-50/80 via-white to-white",
+            )}>
+              <div className="flex items-start gap-3">
+                <span className={cn(
+                  "mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl ring-1 ring-inset",
+                  bulkAllIncome
+                    ? "bg-emerald-100/80 text-emerald-700 ring-emerald-200"
+                    : bulkAllExpense
+                      ? "bg-rose-100/80 text-rose-700 ring-rose-200"
+                      : "bg-violet-100/80 text-violet-700 ring-violet-200",
+                )}>
+                  {bulkAllIncome
+                    ? <ArrowDownToLine className="h-5 w-5" />
+                    : bulkAllExpense
+                      ? <ArrowUpFromLine className="h-5 w-5" />
+                      : <CheckCircle2 className="h-5 w-5" />}
+                </span>
+                <div>
                 <h2 className="text-lg font-bold text-slate-950">
-                  Đối soát hàng loạt · {selectedPaymentItems.length} Payment
+                  {bulkAllIncome
+                    ? "Xác nhận thu tiền hàng loạt"
+                    : bulkAllExpense
+                      ? "Xác nhận chi tiền hàng loạt"
+                      : "Đối soát dòng tiền hàng loạt"}
+                  {" · "}{selectedPaymentItems.length} Payment
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
                   Điều chỉnh số thực tế từng dòng. Khoản thấp hơn dự kiến sẽ tự động split.
                 </p>
+                </div>
               </div>
               <button
                 type="button"
@@ -767,6 +874,62 @@ export default function FlowItemListView({
             </div>
 
             <div className="overflow-y-auto px-6 py-5">
+              <div className={cn(
+                "relative mb-5 overflow-hidden rounded-2xl border p-4",
+                bulkAllIncome
+                  ? "border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/40 shadow-[0_12px_32px_rgba(16,185,129,0.10)]"
+                  : bulkAllExpense
+                    ? "border-rose-100 bg-gradient-to-br from-rose-50 via-white to-rose-50/30"
+                    : "border-violet-100 bg-gradient-to-br from-violet-50 via-white to-violet-50/30",
+              )}>
+                <div className={cn(
+                  "pointer-events-none absolute -right-10 -top-14 h-36 w-36 rounded-full blur-3xl",
+                  bulkAllIncome
+                    ? "bg-emerald-300/25"
+                    : bulkAllExpense
+                      ? "bg-rose-300/20"
+                      : "bg-violet-300/20",
+                )} />
+                <div className="relative grid items-center gap-4 sm:grid-cols-[0.8fr_1.25fr_1fr]">
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">Tổng dự kiến</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-700">
+                      {formatMoney(bulkExpectedTotal, bulkCurrency)}
+                    </div>
+                  </div>
+                  <div className="sm:border-x sm:border-slate-200/70 sm:px-5">
+                    <div className={cn(
+                      "text-[10px] font-bold uppercase tracking-[0.08em]",
+                      bulkAllIncome
+                        ? "text-emerald-600"
+                        : bulkAllExpense
+                          ? "text-rose-600"
+                          : "text-violet-600",
+                    )}>
+                      {bulkAllIncome ? "Tổng tiền sẽ ghi nhận" : bulkAllExpense ? "Tổng tiền thực chi" : "Tổng thực tế"}
+                    </div>
+                    <div className={cn(
+                      "mt-1 text-2xl font-bold tabular-nums tracking-[-0.025em]",
+                      bulkAllIncome
+                        ? "text-emerald-700"
+                        : bulkAllExpense
+                          ? "text-rose-700"
+                          : "text-violet-700",
+                    )}>
+                      {formatMoney(bulkReviewedTotal, bulkCurrency)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">Kết quả batch</div>
+                    <div className={cn("mt-1 text-sm font-bold", bulkRemainingTotal > 0 ? "text-amber-700" : "text-emerald-700")}>
+                      {bulkRemainingTotal > 0
+                        ? `Có split · còn ${formatMoney(bulkRemainingTotal, bulkCurrency)}`
+                        : "Tất cả khớp đủ"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="overflow-hidden rounded-2xl border border-slate-200">
                 <div className="grid grid-cols-[minmax(220px,1fr)_150px_170px_150px] gap-3 bg-slate-50 px-4 py-3 text-[11px] font-bold uppercase text-slate-500">
                   <div>Payment / Đối tượng</div>
@@ -803,7 +966,12 @@ export default function FlowItemListView({
                           ...current,
                           [item.id]: event.target.value,
                         }))}
-                        className="h-10 rounded-xl border border-slate-200 px-3 text-right text-sm font-semibold outline-none focus:border-violet-400"
+                        className={cn(
+                          "h-10 rounded-xl border border-slate-200 px-3 text-right text-sm font-semibold tabular-nums outline-none transition focus:ring-3",
+                          String(item.payment?.direction ?? "").toUpperCase() === "OUT"
+                            ? "focus:border-rose-400 focus:ring-rose-100"
+                            : "focus:border-emerald-400 focus:ring-emerald-100",
+                        )}
                       />
                       <div className={cn("text-xs font-bold", split ? "text-amber-700" : "text-emerald-700")}>
                         {split
@@ -878,11 +1046,27 @@ export default function FlowItemListView({
                 type="button"
                 disabled={isActionPending}
                 onClick={submitBulkReconciliation}
-                className="h-10 rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
+                className={cn(
+                  "inline-flex h-11 items-center gap-2 rounded-xl px-5 text-sm font-semibold text-white transition duration-150 hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-wait disabled:opacity-60 disabled:hover:translate-y-0",
+                  bulkAllIncome
+                    ? "bg-emerald-600 shadow-[0_10px_24px_rgba(5,150,105,0.25)] hover:bg-emerald-700 hover:shadow-[0_12px_28px_rgba(5,150,105,0.32)]"
+                    : bulkAllExpense
+                      ? "bg-slate-950 shadow-lg hover:bg-slate-800"
+                      : "bg-violet-600 shadow-[0_10px_24px_rgba(124,58,237,0.22)] hover:bg-violet-700",
+                )}
               >
+                {bulkAllIncome
+                  ? <ArrowDownToLine className="h-4 w-4" />
+                  : bulkAllExpense
+                    ? <ArrowUpFromLine className="h-4 w-4" />
+                    : <CheckCircle2 className="h-4 w-4" />}
                 {pendingActionId === "BULK_RECONCILE"
                   ? "Đang đối soát..."
-                  : `Xác nhận ${selectedPaymentItems.length} Payment`}
+                  : bulkAllIncome
+                    ? `Xác nhận đã nhận ${selectedPaymentItems.length} khoản`
+                    : bulkAllExpense
+                      ? `Xác nhận đã chi ${selectedPaymentItems.length} khoản`
+                      : `Xác nhận ${selectedPaymentItems.length} Payment`}
               </button>
             </div>
           </div>
@@ -891,15 +1075,32 @@ export default function FlowItemListView({
 
       {reconcileItem?.payment ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
-          <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white shadow-2xl ring-1 ring-slate-200">
-            <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
-              <div>
+          <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white shadow-[0_28px_90px_rgba(15,23,42,0.28)] ring-1 ring-slate-200">
+            <div className={cn(
+              "flex items-start justify-between border-b px-6 py-5",
+              reconciliationIsIncome
+                ? "border-emerald-100 bg-gradient-to-r from-emerald-50/90 via-white to-white"
+                : "border-rose-100 bg-gradient-to-r from-rose-50/80 via-white to-white",
+            )}>
+              <div className="flex items-start gap-3">
+                <span className={cn(
+                  "mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl ring-1 ring-inset",
+                  reconciliationIsIncome
+                    ? "bg-emerald-100/80 text-emerald-700 ring-emerald-200"
+                    : "bg-rose-100/80 text-rose-700 ring-rose-200",
+                )}>
+                  {reconciliationIsIncome
+                    ? <ArrowDownToLine className="h-5 w-5" />
+                    : <ArrowUpFromLine className="h-5 w-5" />}
+                </span>
+                <div>
                 <h2 className="text-lg font-bold text-slate-950">
-                  Đối soát {paymentDirection(reconcileItem.payment.direction).label.toLowerCase()}
+                  {reconciliationIsIncome ? "Xác nhận thu tiền" : "Xác nhận chi tiền"}
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
                   {reconcileItem.preview.title} · {reconcileItem.preview.ref}
                 </p>
+                </div>
               </div>
               <button
                 type="button"
@@ -912,33 +1113,54 @@ export default function FlowItemListView({
             </div>
 
             <div className="space-y-5 px-6 py-5">
-              <div className="grid gap-3 rounded-2xl bg-slate-50 p-4 sm:grid-cols-3">
-                <div>
-                  <div className="text-[11px] font-bold uppercase text-slate-400">Dự kiến</div>
-                  <div className="mt-1 text-base font-bold text-slate-950">
-                    {formatMoney(reconcileItem.payment.amount, reconcileItem.payment.currency)}
+              <div className={cn(
+                "relative overflow-hidden rounded-2xl border p-4",
+                reconciliationIsIncome
+                  ? "border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/40 shadow-[0_12px_32px_rgba(16,185,129,0.10)]"
+                  : "border-rose-100 bg-gradient-to-br from-rose-50 via-white to-rose-50/30",
+              )}>
+                <div className={cn(
+                  "pointer-events-none absolute -right-10 -top-14 h-36 w-36 rounded-full blur-3xl",
+                  reconciliationIsIncome ? "bg-emerald-300/25" : "bg-rose-300/20",
+                )} />
+                <div className="relative grid items-center gap-4 sm:grid-cols-[0.8fr_1.25fr_1fr]">
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">Dự kiến</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-700">
+                      {formatMoney(reconcileItem.payment.amount, reconcileItem.payment.currency)}
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <div className="text-[11px] font-bold uppercase text-slate-400">Thực tế</div>
-                  <div className="mt-1 text-base font-bold text-blue-700">
-                    {formatMoney(Number(reconcileFields.reviewedAmount), reconcileItem.payment.currency)}
+                  <div className="sm:border-x sm:border-slate-200/70 sm:px-5">
+                    <div className={cn(
+                      "text-[10px] font-bold uppercase tracking-[0.08em]",
+                      reconciliationIsIncome ? "text-emerald-600" : "text-rose-600",
+                    )}>
+                      {reconciliationIsIncome ? "Số tiền sẽ ghi nhận" : "Số tiền thực chi"}
+                    </div>
+                    <div className={cn(
+                      "mt-1 text-2xl font-bold tabular-nums tracking-[-0.025em]",
+                      reconciliationIsIncome ? "text-emerald-700" : "text-rose-700",
+                    )}>
+                      {formatMoney(reconciliationReviewedAmount, reconcileItem.payment.currency)}
+                    </div>
                   </div>
-                </div>
-                <div>
+                  <div>
                   <div className="text-[11px] font-bold uppercase text-slate-400">Kết quả</div>
                   <div className={cn(
                     "mt-1 text-sm font-bold",
-                    Number(reconcileFields.reviewedAmount) < Number(reconcileItem.payment.amount)
+                    reconciliationIsSplit
                       ? "text-amber-700"
                       : "text-emerald-700",
                   )}>
-                    {Number(reconcileFields.reviewedAmount) < Number(reconcileItem.payment.amount)
+                    {reconciliationIsSplit
                       ? `Split · còn ${formatMoney(
-                        Number(reconcileItem.payment.amount) - Number(reconcileFields.reviewedAmount),
+                        reconciliationExpectedAmount - reconciliationReviewedAmount,
                         reconcileItem.payment.currency,
                       )}`
-                      : "Khớp đủ · chuyển Settled"}
+                      : reconciliationIsIncome
+                        ? "Khớp đủ · sẵn sàng ghi nhận"
+                        : "Khớp đủ · chuyển Settled"}
+                  </div>
                   </div>
                 </div>
               </div>
@@ -952,7 +1174,12 @@ export default function FlowItemListView({
                     max={reconcileItem.payment.amount}
                     value={reconcileFields.reviewedAmount}
                     onChange={(event) => setReconcileFields((current) => ({ ...current, reviewedAmount: event.target.value }))}
-                    className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 font-medium outline-none focus:border-violet-400"
+                    className={cn(
+                      "mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 font-semibold tabular-nums outline-none transition focus:ring-3",
+                      reconciliationIsIncome
+                        ? "focus:border-emerald-400 focus:ring-emerald-100"
+                        : "focus:border-rose-400 focus:ring-rose-100",
+                    )}
                   />
                 </label>
                 <label className="text-sm font-semibold text-slate-700">
@@ -1032,13 +1259,25 @@ export default function FlowItemListView({
                 type="button"
                 disabled={isActionPending}
                 onClick={submitReconciliation}
-                className="h-10 rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
+                className={cn(
+                  "inline-flex h-11 items-center gap-2 rounded-xl px-5 text-sm font-semibold text-white transition duration-150 hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-wait disabled:opacity-60 disabled:hover:translate-y-0",
+                  reconciliationIsIncome
+                    ? "bg-emerald-600 shadow-[0_10px_24px_rgba(5,150,105,0.25)] hover:bg-emerald-700 hover:shadow-[0_12px_28px_rgba(5,150,105,0.32)]"
+                    : "bg-slate-950 shadow-lg hover:bg-slate-800",
+                )}
               >
+                {reconciliationIsIncome
+                  ? <ArrowDownToLine className="h-4 w-4" />
+                  : <ArrowUpFromLine className="h-4 w-4" />}
                 {isActionPending
                   ? "Đang đối soát..."
-                  : Number(reconcileFields.reviewedAmount) < Number(reconcileItem.payment.amount)
-                    ? "Xác nhận split & đối soát"
-                    : "Xác nhận đối soát & Settled"}
+                  : reconciliationIsSplit
+                    ? reconciliationIsIncome
+                      ? "Xác nhận nhận một phần"
+                      : "Xác nhận chi một phần"
+                    : reconciliationIsIncome
+                      ? "Xác nhận đã nhận tiền"
+                      : "Xác nhận đã chi tiền"}
               </button>
             </div>
           </div>

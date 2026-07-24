@@ -16,6 +16,11 @@ function toPositiveInt(value: string | null | undefined, fallback: number) {
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
 }
 
+function toBoolean(value: string | null, fallback: boolean) {
+    if (value === null || value === "") return fallback;
+    return value.trim().toLowerCase() === "true";
+}
+
 function serialize(obj: unknown) {
     return JSON.parse(
         JSON.stringify(obj, (_key, value) => {
@@ -68,7 +73,7 @@ function buildWatchListInput(req: NextRequest) {
         sort: firstValue(params, "sort") || "updatedDesc",
         page: toPositiveInt(firstValue(params, "page"), 1),
         pageSize: toPositiveInt(firstValue(params, "pageSize"), 20),
-        withTotal: true,
+        withTotal: toBoolean(params.get("withTotal"), true),
         meta: firstValue(params, "meta") || "lite",
     };
 }

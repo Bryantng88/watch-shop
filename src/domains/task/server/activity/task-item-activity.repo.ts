@@ -139,3 +139,29 @@ export async function listTaskItemActivitiesRepo(db: DB, taskItemId: string) {
     orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
   });
 }
+
+export async function listBusinessTargetActivitiesRepo(
+  db: DB,
+  input: { targetType: string; targetId: string },
+) {
+  return dbOrTx(db).taskItemActivity.findMany({
+    where: {
+      AND: [
+        {
+          metadataJson: {
+            path: ["targetType"],
+            equals: input.targetType,
+          },
+        },
+        {
+          metadataJson: {
+            path: ["targetId"],
+            equals: input.targetId,
+          },
+        },
+      ],
+    },
+    include: TASK_ITEM_ACTIVITY_INCLUDE,
+    orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
+  });
+}

@@ -13,6 +13,7 @@ import { TechnicalIssueExecutionStatusSchema } from '../enums/TechnicalIssueExec
 import { EnumTechnicalIssueExecutionStatusFieldUpdateOperationsInputObjectSchema as EnumTechnicalIssueExecutionStatusFieldUpdateOperationsInputObjectSchema } from './EnumTechnicalIssueExecutionStatusFieldUpdateOperationsInput.schema';
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
+import { NullableIntFieldUpdateOperationsInputObjectSchema as NullableIntFieldUpdateOperationsInputObjectSchema } from './NullableIntFieldUpdateOperationsInput.schema';
 import { MaintenanceRecordUpdateManyWithoutTechnicalIssueNestedInputObjectSchema as MaintenanceRecordUpdateManyWithoutTechnicalIssueNestedInputObjectSchema } from './MaintenanceRecordUpdateManyWithoutTechnicalIssueNestedInput.schema';
 import { TechnicalAssessmentUpdateOneRequiredWithoutTechnicalIssueNestedInputObjectSchema as TechnicalAssessmentUpdateOneRequiredWithoutTechnicalIssueNestedInputObjectSchema } from './TechnicalAssessmentUpdateOneRequiredWithoutTechnicalIssueNestedInput.schema';
 import { MechanicalPartCatalogUpdateOneWithoutTechnicalIssueNestedInputObjectSchema as MechanicalPartCatalogUpdateOneWithoutTechnicalIssueNestedInputObjectSchema } from './MechanicalPartCatalogUpdateOneWithoutTechnicalIssueNestedInput.schema';
@@ -50,6 +51,8 @@ const makeSchema = () => z.object({
   confirmedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   confirmedById: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   confirmedByNameSnap: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  expectedWorkingDays: z.union([z.number().int(), z.lazy(() => NullableIntFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  expectedCompletionAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordUpdateManyWithoutTechnicalIssueNestedInputObjectSchema).optional(),
   technicalAssessment: z.lazy(() => TechnicalAssessmentUpdateOneRequiredWithoutTechnicalIssueNestedInputObjectSchema).optional(),
   MechanicalPartCatalog: z.lazy(() => MechanicalPartCatalogUpdateOneWithoutTechnicalIssueNestedInputObjectSchema).optional(),

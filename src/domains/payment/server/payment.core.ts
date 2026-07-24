@@ -454,6 +454,7 @@ export async function splitPayment(input: {
   method?: string | null;
   reference?: string | null;
   note?: string | null;
+  deferConsumers?: (work: () => Promise<void>) => void;
 }) {
   const result = await prisma.$transaction(async (tx) => {
     const payment = await tx.payment.findUnique({ where: { id: input.paymentId } });
@@ -545,7 +546,7 @@ export async function splitPayment(input: {
       splitFromPaymentId: result.paymentId,
       sourceId: `${result.remainderPaymentId}:payment.created:split`,
     },
-  });
+  }, { deferConsumers: input.deferConsumers });
 
   await recordBusinessEvent(prisma, {
     eventKey: "payment.status_updated",
@@ -564,7 +565,7 @@ export async function splitPayment(input: {
       splitRemainderPaymentId: result.remainderPaymentId,
       sourceId: `${result.paymentId}:payment.status_updated:PAID:SPLIT`,
     },
-  });
+  }, { deferConsumers: input.deferConsumers });
 
   await recordBusinessEvent(prisma, {
     eventKey: "payment.paid",
@@ -583,7 +584,7 @@ export async function splitPayment(input: {
       splitRemainderPaymentId: result.remainderPaymentId,
       sourceId: `${result.paymentId}:payment.paid:SPLIT`,
     },
-  });
+  }, { deferConsumers: input.deferConsumers });
 
   return result;
 }
@@ -594,6 +595,7 @@ export async function completePayment(input: {
   method?: string | null;
   reference?: string | null;
   note?: string | null;
+  deferConsumers?: (work: () => Promise<void>) => void;
 }) {
   const result = await prisma.$transaction(async (tx) => {
     if (!input.paymentId) throw new Error("Thiếu paymentId.");
@@ -666,7 +668,7 @@ export async function completePayment(input: {
       summary: result.summary,
       sourceId: `${result.paymentId}:payment.status_updated:PAID`,
     },
-  });
+  }, { deferConsumers: input.deferConsumers });
 
   await recordBusinessEvent(prisma, {
     eventKey: "payment.paid",
@@ -684,7 +686,7 @@ export async function completePayment(input: {
       summary: result.summary,
       sourceId: `${result.paymentId}:payment.paid`,
     },
-  });
+  }, { deferConsumers: input.deferConsumers });
 
   return result;
 }

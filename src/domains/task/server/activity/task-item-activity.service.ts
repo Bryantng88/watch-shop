@@ -9,6 +9,7 @@ import {
   findTaskItemActivityBySourceRepo,
   findTaskItemActivityTaskRepo,
   listTaskItemActivitiesRepo,
+  listBusinessTargetActivitiesRepo,
   updateTaskItemActivityMetadataRepo,
 } from "./task-item-activity.repo";
 import type {
@@ -503,6 +504,28 @@ export async function getTaskItemActivityViewModels(
   const limitedItems = Number.isFinite(take) && take > 0
     ? scopedItems.slice(0, Math.floor(take))
     : scopedItems;
+
+  return limitedItems.map(toTaskItemActivityViewModel);
+}
+
+export async function getBusinessTargetActivityViewModels(
+  targetType: string,
+  targetId: string,
+  limit?: number,
+) {
+  const cleanTargetType = clean(targetType);
+  const cleanTargetId = clean(targetId);
+  assertPresent(cleanTargetType, "Missing targetType");
+  assertPresent(cleanTargetId, "Missing targetId");
+
+  const items = await listBusinessTargetActivitiesRepo(prisma, {
+    targetType: cleanTargetType,
+    targetId: cleanTargetId,
+  });
+  const take = Number(limit);
+  const limitedItems = Number.isFinite(take) && take > 0
+    ? items.slice(0, Math.floor(take))
+    : items;
 
   return limitedItems.map(toTaskItemActivityViewModel);
 }

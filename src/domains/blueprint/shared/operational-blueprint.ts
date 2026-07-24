@@ -56,7 +56,7 @@ export type OperationalBlueprintEventRoute = {
 export type OperationalBlueprintActionField = {
   key: string;
   label: string;
-  kind: "text" | "textarea" | "select" | "multiselect" | "money" | "boolean" | "date";
+  kind: "text" | "textarea" | "select" | "multiselect" | "money" | "number" | "boolean" | "date";
   required: boolean;
   options?: Array<{
     value: string;
@@ -908,16 +908,37 @@ const SERVICE_OPERATION_CONTRACT: OperationalBlueprintContract = {
     {
       key: "start_processing",
       label: "Bắt đầu xử lý",
-      workspaceRole: "PROCESSING",
+      workspaceRole: "INSPECT",
       targetType: "TECHNICAL_ISSUE",
       command: "service.startTechnicalIssue",
       emits: ["technical_issue.started"],
       description: "Bắt đầu xử lý kỹ thuật và ghi nhận vendor, chi tiết kỹ thuật, chi phí dự kiến.",
       fields: [
         {
+          key: "technicalArea",
+          label: "Nhóm kỹ thuật",
+          kind: "select",
+          required: true,
+          options: [
+            { value: "GENERAL", label: "Tổng quát" },
+            { value: "MOVEMENT", label: "Máy" },
+            { value: "CASE", label: "Vỏ" },
+            { value: "CRYSTAL", label: "Kính" },
+            { value: "BRACELET", label: "Dây / bracelet" },
+            { value: "CROWN", label: "Núm" },
+            { value: "HANDS_MARKERS", label: "Kim cọc" },
+          ],
+        },
+        {
           key: "technicalDetailCatalogId",
           label: "Chi tiết kỹ thuật",
           kind: "text",
+          required: true,
+        },
+        {
+          key: "expectedWorkingDays",
+          label: "Dự kiến hoàn tất (số ngày)",
+          kind: "number",
           required: true,
         },
         {
@@ -967,7 +988,7 @@ const SERVICE_OPERATION_CONTRACT: OperationalBlueprintContract = {
     {
       key: "skip_processing",
       label: "Không cần xử lý",
-      workspaceRole: "PROCESSING",
+      workspaceRole: "INSPECT",
       targetType: "TECHNICAL_ISSUE",
       command: "service.closeTechnicalIssueNoIssue",
       emits: ["technical_issue.completed"],

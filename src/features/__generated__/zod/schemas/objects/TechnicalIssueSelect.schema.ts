@@ -55,6 +55,8 @@ const makeSchema = () => z.object({
   user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
   vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional(),
   technicalDetailCatalogId: z.boolean().optional(),
+  expectedWorkingDays: z.boolean().optional(),
+  expectedCompletionAt: z.boolean().optional(),
   technicalDetailCatalog: z.union([z.boolean(), z.lazy(() => TechnicalDetailCatalogArgsObjectSchema)]).optional(),
   task: z.union([z.boolean(), z.lazy(() => TaskFindManySchema)]).optional(),
   payments: z.union([z.boolean(), z.lazy(() => PaymentFindManySchema)]).optional(),

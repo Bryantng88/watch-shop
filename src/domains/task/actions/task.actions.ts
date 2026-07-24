@@ -1462,6 +1462,7 @@ export async function submitOperationalBlueprintActionAction(input: {
     fields: input.fields ?? {},
     actorUserId,
     actorName: actorLabel,
+    deferConsumers: (work: () => Promise<void>) => after(work),
   };
   const result = PAYMENT_OPERATION_BLUEPRINT_ACTION_KEYS.has(actionKey)
     ? await runPaymentOperationBlueprintAction(prisma, actionInput)

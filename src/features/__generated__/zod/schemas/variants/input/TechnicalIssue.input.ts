@@ -45,6 +45,8 @@ export const TechnicalIssueInputSchema = z.object({
     user: z.unknown().optional().nullable(),
     vendor: z.unknown().optional().nullable(),
     technicalDetailCatalogId: z.string().optional().nullable(),
+    expectedWorkingDays: z.number().int().optional().nullable(),
+    expectedCompletionAt: z.date().optional().nullable(),
     technicalDetailCatalog: z.unknown().optional().nullable(),
     task: z.array(z.unknown()),
     payments: z.array(z.unknown()),

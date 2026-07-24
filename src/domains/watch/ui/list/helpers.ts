@@ -288,6 +288,8 @@ export function mapWatchRow(row: any): WatchRow {
         reviewStatus,
         postReadiness: reviewStatus,
         serviceState,
+        serviceExpectedWorkingDays: row?.serviceExpectedWorkingDays ?? null,
+        serviceExpectedCompletionAt: row?.serviceExpectedCompletionAt ?? null,
         stockState: row?.stockState ?? null,
         saleState: row?.saleStage ?? row?.saleState ?? null,
         statusLabel: row?.saleStage ?? row?.saleState ?? row?.stockState ?? null,

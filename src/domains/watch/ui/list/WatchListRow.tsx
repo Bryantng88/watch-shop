@@ -88,12 +88,14 @@ function WatchStatusSignal({
     onClick,
     status,
     tone,
+    detail: detailOverride,
 }: {
     kind: "media" | "service";
     label: string;
     onClick?: (() => void) | null;
     status?: string | null;
     tone: BadgeTone;
+    detail?: string | null;
 }) {
     const normalized = upper(status);
     const icon: VisualStatusIcon = kind === "media"
@@ -103,7 +105,7 @@ function WatchStatusSignal({
                     : tone === "amber" || tone === "rose" ? "warning"
                         : "image"
         : tone === "emerald" ? "success" : tone === "amber" || tone === "rose" ? "waiting" : tone === "blue" ? "service" : "neutral";
-    const detail = kind === "media"
+    const detail = detailOverride || (kind === "media"
         ? normalized === "POSTED" ? "Đã hoàn tất"
             : normalized === "READY_TO_PUBLISH" ? "Chưa xử lý"
                 : normalized === "MEDIA_READY" ? "Chờ xử lý media"
@@ -115,7 +117,7 @@ function WatchStatusSignal({
             : normalized === "IN_SERVICE" ? "Đang xử lý kỹ thuật"
                 : normalized === "WAITING" || normalized === "PENDING" ? "Chờ tiếp nhận"
                     : normalized === "ISSUE" ? "Cần kiểm tra"
-                        : "Đã kiểm tra";
+                        : "Đã kiểm tra");
     return <VisualStatusSignal label={label} detail={detail} tone={tone} icon={icon} onClick={onClick ?? undefined} />;
 }
 
@@ -204,8 +206,9 @@ function mediaTone(status?: string | null): BadgeTone {
         case "MEDIA_READY":
             return "slate";
         case "NEEDS_REWORK":
-        case "NO_IMAGE":
             return "amber";
+        case "NO_IMAGE":
+            return "slate";
         case "PHOTOSHOOT":
         case "MEDIA_PROCESSING":
             return "blue";
@@ -297,8 +300,17 @@ export default function WatchListRow({
             tone: serviceTone(product.v2Row.serviceStatus),
             serviceRequestId: product.v2Row.serviceRequestId,
             href: product.v2Row.serviceWorkspaceHref,
+            expectedCompletionAt: product.v2Row.serviceExpectedCompletionAt,
         }
-        : { ...legacyServiceStatus(product), status: product.serviceState, serviceRequestId: null, href: null };
+        : {
+            ...legacyServiceStatus(product),
+            status: product.serviceState,
+            serviceRequestId: null,
+            href: null,
+            expectedCompletionAt: product.serviceExpectedCompletionAt
+                ? new Date(product.serviceExpectedCompletionAt).toISOString()
+                : null,
+        };
     const sale = product.v2Row
         ? {
             label: product.v2Row.saleStatusLabel,
@@ -541,6 +553,15 @@ export default function WatchListRow({
                     label={service.label}
                     status={service.status}
                     tone={service.tone}
+                    detail={
+                        service.expectedCompletionAt
+                            ? `Dự kiến ${new Intl.DateTimeFormat("vi-VN", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                            }).format(new Date(service.expectedCompletionAt))}`
+                            : null
+                    }
                     onClick={onPreview ? () => { onPreview(servicePreview); /*
                         onPreview({
                             type: service.serviceRequestId ? "SERVICE" : "WATCH",

@@ -4,13 +4,17 @@ import { TaskExecutionActionType, TaskExecutionTargetType } from "@prisma/client
 import { prisma } from "@/server/db/client";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { authorizeTaskItemDetail } from "@/domains/task/server/core/task-item-detail.service";
-import { getTaskItemActivityViewModels } from "@/domains/task/server/activity";
+import {
+    getBusinessTargetActivityViewModels,
+    getTaskItemActivityViewModels,
+} from "@/domains/task/server/activity";
 import { resolveWorkspaceCapabilities } from "@/domains/blueprint/shared/workspace-capabilities";
 import { getAuthUserId } from "@/domains/task/server/core/task.service";
 import type {
     BusinessEntityPreview,
     BusinessEntityType,
 } from "./business-entity.types";
+import { updateTechnicalIssue } from "@/domains/service/server";
 
 type ProductPreviewImageSource = {
     primaryImageUrl?: string | null;
@@ -327,7 +331,7 @@ export async function getBusinessEntityPreviewAction(input: {
     }
 
     if (input.type === "TECHNICAL_ISSUE") {
-        const row = await prisma.technicalIssue.findUnique({
+        const [row, vendorOptions] = await Promise.all([prisma.technicalIssue.findUnique({
             where: { id },
             include: {
                 serviceRequest: {
@@ -391,7 +395,11 @@ export async function getBusinessEntityPreviewAction(input: {
                     },
                 },
             },
-        });
+        }), prisma.vendor.findMany({
+            where: { isActive: true },
+            orderBy: { name: "asc" },
+            select: { id: true, name: true },
+        })]);
 
         if (!row) return null;
 
@@ -419,13 +427,11 @@ export async function getBusinessEntityPreviewAction(input: {
                         label: user.name || user.email,
                         avatarUrl: user.avatarUrl,
                     })),
-                    items: await getTaskItemActivityViewModels(technicalWorkspaceItem.id, {
-                        limit: 20,
-                        scope: {
-                            targets: [{ targetType: "TECHNICAL_ISSUE", targetId: row.id }],
-                            includeWorkspaceLevel: false,
-                        },
-                    }),
+                    items: await getBusinessTargetActivityViewModels(
+                        "TECHNICAL_ISSUE",
+                        row.id,
+                        20,
+                    ),
                 };
             } catch {
                 activity = undefined;
@@ -482,8 +488,70 @@ export async function getBusinessEntityPreviewAction(input: {
                     })),
                 },
             ],
+            edit: ["DONE", "CANCELED", "CANCELLED"].includes(
+                String(row.executionStatus).toUpperCase(),
+            )
+                ? undefined
+                : {
+                    kind: "TECHNICAL_ISSUE",
+                    values: {
+                        summary: row.summary ?? "",
+                        note: row.note ?? "",
+                        area: row.area ?? "GENERAL",
+                        actionMode: String(row.actionMode ?? "INTERNAL"),
+                        vendorId: row.vendorId ?? "",
+                        estimatedCost: row.estimatedCost?.toString() ?? "",
+                        expectedWorkingDays: row.expectedWorkingDays?.toString() ?? "",
+                    },
+                    vendorOptions,
+                },
         };
     }
 
     return null;
+}
+
+export async function updateTechnicalIssuePreviewAction(input: {
+    id: string;
+    summary: string;
+    note?: string | null;
+    area: string;
+    actionMode: string;
+    vendorId?: string | null;
+    estimatedCost?: string | number | null;
+    expectedWorkingDays?: string | number | null;
+}) {
+    const auth = await requirePermission("SERVICE_UPDATE");
+    const issue = await prisma.technicalIssue.findUnique({
+        where: { id: input.id },
+        select: { executionStatus: true },
+    });
+    if (!issue) throw new Error("Không tìm thấy TI.");
+    if (["DONE", "CANCELED", "CANCELLED"].includes(String(issue.executionStatus).toUpperCase())) {
+        throw new Error("TI đã Done hoặc đã hủy nên không thể chỉnh sửa.");
+    }
+    if (
+        String(issue.executionStatus).toUpperCase() === "IN_PROGRESS" &&
+        !String(input.expectedWorkingDays ?? "").trim()
+    ) {
+        throw new Error("TI đang xử lý phải có số ngày dự kiến.");
+    }
+    if (!input.summary.trim()) throw new Error("Vui lòng nhập nội dung TI.");
+    if (String(input.actionMode).toUpperCase() === "VENDOR" && !input.vendorId) {
+        throw new Error("Vui lòng chọn vendor.");
+    }
+
+    await updateTechnicalIssue({
+        id: input.id,
+        actorId: getAuthUserId(auth),
+        summary: input.summary,
+        note: input.note,
+        area: input.area,
+        actionMode: input.actionMode,
+        vendorId: input.vendorId,
+        estimatedCost: input.estimatedCost,
+        expectedWorkingDays: input.expectedWorkingDays,
+    });
+
+    return { ok: true };
 }

@@ -6,6 +6,8 @@ import { WatchSaleStageSchema } from '../enums/WatchSaleStage.schema';
 import { EnumWatchSaleStageFieldUpdateOperationsInputObjectSchema as EnumWatchSaleStageFieldUpdateOperationsInputObjectSchema } from './EnumWatchSaleStageFieldUpdateOperationsInput.schema';
 import { WatchServiceStageSchema } from '../enums/WatchServiceStage.schema';
 import { EnumWatchServiceStageFieldUpdateOperationsInputObjectSchema as EnumWatchServiceStageFieldUpdateOperationsInputObjectSchema } from './EnumWatchServiceStageFieldUpdateOperationsInput.schema';
+import { NullableIntFieldUpdateOperationsInputObjectSchema as NullableIntFieldUpdateOperationsInputObjectSchema } from './NullableIntFieldUpdateOperationsInput.schema';
+import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { WatchStockStageSchema } from '../enums/WatchStockStage.schema';
 import { EnumWatchStockStageFieldUpdateOperationsInputObjectSchema as EnumWatchStockStageFieldUpdateOperationsInputObjectSchema } from './EnumWatchStockStageFieldUpdateOperationsInput.schema';
 import { WatchSiteChannelSchema } from '../enums/WatchSiteChannel.schema';
@@ -23,7 +25,6 @@ import { NullableEnumWatchStyleFieldUpdateOperationsInputObjectSchema as Nullabl
 import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { WatchSpecStatusSchema } from '../enums/WatchSpecStatus.schema';
 import { EnumWatchSpecStatusFieldUpdateOperationsInputObjectSchema as EnumWatchSpecStatusFieldUpdateOperationsInputObjectSchema } from './EnumWatchSpecStatusFieldUpdateOperationsInput.schema';
-import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { ProductUpdateOneRequiredWithoutWatchNestedInputObjectSchema as ProductUpdateOneRequiredWithoutWatchNestedInputObjectSchema } from './ProductUpdateOneRequiredWithoutWatchNestedInput.schema';
 import { WatchContentUpdateOneWithoutWatchNestedInputObjectSchema as WatchContentUpdateOneWithoutWatchNestedInputObjectSchema } from './WatchContentUpdateOneWithoutWatchNestedInput.schema';
@@ -38,6 +39,8 @@ const makeSchema = () => z.object({
   acquisitionId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   saleStage: z.union([WatchSaleStageSchema, z.lazy(() => EnumWatchSaleStageFieldUpdateOperationsInputObjectSchema)]).optional(),
   serviceStage: z.union([WatchServiceStageSchema, z.lazy(() => EnumWatchServiceStageFieldUpdateOperationsInputObjectSchema)]).optional(),
+  serviceExpectedWorkingDays: z.union([z.number().int(), z.lazy(() => NullableIntFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  serviceExpectedCompletionAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   stockStage: z.union([WatchStockStageSchema, z.lazy(() => EnumWatchStockStageFieldUpdateOperationsInputObjectSchema)]).optional(),
   siteChannel: z.union([WatchSiteChannelSchema, z.lazy(() => EnumWatchSiteChannelFieldUpdateOperationsInputObjectSchema)]).optional(),
   gender: z.union([GenderSchema, z.lazy(() => EnumGenderFieldUpdateOperationsInputObjectSchema)]).optional(),

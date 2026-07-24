@@ -12,7 +12,8 @@ import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilte
 import { EnumTechnicalIssueExecutionStatusWithAggregatesFilterObjectSchema as EnumTechnicalIssueExecutionStatusWithAggregatesFilterObjectSchema } from './EnumTechnicalIssueExecutionStatusWithAggregatesFilter.schema';
 import { TechnicalIssueExecutionStatusSchema } from '../enums/TechnicalIssueExecutionStatus.schema';
 import { DateTimeNullableWithAggregatesFilterObjectSchema as DateTimeNullableWithAggregatesFilterObjectSchema } from './DateTimeNullableWithAggregatesFilter.schema';
-import { BoolWithAggregatesFilterObjectSchema as BoolWithAggregatesFilterObjectSchema } from './BoolWithAggregatesFilter.schema'
+import { BoolWithAggregatesFilterObjectSchema as BoolWithAggregatesFilterObjectSchema } from './BoolWithAggregatesFilter.schema';
+import { IntNullableWithAggregatesFilterObjectSchema as IntNullableWithAggregatesFilterObjectSchema } from './IntNullableWithAggregatesFilter.schema'
 
 const technicalissuescalarwherewithaggregatesinputSchema = z.object({
   AND: z.union([z.lazy(() => TechnicalIssueScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => TechnicalIssueScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
@@ -49,7 +50,9 @@ const technicalissuescalarwherewithaggregatesinputSchema = z.object({
   confirmedAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   confirmedById: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   confirmedByNameSnap: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
-  technicalDetailCatalogId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
+  technicalDetailCatalogId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  expectedWorkingDays: z.union([z.lazy(() => IntNullableWithAggregatesFilterObjectSchema), z.number().int()]).optional().nullable(),
+  expectedCompletionAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable()
 }).strict();
 export const TechnicalIssueScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.TechnicalIssueScalarWhereWithAggregatesInput> = technicalissuescalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.TechnicalIssueScalarWhereWithAggregatesInput>;
 export const TechnicalIssueScalarWhereWithAggregatesInputObjectZodSchema = technicalissuescalarwherewithaggregatesinputSchema;

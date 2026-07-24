@@ -23,6 +23,8 @@ const makeSchema = () => z.object({
   acquisitionId: z.string().optional().nullable(),
   saleStage: WatchSaleStageSchema.optional(),
   serviceStage: WatchServiceStageSchema.optional(),
+  serviceExpectedWorkingDays: z.number().int().optional().nullable(),
+  serviceExpectedCompletionAt: z.coerce.date().optional().nullable(),
   stockStage: WatchStockStageSchema.optional(),
   siteChannel: WatchSiteChannelSchema.optional(),
   gender: GenderSchema.optional(),

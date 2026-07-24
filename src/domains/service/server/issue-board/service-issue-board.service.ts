@@ -24,6 +24,20 @@ function decimalOrNull(v: unknown): number | null {
     return Number.isFinite(n) ? n : null;
 }
 
+function positiveInteger(v: unknown, label: string) {
+    const value = Number(v);
+    if (!Number.isInteger(value) || value < 1 || value > 365) {
+        throw new Error(`${label} phải là số nguyên từ 1 đến 365.`);
+    }
+    return value;
+}
+
+function addCalendarDays(start: Date, days: number) {
+    const result = new Date(start);
+    result.setDate(result.getDate() + days);
+    return result;
+}
+
 function adminRoute(path: string) {
     const appUrl = String(process.env.APP_URL ?? "").trim().replace(/\/$/, "");
     return appUrl ? `${appUrl}${path}` : path;
@@ -65,7 +79,7 @@ async function vendorName(vendorId?: string | null) {
 
 async function syncServiceRequestStatusFromIssues(client: any, serviceRequestId?: string | null) {
     const srId = cleanId(serviceRequestId);
-    if (!srId) return;
+    if (!srId) return null;
 
     const [serviceRequest, issues] = await Promise.all([
         client.serviceRequest.findUnique({
@@ -77,11 +91,13 @@ async function syncServiceRequestStatusFromIssues(client: any, serviceRequestId?
             select: {
                 id: true,
                 executionStatus: true,
+                expectedWorkingDays: true,
+                expectedCompletionAt: true,
             },
         }),
     ]);
 
-    if (!serviceRequest) return;
+    if (!serviceRequest) return null;
 
     const nextStatus = deriveServiceRequestStatusFromTechnicalIssues(
         serviceRequest.status,
@@ -97,7 +113,7 @@ async function syncServiceRequestStatusFromIssues(client: any, serviceRequestId?
     });
 
     const productId = cleanId((serviceRequest as any).productId);
-    if (!productId) return;
+    if (!productId) return null;
 
     const activeIssues = issues.filter(
         (issue) => !["CANCELED", "CANCELLED"].includes(String(issue.executionStatus ?? "").toUpperCase()),
@@ -110,14 +126,37 @@ async function syncServiceRequestStatusFromIssues(client: any, serviceRequestId?
         : allDone
             ? "DONE"
             : "IN_SERVICE";
+    const pendingEtaIssues = activeIssues
+        .filter((issue) => !isTechnicalIssueDone(issue.executionStatus))
+        .filter((issue) => issue.expectedCompletionAt)
+        .sort(
+            (left, right) =>
+                new Date(right.expectedCompletionAt).getTime() -
+                new Date(left.expectedCompletionAt).getTime(),
+        );
+    const watchEta = pendingEtaIssues[0] ?? null;
 
-    await client.watch.updateMany({
+    const watch = await client.watch.findUnique({
         where: { productId },
+        select: { id: true },
+    });
+    if (!watch) return null;
+
+    await client.watch.update({
+        where: { id: watch.id },
         data: {
             serviceStage: nextServiceStage,
+            serviceExpectedWorkingDays: watchEta?.expectedWorkingDays ?? null,
+            serviceExpectedCompletionAt: watchEta?.expectedCompletionAt ?? null,
             updatedAt: new Date(),
         } as any,
     });
+
+    return {
+        id: watch.id,
+        serviceExpectedWorkingDays: watchEta?.expectedWorkingDays ?? null,
+        serviceExpectedCompletionAt: watchEta?.expectedCompletionAt ?? null,
+    };
 }
 
 async function ensureTechnicalIssuePaymentEventSeed(client: any, technicalIssueId: string) {
@@ -392,7 +431,6 @@ export async function confirmTechnicalIssue(input: {
             executionStatus: "CONFIRMED",
         },
     });
-
     return updated;
 }
 
@@ -400,6 +438,8 @@ export async function startTechnicalIssue(input: {
     id: string;
     actorId?: string | null;
     actorName?: string | null;
+    technicalArea?: string | null;
+    expectedWorkingDays?: unknown;
     technicalDetailCatalogId?: string | null;
     replacementPartCodes?: string[];
     actionMode?: string | null;
@@ -425,9 +465,15 @@ export async function startTechnicalIssue(input: {
 
     if (!issue) throw new Error("Không tìm thấy issue.");
 
+    const technicalArea = cleanId(input.technicalArea) ?? cleanId((issue as any).area) ?? "GENERAL";
+    const expectedWorkingDays = positiveInteger(
+        input.expectedWorkingDays,
+        "Số ngày dự kiến",
+    );
+    const expectedCompletionAt = addCalendarDays(new Date(), expectedWorkingDays);
     const detail = await resolveTechnicalDetailCatalog({
         technicalDetailCatalogId: input.technicalDetailCatalogId,
-        area: (issue as any).area,
+        area: technicalArea,
     });
     const allowedReplacementPartCodes = new Set(["MOVEMENT_COMPLETE", "MAINSPRING", "GEAR", "BALANCE_WHEEL", "BALANCE_STAFF", "HAIRSPRING"]);
     const replacementPartCodes = Array.from(new Set((input.replacementPartCodes ?? []).filter((code) => allowedReplacementPartCodes.has(code))));
@@ -459,6 +505,9 @@ export async function startTechnicalIssue(input: {
             executionStatus: "IN_PROGRESS" as any,
             startedAt: new Date(),
             actionMode: actionMode as any,
+            area: technicalArea,
+            expectedWorkingDays,
+            expectedCompletionAt,
             vendorId,
             vendorNameSnap: await vendorName(vendorId),
             technicalDetailCatalogId: detail.id,
@@ -467,7 +516,10 @@ export async function startTechnicalIssue(input: {
         } as any,
     });
 
-    await syncServiceRequestStatusFromIssues(prisma as any, (updated as any).serviceRequestId);
+    const syncedWatch = await syncServiceRequestStatusFromIssues(
+        prisma as any,
+        (updated as any).serviceRequestId,
+    );
 
     await syncTechnicalIssueToTasks(prisma as any, {
         technicalIssueId: id,
@@ -495,10 +547,28 @@ export async function startTechnicalIssue(input: {
             technicalDetailCatalogId: detail.id,
             replacementPartCodes,
             estimatedCost: decimalOrNull(input.estimatedCost),
+            expectedWorkingDays,
+            expectedCompletionAt: expectedCompletionAt.toISOString(),
             startedNote: cleanText(input.startedNote),
             vendorChangeNote: cleanText(input.vendorChangeNote),
         },
     });
+    if (syncedWatch) {
+        await recordBusinessEvent(prisma, {
+            eventKey: "watch.service.eta.updated",
+            targetType: "WATCH",
+            targetId: syncedWatch.id,
+            actorUserId: cleanId(input.actorId),
+            payload: {
+                expectedWorkingDays: syncedWatch.serviceExpectedWorkingDays,
+                expectedCompletionAt:
+                    syncedWatch.serviceExpectedCompletionAt instanceof Date
+                        ? syncedWatch.serviceExpectedCompletionAt.toISOString()
+                        : syncedWatch.serviceExpectedCompletionAt,
+                sourceId: `${id}:watch.service.eta.updated:${expectedCompletionAt.toISOString()}`,
+            },
+        });
+    }
 
     return updated;
 }
@@ -691,8 +761,10 @@ export async function cancelTechnicalIssue(
 
 export async function updateTechnicalIssue(input: {
     id: string;
+    actorId?: string | null;
     note?: string | null;
     summary?: string | null;
+    area?: string | null;
     estimatedCost?: unknown;
     actualCost?: unknown;
     resolutionNote?: string | null;
@@ -703,17 +775,31 @@ export async function updateTechnicalIssue(input: {
     supplyCatalogId?: string | null;
     mechanicalPartCatalogId?: string | null;
     technicalDetailCatalogId?: string | null;
+    expectedWorkingDays?: unknown;
 }) {
     const id = cleanId(input.id);
     if (!id) throw new Error("Missing issue id");
 
     const vendorId = cleanId(input.vendorId);
+    const expectedWorkingDays =
+        input.expectedWorkingDays === undefined
+            ? undefined
+            : input.expectedWorkingDays === null || input.expectedWorkingDays === ""
+                ? null
+                : positiveInteger(input.expectedWorkingDays, "Số ngày dự kiến");
+    const expectedCompletionAt =
+        expectedWorkingDays === undefined
+            ? undefined
+            : expectedWorkingDays === null
+                ? null
+                : addCalendarDays(new Date(), expectedWorkingDays);
 
     const updated = await prisma.technicalIssue.update({
         where: { id },
         data: {
             note: input.note === undefined ? undefined : cleanId(input.note),
             summary: input.summary === undefined ? undefined : cleanId(input.summary),
+            area: input.area === undefined ? undefined : cleanId(input.area),
             estimatedCost: input.estimatedCost === undefined ? undefined : decimalOrNull(input.estimatedCost),
             actualCost: input.actualCost === undefined ? undefined : decimalOrNull(input.actualCost),
             resolutionNote: input.resolutionNote === undefined ? undefined : cleanId(input.resolutionNote),
@@ -727,17 +813,47 @@ export async function updateTechnicalIssue(input: {
                 input.mechanicalPartCatalogId === undefined ? undefined : cleanId(input.mechanicalPartCatalogId),
             technicalDetailCatalogId:
                 input.technicalDetailCatalogId === undefined ? undefined : cleanId(input.technicalDetailCatalogId),
+            expectedWorkingDays,
+            expectedCompletionAt,
             updatedAt: new Date(),
         } as any,
     });
 
-    await syncServiceRequestStatusFromIssues(prisma as any, (updated as any).serviceRequestId);
+    const syncedWatch = await syncServiceRequestStatusFromIssues(
+        prisma as any,
+        (updated as any).serviceRequestId,
+    );
 
     await syncTechnicalIssueToTasks(prisma as any, {
         technicalIssueId: id,
         event: "TECHNICAL_ISSUE_UPDATED",
+        actorUserId: cleanId(input.actorId),
         note: "Technical Issue đã được cập nhật",
     });
+    await recordTechnicalIssueEvent({
+        eventKey: "technical_issue.updated",
+        technicalIssueId: id,
+        serviceRequestId: (updated as any).serviceRequestId,
+        actorUserId: cleanId(input.actorId),
+        payload: {
+            area: (updated as any).area,
+            expectedWorkingDays: (updated as any).expectedWorkingDays,
+            expectedCompletionAt: (updated as any).expectedCompletionAt,
+        },
+    });
+    if (syncedWatch) {
+        await recordBusinessEvent(prisma, {
+            eventKey: "watch.service.eta.updated",
+            targetType: "WATCH",
+            targetId: syncedWatch.id,
+            actorUserId: cleanId(input.actorId),
+            payload: {
+                expectedWorkingDays: syncedWatch.serviceExpectedWorkingDays,
+                expectedCompletionAt: syncedWatch.serviceExpectedCompletionAt,
+                sourceId: `${id}:watch.service.eta.updated:update`,
+            },
+        });
+    }
 
     return updated;
 }

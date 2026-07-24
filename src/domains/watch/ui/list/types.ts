@@ -95,6 +95,8 @@ export type WatchRow = {
     serviceIssuesCount: number;
 
     serviceState?: string | null;
+    serviceExpectedWorkingDays?: number | null;
+    serviceExpectedCompletionAt?: string | Date | null;
     stockState?: string | null;
     saleState?: string | null;
     conditionGrade?: string | null;
@@ -130,6 +132,8 @@ export type WatchRow = {
         mediaWorkspaceHref?: string | null;
         serviceStatus: string;
         serviceStatusLabel: string;
+        serviceExpectedWorkingDays?: number | null;
+        serviceExpectedCompletionAt?: string | null;
         serviceRequestId?: string | null;
         serviceWorkspaceHref?: string | null;
         saleStatus: string;

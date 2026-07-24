@@ -25,18 +25,24 @@ export async function GET(request: NextRequest) {
       : "OPERATION";
     const cashPeriod = request.nextUrl.searchParams.get("cashPeriod") ?? "WEEK";
     const flowItemsOnly = request.nextUrl.searchParams.get("includeFlowItems") === "1";
+    const flowStageKey = request.nextUrl.searchParams.get("flowStage");
+    const flowPage = Number(request.nextUrl.searchParams.get("flowPage") ?? 1);
+    const flowPageSize = Number(request.nextUrl.searchParams.get("flowPageSize") ?? 20);
+    const includeBoard = request.nextUrl.searchParams.get("includeBoard") === "1";
     const data = await getCoordinationDashboard({
       context,
       modeKey,
       date,
       auth,
       includeDashboardDetails: true,
-      includeTechnicalBoard: !flowItemsOnly && modeKey === "technical-issue-flow",
-      includeMediaBoard: !flowItemsOnly && modeKey === "media-production-flow",
+      includeTechnicalBoard: !flowItemsOnly && includeBoard && modeKey === "technical-issue-flow",
+      includeMediaBoard: !flowItemsOnly && includeBoard && modeKey === "media-production-flow",
       includeFlowItems: flowItemsOnly,
+      flowStageKey,
+      flowPage,
+      flowPageSize,
       includeManagementDetails: false,
       includeWorkspaceSummaries: !flowItemsOnly,
-      reconcileBindings: false,
     });
     const flow = data.viewConfig.modes.find((mode) => mode.key === modeKey);
     const scopeLabel = data.viewConfig.coreFlows?.find(

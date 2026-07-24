@@ -19,7 +19,9 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   Camera,
+  CalendarClock,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   BookOpen,
   CreditCard,
@@ -616,6 +618,9 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   );
   const [asyncMediaBoard, setAsyncMediaBoard] = useState(data.mediaBoard);
   const [asyncFlowItems, setAsyncFlowItems] = useState(data.flowItems);
+  const [asyncFlowPagination, setAsyncFlowPagination] = useState(
+    data.flowItemsPagination,
+  );
   const [flowItemsModeKey, setFlowItemsModeKey] = useState(activeViewModeKey);
   const [isFlowItemsLoading, setIsFlowItemsLoading] = useState(false);
   const [isBoardRefreshing, setIsBoardRefreshing] = useState(false);
@@ -623,19 +628,35 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   const [workspacePage, setWorkspacePage] = useState(1);
   const [workspacePageSize, setWorkspacePageSize] = useState(10);
   const [isRolloverMenuOpen, setIsRolloverMenuOpen] = useState(false);
+  const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
   const [isMovedItemsOpen, setIsMovedItemsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isViewPending, startViewTransition] = useTransition();
 
   useEffect(() => {
+    // A server refresh returns the default Payment Review slice. Do not let it
+    // replace a Settled slice that the user explicitly loaded.
+    if (normalizeStageKey(flowListStageFilter).includes("settled")) return;
     setAsyncFlowItems(data.flowItems);
-  }, [data.flowItems]);
+    setAsyncFlowPagination(data.flowItemsPagination);
+  }, [data.flowItems, data.flowItemsPagination, flowListStageFilter]);
 
   function changeActiveViewMode(nextModeKey: string) {
+    if (nextModeKey === activeViewModeKey) {
+      setIsViewMenuOpen(false);
+      return;
+    }
+    setIsViewMenuOpen(false);
     startViewTransition(() => {
       setActiveViewModeKey(nextModeKey);
+      setFlowItemsModeKey("");
       setAsyncFlowItems([]);
-      setFlowItemsModeKey(nextModeKey);
+      setAsyncFlowPagination((current) => ({
+        ...current,
+        page: 1,
+        total: 0,
+        totalPages: 1,
+      }));
       setFlowListStageFilter("");
       setWorkTicketView(nextModeKey === "technical-issue-flow"
         ? "TI_BOARD"
@@ -679,6 +700,26 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     : orderedFlowStages[0]?.key ?? "";
   const flowListStageCounts = useMemo(() => {
     const counts = new Map<string, number>();
+    if (activeCoreFlow) {
+      data.workTickets.forEach((ticket) => {
+        const itemStageKey = normalizeStageKey(
+          ticket.blueprint?.flowStageKey ??
+          ticket.blueprint?.operationWorkspaceRole,
+        );
+        const stage = activeCoreFlow.stages.find(
+          (candidate) =>
+            normalizeStageKey(candidate.key) === itemStageKey ||
+            normalizeStageKey(candidate.workspaceKey) === itemStageKey,
+        );
+        if (!stage) return;
+        const summary = ticket.queueSummary;
+        counts.set(
+          stage.key,
+          summary.ready + summary.review + summary.feedback + summary.done,
+        );
+      });
+      if (counts.size) return counts;
+    }
     asyncFlowItems.forEach((item) => {
       const itemStageKey = normalizeStageKey(item.flowStageKey);
       const stage = activeCoreFlow?.stages.find(
@@ -689,7 +730,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
       if (stage) counts.set(stage.key, (counts.get(stage.key) ?? 0) + 1);
     });
     return counts;
-  }, [activeCoreFlow, asyncFlowItems]);
+  }, [activeCoreFlow, asyncFlowItems, data.workTickets]);
   const flowListVisibleCount = activeFlowListStage
     ? flowListStageCounts.get(activeFlowListStage) ?? 0
     : asyncFlowItems.length;
@@ -716,22 +757,37 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     }).mediaBoard;
     if (mediaBoard) setAsyncMediaBoard(mediaBoard);
   }, []);
-  const loadFlowItems = useCallback(async () => {
+  const loadFlowItems = useCallback(async (
+    requestedStageKey?: string,
+    requestedPage = 1,
+    force = false,
+  ) => {
+    const requestedFlowStageKey = requestedStageKey || activeFlowListStage;
     if (
-      (flowItemsModeKey === activeViewModeKey && asyncFlowItems.length) ||
+      (!force &&
+        flowItemsModeKey === activeViewModeKey) ||
       isFlowItemsLoading
     ) return;
     setIsFlowItemsLoading(true);
     setError(null);
     try {
       const separator = dashboardEndpoint.includes("?") ? "&" : "?";
-      const response = await fetch(`${dashboardEndpoint}${separator}includeFlowItems=1`, {
+      const stageParam = requestedFlowStageKey
+        ? `&flowStage=${encodeURIComponent(requestedFlowStageKey)}`
+        : "";
+      const response = await fetch(
+        `${dashboardEndpoint}${separator}includeFlowItems=1${stageParam}&flowPage=${requestedPage}&flowPageSize=${asyncFlowPagination.pageSize}`,
+        {
         cache: "no-store",
-      });
+        },
+      );
       const result = await response.json().catch(() => null);
       if (!response.ok) throw new Error("Không thể tải danh sách item.");
       const items = Array.isArray(result?.flowItems) ? result.flowItems : [];
       setAsyncFlowItems(items);
+      if (result?.flowItemsPagination) {
+        setAsyncFlowPagination(result.flowItemsPagination);
+      }
       setFlowItemsModeKey(activeViewModeKey);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Không thể tải danh sách item.");
@@ -740,11 +796,18 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     }
   }, [
     activeViewModeKey,
-    asyncFlowItems.length,
+    activeFlowListStage,
+    asyncFlowPagination.pageSize,
     dashboardEndpoint,
     flowItemsModeKey,
     isFlowItemsLoading,
   ]);
+  const changeFlowListStage = useCallback((stageKey: string) => {
+    setFlowListStageFilter(stageKey);
+    if (stageKey !== activeFlowListStage) {
+      void loadFlowItems(stageKey, 1, true);
+    }
+  }, [activeFlowListStage, loadFlowItems]);
   const changeWorkTicketView = useCallback((value: string) => {
     const nextView = value === "TI_BOARD"
       ? "TI_BOARD"
@@ -754,12 +817,29 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     setWorkTicketView(nextView);
     if (nextView === "LIST") void loadFlowItems();
   }, [loadFlowItems]);
+  useEffect(() => {
+    if (workTicketView !== "LIST") return;
+    if (flowItemsModeKey === activeViewModeKey) {
+      return;
+    }
+    if (isFlowItemsLoading) return;
+
+    void loadFlowItems(activeFlowListStage, 1, true);
+  }, [
+    activeFlowListStage,
+    activeViewModeKey,
+    flowItemsModeKey,
+    isFlowItemsLoading,
+    loadFlowItems,
+    workTicketView,
+  ]);
   const refreshTechnicalIssueBoard = useCallback(async () => {
     if (isBoardRefreshing) return;
     setError(null);
     setIsBoardRefreshing(true);
     try {
-      const response = await fetch(dashboardEndpoint, { cache: "no-store" });
+      const separator = dashboardEndpoint.includes("?") ? "&" : "?";
+      const response = await fetch(`${dashboardEndpoint}${separator}includeBoard=1`, { cache: "no-store" });
       const result = await response.json().catch(() => null);
       if (!response.ok) throw new Error("Không thể tải lại board.");
       handleDashboardResult(result);
@@ -781,7 +861,9 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     params.set("context", data.context);
     params.set("dashboardVersion", "2");
     params.set("view", "technical-issue-flow");
+    params.set("includeBoard", "1");
     const technicalDashboardEndpoint = `/api/admin/coordination/operation/dashboard?${params.toString()}`;
+    params.delete("includeBoard");
     router.replace(`/admin/coordination/${contextPath(data.context)}?${params.toString()}`);
 
     try {
@@ -1256,18 +1338,62 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                         {activeViewMode.key === data.viewConfig.defaultModeKey ? "Mặc định" : "View"}
                       </span>
                       {data.viewConfig.modes.length > 1 ? (
-                        <select
-                          value={activeViewMode.key}
-                          onChange={(event) => changeActiveViewMode(event.target.value)}
-                          className="ml-1 h-8 min-w-48 rounded-md border border-violet-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm outline-none transition focus:border-violet-300"
-                          aria-label="Chế độ xem Space"
+                        <div
+                          className="relative ml-1"
+                          onBlur={(event) => {
+                            if (!event.currentTarget.contains(event.relatedTarget)) {
+                              setIsViewMenuOpen(false);
+                            }
+                          }}
                         >
-                          {data.viewConfig.modes.map((mode) => (
-                            <option key={mode.key} value={mode.key}>
-                              {modeLabel(mode)}
-                            </option>
-                          ))}
-                        </select>
+                          <button
+                            type="button"
+                            aria-label="Chế độ xem Space"
+                            aria-haspopup="listbox"
+                            aria-expanded={isViewMenuOpen}
+                            onClick={() => setIsViewMenuOpen((open) => !open)}
+                            className="inline-flex h-8 min-w-48 items-center justify-between gap-3 rounded-md border border-violet-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm outline-none transition duration-150 hover:border-violet-300 hover:bg-violet-50/40 focus-visible:ring-2 focus-visible:ring-violet-200"
+                          >
+                            <span>{modeLabel(activeViewMode)}</span>
+                            {isViewPending ? (
+                              <LoaderCircle className="h-3.5 w-3.5 animate-spin text-violet-500" />
+                            ) : (
+                              <ChevronDown className={cn("h-3.5 w-3.5 text-slate-400 transition-transform duration-150", isViewMenuOpen && "rotate-180")} />
+                            )}
+                          </button>
+                          <div
+                            role="listbox"
+                            aria-label="Chế độ xem Space"
+                            className={cn(
+                              "absolute left-0 top-full z-40 mt-1.5 min-w-full origin-top overflow-hidden rounded-lg border border-slate-200 bg-white p-1 shadow-[0_12px_30px_rgba(15,23,42,0.14)] transition duration-150",
+                              isViewMenuOpen
+                                ? "visible translate-y-0 scale-100 opacity-100"
+                                : "invisible -translate-y-1 scale-[0.98] opacity-0",
+                            )}
+                          >
+                            {data.viewConfig.modes.map((mode) => {
+                              const selected = mode.key === activeViewMode.key;
+                              return (
+                                <button
+                                  key={mode.key}
+                                  type="button"
+                                  role="option"
+                                  aria-selected={selected}
+                                  onClick={() => changeActiveViewMode(mode.key)}
+                                  className={cn(
+                                    "flex w-full items-center justify-between gap-4 whitespace-nowrap rounded-md px-3 py-2 text-left text-xs font-semibold transition-colors",
+                                    selected
+                                      ? "bg-violet-50 text-violet-700"
+                                      : "text-slate-700 hover:bg-slate-50",
+                                  )}
+                                >
+                                  <span>{modeLabel(mode)}</span>
+                                  {selected ? <CheckCircle2 className="h-3.5 w-3.5" /> : null}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       ) : null}
                     </div>
                     <p className="mt-2 text-sm text-[#6f7a96]">
@@ -1541,7 +1667,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                       <button
                         key={stage.key}
                         type="button"
-                        onClick={() => setFlowListStageFilter(stage.key)}
+                        onClick={() => changeFlowListStage(stage.key)}
                         aria-current={isActive ? "step" : undefined}
                         className={cn(
                           "group flex min-w-0 flex-1 items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-all duration-200",
@@ -1797,6 +1923,10 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
               (asyncMediaBoard?.items ?? []).map((item) => [item.id, item.imageUrl]),
             )}
             pending={isViewPending || isFlowItemsLoading}
+            pagination={asyncFlowPagination}
+            onPageChange={(page) =>
+              void loadFlowItems(activeFlowListStage, page, true)
+            }
           />
           <div className="hidden">
           <div className={cn("hidden border-y border-slate-100 bg-[#fbfcfe] px-5 py-3 text-xs font-bold uppercase tracking-[0.05em] text-slate-500 lg:grid", workTicketGridClass)}>
@@ -2693,9 +2823,18 @@ function TechnicalIssueBoardView({
                 estimatedCost: moveValues.estimatedCost === "" || moveValues.estimatedCost == null
                   ? candidate.estimatedCost
                   : Number(moveValues.estimatedCost),
+                expectedWorkingDays:
+                  moveValues.expectedWorkingDays === "" ||
+                  moveValues.expectedWorkingDays == null
+                    ? candidate.expectedWorkingDays
+                    : Number(moveValues.expectedWorkingDays),
+                expectedCompletionAt: candidate.expectedCompletionAt,
                 technicalDetailCatalogId: typeof moveValues.technicalDetailCatalogId === "string"
                   ? moveValues.technicalDetailCatalogId
                   : candidate.technicalDetailCatalogId,
+                area: typeof moveValues.technicalArea === "string"
+                  ? moveValues.technicalArea
+                  : candidate.area,
                 processingDetails: (() => {
                   const detail = technicalDetailCatalogOptions.find(
                     (option) => option.id === moveValues.technicalDetailCatalogId,
@@ -2925,7 +3064,9 @@ function defaultTechnicalBoardMoveValues(
   }
   if (action.command === "service.startTechnicalIssue") {
     return {
+      technicalArea: item.area ?? "GENERAL",
       technicalDetailCatalogId: item.technicalDetailCatalogId ?? "",
+      expectedWorkingDays: "",
       replacementPartCodes: [],
       actionMode: item.actionMode && item.actionMode !== "NONE" ? item.actionMode : "INTERNAL",
       vendorId: item.vendorId ?? "",
@@ -2969,40 +3110,35 @@ function technicalBoardAreaAccent(area?: string | null) {
   if (normalized === "MOVEMENT") {
     return {
       bar: "bg-blue-500",
-      headerBg: "bg-blue-50",
-      headerBorder: "border-blue-100",
+      header: "border-blue-100 bg-gradient-to-r from-blue-50 via-blue-50/55 to-white",
       chip: "border-blue-100 bg-blue-50 text-blue-700",
     };
   }
   if (normalized === "CASE") {
     return {
       bar: "bg-amber-500",
-      headerBg: "bg-amber-50",
-      headerBorder: "border-amber-100",
+      header: "border-amber-100 bg-gradient-to-r from-amber-50 via-amber-50/55 to-white",
       chip: "border-amber-200 bg-amber-50 text-amber-700",
     };
   }
   if (normalized === "CRYSTAL") {
     return {
       bar: "bg-indigo-500",
-      headerBg: "bg-indigo-50",
-      headerBorder: "border-indigo-100",
+      header: "border-indigo-100 bg-gradient-to-r from-indigo-50 via-indigo-50/55 to-white",
       chip: "border-indigo-100 bg-indigo-50 text-indigo-700",
     };
   }
   if (normalized === "BRACELET" || normalized === "STRAP") {
     return {
       bar: "bg-teal-500",
-      headerBg: "bg-teal-50",
-      headerBorder: "border-teal-100",
+      header: "border-teal-100 bg-gradient-to-r from-teal-50 via-teal-50/55 to-white",
       chip: "border-teal-100 bg-teal-50 text-teal-700",
     };
   }
 
   return {
     bar: "bg-slate-400",
-    headerBg: "bg-slate-50",
-    headerBorder: "border-slate-100",
+    header: "border-slate-100 bg-gradient-to-r from-slate-100/90 via-slate-50/60 to-white",
     chip: "border-slate-200 bg-slate-50 text-slate-700",
   };
 }
@@ -3148,7 +3284,6 @@ function TechnicalIssueBoardColumn({
   const [visibleCount, setVisibleCount] = useState(TECHNICAL_BOARD_COLUMN_PAGE_SIZE);
   const visibleItems = items.slice(0, visibleCount);
   const remainingCount = Math.max(0, items.length - visibleItems.length);
-
   return (
     <div
       ref={setNodeRef}
@@ -3157,11 +3292,15 @@ function TechnicalIssueBoardColumn({
         isOver && "border-violet-300 ring-2 ring-violet-100",
       )}
     >
-      <div className="sticky top-0 z-10 shrink-0 rounded-t-xl border-b border-slate-100 bg-white px-4 py-3">
+      <div className={cn(
+        "sticky top-0 z-10 shrink-0 rounded-t-xl border-b border-violet-100/70 bg-gradient-to-r from-white via-violet-50/45 to-violet-50/80 px-4 py-3",
+      )}>
         <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-sm font-semibold text-slate-950">{column.label}</div>
-          <div className="mt-1 line-clamp-2 text-xs text-slate-500">{column.hint}</div>
+        <div className="flex min-w-0 items-start">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-slate-950">{column.label}</div>
+            <div className="mt-0.5 line-clamp-2 text-xs text-slate-500">{column.hint}</div>
+          </div>
         </div>
         <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
           {items.length}
@@ -3265,7 +3404,7 @@ function TechnicalIssueBoardCard({
   return (
     <div
       className={cn(
-        "relative w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:border-violet-200 hover:shadow-md",
+        "relative w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_10px_rgba(15,23,42,0.08)] transition hover:border-violet-200 hover:shadow-[0_7px_16px_rgba(15,23,42,0.12)]",
         isUrgent && "border-rose-200 ring-1 ring-rose-100",
         dragging && "rotate-[1.5deg] shadow-xl ring-2 ring-violet-200",
       )}
@@ -3282,7 +3421,7 @@ function TechnicalIssueBoardCard({
           Gấp
         </div>
       ) : null}
-      <div className={cn("flex items-start gap-2 border-b px-2.5 py-2.5", accent.headerBg, accent.headerBorder)}>
+      <div className={cn("flex items-start gap-2 border-b px-2.5 py-2.5", accent.header)}>
         <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-slate-100">
           {imageSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -3386,12 +3525,46 @@ function TechnicalIssueBoardCard({
             <div className="truncate text-[11px] text-slate-400">{formatDateTime(item.updatedAt)}</div>
           </div>
         </div>
-        <div className="max-w-[42%] truncate text-right font-semibold text-slate-800">
-          {item.actualCost != null
-            ? formatMoneyCompact(item.actualCost)
-            : item.estimatedCost != null
-              ? `Dự kiến ${formatMoneyCompact(item.estimatedCost)}`
-              : "Chưa có chi phí"}
+        <div className="flex min-w-0 max-w-[58%] items-center justify-end gap-2 text-right">
+          {item.expectedCompletionAt && item.stage === "DONE" && item.completedAt ? (
+            <span
+              className={cn(
+                "inline-flex shrink-0 items-center gap-1 font-semibold",
+                item.overdueDays && item.overdueDays > 0
+                  ? "text-rose-600"
+                  : "text-emerald-600",
+              )}
+              title={`Dự kiến ${new Intl.DateTimeFormat("vi-VN", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+              }).format(new Date(item.expectedCompletionAt))}`}
+            >
+              <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
+              {item.overdueDays && item.overdueDays > 0
+                ? `Trễ ${item.overdueDays} ngày`
+                : "Đúng hạn"}
+            </span>
+          ) : item.expectedCompletionAt ? (
+            <span
+              className="inline-flex shrink-0 items-center gap-1 font-semibold text-orange-600"
+              title={`Dự kiến hoàn thành sau ${item.expectedWorkingDays ?? "-"} ngày`}
+            >
+              <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
+              {new Intl.DateTimeFormat("vi-VN", {
+                day: "2-digit",
+                month: "2-digit",
+              }).format(new Date(item.expectedCompletionAt))}
+              {item.expectedWorkingDays ? ` · ${item.expectedWorkingDays} ngày` : ""}
+            </span>
+          ) : null}
+          <span className="min-w-0 truncate font-semibold text-slate-800">
+            {item.actualCost != null
+              ? formatMoneyCompact(item.actualCost)
+              : item.estimatedCost != null
+                ? `Dự kiến ${formatMoneyCompact(item.estimatedCost)}`
+                : "Chưa có chi phí"}
+          </span>
         </div>
       </div>
     </div>
@@ -3480,8 +3653,21 @@ function TechnicalIssueBoardMoveModal({
                 disabled={pending}
                 vendorOptions={vendorOptions}
                 technicalDetailCatalogOptions={technicalDetailCatalogOptions}
-                area={request.item.area}
-                onChange={(value) => onChange(field.key, value)}
+                area={
+                  typeof values.technicalArea === "string"
+                    ? values.technicalArea
+                    : request.item.area
+                }
+                onChange={(value) => {
+                  onChange(field.key, value);
+                  if (
+                    field.key === "technicalArea" &&
+                    value !== values.technicalArea
+                  ) {
+                    onChange("technicalDetailCatalogId", "");
+                    onChange("replacementPartCodes", []);
+                  }
+                }}
               />
             </div>
           ))}
@@ -3690,9 +3876,9 @@ function TechnicalBoardFieldControl({
     <input
       className={baseClass}
       disabled={disabled}
-      type={field.kind === "date" ? "date" : field.kind === "money" ? "number" : "text"}
-      min={field.kind === "money" ? 0 : undefined}
-      step={field.kind === "money" ? "1000" : undefined}
+      type={field.kind === "date" ? "date" : field.kind === "money" || field.kind === "number" ? "number" : "text"}
+      min={field.kind === "money" ? 0 : field.kind === "number" ? 1 : undefined}
+      step={field.kind === "money" ? "1000" : field.kind === "number" ? "1" : undefined}
       value={typeof value === "string" ? value : ""}
       placeholder={field.kind === "money" ? `${field.label} (số tiền)` : field.label}
       onChange={(event) => onChange(event.target.value)}

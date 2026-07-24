@@ -3,8 +3,10 @@ import type { Prisma } from '@prisma/client';
 import { SortOrderSchema } from '../enums/SortOrder.schema';
 import { SortOrderInputObjectSchema as SortOrderInputObjectSchema } from './SortOrderInput.schema';
 import { WatchCountOrderByAggregateInputObjectSchema as WatchCountOrderByAggregateInputObjectSchema } from './WatchCountOrderByAggregateInput.schema';
+import { WatchAvgOrderByAggregateInputObjectSchema as WatchAvgOrderByAggregateInputObjectSchema } from './WatchAvgOrderByAggregateInput.schema';
 import { WatchMaxOrderByAggregateInputObjectSchema as WatchMaxOrderByAggregateInputObjectSchema } from './WatchMaxOrderByAggregateInput.schema';
-import { WatchMinOrderByAggregateInputObjectSchema as WatchMinOrderByAggregateInputObjectSchema } from './WatchMinOrderByAggregateInput.schema'
+import { WatchMinOrderByAggregateInputObjectSchema as WatchMinOrderByAggregateInputObjectSchema } from './WatchMinOrderByAggregateInput.schema';
+import { WatchSumOrderByAggregateInputObjectSchema as WatchSumOrderByAggregateInputObjectSchema } from './WatchSumOrderByAggregateInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -13,6 +15,8 @@ const makeSchema = () => z.object({
   acquisitionId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   saleStage: SortOrderSchema.optional(),
   serviceStage: SortOrderSchema.optional(),
+  serviceExpectedWorkingDays: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  serviceExpectedCompletionAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   stockStage: SortOrderSchema.optional(),
   siteChannel: SortOrderSchema.optional(),
   gender: SortOrderSchema.optional(),
@@ -35,8 +39,10 @@ const makeSchema = () => z.object({
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   _count: z.lazy(() => WatchCountOrderByAggregateInputObjectSchema).optional(),
+  _avg: z.lazy(() => WatchAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => WatchMaxOrderByAggregateInputObjectSchema).optional(),
-  _min: z.lazy(() => WatchMinOrderByAggregateInputObjectSchema).optional()
+  _min: z.lazy(() => WatchMinOrderByAggregateInputObjectSchema).optional(),
+  _sum: z.lazy(() => WatchSumOrderByAggregateInputObjectSchema).optional()
 }).strict();
 export const WatchOrderByWithAggregationInputObjectSchema: z.ZodType<Prisma.WatchOrderByWithAggregationInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchOrderByWithAggregationInput>;
 export const WatchOrderByWithAggregationInputObjectZodSchema = makeSchema();

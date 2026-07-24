@@ -62,6 +62,9 @@ Completed:
 
 Current handoff:
 
+- Read `docs/sprints/SM-Payment-Collection-and-Flow-List-pagination-handoff.md`
+  for the current Payment source-of-truth, shared flow pagination, pending
+  migration, smoke results, and next implementation priorities.
 - Read `docs/sprints/SM-Public-Storefront-MVP-NAS-handoff.md`.
 - Read `docs/sprints/SM-Sprint-58-service-operation-existing-domain-review-space-readiness.md`.
 - Read `docs/sprints/SM-Sprint-58-service-operation-review-proposal.md`.

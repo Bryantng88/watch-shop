@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.redirect(result.url, {
             status: 302,
             headers: {
-                "Cache-Control": "private, max-age=300",
+                "Cache-Control": "private, no-store, max-age=0",
             },
         });
     } catch (error: any) {

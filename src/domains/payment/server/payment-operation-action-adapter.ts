@@ -27,6 +27,7 @@ export type PaymentOperationBlueprintActionAdapterInput = {
   fields?: Record<string, unknown>;
   actorUserId?: string | null;
   actorName?: string | null;
+  deferConsumers?: (work: () => Promise<void>) => void;
 };
 
 function clean(value: unknown) {
@@ -229,6 +230,7 @@ export async function runPaymentOperationBlueprintAction(
           method: reviewedMethod,
           reference: optionalField(fields, "transactionReference"),
           note: optionalField(fields, "reviewNote"),
+          deferConsumers: input.deferConsumers,
         });
         await recordBusinessEvent(db, {
           eventKey: "payment.status_updated",
@@ -249,7 +251,7 @@ export async function runPaymentOperationBlueprintAction(
             reviewNote: optionalField(fields, "reviewNote"),
             sourceId: `${targetId}:payment.status_updated:RECONCILED_SPLIT`,
           },
-        });
+        }, { deferConsumers: input.deferConsumers });
         return {
           ok: true,
           actionKey,
@@ -312,7 +314,7 @@ export async function runPaymentOperationBlueprintAction(
           reviewNote: optionalField(fields, "reviewNote"),
           sourceId: `${targetId}:payment.status_updated:RECONCILED:${Date.now()}`,
         },
-      });
+      }, { deferConsumers: input.deferConsumers });
     }
     const result = await completePayment({
       paymentId: targetId,
@@ -320,6 +322,7 @@ export async function runPaymentOperationBlueprintAction(
       method: optionalField(fields, "method"),
       reference: optionalField(fields, isReconciliation ? "transactionReference" : "reference"),
       note: optionalField(fields, isReconciliation ? "reviewNote" : "settlementNote"),
+      deferConsumers: input.deferConsumers,
     });
 
     return { ok: true, actionKey, paymentId: targetId, result };

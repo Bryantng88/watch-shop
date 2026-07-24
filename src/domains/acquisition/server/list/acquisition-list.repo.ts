@@ -1,4 +1,9 @@
-import { ImageRole } from "@prisma/client";
+import {
+    ImageRole,
+    MediaBindingLifecycle,
+    MediaOwnerType,
+    MediaRole,
+} from "@prisma/client";
 
 import { prisma } from "@/server/db/client";
 import { getPaymentOwnerSummaryProjections } from "@/domains/projection/server/payment-owner-summary.projection";
@@ -129,7 +134,7 @@ function buildOrderBy(sort: AcquisitionListFilters["sort"]) {
     }
 }
 
-function toMediaImageUrl(value: unknown) {
+function toMediaImageUrl(value: unknown, version?: Date | string | number | null) {
     const text = String(value ?? "").trim();
     if (!text) return null;
 
@@ -145,7 +150,8 @@ function toMediaImageUrl(value: unknown) {
 
     if (text.startsWith("/")) return text;
 
-    return `/api/media/sign?key=${encodeURIComponent(text)}`;
+    const versionValue = version instanceof Date ? version.getTime() : String(version ?? "").trim();
+    return `/api/media/sign?key=${encodeURIComponent(text)}${versionValue ? `&v=${encodeURIComponent(versionValue)}` : ""}`;
 }
 
 function getFirstMetaImageUrl(item: any) {
@@ -154,8 +160,8 @@ function getFirstMetaImageUrl(item: any) {
     const firstWithKey = images.find((image) => String(image?.key ?? "").trim());
 
     return (
-        toMediaImageUrl(firstWithUrl?.url) ??
-        toMediaImageUrl(firstWithKey?.key) ??
+        toMediaImageUrl(firstWithKey?.key, item?.updatedAt) ??
+        toMediaImageUrl(firstWithUrl?.url, item?.updatedAt) ??
         null
     );
 }
@@ -168,15 +174,19 @@ function getFirstProductImageUrl(product: any) {
         : null;
 
     return (
-        toMediaImageUrl(product.storefrontImageKey) ??
-        toMediaImageUrl(product.primaryImageUrl) ??
-        toMediaImageUrl(primaryProductImage?.fileKey) ??
+        toMediaImageUrl(product.storefrontImageKey, product.updatedAt) ??
+        toMediaImageUrl(product.primaryImageUrl, product.updatedAt) ??
+        toMediaImageUrl(primaryProductImage?.fileKey, primaryProductImage?.updatedAt ?? product.updatedAt) ??
         null
     );
 }
 
-function buildItemImageUrl(item: any) {
-    return getFirstProductImageUrl(item?.product) ?? getFirstMetaImageUrl(item);
+function buildItemImageUrl(item: any, canonicalStorageKey?: string | null) {
+    return (
+        toMediaImageUrl(canonicalStorageKey) ??
+        getFirstProductImageUrl(item?.product) ??
+        getFirstMetaImageUrl(item)
+    );
 }
 
 function buildItemTitle(item: any) {
@@ -217,14 +227,21 @@ export async function listAdminAcquisitionsFromSource(
                             id: true,
                             title: true,
                             sku: true,
+                            updatedAt: true,
                             primaryImageUrl: true,
                             storefrontImageKey: true,
+                            watch: {
+                                select: {
+                                    id: true,
+                                },
+                            },
                             productImage: {
                                 where: { role: ImageRole.INLINE },
                                 select: {
                                     fileKey: true,
                                     isPrimary: true,
                                     sortOrder: true,
+                                    updatedAt: true,
                                 },
                                 orderBy: [
                                     { isPrimary: "desc" },
@@ -245,7 +262,76 @@ export async function listAdminAcquisitionsFromSource(
 
     const pagedIds = rows.map((row) => row.id);
 
-    const paymentSummaries = await getPaymentOwnerSummaryProjections(prisma, "ACQUISITION", pagedIds);
+    const watchOwnerIds = Array.from(new Set(
+        rows.flatMap((row) => row.acquisitionItem
+            .map((item) => item.product?.watch?.id)
+            .filter((id): id is string => Boolean(id))),
+    ));
+    const [paymentSummaries, canonicalWatchMedia] = await Promise.all([
+        getPaymentOwnerSummaryProjections(prisma, "ACQUISITION", pagedIds),
+        watchOwnerIds.length
+            ? prisma.mediaBinding.findMany({
+                where: {
+                    ownerType: MediaOwnerType.WATCH,
+                    ownerId: { in: watchOwnerIds },
+                    lifecycle: { not: MediaBindingLifecycle.REMOVED },
+                    role: {
+                        in: [
+                            MediaRole.COVER,
+                            MediaRole.THUMBNAIL,
+                            MediaRole.INLINE,
+                            MediaRole.GALLERY,
+                        ],
+                    },
+                    mediaObject: {
+                        availability: { notIn: ["MISSING", "QUARANTINED", "DELETED"] },
+                    },
+                },
+                select: {
+                    ownerId: true,
+                    role: true,
+                    lifecycle: true,
+                    sortOrder: true,
+                    updatedAt: true,
+                    mediaObject: {
+                        select: {
+                            storageKey: true,
+                            updatedAt: true,
+                        },
+                    },
+                },
+            })
+            : Promise.resolve([]),
+    ]);
+    const roleWeight = new Map([
+        [MediaRole.COVER, 0],
+        [MediaRole.THUMBNAIL, 1],
+        [MediaRole.INLINE, 2],
+        [MediaRole.GALLERY, 3],
+    ]);
+    const lifecycleWeight = new Map([
+        [MediaBindingLifecycle.PUBLISHED, 0],
+        [MediaBindingLifecycle.APPROVED, 1],
+        [MediaBindingLifecycle.ATTACHED, 2],
+        [MediaBindingLifecycle.SELECTED, 3],
+        [MediaBindingLifecycle.DRAFT, 4],
+    ]);
+    const canonicalMediaByWatchId = new Map<string, string>();
+    canonicalWatchMedia
+        .slice()
+        .sort((left, right) =>
+            (roleWeight.get(left.role) ?? 99) - (roleWeight.get(right.role) ?? 99) ||
+            (lifecycleWeight.get(left.lifecycle) ?? 99) - (lifecycleWeight.get(right.lifecycle) ?? 99) ||
+            left.sortOrder - right.sortOrder ||
+            right.updatedAt.getTime() - left.updatedAt.getTime())
+        .forEach((binding) => {
+            if (!canonicalMediaByWatchId.has(binding.ownerId)) {
+                canonicalMediaByWatchId.set(
+                    binding.ownerId,
+                    `/api/media/sign?key=${encodeURIComponent(binding.mediaObject.storageKey)}&v=${binding.mediaObject.updatedAt.getTime()}`,
+                );
+            }
+        });
 
     const items = rows.map((row) => {
         const acquisitionItems = Array.isArray(row.acquisitionItem)
@@ -267,7 +353,12 @@ export async function listAdminAcquisitionsFromSource(
                 index: index + 1,
                 title: buildItemTitle(item),
                 subtitle: buildItemSubtitle(item),
-                imageUrl: buildItemImageUrl(item),
+                imageUrl: buildItemImageUrl(
+                    item,
+                    item.product?.watch?.id
+                        ? canonicalMediaByWatchId.get(item.product.watch.id)
+                        : null,
+                ),
                 linkedWatchProductId: item.productId ?? null,
                 linkedWatchTitle: item.product?.title ?? null,
                 linkedWatchSku: item.product?.sku ?? null,
