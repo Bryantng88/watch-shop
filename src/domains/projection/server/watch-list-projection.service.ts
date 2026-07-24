@@ -39,7 +39,7 @@ export async function listWatchListProjectionWithFallback(
   db: DB,
   input: WatchListFilters,
 ): Promise<WatchListProjectionListResult> {
-  if (input.duplicateScope) {
+  if (input.duplicateScope === "DUPLICATE") {
     return listSourceFallback(input, "DUPLICATE_SCOPE_REQUIRES_SOURCE");
   }
 

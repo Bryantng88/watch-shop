@@ -293,7 +293,7 @@ export async function createPaymentRowTx(
     vendorId?: string | null;
   },
 ) {
-  if (input.amount < 0) return null;
+  if (!Number.isFinite(input.amount) || input.amount <= 0) return null;
 
   return tx.payment.create({
     data: {
@@ -319,6 +319,27 @@ export async function recomputePaymentOwnerRollupTx(
   ownerId: string,
 ) {
   return buildPaymentOwnerSummary(tx, ownerType, ownerId);
+}
+
+async function syncPaymentOwnerBusinessStateTx(
+  tx: Tx,
+  ownerType: PaymentOwnerType,
+  ownerId: string,
+  summary: PaymentSummary,
+) {
+  if (ownerType !== "ORDER") return;
+
+  await tx.order.update({
+    where: { id: ownerId },
+    data: {
+      depositPaid: money(summary.paidTotal + summary.collectedTotal),
+      paymentStatus:
+        summary.totalDue > 0 && summary.remaining <= 0
+          ? PaymentStatus.PAID
+          : PaymentStatus.UNPAID,
+      updatedAt: new Date(),
+    },
+  });
 }
 
 export async function createPayment(input: CreatePaymentInput) {
@@ -414,6 +435,159 @@ export async function createPayment(input: CreatePaymentInput) {
   return payment;
 }
 
+function splitRemainderPurpose(purpose: PaymentPurpose) {
+  if (purpose === PaymentPurpose.ORDER_FULL) return PaymentPurpose.ORDER_REMAIN;
+  if (purpose === PaymentPurpose.ACQUISITION_FULL) return PaymentPurpose.ACQUISITION_REMAIN;
+  return purpose;
+}
+
+function splitPaidPurpose(purpose: PaymentPurpose) {
+  if (purpose === PaymentPurpose.ORDER_FULL) return PaymentPurpose.ORDER_DEPOSIT;
+  if (purpose === PaymentPurpose.ACQUISITION_FULL) return PaymentPurpose.ACQUISITION_DEPOSIT;
+  return purpose;
+}
+
+export async function splitPayment(input: {
+  paymentId: string;
+  paidAmount: number;
+  paidAt?: Date | string | null;
+  method?: string | null;
+  reference?: string | null;
+  note?: string | null;
+}) {
+  const result = await prisma.$transaction(async (tx) => {
+    const payment = await tx.payment.findUnique({ where: { id: input.paymentId } });
+    if (!payment) throw new Error("Payment không tồn tại.");
+    if (payment.status !== PaymentStatus.UNPAID) {
+      throw new Error("Chỉ có thể split Payment chưa thanh toán.");
+    }
+
+    const originalAmount = Number(payment.amount);
+    const paidAmount = Number(input.paidAmount);
+    if (!Number.isFinite(paidAmount) || paidAmount <= 0 || paidAmount >= originalAmount) {
+      throw new Error("Số tiền split phải lớn hơn 0 và nhỏ hơn số tiền Payment dự kiến.");
+    }
+
+    const owner = resolvePaymentOwner(payment);
+    const remainderAmount = originalAmount - paidAmount;
+    const paidPurpose = splitPaidPurpose(payment.purpose);
+    const remainderPurpose = splitRemainderPurpose(payment.purpose);
+
+    await tx.payment.update({
+      where: { id: payment.id },
+      data: {
+        amount: money(paidAmount),
+        purpose: paidPurpose,
+        status: PaymentStatus.PAID,
+        method: input.method ? (input.method as PaymentMethod) : payment.method,
+        paidAt: input.paidAt ? new Date(input.paidAt) : new Date(),
+        reference: input.reference ?? payment.reference,
+        note: input.note ?? payment.note,
+        updatedAt: new Date(),
+      },
+    });
+
+    const remainder = await createPaymentRowTx(tx, {
+      ownerType: owner.ownerType,
+      ownerId: owner.ownerId,
+      amount: remainderAmount,
+      direction: payment.direction ?? PaymentDirection.IN,
+      type: payment.type,
+      purpose: remainderPurpose,
+      method: payment.method,
+      status: PaymentStatus.UNPAID,
+      vendorId: payment.vendor_id,
+      note: `Phần còn lại sau khi split từ ${payment.refNo ?? payment.id}.`,
+    });
+    if (!remainder) throw new Error("Không thể tạo Payment phần còn lại.");
+
+    const summary = await recomputePaymentOwnerRollupTx(
+      tx,
+      owner.ownerType,
+      owner.ownerId,
+    );
+    await syncPaymentOwnerBusinessStateTx(
+      tx,
+      owner.ownerType,
+      owner.ownerId,
+      summary,
+    );
+
+    return toPlain({
+      paymentId: payment.id,
+      remainderPaymentId: remainder.id,
+      ownerType: owner.ownerType,
+      ownerId: owner.ownerId,
+      paidAmount,
+      remainderAmount,
+      direction: payment.direction,
+      currency: payment.currency,
+      method: input.method ?? payment.method,
+      occurredAt: input.paidAt ? new Date(input.paidAt) : new Date(),
+      purpose: paidPurpose,
+      remainderPurpose,
+      summary,
+    });
+  });
+
+  await recordBusinessEvent(prisma, {
+    eventKey: "payment.created",
+    targetType: "PAYMENT",
+    targetId: result.remainderPaymentId,
+    payload: {
+      ownerType: result.ownerType,
+      ownerId: result.ownerId,
+      status: PaymentStatus.UNPAID,
+      amount: result.remainderAmount,
+      direction: result.direction,
+      purpose: result.remainderPurpose,
+      currency: result.currency,
+      splitFromPaymentId: result.paymentId,
+      sourceId: `${result.remainderPaymentId}:payment.created:split`,
+    },
+  });
+
+  await recordBusinessEvent(prisma, {
+    eventKey: "payment.status_updated",
+    targetType: "PAYMENT",
+    targetId: result.paymentId,
+    payload: {
+      ownerType: result.ownerType,
+      ownerId: result.ownerId,
+      status: PaymentStatus.PAID,
+      direction: result.direction,
+      amount: result.paidAmount,
+      currency: result.currency,
+      method: result.method,
+      occurredAt: result.occurredAt,
+      summary: result.summary,
+      splitRemainderPaymentId: result.remainderPaymentId,
+      sourceId: `${result.paymentId}:payment.status_updated:PAID:SPLIT`,
+    },
+  });
+
+  await recordBusinessEvent(prisma, {
+    eventKey: "payment.paid",
+    targetType: "PAYMENT",
+    targetId: result.paymentId,
+    payload: {
+      ownerType: result.ownerType,
+      ownerId: result.ownerId,
+      status: PaymentStatus.PAID,
+      direction: result.direction,
+      amount: result.paidAmount,
+      currency: result.currency,
+      method: result.method,
+      occurredAt: result.occurredAt,
+      summary: result.summary,
+      splitRemainderPaymentId: result.remainderPaymentId,
+      sourceId: `${result.paymentId}:payment.paid:SPLIT`,
+    },
+  });
+
+  return result;
+}
+
 export async function completePayment(input: {
   paymentId: string;
   paidAt?: Date | string | null;
@@ -457,6 +631,12 @@ export async function completePayment(input: {
     });
 
     const summary = await recomputePaymentOwnerRollupTx(tx, owner.ownerType, owner.ownerId);
+    await syncPaymentOwnerBusinessStateTx(
+      tx,
+      owner.ownerType,
+      owner.ownerId,
+      summary,
+    );
     return toPlain({
       paymentId: payment.id,
       ownerType: owner.ownerType,
@@ -538,6 +718,12 @@ export async function cancelPayment(input: { paymentId: string; note?: string | 
     });
 
     const summary = await recomputePaymentOwnerRollupTx(tx, owner.ownerType, owner.ownerId);
+    await syncPaymentOwnerBusinessStateTx(
+      tx,
+      owner.ownerType,
+      owner.ownerId,
+      summary,
+    );
     return toPlain({ paymentId: payment.id, ownerType: owner.ownerType, ownerId: owner.ownerId, summary });
   });
 

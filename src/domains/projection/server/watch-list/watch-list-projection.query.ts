@@ -440,21 +440,25 @@ export async function listWatchListProjection(
   const take = normalized.meta === "lite"
     ? normalized.pageSize + 1
     : normalized.pageSize;
-  const rows = await dbOrTx(db).$queryRaw<Array<{ dataJson: unknown }>>(
-    Prisma.sql`
-      SELECT "dataJson"
-      FROM "ProjectionRecord"
-      WHERE ${whereSql(normalized)}
-      ORDER BY ${orderBySql(normalized.sort)}
-      LIMIT ${take}
-      OFFSET ${offset}
-    `,
-  );
+  const shouldCount = normalized.withTotal || normalized.meta === "full";
+  const [rows, exactTotal] = await Promise.all([
+    dbOrTx(db).$queryRaw<Array<{ dataJson: unknown }>>(
+      Prisma.sql`
+        SELECT "dataJson"
+        FROM "ProjectionRecord"
+        WHERE ${whereSql(normalized)}
+        ORDER BY ${orderBySql(normalized.sort)}
+        LIMIT ${take}
+        OFFSET ${offset}
+      `,
+    ),
+    shouldCount ? countRows(db, normalized) : Promise.resolve(null),
+  ]);
   const data = dataFromRows(rows);
   const hasNextPage = normalized.meta === "lite" && data.length > normalized.pageSize;
   const pageData = hasNextPage ? data.slice(0, normalized.pageSize) : data;
-  const total = normalized.withTotal || normalized.meta === "full"
-    ? await countRows(db, normalized)
+  const total = shouldCount
+    ? exactTotal ?? 0
     : normalized.meta === "lite"
     ? offset + pageData.length + (hasNextPage ? 1 : 0)
     : await countRows(db, normalized);

@@ -132,11 +132,38 @@ function paymentWorkspaceRole(note?: string | null) {
   return noteLineValue(note, "operationWorkspaceRole")?.toUpperCase() ?? null;
 }
 
+const paymentReconcileLocks = new Map<string, Promise<void>>();
+
+async function withPaymentReconcileLock<T>(
+  taskId: string,
+  run: () => Promise<T>,
+): Promise<T> {
+  const previous = paymentReconcileLocks.get(taskId) ?? Promise.resolve();
+  let release!: () => void;
+  const current = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const queued = previous.then(() => current);
+  paymentReconcileLocks.set(taskId, queued);
+
+  await previous;
+  try {
+    return await run();
+  } finally {
+    release();
+    if (paymentReconcileLocks.get(taskId) === queued) {
+      paymentReconcileLocks.delete(taskId);
+    }
+  }
+}
+
 export async function reconcilePaymentCollectionBindings(input: {
   db: DB;
   taskId: string;
   taskItems: Array<{ id: string; title: string; note: string | null }>;
 }) {
+  return withPaymentReconcileLock(input.taskId, async () => {
+  const db = input.db;
   const inboxItems = input.taskItems.filter((item) => paymentWorkspaceRole(item.note) === "PAYMENT_INBOX");
   const reviewItems = input.taskItems.filter((item) => paymentWorkspaceRole(item.note) === "PAYMENT_REVIEW");
   const settledItems = input.taskItems.filter((item) => paymentWorkspaceRole(item.note) === "PAYMENT_SETTLED");
@@ -147,25 +174,61 @@ export async function reconcilePaymentCollectionBindings(input: {
   if (!reviewId || !settledId) return;
 
   const [payments, existing] = await Promise.all([
-    input.db.payment.findMany({ select: { id: true, status: true } }),
-    input.db.taskExecution.findMany({
-      where: { taskId: input.taskId, targetType: TaskExecutionTargetType.PAYMENT },
-      select: { targetId: true, taskItemId: true },
+    db.payment.findMany({
+      where: { amount: { gt: 0 } },
+      select: { id: true, status: true },
+    }),
+    db.taskExecution.findMany({
+      where: {
+        taskId: input.taskId,
+        targetType: TaskExecutionTargetType.PAYMENT,
+        actionType: { not: TaskExecutionActionType.CANCELLED },
+      },
+      select: { id: true, targetId: true, taskItemId: true },
+      orderBy: { createdAt: "asc" },
     }),
   ]);
-  const existingIds = new Set(existing.map((binding) => binding.targetId));
   const terminalStatuses = new Set(["PAID", "COLLECTED", "CANCELED", "CANCELLED", "FAILED"]);
   const statusById = new Map(payments.map((payment) => [payment.id, String(payment.status).toUpperCase()]));
-  const staleReviewIds = existing.filter((binding) => !terminalStatuses.has(statusById.get(binding.targetId) ?? "")).map((binding) => binding.targetId);
-  const staleSettledIds = existing.filter((binding) => terminalStatuses.has(statusById.get(binding.targetId) ?? "")).map((binding) => binding.targetId);
+  const invalidPaymentIds = existing
+    .filter((binding) => !statusById.has(binding.targetId))
+    .map((binding) => binding.targetId);
+  const validExisting = existing.filter((binding) => statusById.has(binding.targetId));
+  const duplicateBindingIds: string[] = [];
+  const uniqueExisting = Array.from(
+    validExisting.reduce((byTargetId, binding) => {
+      if (byTargetId.has(binding.targetId)) duplicateBindingIds.push(binding.id);
+      else byTargetId.set(binding.targetId, binding);
+      return byTargetId;
+    }, new Map<string, (typeof validExisting)[number]>()),
+  ).map(([, binding]) => binding);
+  const existingIds = new Set(uniqueExisting.map((binding) => binding.targetId));
+  const staleReviewIds = uniqueExisting.filter((binding) => !terminalStatuses.has(statusById.get(binding.targetId) ?? "")).map((binding) => binding.targetId);
+  const staleSettledIds = uniqueExisting.filter((binding) => terminalStatuses.has(statusById.get(binding.targetId) ?? "")).map((binding) => binding.targetId);
+  if (duplicateBindingIds.length) {
+    await db.taskExecution.updateMany({
+      where: { id: { in: duplicateBindingIds } },
+      data: { actionType: TaskExecutionActionType.CANCELLED },
+    });
+  }
+  if (invalidPaymentIds.length) {
+    await db.taskExecution.updateMany({
+      where: {
+        taskId: input.taskId,
+        targetType: TaskExecutionTargetType.PAYMENT,
+        targetId: { in: invalidPaymentIds },
+      },
+      data: { actionType: TaskExecutionActionType.CANCELLED },
+    });
+  }
   if (staleReviewIds.length) {
-    await input.db.taskExecution.updateMany({
+    await db.taskExecution.updateMany({
       where: { taskId: input.taskId, targetType: TaskExecutionTargetType.PAYMENT, targetId: { in: staleReviewIds } },
       data: { taskItemId: reviewId },
     });
   }
   if (staleSettledIds.length) {
-    await input.db.taskExecution.updateMany({
+    await db.taskExecution.updateMany({
       where: { taskId: input.taskId, targetType: TaskExecutionTargetType.PAYMENT, targetId: { in: staleSettledIds } },
       data: { taskItemId: settledId },
     });
@@ -176,12 +239,12 @@ export async function reconcilePaymentCollectionBindings(input: {
     ...settledItems.filter((item) => item.id !== settledId).map((item) => item.id),
   ];
   if (obsoleteWorkspaceIds.length) {
-    await input.db.taskItem.updateMany({ where: { id: { in: obsoleteWorkspaceIds } }, data: { status: TaskStatus.CANCELLED } });
+    await db.taskItem.updateMany({ where: { id: { in: obsoleteWorkspaceIds } }, data: { status: TaskStatus.CANCELLED } });
   }
   const missing = payments.filter((payment) => !existingIds.has(payment.id));
   if (!missing.length) return;
 
-  await input.db.taskExecution.createMany({
+  await db.taskExecution.createMany({
     data: missing.map((payment) => {
       const status = String(payment.status).toUpperCase();
       const terminal = ["PAID", "COLLECTED", "CANCELED", "CANCELLED", "FAILED"].includes(status);
@@ -197,6 +260,7 @@ export async function reconcilePaymentCollectionBindings(input: {
         },
       };
     }),
+  });
   });
 }
 

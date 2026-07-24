@@ -785,11 +785,15 @@ async function buildQueueBusinessPreviewMap(
           technicalIssue: {
             select: {
               summary: true,
+              vendorNameSnap: true,
               serviceRequest: {
                 select: {
                   refNo: true,
                   skuSnapshot: true,
                   primaryImageUrlSnapshot: true,
+                  vendorNameSnap: true,
+                  vendor: { select: { name: true, phone: true } },
+                  customer: { select: { name: true, phone: true } },
                   product: {
                     select: {
                       title: true,
@@ -1016,8 +1020,21 @@ async function buildQueueBusinessPreviewMap(
                 ? "ACQUISITION"
                 : "UNKNOWN",
         ownerRef: sr?.refNo ?? acquisition?.refNo ?? payment.refNo ?? null,
-        counterparty: paymentOrder?.customerName ?? acquisition?.vendor?.name ?? acquisition?.customer?.name ?? null,
-        contact: paymentOrder?.shipPhone ?? acquisition?.customer?.phone ?? null,
+        counterparty:
+          paymentOrder?.customerName ??
+          acquisition?.vendor?.name ??
+          acquisition?.customer?.name ??
+          payment.technicalIssue?.vendorNameSnap ??
+          sr?.vendorNameSnap ??
+          sr?.vendor?.name ??
+          sr?.customer?.name ??
+          null,
+        contact:
+          paymentOrder?.shipPhone ??
+          acquisition?.customer?.phone ??
+          sr?.vendor?.phone ??
+          sr?.customer?.phone ??
+          null,
         createdAt: payment.createdAt?.toISOString?.() ?? null,
         paidAt: payment.paidAt?.toISOString?.() ?? null,
         itemCount: paymentOrder?._count.orderItem ?? acquisition?._count.acquisitionItem ?? 1,

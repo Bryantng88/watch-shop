@@ -626,6 +626,11 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   const [isMovedItemsOpen, setIsMovedItemsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isViewPending, startViewTransition] = useTransition();
+
+  useEffect(() => {
+    setAsyncFlowItems(data.flowItems);
+  }, [data.flowItems]);
+
   function changeActiveViewMode(nextModeKey: string) {
     startViewTransition(() => {
       setActiveViewModeKey(nextModeKey);

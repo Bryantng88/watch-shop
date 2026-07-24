@@ -18,12 +18,14 @@ import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 import { WorkflowStatusSignal } from "@/domains/shared/ui/signals";
 import {
   applyQueueItemManualTransitionsAction,
+  submitOperationalBlueprintActionAction,
 } from "@/domains/task/actions/task.actions";
 import {
   isOpenTargetTransition,
   OpenTargetAction,
   type TaskItemQueueItem,
 } from "@/domains/task/ui/task-work/QueueWorkQueue";
+import { PAYMENT_PURPOSE_LABEL } from "@/domains/payment/shared/payment.constants";
 
 type FlowStage = {
   key: string;
@@ -57,6 +59,44 @@ function formatTime(value: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+}
+
+function paymentDirection(direction?: string | null) {
+  return String(direction ?? "").toUpperCase() === "OUT"
+    ? { label: "Chi", sign: "-", className: "bg-rose-50 text-rose-700 ring-rose-200" }
+    : { label: "Thu", sign: "+", className: "bg-emerald-50 text-emerald-700 ring-emerald-200" };
+}
+
+function paymentPurpose(purpose?: string | null) {
+  const key = String(purpose ?? "").toUpperCase();
+  return PAYMENT_PURPOSE_LABEL[key] ?? (
+    key === "MAINTENANCE_COST"
+      ? "Chi phí bảo trì"
+      : key === "SERVICE_FEE"
+        ? "Phí dịch vụ"
+        : key === "ACQUISITION_DEPOSIT"
+          ? "Cọc thu mua"
+          : key === "ACQUISITION_REMAIN"
+            ? "Còn lại thu mua"
+            : key === "ACQUISITION_FULL"
+              ? "Toàn bộ thu mua"
+              : key || "Khác"
+  );
+}
+
+function paymentOwnerLabel(ownerType?: string | null) {
+  const key = String(ownerType ?? "").toUpperCase();
+  if (key === "ORDER") return "Khách hàng";
+  if (key === "ACQUISITION") return "Vendor";
+  if (key === "TECHNICAL_ISSUE" || key === "SERVICE_REQUEST" || key === "SERVICE") {
+    return "Đối tác dịch vụ";
+  }
+  return "Đối tượng";
+}
+
+function formatMoney(amount: number, currency: string, sign = "") {
+  const value = Math.round(Number(amount) || 0).toLocaleString("vi-VN");
+  return currency === "VND" ? `${sign}${value}đ` : `${sign}${value} ${currency}`;
 }
 
 function itemStatus(item: CoordinationFlowListItemDTO) {
@@ -114,6 +154,24 @@ export default function FlowItemListView({
   const [actionError, setActionError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [optimisticallyMovedIds, setOptimisticallyMovedIds] = useState<string[]>([]);
+  const [reconcileItem, setReconcileItem] = useState<CoordinationFlowListItemDTO | null>(null);
+  const [isBulkReconcileOpen, setIsBulkReconcileOpen] = useState(false);
+  const [bulkReconcileAmounts, setBulkReconcileAmounts] = useState<Record<string, string>>({});
+  const [bulkReconcileFields, setBulkReconcileFields] = useState({
+    method: "BANK_TRANSFER",
+    occurredAt: new Date().toISOString().slice(0, 10),
+    transactionReference: "",
+    reviewNote: "",
+  });
+  const [reconcileFields, setReconcileFields] = useState({
+    reviewedAmount: "",
+    method: "BANK_TRANSFER",
+    occurredAt: new Date().toISOString().slice(0, 10),
+    transactionReference: "",
+    counterparty: "",
+    contact: "",
+    reviewNote: "",
+  });
   const stageByKey = useMemo(() => new Map(
     stages.flatMap((stage) => [
       [normalize(stage.key), stage],
@@ -123,6 +181,7 @@ export default function FlowItemListView({
   const showStatusColumn = !normalize(activeStage).includes("photography");
   const showProgressColumn = normalize(activeStage).includes("media-processing");
   const showPublishChannels = normalize(activeStage).includes("publish");
+  const showPaymentAmount = items.some((item) => Boolean(item.payment));
   const visibleItems = useMemo(() => {
     const cleanQuery = query.trim().toLocaleLowerCase("vi");
     return items.filter((item) => {
@@ -142,12 +201,17 @@ export default function FlowItemListView({
         item.currentWorkflowStateLabel,
         item.payment?.counterparty,
         item.payment?.ownerRef,
+        item.payment ? paymentDirection(item.payment.direction).label : null,
+        item.payment ? paymentPurpose(item.payment.purpose) : null,
       ].filter(Boolean).join(" ").toLocaleLowerCase("vi").includes(cleanQuery);
     });
   }, [activeStage, items, optimisticallyMovedIds, paymentFilter, query, stageByKey, statusFilter]);
   const visibleIds = visibleItems.map((item) => item.id);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
   const selectedItems = items.filter((item) => selectedIds.includes(item.id));
+  const selectedPaymentItems = selectedItems.filter(
+    (item) => item.payment && !["PAID", "COLLECTED", "CANCELED", "CANCELLED"].includes(item.payment.status),
+  );
   const commonActions = selectedItems.length
     ? selectedItems[0].manualTransitions.filter(
         (transition) =>
@@ -221,11 +285,167 @@ export default function FlowItemListView({
     });
   }
 
+  function openReconcileModal(item: CoordinationFlowListItemDTO) {
+    if (!item.payment) return;
+    setActionError(null);
+    setReconcileFields({
+      reviewedAmount: String(item.payment.amount),
+      method: item.payment.method ?? "BANK_TRANSFER",
+      occurredAt: new Date().toISOString().slice(0, 10),
+      transactionReference: "",
+      counterparty: item.payment.counterparty ?? item.payment.ownerRef ?? "",
+      contact: item.payment.contact ?? "",
+      reviewNote: "",
+    });
+    setReconcileItem(item);
+  }
+
+  function submitReconciliation() {
+    if (!reconcileItem?.payment || isActionPending) return;
+    const expectedAmount = Number(reconcileItem.payment.amount);
+    const reviewedAmount = Number(reconcileFields.reviewedAmount);
+    if (!Number.isFinite(reviewedAmount) || reviewedAmount <= 0) {
+      setActionError("Số tiền thực tế phải lớn hơn 0.");
+      return;
+    }
+    if (reviewedAmount > expectedAmount) {
+      setActionError("Số tiền thực tế lớn hơn dự kiến. Vui lòng xử lý khoản thừa riêng.");
+      return;
+    }
+    const reconciliationResult = reviewedAmount < expectedAmount ? "PARTIAL" : "MATCHED";
+    if (!reconcileFields.method || !reconcileFields.occurredAt || !reconcileFields.counterparty.trim()) {
+      setActionError("Vui lòng nhập đủ phương thức, ngày giao dịch và đối tượng.");
+      return;
+    }
+    if (reconciliationResult === "PARTIAL" && !reconcileFields.reviewNote.trim()) {
+      setActionError("Vui lòng ghi chú lý do split Payment.");
+      return;
+    }
+
+    setPendingActionId(reconcileItem.id);
+    setActionError(null);
+    startActionTransition(async () => {
+      try {
+        await submitOperationalBlueprintActionAction({
+          taskItemId: reconcileItem.taskItemId,
+          actionKey: "reconcile_payment",
+          targetType: "PAYMENT",
+          targetId: reconcileItem.targetId,
+          fields: {
+            ...reconcileFields,
+            reviewedAmount: String(reviewedAmount),
+            reconciliationResult,
+          },
+        });
+        setOptimisticallyMovedIds((current) => [...current, reconcileItem.id]);
+        setReconcileItem(null);
+        router.refresh();
+      } catch (error) {
+        setActionError(error instanceof Error ? error.message : "Không thể xác nhận đối soát.");
+      } finally {
+        setPendingActionId(null);
+      }
+    });
+  }
+
+  function openBulkReconcileModal() {
+    if (!selectedPaymentItems.length) return;
+    setActionError(null);
+    setBulkReconcileAmounts(Object.fromEntries(
+      selectedPaymentItems.map((item) => [item.id, String(item.payment?.amount ?? 0)]),
+    ));
+    setBulkReconcileFields({
+      method: "BANK_TRANSFER",
+      occurredAt: new Date().toISOString().slice(0, 10),
+      transactionReference: "",
+      reviewNote: "",
+    });
+    setIsBulkReconcileOpen(true);
+  }
+
+  function submitBulkReconciliation() {
+    if (!selectedPaymentItems.length || isActionPending) return;
+    const invalidItem = selectedPaymentItems.find((item) => {
+      const actual = Number(bulkReconcileAmounts[item.id]);
+      const expected = Number(item.payment?.amount ?? 0);
+      return !Number.isFinite(actual) || actual <= 0 || actual > expected;
+    });
+    if (invalidItem) {
+      setActionError(`Số tiền thực tế của ${invalidItem.preview.title ?? "Payment"} không hợp lệ.`);
+      return;
+    }
+    const hasSplit = selectedPaymentItems.some(
+      (item) => Number(bulkReconcileAmounts[item.id]) < Number(item.payment?.amount ?? 0),
+    );
+    if (!bulkReconcileFields.method || !bulkReconcileFields.occurredAt) {
+      setActionError("Vui lòng chọn phương thức và ngày giao dịch.");
+      return;
+    }
+    if (hasSplit && !bulkReconcileFields.reviewNote.trim()) {
+      setActionError("Vui lòng ghi chú lý do khi bulk có Payment cần split.");
+      return;
+    }
+
+    setPendingActionId("BULK_RECONCILE");
+    setActionError(null);
+    startActionTransition(async () => {
+      const succeeded: string[] = [];
+      const failed: string[] = [];
+      for (const item of selectedPaymentItems) {
+        const reviewedAmount = Number(bulkReconcileAmounts[item.id]);
+        const expectedAmount = Number(item.payment?.amount ?? 0);
+        try {
+          await submitOperationalBlueprintActionAction({
+            taskItemId: item.taskItemId,
+            actionKey: "reconcile_payment",
+            targetType: "PAYMENT",
+            targetId: item.targetId,
+            fields: {
+              reviewedAmount: String(reviewedAmount),
+              method: bulkReconcileFields.method,
+              occurredAt: bulkReconcileFields.occurredAt,
+              transactionReference: bulkReconcileFields.transactionReference,
+              counterparty: item.payment?.counterparty ?? item.payment?.ownerRef ?? "Chưa xác định",
+              contact: item.payment?.contact ?? "",
+              reconciliationResult: reviewedAmount < expectedAmount ? "PARTIAL" : "MATCHED",
+              reviewNote: bulkReconcileFields.reviewNote,
+            },
+          });
+          succeeded.push(item.id);
+        } catch (error) {
+          failed.push(`${item.preview.title ?? item.targetId}: ${error instanceof Error ? error.message : "Lỗi không xác định"}`);
+        }
+      }
+
+      if (succeeded.length) {
+        setOptimisticallyMovedIds((current) => [...current, ...succeeded]);
+        setSelectedIds((current) => current.filter((id) => !succeeded.includes(id)));
+      }
+      if (failed.length) {
+        setActionError(`Đã xử lý ${succeeded.length}/${selectedPaymentItems.length}. Lỗi: ${failed.join("; ")}`);
+      } else {
+        setIsBulkReconcileOpen(false);
+      }
+      setPendingActionId(null);
+      router.refresh();
+    });
+  }
+
   return (
     <div className="bg-white">
       {selectedIds.length ? (
         <div className="flex flex-wrap items-center gap-3 border-b border-violet-100 bg-violet-50 px-5 py-3">
           <span className="text-sm font-semibold text-violet-900">Đã chọn {selectedIds.length} item</span>
+          {selectedPaymentItems.length ? (
+            <button
+              type="button"
+              disabled={isActionPending}
+              onClick={openBulkReconcileModal}
+              className="h-8 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
+            >
+              Đối soát {selectedPaymentItems.length} payment
+            </button>
+          ) : null}
           {commonActions.slice(0, 2).map((transition) => (
             <button
               key={transition.actionKey}
@@ -237,7 +457,7 @@ export default function FlowItemListView({
               {pendingActionId === "BULK" ? "Đang xử lý..." : transition.manualActionLabel || transition.label}
             </button>
           ))}
-          {!commonActions.length ? <span className="text-xs text-violet-600">Các item đã chọn không có action chung.</span> : null}
+          {!commonActions.length && !selectedPaymentItems.length ? <span className="text-xs text-violet-600">Các item đã chọn không có action chung.</span> : null}
           <button type="button" onClick={() => setSelectedIds([])} className="ml-auto text-xs font-semibold text-violet-700 hover:text-violet-900">Bỏ chọn</button>
         </div>
       ) : null}
@@ -248,7 +468,14 @@ export default function FlowItemListView({
       ) : null}
 
       <div className="overflow-x-auto">
-        <table className={cn("w-full border-collapse", showPublishChannels ? "min-w-[1120px]" : "min-w-[980px]")}>
+        <table className={cn(
+          "w-full border-collapse",
+          showPaymentAmount
+            ? "min-w-[1500px]"
+            : showPublishChannels
+              ? "min-w-[1120px]"
+              : "min-w-[980px]",
+        )}>
           <thead>
             <tr className="border-b border-slate-200 bg-[#fbfcfe] text-left text-[11px] font-bold uppercase tracking-[0.05em] text-slate-500">
               <th className="w-12 px-5 py-3">
@@ -258,6 +485,10 @@ export default function FlowItemListView({
               {showStatusColumn ? <th className="px-4 py-3">Trạng thái</th> : null}
               {showProgressColumn ? <th className="w-40 px-4 py-3">Progress</th> : null}
               {showPublishChannels ? <th className="w-56 px-4 py-3">Kênh đăng</th> : null}
+              {showPaymentAmount ? <th className="w-52 px-4 py-3">Đối tượng</th> : null}
+              {showPaymentAmount ? <th className="w-24 px-4 py-3">Thu / Chi</th> : null}
+              {showPaymentAmount ? <th className="w-44 px-4 py-3">Loại khoản</th> : null}
+              {showPaymentAmount ? <th className="w-40 px-4 py-3 text-right">Số tiền</th> : null}
               <th className="w-44 px-4 py-3">Thao tác</th>
               <th className="px-4 py-3">Người thao tác</th>
               <th className="px-4 py-3 text-center">Cập nhật</th>
@@ -382,6 +613,70 @@ export default function FlowItemListView({
                       )}
                     </td>
                   ) : null}
+                  {showPaymentAmount ? (
+                    <td className="px-4 py-3">
+                      {item.payment ? (
+                        <>
+                          <div className="max-w-48 truncate text-xs font-semibold text-slate-800">
+                            {item.payment.counterparty ?? item.payment.ownerRef ?? "Chưa xác định"}
+                          </div>
+                          <div className="mt-1 text-[11px] text-slate-500">
+                            {paymentOwnerLabel(item.payment.ownerType)}
+                            {item.payment.contact ? ` · ${item.payment.contact}` : ""}
+                          </div>
+                        </>
+                      ) : <span className="text-xs text-slate-400">-</span>}
+                    </td>
+                  ) : null}
+                  {showPaymentAmount ? (
+                    <td className="px-4 py-3">
+                      {item.payment ? (
+                        <span className={cn(
+                          "inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ring-inset",
+                          paymentDirection(item.payment.direction).className,
+                        )}>
+                          {paymentDirection(item.payment.direction).label}
+                        </span>
+                      ) : <span className="text-xs text-slate-400">-</span>}
+                    </td>
+                  ) : null}
+                  {showPaymentAmount ? (
+                    <td className="px-4 py-3">
+                      {item.payment ? (
+                        <>
+                          <div className="text-xs font-semibold text-slate-800">
+                            {paymentPurpose(item.payment.purpose)}
+                          </div>
+                          <div className="mt-1 text-[11px] text-slate-500">
+                            {item.payment.type ?? item.payment.ownerType}
+                          </div>
+                        </>
+                      ) : <span className="text-xs text-slate-400">-</span>}
+                    </td>
+                  ) : null}
+                  {showPaymentAmount ? (
+                    <td className="px-4 py-3 text-right">
+                      {item.payment ? (
+                        <>
+                          <div className={cn(
+                            "text-sm font-bold tabular-nums",
+                            String(item.payment.direction).toUpperCase() === "OUT"
+                              ? "text-rose-700"
+                              : "text-emerald-700",
+                          )}>
+                            {formatMoney(
+                              item.payment.amount,
+                              item.payment.currency,
+                              paymentDirection(item.payment.direction).sign,
+                            )}
+                          </div>
+                          <div className="mt-1 text-[11px] font-medium text-slate-500">
+                            {item.payment.method ?? "Chưa có phương thức"}
+                          </div>
+                        </>
+                      ) : <span className="text-xs text-slate-400">-</span>}
+                    </td>
+                  ) : null}
                   <td className="px-4 py-3">
                     {primaryAction && isOpenTargetTransition(primaryAction) ? (
                       <OpenTargetAction
@@ -399,6 +694,15 @@ export default function FlowItemListView({
                         className="h-8 max-w-36 truncate rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
                       >
                         {pendingActionId === item.id ? "Đang xử lý..." : primaryAction.manualActionLabel || primaryAction.label}
+                      </button>
+                    ) : item.payment ? (
+                      <button
+                        type="button"
+                        disabled={isActionPending}
+                        onClick={() => openReconcileModal(item)}
+                        className="inline-flex h-8 items-center rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white transition hover:bg-slate-800"
+                      >
+                        Đối soát {paymentDirection(item.payment.direction).label.toLowerCase()}
                       </button>
                     ) : null}
                   </td>
@@ -439,6 +743,307 @@ export default function FlowItemListView({
         </div>
       ) : null}
       <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-500">Hiển thị {visibleItems.length} / {items.length} item</div>
+
+      {isBulkReconcileOpen ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-slate-200">
+            <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
+              <div>
+                <h2 className="text-lg font-bold text-slate-950">
+                  Đối soát hàng loạt · {selectedPaymentItems.length} Payment
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Điều chỉnh số thực tế từng dòng. Khoản thấp hơn dự kiến sẽ tự động split.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={isActionPending}
+                onClick={() => setIsBulkReconcileOpen(false)}
+                className="rounded-full px-3 py-1.5 text-sm font-semibold text-slate-500 hover:bg-slate-100"
+              >
+                Đóng
+              </button>
+            </div>
+
+            <div className="overflow-y-auto px-6 py-5">
+              <div className="overflow-hidden rounded-2xl border border-slate-200">
+                <div className="grid grid-cols-[minmax(220px,1fr)_150px_170px_150px] gap-3 bg-slate-50 px-4 py-3 text-[11px] font-bold uppercase text-slate-500">
+                  <div>Payment / Đối tượng</div>
+                  <div className="text-right">Dự kiến</div>
+                  <div className="text-right">Thực tế</div>
+                  <div>Kết quả</div>
+                </div>
+                {selectedPaymentItems.map((item) => {
+                  const expected = Number(item.payment?.amount ?? 0);
+                  const actual = Number(bulkReconcileAmounts[item.id]);
+                  const split = Number.isFinite(actual) && actual < expected;
+                  return (
+                    <div
+                      key={item.id}
+                      className="grid grid-cols-[minmax(220px,1fr)_150px_170px_150px] items-center gap-3 border-t border-slate-100 px-4 py-3"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold text-slate-900">
+                          {item.preview.title ?? "Payment"}
+                        </div>
+                        <div className="mt-1 truncate text-xs text-slate-500">
+                          {item.payment?.counterparty ?? item.payment?.ownerRef ?? item.preview.ref}
+                        </div>
+                      </div>
+                      <div className="text-right text-sm font-bold tabular-nums text-slate-800">
+                        {formatMoney(expected, item.payment?.currency ?? "VND")}
+                      </div>
+                      <input
+                        type="number"
+                        min="1"
+                        max={expected}
+                        value={bulkReconcileAmounts[item.id] ?? ""}
+                        onChange={(event) => setBulkReconcileAmounts((current) => ({
+                          ...current,
+                          [item.id]: event.target.value,
+                        }))}
+                        className="h-10 rounded-xl border border-slate-200 px-3 text-right text-sm font-semibold outline-none focus:border-violet-400"
+                      />
+                      <div className={cn("text-xs font-bold", split ? "text-amber-700" : "text-emerald-700")}>
+                        {split
+                          ? `Split · còn ${formatMoney(expected - actual, item.payment?.currency ?? "VND")}`
+                          : "Khớp đủ"}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-5 grid gap-4 sm:grid-cols-3">
+                <label className="text-sm font-semibold text-slate-700">
+                  Phương thức chung
+                  <select
+                    value={bulkReconcileFields.method}
+                    onChange={(event) => setBulkReconcileFields((current) => ({ ...current, method: event.target.value }))}
+                    className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-violet-400"
+                  >
+                    <option value="BANK_TRANSFER">Chuyển khoản</option>
+                    <option value="CASH">Tiền mặt</option>
+                    <option value="COD">COD</option>
+                  </select>
+                </label>
+                <label className="text-sm font-semibold text-slate-700">
+                  Ngày giao dịch
+                  <input
+                    type="date"
+                    value={bulkReconcileFields.occurredAt}
+                    onChange={(event) => setBulkReconcileFields((current) => ({ ...current, occurredAt: event.target.value }))}
+                    className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-violet-400"
+                  />
+                </label>
+                <label className="text-sm font-semibold text-slate-700">
+                  Mã chứng từ chung
+                  <input
+                    value={bulkReconcileFields.transactionReference}
+                    onChange={(event) => setBulkReconcileFields((current) => ({ ...current, transactionReference: event.target.value }))}
+                    className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-violet-400"
+                  />
+                </label>
+              </div>
+
+              <label className="mt-4 block text-sm font-semibold text-slate-700">
+                Ghi chú chung
+                <textarea
+                  rows={3}
+                  value={bulkReconcileFields.reviewNote}
+                  onChange={(event) => setBulkReconcileFields((current) => ({ ...current, reviewNote: event.target.value }))}
+                  className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none focus:border-violet-400"
+                  placeholder="Bắt buộc nếu có ít nhất một Payment cần split"
+                />
+              </label>
+
+              {actionError ? (
+                <div className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+                  {actionError}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 border-t border-slate-100 px-6 py-4">
+              <button
+                type="button"
+                disabled={isActionPending}
+                onClick={() => setIsBulkReconcileOpen(false)}
+                className="h-10 rounded-xl px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={isActionPending}
+                onClick={submitBulkReconciliation}
+                className="h-10 rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
+              >
+                {pendingActionId === "BULK_RECONCILE"
+                  ? "Đang đối soát..."
+                  : `Xác nhận ${selectedPaymentItems.length} Payment`}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {reconcileItem?.payment ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+          <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white shadow-2xl ring-1 ring-slate-200">
+            <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
+              <div>
+                <h2 className="text-lg font-bold text-slate-950">
+                  Đối soát {paymentDirection(reconcileItem.payment.direction).label.toLowerCase()}
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  {reconcileItem.preview.title} · {reconcileItem.preview.ref}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={isActionPending}
+                onClick={() => setReconcileItem(null)}
+                className="rounded-full px-3 py-1.5 text-sm font-semibold text-slate-500 hover:bg-slate-100"
+              >
+                Đóng
+              </button>
+            </div>
+
+            <div className="space-y-5 px-6 py-5">
+              <div className="grid gap-3 rounded-2xl bg-slate-50 p-4 sm:grid-cols-3">
+                <div>
+                  <div className="text-[11px] font-bold uppercase text-slate-400">Dự kiến</div>
+                  <div className="mt-1 text-base font-bold text-slate-950">
+                    {formatMoney(reconcileItem.payment.amount, reconcileItem.payment.currency)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[11px] font-bold uppercase text-slate-400">Thực tế</div>
+                  <div className="mt-1 text-base font-bold text-blue-700">
+                    {formatMoney(Number(reconcileFields.reviewedAmount), reconcileItem.payment.currency)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[11px] font-bold uppercase text-slate-400">Kết quả</div>
+                  <div className={cn(
+                    "mt-1 text-sm font-bold",
+                    Number(reconcileFields.reviewedAmount) < Number(reconcileItem.payment.amount)
+                      ? "text-amber-700"
+                      : "text-emerald-700",
+                  )}>
+                    {Number(reconcileFields.reviewedAmount) < Number(reconcileItem.payment.amount)
+                      ? `Split · còn ${formatMoney(
+                        Number(reconcileItem.payment.amount) - Number(reconcileFields.reviewedAmount),
+                        reconcileItem.payment.currency,
+                      )}`
+                      : "Khớp đủ · chuyển Settled"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="text-sm font-semibold text-slate-700">
+                  Số tiền thực tế
+                  <input
+                    type="number"
+                    min="1"
+                    max={reconcileItem.payment.amount}
+                    value={reconcileFields.reviewedAmount}
+                    onChange={(event) => setReconcileFields((current) => ({ ...current, reviewedAmount: event.target.value }))}
+                    className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 font-medium outline-none focus:border-violet-400"
+                  />
+                </label>
+                <label className="text-sm font-semibold text-slate-700">
+                  Phương thức
+                  <select
+                    value={reconcileFields.method}
+                    onChange={(event) => setReconcileFields((current) => ({ ...current, method: event.target.value }))}
+                    className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-violet-400"
+                  >
+                    <option value="BANK_TRANSFER">Chuyển khoản</option>
+                    <option value="CASH">Tiền mặt</option>
+                    <option value="COD">COD</option>
+                  </select>
+                </label>
+                <label className="text-sm font-semibold text-slate-700">
+                  Ngày giao dịch
+                  <input
+                    type="date"
+                    value={reconcileFields.occurredAt}
+                    onChange={(event) => setReconcileFields((current) => ({ ...current, occurredAt: event.target.value }))}
+                    className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-violet-400"
+                  />
+                </label>
+                <label className="text-sm font-semibold text-slate-700">
+                  Mã giao dịch / chứng từ
+                  <input
+                    value={reconcileFields.transactionReference}
+                    onChange={(event) => setReconcileFields((current) => ({ ...current, transactionReference: event.target.value }))}
+                    className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-violet-400"
+                  />
+                </label>
+                <label className="text-sm font-semibold text-slate-700">
+                  Đối tượng
+                  <input
+                    value={reconcileFields.counterparty}
+                    onChange={(event) => setReconcileFields((current) => ({ ...current, counterparty: event.target.value }))}
+                    className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-violet-400"
+                  />
+                </label>
+                <label className="text-sm font-semibold text-slate-700">
+                  Liên hệ
+                  <input
+                    value={reconcileFields.contact}
+                    onChange={(event) => setReconcileFields((current) => ({ ...current, contact: event.target.value }))}
+                    className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-violet-400"
+                  />
+                </label>
+              </div>
+
+              <label className="block text-sm font-semibold text-slate-700">
+                Ghi chú {Number(reconcileFields.reviewedAmount) < Number(reconcileItem.payment.amount) ? "(bắt buộc khi split)" : ""}
+                <textarea
+                  rows={3}
+                  value={reconcileFields.reviewNote}
+                  onChange={(event) => setReconcileFields((current) => ({ ...current, reviewNote: event.target.value }))}
+                  className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none focus:border-violet-400"
+                />
+              </label>
+
+              {actionError ? (
+                <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+                  {actionError}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 border-t border-slate-100 px-6 py-4">
+              <button
+                type="button"
+                disabled={isActionPending}
+                onClick={() => setReconcileItem(null)}
+                className="h-10 rounded-xl px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={isActionPending}
+                onClick={submitReconciliation}
+                className="h-10 rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
+              >
+                {isActionPending
+                  ? "Đang đối soát..."
+                  : Number(reconcileFields.reviewedAmount) < Number(reconcileItem.payment.amount)
+                    ? "Xác nhận split & đối soát"
+                    : "Xác nhận đối soát & Settled"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

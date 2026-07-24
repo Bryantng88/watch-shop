@@ -12,6 +12,8 @@ import { money, toNumber, toPlain, type Tx } from "./payment.utils";
 export async function ensureTechnicalIssuePaymentTx(tx: Tx, technicalIssueId: string) {
   const seed = await getPaymentOwnerSeedTx(tx, "TECHNICAL_ISSUE", technicalIssueId);
 
+  if (seed.totalDue === 0) return null;
+
   if (seed.totalDue < 0) throw new Error("Chi phí technical issue không hợp lệ.");
 
   const existingUnpaid = await tx.payment.findFirst({
@@ -73,7 +75,7 @@ export async function createTechnicalIssueMaintenanceCostPaymentTx(
     purpose?: string | null;
   },
 ) {
-  if (!Number.isFinite(input.amount) || input.amount < 0) {
+  if (!Number.isFinite(input.amount) || input.amount <= 0) {
     throw new Error("Chi phÃ­ technical issue khÃ´ng há»£p lá»‡.");
   }
 

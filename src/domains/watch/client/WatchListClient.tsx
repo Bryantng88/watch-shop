@@ -1301,7 +1301,7 @@ export default function WatchListClient(props: WatchListClientProps) {
                         const next = new URLSearchParams(params.toString());
                         next.set("segment", segment);
                         next.set("page", "1");
-                        void loadList(next, { meta: "full" });
+                        void loadList(next, { meta: "lite" });
                     }}
                     selectedCount={selectedIds.length}
                     photoshootEligibleCount={photoshootEligibleRows.length}

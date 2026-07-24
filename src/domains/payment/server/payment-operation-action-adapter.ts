@@ -6,7 +6,7 @@ import {
 } from "@/domains/blueprint/shared/operational-blueprint";
 import { parseWorkspaceDefinitionSnapshot } from "@/domains/blueprint/shared/workspace-capabilities";
 import { findBusinessBindingsByTaskItem } from "@/domains/task/server/business-binding.repo";
-import { completePayment } from "./payment.core";
+import { completePayment, splitPayment } from "./payment.core";
 import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
 
 export type PaymentOperationActionAdapterResult = {
@@ -216,6 +216,51 @@ export async function runPaymentOperationBlueprintAction(
       const reconciliationResult = optionalField(fields, "reconciliationResult");
       if (reviewedAmount !== Number(payment.amount) && reconciliationResult === "MATCHED") {
         return { ok: false, actionKey, paymentId: targetId, error: "PAYMENT_RECONCILIATION_NOT_MATCHED" };
+      }
+      if (
+        reconciliationResult === "PARTIAL" &&
+        reviewedAmount > 0 &&
+        reviewedAmount < Number(payment.amount)
+      ) {
+        const split = await splitPayment({
+          paymentId: targetId,
+          paidAmount: reviewedAmount,
+          paidAt: optionalField(fields, "occurredAt"),
+          method: reviewedMethod,
+          reference: optionalField(fields, "transactionReference"),
+          note: optionalField(fields, "reviewNote"),
+        });
+        await recordBusinessEvent(db, {
+          eventKey: "payment.status_updated",
+          targetType: "PAYMENT",
+          targetId,
+          actorUserId: input.actorUserId ?? null,
+          payload: {
+            status: "RECONCILED_SPLIT",
+            expectedAmount: Number(payment.amount),
+            reviewedAmount,
+            remainderAmount: split.remainderAmount,
+            remainderPaymentId: split.remainderPaymentId,
+            method: reviewedMethod,
+            occurredAt: optionalField(fields, "occurredAt"),
+            transactionReference: optionalField(fields, "transactionReference"),
+            counterparty,
+            contact: optionalField(fields, "contact"),
+            reviewNote: optionalField(fields, "reviewNote"),
+            sourceId: `${targetId}:payment.status_updated:RECONCILED_SPLIT`,
+          },
+        });
+        return {
+          ok: true,
+          actionKey,
+          paymentId: targetId,
+          result: {
+            reconciliationResult,
+            settled: true,
+            split,
+            settlement: split.summary,
+          },
+        };
       }
       if (reconciliationResult !== "MATCHED") {
         await db.payment.update({
