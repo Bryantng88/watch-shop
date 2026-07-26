@@ -118,7 +118,7 @@ function WatchStatusSignal({
                 : normalized === "WAITING" || normalized === "PENDING" ? "Chờ tiếp nhận"
                     : normalized === "ISSUE" ? "Cần kiểm tra"
                         : "Đã kiểm tra");
-    return <VisualStatusSignal label={label} detail={detail} tone={tone} icon={icon} onClick={onClick ?? undefined} />;
+    return <VisualStatusSignal label={label} detail={detail} tone={tone} icon={icon} onClick={onClick ?? undefined} singleLine />;
 }
 
 function SaleStatusBadge({
@@ -177,6 +177,7 @@ function SaleStatusBadge({
             detail={config.detail}
             tone={config.tone}
             icon={config.icon}
+            singleLine
         />
     );
 }

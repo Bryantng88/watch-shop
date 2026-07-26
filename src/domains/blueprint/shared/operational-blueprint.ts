@@ -1264,6 +1264,167 @@ const PAYMENT_COLLECTION_CONTRACT: OperationalBlueprintContract = {
   ],
 };
 
+const SHIPMENT_OPERATION_CONTRACT: OperationalBlueprintContract = {
+  key: "shipment-operation",
+  version: 1,
+  context: "OPERATION",
+  summary:
+    "Routes Shipment records through waiting, processing, and done while Shipment remains the business source of truth.",
+  objectTypes: [
+    {
+      targetType: "SHIPMENT",
+      label: "Shipment",
+      role: "ITEM",
+      description: "Shipment owns carrier, tracking, fee and delivery/return status.",
+    },
+  ],
+  workspaceRoles: [
+    {
+      key: "SHIPMENT_WAITING",
+      workspaceKind: "FLOW_STAGE_WORKSPACE",
+      label: "Chờ xử lý",
+      cardinality: "SINGLE_PER_ACTIVE_CYCLE",
+      identityTargetType: null,
+      itemTargetTypes: ["SHIPMENT"],
+      description: "DRAFT and READY shipments waiting for dispatch.",
+    },
+    {
+      key: "SHIPMENT_PROCESSING",
+      workspaceKind: "FLOW_STAGE_WORKSPACE",
+      label: "Đang xử lý",
+      cardinality: "SINGLE_PER_ACTIVE_CYCLE",
+      identityTargetType: null,
+      itemTargetTypes: ["SHIPMENT"],
+      description: "SHIPPED and RETURNING shipments currently in transit.",
+    },
+    {
+      key: "SHIPMENT_DONE",
+      workspaceKind: "FLOW_STAGE_WORKSPACE",
+      label: "Xong",
+      cardinality: "SINGLE_PER_ACTIVE_CYCLE",
+      identityTargetType: null,
+      itemTargetTypes: ["SHIPMENT"],
+      description: "DELIVERED, RETURNED and CANCELLED shipments.",
+    },
+  ],
+  coreFlows: [
+    {
+      key: "shipment-operation-core-flow",
+      label: "Shipment Operation",
+      description: "Chờ xử lý -> Đang xử lý -> Xong.",
+      steps: [
+        { workspaceRole: "SHIPMENT_WAITING", label: "Chờ xử lý", description: "Prepare and dispatch shipment.", isEntry: true, isTerminal: false },
+        { workspaceRole: "SHIPMENT_PROCESSING", label: "Đang xử lý", description: "Track delivery or return.", isEntry: false, isTerminal: false },
+        { workspaceRole: "SHIPMENT_DONE", label: "Xong", description: "Terminal shipment records.", isEntry: false, isTerminal: true },
+      ],
+    },
+  ],
+  spaceViewModes: [
+    {
+      key: "shipment-operation-flow",
+      label: "Shipment Flow",
+      rowModel: "FLOW_STAGE_WORKSPACE",
+      primaryTarget: "workspace",
+      coreFlowKey: "shipment-operation-core-flow",
+      workspaceRoles: ["SHIPMENT_WAITING", "SHIPMENT_PROCESSING", "SHIPMENT_DONE"],
+      description: "Renders Shipment records inside three ordered operational stages.",
+    },
+  ],
+  eventRoutes: [
+    { eventKey: "shipment.created", targetType: "SHIPMENT", workspaceRole: "SHIPMENT_WAITING", effect: "BIND_ITEM", description: "Places new shipments in Waiting." },
+    { eventKey: "shipment.shipped", targetType: "SHIPMENT", workspaceRole: "SHIPMENT_PROCESSING", effect: "MOVE_ITEM", description: "Moves dispatched shipments into Processing." },
+    { eventKey: "shipment.returning", targetType: "SHIPMENT", workspaceRole: "SHIPMENT_PROCESSING", effect: "MOVE_ITEM", description: "Keeps returns visible in Processing." },
+    { eventKey: "shipment.delivered", targetType: "SHIPMENT", workspaceRole: "SHIPMENT_DONE", effect: "MOVE_ITEM", description: "Moves delivered shipments into Done." },
+    { eventKey: "shipment.returned", targetType: "SHIPMENT", workspaceRole: "SHIPMENT_DONE", effect: "MOVE_ITEM", description: "Moves completed returns into Done." },
+    { eventKey: "shipment.cancelled", targetType: "SHIPMENT", workspaceRole: "SHIPMENT_DONE", effect: "MOVE_ITEM", description: "Moves cancelled shipments into Done." },
+  ],
+  actions: [
+    {
+      key: "dispatch_shipment",
+      label: "Bàn giao vận chuyển",
+      workspaceRole: "SHIPMENT_WAITING",
+      targetType: "SHIPMENT",
+      command: "shipment.dispatch",
+      emits: ["shipment.shipped"],
+      description: "Records carrier, tracking and shipment fee, then dispatches the shipment.",
+      fields: [
+        { key: "amount", label: "Phí vận chuyển", kind: "money", required: true },
+        { key: "payer", label: "Người trả phí", kind: "select", required: true, options: [
+          { value: "BUSINESS", label: "Doanh nghiệp" },
+          { value: "CUSTOMER", label: "Khách hàng" },
+        ] },
+        { key: "method", label: "Phương thức", kind: "text", required: true },
+        { key: "carrier", label: "Đơn vị vận chuyển", kind: "text", required: true },
+        { key: "trackingCode", label: "Mã vận đơn", kind: "text", required: false },
+        { key: "note", label: "Ghi chú", kind: "textarea", required: false },
+      ],
+    },
+    {
+      key: "mark_shipment_delivered",
+      label: "Đã giao thành công",
+      workspaceRole: "SHIPMENT_PROCESSING",
+      targetType: "SHIPMENT",
+      command: "shipment.markDelivered",
+      emits: ["shipment.delivered"],
+      description: "Completes delivery and triggers COD collection through Payment when applicable.",
+      fields: [{ key: "note", label: "Ghi chú", kind: "textarea", required: false }],
+    },
+    {
+      key: "mark_shipment_returning",
+      label: "Chuyển đang hoàn",
+      workspaceRole: "SHIPMENT_PROCESSING",
+      targetType: "SHIPMENT",
+      command: "shipment.markReturning",
+      emits: ["shipment.returning"],
+      description: "Marks an in-transit shipment as returning.",
+      fields: [{ key: "note", label: "Lý do hoàn", kind: "textarea", required: true }],
+    },
+    {
+      key: "receive_shipment_return",
+      label: "Nhận hàng hoàn",
+      workspaceRole: "SHIPMENT_PROCESSING",
+      targetType: "SHIPMENT",
+      command: "shipment.receiveReturn",
+      emits: ["shipment.returned"],
+      description: "Receives the return, records return fee and reverses COD collection.",
+      fields: [
+        { key: "amount", label: "Phí hoàn", kind: "money", required: true },
+        { key: "method", label: "Phương thức", kind: "text", required: true },
+        { key: "note", label: "Ghi chú", kind: "textarea", required: false },
+      ],
+    },
+  ],
+  workflows: [
+    {
+      key: "shipment-operation-workflow",
+      workspaceRole: "SHIPMENT_WAITING",
+      states: ["READY", "SHIPPED", "RETURNING", "DELIVERED", "RETURNED", "CANCELLED"],
+      transitions: [
+        { from: "READY", to: "SHIPPED", actionKey: "dispatch_shipment", eventKey: "shipment.shipped" },
+        { from: "SHIPPED", to: "DELIVERED", actionKey: "mark_shipment_delivered", eventKey: "shipment.delivered" },
+        { from: "SHIPPED", to: "RETURNING", actionKey: "mark_shipment_returning", eventKey: "shipment.returning" },
+        { from: "RETURNING", to: "RETURNED", actionKey: "receive_shipment_return", eventKey: "shipment.returned" },
+      ],
+    },
+  ],
+  projectionSubscriptions: [
+    {
+      projectionKey: "shipment-operation-queue",
+      eventKeys: [
+        "shipment.created",
+        "shipment.updated",
+        "shipment.shipped",
+        "shipment.delivered",
+        "shipment.returning",
+        "shipment.returned",
+        "shipment.cancelled",
+      ],
+      resolvesToTargetType: "SHIPMENT",
+      description: "Keeps the Shipment flow list read model current.",
+    },
+  ],
+};
+
 const BLANK_OPERATION_CONTRACT: OperationalBlueprintContract = {
   key: "blank-operation",
   version: 1,
@@ -1301,6 +1462,12 @@ export function listOperationalBlueprintTemplates(): OperationalBlueprintTemplat
       contract: cloneContract(PAYMENT_COLLECTION_CONTRACT),
     },
     {
+      key: "shipment-operation",
+      label: "Shipment Operation",
+      description: "Start from the three-stage Shipment flow with fee and COD integration.",
+      contract: cloneContract(SHIPMENT_OPERATION_CONTRACT),
+    },
+    {
       key: "blank-operation",
       label: "Blank Operation",
       description:
@@ -1336,6 +1503,16 @@ export function operationalBlueprintForWorkType(input: {
     normalizeKey(input.workTypeKey) === "payment"
   ) {
     return PAYMENT_COLLECTION_CONTRACT;
+  }
+
+  if (
+    input.coordinationContext === "OPERATION" &&
+    (
+      normalizeKey(input.workTypeKey) === "shipment-operation" ||
+      normalizeKey(input.workTypeKey) === "shipment"
+    )
+  ) {
+    return SHIPMENT_OPERATION_CONTRACT;
   }
 
   return null;

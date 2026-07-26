@@ -60,6 +60,7 @@ type Props = {
     onClick?: MouseEventHandler<HTMLButtonElement>;
     title?: string;
     className?: string;
+    singleLine?: boolean;
 };
 
 export function VisualStatusSignal({
@@ -68,8 +69,9 @@ export function VisualStatusSignal({
     tone = "slate",
     icon = "neutral",
     onClick,
-    title = label,
+    title,
     className,
+    singleLine = false,
 }: Props) {
     const Icon = ICONS[icon];
     const styles = TONE_CLASSES[tone];
@@ -80,19 +82,21 @@ export function VisualStatusSignal({
             </span>
             <span className="min-w-0 text-left">
                 <span className="block truncate text-[13px] font-semibold leading-5 text-slate-800">{label}</span>
-                {detail ? <span className={cn("mt-0.5 block truncate text-[11px] font-medium leading-4", styles.detail)}>{detail}</span> : null}
+                {!singleLine && detail ? <span className={cn("mt-0.5 block truncate text-[11px] font-medium leading-4", styles.detail)}>{detail}</span> : null}
             </span>
         </>
     );
     const rootClassName = cn(
         "group inline-flex min-w-[160px] max-w-[210px] items-center gap-2.5 rounded-lg",
         onClick && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
+        singleLine && "min-w-[130px]",
         className,
     );
+    const resolvedTitle = title ?? [label, detail].filter(Boolean).join(" · ");
 
     if (onClick) {
-        return <button type="button" onClick={onClick} className={rootClassName} title={title}>{content}</button>;
+        return <button type="button" onClick={onClick} className={rootClassName} title={resolvedTitle}>{content}</button>;
     }
 
-    return <span className={rootClassName} title={title}>{content}</span>;
+    return <span className={rootClassName} title={resolvedTitle}>{content}</span>;
 }

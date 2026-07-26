@@ -5,16 +5,21 @@ import {
     ArrowDownToLine,
     ArrowDownLeft,
     ArrowUpRight,
+    CalendarClock,
     Check,
+    CheckCircle2,
     ChevronDown,
     CirclePlus,
     Image,
+    Inbox,
+    LoaderCircle,
     Pencil,
     Send,
     X,
 } from "lucide-react";
 
 import { DashboardWidgetCard } from "@/domains/shared/ui/dashboard";
+import { SoftIconBadge } from "@/domains/shared/ui/icons";
 import type { DashboardWidgetRegistry } from "@/domains/shared/ui/dashboard";
 import type {
     BusinessListActivityItem,
@@ -231,6 +236,49 @@ export function ValueTrendDashboardWidget({ data }: WidgetProps) {
     );
 }
 
+export function TechnicalDailyPerformanceDashboardWidget({ data }: WidgetProps) {
+    const performance = data.technicalDailyPerformance;
+    const onTimeRate = performance?.completedWithDeadline
+        ? Math.round((performance.onTime / performance.completedWithDeadline) * 100)
+        : 0;
+    const metrics = [
+        { key: "on-time", label: "Đúng hạn", value: performance?.onTime ?? 0, helper: `/${performance?.completedWithDeadline ?? 0} · ${onTimeRate}%`, icon: CalendarClock, badgeClassName: "border-emerald-100 bg-emerald-50 text-emerald-600 shadow-[0_1px_3px_rgba(5,150,105,0.08)]" },
+        { key: "created", label: "TI mới", value: performance?.created ?? 0, helper: "hôm nay", icon: Inbox },
+        { key: "started", label: "Bắt đầu xử lý", value: performance?.started ?? 0, helper: "hôm nay", icon: LoaderCircle },
+        { key: "completed", label: "Done", value: performance?.completed ?? 0, helper: "hôm nay", icon: CheckCircle2 },
+    ];
+
+    return (
+        <DashboardWidgetCard>
+            <div className="flex items-center justify-between gap-3">
+                <h2 className="text-xs font-semibold text-slate-800">
+                    {performance?.label ?? "Hiệu suất TI hôm nay"}
+                </h2>
+                <span className="rounded-full bg-violet-50 px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-violet-600">
+                    Hôm nay
+                </span>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+                {metrics.map((metric) => {
+                    const Icon = metric.icon;
+                    return (
+                        <div key={metric.key} className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/55 px-2.5 py-2">
+                            <SoftIconBadge icon={Icon} className={metric.badgeClassName} />
+                            <span className="min-w-0">
+                                <span className="block truncate text-[10px] font-medium text-slate-500">{metric.label}</span>
+                                <span className="mt-0.5 flex items-baseline gap-1">
+                                    <span className="text-base font-bold tabular-nums text-slate-950">{formatNumber(metric.value)}</span>
+                                    <span className="truncate text-[9px] text-slate-400">{metric.helper}</span>
+                                </span>
+                            </span>
+                        </div>
+                    );
+                })}
+            </div>
+        </DashboardWidgetCard>
+    );
+}
+
 export function CashFlowDashboardWidget({ data }: WidgetProps) {
     const cashFlow = data.cashFlow;
     const income = cashFlow?.income ?? 0;
@@ -374,6 +422,13 @@ export const BUSINESS_LIST_DASHBOARD_WIDGET_REGISTRY: DashboardWidgetRegistry<
         scope: "SHARED",
         size: "1x1",
         component: RecentActivityDashboardWidget,
+    },
+    "technical-daily-performance": {
+        key: "technical-daily-performance",
+        label: "Hiệu suất TI hôm nay",
+        scope: "TECHNICAL",
+        size: "1x1",
+        component: TechnicalDailyPerformanceDashboardWidget,
     },
     "watch-media": {
         key: "watch-media",

@@ -20,6 +20,8 @@ export type OrderListFiltersValue = {
   q: string;
   sort: string;
   pageSize: string;
+  view: OrderViewKey;
+  subFilter: OrderProcessingSubFilter;
 };
 
 export const ORDER_LIST_VIEWS = [
@@ -77,6 +79,8 @@ export type OrderListItem = {
   source?: string | null;
   sourceLabel?: string | null;
   createdByName?: string | null;
+  previewImageUrl?: string | null;
+  previewImageUrls?: string[];
 
   itemsCount?: number | null;
   totalAmount?: number | string | null;
@@ -104,6 +108,7 @@ export type OrderListItem = {
 export type OrderListPageProps = {
   items: OrderListItem[];
   total: number;
+  totalValue: number;
   page: number;
   pageSize: number;
   totalPages: number;

@@ -60,6 +60,13 @@ export function getTimelineTitle(eventKey: string) {
         "watch.image.rejected": "Hình ảnh watch bị trả về",
         "watch.image.approved": "Hình ảnh watch đã được duyệt",
         "watch.media.recalled": "Media đã được thu hồi về xử lý",
+        "shipment.created": "Shipment được tạo",
+        "shipment.updated": "Thông tin shipment được cập nhật",
+        "shipment.shipped": "Đã bàn giao cho đơn vị vận chuyển",
+        "shipment.delivered": "Shipment đã giao thành công",
+        "shipment.returning": "Shipment đang được hoàn",
+        "shipment.returned": "Đã nhận hàng hoàn",
+        "shipment.cancelled": "Shipment đã hủy",
     };
 
     return titles[eventKey] ?? eventKey;
@@ -73,6 +80,11 @@ export function getTimelineBody(metadataJson: unknown) {
     const fromStatus = clean(metadata.fromStatus);
     const toStatus = clean(metadata.toStatus);
     const feedbackMessage = clean(metadata.feedbackMessage);
+    const shipmentRef = clean(metadata.shipmentRefNo);
+    const orderRef = clean(metadata.orderRefNo);
+    const carrier = clean(metadata.carrier);
+    const trackingCode = clean(metadata.trackingCode);
+    const note = clean(metadata.note);
     const parts = [
         title ? `Watch: ${title}` : null,
         ref ? `Ref: ${ref}` : null,
@@ -81,6 +93,11 @@ export function getTimelineBody(metadataJson: unknown) {
             ? `Status: ${fromStatus || "-"} -> ${toStatus || "-"}`
             : null,
         feedbackMessage ? `Feedback: ${feedbackMessage}` : null,
+        shipmentRef ? `Shipment: ${shipmentRef}` : null,
+        orderRef ? `Order: ${orderRef}` : null,
+        carrier ? `Carrier: ${carrier}` : null,
+        trackingCode ? `Tracking: ${trackingCode}` : null,
+        note ? `Note: ${note}` : null,
     ].filter(Boolean);
 
     return parts.length ? parts.join("\n") : null;

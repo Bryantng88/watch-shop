@@ -9,6 +9,7 @@ import {
   findTaskItemActivityBySourceRepo,
   findTaskItemActivityTaskRepo,
   listTaskItemActivitiesRepo,
+  countBusinessTargetActivitiesRepo,
   listBusinessTargetActivitiesRepo,
   updateTaskItemActivityMetadataRepo,
 } from "./task-item-activity.repo";
@@ -528,4 +529,36 @@ export async function getBusinessTargetActivityViewModels(
     : items;
 
   return limitedItems.map(toTaskItemActivityViewModel);
+}
+
+export async function getBusinessTargetActivityPage(input: {
+  targetType: string;
+  targetId: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const targetType = clean(input.targetType);
+  const targetId = clean(input.targetId);
+  assertPresent(targetType, "Missing targetType");
+  assertPresent(targetId, "Missing targetId");
+  const page = Math.max(1, Math.trunc(input.page ?? 1));
+  const pageSize = Math.min(50, Math.max(5, Math.trunc(input.pageSize ?? 10)));
+  const [items, total] = await Promise.all([
+    listBusinessTargetActivitiesRepo(prisma, {
+      targetType,
+      targetId,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    countBusinessTargetActivitiesRepo(prisma, { targetType, targetId }),
+  ]);
+  return {
+    items: items.map(toTaskItemActivityViewModel),
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    },
+  };
 }

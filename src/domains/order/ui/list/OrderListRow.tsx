@@ -3,23 +3,16 @@
 import Link from "next/link";
 import { Eye, Pencil, Send, Truck, WalletCards, XCircle, ClipboardPlus } from "lucide-react";
 
-import {
-  ReserveTypeSignalIcon,
-  OrderSourceSignalIcon,
-  PaymentStateSignalIcon,
-  ProductCountSignalIcon,
-  ShipmentStateSignalIcon,
-} from "@/domains/shared/ui/icons";
 import RowActions from "@/domains/shared/ui/list/RowActions";
-import { ShipmentProgress } from "@/domains/shipment/ui/progress";
+import { PaymentAmountSummary, PaymentStatusSignal } from "@/domains/payment/ui/signals";
+import { ShipmentLiveRouteSignal } from "@/domains/shipment/ui/progress";
+import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 
 import type { OrderListItem } from "./types";
 import {
   canCancelOrder,
-  canMarkShipmentDelivered,
   canPostOrder,
   formatDateTime,
-  formatMoney,
 } from "./helpers";
 
 type Props = {
@@ -56,6 +49,33 @@ function resolveShipmentProgressStatus(item: OrderListItem) {
 
   return "READY";
 }
+
+function OrderPreview({ item }: { item: OrderListItem }) {
+  const images = item.previewImageUrls?.length
+    ? item.previewImageUrls
+    : item.previewImageUrl
+      ? [item.previewImageUrl]
+      : [];
+  return (
+    <div className="relative h-16 w-[76px] shrink-0">
+      {(images.length ? images.slice(0, 3) : [null]).map((url, index) => {
+        const src = url ? resolveMediaPreviewSrc(url) ?? url : null;
+        return (
+          <div
+            key={`${url ?? "empty"}:${index}`}
+            className="absolute top-0 flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-slate-100 text-xs font-semibold text-slate-500 ring-1 ring-slate-200"
+            style={{ left: index * 6, zIndex: 3 - index }}
+          >
+            {src ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={src} alt="" className="h-full w-full object-cover" />
+            ) : "O"}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 export default function OrderListRow({
   item,
   checked,
@@ -66,20 +86,15 @@ export default function OrderListRow({
   onManagePayments,
   onCreateWorkCase,
   onManageShipment,
-  onMarkShipmentDelivered,
   onCancel,
   isCancelledOrder,
 }: Props) {
   const itemsCount = Number(item.itemsCount ?? 0);
   const cancelled = isCancelledOrder(item.status);
   const remainingAmount = cancelled ? 0 : Number(item.remainingAmount ?? 0);
-  const isWebVerified =
-    String(item.source ?? "").toUpperCase() === "WEB" &&
-    String(item.verificationStatus ?? "").toUpperCase() === "VERIFIED";
-
   return (
-    <tr className="border-t border-slate-100 align-middle hover:bg-slate-50/50">
-      <td className="px-4 py-4">
+    <tr className="border-t border-slate-100 align-middle hover:bg-slate-50/40">
+      <td className="px-4 py-3">
         <input
           type="checkbox"
           checked={checked}
@@ -88,30 +103,32 @@ export default function OrderListRow({
         />
       </td>
 
-      <td className="px-4 py-4">
-        <div className="min-w-[260px]">
+      <td className="px-4 py-3">
+        <div className="flex min-w-[340px] items-center gap-3">
+          <OrderPreview item={item} />
+          <div className="min-w-0">
           <Link
             href={`/admin/orders/${item.id}`}
-            className="font-semibold text-slate-950 hover:text-blue-700"
+            className="line-clamp-2 text-[15px] font-semibold text-slate-900 hover:text-blue-700"
           >
             {item.refNo || item.id}
           </Link>
 
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <ProductCountSignalIcon count={itemsCount} />
-            <OrderSourceSignalIcon source={item.source} />
-            <ReserveTypeSignalIcon reserveType={item.reserveType} />
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400">
+            <span>{itemsCount} sản phẩm</span>
+            <span>{item.sourceLabel || item.source || "Nội bộ"}</span>
 
-            {isWebVerified ? (
+            {false ? (
               <span className="inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 ring-1 ring-blue-200">
                 Đã xác minh
               </span>
             ) : null}
           </div>
+          </div>
         </div>
       </td>
 
-      <td className="px-4 py-4">
+      <td className="px-4 py-3">
         <div className="min-w-[150px]">
           <div className="font-semibold text-slate-900">
             {item.customerName || "-"}
@@ -122,52 +139,42 @@ export default function OrderListRow({
         </div>
       </td>
 
-      <td className="px-4 py-4">
-        <div className="flex min-w-[90px] items-center">
-          <PaymentStateSignalIcon
+      <td className="px-4 py-3">
+        <div className="flex min-w-[145px] items-center">
+          <PaymentStatusSignal
             status={cancelled ? "CANCELED" : item.paymentStatus}
             totalAmount={item.totalAmount}
             remainingAmount={cancelled ? 0 : item.remainingAmount}
-            collectedAmount={cancelled ? 0 : item.collectedAmount}
+            paidAmount={cancelled ? 0 : item.paidAmount ?? item.collectedAmount}
           />
         </div>
       </td>
 
-      <td className="px-4 py-4">
+      <td className="px-4 py-3">
         <div className="min-w-[160px]">
-          {!item.hasShipment ? (
-            <ShipmentStateSignalIcon status="DELIVERED" />
-          ) : (
-            <ShipmentProgress
-              status={resolveShipmentProgressStatus(item)}
-              events={item.shipmentProgressEvents}
-              compact
-            />
-          )}
+          <ShipmentLiveRouteSignal
+            noShipment={!item.hasShipment}
+            status={resolveShipmentProgressStatus(item)}
+          />
         </div>
       </td>
 
-      <td className="px-4 py-4 text-right">
-        <div className="min-w-[140px]">
-          <div className="font-semibold text-slate-950">
-            {formatMoney(item.totalAmount)}
-          </div>
-
-          {remainingAmount > 0 ? (
-            <div className="mt-1 text-xs text-rose-600">
-              Còn {formatMoney(remainingAmount)}
-            </div>
-          ) : null}
-        </div>
+      <td className="px-5 py-3 text-right">
+        <PaymentAmountSummary
+          className="min-w-[140px]"
+          totalAmount={item.totalAmount}
+          remainingAmount={remainingAmount}
+          cancelled={cancelled}
+        />
       </td>
 
-      <td className="px-4 py-4">
+      <td className="px-4 py-3">
         <div className="min-w-[120px] text-sm text-slate-600">
           {formatDateTime(item.updatedAt)}
         </div>
       </td>
 
-      <td className="px-4 py-4 text-right">
+      <td className="px-4 py-3 text-right">
         <RowActions
           row={item}
           actions={[

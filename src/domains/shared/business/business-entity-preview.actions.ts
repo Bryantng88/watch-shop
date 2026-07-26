@@ -463,10 +463,8 @@ export async function getBusinessEntityPreviewAction(input: {
                 { label: "Kỹ thuật", value: row.user?.name || "-" },
                 { label: "Vendor", value: row.vendor?.name || row.vendorNameSnap || "-" },
                 { label: "Chi phí dự kiến", value: row.estimatedCost?.toString() || "-" },
+                { label: "Ghi chú kỹ thuật", value: row.note || "-" },
             ],
-            notes: row.note
-                ? [{ label: "Ghi chú kỹ thuật", body: row.note, tone: "info" as const }]
-                : undefined,
             activity,
             sections: [
                 {

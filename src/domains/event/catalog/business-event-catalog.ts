@@ -9,6 +9,8 @@ import type {
   BusinessEventDefinition,
 } from "@/domains/event/contract/business-event-contract.types";
 import { LEGACY_BUSINESS_EVENT_CONTRACTS } from "@/domains/event/catalog/legacy-business-events.catalog";
+import { SHIPMENT_BUSINESS_EVENT_CONTRACTS } from "@/domains/shipment/server/events/shipment-business-event.contract";
+import { ORDER_BUSINESS_EVENT_CONTRACTS } from "@/domains/order/server/events/order-business-event.contract";
 
 const WATCH_BUSINESS_EVENT_CONTRACTS = WATCH_BUSINESS_EVENT_DEFINITIONS.map(
   definitionToBusinessEventContract,
@@ -16,6 +18,8 @@ const WATCH_BUSINESS_EVENT_CONTRACTS = WATCH_BUSINESS_EVENT_DEFINITIONS.map(
 
 export const BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
   ...WATCH_BUSINESS_EVENT_CONTRACTS,
+  ...SHIPMENT_BUSINESS_EVENT_CONTRACTS,
+  ...ORDER_BUSINESS_EVENT_CONTRACTS,
   ...LEGACY_BUSINESS_EVENT_CONTRACTS,
 ];
 
@@ -41,4 +45,3 @@ export function getBusinessEventDefinition(key: unknown) {
   const contract = getBusinessEventContract(key);
   return contract ? contractToBusinessEventDefinition(contract) : null;
 }
-

@@ -78,6 +78,14 @@ export type BusinessListDashboardData = {
         transactionCount: number;
         onPeriodChange?: (period: "WEEK" | "MONTH" | "YEAR" | "ALL") => void;
     };
+    technicalDailyPerformance?: {
+        label: string;
+        onTime: number;
+        completedWithDeadline: number;
+        created: number;
+        started: number;
+        completed: number;
+    };
 };
 
 export type BusinessListDashboardView = {
@@ -90,6 +98,7 @@ export type BusinessListDashboardWidgetKey =
     | "value-trend"
     | "status-breakdown"
     | "recent-activity"
+    | "technical-daily-performance"
     | "cash-flow"
     | "watch-media"
     | "watch-service"

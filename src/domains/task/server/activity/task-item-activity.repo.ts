@@ -142,7 +142,7 @@ export async function listTaskItemActivitiesRepo(db: DB, taskItemId: string) {
 
 export async function listBusinessTargetActivitiesRepo(
   db: DB,
-  input: { targetType: string; targetId: string },
+  input: { targetType: string; targetId: string; skip?: number; take?: number },
 ) {
   return dbOrTx(db).taskItemActivity.findMany({
     where: {
@@ -163,5 +163,21 @@ export async function listBusinessTargetActivitiesRepo(
     },
     include: TASK_ITEM_ACTIVITY_INCLUDE,
     orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
+    skip: input.skip,
+    take: input.take,
+  });
+}
+
+export async function countBusinessTargetActivitiesRepo(
+  db: DB,
+  input: { targetType: string; targetId: string },
+) {
+  return dbOrTx(db).taskItemActivity.count({
+    where: {
+      AND: [
+        { metadataJson: { path: ["targetType"], equals: input.targetType } },
+        { metadataJson: { path: ["targetId"], equals: input.targetId } },
+      ],
+    },
   });
 }

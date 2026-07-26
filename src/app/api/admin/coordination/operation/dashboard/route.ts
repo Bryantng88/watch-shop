@@ -4,12 +4,71 @@ import { getCoordinationDashboard } from "@/domains/coordination/server/coordina
 import type { CoordinationContext } from "@/domains/coordination/server/coordination-cycle.types";
 import type { BusinessListDashboardData } from "@/domains/shared/ui/business-list";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
+import { prisma } from "@/server/db/client";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 function money(value: number) {
   return `${Math.round(value).toLocaleString("vi-VN")}đ`;
+}
+
+function bangkokTodayRange(now = new Date()) {
+  const bangkokOffsetMs = 7 * 60 * 60 * 1000;
+  const bangkokNow = new Date(now.getTime() + bangkokOffsetMs);
+  const start = new Date(
+    Date.UTC(
+      bangkokNow.getUTCFullYear(),
+      bangkokNow.getUTCMonth(),
+      bangkokNow.getUTCDate(),
+    ) - bangkokOffsetMs,
+  );
+  return { start, end: new Date(start.getTime() + 24 * 60 * 60 * 1000) };
+}
+
+async function loadTechnicalDailyPerformance() {
+  const { start, end } = bangkokTodayRange();
+  const [eventCounts, completedWithDeadline, onTime] = await Promise.all([
+    prisma.businessEventLog.groupBy({
+      by: ["eventKey"],
+      where: {
+        eventKey: {
+          in: [
+            "technical_issue.created",
+            "technical_issue.started",
+            "technical_issue.completed",
+          ],
+        },
+        createdAt: { gte: start, lt: end },
+      },
+      _count: { _all: true },
+    }),
+    prisma.technicalIssue.count({
+      where: {
+        completedAt: { gte: start, lt: end },
+        expectedCompletionAt: { not: null },
+      },
+    }),
+    prisma.$queryRaw<Array<{ count: bigint }>>`
+      SELECT COUNT(*) AS "count"
+      FROM "TechnicalIssue"
+      WHERE "completedAt" >= ${start}
+        AND "completedAt" < ${end}
+        AND "expectedCompletionAt" IS NOT NULL
+        AND "completedAt" <= "expectedCompletionAt"
+    `,
+  ]);
+  const count = (eventKey: string) =>
+    eventCounts.find((row) => row.eventKey === eventKey)?._count._all ?? 0;
+
+  return {
+    label: "Hiệu suất TI hôm nay",
+    onTime: Number(onTime[0]?.count ?? 0),
+    completedWithDeadline,
+    created: count("technical_issue.created"),
+    started: count("technical_issue.started"),
+    completed: count("technical_issue.completed"),
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -28,22 +87,44 @@ export async function GET(request: NextRequest) {
     const flowStageKey = request.nextUrl.searchParams.get("flowStage");
     const flowPage = Number(request.nextUrl.searchParams.get("flowPage") ?? 1);
     const flowPageSize = Number(request.nextUrl.searchParams.get("flowPageSize") ?? 20);
+    const flowQuery = request.nextUrl.searchParams.get("flowQuery");
+    const flowStatus = request.nextUrl.searchParams.get("flowStatus");
+    const flowPaymentStatus = request.nextUrl.searchParams.get("flowPaymentStatus");
+    const flowSort = request.nextUrl.searchParams.get("flowSort");
     const includeBoard = request.nextUrl.searchParams.get("includeBoard") === "1";
+    const boardOnly = !flowItemsOnly && includeBoard;
+    const boardStage = request.nextUrl.searchParams.get("boardStage");
+    const boardPage = Number(request.nextUrl.searchParams.get("boardPage") ?? 1);
+    const boardPageSize = Number(request.nextUrl.searchParams.get("boardPageSize") ?? 20);
+    const technicalDailyPerformancePromise =
+      !flowItemsOnly &&
+      !includeBoard &&
+      modeKey === "technical-issue-flow"
+        ? loadTechnicalDailyPerformance()
+        : Promise.resolve(undefined);
     const data = await getCoordinationDashboard({
       context,
       modeKey,
       date,
       auth,
-      includeDashboardDetails: true,
+      includeDashboardDetails: !flowItemsOnly && !boardOnly,
       includeTechnicalBoard: !flowItemsOnly && includeBoard && modeKey === "technical-issue-flow",
       includeMediaBoard: !flowItemsOnly && includeBoard && modeKey === "media-production-flow",
+      boardStage,
+      boardPage,
+      boardPageSize,
       includeFlowItems: flowItemsOnly,
       flowStageKey,
       flowPage,
       flowPageSize,
+      flowQuery,
+      flowStatus,
+      flowPaymentStatus,
+      flowSort,
       includeManagementDetails: false,
-      includeWorkspaceSummaries: !flowItemsOnly,
+      includeWorkspaceSummaries: !flowItemsOnly && !boardOnly,
     });
+    const technicalDailyPerformance = await technicalDailyPerformancePromise;
     const flow = data.viewConfig.modes.find((mode) => mode.key === modeKey);
     const scopeLabel = data.viewConfig.coreFlows?.find(
       (item) => item.key === flow?.coreFlowKey,
@@ -102,6 +183,7 @@ export async function GET(request: NextRequest) {
       ] },
       activities: { label: `Hoạt động · ${scopeLabel}`, items: activities },
       cashFlow: cashFlow ? { period, ...cashFlow } : undefined,
+      technicalDailyPerformance,
     };
 
     return NextResponse.json({

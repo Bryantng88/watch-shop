@@ -22,6 +22,13 @@ const registryWidgets = Object.keys(
     BUSINESS_LIST_DASHBOARD_WIDGET_REGISTRY,
 ) as BusinessListDashboardWidgetKey[];
 
+function dashboardColumns(widgetCount: number) {
+    if (widgetCount <= 1) return "xl:grid-cols-1";
+    if (widgetCount === 2) return "xl:grid-cols-[1.65fr_1fr]";
+    if (widgetCount === 3) return "xl:grid-cols-[1.65fr_1fr_1.12fr]";
+    return "xl:grid-cols-[1.65fr_1fr_1fr_1.12fr]";
+}
+
 function normalizeWidgets(
     value: unknown,
     availableWidgets: BusinessListDashboardWidgetKey[],
@@ -45,11 +52,11 @@ export function BusinessListDashboardSkeleton({ count = 4 }: { count?: number })
 
     return (
         <DashboardWidgetGrid
-            columns="xl:grid-cols-[1.65fr_1fr_1fr_1.12fr]"
+            columns={dashboardColumns(skeletonCount)}
             className="animate-pulse"
         >
             {Array.from({ length: skeletonCount }, (_, item) => (
-                <div key={item} className="h-[190px] rounded-xl border border-slate-200 bg-white p-5">
+                <div key={item} className="h-[190px] rounded-xl border border-slate-200 bg-white p-5 shadow-[0_4px_14px_rgba(15,23,42,0.055)]">
                     <div className="h-3 w-24 rounded bg-slate-100" />
                     <div className="mt-6 h-8 w-32 rounded bg-slate-100" />
                     <div className="mt-5 h-12 rounded bg-slate-50" />
@@ -243,7 +250,7 @@ export default function BusinessListDashboard({
                 </div>
             ) : null}
 
-            <DashboardWidgetGrid columns="xl:grid-cols-[1.65fr_1fr_1fr_1.12fr]">
+            <DashboardWidgetGrid columns={dashboardColumns(selectedWidgets.length)}>
                 {selectedWidgets.map((widgetKey) => {
                     const definition = BUSINESS_LIST_DASHBOARD_WIDGET_REGISTRY[widgetKey];
                     const Widget = definition.component;

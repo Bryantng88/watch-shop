@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { Plus, ShoppingCart } from "lucide-react";
 
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
@@ -15,18 +17,21 @@ import { buildOrderWorkCaseSource } from "@/domains/work-case/utils/work-case-so
 import {
   OrderListBulkActions,
   OrderListFilters,
-  OrderListSubFilters,
   OrderListTable,
-  OrderListToolbar,
-  OrderListViewTabs,
 } from "../ui/list";
+import BusinessListDashboard from "@/domains/shared/ui/business-list/BusinessListDashboard";
+import {
+  BusinessListPageHeader,
+  BusinessListShell,
+  DashboardCustomizeButton,
+  type BusinessListDashboardData,
+  type BusinessListDashboardWidgetKey,
+} from "@/domains/shared/ui/business-list";
 import type {
   OrderListCounts,
   OrderListFiltersValue,
   OrderListItem,
   OrderListPageProps,
-  OrderProcessingSubFilter,
-  OrderViewKey,
 } from "../ui/list";
 import {
   buildCounts,
@@ -39,6 +44,13 @@ import {
 
 type Props = OrderListPageProps;
 
+const ORDER_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = [
+  "overview",
+  "value-trend",
+  "status-breakdown",
+  "recent-activity",
+];
+
 function firstRaw(value: string | string[] | undefined, fallback = ""): string {
   if (Array.isArray(value)) return String(value[0] ?? fallback);
   return String(value ?? fallback);
@@ -49,18 +61,14 @@ function buildInitialFilters(input: { rawSearchParams: Props["rawSearchParams"];
     q: firstRaw(input.rawSearchParams.q),
     sort: normalizeOrderSort(firstRaw(input.rawSearchParams.sort, "updatedDesc")),
     pageSize: firstRaw(input.rawSearchParams.pageSize, String(input.pageSize)),
+    view: normalizeOrderView(firstRaw(input.rawSearchParams.view, "all")),
+    subFilter: normalizeOrderProcessingSubFilter(firstRaw(input.rawSearchParams.subFilter)),
   };
 }
 
 function isCancelledOrder(status?: string | null) {
   const normalized = String(status ?? "").toUpperCase();
   return normalized === "CANCELLED" || normalized === "CANCELED";
-}
-
-function toNumberOrNull(value: unknown): number | null {
-  if (value === null || value === undefined || value === "") return null;
-  const n = Number(value);
-  return Number.isFinite(n) ? n : null;
 }
 
 function toNumber(value: unknown) {
@@ -84,6 +92,7 @@ function toPaymentManageOrder(order: OrderListItem | null) {
 export default function OrderListClient({
   items,
   total,
+  totalValue,
   page,
   pageSize,
   totalPages,
@@ -98,12 +107,12 @@ export default function OrderListClient({
   const dialog = useAppDialog();
   const progress = useAppProgress();
   const currentView = normalizeOrderView(sp.get("view"));
-  const currentSubFilter = normalizeOrderProcessingSubFilter(sp.get("subFilter"));
   const [filters, setFilters] = useState<OrderListFiltersValue>(() => buildInitialFilters({ rawSearchParams, pageSize }));
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [paymentManageOrder, setPaymentManageOrder] = useState<OrderListItem | null>(null);
   const [shipmentManageOrder, setShipmentManageOrder] = useState<OrderListItem | null>(null);
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+  const [dashboardCustomizationRequest, setDashboardCustomizationRequest] = useState(0);
 
   const paymentManageOrderForModal = useMemo(
     () => toPaymentManageOrder(paymentManageOrder),
@@ -116,6 +125,44 @@ export default function OrderListClient({
   );
 
   const selectableIds = useMemo(() => items.filter(isOrderSelectable).map((item) => item.id), [items]);
+  const visibleOrderValues = useMemo(() => items.map((item) => toNumber(item.totalAmount)), [items]);
+  const dashboardData = useMemo<BusinessListDashboardData>(() => ({
+    periodLabel: "Toàn bộ dữ liệu",
+    metrics: [
+      { key: "all", label: "Tổng đơn", value: countsByView.all ?? total, tone: "violet" },
+      { key: "processing", label: "Đang xử lý", value: countsByView.processing ?? 0, tone: "blue" },
+      { key: "completed", label: "Hoàn tất", value: countsByView.completed ?? 0, tone: "emerald" },
+      { key: "cancelled", label: "Đã hủy", value: countsByView.cancelled ?? 0, tone: "rose" },
+    ],
+    inventoryValue: {
+      label: "Giá trị đơn hàng",
+      value: totalValue,
+      currency: "VND",
+      helper: `${total} đơn khớp bộ lọc`,
+      trend: [...visibleOrderValues].reverse(),
+    },
+    breakdown: {
+      label: "Trạng thái đơn hàng",
+      total: countsByView.all ?? total,
+      items: [
+        { key: "processing", label: "Đang xử lý", value: countsByView.processing ?? 0, tone: "blue" },
+        { key: "completed", label: "Hoàn tất", value: countsByView.completed ?? 0, tone: "emerald" },
+        { key: "returned", label: "Đã hoàn", value: countsByView.returned ?? 0, tone: "amber" },
+        { key: "cancelled", label: "Đã hủy", value: countsByView.cancelled ?? 0, tone: "rose" },
+      ],
+    },
+    activities: {
+      label: "Đơn cập nhật gần đây",
+      items: items.slice(0, 4).map((item) => ({
+        id: item.id,
+        title: item.refNo || item.id,
+        description: [item.customerName, item.status].filter(Boolean).join(" · "),
+        occurredAt: item.updatedAt ? String(item.updatedAt) : null,
+        href: `/admin/orders/${item.id}`,
+        kind: "updated",
+      })),
+    },
+  }), [countsByView, items, total, totalValue, visibleOrderValues]);
 
   function navigateWithLoading(patch: Record<string, string | null | undefined>) {
     progress.show({ title: "Đang tải đơn hàng", message: "Hệ thống đang cập nhật danh sách." });
@@ -123,31 +170,16 @@ export default function OrderListClient({
     window.setTimeout(() => progress.hide(), 700);
   }
 
-  function setView(view: OrderViewKey) {
-    setSelectedIds([]);
-    navigateWithLoading({
-      view: view === "all" ? null : view,
-      subFilter: null,
-      page: "1",
-      pageSize: String(pageSize),
-    });
-  }
-
-  function setSubFilter(subFilter: OrderProcessingSubFilter) {
-    setSelectedIds([]);
-    navigateWithLoading({
-      view: "processing",
-      subFilter: subFilter || null,
-      page: "1",
-      pageSize: String(pageSize),
-    });
-  }
-
   function applyFilters() {
     setSelectedIds([]);
     navigateWithLoading({
       q: filters.q.trim() || null,
       sort: filters.sort,
+      view: filters.view === "all" ? null : filters.view,
+      subFilter:
+        filters.view === "processing" && filters.subFilter
+          ? filters.subFilter
+          : null,
       pageSize: filters.pageSize,
       page: "1",
     });
@@ -155,8 +187,21 @@ export default function OrderListClient({
 
   function clearFilters() {
     setSelectedIds([]);
-    setFilters({ q: "", sort: "updatedDesc", pageSize: String(pageSize) });
-    navigateWithLoading({ q: null, sort: null, pageSize: null, page: "1" });
+    setFilters({
+      q: "",
+      sort: "updatedDesc",
+      pageSize: "20",
+      view: "all",
+      subFilter: "",
+    });
+    navigateWithLoading({
+      q: null,
+      sort: null,
+      view: null,
+      subFilter: null,
+      pageSize: null,
+      page: "1",
+    });
   }
 
   function toggleOne(id: string, checked: boolean) {
@@ -267,11 +312,6 @@ export default function OrderListClient({
       progress.hide();
       setPaymentSubmitting(false);
     }
-  }
-
-  function handleMarkPaymentPaid(row: OrderListItem) {
-    if (isCancelledOrder(row.status)) return;
-    setPaymentManageOrder(row);
   }
 
   function handleMarkShipmentDelivered(row: OrderListItem) {
@@ -482,25 +522,49 @@ export default function OrderListClient({
     setWorkCaseSource(buildOrderWorkCaseSource(row));
   }
   return (
-    <div className="mx-auto w-full max-w-[1360px] min-w-0 space-y-5 px-4 py-6 lg:px-5 xl:px-6">
-      <OrderListToolbar selectedCount={selectedIds.length} />
-
-      <OrderListViewTabs currentView={currentView} counts={countsByView} onViewChange={setView} />
-
-      <OrderListSubFilters
-        currentView={currentView}
-        currentSubFilter={currentSubFilter}
-        counts={countsByView}
-        onChange={setSubFilter}
-      />
-
-      <OrderListFilters
-        filters={filters}
-        onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
-        onApply={applyFilters}
-        onClear={clearFilters}
-      />
-
+    <BusinessListShell
+      header={
+        <BusinessListPageHeader
+          title="Đơn hàng"
+          icon={<ShoppingCart className="h-5 w-5" />}
+          meta={<span>Quản lý bán hàng · Thanh toán · Giao nhận</span>}
+          actions={
+            <div className="flex items-center gap-2">
+              <DashboardCustomizeButton
+                onClick={() => setDashboardCustomizationRequest((request) => request + 1)}
+              />
+              <Link
+                href="/admin/orders/new"
+                className="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white transition hover:bg-slate-800"
+              >
+                <Plus className="h-4 w-4" />
+                Tạo đơn hàng
+              </Link>
+            </div>
+          }
+        />
+      }
+      dashboard={
+        <BusinessListDashboard
+          data={dashboardData}
+          widgets={ORDER_DASHBOARD_WIDGETS}
+          storageKey="admin-dashboard:order-list:v2"
+          customizationRequest={dashboardCustomizationRequest}
+          showCustomizationTrigger={false}
+        />
+      }
+      filters={
+        <OrderListFilters
+          filters={filters}
+          counts={countsByView}
+          total={total}
+          visibleCount={items.length}
+          onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
+          onApply={applyFilters}
+          onClear={clearFilters}
+        />
+      }
+    >
       <OrderListBulkActions selectedCount={selectedIds.length} onBulkPost={() => postOrders(selectedIds)} onClearSelection={() => setSelectedIds([])} />
 
       <OrderListTable
@@ -558,6 +622,6 @@ export default function OrderListClient({
           router.refresh();
         }}
       />
-    </div>
+    </BusinessListShell>
   );
 }

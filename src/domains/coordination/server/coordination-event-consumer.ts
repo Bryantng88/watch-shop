@@ -136,9 +136,14 @@ type PaymentCollectionWorkspaceRole =
   | "PAYMENT_INBOX"
   | "PAYMENT_REVIEW"
   | "PAYMENT_SETTLED";
+type ShipmentOperationWorkspaceRole =
+  | "SHIPMENT_WAITING"
+  | "SHIPMENT_PROCESSING"
+  | "SHIPMENT_DONE";
 type OperationWorkspaceRole =
   | ServiceOperationWorkspaceRole
-  | PaymentCollectionWorkspaceRole;
+  | PaymentCollectionWorkspaceRole
+  | ShipmentOperationWorkspaceRole;
 
 function clean(value: unknown) {
   return String(value ?? "").trim();
@@ -341,6 +346,30 @@ function paymentCollectionWorkspaceRoleValue(
   return null;
 }
 
+function shipmentOperationWorkspaceRoleFromNote(
+  note: string | null | undefined,
+): ShipmentOperationWorkspaceRole | null {
+  return shipmentOperationWorkspaceRoleValue(
+    String(note ?? "").match(
+      /^operationWorkspaceRole:\s*(SHIPMENT_WAITING|SHIPMENT_PROCESSING|SHIPMENT_DONE)\s*$/im,
+    )?.[1],
+  );
+}
+
+function shipmentOperationWorkspaceRoleValue(
+  value: unknown,
+): ShipmentOperationWorkspaceRole | null {
+  const normalized = clean(value).toUpperCase();
+  if (
+    normalized === "SHIPMENT_WAITING" ||
+    normalized === "SHIPMENT_PROCESSING" ||
+    normalized === "SHIPMENT_DONE"
+  ) {
+    return normalized;
+  }
+  return null;
+}
+
 function isServiceOperationTechnicalRoute(input: {
   route: CoordinationRoute;
   targetType: string;
@@ -358,6 +387,16 @@ function isPaymentCollectionRoute(input: {
   return (
     normalizeMatchKey(input.route.workTypeKey) === "payment" &&
     normalizeTargetType(input.targetType) === "PAYMENT"
+  );
+}
+
+function isShipmentOperationRoute(input: {
+  route: CoordinationRoute;
+  targetType: string;
+}) {
+  return (
+    normalizeMatchKey(input.route.workTypeKey) === "shipment" &&
+    normalizeTargetType(input.targetType) === "SHIPMENT"
   );
 }
 
@@ -415,6 +454,8 @@ function scopeOperationWorkspaceTickets<T extends { item: { note: string | null 
     ? serviceOperationWorkspaceRoleFromNote
     : isPaymentCollectionRoute(input)
       ? paymentCollectionWorkspaceRoleFromNote
+      : isShipmentOperationRoute(input)
+        ? shipmentOperationWorkspaceRoleFromNote
       : null;
 
   if (!roleFromNote) return tickets;
@@ -867,8 +908,30 @@ async function resolveOperationWorkspaceRole(input: {
 }): Promise<OperationWorkspaceRole | null> {
   return (
     await resolveServiceOperationWorkspaceRole(input) ??
-    await resolvePaymentCollectionWorkspaceRole(input)
+    await resolvePaymentCollectionWorkspaceRole(input) ??
+    await resolveShipmentOperationWorkspaceRole(input)
   );
+}
+
+async function resolveShipmentOperationWorkspaceRole(input: {
+  db: DB;
+  route: CoordinationRoute;
+  eventKey: string;
+  targetType: string;
+  targetId: string;
+  metadataJson?: Prisma.JsonValue | null;
+}): Promise<ShipmentOperationWorkspaceRole | null> {
+  if (!isShipmentOperationRoute(input)) return null;
+  const context = coordinationTypeToContext(input.route.coordinationType);
+  if (!context) return null;
+  const operationRoute = operationalEventRouteForWorkType({
+    workTypeKey: input.route.workTypeKey,
+    coordinationContext: context,
+    eventKey: input.eventKey,
+    targetType: input.targetType,
+  });
+  if (!operationRoute) return null;
+  return shipmentOperationWorkspaceRoleValue(operationRoute.workspaceRole);
 }
 
 function isServiceRequestWorkspaceIntake(input: {
@@ -1404,7 +1467,8 @@ export async function consumeBusinessEventForCoordination(
       (
         isMediaFlowStageRoute({ route, targetType }) ||
         isServiceOperationTechnicalRoute({ route, targetType }) ||
-        isPaymentCollectionRoute({ route, targetType })
+        isPaymentCollectionRoute({ route, targetType }) ||
+        isShipmentOperationRoute({ route, targetType })
       ) &&
       isFlowStageWorkTicket(workTicket)
     ) {

@@ -342,4 +342,24 @@ registerCoordinationRoutes([
       bindingMode: "PROGRESS",
     },
   },
+  ...[
+    "shipment.created",
+    "shipment.shipped",
+    "shipment.returning",
+    "shipment.delivered",
+    "shipment.returned",
+    "shipment.cancelled",
+  ].map((eventKey) => ({
+    eventKey,
+    targetType: "SHIPMENT",
+    coordinationType: "operation",
+    workTypeKey: "shipment",
+    enabled: true,
+    metadata: {
+      note: "Route Shipment lifecycle milestones through Shipment Operation.",
+      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeContext: "OPERATION",
+      bindingMode: eventKey === "shipment.created" ? "INTAKE" : "PROGRESS",
+    },
+  })),
 ]);

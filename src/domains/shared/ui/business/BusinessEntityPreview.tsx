@@ -20,11 +20,22 @@ import type {
     BusinessEntityType,
 } from "@/domains/shared/business/business-entity.types";
 import {
-    getBusinessEntityPreviewAction,
     updateTechnicalIssuePreviewAction,
 } from "@/domains/shared/business/business-entity-preview.actions";
 import { ActivityViewModelFeed } from "@/domains/task/ui/task-work/activity/ActivityFeed";
-import { addTaskItemDiscussionAction, markTaskItemMentionsReadAction } from "@/domains/task/actions/task.actions";
+import { markTaskItemMentionsReadAction } from "@/domains/task/actions/task.actions";
+
+async function loadBusinessEntityPreview(type: BusinessEntityType, id: string) {
+    const query = new URLSearchParams({ type, id });
+    const response = await fetch(`/api/admin/business-entity-preview?${query.toString()}`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(result?.error || "Không thể tải xem nhanh.");
+    return (result?.preview ?? null) as BusinessEntityPreview | null;
+}
 
 const TECHNICAL_AREAS = [
     ["GENERAL", "Tổng quát"],
@@ -195,13 +206,19 @@ function BusinessEntityActivityPanel({
         setSubmitting(true);
         setCommentError(null);
         try {
-            await addTaskItemDiscussionAction({
-                taskItemId: activityTaskItemId,
-                targetType: preview.type,
-                targetId: preview.id,
-                body: text,
-                mentionedUserIds,
+            const response = await fetch("/api/admin/business-entity-preview", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Accept: "application/json" },
+                body: JSON.stringify({
+                    taskItemId: activityTaskItemId,
+                    targetType: preview.type,
+                    targetId: preview.id,
+                    body: text,
+                    mentionedUserIds,
+                }),
             });
+            const result = await response.json().catch(() => null);
+            if (!response.ok) throw new Error(result?.error || "Không thể gửi trao đổi.");
             setBody("");
             setMentionedUserIds([]);
             onActivityChanged?.("COMMENT");
@@ -377,7 +394,9 @@ export function BusinessEntityPreviewModal({
             onClick={onClose}
         >
             <div
-                className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl"
+                className={`flex max-h-[90vh] w-full flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl ${
+                    preview?.type === "TECHNICAL_ISSUE" ? "max-w-4xl" : "max-w-2xl"
+                }`}
                 onClick={(event) => event.stopPropagation()}
             >
                 <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
@@ -489,14 +508,24 @@ export function BusinessEntityPreviewModal({
                                     {preview.notes.map((note) => (
                                         <section
                                             key={note.label}
-                                            className={note.tone === "warning"
+                                            className={`${note.tone === "warning"
                                                 ? "rounded-2xl border border-amber-200 bg-amber-50 p-3"
                                                 : note.tone === "info"
-                                                    ? "rounded-2xl border border-blue-100 bg-blue-50 p-3"
-                                                    : "rounded-2xl border border-slate-200 bg-white p-3"}
+                                                    ? "rounded-2xl border border-blue-100 bg-blue-50"
+                                                    : "rounded-2xl border border-slate-200 bg-white"
+                                            } ${note.label.toLocaleLowerCase("vi").includes("ghi chú kỹ thuật") ? "px-3 py-2.5" : "p-3"}`}
                                         >
                                             <div className="text-xs font-bold uppercase tracking-[0.08em] text-slate-500">{note.label}</div>
-                                            <div className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-800">{note.body}</div>
+                                            <div
+                                                className={`mt-1 whitespace-pre-wrap text-slate-800 ${
+                                                    note.label.toLocaleLowerCase("vi").includes("ghi chú kỹ thuật")
+                                                        ? "line-clamp-2 text-xs leading-5"
+                                                        : "text-sm leading-6"
+                                                }`}
+                                                title={note.body}
+                                            >
+                                                {note.body}
+                                            </div>
                                         </section>
                                     ))}
                                 </div>
@@ -507,11 +536,19 @@ export function BusinessEntityPreviewModal({
                                     {preview.sections.map((section) => (
                                         <section
                                             key={section.title}
-                                            className="rounded-3xl border border-slate-200/80 bg-white p-3 shadow-[0_4px_18px_rgba(15,23,42,0.035)]"
+                                            className={
+                                                section.title.toLocaleLowerCase("vi").includes("technical issue")
+                                                    ? "rounded-3xl border border-blue-200 bg-blue-50/55 p-4 shadow-[0_6px_20px_rgba(37,99,235,0.07)]"
+                                                    : "rounded-3xl border border-slate-200/80 bg-white p-3 shadow-[0_4px_18px_rgba(15,23,42,0.035)]"
+                                            }
                                         >
                                             <div className="flex items-start justify-between gap-3">
                                                 <div>
-                                                    <div className="text-sm font-semibold text-slate-950">
+                                                    <div className={`text-sm font-semibold ${
+                                                        section.title.toLocaleLowerCase("vi").includes("technical issue")
+                                                            ? "text-blue-950"
+                                                            : "text-slate-950"
+                                                    }`}>
                                                         {section.title}
                                                     </div>
                                                     {section.subtitle ? (
@@ -563,14 +600,26 @@ export function BusinessEntityPreviewModal({
                                                         <Link
                                                             key={`${item.id ?? section.title}:${index}`}
                                                             href={item.href}
-                                                            className="block rounded-2xl border border-slate-100 bg-slate-50/50 px-2 transition hover:border-blue-100 hover:bg-blue-50"
+                                                            className={`block rounded-2xl border px-3 transition ${
+                                                                section.title.toLocaleLowerCase("vi").includes("technical issue")
+                                                                    ? item.id === preview.id
+                                                                        ? "border-blue-300 bg-white shadow-[0_3px_12px_rgba(37,99,235,0.08)] ring-1 ring-blue-100"
+                                                                        : "border-blue-100 bg-white/75 hover:border-blue-200 hover:bg-white"
+                                                                    : "border-slate-100 bg-slate-50/50 hover:border-blue-100 hover:bg-blue-50"
+                                                            }`}
                                                         >
                                                             {content}
                                                         </Link>
                                                     ) : (
                                                         <div
                                                             key={`${item.id ?? section.title}:${index}`}
-                                                            className="rounded-2xl border border-slate-100 bg-slate-50/50 px-2"
+                                                            className={`rounded-2xl border px-3 ${
+                                                                section.title.toLocaleLowerCase("vi").includes("technical issue")
+                                                                    ? item.id === preview.id
+                                                                        ? "border-blue-300 bg-white shadow-[0_3px_12px_rgba(37,99,235,0.08)] ring-1 ring-blue-100"
+                                                                        : "border-blue-100 bg-white/75"
+                                                                    : "border-slate-100 bg-slate-50/50"
+                                                            }`}
                                                         >
                                                             {content}
                                                         </div>
@@ -643,10 +692,7 @@ export function useBusinessEntityPreview() {
 
         startTransition(async () => {
             try {
-                const live = await getBusinessEntityPreviewAction({
-                    type: seed.type,
-                    id: seed.id,
-                });
+                const live = await loadBusinessEntityPreview(seed.type, seed.id);
 
                 if (live) {
                     setPreview({
@@ -673,10 +719,7 @@ export function useBusinessEntityPreview() {
 
         startTransition(async () => {
             try {
-                const live = await getBusinessEntityPreviewAction({
-                    type: current.type,
-                    id: current.id,
-                });
+                const live = await loadBusinessEntityPreview(current.type, current.id);
                 if (live) setPreview(live);
             } catch (err: unknown) {
                 setError(err instanceof Error ? err.message : "Không thể tải lại preview.");

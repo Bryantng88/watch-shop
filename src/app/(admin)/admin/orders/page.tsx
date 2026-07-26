@@ -39,6 +39,7 @@ export default async function OrderListPage({
         <OrderListClient
             items={serializeForClient(result.items)}
             total={result.total}
+            totalValue={result.totalValue}
             counts={result.counts}
             page={result.page}
             pageSize={result.pageSize}

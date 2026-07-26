@@ -30,7 +30,16 @@ export default async function OperationCoordinationPage(props: PageProps) {
         db: prisma,
         date: first(searchParams.date) ?? null,
         modeKey,
+        flowStageKey: first(searchParams.flowStage) ?? null,
+        flowPage: Number(first(searchParams.flowPage) ?? 1),
+        flowPageSize: Number(first(searchParams.flowPageSize) ?? 20),
+        flowQuery: first(searchParams.flowQuery) ?? null,
+        flowStatus: first(searchParams.flowStatus) ?? null,
+        flowPaymentStatus: first(searchParams.flowPaymentStatus) ?? null,
+        flowSort: first(searchParams.flowSort) ?? null,
         includeDashboardDetails: false,
+        // The TI board has its own paginated client request. Keeping it out of
+        // the page payload avoids blocking the entire route on the heaviest query.
         includeTechnicalBoard: false,
         includeFlowItems: modeKey !== "technical-issue-flow",
         auth,

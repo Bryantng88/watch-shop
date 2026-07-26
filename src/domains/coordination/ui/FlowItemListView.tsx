@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Activity,
   Radio,
+  X,
 } from "lucide-react";
 import type { CoordinationFlowListItemDTO } from "../server/coordination-dashboard.types";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ import {
   type TaskItemQueueItem,
 } from "@/domains/task/ui/task-work/QueueWorkQueue";
 import { PAYMENT_PURPOSE_LABEL } from "@/domains/payment/shared/payment.constants";
+import type { TaskItemActivityViewModel } from "@/domains/task/server/activity";
 
 type FlowStage = {
   key: string;
@@ -53,6 +55,41 @@ type Props = {
   };
   onPageChange: (page: number) => void;
 };
+
+type OperationalActionField = {
+  key: string;
+  label: string;
+  kind: "text" | "textarea" | "select" | "multiselect" | "money" | "number" | "boolean" | "date";
+  required: boolean;
+  options?: Array<{ value: string; label: string }>;
+};
+
+type OperationalActionForm = {
+  key: string;
+  label: string;
+  description?: string | null;
+  fields: OperationalActionField[];
+};
+
+function operationalActionFromMetadata(metadata: unknown): OperationalActionForm | null {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+  const candidate = (metadata as Record<string, unknown>).operationalBlueprintAction;
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return null;
+  const action = candidate as Record<string, unknown>;
+  const key = String(action.key ?? "").trim();
+  if (!key) return null;
+  return {
+    key,
+    label: String(action.label ?? key),
+    description: action.description ? String(action.description) : null,
+    fields: Array.isArray(action.fields)
+      ? action.fields.filter(
+          (field): field is OperationalActionField =>
+            Boolean(field) && typeof field === "object" && !Array.isArray(field),
+        )
+      : [],
+  };
+}
 
 function normalize(value?: string | null) {
   return String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
@@ -166,6 +203,22 @@ export default function FlowItemListView({
   const [optimisticallyMovedIds, setOptimisticallyMovedIds] = useState<string[]>([]);
   const [reconcileItem, setReconcileItem] = useState<CoordinationFlowListItemDTO | null>(null);
   const [isBulkReconcileOpen, setIsBulkReconcileOpen] = useState(false);
+  const [activityTarget, setActivityTarget] =
+    useState<CoordinationFlowListItemDTO | null>(null);
+  const [activityItems, setActivityItems] = useState<TaskItemActivityViewModel[]>([]);
+  const [activityPagination, setActivityPagination] = useState({
+    page: 1,
+    pageSize: 10,
+    total: 0,
+    totalPages: 1,
+  });
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityError, setActivityError] = useState<string | null>(null);
+  const [operationalAction, setOperationalAction] = useState<{
+    item: CoordinationFlowListItemDTO;
+    action: OperationalActionForm;
+  } | null>(null);
+  const [operationalFields, setOperationalFields] = useState<Record<string, string>>({});
   const [bulkReconcileAmounts, setBulkReconcileAmounts] = useState<Record<string, string>>({});
   const [bulkReconcileFields, setBulkReconcileFields] = useState({
     method: "BANK_TRANSFER",
@@ -269,6 +322,37 @@ export default function FlowItemListView({
   const bulkRemainingTotal = Math.max(0, bulkExpectedTotal - bulkReviewedTotal);
   const bulkCurrency = selectedPaymentItems[0]?.payment?.currency ?? "VND";
 
+  async function loadActivityPage(
+    item: CoordinationFlowListItemDTO,
+    page: number,
+  ) {
+    setActivityTarget(item);
+    setActivityLoading(true);
+    setActivityError(null);
+    try {
+      const params = new URLSearchParams({
+        targetType: item.targetType,
+        targetId: item.targetId,
+        page: String(page),
+        pageSize: "10",
+      });
+      const response = await fetch(
+        `/api/admin/coordination/operation/activity?${params.toString()}`,
+        { cache: "no-store" },
+      );
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.error ?? "Không thể tải hoạt động.");
+      setActivityItems(Array.isArray(result?.items) ? result.items : []);
+      if (result?.pagination) setActivityPagination(result.pagination);
+    } catch (error) {
+      setActivityError(
+        error instanceof Error ? error.message : "Không thể tải hoạt động.",
+      );
+    } finally {
+      setActivityLoading(false);
+    }
+  }
+
   function runAction(item: CoordinationFlowListItemDTO, actionKey: string) {
     setActionError(null);
     setPendingActionId(item.id);
@@ -296,6 +380,53 @@ export default function FlowItemListView({
           setOptimisticallyMovedIds((current) => current.filter((id) => id !== item.id));
         }
         setActionError(error instanceof Error ? error.message : "Không thể cập nhật workflow.");
+      } finally {
+        setPendingActionId(null);
+      }
+    });
+  }
+
+  function openOperationalAction(
+    item: CoordinationFlowListItemDTO,
+    action: OperationalActionForm,
+  ) {
+    setActionError(null);
+    setOperationalFields(Object.fromEntries(
+      action.fields.map((field) => [
+        field.key,
+        field.kind === "select" ? field.options?.[0]?.value ?? "" : "",
+      ]),
+    ));
+    setOperationalAction({ item, action });
+  }
+
+  function submitOperationalAction() {
+    if (!operationalAction) return;
+    const missing = operationalAction.action.fields.find(
+      (field) => field.required && !String(operationalFields[field.key] ?? "").trim(),
+    );
+    if (missing) {
+      setActionError(`Vui lòng nhập ${missing.label}.`);
+      return;
+    }
+    setActionError(null);
+    setPendingActionId(operationalAction.item.id);
+    startActionTransition(async () => {
+      try {
+        await submitOperationalBlueprintActionAction({
+          taskItemId: operationalAction.item.taskItemId,
+          actionKey: operationalAction.action.key,
+          targetType: operationalAction.item.targetType,
+          targetId: operationalAction.item.targetId,
+          fields: operationalFields,
+        });
+        setOperationalAction(null);
+        setOperationalFields({});
+        router.refresh();
+      } catch (error) {
+        setActionError(
+          error instanceof Error ? error.message : "Không thể thực hiện thao tác vận chuyển.",
+        );
       } finally {
         setPendingActionId(null);
       }
@@ -739,7 +870,31 @@ export default function FlowItemListView({
                     </td>
                   ) : null}
                   {!showPaymentAmount ? <td className="px-4 py-3">
-                    {primaryAction && isOpenTargetTransition(primaryAction) ? (
+                    {item.targetType === "SHIPMENT" && enabledActions.length ? (
+                      <div className="flex flex-wrap gap-2">
+                        {enabledActions.map((transition) => {
+                          const action = operationalActionFromMetadata(transition.metadata);
+                          return (
+                            <button
+                              key={transition.actionKey}
+                              type="button"
+                              disabled={isActionPending}
+                              onClick={() =>
+                                action
+                                  ? openOperationalAction(item, action)
+                                  : runAction(item, transition.actionKey)
+                              }
+                              title={transition.manualActionLabel}
+                              className="h-8 max-w-40 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"
+                            >
+                              {pendingActionId === item.id
+                                ? "Đang xử lý..."
+                                : transition.manualActionLabel || transition.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : primaryAction && isOpenTargetTransition(primaryAction) ? (
                       <OpenTargetAction
                         queueItem={item as TaskItemQueueItem}
                         taskItemId={item.taskItemId}
@@ -772,12 +927,16 @@ export default function FlowItemListView({
                   </td>
                   <td className="px-4 py-3 text-center text-xs text-slate-500">{formatTime(item.updatedAt)}</td>
                   <td className="px-4 py-3">
-                    <span className="flex max-w-64 items-center gap-2 text-xs text-slate-600">
+                    <button
+                      type="button"
+                      onClick={() => void loadActivityPage(item, 1)}
+                      className="flex max-w-64 items-center gap-2 text-left text-xs text-slate-600 transition hover:text-violet-700"
+                    >
                       <Activity className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                       <span className="truncate">
                         {item.latestActivityTitle || "Chưa có thao tác"}
                       </span>
-                    </span>
+                    </button>
                   </td>
                   <td className="px-4 py-3">
                     <Link href={href} aria-label="Mở item" className="text-slate-400 transition group-hover:text-violet-600"><ChevronRight className="h-4 w-4" /></Link>
@@ -1281,6 +1440,213 @@ export default function FlowItemListView({
               </button>
             </div>
           </div>
+        </div>
+      ) : null}
+      {operationalAction ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+            <header className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+              <div>
+                <h3 className="text-base font-bold text-slate-950">
+                  {operationalAction.action.label}
+                </h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  {operationalAction.item.preview.title ??
+                    operationalAction.item.preview.ref ??
+                    operationalAction.item.targetId}
+                </p>
+                {operationalAction.action.description ? (
+                  <p className="mt-2 text-sm text-slate-600">
+                    {operationalAction.action.description}
+                  </p>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                disabled={isActionPending}
+                onClick={() => setOperationalAction(null)}
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </header>
+            <div className="max-h-[65vh] space-y-4 overflow-y-auto px-5 py-4">
+              {operationalAction.action.fields.map((field) => {
+                const value = operationalFields[field.key] ?? "";
+                const commonClass =
+                  "mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100";
+                return (
+                  <label key={field.key} className="block text-sm font-semibold text-slate-700">
+                    {field.label}
+                    {field.required ? <span className="text-rose-600"> *</span> : null}
+                    {field.kind === "select" ? (
+                      <select
+                        value={value}
+                        onChange={(event) =>
+                          setOperationalFields((current) => ({
+                            ...current,
+                            [field.key]: event.target.value,
+                          }))
+                        }
+                        className={commonClass}
+                      >
+                        {(field.options ?? []).map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : field.kind === "textarea" ? (
+                      <textarea
+                        rows={3}
+                        value={value}
+                        onChange={(event) =>
+                          setOperationalFields((current) => ({
+                            ...current,
+                            [field.key]: event.target.value,
+                          }))
+                        }
+                        className={commonClass}
+                      />
+                    ) : (
+                      <input
+                        type={
+                          field.kind === "money" || field.kind === "number"
+                            ? "number"
+                            : field.kind === "date"
+                              ? "date"
+                              : "text"
+                        }
+                        min={field.kind === "money" || field.kind === "number" ? 0 : undefined}
+                        step={field.kind === "money" ? 1000 : undefined}
+                        value={value}
+                        onChange={(event) =>
+                          setOperationalFields((current) => ({
+                            ...current,
+                            [field.key]: event.target.value,
+                          }))
+                        }
+                        className={commonClass}
+                      />
+                    )}
+                  </label>
+                );
+              })}
+              {actionError ? (
+                <p className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {actionError}
+                </p>
+              ) : null}
+            </div>
+            <footer className="flex justify-end gap-2 border-t border-slate-200 px-5 py-4">
+              <button
+                type="button"
+                disabled={isActionPending}
+                onClick={() => setOperationalAction(null)}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={isActionPending}
+                onClick={submitOperationalAction}
+                className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:cursor-wait disabled:opacity-60"
+              >
+                {isActionPending ? "Đang xử lý..." : "Xác nhận"}
+              </button>
+            </footer>
+          </div>
+        </div>
+      ) : null}
+
+      {activityTarget ? (
+        <div className="fixed inset-0 z-[90] flex justify-end bg-slate-950/30">
+          <button
+            type="button"
+            aria-label="Đóng hoạt động"
+            className="absolute inset-0 cursor-default"
+            onClick={() => setActivityTarget(null)}
+          />
+          <aside className="relative flex h-full w-full max-w-lg flex-col bg-white shadow-2xl">
+            <header className="flex items-start justify-between border-b border-slate-200 px-5 py-4">
+              <div className="min-w-0">
+                <h3 className="font-bold text-slate-950">Hoạt động</h3>
+                <p className="mt-1 truncate text-xs text-slate-500">
+                  {activityTarget.preview.title ?? activityTarget.preview.ref ?? activityTarget.targetId}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActivityTarget(null)}
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </header>
+            <div className="flex-1 space-y-3 overflow-y-auto p-5">
+              {activityLoading ? (
+                <p className="py-10 text-center text-sm text-slate-500">Đang tải hoạt động...</p>
+              ) : null}
+              {activityError ? (
+                <p className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{activityError}</p>
+              ) : null}
+              {!activityLoading && !activityError && !activityItems.length ? (
+                <p className="py-10 text-center text-sm text-slate-500">Chưa có hoạt động.</p>
+              ) : null}
+              {activityItems.map((activity) => (
+                <article key={activity.id} className="rounded-xl border border-slate-200 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-900">{activity.title}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {activity.actorLabel} · {formatTime(activity.occurredAt)}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">
+                      {activity.sourceType}
+                    </span>
+                  </div>
+                  {activity.body ? (
+                    <p className="mt-3 whitespace-pre-wrap text-sm text-slate-700">{activity.body}</p>
+                  ) : null}
+                  {activity.replies.length ? (
+                    <div className="mt-3 space-y-2 border-l-2 border-violet-100 pl-3">
+                      {activity.replies.map((reply) => (
+                        <div key={reply.id} className="rounded-lg bg-slate-50 px-3 py-2">
+                          <p className="text-xs font-semibold text-slate-700">{reply.actorLabel}</p>
+                          <p className="mt-1 whitespace-pre-wrap text-sm text-slate-600">{reply.body}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </article>
+              ))}
+            </div>
+            <footer className="flex items-center justify-between border-t border-slate-200 px-5 py-4">
+              <span className="text-xs text-slate-500">
+                Trang {activityPagination.page}/{activityPagination.totalPages} · {activityPagination.total} hoạt động
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={activityLoading || activityPagination.page <= 1}
+                  onClick={() => void loadActivityPage(activityTarget, activityPagination.page - 1)}
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold disabled:opacity-40"
+                >
+                  Trước
+                </button>
+                <button
+                  type="button"
+                  disabled={activityLoading || activityPagination.page >= activityPagination.totalPages}
+                  onClick={() => void loadActivityPage(activityTarget, activityPagination.page + 1)}
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold disabled:opacity-40"
+                >
+                  Sau
+                </button>
+              </div>
+            </footer>
+          </aside>
         </div>
       ) : null}
     </div>

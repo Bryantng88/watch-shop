@@ -20,6 +20,9 @@ import {
 import { syncWatchInventoryFromOrders } from "../order-watch-sync.service";
 import { postOneOrderTx } from "../post/order-post.service";
 import { normalizeReserveType } from "../../shared/order-reserve-type";
+import { publishOrderMutation } from "../events";
+import { publishShipmentMutation } from "@/domains/shipment/server/events";
+import { publishPaymentMutations } from "@/domains/payment/server";
 
 async function resolveCustomer(tx: Prisma.TransactionClient, input: CreateOrderInput) {
   const shipPhone = norm(input.shipPhone);
@@ -286,7 +289,7 @@ export async function createOrderWithItems(raw: any) {
   if (!input.customerName) throw new Error("Thiếu tên khách hàng");
   if (!input.items.length) throw new Error("Phải có ít nhất 1 dòng sản phẩm / dịch vụ");
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const customerId = await resolveCustomer(tx, input);
     const strictActiveOnly = input.quickFlowType === "QUICK_ORDER" ? false : true;
 
@@ -368,6 +371,38 @@ export async function createOrderWithItems(raw: any) {
 
     return toPlain({ id: order.id, status: OrderStatus.DRAFT, refNo });
   });
+  await publishOrderMutation({
+    eventKey: result.status === OrderStatus.POSTED ? "order.posted" : "order.created",
+    orderId: result.id,
+    refNo: result.refNo,
+    fromStatus: null,
+    toStatus: String(result.status),
+    source: "ORDER_CREATE",
+  });
+  if ("shipment" in result && result.shipment) {
+    await publishShipmentMutation({
+      eventKey: "shipment.created",
+      shipmentId: result.shipment.id,
+      orderId: result.id,
+      orderRefNo: result.refNo,
+      shipmentRefNo: result.shipment.refNo,
+      fromStatus: null,
+      toStatus: String(result.shipment.status),
+      carrier: result.shipment.carrier,
+      trackingCode: result.shipment.trackingCode,
+      note: result.shipment.notes,
+      source: "ORDER_CREATE_AND_POST",
+    });
+  }
+  if ("initialPayments" in result && Array.isArray(result.initialPayments)) {
+    await publishPaymentMutations(
+      result.initialPayments.map((payment) => ({
+        paymentId: payment.id,
+        eventKey: "payment.created",
+      })),
+    );
+  }
+  return result;
 }
 
 export async function updateOrderDraft(orderId: string, input: OrderDraftInput) {
@@ -390,7 +425,7 @@ export async function updateOrderDraft(orderId: string, input: OrderDraftInput) 
     },
   };
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     await assertCanEditOrderDraftRepo(tx as any, orderId);
 
     const beforeItems = await tx.orderItem.findMany({
@@ -419,4 +454,11 @@ export async function updateOrderDraft(orderId: string, input: OrderDraftInput) 
 
     return result;
   });
+  await publishOrderMutation({
+    eventKey: "order.updated",
+    orderId,
+    toStatus: "DRAFT",
+    source: "ORDER_DRAFT_UPDATE",
+  });
+  return result;
 }

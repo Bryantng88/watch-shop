@@ -348,3 +348,43 @@ Sau khi Payment ổn định:
 5. Mở Technical và Media list để kiểm tra stage/page dùng chung.
 6. Không sửa riêng Payment pagination; mọi thay đổi pagination tiếp theo phải
    đi qua flow list contract chung.
+
+## Cập nhật triển khai sau handoff
+
+Ngày cập nhật: 2026-07-24
+
+Đã hoàn thành:
+
+- Search, work-status filter, payment-status filter và sort chạy ở server trước
+  count/pagination; UI debounce và chống response cũ ghi đè.
+- Flow state được lưu trên URL: stage, page, page size, query, filter và sort.
+- Technical và Media board tải tối đa 20 card đầu mỗi cột, có API/nút tải thêm,
+  aggregate count và merge theo ID.
+- Board chỉ hydrate business detail, event và discussion cho slice đang tải;
+  stage/count dùng projection tối thiểu trước.
+- `Thao tác cuối` mở activity drawer; activity được phân trang 10 item, replies
+  chỉ tải theo page hiện tại.
+- Flow list dùng SQL aggregate theo target cho activity count, feedback/done
+  signal, discussion count và latest activity/actor; không tải toàn bộ lịch sử
+  activity vào Node.
+- Đã xóa `reconcilePaymentCollectionBindings` khỏi dashboard service. Không còn
+  request-path repair Payment.
+- Có script audit read-only:
+  `scripts/audit-payment-binding-invariant.mjs`.
+- Có smoke script read-only:
+  `scripts/smoke-queue-activity-stats.ts`.
+
+Audit DB hiện tại:
+
+```text
+Host: aws-1-ap-southeast-1.pooler.supabase.com
+Database/schema: postgres/public
+Active Payment bindings: 418
+Unique Payment targets: 418
+Duplicate bindings: 0
+Migration applied: 20260724_payment_collection_active_binding_invariant
+```
+
+Database đã được xác nhận là development. Migration đã apply bằng
+`prisma migrate deploy`; `prisma migrate status` báo schema up to date. Audit
+sau migration vẫn đạt 418 active bindings, 418 unique targets và 0 duplicate.

@@ -1,10 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import {
-    PaymentStateSignalIcon,
-    WatchReadinessSignalIcon
-} from "@/domains/shared/ui/icons";
+import { PaymentAmountSummary, PaymentStatusSignal } from "@/domains/payment/ui/signals";
+import { AcquisitionStatusSignal } from "@/domains/acquisition/ui/signals";
 import {
     BadgeCheck,
     XCircle
@@ -17,7 +15,7 @@ import { postAcquisitions } from "@/domains/acquisition/client/list/post-acquisi
 
 import AcquisitionItemsPreview from "./AcquisitionItemsPreview";
 import type { AcquisitionListItem } from "./types";
-import { fmtDateCompact, fmtMoney } from "./helpers";
+import { fmtDateCompact } from "./helpers";
 
 type Props = {
     item: AcquisitionListItem;
@@ -160,27 +158,16 @@ export default function AcquisitionListRow({
                 </div>
             </td>
             <td className="px-4 py-4">
-                <div className="flex items-center gap-2">
-                    <WatchReadinessSignalIcon state={posted ? "APPROVED" : "DRAFT"} />
-                    <span className="text-xs font-semibold text-slate-800">
-                        {posted ? "Đã nhập kho" : draft ? "Bản nháp" : "Đã hủy"}
-                    </span>
-                </div>
+                <AcquisitionStatusSignal status={item.approvalStatus} />
             </td>
             <td className="px-4 py-4">
-                <div className="flex items-center gap-2">
-                    <PaymentStateSignalIcon
-                        status={item.paymentStatus ?? "UNPAID"}
+                <div className="flex items-center">
+                    <PaymentStatusSignal
+                        status={!posted && !draft ? "CANCELLED" : item.paymentStatus ?? "UNPAID"}
                         totalAmount={item.totalAmount}
                         remainingAmount={item.paymentRemainingAmount ?? item.totalAmount}
-                        collectedAmount={item.paymentPaidAmount ?? 0}
+                        paidAmount={item.paymentPaidAmount ?? 0}
                     />
-                    <div>
-                        <div className="text-xs font-semibold text-slate-800">
-                            {item.paymentIsFullyPaid ? "Đã thanh toán" : item.paymentPaidAmount > 0 ? "Một phần" : "Chưa thanh toán"}
-                        </div>
-                        {!item.paymentIsFullyPaid ? <div className="mt-0.5 text-[11px] text-slate-500">Còn {fmtMoney(item.paymentRemainingAmount)}</div> : null}
-                    </div>
                 </div>
             </td>
 
@@ -192,7 +179,12 @@ export default function AcquisitionListRow({
             </td>
 
             <td className="px-4 py-4 text-right whitespace-nowrap">
-                <div className="font-bold text-slate-950">{fmtMoney(item.totalAmount)}</div>
+                <PaymentAmountSummary
+                    totalAmount={item.totalAmount}
+                    remainingAmount={item.paymentRemainingAmount}
+                    currency={item.currency}
+                    cancelled={!posted && !draft}
+                />
             </td>
 
             <td className="px-4 py-4 whitespace-nowrap">

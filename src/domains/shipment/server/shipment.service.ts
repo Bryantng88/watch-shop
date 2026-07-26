@@ -31,6 +31,10 @@ import {
   updateShipmentRepo,
 } from "./shipment.repo";
 import { money, toPlain, type Tx } from "./shipment.utils";
+import {
+  publishShipmentMutation,
+  type ShipmentMutation,
+} from "./events";
 
 const SHIPMENT_STATUS_RETURNING = "RETURNING" as ShipmentStatus;
 const SHIPMENT_STATUS_RETURNED = "RETURNED" as ShipmentStatus;
@@ -85,12 +89,28 @@ export async function getActiveShipmentByOrderId(orderId: string) {
 }
 
 export async function updateShipment(input: { shipmentId: string; data: UpdateShipmentInput }) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const shipment = await requireShipmentTx(tx, input.shipmentId);
     assertEditable(shipment.status);
     const updated = await updateShipmentRepo(tx, input.shipmentId, input.data);
-    return toPlain(updated);
+    return {
+      shipment: toPlain(updated),
+      mutation: {
+        eventKey: "shipment.updated",
+        shipmentId: shipment.id,
+        orderId: shipment.orderId,
+        orderRefNo: shipment.orderRefNo,
+        shipmentRefNo: shipment.refNo,
+        fromStatus: String(shipment.status),
+        toStatus: String(updated.status),
+        carrier: updated.carrier,
+        trackingCode: updated.trackingCode,
+        note: updated.notes,
+      } satisfies ShipmentMutation,
+    };
   });
+  await publishShipmentMutation(result.mutation);
+  return result.shipment;
 }
 
 export async function createShipmentFeeAndShip(input: CreateShipmentFeeInput) {
@@ -153,9 +173,27 @@ export async function createShipmentFeeAndShip(input: CreateShipmentFeeInput) {
     const summary = await recomputeOrderPaymentRollupTx(tx, shipment.orderId);
     await syncWatchInventoryFromOrderId(tx, shipment.orderId);
 
-    return toPlain({ shipment: updated, payment, summary, paymentMutations: paymentResult.mutations });
+    return toPlain({
+      shipment: updated,
+      payment,
+      summary,
+      paymentMutations: paymentResult.mutations,
+      shipmentMutation: {
+        eventKey: "shipment.shipped",
+        shipmentId: shipment.id,
+        orderId: shipment.orderId,
+        orderRefNo: shipment.orderRefNo,
+        shipmentRefNo: shipment.refNo,
+        fromStatus: String(shipment.status),
+        toStatus: String(ShipmentStatus.SHIPPED),
+        carrier: updated.carrier,
+        trackingCode: updated.trackingCode,
+        note: input.note,
+      } satisfies ShipmentMutation,
+    });
   });
   await publishPaymentMutations(result.paymentMutations);
+  await publishShipmentMutation(result.shipmentMutation);
   return result;
 }
 
@@ -184,15 +222,33 @@ export async function markShipmentDelivered(input: CompleteShipmentInput) {
     }
     const summary = await recomputeOrderPaymentRollupTx(tx, shipment.orderId);
     await syncWatchInventoryFromOrderId(tx, shipment.orderId);
-    return toPlain({ shipment: updated, isCod, summary, paymentMutations });
+    return toPlain({
+      shipment: updated,
+      isCod,
+      summary,
+      paymentMutations,
+      shipmentMutation: {
+        eventKey: "shipment.delivered",
+        shipmentId: shipment.id,
+        orderId: shipment.orderId,
+        orderRefNo: shipment.orderRefNo,
+        shipmentRefNo: shipment.refNo,
+        fromStatus: String(shipment.status),
+        toStatus: String(ShipmentStatus.DELIVERED),
+        carrier: shipment.carrier,
+        trackingCode: shipment.trackingCode,
+        note: input.note,
+      } satisfies ShipmentMutation,
+    });
   });
   await publishPaymentMutations(result.paymentMutations);
+  await publishShipmentMutation(result.shipmentMutation);
   return result;
 }
 
 
 export async function markShipmentReturned(input: CompleteShipmentInput) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const shipment = await requireShipmentTx(tx, input.shipmentId);
     const returnableStatuses: ShipmentStatus[] = [
       ShipmentStatus.SHIPPED,
@@ -218,8 +274,24 @@ export async function markShipmentReturned(input: CompleteShipmentInput) {
     });
 
     // Không sync watch ở bước đang hoàn: watch vẫn HOLD theo order RETURNING.
-    return toPlain({ shipment: updated });
+    return toPlain({
+      shipment: updated,
+      shipmentMutation: {
+        eventKey: "shipment.returning",
+        shipmentId: shipment.id,
+        orderId: shipment.orderId,
+        orderRefNo: shipment.orderRefNo,
+        shipmentRefNo: shipment.refNo,
+        fromStatus: String(shipment.status),
+        toStatus: "RETURNING",
+        carrier: shipment.carrier,
+        trackingCode: shipment.trackingCode,
+        note: input.note,
+      } satisfies ShipmentMutation,
+    });
   });
+  await publishShipmentMutation(result.shipmentMutation);
+  return result;
 }
 
 export async function receiveShipmentReturn(input: ReceiveShipmentReturnInput) {
@@ -254,9 +326,27 @@ export async function receiveShipmentReturn(input: ReceiveShipmentReturnInput) {
     await tx.order.update({ where: { id: shipment.orderId }, data: { status: ORDER_STATUS_RETURNED, updatedAt: new Date() } });
     const summary = await recomputeOrderPaymentRollupTx(tx, shipment.orderId);
     await syncWatchInventoryFromOrderId(tx, shipment.orderId);
-    return toPlain({ shipment: updated, payment: paymentResult.payment, summary, paymentMutations: [...paymentResult.mutations, ...codMutations] });
+    return toPlain({
+      shipment: updated,
+      payment: paymentResult.payment,
+      summary,
+      paymentMutations: [...paymentResult.mutations, ...codMutations],
+      shipmentMutation: {
+        eventKey: "shipment.returned",
+        shipmentId: shipment.id,
+        orderId: shipment.orderId,
+        orderRefNo: shipment.orderRefNo,
+        shipmentRefNo: shipment.refNo,
+        fromStatus: String(shipment.status),
+        toStatus: "RETURNED",
+        carrier: shipment.carrier,
+        trackingCode: shipment.trackingCode,
+        note: input.note,
+      } satisfies ShipmentMutation,
+    });
   });
   await publishPaymentMutations(result.paymentMutations);
+  await publishShipmentMutation(result.shipmentMutation);
   return result;
 }
 
@@ -266,13 +356,29 @@ export async function createShipmentReturnFee(input: ReceiveShipmentReturnInput)
 }
 
 export async function createManualShipment(input: CreateManualShipmentInput) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const shipment = await createManualShipmentRepo(tx, input);
     await tx.order.update({
       where: { id: input.orderId },
       data: { status: OrderStatus.PROCESSING, updatedAt: new Date() },
     });
     await syncWatchInventoryFromOrderId(tx, input.orderId);
-    return toPlain(shipment);
+    return {
+      shipment: toPlain(shipment),
+      mutation: {
+        eventKey: "shipment.created",
+        shipmentId: shipment.id,
+        orderId: shipment.orderId,
+        orderRefNo: shipment.orderRefNo,
+        shipmentRefNo: shipment.refNo,
+        fromStatus: null,
+        toStatus: String(shipment.status),
+        carrier: shipment.carrier,
+        trackingCode: shipment.trackingCode,
+        note: shipment.notes,
+      } satisfies ShipmentMutation,
+    };
   });
+  await publishShipmentMutation(result.mutation);
+  return result.shipment;
 }

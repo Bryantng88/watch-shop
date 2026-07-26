@@ -4,12 +4,18 @@ import { watchListProjectionBuilder } from "./watch-list";
 import { hasOperationalProjectionSubscriptionForEvent } from "./operation-projection-subscriptions";
 import { paymentOwnerSummaryProjectionBuilder } from "./payment-owner-summary.projection";
 import { acquisitionListProjectionBuilder } from "./acquisition-list";
+import { shipmentOperationQueueProjectionBuilder } from "./shipment-operation-queue.projection";
+import { orderListProjectionBuilder } from "./order-list.projection";
+import { orderDetailProjectionBuilder } from "./order-detail.projection";
 
 const PROJECTION_BUILDERS: ProjectionBuilder[] = [
   watchMediaQueueProjectionBuilder,
   watchListProjectionBuilder,
   paymentOwnerSummaryProjectionBuilder,
   acquisitionListProjectionBuilder,
+  shipmentOperationQueueProjectionBuilder,
+  orderListProjectionBuilder,
+  orderDetailProjectionBuilder,
 ];
 
 function clean(value: unknown) {

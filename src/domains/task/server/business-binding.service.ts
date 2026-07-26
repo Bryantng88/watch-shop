@@ -6,13 +6,14 @@ import {
   type Prisma,
 } from "@prisma/client";
 import { dbOrTx, withDbTransaction, type DB } from "@/server/db/client";
+import { perfStep } from "@/lib/server-perf";
 import { createSystemActivity } from "./activity";
 import {
   createBusinessBinding,
   findBusinessBindingByTaskItemTarget,
   findBusinessBindingsByTaskItem,
-  findQueueActivitiesByTaskItem,
-  findQueueActivitiesByTaskItemTargets,
+  findQueueActivityStatsByTaskItemTargets,
+  type QueueActivityTargetStatsRow,
   findTaskItemIdsByTarget,
   updateBusinessBindingMetadata,
 } from "./business-binding.repo";
@@ -258,50 +259,6 @@ async function metadataWithWorkspaceWorkflowSnapshot(
   };
 }
 
-function hasAnyToken(value: string, tokens: string[]) {
-  const normalized = value.toLowerCase();
-  return tokens.some((token) => normalized.includes(token));
-}
-
-function activityTarget(activity: { metadataJson: unknown }) {
-  const metadata = asRecord(activity.metadataJson);
-  const targetType = cleanUpper(metadata.targetType);
-  const targetId = clean(metadata.targetId);
-
-  if (!targetType || !targetId) return null;
-
-  return {
-    targetType,
-    targetId,
-  };
-}
-
-function activityEventText(activity: { title: string; metadataJson: unknown }) {
-  const metadata = asRecord(activity.metadataJson);
-  return `${clean(metadata.eventKey)} ${clean(activity.title)}`;
-}
-
-function activityHasFeedback(activity: { title: string; metadataJson: unknown }) {
-  const metadata = asRecord(activity.metadataJson);
-  const feedback = asRecord(metadata.feedback);
-
-  return Boolean(
-    clean(metadata.feedbackId) ||
-      clean(metadata.feedbackMessage) ||
-      clean(feedback.id) ||
-      clean(feedback.message) ||
-      hasAnyToken(activityEventText(activity), ["rejected", "feedback"]),
-  );
-}
-
-function activityHasDoneSignal(activity: { title: string; metadataJson: unknown }) {
-  return hasAnyToken(activityEventText(activity), [
-    "approved",
-    "done",
-    "completed",
-  ]);
-}
-
 function resolveQueueStatus(input: {
   activityCount: number;
   feedbackCount: number;
@@ -519,65 +476,60 @@ function watchPreviewMediaProgress(watch: {
   };
 }
 
-function buildQueueActivityStats(
-  activities: Awaited<ReturnType<typeof findQueueActivitiesByTaskItem>>,
+function buildQueueActivityStatsFromRows(
+  targetType: BusinessBindingTargetType,
+  rows: QueueActivityTargetStatsRow[],
 ) {
   const map = new Map<string, QueueActivityStats>();
-
-  for (const activity of activities) {
-    const target = activityTarget(activity);
-    if (!target) continue;
-
-    const key = queueKey(target.targetType, target.targetId);
-    const current = map.get(key) ?? {
-      latestActivityTitle: null,
-      latestActivityAt: null,
-      latestUpdatedAt: null,
-      lastUpdatedBy: null,
-      activityCount: 0,
-      feedbackCount: 0,
-      discussionCount: 0,
-      hasRejectedOrFeedback: false,
-      hasDoneSignal: false,
+  for (const row of rows) {
+    const key = queueKey(targetType, row.targetId);
+    const existing = map.get(key);
+    const latestActivityAt = latestDate(row.latestActivityAt);
+    const latestUpdatedAt = latestDate(row.latestUpdatedAt, row.latestActivityAt);
+    const candidate: QueueActivityStats = {
+      latestActivityTitle: row.latestActivityTitle,
+      latestActivityAt,
+      latestUpdatedAt,
+      lastUpdatedBy: {
+        label: clean(row.actorName) || clean(row.actorEmail) || "Hệ thống",
+        avatarUrl: row.actorAvatarUrl ?? null,
+        isSystem: !row.actorUserId,
+      },
+      activityCount: Number(row.activityCount),
+      feedbackCount: Number(row.feedbackCount),
+      discussionCount: Number(row.discussionCount),
+      hasRejectedOrFeedback: Boolean(row.hasRejectedOrFeedback),
+      hasDoneSignal: Boolean(row.hasDoneSignal),
     };
-    const activityAt = latestDate(activity.occurredAt);
-    const updatedAt = latestDate(activity.updatedAt, activity.occurredAt);
-    const hasFeedback = activityHasFeedback(activity);
-
-    current.activityCount += 1;
-    if (hasFeedback) current.feedbackCount += 1;
-    current.discussionCount +=
-      activity._count.replies +
-      (String(activity.sourceType) === "DISCUSSION" ? 1 : 0);
-    current.hasRejectedOrFeedback ||= hasFeedback;
-    current.hasDoneSignal ||= activityHasDoneSignal(activity);
-
-    if (activityAt && (!current.latestActivityAt || activityAt >= current.latestActivityAt)) {
-      current.latestActivityAt = activityAt;
-      current.latestActivityTitle = activity.title;
+    if (!existing) {
+      map.set(key, candidate);
+      continue;
     }
-
-    if (updatedAt && (!current.latestUpdatedAt || updatedAt > current.latestUpdatedAt)) {
-      current.latestUpdatedAt = updatedAt;
-      const label = clean(activity.actorUser?.name) ||
-        clean(activity.actorUser?.email) ||
-        "Hệ thống";
-      current.lastUpdatedBy = {
-        label,
-        avatarUrl: activity.actorUser?.avatarUrl ?? null,
-        isSystem: !activity.actorUser,
-      };
+    existing.activityCount += candidate.activityCount;
+    existing.feedbackCount += candidate.feedbackCount;
+    existing.discussionCount += candidate.discussionCount;
+    existing.hasRejectedOrFeedback ||= candidate.hasRejectedOrFeedback;
+    existing.hasDoneSignal ||= candidate.hasDoneSignal;
+    if (
+      candidate.latestActivityAt &&
+      (!existing.latestActivityAt || candidate.latestActivityAt > existing.latestActivityAt)
+    ) {
+      existing.latestActivityTitle = candidate.latestActivityTitle;
+      existing.latestActivityAt = candidate.latestActivityAt;
+      existing.latestUpdatedAt = candidate.latestUpdatedAt;
+      existing.lastUpdatedBy = candidate.lastUpdatedBy;
     }
-
-    map.set(key, current);
   }
-
   return map;
 }
 
 async function buildQueueBusinessPreviewMap(
   db: DB,
   bindings: Array<Pick<BusinessBinding, "targetType" | "targetId">>,
+  paymentLinkHints: Array<{
+    acquisition_id: string | null;
+    order_id: string | null;
+  }> = [],
 ) {
   const client = dbOrTx(db);
   const map = new Map<string, QueueBusinessPreview>();
@@ -613,8 +565,30 @@ async function buildQueueBusinessPreviewMap(
         .filter(Boolean),
     ),
   );
+  const shipmentIds = Array.from(
+    new Set(
+      bindings
+        .filter((binding) => binding.targetType === TaskExecutionTargetType.SHIPMENT)
+        .map((binding) => clean(binding.targetId))
+        .filter(Boolean),
+    ),
+  );
+  const hintedAcquisitionIds = Array.from(
+    new Set(paymentLinkHints.map((payment) => clean(payment.acquisition_id)).filter(Boolean)),
+  );
+  const hintedPaymentOrderIds = Array.from(
+    new Set(paymentLinkHints.map((payment) => clean(payment.order_id)).filter(Boolean)),
+  );
 
-  const [watches, orders, technicalIssues, payments] = await Promise.all([
+  const [
+    watches,
+    orders,
+    technicalIssues,
+    payments,
+    shipments,
+    hintedAcquisitions,
+    hintedPaymentOrders,
+  ] = await Promise.all([
     watchIds.length
       ? client.watch.findMany({
         where: { id: { in: watchIds } },
@@ -771,7 +745,7 @@ async function buildQueueBusinessPreviewMap(
       })
       : Promise.resolve([]),
     paymentIds.length
-      ? client.payment.findMany({
+      ? perfStep("payment-flow-items", "previewPayments", () => client.payment.findMany({
         where: { id: { in: paymentIds } },
         select: {
           id: true,
@@ -807,6 +781,40 @@ async function buildQueueBusinessPreviewMap(
                       sku: true,
                       primaryImageUrl: true,
                       storefrontImageKey: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }))
+      : Promise.resolve([]),
+    shipmentIds.length
+      ? client.shipment.findMany({
+        where: { id: { in: shipmentIds } },
+        select: {
+          id: true,
+          refNo: true,
+          status: true,
+          carrier: true,
+          trackingCode: true,
+          order: {
+            select: {
+              refNo: true,
+              customerName: true,
+              orderItem: {
+                orderBy: { createdAt: "asc" },
+                take: 4,
+                select: {
+                  title: true,
+                  img: true,
+                  product: {
+                    select: {
+                      title: true,
+                      sku: true,
+                      primaryImageUrl: true,
+                      storefrontImageKey: true,
                       productImage: {
                         where: { role: "INLINE" },
                         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
@@ -822,12 +830,76 @@ async function buildQueueBusinessPreviewMap(
         },
       })
       : Promise.resolve([]),
+    hintedAcquisitionIds.length
+      ? perfStep("payment-flow-items", "previewAcquisitions", () => client.acquisition.findMany({
+        where: { id: { in: hintedAcquisitionIds } },
+        select: {
+          id: true,
+          refNo: true,
+          _count: { select: { acquisitionItem: true } },
+          vendor: { select: { name: true } },
+          customer: { select: { name: true, phone: true } },
+          acquisitionItem: {
+            orderBy: { createdAt: "asc" },
+            take: 4,
+            select: {
+              productTitle: true,
+              product: {
+                select: {
+                  title: true,
+                  sku: true,
+                  primaryImageUrl: true,
+                  storefrontImageKey: true,
+                  productImage: {
+                    where: { role: "INLINE" },
+                    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+                    take: 1,
+                    select: { fileKey: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }))
+      : Promise.resolve([]),
+    hintedPaymentOrderIds.length
+      ? perfStep("payment-flow-items", "previewOrders", () => client.order.findMany({
+        where: { id: { in: hintedPaymentOrderIds } },
+        select: {
+          id: true,
+          refNo: true,
+          customerName: true,
+          shipPhone: true,
+          createdAt: true,
+          _count: { select: { orderItem: true } },
+          orderItem: {
+            orderBy: { createdAt: "asc" },
+            take: 4,
+            select: {
+              title: true,
+              img: true,
+            },
+          },
+        },
+      }).then((rows) => rows.map((order) => ({
+        ...order,
+        orderItem: order.orderItem.map((item) => ({
+          ...item,
+          product: null,
+        })),
+      }))))
+      : Promise.resolve([]),
   ]);
-  const acquisitionIds = payments.map((payment) => clean(payment.acquisition_id)).filter(Boolean);
-  const paymentOrderIds = payments.map((payment) => clean(payment.order_id)).filter(Boolean);
+  const acquisitionIds = paymentLinkHints.length
+    ? []
+    : payments.map((payment) => clean(payment.acquisition_id)).filter(Boolean);
+  const paymentOrderIds = paymentLinkHints.length
+    ? []
+    : payments.map((payment) => clean(payment.order_id)).filter(Boolean);
   const [acquisitions, paymentOrders] = await Promise.all([
     acquisitionIds.length
-    ? client.acquisition.findMany({
+    ? perfStep("payment-flow-items", "previewAcquisitions", () => client.acquisition.findMany({
       where: { id: { in: acquisitionIds } },
       select: {
         id: true,
@@ -837,6 +909,7 @@ async function buildQueueBusinessPreviewMap(
         customer: { select: { name: true, phone: true } },
         acquisitionItem: {
           orderBy: { createdAt: "asc" },
+          take: 4,
           select: {
             productTitle: true,
             product: {
@@ -856,26 +929,32 @@ async function buildQueueBusinessPreviewMap(
           },
         },
       },
-    })
+    }))
     : Promise.resolve([]),
     paymentOrderIds.length
-    ? client.order.findMany({
+    ? perfStep("payment-flow-items", "previewOrders", () => client.order.findMany({
       where: { id: { in: paymentOrderIds } },
       select: {
         id: true, refNo: true, customerName: true, shipPhone: true, createdAt: true,
         _count: { select: { orderItem: true } },
         orderItem: {
           orderBy: { createdAt: "asc" },
+          take: 4,
           select: { title: true, img: true, product: { select: {
             title: true, sku: true, primaryImageUrl: true, storefrontImageKey: true,
-            productImage: { where: { role: "INLINE" }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }], take: 1, select: { fileKey: true } },
           } } },
         },
       },
-    }) : Promise.resolve([]),
+    })) : Promise.resolve([]),
   ]);
-  const acquisitionById = new Map(acquisitions.map((acquisition) => [acquisition.id, acquisition]));
-  const paymentOrderById = new Map(paymentOrders.map((order) => [order.id, order]));
+  const allAcquisitions = [...hintedAcquisitions, ...acquisitions];
+  const allPaymentOrders = [...hintedPaymentOrders, ...paymentOrders];
+  const acquisitionById = new Map(
+    allAcquisitions.map((acquisition) => [acquisition.id, acquisition]),
+  );
+  const paymentOrderById = new Map(
+    allPaymentOrders.map((order) => [order.id, order]),
+  );
 
   for (const watch of watches) {
     const imageUrl = productPreviewImage(watch.product);
@@ -975,6 +1054,35 @@ async function buildQueueBusinessPreviewMap(
             }
           : null,
       },
+    });
+  }
+
+  for (const shipment of shipments) {
+    const images = shipment.order.orderItem
+      .map((item) => productPreviewImage(item.product) || mediaUrl(item.img))
+      .filter((value): value is string => Boolean(value));
+    const firstItem = shipment.order.orderItem[0] ?? null;
+    const title =
+      firstItem?.product?.title ??
+      firstItem?.title ??
+      shipment.order.customerName ??
+      "Vận chuyển đơn hàng";
+    const ref = [shipment.refNo, shipment.order.refNo, shipment.trackingCode]
+      .map(clean)
+      .filter(Boolean)
+      .join(" / ");
+    const status = [shipment.status, shipment.carrier]
+      .map(clean)
+      .filter(Boolean)
+      .join(" / ");
+
+    map.set(queueKey(TaskExecutionTargetType.SHIPMENT, shipment.id), {
+      title,
+      ref: ref || shipment.id,
+      status,
+      imageUrl: images[0] ?? null,
+      imageUrls: images,
+      href: "/admin/shipments",
     });
   }
 
@@ -1236,6 +1344,7 @@ export async function listPaymentCollectionQueueItems(
     stage?: "REVIEW" | "SETTLED";
     page?: number;
     pageSize?: number;
+    paginate?: boolean;
   },
 ): Promise<QueueItemDTO[]> {
   const client = dbOrTx(db);
@@ -1246,7 +1355,7 @@ export async function listPaymentCollectionQueueItems(
     : input.stage === "SETTLED"
       ? [input.settledTaskItemId]
       : [input.reviewTaskItemId, input.settledTaskItemId];
-  const payments = await client.payment.findMany({
+  const payments = await perfStep("payment-flow-items", "payments", () => client.payment.findMany({
     where: {
       amount: { gt: 0 },
       status: input.stage === "REVIEW"
@@ -1259,18 +1368,20 @@ export async function listPaymentCollectionQueueItems(
       id: true,
       status: true,
       updatedAt: true,
+      acquisition_id: true,
+      order_id: true,
     },
     orderBy: { updatedAt: "desc" },
-    skip: (page - 1) * pageSize,
-    take: pageSize,
-  });
+    skip: input.paginate === false ? undefined : (page - 1) * pageSize,
+    take: input.paginate === false ? undefined : pageSize,
+  }));
   const paymentIds = payments.map((payment) => payment.id);
   const previewTargets = payments.map((payment) => ({
     targetType: TaskExecutionTargetType.PAYMENT,
     targetId: payment.id,
   }));
   const [bindings, activityGroups, businessPreviews] = await Promise.all([
-    client.taskExecution.findMany({
+    perfStep("payment-flow-items", "bindings", () => client.taskExecution.findMany({
       where: {
         taskId: input.taskId,
         targetType: TaskExecutionTargetType.PAYMENT,
@@ -1287,17 +1398,19 @@ export async function listPaymentCollectionQueueItems(
         createdAt: true,
       },
       orderBy: { createdAt: "desc" },
-    }),
-    Promise.all(
+    })),
+    perfStep("payment-flow-items", "activityStats", () => Promise.all(
       activityTaskItemIds.map((taskItemId) =>
-        findQueueActivitiesByTaskItemTargets(db, {
+        findQueueActivityStatsByTaskItemTargets(db, {
           taskItemId,
           targetType: TaskExecutionTargetType.PAYMENT,
           targetIds: paymentIds,
         }),
       ),
+    )),
+    perfStep("payment-flow-items", "businessPreviews", () =>
+      buildQueueBusinessPreviewMap(db, previewTargets, payments)
     ),
-    buildQueueBusinessPreviewMap(db, previewTargets),
   ]);
 
   const bindingByPaymentId = new Map<string, BusinessBinding>();
@@ -1306,7 +1419,10 @@ export async function listPaymentCollectionQueueItems(
       bindingByPaymentId.set(binding.targetId, binding);
     }
   }
-  const activityStats = buildQueueActivityStats(activityGroups.flat());
+  const activityStats = buildQueueActivityStatsFromRows(
+    TaskExecutionTargetType.PAYMENT,
+    activityGroups.flat(),
+  );
 
   return payments.map((payment) => {
     const binding = bindingByPaymentId.get(payment.id);
@@ -1369,6 +1485,7 @@ export async function listTaskItemQueueItems(
     note?: string | null;
     page?: number;
     pageSize?: number;
+    paginate?: boolean;
   },
 ): Promise<QueueItemDTO[]> {
   const cleanTaskItemId = clean(taskItemId);
@@ -1393,25 +1510,29 @@ export async function listTaskItemQueueItems(
   const page = Math.max(1, Math.trunc(taskItemContext?.page ?? 1));
   const pageSize = Math.min(100, Math.max(10, Math.trunc(taskItemContext?.pageSize ?? 20)));
   const bindings = await findBusinessBindingsByTaskItem(db, cleanTaskItemId, {
-    skip: (page - 1) * pageSize,
-    take: pageSize,
+    skip: taskItemContext?.paginate === false ? undefined : (page - 1) * pageSize,
+    take: taskItemContext?.paginate === false ? undefined : pageSize,
   });
-  const activities = (
-    await Promise.all(
+  const activityStats = new Map<string, QueueActivityStats>();
+  const activityStatsGroups = await Promise.all(
       Object.entries(
         bindings.reduce<Record<string, string[]>>((groups, binding) => {
           (groups[binding.targetType] ??= []).push(binding.targetId);
           return groups;
         }, {}),
-      ).map(([targetType, targetIds]) =>
-        findQueueActivitiesByTaskItemTargets(db, {
+      ).map(async ([targetType, targetIds]) => {
+        const typedTarget = targetType as BusinessBindingTargetType;
+        const rows = await findQueueActivityStatsByTaskItemTargets(db, {
           taskItemId: cleanTaskItemId,
-          targetType: targetType as BusinessBindingTargetType,
+          targetType: typedTarget,
           targetIds,
-        }),
-      ),
-    )
-  ).flat();
+        });
+        return buildQueueActivityStatsFromRows(typedTarget, rows);
+      }),
+    );
+  for (const group of activityStatsGroups) {
+    for (const [key, stats] of group) activityStats.set(key, stats);
+  }
   const expectedWorkflowKey = workflowKeyFromTaskItemNote(taskItem?.note ?? null);
   const visibleBindings = bindings.filter((binding) => {
     if (!bindingMatchesTaskItemWorkflow(binding, expectedWorkflowKey)) return false;
@@ -1452,7 +1573,6 @@ export async function listTaskItemQueueItems(
         : [];
     }),
   );
-  const activityStats = buildQueueActivityStats(activities);
   const businessPreviews = await buildQueueBusinessPreviewMap(db, visibleBindings);
 
   return visibleBindings

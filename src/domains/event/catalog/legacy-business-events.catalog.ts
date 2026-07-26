@@ -52,36 +52,6 @@ export const LEGACY_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
     knownConsumers: ["timeline", "projection"],
   }),
   defineBusinessEventContract({
-    key: "order.posted",
-    label: "Order posted",
-    targetType: "ORDER",
-    group: "Order",
-  }),
-  defineBusinessEventContract({
-    key: "order.paid",
-    label: "Order paid",
-    targetType: "ORDER",
-    group: "Order",
-  }),
-  defineBusinessEventContract({
-    key: "order.completed",
-    label: "Order completed",
-    targetType: "ORDER",
-    group: "Order",
-  }),
-  defineBusinessEventContract({
-    key: "shipment.delivered",
-    label: "Shipment delivered",
-    targetType: "SHIPMENT",
-    group: "Shipment",
-  }),
-  defineBusinessEventContract({
-    key: "shipment.returned",
-    label: "Shipment returned",
-    targetType: "SHIPMENT",
-    group: "Shipment",
-  }),
-  defineBusinessEventContract({
     key: "payment.paid",
     label: "Payment paid",
     targetType: "PAYMENT",
@@ -157,7 +127,7 @@ export const LEGACY_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
     label: "Technical issue completed",
     targetType: "TECHNICAL_ISSUE",
     group: "Service",
-    knownConsumers: ["timeline", "coordination", "projection"],
+    knownConsumers: ["notification", "timeline", "coordination", "projection"],
   }),
   defineBusinessEventContract({
     key: "technical_issue.reopened",

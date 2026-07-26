@@ -71,6 +71,12 @@ const PAYMENT_COLLECTION_WORKSPACES = [
   },
 ] as const;
 
+const SHIPMENT_OPERATION_WORKSPACES = [
+  { role: "SHIPMENT_WAITING", title: "Shipment Operation - Chờ xử lý", flowStageKey: "shipment-waiting", flowStageOrder: 10, sortOrder: 21 },
+  { role: "SHIPMENT_PROCESSING", title: "Shipment Operation - Đang xử lý", flowStageKey: "shipment-processing", flowStageOrder: 20, sortOrder: 22 },
+  { role: "SHIPMENT_DONE", title: "Shipment Operation - Xong", flowStageKey: "shipment-done", flowStageOrder: 30, sortOrder: 23 },
+] as const;
+
 function startOfUtcDate(date: Date) {
   return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
 }
@@ -500,6 +506,63 @@ export async function ensureWorkTickets(
         createdCount += 1;
       }
 
+      continue;
+    }
+
+    if (
+      input.context === "OPERATION" &&
+      normalizeWorkTypeKey(workType.key) === "shipment"
+    ) {
+      for (const shipmentWorkspace of SHIPMENT_OPERATION_WORKSPACES) {
+        const existingItem = existingByTitle.get(shipmentWorkspace.title);
+        const extraLines = [
+          `operationWorkspaceRole: ${shipmentWorkspace.role}`,
+          "workspaceKind: FLOW_STAGE_WORKSPACE",
+          "coreFlowKey: shipment-operation-core-flow",
+          `flowStageKey: ${shipmentWorkspace.flowStageKey}`,
+          `flowStageOrder: ${shipmentWorkspace.flowStageOrder}`,
+        ];
+        const note = workTypeNote(workType, adminUserIds, {
+          extraLines,
+          eventTargetTypes: ["SHIPMENT"],
+          workspaceType: `${shipmentWorkspace.title} Workspace`,
+          itemLabel: "Shipment",
+        });
+
+        if (existingItem) {
+          const nextSharedUserIds = Array.from(
+            new Set([...sharedUserIdsFromNote(existingItem.note), ...adminUserIds]),
+          );
+          const nextNote = workTypeNote(workType, nextSharedUserIds, {
+            extraLines,
+            eventTargetTypes: ["SHIPMENT"],
+            workspaceType: `${shipmentWorkspace.title} Workspace`,
+            itemLabel: "Shipment",
+          });
+          if (nextNote !== existingItem.note) {
+            await client.taskItem.update({
+              where: { id: existingItem.id },
+              data: { note: nextNote },
+            });
+          }
+          continue;
+        }
+
+        const createdItem = await client.taskItem.create({
+          data: {
+            taskId: input.taskId,
+            title: shipmentWorkspace.title,
+            note,
+            status: TaskStatus.TODO,
+            priority: "MEDIUM",
+            assignedToUserId: null,
+            sortOrder: shipmentWorkspace.sortOrder,
+          },
+        });
+        existingByTitle.set(shipmentWorkspace.title, createdItem);
+        existingTitles.add(shipmentWorkspace.title);
+        createdCount += 1;
+      }
       continue;
     }
 

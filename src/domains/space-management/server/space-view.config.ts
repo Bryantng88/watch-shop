@@ -357,6 +357,41 @@ function paymentSpaceViewConfig(): SpaceViewConfig {
   };
 }
 
+const SHIPMENT_OPERATION_FLOW = {
+  key: "shipment-operation-core-flow",
+  label: "Shipment Operation",
+  description: "Renders Shipment work as Waiting, Processing, and Done stages.",
+  rowModel: "FLOW_STAGE_WORKSPACE",
+  primaryTarget: "workspace",
+  itemTargetType: "SHIPMENT",
+  stages: [
+    {
+      key: "shipment-waiting",
+      label: "Chờ xử lý",
+      workspaceKey: "shipment-waiting",
+      sortOrder: 10,
+      itemTargetType: "SHIPMENT",
+      evidenceEvents: ["shipment.created"],
+    },
+    {
+      key: "shipment-processing",
+      label: "Đang xử lý",
+      workspaceKey: "shipment-processing",
+      sortOrder: 20,
+      itemTargetType: "SHIPMENT",
+      evidenceEvents: ["shipment.shipped", "shipment.returning"],
+    },
+    {
+      key: "shipment-done",
+      label: "Xong",
+      workspaceKey: "shipment-done",
+      sortOrder: 30,
+      itemTargetType: "SHIPMENT",
+      evidenceEvents: ["shipment.delivered", "shipment.returned", "shipment.cancelled"],
+    },
+  ],
+} as const satisfies NonNullable<SpaceViewConfig["coreFlows"]>[number];
+
 function unifiedOperationSpaceViewConfig(): SpaceViewConfig {
   return {
     ...defaultSpaceViewConfig("OPERATION"),
@@ -397,6 +432,16 @@ function unifiedOperationSpaceViewConfig(): SpaceViewConfig {
         columns: WORKSPACE_COLUMNS,
       },
       {
+        key: "shipment-operation-flow",
+        label: "Vận chuyển",
+        description: "Chờ xử lý -> Đang xử lý -> Xong.",
+        rowModel: "FLOW_STAGE_WORKSPACE",
+        primaryTarget: "workspace",
+        coreFlowKey: SHIPMENT_OPERATION_FLOW.key,
+        allowedWorkspaceKinds: ["FLOW_STAGE_WORKSPACE"],
+        columns: WORKSPACE_COLUMNS,
+      },
+      {
         key: "sr-cases",
         label: "SR Cases",
         description: "Service Request case Workspaces inside the unified operation Space.",
@@ -415,7 +460,12 @@ function unifiedOperationSpaceViewConfig(): SpaceViewConfig {
         columns: WORKSPACE_COLUMNS,
       },
     ],
-    coreFlows: [TECHNICAL_ISSUE_FLOW, PAYMENT_COLLECTION_FLOW, MEDIA_PRODUCTION_FLOW],
+    coreFlows: [
+      TECHNICAL_ISSUE_FLOW,
+      PAYMENT_COLLECTION_FLOW,
+      MEDIA_PRODUCTION_FLOW,
+      SHIPMENT_OPERATION_FLOW,
+    ],
   };
 }
 

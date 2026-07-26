@@ -142,6 +142,13 @@ export type CoordinationMediaBoardItemDTO = {
   };
 };
 
+export type CoordinationBoardColumnPaginationDTO = Record<string, {
+  loaded: number;
+  total: number;
+  hasMore: boolean;
+  nextPage: number | null;
+}>;
+
 export type CoordinationUserSummaryDTO = {
   id: string;
   name: string | null;
@@ -228,6 +235,7 @@ export type CoordinationDashboardDTO = {
   };
   technicalIssueBoard: {
     items: CoordinationTechnicalIssueBoardItemDTO[];
+    columnPagination: CoordinationBoardColumnPaginationDTO;
     vendorOptions: Array<{ id: string; name: string }>;
     technicalDetailCatalogOptions: Array<{
       id: string;
@@ -238,5 +246,6 @@ export type CoordinationDashboardDTO = {
   } | null;
   mediaBoard: {
     items: CoordinationMediaBoardItemDTO[];
+    columnPagination: CoordinationBoardColumnPaginationDTO;
   } | null;
 };

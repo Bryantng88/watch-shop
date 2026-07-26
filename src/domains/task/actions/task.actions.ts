@@ -58,6 +58,7 @@ import {
   runServiceOperationManualAction,
 } from "@/domains/service/server/operation/service-operation-action-adapter";
 import { runPaymentOperationBlueprintAction } from "@/domains/payment/server/payment-operation-action-adapter";
+import { runShipmentOperationBlueprintAction } from "@/domains/shipment/server/shipment-operation-action-adapter";
 import {
   addManualQueueItem,
   searchManualQueueTargets,
@@ -91,6 +92,12 @@ const PAYMENT_OPERATION_BLUEPRINT_ACTION_KEYS = new Set([
   "reconcile_payment",
   "review_payment",
   "mark_payment_exception",
+]);
+const SHIPMENT_OPERATION_BLUEPRINT_ACTION_KEYS = new Set([
+  "dispatch_shipment",
+  "mark_shipment_delivered",
+  "mark_shipment_returning",
+  "receive_shipment_return",
 ]);
 
 function normalizeTextKey(value: unknown) {
@@ -1466,7 +1473,9 @@ export async function submitOperationalBlueprintActionAction(input: {
   };
   const result = PAYMENT_OPERATION_BLUEPRINT_ACTION_KEYS.has(actionKey)
     ? await runPaymentOperationBlueprintAction(prisma, actionInput)
-    : await runServiceOperationBlueprintAction(prisma, actionInput);
+    : SHIPMENT_OPERATION_BLUEPRINT_ACTION_KEYS.has(actionKey)
+      ? await runShipmentOperationBlueprintAction(prisma, actionInput)
+      : await runServiceOperationBlueprintAction(prisma, actionInput);
 
   if (!result.ok) {
     throw new Error(result.error ?? "Operational Blueprint action failed");

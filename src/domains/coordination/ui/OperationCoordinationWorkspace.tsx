@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { Fragment, type FormEvent, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -72,6 +72,7 @@ import {
   AsyncBusinessListDashboard,
   DashboardCustomizeButton,
 } from "@/domains/shared/ui/business-list";
+import { SoftIconBadge } from "@/domains/shared/ui/icons";
 import type { BusinessListDashboardWidgetKey } from "@/domains/shared/ui/business-list";
 import {
   SpaceViewFooterTip,
@@ -97,6 +98,7 @@ type TechnicalBoardFieldValue = string | boolean | string[];
 type TechnicalBoardAdditionalIssue = { summary: string; note: string };
 
 const SPACE_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = ["overview", "value-trend", "status-breakdown", "recent-activity"];
+const TECHNICAL_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = [...SPACE_DASHBOARD_WIDGETS, "technical-daily-performance"];
 const PAYMENT_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = ["overview", "cash-flow", "status-breakdown", "recent-activity"];
 
 function sleep(ms: number) {
@@ -595,20 +597,26 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [workTicketView, setWorkTicketView] = useState<"LIST" | "TI_BOARD" | "MEDIA_BOARD">(() =>
-    data.viewConfig.defaultModeKey === "technical-issue-flow"
+    (searchParams.get("view") ?? data.viewConfig.defaultModeKey) === "technical-issue-flow"
       ? "TI_BOARD"
-      : data.viewConfig.defaultModeKey === "media-production-flow"
+      : (searchParams.get("view") ?? data.viewConfig.defaultModeKey) === "media-production-flow"
         ? "MEDIA_BOARD"
       : "LIST",
   );
   const [isTechnicalIntakeOpen, setIsTechnicalIntakeOpen] = useState(false);
   const [focusedTechnicalIssueId, setFocusedTechnicalIssueId] = useState<string | null>(null);
   const [dashboardCustomizationRequest, setDashboardCustomizationRequest] = useState(0);
-  const [filterQuery, setFilterQuery] = useState("");
+  const [filterQuery, setFilterQuery] = useState(() => searchParams.get("flowQuery") ?? "");
   const [filterCreator, setFilterCreator] = useState("ALL");
-  const [filterWorkStatus, setFilterWorkStatus] = useState("ALL");
-  const [filterPayment, setFilterPayment] = useState("ALL");
-  const [flowListStageFilter, setFlowListStageFilter] = useState("");
+  const [filterWorkStatus, setFilterWorkStatus] = useState(
+    () => searchParams.get("flowStatus") ?? "ALL",
+  );
+  const [filterPayment, setFilterPayment] = useState(
+    () => searchParams.get("flowPaymentStatus") ?? "ALL",
+  );
+  const [flowListStageFilter, setFlowListStageFilter] = useState(
+    () => searchParams.get("flowStage") ?? "",
+  );
   const [technicalIssuePriorityFilter, setTechnicalIssuePriorityFilter] =
     useState<TechnicalIssuePriorityFilter>("ALL");
   const [technicalIssueCommentFilter, setTechnicalIssueCommentFilter] =
@@ -624,6 +632,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   const [flowItemsModeKey, setFlowItemsModeKey] = useState(activeViewModeKey);
   const [isFlowItemsLoading, setIsFlowItemsLoading] = useState(false);
   const [isBoardRefreshing, setIsBoardRefreshing] = useState(false);
+  const [loadingBoardColumn, setLoadingBoardColumn] = useState<string | null>(null);
   const [boardRefreshedAt, setBoardRefreshedAt] = useState<Date | null>(null);
   const [workspacePage, setWorkspacePage] = useState(1);
   const [workspacePageSize, setWorkspacePageSize] = useState(10);
@@ -632,6 +641,23 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
   const [isMovedItemsOpen, setIsMovedItemsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isViewPending, startViewTransition] = useTransition();
+  const flowItemsRequestId = useRef(0);
+  const flowItemsAbortController = useRef<AbortController | null>(null);
+  const lastFlowFilterRequestKey = useRef<string | null>(null);
+  const technicalBoardLoadAttempted = useRef(false);
+
+  useEffect(() => {
+    const nextQuery = searchParams.get("flowQuery") ?? "";
+    const nextStatus = searchParams.get("flowStatus") ?? "ALL";
+    const nextPaymentStatus = searchParams.get("flowPaymentStatus") ?? "ALL";
+    const nextStage = searchParams.get("flowStage") ?? "";
+    setFilterQuery((current) => current === nextQuery ? current : nextQuery);
+    setFilterWorkStatus((current) => current === nextStatus ? current : nextStatus);
+    setFilterPayment((current) =>
+      current === nextPaymentStatus ? current : nextPaymentStatus
+    );
+    setFlowListStageFilter((current) => current === nextStage ? current : nextStage);
+  }, [searchParams]);
 
   useEffect(() => {
     // A server refresh returns the default Payment Review slice. Do not let it
@@ -640,6 +666,15 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     setAsyncFlowItems(data.flowItems);
     setAsyncFlowPagination(data.flowItemsPagination);
   }, [data.flowItems, data.flowItemsPagination, flowListStageFilter]);
+
+  useEffect(() => {
+    if (data.technicalIssueBoard) {
+      setAsyncTechnicalIssueBoard(data.technicalIssueBoard);
+    }
+    if (data.mediaBoard) {
+      setAsyncMediaBoard(data.mediaBoard);
+    }
+  }, [data.mediaBoard, data.technicalIssueBoard]);
 
   function changeActiveViewMode(nextModeKey: string) {
     if (nextModeKey === activeViewModeKey) {
@@ -738,6 +773,20 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     activeCoreFlow?.key === "payment-collection-core-flow";
   const dashboardEndpoint = useMemo(() => {
     const params = new URLSearchParams(searchParams.toString());
+    [
+      "includeFlowItems",
+      "flowStage",
+      "flowPage",
+      "flowPageSize",
+      "flowQuery",
+      "flowStatus",
+      "flowPaymentStatus",
+      "flowSort",
+      "includeBoard",
+      "boardStage",
+      "boardPage",
+      "boardPageSize",
+    ].forEach((key) => params.delete(key));
     params.set("context", data.context);
     if (activeViewMode?.key) params.set("view", activeViewMode.key);
     return `/api/admin/coordination/operation/dashboard?${params.toString()}`;
@@ -762,12 +811,12 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     requestedPage = 1,
     force = false,
   ) => {
+    void force;
     const requestedFlowStageKey = requestedStageKey || activeFlowListStage;
-    if (
-      (!force &&
-        flowItemsModeKey === activeViewModeKey) ||
-      isFlowItemsLoading
-    ) return;
+    const requestId = ++flowItemsRequestId.current;
+    flowItemsAbortController.current?.abort();
+    const controller = new AbortController();
+    flowItemsAbortController.current = controller;
     setIsFlowItemsLoading(true);
     setError(null);
     try {
@@ -775,14 +824,24 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
       const stageParam = requestedFlowStageKey
         ? `&flowStage=${encodeURIComponent(requestedFlowStageKey)}`
         : "";
+      const flowParams = new URLSearchParams({
+        flowPage: String(requestedPage),
+        flowPageSize: String(asyncFlowPagination.pageSize),
+        flowQuery: filterQuery.trim(),
+        flowStatus: filterWorkStatus,
+        flowPaymentStatus: filterPayment,
+        flowSort: "UPDATED_DESC",
+      });
       const response = await fetch(
-        `${dashboardEndpoint}${separator}includeFlowItems=1${stageParam}&flowPage=${requestedPage}&flowPageSize=${asyncFlowPagination.pageSize}`,
+        `${dashboardEndpoint}${separator}includeFlowItems=1${stageParam}&${flowParams.toString()}`,
         {
-        cache: "no-store",
+          cache: "no-store",
+          signal: controller.signal,
         },
       );
       const result = await response.json().catch(() => null);
       if (!response.ok) throw new Error("Không thể tải danh sách item.");
+      if (requestId !== flowItemsRequestId.current) return;
       const items = Array.isArray(result?.flowItems) ? result.flowItems : [];
       setAsyncFlowItems(items);
       if (result?.flowItemsPagination) {
@@ -790,24 +849,79 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
       }
       setFlowItemsModeKey(activeViewModeKey);
     } catch (loadError) {
+      if (requestId !== flowItemsRequestId.current) return;
+      if (loadError instanceof DOMException && loadError.name === "AbortError") return;
       setError(loadError instanceof Error ? loadError.message : "Không thể tải danh sách item.");
     } finally {
-      setIsFlowItemsLoading(false);
+      if (requestId === flowItemsRequestId.current) {
+        flowItemsAbortController.current = null;
+        setIsFlowItemsLoading(false);
+      }
     }
   }, [
     activeViewModeKey,
     activeFlowListStage,
     asyncFlowPagination.pageSize,
     dashboardEndpoint,
-    flowItemsModeKey,
-    isFlowItemsLoading,
+    filterPayment,
+    filterQuery,
+    filterWorkStatus,
+  ]);
+  useEffect(() => () => {
+    flowItemsAbortController.current?.abort();
+  }, []);
+  useEffect(() => {
+    if (!activeCoreFlow || workTicketView !== "LIST") return;
+    const requestKey = [
+      activeViewModeKey,
+      activeFlowListStage,
+      filterQuery.trim(),
+      filterWorkStatus,
+      filterPayment,
+    ].join("|");
+    if (lastFlowFilterRequestKey.current === null) {
+      lastFlowFilterRequestKey.current = requestKey;
+      return;
+    }
+    if (lastFlowFilterRequestKey.current === requestKey) {
+      return;
+    }
+    lastFlowFilterRequestKey.current = requestKey;
+    const timeoutId = window.setTimeout(() => {
+      void loadFlowItems(activeFlowListStage, 1, true);
+    }, 300);
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    activeCoreFlow,
+    activeFlowListStage,
+    activeViewModeKey,
+    filterPayment,
+    filterQuery,
+    filterWorkStatus,
+    loadFlowItems,
+    workTicketView,
   ]);
   const changeFlowListStage = useCallback((stageKey: string) => {
+    flowItemsAbortController.current?.abort();
+    if (stageKey !== activeFlowListStage) setIsFlowItemsLoading(true);
     setFlowListStageFilter(stageKey);
     if (stageKey !== activeFlowListStage) {
-      void loadFlowItems(stageKey, 1, true);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("flowStage", stageKey);
+      params.set("flowPage", "1");
+      params.set("flowPageSize", String(asyncFlowPagination.pageSize));
+      window.history.pushState(
+        null,
+        "",
+        `/admin/coordination/${contextPath(data.context)}?${params.toString()}`,
+      );
     }
-  }, [activeFlowListStage, loadFlowItems]);
+  }, [
+    activeFlowListStage,
+    asyncFlowPagination.pageSize,
+    data.context,
+    searchParams,
+  ]);
   const changeWorkTicketView = useCallback((value: string) => {
     const nextView = value === "TI_BOARD"
       ? "TI_BOARD"
@@ -850,6 +964,86 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
       setIsBoardRefreshing(false);
     }
   }, [dashboardEndpoint, handleDashboardResult, isBoardRefreshing]);
+  useEffect(() => {
+    if (
+      activeViewMode?.key !== "technical-issue-flow" ||
+      workTicketView !== "TI_BOARD" ||
+      asyncTechnicalIssueBoard ||
+      technicalBoardLoadAttempted.current
+    ) return;
+    technicalBoardLoadAttempted.current = true;
+    void refreshTechnicalIssueBoard();
+  }, [
+    activeViewMode?.key,
+    asyncTechnicalIssueBoard,
+    refreshTechnicalIssueBoard,
+    workTicketView,
+  ]);
+  const loadMoreBoardColumn = useCallback(async (
+    kind: "technical" | "media",
+    stage: string,
+    page: number,
+  ) => {
+    if (loadingBoardColumn) return;
+    setLoadingBoardColumn(`${kind}:${stage}`);
+    setError(null);
+    try {
+      const separator = dashboardEndpoint.includes("?") ? "&" : "?";
+      const response = await fetch(
+        `${dashboardEndpoint}${separator}includeBoard=1&boardStage=${encodeURIComponent(stage)}&boardPage=${page}&boardPageSize=20`,
+        { cache: "no-store" },
+      );
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error("Không thể tải thêm board.");
+      const source = result && typeof result === "object" && "data" in result &&
+        result.data && typeof result.data === "object"
+        ? result.data
+        : result;
+      if (kind === "technical") {
+        const board = (source as {
+          technicalIssueBoard?: CoordinationDashboardDTO["technicalIssueBoard"];
+        })?.technicalIssueBoard;
+        if (board) {
+          setAsyncTechnicalIssueBoard((current) => current ? {
+            ...current,
+            items: [
+              ...current.items,
+              ...board.items.filter(
+                (item) => !current.items.some((existing) => existing.id === item.id),
+              ),
+            ],
+            columnPagination: {
+              ...current.columnPagination,
+              [stage]: board.columnPagination[stage],
+            },
+          } : board);
+        }
+      } else {
+        const board = (source as {
+          mediaBoard?: CoordinationDashboardDTO["mediaBoard"];
+        })?.mediaBoard;
+        if (board) {
+          setAsyncMediaBoard((current) => current ? {
+            ...current,
+            items: [
+              ...current.items,
+              ...board.items.filter(
+                (item) => !current.items.some((existing) => existing.id === item.id),
+              ),
+            ],
+            columnPagination: {
+              ...current.columnPagination,
+              [stage]: board.columnPagination[stage],
+            },
+          } : board);
+        }
+      }
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Không thể tải thêm board.");
+    } finally {
+      setLoadingBoardColumn(null);
+    }
+  }, [dashboardEndpoint, loadingBoardColumn]);
   const handleTechnicalIntakeCompleted = useCallback(async (technicalIssueId: string | null) => {
     setActiveViewModeKey("technical-issue-flow");
     setWorkTicketView("TI_BOARD");
@@ -1012,8 +1206,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
 
     return Array.from(actionsByKey.values());
   }, [data.blueprints]);
-  const canShowTechnicalIssueBoard =
-    isTechnicalIssueFlowMode && Boolean(asyncTechnicalIssueBoard);
+  const canShowTechnicalIssueBoard = isTechnicalIssueFlowMode;
   const isTechnicalIssueBoardView =
     workTicketView === "TI_BOARD" && canShowTechnicalIssueBoard;
   const canShowMediaBoard = isMediaFlowMode && Boolean(asyncMediaBoard);
@@ -1317,13 +1510,19 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     >
         <AsyncBusinessListDashboard
           endpoint={dashboardEndpoint}
-          widgets={isPaymentCollectionFlow ? PAYMENT_DASHBOARD_WIDGETS : SPACE_DASHBOARD_WIDGETS}
+          widgets={
+            isPaymentCollectionFlow
+              ? PAYMENT_DASHBOARD_WIDGETS
+              : activeCoreFlow?.key === "technical-issue-flow"
+                ? TECHNICAL_DASHBOARD_WIDGETS
+                : SPACE_DASHBOARD_WIDGETS
+          }
           storageKey={`admin-dashboard:${data.context.toLowerCase()}-space:${activeCoreFlow?.key ?? activeViewMode?.key ?? "default"}`}
-          customizationRequest={dashboardCustomizationRequest}
-          showCustomizationTrigger={false}
-          cashFlowPeriods={isPaymentCollectionFlow}
-          onResult={handleDashboardResult}
-        />
+           customizationRequest={dashboardCustomizationRequest}
+           showCustomizationTrigger={false}
+           cashFlowPeriods={isPaymentCollectionFlow}
+           onResult={handleDashboardResult}
+         />
         <section className="min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
           <div className="border-b border-slate-200 px-5 py-4">
             {activeViewMode ? (
@@ -1664,8 +1863,16 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                   {orderedFlowStages.map((stage, index) => {
                     const isActive = stage.key === activeFlowListStage;
                     return (
+                      <Fragment key={stage.key}>
+                      {index > 0 ? (
+                        <span
+                          aria-hidden="true"
+                          className="mx-1.5 flex w-3 shrink-0 items-center justify-center text-violet-300"
+                        >
+                          <ChevronRight className="h-4 w-4" strokeWidth={1.5} />
+                        </span>
+                      ) : null}
                       <button
-                        key={stage.key}
                         type="button"
                         onClick={() => changeFlowListStage(stage.key)}
                         aria-current={isActive ? "step" : undefined}
@@ -1701,6 +1908,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
                           {flowListStageCounts.get(stage.key) ?? 0}
                         </span>
                       </button>
+                      </Fragment>
                     );
                   })}
                 </div>
@@ -1899,10 +2107,20 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
               priorityFilter={technicalIssuePriorityFilter}
               commentFilter={technicalIssueCommentFilter}
               focusedIssueId={focusedTechnicalIssueId}
+              columnPagination={asyncTechnicalIssueBoard?.columnPagination ?? {}}
+              loadingColumn={loadingBoardColumn}
+              onLoadMore={(stage, page) =>
+                void loadMoreBoardColumn("technical", stage, page)
+              }
             />
           ) : isMediaBoardView ? (
             <MediaProductionBoardView
               items={visibleMediaBoardItems}
+              columnPagination={asyncMediaBoard?.columnPagination ?? {}}
+              loadingColumn={loadingBoardColumn}
+              onLoadMore={(stage, page) =>
+                void loadMoreBoardColumn("media", stage, page)
+              }
               onChanged={(items) => setAsyncMediaBoard((current) => current ? {
                 ...current,
                 items: current.items.map((item) => items.find((updated) => updated.id === item.id) ?? item),
@@ -1914,9 +2132,9 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
             key={activeCoreFlow?.key ?? activeViewModeKey}
             items={asyncFlowItems}
             stages={activeCoreFlow?.stages ?? []}
-            query={filterQuery}
-            statusFilter={filterWorkStatus}
-            paymentFilter={filterPayment}
+            query=""
+            statusFilter="ALL"
+            paymentFilter="ALL"
             activeStage={activeFlowListStage}
             completedIcon={activeCoreFlow?.key === "media-production-flow" ? "published" : undefined}
             imageOverrides={Object.fromEntries(
@@ -1924,9 +2142,18 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
             )}
             pending={isViewPending || isFlowItemsLoading}
             pagination={asyncFlowPagination}
-            onPageChange={(page) =>
-              void loadFlowItems(activeFlowListStage, page, true)
-            }
+            onPageChange={(page) => {
+              const params = new URLSearchParams(searchParams.toString());
+              params.set("flowStage", activeFlowListStage);
+              params.set("flowPage", String(page));
+              params.set("flowPageSize", String(asyncFlowPagination.pageSize));
+              window.history.pushState(
+                null,
+                "",
+                `/admin/coordination/${contextPath(data.context)}?${params.toString()}`,
+              );
+              void loadFlowItems(activeFlowListStage, page, true);
+            }}
           />
           <div className="hidden">
           <div className={cn("hidden border-y border-slate-100 bg-[#fbfcfe] px-5 py-3 text-xs font-bold uppercase tracking-[0.05em] text-slate-500 lg:grid", workTicketGridClass)}>
@@ -2406,9 +2633,15 @@ type MediaBoardStage = MediaBoardItem["stage"];
 
 function MediaProductionBoardView({
   items,
+  columnPagination,
+  loadingColumn,
+  onLoadMore,
   onChanged,
 }: {
   items: MediaBoardItem[];
+  columnPagination: NonNullable<CoordinationDashboardDTO["mediaBoard"]>["columnPagination"];
+  loadingColumn: string | null;
+  onLoadMore: (stage: MediaBoardStage, page: number) => void;
   onChanged: (items: MediaBoardItem[]) => void;
 }) {
   const router = useRouter();
@@ -2476,6 +2709,9 @@ function MediaProductionBoardView({
                 key={column.key}
                 column={column}
                 items={items.filter((item) => item.stage === column.key)}
+                pagination={columnPagination[column.key]}
+                loading={loadingColumn === `media:${column.key}`}
+                onLoadMore={onLoadMore}
                 pendingId={pendingId}
                 onPreview={(item) => previewState.openPreview({
                   type: "WATCH",
@@ -2509,11 +2745,17 @@ function MediaProductionBoardView({
 function MediaBoardColumn({
   column,
   items,
+  pagination,
+  loading,
+  onLoadMore,
   pendingId,
   onPreview,
 }: {
   column: { key: MediaBoardStage; label: string; hint: string };
   items: MediaBoardItem[];
+  pagination?: { loaded: number; total: number; hasMore: boolean; nextPage: number | null };
+  loading: boolean;
+  onLoadMore: (stage: MediaBoardStage, page: number) => void;
   pendingId: string | null;
   onPreview: (item: MediaBoardItem) => void;
 }) {
@@ -2528,11 +2770,21 @@ function MediaBoardColumn({
             <span className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white shadow-sm", appearance.iconColor)}><StageIcon className="h-4.5 w-4.5" /></span>
             <div><div className="text-sm font-bold text-slate-950">{column.label}</div><div className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-slate-500">{column.hint}</div></div>
           </div>
-          <span className="grid h-7 min-w-7 place-items-center rounded-full bg-white px-2 text-xs font-bold text-slate-700 shadow-sm">{items.length}</span>
+          <span className="grid h-7 min-w-7 place-items-center rounded-full bg-white px-2 text-xs font-bold text-slate-700 shadow-sm">{pagination?.total ?? items.length}</span>
         </div>
       </header>
       <div className="grid content-start gap-4 p-3.5">
         {items.map((item) => <DraggableMediaBoardCard key={item.id} item={item} pending={pendingId === item.id} onPreview={() => onPreview(item)} />)}
+        {pagination?.hasMore && pagination.nextPage ? (
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => onLoadMore(column.key, pagination.nextPage!)}
+            className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-600 transition hover:border-violet-300 hover:bg-violet-50 disabled:opacity-50"
+          >
+            {loading ? "Đang tải..." : `Tải thêm · Còn ${pagination.total - pagination.loaded}`}
+          </button>
+        ) : null}
         {!items.length ? <div className={cn("grid min-h-32 place-items-center rounded-2xl border border-dashed text-xs", appearance.empty)}><div className="text-center"><StageIcon className="mx-auto mb-2 h-5 w-5 opacity-50" />Kéo Watch vào đây</div></div> : null}
       </div>
     </section>
@@ -2605,6 +2857,9 @@ function TechnicalIssueBoardView({
   priorityFilter,
   commentFilter,
   focusedIssueId,
+  columnPagination,
+  loadingColumn,
+  onLoadMore,
 }: {
   items: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["items"];
   actions: OperationalBlueprintAction[];
@@ -2613,6 +2868,9 @@ function TechnicalIssueBoardView({
   priorityFilter: TechnicalIssuePriorityFilter;
   commentFilter: TechnicalIssueCommentFilter;
   focusedIssueId: string | null;
+  columnPagination: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["columnPagination"];
+  loadingColumn: string | null;
+  onLoadMore: (stage: TechnicalIssueBoardStage, page: number) => void;
 }) {
   const router = useRouter();
   const progress = useAppProgress();
@@ -2926,6 +3184,9 @@ function TechnicalIssueBoardView({
                   key={column.key}
                   column={column}
                   items={columnItems}
+                  pagination={columnPagination[column.key]}
+                  loading={loadingColumn === `technical:${column.key}`}
+                  onLoadMore={onLoadMore}
                   isOver={overStage === column.key}
                   onTogglePriority={togglePriority}
                   priorityPendingIssueId={isPriorityPending ? priorityIssueId : null}
@@ -3211,6 +3472,25 @@ function technicalBoardSubmitLabel(action: OperationalBlueprintAction) {
   return "Xác nhận";
 }
 
+function TechnicalIssueBoardStageIcon({
+  stage,
+}: {
+  stage: TechnicalIssueBoardStage;
+}) {
+  const Icon =
+    stage === "INSPECT"
+      ? Inbox
+      : stage === "READY"
+        ? CalendarClock
+        : stage === "PROCESSING"
+          ? LoaderCircle
+          : CheckCircle2;
+
+  return (
+    <SoftIconBadge icon={Icon} />
+  );
+}
+
 function fieldKindLabel(kind: OperationalBlueprintActionField["kind"]) {
   if (kind === "textarea") return "Ghi chú";
   if (kind === "select") return "Chọn";
@@ -3261,11 +3541,12 @@ function TechnicalIssueBoardControlStrip({
     </div>
   );
 }
-const TECHNICAL_BOARD_COLUMN_PAGE_SIZE = 10;
-
 function TechnicalIssueBoardColumn({
   column,
   items,
+  pagination,
+  loading,
+  onLoadMore,
   isOver,
   onTogglePriority,
   priorityPendingIssueId,
@@ -3274,6 +3555,9 @@ function TechnicalIssueBoardColumn({
 }: {
   column: { key: TechnicalIssueBoardStage; label: string; hint: string };
   items: TechnicalIssueBoardItem[];
+  pagination?: { loaded: number; total: number; hasMore: boolean; nextPage: number | null };
+  loading: boolean;
+  onLoadMore: (stage: TechnicalIssueBoardStage, page: number) => void;
   isOver: boolean;
   onTogglePriority: (item: TechnicalIssueBoardItem) => void;
   priorityPendingIssueId: string | null;
@@ -3281,9 +3565,6 @@ function TechnicalIssueBoardColumn({
   onPreview: (item: TechnicalIssueBoardItem) => void;
 }) {
   const { setNodeRef } = useDroppable({ id: column.key });
-  const [visibleCount, setVisibleCount] = useState(TECHNICAL_BOARD_COLUMN_PAGE_SIZE);
-  const visibleItems = items.slice(0, visibleCount);
-  const remainingCount = Math.max(0, items.length - visibleItems.length);
   return (
     <div
       ref={setNodeRef}
@@ -3296,19 +3577,20 @@ function TechnicalIssueBoardColumn({
         "sticky top-0 z-10 shrink-0 rounded-t-xl border-b border-violet-100/70 bg-gradient-to-r from-white via-violet-50/45 to-violet-50/80 px-4 py-3",
       )}>
         <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start">
+        <div className="flex min-w-0 items-start gap-2.5">
+          <TechnicalIssueBoardStageIcon stage={column.key} />
           <div className="min-w-0">
             <div className="text-sm font-semibold text-slate-950">{column.label}</div>
             <div className="mt-0.5 line-clamp-2 text-xs text-slate-500">{column.hint}</div>
           </div>
         </div>
         <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-          {items.length}
+          {pagination?.total ?? items.length}
         </span>
         </div>
       </div>
       <div className="grid flex-1 content-start gap-3 p-3 sm:p-4">
-        {visibleItems.map((item) => (
+        {items.map((item) => (
           <DraggableTechnicalIssueBoardCard
             key={item.id}
             item={item}
@@ -3323,13 +3605,14 @@ function TechnicalIssueBoardColumn({
             Kéo TI vào đây.
           </div>
         ) : null}
-        {remainingCount > 0 ? (
+        {pagination?.hasMore && pagination.nextPage ? (
           <button
             type="button"
-            onClick={() => setVisibleCount((current) => current + TECHNICAL_BOARD_COLUMN_PAGE_SIZE)}
+            disabled={loading}
+            onClick={() => onLoadMore(column.key, pagination.nextPage!)}
             className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-600 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
           >
-            Xem thêm {Math.min(TECHNICAL_BOARD_COLUMN_PAGE_SIZE, remainingCount)} · Còn {remainingCount} TI
+            {loading ? "Đang tải..." : `Tải thêm · Còn ${pagination.total - pagination.loaded} TI`}
           </button>
         ) : null}
       </div>

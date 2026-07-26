@@ -42,6 +42,22 @@ const QUEUE_ACTIVITY_SELECT = {
   },
 } as const;
 
+export type QueueActivityTargetStatsRow = {
+  targetId: string;
+  latestActivityTitle: string | null;
+  latestActivityAt: Date | null;
+  latestUpdatedAt: Date | null;
+  actorName: string | null;
+  actorEmail: string | null;
+  actorAvatarUrl: string | null;
+  actorUserId: string | null;
+  activityCount: bigint | number;
+  feedbackCount: bigint | number;
+  discussionCount: bigint | number;
+  hasRejectedOrFeedback: boolean;
+  hasDoneSignal: boolean;
+};
+
 function clean(value: unknown) {
   return String(value ?? "").trim();
 }
@@ -258,6 +274,82 @@ export async function findQueueActivitiesByTaskItemTargets(
       { id: "asc" },
     ],
   });
+}
+
+export async function findQueueActivityStatsByTaskItemTargets(
+  db: DB,
+  input: {
+    taskItemId: string;
+    targetType: BusinessBindingTargetType;
+    targetIds: string[];
+  },
+) {
+  const client = dbOrTx(db);
+  const taskItemId = clean(input.taskItemId);
+  const targetIds = Array.from(new Set(input.targetIds.map(clean).filter(Boolean)));
+  assertPresent(taskItemId, "Missing taskItemId");
+  if (!targetIds.length) return [] as QueueActivityTargetStatsRow[];
+
+  return client.$queryRaw<QueueActivityTargetStatsRow[]>(Prisma.sql`
+    WITH base AS (
+      SELECT
+        a.id,
+        a."metadataJson" ->> 'targetId' AS "targetId",
+        a.title,
+        a."sourceType"::text AS "sourceType",
+        a."occurredAt",
+        a."updatedAt",
+        a."actorUserId",
+        lower(COALESCE(a."metadataJson" ->> 'eventKey', '') || ' ' || a.title) AS event_text,
+        CASE WHEN
+          COALESCE(a."metadataJson" ->> 'feedbackId', '') <> '' OR
+          COALESCE(a."metadataJson" ->> 'feedbackMessage', '') <> '' OR
+          COALESCE(a."metadataJson" #>> '{feedback,id}', '') <> '' OR
+          COALESCE(a."metadataJson" #>> '{feedback,message}', '') <> '' OR
+          lower(COALESCE(a."metadataJson" ->> 'eventKey', '') || ' ' || a.title)
+            ~ '(rejected|feedback)'
+        THEN 1 ELSE 0 END AS has_feedback,
+        (SELECT COUNT(*) FROM "TaskItemActivityReply" r WHERE r."activityId" = a.id) AS reply_count
+      FROM "TaskItemActivity" a
+      WHERE a."taskItemId" = ${taskItemId}
+        AND a."metadataJson" ->> 'targetType' = ${input.targetType}
+        AND a."metadataJson" ->> 'targetId' IN (${Prisma.join(targetIds)})
+    ),
+    aggregate AS (
+      SELECT
+        "targetId",
+        COUNT(*) AS "activityCount",
+        SUM(has_feedback) AS "feedbackCount",
+        SUM(reply_count + CASE WHEN "sourceType" = 'DISCUSSION' THEN 1 ELSE 0 END)
+          AS "discussionCount",
+        BOOL_OR(has_feedback = 1) AS "hasRejectedOrFeedback",
+        BOOL_OR(event_text ~ '(approved|done|completed)') AS "hasDoneSignal"
+      FROM base
+      GROUP BY "targetId"
+    ),
+    latest AS (
+      SELECT DISTINCT ON ("targetId")
+        "targetId",
+        title AS "latestActivityTitle",
+        "occurredAt" AS "latestActivityAt",
+        "updatedAt" AS "latestUpdatedAt",
+        "actorUserId"
+      FROM base
+      ORDER BY "targetId", "occurredAt" DESC, id DESC
+    )
+    SELECT
+      aggregate.*,
+      latest."latestActivityTitle",
+      latest."latestActivityAt",
+      latest."latestUpdatedAt",
+      latest."actorUserId",
+      u.name AS "actorName",
+      u.email AS "actorEmail",
+      u."avatarUrl" AS "actorAvatarUrl"
+    FROM aggregate
+    JOIN latest USING ("targetId")
+    LEFT JOIN "User" u ON u.id = latest."actorUserId"
+  `);
 }
 
 export async function findBusinessBindingByTaskItemTarget(

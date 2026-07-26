@@ -27,6 +27,10 @@ function operationContracts() {
       workTypeKey: "payment",
       coordinationContext: "PAYMENT",
     }),
+    operationalBlueprintForWorkType({
+      workTypeKey: "shipment",
+      coordinationContext: "OPERATION",
+    }),
   ].filter((contract): contract is OperationalBlueprintContract => Boolean(contract));
 }
 

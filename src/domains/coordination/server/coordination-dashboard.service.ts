@@ -42,6 +42,14 @@ import {
   listTaskItemQueueItems,
 } from "@/domains/task/server/business-binding.service";
 import type { CoordinationFlowListItemDTO } from "./coordination-dashboard.types";
+import {
+  listShipmentOperationQueueProjection,
+  type ShipmentOperationStage,
+} from "@/domains/projection/server/shipment-operation-queue.projection";
+import {
+  operationalBlueprintForWorkType,
+  selectOperationalActionsForWorkspaceRole,
+} from "@/domains/blueprint/shared/operational-blueprint";
 
 function dashboardStep<T>(label: string, run: () => Promise<T>) {
   return perfStep("coordination-dashboard", label, run);
@@ -150,161 +158,6 @@ function overdueCalendarDays(
     0,
     Math.round((completed.getTime() - expected.getTime()) / 86_400_000),
   );
-}
-
-const paymentReconcileLocks = new Map<string, Promise<void>>();
-
-async function withPaymentReconcileLock<T>(
-  taskId: string,
-  run: () => Promise<T>,
-): Promise<T> {
-  const previous = paymentReconcileLocks.get(taskId) ?? Promise.resolve();
-  let release!: () => void;
-  const current = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  const queued = previous.then(() => current);
-  paymentReconcileLocks.set(taskId, queued);
-
-  await previous;
-  try {
-    return await run();
-  } finally {
-    release();
-    if (paymentReconcileLocks.get(taskId) === queued) {
-      paymentReconcileLocks.delete(taskId);
-    }
-  }
-}
-
-export async function reconcilePaymentCollectionBindings(input: {
-  db: DB;
-  taskId: string;
-  taskItems: Array<{ id: string; title: string; note: string | null }>;
-}) {
-  return withPaymentReconcileLock(input.taskId, async () => {
-  const db = input.db;
-  const inboxItems = input.taskItems.filter((item) => paymentWorkspaceRole(item.note) === "PAYMENT_INBOX");
-  const reviewItems = input.taskItems.filter((item) => paymentWorkspaceRole(item.note) === "PAYMENT_REVIEW");
-  const settledItems = input.taskItems.filter((item) => paymentWorkspaceRole(item.note) === "PAYMENT_SETTLED");
-  const canonicalReview = reviewItems.find((item) => item.title === "Payment Collection - Review") ?? reviewItems[0];
-  const canonicalSettled = settledItems.find((item) => item.title === "Payment Collection - Settled / Exception") ?? settledItems[0];
-  const reviewId = canonicalReview?.id;
-  const settledId = canonicalSettled?.id;
-  if (!reviewId || !settledId) return;
-
-  const [payments, existing] = await Promise.all([
-    db.payment.findMany({
-      where: { amount: { gt: 0 } },
-      select: { id: true, status: true },
-    }),
-    db.taskExecution.findMany({
-      where: {
-        taskId: input.taskId,
-        targetType: TaskExecutionTargetType.PAYMENT,
-        actionType: { not: TaskExecutionActionType.CANCELLED },
-      },
-      select: { id: true, targetId: true, taskItemId: true },
-      orderBy: { createdAt: "asc" },
-    }),
-  ]);
-  const terminalStatuses = new Set(["PAID", "COLLECTED", "CANCELED", "CANCELLED", "FAILED"]);
-  const statusById = new Map(payments.map((payment) => [payment.id, String(payment.status).toUpperCase()]));
-  const invalidPaymentIds = existing
-    .filter((binding) => !statusById.has(binding.targetId))
-    .map((binding) => binding.targetId);
-  const validExisting = existing.filter((binding) => statusById.has(binding.targetId));
-  const duplicateBindingIds: string[] = [];
-  const bindingsByTargetId = validExisting.reduce((groups, binding) => {
-    const group = groups.get(binding.targetId) ?? [];
-    group.push(binding);
-    groups.set(binding.targetId, group);
-    return groups;
-  }, new Map<string, Array<(typeof validExisting)[number]>>());
-  const uniqueExisting = Array.from(bindingsByTargetId.entries()).map(([targetId, bindings]) => {
-    const terminal = terminalStatuses.has(statusById.get(targetId) ?? "");
-    const expectedTaskItemId = terminal ? settledId : reviewId;
-    const bindingToKeep =
-      bindings.find((binding) => binding.taskItemId === expectedTaskItemId) ??
-      bindings[0];
-    duplicateBindingIds.push(
-      ...bindings
-        .filter((binding) => binding.id !== bindingToKeep.id)
-        .map((binding) => binding.id),
-    );
-    return bindingToKeep;
-  });
-  const existingIds = new Set(uniqueExisting.map((binding) => binding.targetId));
-  const staleReviewIds = uniqueExisting.filter((binding) => !terminalStatuses.has(statusById.get(binding.targetId) ?? "")).map((binding) => binding.targetId);
-  const staleSettledIds = uniqueExisting.filter((binding) => terminalStatuses.has(statusById.get(binding.targetId) ?? "")).map((binding) => binding.targetId);
-  if (duplicateBindingIds.length) {
-    await db.taskExecution.updateMany({
-      where: { id: { in: duplicateBindingIds } },
-      data: { actionType: TaskExecutionActionType.CANCELLED },
-    });
-  }
-  if (invalidPaymentIds.length) {
-    await db.taskExecution.updateMany({
-      where: {
-        taskId: input.taskId,
-        targetType: TaskExecutionTargetType.PAYMENT,
-        targetId: { in: invalidPaymentIds },
-      },
-      data: { actionType: TaskExecutionActionType.CANCELLED },
-    });
-  }
-  if (staleReviewIds.length) {
-    await db.taskExecution.updateMany({
-      where: {
-        taskId: input.taskId,
-        targetType: TaskExecutionTargetType.PAYMENT,
-        targetId: { in: staleReviewIds },
-        actionType: { not: TaskExecutionActionType.CANCELLED },
-      },
-      data: { taskItemId: reviewId },
-    });
-  }
-  if (staleSettledIds.length) {
-    await db.taskExecution.updateMany({
-      where: {
-        taskId: input.taskId,
-        targetType: TaskExecutionTargetType.PAYMENT,
-        targetId: { in: staleSettledIds },
-        actionType: { not: TaskExecutionActionType.CANCELLED },
-      },
-      data: { taskItemId: settledId },
-    });
-  }
-  const obsoleteWorkspaceIds = [
-    ...inboxItems.map((item) => item.id),
-    ...reviewItems.filter((item) => item.id !== reviewId).map((item) => item.id),
-    ...settledItems.filter((item) => item.id !== settledId).map((item) => item.id),
-  ];
-  if (obsoleteWorkspaceIds.length) {
-    await db.taskItem.updateMany({ where: { id: { in: obsoleteWorkspaceIds } }, data: { status: TaskStatus.CANCELLED } });
-  }
-  const missing = payments.filter((payment) => !existingIds.has(payment.id));
-  if (!missing.length) return;
-
-  await db.taskExecution.createMany({
-    skipDuplicates: true,
-    data: missing.map((payment) => {
-      const status = String(payment.status).toUpperCase();
-      const terminal = ["PAID", "COLLECTED", "CANCELED", "CANCELLED", "FAILED"].includes(status);
-      return {
-        taskId: input.taskId,
-        taskItemId: terminal ? settledId : reviewId,
-        targetType: TaskExecutionTargetType.PAYMENT,
-        targetId: payment.id,
-        actionType: TaskExecutionActionType.LINKED,
-        metadataJson: {
-          source: "PAYMENT_FLOW_RECONCILE",
-          paymentStatus: status,
-        },
-      };
-    }),
-  });
-  });
 }
 
 function ticketCreator(item: {
@@ -1335,7 +1188,14 @@ function serviceRequestPaymentStatus(input: {
   return "UNPAID";
 }
 
-async function loadMediaBoard(input: { db: DB; taskId: string; viewerUserId?: string | null }) {
+async function loadMediaBoard(input: {
+  db: DB;
+  taskId: string;
+  viewerUserId?: string | null;
+  stage?: string | null;
+  page?: number;
+  pageSize?: number;
+}) {
   const bindings = await input.db.taskExecution.findMany({
     where: {
       taskId: input.taskId,
@@ -1362,11 +1222,60 @@ async function loadMediaBoard(input: { db: DB; taskId: string; viewerUserId?: st
     bindingByWatchId.set(binding.targetId, binding);
   }
   const watchIds = [...bindingByWatchId.keys()];
-  if (!watchIds.length) return { items: [] as CoordinationMediaBoardItemDTO[] };
+  if (!watchIds.length) return {
+    items: [] as CoordinationMediaBoardItemDTO[],
+    columnPagination: {},
+  };
 
+  const page = Math.max(1, Math.trunc(input.page ?? 1));
+  const pageSize = Math.min(100, Math.max(1, Math.trunc(input.pageSize ?? 20)));
+  const stages = ["PHOTOGRAPHY", "MEDIA_PROCESSING", "PUBLISH", "DONE"] as const;
+  const requestedStage = stages.find((stage) => stage === normalizeStatus(input.stage));
+  const stageForBinding = (binding: (typeof bindings)[number]) => {
+    const workType = mediaStageFromWorkTypeKey(ticketWorkTypeKey(binding.taskItem?.note));
+    const runtime = getQueueItemWorkflowState({ metadataJson: binding.metadataJson });
+    return workType === "photography"
+      ? "PHOTOGRAPHY" as const
+      : workType === "media-processing"
+        ? "MEDIA_PROCESSING" as const
+        : runtime?.currentState === "DONE" || runtime?.currentState === "CANCELLED"
+          ? "DONE" as const
+          : "PUBLISH" as const;
+  };
+  const watchOrderRows = await input.db.watch.findMany({
+    where: { id: { in: watchIds } },
+    select: { id: true, updatedAt: true },
+    orderBy: { updatedAt: "desc" },
+  });
+  const watchIdsByStage = new Map(stages.map((stage) => [stage, [] as string[]]));
+  for (const watch of watchOrderRows) {
+    const binding = bindingByWatchId.get(watch.id);
+    if (binding) watchIdsByStage.get(stageForBinding(binding))?.push(watch.id);
+  }
+  const columnPagination = Object.fromEntries(stages.map((stage) => {
+    const total = watchIdsByStage.get(stage)?.length ?? 0;
+    const loaded = requestedStage === stage
+      ? Math.min(total, page * pageSize)
+      : Math.min(total, pageSize);
+    return [stage, {
+      loaded,
+      total,
+      hasMore: loaded < total,
+      nextPage: loaded < total ? Math.floor(loaded / pageSize) + 1 : null,
+    }];
+  }));
+  const selectedWatchIds = requestedStage
+    ? (watchIdsByStage.get(requestedStage) ?? [])
+        .slice((page - 1) * pageSize, page * pageSize)
+    : stages.flatMap((stage) =>
+        (watchIdsByStage.get(stage) ?? []).slice(0, pageSize)
+      );
+  const selectedBindings = selectedWatchIds
+    .map((id) => bindingByWatchId.get(id))
+    .filter((binding): binding is (typeof bindings)[number] => Boolean(binding));
   const [watches, discussionActivities] = await Promise.all([
     input.db.watch.findMany({
-      where: { id: { in: watchIds } },
+      where: { id: { in: selectedWatchIds } },
       select: {
         id: true,
         updatedAt: true,
@@ -1374,7 +1283,7 @@ async function loadMediaBoard(input: { db: DB; taskId: string; viewerUserId?: st
       },
     }),
     input.db.taskItemActivity.findMany({
-      where: { taskItemId: { in: bindings.map((binding) => binding.taskItemId).filter((id): id is string => Boolean(id)) } },
+      where: { taskItemId: { in: selectedBindings.map((binding) => binding.taskItemId).filter((id): id is string => Boolean(id)) } },
       select: { sourceType: true, metadataJson: true, replies: { select: { metadataJson: true } }, _count: { select: { replies: true } } },
     }),
   ]);
@@ -1418,15 +1327,8 @@ async function loadMediaBoard(input: { db: DB; taskId: string; viewerUserId?: st
     .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime())
     .map((watch): CoordinationMediaBoardItemDTO => {
     const binding = bindingByWatchId.get(watch.id)!;
-    const workType = mediaStageFromWorkTypeKey(ticketWorkTypeKey(binding.taskItem?.note));
     const runtime = getQueueItemWorkflowState({ metadataJson: binding.metadataJson });
-    const stage = workType === "photography"
-      ? "PHOTOGRAPHY"
-      : workType === "media-processing"
-        ? "MEDIA_PROCESSING"
-        : runtime?.currentState === "DONE" || runtime?.currentState === "CANCELLED"
-          ? "DONE"
-          : "PUBLISH";
+    const stage = stageForBinding(binding);
     const actorLabel = userLabel(binding.createdByUser);
     return {
       id: watch.id,
@@ -1448,7 +1350,7 @@ async function loadMediaBoard(input: { db: DB; taskId: string; viewerUserId?: st
       },
     };
     });
-  return { items };
+  return { items, columnPagination };
 }
 
 function technicalIssueBoardStage(input: {
@@ -1471,6 +1373,9 @@ async function loadTechnicalIssueBoard(input: {
   db: DB;
   taskId: string;
   viewerUserId?: string | null;
+  stage?: string | null;
+  page?: number;
+  pageSize?: number;
 }) {
   const bindings = await input.db.taskExecution.findMany({
     where: {
@@ -1561,7 +1466,12 @@ async function loadTechnicalIssueBoard(input: {
     }),
   ]);
 
-  if (!issueIds.length) return { items: [], vendorOptions, technicalDetailCatalogOptions };
+  if (!issueIds.length) return {
+    items: [],
+    vendorOptions,
+    technicalDetailCatalogOptions,
+    columnPagination: {},
+  };
 
   const srCaseTaskItemIdByServiceRequestId = new Map<string, string>();
   for (const binding of serviceRequestBindings) {
@@ -1571,8 +1481,52 @@ async function loadTechnicalIssueBoard(input: {
     srCaseTaskItemIdByServiceRequestId.set(binding.targetId, binding.taskItemId);
   }
 
-  const [issues, startedEvents, discussionActivities] = await Promise.all([input.db.technicalIssue.findMany({
+  const page = Math.max(1, Math.trunc(input.page ?? 1));
+  const pageSize = Math.min(100, Math.max(1, Math.trunc(input.pageSize ?? 20)));
+  const stages = ["INSPECT", "READY", "PROCESSING", "DONE"] as const;
+  const requestedStage = stages.find((stage) => stage === normalizeStatus(input.stage));
+  const issueStageRows = await input.db.technicalIssue.findMany({
     where: { id: { in: issueIds } },
+    select: {
+      id: true,
+      executionStatus: true,
+      isConfirmed: true,
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+  const issueIdsByStage = new Map(stages.map((stage) => [stage, [] as string[]]));
+  for (const issue of issueStageRows) {
+    const binding = bindingByIssueId.get(issue.id);
+    const stage = technicalIssueBoardStage({
+      flowStageKey: binding?.flowStageKey ?? null,
+      executionStatus: issue.executionStatus,
+      isConfirmed: issue.isConfirmed,
+    });
+    issueIdsByStage.get(stage)?.push(issue.id);
+  }
+  const columnPagination = Object.fromEntries(stages.map((stage) => {
+    const total = issueIdsByStage.get(stage)?.length ?? 0;
+    const loaded = requestedStage === stage
+      ? Math.min(total, page * pageSize)
+      : Math.min(total, pageSize);
+    return [stage, {
+      loaded,
+      total,
+      hasMore: loaded < total,
+      nextPage: loaded < total ? Math.floor(loaded / pageSize) + 1 : null,
+    }];
+  }));
+  const selectedIssueIds = requestedStage
+    ? (issueIdsByStage.get(requestedStage) ?? [])
+        .slice((page - 1) * pageSize, page * pageSize)
+    : stages.flatMap((stage) =>
+        (issueIdsByStage.get(stage) ?? []).slice(0, pageSize)
+      );
+  const selectedTaskItemIds = selectedIssueIds
+    .map((id) => bindingByIssueId.get(id)?.taskItemId)
+    .filter((id): id is string => Boolean(id));
+  const [issues, startedEvents, discussionActivities] = await Promise.all([input.db.technicalIssue.findMany({
+    where: { id: { in: selectedIssueIds } },
     select: {
       id: true,
       serviceRequestId: true,
@@ -1614,12 +1568,12 @@ async function loadTechnicalIssueBoard(input: {
     where: {
       eventKey: "technical_issue.started",
       targetType: "TECHNICAL_ISSUE",
-      targetId: { in: issueIds },
+      targetId: { in: selectedIssueIds },
     },
     select: { targetId: true, metadataJson: true },
   }), input.db.taskItemActivity.findMany({
     where: {
-      taskItemId: { in: bindings.map((binding) => binding.taskItemId).filter((id): id is string => Boolean(id)) },
+      taskItemId: { in: selectedTaskItemIds },
     },
     select: {
       sourceType: true,
@@ -1775,7 +1729,12 @@ async function loadTechnicalIssueBoard(input: {
       return String(right.updatedAt ?? "").localeCompare(String(left.updatedAt ?? ""));
     });
 
-  return { items, vendorOptions, technicalDetailCatalogOptions };
+  return {
+    items,
+    vendorOptions,
+    technicalDetailCatalogOptions,
+    columnPagination,
+  };
 }
 
 async function loadTechnicalServiceRequestRollupByTaskItem(input: {
@@ -2160,10 +2119,17 @@ export async function getCoordinationDashboard(input: {
   includeDashboardDetails?: boolean;
   includeTechnicalBoard?: boolean;
   includeMediaBoard?: boolean;
+  boardStage?: string | null;
+  boardPage?: number | null;
+  boardPageSize?: number | null;
   includeFlowItems?: boolean;
   flowStageKey?: string | null;
   flowPage?: number | null;
   flowPageSize?: number | null;
+  flowQuery?: string | null;
+  flowStatus?: string | null;
+  flowPaymentStatus?: string | null;
+  flowSort?: string | null;
   includeManagementDetails?: boolean;
   includeWorkspaceSummaries?: boolean;
   auth?: unknown;
@@ -2171,6 +2137,16 @@ export async function getCoordinationDashboard(input: {
   const db = input?.db ?? prisma;
   const flowPage = Math.max(1, Math.trunc(input.flowPage ?? 1));
   const flowPageSize = Math.min(100, Math.max(10, Math.trunc(input.flowPageSize ?? 20)));
+  const flowQuery = String(input.flowQuery ?? "").trim().toLocaleLowerCase("vi");
+  const flowStatus = normalizeStatus(input.flowStatus);
+  const flowPaymentStatus = normalizeStatus(input.flowPaymentStatus);
+  const flowSort = normalizeStatus(input.flowSort) || "UPDATED_DESC";
+  const hasFlowFilters = Boolean(
+    flowQuery ||
+    (flowStatus && flowStatus !== "ALL") ||
+    (flowPaymentStatus && flowPaymentStatus !== "ALL") ||
+    flowSort !== "UPDATED_DESC"
+  );
   const selectedDate = parseDateInput(input?.date);
   const cycle = await dashboardStep("ensureCycle", () => ensureCoordinationCycle(db, {
     context: input.context,
@@ -2178,7 +2154,12 @@ export async function getCoordinationDashboard(input: {
     provisionWorkTickets: false,
   }));
 
-  const rawTaskItems = await dashboardStep("loadTaskItems", () => db.taskItem.findMany({
+  const needsTaskItems =
+    input.includeWorkspaceSummaries !== false ||
+    input.includeFlowItems !== false ||
+    input.includeManagementDetails !== false;
+  const rawTaskItems = needsTaskItems
+    ? await dashboardStep("loadTaskItems", () => db.taskItem.findMany({
     where: {
       taskId: cycle.task.id,
       status: { not: TaskStatus.CANCELLED },
@@ -2224,7 +2205,8 @@ export async function getCoordinationDashboard(input: {
       { sortOrder: "asc" },
       { createdAt: "asc" },
     ],
-  }));
+      }))
+    : [];
   const workTypeContexts: CoordinationContext[] = input.context === "OPERATION"
     ? ["OPERATION", "SALES", "TECHNICAL", "MEDIA", "PAYMENT", "GENERAL"]
     : [input.context];
@@ -2304,6 +2286,7 @@ export async function getCoordinationDashboard(input: {
   const isTechnicalFlow = input.context === "TECHNICAL" || activeFlow?.key === "technical-issue-flow";
   const isMediaFlow = input.context === "MEDIA" || activeFlow?.key === "media-production-flow";
   const isPaymentFlow = input.context === "PAYMENT" || activeFlow?.key === "payment-collection-core-flow";
+  const isShipmentFlow = activeFlow?.key === "shipment-operation-core-flow";
   const isServiceRequestCaseMode = activeMode?.key === "sr-cases";
   const requestedFlowStage = activeFlow?.stages.find(
     (stage) =>
@@ -2322,6 +2305,44 @@ export async function getCoordinationDashboard(input: {
         );
       })
     : taskItems;
+  const shipmentStage: ShipmentOperationStage =
+    normalizeStatus(requestedFlowStage?.key).includes("PROCESSING")
+      ? "SHIPMENT_PROCESSING"
+      : normalizeStatus(requestedFlowStage?.key).includes("DONE")
+        ? "SHIPMENT_DONE"
+        : "SHIPMENT_WAITING";
+  const shipmentProjectionPromise =
+    input.includeFlowItems !== false && isShipmentFlow
+      ? listShipmentOperationQueueProjection(db, {
+          stage: shipmentStage,
+          page: flowPage,
+          pageSize: flowPageSize,
+          query: input.flowQuery,
+        })
+      : null;
+  const unfilteredFlowItemsTotalPromise =
+    input.includeFlowItems === false || hasFlowFilters
+      ? Promise.resolve(0)
+      : dashboardStep("flowItemsTotal", () =>
+          isShipmentFlow && shipmentProjectionPromise
+            ? shipmentProjectionPromise.then((result) => result.total)
+            : isPaymentFlow
+            ? db.payment.count({
+                where: {
+                  amount: { gt: 0 },
+                  status: normalizeStatus(input.flowStageKey).includes("SETTLED")
+                    ? { not: PaymentStatus.UNPAID }
+                    : PaymentStatus.UNPAID,
+                },
+              })
+            : db.taskExecution.count({
+                where: {
+                  taskId: cycle.task.id,
+                  taskItemId: { in: flowLoadTaskItems.map((item) => item.id) },
+                  actionType: { not: TaskExecutionActionType.CANCELLED },
+                },
+              }),
+        );
 
   const [
     queueRows,
@@ -2399,6 +2420,9 @@ export async function getCoordinationDashboard(input: {
           db,
           taskId: cycle.task.id,
           viewerUserId: getAuthUserId(input.auth),
+          stage: input.boardStage,
+          page: input.boardPage ?? undefined,
+          pageSize: input.boardPageSize ?? undefined,
         }))
       : Promise.resolve(null),
     input.includeManagementDetails !== false
@@ -2420,11 +2444,112 @@ export async function getCoordinationDashboard(input: {
         }).then(paymentCashFlowPeriods))
       : Promise.resolve(null),
     isMediaFlow && input.includeMediaBoard !== false
-      ? dashboardStep("mediaBoard", () => loadMediaBoard({ db, taskId: cycle.task.id, viewerUserId: getAuthUserId(input.auth) }))
+      ? dashboardStep("mediaBoard", () => loadMediaBoard({
+          db,
+          taskId: cycle.task.id,
+          viewerUserId: getAuthUserId(input.auth),
+          stage: input.boardStage,
+          page: input.boardPage ?? undefined,
+          pageSize: input.boardPageSize ?? undefined,
+        }))
       : Promise.resolve(null),
     input.includeFlowItems !== false
       ? dashboardStep("flowItems", () =>
-          isPaymentFlow
+          isShipmentFlow && shipmentProjectionPromise
+              ? shipmentProjectionPromise.then((result) => {
+                 const workspace = flowLoadTaskItems[0] ?? null;
+                 const metadata = workspaceRoleMetadataFromNote(workspace?.note);
+                 const shipmentContract = operationalBlueprintForWorkType({
+                   workTypeKey: "shipment",
+                   coordinationContext: "OPERATION",
+                 });
+                 const shipmentActions = selectOperationalActionsForWorkspaceRole({
+                   contract: shipmentContract,
+                   workspaceRole:
+                     metadata.operationWorkspaceRole ??
+                     (shipmentStage === "SHIPMENT_DONE"
+                       ? "SHIPMENT_DONE"
+                       : shipmentStage === "SHIPMENT_PROCESSING"
+                         ? "SHIPMENT_PROCESSING"
+                         : "SHIPMENT_WAITING"),
+                   targetTypes: ["SHIPMENT"],
+                 });
+                 return [
+                  result.rows.map((row): CoordinationFlowListItemDTO => ({
+                    id: `shipment:${row.shipmentId}`,
+                    taskItemId: workspace?.id ?? "",
+                    targetType: TaskExecutionTargetType.SHIPMENT,
+                    targetId: row.shipmentId,
+                    source: "AUTO",
+                    status:
+                      row.flowStage === "SHIPMENT_DONE"
+                        ? "DONE"
+                        : row.flowStage === "SHIPMENT_PROCESSING"
+                          ? "IN_PROGRESS"
+                          : "WAITING",
+                    preview: {
+                      title: row.shipmentRefNo
+                        ? `Vận chuyển ${row.shipmentRefNo}`
+                        : "Vận chuyển đơn hàng",
+                      ref: [row.orderRefNo, row.trackingCode].filter(Boolean).join(" / ") || row.shipmentId,
+                      status: row.shipmentStatus,
+                      imageUrl: row.imageUrl,
+                      imageUrls: row.imageUrls,
+                      postTargets: [],
+                    },
+                    latestActivityTitle: null,
+                    feedbackCount: 0,
+                    discussionCount: 0,
+                    activityCount: 0,
+                    lastUpdatedBy: {
+                      label: "Hệ thống",
+                      avatarUrl: null,
+                      isSystem: true,
+                    },
+                    workflowKey: "shipment-operation-workflow",
+                    currentWorkflowState: row.shipmentStatus,
+                    currentWorkflowStateLabel: row.shipmentStatus,
+                    isWorkflowDone: row.flowStage === "SHIPMENT_DONE",
+                    manualTransitions: shipmentActions
+                    .filter((action) => {
+                      const status = normalizeStatus(row.shipmentStatus);
+                      if (status === "RETURNING") {
+                        return action.key === "receive_shipment_return";
+                      }
+                      if (row.flowStage === "SHIPMENT_PROCESSING") {
+                        return [
+                          "mark_shipment_delivered",
+                          "mark_shipment_returning",
+                        ].includes(action.key);
+                      }
+                      return row.flowStage === "SHIPMENT_WAITING";
+                    })
+                    .map((action) => ({
+                      actionKey: action.key,
+                      label: action.label,
+                      manualActionLabel: action.label,
+                      fromState: row.shipmentStatus,
+                      toState: action.emits[0] ?? row.shipmentStatus,
+                      enabled: true,
+                      reason: null,
+                      metadata: {
+                        operationalBlueprintAction: action,
+                      },
+                    })),
+                    intakeNote: row.shipAddressLabel,
+                    reshootNote: null,
+                    mediaWorkProgress: null,
+                    technicalIssue: null,
+                    payment: null,
+                    href: "/admin/shipments",
+                    updatedAt: row.updatedAt,
+                    workspaceTitle: workspace?.title ?? "",
+                    flowStageKey: metadata.flowStageKey ?? requestedFlowStage?.key ?? null,
+                    flowStageOrder: metadata.flowStageOrder ?? requestedFlowStage?.sortOrder ?? null,
+                  })),
+                ];
+              })
+            : isPaymentFlow
             ? (() => {
                 const reviewItem = taskItems.find(
                   (item) => paymentWorkspaceRole(item.note) === "PAYMENT_REVIEW",
@@ -2452,6 +2577,7 @@ export async function getCoordinationDashboard(input: {
                     : "REVIEW",
                   page: flowPage,
                   pageSize: flowPageSize,
+                  paginate: !hasFlowFilters,
                 }).then((items) => [
                   items.map((queueItem) => {
                     const metadata = metadataByTaskItemId.get(queueItem.taskItemId);
@@ -2473,6 +2599,7 @@ export async function getCoordinationDashboard(input: {
                   note: item.note,
                   page: flowPage,
                   pageSize: flowPageSize,
+                  paginate: !hasFlowFilters,
                 });
                 return items.map((queueItem) => ({
                   ...queueItem,
@@ -2563,7 +2690,48 @@ export async function getCoordinationDashboard(input: {
     if (leftOrder !== rightOrder) return leftOrder - rightOrder;
     return left.title.localeCompare(right.title);
   });
-  const flowItems: CoordinationFlowListItemDTO[] = flowItemGroups.flat().sort((left, right) => {
+  const unfilteredFlowItems: CoordinationFlowListItemDTO[] = flowItemGroups.flat();
+  const filteredFlowItems = unfilteredFlowItems.filter((item) => {
+    const status = item.isWorkflowDone || item.status === "DONE"
+      ? "DONE"
+      : item.status === "FEEDBACK" || item.status === "RETURNED"
+        ? "FEEDBACK"
+        : "OPEN";
+    if (flowStatus && flowStatus !== "ALL" && status !== flowStatus) return false;
+    const paymentStatus = normalizeStatus(item.payment?.status) || "NONE";
+    if (
+      flowPaymentStatus === "UNPAID" &&
+      !["UNPAID", "PARTIAL"].includes(paymentStatus)
+    ) return false;
+    if (flowPaymentStatus === "PAID" && paymentStatus !== "PAID") return false;
+    if (flowPaymentStatus === "NONE" && item.payment) return false;
+    if (!flowQuery) return true;
+    return [
+      item.preview.title,
+      item.preview.ref,
+      item.preview.status,
+      item.currentWorkflowStateLabel,
+      item.payment?.counterparty,
+      item.payment?.ownerRef,
+      item.payment?.direction,
+      item.payment?.purpose,
+    ].filter(Boolean).join(" ").toLocaleLowerCase("vi").includes(flowQuery);
+  }).sort((left, right) => {
+    if (flowSort === "UPDATED_ASC") {
+      return left.updatedAt.localeCompare(right.updatedAt);
+    }
+    if (flowSort === "TITLE_ASC") {
+      return String(left.preview.title ?? "").localeCompare(
+        String(right.preview.title ?? ""),
+        "vi",
+      );
+    }
+    if (flowSort === "TITLE_DESC") {
+      return String(right.preview.title ?? "").localeCompare(
+        String(left.preview.title ?? ""),
+        "vi",
+      );
+    }
     const stageOrder = (left.flowStageOrder ?? Number.MAX_SAFE_INTEGER) -
       (right.flowStageOrder ?? Number.MAX_SAFE_INTEGER);
     if (stageOrder !== 0) return stageOrder;
@@ -2571,24 +2739,12 @@ export async function getCoordinationDashboard(input: {
   });
   const flowItemsTotal = input.includeFlowItems === false
     ? 0
-    : await dashboardStep("flowItemsTotal", () =>
-        isPaymentFlow
-          ? db.payment.count({
-              where: {
-                amount: { gt: 0 },
-                status: normalizeStatus(input.flowStageKey).includes("SETTLED")
-                  ? { not: PaymentStatus.UNPAID }
-                  : PaymentStatus.UNPAID,
-              },
-            })
-          : db.taskExecution.count({
-              where: {
-                taskId: cycle.task.id,
-                taskItemId: { in: flowLoadTaskItems.map((item) => item.id) },
-                actionType: { not: TaskExecutionActionType.CANCELLED },
-              },
-            }),
-      );
+    : hasFlowFilters
+      ? filteredFlowItems.length
+      : await unfilteredFlowItemsTotalPromise;
+  const flowItems = hasFlowFilters
+    ? filteredFlowItems.slice((flowPage - 1) * flowPageSize, flowPage * flowPageSize)
+    : filteredFlowItems;
 
   const reportValues = {
     workTickets: workTickets.length,
