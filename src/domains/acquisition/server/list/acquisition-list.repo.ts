@@ -183,8 +183,8 @@ function getFirstProductImageUrl(product: any) {
 
 function buildItemImageUrl(item: any, canonicalStorageKey?: string | null) {
     return (
-        toMediaImageUrl(canonicalStorageKey) ??
         getFirstProductImageUrl(item?.product) ??
+        toMediaImageUrl(canonicalStorageKey) ??
         getFirstMetaImageUrl(item)
     );
 }

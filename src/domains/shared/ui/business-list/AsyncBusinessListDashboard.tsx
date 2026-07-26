@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RotateCcw } from "lucide-react";
 
 import BusinessListDashboard, { BusinessListDashboardSkeleton } from "./BusinessListDashboard";
@@ -21,6 +21,7 @@ export default function AsyncBusinessListDashboard({
     onViewChange,
     cashFlowPeriods = false,
     onResult,
+    initialData,
 }: {
     endpoint: string;
     widgets?: BusinessListDashboardWidgetKey[];
@@ -32,13 +33,27 @@ export default function AsyncBusinessListDashboard({
     onViewChange?: (view: string) => void;
     cashFlowPeriods?: boolean;
     onResult?: (result: unknown) => void;
+    initialData?: BusinessListDashboardData | null;
 }) {
-    const [data, setData] = useState<BusinessListDashboardData | null>(null);
+    const initialEndpoint = useRef(endpoint);
+    const [data, setData] = useState<BusinessListDashboardData | null>(
+        initialData ?? null,
+    );
     const [failed, setFailed] = useState(false);
     const [retryKey, setRetryKey] = useState(0);
     const [cashPeriod, setCashPeriod] = useState<"WEEK" | "MONTH" | "YEAR" | "ALL">("WEEK");
 
     useEffect(() => {
+        if (
+            retryKey === 0 &&
+            endpoint === initialEndpoint.current &&
+            initialData &&
+            cashPeriod === "WEEK"
+        ) {
+            setData(initialData);
+            setFailed(false);
+            return;
+        }
         const controller = new AbortController();
         const url = new URL(endpoint, window.location.origin);
         if (cashFlowPeriods) url.searchParams.set("cashPeriod", cashPeriod);
@@ -72,7 +87,7 @@ export default function AsyncBusinessListDashboard({
             });
 
         return () => controller.abort();
-    }, [cashFlowPeriods, cashPeriod, endpoint, onResult, retryKey]);
+    }, [cashFlowPeriods, cashPeriod, endpoint, initialData, onResult, retryKey]);
 
     if (failed) {
         return (

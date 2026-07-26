@@ -343,6 +343,7 @@ export async function runServiceOperationBlueprintAction(
         actionMode: optionalField(fields, "actionMode") ?? "INTERNAL",
         estimatedCost: optionalField(fields, "estimatedCost"),
         vendorId: optionalField(fields, "vendorId"),
+        actorUserId: input.actorUserId,
       });
 
       return {

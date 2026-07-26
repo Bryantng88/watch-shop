@@ -74,6 +74,8 @@ import {
 } from "@/domains/shared/ui/business-list";
 import { SoftIconBadge } from "@/domains/shared/ui/icons";
 import type { BusinessListDashboardWidgetKey } from "@/domains/shared/ui/business-list";
+import type { BusinessListDashboardData } from "@/domains/shared/ui/business-list";
+import { mapCoordinationDashboardShell } from "@/domains/coordination/shared/coordination-dashboard-shell.mapper";
 import {
   SpaceViewFooterTip,
   SpaceViewPage,
@@ -90,6 +92,7 @@ import FlowItemListView from "./FlowItemListView";
 
 type Props = {
   data: CoordinationDashboardDTO;
+  initialDashboard?: BusinessListDashboardData | null;
 };
 
 type TechnicalIssuePriorityFilter = "ALL" | "URGENT" | "NORMAL";
@@ -101,6 +104,16 @@ const SPACE_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = ["overview", "
 const TECHNICAL_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = [...SPACE_DASHBOARD_WIDGETS, "technical-daily-performance"];
 const PAYMENT_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = ["overview", "cash-flow", "status-breakdown", "recent-activity"];
 
+function coordinationDashboardResponseSource(result: unknown) {
+  if (!result || typeof result !== "object" || Array.isArray(result)) return null;
+  const root = result as Record<string, unknown>;
+  const nested =
+    root.data && typeof root.data === "object" && !Array.isArray(root.data)
+      ? root.data as Record<string, unknown>
+      : {};
+  return { ...nested, ...root };
+}
+
 function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
@@ -111,6 +124,44 @@ function formatDateTime(value: string | null) {
   if (Number.isNaN(date.getTime())) return "-";
 
   return new Intl.DateTimeFormat("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function vietnamDateKey(date: Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function isTodayInVietnam(value: string | null) {
+  if (!value) return false;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  return vietnamDateKey(date) === vietnamDateKey(new Date());
+}
+
+function formatTechnicalCardDateTime(value: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  const time = new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+
+  if (isTodayInVietnam(value)) return `Hôm nay · ${time}`;
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
@@ -578,7 +629,7 @@ function SpaceSharingEditor({
   );
 }
 
-export default function OperationCoordinationWorkspace({ data }: Props) {
+export default function OperationCoordinationWorkspace({ data, initialDashboard }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dialog = useAppDialog();
@@ -791,12 +842,31 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     if (activeViewMode?.key) params.set("view", activeViewMode.key);
     return `/api/admin/coordination/operation/dashboard?${params.toString()}`;
   }, [activeViewMode?.key, data.context, searchParams]);
+  const initialDashboardShell = useMemo(
+    () => initialDashboard ?? mapCoordinationDashboardShell(data, {
+      modeKey: activeViewMode?.key,
+    }),
+    [activeViewMode?.key, data, initialDashboard],
+  );
   const handleDashboardResult = useCallback((result: unknown) => {
-    if (!result || typeof result !== "object") return;
-    const nested = "data" in result && result.data && typeof result.data === "object"
-      ? result.data
-      : null;
-    const source = { ...(nested ?? {}), ...result };
+    const source = coordinationDashboardResponseSource(result);
+    if (!source) return;
+    const boardResult = source as {
+      boardKey?: string;
+      board?: CoordinationDashboardDTO["technicalIssueBoard"] | CoordinationDashboardDTO["mediaBoard"];
+    };
+    if (boardResult.boardKey === "technical-issue" && boardResult.board) {
+      setAsyncTechnicalIssueBoard(
+        boardResult.board as CoordinationDashboardDTO["technicalIssueBoard"],
+      );
+      return;
+    }
+    if (boardResult.boardKey === "media-operation" && boardResult.board) {
+      setAsyncMediaBoard(
+        boardResult.board as CoordinationDashboardDTO["mediaBoard"],
+      );
+      return;
+    }
     const board = (source as {
       technicalIssueBoard?: CoordinationDashboardDTO["technicalIssueBoard"];
     }).technicalIssueBoard;
@@ -952,8 +1022,10 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     setError(null);
     setIsBoardRefreshing(true);
     try {
-      const separator = dashboardEndpoint.includes("?") ? "&" : "?";
-      const response = await fetch(`${dashboardEndpoint}${separator}includeBoard=1`, { cache: "no-store" });
+      const response = await fetch(
+        `/api/admin/coordination/operation/boards/technical-issue?taskId=${encodeURIComponent(data.cycle.id)}&pageSize=10`,
+        { cache: "no-store" },
+      );
       const result = await response.json().catch(() => null);
       if (!response.ok) throw new Error("Không thể tải lại board.");
       handleDashboardResult(result);
@@ -963,7 +1035,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     } finally {
       setIsBoardRefreshing(false);
     }
-  }, [dashboardEndpoint, handleDashboardResult, isBoardRefreshing]);
+  }, [data.cycle.id, handleDashboardResult, isBoardRefreshing]);
   useEffect(() => {
     if (
       activeViewMode?.key !== "technical-issue-flow" ||
@@ -988,21 +1060,19 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     setLoadingBoardColumn(`${kind}:${stage}`);
     setError(null);
     try {
-      const separator = dashboardEndpoint.includes("?") ? "&" : "?";
+      const pageSize = kind === "technical" ? 10 : 20;
+      const boardKey = kind === "technical" ? "technical-issue" : "media-operation";
       const response = await fetch(
-        `${dashboardEndpoint}${separator}includeBoard=1&boardStage=${encodeURIComponent(stage)}&boardPage=${page}&boardPageSize=20`,
+        `/api/admin/coordination/operation/boards/${boardKey}?taskId=${encodeURIComponent(data.cycle.id)}&stage=${encodeURIComponent(stage)}&page=${page}&pageSize=${pageSize}`,
         { cache: "no-store" },
       );
       const result = await response.json().catch(() => null);
       if (!response.ok) throw new Error("Không thể tải thêm board.");
-      const source = result && typeof result === "object" && "data" in result &&
-        result.data && typeof result.data === "object"
-        ? result.data
-        : result;
+      const source = coordinationDashboardResponseSource(result);
       if (kind === "technical") {
         const board = (source as {
-          technicalIssueBoard?: CoordinationDashboardDTO["technicalIssueBoard"];
-        })?.technicalIssueBoard;
+          board?: CoordinationDashboardDTO["technicalIssueBoard"];
+        })?.board;
         if (board) {
           setAsyncTechnicalIssueBoard((current) => current ? {
             ...current,
@@ -1020,8 +1090,8 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
         }
       } else {
         const board = (source as {
-          mediaBoard?: CoordinationDashboardDTO["mediaBoard"];
-        })?.mediaBoard;
+          board?: CoordinationDashboardDTO["mediaBoard"];
+        })?.board;
         if (board) {
           setAsyncMediaBoard((current) => current ? {
             ...current,
@@ -1043,7 +1113,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     } finally {
       setLoadingBoardColumn(null);
     }
-  }, [dashboardEndpoint, loadingBoardColumn]);
+  }, [data.cycle.id, loadingBoardColumn]);
   const handleTechnicalIntakeCompleted = useCallback(async (technicalIssueId: string | null) => {
     setActiveViewModeKey("technical-issue-flow");
     setWorkTicketView("TI_BOARD");
@@ -1055,19 +1125,18 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     params.set("context", data.context);
     params.set("dashboardVersion", "2");
     params.set("view", "technical-issue-flow");
-    params.set("includeBoard", "1");
-    const technicalDashboardEndpoint = `/api/admin/coordination/operation/dashboard?${params.toString()}`;
-    params.delete("includeBoard");
+    const technicalBoardEndpoint =
+      `/api/admin/coordination/operation/boards/technical-issue?taskId=${encodeURIComponent(data.cycle.id)}&pageSize=10`;
     router.replace(`/admin/coordination/${contextPath(data.context)}?${params.toString()}`);
 
     try {
-      const response = await fetch(technicalDashboardEndpoint, { cache: "no-store" });
+      const response = await fetch(technicalBoardEndpoint, { cache: "no-store" });
       const result = await response.json().catch(() => null);
       if (response.ok) handleDashboardResult(result);
     } finally {
       router.refresh();
     }
-  }, [data.context, handleDashboardResult, router, searchParams]);
+  }, [data.context, data.cycle.id, handleDashboardResult, router, searchParams]);
   const activeStageByWorkspaceKey = useMemo(() => {
     const entries =
       activeCoreFlow?.stages.flatMap((stage) => [
@@ -1510,6 +1579,7 @@ export default function OperationCoordinationWorkspace({ data }: Props) {
     >
         <AsyncBusinessListDashboard
           endpoint={dashboardEndpoint}
+          initialData={initialDashboardShell}
           widgets={
             isPaymentCollectionFlow
               ? PAYMENT_DASHBOARD_WIDGETS
@@ -3683,6 +3753,7 @@ function TechnicalIssueBoardCard({
   const accent = technicalBoardAreaAccent(item.area);
   const lastUpdatedBy = item.lastUpdatedBy;
   const lastUpdatedAvatarSrc = resolveMediaPreviewSrc(lastUpdatedBy.avatarUrl);
+  const updatedToday = isTodayInVietnam(item.updatedAt);
 
   return (
     <div
@@ -3805,7 +3876,16 @@ function TechnicalIssueBoardCard({
           </span>
           <div className="min-w-0 leading-tight">
             <div className="truncate font-semibold text-slate-800">{lastUpdatedBy.label}</div>
-            <div className="truncate text-[11px] text-slate-400">{formatDateTime(item.updatedAt)}</div>
+            <div
+              className={cn(
+                "truncate text-[11px]",
+                updatedToday
+                  ? "font-semibold text-emerald-600"
+                  : "text-slate-400",
+              )}
+            >
+              {formatTechnicalCardDateTime(item.updatedAt)}
+            </div>
           </div>
         </div>
         <div className="flex min-w-0 max-w-[58%] items-center justify-end gap-2 text-right">

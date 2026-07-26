@@ -47,6 +47,23 @@ import {
   type ShipmentOperationStage,
 } from "@/domains/projection/server/shipment-operation-queue.projection";
 import {
+  listTechnicalIssueBoardWorkspaceProjection,
+  type TechnicalIssueBoardStage,
+} from "@/domains/projection/server/technical-issue-board.projection";
+import {
+  hasPaymentListProjectionRows,
+  listSettledPaymentCashFlowProjection,
+} from "@/domains/projection/server/payment-list.projection";
+import {
+  queryMediaOperationBoardProjection,
+  type MediaOperationBoardStage,
+} from "@/domains/projection/server/media-operation-board.projection";
+import { ensureProjectionReady } from "@/domains/projection/server/projection-read.service";
+import {
+  buildCoordinationWorkspaceSummaryRow,
+  queryCoordinationWorkspaceSummary,
+} from "@/domains/projection/server/coordination-workspace-summary.projection";
+import {
   operationalBlueprintForWorkType,
   selectOperationalActionsForWorkspaceRole,
 } from "@/domains/blueprint/shared/operational-blueprint";
@@ -1188,7 +1205,89 @@ function serviceRequestPaymentStatus(input: {
   return "UNPAID";
 }
 
-async function loadMediaBoard(input: {
+async function loadMediaBoardFromProjection(input: {
+  db: DB;
+  taskId: string;
+  viewerUserId?: string | null;
+  stage?: string | null;
+  page?: number;
+  pageSize?: number;
+}) {
+  const page = Math.max(1, Math.trunc(input.page ?? 1));
+  const pageSize = Math.min(100, Math.max(1, Math.trunc(input.pageSize ?? 20)));
+  const stages: MediaOperationBoardStage[] = ["PHOTOGRAPHY", "MEDIA_PROCESSING", "PUBLISH", "DONE"];
+  const requestedStage = stages.find((stage) => stage === normalizeStatus(input.stage));
+  const projection = await queryMediaOperationBoardProjection(input.db, {
+    workspaceId: input.taskId,
+    requestedStage,
+    page,
+    pageSize,
+  });
+  const total = stages.reduce((sum, stage) => sum + (projection.totals.get(stage) ?? 0), 0);
+  if (!total) return null;
+  const taskItemIds = projection.rows.map((row) => row.workspaceTaskItemId).filter(Boolean);
+  const activities = input.viewerUserId && taskItemIds.length
+    ? await input.db.taskItemActivity.findMany({
+        where: { taskItemId: { in: taskItemIds } },
+        select: {
+          metadataJson: true,
+          replies: { select: { metadataJson: true } },
+        },
+      })
+    : [];
+  const mentions = new Map<string, number>();
+  const unread = new Map<string, number>();
+  for (const activity of activities) {
+    const metadata = activity.metadataJson;
+    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata) || !input.viewerUserId) continue;
+    const target = metadata as {
+      targetType?: unknown;
+      targetId?: unknown;
+      mentionedUserIds?: unknown;
+      mentionReadByUserIds?: unknown;
+    };
+    if (String(target.targetType ?? "").trim() !== "WATCH") continue;
+    const watchId = String(target.targetId ?? "").trim();
+    if (!watchId) continue;
+    const directMentionIds = Array.isArray(target.mentionedUserIds) ? target.mentionedUserIds.map(String) : [];
+    const directReadIds = Array.isArray(target.mentionReadByUserIds) ? target.mentionReadByUserIds.map(String) : [];
+    let mentionCount = directMentionIds.includes(input.viewerUserId) ? 1 : 0;
+    let unreadCount = mentionCount && !directReadIds.includes(input.viewerUserId) ? 1 : 0;
+    for (const reply of activity.replies) {
+      const replyMetadata = reply.metadataJson;
+      if (!replyMetadata || typeof replyMetadata !== "object" || Array.isArray(replyMetadata)) continue;
+      const value = replyMetadata as { mentionedUserIds?: unknown; mentionReadByUserIds?: unknown };
+      const mentionIds = Array.isArray(value.mentionedUserIds) ? value.mentionedUserIds.map(String) : [];
+      const readIds = Array.isArray(value.mentionReadByUserIds) ? value.mentionReadByUserIds.map(String) : [];
+      if (mentionIds.includes(input.viewerUserId)) {
+        mentionCount += 1;
+        if (!readIds.includes(input.viewerUserId)) unreadCount += 1;
+      }
+    }
+    mentions.set(watchId, (mentions.get(watchId) ?? 0) + mentionCount);
+    unread.set(watchId, (unread.get(watchId) ?? 0) + unreadCount);
+  }
+  const items: CoordinationMediaBoardItemDTO[] = projection.rows.map((row) => ({
+    ...row,
+    mentionedMeCount: mentions.get(row.id) ?? 0,
+    unreadMentionCount: unread.get(row.id) ?? 0,
+  }));
+  const columnPagination = Object.fromEntries(stages.map((stage) => {
+    const stageTotal = projection.totals.get(stage) ?? 0;
+    const loaded = requestedStage === stage
+      ? Math.min(stageTotal, page * pageSize)
+      : Math.min(stageTotal, pageSize);
+    return [stage, {
+      loaded,
+      total: stageTotal,
+      hasMore: loaded < stageTotal,
+      nextPage: loaded < stageTotal ? Math.floor(loaded / pageSize) + 1 : null,
+    }];
+  }));
+  return { items, columnPagination };
+}
+
+async function loadMediaBoardLive(input: {
   db: DB;
   taskId: string;
   viewerUserId?: string | null;
@@ -1353,6 +1452,25 @@ async function loadMediaBoard(input: {
   return { items, columnPagination };
 }
 
+async function loadMediaBoard(input: {
+  db: DB;
+  taskId: string;
+  viewerUserId?: string | null;
+  stage?: string | null;
+  page?: number;
+  pageSize?: number;
+}) {
+  try {
+    const projection = await loadMediaBoardFromProjection(input);
+    if (projection) return projection;
+  } catch (error) {
+    console.warn("[coordination-dashboard] media board projection unavailable; using live fallback", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+  return loadMediaBoardLive(input);
+}
+
 function technicalIssueBoardStage(input: {
   flowStageKey: string | null;
   executionStatus: unknown;
@@ -1369,7 +1487,114 @@ function technicalIssueBoardStage(input: {
   return "INSPECT";
 }
 
-async function loadTechnicalIssueBoard(input: {
+async function loadTechnicalIssueBoardFromProjection(input: {
+  db: DB;
+  taskId: string;
+  viewerUserId?: string | null;
+  stage?: string | null;
+  page?: number;
+  pageSize?: number;
+}) {
+  const page = Math.max(1, Math.trunc(input.page ?? 1));
+  const pageSize = Math.min(100, Math.max(1, Math.trunc(input.pageSize ?? 10)));
+  const stages: TechnicalIssueBoardStage[] = ["INSPECT", "READY", "PROCESSING", "DONE"];
+  const requestedStage = stages.find((stage) => stage === normalizeStatus(input.stage));
+  const projectionResult = await listTechnicalIssueBoardWorkspaceProjection(input.db, {
+    workspaceId: input.taskId,
+    requestedStage,
+    page,
+    pageSize,
+  });
+  const projectionTotal = stages.reduce(
+    (sum, stage) => sum + (projectionResult.totals.get(stage) ?? 0),
+    0,
+  );
+  if (!projectionTotal) return null;
+
+  const selectedRows = projectionResult.rows;
+  const taskItemIds = selectedRows
+    .map((row) => row.workspaceTaskItemId)
+    .filter((id): id is string => Boolean(id));
+  const activities = input.viewerUserId && taskItemIds.length
+    ? await input.db.taskItemActivity.findMany({
+        where: { taskItemId: { in: taskItemIds } },
+        select: {
+          metadataJson: true,
+          replies: { select: { metadataJson: true } },
+        },
+      })
+    : [];
+  const mentionedByIssueId = new Map<string, number>();
+  const unreadByIssueId = new Map<string, number>();
+  for (const activity of activities) {
+    if (!activity.metadataJson || typeof activity.metadataJson !== "object" || Array.isArray(activity.metadataJson)) continue;
+    const metadata = activity.metadataJson as {
+      targetType?: unknown;
+      targetId?: unknown;
+      mentionedUserIds?: unknown;
+      mentionReadByUserIds?: unknown;
+    };
+    if (String(metadata.targetType ?? "") !== "TECHNICAL_ISSUE") continue;
+    const issueId = String(metadata.targetId ?? "").trim();
+    if (!issueId || !input.viewerUserId) continue;
+    const mentionedIds = Array.isArray(metadata.mentionedUserIds) ? metadata.mentionedUserIds.map(String) : [];
+    const readIds = Array.isArray(metadata.mentionReadByUserIds) ? metadata.mentionReadByUserIds.map(String) : [];
+    let mentioned = mentionedIds.includes(input.viewerUserId) ? 1 : 0;
+    let unread = mentioned && !readIds.includes(input.viewerUserId) ? 1 : 0;
+    for (const reply of activity.replies) {
+      if (!reply.metadataJson || typeof reply.metadataJson !== "object" || Array.isArray(reply.metadataJson)) continue;
+      const replyMetadata = reply.metadataJson as {
+        mentionedUserIds?: unknown;
+        mentionReadByUserIds?: unknown;
+      };
+      const replyMentionedIds = Array.isArray(replyMetadata.mentionedUserIds)
+        ? replyMetadata.mentionedUserIds.map(String)
+        : [];
+      const replyReadIds = Array.isArray(replyMetadata.mentionReadByUserIds)
+        ? replyMetadata.mentionReadByUserIds.map(String)
+        : [];
+      if (replyMentionedIds.includes(input.viewerUserId)) {
+        mentioned += 1;
+        if (!replyReadIds.includes(input.viewerUserId)) unread += 1;
+      }
+    }
+    mentionedByIssueId.set(issueId, (mentionedByIssueId.get(issueId) ?? 0) + mentioned);
+    unreadByIssueId.set(issueId, (unreadByIssueId.get(issueId) ?? 0) + unread);
+  }
+
+  const [vendorOptions, technicalDetailCatalogOptions] = await Promise.all([
+    input.db.vendor.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+    input.db.technicalDetailCatalog.findMany({
+      where: { isActive: true },
+      select: { id: true, area: true, code: true, name: true },
+      orderBy: [{ area: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
+    }),
+  ]);
+  const items: CoordinationTechnicalIssueBoardItemDTO[] = selectedRows.map((row) => ({
+    ...row,
+    mentionedMeCount: mentionedByIssueId.get(row.id) ?? 0,
+    unreadMentionCount: unreadByIssueId.get(row.id) ?? 0,
+  }));
+  const columnPagination = Object.fromEntries(stages.map((stage) => {
+    const total = projectionResult.totals.get(stage) ?? 0;
+    const loaded = requestedStage === stage
+      ? Math.min(total, page * pageSize)
+      : Math.min(total, pageSize);
+    return [stage, {
+      loaded,
+      total,
+      hasMore: loaded < total,
+      nextPage: loaded < total ? Math.floor(loaded / pageSize) + 1 : null,
+    }];
+  }));
+  return { items, vendorOptions, technicalDetailCatalogOptions, columnPagination };
+}
+
+async function loadTechnicalIssueBoardLive(input: {
   db: DB;
   taskId: string;
   viewerUserId?: string | null;
@@ -1460,6 +1685,13 @@ async function loadTechnicalIssueBoard(input: {
         targetId: true,
         taskItemId: true,
         createdAt: true,
+        createdByUser: {
+          select: {
+            name: true,
+            email: true,
+            avatarUrl: true,
+          },
+        },
         taskItem: { select: { note: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -1474,7 +1706,22 @@ async function loadTechnicalIssueBoard(input: {
   };
 
   const srCaseTaskItemIdByServiceRequestId = new Map<string, string>();
+  const serviceRequestActorById = new Map<string, {
+    label: string;
+    avatarUrl: string | null;
+    isSystem: boolean;
+  }>();
   for (const binding of serviceRequestBindings) {
+    if (!serviceRequestActorById.has(binding.targetId)) {
+      const label = userLabel(binding.createdByUser);
+      if (label !== "-") {
+        serviceRequestActorById.set(binding.targetId, {
+          label,
+          avatarUrl: binding.createdByUser?.avatarUrl ?? null,
+          isSystem: false,
+        });
+      }
+    }
     if (!binding.taskItemId || srCaseTaskItemIdByServiceRequestId.has(binding.targetId)) continue;
     const metadata = workspaceRoleMetadataFromNote(binding.taskItem?.note ?? null);
     if (metadata.workspaceRole && metadata.workspaceRole !== "SR_CASE") continue;
@@ -1482,7 +1729,7 @@ async function loadTechnicalIssueBoard(input: {
   }
 
   const page = Math.max(1, Math.trunc(input.page ?? 1));
-  const pageSize = Math.min(100, Math.max(1, Math.trunc(input.pageSize ?? 20)));
+  const pageSize = Math.min(100, Math.max(1, Math.trunc(input.pageSize ?? 10)));
   const stages = ["INSPECT", "READY", "PROCESSING", "DONE"] as const;
   const requestedStage = stages.find((stage) => stage === normalizeStatus(input.stage));
   const issueStageRows = await input.db.technicalIssue.findMany({
@@ -1591,6 +1838,58 @@ async function loadTechnicalIssueBoard(input: {
     },
     orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
   })]);
+  const unresolvedServiceRequestIds = Array.from(
+    new Set(
+      issues
+        .map((issue) => issue.serviceRequestId)
+        .filter((id) => !serviceRequestActorById.has(id)),
+    ),
+  );
+  if (unresolvedServiceRequestIds.length) {
+    const serviceRequestEvents = await input.db.businessEventLog.findMany({
+      where: {
+        eventKey: "service_request.created",
+        targetType: "SERVICE_REQUEST",
+        targetId: { in: unresolvedServiceRequestIds },
+        actorUserId: { not: null },
+      },
+      select: {
+        targetId: true,
+        actorUserId: true,
+      },
+    });
+    const actorIds = Array.from(
+      new Set(
+        serviceRequestEvents
+          .map((event) => event.actorUserId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+    const actors = actorIds.length
+      ? await input.db.user.findMany({
+          where: { id: { in: actorIds } },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatarUrl: true,
+          },
+        })
+      : [];
+    const actorById = new Map(actors.map((actor) => [actor.id, actor]));
+
+    for (const event of serviceRequestEvents) {
+      if (!event.actorUserId) continue;
+      const actor = actorById.get(event.actorUserId);
+      const label = userLabel(actor);
+      if (label === "-") continue;
+      serviceRequestActorById.set(event.targetId, {
+        label,
+        avatarUrl: actor?.avatarUrl ?? null,
+        isSystem: false,
+      });
+    }
+  }
   const startedEventByIssueId = new Map(startedEvents.map((event) => [event.targetId, event.metadataJson]));
   const commentCountByIssueId = new Map<string, number>();
   const mentionedMeCountByIssueId = new Map<string, number>();
@@ -1658,6 +1957,8 @@ async function loadTechnicalIssueBoard(input: {
     .map((issue): CoordinationTechnicalIssueBoardItemDTO => {
       const binding = bindingByIssueId.get(issue.id);
       const lastUpdate = lastUpdateByIssueId.get(issue.id);
+      const bindingActor = binding?.lastUpdatedBy;
+      const serviceRequestActor = serviceRequestActorById.get(issue.serviceRequestId);
       const startedMetadata = startedEventByIssueId.get(issue.id);
       const replacementPartCodes = startedMetadata && typeof startedMetadata === "object" && !Array.isArray(startedMetadata)
         ? (startedMetadata as { replacementPartCodes?: unknown }).replacementPartCodes
@@ -1697,15 +1998,23 @@ async function loadTechnicalIssueBoard(input: {
         }),
         actualCost: nullableNumber(issue.actualCost),
         updatedAt: formatDateTime(lastUpdate?.occurredAt ?? issue.updatedAt),
-        lastUpdatedBy: lastUpdate ? {
-          label: lastUpdate.label,
-          avatarUrl: lastUpdate.avatarUrl,
-          isSystem: lastUpdate.isSystem,
-        } : binding?.lastUpdatedBy ?? {
-          label: "Hệ thống",
-          avatarUrl: null,
-          isSystem: true,
-        },
+        lastUpdatedBy: lastUpdate && !lastUpdate.isSystem
+          ? {
+              label: lastUpdate.label,
+              avatarUrl: lastUpdate.avatarUrl,
+              isSystem: lastUpdate.isSystem,
+            }
+          : bindingActor && !bindingActor.isSystem
+            ? bindingActor
+            : serviceRequestActor ?? bindingActor ?? (lastUpdate ? {
+                label: lastUpdate.label,
+                avatarUrl: lastUpdate.avatarUrl,
+                isSystem: lastUpdate.isSystem,
+              } : {
+                label: "Hệ thống",
+                avatarUrl: null,
+                isSystem: true,
+              }),
         workspaceTaskItemId: binding?.taskItemId ?? null,
         srCaseTaskItemId: srCaseTaskItemIdByServiceRequestId.get(issue.serviceRequestId) ?? null,
         serviceRequest: {
@@ -1735,6 +2044,60 @@ async function loadTechnicalIssueBoard(input: {
     technicalDetailCatalogOptions,
     columnPagination,
   };
+}
+
+async function loadTechnicalIssueBoard(input: {
+  db: DB;
+  taskId: string;
+  viewerUserId?: string | null;
+  stage?: string | null;
+  page?: number;
+  pageSize?: number;
+}) {
+  try {
+    const projection = await loadTechnicalIssueBoardFromProjection(input);
+    if (projection) return projection;
+  } catch (error) {
+    console.warn("[coordination-dashboard] technical issue projection unavailable; using live fallback", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+  return loadTechnicalIssueBoardLive(input);
+}
+
+export type CoordinationBoardKey = "technical-issue" | "media-operation";
+
+export async function getCoordinationBoard(input: {
+  db?: DB;
+  boardKey: CoordinationBoardKey;
+  taskId: string;
+  auth?: unknown;
+  stage?: string | null;
+  page?: number;
+  pageSize?: number;
+}) {
+  const db = input.db ?? prisma;
+  const taskId = String(input.taskId ?? "").trim();
+  if (!taskId) throw new Error("COORDINATION_BOARD_TASK_ID_REQUIRED");
+
+  const query = {
+    db,
+    taskId,
+    viewerUserId: getAuthUserId(input.auth),
+    stage: input.stage,
+    page: input.page,
+    pageSize: input.pageSize,
+  };
+
+  if (input.boardKey === "technical-issue") {
+    return dashboardStep("technicalBoardQuery", () =>
+      loadTechnicalIssueBoard(query));
+  }
+  if (input.boardKey === "media-operation") {
+    return dashboardStep("mediaBoardQuery", () =>
+      loadMediaBoard(query));
+  }
+  throw new Error("COORDINATION_BOARD_NOT_SUPPORTED");
 }
 
 async function loadTechnicalServiceRequestRollupByTaskItem(input: {
@@ -2158,8 +2521,12 @@ export async function getCoordinationDashboard(input: {
     input.includeWorkspaceSummaries !== false ||
     input.includeFlowItems !== false ||
     input.includeManagementDetails !== false;
-  const rawTaskItems = needsTaskItems
-    ? await dashboardStep("loadTaskItems", () => db.taskItem.findMany({
+  let rawTaskItems = needsTaskItems
+    ? await dashboardStep("loadTaskItemsProjection", () =>
+      queryCoordinationWorkspaceSummary(db, cycle.task.id))
+    : [];
+  if (needsTaskItems && rawTaskItems.length === 0) {
+    rawTaskItems = await dashboardStep("loadTaskItemsSource", () => db.taskItem.findMany({
     where: {
       taskId: cycle.task.id,
       status: { not: TaskStatus.CANCELLED },
@@ -2205,8 +2572,17 @@ export async function getCoordinationDashboard(input: {
       { sortOrder: "asc" },
       { createdAt: "asc" },
     ],
-      }))
-    : [];
+      }));
+    await dashboardStep("seedTaskItemsProjection", async () => {
+      for (let index = 0; index < rawTaskItems.length; index += 20) {
+        await Promise.all(
+          rawTaskItems.slice(index, index + 20).map((item) =>
+            buildCoordinationWorkspaceSummaryRow(db, item.id),
+          ),
+        );
+      }
+    });
+  }
   const workTypeContexts: CoordinationContext[] = input.context === "OPERATION"
     ? ["OPERATION", "SALES", "TECHNICAL", "MEDIA", "PAYMENT", "GENERAL"]
     : [input.context];
@@ -2311,6 +2687,10 @@ export async function getCoordinationDashboard(input: {
       : normalizeStatus(requestedFlowStage?.key).includes("DONE")
         ? "SHIPMENT_DONE"
         : "SHIPMENT_WAITING";
+  if (input.includeFlowItems !== false && isShipmentFlow) {
+    await dashboardStep("shipmentProjectionReady", () =>
+      ensureProjectionReady(db, "shipment-operation-queue"));
+  }
   const shipmentProjectionPromise =
     input.includeFlowItems !== false && isShipmentFlow
       ? listShipmentOperationQueueProjection(db, {
@@ -2438,10 +2818,54 @@ export async function getCoordinationDashboard(input: {
         }))
       : Promise.resolve([]),
     isPaymentFlow && input.includeDashboardDetails !== false
-      ? dashboardStep("paymentCashFlow", () => db.payment.findMany({
-          where: { status: { in: [PaymentStatus.PAID, PaymentStatus.COLLECTED] } },
-          select: { amount: true, direction: true, paidAt: true, createdAt: true },
-        }).then(paymentCashFlowPeriods))
+      ? dashboardStep("paymentCashFlow", () =>
+          hasPaymentListProjectionRows(db).then((ready) =>
+            ready
+              ? listSettledPaymentCashFlowProjection(db)
+              : db.payment.findMany({
+                  where: { status: { in: [PaymentStatus.PAID, PaymentStatus.COLLECTED] } },
+                  select: {
+                    amount: true,
+                    direction: true,
+                    paidAt: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    id: true,
+                    refNo: true,
+                    method: true,
+                    currency: true,
+                    reference: true,
+                    note: true,
+                    status: true,
+                    purpose: true,
+                    type: true,
+                    order_id: true,
+                    service_request_id: true,
+                    technical_issue_id: true,
+                    vendor_id: true,
+                    acquisition_id: true,
+                    shipment_id: true,
+                  },
+                }).then((rows) => rows.map((row) => ({
+                  ...row,
+                  amount: Number(row.amount),
+                  method: String(row.method),
+                  direction: String(row.direction),
+                  status: String(row.status),
+                  purpose: String(row.purpose),
+                  type: String(row.type),
+                  paidAt: row.paidAt?.toISOString() ?? null,
+                  createdAt: row.createdAt.toISOString(),
+                  updatedAt: row.updatedAt.toISOString(),
+                })))
+          ).then((rows) =>
+            paymentCashFlowPeriods(rows.map((row) => ({
+              amount: row.amount,
+              direction: row.direction as PaymentDirection,
+              paidAt: row.paidAt ? new Date(row.paidAt) : null,
+              createdAt: new Date(row.createdAt),
+            }))),
+          ))
       : Promise.resolve(null),
     isMediaFlow && input.includeMediaBoard !== false
       ? dashboardStep("mediaBoard", () => loadMediaBoard({

@@ -17,6 +17,7 @@ import {
 import { ensureInitialPaymentForAcquisitionTx, publishPaymentMutations } from "@/domains/payment/server";
 import { restoreBuyBackWatchAfterAcquisitionPostTx } from "../server";
 import { emitWatchCreatedEvent } from "@/domains/watch/server/events";
+import type { BusinessEventDispatchOptions } from "@/domains/event/server/business-event.service";
 
 type PendingInlineImageAttach = {
     acquisitionId: string;
@@ -56,7 +57,11 @@ async function resolveVendorIdForPosting(
 }
 
 export async function postAcquisitionApplication(
-    input: string | { acquisitionId: string; vendorName?: string | null },
+    input: string | {
+        acquisitionId: string;
+        vendorName?: string | null;
+        deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
+    },
     legacyVendorName?: string | null
 ) {
     const acqId = typeof input === "string"
@@ -66,6 +71,7 @@ export async function postAcquisitionApplication(
     const vendorName = typeof input === "string"
         ? legacyVendorName ?? ""
         : input.vendorName ?? "";
+    const deferConsumers = typeof input === "string" ? undefined : input.deferConsumers;
 
     const acq = await repoAcq.getAcqtById(acqId);
 
@@ -184,15 +190,20 @@ export async function postAcquisitionApplication(
     if (result.paymentResult.created) {
         await publishPaymentMutations([
             { paymentId: result.paymentResult.payment.id, eventKey: "payment.created" },
-        ]);
+        ], {
+            deferConsumers,
+            skipProjectionKeys: ["acquisition-list"],
+        });
     }
 
     await repoAcq.emitAcquisitionBusinessEvent(prisma, {
         eventKey: "acquisition.posted",
         acquisitionId: acqId,
+        payload: { skipProjection: true },
+        deferConsumers,
     });
 
-    for (const event of createdWatchEvents) {
+    await Promise.all(createdWatchEvents.map(async (event) => {
         const pending = inlineImagesByWatchId.get(event.watchId);
         if (pending) {
             await attachInlineImageToAcquisitionWatchDraft(pending);
@@ -208,8 +219,15 @@ export async function postAcquisitionApplication(
             },
             acquisitionId: event.acquisitionId,
             acquisitionItemId: event.acquisitionItemId,
+            deferConsumers,
         });
-    }
+    }));
+
+    await repoAcq.emitAcquisitionBusinessEvent(prisma, {
+        eventKey: "acquisition.items.updated",
+        acquisitionId: acqId,
+        payload: { source: "POST_FINALIZED" },
+    });
 
     return result.posted;
 }

@@ -297,6 +297,7 @@ export async function createTechnicalIssue(input: {
     technicalDetailCatalogId?: string | null;
     summary?: string | null;
     priority?: string | null;
+    actorUserId?: string | null;
     deferConsumers?: (work: () => Promise<void>) => void;
 }) {
     const serviceRequestId = cleanId(input.serviceRequestId);
@@ -371,6 +372,7 @@ export async function createTechnicalIssue(input: {
         eventKey: "technical_issue.created",
         technicalIssueId: created.id,
         serviceRequestId,
+        actorUserId: input.actorUserId,
         payload: {
             executionStatus: "OPEN",
             area: cleanId(input.area) ?? "GENERAL",

@@ -1,5 +1,5 @@
 export const ACQUISITION_LIST_PROJECTION_KEY = "acquisition-list";
-export const ACQUISITION_LIST_PROJECTION_VERSION = 1;
+export const ACQUISITION_LIST_PROJECTION_VERSION = 2;
 
 export const ACQUISITION_LIST_PROJECTION_SOURCE_EVENTS = [
   "acquisition.created",
@@ -12,4 +12,8 @@ export const ACQUISITION_LIST_PROJECTION_SOURCE_EVENTS = [
   "payment.paid",
   "payment.refunded",
   "payment.exception_marked",
+  "watch.media.photoshoot.completed",
+  "watch.media.asset.attached",
+  "watch.media.ready_for_publish",
+  "watch.media.recalled",
 ] as const;

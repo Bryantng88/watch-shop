@@ -1066,6 +1066,23 @@ const SERVICE_OPERATION_CONTRACT: OperationalBlueprintContract = {
   ],
   projectionSubscriptions: [
     {
+      projectionKey: "technical-issue-board",
+      eventKeys: [
+        "technical_issue.created",
+        "technical_issue.updated",
+        "technical_issue.confirmed",
+        "technical_issue.started",
+        "technical_issue.completed",
+        "technical_issue.canceled",
+        "service_request.created",
+        "service_request.status_changed",
+        "task.item.activity.commented",
+      ],
+      resolvesToTargetType: "TECHNICAL_ISSUE",
+      description:
+        "Service Operation events refresh the Technical Issue Board card, stage counters and pagination row.",
+    },
+    {
       projectionKey: "watch-list",
       eventKeys: [
         "service_request.created",
@@ -1255,6 +1272,12 @@ const PAYMENT_COLLECTION_CONTRACT: OperationalBlueprintContract = {
     },
   ],
   projectionSubscriptions: [
+    {
+      projectionKey: "payment-list",
+      eventKeys: ["payment.created", "payment.status_updated", "payment.paid", "payment.refunded", "payment.exception_marked"],
+      resolvesToTargetType: "PAYMENT",
+      description: "Payment events refresh the Payment Workspace list, counters and cash-flow row.",
+    },
     {
       projectionKey: "payment-owner-summary",
       eventKeys: ["payment.created", "payment.status_updated", "payment.paid", "payment.refunded", "payment.exception_marked"],

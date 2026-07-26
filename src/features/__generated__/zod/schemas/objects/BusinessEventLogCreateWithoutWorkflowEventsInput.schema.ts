@@ -1,6 +1,7 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema'
+import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema';
+import { ProjectionEventDeliveryCreateNestedManyWithoutBusinessEventLogInputObjectSchema as ProjectionEventDeliveryCreateNestedManyWithoutBusinessEventLogInputObjectSchema } from './ProjectionEventDeliveryCreateNestedManyWithoutBusinessEventLogInput.schema'
 
 import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
@@ -11,7 +12,8 @@ const makeSchema = () => z.object({
   targetId: z.string(),
   actorUserId: z.string().optional().nullable(),
   metadataJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
-  createdAt: z.coerce.date().optional()
+  createdAt: z.coerce.date().optional(),
+  projectionDeliveries: z.lazy(() => ProjectionEventDeliveryCreateNestedManyWithoutBusinessEventLogInputObjectSchema).optional()
 }).strict();
 export const BusinessEventLogCreateWithoutWorkflowEventsInputObjectSchema: z.ZodType<Prisma.BusinessEventLogCreateWithoutWorkflowEventsInput> = makeSchema() as unknown as z.ZodType<Prisma.BusinessEventLogCreateWithoutWorkflowEventsInput>;
 export const BusinessEventLogCreateWithoutWorkflowEventsInputObjectZodSchema = makeSchema();

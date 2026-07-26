@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 
 import { postAcquisitionApplication } from "@/domains/acquisition/application";
 
@@ -27,6 +27,7 @@ export async function PUT(
         const data = await postAcquisitionApplication({
             acquisitionId: id,
             vendorName: String(body?.vendor ?? body?.vendorName ?? "").trim(),
+            deferConsumers: (work) => after(work),
         });
 
         return NextResponse.json({ ok: true, data });

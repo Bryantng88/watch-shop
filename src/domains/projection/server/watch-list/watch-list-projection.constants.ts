@@ -21,4 +21,9 @@ export const WATCH_LIST_PROJECTION_SOURCE_EVENTS = [
   "watch.media.recalled",
   "watch.saleStage.posted",
   "watch.service.eta.updated",
+  "order.created",
+  "order.updated",
+  "order.posted",
+  "order.cancelled",
+  "order.completed",
 ] as const;

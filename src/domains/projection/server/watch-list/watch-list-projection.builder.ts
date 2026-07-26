@@ -80,29 +80,23 @@ export async function rebuildWatchListProjectionRows(
     const batchKeys = rows.map((row) => row.id);
     rowKeys.push(...batchKeys);
 
-    if (scoped && batchKeys.length) {
-      await deleteProjectionRecords(db, {
-        projectionKey: WATCH_LIST_PROJECTION_KEY,
-        rowKeys: batchKeys,
-      });
-    }
-
-    for (const row of rows) {
-      const data = mapWatchListSourceRowToProjectionData(row);
-
-      await upsertProjectionRecord(db, {
-        projectionKey: WATCH_LIST_PROJECTION_KEY,
-        projectionVersion: WATCH_LIST_PROJECTION_VERSION,
-        rowKey: data.filters.watchId,
-        entityType: TaskExecutionTargetType.WATCH,
-        entityId: data.filters.watchId,
-        spaceId: data.filters.productId,
-        status: data.filters.saleStage,
-        searchText: watchListProjectionSearchText(data),
-        sortAt: watchListProjectionSortAt(data),
-        sourceUpdatedAt: data.filters.updatedAt,
-        dataJson: data,
-      });
+    for (let index = 0; index < rows.length; index += 12) {
+      await Promise.all(rows.slice(index, index + 12).map((row) => {
+        const data = mapWatchListSourceRowToProjectionData(row);
+        return upsertProjectionRecord(db, {
+          projectionKey: WATCH_LIST_PROJECTION_KEY,
+          projectionVersion: WATCH_LIST_PROJECTION_VERSION,
+          rowKey: data.filters.watchId,
+          entityType: TaskExecutionTargetType.WATCH,
+          entityId: data.filters.watchId,
+          spaceId: data.filters.productId,
+          status: data.filters.saleStage,
+          searchText: watchListProjectionSearchText(data),
+          sortAt: watchListProjectionSortAt(data),
+          sourceUpdatedAt: data.filters.updatedAt,
+          dataJson: data,
+        });
+      }));
     }
 
     if (scoped || rows.length < limit) break;
@@ -177,7 +171,7 @@ export const watchListProjectionBuilder: ProjectionBuilder = {
   version: WATCH_LIST_PROJECTION_VERSION,
   description: "Read model for Admin Watch List rows.",
   sourceEvents: [...WATCH_LIST_PROJECTION_SOURCE_EVENTS],
-  targetTypes: ["WATCH", "PRODUCT", "SERVICE_REQUEST", "TECHNICAL_ISSUE", "PAYMENT"],
+  targetTypes: ["WATCH", "PRODUCT", "SERVICE_REQUEST", "TECHNICAL_ISSUE", "PAYMENT", "ORDER"],
   buildFromEvent: buildWatchListProjectionFromEvent,
   rebuild: rebuildWatchListProjection,
 };

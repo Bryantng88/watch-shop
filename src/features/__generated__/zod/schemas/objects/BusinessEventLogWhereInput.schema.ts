@@ -4,7 +4,8 @@ import { StringFilterObjectSchema as StringFilterObjectSchema } from './StringFi
 import { StringNullableFilterObjectSchema as StringNullableFilterObjectSchema } from './StringNullableFilter.schema';
 import { JsonNullableFilterObjectSchema as JsonNullableFilterObjectSchema } from './JsonNullableFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
-import { WorkflowExecutionEventListRelationFilterObjectSchema as WorkflowExecutionEventListRelationFilterObjectSchema } from './WorkflowExecutionEventListRelationFilter.schema'
+import { WorkflowExecutionEventListRelationFilterObjectSchema as WorkflowExecutionEventListRelationFilterObjectSchema } from './WorkflowExecutionEventListRelationFilter.schema';
+import { ProjectionEventDeliveryListRelationFilterObjectSchema as ProjectionEventDeliveryListRelationFilterObjectSchema } from './ProjectionEventDeliveryListRelationFilter.schema'
 
 const businesseventlogwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => BusinessEventLogWhereInputObjectSchema), z.lazy(() => BusinessEventLogWhereInputObjectSchema).array()]).optional(),
@@ -17,7 +18,8 @@ const businesseventlogwhereinputSchema = z.object({
   actorUserId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   metadataJson: z.lazy(() => JsonNullableFilterObjectSchema).optional(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  workflowEvents: z.lazy(() => WorkflowExecutionEventListRelationFilterObjectSchema).optional()
+  workflowEvents: z.lazy(() => WorkflowExecutionEventListRelationFilterObjectSchema).optional(),
+  projectionDeliveries: z.lazy(() => ProjectionEventDeliveryListRelationFilterObjectSchema).optional()
 }).strict();
 export const BusinessEventLogWhereInputObjectSchema: z.ZodType<Prisma.BusinessEventLogWhereInput> = businesseventlogwhereinputSchema as unknown as z.ZodType<Prisma.BusinessEventLogWhereInput>;
 export const BusinessEventLogWhereInputObjectZodSchema = businesseventlogwhereinputSchema;

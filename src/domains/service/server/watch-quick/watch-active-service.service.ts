@@ -336,6 +336,7 @@ export async function watchIntakeWithInitialSuspicion(input: {
         summary: suspicion,
         note: cleanText(input.note) ?? suspicion,
         priority: normalizePriority(input.priority),
+        actorUserId: input.actorUserId,
         deferConsumers: input.deferConsumers,
       });
 
@@ -414,17 +415,6 @@ export async function watchIntakeWithInitialSuspicion(input: {
   const request = await createQuickServiceRequest(prisma, productId);
   await ensureAssessment(prisma, request.id);
 
-  const issue = await createTechnicalIssue({
-    serviceRequestId: request.id,
-    area: normalizeArea(input.area),
-    issueType: "CHECK",
-    actionMode: "INTERNAL",
-    summary: suspicion,
-    note: cleanText(input.note) ?? suspicion,
-    priority: normalizePriority(input.priority),
-    deferConsumers: input.deferConsumers,
-  });
-
   const event = await recordBusinessEvent(prisma, {
     eventKey: "service_request.created",
     targetType: "SERVICE_REQUEST",
@@ -433,12 +423,25 @@ export async function watchIntakeWithInitialSuspicion(input: {
     payload: {
       source: "watch-list-service-operation-intake",
       actionKey: "watch_intake_with_suspicion",
+      skipProjection: true,
       productId,
       serviceRequestId: request.id,
       refNo: request.refNo ?? null,
     },
     targetAliasIds: [productId],
   }, { deferConsumers: input.deferConsumers });
+
+  const issue = await createTechnicalIssue({
+    serviceRequestId: request.id,
+    area: normalizeArea(input.area),
+    issueType: "CHECK",
+    actionMode: "INTERNAL",
+    summary: suspicion,
+    note: cleanText(input.note) ?? suspicion,
+    priority: normalizePriority(input.priority),
+    actorUserId: input.actorUserId,
+    deferConsumers: input.deferConsumers,
+  });
 
   const binding = input.deferConsumers
     ? null
@@ -589,6 +592,7 @@ export async function createQuickIssueForActiveWatchService(input: {
   note?: string | null;
   issueType?: string | null;
   priority?: string | null;
+  actorUserId?: string | null;
 }) {
   const productId = cleanText(input.productId);
   if (!productId) throw new Error("Missing productId");
@@ -625,6 +629,7 @@ export async function createQuickIssueForActiveWatchService(input: {
     issueType: normalizeIssueType(input.issueType),
     actionMode: "INTERNAL",
     priority: normalizedPriority,
+    actorUserId: input.actorUserId,
   });
 
   const now = new Date();

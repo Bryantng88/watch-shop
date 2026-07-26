@@ -10,6 +10,7 @@ import {
   postServiceRequestsApplication,
 } from "../application";
 import { createTechnicalIssue } from "../server/issue-board";
+import { getCurrentUser } from "@/server/auth/getCurrentUser";
 function serialize<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj, (_key, value) => {
     if (value instanceof Date) return value.toISOString();
@@ -70,6 +71,7 @@ export async function createTechnicalIssueForServiceRequestAction(input: {
   technicalDetailCatalogId?: string | null;
   vendorId?: string | null;
 }) {
+  const actor = await getCurrentUser();
   const result = await createTechnicalIssue({
     serviceRequestId: input.serviceRequestId,
     summary: input.summary,
@@ -79,6 +81,7 @@ export async function createTechnicalIssueForServiceRequestAction(input: {
     note: input.note ?? null,
     technicalDetailCatalogId: input.technicalDetailCatalogId ?? null,
     vendorId: input.vendorId ?? null,
+    actorUserId: actor?.id ?? null,
   });
 
   revalidateService();

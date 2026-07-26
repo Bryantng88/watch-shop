@@ -36,7 +36,6 @@ export async function buildOrderDetailProjectionRow(db: DB, orderId: string) {
       listPrice: toNumberPrice(item.listPrice),
       unitPriceAgreed: toNumberPrice(item.unitPriceAgreed),
       subtotal: toNumberPrice(item.subtotal),
-      taxRate: toNumberPrice(item.taxRate),
       linkedProductTitle: item.linkedOrderItem?.title ?? null,
     })),
     orderItem: undefined,

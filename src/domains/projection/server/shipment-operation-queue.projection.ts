@@ -264,8 +264,12 @@ async function rebuild(
     orderBy: { updatedAt: "desc" },
     take: context.scope.limit ? Math.max(1, Math.min(5000, context.scope.limit)) : undefined,
   });
-  for (const row of rows) {
-    await buildShipmentOperationQueueRow(db, row.id, "BACKFILL");
+  for (let index = 0; index < rows.length; index += 10) {
+    await Promise.all(
+      rows.slice(index, index + 10).map((row) =>
+        buildShipmentOperationQueueRow(db, row.id, "BACKFILL"),
+      ),
+    );
   }
   return buildResult(context, context.scope, rows.length, rows.length ? undefined : "NO_SHIPMENTS");
 }
@@ -296,6 +300,7 @@ export async function listShipmentOperationQueueProjection(
     SELECT "dataJson"
     FROM "ProjectionRecord"
     WHERE "projectionKey" = ${SHIPMENT_OPERATION_QUEUE_PROJECTION_KEY}
+      AND "projectionVersion" = ${SHIPMENT_OPERATION_QUEUE_PROJECTION_VERSION}
       AND "status" = ${input.stage}
       AND (${query || null}::text IS NULL OR "searchText" ILIKE ${query ? `%${query}%` : null})
     ORDER BY "sortAt" DESC NULLS LAST, "updatedAt" DESC
@@ -306,6 +311,7 @@ export async function listShipmentOperationQueueProjection(
     SELECT COUNT(*) AS "count"
     FROM "ProjectionRecord"
     WHERE "projectionKey" = ${SHIPMENT_OPERATION_QUEUE_PROJECTION_KEY}
+      AND "projectionVersion" = ${SHIPMENT_OPERATION_QUEUE_PROJECTION_VERSION}
       AND "status" = ${input.stage}
       AND (${query || null}::text IS NULL OR "searchText" ILIKE ${query ? `%${query}%` : null})
   `);

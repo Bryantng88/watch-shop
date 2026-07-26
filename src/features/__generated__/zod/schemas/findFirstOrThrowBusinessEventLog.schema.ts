@@ -18,6 +18,7 @@ export const BusinessEventLogFindFirstOrThrowSelectSchema: z.ZodType<Prisma.Busi
     metadataJson: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     workflowEvents: z.boolean().optional(),
+    projectionDeliveries: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.BusinessEventLogSelect>;
 
@@ -30,6 +31,7 @@ export const BusinessEventLogFindFirstOrThrowSelectZodSchema = z.object({
     metadataJson: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     workflowEvents: z.boolean().optional(),
+    projectionDeliveries: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

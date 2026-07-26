@@ -7,6 +7,12 @@ import { acquisitionListProjectionBuilder } from "./acquisition-list";
 import { shipmentOperationQueueProjectionBuilder } from "./shipment-operation-queue.projection";
 import { orderListProjectionBuilder } from "./order-list.projection";
 import { orderDetailProjectionBuilder } from "./order-detail.projection";
+import { technicalIssueBoardProjectionBuilder } from "./technical-issue-board.projection";
+import { paymentListProjectionBuilder } from "./payment-list.projection";
+import { mediaOperationBoardProjectionBuilder } from "./media-operation-board.projection";
+import { coordinationWorkspaceSummaryProjectionBuilder } from "./coordination-workspace-summary.projection";
+import { adminDashboardSummaryProjectionBuilder } from "./admin-dashboard-summary.projection";
+import { serviceRequestListProjectionBuilder } from "./service-request-list.projection";
 
 const PROJECTION_BUILDERS: ProjectionBuilder[] = [
   watchMediaQueueProjectionBuilder,
@@ -16,6 +22,12 @@ const PROJECTION_BUILDERS: ProjectionBuilder[] = [
   shipmentOperationQueueProjectionBuilder,
   orderListProjectionBuilder,
   orderDetailProjectionBuilder,
+  technicalIssueBoardProjectionBuilder,
+  paymentListProjectionBuilder,
+  mediaOperationBoardProjectionBuilder,
+  coordinationWorkspaceSummaryProjectionBuilder,
+  adminDashboardSummaryProjectionBuilder,
+  serviceRequestListProjectionBuilder,
 ];
 
 function clean(value: unknown) {

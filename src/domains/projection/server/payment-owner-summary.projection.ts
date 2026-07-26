@@ -3,7 +3,11 @@ import { PaymentDirection, PaymentStatus } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
 import type { BusinessEventDispatchContext } from "@/domains/event/dispatcher/business-event-consumer.types";
 import type { PaymentOwnerType, PaymentSummary } from "@/domains/payment/shared";
-import { listProjectionRecords, upsertProjectionRecord } from "./projection-record.repo";
+import {
+  deleteProjectionRecords,
+  listProjectionRecords,
+  upsertProjectionRecord,
+} from "./projection-record.repo";
 import type { ProjectionBuildContext, ProjectionBuildResult, ProjectionBuilder, ProjectionScope } from "./projection.types";
 
 export const PAYMENT_OWNER_SUMMARY_PROJECTION_KEY = "payment-owner-summary";
@@ -71,22 +75,34 @@ async function ownerFromPaymentId(db: DB, paymentId: string) {
   return payment ? ownerFromPayment(payment) : null;
 }
 
-async function ownerTotalDue(db: DB, ownerType: PaymentOwnerType, ownerId: string) {
+async function ownerFinancialFacts(db: DB, ownerType: PaymentOwnerType, ownerId: string) {
   const client = dbOrTx(db);
-  if (ownerType === "ORDER") return toNumber((await client.order.findUnique({ where: { id: ownerId }, select: { subtotal: true } }))?.subtotal);
-  if (ownerType === "ACQUISITION") return toNumber((await client.acquisition.findUnique({ where: { id: ownerId }, select: { totalAmount: true } }))?.totalAmount);
-  if (ownerType === "SHIPMENT") return toNumber((await client.shipment.findUnique({ where: { id: ownerId }, select: { shippingAmount: true } }))?.shippingAmount);
+  if (ownerType === "ORDER") {
+    const order = await client.order.findUnique({
+      where: { id: ownerId },
+      select: { subtotal: true, depositRequired: true },
+    });
+    return { totalDue: toNumber(order?.subtotal), depositRequired: toNumber(order?.depositRequired) };
+  }
+  if (ownerType === "ACQUISITION") {
+    const row = await client.acquisition.findUnique({ where: { id: ownerId }, select: { totalAmount: true } });
+    return { totalDue: toNumber(row?.totalAmount), depositRequired: 0 };
+  }
+  if (ownerType === "SHIPMENT") {
+    const row = await client.shipment.findUnique({ where: { id: ownerId }, select: { shippingAmount: true } });
+    return { totalDue: toNumber(row?.shippingAmount), depositRequired: 0 };
+  }
   if (ownerType === "TECHNICAL_ISSUE") {
     const issue = await client.technicalIssue.findUnique({ where: { id: ownerId }, select: { actualCost: true, estimatedCost: true } });
-    return toNumber(issue?.actualCost ?? issue?.estimatedCost);
+    return { totalDue: toNumber(issue?.actualCost ?? issue?.estimatedCost), depositRequired: 0 };
   }
-  return 0;
+  return { totalDue: 0, depositRequired: 0 };
 }
 
 export async function buildPaymentOwnerSummary(db: DB, ownerType: PaymentOwnerType, ownerId: string) {
   const client = dbOrTx(db);
-  const [totalDue, payments] = await Promise.all([
-    ownerTotalDue(db, ownerType, ownerId),
+  const [facts, payments] = await Promise.all([
+    ownerFinancialFacts(db, ownerType, ownerId),
     client.payment.findMany({
       where: ownerWhere(ownerType, ownerId),
       select: { amount: true, currency: true, direction: true, status: true, paidAt: true, createdAt: true, updatedAt: true },
@@ -100,9 +116,7 @@ export async function buildPaymentOwnerSummary(db: DB, ownerType: PaymentOwnerTy
   const incomeTotal = payments.filter((row) => settled.has(row.status) && row.direction === PaymentDirection.IN).reduce((sum, row) => sum + toNumber(row.amount), 0);
   const expenseTotal = payments.filter((row) => settled.has(row.status) && row.direction === PaymentDirection.OUT).reduce((sum, row) => sum + toNumber(row.amount), 0);
   const recognizedTotal = paidTotal + collectedTotal;
-  const depositRequired = ownerType === "ORDER"
-    ? toNumber((await client.order.findUnique({ where: { id: ownerId }, select: { depositRequired: true } }))?.depositRequired)
-    : 0;
+  const { totalDue, depositRequired } = facts;
   const summary: PaymentOwnerSummaryProjection = {
     ownerType,
     ownerId,
@@ -167,6 +181,11 @@ async function rebuild(db: DB, context: ProjectionBuildContext & { scope: Projec
     await buildPaymentOwnerSummary(db, targetType, targetId);
     return buildResult(context, context.scope, 1);
   }
+  if (!targetId) {
+    await deleteProjectionRecords(db, {
+      projectionKey: PAYMENT_OWNER_SUMMARY_PROJECTION_KEY,
+    });
+  }
   const rows = await client.payment.findMany({
     select: { type: true, order_id: true, acquisition_id: true, shipment_id: true, service_request_id: true, technical_issue_id: true },
   });
@@ -175,21 +194,35 @@ async function rebuild(db: DB, context: ProjectionBuildContext & { scope: Projec
     const owner = ownerFromPayment(row);
     if (owner) owners.set(`${owner.ownerType}:${owner.ownerId}`, owner);
   }
-  for (const owner of owners.values()) await buildPaymentOwnerSummary(db, owner.ownerType, owner.ownerId);
+  const ownerRows = [...owners.values()];
+  for (let index = 0; index < ownerRows.length; index += 8) {
+    await Promise.all(
+      ownerRows.slice(index, index + 8).map((owner) =>
+        buildPaymentOwnerSummary(db, owner.ownerType, owner.ownerId),
+      ),
+    );
+  }
   return buildResult(context, context.scope, owners.size, owners.size ? undefined : "NO_PAYMENT_OWNERS");
 }
 
 export async function getPaymentOwnerSummaryProjection(db: DB, ownerType: PaymentOwnerType, ownerId: string) {
-  const rows = await listProjectionRecords(db, { projectionKey: PAYMENT_OWNER_SUMMARY_PROJECTION_KEY, entityType: ownerType, entityId: ownerId, limit: 1 });
+  const rows = await listProjectionRecords(db, { projectionKey: PAYMENT_OWNER_SUMMARY_PROJECTION_KEY, projectionVersion: PAYMENT_OWNER_SUMMARY_PROJECTION_VERSION, entityType: ownerType, entityId: ownerId, limit: 1 });
   const data = rows[0]?.dataJson as PaymentOwnerSummaryProjection | undefined;
   return data ?? buildPaymentOwnerSummary(db, ownerType, ownerId);
 }
 
 export async function getPaymentOwnerSummaryProjections(db: DB, ownerType: PaymentOwnerType, ownerIds: string[]) {
   const uniqueIds = [...new Set(ownerIds.filter(Boolean))];
-  const rows = await listProjectionRecords(db, { projectionKey: PAYMENT_OWNER_SUMMARY_PROJECTION_KEY, entityType: ownerType, limit: Math.max(100, uniqueIds.length) });
+  const rows = await listProjectionRecords(db, { projectionKey: PAYMENT_OWNER_SUMMARY_PROJECTION_KEY, projectionVersion: PAYMENT_OWNER_SUMMARY_PROJECTION_VERSION, entityType: ownerType, limit: Math.max(100, uniqueIds.length) });
   const map = new Map(rows.map((row) => [row.entityId ?? "", row.dataJson as PaymentOwnerSummaryProjection]));
-  for (const ownerId of uniqueIds) if (!map.has(ownerId)) map.set(ownerId, await buildPaymentOwnerSummary(db, ownerType, ownerId));
+  const missingIds = uniqueIds.filter((ownerId) => !map.has(ownerId));
+  for (let index = 0; index < missingIds.length; index += 8) {
+    const ids = missingIds.slice(index, index + 8);
+    const summaries = await Promise.all(
+      ids.map((ownerId) => buildPaymentOwnerSummary(db, ownerType, ownerId)),
+    );
+    summaries.forEach((summary, summaryIndex) => map.set(ids[summaryIndex], summary));
+  }
   return map;
 }
 

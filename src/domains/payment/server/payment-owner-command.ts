@@ -1,19 +1,23 @@
 import { PaymentDirection, PaymentMethod, PaymentPurpose, PaymentStatus, PaymentType } from "@prisma/client";
 
 import { prisma } from "@/server/db/client";
-import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
-import { getPaymentOwnerSummaryProjection } from "@/domains/projection/server/payment-owner-summary.projection";
+import {
+  recordBusinessEvent,
+  type BusinessEventDispatchOptions,
+} from "@/domains/event/server/business-event.service";
 import { normalizePaymentMethod, resolvePaymentOwner } from "./payment.core";
 import { buildPaymentRef, money, toNumber, type Tx } from "./payment.utils";
 
 export type PaymentMutation = { paymentId: string; eventKey: "payment.created" | "payment.status_updated" | "payment.paid" };
 
-export async function publishPaymentMutations(mutations: PaymentMutation[]) {
+export async function publishPaymentMutations(
+  mutations: PaymentMutation[],
+  options?: BusinessEventDispatchOptions & { skipProjectionKeys?: string[] },
+) {
   for (const mutation of mutations) {
     const payment = await prisma.payment.findUnique({ where: { id: mutation.paymentId } });
     if (!payment) continue;
     const owner = resolvePaymentOwner(payment);
-    const summary = await getPaymentOwnerSummaryProjection(prisma, owner.ownerType, owner.ownerId);
     await recordBusinessEvent(prisma, {
       eventKey: mutation.eventKey,
       targetType: "PAYMENT",
@@ -28,10 +32,10 @@ export async function publishPaymentMutations(mutations: PaymentMutation[]) {
         currency: payment.currency,
         method: payment.method,
         occurredAt: payment.paidAt ?? payment.updatedAt,
-        summary,
         sourceId: `${payment.id}:${mutation.eventKey}:${payment.updatedAt.getTime()}`,
+        skipProjectionKeys: options?.skipProjectionKeys ?? [],
       },
-    });
+    }, options);
   }
 }
 

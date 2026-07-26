@@ -26,19 +26,21 @@ function searchText(row: AcquisitionListProjectionRow) {
 }
 
 async function upsertRows(db: DB, rows: AcquisitionListProjectionRow[]) {
-  for (const row of rows) {
-    await upsertProjectionRecord(db, {
-      projectionKey: ACQUISITION_LIST_PROJECTION_KEY,
-      projectionVersion: ACQUISITION_LIST_PROJECTION_VERSION,
-      rowKey: row.id,
-      entityType: "ACQUISITION",
-      entityId: row.id,
-      status: row.approvalStatus,
-      searchText: searchText(row),
-      sortAt: row.updatedAt,
-      sourceUpdatedAt: row.updatedAt,
-      dataJson: row,
-    });
+  for (let index = 0; index < rows.length; index += 12) {
+    await Promise.all(rows.slice(index, index + 12).map((row) =>
+      upsertProjectionRecord(db, {
+        projectionKey: ACQUISITION_LIST_PROJECTION_KEY,
+        projectionVersion: ACQUISITION_LIST_PROJECTION_VERSION,
+        rowKey: row.id,
+        entityType: "ACQUISITION",
+        entityId: row.id,
+        status: row.approvalStatus,
+        searchText: searchText(row),
+        sortAt: row.updatedAt,
+        sourceUpdatedAt: row.updatedAt,
+        dataJson: row,
+      }),
+    ));
   }
 }
 
@@ -56,18 +58,25 @@ function buildResult(context: ProjectionBuildContext, scope: ProjectionScope, ap
   };
 }
 
-async function resolveAcquisitionId(db: DB, targetType: unknown, targetId: unknown) {
+async function resolveAcquisitionIds(db: DB, targetType: unknown, targetId: unknown) {
   const type = clean(targetType).toUpperCase();
   const id = clean(targetId);
-  if (!id) return null;
-  if (type === "ACQUISITION") return id;
-  if (type !== "PAYMENT") return null;
+  if (!id) return [];
+  if (type === "ACQUISITION") return [id];
+  if (type === "WATCH") {
+    const rows = await dbOrTx(db).acquisitionItem.findMany({
+      where: { product: { watch: { id } } },
+      select: { acquisitionId: true },
+    });
+    return [...new Set(rows.map((row) => row.acquisitionId))];
+  }
+  if (type !== "PAYMENT") return [];
 
   const payment = await dbOrTx(db).payment.findUnique({
     where: { id },
     select: { acquisition_id: true },
   });
-  return payment?.acquisition_id ?? null;
+  return payment?.acquisition_id ? [payment.acquisition_id] : [];
 }
 
 export async function rebuildAcquisitionListProjectionRows(
@@ -108,13 +117,13 @@ async function rebuild(
   db: DB,
   context: ProjectionBuildContext & { scope: ProjectionScope },
 ) {
-  const acquisitionId = await resolveAcquisitionId(db, context.scope.targetType, context.scope.targetId);
+  const acquisitionIds = await resolveAcquisitionIds(db, context.scope.targetType, context.scope.targetId);
   const hasScope = Boolean(clean(context.scope.targetType) || clean(context.scope.targetId));
-  if (hasScope && !acquisitionId) {
+  if (hasScope && !acquisitionIds.length) {
     return buildResult(context, context.scope, 0, "ACQUISITION_LIST_TARGET_NOT_FOUND");
   }
   const applied = await rebuildAcquisitionListProjectionRows(db, {
-    acquisitionIds: acquisitionId ? [acquisitionId] : [],
+    acquisitionIds,
     limit: context.scope.limit,
   });
   return buildResult(context, context.scope, applied, "NO_ACQUISITION_ROWS");
@@ -139,7 +148,8 @@ export const acquisitionListProjectionBuilder: ProjectionBuilder = {
   version: ACQUISITION_LIST_PROJECTION_VERSION,
   description: "Persistent read model for Admin Acquisition List rows.",
   sourceEvents: [...ACQUISITION_LIST_PROJECTION_SOURCE_EVENTS],
-  targetTypes: ["ACQUISITION", "PAYMENT"],
+  targetTypes: ["ACQUISITION", "PAYMENT", "WATCH"],
+  dependsOnProjectionKeys: ["payment-owner-summary"],
   buildFromEvent,
   rebuild,
 };

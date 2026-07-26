@@ -14,7 +14,7 @@ export const LEGACY_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
     label: "Technical issue updated",
     targetType: "TECHNICAL_ISSUE",
     group: "Service",
-    knownConsumers: ["timeline"],
+    knownConsumers: ["timeline", "projection"],
   }),
   defineBusinessEventContract({
     key: "acquisition.created",
@@ -80,6 +80,13 @@ export const LEGACY_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
     knownConsumers: ["timeline", "coordination", "projection"],
   }),
   defineBusinessEventContract({
+    key: "payment.refunded",
+    label: "Payment refunded",
+    targetType: "PAYMENT",
+    group: "Payment",
+    knownConsumers: ["timeline", "projection"],
+  }),
+  defineBusinessEventContract({
     key: "service_request.created",
     label: "Service request created",
     targetType: "SERVICE_REQUEST",
@@ -137,6 +144,13 @@ export const LEGACY_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
     knownConsumers: ["timeline", "projection"],
   }),
   defineBusinessEventContract({
+    key: "technical_issue.canceled",
+    label: "Technical issue canceled",
+    targetType: "TECHNICAL_ISSUE",
+    group: "Service",
+    knownConsumers: ["notification", "timeline", "coordination", "projection"],
+  }),
+  defineBusinessEventContract({
     key: "technical_issue.done",
     label: "Technical issue done",
     targetType: "TECHNICAL_ISSUE",
@@ -159,6 +173,6 @@ export const LEGACY_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
     label: "Task activity commented",
     targetType: "TASK_ITEM",
     group: "Task",
-    knownConsumers: ["notification", "timeline"],
+    knownConsumers: ["notification", "timeline", "projection"],
   }),
 ];

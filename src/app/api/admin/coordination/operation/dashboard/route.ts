@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getCoordinationDashboard } from "@/domains/coordination/server/coordination-dashboard.service";
+import {
+  getCoordinationBoard,
+  getCoordinationDashboard,
+} from "@/domains/coordination/server/coordination-dashboard.service";
+import { resolveCoordinationCycle } from "@/domains/coordination/server/coordination-cycle.service";
 import type { CoordinationContext } from "@/domains/coordination/server/coordination-cycle.types";
 import type { BusinessListDashboardData } from "@/domains/shared/ui/business-list";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
@@ -95,13 +99,60 @@ export async function GET(request: NextRequest) {
     const boardOnly = !flowItemsOnly && includeBoard;
     const boardStage = request.nextUrl.searchParams.get("boardStage");
     const boardPage = Number(request.nextUrl.searchParams.get("boardPage") ?? 1);
-    const boardPageSize = Number(request.nextUrl.searchParams.get("boardPageSize") ?? 20);
+    const boardPageSize = Number(
+      request.nextUrl.searchParams.get("boardPageSize") ??
+      (modeKey === "technical-issue-flow" ? 10 : 20),
+    );
     const technicalDailyPerformancePromise =
       !flowItemsOnly &&
       !includeBoard &&
       modeKey === "technical-issue-flow"
         ? loadTechnicalDailyPerformance()
         : Promise.resolve(undefined);
+
+    // Rolling-deploy compatibility: old browser bundles still call the
+    // dashboard endpoint for board pagination. Route those requests through
+    // the same Board Query Gateway instead of rebuilding the dashboard graph.
+    if (boardOnly && (
+      modeKey === "technical-issue-flow" ||
+      modeKey === "media-production-flow"
+    )) {
+      const parsedDate = date ? new Date(date) : undefined;
+      const cycle = await resolveCoordinationCycle(prisma, {
+        context,
+        date: parsedDate && !Number.isNaN(parsedDate.getTime())
+          ? parsedDate
+          : undefined,
+      });
+      if (!cycle) {
+        return NextResponse.json(
+          { ok: false, error: "Coordination cycle không tồn tại." },
+          { status: 404 },
+        );
+      }
+      const boardKey = modeKey === "technical-issue-flow"
+        ? "technical-issue"
+        : "media-operation";
+      const board = await getCoordinationBoard({
+        db: prisma,
+        boardKey,
+        taskId: cycle.task.id,
+        auth,
+        stage: boardStage,
+        page: boardPage,
+        pageSize: boardPageSize,
+      });
+      return NextResponse.json({
+        ok: true,
+        boardKey,
+        board,
+        technicalIssueBoard: boardKey === "technical-issue" ? board : undefined,
+        mediaBoard: boardKey === "media-operation" ? board : undefined,
+      }, {
+        headers: { "Cache-Control": "no-store, max-age=0" },
+      });
+    }
+
     const data = await getCoordinationDashboard({
       context,
       modeKey,

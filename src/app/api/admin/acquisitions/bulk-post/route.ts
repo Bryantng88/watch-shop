@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 
 import { postAcquisitionApplication } from "@/domains/acquisition/application";
 
@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
             try {
                 const result = await postAcquisitionApplication({
                     acquisitionId,
+                    deferConsumers: (work) => after(work),
                 });
 
                 posted.push(result);

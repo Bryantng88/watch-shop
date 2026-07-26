@@ -44,6 +44,7 @@ export type ProjectionBuilder = {
   description?: string;
   sourceEvents?: string[];
   targetTypes?: string[];
+  dependsOnProjectionKeys?: string[];
   buildFromEvent?: (
     db: DB,
     context: ProjectionBuildContext & {

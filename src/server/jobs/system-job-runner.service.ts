@@ -1,12 +1,15 @@
 import { getJobControl } from "./job-control.repo";
 import { createJobRunLog, finishJobRunLog } from "./job-run-log.repo";
 import { processQueuedAcquisitionSpecJobs } from "@/app/(admin)/admin/acquisitions/_server/ai/acquisition-spec-job.service";
+import { runProjectionMaintenance } from "@/domains/projection/server/projection-maintenance.service";
 
 export async function runSystemJobs(input?: {
     triggerSource?: string;
 }) {
     const triggerSource = input?.triggerSource ?? "manual";
-    const summary: Record<string, any> = {};
+    const summary: Record<string, unknown> = {};
+
+    summary.projection = await runProjectionMaintenance();
 
     const acquisitionSpecControl = await getJobControl("acquisition_spec");
 

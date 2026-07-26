@@ -1,9 +1,14 @@
-import type { DB } from "@/server/db/client";
+import { Prisma } from "@prisma/client";
+import { dbOrTx, type DB } from "@/server/db/client";
 import type { WatchListFilters } from "@/domains/watch/ui/list/types";
 import {
   compareWatchMediaQueueProjection,
   WATCH_MEDIA_QUEUE_PROJECTION_KEY,
 } from "./watch-media-queue.projection";
+import {
+  comparePaymentListProjection,
+  PAYMENT_LIST_PROJECTION_KEY,
+} from "./payment-list.projection";
 import {
   compareWatchListProjection,
   WATCH_LIST_PROJECTION_KEY,
@@ -32,6 +37,88 @@ function clean(value: unknown) {
 
 function numberCount(value: bigint | number) {
   return typeof value === "bigint" ? Number(value) : Number(value);
+}
+
+const ENTITY_COVERAGE_PROJECTIONS: Record<
+  string,
+  { table: string; sourceWhere?: string }
+> = {
+  "acquisition-list": { table: "Acquisition" },
+  "watch-list": { table: "Watch" },
+  "order-list": { table: "Order" },
+  "order-detail": { table: "Order" },
+  "payment-list": { table: "Payment" },
+  // technical-issue-board only materializes issues that have an active
+  // coordination binding, so raw TechnicalIssue row counts are not equivalent.
+  "service-request-list": { table: "ServiceRequest" },
+  "shipment-operation-queue": { table: "Shipment" },
+  "coordination-workspace-summary": {
+    table: "TaskItem",
+    sourceWhere: `"status" <> 'CANCELLED'`,
+  },
+};
+
+async function compareEntityProjectionCoverage(
+  db: DB,
+  projectionKey: string,
+) {
+  const config = ENTITY_COVERAGE_PROJECTIONS[projectionKey];
+  const builder = getProjectionBuilder(projectionKey);
+  if (!config || !builder) return null;
+  const table = Prisma.raw(`"${config.table}"`);
+  const sourceWhere = config.sourceWhere
+    ? Prisma.raw(`WHERE ${config.sourceWhere}`)
+    : Prisma.empty;
+  const rows = await dbOrTx(db).$queryRaw<Array<{
+    sourceCount: bigint;
+    projectionCount: bigint;
+    missingCount: bigint;
+    staleCount: bigint;
+  }>>(Prisma.sql`
+    WITH source AS (
+      SELECT "id"::text AS "id", "updatedAt"
+      FROM ${table}
+      ${sourceWhere}
+    ),
+    projection AS (
+      SELECT "entityId", "sourceUpdatedAt"
+      FROM "ProjectionRecord"
+      WHERE "projectionKey" = ${projectionKey}
+        AND "projectionVersion" = ${builder.version}
+    )
+    SELECT
+      (SELECT COUNT(*) FROM source) AS "sourceCount",
+      (SELECT COUNT(*) FROM projection) AS "projectionCount",
+      (
+        SELECT COUNT(*)
+        FROM source
+        LEFT JOIN projection ON projection."entityId" = source."id"
+        WHERE projection."entityId" IS NULL
+      ) AS "missingCount",
+      (
+        SELECT COUNT(*)
+        FROM source
+        JOIN projection ON projection."entityId" = source."id"
+        WHERE projection."sourceUpdatedAt" IS NULL
+           OR source."updatedAt" > projection."sourceUpdatedAt"
+      ) AS "staleCount"
+  `);
+  const row = rows[0];
+  const details = {
+    sourceCount: Number(row?.sourceCount ?? 0),
+    projectionCount: Number(row?.projectionCount ?? 0),
+    missingCount: Number(row?.missingCount ?? 0),
+    staleCount: Number(row?.staleCount ?? 0),
+  };
+  return {
+    // Aggregate projections can intentionally use a related entity's
+    // updatedAt as sourceUpdatedAt (Product for Watch, Order/Payment for
+    // Shipment). Treat timestamp differences as diagnostics only; durable
+    // event delivery is responsible for freshness. Auto-repair is reserved
+    // for provably missing rows to avoid rebuild loops and cron load.
+    ok: details.missingCount === 0,
+    details,
+  };
 }
 
 function statusKey(value: unknown) {
@@ -252,6 +339,24 @@ export async function compareProjection(
     };
   }
 
+  if (projectionKey === PAYMENT_LIST_PROJECTION_KEY) {
+    const details = await comparePaymentListProjection(db);
+    return {
+      ok: details.ok,
+      projectionKey,
+      details,
+    };
+  }
+
+  const coverage = await compareEntityProjectionCoverage(db, projectionKey);
+  if (coverage) {
+    return {
+      ok: coverage.ok,
+      projectionKey,
+      details: coverage.details,
+    };
+  }
+
   return {
     ok: true,
     projectionKey,
@@ -302,5 +407,41 @@ export async function repairProjection(
     build,
     after,
     compare,
+  };
+}
+
+export async function repairDriftedProjections(
+  db: DB,
+  input: { limit?: number } = {},
+) {
+  const limit = Math.max(1, Math.min(10, Math.trunc(input.limit ?? 2)));
+  const checked: ProjectionCompareResult[] = [];
+  const repaired: ProjectionRepairResult[] = [];
+
+  // The recurring job deliberately uses lightweight entity coverage checks.
+  // Deep payload comparisons remain available through compareProjection/smoke
+  // scripts without adding their source-query cost to every cron execution.
+  for (const projectionKey of Object.keys(ENTITY_COVERAGE_PROJECTIONS)) {
+    const coverage = await compareEntityProjectionCoverage(db, projectionKey);
+    if (!coverage) continue;
+    const compare: ProjectionCompareResult = {
+      ok: coverage.ok,
+      projectionKey,
+      details: coverage.details,
+    };
+    checked.push(compare);
+    if (compare.ok) continue;
+    repaired.push(await repairProjection(db, {
+      projectionKey,
+      compare: false,
+    }));
+    if (repaired.length >= limit) break;
+  }
+
+  return {
+    checked: checked.length,
+    drifted: checked.filter((item) => !item.skipped && !item.ok).length,
+    repaired: repaired.length,
+    results: repaired,
   };
 }

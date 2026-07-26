@@ -10,6 +10,10 @@ import {
 import * as paymentRepo from "./payment.repo";
 import type { PaymentListInput, PaymentViewKey } from "../_helper/SearchParams";
 import { prisma } from "@/server/db/client";
+import {
+    queryPaymentListProjection,
+} from "@/domains/projection/server/payment-list.projection";
+import { ensureProjectionReady } from "@/domains/projection/server/projection-read.service";
 
 export async function createPaymentsForOrder(tx: any, order: Order) {
     const payments: paymentRepo.CreatePaymentInput[] = [];
@@ -113,12 +117,31 @@ export async function getAdminPaymentList(input: PaymentListInput) {
 
     const effectiveStatus = input.status || viewToStatus(input.view);
 
-    const { items, total, counts } = await paymentRepo.listAdmin(prisma, {
-        ...input,
-        status: effectiveStatus,
-        page,
-        pageSize,
-    });
+    let result;
+    try {
+        const projectionReady = await ensureProjectionReady(prisma, "payment-list");
+        result = projectionReady.ready
+            ? await queryPaymentListProjection(prisma, {
+                ...input,
+                status: effectiveStatus,
+                page,
+                pageSize,
+            })
+            : await paymentRepo.listAdmin(prisma, {
+                ...input,
+                status: effectiveStatus,
+                page,
+                pageSize,
+            });
+    } catch {
+        result = await paymentRepo.listAdmin(prisma, {
+            ...input,
+            status: effectiveStatus,
+            page,
+            pageSize,
+        });
+    }
+    const { items, total, counts } = result;
 
     return serialize({
         items,

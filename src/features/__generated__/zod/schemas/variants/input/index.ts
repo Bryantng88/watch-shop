@@ -22,6 +22,7 @@ export { NotificationDispatchInputSchema } from './NotificationDispatch.input';
 export { NotificationChannelDeliveryInputSchema } from './NotificationChannelDelivery.input';
 export { NotificationRecipientGroupInputSchema } from './NotificationRecipientGroup.input';
 export { BusinessEventLogInputSchema } from './BusinessEventLog.input';
+export { ProjectionEventDeliveryInputSchema } from './ProjectionEventDelivery.input';
 export { ProjectionRecordInputSchema } from './ProjectionRecord.input';
 export { OrderInputSchema } from './Order.input';
 export { OrderItemInputSchema } from './OrderItem.input';

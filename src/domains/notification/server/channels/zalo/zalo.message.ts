@@ -15,5 +15,5 @@ export async function sendZaloTextToGroup(input: ZaloSendTextToGroupInput) {
         message: {
             text: message,
         },
-    });
+    }, { signal: input.signal });
 }

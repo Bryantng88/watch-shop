@@ -12,7 +12,7 @@ import {
     Menu,
     ChevronDown,
     ClipboardList,
-    Warehouse,
+    CreditCard,
     LayoutList,
     MonitorCog,
     CameraIcon,
@@ -27,25 +27,12 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 
-type NotificationCounts = Partial<{
-    products: number;
-    acquisitions: number;
-    orders: number;
-    services: number;
-    shipments: number;
-    invoices: number;
-    payments: number;
-    tasks: number;
-    workCases: number;
-}>;
-
 type Props = {
     user: {
         permissions: string[];
         name?: string | null;
         roles?: string[];
     };
-    notifications?: NotificationCounts;
     variant?: "desktop" | "mobile";
 };
 
@@ -56,7 +43,6 @@ type NavItem = {
     icon: ComponentType<{ size?: number; className?: string }>;
     exact?: boolean;
     permission?: string;
-    notificationKey?: keyof NotificationCounts;
 };
 
 type NavGroup = {
@@ -88,7 +74,6 @@ const NAV: NavEntry[] = [
                 label: "Sản phẩm",
                 icon: Package,
                 permission: PERMISSIONS.PRODUCT_VIEW,
-                notificationKey: "products",
             },
             {
                 type: "item",
@@ -96,7 +81,6 @@ const NAV: NavEntry[] = [
                 label: "Phiếu nhập",
                 icon: Tags,
                 permission: PERMISSIONS.ACQUISITION_VIEW,
-                notificationKey: "acquisitions",
             },
             {
                 type: "item",
@@ -104,7 +88,13 @@ const NAV: NavEntry[] = [
                 label: "Đơn hàng",
                 icon: ClipboardList,
                 permission: PERMISSIONS.ORDER_VIEW,
-                notificationKey: "orders",
+            },
+            {
+                type: "item",
+                href: "/admin/payments",
+                label: "Thanh toán",
+                icon: CreditCard,
+                permission: PERMISSIONS.PAYMENT_VIEW,
             },
             {
                 type: "item",
@@ -112,15 +102,6 @@ const NAV: NavEntry[] = [
                 label: "Vận hành",
                 icon: Workflow,
                 permission: PERMISSIONS.TASK_VIEW,
-                notificationKey: "tasks",
-            },
-            {
-                type: "item",
-                href: "/admin/shipments",
-                label: "Vận chuyển",
-                icon: Warehouse,
-                permission: PERMISSIONS.SHIPMENT_VIEW,
-                notificationKey: "shipments",
             },
             {
                 type: "item",
@@ -235,7 +216,6 @@ function buildAllowedNav(user: Props["user"]) {
 
 export default function AdminSidebar({
     user,
-    notifications,
     variant = "desktop",
 }: Props) {
     const isMobile = variant === "mobile";
@@ -313,10 +293,6 @@ export default function AdminSidebar({
 
     function renderNavItem(item: NavItem, nested = false) {
         const Icon = item.icon;
-        const count = Number(
-            item.notificationKey ? notifications?.[item.notificationKey] ?? 0 : 0,
-        );
-
         return (
             <div
                 key={item.href}
@@ -336,18 +312,7 @@ export default function AdminSidebar({
                             {item.label}
                         </span>
 
-                        {Number.isFinite(count) && count > 0 ? (
-                            <span className="inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
-                                {count > 99 ? "99+" : count}
-                            </span>
-                        ) : null}
                     </span>
-
-                    {Number.isFinite(count) && count > 0 ? (
-                        <span className="absolute right-2 top-2 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white xl:hidden">
-                            {count > 99 ? "99+" : count}
-                        </span>
-                    ) : null}
                 </ActiveLink>
 
                 <div className="pointer-events-none absolute left-[68px] top-1/2 z-[9999] hidden -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white shadow-xl group-hover:block xl:hidden">

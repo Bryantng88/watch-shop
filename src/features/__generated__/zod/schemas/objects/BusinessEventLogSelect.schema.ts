@@ -1,6 +1,7 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { WorkflowExecutionEventFindManySchema as WorkflowExecutionEventFindManySchema } from '../findManyWorkflowExecutionEvent.schema';
+import { ProjectionEventDeliveryFindManySchema as ProjectionEventDeliveryFindManySchema } from '../findManyProjectionEventDelivery.schema';
 import { BusinessEventLogCountOutputTypeArgsObjectSchema as BusinessEventLogCountOutputTypeArgsObjectSchema } from './BusinessEventLogCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -12,6 +13,7 @@ const makeSchema = () => z.object({
   metadataJson: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   workflowEvents: z.union([z.boolean(), z.lazy(() => WorkflowExecutionEventFindManySchema)]).optional(),
+  projectionDeliveries: z.union([z.boolean(), z.lazy(() => ProjectionEventDeliveryFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => BusinessEventLogCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const BusinessEventLogSelectObjectSchema: z.ZodType<Prisma.BusinessEventLogSelect> = makeSchema() as unknown as z.ZodType<Prisma.BusinessEventLogSelect>;

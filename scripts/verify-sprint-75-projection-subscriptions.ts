@@ -71,6 +71,34 @@ function main() {
     }
   }
 
+  const paymentBuilders = listProjectionBuildersForEvent({
+    eventKey: "payment.created",
+    targetType: "PAYMENT",
+  });
+  if (!paymentBuilders.some((builder) => builder.key === "payment-list")) {
+    fail("projection registry did not select payment-list for payment.created");
+  }
+
+  const mediaBuilders = listProjectionBuildersForEvent({
+    eventKey: "watch.media.asset.attached",
+    targetType: "WATCH",
+  });
+  for (const projectionKey of ["watch-media-queue", "media-operation-board"]) {
+    if (!mediaBuilders.some((builder) => builder.key === projectionKey)) {
+      fail(`projection registry did not select ${projectionKey} for watch.media.asset.attached`);
+    }
+  }
+
+  const commentBuilders = listProjectionBuildersForEvent({
+    eventKey: "task.item.activity.commented",
+    targetType: "TASK_ITEM",
+  });
+  for (const projectionKey of ["technical-issue-board", "media-operation-board"]) {
+    if (!commentBuilders.some((builder) => builder.key === projectionKey)) {
+      fail(`projection registry did not select ${projectionKey} for task.item.activity.commented`);
+    }
+  }
+
   console.log("[sprint-75-verify] ok");
 }
 

@@ -30,6 +30,7 @@ export async function emitWatchCreatedEvent(
     acquisitionId?: string | null;
     acquisitionItemId?: string | null;
     actorUserId?: string | null;
+    deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
   },
 ) {
   const acquisitionId = String(input.acquisitionId ?? "").trim() || null;
@@ -54,7 +55,7 @@ export async function emitWatchCreatedEvent(
       sourceId: acquisitionItemId ?? acquisitionId,
       eventInstanceId: acquisitionItemId ?? acquisitionId,
     },
-  });
+  }, { deferConsumers: input.deferConsumers });
 }
 
 export async function emitWatchReviewBusinessEvent(

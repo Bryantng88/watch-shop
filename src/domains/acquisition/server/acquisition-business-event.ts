@@ -1,5 +1,8 @@
 import type { DB } from "@/server/db/client";
-import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
+import {
+  recordBusinessEvent,
+  type BusinessEventDispatchOptions,
+} from "@/domains/event/server/business-event.service";
 
 export type AcquisitionBusinessEventKey =
   | "acquisition.created"
@@ -14,6 +17,7 @@ export async function emitAcquisitionBusinessEvent(
     eventKey: AcquisitionBusinessEventKey;
     acquisitionId: string;
     payload?: Record<string, unknown>;
+    deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
   },
 ) {
   return recordBusinessEvent(db, {
@@ -24,5 +28,5 @@ export async function emitAcquisitionBusinessEvent(
       acquisitionId: input.acquisitionId,
       ...input.payload,
     },
-  });
+  }, { deferConsumers: input.deferConsumers });
 }

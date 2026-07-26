@@ -10,6 +10,7 @@ import {
 import type { BusinessBindingTargetType } from "@/domains/task/server/business-binding.types";
 import { createBusinessEventActivityLoose } from "@/domains/task/server/activity";
 import { appendTimelineEntry } from "./timeline.service";
+import { perfStep } from "@/lib/server-perf";
 
 export type TimelineBusinessEventLog = {
     id?: string | null;
@@ -355,30 +356,53 @@ export async function projectBusinessEventToTaskItemActivity(
 export async function consumeBusinessEventForTimeline(
     client: DB,
     eventLog: unknown,
+    abortSignal?: AbortSignal,
 ) {
     const event = eventLog as TimelineBusinessEventLog;
 
     try {
-        const resolvedTaskItemIds = await findRelatedTaskItemIdsForBusinessEvent(
-            client,
-            event,
-            asRecord(event.metadataJson),
+        abortSignal?.throwIfAborted();
+        const eventKey = clean(event.eventKey) || "unknown";
+        const resolvedTaskItemIds = await perfStep(
+            "timeline",
+            `${eventKey}:resolve-bindings`,
+            () => findRelatedTaskItemIdsForBusinessEvent(
+                client,
+                event,
+                asRecord(event.metadataJson),
+            ),
         );
-        const businessEventResult = await projectBusinessEventToTaskItemTimeline(
-            client,
-            event,
-            resolvedTaskItemIds,
-        );
-        const feedbackResult = await projectBusinessFeedbackEventToTaskItemTimeline(
-            client,
-            event,
-            resolvedTaskItemIds,
-        );
-        const activityResult = await projectBusinessEventToTaskItemActivity(
-            client,
-            event,
-            resolvedTaskItemIds,
-        );
+        abortSignal?.throwIfAborted();
+        const [businessEventResult, feedbackResult, activityResult] = await Promise.all([
+            perfStep(
+                "timeline",
+                `${eventKey}:entries`,
+                () => projectBusinessEventToTaskItemTimeline(
+                    client,
+                    event,
+                    resolvedTaskItemIds,
+                ),
+            ),
+            perfStep(
+                "timeline",
+                `${eventKey}:feedback`,
+                () => projectBusinessFeedbackEventToTaskItemTimeline(
+                    client,
+                    event,
+                    resolvedTaskItemIds,
+                ),
+            ),
+            perfStep(
+                "timeline",
+                `${eventKey}:activity`,
+                () => projectBusinessEventToTaskItemActivity(
+                    client,
+                    event,
+                    resolvedTaskItemIds,
+                ),
+            ),
+        ]);
+        abortSignal?.throwIfAborted();
 
         const timelineEntries = [
             ...businessEventResult.createdTimelineEntries,

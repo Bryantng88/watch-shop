@@ -37,6 +37,7 @@ export type ProjectionRecordUpsertInput = {
 
 export type ProjectionRecordListInput = {
   projectionKey: string;
+  projectionVersion?: number | null;
   workspaceId?: string | null;
   status?: string | null;
   entityType?: string | null;
@@ -176,6 +177,11 @@ export async function listProjectionRecords(
 ) {
   const client = dbOrTx(db);
   const projectionKey = clean(input.projectionKey);
+  const projectionVersion = input.projectionVersion == null
+    ? null
+    : Number.isFinite(Number(input.projectionVersion))
+      ? Math.trunc(Number(input.projectionVersion))
+      : null;
   const limit = intRange(input.limit, 100, 500);
   const offset = intRange(input.offset, 0, 100000);
 
@@ -202,6 +208,7 @@ export async function listProjectionRecords(
         "updatedAt"
       FROM "ProjectionRecord"
       WHERE "projectionKey" = ${projectionKey}
+        AND (${projectionVersion}::int IS NULL OR "projectionVersion" = ${projectionVersion})
         AND (${cleanNullable(input.workspaceId)}::text IS NULL OR "workspaceId" = ${cleanNullable(input.workspaceId)})
         AND (${cleanNullable(input.status)}::text IS NULL OR "status" = ${cleanNullable(input.status)})
         AND (${cleanNullable(input.entityType)}::text IS NULL OR "entityType" = ${cleanNullable(input.entityType)})
@@ -256,12 +263,16 @@ export async function deleteProjectionRecords(
   db: DB,
   input: {
     projectionKey: string;
+    projectionVersion?: number | null;
     workspaceId?: string | null;
     rowKeys?: string[] | null;
   },
 ) {
   const client = dbOrTx(db);
   const projectionKey = clean(input.projectionKey);
+  const projectionVersion = input.projectionVersion == null
+    ? null
+    : Math.trunc(input.projectionVersion);
   const workspaceId = cleanNullable(input.workspaceId);
   const rowKeys = Array.from(
     new Set((input.rowKeys ?? []).map(clean).filter(Boolean)),
@@ -274,6 +285,7 @@ export async function deleteProjectionRecords(
       Prisma.sql`
         DELETE FROM "ProjectionRecord"
         WHERE "projectionKey" = ${projectionKey}
+          AND (${projectionVersion}::int IS NULL OR "projectionVersion" = ${projectionVersion})
           AND "rowKey" IN (${Prisma.join(rowKeys)})
       `,
     );
@@ -284,6 +296,7 @@ export async function deleteProjectionRecords(
     Prisma.sql`
       DELETE FROM "ProjectionRecord"
       WHERE "projectionKey" = ${projectionKey}
+        AND (${projectionVersion}::int IS NULL OR "projectionVersion" = ${projectionVersion})
         AND (${workspaceId}::text IS NULL OR "workspaceId" = ${workspaceId})
     `,
   );

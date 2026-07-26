@@ -1,17 +1,13 @@
 import { prisma } from "@/server/db/client";
 import {
     queryAcquisitionListProjection,
-    rebuildAcquisitionListProjectionRows,
 } from "@/domains/projection/server/acquisition-list";
+import { ensureProjectionReady } from "@/domains/projection/server/projection-read.service";
 import type { AcquisitionListFilters } from "../../shared/search-params";
 
 export async function getAcquisitionListProjection(input: AcquisitionListFilters) {
-    let result = await queryAcquisitionListProjection(prisma, input);
-
-    if (result.projectionRowCount === 0) {
-        await rebuildAcquisitionListProjectionRows(prisma);
-        result = await queryAcquisitionListProjection(prisma, input);
-    }
+    await ensureProjectionReady(prisma, "acquisition-list");
+    const result = await queryAcquisitionListProjection(prisma, input);
 
     return {
         items: result.items,

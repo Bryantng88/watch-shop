@@ -1,6 +1,12 @@
 import { Prisma, ServiceRequestStatus } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import * as repo from "../repository/service-request.repo";
+import {
+  hasServiceRequestListProjectionRows,
+  queryServiceRequestListProjection,
+  SERVICE_REQUEST_LIST_PROJECTION_KEY,
+} from "@/domains/projection/server/service-request-list.projection";
+import { ensureProjectionReady } from "@/domains/projection/server/projection-read.service";
 import type {
   ServiceRequestSearchInput,
   ServiceRequestListSort,
@@ -74,7 +80,7 @@ function buildSearchWhere(q?: string | null): Prisma.ServiceRequestWhereInput {
       { notes: { contains: keyword, mode: "insensitive" } },
       { vendorNameSnap: { contains: keyword, mode: "insensitive" } },
       { technicianNameSnap: { contains: keyword, mode: "insensitive" } },
-      { skuSnapshot: { contains: keyword, mode: "insensitive" } as any },
+      { skuSnapshot: { contains: keyword, mode: "insensitive" } },
       { product: { is: { title: { contains: keyword, mode: "insensitive" } } } },
       { serviceCatalog: { is: { name: { contains: keyword, mode: "insensitive" } } } },
       { orderItem: { is: { order: { is: { refNo: { contains: keyword, mode: "insensitive" } } } } } },
@@ -82,7 +88,7 @@ function buildSearchWhere(q?: string | null): Prisma.ServiceRequestWhereInput {
   };
 }
 
-export async function getAdminServiceRequestList(input: ServiceRequestSearchInput) {
+export async function getAdminServiceRequestListSource(input: ServiceRequestSearchInput) {
   const { page, pageSize, q, sort, view } = input;
   const baseWhere = buildSearchWhere(q);
   const where = combineWhere(baseWhere, serviceRequestViewWhere(view));
@@ -130,4 +136,24 @@ export async function getAdminServiceRequestList(input: ServiceRequestSearchInpu
   }));
 
   return { items, total, page, pageSize, counts: { all: cAll, draft: cDraft, in_progress: cInProgress, done: cDone, canceled: cCanceled } };
+}
+
+export async function getAdminServiceRequestList(input: ServiceRequestSearchInput) {
+  if (!(await hasServiceRequestListProjectionRows(prisma))) {
+    const readiness = await ensureProjectionReady(
+      prisma,
+      SERVICE_REQUEST_LIST_PROJECTION_KEY,
+    );
+    if (!readiness.ready) return getAdminServiceRequestListSource(input);
+  }
+
+  const projected = await queryServiceRequestListProjection(prisma, input);
+  return {
+    ...projected,
+    items: projected.items.map((item) => ({
+      ...item,
+      createdAt: new Date(item.createdAt),
+      updatedAt: new Date(item.updatedAt),
+    })),
+  };
 }

@@ -120,6 +120,28 @@ async function enrichNotificationEvent(
         });
 
         const serviceRequest = issue?.serviceRequest;
+        if (!clean(enriched.actorName) && !event.actorUserId && serviceRequest?.id) {
+            const serviceRequestEvent = await client.businessEventLog.findUnique({
+                where: {
+                    eventKey_targetType_targetId: {
+                        eventKey: "service_request.created",
+                        targetType: "SERVICE_REQUEST",
+                        targetId: serviceRequest.id,
+                    },
+                },
+                select: { actorUserId: true },
+            });
+            const serviceRequestActor = serviceRequestEvent?.actorUserId
+                ? await client.user.findUnique({
+                    where: { id: serviceRequestEvent.actorUserId },
+                    select: { name: true, email: true },
+                })
+                : null;
+
+            enriched.actorName =
+                clean(serviceRequestActor?.name) ||
+                clean(serviceRequestActor?.email);
+        }
         const watchTitle = [
             clean(serviceRequest?.brandSnapshot),
             clean(serviceRequest?.modelSnapshot),
@@ -325,7 +347,9 @@ async function resolveGroupUsers(group: NotificationRecipientGroupRow) {
 export async function consumeBusinessEventForNotification(
     client: Prisma.TransactionClient,
     eventLogInput: unknown,
+    abortSignal?: AbortSignal,
 ) {
+    abortSignal?.throwIfAborted();
     let eventLog = normalizeEventLog(eventLogInput);
 
     if (!eventLog.id || !eventLog.eventKey || !eventLog.targetType || !eventLog.targetId) {
@@ -338,6 +362,7 @@ export async function consumeBusinessEventForNotification(
     }
 
     eventLog = await enrichNotificationEvent(client, eventLog);
+    abortSignal?.throwIfAborted();
 
     const rules = await client.notificationRule.findMany({
         where: {
@@ -346,6 +371,7 @@ export async function consumeBusinessEventForNotification(
         },
         orderBy: [{ createdAt: "asc" }],
     });
+    abortSignal?.throwIfAborted();
 
     if (!rules.length) {
         return {
@@ -359,6 +385,7 @@ export async function consumeBusinessEventForNotification(
     const results = [];
 
     for (const rule of rules) {
+        abortSignal?.throwIfAborted();
         if (!matchNotificationRule(rule, eventLog)) continue;
 
         const group = await client.notificationRecipientGroup.findUnique({
@@ -490,9 +517,11 @@ export async function consumeBusinessEventForNotification(
                 await sendZaloTextToGroup({
                     groupId: group.zaloGroupId,
                     message: channelMessage,
+                    signal: abortSignal,
                 });
             }
 
+            abortSignal?.throwIfAborted();
             await client.notificationChannelDelivery.update({
                 where: { id: delivery.id },
                 data: {

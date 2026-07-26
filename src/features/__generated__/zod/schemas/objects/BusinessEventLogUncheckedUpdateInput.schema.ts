@@ -4,7 +4,8 @@ import { StringFieldUpdateOperationsInputObjectSchema as StringFieldUpdateOperat
 import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringFieldUpdateOperationsInputObjectSchema } from './NullableStringFieldUpdateOperationsInput.schema';
 import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { WorkflowExecutionEventUncheckedUpdateManyWithoutBusinessEventLogNestedInputObjectSchema as WorkflowExecutionEventUncheckedUpdateManyWithoutBusinessEventLogNestedInputObjectSchema } from './WorkflowExecutionEventUncheckedUpdateManyWithoutBusinessEventLogNestedInput.schema'
+import { WorkflowExecutionEventUncheckedUpdateManyWithoutBusinessEventLogNestedInputObjectSchema as WorkflowExecutionEventUncheckedUpdateManyWithoutBusinessEventLogNestedInputObjectSchema } from './WorkflowExecutionEventUncheckedUpdateManyWithoutBusinessEventLogNestedInput.schema';
+import { ProjectionEventDeliveryUncheckedUpdateManyWithoutBusinessEventLogNestedInputObjectSchema as ProjectionEventDeliveryUncheckedUpdateManyWithoutBusinessEventLogNestedInputObjectSchema } from './ProjectionEventDeliveryUncheckedUpdateManyWithoutBusinessEventLogNestedInput.schema'
 
 import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
@@ -16,7 +17,8 @@ const makeSchema = () => z.object({
   actorUserId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   metadataJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  workflowEvents: z.lazy(() => WorkflowExecutionEventUncheckedUpdateManyWithoutBusinessEventLogNestedInputObjectSchema).optional()
+  workflowEvents: z.lazy(() => WorkflowExecutionEventUncheckedUpdateManyWithoutBusinessEventLogNestedInputObjectSchema).optional(),
+  projectionDeliveries: z.lazy(() => ProjectionEventDeliveryUncheckedUpdateManyWithoutBusinessEventLogNestedInputObjectSchema).optional()
 }).strict();
 export const BusinessEventLogUncheckedUpdateInputObjectSchema: z.ZodType<Prisma.BusinessEventLogUncheckedUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.BusinessEventLogUncheckedUpdateInput>;
 export const BusinessEventLogUncheckedUpdateInputObjectZodSchema = makeSchema();

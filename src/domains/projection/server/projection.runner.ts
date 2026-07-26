@@ -7,9 +7,16 @@ import type {
   ProjectionConsumerResult,
   ProjectionScope,
 } from "./projection.types";
+import { perfStep } from "@/lib/server-perf";
 
 function clean(value: unknown) {
   return String(value ?? "").trim();
+}
+
+function throwIfAborted(signal?: AbortSignal) {
+  if (signal?.aborted) {
+    throw new Error("PROJECTION_CONSUMER_ABORTED");
+  }
 }
 
 function skippedResult(input: {
@@ -51,11 +58,17 @@ function failedResult(input: {
 export async function runProjectionBuildersForEvent(
   db: DB,
   event: BusinessEventDispatchContext,
+  options?: { skipProjectionKeys?: string[] },
 ): Promise<ProjectionConsumerResult> {
+  const skipKeys = new Set(
+    (options?.skipProjectionKeys ?? [])
+      .map((key) => clean(key).toLowerCase())
+      .filter(Boolean),
+  );
   const builders = listProjectionBuildersForEvent({
     eventKey: event.eventKey,
     targetType: event.targetType,
-  });
+  }).filter((builder) => !skipKeys.has(clean(builder.key).toLowerCase()));
 
   if (!builders.length) {
     return {
@@ -67,29 +80,48 @@ export async function runProjectionBuildersForEvent(
   }
 
   const results: ProjectionBuildResult[] = [];
+  const selectedKeys = new Set(builders.map((builder) => clean(builder.key).toLowerCase()));
+  const completedKeys = new Set<string>();
+  const pending = [...builders];
 
-  for (const builder of builders) {
-    if (!builder.buildFromEvent) {
-      results.push(skippedResult({ builder, reason: "NO_EVENT_BUILDER" }));
-      continue;
-    }
+  while (pending.length) {
+    throwIfAborted(event.abortSignal);
+    let ready = pending.filter((builder) =>
+      (builder.dependsOnProjectionKeys ?? []).every((key) => {
+        const dependency = clean(key).toLowerCase();
+        return !selectedKeys.has(dependency) || completedKeys.has(dependency);
+      }),
+    );
+    if (!ready.length) ready = [...pending];
 
-    try {
-      results.push(
-        await builder.buildFromEvent(db, {
-          projectionKey: builder.key,
-          projectionVersion: builder.version,
-          sourceKind: "BUSINESS_EVENT",
-          sourceEvent: event,
-          scope: {
-            targetType: event.targetType,
-            targetId: event.targetId,
-          },
-        }),
-      );
-    } catch (error) {
-      results.push(failedResult({ builder, error }));
+    const batchResults = await Promise.all(ready.map(async (builder) => {
+      if (!builder.buildFromEvent) {
+        return skippedResult({ builder, reason: "NO_EVENT_BUILDER" });
+      }
+      try {
+        return await perfStep("projection", `${event.eventKey}:${builder.key}`, () =>
+          builder.buildFromEvent!(db, {
+            projectionKey: builder.key,
+            projectionVersion: builder.version,
+            sourceKind: "BUSINESS_EVENT",
+            sourceEvent: event,
+            scope: {
+              targetType: event.targetType,
+              targetId: event.targetId,
+            },
+          }),
+        );
+      } catch (error) {
+        return failedResult({ builder, error });
+      }
+    }));
+    results.push(...batchResults);
+    for (const builder of ready) {
+      completedKeys.add(clean(builder.key).toLowerCase());
+      const index = pending.indexOf(builder);
+      if (index >= 0) pending.splice(index, 1);
     }
+    throwIfAborted(event.abortSignal);
   }
 
   const failed = results.some((result) => !result.ok || result.status === "failed");

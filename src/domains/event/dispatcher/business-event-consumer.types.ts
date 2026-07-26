@@ -14,6 +14,8 @@ export type BusinessEventDispatchContext = {
   targetAliasIds?: string[];
   eventInstanceId?: string | null;
   idempotencyKey?: string | null;
+  projectionDeliveryKey?: string | null;
+  abortSignal?: AbortSignal;
 };
 
 export type BusinessEventConsumerContext = BusinessEventDispatchContext;

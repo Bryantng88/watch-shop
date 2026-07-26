@@ -3,7 +3,8 @@ import type { Prisma } from '@prisma/client';
 import { StringFieldUpdateOperationsInputObjectSchema as StringFieldUpdateOperationsInputObjectSchema } from './StringFieldUpdateOperationsInput.schema';
 import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringFieldUpdateOperationsInputObjectSchema } from './NullableStringFieldUpdateOperationsInput.schema';
 import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema';
-import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema'
+import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
+import { ProjectionEventDeliveryUncheckedUpdateManyWithoutBusinessEventLogNestedInputObjectSchema as ProjectionEventDeliveryUncheckedUpdateManyWithoutBusinessEventLogNestedInputObjectSchema } from './ProjectionEventDeliveryUncheckedUpdateManyWithoutBusinessEventLogNestedInput.schema'
 
 import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
@@ -14,7 +15,8 @@ const makeSchema = () => z.object({
   targetId: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   actorUserId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   metadataJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
-  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  projectionDeliveries: z.lazy(() => ProjectionEventDeliveryUncheckedUpdateManyWithoutBusinessEventLogNestedInputObjectSchema).optional()
 }).strict();
 export const BusinessEventLogUncheckedUpdateWithoutWorkflowEventsInputObjectSchema: z.ZodType<Prisma.BusinessEventLogUncheckedUpdateWithoutWorkflowEventsInput> = makeSchema() as unknown as z.ZodType<Prisma.BusinessEventLogUncheckedUpdateWithoutWorkflowEventsInput>;
 export const BusinessEventLogUncheckedUpdateWithoutWorkflowEventsInputObjectZodSchema = makeSchema();

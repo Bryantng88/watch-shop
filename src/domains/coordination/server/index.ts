@@ -64,9 +64,11 @@ export type {
 } from "./coordination-dashboard.types";
 
 export {
+  getCoordinationBoard,
   getCoordinationDashboard,
   getOperationCoordinationDashboard,
 } from "./coordination-dashboard.service";
+export type { CoordinationBoardKey } from "./coordination-dashboard.service";
 
 export type {
   CoordinationConsumerSkipReason,

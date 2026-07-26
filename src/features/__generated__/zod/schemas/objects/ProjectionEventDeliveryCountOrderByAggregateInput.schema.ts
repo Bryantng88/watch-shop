@@ -1,0 +1,28 @@
+import * as z from 'zod';
+import type { Prisma } from '@prisma/client';
+import { SortOrderSchema } from '../enums/SortOrder.schema'
+
+const makeSchema = () => z.object({
+  id: SortOrderSchema.optional(),
+  idempotencyKey: SortOrderSchema.optional(),
+  businessEventLogId: SortOrderSchema.optional(),
+  eventKey: SortOrderSchema.optional(),
+  targetType: SortOrderSchema.optional(),
+  targetId: SortOrderSchema.optional(),
+  actorUserId: SortOrderSchema.optional(),
+  effect: SortOrderSchema.optional(),
+  revokeEventKey: SortOrderSchema.optional(),
+  targetAliasIds: SortOrderSchema.optional(),
+  eventInstanceId: SortOrderSchema.optional(),
+  payloadJson: SortOrderSchema.optional(),
+  status: SortOrderSchema.optional(),
+  attempts: SortOrderSchema.optional(),
+  nextAttemptAt: SortOrderSchema.optional(),
+  lockedAt: SortOrderSchema.optional(),
+  completedAt: SortOrderSchema.optional(),
+  lastError: SortOrderSchema.optional(),
+  createdAt: SortOrderSchema.optional(),
+  updatedAt: SortOrderSchema.optional()
+}).strict();
+export const ProjectionEventDeliveryCountOrderByAggregateInputObjectSchema: z.ZodType<Prisma.ProjectionEventDeliveryCountOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.ProjectionEventDeliveryCountOrderByAggregateInput>;
+export const ProjectionEventDeliveryCountOrderByAggregateInputObjectZodSchema = makeSchema();

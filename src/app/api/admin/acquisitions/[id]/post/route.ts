@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import { postAcquisitionApplication } from "@/domains/acquisition/application";
 
@@ -20,6 +20,7 @@ export async function POST(
         const data = await postAcquisitionApplication({
             acquisitionId: id,
             vendorName: String(body?.vendorName ?? body?.vendor ?? "").trim(),
+            deferConsumers: (work) => after(work),
         });
 
         return NextResponse.json({ ok: true, data });

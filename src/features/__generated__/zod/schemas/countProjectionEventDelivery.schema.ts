@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { ProjectionEventDeliveryOrderByWithRelationInputObjectSchema as ProjectionEventDeliveryOrderByWithRelationInputObjectSchema } from './objects/ProjectionEventDeliveryOrderByWithRelationInput.schema';
+import { ProjectionEventDeliveryWhereInputObjectSchema as ProjectionEventDeliveryWhereInputObjectSchema } from './objects/ProjectionEventDeliveryWhereInput.schema';
+import { ProjectionEventDeliveryWhereUniqueInputObjectSchema as ProjectionEventDeliveryWhereUniqueInputObjectSchema } from './objects/ProjectionEventDeliveryWhereUniqueInput.schema';
+import { ProjectionEventDeliveryCountAggregateInputObjectSchema as ProjectionEventDeliveryCountAggregateInputObjectSchema } from './objects/ProjectionEventDeliveryCountAggregateInput.schema';
+
+export const ProjectionEventDeliveryCountSchema: z.ZodType<Prisma.ProjectionEventDeliveryCountArgs> = z.object({ orderBy: z.union([ProjectionEventDeliveryOrderByWithRelationInputObjectSchema, ProjectionEventDeliveryOrderByWithRelationInputObjectSchema.array()]).optional(), where: ProjectionEventDeliveryWhereInputObjectSchema.optional(), cursor: ProjectionEventDeliveryWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), ProjectionEventDeliveryCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.ProjectionEventDeliveryCountArgs>;
+
+export const ProjectionEventDeliveryCountZodSchema = z.object({ orderBy: z.union([ProjectionEventDeliveryOrderByWithRelationInputObjectSchema, ProjectionEventDeliveryOrderByWithRelationInputObjectSchema.array()]).optional(), where: ProjectionEventDeliveryWhereInputObjectSchema.optional(), cursor: ProjectionEventDeliveryWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), ProjectionEventDeliveryCountAggregateInputObjectSchema ]).optional() }).strict();

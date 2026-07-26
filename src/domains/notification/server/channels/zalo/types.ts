@@ -1,6 +1,7 @@
 export type ZaloSendTextToGroupInput = {
     groupId: string;
     message: string;
+    signal?: AbortSignal;
 };
 
 export type ZaloApiResponse = {

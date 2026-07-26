@@ -7,7 +7,8 @@ export const BusinessEventLogAggregateResultSchema = z.object({  _count: z.objec
     actorUserId: z.number(),
     metadataJson: z.number(),
     createdAt: z.number(),
-    workflowEvents: z.number()
+    workflowEvents: z.number(),
+    projectionDeliveries: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),

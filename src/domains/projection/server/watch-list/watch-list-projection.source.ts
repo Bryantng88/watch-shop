@@ -336,14 +336,16 @@ export async function loadWatchListProjectionSourceRows(
     take: limit,
   });
 
-  const mediaStatesByWatchId = await loadMediaStatesByWatchId(
-    db,
-    rows.map((row) => row.id),
-  );
-  const serviceStatesByWatchId = await loadServiceStatesByWatchId(
-    db,
-    rows.map((row) => ({ id: row.id, productId: row.productId })),
-  );
+  const [mediaStatesByWatchId, serviceStatesByWatchId] = await Promise.all([
+    loadMediaStatesByWatchId(
+      db,
+      rows.map((row) => row.id),
+    ),
+    loadServiceStatesByWatchId(
+      db,
+      rows.map((row) => ({ id: row.id, productId: row.productId })),
+    ),
+  ]);
 
   return rows.map((row) => ({
     ...row,
@@ -407,6 +409,22 @@ export async function resolveWatchIdsForProjectionTarget(
     }
   }
 
+  if (targetType === "ORDER") {
+    const rows = await dbOrTx(db).orderItem.findMany({
+      where: { orderId: targetId, productId: { not: null } },
+      select: {
+        product: {
+          select: {
+            watch: { select: { id: true } },
+          },
+        },
+      },
+    });
+    return Array.from(
+      new Set(rows.map((row) => row.product?.watch?.id).filter(Boolean)),
+    ) as string[];
+  }
+
   return [];
 }
 
@@ -419,15 +437,14 @@ async function resolveWatchIdsForServiceRequest(
 
   const serviceRequest = await dbOrTx(db).serviceRequest.findUnique({
     where: { id },
-    select: { productId: true },
+    select: {
+      product: {
+        select: {
+          watch: { select: { id: true } },
+        },
+      },
+    },
   });
-  const productId = clean(serviceRequest?.productId);
-  if (!productId) return [];
-
-  const watch = await dbOrTx(db).watch.findUnique({
-    where: { productId },
-    select: { id: true },
-  });
-
-  return watch?.id ? [watch.id] : [];
+  const watchId = clean(serviceRequest?.product?.watch?.id);
+  return watchId ? [watchId] : [];
 }

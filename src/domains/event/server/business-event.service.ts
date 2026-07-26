@@ -6,6 +6,8 @@ import type {
     BusinessEventEffect,
 } from "@/domains/event/dispatcher/business-event-consumer.types";
 import { perfLog, perfNow } from "@/lib/server-perf";
+import { randomUUID } from "node:crypto";
+import { enqueueProjectionDelivery } from "@/domains/projection/server/projection-delivery.repo";
 export type { BusinessEventEffect };
 
 export type BusinessEventInput = {
@@ -119,6 +121,22 @@ export async function recordBusinessEvent(
         },
     });
     perfLog("business-event", `${eventKey}:upsert`, upsertStartedAt);
+    const projectionDeliveryKey = eventInstanceId
+        ? idempotencyKey
+        : `${idempotencyKey}:${randomUUID()}`;
+    await enqueueProjectionDelivery(db, {
+        idempotencyKey: projectionDeliveryKey,
+        businessEventLogId: eventLog.id,
+        eventKey,
+        targetType,
+        targetId,
+        actorUserId: input.actorUserId ?? null,
+        effect,
+        revokeEventKey: revokeEventKey || null,
+        targetAliasIds: input.targetAliasIds ?? [],
+        eventInstanceId,
+        payload: metadataJson,
+    });
 
     const consumerContext: BusinessEventDispatchContext = {
         eventLog,
@@ -131,6 +149,7 @@ export async function recordBusinessEvent(
         targetAliasIds: input.targetAliasIds ?? [],
         eventInstanceId,
         idempotencyKey,
+        projectionDeliveryKey,
     };
 
     if (options?.deferConsumers) {
@@ -160,6 +179,9 @@ export async function recordBusinessEvent(
     const consumerResults = await dispatchBusinessEvent({
         client,
         context: consumerContext,
+        // Projection is durably queued above. Synchronous mutation paths must not
+        // pay projection fan-out latency; the system worker will drain the outbox.
+        excludedConsumerKeys: ["projection"],
     });
     perfLog("business-event", `${eventKey}:total`, totalStartedAt);
 

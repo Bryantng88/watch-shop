@@ -254,9 +254,11 @@ export async function rebuildOrderListProjectionRows(
     orderBy: { updatedAt: "desc" },
     take: input.limit ? Math.min(10000, Math.max(1, input.limit)) : undefined,
   });
-  for (const order of orders) {
-    const row = await buildOrderListProjectionRow(db, order.id);
-    if (row) await upsertRow(db, row);
+  for (let index = 0; index < orders.length; index += 10) {
+    await Promise.all(orders.slice(index, index + 10).map(async (order) => {
+      const row = await buildOrderListProjectionRow(db, order.id);
+      if (row) await upsertRow(db, row);
+    }));
   }
   return orders.length;
 }
@@ -313,6 +315,7 @@ export const orderListProjectionBuilder: ProjectionBuilder = {
   description: "Persistent event-driven read model for Admin Order List.",
   sourceEvents: [...ORDER_BUSINESS_EVENT_KEYS, ...RELATED_EVENTS],
   targetTypes: ["ORDER", "PAYMENT", "SHIPMENT"],
+  dependsOnProjectionKeys: ["payment-owner-summary"],
   buildFromEvent,
   rebuild,
 };

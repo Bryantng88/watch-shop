@@ -1,16 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createOrderWithItems } from "@/app/(admin)/admin/orders/_servers/order.service";
-import { setHeapSnapshotNearHeapLimit } from "v8";
+import { createOrderApplication } from "@/domains/order/application";
+import type { CreateOrderInput } from "@/domains/order/server/shared";
+
+type PublicOrderItem = {
+    productId?: unknown;
+    quantity?: unknown;
+    title?: unknown;
+};
+
+type PublicOrderBody = Record<string, unknown> & {
+    customerName?: unknown;
+    shipPhone?: unknown;
+    shipAddress?: unknown;
+    items?: PublicOrderItem[];
+};
 
 // POST /api/public/orders
 export async function POST(req: NextRequest) {
-    let body: any;
+    let body: PublicOrderBody;
 
     // ==========================
     // Parse JSON
     // ==========================
     try {
-        body = await req.json();
+        body = await req.json() as PublicOrderBody;
     } catch {
         return NextResponse.json(
             { error: "Body không hợp lệ (không phải JSON)" },
@@ -51,7 +64,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        if (!item.quantity || item.quantity < 1) {
+        if (typeof item.quantity !== "number" || item.quantity < 1) {
             return NextResponse.json(
                 { error: `Sản phẩm dòng ${i + 1} số lượng phải ≥ 1` },
                 { status: 400 }
@@ -88,12 +101,13 @@ export async function POST(req: NextRequest) {
     // Create order
     // ==========================
     try {
-        const order = await createOrderWithItems(payload);
+        const order = await createOrderApplication(payload as unknown as CreateOrderInput);
         return NextResponse.json(order, { status: 201 });
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error("Create public order failed:", err);
+        const message = err instanceof Error ? err.message : null;
         return NextResponse.json(
-            { error: err?.message || "Lỗi hệ thống" },
+            { error: message || "Lỗi hệ thống" },
             { status: 400 }
         );
     }

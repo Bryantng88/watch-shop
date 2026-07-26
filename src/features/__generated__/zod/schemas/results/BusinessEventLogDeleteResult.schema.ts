@@ -7,5 +7,6 @@ export const BusinessEventLogDeleteResultSchema = z.nullable(z.object({
   actorUserId: z.string().optional(),
   metadataJson: z.unknown().optional(),
   createdAt: z.date(),
-  workflowEvents: z.array(z.unknown())
+  workflowEvents: z.array(z.unknown()),
+  projectionDeliveries: z.array(z.unknown())
 }));

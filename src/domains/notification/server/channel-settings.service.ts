@@ -63,7 +63,7 @@ function defaultZaloTemplatesForEvent(eventKey: string) {
 
     if (eventKey === "technical_issue.created") {
         return {
-            titleTemplate: "🔧 TI mới được đưa vào Kiểm tra",
+            titleTemplate: "👤 {{actorName}} (User) vừa đưa 1 Watch vào Kiểm tra TI",
             messageTemplate: "Đồng hồ: {{watchTitle}}\nSKU: {{sku}}\nMã SR: {{serviceRequestRef}}\nNội dung: {{summary}}\nKhu vực: {{area}}\nƯu tiên: {{priority}}\nMở xử lý: {{route}}",
         };
     }

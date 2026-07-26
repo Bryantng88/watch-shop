@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
     try {
-        await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+        const actor = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
 
         const body = await request.json().catch(() => ({}));
         if (!body?.productId) throw new Error("Missing productId");
@@ -85,6 +85,7 @@ export async function PATCH(request: NextRequest) {
             note: finalNote,
             issueType: body.issueType,
             priority: body.priority,
+            actorUserId: actor.id,
         });
 
         return ok(data);

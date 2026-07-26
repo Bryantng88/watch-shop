@@ -145,6 +145,7 @@ async function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
   message: string,
+  onTimeout?: () => void,
 ) {
   let timeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -152,7 +153,10 @@ async function withTimeout<T>(
     return await Promise.race([
       promise,
       new Promise<never>((_, reject) => {
-        timeout = setTimeout(() => reject(new Error(message)), timeoutMs);
+        timeout = setTimeout(() => {
+          onTimeout?.();
+          reject(new Error(message));
+        }, timeoutMs);
       }),
     ]);
   } finally {
@@ -187,6 +191,7 @@ async function runConsumer(input: {
   const timeoutMs = consumer.timeoutMs ?? policy.defaultTimeoutMs;
   const maxRetries = consumer.retry?.attempts ?? policy.defaultRetry.attempts;
   let attempts = 0;
+  let activeController: AbortController | null = null;
 
   try {
     if (!isBusinessEventConsumerAllowed(context.eventKey, consumer.key)) {
@@ -201,12 +206,17 @@ async function runConsumer(input: {
 
     for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
       attempts = attempt + 1;
+      activeController = new AbortController();
 
       try {
         const result = await withTimeout(
-          consumer.consume(client, context),
+          consumer.consume(client, {
+            ...context,
+            abortSignal: activeController.signal,
+          }),
           timeoutMs,
           `BusinessEvent consumer ${consumer.key} timed out after ${timeoutMs}ms`,
+          () => activeController?.abort(),
         );
         const outcome = consumerResultOutcome(result);
 
@@ -224,6 +234,7 @@ async function runConsumer(input: {
         logConsumerResult(context, consumerResult);
         return consumerResult;
       } catch (error) {
+        activeController.abort();
         lastError = error;
       }
     }
@@ -242,6 +253,7 @@ async function runConsumer(input: {
     logConsumerResult(context, consumerResult);
     return consumerResult;
   } finally {
+    activeController?.abort();
     perfLog(
       "business-event",
       `${context.eventKey}:consumer:${consumer.key}`,
@@ -285,9 +297,12 @@ export async function dispatchBusinessEvent(input: {
   context: BusinessEventConsumerContext;
   consumers?: BusinessEventConsumer[];
   policy?: Partial<BusinessEventDispatchPolicy>;
+  excludedConsumerKeys?: BusinessEventConsumerKey[];
 }): Promise<BusinessEventDispatchResult> {
   const policy = resolveDispatchPolicy(input.policy);
-  const consumers = input.consumers ?? listBusinessEventConsumers();
+  const excluded = new Set(input.excludedConsumerKeys ?? []);
+  const consumers = (input.consumers ?? listBusinessEventConsumers())
+    .filter((consumer) => !excluded.has(consumer.key));
   const { ordered, parallel } = orderConsumers(
     consumers,
     policy.orderedConsumers,

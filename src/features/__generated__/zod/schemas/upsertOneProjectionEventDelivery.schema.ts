@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { ProjectionEventDeliverySelectObjectSchema as ProjectionEventDeliverySelectObjectSchema } from './objects/ProjectionEventDeliverySelect.schema';
+import { ProjectionEventDeliveryIncludeObjectSchema as ProjectionEventDeliveryIncludeObjectSchema } from './objects/ProjectionEventDeliveryInclude.schema';
+import { ProjectionEventDeliveryWhereUniqueInputObjectSchema as ProjectionEventDeliveryWhereUniqueInputObjectSchema } from './objects/ProjectionEventDeliveryWhereUniqueInput.schema';
+import { ProjectionEventDeliveryCreateInputObjectSchema as ProjectionEventDeliveryCreateInputObjectSchema } from './objects/ProjectionEventDeliveryCreateInput.schema';
+import { ProjectionEventDeliveryUncheckedCreateInputObjectSchema as ProjectionEventDeliveryUncheckedCreateInputObjectSchema } from './objects/ProjectionEventDeliveryUncheckedCreateInput.schema';
+import { ProjectionEventDeliveryUpdateInputObjectSchema as ProjectionEventDeliveryUpdateInputObjectSchema } from './objects/ProjectionEventDeliveryUpdateInput.schema';
+import { ProjectionEventDeliveryUncheckedUpdateInputObjectSchema as ProjectionEventDeliveryUncheckedUpdateInputObjectSchema } from './objects/ProjectionEventDeliveryUncheckedUpdateInput.schema';
+
+export const ProjectionEventDeliveryUpsertOneSchema: z.ZodType<Prisma.ProjectionEventDeliveryUpsertArgs> = z.object({ select: ProjectionEventDeliverySelectObjectSchema.optional(), include: ProjectionEventDeliveryIncludeObjectSchema.optional(), where: ProjectionEventDeliveryWhereUniqueInputObjectSchema, create: z.union([ ProjectionEventDeliveryCreateInputObjectSchema, ProjectionEventDeliveryUncheckedCreateInputObjectSchema ]), update: z.union([ ProjectionEventDeliveryUpdateInputObjectSchema, ProjectionEventDeliveryUncheckedUpdateInputObjectSchema ]) }).strict() as unknown as z.ZodType<Prisma.ProjectionEventDeliveryUpsertArgs>;
+
+export const ProjectionEventDeliveryUpsertOneZodSchema = z.object({ select: ProjectionEventDeliverySelectObjectSchema.optional(), include: ProjectionEventDeliveryIncludeObjectSchema.optional(), where: ProjectionEventDeliveryWhereUniqueInputObjectSchema, create: z.union([ ProjectionEventDeliveryCreateInputObjectSchema, ProjectionEventDeliveryUncheckedCreateInputObjectSchema ]), update: z.union([ ProjectionEventDeliveryUpdateInputObjectSchema, ProjectionEventDeliveryUncheckedUpdateInputObjectSchema ]) }).strict();

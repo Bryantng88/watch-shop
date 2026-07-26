@@ -39,13 +39,13 @@ export function listBusinessEventConsumers(): BusinessEventConsumer[] {
       key: "notification",
       timeoutMs: 10000,
       consume: (client, context) =>
-        consumeBusinessEventForNotification(client, context.eventLog),
+        consumeBusinessEventForNotification(client, context.eventLog, context.abortSignal),
     },
     {
       key: "timeline",
       timeoutMs: 15000,
       consume: (client, context) =>
-        consumeBusinessEventForTimeline(client, context.eventLog),
+        consumeBusinessEventForTimeline(client, context.eventLog, context.abortSignal),
     },
     {
       key: "coordination",

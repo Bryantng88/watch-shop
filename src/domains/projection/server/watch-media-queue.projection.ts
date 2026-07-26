@@ -282,23 +282,26 @@ export async function rebuildWatchMediaQueueProjectionForWorkspace(
 
   await deleteProjectionRecords(db, {
     projectionKey: WATCH_MEDIA_QUEUE_PROJECTION_KEY,
+    projectionVersion: WATCH_MEDIA_QUEUE_PROJECTION_VERSION,
     workspaceId,
   });
 
-  for (const item of sourceItems) {
-    await upsertProjectionRecord(db, {
-      projectionKey: WATCH_MEDIA_QUEUE_PROJECTION_KEY,
-      projectionVersion: WATCH_MEDIA_QUEUE_PROJECTION_VERSION,
-      rowKey: item.id,
-      workspaceId,
-      entityType: item.targetType,
-      entityId: item.targetId,
-      status: item.status,
-      searchText: itemSearchText(item),
-      sortAt: itemSortAt(item),
-      sourceUpdatedAt: itemSortAt(item),
-      dataJson: item,
-    });
+  for (let index = 0; index < sourceItems.length; index += 12) {
+    await Promise.all(sourceItems.slice(index, index + 12).map((item) =>
+      upsertProjectionRecord(db, {
+        projectionKey: WATCH_MEDIA_QUEUE_PROJECTION_KEY,
+        projectionVersion: WATCH_MEDIA_QUEUE_PROJECTION_VERSION,
+        rowKey: item.id,
+        workspaceId,
+        entityType: item.targetType,
+        entityId: item.targetId,
+        status: item.status,
+        searchText: itemSearchText(item),
+        sortAt: itemSortAt(item),
+        sourceUpdatedAt: itemSortAt(item),
+        dataJson: item,
+      }),
+    ));
   }
 
   return {
@@ -349,7 +352,7 @@ export async function listWatchMediaQueueProjectionItemsWithFallback(
       items: await listTaskItemQueueItems(db, workspaceId),
     });
 
-  if (process.env.WATCH_MEDIA_QUEUE_PROJECTION_READ !== "1") {
+  if (process.env.WATCH_MEDIA_QUEUE_PROJECTION_READ === "0") {
     return {
       source: "source",
       items: await sourceItems(),
@@ -451,6 +454,9 @@ async function rebuildWatchMediaQueueProjection(
     scope: ProjectionScope;
   },
 ): Promise<ProjectionBuildResult> {
+  if (!clean(context.scope.targetId) && !clean(context.scope.workspaceId)) {
+    await deleteProjectionRecords(db, { projectionKey: WATCH_MEDIA_QUEUE_PROJECTION_KEY });
+  }
   const workspaceIds = await resolveMediaWorkspaceIds(db, context.scope);
   if (!workspaceIds.length) {
     return skippedResult({
@@ -461,11 +467,13 @@ async function rebuildWatchMediaQueueProjection(
   }
 
   let applied = 0;
-  for (const workspaceId of workspaceIds) {
-    const result = await rebuildWatchMediaQueueProjectionForWorkspace(db, {
-      workspaceId,
-    });
-    applied += result.applied;
+  for (let index = 0; index < workspaceIds.length; index += 2) {
+    const results = await Promise.all(
+      workspaceIds.slice(index, index + 2).map((workspaceId) =>
+        rebuildWatchMediaQueueProjectionForWorkspace(db, { workspaceId }),
+      ),
+    );
+    applied += results.reduce((sum, item) => sum + item.applied, 0);
   }
 
   return appliedResult({

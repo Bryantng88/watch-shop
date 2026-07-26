@@ -6,6 +6,7 @@ import type { ZaloTokenResponse } from "./types";
 const TOKEN_CONTROL_KEY = "zalo_oa_token";
 const TOKEN_CONTROL_LABEL = "Zalo OA Token";
 const DEFAULT_ZALO_TOKEN_URL = "https://oauth.zaloapp.com/v4/oa/access_token";
+const DEFAULT_ZALO_TOKEN_TIMEOUT_MS = 3000;
 const REFRESH_BUFFER_MS = 10 * 60 * 1000;
 
 type ZaloTokenMetadata = {
@@ -114,6 +115,13 @@ function tokenEndpoint() {
     return clean(process.env.ZALO_OA_TOKEN_URL) || DEFAULT_ZALO_TOKEN_URL;
 }
 
+function tokenTimeoutMs() {
+    const configured = Number(process.env.ZALO_OA_TOKEN_TIMEOUT_MS);
+    return Number.isFinite(configured) && configured > 0
+        ? configured
+        : DEFAULT_ZALO_TOKEN_TIMEOUT_MS;
+}
+
 function parseExpiresAt(expiresIn: unknown) {
     const seconds = Number(expiresIn);
     const safeSeconds = Number.isFinite(seconds) && seconds > 0
@@ -146,14 +154,29 @@ async function requestZaloAccessToken(refreshToken: string) {
     body.set("app_id", appId);
     body.set("grant_type", "refresh_token");
 
-    const response = await fetch(tokenEndpoint(), {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            secret_key: appSecret,
-        },
-        body,
-    });
+    const controller = new AbortController();
+    const timeoutMs = tokenTimeoutMs();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    let response: Response;
+
+    try {
+        response = await fetch(tokenEndpoint(), {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                secret_key: appSecret,
+            },
+            body,
+            signal: controller.signal,
+        });
+    } catch (error) {
+        if (controller.signal.aborted) {
+            throw new Error(`Zalo token API timed out after ${timeoutMs}ms`);
+        }
+        throw error;
+    } finally {
+        clearTimeout(timeout);
+    }
 
     const data = (await response.json().catch(() => null)) as ZaloTokenResponse | null;
 

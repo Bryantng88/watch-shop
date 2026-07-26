@@ -444,12 +444,45 @@ model BusinessEventLog {
   createdAt    DateTime @default(now())
 
   workflowEvents WorkflowExecutionEvent[]
+  projectionDeliveries ProjectionEventDelivery[]
 
   @@unique([eventKey, targetType, targetId])
   @@index([eventKey])
   @@index([targetType, targetId])
   @@index([actorUserId])
   @@index([createdAt])
+}
+
+model ProjectionEventDelivery {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  idempotencyKey String @unique
+  businessEventLogId String?
+  eventKey String
+  targetType String
+  targetId String
+  actorUserId String?
+  effect String @default("ASSERT")
+  revokeEventKey String?
+  targetAliasIds Json?
+  eventInstanceId String?
+  payloadJson Json?
+
+  status String @default("PENDING")
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now())
+  lockedAt DateTime?
+  completedAt DateTime?
+  lastError String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  businessEventLog BusinessEventLog? @relation(fields: [businessEventLogId], references: [id], onDelete: SetNull)
+
+  @@index([status, nextAttemptAt])
+  @@index([businessEventLogId])
+  @@index([eventKey, targetType])
+  @@index([targetType, targetId])
 }
 
 model ProjectionRecord {

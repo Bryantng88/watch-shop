@@ -15,7 +15,8 @@ export const BusinessEventLogGroupByResultSchema = z.array(z.object({
     actorUserId: z.number(),
     metadataJson: z.number(),
     createdAt: z.number(),
-    workflowEvents: z.number()
+    workflowEvents: z.number(),
+    projectionDeliveries: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),

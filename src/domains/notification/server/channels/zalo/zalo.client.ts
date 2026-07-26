@@ -11,17 +11,21 @@ function resolveTimeoutMs() {
 
 export async function zaloPost<TBody extends Record<string, unknown>>(
     body: TBody,
+    options?: { signal?: AbortSignal },
 ): Promise<ZaloApiResponse> {
+    options?.signal?.throwIfAborted();
     const endpoint = process.env.ZALO_OA_SEND_URL || DEFAULT_ZALO_SEND_URL;
     const accessToken = await getZaloAccessToken();
+    options?.signal?.throwIfAborted();
 
     try {
-        return await zaloPostWithToken(endpoint, body, accessToken);
+        return await zaloPostWithToken(endpoint, body, accessToken, options?.signal);
     } catch (error) {
         if (!isAccessTokenExpiredError(error)) throw error;
 
         const refreshedAccessToken = await getZaloAccessToken({ forceRefresh: true });
-        return zaloPostWithToken(endpoint, body, refreshedAccessToken);
+        options?.signal?.throwIfAborted();
+        return zaloPostWithToken(endpoint, body, refreshedAccessToken, options?.signal);
     }
 }
 
@@ -29,8 +33,11 @@ async function zaloPostWithToken<TBody extends Record<string, unknown>>(
     endpoint: string,
     body: TBody,
     accessToken: string,
+    parentSignal?: AbortSignal,
 ): Promise<ZaloApiResponse> {
     const controller = new AbortController();
+    const abortFromParent = () => controller.abort(parentSignal?.reason);
+    parentSignal?.addEventListener("abort", abortFromParent, { once: true });
     const timeout = setTimeout(() => controller.abort(), resolveTimeoutMs());
 
     try {
@@ -69,6 +76,7 @@ async function zaloPostWithToken<TBody extends Record<string, unknown>>(
         throw error;
     } finally {
         clearTimeout(timeout);
+        parentSignal?.removeEventListener("abort", abortFromParent);
     }
 }
 

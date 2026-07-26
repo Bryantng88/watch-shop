@@ -1,12 +1,16 @@
 import { runAcquisitionSpecProcessorNow } from "./acquisition-spec.processor";
+import { runProjectionMaintenance } from "@/domains/projection/server/projection-maintenance.service";
 
 export async function runSystemJobs(input?: { triggerSource?: string }) {
     const triggerSource = input?.triggerSource ?? "system";
 
-    const acquisitionSpec = await runAcquisitionSpecProcessorNow({
-        triggerSource,
-        includeFailed: false,
-    });
+    const [projection, acquisitionSpec] = await Promise.all([
+        runProjectionMaintenance(),
+        runAcquisitionSpecProcessorNow({
+            triggerSource,
+            includeFailed: false,
+        }),
+    ]);
 
-    return { acquisitionSpec };
+    return { projection, acquisitionSpec };
 }

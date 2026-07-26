@@ -9,7 +9,8 @@ export const BusinessEventLogModelSchema = z.object({
     actorUserId: z.string().nullable(),
     metadataJson: z.unknown().nullable(),
     createdAt: z.date(),
-    workflowEvents: z.array(z.unknown())
+    workflowEvents: z.array(z.unknown()),
+    projectionDeliveries: z.array(z.unknown())
 }).strict();
 
 export type BusinessEventLogPureType = z.infer<typeof BusinessEventLogModelSchema>;
