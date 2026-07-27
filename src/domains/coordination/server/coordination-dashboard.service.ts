@@ -73,6 +73,7 @@ import {
   operationalBlueprintForWorkType,
   selectOperationalActionsForWorkspaceRole,
 } from "@/domains/blueprint/shared/operational-blueprint";
+import { assertCoordinationCycleScope } from "./coordination-cycle-scope.service";
 
 function dashboardStep<T>(label: string, run: () => Promise<T>) {
   return perfStep("coordination-dashboard", label, run);
@@ -2163,6 +2164,12 @@ export async function getCoordinationBoard(input: {
   const db = input.db ?? prisma;
   const taskId = String(input.taskId ?? "").trim();
   if (!taskId) throw new Error("COORDINATION_BOARD_TASK_ID_REQUIRED");
+  await dashboardStep("boardCycleScope", () =>
+    assertCoordinationCycleScope({
+      db,
+      context: "OPERATION",
+      taskId,
+    }));
 
   const query = {
     db,
@@ -2585,6 +2592,7 @@ export async function getCoordinationDashboard(input: {
   doneRetentionDays?: number | null;
   includeManagementDetails?: boolean;
   includeWorkspaceSummaries?: boolean;
+  cycleTaskId?: string | null;
   auth?: unknown;
 }): Promise<CoordinationDashboardDTO> {
   const db = input?.db ?? prisma;
@@ -2601,16 +2609,50 @@ export async function getCoordinationDashboard(input: {
     flowSort !== "UPDATED_DESC"
   );
   const selectedDate = parseDateInput(input?.date);
-  const cycle = await dashboardStep("ensureCycle", () => ensureCoordinationCycle(db, {
-    context: input.context,
-    date: selectedDate,
-    provisionWorkTickets: false,
-  }));
+  const trustedCycleTaskId = String(input.cycleTaskId ?? "").trim();
+  const cycle = trustedCycleTaskId
+    ? {
+        task: {
+          id: trustedCycleTaskId,
+          title: "",
+          description: `Coordination Space ${input.context}`,
+          source: "SYSTEM",
+          kind: "COORDINATION",
+          periodType: "WEEK",
+          periodKey: getWeekRange(selectedDate).periodKey,
+          status: "IN_PROGRESS",
+        },
+        referenceRange: getWeekRange(selectedDate),
+        context: input.context,
+        created: false,
+        workTickets: [],
+        workTicketsCreated: 0,
+      }
+    : await dashboardStep("ensureCycle", () => ensureCoordinationCycle(db, {
+        context: input.context,
+        date: selectedDate,
+        provisionWorkTickets: false,
+      }));
 
+  const earlyViewConfig = getSpaceViewConfig(input.context);
+  const earlyMode = earlyViewConfig.modes.find((mode) => mode.key === input.modeKey);
+  const earlyFlow = earlyMode?.coreFlowKey
+    ? earlyViewConfig.coreFlows?.find((flow) => flow.key === earlyMode.coreFlowKey)
+    : null;
+  const projectionFlowNeedsNoWorkspaceShell =
+    input.includeFlowItems !== false &&
+    input.includeWorkspaceSummaries === false &&
+    input.includeDashboardDetails === false &&
+    (
+      earlyFlow?.key === "technical-issue-flow" ||
+      earlyFlow?.key === "media-production-flow"
+    );
   const needsTaskItems =
-    input.includeWorkspaceSummaries !== false ||
-    input.includeFlowItems !== false ||
-    input.includeManagementDetails !== false;
+    !projectionFlowNeedsNoWorkspaceShell && (
+      input.includeWorkspaceSummaries !== false ||
+      input.includeFlowItems !== false ||
+      input.includeManagementDetails !== false
+    );
   let rawTaskItems = needsTaskItems
     ? await dashboardStep("loadTaskItemsProjection", () =>
       queryCoordinationWorkspaceSummary(db, cycle.task.id))
@@ -3638,5 +3680,60 @@ export async function getOperationCoordinationDashboard(input?: {
   return getCoordinationDashboard({
     ...input,
     context: "OPERATION",
+  });
+}
+
+export async function getCoordinationFlowPage(input: {
+  db?: DB;
+  context: CoordinationContext;
+  modeKey: string;
+  taskId?: string | null;
+  date?: string | null;
+  stage?: string | null;
+  page?: number | null;
+  pageSize?: number | null;
+  query?: string | null;
+  status?: string | null;
+  paymentStatus?: string | null;
+  sort?: string | null;
+  doneRetentionDays?: number | null;
+  auth?: unknown;
+}) {
+  return perfStep("coordination-flow-query", input.modeKey, async () => {
+    const db = input.db ?? prisma;
+    const taskId = input.taskId
+      ? await perfStep("coordination-flow-query", "cycleScope", () =>
+          assertCoordinationCycleScope({
+            db,
+            context: input.context,
+            taskId: input.taskId!,
+          }))
+      : null;
+    const dashboard = await getCoordinationDashboard({
+      db,
+      context: input.context,
+      modeKey: input.modeKey,
+      cycleTaskId: taskId,
+      date: input.date,
+      flowStageKey: input.stage,
+      flowPage: input.page,
+      flowPageSize: input.pageSize,
+      flowQuery: input.query,
+      flowStatus: input.status,
+      flowPaymentStatus: input.paymentStatus,
+      flowSort: input.sort,
+      doneRetentionDays: input.doneRetentionDays,
+      includeFlowItems: true,
+      includeTechnicalBoard: false,
+      includeMediaBoard: false,
+      includeDashboardDetails: false,
+      includeWorkspaceSummaries: false,
+      includeManagementDetails: false,
+      auth: input.auth,
+    });
+    return {
+      items: dashboard.flowItems,
+      pagination: dashboard.flowItemsPagination,
+    };
   });
 }

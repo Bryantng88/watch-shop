@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   getCoordinationBoard,
   getCoordinationDashboard,
+  getCoordinationFlowPage,
 } from "@/domains/coordination/server/coordination-dashboard.service";
 import { resolveCoordinationCycle } from "@/domains/coordination/server/coordination-cycle.service";
 import type { CoordinationContext } from "@/domains/coordination/server/coordination-cycle.types";
@@ -117,6 +118,37 @@ export async function GET(request: NextRequest) {
       modeKey === "technical-issue-flow"
         ? loadTechnicalDailyPerformance()
         : Promise.resolve(undefined);
+
+    // Rolling-deploy compatibility for browser bundles that still request
+    // flow pages through /dashboard. The canonical read boundary is the Flow
+    // Query Gateway; keep the legacy route as a thin adapter only.
+    if (flowItemsOnly && modeKey) {
+      const flow = await getCoordinationFlowPage({
+        db: prisma,
+        context,
+        modeKey,
+        taskId: request.nextUrl.searchParams.get("taskId"),
+        date,
+        stage: flowStageKey,
+        page: flowPage,
+        pageSize: flowPageSize,
+        query: flowQuery,
+        status: flowStatus,
+        paymentStatus: flowPaymentStatus,
+        sort: flowSort,
+        doneRetentionDays: doneDays,
+        auth,
+      });
+      return NextResponse.json(
+        {
+          ok: true,
+          flowKey: modeKey,
+          flowItems: flow.items,
+          flowItemsPagination: flow.pagination,
+        },
+        { headers: { "Cache-Control": "no-store, max-age=0" } },
+      );
+    }
 
     // Rolling-deploy compatibility: old browser bundles still call the
     // dashboard endpoint for board pagination. Route those requests through

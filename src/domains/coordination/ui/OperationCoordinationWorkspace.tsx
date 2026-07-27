@@ -624,6 +624,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
       ? requestedView as string
       : data.viewConfig.defaultModeKey;
   });
+  const initialViewModeKey = useRef(activeViewModeKey);
   const initialTitle = data.blueprints[0]?.workspaceDefinition.defaultName ?? "";
   const [title, setTitle] = useState(initialTitle);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
@@ -665,7 +666,11 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
   const [asyncFlowPagination, setAsyncFlowPagination] = useState(
     data.flowItemsPagination,
   );
-  const [flowItemsModeKey, setFlowItemsModeKey] = useState(activeViewModeKey);
+  const [flowItemsModeKey, setFlowItemsModeKey] = useState(() =>
+    data.flowItems.length > 0 || data.flowItemsPagination.total > 0
+      ? activeViewModeKey
+      : "",
+  );
   const [isFlowItemsLoading, setIsFlowItemsLoading] = useState(false);
   const [isBoardRefreshing, setIsBoardRefreshing] = useState(false);
   const [loadingBoardColumn, setLoadingBoardColumn] = useState<string | null>(null);
@@ -677,6 +682,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
   const [isViewPending, startViewTransition] = useTransition();
   const flowItemsRequestId = useRef(0);
   const flowItemsAbortController = useRef<AbortController | null>(null);
+  const inFlightFlowRequestKey = useRef<string | null>(null);
   const lastFlowFilterRequestKey = useRef<string | null>(null);
   const technicalBoardLoadAttempted = useRef(false);
 
@@ -692,30 +698,6 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
     );
     setFlowListStageFilter((current) => current === nextStage ? current : nextStage);
   }, [searchParams]);
-
-  useEffect(() => {
-    // A server refresh returns the default Payment Review slice. Do not let it
-    // replace a Settled slice that the user explicitly loaded.
-    if (normalizeStageKey(flowListStageFilter).includes("settled")) return;
-    // A dashboard shell intentionally omits flow items. Never let that empty
-    // transport payload replace a list already loaded through the Flow query.
-    if (
-      workTicketView === "LIST" &&
-      flowItemsModeKey === activeViewModeKey &&
-      asyncFlowItems.length > 0 &&
-      data.flowItems.length === 0
-    ) return;
-    setAsyncFlowItems(data.flowItems);
-    setAsyncFlowPagination(data.flowItemsPagination);
-  }, [
-    activeViewModeKey,
-    asyncFlowItems.length,
-    data.flowItems,
-    data.flowItemsPagination,
-    flowItemsModeKey,
-    flowListStageFilter,
-    workTicketView,
-  ]);
 
   useEffect(() => {
     if (data.technicalIssueBoard) {
@@ -752,7 +734,13 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
       params.set("context", data.context);
       params.set("dashboardVersion", "2");
       params.set("view", nextModeKey);
-      router.replace(`/admin/coordination/${contextPath(data.context)}?${params.toString()}`);
+      params.delete("flowStage");
+      params.delete("flowPage");
+      window.history.pushState(
+        null,
+        "",
+        `/admin/coordination/${contextPath(data.context)}?${params.toString()}`,
+      );
     });
   }
   const selectedBlueprint = useMemo(
@@ -802,6 +790,14 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
     : orderedFlowStages[0]?.key ?? "";
   const flowListStageCounts = useMemo(() => {
     const counts = new Map<string, number>();
+    if (activeCoreFlow?.key === "technical-issue-flow" && asyncTechnicalIssueBoard) {
+      const totals = asyncTechnicalIssueBoard.columnPagination;
+      counts.set("inspect", totals.INSPECT?.total ?? 0);
+      counts.set("ready", totals.READY?.total ?? 0);
+      counts.set("processing", totals.PROCESSING?.total ?? 0);
+      counts.set("done", totals.DONE?.total ?? 0);
+      return counts;
+    }
     if (activeCoreFlow?.key === "media-production-flow" && asyncMediaBoard) {
       const totals = asyncMediaBoard.columnPagination;
       counts.set("photography", totals.PHOTOGRAPHY?.total ?? 0);
@@ -840,7 +836,13 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
       if (stage) counts.set(stage.key, (counts.get(stage.key) ?? 0) + 1);
     });
     return counts;
-  }, [activeCoreFlow, asyncFlowItems, asyncMediaBoard, data.workTickets]);
+  }, [
+    activeCoreFlow,
+    asyncFlowItems,
+    asyncMediaBoard,
+    asyncTechnicalIssueBoard,
+    data.workTickets,
+  ]);
   const flowListVisibleCount = activeFlowListStage
     ? flowListStageCounts.get(activeFlowListStage) ?? 0
     : asyncFlowItems.length;
@@ -866,10 +868,29 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
     if (activeViewMode?.key) params.set("view", activeViewMode.key);
     return `/api/admin/coordination/operation/dashboard?${params.toString()}`;
   }, [activeViewMode?.key, data.context, searchParams]);
+  const flowEndpoint = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set("context", data.context);
+    params.set("taskId", data.cycle.id);
+    const date = searchParams.get("date");
+    if (date) params.set("date", date);
+    return `/api/admin/coordination/operation/flows/${encodeURIComponent(
+      activeViewMode?.key ?? activeViewModeKey,
+    )}?${params.toString()}`;
+  }, [
+    activeViewMode?.key,
+    activeViewModeKey,
+    data.context,
+    data.cycle.id,
+    searchParams,
+  ]);
   const initialDashboardShell = useMemo(
-    () => initialDashboard ?? mapCoordinationDashboardShell(data, {
-      modeKey: activeViewMode?.key,
-    }),
+    () =>
+      initialDashboard && activeViewMode?.key === initialViewModeKey.current
+        ? initialDashboard
+        : mapCoordinationDashboardShell(data, {
+            modeKey: activeViewMode?.key,
+          }),
     [activeViewMode?.key, data, initialDashboard],
   );
   const handleDashboardResult = useCallback((result: unknown) => {
@@ -907,6 +928,23 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
   ) => {
     void force;
     const requestedFlowStageKey = requestedStageKey || activeFlowListStage;
+    const separator = flowEndpoint.includes("?") ? "&" : "?";
+    const flowParams = new URLSearchParams({
+      flowPage: String(requestedPage),
+      flowPageSize: String(asyncFlowPagination.pageSize),
+      flowQuery: filterQuery.trim(),
+      flowStatus: filterWorkStatus,
+      flowPaymentStatus: filterPayment,
+      flowSort: "UPDATED_DESC",
+      doneRange,
+    });
+    if (requestedFlowStageKey) {
+      flowParams.set("flowStage", requestedFlowStageKey);
+    }
+    const requestUrl = `${flowEndpoint}${separator}${flowParams.toString()}`;
+    if (inFlightFlowRequestKey.current === requestUrl) return;
+
+    inFlightFlowRequestKey.current = requestUrl;
     const requestId = ++flowItemsRequestId.current;
     flowItemsAbortController.current?.abort();
     const controller = new AbortController();
@@ -914,21 +952,8 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
     setIsFlowItemsLoading(true);
     setError(null);
     try {
-      const separator = dashboardEndpoint.includes("?") ? "&" : "?";
-      const stageParam = requestedFlowStageKey
-        ? `&flowStage=${encodeURIComponent(requestedFlowStageKey)}`
-        : "";
-      const flowParams = new URLSearchParams({
-        flowPage: String(requestedPage),
-        flowPageSize: String(asyncFlowPagination.pageSize),
-        flowQuery: filterQuery.trim(),
-        flowStatus: filterWorkStatus,
-        flowPaymentStatus: filterPayment,
-        flowSort: "UPDATED_DESC",
-        doneRange,
-      });
       const response = await fetch(
-        `${dashboardEndpoint}${separator}includeFlowItems=1${stageParam}&${flowParams.toString()}`,
+        requestUrl,
         {
           cache: "no-store",
           signal: controller.signal,
@@ -949,6 +974,9 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
       setError(loadError instanceof Error ? loadError.message : "Không thể tải danh sách item.");
     } finally {
       if (requestId === flowItemsRequestId.current) {
+        if (inFlightFlowRequestKey.current === requestUrl) {
+          inFlightFlowRequestKey.current = null;
+        }
         flowItemsAbortController.current = null;
         setIsFlowItemsLoading(false);
       }
@@ -957,7 +985,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
     activeViewModeKey,
     activeFlowListStage,
     asyncFlowPagination.pageSize,
-    dashboardEndpoint,
+    flowEndpoint,
     filterPayment,
     filterQuery,
     filterWorkStatus,
@@ -976,17 +1004,21 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
       filterPayment,
       doneRange,
     ].join("|");
+    const needsModeLoad = flowItemsModeKey !== activeViewModeKey;
     if (lastFlowFilterRequestKey.current === null) {
       lastFlowFilterRequestKey.current = requestKey;
-      return;
+      if (!needsModeLoad) return;
     }
-    if (lastFlowFilterRequestKey.current === requestKey) {
+    if (
+      lastFlowFilterRequestKey.current === requestKey &&
+      !needsModeLoad
+    ) {
       return;
     }
     lastFlowFilterRequestKey.current = requestKey;
     const timeoutId = window.setTimeout(() => {
       void loadFlowItems(activeFlowListStage, 1, true);
-    }, 300);
+    }, needsModeLoad ? 0 : 300);
     return () => window.clearTimeout(timeoutId);
   }, [
     activeCoreFlow,
@@ -995,6 +1027,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
     filterPayment,
     filterQuery,
     filterWorkStatus,
+    flowItemsModeKey,
     doneRange,
     loadFlowItems,
     workTicketView,
@@ -1027,24 +1060,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
         ? "MEDIA_BOARD"
         : "LIST";
     setWorkTicketView(nextView);
-    if (nextView === "LIST") void loadFlowItems();
-  }, [loadFlowItems]);
-  useEffect(() => {
-    if (workTicketView !== "LIST") return;
-    if (flowItemsModeKey === activeViewModeKey) {
-      return;
-    }
-    if (isFlowItemsLoading) return;
-
-    void loadFlowItems(activeFlowListStage, 1, true);
-  }, [
-    activeFlowListStage,
-    activeViewModeKey,
-    flowItemsModeKey,
-    isFlowItemsLoading,
-    loadFlowItems,
-    workTicketView,
-  ]);
+  }, []);
   const refreshTechnicalIssueBoard = useCallback(async () => {
     if (isBoardRefreshing) return;
     setError(null);
@@ -1513,6 +1529,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
     >
         <AsyncBusinessListDashboard
           endpoint={dashboardEndpoint}
+          preferInitialData
           initialData={initialDashboardShell}
           widgets={
             isPaymentCollectionFlow

@@ -22,6 +22,7 @@ export default function AsyncBusinessListDashboard({
     cashFlowPeriods = false,
     onResult,
     initialData,
+    preferInitialData = false,
 }: {
     endpoint: string;
     widgets?: BusinessListDashboardWidgetKey[];
@@ -34,6 +35,7 @@ export default function AsyncBusinessListDashboard({
     cashFlowPeriods?: boolean;
     onResult?: (result: unknown) => void;
     initialData?: BusinessListDashboardData | null;
+    preferInitialData?: boolean;
 }) {
     const initialEndpoint = useRef(endpoint);
     const [data, setData] = useState<BusinessListDashboardData | null>(
@@ -46,9 +48,9 @@ export default function AsyncBusinessListDashboard({
     useEffect(() => {
         if (
             retryKey === 0 &&
-            endpoint === initialEndpoint.current &&
             initialData &&
-            cashPeriod === "WEEK"
+            cashPeriod === "WEEK" &&
+            (preferInitialData || endpoint === initialEndpoint.current)
         ) {
             setData(initialData);
             setFailed(false);
@@ -87,7 +89,15 @@ export default function AsyncBusinessListDashboard({
             });
 
         return () => controller.abort();
-    }, [cashFlowPeriods, cashPeriod, endpoint, initialData, onResult, retryKey]);
+    }, [
+        cashFlowPeriods,
+        cashPeriod,
+        endpoint,
+        initialData,
+        onResult,
+        preferInitialData,
+        retryKey,
+    ]);
 
     if (failed) {
         return (

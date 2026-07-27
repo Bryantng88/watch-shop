@@ -29,6 +29,8 @@
     "projection:smoke-runtime": "tsx scripts/smoke-projection-runtime.ts",
     "coordination:smoke-board-query": "tsx scripts/smoke-coordination-board-query.ts",
     "coordination:smoke-bootstrap": "tsx scripts/smoke-coordination-bootstrap.ts",
+    "coordination:smoke-operation-flows": "tsx scripts/smoke-coordination-operation-flows.ts",
+    "coordination:audit-read-architecture": "tsx scripts/audit-operation-read-architecture.ts",
     "gen": "prisma generate && node scripts/trim-zod.js"
   },
   "prisma": {

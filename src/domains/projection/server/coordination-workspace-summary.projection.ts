@@ -175,10 +175,23 @@ async function buildFromEvent(
   db: DB,
   context: ProjectionBuildContext & { sourceEvent: BusinessEventDispatchContext },
 ) {
-  const row = await buildCoordinationWorkspaceSummaryRow(db, context.sourceEvent.targetId);
+  const eventLog = context.sourceEvent.eventLog &&
+    typeof context.sourceEvent.eventLog === "object"
+    ? context.sourceEvent.eventLog as Record<string, unknown>
+    : {};
+  const payload = eventLog.metadataJson &&
+    typeof eventLog.metadataJson === "object" &&
+    !Array.isArray(eventLog.metadataJson)
+    ? eventLog.metadataJson as Record<string, unknown>
+    : {};
+  const payloadTaskItemId = String(
+    payload.targetTaskItemId ?? payload.taskItemId ?? "",
+  ).trim();
+  const taskItemId = payloadTaskItemId || context.sourceEvent.targetId;
+  const row = await buildCoordinationWorkspaceSummaryRow(db, taskItemId);
   return result(
     context,
-    { targetType: "TASK_ITEM", targetId: context.sourceEvent.targetId },
+    { targetType: "TASK_ITEM", targetId: taskItemId },
     row ? 1 : 0,
     row ? undefined : "TASK_ITEM_NOT_FOUND_OR_CANCELLED",
   );

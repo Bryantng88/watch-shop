@@ -43,6 +43,7 @@ export {
   resolveCurrentCoordinationCycle,
 } from "./coordination-cycle.service";
 export { getWatchPeriodComparison } from "./coordination-period-read.service";
+export { assertCoordinationCycleScope } from "./coordination-cycle-scope.service";
 
 export type {
   WorkTypeDefinition as CoordinationWorkTypeDefinition,
@@ -66,6 +67,7 @@ export type {
 export {
   getCoordinationBoard,
   getCoordinationDashboard,
+  getCoordinationFlowPage,
   getOperationCoordinationDashboard,
 } from "./coordination-dashboard.service";
 export type { CoordinationBoardKey } from "./coordination-dashboard.service";

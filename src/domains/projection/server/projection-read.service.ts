@@ -1,8 +1,4 @@
 import { dbOrTx, type DB } from "@/server/db/client";
-import {
-  TaskExecutionActionType,
-  TaskExecutionTargetType,
-} from "@prisma/client";
 import { getProjectionBuilder } from "./projection.registry";
 import { rebuildProjection } from "./projection.runner";
 
@@ -17,78 +13,6 @@ const projectionHealthCache = new Map<string, {
   expiresAt: number;
   rowCount: number;
 }>();
-
-async function projectionSourceHealth(db: DB, projectionKey: string) {
-  const client = dbOrTx(db);
-  if (projectionKey === "technical-issue-board") {
-    const bindings = await client.taskExecution.findMany({
-      where: {
-        targetType: TaskExecutionTargetType.TECHNICAL_ISSUE,
-        actionType: { not: TaskExecutionActionType.CANCELLED },
-      },
-      distinct: ["targetId"],
-      select: { targetId: true },
-    });
-    const targetIds = bindings.map((row) => row.targetId);
-    const source = targetIds.length
-      ? await client.technicalIssue.aggregate({
-          where: { id: { in: targetIds } },
-          _count: { _all: true },
-          _max: { updatedAt: true },
-        })
-      : null;
-    return {
-      count: source?._count._all ?? 0,
-      updatedAt: source?._max.updatedAt ?? null,
-    };
-  }
-  if (projectionKey === "media-operation-board") {
-    const bindings = await client.taskExecution.findMany({
-      where: {
-        targetType: TaskExecutionTargetType.WATCH,
-        actionType: { not: TaskExecutionActionType.CANCELLED },
-        taskItem: {
-          is: {
-            OR: [
-              { note: { contains: "workTypeKey: photography", mode: "insensitive" } },
-              { note: { contains: "workTypeKey: media-processing", mode: "insensitive" } },
-              { note: { contains: "workTypeKey: publish", mode: "insensitive" } },
-            ],
-          },
-        },
-      },
-      distinct: ["targetId"],
-      select: { targetId: true },
-    });
-    const targetIds = bindings.map((row) => row.targetId);
-    const source = targetIds.length
-      ? await client.watch.aggregate({
-          where: { id: { in: targetIds } },
-          _count: { _all: true },
-          _max: { updatedAt: true },
-        })
-      : null;
-    return {
-      count: source?._count._all ?? 0,
-      updatedAt: source?._max.updatedAt ?? null,
-    };
-  }
-  if (projectionKey === "shipment-operation-queue") {
-    const source = await client.shipment.aggregate({
-      _count: { _all: true },
-      _max: { updatedAt: true },
-    });
-    return { count: source._count._all, updatedAt: source._max.updatedAt };
-  }
-  if (projectionKey === "payment-list") {
-    const source = await client.payment.aggregate({
-      _count: { _all: true },
-      _max: { updatedAt: true },
-    });
-    return { count: source._count._all, updatedAt: source._max.updatedAt };
-  }
-  return null;
-}
 
 export async function ensureProjectionReady(
   db: DB,
@@ -109,39 +33,13 @@ export async function ensureProjectionReady(
     };
   }
   const client = dbOrTx(db);
-  const [count, projectedEntities, projectionFreshness, sourceHealth] = await Promise.all([
-    client.projectionRecord.count({
+  const count = await client.projectionRecord.count({
     where: {
       projectionKey: builder.key,
       projectionVersion: builder.version,
     },
-    }),
-    client.projectionRecord.findMany({
-      where: {
-        projectionKey: builder.key,
-        projectionVersion: builder.version,
-        entityId: { not: null },
-      },
-      distinct: ["entityId"],
-      select: { entityId: true },
-    }),
-    client.projectionRecord.aggregate({
-      where: {
-        projectionKey: builder.key,
-        projectionVersion: builder.version,
-      },
-      _max: { sourceUpdatedAt: true },
-    }),
-    projectionSourceHealth(db, builder.key),
-  ]);
-  const entityCount = projectedEntities.length;
-  const complete = !sourceHealth || entityCount === sourceHealth.count;
-  const fresh = !sourceHealth?.updatedAt ||
-    Boolean(
-      projectionFreshness._max.sourceUpdatedAt &&
-      projectionFreshness._max.sourceUpdatedAt >= sourceHealth.updatedAt,
-    );
-  if (count > 0 && complete && fresh) {
+  });
+  if (count > 0) {
     projectionHealthCache.set(cacheKey, {
       expiresAt: Date.now() + PROJECTION_HEALTH_CACHE_TTL_MS,
       rowCount: count,
@@ -150,11 +48,15 @@ export async function ensureProjectionReady(
       ready: true,
       rebuilt: false,
       rowCount: count,
-      entityCount,
-      sourceCount: sourceHealth?.count,
     };
   }
 
+  // A projection read must never delete/rebuild a populated read model.
+  // Full rebuilds replace rows in batches, so doing that from a request can
+  // expose an empty or partially rebuilt board to concurrent readers. Runtime
+  // event delivery keeps populated projections current; explicit repair jobs
+  // handle drift outside the request path. Only an entirely absent projection
+  // is bootstrapped here for a fresh environment.
   const build = await rebuildProjection(db, { projectionKey: builder.key });
   if (!build.ok) {
     return {

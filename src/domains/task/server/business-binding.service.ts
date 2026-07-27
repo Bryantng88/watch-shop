@@ -1,9 +1,9 @@
 import {
   PaymentStatus,
+  Prisma,
   TaskExecutionActionType,
   TaskExecutionTargetType,
   TaskStatus,
-  type Prisma,
 } from "@prisma/client";
 import { dbOrTx, withDbTransaction, type DB } from "@/server/db/client";
 import { perfStep } from "@/lib/server-perf";
@@ -1339,6 +1339,164 @@ export function isPaymentCollectionSettledStatus(status: unknown) {
   return PAYMENT_COLLECTION_TERMINAL_STATUSES.has(cleanUpper(status));
 }
 
+async function buildPaymentQueuePreviewMapFromProjections(
+  db: DB,
+  payments: Array<{
+    id: string;
+    refNo: string | null;
+    status: PaymentStatus;
+    amount: unknown;
+    currency: string;
+    method: unknown;
+    direction: unknown;
+    type: unknown;
+    purpose: unknown;
+    paidAt: Date | null;
+    createdAt: Date;
+    acquisition_id: string | null;
+    order_id: string | null;
+    service_request_id: string | null;
+    technical_issue_id: string | null;
+    shipment_id: string | null;
+  }>,
+) {
+  const map = new Map<string, QueueBusinessPreview>();
+  const ownerIds = Array.from(new Set(
+    payments.flatMap((payment) => [
+      payment.acquisition_id,
+      payment.order_id,
+      payment.technical_issue_id,
+    ]).map(clean).filter(Boolean),
+  ));
+  const projectionRows = ownerIds.length
+    ? await dbOrTx(db).$queryRaw<Array<{
+        projectionKey: string;
+        entityId: string | null;
+        dataJson: Prisma.JsonValue;
+      }>>(Prisma.sql`
+        SELECT "projectionKey", "entityId", "dataJson"
+        FROM "ProjectionRecord"
+        WHERE "projectionKey" IN (
+          'acquisition-list',
+          'order-list',
+          'technical-issue-board'
+        )
+          AND "entityId" IN (${Prisma.join(ownerIds)})
+      `)
+    : [];
+  const projectionByOwner = new Map(
+    projectionRows.map((row) => [
+      `${row.projectionKey}:${row.entityId ?? ""}`,
+      asRecord(row.dataJson),
+    ]),
+  );
+
+  for (const payment of payments) {
+    const acquisition = payment.acquisition_id
+      ? projectionByOwner.get(`acquisition-list:${payment.acquisition_id}`)
+      : null;
+    const order = payment.order_id
+      ? projectionByOwner.get(`order-list:${payment.order_id}`)
+      : null;
+    const issue = payment.technical_issue_id
+      ? projectionByOwner.get(`technical-issue-board:${payment.technical_issue_id}`)
+      : null;
+    const serviceRequest = asRecord(issue?.serviceRequest);
+    const detailItems = Array.isArray(acquisition?.detailItems)
+      ? acquisition.detailItems.map(asRecord)
+      : [];
+    const relatedItems = Array.isArray(order?.items)
+      ? order.items.map(asRecord)
+      : detailItems;
+    const orderImages = Array.isArray(order?.previewImageUrls)
+      ? order.previewImageUrls.map(clean).filter(Boolean)
+      : [];
+    const acquisitionImages = detailItems
+      .map((item) => clean(item.imageUrl))
+      .filter(Boolean);
+    const issueImage = clean(serviceRequest.imageUrl);
+    const imageUrl =
+      clean(order?.previewImageUrl) ||
+      orderImages[0] ||
+      acquisitionImages[0] ||
+      issueImage ||
+      null;
+    const isIncome = clean(payment.direction).toUpperCase() === "IN";
+    const technicalWorkLabel = clean(issue?.summary);
+    const title = payment.acquisition_id
+      ? isIncome ? "Thu tiền thu mua" : "Thanh toán thu mua"
+      : payment.order_id
+        ? isIncome ? "Thu tiền đơn hàng" : "Thanh toán đơn hàng"
+        : payment.technical_issue_id || payment.service_request_id
+          ? `${isIncome ? "Thu tiền" : "Thanh toán"} xử lý kỹ thuật${technicalWorkLabel ? `: ${technicalWorkLabel}` : ""}`
+          : clean(payment.type).toUpperCase() === "SHIPMENT"
+            ? isIncome ? "Thu tiền vận chuyển" : "Chi phí vận chuyển"
+            : isIncome ? "Thu tiền" : "Thanh toán";
+    const ownerRef =
+      clean(order?.refNo) ||
+      clean(acquisition?.refNo) ||
+      clean(serviceRequest.refNo) ||
+      clean(payment.refNo) ||
+      null;
+    const counterparty =
+      clean(order?.customerName) ||
+      clean(acquisition?.vendorName) ||
+      clean(issue?.vendorName) ||
+      null;
+    const contact = clean(order?.shipPhone) || null;
+    const normalizedRelatedItems = relatedItems.slice(0, 4).map((item) => ({
+      title:
+        clean(item.title) ||
+        clean(item.linkedWatchTitle) ||
+        clean(item.subtitle) ||
+        null,
+      ref: clean(item.sku) || clean(item.linkedWatchSku) || null,
+    }));
+
+    map.set(queueKey(TaskExecutionTargetType.PAYMENT, payment.id), {
+      title,
+      ref: [clean(payment.refNo), ownerRef].filter(Boolean).join(" / ") || payment.id,
+      status: [clean(payment.status), clean(payment.method)].filter(Boolean).join(" / "),
+      imageUrl,
+      imageUrls: orderImages.length
+        ? orderImages
+        : acquisitionImages.length
+          ? acquisitionImages
+          : imageUrl
+            ? [imageUrl]
+            : [],
+      payment: {
+        status: clean(payment.status),
+        direction: clean(payment.direction) || null,
+        type: clean(payment.type) || null,
+        purpose: clean(payment.purpose) || null,
+        amount: Number(payment.amount),
+        currency: payment.currency,
+        method: clean(payment.method) || null,
+        ownerType: payment.technical_issue_id
+          ? "TECHNICAL_ISSUE"
+          : payment.service_request_id
+            ? "SERVICE_REQUEST"
+            : payment.order_id
+              ? "ORDER"
+              : payment.acquisition_id
+                ? "ACQUISITION"
+                : payment.shipment_id
+                  ? "SHIPMENT"
+                  : "UNKNOWN",
+        ownerRef,
+        counterparty,
+        contact,
+        createdAt: payment.createdAt.toISOString(),
+        paidAt: payment.paidAt?.toISOString() ?? null,
+        itemCount: Math.max(1, normalizedRelatedItems.length),
+        relatedItems: normalizedRelatedItems,
+      },
+    });
+  }
+  return map;
+}
+
 export async function listPaymentCollectionQueueItems(
   db: DB,
   input: {
@@ -1370,20 +1528,28 @@ export async function listPaymentCollectionQueueItems(
     },
     select: {
       id: true,
+      refNo: true,
       status: true,
+      amount: true,
+      currency: true,
+      method: true,
+      direction: true,
+      type: true,
+      purpose: true,
+      paidAt: true,
+      createdAt: true,
       updatedAt: true,
       acquisition_id: true,
       order_id: true,
+      service_request_id: true,
+      technical_issue_id: true,
+      shipment_id: true,
     },
     orderBy: { updatedAt: "desc" },
     skip: input.paginate === false ? undefined : (page - 1) * pageSize,
     take: input.paginate === false ? undefined : pageSize,
   }));
   const paymentIds = payments.map((payment) => payment.id);
-  const previewTargets = payments.map((payment) => ({
-    targetType: TaskExecutionTargetType.PAYMENT,
-    targetId: payment.id,
-  }));
   const [bindings, activityGroups, businessPreviews] = await Promise.all([
     perfStep("payment-flow-items", "bindings", () => client.taskExecution.findMany({
       where: {
@@ -1413,7 +1579,7 @@ export async function listPaymentCollectionQueueItems(
       ),
     )),
     perfStep("payment-flow-items", "businessPreviews", () =>
-      buildQueueBusinessPreviewMap(db, previewTargets, payments)
+      buildPaymentQueuePreviewMapFromProjections(db, payments)
     ),
   ]);
 
