@@ -1126,6 +1126,7 @@ async function moveExistingFlowStageBindingToWorkspace(input: {
       select: {
         id: true,
         taskItemId: true,
+        metadataJson: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -1141,10 +1142,40 @@ async function moveExistingFlowStageBindingToWorkspace(input: {
         data: { actionType: TaskExecutionActionType.CANCELLED },
       });
     }
-    if (bindingToKeep && bindingToKeep.taskItemId !== input.taskItemId) {
+    const currentMetadata = asRecord(bindingToKeep?.metadataJson);
+    const currentWorkTypeKey = clean(currentMetadata.workTypeKey).toLowerCase();
+    const targetWorkTypeKey = clean(input.metadataJson.workTypeKey).toLowerCase();
+    const changesFlowStage =
+      Boolean(bindingToKeep) &&
+      (
+        bindingToKeep.taskItemId !== input.taskItemId ||
+        (
+          targetWorkTypeKey &&
+          currentWorkTypeKey !== targetWorkTypeKey
+        )
+      );
+    if (bindingToKeep && changesFlowStage) {
+      const {
+        workflowRuntime: _workflowRuntime,
+        workflowKey: _workflowKey,
+        workTypeKey: _workTypeKey,
+        appliedWorkflowSnapshot: _appliedWorkflowSnapshot,
+        ...preservedMetadata
+      } = currentMetadata;
+      void _workflowRuntime;
+      void _workflowKey;
+      void _workTypeKey;
+      void _appliedWorkflowSnapshot;
+
       await tx.taskExecution.update({
         where: { id: bindingToKeep.id },
-        data: { taskItemId: input.taskItemId },
+        data: {
+          taskItemId: input.taskItemId,
+          metadataJson: {
+            ...preservedMetadata,
+            ...input.metadataJson,
+          },
+        },
       });
     }
 

@@ -6,7 +6,15 @@ import {
 
 import type { CoordinationMediaBoardItemDTO } from "@/domains/coordination/server/coordination-dashboard.types";
 import type { BusinessEventDispatchContext } from "@/domains/event/dispatcher/business-event-consumer.types";
-import { getQueueItemWorkflowState } from "@/domains/task/server/business-binding-workflow.service";
+import {
+  getQueueItemWorkflowState,
+  listAvailableManualTransitionsForQueueItem,
+  resolveBindingWorkflowDefinition,
+} from "@/domains/task/server/business-binding-workflow.service";
+import {
+  mapProductPostTargets,
+  resolveMediaWorkProgressFromMetadata,
+} from "@/domains/task/server/business-binding.service";
 import { dbOrTx, type DB } from "@/server/db/client";
 import { deleteProjectionRecords, upsertProjectionRecord } from "./projection-record.repo";
 import type {
@@ -17,7 +25,7 @@ import type {
 } from "./projection.types";
 
 export const MEDIA_OPERATION_BOARD_PROJECTION_KEY = "media-operation-board";
-export const MEDIA_OPERATION_BOARD_PROJECTION_VERSION = 1;
+export const MEDIA_OPERATION_BOARD_PROJECTION_VERSION = 3;
 const MEDIA_OPERATION_BOARD_EVENTS = [
   "watch.created",
   "watch.media.photoshoot.requested",
@@ -42,6 +50,11 @@ export type MediaOperationBoardProjection = CoordinationMediaBoardItemDTO & {
 
 function clean(value: unknown) {
   return String(value ?? "").trim();
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
 }
 
 function workTypeKey(note?: string | null) {
@@ -115,8 +128,22 @@ export async function buildMediaOperationBoardRow(
       where: { id: input.watchId },
       select: {
         id: true,
+        productId: true,
         updatedAt: true,
-        product: { select: { title: true, sku: true, primaryImageUrl: true } },
+        product: {
+          select: {
+            title: true,
+            sku: true,
+            primaryImageUrl: true,
+            postTargets: {
+              select: {
+                postTarget: {
+                  select: { id: true, name: true, platform: true },
+                },
+              },
+            },
+          },
+        },
       },
     }),
     client.taskItemActivity.findMany({
@@ -138,16 +165,26 @@ export async function buildMediaOperationBoardRow(
     commentCount += (String(activity.sourceType) === "DISCUSSION" ? 1 : 0) + activity._count.replies;
   }
   const runtime = getQueueItemWorkflowState({ metadataJson: binding.metadataJson });
+  const workflowDefinition = resolveBindingWorkflowDefinition(binding.metadataJson);
   const actor = userLabel(binding.createdByUser);
   const data: MediaOperationBoardProjection = {
     id: watch.id,
+    productId: watch.productId,
     bindingId: binding.id,
     workspaceTaskItemId: binding.taskItemId,
     title: watch.product?.title ?? "Watch",
     sku: watch.product?.sku ?? null,
     imageUrl: watch.product?.primaryImageUrl ?? null,
     stage,
+    workflowKey: runtime?.workflowKey ?? null,
     workflowState: runtime?.currentState ?? null,
+    mediaWorkProgress:
+      resolveMediaWorkProgressFromMetadata(asRecord(binding.metadataJson)),
+    postTargets: mapProductPostTargets(watch.product),
+    manualTransitions: listAvailableManualTransitionsForQueueItem({
+      workflowDefinition,
+      currentState: runtime?.currentState ?? null,
+    }),
     commentCount,
     mentionedMeCount: 0,
     unreadMentionCount: 0,

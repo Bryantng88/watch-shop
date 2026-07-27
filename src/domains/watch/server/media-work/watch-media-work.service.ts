@@ -24,6 +24,7 @@ import {
   approveWatchReview,
   resetWatchReviewToDraft,
 } from "@/domains/watch/server/review";
+import { resolveMediaWorkProgressFromMetadata } from "@/domains/task/server/business-binding.service";
 
 type WatchPhotoshootRow = {
   id: string;
@@ -522,6 +523,7 @@ export async function markWatchMediaAssetAttachedFromQueueItem(
     bindingId: string;
     actorUserId?: string | null;
     note?: string | null;
+    deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
   },
   db: DB = prisma,
 ) {
@@ -656,7 +658,7 @@ export async function markWatchMediaAssetAttachedFromQueueItem(
     sourceId: `media-asset-attached:${binding.id}`,
     note: input.note ?? null,
     mediaWorkProgress: seededProgress,
-  });
+  }, { deferConsumers: input.deferConsumers });
 
   return {
     ok: true,
@@ -674,6 +676,7 @@ export async function markWatchMediaAssetAttachedFromWatch(
     productId: string;
     actorUserId?: string | null;
     note?: string | null;
+    deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
   },
   db: DB = prisma,
 ) {
@@ -729,7 +732,7 @@ export async function markWatchMediaAssetAttachedFromWatch(
       sourceId: `media-asset-attached:list:${watch.id}:${attachedAt}`,
       note: input.note ?? null,
       mediaWorkProgress: seededProgress,
-    });
+    }, { deferConsumers: input.deferConsumers });
 
     return {
       ok: true,
@@ -747,6 +750,7 @@ export async function markWatchMediaAssetAttachedFromWatch(
       bindingId: binding.id,
       actorUserId: input.actorUserId ?? null,
       note: input.note ?? null,
+      deferConsumers: input.deferConsumers,
     },
     db,
   );
@@ -853,6 +857,36 @@ export async function saveWatchMediaWorkDraftFromQueueItem(
     parts: nextParts,
     completed,
     updatedAt,
+  };
+}
+
+export async function getWatchMediaWorkProgressFromQueueItem(
+  bindingIdInput: string,
+  db: DB = prisma,
+) {
+  const bindingId = clean(bindingIdInput);
+  if (!bindingId) return null;
+
+  const binding = await db.taskExecution.findUnique({
+    where: { id: bindingId },
+    select: {
+      targetType: true,
+      metadataJson: true,
+    },
+  });
+  if (
+    !binding ||
+    binding.targetType !== TaskExecutionTargetType.WATCH
+  ) {
+    return null;
+  }
+
+  const progress =
+    resolveMediaWorkProgressFromMetadata(asRecord(binding.metadataJson));
+  return {
+    profile: Boolean(progress?.profile),
+    content: Boolean(progress?.content),
+    image: Boolean(progress?.image),
   };
 }
 
@@ -1092,6 +1126,7 @@ export async function completeWatchMediaProcessingFromQueueItem(
     bindingId: string;
     actorUserId?: string | null;
     note?: string | null;
+    deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
   },
   db: DB = prisma,
 ) {
@@ -1170,7 +1205,7 @@ export async function completeWatchMediaProcessingFromQueueItem(
     actorUserId: input.actorUserId ?? null,
     sourceId: `media-ready-for-publish:${binding.id}:${readyAt}`,
     note: input.note ?? null,
-  });
+  }, { deferConsumers: input.deferConsumers });
 
   return {
     ok: true,

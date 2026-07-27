@@ -52,6 +52,7 @@ type Props = {
     canViewCost?: boolean;
     canEditPrice?: boolean;
     canReviewContent?: boolean;
+    initialMediaWorkDone?: Record<MediaWorkPart, boolean> | null;
     postTargets?: Array<{
         id: string;
         name: string;
@@ -265,6 +266,11 @@ function mediaApproveConsumerResult(
     return recordValue(consumers[consumerKey]);
 }
 
+function mediaApproveEventDeferred(mediaProcessingResult: unknown) {
+    const event = recordValue(recordValue(mediaProcessingResult).event);
+    return event.deferred === true;
+}
+
 function useUnsavedChangesGuard({
     enabled,
     message,
@@ -332,6 +338,7 @@ export default function WatchFormClient({
     canViewCost = false,
     canEditPrice = false,
     canReviewContent = false,
+    initialMediaWorkDone = null,
 
 }: Props) {
     const router = useRouter();
@@ -361,9 +368,15 @@ export default function WatchFormClient({
     const [mediaWorkDone, setMediaWorkDone] = useState<
         Record<MediaWorkPart, boolean>
     >({
-        profile: searchParams.get("mediaProfileDone") === "1",
-        content: searchParams.get("mediaContentDone") === "1",
-        image: searchParams.get("mediaImageDone") === "1",
+        profile:
+            initialMediaWorkDone?.profile ??
+            searchParams.get("mediaProfileDone") === "1",
+        content:
+            initialMediaWorkDone?.content ??
+            searchParams.get("mediaContentDone") === "1",
+        image:
+            initialMediaWorkDone?.image ??
+            searchParams.get("mediaImageDone") === "1",
     });
     const [activeMediaSection, setActiveMediaSection] = useState<
         "basic" | "content" | "image"
@@ -432,6 +445,7 @@ export default function WatchFormClient({
 
             const progressResult = await saveWatchMediaWorkDraftFromWatchAction({
                 productId: submitValues.productId,
+                bindingId: workspaceBindingId || null,
                 parts: { [part]: nextDone },
                 note: `${partLabel} saved from Watch edit workspace modal.`,
             });
@@ -910,6 +924,7 @@ export default function WatchFormClient({
 
             await saveWatchMediaWorkDraftFromWatchAction({
                 productId: submitValues.productId,
+                bindingId: workspaceBindingId || null,
                 parts: mediaWorkDone,
                 note: "Media work draft saved from Watch edit workspace modal.",
             });
@@ -1098,8 +1113,10 @@ export default function WatchFormClient({
                 mediaProcessingResult,
                 "coordination",
             );
+            const eventDeferred = mediaApproveEventDeferred(mediaProcessingResult);
 
             if (
+                !eventDeferred &&
                 coordinationResult.status !== "success" &&
                 coordinationResult.ok !== true
             ) {
@@ -1109,8 +1126,20 @@ export default function WatchFormClient({
             }
 
             steps = setStepStatus(steps, "approve", "done", "Content/image da duoc duyet.");
-            steps = setStepStatus(steps, "publish", "done", "Da chuyen item sang Publish workspace.");
-            const notificationStep = mediaApproveNotificationStep(mediaProcessingResult);
+            steps = setStepStatus(
+                steps,
+                "publish",
+                eventDeferred ? "running" : "done",
+                eventDeferred
+                    ? "Event da duoc ghi nhan; Publish workspace dang dong bo nen."
+                    : "Da chuyen item sang Publish workspace.",
+            );
+            const notificationStep = eventDeferred
+                ? {
+                    status: "running" as const,
+                    detail: "Notification dang duoc dispatch nen tu event da ghi nhan.",
+                }
+                : mediaApproveNotificationStep(mediaProcessingResult);
             steps = setStepStatus(
                 steps,
                 "notification",
@@ -1123,7 +1152,12 @@ export default function WatchFormClient({
                 steps,
             });
 
-            if (notificationStep.status === "done") {
+            if (eventDeferred) {
+                notify.success({
+                    title: "ÄÃ£ duyá»‡t media",
+                    message: "Media Ä‘Ã£ duyá»‡t; Publish workspace vÃ  notification Ä‘ang Ä‘Æ°á»£c Ä‘á»“ng bá»™ ná»n.",
+                });
+            } else if (notificationStep.status === "done") {
                 notify.success({
                     title: "Đã duyệt media",
                     message: "Item đã được duyệt, chuyển sang Workspace Đăng bài và đã gửi notification.",
@@ -1139,7 +1173,9 @@ export default function WatchFormClient({
             steps = setStepStatus(steps, "close", "done", "Workspace da duoc lam moi.");
             progress.update({
                 message:
-                    notificationStep.status === "done"
+                    eventDeferred
+                        ? "Duyet media hoan tat; he thong dang dong bo Publish."
+                        : notificationStep.status === "done"
                         ? "Duyet media hoan tat."
                         : "Duyet media hoan tat, notification can kiem tra.",
                 steps,

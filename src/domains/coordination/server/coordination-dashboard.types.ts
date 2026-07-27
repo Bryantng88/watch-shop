@@ -124,13 +124,18 @@ export type CoordinationFlowListItemDTO = QueueItemDTO & {
 
 export type CoordinationMediaBoardItemDTO = {
   id: string;
+  productId: string;
   bindingId: string;
   workspaceTaskItemId: string;
   title: string;
   sku: string | null;
   imageUrl: string | null;
   stage: "PHOTOGRAPHY" | "MEDIA_PROCESSING" | "PUBLISH" | "DONE";
+  workflowKey: string | null;
   workflowState: string | null;
+  mediaWorkProgress: QueueItemDTO["mediaWorkProgress"];
+  postTargets: QueueItemDTO["preview"]["postTargets"];
+  manualTransitions: QueueItemDTO["manualTransitions"];
   commentCount: number;
   mentionedMeCount: number;
   unreadMentionCount: number;

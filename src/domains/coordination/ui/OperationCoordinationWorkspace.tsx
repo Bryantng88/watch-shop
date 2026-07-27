@@ -45,8 +45,6 @@ import {
 } from "lucide-react";
 import AdminBreadcrumbs from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
 import {
-  previewRolloverPreviousCycleItemsAction,
-  rolloverPreviousCycleItemsAction,
   updateSpaceSharingAction,
   updateTechnicalIssuePriorityAction,
 } from "@/domains/coordination/actions/coordination.actions";
@@ -112,10 +110,6 @@ function coordinationDashboardResponseSource(result: unknown) {
       ? root.data as Record<string, unknown>
       : {};
   return { ...nested, ...root };
-}
-
-function sleep(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 function formatDateTime(value: string | null) {
@@ -209,18 +203,6 @@ function resolveIdentityImageSrc(value?: string | null) {
   }
 
   return resolveMediaPreviewSrc(src);
-}
-
-function actionLabel(value: string) {
-  const cleanValue = displayText(value);
-  if (
-    cleanValue === "Nhận item tồn tuần trước" ||
-    cleanValue.toLowerCase() === "nhan item ton tuan truoc"
-  ) {
-    return "Nhận item tồn từ tuần trước";
-  }
-
-  return cleanValue;
 }
 
 function modeLabel(mode: CoordinationDashboardDTO["viewConfig"]["modes"][number]) {
@@ -633,7 +615,6 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
   const router = useRouter();
   const searchParams = useSearchParams();
   const dialog = useAppDialog();
-  const progress = useAppProgress();
   const [blueprintKey, setBlueprintKey] = useState(
     data.blueprints[0]?.selectionKey ?? "",
   );
@@ -687,9 +668,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
   const [boardRefreshedAt, setBoardRefreshedAt] = useState<Date | null>(null);
   const [workspacePage, setWorkspacePage] = useState(1);
   const [workspacePageSize, setWorkspacePageSize] = useState(10);
-  const [isRolloverMenuOpen, setIsRolloverMenuOpen] = useState(false);
   const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
-  const [isMovedItemsOpen, setIsMovedItemsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isViewPending, startViewTransition] = useTransition();
   const flowItemsRequestId = useRef(0);
@@ -714,9 +693,25 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
     // A server refresh returns the default Payment Review slice. Do not let it
     // replace a Settled slice that the user explicitly loaded.
     if (normalizeStageKey(flowListStageFilter).includes("settled")) return;
+    // A dashboard shell intentionally omits flow items. Never let that empty
+    // transport payload replace a list already loaded through the Flow query.
+    if (
+      workTicketView === "LIST" &&
+      flowItemsModeKey === activeViewModeKey &&
+      asyncFlowItems.length > 0 &&
+      data.flowItems.length === 0
+    ) return;
     setAsyncFlowItems(data.flowItems);
     setAsyncFlowPagination(data.flowItemsPagination);
-  }, [data.flowItems, data.flowItemsPagination, flowListStageFilter]);
+  }, [
+    activeViewModeKey,
+    asyncFlowItems.length,
+    data.flowItems,
+    data.flowItemsPagination,
+    flowItemsModeKey,
+    flowListStageFilter,
+    workTicketView,
+  ]);
 
   useEffect(() => {
     if (data.technicalIssueBoard) {
@@ -778,7 +773,24 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
       ) ?? null
     : null;
   const orderedFlowStages = useMemo(
-    () => activeCoreFlow?.stages.slice().sort((left, right) => left.sortOrder - right.sortOrder) ?? [],
+    () => {
+      const stages =
+        activeCoreFlow?.stages.slice().sort((left, right) => left.sortOrder - right.sortOrder) ?? [];
+      if (
+        activeCoreFlow?.key === "media-production-flow" &&
+        !stages.some((stage) => normalizeStageKey(stage.key) === "done")
+      ) {
+        stages.push({
+          key: "done",
+          label: "Done",
+          workspaceKey: "done",
+          sortOrder: 40,
+          itemTargetType: "WATCH",
+          evidenceEvents: ["watch.publish.assets.downloaded"],
+        });
+      }
+      return stages;
+    },
     [activeCoreFlow],
   );
   const activeFlowListStage = orderedFlowStages.some((stage) => stage.key === flowListStageFilter)
@@ -786,6 +798,14 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
     : orderedFlowStages[0]?.key ?? "";
   const flowListStageCounts = useMemo(() => {
     const counts = new Map<string, number>();
+    if (activeCoreFlow?.key === "media-production-flow" && asyncMediaBoard) {
+      const totals = asyncMediaBoard.columnPagination;
+      counts.set("photography", totals.PHOTOGRAPHY?.total ?? 0);
+      counts.set("media-processing", totals.MEDIA_PROCESSING?.total ?? 0);
+      counts.set("publish", totals.PUBLISH?.total ?? 0);
+      counts.set("done", totals.DONE?.total ?? 0);
+      return counts;
+    }
     if (activeCoreFlow) {
       data.workTickets.forEach((ticket) => {
         const itemStageKey = normalizeStageKey(
@@ -816,7 +836,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
       if (stage) counts.set(stage.key, (counts.get(stage.key) ?? 0) + 1);
     });
     return counts;
-  }, [activeCoreFlow, asyncFlowItems, data.workTickets]);
+  }, [activeCoreFlow, asyncFlowItems, asyncMediaBoard, data.workTickets]);
   const flowListVisibleCount = activeFlowListStage
     ? flowListStageCounts.get(activeFlowListStage) ?? 0
     : asyncFlowItems.length;
@@ -1209,15 +1229,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
         return left.title.localeCompare(right.title);
       });
   }, [activeCoreFlow, activeViewMode, data.workTickets, flowStageKeys]);
-  const movedWorkTickets = useMemo(
-    () => displayedWorkTickets.filter((ticket) => ticket.rollover?.direction === "OUT"),
-    [displayedWorkTickets],
-  );
-  const activeDisplayedWorkTickets = useMemo(
-    () => displayedWorkTickets.filter((ticket) => ticket.rollover?.direction !== "OUT"),
-    [displayedWorkTickets],
-  );
-  const isCurrentCycle = data.week.periodKey === data.filters.currentPeriodKey;
+  const activeDisplayedWorkTickets = displayedWorkTickets;
   const filterFacets = useMemo(() => {
     const creators = new Map<string, number>();
     const result = { open: 0, feedback: 0, done: 0, unpaid: 0, paid: 0, none: 0 };
@@ -1399,152 +1411,6 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
     });
   }
 
-  async function rolloverPreviousCycle() {
-    const ok = await dialog.confirm({
-      title: "Nhận item tồn từ tuần trước?",
-      message:
-        "Hệ thống sẽ chuyển các item chưa xử lý xong từ Space tuần trước sang Workspace chính tương ứng trong Space tuần này. Item cũ sẽ được đánh dấu đã chuyển để không còn hiện như đang hoạt động.",
-      confirmText: "Nhận item tồn",
-      cancelText: "Hủy",
-      tone: "warning",
-    });
-
-    if (!ok) return;
-
-    setError(null);
-    progress.show({
-      title: "Đang nhận item tồn",
-      message: "Hệ thống đang chuyển item sang các Workspace core của tuần hiện tại.",
-    });
-
-    try {
-      progress.update({
-        percent: 10,
-        steps: [
-          { id: "scan", label: "Quét Space tuần trước", status: "running" },
-          { id: "move", label: "Chuyển item sang tuần hiện tại", status: "pending" },
-        ],
-      });
-
-      const preview = await previewRolloverPreviousCycleItemsAction({
-        taskId: data.cycle.id,
-        context: data.context,
-      });
-      const previewTotal = preview.items.length;
-      const previewMovable = preview.moved;
-      const previewSteps: AppProgressStep[] = preview.items
-        .slice(0, 40)
-        .map((item, index) => {
-          const target = `${item.targetType}:${item.targetId.slice(0, 8)}`;
-          const from = repairVietnameseMojibake(item.fromWorkspaceTitle);
-          const to = repairVietnameseMojibake(item.toWorkspaceTitle ?? "không có workspace nhận");
-          const status =
-            item.status === "MOVED"
-              ? "done"
-              : item.status === "FAILED"
-                ? "error"
-                : "skipped";
-
-          return {
-            id: `preview:${item.targetType}:${item.targetId}:${index}`,
-            label: `${target} - ${from} -> ${to}`,
-            detail: item.reason === "READY_TO_MOVE"
-              ? "Sẵn sàng chuyển"
-              : item.reason
-                ? `${item.status} (${item.reason})`
-                : item.status,
-            status,
-          };
-        });
-
-      if (previewTotal > previewSteps.length) {
-        previewSteps.push({
-          id: "preview-more",
-          label: `Còn ${previewTotal - previewSteps.length} item khác`,
-          detail: "Danh sách đầy đủ sẽ hiển thị sau khi xử lý xong.",
-          status: "pending",
-        });
-      }
-
-      progress.update({
-        message: `Tìm thấy ${previewTotal} item: ${previewMovable} có thể chuyển, ${preview.skipped} bỏ qua, ${preview.failed} lỗi rule. Đang chạy server action...`,
-        percent: previewTotal ? 35 : 100,
-        steps: [
-          {
-            id: "scan",
-            label: "Quét Space tuần trước",
-            status: "done",
-            detail: `${previewTotal} item được đánh giá`,
-          },
-          {
-            id: "move",
-            label: "Chuyển item sang tuần hiện tại",
-            status: previewTotal ? "running" : "skipped",
-            detail: previewTotal ? `${previewMovable} item có thể chuyển` : "Không có item cần chuyển",
-          },
-          ...previewSteps,
-        ],
-      });
-
-      const result = await rolloverPreviousCycleItemsAction({
-        taskId: data.cycle.id,
-        context: data.context,
-      });
-      const steps: AppProgressStep[] = result.items.map((item, index) => {
-        const target = `${item.targetType}:${item.targetId.slice(0, 8)}`;
-        const from = repairVietnameseMojibake(item.fromWorkspaceTitle);
-        const to = repairVietnameseMojibake(item.toWorkspaceTitle ?? "không có workspace nhận");
-        const status =
-          item.status === "MOVED"
-            ? "done"
-            : item.status === "FAILED"
-              ? "error"
-              : "skipped";
-
-        return {
-          id: `${item.targetType}:${item.targetId}:${index}`,
-          label: `${target} - ${from} -> ${to}`,
-          detail: item.reason ? `${item.status} (${item.reason})` : item.status,
-          status,
-        };
-      });
-      progress.update({
-        title: "Đã xử lý item tồn",
-        message: `Moved: ${result.moved} · Skipped: ${result.skipped} · Failed: ${result.failed}`,
-        percent: 100,
-        steps,
-      });
-      await sleep(result.items.length ? 1800 : 700);
-
-      const lines = result.items
-        .slice(0, 12)
-        .map((item) => {
-          const target = `${item.targetType}:${item.targetId.slice(0, 8)}`;
-          const to = item.toWorkspaceTitle ?? "không có workspace nhận";
-          return `${item.status} - ${target} - ${item.fromWorkspaceTitle} -> ${to}${item.reason ? ` (${item.reason})` : ""}`;
-        });
-      const more = result.items.length > lines.length
-        ? `\n... và ${result.items.length - lines.length} item khác`
-        : "";
-
-      progress.hide();
-      await dialog.alert({
-        title: "Đã xử lý item tồn",
-        message: [
-          `Moved: ${result.moved}`,
-          `Skipped: ${result.skipped}`,
-          `Failed: ${result.failed}`,
-          lines.length ? `\n${lines.join("\n")}${more}` : "\nKhông có item cần chuyển.",
-        ].join("\n"),
-        tone: result.failed ? "warning" : "success",
-      });
-      router.refresh();
-    } catch (caught) {
-      progress.hide();
-      setError(caught instanceof Error ? caught.message : "Không thể nhận item tồn từ tuần trước.");
-    }
-  }
-
   return (
     <SpaceViewPage
       breadcrumbs={
@@ -1677,46 +1543,6 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
                       activeCoreFlow={activeCoreFlow}
                       sharing={data.spaceSharing}
                     />
-                    <div className="relative">
-                      <button
-                        type="button"
-                        disabled={isPending || !data.viewConfig.carryover.enabled}
-                        onClick={() => setIsRolloverMenuOpen((open) => !open)}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-violet-200 bg-white px-3 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:bg-white/60 disabled:text-slate-400"
-                      >
-                        <RotateCcw className="h-4 w-4" />
-                        <span>Xử lý tồn</span>
-                        <ChevronRight className={cn("h-4 w-4 transition", isRolloverMenuOpen && "rotate-90")} />
-                      </button>
-                      {isRolloverMenuOpen ? (
-                        <div className="absolute right-0 z-30 mt-2 w-72 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-lg">
-                          <button
-                            type="button"
-                            disabled={!isCurrentCycle}
-                            onClick={() => {
-                              setIsRolloverMenuOpen(false);
-                              void rolloverPreviousCycle();
-                            }}
-                            className="flex w-full items-center gap-2 px-3 py-2 text-left font-medium text-slate-700 transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-white"
-                            title={isCurrentCycle ? undefined : "Chỉ nhận item tồn ở tuần hiện tại"}
-                          >
-                            <RotateCcw className="h-4 w-4 text-violet-600" />
-                            <span>{actionLabel(data.viewConfig.carryover.actionLabel)}</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsRolloverMenuOpen(false);
-                              setIsMovedItemsOpen(true);
-                            }}
-                            className="flex w-full items-center gap-2 px-3 py-2 text-left font-medium text-slate-700 transition hover:bg-slate-50"
-                          >
-                            <List className="h-4 w-4 text-slate-500" />
-                            <span>Xem item đã chuyển ({movedWorkTickets.length})</span>
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
                     {isTechnicalIssueFlowMode ? (
                       <button
                         type="button"
@@ -2201,7 +2027,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
           <FlowItemListView
             key={activeCoreFlow?.key ?? activeViewModeKey}
             items={asyncFlowItems}
-            stages={activeCoreFlow?.stages ?? []}
+            stages={orderedFlowStages}
             query=""
             statusFilter="ALL"
             paymentFilter="ALL"
@@ -2375,58 +2201,6 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
             Gợi ý: kéo thả để đổi thứ tự stage. Nhấp vào Workspace để xem chi tiết item và hoạt động.
           </SpaceViewFooterTip>
         </section>
-        {isMovedItemsOpen ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 py-6">
-            <div className="max-h-[82vh] w-full max-w-3xl overflow-hidden rounded-xl bg-white shadow-xl">
-              <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
-                <div>
-                  <h3 className="text-base font-bold text-slate-950">Item đã chuyển</h3>
-                  <p className="mt-1 text-sm text-slate-500">{movedWorkTickets.length} workspace đã được chuyển khỏi tuần này.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsMovedItemsOpen(false)}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
-                  aria-label="Đóng danh sách item đã chuyển"
-                >
-                  <XCircle className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="max-h-[62vh] overflow-auto p-4">
-                {movedWorkTickets.length ? (
-                  <div className="divide-y divide-slate-100 rounded-lg border border-slate-200">
-                    {movedWorkTickets.map((ticket) => (
-                      <Link
-                        key={ticket.id}
-                        href={`/admin/task-items/${ticket.id}`}
-                        onClick={() => setIsMovedItemsOpen(false)}
-                        className="grid gap-3 px-4 py-3 transition hover:bg-slate-50 md:grid-cols-[1.4fr_1fr_0.8fr] md:items-center"
-                      >
-                        <div className="min-w-0">
-                          <div className="truncate text-sm font-semibold text-slate-950">{prefixedLabel("Workspace", ticket.title)}</div>
-                          <div className="mt-1 truncate text-xs text-slate-500">{ticket.identityPreview?.ref ?? ticket.identityPreview?.title ?? "-"}</div>
-                        </div>
-                        <div className="min-w-0 text-sm text-slate-600">
-                          <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Chuyển sang</div>
-                          <div className="mt-1 truncate font-medium text-slate-800">{ticket.rollover?.toTaskItemTitle ?? "Tuần sau"}</div>
-                        </div>
-                        <div className="text-sm text-slate-600 md:text-right">
-                          <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Thời điểm</div>
-                          <div className="mt-1 font-medium text-slate-800">{formatDateTime(ticket.rollover?.movedAt)}</div>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3 rounded-lg border border-dashed border-slate-200 px-4 py-10 text-sm text-slate-500">
-                    <Inbox className="h-5 w-5" />
-                    Chưa có item nào đã chuyển khỏi tuần này.
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ) : null}
         {isTechnicalIntakeOpen ? (
           <TechnicalIntakeModal
             onClose={() => setIsTechnicalIntakeOpen(false)}

@@ -239,6 +239,7 @@ export async function emitWatchMediaReadyForPublishEvent(
   input: Omit<WatchMediaPipelineEventPayloadInput, "sourceAction"> & {
     actorUserId?: string | null;
   },
+  options?: BusinessEventDispatchOptions,
 ) {
   return recordBusinessEvent(db, {
     eventKey: "watch.media.ready_for_publish",
@@ -252,7 +253,7 @@ export async function emitWatchMediaReadyForPublishEvent(
       sourceId: input.sourceId ?? null,
       note: input.note ?? null,
     }),
-  });
+  }, options);
 }
 
 export async function emitWatchMediaRecalledEvent(

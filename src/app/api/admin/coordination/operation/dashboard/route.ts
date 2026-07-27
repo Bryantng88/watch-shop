@@ -245,6 +245,7 @@ export async function GET(request: NextRequest) {
       mediaBoard: data.mediaBoard,
       mediaBoardItemCount: data.mediaBoard?.items.length ?? 0,
       flowItems: flowItemsOnly ? data.flowItems : undefined,
+      flowItemsPagination: flowItemsOnly ? data.flowItemsPagination : undefined,
     }, {
       headers: { "Cache-Control": "no-store, max-age=0" },
     });

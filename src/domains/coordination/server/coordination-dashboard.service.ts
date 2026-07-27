@@ -22,7 +22,11 @@ import {
 } from "@/domains/blueprint/server";
 import { getSpaceViewConfig } from "@/domains/space-management/server/space-view.config";
 import { parseWorkspaceDefinitionSnapshot } from "@/domains/blueprint/shared/workspace-capabilities";
-import { getQueueItemWorkflowState } from "@/domains/task/server/business-binding-workflow.service";
+import {
+  getQueueItemWorkflowState,
+  listAvailableManualTransitionsForQueueItem,
+  resolveBindingWorkflowDefinition,
+} from "@/domains/task/server/business-binding-workflow.service";
 import { workspaceFlowOrder } from "@/domains/task/shared/workspace-flow-policy";
 import type { WorkspaceKind } from "@/domains/space-management/server/space-view.types";
 import type {
@@ -40,6 +44,8 @@ import {
   isPaymentCollectionSettledStatus,
   listPaymentCollectionQueueItems,
   listTaskItemQueueItems,
+  mapProductPostTargets,
+  resolveMediaWorkProgressFromMetadata,
 } from "@/domains/task/server/business-binding.service";
 import type { CoordinationFlowListItemDTO } from "./coordination-dashboard.types";
 import {
@@ -1295,9 +1301,10 @@ async function loadMediaBoardLive(input: {
   page?: number;
   pageSize?: number;
 }) {
+  const taskIds = await resolveContinuousWeeklyTaskIds(input.db, input.taskId);
   const bindings = await input.db.taskExecution.findMany({
     where: {
-      taskId: input.taskId,
+      taskId: { in: taskIds },
       targetType: TaskExecutionTargetType.WATCH,
       actionType: { not: TaskExecutionActionType.CANCELLED },
       taskItemId: { not: null },
@@ -1330,26 +1337,47 @@ async function loadMediaBoardLive(input: {
   const pageSize = Math.min(100, Math.max(1, Math.trunc(input.pageSize ?? 20)));
   const stages = ["PHOTOGRAPHY", "MEDIA_PROCESSING", "PUBLISH", "DONE"] as const;
   const requestedStage = stages.find((stage) => stage === normalizeStatus(input.stage));
-  const stageForBinding = (binding: (typeof bindings)[number]) => {
+  const stageForBinding = (
+    binding: (typeof bindings)[number],
+    watch?: {
+      saleStage: unknown;
+      isContentDownloaded: boolean;
+      isImageDownloaded: boolean;
+    },
+  ) => {
     const workType = mediaStageFromWorkTypeKey(ticketWorkTypeKey(binding.taskItem?.note));
     const runtime = getQueueItemWorkflowState({ metadataJson: binding.metadataJson });
-    return workType === "photography"
-      ? "PHOTOGRAPHY" as const
-      : workType === "media-processing"
-        ? "MEDIA_PROCESSING" as const
-        : runtime?.currentState === "DONE" || runtime?.currentState === "CANCELLED"
-          ? "DONE" as const
+    const saleStage = normalizeStatus(watch?.saleStage);
+    const businessDone =
+      (watch?.isContentDownloaded && watch.isImageDownloaded) ||
+      ["DONE", "POSTED", "SOLD", "CONSIGNED_TO", "CANCELED", "CANCELLED"].includes(saleStage);
+    return businessDone ||
+        runtime?.currentState === "DONE" ||
+        runtime?.currentState === "CANCELLED"
+      ? "DONE" as const
+      : workType === "photography"
+        ? "PHOTOGRAPHY" as const
+        : workType === "media-processing"
+          ? "MEDIA_PROCESSING" as const
           : "PUBLISH" as const;
   };
   const watchOrderRows = await input.db.watch.findMany({
     where: { id: { in: watchIds } },
-    select: { id: true, updatedAt: true },
+    select: {
+      id: true,
+      productId: true,
+      updatedAt: true,
+      saleStage: true,
+      isContentDownloaded: true,
+      isImageDownloaded: true,
+    },
     orderBy: { updatedAt: "desc" },
   });
+  const watchStateById = new Map(watchOrderRows.map((watch) => [watch.id, watch]));
   const watchIdsByStage = new Map(stages.map((stage) => [stage, [] as string[]]));
   for (const watch of watchOrderRows) {
     const binding = bindingByWatchId.get(watch.id);
-    if (binding) watchIdsByStage.get(stageForBinding(binding))?.push(watch.id);
+    if (binding) watchIdsByStage.get(stageForBinding(binding, watch))?.push(watch.id);
   }
   const columnPagination = Object.fromEntries(stages.map((stage) => {
     const total = watchIdsByStage.get(stage)?.length ?? 0;
@@ -1377,8 +1405,22 @@ async function loadMediaBoardLive(input: {
       where: { id: { in: selectedWatchIds } },
       select: {
         id: true,
+        productId: true,
         updatedAt: true,
-        product: { select: { title: true, sku: true, primaryImageUrl: true } },
+        product: {
+          select: {
+            title: true,
+            sku: true,
+            primaryImageUrl: true,
+            postTargets: {
+              select: {
+                postTarget: {
+                  select: { id: true, name: true, platform: true },
+                },
+              },
+            },
+          },
+        },
       },
     }),
     input.db.taskItemActivity.findMany({
@@ -1427,17 +1469,27 @@ async function loadMediaBoardLive(input: {
     .map((watch): CoordinationMediaBoardItemDTO => {
     const binding = bindingByWatchId.get(watch.id)!;
     const runtime = getQueueItemWorkflowState({ metadataJson: binding.metadataJson });
-    const stage = stageForBinding(binding);
+    const workflowDefinition = resolveBindingWorkflowDefinition(binding.metadataJson);
+    const stage = stageForBinding(binding, watchStateById.get(watch.id));
     const actorLabel = userLabel(binding.createdByUser);
     return {
       id: watch.id,
+      productId: watch.productId,
       bindingId: binding.id,
       workspaceTaskItemId: binding.taskItemId!,
       title: watch.product?.title ?? "Watch",
       sku: watch.product?.sku ?? null,
       imageUrl: watch.product?.primaryImageUrl ?? null,
       stage,
+      workflowKey: runtime?.workflowKey ?? null,
       workflowState: runtime?.currentState ?? null,
+      mediaWorkProgress:
+        resolveMediaWorkProgressFromMetadata(asRecord(binding.metadataJson)),
+      postTargets: mapProductPostTargets(watch.product),
+      manualTransitions: listAvailableManualTransitionsForQueueItem({
+        workflowDefinition,
+        currentState: runtime?.currentState ?? null,
+      }),
       commentCount: commentCountByWatchId.get(watch.id) ?? 0,
       mentionedMeCount: mentionCountByWatchId.get(watch.id) ?? 0,
       unreadMentionCount: unreadMentionCountByWatchId.get(watch.id) ?? 0,
@@ -1460,6 +1512,14 @@ async function loadMediaBoard(input: {
   page?: number;
   pageSize?: number;
 }) {
+  const task = await input.db.task.findUnique({
+    where: { id: input.taskId },
+    select: { periodType: true },
+  });
+  if (task?.periodType === "WEEKLY") {
+    return loadMediaBoardLive(input);
+  }
+
   try {
     const projection = await loadMediaBoardFromProjection(input);
     if (projection) return projection;
@@ -1485,6 +1545,34 @@ function technicalIssueBoardStage(input: {
   if (flowStage === "PROCESSING" || input.isConfirmed) return "READY";
   if (flowStage === "INSPECT") return "INSPECT";
   return "INSPECT";
+}
+
+async function resolveContinuousWeeklyTaskIds(db: DB, taskId: string) {
+  const task = await db.task.findUnique({
+    where: { id: taskId },
+    select: {
+      id: true,
+      kind: true,
+      periodType: true,
+      periodKey: true,
+    },
+  });
+  if (!task) return [taskId];
+  if (task.periodType !== "WEEKLY" || !task.periodKey) return [task.id];
+  if (task.periodKey !== getWeekRange(new Date()).periodKey) return [task.id];
+
+  const tasks = await db.task.findMany({
+    where: {
+      kind: task.kind,
+      periodType: task.periodType,
+      periodKey: { lte: task.periodKey },
+      status: { not: TaskStatus.CANCELLED },
+    },
+    select: { id: true },
+    orderBy: { periodKey: "desc" },
+  });
+
+  return tasks.map((item) => item.id);
 }
 
 async function loadTechnicalIssueBoardFromProjection(input: {
@@ -1602,9 +1690,10 @@ async function loadTechnicalIssueBoardLive(input: {
   page?: number;
   pageSize?: number;
 }) {
+  const taskIds = await resolveContinuousWeeklyTaskIds(input.db, input.taskId);
   const bindings = await input.db.taskExecution.findMany({
     where: {
-      taskId: input.taskId,
+      taskId: { in: taskIds },
       targetType: TaskExecutionTargetType.TECHNICAL_ISSUE,
       taskItemId: { not: null },
     },
@@ -1676,7 +1765,7 @@ async function loadTechnicalIssueBoardLive(input: {
     }),
     input.db.taskExecution.findMany({
       where: {
-        taskId: input.taskId,
+        taskId: { in: taskIds },
         targetType: TaskExecutionTargetType.SERVICE_REQUEST,
         actionType: { not: TaskExecutionActionType.CANCELLED },
         taskItemId: { not: null },
@@ -2054,6 +2143,14 @@ async function loadTechnicalIssueBoard(input: {
   page?: number;
   pageSize?: number;
 }) {
+  const task = await input.db.task.findUnique({
+    where: { id: input.taskId },
+    select: { periodType: true },
+  });
+  if (task?.periodType === "WEEKLY") {
+    return loadTechnicalIssueBoardLive(input);
+  }
+
   try {
     const projection = await loadTechnicalIssueBoardFromProjection(input);
     if (projection) return projection;
@@ -2664,7 +2761,14 @@ export async function getCoordinationDashboard(input: {
   const isPaymentFlow = input.context === "PAYMENT" || activeFlow?.key === "payment-collection-core-flow";
   const isShipmentFlow = activeFlow?.key === "shipment-operation-core-flow";
   const isServiceRequestCaseMode = activeMode?.key === "sr-cases";
-  const requestedFlowStage = activeFlow?.stages.find(
+  const requestedFlowStage =
+    activeFlow?.key === "media-production-flow" &&
+    normalizeWorkTypeKey(input.flowStageKey ?? "") === "done"
+      ? activeFlow.stages.find((stage) =>
+          normalizeWorkTypeKey(stage.key).includes("publish") ||
+          normalizeWorkTypeKey(stage.workspaceKey).includes("publish")
+        ) ?? null
+      : activeFlow?.stages.find(
     (stage) =>
       normalizeWorkTypeKey(stage.key) === normalizeWorkTypeKey(input.flowStageKey ?? "") ||
       normalizeWorkTypeKey(stage.workspaceKey) === normalizeWorkTypeKey(input.flowStageKey ?? ""),
@@ -2700,11 +2804,33 @@ export async function getCoordinationDashboard(input: {
           query: input.flowQuery,
         })
       : null;
+  const requestedMediaBoardStage =
+    normalizeWorkTypeKey(input.flowStageKey ?? "") === "done"
+      ? "DONE"
+      : normalizeWorkTypeKey(input.flowStageKey ?? "").includes("publish")
+        ? "PUBLISH"
+        : normalizeWorkTypeKey(input.flowStageKey ?? "").includes("media")
+          ? "MEDIA_PROCESSING"
+          : "PHOTOGRAPHY";
+  const mediaFlowBoardPromise =
+    input.includeFlowItems !== false && isMediaFlow
+      ? loadMediaBoardLive({
+          db,
+          taskId: cycle.task.id,
+          stage: requestedMediaBoardStage,
+          page: flowPage,
+          pageSize: flowPageSize,
+        })
+      : null;
   const unfilteredFlowItemsTotalPromise =
     input.includeFlowItems === false || hasFlowFilters
       ? Promise.resolve(0)
       : dashboardStep("flowItemsTotal", () =>
-          isShipmentFlow && shipmentProjectionPromise
+          isMediaFlow && mediaFlowBoardPromise
+            ? mediaFlowBoardPromise.then(
+                (board) => board.columnPagination[requestedMediaBoardStage]?.total ?? 0,
+              )
+            : isShipmentFlow && shipmentProjectionPromise
             ? shipmentProjectionPromise.then((result) => result.total)
             : isPaymentFlow
             ? db.payment.count({
@@ -2879,7 +3005,59 @@ export async function getCoordinationDashboard(input: {
       : Promise.resolve(null),
     input.includeFlowItems !== false
       ? dashboardStep("flowItems", () =>
-          isShipmentFlow && shipmentProjectionPromise
+          isMediaFlow && mediaFlowBoardPromise
+            ? mediaFlowBoardPromise.then((board) => [
+                board.items.map((item): CoordinationFlowListItemDTO => ({
+                  id: item.bindingId,
+                  taskItemId: item.workspaceTaskItemId,
+                  targetType: TaskExecutionTargetType.WATCH,
+                  targetId: item.id,
+                  source: "AUTO",
+                  status: item.stage === "DONE" ? "DONE" : "IN_PROGRESS",
+                  preview: {
+                    title: item.title,
+                    ref: item.sku,
+                    status: item.workflowState,
+                    imageUrl: item.imageUrl,
+                    postTargets: item.postTargets,
+                  },
+                  latestActivityTitle: null,
+                  feedbackCount: 0,
+                  discussionCount: item.commentCount,
+                  activityCount: item.commentCount,
+                  lastUpdatedBy: item.lastUpdatedBy,
+                  workflowKey: item.workflowKey,
+                  currentWorkflowState: item.workflowState,
+                  currentWorkflowStateLabel: item.workflowState,
+                  isWorkflowDone: item.stage === "DONE",
+                  manualTransitions: item.manualTransitions,
+                  intakeNote: null,
+                  reshootNote: null,
+                  mediaWorkProgress: item.mediaWorkProgress,
+                  technicalIssue: null,
+                  payment: null,
+                  href: `/admin/watches/${item.productId}`,
+                  updatedAt: item.updatedAt ?? "",
+                  workspaceTitle:
+                    item.stage === "PHOTOGRAPHY"
+                      ? "Photography"
+                      : item.stage === "MEDIA_PROCESSING"
+                        ? "Media Processing"
+                        : item.stage === "PUBLISH"
+                          ? "Publish"
+                          : "Done",
+                  flowStageKey: normalizeWorkTypeKey(item.stage),
+                  flowStageOrder:
+                    item.stage === "PHOTOGRAPHY"
+                      ? 10
+                      : item.stage === "MEDIA_PROCESSING"
+                        ? 20
+                        : item.stage === "PUBLISH"
+                          ? 30
+                          : 40,
+                })),
+              ])
+            : isShipmentFlow && shipmentProjectionPromise
               ? shipmentProjectionPromise.then((result) => {
                  const workspace = flowLoadTaskItems[0] ?? null;
                  const metadata = workspaceRoleMetadataFromNote(workspace?.note);
@@ -3019,17 +3197,33 @@ export async function getCoordinationDashboard(input: {
             : Promise.all(flowLoadTaskItems.map(async (item) => {
                 const metadata = workspaceRoleMetadataFromNote(item.note);
                 const items = await listTaskItemQueueItems(db, item.id, {
-                  taskId: cycle.task.id,
-                  note: item.note,
-                  page: flowPage,
-                  pageSize: flowPageSize,
-                  paginate: !hasFlowFilters,
-                });
-                return items.map((queueItem) => ({
+                    taskId: cycle.task.id,
+                    note: item.note,
+                    page: flowPage,
+                    pageSize: flowPageSize,
+                    paginate: !hasFlowFilters,
+                  });
+                const mediaDoneRequested =
+                  isMediaFlow &&
+                  normalizeWorkTypeKey(input.flowStageKey ?? "") === "done";
+                const mediaPublishRequested =
+                  isMediaFlow &&
+                  normalizeWorkTypeKey(input.flowStageKey ?? "").includes("publish");
+                return items
+                  .filter((queueItem) =>
+                    mediaDoneRequested
+                      ? queueItem.isWorkflowDone || queueItem.status === "DONE"
+                      : mediaPublishRequested
+                        ? !queueItem.isWorkflowDone && queueItem.status !== "DONE"
+                        : true
+                  )
+                  .map((queueItem) => ({
                   ...queueItem,
                   workspaceTitle: item.title,
-                  flowStageKey: metadata.flowStageKey ?? ticketWorkTypeKey(item.note),
-                  flowStageOrder: metadata.flowStageOrder,
+                  flowStageKey: mediaDoneRequested
+                    ? "done"
+                    : metadata.flowStageKey ?? ticketWorkTypeKey(item.note),
+                  flowStageOrder: mediaDoneRequested ? 40 : metadata.flowStageOrder,
                 }));
               })),
         )

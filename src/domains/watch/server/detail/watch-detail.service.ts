@@ -216,19 +216,18 @@ export async function getWatchEditDetail(productId: string) {
 }
 
 export async function getWatchMediaEditDetail(productId: string) {
-  const row = await perfStep("watch-media-edit-detail", "watchRow", () =>
+  const rowPromise = perfStep("watch-media-edit-detail", "watchRow", () =>
     getAdminWatchMediaEditDetail(prisma, productId),
   );
+  const poolImagesPromise = perfStep("watch-media-edit-detail", "mediaPool", () =>
+    listSelectedWatchMedia({ productId }),
+  );
+  const [row, poolImages] = await Promise.all([rowPromise, poolImagesPromise]);
 
   if (!row) {
     throw new Error("KhÃ´ng tÃ¬m tháº¥y watch Ä‘á»ƒ edit media");
   }
 
-  const poolImages = await perfStep("watch-media-edit-detail", "mediaPool", () =>
-    listSelectedWatchMedia({
-      productId,
-    }),
-  );
   const mapped = mapWatchDetail({
     ...row,
     stockState: row.stockStage,

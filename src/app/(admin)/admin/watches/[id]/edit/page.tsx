@@ -5,6 +5,7 @@ import {
     getWatchEditDetail,
     getWatchMediaEditDetail,
 } from "@/domains/watch/server/detail/watch-detail.service";
+import { getWatchMediaWorkProgressFromQueueItem } from "@/domains/watch/server";
 import {
     listWatchEditOptions,
     listWatchMediaEditOptions,
@@ -115,6 +116,10 @@ export default async function WatchEditPage({
     const query = await searchParams;
     const isEmbeddedMediaMode =
         query.embedded === "1" && query.mode === "media";
+    const workspaceBindingId =
+        typeof query.workspaceBindingId === "string"
+            ? query.workspaceBindingId.trim()
+            : "";
 
     if (!isEmbeddedMediaMode) {
         redirect(`/admin/watches/${id}`);
@@ -124,7 +129,7 @@ export default async function WatchEditPage({
         requirePermission(PERMISSIONS.PRODUCT_UPDATE),
     );
 
-    const [detail, options] = isEmbeddedMediaMode
+    const [detail, options, mediaWorkDone] = isEmbeddedMediaMode
         ? await Promise.all([
             perfStep("watch-edit-page", "getWatchMediaEditDetail", () =>
                 getWatchMediaEditDetail(id),
@@ -132,6 +137,11 @@ export default async function WatchEditPage({
             perfStep("watch-edit-page", "listWatchMediaEditOptions", () =>
                 listWatchMediaEditOptions(),
             ),
+            workspaceBindingId
+                ? perfStep("watch-edit-page", "getMediaWorkProgress", () =>
+                    getWatchMediaWorkProgressFromQueueItem(workspaceBindingId),
+                )
+                : Promise.resolve(null),
         ])
         : await Promise.all([
             perfStep("watch-edit-page", "getWatchEditDetail", () =>
@@ -140,6 +150,7 @@ export default async function WatchEditPage({
             perfStep("watch-edit-page", "listWatchEditOptions", () =>
                 listWatchEditOptions(),
             ),
+            Promise.resolve(null),
         ]);
 
     if (!detail) notFound();
@@ -178,6 +189,7 @@ export default async function WatchEditPage({
                 canViewCost={canViewCost(user)}
                 canEditPrice={canEditPrice(user)}
                 canReviewContent={hasAdmin(user)}
+                initialMediaWorkDone={mediaWorkDone}
             />
         </div>
     );

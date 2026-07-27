@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { routeWatchesToMedia } from "@/domains/media/pipeline";
 import { ensureCoordinationCycle } from "@/domains/coordination/server";
@@ -8,6 +9,7 @@ import {
   markWatchMediaAssetAttachedFromQueueItem,
   markWatchMediaAssetAttachedFromWatch,
   requestWatchMediaReshootFromQueueItem,
+  saveWatchMediaWorkDraftFromQueueItem,
   saveWatchMediaWorkDraftFromWatch,
 } from "@/domains/watch/server";
 import { requirePermission } from "@/server/auth/requirePermission";
@@ -57,6 +59,7 @@ export async function markWatchMediaAssetAttachedAction(input: {
       bindingId: input.bindingId,
       actorUserId: user.id,
       note: input.note ?? null,
+      deferConsumers: (work) => after(work),
     },
     prisma,
   );
@@ -83,6 +86,7 @@ export async function markWatchMediaAssetAttachedFromWatchAction(input: {
       productId: input.productId,
       actorUserId: user.id,
       note: input.note ?? null,
+      deferConsumers: (work) => after(work),
     },
     prisma,
   );
@@ -97,6 +101,7 @@ export async function markWatchMediaAssetAttachedFromWatchAction(input: {
 
 export async function saveWatchMediaWorkDraftFromWatchAction(input: {
   productId: string;
+  bindingId?: string | null;
   parts: {
     profile?: boolean | null;
     content?: boolean | null;
@@ -106,15 +111,26 @@ export async function saveWatchMediaWorkDraftFromWatchAction(input: {
 }) {
   const user = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
 
-  const result = await saveWatchMediaWorkDraftFromWatch(
-    {
-      productId: input.productId,
-      actorUserId: user.id,
-      parts: input.parts,
-      note: input.note ?? null,
-    },
-    prisma,
-  );
+  const bindingId = String(input.bindingId ?? "").trim();
+  const result = bindingId
+    ? await saveWatchMediaWorkDraftFromQueueItem(
+        {
+          bindingId,
+          actorUserId: user.id,
+          parts: input.parts,
+          note: input.note ?? null,
+        },
+        prisma,
+      )
+    : await saveWatchMediaWorkDraftFromWatch(
+        {
+          productId: input.productId,
+          actorUserId: user.id,
+          parts: input.parts,
+          note: input.note ?? null,
+        },
+        prisma,
+      );
 
   revalidatePath("/admin/watches");
   revalidatePath("/admin/coordination/media");

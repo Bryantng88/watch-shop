@@ -7,7 +7,6 @@ import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
 import type { CoordinationContext } from "../server/coordination-cycle.types";
 import { normalizeWorkTypeKey } from "@/domains/task/server/work-type.service";
-import { rolloverPreviousCycleItems } from "../server/coordination-rollover.service";
 
 function clean(value: unknown) {
   return String(value ?? "").trim();
@@ -214,36 +213,6 @@ export async function updateSpaceSharingAction(input: {
   revalidatePath("/admin/task-items");
 
   return { ok: true, sharedUserIds: validIds };
-}
-
-export async function rolloverPreviousCycleItemsAction(input: {
-  taskId: string;
-  context: CoordinationContext;
-}) {
-  const user = await requirePermission("TASK_VIEW");
-
-  const result = await rolloverPreviousCycleItems(prisma, {
-    taskId: input.taskId,
-    context: input.context,
-    actorUserId: user.id,
-  });
-
-  revalidatePath(`/admin/coordination/${contextPath(input.context)}`);
-
-  return result;
-}
-
-export async function previewRolloverPreviousCycleItemsAction(input: {
-  taskId: string;
-  context: CoordinationContext;
-}) {
-  await requirePermission("TASK_VIEW");
-
-  return rolloverPreviousCycleItems(prisma, {
-    taskId: input.taskId,
-    context: input.context,
-    dryRun: true,
-  });
 }
 
 export async function updateTechnicalIssuePriorityAction(input: {

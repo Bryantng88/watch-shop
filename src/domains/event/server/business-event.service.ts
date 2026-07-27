@@ -1,4 +1,4 @@
-import { dbOrTx, type DB } from "@/server/db/client";
+import { dbOrTx, prisma, type DB } from "@/server/db/client";
 import { validateBusinessEventInput } from "@/domains/event/validator/business-event-validator";
 import { dispatchBusinessEvent } from "@/domains/event/dispatcher/business-event-dispatcher";
 import type {
@@ -154,9 +154,23 @@ export async function recordBusinessEvent(
 
     if (options?.deferConsumers) {
         options.deferConsumers(async () => {
+            // Deferred work runs after the mutation transaction has finished.
+            // Never retain its TransactionClient: Prisma correctly invalidates
+            // that client as soon as the transaction commits or rolls back.
+            const committedEventLog = await prisma.businessEventLog.findUnique({
+                where: { id: eventLog.id },
+            });
+            if (!committedEventLog) return;
+
             await dispatchBusinessEvent({
-                client,
-                context: consumerContext,
+                client: prisma,
+                context: {
+                    ...consumerContext,
+                    eventLog: committedEventLog,
+                },
+                // Projection already has a durable outbox delivery written in
+                // the same transaction as the event.
+                excludedConsumerKeys: ["projection"],
             });
             perfLog("business-event", `${eventKey}:deferred-total`, totalStartedAt);
         });

@@ -316,7 +316,9 @@ function resolveQueueSource(metadata: Record<string, unknown>): QueueItemSource 
   return cleanUpper(metadata.source) === "AUTO" ? "AUTO" : "MANUAL";
 }
 
-function mediaWorkProgress(metadata: Record<string, unknown>) {
+export function resolveMediaWorkProgressFromMetadata(
+  metadata: Record<string, unknown>,
+): QueueItemDTO["mediaWorkProgress"] {
   const progress = asRecord(metadata.mediaWorkProgress);
   const parts = asRecord(progress.parts);
   const profile = parts.profile === true;
@@ -380,7 +382,7 @@ type QueueBusinessPreview = {
   href?: string | null;
 };
 
-type ProductPostTargetsShape = {
+export type ProductPostTargetsShape = {
   postTargets?: Array<{
     postTarget?: {
       id?: string | null;
@@ -394,7 +396,9 @@ type ProductPostTargetsShape = {
   }> | null;
 } | null;
 
-function mapPostTargets(product: ProductPostTargetsShape): QueueItemDTO["preview"]["postTargets"] {
+export function mapProductPostTargets(
+  product: ProductPostTargetsShape,
+): QueueItemDTO["preview"]["postTargets"] {
   const relations = Array.isArray(product?.postTargets) ? product.postTargets : [];
   const byName = new Map<string, { id: string; name: string; platform?: string | null }>();
 
@@ -964,7 +968,7 @@ async function buildQueueBusinessPreviewMap(
       status: String(watch.saleStage || watch.product.status || ""),
       imageUrl,
       imageUrls: imageUrl ? [imageUrl] : [],
-      postTargets: mapPostTargets(watch.product),
+      postTargets: mapProductPostTargets(watch.product),
       mediaWorkProgress: watchPreviewMediaProgress(watch),
       href: watchPreviewHref(watch.productId),
     });
@@ -1603,7 +1607,9 @@ export async function listTaskItemQueueItems(
           binding.createdAt,
       );
       const progress =
-        mediaWorkProgress(metadata) ?? businessPreview?.mediaWorkProgress ?? null;
+        resolveMediaWorkProgressFromMetadata(metadata) ??
+        businessPreview?.mediaWorkProgress ??
+        null;
       const workflowStatus = resolveWorkflowQueueStatus({
         workflowRuntime,
         workflowDefinition,

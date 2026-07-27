@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Activity,
+  MoreHorizontal,
   Radio,
   X,
 } from "lucide-react";
@@ -870,7 +871,85 @@ export default function FlowItemListView({
                     </td>
                   ) : null}
                   {!showPaymentAmount ? <td className="px-4 py-3">
-                    {item.targetType === "SHIPMENT" && enabledActions.length ? (
+                    {item.targetType === "WATCH" && showPublishChannels && enabledActions.length ? (
+                      enabledActions.length === 1 ? (
+                        isOpenTargetTransition(enabledActions[0]) ? (
+                          <OpenTargetAction
+                            queueItem={item as TaskItemQueueItem}
+                            taskItemId={item.taskItemId}
+                            transition={enabledActions[0]}
+                            className="inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={isActionPending}
+                            onClick={() => runAction(item, enabledActions[0].actionKey)}
+                            title={enabledActions[0].manualActionLabel}
+                            className="h-8 max-w-40 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"
+                          >
+                            {pendingActionId === item.id
+                              ? "Äang xá»­ lÃ½..."
+                              : enabledActions[0].manualActionLabel || enabledActions[0].label}
+                          </button>
+                        )
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          {isOpenTargetTransition(enabledActions[0]) ? (
+                            <OpenTargetAction
+                              queueItem={item as TaskItemQueueItem}
+                              taskItemId={item.taskItemId}
+                              transition={enabledActions[0]}
+                              className="inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={isActionPending}
+                              onClick={() => runAction(item, enabledActions[0].actionKey)}
+                              title={enabledActions[0].manualActionLabel}
+                              className="h-8 max-w-36 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"
+                            >
+                              {pendingActionId === item.id
+                                ? "Äang xá»­ lÃ½..."
+                                : enabledActions[0].manualActionLabel || enabledActions[0].label}
+                            </button>
+                          )}
+                          <details className="relative">
+                            <summary
+                              title="ThÃªm thao tÃ¡c"
+                              aria-label="ThÃªm thao tÃ¡c"
+                              className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 [&::-webkit-details-marker]:hidden"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </summary>
+                            <div className="absolute right-0 z-30 mt-1 min-w-40 overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-xl">
+                              {enabledActions.slice(1).map((transition) =>
+                                isOpenTargetTransition(transition) ? (
+                                  <OpenTargetAction
+                                    key={transition.actionKey}
+                                    queueItem={item as TaskItemQueueItem}
+                                    taskItemId={item.taskItemId}
+                                    transition={transition}
+                                    className="flex h-8 w-full items-center rounded-lg px-2.5 text-left text-xs font-semibold text-slate-700 transition hover:bg-violet-50 hover:text-violet-700"
+                                  />
+                                ) : (
+                                  <button
+                                    key={transition.actionKey}
+                                    type="button"
+                                    disabled={isActionPending}
+                                    onClick={() => runAction(item, transition.actionKey)}
+                                    className="block h-8 w-full rounded-lg px-2.5 text-left text-xs font-semibold text-slate-700 transition hover:bg-violet-50 hover:text-violet-700 disabled:cursor-wait disabled:opacity-60"
+                                  >
+                                    {transition.manualActionLabel || transition.label}
+                                  </button>
+                                ),
+                              )}
+                            </div>
+                          </details>
+                        </div>
+                      )
+                    ) : item.targetType === "SHIPMENT" && enabledActions.length ? (
                       <div className="flex flex-wrap gap-2">
                         {enabledActions.map((transition) => {
                           const action = operationalActionFromMetadata(transition.metadata);
