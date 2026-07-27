@@ -2,25 +2,17 @@ import {
   type AudienceSegment,
   TaskExecutionActionType,
   TaskExecutionTargetType,
-  TaskPeriod,
 } from "@prisma/client";
 
 import { prisma, type DB } from "@/server/db/client";
-import { getWeekRange } from "./coordination-cycle.service";
 
-type WeeklyWatchFlow = {
+type WatchPeriodFlow = {
   total: number;
   ready: number;
   service: number;
   missingImage: number;
   inventoryValue: number;
 };
-
-function previousWeekDate(date: Date) {
-  const previous = new Date(date);
-  previous.setUTCDate(previous.getUTCDate() - 7);
-  return previous;
-}
 
 function noteValue(note: string | null, key: string) {
   const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -30,19 +22,16 @@ function noteValue(note: string | null, key: string) {
     .toLowerCase() ?? null;
 }
 
-function isContext(description: string | null, context: "MEDIA" | "TECHNICAL") {
-  return String(description ?? "").startsWith(`Coordination cycle ${context} `);
-}
-
-async function readWeek(
+async function readPeriod(
   db: DB,
-  periodKey: string,
+  startAt: Date,
+  endAt: Date,
   audienceSegment?: AudienceSegment,
-): Promise<WeeklyWatchFlow> {
+): Promise<WatchPeriodFlow> {
   const rows = await db.taskExecution.findMany({
     where: {
       actionType: { not: TaskExecutionActionType.CANCELLED },
-      task: { periodType: TaskPeriod.WEEKLY, periodKey },
+      createdAt: { gte: startAt, lt: endAt },
       targetType: {
         in: [
           TaskExecutionTargetType.WATCH,
@@ -53,7 +42,6 @@ async function readWeek(
     select: {
       targetType: true,
       targetId: true,
-      task: { select: { description: true } },
       taskItem: { select: { note: true } },
     },
   });
@@ -64,20 +52,14 @@ async function readWeek(
   const serviceRequestIds = new Set<string>();
 
   for (const row of rows) {
-    if (
-      row.targetType === TaskExecutionTargetType.WATCH &&
-      isContext(row.task.description, "MEDIA")
-    ) {
+    if (row.targetType === TaskExecutionTargetType.WATCH) {
       mediaWatchIds.add(row.targetId);
       const workTypeKey = noteValue(row.taskItem?.note ?? null, "workTypeKey");
       if (workTypeKey === "publish") publishWatchIds.add(row.targetId);
       if (workTypeKey === "photography") photographyWatchIds.add(row.targetId);
     }
 
-    if (
-      row.targetType === TaskExecutionTargetType.SERVICE_REQUEST &&
-      isContext(row.task.description, "TECHNICAL")
-    ) {
+    if (row.targetType === TaskExecutionTargetType.SERVICE_REQUEST) {
       serviceRequestIds.add(row.targetId);
     }
   }
@@ -124,25 +106,27 @@ async function readWeek(
   };
 }
 
-/** Read-only adapter over canonical weekly Coordination Spaces. */
-export async function getWeeklyWatchSpaceComparison(input?: {
+/** Date-filtered comparison independent from Coordination Space identity. */
+export async function getWatchPeriodComparison(input?: {
   db?: DB;
   date?: Date;
   audienceSegment?: AudienceSegment;
 }) {
   const db = input?.db ?? prisma;
-  const date = input?.date ?? new Date();
-  const currentWeek = getWeekRange(date);
-  const previousWeek = getWeekRange(previousWeekDate(currentWeek.startDate));
+  const currentEnd = input?.date ?? new Date();
+  const currentStart = new Date(currentEnd);
+  currentStart.setUTCDate(currentStart.getUTCDate() - 7);
+  const previousStart = new Date(currentStart);
+  previousStart.setUTCDate(previousStart.getUTCDate() - 7);
   const [current, previous] = await Promise.all([
-    readWeek(db, currentWeek.periodKey, input?.audienceSegment),
-    readWeek(db, previousWeek.periodKey, input?.audienceSegment),
+    readPeriod(db, currentStart, currentEnd, input?.audienceSegment),
+    readPeriod(db, previousStart, currentStart, input?.audienceSegment),
   ]);
 
   return {
     current,
     previous,
-    currentPeriodKey: currentWeek.periodKey,
-    previousPeriodKey: previousWeek.periodKey,
+    currentPeriodStart: currentStart.toISOString(),
+    previousPeriodStart: previousStart.toISOString(),
   };
 }

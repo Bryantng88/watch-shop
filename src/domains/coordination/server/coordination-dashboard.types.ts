@@ -167,7 +167,7 @@ export type CoordinationDashboardDTO = {
   spaceLabel: string;
   spacesLabel: string;
   title: string;
-  week: {
+  timeRange: {
     label: string;
     periodKey: string;
     startDate: string;

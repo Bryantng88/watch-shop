@@ -68,7 +68,7 @@ export function mapCoordinationDashboardShell(
 
   return {
     generatedAt: new Date().toISOString(),
-    periodLabel: `Tuần ${data.week.weekNumber}/${data.week.year}`,
+    periodLabel: `Tuần ${data.timeRange.weekNumber}/${data.timeRange.year}`,
     metrics: [
       {
         key: "workspaces",

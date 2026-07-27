@@ -8,7 +8,11 @@ import { parseWorkspaceDefinitionSnapshot } from "@/domains/blueprint/shared/wor
 import type { BusinessEventDispatchContext } from "@/domains/event/dispatcher/business-event-consumer.types";
 import type { CoordinationTechnicalIssueBoardItemDTO } from "@/domains/coordination/server/coordination-dashboard.types";
 import { dbOrTx, type DB } from "@/server/db/client";
-import { upsertProjectionRecord } from "./projection-record.repo";
+import { operationBoardDoneCutoff } from "./operation-board-retention.policy";
+import {
+  deleteProjectionRecords,
+  upsertProjectionRecord,
+} from "./projection-record.repo";
 import type {
   ProjectionBuildContext,
   ProjectionBuildResult,
@@ -385,6 +389,11 @@ async function rebuild(
   context: ProjectionBuildContext & { scope: ProjectionScope },
 ) {
   const targetId = clean(context.scope.targetId);
+  if (!targetId) {
+    await deleteProjectionRecords(db, {
+      projectionKey: TECHNICAL_ISSUE_BOARD_PROJECTION_KEY,
+    });
+  }
   const rows = await dbOrTx(db).technicalIssue.findMany({
     where: targetId ? { id: targetId } : undefined,
     select: { id: true },
@@ -417,21 +426,31 @@ export const technicalIssueBoardProjectionBuilder: ProjectionBuilder = {
 export async function listTechnicalIssueBoardProjection(
   db: DB,
   input: {
-    workspaceId: string;
+    workspaceId?: string | null;
     stage: TechnicalIssueBoardStage;
     page: number;
     pageSize: number;
+    doneRetentionDays?: number | null;
   },
 ) {
   const client = dbOrTx(db);
   const offset = (input.page - 1) * input.pageSize;
+  const doneCutoff = operationBoardDoneCutoff(input.doneRetentionDays);
   const [rows, totals] = await Promise.all([
     client.$queryRaw<Array<{ dataJson: unknown }>>(Prisma.sql`
       SELECT "dataJson"
       FROM "ProjectionRecord"
       WHERE "projectionKey" = ${TECHNICAL_ISSUE_BOARD_PROJECTION_KEY}
         AND "projectionVersion" = ${TECHNICAL_ISSUE_BOARD_PROJECTION_VERSION}
-        AND "workspaceId" = ${input.workspaceId}
+        AND (
+          "status" <> 'DONE'
+          OR ${doneCutoff}::timestamptz IS NULL
+          OR COALESCE("sortAt", "updatedAt") >= ${doneCutoff}
+        )
+        AND (
+          ${input.workspaceId ?? null}::text IS NULL
+          OR "workspaceId" = ${input.workspaceId ?? null}
+        )
         AND "status" = ${input.stage}
       ORDER BY "sortAt" DESC NULLS LAST, "updatedAt" DESC
       LIMIT ${input.pageSize}
@@ -442,7 +461,15 @@ export async function listTechnicalIssueBoardProjection(
       FROM "ProjectionRecord"
       WHERE "projectionKey" = ${TECHNICAL_ISSUE_BOARD_PROJECTION_KEY}
         AND "projectionVersion" = ${TECHNICAL_ISSUE_BOARD_PROJECTION_VERSION}
-        AND "workspaceId" = ${input.workspaceId}
+        AND (
+          "status" <> 'DONE'
+          OR ${doneCutoff}::timestamptz IS NULL
+          OR COALESCE("sortAt", "updatedAt") >= ${doneCutoff}
+        )
+        AND (
+          ${input.workspaceId ?? null}::text IS NULL
+          OR "workspaceId" = ${input.workspaceId ?? null}
+        )
         AND "status" = ${input.stage}
     `),
   ]);
@@ -455,14 +482,15 @@ export async function listTechnicalIssueBoardProjection(
 export async function listTechnicalIssueBoardWorkspaceProjection(
   db: DB,
   input: {
-    workspaceId: string;
     requestedStage?: TechnicalIssueBoardStage | null;
     page: number;
     pageSize: number;
+    doneRetentionDays?: number | null;
   },
 ) {
   const client = dbOrTx(db);
   const offset = (input.page - 1) * input.pageSize;
+  const doneCutoff = operationBoardDoneCutoff(input.doneRetentionDays);
   const rows = await client.$queryRaw<Array<{
     kind: "ROW" | "TOTAL";
     status: TechnicalIssueBoardStage;
@@ -480,7 +508,11 @@ export async function listTechnicalIssueBoardWorkspaceProjection(
       FROM "ProjectionRecord"
       WHERE "projectionKey" = ${TECHNICAL_ISSUE_BOARD_PROJECTION_KEY}
         AND "projectionVersion" = ${TECHNICAL_ISSUE_BOARD_PROJECTION_VERSION}
-        AND "workspaceId" = ${input.workspaceId}
+        AND (
+          "status" <> 'DONE'
+          OR ${doneCutoff}::timestamptz IS NULL
+          OR COALESCE("sortAt", "updatedAt") >= ${doneCutoff}
+        )
     ),
     totals AS (
       SELECT "status", COUNT(*) AS "total"

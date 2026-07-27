@@ -134,7 +134,7 @@ function derivePublishRuntimeState(metadata: Record<string, unknown>) {
   if (bool(metadata.readyForPublish)) return "READY_TO_POST";
 
   if (bool(metadata.contentApproved) && bool(metadata.imageApproved)) {
-    return "DONE";
+    return "READY_TO_POST";
   }
 
   if (bool(metadata.contentRejected)) return "CONTENT_FEEDBACK";
@@ -180,7 +180,9 @@ function updatePublishRuntimeMetadataForEvent(
     next.lastPublishAssetKind = clean(eventMetadata.publishAssetKind) || null;
     next.isContentDownloaded = bool(eventMetadata.isContentDownloaded);
     next.isImageDownloaded = bool(eventMetadata.isImageDownloaded);
-    next.publishAssetsCompleted = bool(eventMetadata.isPosted);
+    // Downloading/copying publish assets is an intermediate state. Publishing
+    // is completed only by the explicit `mark-posted` manual transition.
+    next.publishAssetsCompleted = false;
   }
 
   if (eventKey === "watch.content.submitted") {
@@ -244,6 +246,25 @@ function normalizePublishRecalledManualMetadata(metadata: Record<string, unknown
 
 function normalizeRuntimeState(runtime: WorkflowRuntimeState): WorkflowRuntimeState {
   const metadata = asRecord(runtime.metadata);
+
+  if (
+    isPublishWorkflow(runtime.workflowKey) &&
+    runtime.currentState === "DONE" &&
+    clean(metadata.lastTriggerValue) === "watch.publish.assets.downloaded" &&
+    clean(metadata.lastManualActionKey) !== "mark-posted"
+  ) {
+    return {
+      ...runtime,
+      currentState: "READY_TO_POST",
+      completedAt: null,
+      metadata: {
+        ...metadata,
+        publishAssetsCompleted: false,
+        normalizedFromState: "DONE",
+        normalizedReason: "asset_download_is_not_publish_completion",
+      } as Prisma.JsonObject,
+    };
+  }
 
   if (
     isPublishWorkflow(runtime.workflowKey) &&

@@ -32,6 +32,15 @@ function workflowStatusPresentation(
     };
   }
 
+  if (normalized === "ASSETS_DOWNLOADED") {
+    return {
+      label: "Đã tải content/image",
+      detail: "Đã tải content/image",
+      tone: "blue",
+      icon: "success",
+    };
+  }
+
   if (["RETURNED", "FEEDBACK", "NEEDS_REWORK", "REJECTED"].includes(normalized)) {
     return {
       label: "Cần xử lý lại",

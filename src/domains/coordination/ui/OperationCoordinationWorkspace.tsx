@@ -263,7 +263,7 @@ function emptyStateText(value: string, modeKey?: string) {
     return "Chưa có Workspace trong Không gian kỹ thuật này.";
   }
   if (cleanValue.toLowerCase().includes("media production flow")) {
-    return "Chưa có Workspace trong Luồng sản xuất Media tuần này.";
+    return "Chưa có Workspace phù hợp trong Luồng sản xuất Media.";
   }
 
   return cleanValue;
@@ -632,7 +632,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
     (searchParams.get("view") ?? data.viewConfig.defaultModeKey) === "technical-issue-flow"
       ? "TI_BOARD"
       : (searchParams.get("view") ?? data.viewConfig.defaultModeKey) === "media-production-flow"
-        ? "MEDIA_BOARD"
+        ? "LIST"
       : "LIST",
   );
   const [isTechnicalIntakeOpen, setIsTechnicalIntakeOpen] = useState(false);
@@ -649,6 +649,10 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
   const [flowListStageFilter, setFlowListStageFilter] = useState(
     () => searchParams.get("flowStage") ?? "",
   );
+  const [doneRange, setDoneRange] = useState<"14D" | "30D" | "ALL">(() => {
+    const value = searchParams.get("doneRange");
+    return value === "30D" || value === "ALL" ? value : "14D";
+  });
   const [technicalIssuePriorityFilter, setTechnicalIssuePriorityFilter] =
     useState<TechnicalIssuePriorityFilter>("ALL");
   const [technicalIssueCommentFilter, setTechnicalIssueCommentFilter] =
@@ -742,7 +746,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
       setWorkTicketView(nextModeKey === "technical-issue-flow"
         ? "TI_BOARD"
         : nextModeKey === "media-production-flow"
-          ? "MEDIA_BOARD"
+          ? "LIST"
           : "LIST");
       const params = new URLSearchParams(searchParams.toString());
       params.set("context", data.context);
@@ -921,6 +925,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
         flowStatus: filterWorkStatus,
         flowPaymentStatus: filterPayment,
         flowSort: "UPDATED_DESC",
+        doneRange,
       });
       const response = await fetch(
         `${dashboardEndpoint}${separator}includeFlowItems=1${stageParam}&${flowParams.toString()}`,
@@ -956,6 +961,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
     filterPayment,
     filterQuery,
     filterWorkStatus,
+    doneRange,
   ]);
   useEffect(() => () => {
     flowItemsAbortController.current?.abort();
@@ -968,6 +974,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
       filterQuery.trim(),
       filterWorkStatus,
       filterPayment,
+      doneRange,
     ].join("|");
     if (lastFlowFilterRequestKey.current === null) {
       lastFlowFilterRequestKey.current = requestKey;
@@ -988,6 +995,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
     filterPayment,
     filterQuery,
     filterWorkStatus,
+    doneRange,
     loadFlowItems,
     workTicketView,
   ]);
@@ -1043,11 +1051,16 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
     setIsBoardRefreshing(true);
     try {
       const response = await fetch(
-        `/api/admin/coordination/operation/boards/technical-issue?taskId=${encodeURIComponent(data.cycle.id)}&pageSize=10`,
+        `/api/admin/coordination/operation/boards/technical-issue?taskId=${encodeURIComponent(data.cycle.id)}&pageSize=10&doneRange=${doneRange}`,
         { cache: "no-store" },
       );
       const result = await response.json().catch(() => null);
-      if (!response.ok) throw new Error("Không thể tải lại board.");
+      if (!response.ok) {
+        const serverError = String(
+          (result as { error?: unknown } | null)?.error ?? "",
+        ).trim();
+        throw new Error(serverError || "Không thể tải lại board.");
+      }
       handleDashboardResult(result);
       setBoardRefreshedAt(new Date());
     } catch (refreshError) {
@@ -1055,7 +1068,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
     } finally {
       setIsBoardRefreshing(false);
     }
-  }, [data.cycle.id, handleDashboardResult, isBoardRefreshing]);
+  }, [data.cycle.id, doneRange, handleDashboardResult, isBoardRefreshing]);
   useEffect(() => {
     if (
       activeViewMode?.key !== "technical-issue-flow" ||
@@ -1083,7 +1096,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
       const pageSize = kind === "technical" ? 10 : 20;
       const boardKey = kind === "technical" ? "technical-issue" : "media-operation";
       const response = await fetch(
-        `/api/admin/coordination/operation/boards/${boardKey}?taskId=${encodeURIComponent(data.cycle.id)}&stage=${encodeURIComponent(stage)}&page=${page}&pageSize=${pageSize}`,
+        `/api/admin/coordination/operation/boards/${boardKey}?taskId=${encodeURIComponent(data.cycle.id)}&stage=${encodeURIComponent(stage)}&page=${page}&pageSize=${pageSize}&doneRange=${doneRange}`,
         { cache: "no-store" },
       );
       const result = await response.json().catch(() => null);
@@ -1133,7 +1146,66 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
     } finally {
       setLoadingBoardColumn(null);
     }
-  }, [data.cycle.id, loadingBoardColumn]);
+  }, [data.cycle.id, doneRange, loadingBoardColumn]);
+  const changeDoneRange = useCallback(async (value: "14D" | "30D" | "ALL") => {
+    setDoneRange(value);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("doneRange", value);
+    window.history.replaceState(
+      null,
+      "",
+      `/admin/coordination/${contextPath(data.context)}?${params.toString()}`,
+    );
+    if (workTicketView === "LIST") return;
+
+    const kind = workTicketView === "TI_BOARD" ? "technical" : "media";
+    const boardKey = kind === "technical" ? "technical-issue" : "media-operation";
+    const pageSize = kind === "technical" ? 10 : 20;
+    setLoadingBoardColumn(`${kind}:DONE`);
+    try {
+      const response = await fetch(
+        `/api/admin/coordination/operation/boards/${boardKey}?taskId=${encodeURIComponent(data.cycle.id)}&stage=DONE&page=1&pageSize=${pageSize}&doneRange=${value}`,
+        { cache: "no-store" },
+      );
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error("Không thể tải lịch sử Done.");
+      const source = coordinationDashboardResponseSource(result) as {
+        board?: CoordinationDashboardDTO["technicalIssueBoard"] |
+          CoordinationDashboardDTO["mediaBoard"];
+      };
+      if (kind === "technical") {
+        const board = source.board as CoordinationDashboardDTO["technicalIssueBoard"];
+        if (board) setAsyncTechnicalIssueBoard((current) => current ? {
+          ...current,
+          items: [
+            ...current.items.filter((item) => item.stage !== "DONE"),
+            ...board.items,
+          ],
+          columnPagination: {
+            ...current.columnPagination,
+            DONE: board.columnPagination.DONE,
+          },
+        } : board);
+      } else {
+        const board = source.board as CoordinationDashboardDTO["mediaBoard"];
+        if (board) setAsyncMediaBoard((current) => current ? {
+          ...current,
+          items: [
+            ...current.items.filter((item) => item.stage !== "DONE"),
+            ...board.items,
+          ],
+          columnPagination: {
+            ...current.columnPagination,
+            DONE: board.columnPagination.DONE,
+          },
+        } : board);
+      }
+    } catch (rangeError) {
+      setError(rangeError instanceof Error ? rangeError.message : "Không thể tải lịch sử Done.");
+    } finally {
+      setLoadingBoardColumn(null);
+    }
+  }, [data.context, data.cycle.id, searchParams, workTicketView]);
   const handleTechnicalIntakeCompleted = useCallback(async (technicalIssueId: string | null) => {
     setActiveViewModeKey("technical-issue-flow");
     setWorkTicketView("TI_BOARD");
@@ -1431,11 +1503,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
       headerVariant="compact"
       headerIcon={<Workflow className="h-5 w-5" />}
       meta={
-        <>
-          <span className="font-medium text-slate-600">Vận hành</span>
-          <span aria-hidden="true" className="h-1 w-1 rounded-full bg-slate-300" />
-          <span>{data.week.label}</span>
-        </>
+        <span className="font-medium text-slate-600">Vận hành</span>
       }
       actions={
         <DashboardCustomizeButton
@@ -1459,7 +1527,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
            cashFlowPeriods={isPaymentCollectionFlow}
            onResult={handleDashboardResult}
          />
-        <section className="min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
+        <section className="min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-300/80 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.055)]">
           <div className="border-b border-slate-200 px-5 py-4">
             {activeViewMode ? (
               <div className="rounded-xl border border-sky-100 bg-gradient-to-b from-sky-50/80 to-[#f3f8ff] p-4 text-xs text-slate-700 shadow-[0_8px_24px_rgba(30,43,79,0.04)]">
@@ -1624,7 +1692,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
               <SpaceFilterBar
                 frameless
                 filterBadgeCount={unreadMentionBadgeCount}
-                weekValue={data.week.periodKey}
+                weekValue={data.timeRange.periodKey}
                 weekOptions={data.filters.weekOptions}
                 dateValue={data.filters.selectedDate}
                 searchValue={filterQuery}
@@ -1653,6 +1721,22 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
                     ],
                     onChange: setFilterWorkStatus,
                   },
+                  ...(workTicketView === "LIST" &&
+                    normalizeStageKey(activeFlowListStage).includes("done") &&
+                    (isMediaFlowMode || activeViewMode?.key === "technical-issue-flow")
+                    ? [{
+                        key: "done-range",
+                        label: "Lịch sử Done",
+                        value: doneRange,
+                        options: [
+                          { label: "14 ngày gần đây", value: "14D" },
+                          { label: "30 ngày gần đây", value: "30D" },
+                          { label: "Tất cả lịch sử", value: "ALL" },
+                        ],
+                        onChange: (value: string) =>
+                          void changeDoneRange(value as "14D" | "30D" | "ALL"),
+                      }]
+                    : []),
                   ...(isTechnicalIssueBoardView ? [{
                     key: "ti-priority",
                     label: "Độ ưu tiên",
@@ -2005,6 +2089,8 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
               focusedIssueId={focusedTechnicalIssueId}
               columnPagination={asyncTechnicalIssueBoard?.columnPagination ?? {}}
               loadingColumn={loadingBoardColumn}
+              doneRange={doneRange}
+              onDoneRangeChange={changeDoneRange}
               onLoadMore={(stage, page) =>
                 void loadMoreBoardColumn("technical", stage, page)
               }
@@ -2014,6 +2100,8 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
               items={visibleMediaBoardItems}
               columnPagination={asyncMediaBoard?.columnPagination ?? {}}
               loadingColumn={loadingBoardColumn}
+              doneRange={doneRange}
+              onDoneRangeChange={changeDoneRange}
               onLoadMore={(stage, page) =>
                 void loadMoreBoardColumn("media", stage, page)
               }
@@ -2481,12 +2569,16 @@ function MediaProductionBoardView({
   loadingColumn,
   onLoadMore,
   onChanged,
+  doneRange,
+  onDoneRangeChange,
 }: {
   items: MediaBoardItem[];
   columnPagination: NonNullable<CoordinationDashboardDTO["mediaBoard"]>["columnPagination"];
   loadingColumn: string | null;
   onLoadMore: (stage: MediaBoardStage, page: number) => void;
   onChanged: (items: MediaBoardItem[]) => void;
+  doneRange: "14D" | "30D" | "ALL";
+  onDoneRangeChange: (value: "14D" | "30D" | "ALL") => void;
 }) {
   const router = useRouter();
   const previewState = useBusinessEntityPreview();
@@ -2498,7 +2590,7 @@ function MediaProductionBoardView({
     { key: "PHOTOGRAPHY", label: "Chụp ảnh", hint: "Watch đang chờ hoặc thực hiện chụp ảnh." },
     { key: "MEDIA_PROCESSING", label: "Xử lý media", hint: "Gắn media, kiểm tra và duyệt nội dung/hình ảnh." },
     { key: "PUBLISH", label: "Đăng bài", hint: "Media đã duyệt, chờ đăng lên các kênh." },
-    { key: "DONE", label: "Done", hint: "Watch đã hoàn tất đăng bài." },
+    { key: "DONE", label: "Done", hint: "Watch hoàn tất hoặc cập nhật trong 14 ngày gần đây." },
   ];
   const stageOrder: MediaBoardStage[] = ["PHOTOGRAPHY", "MEDIA_PROCESSING", "PUBLISH", "DONE"];
 
@@ -2533,7 +2625,7 @@ function MediaProductionBoardView({
   }
 
   return (
-    <div className="min-w-0 max-w-full border-t border-slate-100 bg-slate-50/70 px-3 py-4 sm:px-4">
+    <div className="min-w-0 max-w-full border-t border-slate-200 bg-slate-50/80 px-3 py-4 sm:px-4">
       {error ? <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">{error}</div> : null}
       <div className="max-w-full overflow-x-auto overscroll-x-contain pb-2">
         <DndContext
@@ -2557,6 +2649,8 @@ function MediaProductionBoardView({
                 loading={loadingColumn === `media:${column.key}`}
                 onLoadMore={onLoadMore}
                 pendingId={pendingId}
+                doneRange={doneRange}
+                onDoneRangeChange={onDoneRangeChange}
                 onPreview={(item) => previewState.openPreview({
                   type: "WATCH",
                   id: item.id,
@@ -2594,6 +2688,8 @@ function MediaBoardColumn({
   onLoadMore,
   pendingId,
   onPreview,
+  doneRange,
+  onDoneRangeChange,
 }: {
   column: { key: MediaBoardStage; label: string; hint: string };
   items: MediaBoardItem[];
@@ -2602,6 +2698,8 @@ function MediaBoardColumn({
   onLoadMore: (stage: MediaBoardStage, page: number) => void;
   pendingId: string | null;
   onPreview: (item: MediaBoardItem) => void;
+  doneRange: "14D" | "30D" | "ALL";
+  onDoneRangeChange: (value: "14D" | "30D" | "ALL") => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.key });
   const appearance = mediaStageAppearance(column.key);
@@ -2614,7 +2712,23 @@ function MediaBoardColumn({
             <span className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white shadow-sm", appearance.iconColor)}><StageIcon className="h-4.5 w-4.5" /></span>
             <div><div className="text-sm font-bold text-slate-950">{column.label}</div><div className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-slate-500">{column.hint}</div></div>
           </div>
-          <span className="grid h-7 min-w-7 place-items-center rounded-full bg-white px-2 text-xs font-bold text-slate-700 shadow-sm">{pagination?.total ?? items.length}</span>
+          <div className="flex shrink-0 items-center gap-2">
+            {column.key === "DONE" ? (
+              <select
+                aria-label="Lịch sử Done"
+                className="h-7 rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-600 shadow-sm"
+                value={doneRange}
+                onChange={(event) =>
+                  onDoneRangeChange(event.target.value as "14D" | "30D" | "ALL")
+                }
+              >
+                <option value="14D">14 ngày</option>
+                <option value="30D">30 ngày</option>
+                <option value="ALL">Tất cả</option>
+              </select>
+            ) : null}
+            <span className="grid h-7 min-w-7 place-items-center rounded-full bg-white px-2 text-xs font-bold text-slate-700 shadow-sm">{pagination?.total ?? items.length}</span>
+          </div>
         </div>
       </header>
       <div className="grid content-start gap-4 p-3.5">
@@ -2704,6 +2818,8 @@ function TechnicalIssueBoardView({
   columnPagination,
   loadingColumn,
   onLoadMore,
+  doneRange,
+  onDoneRangeChange,
 }: {
   items: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["items"];
   actions: OperationalBlueprintAction[];
@@ -2715,6 +2831,8 @@ function TechnicalIssueBoardView({
   columnPagination: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["columnPagination"];
   loadingColumn: string | null;
   onLoadMore: (stage: TechnicalIssueBoardStage, page: number) => void;
+  doneRange: "14D" | "30D" | "ALL";
+  onDoneRangeChange: (value: "14D" | "30D" | "ALL") => void;
 }) {
   const router = useRouter();
   const progress = useAppProgress();
@@ -2746,7 +2864,7 @@ function TechnicalIssueBoardView({
     { key: "INSPECT", label: "Kiểm tra", hint: "TI cần xác nhận hoặc phân loại." },
     { key: "READY", label: "Chờ xử lý", hint: "TI đã phân loại, chờ bắt đầu xử lý." },
     { key: "PROCESSING", label: "Xử lý", hint: "TI đang được kỹ thuật/vendor xử lý." },
-    { key: "DONE", label: "Done", hint: "TI đã xong kỹ thuật hoặc theo dõi." },
+    { key: "DONE", label: "Done", hint: "TI hoàn tất hoặc cập nhật trong 14 ngày gần đây." },
   ];
   const visibleItems = useMemo(() => {
     const filtered =
@@ -3011,7 +3129,7 @@ function TechnicalIssueBoardView({
   }
 
   return (
-    <div className="min-w-0 max-w-full border-t border-slate-100 bg-slate-50/70 px-3 py-4 sm:px-4">
+    <div className="min-w-0 max-w-full border-t border-slate-200 bg-slate-50/80 px-3 py-4 sm:px-4">
       <div className="max-w-full overflow-x-auto overscroll-x-contain pb-2">
         <DndContext
           sensors={sensors}
@@ -3029,8 +3147,10 @@ function TechnicalIssueBoardView({
                   column={column}
                   items={columnItems}
                   pagination={columnPagination[column.key]}
-                  loading={loadingColumn === `technical:${column.key}`}
-                  onLoadMore={onLoadMore}
+                loading={loadingColumn === `technical:${column.key}`}
+                onLoadMore={onLoadMore}
+                doneRange={doneRange}
+                onDoneRangeChange={onDoneRangeChange}
                   isOver={overStage === column.key}
                   onTogglePriority={togglePriority}
                   priorityPendingIssueId={isPriorityPending ? priorityIssueId : null}
@@ -3396,6 +3516,8 @@ function TechnicalIssueBoardColumn({
   priorityPendingIssueId,
   focusedIssueId,
   onPreview,
+  doneRange,
+  onDoneRangeChange,
 }: {
   column: { key: TechnicalIssueBoardStage; label: string; hint: string };
   items: TechnicalIssueBoardItem[];
@@ -3407,13 +3529,15 @@ function TechnicalIssueBoardColumn({
   priorityPendingIssueId: string | null;
   focusedIssueId: string | null;
   onPreview: (item: TechnicalIssueBoardItem) => void;
+  doneRange: "14D" | "30D" | "ALL";
+  onDoneRangeChange: (value: "14D" | "30D" | "ALL") => void;
 }) {
   const { setNodeRef } = useDroppable({ id: column.key });
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        "flex min-h-[480px] min-w-0 flex-col rounded-xl border border-slate-200 bg-white shadow-sm transition",
+        "flex min-h-[480px] min-w-0 flex-col rounded-xl border border-slate-300/80 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.07)] transition",
         isOver && "border-violet-300 ring-2 ring-violet-100",
       )}
     >
@@ -3428,9 +3552,25 @@ function TechnicalIssueBoardColumn({
             <div className="mt-0.5 line-clamp-2 text-xs text-slate-500">{column.hint}</div>
           </div>
         </div>
-        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-          {pagination?.total ?? items.length}
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          {column.key === "DONE" ? (
+            <select
+              aria-label="Lịch sử Done"
+              className="h-7 rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-600 shadow-sm"
+              value={doneRange}
+              onChange={(event) =>
+                onDoneRangeChange(event.target.value as "14D" | "30D" | "ALL")
+              }
+            >
+              <option value="14D">14 ngày</option>
+              <option value="30D">30 ngày</option>
+              <option value="ALL">Tất cả</option>
+            </select>
+          ) : null}
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+            {pagination?.total ?? items.length}
+          </span>
+        </div>
         </div>
       </div>
       <div className="grid flex-1 content-start gap-3 p-3 sm:p-4">

@@ -13,6 +13,11 @@ import { prisma } from "@/server/db/client";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+function doneRetentionDays(value: string | null) {
+  if (value === "ALL") return null;
+  return value === "30D" ? 30 : 14;
+}
+
 function money(value: number) {
   return `${Math.round(value).toLocaleString("vi-VN")}đ`;
 }
@@ -95,6 +100,9 @@ export async function GET(request: NextRequest) {
     const flowStatus = request.nextUrl.searchParams.get("flowStatus");
     const flowPaymentStatus = request.nextUrl.searchParams.get("flowPaymentStatus");
     const flowSort = request.nextUrl.searchParams.get("flowSort");
+    const doneDays = doneRetentionDays(
+      request.nextUrl.searchParams.get("doneRange"),
+    );
     const includeBoard = request.nextUrl.searchParams.get("includeBoard") === "1";
     const boardOnly = !flowItemsOnly && includeBoard;
     const boardStage = request.nextUrl.searchParams.get("boardStage");
@@ -141,6 +149,7 @@ export async function GET(request: NextRequest) {
         stage: boardStage,
         page: boardPage,
         pageSize: boardPageSize,
+        doneRetentionDays: doneDays,
       });
       return NextResponse.json({
         ok: true,
@@ -172,6 +181,7 @@ export async function GET(request: NextRequest) {
       flowStatus,
       flowPaymentStatus,
       flowSort,
+      doneRetentionDays: doneDays,
       includeManagementDetails: false,
       includeWorkspaceSummaries: !flowItemsOnly && !boardOnly,
     });
@@ -218,7 +228,7 @@ export async function GET(request: NextRequest) {
       : "WEEK";
     const cashFlow = data.paymentCashFlow?.[period];
     const dashboard: BusinessListDashboardData = {
-      periodLabel: `Tuần ${data.week.weekNumber}/${data.week.year}`,
+      periodLabel: `Tuần ${data.timeRange.weekNumber}/${data.timeRange.year}`,
       metrics: [
         { key: "workspaces", label: "Workspace", value: data.workTickets.length, helper: `${activeWorkspaces}`, helperSuffix: "đang mở", helperTone: activeWorkspaces ? "positive" : "neutral" },
         { key: "open-items", label: "Item mở", value: openItems, helper: `${totals.done}`, helperSuffix: "đã xong", helperTone: totals.done ? "positive" : "neutral" },

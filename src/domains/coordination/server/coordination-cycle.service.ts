@@ -1,4 +1,4 @@
-import { TaskKind, TaskPeriod, TaskSource, TaskStatus } from "@prisma/client";
+import { TaskKind, TaskSource, TaskStatus } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
 import {
   listWorkTypes,
@@ -12,7 +12,7 @@ import {
 import type { WorkTypeDefinition } from "@/domains/task/server/work-type.types";
 import type {
   CoordinationContext,
-  CoordinationWeekRange,
+  CoordinationReferenceRange,
   EnsureCoordinationCycleInput,
   EnsureCoordinationCycleResult,
   ResolveCurrentCoordinationCycleInput,
@@ -232,7 +232,7 @@ function shouldAutoCreateWorkTicket(workType: WorkTypeDefinition) {
   );
 }
 
-export function getWeekRange(date = new Date()): CoordinationWeekRange {
+export function getWeekRange(date = new Date()): CoordinationReferenceRange {
   const current = startOfUtcDate(date);
   const day = current.getUTCDay() || 7;
   const startDate = new Date(current);
@@ -263,53 +263,86 @@ export function getWeekRange(date = new Date()): CoordinationWeekRange {
 
 export function getCoordinationCycleTitle(
   context: CoordinationContext,
-  weekNumber: number,
 ) {
-  if (context === "OPERATION") return `Vận hành tuần ${weekNumber}`;
-  if (context === "SALES") return `Bán hàng tuần ${weekNumber}`;
-  if (context === "TECHNICAL") return `Kỹ thuật tuần ${weekNumber}`;
+  if (context === "OPERATION") return "Vận hành";
+  if (context === "SALES") return "Bán hàng";
+  if (context === "TECHNICAL") return "Kỹ thuật";
 
-  return `Khác tuần ${weekNumber}`;
+  return "Khác";
 }
 
 function getCoordinationCycleRuntimeTitle(
   context: CoordinationContext,
-  weekNumber: number,
 ) {
-  if (context === "OPERATION") return `Vận hành tuần ${weekNumber}`;
-  if (context === "SALES") return `Bán hàng tuần ${weekNumber}`;
-  if (context === "TECHNICAL") return `Kỹ thuật tuần ${weekNumber}`;
-  if (context === "MEDIA") return `Media tuần ${weekNumber}`;
-  if (context === "PAYMENT") return `Thanh toán tuần ${weekNumber}`;
+  if (context === "OPERATION") return "Vận hành";
+  if (context === "SALES") return "Bán hàng";
+  if (context === "TECHNICAL") return "Kỹ thuật";
+  if (context === "MEDIA") return "Media";
+  if (context === "PAYMENT") return "Thanh toán";
 
-  return `Tổng quát tuần ${weekNumber}`;
+  return "Tổng quát";
 }
 
 async function findCoordinationCycleTask(
   db: DB,
   input: {
     context: CoordinationContext;
-    week: CoordinationWeekRange;
   },
 ) {
-  const title = getCoordinationCycleRuntimeTitle(
-    input.context,
-    input.week.weekNumber,
-  );
+  const client = dbOrTx(db);
+  const title = getCoordinationCycleRuntimeTitle(input.context);
+  const legacyDescriptionPrefix = `Coordination cycle ${input.context} `;
 
-  return dbOrTx(db).task.findFirst({
+  const stableTask = await client.task.findFirst({
     where: {
-      title,
       kind: contextToTaskKind(input.context),
-      periodType: TaskPeriod.WEEKLY,
-      periodKey: input.week.periodKey,
       status: { not: TaskStatus.CANCELLED },
+      title,
+      periodType: null,
+      periodKey: null,
     },
     select: COORDINATION_CYCLE_TASK_SELECT,
-    orderBy: [
-      { source: "asc" },
-      { createdAt: "asc" },
-    ],
+    orderBy: { createdAt: "desc" },
+  });
+  if (stableTask) return stableTask;
+
+  return client.task.findFirst({
+    where: {
+      kind: contextToTaskKind(input.context),
+      source: TaskSource.SYSTEM,
+      status: { not: TaskStatus.CANCELLED },
+      description: { startsWith: legacyDescriptionPrefix },
+    },
+    select: COORDINATION_CYCLE_TASK_SELECT,
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+async function archiveDuplicateCoordinationSpaces(
+  db: DB,
+  input: {
+    context: CoordinationContext;
+    canonicalTaskId: string;
+  },
+) {
+  const title = getCoordinationCycleRuntimeTitle(input.context);
+  const legacyDescriptionPrefix = `Coordination cycle ${input.context} `;
+  const now = new Date();
+  return dbOrTx(db).task.updateMany({
+    where: {
+      id: { not: input.canonicalTaskId },
+      kind: contextToTaskKind(input.context),
+      source: TaskSource.SYSTEM,
+      status: { not: TaskStatus.CANCELLED },
+      OR: [
+        { title, description: `Coordination Space ${input.context}` },
+        { description: { startsWith: legacyDescriptionPrefix } },
+      ],
+    },
+    data: {
+      status: TaskStatus.CANCELLED,
+      cancelledAt: now,
+    },
   });
 }
 
@@ -343,14 +376,13 @@ export async function resolveCoordinationCycle(
   const week = getWeekRange(input.date);
   const task = await findCoordinationCycleTask(db, {
     context: input.context,
-    week,
   });
 
   if (!task) return null;
 
   return {
     task,
-    week,
+    referenceRange: week,
     context: input.context,
   };
 }
@@ -647,14 +679,38 @@ export async function ensureCoordinationCycle(
 
   const existing = await findCoordinationCycleTask(client, {
     context: input.context,
-    week,
   });
 
   if (existing) {
+    const stableTitle = getCoordinationCycleRuntimeTitle(input.context);
+    const stableDescription = `Coordination Space ${input.context}`;
+    const isAlreadyStable = existing.title === stableTitle &&
+        existing.description === stableDescription &&
+        existing.periodType === null &&
+        existing.periodKey === null;
+    const stableTask = isAlreadyStable
+      ? existing
+      : await client.task.update({
+          where: { id: existing.id },
+          data: {
+            title: stableTitle,
+            description: stableDescription,
+            periodType: null,
+            periodKey: null,
+          },
+          select: COORDINATION_CYCLE_TASK_SELECT,
+        });
+    if (!isAlreadyStable) {
+      await archiveDuplicateCoordinationSpaces(client, {
+        context: input.context,
+        canonicalTaskId: stableTask.id,
+      });
+    }
+
     if (input.provisionWorkTickets === false) {
       return {
-        task: existing,
-        week,
+        task: stableTask,
+        referenceRange: week,
         context: input.context,
         created: false,
         workTickets: [],
@@ -663,12 +719,12 @@ export async function ensureCoordinationCycle(
     }
 
     const workTickets = input.context === "OPERATION"
-      ? await ensureUnifiedOperationWorkTickets(client, existing.id)
-      : await ensureWorkTickets(client, { taskId: existing.id, context: input.context });
+      ? await ensureUnifiedOperationWorkTickets(client, stableTask.id)
+      : await ensureWorkTickets(client, { taskId: stableTask.id, context: input.context });
 
     return {
-      task: existing,
-      week,
+      task: stableTask,
+      referenceRange: week,
       context: input.context,
       created: false,
       workTickets: workTickets.items,
@@ -676,22 +732,23 @@ export async function ensureCoordinationCycle(
     };
   }
 
-  const title = getCoordinationCycleRuntimeTitle(
-    input.context,
-    week.weekNumber,
-  );
+  const title = getCoordinationCycleRuntimeTitle(input.context);
 
   const task = await client.task.create({
     data: {
       title,
-      description: `Coordination cycle ${input.context} ${week.periodKey}`,
+      description: `Coordination Space ${input.context}`,
       source: TaskSource.SYSTEM,
       kind: contextToTaskKind(input.context),
-      periodType: TaskPeriod.WEEKLY,
-      periodKey: week.periodKey,
+      periodType: null,
+      periodKey: null,
       priority: "MEDIUM",
     },
     select: COORDINATION_CYCLE_TASK_SELECT,
+  });
+  await archiveDuplicateCoordinationSpaces(client, {
+    context: input.context,
+    canonicalTaskId: task.id,
   });
 
   const workTickets = input.context === "OPERATION"
@@ -700,7 +757,7 @@ export async function ensureCoordinationCycle(
 
   return {
     task,
-    week,
+    referenceRange: week,
     context: input.context,
     created: true,
     workTickets: workTickets.items,

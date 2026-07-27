@@ -26,7 +26,7 @@ export type {
   CoordinationContext,
   CoordinationCycleTask,
   CoordinationWorkTicket,
-  CoordinationWeekRange,
+  CoordinationReferenceRange,
   EnsureCoordinationCycleInput,
   EnsureCoordinationCycleResult,
   ResolveCurrentCoordinationCycleInput,
@@ -42,7 +42,7 @@ export {
   resolveCoordinationCycle,
   resolveCurrentCoordinationCycle,
 } from "./coordination-cycle.service";
-export { getWeeklyWatchSpaceComparison } from "./coordination-weekly-read.service";
+export { getWatchPeriodComparison } from "./coordination-period-read.service";
 
 export type {
   WorkTypeDefinition as CoordinationWorkTypeDefinition,

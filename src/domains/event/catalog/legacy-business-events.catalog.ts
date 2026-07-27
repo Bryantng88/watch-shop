@@ -92,7 +92,7 @@ export const LEGACY_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
     targetType: "SERVICE_REQUEST",
     group: "Service",
     knownConsumers: ["timeline", "coordination", "projection"],
-    autoBindingScope: "CURRENT_ACTIVE_WEEKLY_SPACE:TECHNICAL:service-operation",
+    autoBindingScope: "CURRENT_ACTIVE_SPACE:TECHNICAL:service-operation",
   }),
   defineBusinessEventContract({
     key: "service_request.status_changed",
@@ -113,7 +113,7 @@ export const LEGACY_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
     targetType: "TECHNICAL_ISSUE",
     group: "Service",
     knownConsumers: ["notification", "timeline", "coordination", "projection"],
-    autoBindingScope: "CURRENT_ACTIVE_WEEKLY_SPACE:TECHNICAL:service-operation",
+    autoBindingScope: "CURRENT_ACTIVE_SPACE:TECHNICAL:service-operation",
   }),
   defineBusinessEventContract({
     key: "technical_issue.confirmed",

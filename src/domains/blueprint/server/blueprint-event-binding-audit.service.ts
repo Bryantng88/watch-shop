@@ -64,7 +64,7 @@ function auditItemFromBinding(input: {
 function auditItemsFromLegacyRoutes(): BlueprintEventBindingAuditItem[] {
   return listCoordinationRoutes().map((route) => {
     const metadata = asRecord(route.metadata);
-    const scopeType = clean(metadata.scopeType) || "CURRENT_ACTIVE_WEEKLY_SPACE";
+    const scopeType = clean(metadata.scopeType) || "CURRENT_ACTIVE_SPACE";
     const scopeContext = clean(metadata.scopeContext) || clean(route.coordinationType).toUpperCase();
     const conflictKey = [
       normalizeEventKey(route.eventKey),

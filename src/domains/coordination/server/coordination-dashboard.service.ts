@@ -1218,16 +1218,17 @@ async function loadMediaBoardFromProjection(input: {
   stage?: string | null;
   page?: number;
   pageSize?: number;
+  doneRetentionDays?: number | null;
 }) {
   const page = Math.max(1, Math.trunc(input.page ?? 1));
   const pageSize = Math.min(100, Math.max(1, Math.trunc(input.pageSize ?? 20)));
   const stages: MediaOperationBoardStage[] = ["PHOTOGRAPHY", "MEDIA_PROCESSING", "PUBLISH", "DONE"];
   const requestedStage = stages.find((stage) => stage === normalizeStatus(input.stage));
   const projection = await queryMediaOperationBoardProjection(input.db, {
-    workspaceId: input.taskId,
     requestedStage,
     page,
     pageSize,
+    doneRetentionDays: input.doneRetentionDays,
   });
   const total = stages.reduce((sum, stage) => sum + (projection.totals.get(stage) ?? 0), 0);
   if (!total) return null;
@@ -1301,10 +1302,8 @@ async function loadMediaBoardLive(input: {
   page?: number;
   pageSize?: number;
 }) {
-  const taskIds = await resolveContinuousWeeklyTaskIds(input.db, input.taskId);
   const bindings = await input.db.taskExecution.findMany({
     where: {
-      taskId: { in: taskIds },
       targetType: TaskExecutionTargetType.WATCH,
       actionType: { not: TaskExecutionActionType.CANCELLED },
       taskItemId: { not: null },
@@ -1349,17 +1348,22 @@ async function loadMediaBoardLive(input: {
     const runtime = getQueueItemWorkflowState({ metadataJson: binding.metadataJson });
     const saleStage = normalizeStatus(watch?.saleStage);
     const businessDone =
-      (watch?.isContentDownloaded && watch.isImageDownloaded) ||
       ["DONE", "POSTED", "SOLD", "CONSIGNED_TO", "CANCELED", "CANCELLED"].includes(saleStage);
+    if (workType === "photography") {
+      return runtime?.currentState === "DONE"
+        ? "MEDIA_PROCESSING" as const
+        : "PHOTOGRAPHY" as const;
+    }
+    if (workType === "media-processing") {
+      return runtime?.currentState === "DONE"
+        ? "PUBLISH" as const
+        : "MEDIA_PROCESSING" as const;
+    }
     return businessDone ||
         runtime?.currentState === "DONE" ||
         runtime?.currentState === "CANCELLED"
       ? "DONE" as const
-      : workType === "photography"
-        ? "PHOTOGRAPHY" as const
-        : workType === "media-processing"
-          ? "MEDIA_PROCESSING" as const
-          : "PUBLISH" as const;
+      : "PUBLISH" as const;
   };
   const watchOrderRows = await input.db.watch.findMany({
     where: { id: { in: watchIds } },
@@ -1471,6 +1475,25 @@ async function loadMediaBoardLive(input: {
     const runtime = getQueueItemWorkflowState({ metadataJson: binding.metadataJson });
     const workflowDefinition = resolveBindingWorkflowDefinition(binding.metadataJson);
     const stage = stageForBinding(binding, watchStateById.get(watch.id));
+    const bindingStage = mediaStageFromWorkTypeKey(
+      ticketWorkTypeKey(binding.taskItem?.note),
+    );
+    const transitionedToNextStage =
+      Boolean(bindingStage) &&
+      normalizeStatus(bindingStage) !== normalizeStatus(stage);
+    const publishState =
+      watchStateById.get(watch.id)?.isContentDownloaded ||
+      watchStateById.get(watch.id)?.isImageDownloaded
+        ? "ASSETS_DOWNLOADED"
+        : "NEW";
+    const visibleWorkflowState =
+      stage === "DONE"
+        ? "DONE"
+        : stage === "PUBLISH"
+          ? publishState
+          : transitionedToNextStage
+            ? "NEW"
+            : runtime?.currentState ?? null;
     const actorLabel = userLabel(binding.createdByUser);
     return {
       id: watch.id,
@@ -1481,15 +1504,18 @@ async function loadMediaBoardLive(input: {
       sku: watch.product?.sku ?? null,
       imageUrl: watch.product?.primaryImageUrl ?? null,
       stage,
-      workflowKey: runtime?.workflowKey ?? null,
-      workflowState: runtime?.currentState ?? null,
-      mediaWorkProgress:
-        resolveMediaWorkProgressFromMetadata(asRecord(binding.metadataJson)),
+      workflowKey: transitionedToNextStage ? null : runtime?.workflowKey ?? null,
+      workflowState: visibleWorkflowState,
+      mediaWorkProgress: transitionedToNextStage || stage === "PUBLISH"
+        ? null
+        : resolveMediaWorkProgressFromMetadata(asRecord(binding.metadataJson)),
       postTargets: mapProductPostTargets(watch.product),
-      manualTransitions: listAvailableManualTransitionsForQueueItem({
-        workflowDefinition,
-        currentState: runtime?.currentState ?? null,
-      }),
+      manualTransitions: transitionedToNextStage
+        ? []
+        : listAvailableManualTransitionsForQueueItem({
+            workflowDefinition,
+            currentState: runtime?.currentState ?? null,
+          }),
       commentCount: commentCountByWatchId.get(watch.id) ?? 0,
       mentionedMeCount: mentionCountByWatchId.get(watch.id) ?? 0,
       unreadMentionCount: unreadMentionCountByWatchId.get(watch.id) ?? 0,
@@ -1511,15 +1537,8 @@ async function loadMediaBoard(input: {
   stage?: string | null;
   page?: number;
   pageSize?: number;
+  doneRetentionDays?: number | null;
 }) {
-  const task = await input.db.task.findUnique({
-    where: { id: input.taskId },
-    select: { periodType: true },
-  });
-  if (task?.periodType === "WEEKLY") {
-    return loadMediaBoardLive(input);
-  }
-
   try {
     const projection = await loadMediaBoardFromProjection(input);
     if (projection) return projection;
@@ -1547,34 +1566,6 @@ function technicalIssueBoardStage(input: {
   return "INSPECT";
 }
 
-async function resolveContinuousWeeklyTaskIds(db: DB, taskId: string) {
-  const task = await db.task.findUnique({
-    where: { id: taskId },
-    select: {
-      id: true,
-      kind: true,
-      periodType: true,
-      periodKey: true,
-    },
-  });
-  if (!task) return [taskId];
-  if (task.periodType !== "WEEKLY" || !task.periodKey) return [task.id];
-  if (task.periodKey !== getWeekRange(new Date()).periodKey) return [task.id];
-
-  const tasks = await db.task.findMany({
-    where: {
-      kind: task.kind,
-      periodType: task.periodType,
-      periodKey: { lte: task.periodKey },
-      status: { not: TaskStatus.CANCELLED },
-    },
-    select: { id: true },
-    orderBy: { periodKey: "desc" },
-  });
-
-  return tasks.map((item) => item.id);
-}
-
 async function loadTechnicalIssueBoardFromProjection(input: {
   db: DB;
   taskId: string;
@@ -1582,16 +1573,18 @@ async function loadTechnicalIssueBoardFromProjection(input: {
   stage?: string | null;
   page?: number;
   pageSize?: number;
+  includeOptions?: boolean;
+  doneRetentionDays?: number | null;
 }) {
   const page = Math.max(1, Math.trunc(input.page ?? 1));
   const pageSize = Math.min(100, Math.max(1, Math.trunc(input.pageSize ?? 10)));
   const stages: TechnicalIssueBoardStage[] = ["INSPECT", "READY", "PROCESSING", "DONE"];
   const requestedStage = stages.find((stage) => stage === normalizeStatus(input.stage));
   const projectionResult = await listTechnicalIssueBoardWorkspaceProjection(input.db, {
-    workspaceId: input.taskId,
     requestedStage,
     page,
     pageSize,
+    doneRetentionDays: input.doneRetentionDays,
   });
   const projectionTotal = stages.reduce(
     (sum, stage) => sum + (projectionResult.totals.get(stage) ?? 0),
@@ -1650,18 +1643,20 @@ async function loadTechnicalIssueBoardFromProjection(input: {
     unreadByIssueId.set(issueId, (unreadByIssueId.get(issueId) ?? 0) + unread);
   }
 
-  const [vendorOptions, technicalDetailCatalogOptions] = await Promise.all([
-    input.db.vendor.findMany({
-      where: { isActive: true },
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-    input.db.technicalDetailCatalog.findMany({
-      where: { isActive: true },
-      select: { id: true, area: true, code: true, name: true },
-      orderBy: [{ area: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
-    }),
-  ]);
+  const [vendorOptions, technicalDetailCatalogOptions] = input.includeOptions === false
+    ? [[], []]
+    : await Promise.all([
+        input.db.vendor.findMany({
+          where: { isActive: true },
+          select: { id: true, name: true },
+          orderBy: { name: "asc" },
+        }),
+        input.db.technicalDetailCatalog.findMany({
+          where: { isActive: true },
+          select: { id: true, area: true, code: true, name: true },
+          orderBy: [{ area: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
+        }),
+      ]);
   const items: CoordinationTechnicalIssueBoardItemDTO[] = selectedRows.map((row) => ({
     ...row,
     mentionedMeCount: mentionedByIssueId.get(row.id) ?? 0,
@@ -1690,10 +1685,8 @@ async function loadTechnicalIssueBoardLive(input: {
   page?: number;
   pageSize?: number;
 }) {
-  const taskIds = await resolveContinuousWeeklyTaskIds(input.db, input.taskId);
   const bindings = await input.db.taskExecution.findMany({
     where: {
-      taskId: { in: taskIds },
       targetType: TaskExecutionTargetType.TECHNICAL_ISSUE,
       taskItemId: { not: null },
     },
@@ -1765,7 +1758,6 @@ async function loadTechnicalIssueBoardLive(input: {
     }),
     input.db.taskExecution.findMany({
       where: {
-        taskId: { in: taskIds },
         targetType: TaskExecutionTargetType.SERVICE_REQUEST,
         actionType: { not: TaskExecutionActionType.CANCELLED },
         taskItemId: { not: null },
@@ -2142,15 +2134,9 @@ async function loadTechnicalIssueBoard(input: {
   stage?: string | null;
   page?: number;
   pageSize?: number;
+  includeOptions?: boolean;
+  doneRetentionDays?: number | null;
 }) {
-  const task = await input.db.task.findUnique({
-    where: { id: input.taskId },
-    select: { periodType: true },
-  });
-  if (task?.periodType === "WEEKLY") {
-    return loadTechnicalIssueBoardLive(input);
-  }
-
   try {
     const projection = await loadTechnicalIssueBoardFromProjection(input);
     if (projection) return projection;
@@ -2172,6 +2158,7 @@ export async function getCoordinationBoard(input: {
   stage?: string | null;
   page?: number;
   pageSize?: number;
+  doneRetentionDays?: number | null;
 }) {
   const db = input.db ?? prisma;
   const taskId = String(input.taskId ?? "").trim();
@@ -2184,13 +2171,18 @@ export async function getCoordinationBoard(input: {
     stage: input.stage,
     page: input.page,
     pageSize: input.pageSize,
+    doneRetentionDays: input.doneRetentionDays,
   };
 
   if (input.boardKey === "technical-issue") {
+    await dashboardStep("technicalBoardProjectionReady", () =>
+      ensureProjectionReady(db, "technical-issue-board"));
     return dashboardStep("technicalBoardQuery", () =>
       loadTechnicalIssueBoard(query));
   }
   if (input.boardKey === "media-operation") {
+    await dashboardStep("mediaBoardProjectionReady", () =>
+      ensureProjectionReady(db, "media-operation-board"));
     return dashboardStep("mediaBoardQuery", () =>
       loadMediaBoard(query));
   }
@@ -2590,6 +2582,7 @@ export async function getCoordinationDashboard(input: {
   flowStatus?: string | null;
   flowPaymentStatus?: string | null;
   flowSort?: string | null;
+  doneRetentionDays?: number | null;
   includeManagementDetails?: boolean;
   includeWorkspaceSummaries?: boolean;
   auth?: unknown;
@@ -2795,6 +2788,14 @@ export async function getCoordinationDashboard(input: {
     await dashboardStep("shipmentProjectionReady", () =>
       ensureProjectionReady(db, "shipment-operation-queue"));
   }
+  if (input.includeFlowItems !== false && isMediaFlow) {
+    await dashboardStep("mediaFlowProjectionReady", () =>
+      ensureProjectionReady(db, "media-operation-board"));
+  }
+  if (input.includeFlowItems !== false && isTechnicalFlow) {
+    await dashboardStep("technicalFlowProjectionReady", () =>
+      ensureProjectionReady(db, "technical-issue-board"));
+  }
   const shipmentProjectionPromise =
     input.includeFlowItems !== false && isShipmentFlow
       ? listShipmentOperationQueueProjection(db, {
@@ -2814,12 +2815,35 @@ export async function getCoordinationDashboard(input: {
           : "PHOTOGRAPHY";
   const mediaFlowBoardPromise =
     input.includeFlowItems !== false && isMediaFlow
-      ? loadMediaBoardLive({
+      ? loadMediaBoard({
           db,
           taskId: cycle.task.id,
+          viewerUserId: getAuthUserId(input.auth),
           stage: requestedMediaBoardStage,
           page: flowPage,
           pageSize: flowPageSize,
+          doneRetentionDays: input.doneRetentionDays,
+        })
+      : null;
+  const requestedTechnicalBoardStage: TechnicalIssueBoardStage =
+    normalizeWorkTypeKey(input.flowStageKey ?? "").includes("done")
+      ? "DONE"
+      : normalizeWorkTypeKey(input.flowStageKey ?? "").includes("processing")
+        ? "PROCESSING"
+        : normalizeWorkTypeKey(input.flowStageKey ?? "").includes("ready")
+          ? "READY"
+          : "INSPECT";
+  const technicalFlowBoardPromise =
+    input.includeFlowItems !== false && isTechnicalFlow
+      ? loadTechnicalIssueBoard({
+          db,
+          taskId: cycle.task.id,
+          viewerUserId: getAuthUserId(input.auth),
+          stage: requestedTechnicalBoardStage,
+          page: flowPage,
+          pageSize: flowPageSize,
+          includeOptions: false,
+          doneRetentionDays: input.doneRetentionDays,
         })
       : null;
   const unfilteredFlowItemsTotalPromise =
@@ -2832,6 +2856,10 @@ export async function getCoordinationDashboard(input: {
               )
             : isShipmentFlow && shipmentProjectionPromise
             ? shipmentProjectionPromise.then((result) => result.total)
+            : isTechnicalFlow && technicalFlowBoardPromise
+            ? technicalFlowBoardPromise.then(
+                (board) => board.columnPagination[requestedTechnicalBoardStage]?.total ?? 0,
+              )
             : isPaymentFlow
             ? db.payment.count({
                 where: {
@@ -2876,7 +2904,9 @@ export async function getCoordinationDashboard(input: {
       _count: { _all: true },
         }))
       : Promise.resolve([]),
-    input.includeWorkspaceSummaries !== false && isMediaFlow
+    input.includeWorkspaceSummaries !== false &&
+      input.includeDashboardDetails !== false &&
+      isMediaFlow
       ? dashboardStep("mediaQueue", () => loadMediaQueueSummaryByTaskItem({
           db,
           taskId: cycle.task.id,
@@ -2884,7 +2914,9 @@ export async function getCoordinationDashboard(input: {
           terminalStatesByTargetType: viewConfig.carryover.terminalStatesByTargetType,
         }))
       : Promise.resolve(new Map<string, QueueSummaryDTO>()),
-    input.includeWorkspaceSummaries !== false && isTechnicalFlow
+    input.includeWorkspaceSummaries !== false &&
+      input.includeDashboardDetails !== false &&
+      isTechnicalFlow
       ? dashboardStep("technicalQueue", () => loadTechnicalQueueCountByTaskItem({
           db,
           taskId: cycle.task.id,
@@ -2898,23 +2930,28 @@ export async function getCoordinationDashboard(input: {
           taskItems,
         }))
       : Promise.resolve(new Map<string, number>()),
-    input.includeWorkspaceSummaries !== false
+    input.includeWorkspaceSummaries !== false &&
+      input.includeDashboardDetails !== false
       ? dashboardStep("activitySummary", () => loadActivitySummaryByTaskItem(db, taskItemIds))
       : Promise.resolve({ feedbackCounts: new Map<string, number>(), lastActivities: new Map() }),
-    input.includeWorkspaceSummaries !== false
+    input.includeWorkspaceSummaries !== false &&
+      input.includeDashboardDetails !== false
       ? dashboardStep("rollover", () => loadRolloverOutByTaskItem(db, {
           taskId: cycle.task.id,
           taskItemIds,
         }))
       : Promise.resolve(new Map()),
-    input.includeWorkspaceSummaries !== false
+    input.includeWorkspaceSummaries !== false &&
+      input.includeDashboardDetails !== false
       ? dashboardStep("identityPreviews", () => loadWorkspaceIdentityPreviewMap({
           db,
           taskId: cycle.task.id,
           taskItems: taskItems.filter((item) => identityPreviewTaskItemIdSet.has(item.id)),
         }))
       : Promise.resolve(new Map()),
-    input.includeWorkspaceSummaries !== false && (isTechnicalFlow || isServiceRequestCaseMode)
+    input.includeWorkspaceSummaries !== false &&
+      input.includeDashboardDetails !== false &&
+      (isTechnicalFlow || isServiceRequestCaseMode)
       ? dashboardStep("technicalRollup", () => loadTechnicalServiceRequestRollupByTaskItem({
           db,
           taskId: cycle.task.id,
@@ -2929,6 +2966,7 @@ export async function getCoordinationDashboard(input: {
           stage: input.boardStage,
           page: input.boardPage ?? undefined,
           pageSize: input.boardPageSize ?? undefined,
+          doneRetentionDays: input.doneRetentionDays,
         }))
       : Promise.resolve(null),
     input.includeManagementDetails !== false
@@ -3001,6 +3039,7 @@ export async function getCoordinationDashboard(input: {
           stage: input.boardStage,
           page: input.boardPage ?? undefined,
           pageSize: input.boardPageSize ?? undefined,
+          doneRetentionDays: input.doneRetentionDays,
         }))
       : Promise.resolve(null),
     input.includeFlowItems !== false
@@ -3151,6 +3190,71 @@ export async function getCoordinationDashboard(input: {
                   })),
                 ];
               })
+            : isTechnicalFlow && technicalFlowBoardPromise
+            ? technicalFlowBoardPromise.then((board) => [
+                board.items.map((item): CoordinationFlowListItemDTO => ({
+                  id: `technical-issue:${item.id}`,
+                  taskItemId: item.workspaceTaskItemId ?? "",
+                  targetType: TaskExecutionTargetType.TECHNICAL_ISSUE,
+                  targetId: item.id,
+                  source: "AUTO",
+                  status: item.stage === "DONE"
+                    ? "DONE"
+                    : item.stage === "INSPECT"
+                      ? "WAITING"
+                      : "IN_PROGRESS",
+                  preview: {
+                    title: item.summary,
+                    ref: item.serviceRequest.refNo,
+                    status: item.executionStatus,
+                    imageUrl: item.serviceRequest.imageUrl,
+                    imageUrls: item.serviceRequest.imageUrl ? [item.serviceRequest.imageUrl] : [],
+                    postTargets: [],
+                  },
+                  latestActivityTitle: null,
+                  feedbackCount: 0,
+                  discussionCount: item.commentCount,
+                  activityCount: item.commentCount,
+                  lastUpdatedBy: item.lastUpdatedBy,
+                  workflowKey: null,
+                  currentWorkflowState: item.executionStatus,
+                  currentWorkflowStateLabel: item.executionStatus,
+                  isWorkflowDone: item.stage === "DONE",
+                  manualTransitions: [],
+                  intakeNote: item.note,
+                  reshootNote: null,
+                  mediaWorkProgress: null,
+                  technicalIssue: {
+                    id: item.id,
+                    summary: item.summary,
+                    note: item.note,
+                    area: item.area,
+                    actionMode: item.actionMode,
+                    executionStatus: item.executionStatus,
+                    vendorId: item.vendorId,
+                    vendorNameSnap: item.vendorName,
+                    estimatedCost: item.estimatedCost,
+                    actualCost: item.actualCost,
+                    technicalDetailCatalogId: item.technicalDetailCatalogId,
+                    technicalDetailCatalog: null,
+                    supplyCatalog: null,
+                    mechanicalPartCatalog: null,
+                  },
+                  payment: null,
+                  href: null,
+                  updatedAt: item.updatedAt ?? "",
+                  workspaceTitle: item.stage,
+                  flowStageKey: normalizeWorkTypeKey(item.stage),
+                  flowStageOrder:
+                    item.stage === "INSPECT"
+                      ? 10
+                      : item.stage === "READY"
+                        ? 20
+                        : item.stage === "PROCESSING"
+                          ? 30
+                          : 40,
+                })),
+              ])
             : isPaymentFlow
             ? (() => {
                 const reviewItem = taskItems.find(
@@ -3449,13 +3553,13 @@ export async function getCoordinationDashboard(input: {
     spaceLabel: SPACE_LABELS[input.context].spaceLabel,
     spacesLabel: SPACE_LABELS[input.context].spacesLabel,
     title: cycle.task.title,
-    week: {
-      label: cycle.week.weekLabel,
-      periodKey: cycle.week.periodKey,
-      startDate: formatDateInput(cycle.week.startDate),
-      endDate: formatDateInput(cycle.week.endDate),
-      weekNumber: cycle.week.weekNumber,
-      year: cycle.week.year,
+    timeRange: {
+      label: cycle.referenceRange.weekLabel,
+      periodKey: cycle.referenceRange.periodKey,
+      startDate: formatDateInput(cycle.referenceRange.startDate),
+      endDate: formatDateInput(cycle.referenceRange.endDate),
+      weekNumber: cycle.referenceRange.weekNumber,
+      year: cycle.referenceRange.year,
     },
     cycle: {
       id: cycle.task.id,
@@ -3464,7 +3568,7 @@ export async function getCoordinationDashboard(input: {
     },
     viewConfig,
     filters: {
-      selectedDate: formatDateInput(cycle.week.startDate),
+      selectedDate: formatDateInput(cycle.referenceRange.startDate),
       currentPeriodKey: currentWeek.periodKey,
       weekOptions: buildWeekOptions(selectedDate),
     },

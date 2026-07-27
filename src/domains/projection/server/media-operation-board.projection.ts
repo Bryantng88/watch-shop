@@ -16,6 +16,7 @@ import {
   resolveMediaWorkProgressFromMetadata,
 } from "@/domains/task/server/business-binding.service";
 import { dbOrTx, type DB } from "@/server/db/client";
+import { operationBoardDoneCutoff } from "./operation-board-retention.policy";
 import { deleteProjectionRecords, upsertProjectionRecord } from "./projection-record.repo";
 import type {
   ProjectionBuildContext,
@@ -25,7 +26,7 @@ import type {
 } from "./projection.types";
 
 export const MEDIA_OPERATION_BOARD_PROJECTION_KEY = "media-operation-board";
-export const MEDIA_OPERATION_BOARD_PROJECTION_VERSION = 3;
+export const MEDIA_OPERATION_BOARD_PROJECTION_VERSION = 10;
 const MEDIA_OPERATION_BOARD_EVENTS = [
   "watch.created",
   "watch.media.photoshoot.requested",
@@ -40,6 +41,9 @@ const MEDIA_OPERATION_BOARD_EVENTS = [
   "watch.image.rejected",
   "watch.media.ready_for_publish",
   "watch.media.recalled",
+  "watch.publish.assets.downloaded",
+  "watch.saleStage.posted",
+  "watch.sold",
   "task.item.activity.commented",
 ] as const;
 
@@ -61,13 +65,48 @@ function workTypeKey(note?: string | null) {
   return clean(String(note ?? "").match(/workTypeKey:\s*([a-z0-9-]+)/i)?.[1]).toLowerCase();
 }
 
-function mediaStage(note: string | null | undefined, metadataJson: unknown): MediaOperationBoardStage | null {
+function mediaBindingRank(input: {
+  taskItem?: { note?: string | null } | null;
+  metadataJson: unknown;
+  createdAt: Date;
+}) {
+  const stageRank = {
+    photography: 1,
+    "media-processing": 2,
+    publish: 3,
+  }[workTypeKey(input.taskItem?.note)] ?? 0;
+  const workflowRuntime = asRecord(asRecord(input.metadataJson).workflowRuntime);
+  const workflowUpdatedAt = Date.parse(clean(workflowRuntime.updatedAt));
+  const recency = Number.isFinite(workflowUpdatedAt)
+    ? workflowUpdatedAt
+    : input.createdAt.getTime();
+  return stageRank * 10_000_000_000_000 + recency;
+}
+
+function mediaStage(
+  note: string | null | undefined,
+  metadataJson: unknown,
+  watch?: {
+    saleStage: unknown;
+    isContentDownloaded: boolean;
+    isImageDownloaded: boolean;
+  } | null,
+): MediaOperationBoardStage | null {
   const workType = workTypeKey(note);
-  if (workType === "photography") return "PHOTOGRAPHY";
-  if (workType === "media-processing") return "MEDIA_PROCESSING";
-  if (workType !== "publish") return null;
+  if (!["photography", "media-processing", "publish"].includes(workType)) return null;
   const runtime = getQueueItemWorkflowState({ metadataJson });
-  return runtime?.currentState === "DONE" || runtime?.currentState === "CANCELLED"
+  const saleStage = clean(watch?.saleStage).toUpperCase();
+  const businessDone =
+    ["DONE", "POSTED", "SOLD", "CONSIGNED_TO", "CANCELED", "CANCELLED"].includes(saleStage);
+  if (workType === "photography") {
+    return runtime?.currentState === "DONE" ? "MEDIA_PROCESSING" : "PHOTOGRAPHY";
+  }
+  if (workType === "media-processing") {
+    return runtime?.currentState === "DONE" ? "PUBLISH" : "MEDIA_PROCESSING";
+  }
+  return businessDone ||
+      runtime?.currentState === "DONE" ||
+      runtime?.currentState === "CANCELLED"
     ? "DONE"
     : "PUBLISH";
 }
@@ -97,12 +136,11 @@ function result(
 
 export async function buildMediaOperationBoardRow(
   db: DB,
-  input: { taskId: string; watchId: string },
+  input: { watchId: string },
 ) {
   const client = dbOrTx(db);
   const bindings = await client.taskExecution.findMany({
     where: {
-      taskId: input.taskId,
       targetType: TaskExecutionTargetType.WATCH,
       targetId: input.watchId,
       actionType: { not: TaskExecutionActionType.CANCELLED },
@@ -119,10 +157,10 @@ export async function buildMediaOperationBoardRow(
       taskItem: { select: { note: true } },
     },
   });
-  const binding = bindings.find((row) => mediaStage(row.taskItem?.note, row.metadataJson));
+  const binding = bindings
+    .filter((row) => mediaStage(row.taskItem?.note, row.metadataJson))
+    .sort((left, right) => mediaBindingRank(right) - mediaBindingRank(left))[0];
   if (!binding?.taskItemId) return null;
-  const stage = mediaStage(binding.taskItem?.note, binding.metadataJson);
-  if (!stage) return null;
   const [watch, activities] = await Promise.all([
     client.watch.findUnique({
       where: { id: input.watchId },
@@ -130,6 +168,9 @@ export async function buildMediaOperationBoardRow(
         id: true,
         productId: true,
         updatedAt: true,
+        saleStage: true,
+        isContentDownloaded: true,
+        isImageDownloaded: true,
         product: {
           select: {
             title: true,
@@ -156,6 +197,8 @@ export async function buildMediaOperationBoardRow(
     }),
   ]);
   if (!watch) return null;
+  const stage = mediaStage(binding.taskItem?.note, binding.metadataJson, watch);
+  if (!stage) return null;
   let commentCount = 0;
   for (const activity of activities) {
     const metadata = activity.metadataJson;
@@ -166,6 +209,39 @@ export async function buildMediaOperationBoardRow(
   }
   const runtime = getQueueItemWorkflowState({ metadataJson: binding.metadataJson });
   const workflowDefinition = resolveBindingWorkflowDefinition(binding.metadataJson);
+  const bindingWorkType = workTypeKey(binding.taskItem?.note);
+  const bindingStage: MediaOperationBoardStage =
+    bindingWorkType === "photography"
+      ? "PHOTOGRAPHY"
+      : bindingWorkType === "media-processing"
+        ? "MEDIA_PROCESSING"
+        : "PUBLISH";
+  const transitionedToNextStage = stage !== bindingStage;
+  const publishState =
+    watch.isContentDownloaded || watch.isImageDownloaded
+      ? "ASSETS_DOWNLOADED"
+      : "NEW";
+  const visibleWorkflowState =
+    stage === "DONE"
+      ? "DONE"
+      : stage === "PUBLISH"
+        ? publishState
+        : transitionedToNextStage
+          ? "NEW"
+          : runtime?.currentState ?? null;
+  const availableTransitions = transitionedToNextStage
+    ? []
+    : listAvailableManualTransitionsForQueueItem({
+        workflowDefinition,
+        currentState: runtime?.currentState ?? null,
+      });
+  const manualTransitions =
+    stage === "PUBLISH" && publishState === "ASSETS_DOWNLOADED"
+      ? [...availableTransitions].sort((left, right) =>
+          Number(right.actionKey === "mark-posted") -
+          Number(left.actionKey === "mark-posted")
+        )
+      : availableTransitions;
   const actor = userLabel(binding.createdByUser);
   const data: MediaOperationBoardProjection = {
     id: watch.id,
@@ -176,15 +252,13 @@ export async function buildMediaOperationBoardRow(
     sku: watch.product?.sku ?? null,
     imageUrl: watch.product?.primaryImageUrl ?? null,
     stage,
-    workflowKey: runtime?.workflowKey ?? null,
-    workflowState: runtime?.currentState ?? null,
-    mediaWorkProgress:
-      resolveMediaWorkProgressFromMetadata(asRecord(binding.metadataJson)),
+    workflowKey: transitionedToNextStage ? null : runtime?.workflowKey ?? null,
+    workflowState: visibleWorkflowState,
+    mediaWorkProgress: transitionedToNextStage || stage === "PUBLISH"
+      ? null
+      : resolveMediaWorkProgressFromMetadata(asRecord(binding.metadataJson)),
     postTargets: mapProductPostTargets(watch.product),
-    manualTransitions: listAvailableManualTransitionsForQueueItem({
-      workflowDefinition,
-      currentState: runtime?.currentState ?? null,
-    }),
+    manualTransitions,
     commentCount,
     mentionedMeCount: 0,
     unreadMentionCount: 0,
@@ -199,7 +273,7 @@ export async function buildMediaOperationBoardRow(
   await upsertProjectionRecord(db, {
     projectionKey: MEDIA_OPERATION_BOARD_PROJECTION_KEY,
     projectionVersion: MEDIA_OPERATION_BOARD_PROJECTION_VERSION,
-    rowKey: `${binding.taskId}:${watch.id}`,
+    rowKey: watch.id,
     workspaceId: binding.taskId,
     entityType: "WATCH",
     entityId: watch.id,
@@ -223,19 +297,6 @@ async function watchIdFromComment(db: DB, eventId: string) {
   return clean(target.targetType) === "WATCH" ? clean(target.targetId) || null : null;
 }
 
-async function taskIdsForWatch(db: DB, watchId: string) {
-  const rows = await dbOrTx(db).taskExecution.findMany({
-    where: {
-      targetType: TaskExecutionTargetType.WATCH,
-      targetId: watchId,
-      actionType: { not: TaskExecutionActionType.CANCELLED },
-    },
-    distinct: ["taskId"],
-    select: { taskId: true },
-  });
-  return rows.map((row) => row.taskId);
-}
-
 async function buildFromEvent(
   db: DB,
   context: ProjectionBuildContext & { sourceEvent: BusinessEventDispatchContext },
@@ -244,11 +305,7 @@ async function buildFromEvent(
     ? await watchIdFromComment(db, context.sourceEvent.targetId)
     : clean(context.sourceEvent.targetId);
   if (!watchId) return result(context, context.scope ?? {}, 0, "WATCH_NOT_FOUND");
-  const taskIds = await taskIdsForWatch(db, watchId);
-  let applied = 0;
-  for (const taskId of taskIds) {
-    if (await buildMediaOperationBoardRow(db, { taskId, watchId })) applied += 1;
-  }
+  const applied = await buildMediaOperationBoardRow(db, { watchId }) ? 1 : 0;
   return result(context, { targetType: "WATCH", targetId: watchId }, applied, applied ? undefined : "NO_MEDIA_BOARD_BINDING");
 }
 
@@ -267,15 +324,15 @@ async function rebuild(
       actionType: { not: TaskExecutionActionType.CANCELLED },
       ...(targetId ? { targetId } : {}),
     },
-    distinct: ["taskId", "targetId"],
-    select: { taskId: true, targetId: true },
+    distinct: ["targetId"],
+    select: { targetId: true },
     take: context.scope.limit ? Math.max(1, Math.min(10000, context.scope.limit)) : undefined,
   });
   let applied = 0;
   for (let index = 0; index < rows.length; index += 8) {
     const built = await Promise.all(
       rows.slice(index, index + 8).map((row) =>
-        buildMediaOperationBoardRow(db, { taskId: row.taskId, watchId: row.targetId }),
+        buildMediaOperationBoardRow(db, { watchId: row.targetId }),
       ),
     );
     applied += built.filter(Boolean).length;
@@ -286,26 +343,39 @@ async function rebuild(
 export async function queryMediaOperationBoardProjection(
   db: DB,
   input: {
-    workspaceId: string;
     requestedStage?: MediaOperationBoardStage | null;
     page: number;
     pageSize: number;
+    doneRetentionDays?: number | null;
   },
 ) {
   const offset = (input.page - 1) * input.pageSize;
+  const doneCutoff = operationBoardDoneCutoff(input.doneRetentionDays);
   const rows = await dbOrTx(db).$queryRaw<Array<{
     kind: "ROW" | "TOTAL";
     status: MediaOperationBoardStage;
     dataJson: unknown;
     total: bigint;
   }>>(Prisma.sql`
-    WITH ranked AS (
-      SELECT "status", "dataJson",
-        ROW_NUMBER() OVER (PARTITION BY "status" ORDER BY "sortAt" DESC NULLS LAST, "updatedAt" DESC) AS rn
+    WITH latest AS (
+      SELECT DISTINCT ON ("entityId")
+        "entityId", "status", "dataJson", "sortAt", "updatedAt"
       FROM "ProjectionRecord"
       WHERE "projectionKey" = ${MEDIA_OPERATION_BOARD_PROJECTION_KEY}
         AND "projectionVersion" = ${MEDIA_OPERATION_BOARD_PROJECTION_VERSION}
-        AND "workspaceId" = ${input.workspaceId}
+      ORDER BY "entityId", "updatedAt" DESC
+    ),
+    eligible AS (
+      SELECT "entityId", "status", "dataJson", "sortAt", "updatedAt"
+      FROM latest
+      WHERE "status" <> 'DONE'
+        OR ${doneCutoff}::timestamptz IS NULL
+        OR COALESCE("sortAt", "updatedAt") >= ${doneCutoff}
+    ),
+    ranked AS (
+      SELECT "status", "dataJson",
+        ROW_NUMBER() OVER (PARTITION BY "status" ORDER BY "sortAt" DESC NULLS LAST, "updatedAt" DESC) AS rn
+      FROM eligible
     ),
     totals AS (
       SELECT "status", COUNT(*) AS total FROM ranked GROUP BY "status"

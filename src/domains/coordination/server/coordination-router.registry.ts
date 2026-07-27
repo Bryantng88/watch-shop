@@ -64,7 +64,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Create one SR workspace in Service Operation when Service domain creates a ServiceRequest.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "TECHNICAL",
       bindingMode: "INTAKE",
     },
@@ -77,7 +77,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Intake Watch into Photoshoot when Media requests shooting.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "MEDIA",
       bindingMode: "INTAKE",
     },
@@ -90,7 +90,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Intake Watch into Media Processing after Photoshoot is done.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "MEDIA",
       bindingMode: "INTAKE",
     },
@@ -103,7 +103,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Intake or progress Media Processing after NAS assets are attached through Watch domain.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "MEDIA",
       bindingMode: "INTAKE",
     },
@@ -116,7 +116,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Route Watch content review event to the media processing work ticket.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "MEDIA",
       bindingMode: "PROGRESS",
     },
@@ -129,7 +129,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Route Watch content review event to the media processing work ticket.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "MEDIA",
       bindingMode: "PROGRESS",
     },
@@ -142,7 +142,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Route Watch content review event to the media processing work ticket.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "MEDIA",
       bindingMode: "PROGRESS",
     },
@@ -155,7 +155,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Route Watch content approval recall to the media processing work ticket.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "MEDIA",
       bindingMode: "PROGRESS",
     },
@@ -168,7 +168,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Route Watch image review event to the media processing work ticket.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "MEDIA",
       bindingMode: "PROGRESS",
     },
@@ -181,7 +181,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Route Watch image review event to the media processing work ticket.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "MEDIA",
       bindingMode: "PROGRESS",
     },
@@ -194,7 +194,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Route Watch image review event to the media processing work ticket.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "MEDIA",
       bindingMode: "PROGRESS",
     },
@@ -207,7 +207,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Route Watch image approval recall to the media processing work ticket.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "MEDIA",
       bindingMode: "PROGRESS",
     },
@@ -220,7 +220,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Intake approved Watch media into Publish work ticket.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "MEDIA",
       bindingMode: "INTAKE",
     },
@@ -233,7 +233,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Recall Watch from Publish back into Media Processing.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "MEDIA",
       bindingMode: "INTAKE",
     },
@@ -246,7 +246,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Progress Publish after assets/content are downloaded from Watch domain.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "MEDIA",
       bindingMode: "PROGRESS",
     },
@@ -259,7 +259,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Intake TechnicalIssue into Service Operation when the Service domain creates it.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "TECHNICAL",
       bindingMode: "INTAKE",
     },
@@ -272,7 +272,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Progress Service Operation item when TechnicalIssue is confirmed.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "TECHNICAL",
       bindingMode: "PROGRESS",
     },
@@ -285,7 +285,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Progress Service Operation item when TechnicalIssue work starts.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "TECHNICAL",
       bindingMode: "PROGRESS",
     },
@@ -298,7 +298,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Progress Service Operation item when TechnicalIssue work is completed.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "TECHNICAL",
       bindingMode: "PROGRESS",
     },
@@ -311,7 +311,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Intake newly created Payment records into Payment Collection.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "PAYMENT",
       bindingMode: "INTAKE",
     },
@@ -324,7 +324,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Progress Payment Collection when a Payment status changes before settlement.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "PAYMENT",
       bindingMode: "PROGRESS",
     },
@@ -337,7 +337,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Move paid Payment records into Settled / Exception follow-up.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "PAYMENT",
       bindingMode: "PROGRESS",
     },
@@ -357,7 +357,7 @@ registerCoordinationRoutes([
     enabled: true,
     metadata: {
       note: "Route Shipment lifecycle milestones through Shipment Operation.",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "OPERATION",
       bindingMode: eventKey === "shipment.created" ? "INTAKE" : "PROGRESS",
     },

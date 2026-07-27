@@ -24,7 +24,7 @@ export const SHIPMENT_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
     targetType: "SHIPMENT",
     group: "Shipment",
     knownConsumers: [...SHIPMENT_OPERATION_CONSUMERS],
-    autoBindingScope: "CURRENT_ACTIVE_WEEKLY_SPACE:OPERATION:shipment-operation",
+    autoBindingScope: "CURRENT_ACTIVE_SPACE:OPERATION:shipment-operation",
   }),
   defineBusinessEventContract({
     key: "shipment.updated",

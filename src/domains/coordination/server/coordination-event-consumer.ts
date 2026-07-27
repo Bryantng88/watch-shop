@@ -115,7 +115,7 @@ export type CoordinationEventDiagnosticResult =
 const TARGET_TYPES = new Set<string>(Object.values(TaskExecutionTargetType));
 
 type CoordinationBindingScope = {
-  scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE" | "PUBLISHED_BLUEPRINT_SPACE";
+  scopeType: "CURRENT_ACTIVE_SPACE" | "PUBLISHED_BLUEPRINT_SPACE";
   context: CoordinationContext;
   coordinationType: string;
   workTypeKey: string;
@@ -241,7 +241,7 @@ async function findActiveCoordinationTask(
 
 function routeScope(route: CoordinationRoute, context: CoordinationContext): CoordinationBindingScope {
   return {
-    scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+    scopeType: "CURRENT_ACTIVE_SPACE",
     context,
     coordinationType: route.coordinationType,
     workTypeKey: route.workTypeKey,
@@ -493,7 +493,7 @@ function effectiveReceiverEventBinding(input: {
     eventKey: input.eventKey,
     targetType: normalizeTargetType(input.targetType),
     consumer: "coordination",
-    scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+    scopeType: "CURRENT_ACTIVE_SPACE",
     scopeContext: input.context,
     workTypeKey: input.route.workTypeKey,
     mode,
@@ -523,6 +523,11 @@ function eventBindingWithEffectiveRouteMode(input: {
   };
 }
 
+function isCurrentActiveSpaceScope(value: unknown) {
+  const scope = clean(value).toUpperCase();
+  return scope.startsWith("CURRENT_ACTIVE_") && scope.endsWith("_SPACE");
+}
+
 function eventBindingMatches(input: {
   binding: WorkspaceEventBinding;
   eventKey: string;
@@ -535,7 +540,7 @@ function eventBindingMatches(input: {
     input.binding.consumer === "coordination" &&
     normalizeEventKey(input.binding.eventKey) === input.eventKey &&
     normalizeTargetType(input.binding.targetType) === input.targetType &&
-    input.binding.scopeType === "CURRENT_ACTIVE_WEEKLY_SPACE" &&
+    isCurrentActiveSpaceScope(input.binding.scopeType) &&
     input.binding.scopeContext === input.context &&
     normalizeMatchKey(input.binding.workTypeKey) ===
       normalizeMatchKey(input.route.workTypeKey)
@@ -553,7 +558,7 @@ function eventBindingMatchesCurrentRoute(input: {
     input.binding.consumer === "coordination" &&
     normalizeEventKey(input.binding.eventKey) === input.eventKey &&
     normalizeTargetType(input.binding.targetType) === input.targetType &&
-    input.binding.scopeType === "CURRENT_ACTIVE_WEEKLY_SPACE" &&
+    isCurrentActiveSpaceScope(input.binding.scopeType) &&
     input.binding.scopeContext === input.context &&
     normalizeMatchKey(input.binding.workTypeKey) ===
       normalizeMatchKey(input.route.workTypeKey)

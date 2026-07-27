@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { WatchSaleStage, type AudienceSegment } from "@prisma/client";
 
-import { getWeeklyWatchSpaceComparison } from "@/domains/coordination/server";
+import { getWatchPeriodComparison } from "@/domains/coordination/server";
 import type { BusinessListDashboardData } from "@/domains/shared/ui/business-list";
 import { prisma } from "@/server/db/client";
 
@@ -61,7 +61,7 @@ function metricDelta(
     const delta = current - previous;
     return {
         helper: `${delta >= 0 ? "+" : ""}${delta}`,
-        helperSuffix: showComparisonLabel ? "so với tuần trước" : undefined,
+        helperSuffix: showComparisonLabel ? "so với 7 ngày trước" : undefined,
         helperTone:
             delta > 0
                 ? "positive" as const
@@ -88,7 +88,7 @@ const getCachedWatchListDashboard = unstable_cache(
             })
         ).map((watch) => watch.id);
 
-        const [saleStageGroups, serviceStageGroups, missingImageCount, mediaApprovedCount, inventoryValue, recentEvents, recentTrendRows, weeklySpaces, readinessNoContent, readinessNoPrice, agingUnderSeven, agingSevenToFourteen, agingFourteenToThirty, agingOverThirty] =
+        const [saleStageGroups, serviceStageGroups, missingImageCount, mediaApprovedCount, inventoryValue, recentEvents, recentTrendRows, periodComparison, readinessNoContent, readinessNoPrice, agingUnderSeven, agingSevenToFourteen, agingFourteenToThirty, agingOverThirty] =
             await Promise.all([
                 prisma.watch.groupBy({
                     by: ["saleStage"],
@@ -139,7 +139,7 @@ const getCachedWatchListDashboard = unstable_cache(
                     where: { audienceSegment, createdAt: { gte: twelveDaysAgo } },
                     select: { createdAt: true },
                 }),
-                getWeeklyWatchSpaceComparison({ db: prisma, audienceSegment }),
+                getWatchPeriodComparison({ db: prisma, audienceSegment }),
                 prisma.watch.count({
                     where: {
                         product: { productImage: { some: {} } },
@@ -197,11 +197,11 @@ const getCachedWatchListDashboard = unstable_cache(
             }).length;
         });
         const inventoryDelta =
-            weeklySpaces.current.inventoryValue -
-            weeklySpaces.previous.inventoryValue;
+            periodComparison.current.inventoryValue -
+            periodComparison.previous.inventoryValue;
         const inventoryPercent =
-            weeklySpaces.previous.inventoryValue > 0
-                ? (inventoryDelta / weeklySpaces.previous.inventoryValue) * 100
+            periodComparison.previous.inventoryValue > 0
+                ? (inventoryDelta / periodComparison.previous.inventoryValue) * 100
                 : undefined;
 
         return {
@@ -213,15 +213,15 @@ const getCachedWatchListDashboard = unstable_cache(
                     label: "Tổng số watch",
                     value: total,
                     ...metricDelta(
-                        weeklySpaces.current.total,
-                        weeklySpaces.previous.total,
+                        periodComparison.current.total,
+                        periodComparison.previous.total,
                         true,
                     ),
                     tone: "violet",
                 },
-                { key: "ready", label: "Sẵn sàng bán", value: ready, ...metricDelta(weeklySpaces.current.ready, weeklySpaces.previous.ready), tone: "blue" },
-                { key: "service", label: "Đang service", value: serviceCount, ...metricDelta(weeklySpaces.current.service, weeklySpaces.previous.service), tone: "amber" },
-                { key: "missing-image", label: "Chưa có ảnh", value: missingImageCount, ...metricDelta(weeklySpaces.current.missingImage, weeklySpaces.previous.missingImage), tone: "rose" },
+                { key: "ready", label: "Sẵn sàng bán", value: ready, ...metricDelta(periodComparison.current.ready, periodComparison.previous.ready), tone: "blue" },
+                { key: "service", label: "Đang service", value: serviceCount, ...metricDelta(periodComparison.current.service, periodComparison.previous.service), tone: "amber" },
+                { key: "missing-image", label: "Chưa có ảnh", value: missingImageCount, ...metricDelta(periodComparison.current.missingImage, periodComparison.previous.missingImage), tone: "rose" },
             ],
             inventoryValue: {
                 label: "Giá trị hàng hóa",
@@ -241,8 +241,8 @@ const getCachedWatchListDashboard = unstable_cache(
                           : "negative",
                 changeSuffix:
                     inventoryPercent === undefined
-                        ? "tuần trước chưa có giá trị"
-                        : "so với tuần trước",
+                        ? "7 ngày trước chưa có giá trị"
+                        : "so với 7 ngày trước",
             },
             breakdown: {
                 label: "Theo trạng thái bán",

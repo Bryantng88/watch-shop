@@ -15,7 +15,7 @@ export type WorkspaceEventBindingStatus = "ACTIVE" | "DRAFT" | "DEPRECATED";
 
 export type WorkspaceEventBindingMode = "INTAKE" | "PROGRESS";
 
-export type WorkspaceEventBindingScopeType = "CURRENT_ACTIVE_WEEKLY_SPACE";
+export type WorkspaceEventBindingScopeType = "CURRENT_ACTIVE_SPACE";
 
 export type WorkspaceEventBindingSource = "BLUEPRINT";
 
@@ -222,7 +222,7 @@ export function eventBindingsForWorkType(input: {
       eventKey: binding.eventKey,
       targetType: binding.targetType,
       consumer: "coordination",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "TECHNICAL",
       workTypeKey: "service-operation",
       mode: binding.mode,
@@ -240,7 +240,7 @@ export function eventBindingsForWorkType(input: {
       eventKey: binding.eventKey,
       targetType: "PAYMENT",
       consumer: "coordination",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "PAYMENT",
       workTypeKey: "payment",
       mode: binding.mode,
@@ -260,7 +260,7 @@ export function eventBindingsForWorkType(input: {
       eventKey: binding.eventKey,
       targetType: "WATCH",
       consumer: "coordination",
-      scopeType: "CURRENT_ACTIVE_WEEKLY_SPACE",
+      scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "MEDIA",
       workTypeKey: binding.workTypeKey,
       mode: binding.mode,

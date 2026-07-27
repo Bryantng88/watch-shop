@@ -57,7 +57,7 @@ function defaultSpaceViewConfig(context: CoordinationContext): SpaceViewConfig {
     ],
     carryover: {
       enabled: true,
-      actionLabel: "Nhận item tồn tuần trước",
+      actionLabel: "Nhận item đang tồn",
       source: "PREVIOUS_CYCLE",
       onlyProcessingItems: true,
       processingRule:
@@ -69,7 +69,7 @@ function defaultSpaceViewConfig(context: CoordinationContext): SpaceViewConfig {
       actionLabel: "Tạo Workspace",
       defaultTitlePlaceholder: "Tên Workspace",
     },
-    emptyState: "Chưa có Workspace trong tuần này.",
+    emptyState: "Chưa có Workspace phù hợp.",
   };
 }
 
@@ -255,7 +255,7 @@ function technicalSpaceViewConfig(): SpaceViewConfig {
     coreFlows: [TECHNICAL_ISSUE_FLOW],
     carryover: {
       enabled: true,
-      actionLabel: "Nhận item tồn tuần trước",
+      actionLabel: "Nhận item đang tồn",
       source: "PREVIOUS_CYCLE",
       onlyProcessingItems: true,
       processingRule:
@@ -338,7 +338,7 @@ function paymentSpaceViewConfig(): SpaceViewConfig {
     coreFlows: [PAYMENT_COLLECTION_FLOW],
     carryover: {
       enabled: true,
-      actionLabel: "Nhận item tồn tuần trước",
+      actionLabel: "Nhận item đang tồn",
       source: "PREVIOUS_CYCLE",
       onlyProcessingItems: true,
       processingRule:
@@ -397,7 +397,7 @@ function unifiedOperationSpaceViewConfig(): SpaceViewConfig {
     ...defaultSpaceViewConfig("OPERATION"),
     key: "unified-operation-space-view",
     label: "Unified Operation Space",
-    description: "One weekly Space hosts the available operational Core Flows; only the selected flow is rendered.",
+    description: "One persistent Space hosts the available operational Core Flows; only the selected flow is rendered.",
     defaultModeKey: "technical-issue-flow",
     defaultCoreFlowKey: TECHNICAL_ISSUE_FLOW.key,
     modes: [

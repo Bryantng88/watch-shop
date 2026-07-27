@@ -15,6 +15,11 @@ const BOARD_KEYS = new Set<CoordinationBoardKey>([
   "media-operation",
 ]);
 
+function doneRetentionDays(value: string | null) {
+  if (value === "ALL") return null;
+  return value === "30D" ? 30 : 14;
+}
+
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ boardKey: string }> },
@@ -40,6 +45,9 @@ export async function GET(
       stage: request.nextUrl.searchParams.get("stage"),
       page: Number(request.nextUrl.searchParams.get("page") ?? 1),
       pageSize: Number(request.nextUrl.searchParams.get("pageSize") ?? 10),
+      doneRetentionDays: doneRetentionDays(
+        request.nextUrl.searchParams.get("doneRange"),
+      ),
     });
     return NextResponse.json(
       { ok: true, boardKey, board },

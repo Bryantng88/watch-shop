@@ -6,7 +6,7 @@ export type CoordinationContext =
   | "PAYMENT"
   | "GENERAL";
 
-export type CoordinationWeekRange = {
+export type CoordinationReferenceRange = {
   weekLabel: string;
   startDate: Date;
   endDate: Date;
@@ -46,7 +46,7 @@ export type CoordinationWorkTicket = {
 
 export type ResolveCurrentCoordinationCycleResult = {
   task: CoordinationCycleTask;
-  week: CoordinationWeekRange;
+  referenceRange: CoordinationReferenceRange;
   context: CoordinationContext;
 };
 

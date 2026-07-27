@@ -45,6 +45,7 @@ export default async function OperationCoordinationPage(props: PageProps) {
         flowPaymentStatus: first(searchParams.flowPaymentStatus) ?? null,
         flowSort: first(searchParams.flowSort) ?? null,
         includeDashboardDetails: false,
+        includeManagementDetails: false,
         // The TI board has its own paginated client request. Keeping it out of
         // the page payload avoids blocking the entire route on the heaviest query.
         includeTechnicalBoard: false,
