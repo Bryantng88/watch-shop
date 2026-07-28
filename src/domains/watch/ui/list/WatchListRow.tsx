@@ -184,13 +184,13 @@ function SaleStatusBadge({
 
 function legacyMediaStatus(row: WatchRow) {
     if (row.isPosted) return { label: "Đã đăng", tone: "emerald" as BadgeTone };
-    return { label: "Chưa gửi photoshoot", tone: "slate" as BadgeTone };
+    return { label: "Chưa vào luồng Media", tone: "slate" as BadgeTone };
 }
 
 function mediaStatusLabel(status: string | null | undefined, fallback: string) {
     switch (upper(status)) {
         case "NO_IMAGE":
-            return "Chưa gửi photoshoot";
+            return "Chưa vào luồng Media";
         case "MEDIA_READY":
             return "Đã chụp xong";
         default:
@@ -597,6 +597,15 @@ export default function WatchListRow({
 
             <td className="px-4 py-3 align-middle">
                 <div
+                    className="text-sm text-slate-700"
+                    title="Thời điểm Watch được tạo từ phiếu nhập"
+                >
+                    {formatDateTime(product.createdAt)}
+                </div>
+            </td>
+
+            <td className="px-4 py-3 align-middle">
+                <div
                     className={cn(
                         "text-sm",
                         isRecent ? "font-semibold text-emerald-500" : "text-slate-700",
@@ -604,6 +613,31 @@ export default function WatchListRow({
                 >
                     {formatDateTime(product.updatedAt)}
                 </div>
+            </td>
+
+            <td className="px-4 py-3 align-middle">
+                {product.v2Row?.lastAction ? (
+                    <div
+                        className="min-w-0"
+                        title={[
+                            product.v2Row.lastAction.label,
+                            product.v2Row.lastAction.note,
+                            product.v2Row.lastAction.actorLabel,
+                            formatDateTime(product.v2Row.lastAction.at),
+                        ].filter(Boolean).join(" · ")}
+                    >
+                        <div className="truncate text-sm font-medium text-slate-800">
+                            {product.v2Row.lastAction.label}
+                        </div>
+                        <div className="mt-0.5 truncate text-xs text-slate-500">
+                            {product.v2Row.lastAction.actorLabel || "Hệ thống"}
+                            {" · "}
+                            {formatDateTime(product.v2Row.lastAction.at)}
+                        </div>
+                    </div>
+                ) : (
+                    <span className="text-sm text-slate-400">Chưa có thao tác</span>
+                )}
             </td>
 
             <td className="px-4 py-3 text-right">

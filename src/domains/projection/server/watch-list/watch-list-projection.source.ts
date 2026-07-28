@@ -1,7 +1,9 @@
 import { ImageRole, Prisma, TaskExecutionActionType, TaskExecutionTargetType } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
 import { getQueueItemWorkflowState } from "@/domains/task/server/business-binding-workflow.service";
+import { watchActivityLabel } from "@/domains/watch/shared/watch-activity";
 import type {
+  WatchListProjectionLastAction,
   WatchListProjectionMediaState,
   WatchListProjectionServiceState,
   WatchListProjectionSourceRow,
@@ -172,6 +174,66 @@ async function loadMediaStatesByWatchId(
   return byWatchId;
 }
 
+function metadataText(value: unknown, key: string) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const text = clean((value as Record<string, unknown>)[key]);
+  return text || null;
+}
+
+async function loadLastActionsByWatchId(
+  db: DB,
+  watchIds: string[],
+): Promise<Map<string, WatchListProjectionLastAction>> {
+  if (!watchIds.length) return new Map();
+
+  const events = await dbOrTx(db).businessEventLog.findMany({
+    where: {
+      targetType: "WATCH",
+      targetId: { in: watchIds },
+      eventKey: { startsWith: "watch." },
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    select: {
+      eventKey: true,
+      targetId: true,
+      actorUserId: true,
+      metadataJson: true,
+      createdAt: true,
+    },
+  });
+  const latestByWatchId = new Map<string, (typeof events)[number]>();
+  for (const event of events) {
+    if (!latestByWatchId.has(event.targetId)) latestByWatchId.set(event.targetId, event);
+  }
+
+  const actorIds = [...new Set(
+    [...latestByWatchId.values()].map((event) => event.actorUserId).filter(Boolean),
+  )] as string[];
+  const actors = actorIds.length
+    ? await dbOrTx(db).user.findMany({
+      where: { id: { in: actorIds } },
+      select: { id: true, name: true, email: true },
+    })
+    : [];
+  const actorById = new Map(
+    actors.map((actor) => [actor.id, clean(actor.name) || clean(actor.email) || "Người dùng"]),
+  );
+
+  return new Map(
+    [...latestByWatchId.entries()].map(([watchId, event]) => [
+      watchId,
+      {
+        eventKey: event.eventKey,
+        label: watchActivityLabel(event.eventKey),
+        note: metadataText(event.metadataJson, "intakeNote"),
+        actorUserId: event.actorUserId,
+        actorLabel: event.actorUserId ? actorById.get(event.actorUserId) ?? null : "Hệ thống",
+        at: event.createdAt.toISOString(),
+      },
+    ]),
+  );
+}
+
 function serviceStatusFromRequest(input: {
   serviceRequestStatus?: unknown;
   technicalIssueStatuses?: unknown[] | null;
@@ -336,7 +398,7 @@ export async function loadWatchListProjectionSourceRows(
     take: limit,
   });
 
-  const [mediaStatesByWatchId, serviceStatesByWatchId] = await Promise.all([
+  const [mediaStatesByWatchId, serviceStatesByWatchId, lastActionsByWatchId] = await Promise.all([
     loadMediaStatesByWatchId(
       db,
       rows.map((row) => row.id),
@@ -345,12 +407,14 @@ export async function loadWatchListProjectionSourceRows(
       db,
       rows.map((row) => ({ id: row.id, productId: row.productId })),
     ),
+    loadLastActionsByWatchId(db, rows.map((row) => row.id)),
   ]);
 
   return rows.map((row) => ({
     ...row,
     __mediaState: mediaStatesByWatchId.get(row.id) ?? [],
     __serviceState: serviceStatesByWatchId.get(row.id) ?? null,
+    __lastAction: lastActionsByWatchId.get(row.id) ?? null,
   })) as WatchListProjectionSourceRow[];
 }
 

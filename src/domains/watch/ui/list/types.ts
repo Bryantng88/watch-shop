@@ -139,6 +139,14 @@ export type WatchRow = {
         saleStatus: string;
         saleStatusLabel: string;
         salePrice: number | null;
+        lastAction?: {
+            eventKey: string;
+            label: string;
+            note: string | null;
+            actorUserId: string | null;
+            actorLabel: string | null;
+            at: string;
+        } | null;
         updatedAt: string | null;
     };
 };

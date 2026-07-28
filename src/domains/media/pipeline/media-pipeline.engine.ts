@@ -18,6 +18,7 @@ export async function routeWatchToMedia(
     watchId: string;
     actorUserId?: string | null;
     reason?: string | null;
+    deferConsumers?: (work: () => Promise<void>) => void;
   },
   db: DB = prisma,
 ) {
@@ -44,6 +45,7 @@ export async function routeWatchToMedia(
       watchIds: [watch.id],
       actorUserId: input.actorUserId ?? null,
       note: input.reason ?? null,
+      deferConsumers: input.deferConsumers,
     },
     db,
   );
@@ -62,6 +64,7 @@ export async function routeWatchesToMedia(
     watchIds: string[];
     actorUserId?: string | null;
     reason?: string | null;
+    deferConsumers?: (work: () => Promise<void>) => void;
   },
   db: DB = prisma,
 ) {
@@ -87,6 +90,7 @@ export async function routeWatchesToMedia(
       watchIds,
       actorUserId: input.actorUserId ?? null,
       note: input.reason ?? null,
+      deferConsumers: input.deferConsumers,
     },
     db,
   );

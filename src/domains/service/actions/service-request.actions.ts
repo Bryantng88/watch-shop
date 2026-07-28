@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import {
   assignVendorForServiceRequestApplication,
   bulkAssignVendorAndCreateMaintenanceApplication,
@@ -82,6 +83,7 @@ export async function createTechnicalIssueForServiceRequestAction(input: {
     technicalDetailCatalogId: input.technicalDetailCatalogId ?? null,
     vendorId: input.vendorId ?? null,
     actorUserId: actor?.id ?? null,
+    deferConsumers: (work) => after(work),
   });
 
   revalidateService();

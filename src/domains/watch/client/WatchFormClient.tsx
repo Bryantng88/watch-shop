@@ -20,6 +20,10 @@ import {
     markWatchMediaAssetAttachedFromWatchAction,
     saveWatchMediaWorkDraftFromWatchAction,
 } from "./media-work/watch-media-work.actions";
+import {
+    waitForWatchMediaDelivery,
+    type WatchMediaDeliveryCommandResult,
+} from "./media-work/watch-media-delivery.client";
 import { mapWatchDetailToFormValues } from "./form/watch-form.mapper";
 import type { WatchFormValues } from "./form/watch-form.types";
 
@@ -904,6 +908,7 @@ export default function WatchFormClient({
                     await markWatchMediaAssetAttachedFromWatchAction({
                         productId: submitValues.productId,
                         note: "Spec, content, and media submitted from Watch edit workspace modal.",
+                        origin: "WATCH_DETAIL",
                     });
 
                 if (workspaceResult?.skipped) {
@@ -1044,6 +1049,35 @@ export default function WatchFormClient({
             }
 
             steps = setStepStatus(steps, "transition", "done", "Workflow đã chuyển khỏi Media Processing.");
+            steps = setStepStatus(steps, "reconcile", "running", "Đang chờ Photography và các bộ đếm đồng bộ.");
+            progress.update({ steps });
+
+            const reshootEffect = transitionResult.workflowProcessorResult.effects.find(
+                (effect) => effect.type === "watch-media-reshoot-requested",
+            );
+            if (!reshootEffect || reshootEffect.status !== "applied") {
+                throw new Error(
+                    reshootEffect?.reason || "Không tạo được yêu cầu Photography.",
+                );
+            }
+            await waitForWatchMediaDelivery(
+                reshootEffect.result as WatchMediaDeliveryCommandResult,
+                {
+                    onStatus: (status) => {
+                        steps = setStepStatus(
+                            steps,
+                            "reconcile",
+                            "running",
+                            status === "BLOCKED"
+                                ? "Đang tạo binding Photography..."
+                                : status === "PROCESSING"
+                                    ? "Đang đồng bộ Media board, list và bộ đếm..."
+                                    : "Đang chờ đồng bộ dữ liệu...",
+                        );
+                        progress.update({ steps });
+                    },
+                },
+            );
             steps = setStepStatus(steps, "reconcile", "done", "Danh sách cha đã nhận kết quả chuyển stage.");
             progress.update({
                 message: "Yêu cầu chụp lại đã hoàn tất.",

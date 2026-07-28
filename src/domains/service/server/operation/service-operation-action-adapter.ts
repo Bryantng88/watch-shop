@@ -38,6 +38,7 @@ export type ServiceOperationBlueprintActionAdapterInput = {
   fields?: Record<string, unknown>;
   actorUserId?: string | null;
   actorName?: string | null;
+  deferConsumers?: (work: () => Promise<void>) => void;
 };
 
 function clean(value: unknown) {
@@ -199,6 +200,7 @@ export async function runServiceOperationManualAction(
     actorUserId?: string | null;
     actorName?: string | null;
     note?: string | null;
+    deferConsumers?: (work: () => Promise<void>) => void;
   },
 ): Promise<ServiceOperationActionAdapterResult> {
   if (!input.transition.applied) {
@@ -224,6 +226,7 @@ export async function runServiceOperationManualAction(
         id: technicalIssueId,
         actorId: input.actorUserId ?? null,
         actorName: input.actorName ?? null,
+        deferConsumers: input.deferConsumers,
       });
       return { ok: true, actionKey, technicalIssueId, result };
     }
@@ -234,6 +237,7 @@ export async function runServiceOperationManualAction(
         actorId: input.actorUserId ?? null,
         actorName: input.actorName ?? null,
         resolutionNote: input.note ?? null,
+        deferConsumers: input.deferConsumers,
       });
       return { ok: true, actionKey, technicalIssueId, result };
     }
@@ -243,6 +247,7 @@ export async function runServiceOperationManualAction(
         id: technicalIssueId,
         actorId: input.actorUserId ?? null,
         actorName: input.actorName ?? null,
+        deferConsumers: input.deferConsumers,
       });
       return { ok: true, actionKey, technicalIssueId, result };
     }
@@ -256,6 +261,7 @@ export async function runServiceOperationManualAction(
         id: technicalIssueId,
         actorId: input.actorUserId ?? null,
         actorName: input.actorName ?? null,
+        deferConsumers: input.deferConsumers,
         ...completionInput,
       });
       return { ok: true, actionKey, technicalIssueId, result };
@@ -344,6 +350,7 @@ export async function runServiceOperationBlueprintAction(
         estimatedCost: optionalField(fields, "estimatedCost"),
         vendorId: optionalField(fields, "vendorId"),
         actorUserId: input.actorUserId,
+        deferConsumers: input.deferConsumers,
       });
 
       return {
@@ -419,6 +426,7 @@ export async function runServiceOperationBlueprintAction(
         id: targetId,
         actorId: input.actorUserId ?? null,
         actorName: input.actorName ?? null,
+        deferConsumers: input.deferConsumers,
       });
 
       return {
@@ -439,6 +447,7 @@ export async function runServiceOperationBlueprintAction(
         actorId: input.actorUserId ?? null,
         actorName: input.actorName ?? null,
         resolutionNote: requiredField(fields, "resolutionNote"),
+        deferConsumers: input.deferConsumers,
       });
 
       return {
@@ -467,6 +476,7 @@ export async function runServiceOperationBlueprintAction(
         estimatedCost: moneyField(fields, "estimatedCost", false),
         startedNote: optionalField(fields, "startedNote"),
         vendorChangeNote: optionalField(fields, "vendorChangeNote"),
+        deferConsumers: input.deferConsumers,
       });
 
       return {
@@ -489,6 +499,7 @@ export async function runServiceOperationBlueprintAction(
         actualCost: moneyField(fields, "actualCost", true),
         resolutionNote: optionalField(fields, "resolutionNote"),
         createPayment: booleanField(fields, "createPayment", false),
+        deferConsumers: input.deferConsumers,
       });
 
       return {
@@ -506,6 +517,8 @@ export async function runServiceOperationBlueprintAction(
 
       const result = await cancelTechnicalIssue(targetId, {
         reason: requiredField(fields, "cancelReason"),
+        actorId: input.actorUserId ?? null,
+        deferConsumers: input.deferConsumers,
       });
 
       return {

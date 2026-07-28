@@ -115,6 +115,7 @@ export async function POST(request: Request) {
             productId: body?.productId,
             actorUserId: auth.id ?? auth.userId ?? null,
             openExisting: body?.openExisting === true,
+            deferConsumers: (work) => after(work),
           });
 
     return NextResponse.json({ ok: true, data });

@@ -29,6 +29,11 @@ export type ProjectionEventDeliveryRow = {
   updatedAt: Date;
 };
 
+export type ProjectionDeliveryStatus = Pick<
+  ProjectionEventDeliveryRow,
+  "idempotencyKey" | "status" | "attempts" | "completedAt" | "lastError" | "updatedAt"
+>;
+
 function clean(value: unknown) {
   return String(value ?? "").trim();
 }
@@ -84,12 +89,45 @@ export async function enqueueProjectionDelivery(
       ${JSON.stringify(input.targetAliasIds ?? [])}::jsonb,
       ${clean(input.eventInstanceId) || null},
       ${JSON.stringify(input.payload ?? {})}::jsonb,
-      'PENDING',
+      'BLOCKED',
       NOW(),
       NOW(),
       NOW()
     )
     ON CONFLICT ("idempotencyKey") DO NOTHING
+  `);
+}
+
+export async function getProjectionDeliveryStatus(
+  db: DB,
+  idempotencyKey: string,
+) {
+  const rows = await dbOrTx(db).$queryRaw<ProjectionDeliveryStatus[]>(Prisma.sql`
+    SELECT
+      "idempotencyKey",
+      "status",
+      "attempts",
+      "completedAt",
+      "lastError",
+      "updatedAt"
+    FROM "ProjectionEventDelivery"
+    WHERE "idempotencyKey" = ${idempotencyKey}
+    LIMIT 1
+  `);
+  return rows[0] ?? null;
+}
+
+export async function markProjectionDeliveryReady(db: DB, idempotencyKey: string) {
+  await dbOrTx(db).$executeRaw(Prisma.sql`
+    UPDATE "ProjectionEventDelivery"
+    SET
+      "status" = 'PENDING',
+      "nextAttemptAt" = NOW(),
+      "lockedAt" = NULL,
+      "lastError" = NULL,
+      "updatedAt" = NOW()
+    WHERE "idempotencyKey" = ${idempotencyKey}
+      AND "status" = 'BLOCKED'
   `);
 }
 

@@ -188,7 +188,9 @@ async function runConsumer(input: {
 }) {
   const { client, consumer, context, policy } = input;
   const consumerStartedAt = perfNow();
-  const timeoutMs = consumer.timeoutMs ?? policy.defaultTimeoutMs;
+  const timeoutMs = consumer.timeoutMs === null
+    ? null
+    : consumer.timeoutMs ?? policy.defaultTimeoutMs;
   const maxRetries = consumer.retry?.attempts ?? policy.defaultRetry.attempts;
   let attempts = 0;
   let activeController: AbortController | null = null;
@@ -209,15 +211,18 @@ async function runConsumer(input: {
       activeController = new AbortController();
 
       try {
-        const result = await withTimeout(
-          consumer.consume(client, {
-            ...context,
-            abortSignal: activeController.signal,
-          }),
-          timeoutMs,
-          `BusinessEvent consumer ${consumer.key} timed out after ${timeoutMs}ms`,
-          () => activeController?.abort(),
-        );
+        const consumerWork = consumer.consume(client, {
+          ...context,
+          abortSignal: activeController.signal,
+        });
+        const result = timeoutMs === null
+          ? await consumerWork
+          : await withTimeout(
+              consumerWork,
+              timeoutMs,
+              `BusinessEvent consumer ${consumer.key} timed out after ${timeoutMs}ms`,
+              () => activeController?.abort(),
+            );
         const outcome = consumerResultOutcome(result);
 
         const consumerResult = {

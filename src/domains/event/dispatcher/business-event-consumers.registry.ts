@@ -49,7 +49,10 @@ export function listBusinessEventConsumers(): BusinessEventConsumer[] {
     },
     {
       key: "coordination",
-      timeoutMs: 15000,
+      // Coordination writes the binding/workflow state consumed by projections.
+      // It is a completion barrier: a soft Promise timeout cannot cancel Prisma
+      // work and previously allowed stale projections to publish first.
+      timeoutMs: null,
       consume: (client, context) =>
         consumeBusinessEventForCoordination(client, {
           ...businessEventLogForCoordination(context.eventLog),

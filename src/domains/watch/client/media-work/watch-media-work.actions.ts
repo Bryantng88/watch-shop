@@ -14,6 +14,7 @@ import {
 } from "@/domains/watch/server";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
+import { getProjectionDeliveryStatus } from "@/domains/projection/server";
 
 export async function loadWatchMediaPoolAction(input: { productId: string }) {
   await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
@@ -36,6 +37,7 @@ export async function requestWatchPhotoshootAction(input: {
       watchIds: input.watchIds,
       actorUserId: user.id,
       reason: input.note ?? null,
+      deferConsumers: (work) => after(work),
     },
     prisma,
   );
@@ -82,17 +84,24 @@ export async function markWatchMediaAssetAttachedAction(input: {
 export async function markWatchMediaAssetAttachedFromWatchAction(input: {
   productId: string;
   note?: string | null;
+  origin?: "WATCH_LIST" | "WATCH_DETAIL";
 }) {
+  const startedAt = Date.now();
   const user = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+  const authorizedAt = Date.now();
 
   const result = await markWatchMediaAssetAttachedFromWatch(
     {
       productId: input.productId,
       actorUserId: user.id,
       note: input.note ?? null,
+      origin: input.origin ?? "WATCH_DETAIL",
       deferConsumers: (work) => after(work),
     },
     prisma,
+  );
+  console.info(
+    `[perf:watch-media-intake-action] auth=${authorizedAt - startedAt}ms domain=${Date.now() - authorizedAt}ms total=${Date.now() - startedAt}ms productId=${input.productId}`,
   );
 
   revalidatePath("/admin/watches");
@@ -101,6 +110,28 @@ export async function markWatchMediaAssetAttachedFromWatchAction(input: {
   revalidatePath(`/admin/watches/${input.productId}/edit`);
 
   return result;
+}
+
+export async function getWatchMediaIntakeStatusAction(input: {
+  projectionDeliveryKey: string;
+}) {
+  await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+  const projectionDeliveryKey = String(input.projectionDeliveryKey ?? "").trim();
+  if (!projectionDeliveryKey) return null;
+
+  const delivery = await getProjectionDeliveryStatus(
+    prisma,
+    projectionDeliveryKey,
+  );
+  if (!delivery) return null;
+
+  return {
+    status: delivery.status,
+    attempts: delivery.attempts,
+    completedAt: delivery.completedAt?.toISOString() ?? null,
+    lastError: delivery.lastError,
+    updatedAt: delivery.updatedAt.toISOString(),
+  };
 }
 
 export async function saveWatchMediaWorkDraftFromWatchAction(input: {

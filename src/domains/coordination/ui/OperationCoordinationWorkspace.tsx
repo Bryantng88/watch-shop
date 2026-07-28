@@ -1258,6 +1258,14 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
       await refreshBoard("media");
       return;
     }
+    if (activeCoreFlow?.key === "media-production-flow") {
+      await Promise.all([
+        refreshBoard("media"),
+        loadFlowItems(activeFlowListStage, asyncFlowPagination.page, true),
+      ]);
+      setBoardRefreshedAt(new Date());
+      return;
+    }
     setIsBoardRefreshing(true);
     try {
       await loadFlowItems(activeFlowListStage, asyncFlowPagination.page, true);
@@ -1267,6 +1275,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
     }
   }, [
     activeFlowListStage,
+    activeCoreFlow?.key,
     asyncFlowPagination.page,
     isBoardRefreshing,
     loadFlowItems,

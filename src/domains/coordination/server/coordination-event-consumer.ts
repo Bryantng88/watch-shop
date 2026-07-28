@@ -771,12 +771,19 @@ function extractQueueSeedMetadata(metadataJson: unknown): Prisma.InputJsonObject
   const metadata = asRecord(metadataJson);
   const mediaWorkProgress = asRecord(metadata.mediaWorkProgress);
   const mediaAssetAttachedAt = clean(metadata.mediaAssetAttachedAt);
+  const intakeNote = clean(metadata.intakeNote);
+  const sourceId = clean(metadata.sourceId);
+  const isReshoot =
+    sourceId.startsWith("media-reshoot:") ||
+    clean(metadata.sourceAction).toUpperCase() === "REQUEST_PHOTOSHOOT";
 
   return {
     ...(Object.keys(mediaWorkProgress).length
       ? { mediaWorkProgress: mediaWorkProgress as Prisma.InputJsonObject }
       : {}),
     ...(mediaAssetAttachedAt ? { mediaAssetAttachedAt } : {}),
+    ...(intakeNote ? { intakeNote } : {}),
+    ...(intakeNote && isReshoot ? { reshootNote: intakeNote } : {}),
   };
 }
 

@@ -1,6 +1,7 @@
 "use server";
 
 import { TaskExecutionActionType, TaskExecutionTargetType } from "@prisma/client";
+import { after } from "next/server";
 import { prisma } from "@/server/db/client";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -551,6 +552,7 @@ export async function updateTechnicalIssuePreviewAction(input: {
         vendorId: input.vendorId,
         estimatedCost: input.estimatedCost,
         expectedWorkingDays: input.expectedWorkingDays,
+        deferConsumers: (work) => after(work),
     });
 
     return { ok: true };

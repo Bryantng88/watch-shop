@@ -45,6 +45,7 @@ function buildWatchListInput(req: NextRequest) {
         | "hold"
         | "sold"
         | "all";
+    const galleryFilter = firstValue(params, "hasImages").toLowerCase();
 
     return {
         view,
@@ -57,7 +58,9 @@ function buildWatchListInput(req: NextRequest) {
         vendorId: firstValue(params, "vendorId"),
 
         hasContent: "" as "" | "yes" | "no",
-        hasImages: "" as "" | "yes" | "no",
+        hasImages: (galleryFilter === "yes" || galleryFilter === "no"
+            ? galleryFilter
+            : "") as "" | "yes" | "no",
 
         saleStage: "",
         opsStage: "",

@@ -43,7 +43,17 @@ export type WatchListProjectionRow = {
   saleStatus: WatchListSaleStatus;
   saleStatusLabel: string;
   salePrice: number | null;
+  lastAction: WatchListProjectionLastAction | null;
   updatedAt: string | null;
+};
+
+export type WatchListProjectionLastAction = {
+  eventKey: string;
+  label: string;
+  note: string | null;
+  actorUserId: string | null;
+  actorLabel: string | null;
+  at: string;
 };
 
 export type WatchListProjectionMediaState = {
@@ -176,6 +186,7 @@ export type WatchListProjectionSourceRow = {
   __imagesCount?: number;
   __mediaState?: WatchListProjectionMediaState[];
   __serviceState?: WatchListProjectionServiceState | null;
+  __lastAction?: WatchListProjectionLastAction | null;
 };
 
 export type WatchListProjectionListResult = WatchListResult & {

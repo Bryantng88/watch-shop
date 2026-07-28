@@ -94,27 +94,34 @@ export async function runProjectionBuildersForEvent(
     );
     if (!ready.length) ready = [...pending];
 
-    const batchResults = await Promise.all(ready.map(async (builder) => {
-      if (!builder.buildFromEvent) {
-        return skippedResult({ builder, reason: "NO_EVENT_BUILDER" });
-      }
-      try {
-        return await perfStep("projection", `${event.eventKey}:${builder.key}`, () =>
-          builder.buildFromEvent!(db, {
-            projectionKey: builder.key,
-            projectionVersion: builder.version,
-            sourceKind: "BUSINESS_EVENT",
-            sourceEvent: event,
-            scope: {
-              targetType: event.targetType,
-              targetId: event.targetId,
-            },
-          }),
-        );
-      } catch (error) {
-        return failedResult({ builder, error });
-      }
-    }));
+    const batchResults: ProjectionBuildResult[] = [];
+    // These builders are database-heavy read models. Keep bounded concurrency
+    // inside one delivery so a single event cannot exhaust the connection pool.
+    for (let index = 0; index < ready.length; index += 2) {
+      batchResults.push(...await Promise.all(
+        ready.slice(index, index + 2).map(async (builder) => {
+          if (!builder.buildFromEvent) {
+            return skippedResult({ builder, reason: "NO_EVENT_BUILDER" });
+          }
+          try {
+            return await perfStep("projection", `${event.eventKey}:${builder.key}`, () =>
+              builder.buildFromEvent!(db, {
+                projectionKey: builder.key,
+                projectionVersion: builder.version,
+                sourceKind: "BUSINESS_EVENT",
+                sourceEvent: event,
+                scope: {
+                  targetType: event.targetType,
+                  targetId: event.targetId,
+                },
+              }),
+            );
+          } catch (error) {
+            return failedResult({ builder, error });
+          }
+        }),
+      ));
+    }
     results.push(...batchResults);
     for (const builder of ready) {
       completedKeys.add(clean(builder.key).toLowerCase());

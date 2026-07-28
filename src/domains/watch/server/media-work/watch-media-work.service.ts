@@ -292,6 +292,7 @@ export async function requestWatchPhotoshoot(
     watchIds: string[];
     actorUserId?: string | null;
     note?: string | null;
+    deferConsumers?: (work: () => Promise<void>) => void;
   },
   db: DB = prisma,
 ): Promise<RequestWatchPhotoshootResult> {
@@ -388,6 +389,8 @@ export async function requestWatchPhotoshoot(
       actorUserId: input.actorUserId ?? null,
       sourceId: `photoshoot:${watch.id}`,
       note: input.note ?? null,
+    }, {
+      deferConsumers: input.deferConsumers,
     });
 
     items.push({
@@ -524,7 +527,6 @@ export async function markWatchMediaAssetAttachedFromQueueItem(
     actorUserId?: string | null;
     note?: string | null;
     deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
-    deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
   },
   db: DB = prisma,
 ) {
@@ -588,7 +590,6 @@ export async function markWatchMediaAssetAttachedFromQueueItem(
           productImage: {
             where: { role: ImageRole.GALLERY },
             select: { id: true },
-            take: 1,
           },
         },
       },
@@ -658,6 +659,9 @@ export async function markWatchMediaAssetAttachedFromQueueItem(
     actorUserId: input.actorUserId ?? null,
     sourceId: `media-asset-attached:${binding.id}`,
     note: input.note ?? null,
+    mediaSource: "MEDIA_WORKSPACE",
+    origin: "MEDIA_WORKSPACE",
+    galleryImageCount: watch.product?.productImage?.length ?? 0,
     mediaWorkProgress: seededProgress,
   }, { deferConsumers: input.deferConsumers });
 
@@ -677,6 +681,7 @@ export async function markWatchMediaAssetAttachedFromWatch(
     productId: string;
     actorUserId?: string | null;
     note?: string | null;
+    origin?: "WATCH_LIST" | "WATCH_DETAIL";
     deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
   },
   db: DB = prisma,
@@ -699,7 +704,6 @@ export async function markWatchMediaAssetAttachedFromWatch(
           productImage: {
             where: { role: ImageRole.GALLERY },
             select: { id: true },
-            take: 1,
           },
         },
       },
@@ -707,6 +711,10 @@ export async function markWatchMediaAssetAttachedFromWatch(
   });
 
   if (!watch) return { ok: false, skipped: true, reason: "WATCH_NOT_FOUND" };
+  const galleryImageCount = watch.product?.productImage?.length ?? 0;
+  if (galleryImageCount <= 0) {
+    return { ok: false, skipped: true, reason: "NO_GALLERY_IMAGES" };
+  }
 
   const binding = await db.taskExecution.findFirst({
     where: {
@@ -730,8 +738,12 @@ export async function markWatchMediaAssetAttachedFromWatch(
     const event = await emitWatchMediaAssetAttachedEvent(db, {
       watch: toWatchEventSnapshot(watch),
       actorUserId: input.actorUserId ?? null,
-      sourceId: `media-asset-attached:list:${watch.id}:${attachedAt}`,
+      sourceId: `media-intake:gallery:${watch.id}`,
       note: input.note ?? null,
+      mediaSource: "GALLERY",
+      intakeRoute: "DIRECT_TO_MEDIA_PROCESSING",
+      origin: input.origin ?? "WATCH_DETAIL",
+      galleryImageCount,
       mediaWorkProgress: seededProgress,
     }, { deferConsumers: input.deferConsumers });
 
@@ -950,6 +962,7 @@ export async function requestWatchMediaReshootFromQueueItem(
     bindingId: string;
     actorUserId?: string | null;
     note?: string | null;
+    deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
   },
   db: DB = prisma,
 ) {

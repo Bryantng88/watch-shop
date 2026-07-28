@@ -314,6 +314,59 @@ Consumer rules:
 - Consumer-specific side effects stay inside the consumer or the service it
   owns.
 - A consumer failure must not hide the status of other consumers.
+- A consumer that writes state required by a downstream read model is a
+  completion barrier. It must finish successfully before that projection
+  delivery can be claimed. Do not apply a soft `Promise.race` timeout to a
+  database write barrier: the timeout cannot cancel the database work and can
+  publish a stale projection while the write continues in the background.
+- A durable projection delivery is inserted as `BLOCKED` in the command
+  transaction and released to `PENDING` only after the completion barrier
+  succeeds. Both the immediate after-commit runner and the periodic worker must
+  claim only released deliveries.
+- Projection fan-out must use bounded concurrency. An event may update several
+  independent read models, but it must not start every database-heavy builder
+  at once and exhaust the shared connection pool.
+
+### Command Request Lifecycle
+
+Every UI or API command that changes operation-visible state must use the same
+request lifecycle:
+
+```text
+validate and authorize
+-> write business truth
+-> persist the catalogued Business Event and durable deliveries
+-> commit
+-> schedule consumers after commit
+-> return the command result
+```
+
+The application entry point owns the runtime-specific scheduler (for example
+Next.js `after`). It passes that scheduler through the application/domain
+command contract as `deferConsumers`. Domain adapters must forward the contract;
+they must not silently drop it.
+
+Rules:
+
+- Projection, Coordination, Timeline, and Notification work must not extend the
+  blocking save/review request.
+- A command must not rely only on a periodic worker to make its immediately
+  visible list, board, counter, or activity state correct.
+- The event and its delivery records remain durable and idempotent so a worker
+  can retry failures.
+- UI code must not call projection builders or patch list counters directly.
+- All entry points for the same domain command (Blueprint action, manual queue
+  action, modal action, and API route) must call the same domain adapter and
+  preserve the same after-commit contract.
+- The client may optimistically disable or remove an item while the command is
+  pending, then reconcile from the affected projection slice. It must not make
+  a second business mutation merely to refresh the screen.
+- A progress UI must distinguish command acceptance from operation completion.
+  For commands with deferred consumers it tracks the durable delivery key and
+  reports success only after the required delivery reaches `SUCCEEDED`; only
+  then may it refresh the affected list/board/counters. Closing or cancelling
+  the progress UI stops client polling and future batch submissions, not an
+  already committed business command.
 
 ## Workflow Boundary
 
@@ -528,6 +581,7 @@ Before adding a new cross-domain behavior, answer:
 8. Is workflow orchestration separate from domain CRUD?
 9. Is projection read-only and rebuildable?
 10. Is there a fallback or verification path if changing a hot flow?
+11. Does the flow pass the list/board projection consistency production gate?
 
 If the answer is unclear, document the boundary before coding.
 
@@ -539,6 +593,7 @@ This doc refines the principles from:
 - `docs/architecture/00-vision.md`
 - `docs/architecture/03-business-event-consumers.md`
 - `docs/architecture/06-item-runtime-contract.md`
+- `docs/architecture/23-list-projection-consistency-production-gate.md`
 - `docs/sprints/SM-Sprint-51-event-architecture-and-workspace-flow-handoff.md`
 
 Those docs explain the product model and earlier sprint work. This document is

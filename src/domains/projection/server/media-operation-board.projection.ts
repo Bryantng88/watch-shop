@@ -246,6 +246,7 @@ export async function buildMediaOperationBoardRow(
         )
       : availableTransitions;
   const actor = userLabel(binding.createdByUser);
+  const bindingMetadata = asRecord(binding.metadataJson);
   const data: MediaOperationBoardProjection = {
     id: watch.id,
     productId: watch.productId,
@@ -257,9 +258,10 @@ export async function buildMediaOperationBoardRow(
     stage,
     workflowKey: transitionedToNextStage ? null : runtime?.workflowKey ?? null,
     workflowState: visibleWorkflowState,
+    reshootNote: clean(bindingMetadata.reshootNote) || null,
     mediaWorkProgress: transitionedToNextStage || stage === "PUBLISH"
       ? null
-      : resolveMediaWorkProgressFromMetadata(asRecord(binding.metadataJson)),
+      : resolveMediaWorkProgressFromMetadata(bindingMetadata),
     postTargets: mapProductPostTargets(watch.product),
     manualTransitions,
     commentCount,

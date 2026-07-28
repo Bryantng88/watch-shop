@@ -102,7 +102,7 @@ registerCoordinationRoutes([
     workTypeKey: "media-processing",
     enabled: true,
     metadata: {
-      note: "Intake or progress Media Processing after NAS assets are attached through Watch domain.",
+      note: "Intake Gallery-backed Watch directly into Media Processing, or progress an existing Media item after assets change.",
       scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "MEDIA",
       bindingMode: "INTAKE",

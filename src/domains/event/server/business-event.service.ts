@@ -8,6 +8,7 @@ import type {
 import { perfLog, perfNow } from "@/lib/server-perf";
 import { randomUUID } from "node:crypto";
 import { enqueueProjectionDelivery } from "@/domains/projection/server/projection-delivery.repo";
+import { markProjectionDeliveryReady } from "@/domains/projection/server/projection-delivery.repo";
 import { processProjectionDelivery } from "@/domains/projection/server/projection-delivery.service";
 export type { BusinessEventEffect };
 
@@ -163,7 +164,7 @@ export async function recordBusinessEvent(
             });
             if (!committedEventLog) return;
 
-            await dispatchBusinessEvent({
+            const consumerResults = await dispatchBusinessEvent({
                 client: prisma,
                 context: {
                     ...consumerContext,
@@ -173,6 +174,18 @@ export async function recordBusinessEvent(
                 // the same transaction as the event.
                 excludedConsumerKeys: ["projection"],
             });
+            if (consumerResults.coordination?.ok === false) {
+                console.warn("[business-event] projection held because coordination failed", {
+                    eventKey,
+                    targetType,
+                    targetId,
+                    projectionDeliveryKey,
+                    coordinationStatus: consumerResults.coordination.status,
+                    coordinationError: consumerResults.coordination.error,
+                });
+                return;
+            }
+            await markProjectionDeliveryReady(prisma, projectionDeliveryKey);
             await processProjectionDelivery(projectionDeliveryKey, {
                 db: prisma,
             });
@@ -183,6 +196,7 @@ export async function recordBusinessEvent(
         return {
             ok: true,
             eventLog,
+            projectionDeliveryKey,
             deferred: true as const,
             consumers: {
                 coordination: undefined,
@@ -201,11 +215,15 @@ export async function recordBusinessEvent(
         // pay projection fan-out latency; the system worker will drain the outbox.
         excludedConsumerKeys: ["projection"],
     });
+    if (consumerResults.coordination?.ok !== false) {
+        await markProjectionDeliveryReady(client, projectionDeliveryKey);
+    }
     perfLog("business-event", `${eventKey}:total`, totalStartedAt);
 
     return {
         ok: true,
         eventLog,
+        projectionDeliveryKey,
         consumers: {
             coordination: consumerResults.coordination,
             workflow: consumerResults.workflow,

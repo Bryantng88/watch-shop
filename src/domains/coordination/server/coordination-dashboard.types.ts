@@ -133,6 +133,7 @@ export type CoordinationMediaBoardItemDTO = {
   stage: "PHOTOGRAPHY" | "MEDIA_PROCESSING" | "PUBLISH" | "DONE";
   workflowKey: string | null;
   workflowState: string | null;
+  reshootNote: string | null;
   mediaWorkProgress: QueueItemDTO["mediaWorkProgress"];
   postTargets: QueueItemDTO["preview"]["postTargets"];
   manualTransitions: QueueItemDTO["manualTransitions"];

@@ -73,6 +73,7 @@ function buildInitialWatchListInput(searchParams: SearchParams) {
         | "hold"
         | "sold"
         | "all";
+    const galleryFilter = firstValue(searchParams.hasImages).toLowerCase();
     return {
         view,
         audienceSegment: audienceSegment as "MEN" | "WOMEN" | "UNISEX",
@@ -85,7 +86,9 @@ function buildInitialWatchListInput(searchParams: SearchParams) {
         vendorId: firstValue(searchParams.vendorId),
 
         hasContent: "" as "" | "yes" | "no",
-        hasImages: "" as "" | "yes" | "no",
+        hasImages: (galleryFilter === "yes" || galleryFilter === "no"
+            ? galleryFilter
+            : "") as "" | "yes" | "no",
 
         saleStage: "",
         opsStage: "",

@@ -27,6 +27,7 @@ import {
     markWatchMediaAssetAttachedFromWatchAction,
     requestWatchPhotoshootAction,
 } from "./media-work/watch-media-work.actions";
+import { waitForWatchMediaDelivery } from "./media-work/watch-media-delivery.client";
 import {
     confirmDuplicateWatchAction,
     permanentlyDeleteDuplicateWatchAction,
@@ -110,7 +111,6 @@ function sanitizeParams(input: URLSearchParams) {
     [
         "subFilter",
         "hasContent",
-        "hasImages",
         "saleStage",
         "opsStage",
         "quickFilter",
@@ -465,6 +465,7 @@ export default function WatchListClient(props: WatchListClientProps) {
             setParam(next, "sku", filters.sku);
             setParam(next, "brandId", filters.brandId);
             setParam(next, "vendorId", filters.vendorId);
+            setParam(next, "hasImages", filters.hasImages);
             setParam(next, "mediaStatus", filters.mediaStatus);
             setParam(next, "serviceStatus", filters.serviceStatus);
             setParam(next, "saleStatus", filters.saleStatus);
@@ -474,7 +475,6 @@ export default function WatchListClient(props: WatchListClientProps) {
             setParam(next, "priceMax", filters.priceMax);
             [
                 "hasContent",
-                "hasImages",
                 "saleStage",
                 "opsStage",
                 "subFilter",
@@ -707,7 +707,11 @@ export default function WatchListClient(props: WatchListClientProps) {
                     const result = await markWatchMediaAssetAttachedFromWatchAction({
                         productId: row.productId,
                         note: "Submitted to Media Processing review from Watch list bulk action.",
+                        origin: "WATCH_LIST",
                     });
+                    if (!result.skipped) {
+                        await waitForWatchMediaDelivery(result);
+                    }
 
                     if (result.skipped) {
                         skipped += 1;
@@ -779,7 +783,11 @@ export default function WatchListClient(props: WatchListClientProps) {
                 const result = await markWatchMediaAssetAttachedFromWatchAction({
                     productId: row.productId,
                     note: "Requested Media Workspace from Watch list row action.",
+                    origin: "WATCH_LIST",
                 });
+                if (!result.skipped) {
+                    await waitForWatchMediaDelivery(result);
+                }
 
                 if (result.skipped) {
                     notify.warning({
@@ -926,6 +934,7 @@ export default function WatchListClient(props: WatchListClientProps) {
         if (!selectedRows.length || photoshootSubmitting || mediaReviewSubmitting) return;
 
         setMediaReviewSubmitting(true);
+        let cancelled = false;
         const steps: AppProgressStep[] = selectedRows.map((row) => ({
             id: row.id,
             label: row.title || row.sku || row.productId,
@@ -937,11 +946,18 @@ export default function WatchListClient(props: WatchListClientProps) {
             title: "Đang đưa vào Space Media",
             message: `0/${selectedRows.length} watch hoàn tất`,
             steps,
+            cancellable: true,
+            cancelLabel: "Dừng batch",
+            onCancel: () => {
+                cancelled = true;
+                setMediaReviewSubmitting(false);
+            },
         });
 
         let completed = 0;
         let skipped = 0;
         for (let index = 0; index < selectedRows.length; index += 1) {
+            if (cancelled) break;
             const row = selectedRows[index];
             steps[index] = { ...steps[index], status: "running", detail: "Đang xử lý..." };
             progress.update({ message: `${index}/${selectedRows.length} watch hoàn tất`, steps: [...steps] });
@@ -951,7 +967,27 @@ export default function WatchListClient(props: WatchListClientProps) {
                     const result = await markWatchMediaAssetAttachedFromWatchAction({
                         productId: row.productId,
                         note: "Requested Media Workspace from Watch list bulk action.",
+                        origin: "WATCH_LIST",
                     });
+                    if (!result.skipped) {
+                        await waitForWatchMediaDelivery(result, {
+                            cancelled: () => cancelled,
+                            onStatus: (status) => {
+                                steps[index] = {
+                                    ...steps[index],
+                                    detail: status === "BLOCKED"
+                                        ? "Đang cập nhật Workspace Media..."
+                                        : status === "PROCESSING"
+                                            ? "Đang đồng bộ danh sách và bộ đếm..."
+                                            : "Đang chờ đồng bộ dữ liệu...",
+                                };
+                                progress.update({
+                                    message: `${index}/${selectedRows.length} watch hoàn tất`,
+                                    steps: [...steps],
+                                });
+                            },
+                        });
+                    }
                     if (result.skipped) {
                         skipped += 1;
                         steps[index] = { ...steps[index], status: "skipped", detail: result.reason ?? "Watch đã được bỏ qua." };
@@ -974,6 +1010,7 @@ export default function WatchListClient(props: WatchListClientProps) {
                     }
                 }
             } catch (error) {
+                if (cancelled) break;
                 skipped += 1;
                 steps[index] = {
                     ...steps[index],
@@ -982,6 +1019,7 @@ export default function WatchListClient(props: WatchListClientProps) {
                 };
             }
 
+            if (cancelled) break;
             progress.update({
                 message: `${index + 1}/${selectedRows.length} watch hoàn tất`,
                 steps: [...steps],
@@ -989,6 +1027,14 @@ export default function WatchListClient(props: WatchListClientProps) {
         }
 
         try {
+            if (cancelled) {
+                notify.info({
+                    title: "Đã dừng batch",
+                    message: "Không nhận thêm item mới. Item đang gửi trước lúc dừng có thể vẫn hoàn tất ở server.",
+                });
+                await loadList(new URLSearchParams(params.toString()), { meta: "lite" });
+                return;
+            }
             notify.success({
                 title: "Đã xử lý Space Media",
                 message: `${completed} watch được đưa vào luồng, ${skipped} watch bỏ qua.`,

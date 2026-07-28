@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { createTechnicalIssue } from "@/domains/service/server";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -23,12 +23,13 @@ export async function POST(req: Request) {
             mechanicalPartCatalogId: body.mechanicalPartCatalogId,
             summary: body.summary,
             actorUserId: actor.id,
+            deferConsumers: (work) => after(work),
         });
 
         return NextResponse.json({ ok: true, item });
-    } catch (error: any) {
+    } catch (error: unknown) {
         return NextResponse.json(
-            { error: error?.message || "Create technical issue failed" },
+            { error: error instanceof Error ? error.message : "Create technical issue failed" },
             { status: 500 }
         );
     }

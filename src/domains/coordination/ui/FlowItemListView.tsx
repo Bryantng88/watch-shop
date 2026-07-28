@@ -259,6 +259,7 @@ export default function FlowItemListView({
     !showPaymentAmount && !normalize(activeStage).includes("photography");
   const showProgressColumn = normalize(activeStage).includes("media-processing");
   const showPublishChannels = normalize(activeStage).includes("publish");
+  const showReshootNote = normalize(activeStage).includes("photography");
   const visibleItems = useMemo(() => {
     const cleanQuery = query.trim().toLocaleLowerCase("vi");
     return items.filter((item) => {
@@ -744,6 +745,7 @@ export default function FlowItemListView({
                 <input type="checkbox" aria-label="Chọn tất cả item đang hiển thị" checked={allVisibleSelected} onChange={(event) => setSelectedIds(event.target.checked ? Array.from(new Set([...selectedIds, ...visibleIds])) : selectedIds.filter((id) => !visibleIds.includes(id)))} />
               </th>
               <th className="px-2 py-3">Item</th>
+              {showReshootNote ? <th className="w-80 px-4 py-3">Yêu cầu xử lý</th> : null}
               {showStatusColumn ? <th className="px-4 py-3">Trạng thái</th> : null}
               {showProgressColumn ? <th className="w-40 px-4 py-3">Progress</th> : null}
               {showPublishChannels ? <th className="w-56 px-4 py-3">Kênh đăng</th> : null}
@@ -814,6 +816,20 @@ export default function FlowItemListView({
                       </span>
                     </Link>
                   </td>
+                  {showReshootNote ? (
+                    <td className="px-4 py-3">
+                      {item.reshootNote ? (
+                        <div
+                          title={item.reshootNote}
+                          className="max-w-80 whitespace-normal text-xs font-medium leading-5 text-amber-800"
+                        >
+                          {item.reshootNote}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
+                    </td>
+                  ) : null}
                   {showStatusColumn ? (
                     <td className="px-4 py-3">
                       <WorkflowStatusSignal

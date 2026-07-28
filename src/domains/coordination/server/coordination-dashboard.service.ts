@@ -1496,6 +1496,7 @@ async function loadMediaBoardLive(input: {
             ? "NEW"
             : runtime?.currentState ?? null;
     const actorLabel = userLabel(binding.createdByUser);
+    const bindingMetadata = asRecord(binding.metadataJson);
     return {
       id: watch.id,
       productId: watch.productId,
@@ -1507,9 +1508,10 @@ async function loadMediaBoardLive(input: {
       stage,
       workflowKey: transitionedToNextStage ? null : runtime?.workflowKey ?? null,
       workflowState: visibleWorkflowState,
+      reshootNote: String(bindingMetadata.reshootNote ?? "").trim() || null,
       mediaWorkProgress: transitionedToNextStage || stage === "PUBLISH"
         ? null
-        : resolveMediaWorkProgressFromMetadata(asRecord(binding.metadataJson)),
+        : resolveMediaWorkProgressFromMetadata(bindingMetadata),
       postTargets: mapProductPostTargets(watch.product),
       manualTransitions: transitionedToNextStage
         ? []
@@ -3113,7 +3115,7 @@ export async function getCoordinationDashboard(input: {
                   isWorkflowDone: item.stage === "DONE",
                   manualTransitions: item.manualTransitions,
                   intakeNote: null,
-                  reshootNote: null,
+                  reshootNote: item.reshootNote,
                   mediaWorkProgress: item.mediaWorkProgress,
                   technicalIssue: null,
                   payment: null,

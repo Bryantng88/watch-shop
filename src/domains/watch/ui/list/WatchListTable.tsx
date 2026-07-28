@@ -78,10 +78,22 @@ export default function WatchListTable({
             </div>
 
             <div className="relative overflow-x-auto">
-                <table className="w-full min-w-[1120px] table-fixed text-sm">
+                <table className="w-full min-w-[1910px] table-fixed text-sm">
+                    <colgroup>
+                        <col className="w-14" />
+                        <col className="w-[500px]" />
+                        <col className="w-[210px]" />
+                        <col className="w-[210px]" />
+                        <col className="w-[150px]" />
+                        <col className="w-[130px]" />
+                        <col className="w-[160px]" />
+                        <col className="w-[160px]" />
+                        <col className="w-[260px]" />
+                        <col className="w-[74px]" />
+                    </colgroup>
                     <thead className="bg-slate-50/80 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
                         <tr>
-                            <th className="w-[5%] px-4 py-3">
+                            <th className="px-4 py-3">
                                 <input
                                     type="checkbox"
                                     checked={allChecked}
@@ -89,13 +101,20 @@ export default function WatchListTable({
                                     className="h-4 w-4 rounded border-slate-300"
                                 />
                             </th>
-                            <th className="w-[35%] px-4 py-3">Watch</th>
-                            <th className="min-w-[220px] px-4 py-3">Media</th>
-                            <th className="min-w-[220px] px-4 py-3">Service</th>
-                            <th className="w-[11%] px-4 py-3">Bán hàng</th>
-                            <th className="w-[9%] px-4 py-3">Giá bán</th>
-                            <th className="w-[9%] px-4 py-3">Cập nhật</th>
-                            <th className="w-[6%] px-4 py-3 text-right">Actions</th>
+                            <th className="px-4 py-3">Watch</th>
+                            <th className="px-4 py-3">Media</th>
+                            <th className="px-4 py-3">Service</th>
+                            <th className="px-4 py-3">Bán hàng</th>
+                            <th className="px-4 py-3">Giá bán</th>
+                            <th
+                                className="px-4 py-3"
+                                title="Thời điểm Watch được tạo từ phiếu nhập"
+                            >
+                                Ngày tạo
+                            </th>
+                            <th className="px-4 py-3">Cập nhật</th>
+                            <th className="px-4 py-3">Thao tác cuối</th>
+                            <th className="px-4 py-3 text-right">Actions</th>
                         </tr>
                     </thead>
 
@@ -103,7 +122,7 @@ export default function WatchListTable({
                         {safeItems.length === 0 ? (
                             <tr>
                                 <td
-                                    colSpan={8}
+                                    colSpan={10}
                                     className="px-4 py-12 text-center text-sm text-slate-500"
                                 >
                                     Chưa có watch nào khớp bộ lọc hiện tại.

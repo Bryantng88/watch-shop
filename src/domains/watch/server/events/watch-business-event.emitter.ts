@@ -231,6 +231,11 @@ export async function emitWatchMediaAssetAttachedEvent(
       sourceAction: "ATTACH_MEDIA_ASSET",
       sourceId: input.sourceId ?? null,
       note: input.note ?? null,
+      mediaSource: input.mediaSource ?? null,
+      intakeRoute: input.intakeRoute ?? null,
+      origin: input.origin ?? null,
+      galleryImageCount: input.galleryImageCount ?? null,
+      mediaWorkProgress: input.mediaWorkProgress ?? null,
     }),
   }, options);
 }

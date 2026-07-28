@@ -55,6 +55,10 @@ export type WatchMediaPipelineEventPayloadInput = {
     | "DOWNLOAD_PUBLISH_ASSETS";
   sourceId?: string | null;
   note?: string | null;
+  mediaSource?: "GALLERY" | "PHOTOSHOOT" | "MEDIA_WORKSPACE" | null;
+  intakeRoute?: "DIRECT_TO_MEDIA_PROCESSING" | "PHOTOSHOOT_HANDOFF" | null;
+  origin?: "WATCH_LIST" | "WATCH_DETAIL" | "MEDIA_WORKSPACE" | null;
+  galleryImageCount?: number | null;
   mediaWorkProgress?: {
     parts: {
       profile: boolean;
@@ -150,11 +154,11 @@ export const WATCH_BUSINESS_EVENT_DEFINITIONS: WatchBusinessEventDefinition[] = 
     targetType: "WATCH",
     group: "Watch Media",
     status: "ACTIVE",
-    businessMeaning: "Media assets from NAS were attached to Watch through Watch domain.",
+    businessMeaning: "Gallery assets were attached or a legacy Gallery Watch was directly intaken into Media Processing.",
     producer: "watch-media-work.service",
-    emitPoint: "markWatchMediaAssetAttachedFromQueueItem",
+    emitPoint: "markWatchMediaAssetAttachedFromWatch / markWatchMediaAssetAttachedFromQueueItem",
     targetIdPolicy: "watch.id",
-    targetAliasPolicy: "[watch.id, productId, nasAssetIds]",
+    targetAliasPolicy: "[watch.id, productId, sourceId]",
     payloadContract: "WatchMediaAssetAttachedPayload",
     knownConsumers: [...WATCH_MEDIA_QUEUE_PROJECTION_CONSUMERS],
     autoBindingScope: WATCH_MEDIA_PROCESSING_AUTO_BINDING_SCOPE,
@@ -497,6 +501,10 @@ export function watchMediaPipelineEventPayload(input: WatchMediaPipelineEventPay
     sourceId,
     eventInstanceId: sourceId,
     intakeNote: input.note ?? null,
+    mediaSource: input.mediaSource ?? null,
+    intakeRoute: input.intakeRoute ?? null,
+    origin: input.origin ?? null,
+    galleryImageCount: input.galleryImageCount ?? null,
     mediaWorkProgress: input.mediaWorkProgress ?? null,
   };
 }

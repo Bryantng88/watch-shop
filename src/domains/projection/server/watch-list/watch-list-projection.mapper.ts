@@ -120,7 +120,7 @@ function mapMediaStatus(row: WatchRow, source: WatchListProjectionSourceRow) {
   // An inline/acquisition image is product identity data, not evidence that the
   // watch entered the media workflow. Only photoshoot events may advance the
   // media status.
-  return { status: "NO_IMAGE" as const, label: "Chưa gửi photoshoot" };
+  return { status: "NO_IMAGE" as const, label: "Chưa vào luồng Media" };
 }
 
 function mapServiceStatus(row: WatchRow, source: WatchListProjectionSourceRow): {
@@ -219,6 +219,7 @@ function mapV2Row(
     saleStatus: sale.status,
     saleStatusLabel: sale.label,
     salePrice: numberNullable(row.salePrice),
+    lastAction: source.__lastAction ?? null,
     updatedAt: isoDate(row.updatedAt),
   };
 }

@@ -1279,6 +1279,7 @@ export async function applyQueueItemManualTransitionAction(input: {
       actorUserId,
       actorName: actorLabel,
       note: input.note ?? null,
+      deferConsumers: (work) => after(work),
     });
 
     if (!serviceActionResult.ok) {

@@ -207,6 +207,7 @@ export async function getOrCreateServiceOperationWorkspaceForWatch(input: {
   productId: string;
   actorUserId?: string | null;
   openExisting?: boolean;
+  deferConsumers?: (work: () => Promise<void>) => void;
 }) {
   const productId = cleanText(input.productId);
   if (!productId) throw new Error("Missing productId");
@@ -256,9 +257,11 @@ export async function getOrCreateServiceOperationWorkspaceForWatch(input: {
         refNo: existing.refNo ?? null,
       },
       targetAliasIds: [productId],
-    });
+    }, { deferConsumers: input.deferConsumers });
 
-    const binding = await findServiceRequestWorkspaceBinding(prisma, existing.id);
+    const binding = input.deferConsumers
+      ? null
+      : await findServiceRequestWorkspaceBinding(prisma, existing.id);
     const taskItemId = binding?.taskItemId ?? event.consumers.coordination?.taskItemId ?? null;
 
     return {
@@ -287,9 +290,11 @@ export async function getOrCreateServiceOperationWorkspaceForWatch(input: {
       refNo: request.refNo ?? null,
     },
     targetAliasIds: [productId],
-  });
+  }, { deferConsumers: input.deferConsumers });
 
-  const binding = await findServiceRequestWorkspaceBinding(prisma, request.id);
+  const binding = input.deferConsumers
+    ? null
+    : await findServiceRequestWorkspaceBinding(prisma, request.id);
   const taskItemId = binding?.taskItemId ?? event.consumers.coordination?.taskItemId ?? null;
 
   return {
@@ -393,9 +398,11 @@ export async function watchIntakeWithInitialSuspicion(input: {
         refNo: existing.refNo ?? null,
       },
       targetAliasIds: [productId],
-    });
+    }, { deferConsumers: input.deferConsumers });
 
-    const binding = await findServiceRequestWorkspaceBinding(prisma, existing.id);
+    const binding = input.deferConsumers
+      ? null
+      : await findServiceRequestWorkspaceBinding(prisma, existing.id);
     const taskItemId = binding?.taskItemId ?? event.consumers.coordination?.taskItemId ?? null;
 
     return {
@@ -561,15 +568,35 @@ async function getQuickServiceById(serviceRequestId: string) {
   return mapQuickService(row);
 }
 
-export async function getOrCreateActiveWatchService(input: { productId: string }) {
+export async function getOrCreateActiveWatchService(input: {
+  productId: string;
+  actorUserId?: string | null;
+  deferConsumers?: (work: () => Promise<void>) => void;
+}) {
   const productId = cleanText(input.productId);
   if (!productId) throw new Error("Missing productId");
 
+  const existing = await findActiveServiceRequest(prisma, productId);
   const serviceRequestId = await getOrCreateActiveServiceRequestId(productId);
 
   // Không gọi getQuickServiceById bên trong transaction.
   // Transaction cũ bị timeout vì vừa gen ref / create SR / query detail trong cùng interactive transaction.
   await ensureAssessment(prisma, serviceRequestId);
+
+  if (!existing?.id) {
+    await recordBusinessEvent(prisma, {
+      eventKey: "service_request.created",
+      targetType: "SERVICE_REQUEST",
+      targetId: serviceRequestId,
+      actorUserId: input.actorUserId ?? null,
+      payload: {
+        source: "watch-active-service-force-create",
+        productId,
+        serviceRequestId,
+      },
+      targetAliasIds: [productId],
+    }, { deferConsumers: input.deferConsumers });
+  }
 
   return getQuickServiceById(serviceRequestId);
 }
@@ -593,6 +620,7 @@ export async function createQuickIssueForActiveWatchService(input: {
   issueType?: string | null;
   priority?: string | null;
   actorUserId?: string | null;
+  deferConsumers?: (work: () => Promise<void>) => void;
 }) {
   const productId = cleanText(input.productId);
   if (!productId) throw new Error("Missing productId");
@@ -630,6 +658,7 @@ export async function createQuickIssueForActiveWatchService(input: {
     actionMode: "INTERNAL",
     priority: normalizedPriority,
     actorUserId: input.actorUserId,
+    deferConsumers: input.deferConsumers,
   });
 
   const now = new Date();

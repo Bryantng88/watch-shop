@@ -41,18 +41,28 @@ const sortField: FilterBarField = {
 
 const advancedFields: FilterBarField[] = [
     {
+        key: "hasImages",
+        label: "Gallery",
+        type: "select",
+        options: [
+            { label: "Gallery: Tất cả", value: "" },
+            { label: "Gallery: Có ảnh", value: "yes" },
+            { label: "Gallery: Chưa có ảnh", value: "no" },
+        ],
+    },
+    {
         key: "mediaStatus",
-        label: "Media",
+        label: "Luồng Media",
         type: "select",
         options: [
             { label: "Tất cả", value: "" },
             { label: "Đang chụp", value: "PHOTOSHOOT" },
-            { label: "Có ảnh · Chưa xử lý", value: "MEDIA_READY" },
+            { label: "Đã chụp xong · Chờ xử lý", value: "MEDIA_READY" },
             { label: "Đang xử lý media", value: "MEDIA_PROCESSING" },
             { label: "Sẵn sàng đăng", value: "READY_TO_PUBLISH" },
             { label: "Đã đăng", value: "POSTED" },
             { label: "Cần xử lý lại", value: "NEEDS_REWORK" },
-            { label: "Chưa gửi photoshoot", value: "NO_IMAGE" },
+            { label: "Chưa vào luồng Media", value: "NO_IMAGE" },
         ],
     },
     {

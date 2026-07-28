@@ -19,6 +19,7 @@ export const WATCH_MEDIA_QUEUE_PROJECTION_KEY = "watch-media-queue";
 export const WATCH_MEDIA_QUEUE_PROJECTION_VERSION = 1;
 
 const WATCH_MEDIA_QUEUE_SOURCE_EVENTS = [
+  "watch.media.photoshoot.requested",
   "watch.media.photoshoot.completed",
   "watch.media.asset.attached",
   "watch.content.modified",

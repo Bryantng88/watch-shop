@@ -8,6 +8,8 @@ import {
     isTechnicalIssueDone,
 } from "@/domains/service/server/shared/service-request.rules";
 
+type DeferConsumers = (work: () => Promise<void>) => void;
+
 function cleanId(v: unknown): string | null {
     const text = String(v ?? "").trim();
     return text || null;
@@ -395,6 +397,7 @@ export async function confirmTechnicalIssue(input: {
     actorName?: string | null;
     summary?: string | null;
     note?: string | null;
+    deferConsumers?: DeferConsumers;
 }) {
     const id = cleanId(input.id);
     if (!id) throw new Error("Missing issue id");
@@ -432,6 +435,7 @@ export async function confirmTechnicalIssue(input: {
         payload: {
             executionStatus: "CONFIRMED",
         },
+        deferConsumers: input.deferConsumers,
     });
     return updated;
 }
@@ -449,6 +453,7 @@ export async function startTechnicalIssue(input: {
     estimatedCost?: unknown;
     startedNote?: string | null;
     vendorChangeNote?: string | null;
+    deferConsumers?: DeferConsumers;
 }) {
     const id = cleanId(input.id);
     if (!id) throw new Error("Missing issue id");
@@ -554,6 +559,7 @@ export async function startTechnicalIssue(input: {
             startedNote: cleanText(input.startedNote),
             vendorChangeNote: cleanText(input.vendorChangeNote),
         },
+        deferConsumers: input.deferConsumers,
     });
     if (syncedWatch) {
         await recordBusinessEvent(prisma, {
@@ -569,7 +575,7 @@ export async function startTechnicalIssue(input: {
                         : syncedWatch.serviceExpectedCompletionAt,
                 sourceId: `${id}:watch.service.eta.updated:${expectedCompletionAt.toISOString()}`,
             },
-        });
+        }, { deferConsumers: input.deferConsumers });
     }
 
     return updated;
@@ -584,6 +590,7 @@ export async function completeTechnicalIssue(input: {
     supplyCatalogId?: string | null;
     mechanicalPartCatalogId?: string | null;
     createPayment?: boolean;
+    deferConsumers?: DeferConsumers;
 }) {
     const id = cleanId(input.id);
     if (!id) throw new Error("Missing issue id");
@@ -667,6 +674,7 @@ export async function completeTechnicalIssue(input: {
             actualCost,
             createPayment: input.createPayment !== false,
         },
+        deferConsumers: input.deferConsumers,
     });
 
     if (completion.createdPayment) {
@@ -681,7 +689,7 @@ export async function completeTechnicalIssue(input: {
                 amount: completion.createdPayment.amount,
                 sourceId: `${completion.createdPayment.id}:payment.created`,
             },
-        });
+        }, { deferConsumers: input.deferConsumers });
     }
 
     return updated;
@@ -692,6 +700,7 @@ export async function closeTechnicalIssueNoIssue(input: {
     actorId?: string | null;
     actorName?: string | null;
     resolutionNote?: string | null;
+    deferConsumers?: DeferConsumers;
 }) {
     const id = cleanId(input.id);
     if (!id) throw new Error("Missing issue id");
@@ -728,6 +737,7 @@ export async function closeTechnicalIssueNoIssue(input: {
             actualCost: 0,
             noIssue: true,
         },
+        deferConsumers: input.deferConsumers,
     });
 
     return updated;
@@ -735,7 +745,11 @@ export async function closeTechnicalIssueNoIssue(input: {
 
 export async function cancelTechnicalIssue(
     idInput: string,
-    input: { reason?: string | null } = {},
+    input: {
+        reason?: string | null;
+        actorId?: string | null;
+        deferConsumers?: DeferConsumers;
+    } = {},
 ) {
     const id = cleanId(idInput);
     if (!id) throw new Error("Missing issue id");
@@ -758,6 +772,18 @@ export async function cancelTechnicalIssue(
         note: cleanId(input.reason) ?? "Technical Issue đã hủy",
     });
 
+    await recordTechnicalIssueEvent({
+        eventKey: "technical_issue.canceled",
+        technicalIssueId: id,
+        serviceRequestId: (updated as any).serviceRequestId,
+        actorUserId: cleanId(input.actorId),
+        payload: {
+            executionStatus: "CANCELED",
+            reason: cleanId(input.reason),
+        },
+        deferConsumers: input.deferConsumers,
+    });
+
     return updated;
 }
 
@@ -778,6 +804,7 @@ export async function updateTechnicalIssue(input: {
     mechanicalPartCatalogId?: string | null;
     technicalDetailCatalogId?: string | null;
     expectedWorkingDays?: unknown;
+    deferConsumers?: DeferConsumers;
 }) {
     const id = cleanId(input.id);
     if (!id) throw new Error("Missing issue id");
@@ -842,6 +869,7 @@ export async function updateTechnicalIssue(input: {
             expectedWorkingDays: (updated as any).expectedWorkingDays,
             expectedCompletionAt: (updated as any).expectedCompletionAt,
         },
+        deferConsumers: input.deferConsumers,
     });
     if (syncedWatch) {
         await recordBusinessEvent(prisma, {
@@ -854,7 +882,7 @@ export async function updateTechnicalIssue(input: {
                 expectedCompletionAt: syncedWatch.serviceExpectedCompletionAt,
                 sourceId: `${id}:watch.service.eta.updated:update`,
             },
-        });
+        }, { deferConsumers: input.deferConsumers });
     }
 
     return updated;

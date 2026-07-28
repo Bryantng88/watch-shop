@@ -30,7 +30,12 @@ export type BusinessEventConsumer = {
     client: DB,
     context: BusinessEventDispatchContext,
   ) => Promise<unknown>;
-  timeoutMs?: number;
+  /**
+   * `null` marks a commit barrier. The dispatcher must await the real result
+   * because timing it out would let dependent read models observe half-written
+   * business state while the underlying database work keeps running.
+   */
+  timeoutMs?: number | null;
   retry?: BusinessEventConsumerRetryPolicy;
 };
 

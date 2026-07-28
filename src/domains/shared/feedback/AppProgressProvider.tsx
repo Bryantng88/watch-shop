@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, Circle, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, Circle, Loader2, X, XCircle } from "lucide-react";
 
 export type AppProgressStep = {
     id: string;
@@ -15,6 +15,9 @@ type ProgressOptions = {
     message?: string;
     percent?: number;
     steps?: AppProgressStep[];
+    cancellable?: boolean;
+    cancelLabel?: string;
+    onCancel?: () => void;
 };
 
 type AppProgressApi = {
@@ -29,6 +32,9 @@ type ProgressState = {
     message?: string;
     percent?: number;
     steps: AppProgressStep[];
+    cancellable: boolean;
+    cancelLabel: string;
+    onCancel?: () => void;
 };
 
 const AppProgressContext = React.createContext<AppProgressApi | null>(null);
@@ -44,6 +50,8 @@ export function AppProgressProvider({
         message: "",
         percent: undefined,
         steps: [],
+        cancellable: false,
+        cancelLabel: "Hủy",
     });
 
     const show = React.useCallback((options?: ProgressOptions) => {
@@ -53,6 +61,9 @@ export function AppProgressProvider({
             message: options?.message ?? "Vui lòng chờ trong giây lát",
             percent: options?.percent,
             steps: options?.steps ?? [],
+            cancellable: options?.cancellable ?? false,
+            cancelLabel: options?.cancelLabel ?? "Hủy",
+            onCancel: options?.onCancel,
         });
     }, []);
 
@@ -64,6 +75,9 @@ export function AppProgressProvider({
             message: options?.message ?? prev.message,
             percent: options?.percent ?? prev.percent,
             steps: options?.steps ?? prev.steps,
+            cancellable: options?.cancellable ?? prev.cancellable,
+            cancelLabel: options?.cancelLabel ?? prev.cancelLabel,
+            onCancel: options?.onCancel ?? prev.onCancel,
         }));
     }, []);
 
@@ -74,6 +88,9 @@ export function AppProgressProvider({
             message: "",
             percent: undefined,
             steps: [],
+            cancellable: false,
+            cancelLabel: "Hủy",
+            onCancel: undefined,
         });
     }, []);
 
@@ -85,6 +102,11 @@ export function AppProgressProvider({
         }),
         [show, update, hide],
     );
+
+    const cancel = React.useCallback(() => {
+        state.onCancel?.();
+        hide();
+    }, [hide, state]);
 
     return (
         <AppProgressContext.Provider value={value}>
@@ -109,6 +131,17 @@ export function AppProgressProvider({
                                     </div>
                                 ) : null}
                             </div>
+
+                            {state.cancellable ? (
+                                <button
+                                    type="button"
+                                    onClick={cancel}
+                                    className="ml-auto inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                                >
+                                    <X className="h-4 w-4" />
+                                    {state.cancelLabel}
+                                </button>
+                            ) : null}
                         </div>
 
                         {state.steps.length ? (

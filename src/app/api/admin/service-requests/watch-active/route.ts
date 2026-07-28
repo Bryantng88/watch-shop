@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 
 import {
     createQuickIssueForActiveWatchService,
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+        const actor = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
 
         const body = await request.json().catch(() => ({}));
         if (!body?.productId) throw new Error("Missing productId");
@@ -56,7 +56,11 @@ export async function POST(request: NextRequest) {
         // Giữ tương thích nếu nơi cũ còn gọi POST để mở modal.
         // Mặc định POST cũng chỉ preview, trừ khi gọi forceCreate rõ ràng.
         const data = body?.forceCreate
-            ? await getOrCreateActiveWatchService({ productId: body.productId })
+            ? await getOrCreateActiveWatchService({
+                productId: body.productId,
+                actorUserId: actor.id,
+                deferConsumers: (work) => after(work),
+            })
             : await getActiveWatchService({ productId: body.productId });
 
         return ok(data);
@@ -86,6 +90,7 @@ export async function PATCH(request: NextRequest) {
             issueType: body.issueType,
             priority: body.priority,
             actorUserId: actor.id,
+            deferConsumers: (work) => after(work),
         });
 
         return ok(data);
