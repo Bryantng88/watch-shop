@@ -107,6 +107,7 @@ type LastAction = {
   note: string | null;
   actorUserId: string | null;
   actorLabel: string | null;
+  actorAvatarUrl: string | null;
   at: string;
 };
 ```
@@ -117,6 +118,8 @@ Rules:
 - use the shared event-label registry used by Activity/Dashboard surfaces;
 - include business context such as return/reshoot note when present;
 - batch-load events and actors for the projection page;
+- batch-load the actor avatar with the actor label; UI uses initials or a
+  system badge when no avatar exists;
 - never query Activity or User once per row;
 - treat the value as audit/read context, not business truth.
 
@@ -152,6 +155,30 @@ A timeout must identify the consumer or projection that exceeded its budget.
 Increasing a global timeout is not a valid fix for an unbounded query or
 fan-out.
 
+### Database pool budget
+
+The query concurrency budget and Prisma connection pool must be designed
+together. `Promise.all` does not create database concurrency when Prisma has a
+single connection; it only creates an in-process wait queue that makes unrelated
+requests inflate each other's measured query time.
+
+Rules:
+
+- local/development admin workloads use a bounded pool large enough for the
+  measured concurrent read surfaces; the current dev baseline is
+  `connection_limit=5`;
+- `pool_timeout=0` is forbidden for development diagnostics because an
+  exhausted pool can wait indefinitely and hide the contention source;
+- changing `DATABASE_URL` pool parameters requires restarting the application
+  process because an existing PrismaClient keeps its original engine pool;
+- projection builders retain their own bounded fan-out even when the pool is
+  larger;
+- serverless production pool sizing must include maximum instance count and the
+  provider connection budget. Do not copy the development limit blindly;
+- performance logs distinguish source-query time from request total, but a
+  query timer may still include Prisma pool wait time. Correlated slowdowns
+  across unrelated domains are treated as pool contention until disproven.
+
 ## Failure And Repair
 
 When downstream projection work fails:
@@ -164,6 +191,137 @@ When downstream projection work fails:
 - repair rebuilds projection data only;
 - repair must not repeat workflow transitions, notifications, or business
   writes.
+
+## Delivery Liveness Gate
+
+Implemented 2026-07-28:
+
+- the preferred command path passes `deferConsumers` from the application
+  entry point and claims the exact durable delivery after commit;
+- an older producer that omits the scheduler uses a synchronous compatibility
+  claim, so correctness does not depend only on the recurring worker;
+- catalog event keys and projection subscriptions share one canonical
+  normalization rule;
+- an event declaring the `projection` consumer must resolve at least one
+  builder, otherwise delivery fails with `PROJECTION_BUILDER_REQUIRED`;
+- automated coverage tests prevent adding a catalogued projection event with
+  no matching builder.
+
+Production acceptance now also requires:
+
+| Check | Required result |
+| --- | --- |
+| Immediate runner | A normal mutation increments delivery attempts without waiting for cron |
+| Worker fallback | A released delivery survives process loss and is later claimed |
+| Backlog liveness | No `PENDING` delivery with `attempts = 0` exceeds the agreed SLA |
+| Catalog coverage | Every event declaring `projection` matches a registered builder |
+| Domain coverage | Source and list/detail projection entity counts have zero missing rows |
+
+The synchronous compatibility path may add latency and must be removed from a
+domain only after every entry point for that domain forwards the after-commit
+scheduler. Removing it globally before that migration is complete reopens the
+silent missing-row failure.
+
+### Cross-domain hardening completed 2026-07-28
+
+The production gate was extended after auditing Watch, Order, Payment,
+Shipment, Service, Technical Issue, Coordination, Media, and Dashboard:
+
+- projection coverage is bidirectional: every catalog event declaring the
+  `projection` consumer must resolve a builder, and every builder source event
+  must be catalogued and allow the `projection` consumer;
+- `watch.sold`, `task.item.created`, `task.item.moved`, and
+  `service.request.completed` now explicitly allow their registered projection
+  subscriptions;
+- projection release checks every state-writing completion barrier declared by
+  the event contract. Coordination and Workflow are barriers when they are
+  listed for that event; Timeline and Notification remain isolated side
+  effects;
+- the durable delivery worker uses real bounded concurrency. Concurrency is
+  limited both across deliveries and inside one event's builder fan-out; a
+  process-global serialization tail must not silently turn the configured
+  worker concurrency into one;
+- runtime maintenance reports status counts plus stale `BLOCKED`, unattempted
+  `PENDING`, stale `PROCESSING`, retryable `FAILED`, and `DEAD` deliveries.
+  Runtime smoke fails the liveness gate when any of those unhealthy classes is
+  present;
+- unsupported projection comparisons return an explicit non-healthy/skipped
+  result. They must not be reported as a successful comparison;
+- required singleton projections, currently `admin-dashboard-summary`, are
+  included in recurring drift detection and repair.
+
+### Atomic singleton projection rule
+
+A singleton or aggregate snapshot must remain readable until its replacement is
+fully built:
+
+```text
+read source with the command's DB client
+-> build complete snapshot in memory
+-> atomic upsert of the singleton row
+```
+
+An event builder must not delete the current singleton and wait for a later GET
+request to recreate it. The Admin Dashboard follows this rule:
+
+- event delivery rebuilds and atomically upserts the `global` row;
+- the dashboard GET reads the projection;
+- `ensureProjectionReady()` may bootstrap an entirely absent projection in a
+  new environment, as allowed by ADR-003;
+- a populated projection is never rebuilt or deleted by the GET path.
+
+Verification:
+
+```text
+npx tsx --test src/domains/projection/server/projection-event-coverage.test.ts
+npm run projection:smoke-runtime
+npm run projection:smoke-admin-core
+npm run coordination:audit-read-architecture
+```
+
+## Flow List Reconciliation Closure
+
+Implemented 2026-07-28 after auditing the shared Coordination flow list across
+Payment, Media, Technical, Shipment, and generic Blueprint flows.
+
+The shared list follows these additional invariants:
+
+- refreshed server `flowItems` and pagination replace the client copy;
+- a dashboard shell loaded with `includeFlowItems: false` is not an
+  authoritative empty flow result and must never replace a list loaded from the
+  dedicated flow endpoint;
+- optimistic hidden IDs live only until authoritative items arrive;
+- selection is intersected with authoritative item IDs after reload;
+- counters use an explicit destination stage when the command supplies one;
+- when the destination is unknown, only the source count changes
+  optimistically;
+- Payment reconciliation explicitly targets `payment-settled` for single and
+  bulk actions;
+- pagination applies to the merged flow result, never independently to each
+  Workspace before flattening.
+
+The generic Workspace-backed reader merges and sorts eligible Workspace items
+before applying one flow-level page window. This is the correctness fallback
+for low-volume custom Blueprint flows. A flow that can exceed a bounded
+in-memory merge must add a dedicated projection/query gateway, as Media,
+Technical, Shipment, and Payment do; it must not restore per-Workspace
+pagination.
+
+Server/client payloads must carry an explicit authority signal when a route
+intentionally omits a heavy list. An empty included list means “authoritatively
+empty”; an omitted list means “unchanged, fetch from its dedicated endpoint”.
+Do not infer those two states from `items.length`.
+
+Regression scenarios for every flow:
+
+1. forward transition;
+2. reverse transition;
+3. transition that skips a stage;
+4. transition to exception/follow-up;
+5. refresh while staying on the same stage;
+6. destination navigation when the binding ID is retained;
+7. multiple Workspaces contributing to page 1 and page 2;
+8. bulk action with partial failures.
 
 ## Production Acceptance Matrix
 

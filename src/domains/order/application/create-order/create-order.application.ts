@@ -1,7 +1,11 @@
 import { createOrderWithItems } from "../../server";
 import type { CreateOrderInput } from "../../server/shared";
+import type { BusinessEventDispatchOptions } from "@/domains/event/server/business-event.service";
 
-export async function createOrderApplication(input: CreateOrderInput) {
+export async function createOrderApplication(
+  input: CreateOrderInput,
+  runtime?: BusinessEventDispatchOptions,
+) {
   const source = input.source ?? "ADMIN";
   const verificationStatus =
     input.verificationStatus ?? (source === "WEB" ? "PENDING" : "VERIFIED");
@@ -17,5 +21,5 @@ export async function createOrderApplication(input: CreateOrderInput) {
     status,
     quickFromProductId: input.quickFromProductId ?? null,
     quickFlowType: input.quickFlowType ?? "STANDARD",
-  });
+  }, runtime);
 }

@@ -34,6 +34,17 @@ export type ProjectionDeliveryStatus = Pick<
   "idempotencyKey" | "status" | "attempts" | "completedAt" | "lastError" | "updatedAt"
 >;
 
+export type ProjectionDeliveryHealth = {
+  total: number;
+  statusCounts: Record<string, number>;
+  staleBlocked: number;
+  stalePendingUnattempted: number;
+  staleProcessing: number;
+  retryableFailed: number;
+  dead: number;
+  healthy: boolean;
+};
+
 function clean(value: unknown) {
   return String(value ?? "").trim();
 }
@@ -115,6 +126,81 @@ export async function getProjectionDeliveryStatus(
     LIMIT 1
   `);
   return rows[0] ?? null;
+}
+
+export async function getProjectionDeliveryHealth(
+  db: DB,
+  input: {
+    livenessSlaMinutes?: number;
+    processingLockMinutes?: number;
+  } = {},
+): Promise<ProjectionDeliveryHealth> {
+  const livenessSlaMinutes = Math.max(
+    1,
+    Math.min(1440, Math.trunc(input.livenessSlaMinutes ?? 5)),
+  );
+  const processingLockMinutes = Math.max(
+    1,
+    Math.min(60, Math.trunc(input.processingLockMinutes ?? 10)),
+  );
+  const rows = await dbOrTx(db).$queryRaw<Array<{
+    status: string;
+    count: bigint;
+    staleBlocked: bigint;
+    stalePendingUnattempted: bigint;
+    staleProcessing: bigint;
+    retryableFailed: bigint;
+    dead: bigint;
+  }>>(Prisma.sql`
+    SELECT
+      "status",
+      COUNT(*) AS "count",
+      COUNT(*) FILTER (
+        WHERE "status" = 'BLOCKED'
+          AND "createdAt" < NOW() - (${livenessSlaMinutes} * INTERVAL '1 minute')
+      ) AS "staleBlocked",
+      COUNT(*) FILTER (
+        WHERE "status" = 'PENDING'
+          AND "attempts" = 0
+          AND "createdAt" < NOW() - (${livenessSlaMinutes} * INTERVAL '1 minute')
+      ) AS "stalePendingUnattempted",
+      COUNT(*) FILTER (
+        WHERE "status" = 'PROCESSING'
+          AND "lockedAt" < NOW() - (${processingLockMinutes} * INTERVAL '1 minute')
+      ) AS "staleProcessing",
+      COUNT(*) FILTER (WHERE "status" = 'FAILED' AND "attempts" < 8)
+        AS "retryableFailed",
+      COUNT(*) FILTER (WHERE "status" = 'DEAD') AS "dead"
+    FROM "ProjectionEventDelivery"
+    GROUP BY "status"
+    ORDER BY "status"
+  `);
+  const statusCounts = Object.fromEntries(
+    rows.map((row) => [row.status, Number(row.count)]),
+  );
+  const sum = (key: keyof Omit<ProjectionDeliveryHealth, "total" | "statusCounts" | "healthy">) =>
+    rows.reduce((total, row) => total + Number(row[key]), 0);
+  const staleBlocked = sum("staleBlocked");
+  const stalePendingUnattempted = sum("stalePendingUnattempted");
+  const staleProcessing = sum("staleProcessing");
+  const retryableFailed = sum("retryableFailed");
+  const dead = sum("dead");
+
+  return {
+    total: rows.reduce((total, row) => total + Number(row.count), 0),
+    statusCounts,
+    staleBlocked,
+    stalePendingUnattempted,
+    staleProcessing,
+    retryableFailed,
+    dead,
+    healthy:
+      staleBlocked === 0 &&
+      stalePendingUnattempted === 0 &&
+      staleProcessing === 0 &&
+      retryableFailed === 0 &&
+      dead === 0,
+  };
 }
 
 export async function markProjectionDeliveryReady(db: DB, idempotencyKey: string) {

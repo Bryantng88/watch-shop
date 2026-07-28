@@ -58,6 +58,8 @@ const ENTITY_COVERAGE_PROJECTIONS: Record<
   },
 };
 
+const REQUIRED_SINGLETON_PROJECTIONS = ["admin-dashboard-summary"] as const;
+
 async function compareEntityProjectionCoverage(
   db: DB,
   projectionKey: string,
@@ -118,6 +120,32 @@ async function compareEntityProjectionCoverage(
     // for provably missing rows to avoid rebuild loops and cron load.
     ok: details.missingCount === 0,
     details,
+  };
+}
+
+async function compareRequiredSingletonProjection(
+  db: DB,
+  projectionKey: string,
+) {
+  if (!REQUIRED_SINGLETON_PROJECTIONS.includes(
+    projectionKey as (typeof REQUIRED_SINGLETON_PROJECTIONS)[number],
+  )) {
+    return null;
+  }
+  const builder = getProjectionBuilder(projectionKey);
+  if (!builder) return null;
+  const count = await dbOrTx(db).projectionRecord.count({
+    where: {
+      projectionKey,
+      projectionVersion: builder.version,
+    },
+  });
+  return {
+    ok: count === 1,
+    details: {
+      expectedCount: 1,
+      projectionCount: count,
+    },
   };
 }
 
@@ -357,8 +385,17 @@ export async function compareProjection(
     };
   }
 
+  const singleton = await compareRequiredSingletonProjection(db, projectionKey);
+  if (singleton) {
+    return {
+      ok: singleton.ok,
+      projectionKey,
+      details: singleton.details,
+    };
+  }
+
   return {
-    ok: true,
+    ok: false,
     projectionKey,
     skipped: true,
     reason: "PROJECTION_COMPARE_NOT_SUPPORTED",
@@ -436,6 +473,24 @@ export async function repairDriftedProjections(
       compare: false,
     }));
     if (repaired.length >= limit) break;
+  }
+  if (repaired.length < limit) {
+    for (const projectionKey of REQUIRED_SINGLETON_PROJECTIONS) {
+      const singleton = await compareRequiredSingletonProjection(db, projectionKey);
+      if (!singleton) continue;
+      const compare: ProjectionCompareResult = {
+        ok: singleton.ok,
+        projectionKey,
+        details: singleton.details,
+      };
+      checked.push(compare);
+      if (compare.ok) continue;
+      repaired.push(await repairProjection(db, {
+        projectionKey,
+        compare: false,
+      }));
+      if (repaired.length >= limit) break;
+    }
   }
 
   return {

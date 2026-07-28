@@ -1,5 +1,6 @@
 import { prisma } from "@/server/db/client";
 import { emitWatchPublishAssetsDownloadedEvent } from "@/domains/watch/server/events";
+import type { BusinessEventDispatchOptions } from "@/domains/event/server/business-event.service";
 import {
     getWatchPostUsageStateRepo,
     markWatchPostUsageRepo,
@@ -51,6 +52,7 @@ export async function markWatchPostUsage(input: {
     productId: string;
     kind: WatchPostUsageKind;
     actorUserId?: string | null;
+    deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
 }) {
     const result = await prisma.$transaction(async (tx) => {
         const current = await getWatchPostUsageStateRepo(tx, input.productId);
@@ -114,6 +116,7 @@ export async function markWatchPostUsage(input: {
             isImageDownloaded: result.usage.isImageDownloaded,
             isPosted: result.usage.isPosted,
         },
+        deferConsumers: input.deferConsumers,
     });
 
     return result.usage;

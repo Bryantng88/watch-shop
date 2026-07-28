@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { createOrderApplication } from "@/domains/order/application";
 
 export async function POST(req: NextRequest) {
@@ -20,7 +20,9 @@ export async function POST(req: NextRequest) {
     };
 
     try {
-        const order = await createOrderApplication(payload);
+        const order = await createOrderApplication(payload, {
+            deferConsumers: (work) => after(work),
+        });
         return NextResponse.json(order, { status: 201 });
     } catch (err: any) {
         console.error("[ORDER_CREATE_ROUTE][ERROR]", err);

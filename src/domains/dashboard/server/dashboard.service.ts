@@ -4,6 +4,7 @@ import type {
   DashboardRecentItem,
 } from "../shared";
 import { getDashboardOverviewRepo } from "./dashboard.repo";
+import { prisma, type DB } from "@/server/db/client";
 
 function num(map: Map<string, number>, key: string) {
   return map.get(String(key).toUpperCase()) ?? 0;
@@ -60,8 +61,10 @@ function buildRecentItems(input: Awaited<ReturnType<typeof getDashboardOverviewR
     .slice(0, 10);
 }
 
-export async function getAdminDashboardService(): Promise<AdminDashboardData> {
-  const data = await getDashboardOverviewRepo();
+export async function getAdminDashboardService(
+  db: DB = prisma,
+): Promise<AdminDashboardData> {
+  const data = await getDashboardOverviewRepo(db);
 
   const watchTotal = Array.from(data.watchStageMap.values()).reduce((sum, value) => sum + value, 0);
   const shipmentTotal = Array.from(data.shipmentStatusMap.values()).reduce((sum, value) => sum + value, 0);

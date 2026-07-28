@@ -326,6 +326,12 @@ Consumer rules:
 - Projection fan-out must use bounded concurrency. An event may update several
   independent read models, but it must not start every database-heavy builder
   at once and exhaust the shared connection pool.
+- Completion barriers are resolved from the event contract. Coordination and
+  Workflow are barriers when the contract lists them; projection delivery must
+  not be released merely because Coordination alone succeeded.
+- Projection subscription validation is bidirectional. A catalog event that
+  declares Projection needs a builder, and a builder source event must be
+  catalogued and explicitly allow Projection.
 
 ### Command Request Lifecycle
 
@@ -367,6 +373,55 @@ Rules:
   then may it refresh the affected list/board/counters. Closing or cancelling
   the progress UI stops client polling and future batch submissions, not an
   already committed business command.
+
+### Projection Delivery Hardening Implemented 2026-07-28
+
+The runtime now enforces two execution paths after the completion barrier:
+
+```text
+Preferred:
+application entry point passes deferConsumers / Next.js after
+-> delivery is released after commit
+-> the deferred runner claims that exact delivery
+
+Compatibility fail-safe:
+producer omits deferConsumers
+-> the synchronous event path releases and immediately claims that exact delivery
+-> request latency may increase, but the delivery must not remain PENDING with attempts=0
+```
+
+The compatibility path is a correctness guard, not the preferred integration
+for new commands. New HTTP routes and Server Actions must pass the runtime
+scheduler. Order creation, public Order creation, Watch publish-asset usage,
+and Watch Media recall now forward this scheduler. Order and Shipment emitters
+accept the shared dispatch options so the remaining mutation entry points can
+be migrated without introducing another event API.
+
+Projection event matching uses the same canonical event-key normalization as
+the Business Event catalog. A regression test requires every catalog event
+that declares the `projection` consumer to match at least one registered
+projection builder. If such an event reaches the runner with no builder, the
+delivery fails with `PROJECTION_BUILDER_REQUIRED`; it must not be marked
+`SUCCEEDED` as a no-op.
+
+The periodic projection worker remains required for retry, crash recovery, and
+old backlog. It is no longer the only execution path for a producer that omits
+the preferred after-commit scheduler.
+
+Operational repair performed with this hardening:
+
+- drained 7 old `PENDING` deliveries across Watch, Order, Payment, and
+  Acquisition;
+- all 7 completed successfully with no failed delivery;
+- restored `order-list` coverage from 71/72 to 72/72;
+- restored `payment-list` coverage from 218/219 to 219/219.
+
+Known follow-up: not every older domain command yet persists business truth,
+BusinessEventLog, and projection delivery in one database transaction. The
+synchronous compatibility claim closes the visible stuck-delivery failure but
+does not remove the crash window between an older domain commit and its later
+event write. New command refactors must move event/outbox persistence into the
+owning transaction and leave consumer execution after commit.
 
 ## Workflow Boundary
 
@@ -515,6 +570,34 @@ Rules proven by Watch Media:
 
 Future domains should follow the same shape instead of calling Space
 Management services directly from domain actions.
+
+## Mutation-to-read refresh contract
+
+A successful command, consumer delivery, and binding transition do not by
+themselves refresh an already rendered Next.js route. Every server action that
+changes a business flow must invalidate both:
+
+- the direct Task/TaskItem surfaces affected by the command; and
+- every coordination route that reads the changed domain state.
+
+The client may remove an item optimistically from its current stage, but it
+must call `router.refresh()` after the command succeeds when the destination
+stage is server-rendered. Optimistic state is presentation feedback, not a
+replacement for reloading the authoritative read model.
+
+Payment reconciliation is the reference implementation:
+
+- `payment.status_updated` and `payment.paid` move the binding from
+  `payment-review` to `payment-settled`;
+- `submitOperationalBlueprintActionAction` invalidates both Payment and
+  Operation coordination routes for Payment commands;
+- `FlowItemListView` refreshes after single and bulk reconciliation so the
+  settled stage and its counts see the new source state immediately.
+
+When an item disappears from the source stage but does not appear in the
+destination stage, verify source state, event delivery, and binding first. If
+all three are correct, investigate route invalidation/client refresh before
+changing the consumer.
 
 ## Anti-Patterns
 

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -35,6 +35,7 @@ import {
 } from "@/domains/task/ui/task-work/manual-transition-feedback";
 import { useManualTransitionFeedback } from "@/domains/task/ui/task-work/use-manual-transition-feedback";
 import { PostTargetChip } from "@/domains/shared/ui/post-target/PostTargetChip";
+import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 
 type FlowStage = {
   key: string;
@@ -208,6 +209,7 @@ export default function FlowItemListView({
   onItemsMovedFromStage,
 }: Props) {
   const router = useRouter();
+  const progress = useAppProgress();
   const transitionFeedback = useManualTransitionFeedback();
   const [isActionPending, startActionTransition] = useTransition();
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
@@ -239,6 +241,11 @@ export default function FlowItemListView({
     transactionReference: "",
     reviewNote: "",
   });
+  useEffect(() => {
+    setOptimisticallyMovedIds([]);
+    const authoritativeIds = new Set(items.map((item) => item.id));
+    setSelectedIds((current) => current.filter((id) => authoritativeIds.has(id)));
+  }, [items]);
   const [reconcileFields, setReconcileFields] = useState({
     reviewedAmount: "",
     method: "BANK_TRANSFER",
@@ -568,6 +575,11 @@ export default function FlowItemListView({
 
     setPendingActionId(reconcileItem.id);
     setActionError(null);
+    progress.show({
+      title: "Đang đối soát Payment",
+      message: `${reconcileItem.preview.title ?? reconcileItem.targetId} · ${new Intl.NumberFormat("vi-VN").format(reviewedAmount)} VND`,
+      percent: 25,
+    });
     startActionTransition(async () => {
       try {
         await submitOperationalBlueprintActionAction({
@@ -586,12 +598,23 @@ export default function FlowItemListView({
         onItemsMovedFromStage?.({
           itemIds: [reconcileItem.id],
           fromStageKey: reconcileItem.flowStageKey || activeStage,
+          toStageKey: stages.find((stage) =>
+            normalize(stage.key).includes("settled") ||
+            normalize(stage.workspaceKey).includes("settled")
+          )?.key,
         });
         setReconcileItem(null);
+        progress.update({
+          percent: 90,
+          message: "Đã ghi nhận thanh toán, đang đồng bộ sang bước hoàn tất.",
+        });
+        router.refresh();
+        window.setTimeout(() => progress.hide(), 900);
       } catch (error) {
         setActionError(error instanceof Error ? error.message : "Không thể xác nhận đối soát.");
       } finally {
         setPendingActionId(null);
+        window.setTimeout(() => progress.hide(), 1500);
       }
     });
   }
@@ -636,10 +659,15 @@ export default function FlowItemListView({
 
     setPendingActionId("BULK_RECONCILE");
     setActionError(null);
+    progress.show({
+      title: "Đang đối soát Payment hàng loạt",
+      message: `Đang xử lý ${selectedPaymentItems.length} khoản thanh toán.`,
+      percent: 10,
+    });
     startActionTransition(async () => {
       const succeeded: string[] = [];
       const failed: string[] = [];
-      for (const item of selectedPaymentItems) {
+      for (const [index, item] of selectedPaymentItems.entries()) {
         const reviewedAmount = Number(bulkReconcileAmounts[item.id]);
         const expectedAmount = Number(item.payment?.amount ?? 0);
         try {
@@ -663,6 +691,10 @@ export default function FlowItemListView({
         } catch (error) {
           failed.push(`${item.preview.title ?? item.targetId}: ${error instanceof Error ? error.message : "Lỗi không xác định"}`);
         }
+        progress.update({
+          percent: Math.min(85, 10 + Math.round(((index + 1) / selectedPaymentItems.length) * 75)),
+          message: `Đã xử lý ${index + 1}/${selectedPaymentItems.length} khoản thanh toán.`,
+        });
       }
 
       if (succeeded.length) {
@@ -671,14 +703,26 @@ export default function FlowItemListView({
         onItemsMovedFromStage?.({
           itemIds: succeeded,
           fromStageKey: activeStage,
+          toStageKey: stages.find((stage) =>
+            normalize(stage.key).includes("settled") ||
+            normalize(stage.workspaceKey).includes("settled")
+          )?.key,
         });
+        router.refresh();
       }
       if (failed.length) {
         setActionError(`Đã xử lý ${succeeded.length}/${selectedPaymentItems.length}. Lỗi: ${failed.join("; ")}`);
       } else {
         setIsBulkReconcileOpen(false);
       }
+      progress.update({
+        percent: failed.length ? 90 : 95,
+        message: failed.length
+          ? `Hoàn tất ${succeeded.length}/${selectedPaymentItems.length}; ${failed.length} khoản cần kiểm tra lại.`
+          : "Đã đối soát xong, đang đồng bộ dashboard.",
+      });
       setPendingActionId(null);
+      window.setTimeout(() => progress.hide(), failed.length ? 1800 : 900);
     });
   }
 

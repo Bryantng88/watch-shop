@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
 
-import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
+import {
+  recordBusinessEvent,
+  type BusinessEventDispatchOptions,
+} from "@/domains/event/server/business-event.service";
 import { prisma } from "@/server/db/client";
 
 export type ShipmentMutation = {
@@ -26,7 +29,10 @@ export type ShipmentMutation = {
   eventInstanceId?: string | null;
 };
 
-export async function publishShipmentMutation(mutation: ShipmentMutation) {
+export async function publishShipmentMutation(
+  mutation: ShipmentMutation,
+  options?: BusinessEventDispatchOptions,
+) {
   return recordBusinessEvent(prisma, {
     eventKey: mutation.eventKey,
     targetType: "SHIPMENT",
@@ -47,13 +53,16 @@ export async function publishShipmentMutation(mutation: ShipmentMutation) {
       note: mutation.note ?? null,
       source: mutation.source ?? "SHIPMENT_DOMAIN",
     },
-  });
+  }, options);
 }
 
-export async function publishShipmentMutations(mutations: ShipmentMutation[]) {
+export async function publishShipmentMutations(
+  mutations: ShipmentMutation[],
+  options?: BusinessEventDispatchOptions,
+) {
   const results = [];
   for (const mutation of mutations) {
-    results.push(await publishShipmentMutation(mutation));
+    results.push(await publishShipmentMutation(mutation, options));
   }
   return results;
 }

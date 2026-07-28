@@ -454,3 +454,30 @@ Workspace can play different roles, but every Workspace must declare its role.
 Space views can render differently, but every view must declare its row model
 and primary target.
 ```
+
+## Permission Catalog And Persistence Gate
+
+Implemented 2026-07-28 after Activity permissions were added to code while the
+corresponding database migration had not yet been deployed.
+
+Authorization uses persisted `Role -> Permission` relations at runtime.
+`ROLE_PERMISSIONS` and `PERMISSIONS` in source code are declarations; changing
+them does not update an existing database.
+
+Rules:
+
+- every new permission code requires an idempotent migration that inserts the
+  `Permission` row and assigns it to the intended existing roles;
+- application code that begins enforcing a new permission and its migration
+  must be deployed as one release unit;
+- `prisma migrate deploy` must run before traffic reaches code that enforces
+  the new permission;
+- a role label such as `ADMIN` is not an authorization bypass. Runtime access
+  comes from its persisted permission relations;
+- deployment verification runs `npm run auth:audit-permissions`;
+- the Activity invariant is that every role with `TASK_VIEW` also has
+  `ACTIVITY_READ` and `ACTIVITY_EDIT`, unless a later architecture decision
+  explicitly introduces a read-only task role.
+
+The audit fails when a permission declared in the source catalog is absent from
+the database or when a `TASK_VIEW` role is missing either Activity permission.

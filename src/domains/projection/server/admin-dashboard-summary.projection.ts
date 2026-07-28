@@ -3,10 +3,7 @@ import type { AdminDashboardData } from "@/domains/dashboard/shared";
 import { getAdminDashboardService } from "@/domains/dashboard/server";
 import { dbOrTx, type DB } from "@/server/db/client";
 import { WATCH_LIST_PROJECTION_SOURCE_EVENTS } from "./watch-list";
-import {
-  deleteProjectionRecords,
-  upsertProjectionRecord,
-} from "./projection-record.repo";
+import { upsertProjectionRecord } from "./projection-record.repo";
 import type {
   ProjectionBuildContext,
   ProjectionBuildResult,
@@ -60,7 +57,7 @@ function result(
 }
 
 export async function rebuildAdminDashboardSummary(db: DB) {
-  const data = await getAdminDashboardService();
+  const data = await getAdminDashboardService(db);
   const generatedAt = new Date(data.generatedAt);
   await upsertProjectionRecord(db, {
     projectionKey: ADMIN_DASHBOARD_SUMMARY_PROJECTION_KEY,
@@ -91,10 +88,7 @@ async function buildFromEvent(
   db: DB,
   context: ProjectionBuildContext & { sourceEvent: BusinessEventDispatchContext },
 ) {
-  await deleteProjectionRecords(db, {
-    projectionKey: ADMIN_DASHBOARD_SUMMARY_PROJECTION_KEY,
-    rowKeys: [ROW_KEY],
-  });
+  await rebuildAdminDashboardSummary(db);
   return result(context, {
     targetType: context.sourceEvent.targetType,
     targetId: context.sourceEvent.targetId,
@@ -105,9 +99,6 @@ async function rebuild(
   db: DB,
   context: ProjectionBuildContext & { scope: ProjectionScope },
 ) {
-  await deleteProjectionRecords(db, {
-    projectionKey: ADMIN_DASHBOARD_SUMMARY_PROJECTION_KEY,
-  });
   await rebuildAdminDashboardSummary(db);
   return result(context, context.scope, 1);
 }

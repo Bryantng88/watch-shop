@@ -27,6 +27,9 @@ export default async function OperationCoordinationPage(props: PageProps) {
   const effectiveModeKey = viewConfig.modes.some((mode) => mode.key === modeKey)
     ? modeKey
     : viewConfig.defaultModeKey;
+  const serverIncludesFlowItems =
+    effectiveModeKey !== "technical-issue-flow" &&
+    effectiveModeKey !== "media-production-flow";
 
   const [data, technicalDailyPerformance] = await Promise.all([
     perfStep(
@@ -49,9 +52,7 @@ export default async function OperationCoordinationPage(props: PageProps) {
         // The TI board has its own paginated client request. Keeping it out of
         // the page payload avoids blocking the entire route on the heaviest query.
         includeTechnicalBoard: false,
-        includeFlowItems:
-          effectiveModeKey !== "technical-issue-flow" &&
-          effectiveModeKey !== "media-production-flow",
+        includeFlowItems: serverIncludesFlowItems,
         auth,
       }),
     ),
@@ -70,6 +71,7 @@ export default async function OperationCoordinationPage(props: PageProps) {
     <OperationCoordinationWorkspace
       data={data}
       initialDashboard={initialDashboard}
+      serverIncludesFlowItems={serverIncludesFlowItems}
     />
   );
 }

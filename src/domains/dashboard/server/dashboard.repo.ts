@@ -1,4 +1,4 @@
-import { prisma } from "@/server/db/client";
+import { dbOrTx, prisma, type DB } from "@/server/db/client";
 
 function toNumber(value: unknown) {
   if (value == null) return 0;
@@ -23,7 +23,8 @@ function makeCountMap(rows: Array<Record<string, any>>, field: string) {
   return map;
 }
 
-export async function getDashboardOverviewRepo() {
+export async function getDashboardOverviewRepo(db: DB = prisma) {
+  const client = dbOrTx(db);
   const [
     watchBySaleStage,
     orderByStatus,
@@ -47,36 +48,36 @@ export async function getDashboardOverviewRepo() {
     shipmentNoTracking,
     shipmentCodPending,
   ] = await Promise.all([
-    prisma.watch.groupBy({
+    client.watch.groupBy({
       by: ["saleStage"],
       _count: { _all: true },
     }),
 
-    prisma.order.groupBy({
+    client.order.groupBy({
       by: ["status"],
       _count: { _all: true },
     }),
 
-    prisma.shipment.groupBy({
+    client.shipment.groupBy({
       by: ["status"],
       _count: { _all: true },
     }),
 
-    prisma.acquisition.groupBy({
+    client.acquisition.groupBy({
       by: ["accquisitionStt"],
       _count: { _all: true },
     }),
 
-    prisma.order.count(),
+    client.order.count(),
 
-    prisma.order.aggregate({
+    client.order.aggregate({
       _sum: {
         subtotal: true,
         shippingAmount: true,
       },
     }),
 
-    prisma.payment.aggregate({
+    client.payment.aggregate({
       where: {
         direction: "IN" as any,
         status: "PAID" as any,
@@ -84,7 +85,7 @@ export async function getDashboardOverviewRepo() {
       _sum: { amount: true },
     }),
 
-    prisma.payment.aggregate({
+    client.payment.aggregate({
       where: {
         direction: "IN" as any,
         status: "COLLECTED" as any,
@@ -92,7 +93,7 @@ export async function getDashboardOverviewRepo() {
       _sum: { amount: true },
     }),
 
-    prisma.payment.aggregate({
+    client.payment.aggregate({
       where: {
         direction: "IN" as any,
         status: "UNPAID" as any,
@@ -100,7 +101,7 @@ export async function getDashboardOverviewRepo() {
       _sum: { amount: true },
     }),
 
-    prisma.order.findMany({
+    client.order.findMany({
       take: 5,
       orderBy: { updatedAt: "desc" },
       select: {
@@ -112,7 +113,7 @@ export async function getDashboardOverviewRepo() {
       },
     }),
 
-    prisma.shipment.findMany({
+    client.shipment.findMany({
       take: 5,
       orderBy: { updatedAt: "desc" },
       select: {
@@ -125,7 +126,7 @@ export async function getDashboardOverviewRepo() {
       },
     }),
 
-    prisma.watch.findMany({
+    client.watch.findMany({
       take: 5,
       orderBy: { updatedAt: "desc" },
       select: {
@@ -143,7 +144,7 @@ export async function getDashboardOverviewRepo() {
       },
     }),
 
-    prisma.acquisition.findMany({
+    client.acquisition.findMany({
       take: 5,
       orderBy: { updatedAt: "desc" },
       select: {
@@ -159,14 +160,14 @@ export async function getDashboardOverviewRepo() {
       },
     }),
 
-    prisma.watch.count({
+    client.watch.count({
       where: {
         saleStage: "PROCESSING" as any,
         watchContent: null,
       },
     }),
 
-    prisma.watch.count({
+    client.watch.count({
       where: {
         saleStage: "PROCESSING" as any,
         product: {
@@ -179,7 +180,7 @@ export async function getDashboardOverviewRepo() {
       },
     }),
 
-    prisma.watch.count({
+    client.watch.count({
       where: {
         saleStage: "READY" as any,
         reviewStates: {
@@ -190,7 +191,7 @@ export async function getDashboardOverviewRepo() {
       },
     }),
 
-    prisma.watch.count({
+    client.watch.count({
       where: {
         saleStage: "READY" as any,
         OR: [
@@ -238,7 +239,7 @@ export async function getDashboardOverviewRepo() {
       },
     }),
 
-    prisma.watch.count({
+    client.watch.count({
       where: {
         saleStage: "READY" as any,
         AND: [
@@ -268,21 +269,21 @@ export async function getDashboardOverviewRepo() {
       },
     }),
 
-    prisma.watch.count({
+    client.watch.count({
       where: {
         isContentDownloaded: true,
         isImageDownloaded: true,
       },
     }),
 
-    prisma.shipment.count({
+    client.shipment.count({
       where: {
         status: { in: ["READY", "SHIPPED"] as any },
         OR: [{ trackingCode: null }, { trackingCode: "" }],
       },
     }),
 
-    prisma.shipment.count({
+    client.shipment.count({
       where: {
         status: "DELIVERED" as any,
         order: {

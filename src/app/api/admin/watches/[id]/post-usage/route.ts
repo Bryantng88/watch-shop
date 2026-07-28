@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { PERMISSIONS } from "@/constants/permissions";
@@ -26,6 +26,7 @@ export async function POST(
             productId: params.id,
             kind: body.action,
             actorUserId: auth.id,
+            deferConsumers: (work) => after(work),
         });
 
         return NextResponse.json({

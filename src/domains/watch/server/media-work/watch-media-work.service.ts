@@ -1216,6 +1216,7 @@ export async function recallWatchMediaFromPublishQueueItem(
     bindingId: string;
     actorUserId?: string | null;
     note?: string | null;
+    deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
   },
   db: DB = prisma,
 ) {
@@ -1306,6 +1307,7 @@ export async function recallWatchMediaFromPublishQueueItem(
     actorUserId: input.actorUserId ?? null,
     sourceId: `media-recalled:${binding.id}`,
     note: input.note ?? null,
+    deferConsumers: input.deferConsumers,
   });
 
   return {

@@ -415,7 +415,7 @@ export const WATCH_BUSINESS_EVENT_DEFINITIONS: WatchBusinessEventDefinition[] = 
     targetIdPolicy: "watch.id",
     targetAliasPolicy: "[watch.id, productId]",
     payloadContract: "TBD",
-    knownConsumers: [],
+    knownConsumers: ["projection"],
     autoBindingScope: null,
   },
 ];

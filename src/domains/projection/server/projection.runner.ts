@@ -8,6 +8,7 @@ import type {
   ProjectionScope,
 } from "./projection.types";
 import { perfStep } from "@/lib/server-perf";
+import { getBusinessEventContract } from "@/domains/event/catalog/business-event-catalog";
 
 function clean(value: unknown) {
   return String(value ?? "").trim();
@@ -71,10 +72,14 @@ export async function runProjectionBuildersForEvent(
   }).filter((builder) => !skipKeys.has(clean(builder.key).toLowerCase()));
 
   if (!builders.length) {
+    const projectionRequired =
+      getBusinessEventContract(event.eventKey)?.knownConsumers?.includes("projection") === true;
     return {
-      ok: true,
-      skipped: true,
-      reason: "NO_PROJECTION_BUILDER",
+      ok: !projectionRequired,
+      skipped: !projectionRequired,
+      reason: projectionRequired
+        ? "PROJECTION_BUILDER_REQUIRED"
+        : "NO_PROJECTION_BUILDER",
       builders: [],
     };
   }

@@ -519,16 +519,17 @@ export async function getBusinessTargetActivityViewModels(
   assertPresent(cleanTargetType, "Missing targetType");
   assertPresent(cleanTargetId, "Missing targetId");
 
+  const take = Number(limit);
+  const limitedTake = Number.isFinite(take) && take > 0
+    ? Math.floor(take)
+    : undefined;
   const items = await listBusinessTargetActivitiesRepo(prisma, {
     targetType: cleanTargetType,
     targetId: cleanTargetId,
+    take: limitedTake,
   });
-  const take = Number(limit);
-  const limitedItems = Number.isFinite(take) && take > 0
-    ? items.slice(0, Math.floor(take))
-    : items;
 
-  return limitedItems.map(toTaskItemActivityViewModel);
+  return items.map(toTaskItemActivityViewModel);
 }
 
 export async function getBusinessTargetActivityPage(input: {

@@ -145,6 +145,7 @@ export type WatchRow = {
             note: string | null;
             actorUserId: string | null;
             actorLabel: string | null;
+            actorAvatarUrl: string | null;
             at: string;
         } | null;
         updatedAt: string | null;

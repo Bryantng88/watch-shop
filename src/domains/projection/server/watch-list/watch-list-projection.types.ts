@@ -53,12 +53,13 @@ export type WatchListProjectionLastAction = {
   note: string | null;
   actorUserId: string | null;
   actorLabel: string | null;
+  actorAvatarUrl: string | null;
   at: string;
 };
 
 export type WatchListProjectionMediaState = {
   watchId: string;
-  workTypeKey: "photoshoot" | "media-processing" | "publish";
+  workTypeKey: "photography" | "media-processing" | "publish";
   workflowKey: string | null;
   workflowState: string | null;
   taskStatus: string | null;

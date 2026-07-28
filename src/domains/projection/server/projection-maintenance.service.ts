@@ -1,5 +1,6 @@
 import { prisma, type DB } from "@/server/db/client";
 import { processPendingProjectionDeliveries } from "./projection-delivery.service";
+import { getProjectionDeliveryHealth } from "./projection-delivery.repo";
 import { repairDriftedProjections } from "./projection-observability.service";
 
 export async function runProjectionMaintenance(input: {
@@ -9,6 +10,7 @@ export async function runProjectionMaintenance(input: {
   repairLimit?: number;
 } = {}) {
   const db = input.db ?? prisma;
+  const deliveryHealthBefore = await getProjectionDeliveryHealth(db);
   const delivery = await processPendingProjectionDeliveries({
     db,
     limit: input.deliveryLimit ?? 40,
@@ -17,6 +19,12 @@ export async function runProjectionMaintenance(input: {
   const consistency = await repairDriftedProjections(db, {
     limit: input.repairLimit ?? 2,
   });
+  const deliveryHealthAfter = await getProjectionDeliveryHealth(db);
 
-  return { delivery, consistency };
+  return {
+    delivery,
+    deliveryHealthBefore,
+    deliveryHealthAfter,
+    consistency,
+  };
 }

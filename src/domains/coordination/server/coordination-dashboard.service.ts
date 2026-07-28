@@ -2797,6 +2797,12 @@ export async function getCoordinationDashboard(input: {
   const isMediaFlow = input.context === "MEDIA" || activeFlow?.key === "media-production-flow";
   const isPaymentFlow = input.context === "PAYMENT" || activeFlow?.key === "payment-collection-core-flow";
   const isShipmentFlow = activeFlow?.key === "shipment-operation-core-flow";
+  const usesGenericFlowItemReader =
+    input.includeFlowItems !== false &&
+    !isTechnicalFlow &&
+    !isMediaFlow &&
+    !isPaymentFlow &&
+    !isShipmentFlow;
   const isServiceRequestCaseMode = activeMode?.key === "sr-cases";
   const requestedFlowStage =
     activeFlow?.key === "media-production-flow" &&
@@ -3349,7 +3355,11 @@ export async function getCoordinationDashboard(input: {
                     note: item.note,
                     page: flowPage,
                     pageSize: flowPageSize,
-                    paginate: !hasFlowFilters,
+                    // Multiple Workspaces can belong to one stage. Per-Workspace
+                    // pagination would produce N × pageSize rows and invalid
+                    // global pages, so the generic reader paginates only after
+                    // the Workspace results have been merged and sorted.
+                    paginate: false,
                   });
                 const mediaDoneRequested =
                   isMediaFlow &&
@@ -3505,10 +3515,10 @@ export async function getCoordinationDashboard(input: {
   });
   const flowItemsTotal = input.includeFlowItems === false
     ? 0
-    : hasFlowFilters
+    : hasFlowFilters || usesGenericFlowItemReader
       ? filteredFlowItems.length
       : await unfilteredFlowItemsTotalPromise;
-  const flowItems = hasFlowFilters
+  const flowItems = hasFlowFilters || usesGenericFlowItemReader
     ? filteredFlowItems.slice((flowPage - 1) * flowPageSize, flowPage * flowPageSize)
     : filteredFlowItems;
 

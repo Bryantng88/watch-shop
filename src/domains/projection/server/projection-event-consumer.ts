@@ -41,6 +41,7 @@ export async function consumeBusinessEventForProjection(
     if (!result.ok) {
       throw new Error(
         result.builders.find((builder) => !builder.ok)?.error ??
+        result.reason ??
         "PROJECTION_BUILDERS_FAILED",
       );
     }

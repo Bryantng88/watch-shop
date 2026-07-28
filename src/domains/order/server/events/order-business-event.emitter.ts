@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
 
-import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
+import {
+  recordBusinessEvent,
+  type BusinessEventDispatchOptions,
+} from "@/domains/event/server/business-event.service";
 import { prisma } from "@/server/db/client";
 import type { ORDER_BUSINESS_EVENT_KEYS } from "./order-business-event.contract";
 
@@ -15,7 +18,10 @@ export type OrderMutation = {
   source?: string | null;
 };
 
-export async function publishOrderMutation(mutation: OrderMutation) {
+export async function publishOrderMutation(
+  mutation: OrderMutation,
+  options?: BusinessEventDispatchOptions,
+) {
   return recordBusinessEvent(prisma, {
     eventKey: mutation.eventKey,
     targetType: "ORDER",
@@ -31,9 +37,12 @@ export async function publishOrderMutation(mutation: OrderMutation) {
       source: mutation.source ?? "ORDER_DOMAIN",
       occurredAt: new Date().toISOString(),
     },
-  });
+  }, options);
 }
 
-export async function publishOrderMutations(mutations: OrderMutation[]) {
-  for (const mutation of mutations) await publishOrderMutation(mutation);
+export async function publishOrderMutations(
+  mutations: OrderMutation[],
+  options?: BusinessEventDispatchOptions,
+) {
+  for (const mutation of mutations) await publishOrderMutation(mutation, options);
 }

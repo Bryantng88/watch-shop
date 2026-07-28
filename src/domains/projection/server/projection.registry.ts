@@ -13,6 +13,7 @@ import { mediaOperationBoardProjectionBuilder } from "./media-operation-board.pr
 import { coordinationWorkspaceSummaryProjectionBuilder } from "./coordination-workspace-summary.projection";
 import { adminDashboardSummaryProjectionBuilder } from "./admin-dashboard-summary.projection";
 import { serviceRequestListProjectionBuilder } from "./service-request-list.projection";
+import { normalizeBusinessEventKey } from "@/domains/event/contract/business-event-contract.helpers";
 
 const PROJECTION_BUILDERS: ProjectionBuilder[] = [
   watchMediaQueueProjectionBuilder,
@@ -38,6 +39,10 @@ function normalizeKey(value: unknown) {
   return clean(value).toLowerCase();
 }
 
+function normalizeEventKey(value: unknown) {
+  return normalizeBusinessEventKey(value);
+}
+
 export function listProjectionBuilders() {
   return PROJECTION_BUILDERS;
 }
@@ -56,7 +61,7 @@ export function listProjectionBuildersForEvent(input: {
   eventKey: unknown;
   targetType: unknown;
 }) {
-  const eventKey = normalizeKey(input.eventKey);
+  const eventKey = normalizeEventKey(input.eventKey);
   const targetType = clean(input.targetType).toUpperCase();
 
   return PROJECTION_BUILDERS.filter((builder) => {
@@ -67,7 +72,7 @@ export function listProjectionBuildersForEvent(input: {
     const eventMatches =
       subscriptionMatches ||
       !builder.sourceEvents?.length ||
-      builder.sourceEvents.map(normalizeKey).includes(eventKey);
+      builder.sourceEvents.map(normalizeEventKey).includes(eventKey);
     const targetMatches =
       subscriptionMatches ||
       !builder.targetTypes?.length ||

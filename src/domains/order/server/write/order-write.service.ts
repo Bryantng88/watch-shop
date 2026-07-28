@@ -21,6 +21,7 @@ import { syncWatchInventoryFromOrders } from "../order-watch-sync.service";
 import { postOneOrderTx } from "../post/order-post.service";
 import { normalizeReserveType } from "../../shared/order-reserve-type";
 import { publishOrderMutation } from "../events";
+import type { BusinessEventDispatchOptions } from "@/domains/event/server/business-event.service";
 import { publishShipmentMutation } from "@/domains/shipment/server/events";
 import { publishPaymentMutations } from "@/domains/payment/server";
 
@@ -283,7 +284,10 @@ function normalizeCreateInput(raw: any): CreateOrderInput {
   };
 }
 
-export async function createOrderWithItems(raw: any) {
+export async function createOrderWithItems(
+  raw: any,
+  runtime?: BusinessEventDispatchOptions,
+) {
   const input = normalizeCreateInput(raw);
   assertValidReserveBusiness(input);
   if (!input.customerName) throw new Error("Thiếu tên khách hàng");
@@ -378,7 +382,7 @@ export async function createOrderWithItems(raw: any) {
     fromStatus: null,
     toStatus: String(result.status),
     source: "ORDER_CREATE",
-  });
+  }, runtime);
   if ("shipment" in result && result.shipment) {
     await publishShipmentMutation({
       eventKey: "shipment.created",
@@ -392,7 +396,7 @@ export async function createOrderWithItems(raw: any) {
       trackingCode: result.shipment.trackingCode,
       note: result.shipment.notes,
       source: "ORDER_CREATE_AND_POST",
-    });
+    }, runtime);
   }
   if ("initialPayments" in result && Array.isArray(result.initialPayments)) {
     await publishPaymentMutations(

@@ -1528,6 +1528,10 @@ export async function submitOperationalBlueprintActionAction(input: {
 
   revalidatePath("/admin/task-items");
   revalidatePath(`/admin/task-items/${taskItemId}`);
+  if (PAYMENT_OPERATION_BLUEPRINT_ACTION_KEYS.has(actionKey)) {
+    revalidatePath("/admin/coordination/payment");
+    revalidatePath("/admin/coordination/operation");
+  }
 
   return { ok: true, result };
 }

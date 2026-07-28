@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { createOrderApplication } from "@/domains/order/application";
 import type { CreateOrderInput } from "@/domains/order/server/shared";
 
@@ -101,7 +101,10 @@ export async function POST(req: NextRequest) {
     // Create order
     // ==========================
     try {
-        const order = await createOrderApplication(payload as unknown as CreateOrderInput);
+        const order = await createOrderApplication(
+            payload as unknown as CreateOrderInput,
+            { deferConsumers: (work) => after(work) },
+        );
         return NextResponse.json(order, { status: 201 });
     } catch (err: unknown) {
         console.error("Create public order failed:", err);

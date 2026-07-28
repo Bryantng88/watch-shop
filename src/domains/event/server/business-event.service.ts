@@ -10,6 +10,7 @@ import { randomUUID } from "node:crypto";
 import { enqueueProjectionDelivery } from "@/domains/projection/server/projection-delivery.repo";
 import { markProjectionDeliveryReady } from "@/domains/projection/server/projection-delivery.repo";
 import { processProjectionDelivery } from "@/domains/projection/server/projection-delivery.service";
+import { getBusinessEventContract } from "@/domains/event/catalog/business-event-catalog";
 export type { BusinessEventEffect };
 
 export type BusinessEventInput = {
@@ -39,6 +40,18 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function eventInstanceIdFromPayload(payload: Record<string, unknown>) {
     return clean(payload.eventInstanceId) || clean(payload.sourceId) || null;
+}
+
+function failedProjectionBarrier(
+    eventKey: string,
+    results: Awaited<ReturnType<typeof dispatchBusinessEvent>>,
+) {
+    const consumers = getBusinessEventContract(eventKey)?.knownConsumers ?? [];
+    const barrierKeys = ["coordination", "workflow"] as const;
+    return barrierKeys
+        .filter((key) => consumers.includes(key))
+        .map((key) => results[key])
+        .find((result) => result?.ok === false);
 }
 
 function formatValidationErrors(
@@ -174,14 +187,16 @@ export async function recordBusinessEvent(
                 // the same transaction as the event.
                 excludedConsumerKeys: ["projection"],
             });
-            if (consumerResults.coordination?.ok === false) {
-                console.warn("[business-event] projection held because coordination failed", {
+            const failedBarrier = failedProjectionBarrier(eventKey, consumerResults);
+            if (failedBarrier) {
+                console.warn("[business-event] projection held because a completion barrier failed", {
                     eventKey,
                     targetType,
                     targetId,
                     projectionDeliveryKey,
-                    coordinationStatus: consumerResults.coordination.status,
-                    coordinationError: consumerResults.coordination.error,
+                    consumer: failedBarrier.consumer,
+                    status: failedBarrier.status,
+                    error: failedBarrier.error,
                 });
                 return;
             }
@@ -215,8 +230,19 @@ export async function recordBusinessEvent(
         // pay projection fan-out latency; the system worker will drain the outbox.
         excludedConsumerKeys: ["projection"],
     });
-    if (consumerResults.coordination?.ok !== false) {
+    let compatibilityProjectionDelivery:
+        | Awaited<ReturnType<typeof processProjectionDelivery>>
+        | null = null;
+    if (!failedProjectionBarrier(eventKey, consumerResults)) {
         await markProjectionDeliveryReady(client, projectionDeliveryKey);
+        // Compatibility fail-safe for producers that have not yet adopted the
+        // runtime after-commit scheduler. Correctness wins over request latency:
+        // never leave an operation-visible delivery at PENDING/attempts=0 and
+        // rely solely on the periodic worker.
+        compatibilityProjectionDelivery = await processProjectionDelivery(
+            projectionDeliveryKey,
+            { db: client },
+        );
     }
     perfLog("business-event", `${eventKey}:total`, totalStartedAt);
 
@@ -229,7 +255,19 @@ export async function recordBusinessEvent(
             workflow: consumerResults.workflow,
             notification: consumerResults.notification,
             timeline: consumerResults.timeline,
-            projection: consumerResults.projection,
+            projection: compatibilityProjectionDelivery?.result
+                ? {
+                    ok: compatibilityProjectionDelivery.result.ok,
+                    consumer: "projection" as const,
+                    status: compatibilityProjectionDelivery.result.ok ? "success" as const : "failed" as const,
+                    attempts: 1,
+                    durationMs: 0,
+                    error: compatibilityProjectionDelivery.result.ok
+                        ? undefined
+                        : compatibilityProjectionDelivery.result.error,
+                    result: compatibilityProjectionDelivery.result,
+                }
+                : consumerResults.projection,
         },
     };
 }

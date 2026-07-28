@@ -106,6 +106,7 @@ export const LEGACY_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
     label: "Service request completed",
     targetType: "SERVICE_REQUEST",
     group: "Service",
+    knownConsumers: ["timeline", "projection"],
   }),
   defineBusinessEventContract({
     key: "technical_issue.created",
@@ -161,12 +162,14 @@ export const LEGACY_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
     label: "Task item created",
     targetType: "TASK_ITEM",
     group: "Task",
+    knownConsumers: ["projection"],
   }),
   defineBusinessEventContract({
     key: "task.item.moved",
     label: "Task item moved",
     targetType: "TASK_ITEM",
     group: "Task",
+    knownConsumers: ["projection"],
   }),
   defineBusinessEventContract({
     key: "task.item.activity.commented",

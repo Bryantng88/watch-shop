@@ -108,11 +108,44 @@ function clean(value: unknown) {
   return String(value ?? "").trim();
 }
 
-function workTypeKeyFromNote(note: unknown): WatchListProjectionMediaState["workTypeKey"] | null {
-  const text = clean(note).toLowerCase();
-  if (/worktypekey:\s*photoshoot/.test(text)) return "photoshoot";
-  if (/worktypekey:\s*media-processing/.test(text)) return "media-processing";
-  if (/worktypekey:\s*publish/.test(text)) return "publish";
+export function mediaWorkTypeKey(
+  value: unknown,
+): WatchListProjectionMediaState["workTypeKey"] | null {
+  const normalized = clean(value).toLowerCase();
+  if (["photography", "photoshoot", "photo-shoot", "shooting"].includes(normalized)) {
+    return "photography";
+  }
+  if (normalized === "media-processing") return "media-processing";
+  if (normalized === "publish") return "publish";
+  return null;
+}
+
+function noteField(note: unknown, key: string) {
+  const match = clean(note).match(new RegExp(`^${key}:\\s*(.+)$`, "im"));
+  return clean(match?.[1]) || null;
+}
+
+function recordText(value: unknown, key: string) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return clean((value as Record<string, unknown>)[key]) || null;
+}
+
+function bindingMediaWorkTypeKey(binding: {
+  metadataJson: unknown;
+  taskItem: { note: string | null } | null;
+}) {
+  const metadataWorkType = mediaWorkTypeKey(recordText(binding.metadataJson, "workTypeKey"));
+  if (metadataWorkType) return metadataWorkType;
+
+  const noteWorkType = mediaWorkTypeKey(noteField(binding.taskItem?.note, "workTypeKey"));
+  if (noteWorkType) return noteWorkType;
+
+  const workflowKey =
+    recordText(binding.metadataJson, "workflowKey") ??
+    noteField(binding.taskItem?.note, "workflowKey");
+  if (workflowKey === "watch-photography") return "photography";
+  if (workflowKey === "watch-media-processing") return "media-processing";
+  if (workflowKey === "watch-publish") return "publish";
   return null;
 }
 
@@ -147,7 +180,7 @@ async function loadMediaStatesByWatchId(
   const byWatchId = new Map<string, WatchListProjectionMediaState[]>();
 
   for (const binding of bindings) {
-    const workTypeKey = workTypeKeyFromNote(binding.taskItem?.note);
+    const workTypeKey = bindingMediaWorkTypeKey(binding);
     if (!workTypeKey) continue;
 
     const runtime = getQueueItemWorkflowState(binding);
@@ -212,11 +245,14 @@ async function loadLastActionsByWatchId(
   const actors = actorIds.length
     ? await dbOrTx(db).user.findMany({
       where: { id: { in: actorIds } },
-      select: { id: true, name: true, email: true },
+      select: { id: true, name: true, email: true, avatarUrl: true },
     })
     : [];
   const actorById = new Map(
     actors.map((actor) => [actor.id, clean(actor.name) || clean(actor.email) || "Người dùng"]),
+  );
+  const actorAvatarById = new Map(
+    actors.map((actor) => [actor.id, clean(actor.avatarUrl) || null]),
   );
 
   return new Map(
@@ -228,6 +264,9 @@ async function loadLastActionsByWatchId(
         note: metadataText(event.metadataJson, "intakeNote"),
         actorUserId: event.actorUserId,
         actorLabel: event.actorUserId ? actorById.get(event.actorUserId) ?? null : "Hệ thống",
+        actorAvatarUrl: event.actorUserId
+          ? actorAvatarById.get(event.actorUserId) ?? null
+          : null,
         at: event.createdAt.toISOString(),
       },
     ]),

@@ -9,6 +9,9 @@ async function main() {
     repairLimit: 2,
   });
   console.log(JSON.stringify(result, null, 2));
+  if (!result.deliveryHealthAfter.healthy) {
+    throw new Error("PROJECTION_DELIVERY_LIVENESS_GATE_FAILED");
+  }
 }
 
 main()

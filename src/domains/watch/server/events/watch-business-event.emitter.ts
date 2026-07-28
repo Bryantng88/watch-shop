@@ -266,6 +266,7 @@ export async function emitWatchMediaRecalledEvent(
   db: DB,
   input: Omit<WatchMediaPipelineEventPayloadInput, "sourceAction"> & {
     actorUserId?: string | null;
+    deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
   },
 ) {
   return recordBusinessEvent(db, {
@@ -280,7 +281,7 @@ export async function emitWatchMediaRecalledEvent(
       sourceId: input.sourceId ?? null,
       note: input.note ?? null,
     }),
-  });
+  }, { deferConsumers: input.deferConsumers });
 }
 
 export async function emitWatchPublishAssetsDownloadedEvent(
@@ -288,6 +289,7 @@ export async function emitWatchPublishAssetsDownloadedEvent(
   input: Omit<WatchMediaPipelineEventPayloadInput, "sourceAction"> & {
     actorUserId?: string | null;
     extraPayload?: Record<string, unknown>;
+    deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
   },
 ) {
   const payload = {
@@ -307,7 +309,7 @@ export async function emitWatchPublishAssetsDownloadedEvent(
     targetAliasIds: watchMediaPipelineEventAliases(input.watch, input.sourceId),
     actorUserId: input.actorUserId ?? null,
     payload,
-  });
+  }, { deferConsumers: input.deferConsumers });
 }
 
 export async function emitWatchPostedEvent(

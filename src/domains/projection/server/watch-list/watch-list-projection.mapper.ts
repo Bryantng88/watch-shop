@@ -66,10 +66,10 @@ function mapMediaStatus(row: WatchRow, source: WatchListProjectionSourceRow) {
   const states = source.__mediaState ?? [];
   const publish = newestMediaState(states, "publish");
   const media = newestMediaState(states, "media-processing");
-  const photoshoot = newestMediaState(states, "photoshoot");
+  const photography = newestMediaState(states, "photography");
   const publishState = workflowState(publish);
   const mediaState = workflowState(media);
-  const photoshootState = workflowState(photoshoot);
+  const photographyState = workflowState(photography);
 
   if (row.isPosted || isDone(publishState)) {
     return { status: "POSTED" as const, label: "Đã hoàn tất" };
@@ -105,12 +105,12 @@ function mapMediaStatus(row: WatchRow, source: WatchListProjectionSourceRow) {
     return { status: "MEDIA_PROCESSING" as const, label: "Đang xử lý media" };
   }
 
-  if (photoshoot && !isCancelled(photoshootState)) {
-    if (["FEEDBACK", "RECALLED", "BLOCKED"].includes(photoshootState)) {
+  if (photography && !isCancelled(photographyState)) {
+    if (["FEEDBACK", "RECALLED", "BLOCKED"].includes(photographyState)) {
       return { status: "NEEDS_REWORK" as const, label: "Cần chụp lại" };
     }
 
-    if (isDone(photoshootState)) {
+    if (isDone(photographyState)) {
       return { status: "MEDIA_READY" as const, label: "Đã chụp xong" };
     }
 
@@ -158,20 +158,20 @@ function mediaWorkspaceHrefForStatus(
   const states = source.__mediaState ?? [];
   const publish = newestMediaState(states, "publish");
   const media = newestMediaState(states, "media-processing");
-  const photoshoot = newestMediaState(states, "photoshoot");
+  const photography = newestMediaState(states, "photography");
 
   switch (upper(status)) {
     case "POSTED":
     case "READY_TO_PUBLISH":
       return publish?.workspaceHref ?? media?.workspaceHref ?? null;
     case "NEEDS_REWORK":
-      return media?.workspaceHref ?? photoshoot?.workspaceHref ?? null;
+      return media?.workspaceHref ?? photography?.workspaceHref ?? null;
     case "MEDIA_PROCESSING":
       return media?.workspaceHref ?? null;
     case "MEDIA_READY":
-      return photoshoot?.workspaceHref ?? null;
+      return photography?.workspaceHref ?? null;
     case "PHOTOSHOOT":
-      return photoshoot?.workspaceHref ?? null;
+      return photography?.workspaceHref ?? null;
     default:
       return null;
   }

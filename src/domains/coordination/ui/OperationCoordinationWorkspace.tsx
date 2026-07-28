@@ -94,6 +94,7 @@ import FlowItemListView from "./FlowItemListView";
 type Props = {
   data: CoordinationDashboardDTO;
   initialDashboard?: BusinessListDashboardData | null;
+  serverIncludesFlowItems?: boolean;
 };
 
 type TechnicalIssuePriorityFilter = "ALL" | "URGENT" | "NORMAL";
@@ -688,7 +689,11 @@ function SpaceSharingEditor({
   );
 }
 
-export default function OperationCoordinationWorkspace({ data, initialDashboard }: Props) {
+export default function OperationCoordinationWorkspace({
+  data,
+  initialDashboard,
+  serverIncludesFlowItems = true,
+}: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dialog = useAppDialog();
@@ -783,7 +788,22 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
     if (data.mediaBoard) {
       setAsyncMediaBoard(data.mediaBoard);
     }
-  }, [data.mediaBoard, data.technicalIssueBoard]);
+    if (serverIncludesFlowItems) {
+      setAsyncFlowItems(data.flowItems);
+      setAsyncFlowPagination(data.flowItemsPagination);
+    } else {
+      // The page returned only a dashboard shell. Keep the visible rows while
+      // marking the dedicated flow payload stale so the flow endpoint reloads
+      // it without flashing an authoritative-looking empty list.
+      setFlowItemsModeKey("");
+    }
+  }, [
+    data.flowItems,
+    data.flowItemsPagination,
+    data.mediaBoard,
+    data.technicalIssueBoard,
+    serverIncludesFlowItems,
+  ]);
 
   function changeActiveViewMode(nextModeKey: string) {
     if (nextModeKey === activeViewModeKey) {
@@ -885,7 +905,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
             .map(normalizeStageKey)
             .includes(normalizeStageKey(input.toStageKey)),
         )
-      : orderedFlowStages[fromIndex + 1];
+      : undefined;
     if (input.syncFlowList !== false) {
       setAsyncFlowItems((current) =>
         current.filter((item) => !input.itemIds.includes(item.id)),

@@ -9,22 +9,6 @@ import {
 } from "./projection-delivery.repo";
 import { runProjectionBuildersForEvent } from "./projection.runner";
 
-let projectionDeliveryTail: Promise<void> = Promise.resolve();
-
-async function runSerializedProjectionDelivery<T>(work: () => Promise<T>) {
-  const previous = projectionDeliveryTail;
-  let release: () => void = () => undefined;
-  projectionDeliveryTail = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  await previous.catch(() => undefined);
-  try {
-    return await work();
-  } finally {
-    release();
-  }
-}
-
 async function processClaimedDelivery(db: DB, row: ProjectionEventDeliveryRow) {
   try {
     const result = await runProjectionBuildersForEvent(
@@ -34,6 +18,7 @@ async function processClaimedDelivery(db: DB, row: ProjectionEventDeliveryRow) {
     if (!result.ok) {
       throw new Error(
         result.builders.find((builder) => !builder.ok)?.error ??
+        result.reason ??
         "PROJECTION_BUILDERS_FAILED",
       );
     }
@@ -63,9 +48,7 @@ export async function processProjectionDelivery(
 
   return {
     claimed: true as const,
-    result: await runSerializedProjectionDelivery(() =>
-      processClaimedDelivery(db, row),
-    ),
+    result: await processClaimedDelivery(db, row),
   };
 }
 
@@ -83,7 +66,7 @@ export async function processPendingProjectionDeliveries(input?: {
     results.push(
       ...await Promise.all(
         rows.slice(index, index + concurrency).map((row) =>
-          runSerializedProjectionDelivery(() => processClaimedDelivery(db, row)),
+          processClaimedDelivery(db, row),
         ),
       ),
     );

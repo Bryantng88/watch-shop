@@ -16,6 +16,7 @@ import type {
     BusinessEntityType,
 } from "./business-entity.types";
 import { updateTechnicalIssue } from "@/domains/service/server";
+import { perfStep } from "@/lib/server-perf";
 
 type ProductPreviewImageSource = {
     primaryImageUrl?: string | null;
@@ -337,7 +338,8 @@ export async function getBusinessEntityPreviewAction(input: {
     }
 
     if (input.type === "TECHNICAL_ISSUE") {
-        const [row, vendorOptions] = await Promise.all([prisma.technicalIssue.findUnique({
+        const row = await perfStep("business-preview", "technical-issue:source", () =>
+          prisma.technicalIssue.findUnique({
             where: { id },
             include: {
                 serviceRequest: {
@@ -401,11 +403,8 @@ export async function getBusinessEntityPreviewAction(input: {
                     },
                 },
             },
-        }), prisma.vendor.findMany({
-            where: { isActive: true },
-            orderBy: { name: "asc" },
-            select: { id: true, name: true },
-        })]);
+          }),
+        );
 
         if (!row) return null;
 
@@ -414,6 +413,32 @@ export async function getBusinessEntityPreviewAction(input: {
             ? `/admin/task-items/${sr.TaskExecution[0].taskItemId}`
             : null;
         const technicalWorkspaceItem = row.TaskExecution?.[0]?.taskItem ?? null;
+        const isEditable = !["DONE", "CANCELED", "CANCELLED"].includes(
+            String(row.executionStatus).toUpperCase(),
+        );
+        const [vendorOptions, activityItems, mentionableUsers] = await perfStep(
+          "business-preview",
+          "technical-issue:activity-and-options",
+          () => Promise.all([
+            isEditable
+                ? prisma.vendor.findMany({
+                    where: { isActive: true },
+                    orderBy: { name: "asc" },
+                    select: { id: true, name: true },
+                })
+                : Promise.resolve([]),
+            technicalWorkspaceItem && canReadActivity
+                ? getBusinessTargetActivityViewModels("TECHNICAL_ISSUE", row.id, 20)
+                : Promise.resolve([]),
+            technicalWorkspaceItem && canReadActivity && canEditActivity
+                ? prisma.user.findMany({
+                    where: { isActive: true },
+                    orderBy: [{ name: "asc" }, { email: "asc" }],
+                    select: { id: true, name: true, email: true, avatarUrl: true },
+                })
+                : Promise.resolve([]),
+          ]),
+        );
         let activity: BusinessEntityPreview["activity"];
 
         if (technicalWorkspaceItem && canReadActivity) {
@@ -423,21 +448,13 @@ export async function getBusinessEntityPreviewAction(input: {
                 discussionEnabled: canEditActivity && capabilities.discussion,
                 viewerUserId: getAuthUserId(auth),
                 mentionableUsers: canEditActivity
-                    ? (await prisma.user.findMany({
-                        where: { isActive: true },
-                        orderBy: [{ name: "asc" }, { email: "asc" }],
-                        select: { id: true, name: true, email: true, avatarUrl: true },
-                    })).map((user) => ({
+                    ? mentionableUsers.map((user) => ({
                         id: user.id,
                         label: user.name || user.email,
                         avatarUrl: user.avatarUrl,
                     }))
                     : [],
-                items: await getBusinessTargetActivityViewModels(
-                    "TECHNICAL_ISSUE",
-                    row.id,
-                    20,
-                ),
+                items: activityItems,
             };
         }
 
@@ -489,11 +506,8 @@ export async function getBusinessEntityPreviewAction(input: {
                     })),
                 },
             ],
-            edit: ["DONE", "CANCELED", "CANCELLED"].includes(
-                String(row.executionStatus).toUpperCase(),
-            )
-                ? undefined
-                : {
+            edit: isEditable
+                ? {
                     kind: "TECHNICAL_ISSUE",
                     values: {
                         summary: row.summary ?? "",
@@ -505,7 +519,8 @@ export async function getBusinessEntityPreviewAction(input: {
                         expectedWorkingDays: row.expectedWorkingDays?.toString() ?? "",
                     },
                     vendorOptions,
-                },
+                }
+                : undefined,
         };
     }
 

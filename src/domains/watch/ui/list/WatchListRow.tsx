@@ -26,6 +26,7 @@ import {
 
 import type { WatchRow } from "./types";
 import { formatDateTime, formatMoney } from "./helpers";
+import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 
 type WatchRowAction = {
     key: string;
@@ -59,6 +60,47 @@ type Props = {
     onCreateTask?: (row: WatchRow) => void;
     onPreview?: (preview: BusinessEntityPreview) => void;
 };
+
+function initials(label?: string | null) {
+    return String(label || "Hệ thống")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((word) => word.charAt(0).toUpperCase())
+        .join("");
+}
+
+function LastActionAvatar({
+    label,
+    avatarUrl,
+    isSystem,
+}: {
+    label: string;
+    avatarUrl?: string | null;
+    isSystem: boolean;
+}) {
+    const src = resolveMediaPreviewSrc(avatarUrl);
+
+    return (
+        <span
+            className={cn(
+                "flex h-[18px] w-[18px] shrink-0 items-center justify-center overflow-hidden rounded-full border text-[7px] font-semibold",
+                isSystem
+                    ? "border-slate-200 bg-slate-100 text-slate-500"
+                    : "border-indigo-100 bg-indigo-50 text-indigo-700",
+            )}
+            title={label}
+        >
+            {src ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={src} alt={label} className="h-full w-full object-cover" />
+            ) : (
+                initials(label)
+            )}
+        </span>
+    );
+}
 
 type BadgeTone = VisualStatusTone;
 
@@ -629,10 +671,17 @@ export default function WatchListRow({
                         <div className="truncate text-sm font-medium text-slate-800">
                             {product.v2Row.lastAction.label}
                         </div>
-                        <div className="mt-0.5 truncate text-xs text-slate-500">
-                            {product.v2Row.lastAction.actorLabel || "Hệ thống"}
-                            {" · "}
-                            {formatDateTime(product.v2Row.lastAction.at)}
+                        <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-slate-500">
+                            <LastActionAvatar
+                                label={product.v2Row.lastAction.actorLabel || "Hệ thống"}
+                                avatarUrl={product.v2Row.lastAction.actorAvatarUrl}
+                                isSystem={!product.v2Row.lastAction.actorUserId}
+                            />
+                            <div className="truncate">
+                                {product.v2Row.lastAction.actorLabel || "Hệ thống"}
+                                {" · "}
+                                {formatDateTime(product.v2Row.lastAction.at)}
+                            </div>
                         </div>
                     </div>
                 ) : (
