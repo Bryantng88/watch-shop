@@ -524,6 +524,7 @@ export async function markWatchMediaAssetAttachedFromQueueItem(
     actorUserId?: string | null;
     note?: string | null;
     deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
+    deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
   },
   db: DB = prisma,
 ) {
@@ -1033,17 +1034,6 @@ export async function requestWatchMediaReshootFromQueueItem(
     },
   });
 
-  const runtime = getQueueItemWorkflowState(binding);
-  if (runtime?.workflowKey === "watch-media-processing") {
-    await updateQueueItemWorkflowState(db, binding.id, "RETURNED", {
-      ...(asRecord(runtime.metadata) as Prisma.JsonObject),
-      returnedByAction: "request-reshoot",
-      returnedAt: updatedAt,
-      reshootRequested: true,
-      ...(input.actorUserId ? { returnedByUserId: input.actorUserId } : {}),
-    });
-  }
-
   await createSystemActivity({
     taskItemId: binding.taskItem.id,
     sourceId: `media-reshoot-requested:${binding.id}:${updatedAt}`,
@@ -1066,24 +1056,15 @@ export async function requestWatchMediaReshootFromQueueItem(
   }, db);
 
   const activePhotoshootWatchIds = await findActivePhotoshootWatchIds(db, [watch.id]);
-  if (activePhotoshootWatchIds.has(watch.id)) {
-    return {
-      ok: true,
-      skipped: true,
-      reason: "WATCH_ALREADY_IN_ACTIVE_PHOTOSHOOT",
-      watchId: watch.id,
-      productId: watch.productId,
-      parts: nextParts,
-      completed,
-      updatedAt,
-    };
-  }
+  const photoshootAlreadyActive = activePhotoshootWatchIds.has(watch.id);
 
   const event = await emitWatchPhotoshootRequestedEvent(db, {
     watch: toWatchEventSnapshot(watch),
     actorUserId: input.actorUserId ?? null,
     sourceId: `media-reshoot:${binding.id}`,
     note,
+  }, {
+    deferConsumers: input.deferConsumers,
   });
 
   const photoshootBindingId = event.consumers.coordination?.skipped === false
@@ -1118,6 +1099,7 @@ export async function requestWatchMediaReshootFromQueueItem(
     parts: nextParts,
     completed,
     updatedAt,
+    photoshootAlreadyActive,
   };
 }
 

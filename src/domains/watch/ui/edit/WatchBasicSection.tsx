@@ -5,6 +5,7 @@ import { buildWatchTitleFromForm } from "../../shared/watch-title-sku.helpers";
 import type { WatchFormValues } from "../../client/form/watch-form.types";
 import { Button, cx, FieldLabel, Input, moneyPreview, SectionCard, Select, Textarea, Toggle } from "./shared";
 import WatchBrandField from "./WatchBrandField";
+import { PostTargetChip } from "@/domains/shared/ui/post-target/PostTargetChip";
 
 export type SimpleOption = {
     id: string;
@@ -213,11 +214,12 @@ export function PostTargetMultiSelect({
                             key={group.key}
                             type="button"
                             onClick={() => toggleGroup(group.key)}
-                            className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-2.5 py-1 text-xs font-medium text-white"
+                            className="rounded-full"
                             title="Bỏ chọn"
                         >
-                            {group.name}
-                            <span className="text-slate-300">x</span>
+                            <PostTargetChip trailing={<span className="text-slate-300">x</span>}>
+                                {group.name}
+                            </PostTargetChip>
                         </button>
                     ))
                 ) : (

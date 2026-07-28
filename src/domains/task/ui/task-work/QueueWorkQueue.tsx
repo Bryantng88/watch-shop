@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -41,6 +41,16 @@ import {
   resolveQueueRowPresentation,
   type QueueRowProgress,
 } from "./queue-row-presentation";
+import { useManualTransitionFeedback } from "./use-manual-transition-feedback";
+import {
+  manualTransitionActionLabel,
+  manualTransitionMovesOutOfCurrentStage,
+} from "./manual-transition-feedback";
+import {
+  isWorkspaceTransitionOutcome,
+  type WorkspaceTransitionOutcome,
+} from "@/domains/shared/ui/transitions/workspace-transition-outcome";
+import { useCoalescedRouterRefresh } from "@/domains/shared/ui/transitions/use-coalesced-router-refresh";
 
 export type UserSummary = {
   id: string;
@@ -299,6 +309,9 @@ export function effectiveTransitionLabel(
   transition: TaskItemQueueTransition,
   workspaceWorkTypeKey?: string | null,
 ) {
+  if (transition.actionKey === "mark-posted") {
+    return manualTransitionActionLabel(transition);
+  }
   if (
     workspaceWorkTypeKey === "photography" &&
     (transition.actionKey === "start-work" || transition.actionKey === "mark-done")
@@ -1004,6 +1017,7 @@ export function OpenTargetAction({
   iconClassName = "h-3.5 w-3.5",
   iconOnly = false,
   onActivate,
+  onTransitionApplied,
 }: {
   queueItem: TaskItemQueueItem;
   taskItemId: string;
@@ -1012,9 +1026,12 @@ export function OpenTargetAction({
   iconClassName?: string;
   iconOnly?: boolean;
   onActivate?: () => void;
+  onTransitionApplied?: (outcome: WorkspaceTransitionOutcome) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const transitionAppliedRef = useRef(false);
   const router = useRouter();
+  const scheduleRefresh = useCoalescedRouterRefresh(router);
   const href = openTargetHref({ queueItem, taskItemId, transition });
   const label = openTargetActionLabel(transition, queueItem);
   const modal =
@@ -1026,6 +1043,12 @@ export function OpenTargetAction({
 
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
+      if (isWorkspaceTransitionOutcome(event.data)) {
+        if (event.data.bindingId !== queueItem.id) return;
+        transitionAppliedRef.current = true;
+        onTransitionApplied?.(event.data);
+        return;
+      }
       if (
         event.data?.type !== "workspace-target-modal-close" &&
         event.data?.type !== "workspace-target-modal-refresh"
@@ -1036,12 +1059,12 @@ export function OpenTargetAction({
       if (event.data?.type === "workspace-target-modal-close") {
         setOpen(false);
       }
-      router.refresh();
+      if (!transitionAppliedRef.current) scheduleRefresh();
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [open, router]);
+  }, [onTransitionApplied, open, queueItem.id, scheduleRefresh]);
 
   if (!href) return null;
 
@@ -1060,6 +1083,7 @@ export function OpenTargetAction({
         type="button"
         onClick={() => {
           onActivate?.();
+          transitionAppliedRef.current = false;
           setOpen(true);
         }}
         className={className}
@@ -1094,7 +1118,7 @@ export function OpenTargetAction({
                   type="button"
                   onClick={() => {
                     setOpen(false);
-                    router.refresh();
+                    if (!transitionAppliedRef.current) scheduleRefresh();
                   }}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
                   aria-label="Close modal"
@@ -1142,6 +1166,7 @@ export function QueueWorkQueue({
   const [filter, setFilter] = useState<QueueFilter>("ALL");
   const [paymentTypeFilter, setPaymentTypeFilter] = useState("ALL");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [completedItemIds, setCompletedItemIds] = useState<string[]>([]);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
   const [createIssueOpen, setCreateIssueOpen] = useState(false);
@@ -1174,21 +1199,36 @@ export function QueueWorkQueue({
   const previewState = useBusinessEntityPreview();
   const router = useRouter();
   const appProgress = useAppProgress();
+  const transitionFeedback = useManualTransitionFeedback();
   const isServiceOperationWorkspace = workspaceWorkTypeKey === "service-operation";
   const isPaymentWorkspace = workspaceWorkTypeKey === "payment";
   const canCreateTechnicalIssue = Boolean(serviceRequestId);
-  const statusCount = (status: QueueItemStatus) => items.filter(
+  const activeItems = items.filter((item) => !completedItemIds.includes(item.id));
+  const reconcileEmbeddedTransition = (
+    itemId: string,
+    outcome: WorkspaceTransitionOutcome,
+  ) => {
+    const fromStage = String(outcome.fromStageKey ?? "").trim();
+    const toStage = String(outcome.toStageKey ?? "").trim();
+    if (!fromStage || !toStage || fromStage === toStage) return;
+
+    setCompletedItemIds((current) =>
+      current.includes(itemId) ? current : [...current, itemId],
+    );
+    setSelectedIds((current) => current.filter((id) => id !== itemId));
+  };
+  const statusCount = (status: QueueItemStatus) => activeItems.filter(
     (item) => normalizeQueueStatusForWorkspace(item.status, workspaceWorkTypeKey) === status,
   ).length;
-  const workflowStateCount = (state: string) => items.filter(
+  const workflowStateCount = (state: string) => activeItems.filter(
     (item) => item.currentWorkflowState === state,
   ).length;
-  const directionCount = (direction: "IN" | "OUT") => items.filter(
+  const directionCount = (direction: "IN" | "OUT") => activeItems.filter(
     (item) => String(item.payment?.direction ?? "").toUpperCase() === direction,
   ).length;
   const filters: Array<{ key: QueueFilter; label: string; count: number }> = isServiceOperationWorkspace
     ? [
-      { key: "ALL", label: "Tất cả", count: items.length },
+      { key: "ALL", label: "Tất cả", count: activeItems.length },
       { key: "WF:INSPECT", label: "Kiểm tra", count: workflowStateCount("INSPECT") },
       { key: "WF:READY", label: "Sẵn sàng", count: workflowStateCount("READY") },
       { key: "WF:IN_PROGRESS", label: "Đang xử lý", count: workflowStateCount("IN_PROGRESS") },
@@ -1196,25 +1236,25 @@ export function QueueWorkQueue({
     ]
     : isPaymentWorkspace
       ? [
-        { key: "ALL", label: "Tất cả", count: items.length },
+        { key: "ALL", label: "Tất cả", count: activeItems.length },
         { key: "DIR:IN", label: "Thu", count: directionCount("IN") },
         { key: "DIR:OUT", label: "Chi", count: directionCount("OUT") },
         { key: "WAITING", label: "Cần xử lý", count: statusCount("WAITING") },
         { key: "DONE", label: "Hoàn tất", count: statusCount("DONE") },
       ]
       : [
-      { key: "ALL", label: "Tất cả", count: items.length },
+      { key: "ALL", label: "Tất cả", count: activeItems.length },
       { key: "WAITING", label: "Cần xử lý", count: statusCount("WAITING") },
       { key: "IN_PROGRESS", label: "Đang xử lý", count: statusCount("IN_PROGRESS") },
       { key: "DONE", label: "Hoàn tất", count: statusCount("DONE") },
     ];
   const statusFilteredItems = filter === "ALL"
-    ? items
+    ? activeItems
     : filter.startsWith("WF:")
-      ? items.filter((item) => item.currentWorkflowState === filter.slice(3))
+      ? activeItems.filter((item) => item.currentWorkflowState === filter.slice(3))
       : filter.startsWith("DIR:")
-        ? items.filter((item) => String(item.payment?.direction ?? "").toUpperCase() === filter.slice(4))
-      : items.filter(
+        ? activeItems.filter((item) => String(item.payment?.direction ?? "").toUpperCase() === filter.slice(4))
+      : activeItems.filter(
         (item) =>
           normalizeQueueStatusForWorkspace(item.status, workspaceWorkTypeKey) === filter,
       );
@@ -1557,6 +1597,16 @@ export function QueueWorkQueue({
   const applyManualAction = (queueItem: TaskItemQueueItem, actionKey: string) => {
     if (isPending && pendingId) return;
 
+    const transition =
+      queueItem.manualTransitions?.find((candidate) => candidate.actionKey === actionKey) ?? {
+        actionKey,
+        label: actionKey,
+        manualActionLabel: actionKey,
+        fromState: queueItem.currentWorkflowState ?? "",
+        toState: "",
+        enabled: true,
+        reason: null,
+      };
     const pendingKey = `${queueItem.id}:${actionKey}`;
     const isRecallAction = actionKey === "recall-media";
     const isPhotoshootCompletion =
@@ -1637,6 +1687,11 @@ export function QueueWorkQueue({
         message: `${queueItem.preview.title || queueItem.preview.ref || "Watch"} đang được chuyển sang bước xử lý media.`,
         steps: photoshootSteps,
       });
+    } else {
+      transitionFeedback.begin(transition, [{
+        id: queueItem.id,
+        label: queueItem.preview.title || queueItem.preview.ref,
+      }]);
     }
 
     startTransition(async () => {
@@ -1663,6 +1718,10 @@ export function QueueWorkQueue({
         if (!result?.result?.applied) {
           throw new Error(result?.result?.reason ?? "WORKFLOW_ACTION_NOT_APPLIED");
         }
+        if (manualTransitionMovesOutOfCurrentStage(transition)) {
+          setCompletedItemIds((current) => [...current, queueItem.id]);
+          setSelectedIds((current) => current.filter((id) => id !== queueItem.id));
+        }
         if (isRecallAction) {
           setRecallStep("recall", "done", "Da thu hoi item khoi luong Dang bai.");
           setRecallStep("workspace", "running");
@@ -1688,8 +1747,16 @@ export function QueueWorkQueue({
             steps: photoshootSteps,
           });
         }
+        if (!isRecallAction && !isPhotoshootCompletion) {
+          transitionFeedback.success(transition, {
+            id: queueItem.id,
+            label: queueItem.preview.title || queueItem.preview.ref,
+          });
+        }
         setActionError(null);
-        window.setTimeout(() => router.refresh(), isRecallAction || isPhotoshootCompletion ? 350 : 0);
+        if (!manualTransitionMovesOutOfCurrentStage(transition)) {
+          window.setTimeout(() => router.refresh(), 0);
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Khong the cap nhat workflow.";
         if (isRecallAction) {
@@ -1721,6 +1788,12 @@ export function QueueWorkQueue({
           itemId: queueItem.id,
           message,
         });
+        if (!isRecallAction && !isPhotoshootCompletion) {
+          transitionFeedback.failure(transition, {
+            id: queueItem.id,
+            label: queueItem.preview.title || queueItem.preview.ref,
+          }, message);
+        }
         console.error(error);
       } finally {
         if (heartbeat) window.clearInterval(heartbeat);
@@ -1796,6 +1869,14 @@ export function QueueWorkQueue({
         percent: 10,
         steps: bulkProgressSteps,
       });
+    } else {
+      transitionFeedback.begin(
+        selectedTransitions[0].transition,
+        selectedTransitions.map(({ queueItem }) => ({
+          id: queueItem.id,
+          label: queueItem.preview.title || queueItem.preview.ref,
+        })),
+      );
     }
     startTransition(async () => {
       try {
@@ -1805,8 +1886,17 @@ export function QueueWorkQueue({
             actionKey: transition.actionKey,
           })),
         });
-        if (!result.ok) {
-          throw new Error(`${result.failed}/${selectedCount} Photoshoot Items không thể hoàn tất.`);
+        const succeededIds = result.results
+          .filter((entry) => entry.ok)
+          .map((entry) => entry.bindingId);
+        const completedIds = selectedTransitions
+          .filter(({ queueItem, transition }) =>
+            succeededIds.includes(queueItem.id) &&
+            manualTransitionMovesOutOfCurrentStage(transition),
+          )
+          .map(({ queueItem }) => queueItem.id);
+        if (completedIds.length) {
+          setCompletedItemIds((current) => [...current, ...completedIds]);
         }
         if (isBulkPhotoshootCompletion) {
           setBulkProgressStep("complete", "done", `Đã hoàn tất ${selectedCount} Photoshoot Items.`);
@@ -1816,8 +1906,8 @@ export function QueueWorkQueue({
           setBulkProgressStep("refresh", "running", "Đang làm mới danh sách Photoshoot Items.");
           appProgress.update({ percent: 90 });
         }
-        setSelectedIds([]);
-        router.refresh();
+        setSelectedIds((current) => current.filter((id) => !succeededIds.includes(id)));
+        if (!completedIds.length) router.refresh();
         if (isBulkPhotoshootCompletion) {
           setBulkProgressStep("refresh", "done", "Workspace đã được cập nhật.");
           appProgress.update({
@@ -1826,7 +1916,20 @@ export function QueueWorkQueue({
             percent: 100,
             steps: bulkProgressSteps,
           });
-          window.setTimeout(() => appProgress.hide(), 2200);
+        }
+        transitionFeedback.bulkResult(
+          selectedTransitions[0].transition,
+          selectedTransitions.map(({ queueItem }) => ({
+            id: queueItem.id,
+            label: queueItem.preview.title || queueItem.preview.ref,
+          })),
+          result.results,
+        );
+        if (!result.ok) {
+          setActionError({
+            itemId: "bulk",
+            message: `Đã xử lý ${result.applied}/${selectedCount} item. ${result.failed} item lỗi được giữ lại.`,
+          });
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Không thể cập nhật workflow.";
@@ -2411,6 +2514,9 @@ export function QueueWorkQueue({
                                         queueItem={queueItem}
                                         taskItemId={taskItemId}
                                         transition={transition}
+                                        onTransitionApplied={(outcome) =>
+                                          reconcileEmbeddedTransition(queueItem.id, outcome)
+                                        }
                                         className="inline-flex h-7 min-w-0 items-center gap-1.5 rounded-lg border border-slate-200 px-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
                                         onActivate={() => setOpenActionMenuId(null)}
                                       />
@@ -2440,6 +2546,9 @@ export function QueueWorkQueue({
                                     queueItem={queueItem}
                                     taskItemId={taskItemId}
                                     transition={photoshootMediaPreviewTransition(queueItem)}
+                                    onTransitionApplied={(outcome) =>
+                                      reconcileEmbeddedTransition(queueItem.id, outcome)
+                                    }
                                     className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-blue-600 transition hover:border-blue-200 hover:bg-blue-50"
                                     iconClassName="h-3.5 w-3.5"
                                     iconOnly
@@ -2476,6 +2585,9 @@ export function QueueWorkQueue({
                                                 queueItem={queueItem}
                                                 taskItemId={taskItemId}
                                                 transition={transition}
+                                                onTransitionApplied={(outcome) =>
+                                                  reconcileEmbeddedTransition(queueItem.id, outcome)
+                                                }
                                                 className="flex h-8 w-full items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
                                                 onActivate={() => setOpenActionMenuId(null)}
                                               />

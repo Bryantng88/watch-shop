@@ -36,7 +36,6 @@ import {
   Monitor,
   Plus,
   Receipt,
-  RotateCcw,
   Send,
   SlidersHorizontal,
   Workflow,
@@ -65,6 +64,7 @@ import {
   useAppProgress,
   type AppProgressStep,
 } from "@/domains/shared/feedback/AppProgressProvider";
+import { useManualTransitionFeedback } from "@/domains/task/ui/task-work/use-manual-transition-feedback";
 import { repairVietnameseMojibake } from "@/domains/shared/text/vietnamese-mojibake";
 import {
   AsyncBusinessListDashboard,
@@ -78,7 +78,9 @@ import {
   SpaceViewFooterTip,
   SpaceViewPage,
 } from "@/domains/shared/ui/space/SpaceViewShell";
-import SpaceFilterBar from "@/domains/shared/ui/space/SpaceFilterBar";
+import SpaceFilterBar, {
+  SpaceDataRefreshButton,
+} from "@/domains/shared/ui/space/SpaceFilterBar";
 import {
   BusinessEntityPreviewModal,
   useBusinessEntityPreview,
@@ -788,15 +790,97 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
   const activeFlowListStage = orderedFlowStages.some((stage) => stage.key === flowListStageFilter)
     ? flowListStageFilter
     : orderedFlowStages[0]?.key ?? "";
+  const reconcileMovedFlowItems = useCallback((input: {
+    itemIds: string[];
+    fromStageKey: string;
+    toStageKey?: string;
+    syncFlowList?: boolean;
+  }) => {
+    const movedCount = new Set(input.itemIds).size;
+    if (!movedCount) return;
+    const fromIndex = orderedFlowStages.findIndex((stage) =>
+      [stage.key, stage.workspaceKey]
+        .map(normalizeStageKey)
+        .includes(normalizeStageKey(input.fromStageKey)),
+    );
+    const fromStage = orderedFlowStages[fromIndex];
+    const toStage = input.toStageKey
+      ? orderedFlowStages.find((stage) =>
+          [stage.key, stage.workspaceKey]
+            .map(normalizeStageKey)
+            .includes(normalizeStageKey(input.toStageKey)),
+        )
+      : orderedFlowStages[fromIndex + 1];
+    if (input.syncFlowList !== false) {
+      setAsyncFlowItems((current) =>
+        current.filter((item) => !input.itemIds.includes(item.id)),
+      );
+      setAsyncFlowPagination((current) => {
+        const total = Math.max(0, current.total - movedCount);
+        return {
+          ...current,
+          total,
+          totalPages: Math.max(1, Math.ceil(total / current.pageSize)),
+        };
+      });
+    }
+
+    const updateTotals = (
+      totals: Record<string, { loaded: number; total: number; hasMore: boolean; nextPage: number | null }>,
+    ) => {
+      const next = { ...totals };
+      const fromKey = Object.keys(next).find(
+        (key) => normalizeStageKey(key) === normalizeStageKey(fromStage?.key),
+      );
+      const toKey = Object.keys(next).find(
+        (key) => normalizeStageKey(key) === normalizeStageKey(toStage?.key),
+      );
+      if (fromKey && next[fromKey]) {
+        next[fromKey] = {
+          ...next[fromKey],
+          loaded: Math.max(0, next[fromKey].loaded - movedCount),
+          total: Math.max(0, next[fromKey].total - movedCount),
+        };
+      }
+      if (toKey && next[toKey]) {
+        next[toKey] = {
+          ...next[toKey],
+          total: next[toKey].total + movedCount,
+        };
+      }
+      return next;
+    };
+
+    if (activeCoreFlow?.key === "media-production-flow") {
+      setAsyncMediaBoard((current) => current ? {
+        ...current,
+        columnPagination: updateTotals(current.columnPagination),
+      } : current);
+    } else if (activeCoreFlow?.key === "technical-issue-flow") {
+      setAsyncTechnicalIssueBoard((current) => current ? {
+        ...current,
+        columnPagination: updateTotals(current.columnPagination),
+      } : current);
+    }
+  }, [activeCoreFlow?.key, orderedFlowStages]);
   const flowListStageCounts = useMemo(() => {
     const counts = new Map<string, number>();
+    const applyActiveListTotal = () => {
+      if (
+        flowItemsModeKey === activeViewModeKey &&
+        activeFlowListStage
+      ) {
+        counts.set(activeFlowListStage, asyncFlowPagination.total);
+      }
+      return counts;
+    };
     if (activeCoreFlow?.key === "technical-issue-flow" && asyncTechnicalIssueBoard) {
       const totals = asyncTechnicalIssueBoard.columnPagination;
       counts.set("inspect", totals.INSPECT?.total ?? 0);
       counts.set("ready", totals.READY?.total ?? 0);
       counts.set("processing", totals.PROCESSING?.total ?? 0);
       counts.set("done", totals.DONE?.total ?? 0);
-      return counts;
+      return applyActiveListTotal();
     }
     if (activeCoreFlow?.key === "media-production-flow" && asyncMediaBoard) {
       const totals = asyncMediaBoard.columnPagination;
@@ -804,7 +888,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
       counts.set("media-processing", totals.MEDIA_PROCESSING?.total ?? 0);
       counts.set("publish", totals.PUBLISH?.total ?? 0);
       counts.set("done", totals.DONE?.total ?? 0);
-      return counts;
+      return applyActiveListTotal();
     }
     if (activeCoreFlow) {
       data.workTickets.forEach((ticket) => {
@@ -824,7 +908,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
           summary.ready + summary.review + summary.feedback + summary.done,
         );
       });
-      if (counts.size) return counts;
+      if (counts.size) return applyActiveListTotal();
     }
     asyncFlowItems.forEach((item) => {
       const itemStageKey = normalizeStageKey(item.flowStageKey);
@@ -835,13 +919,17 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
       );
       if (stage) counts.set(stage.key, (counts.get(stage.key) ?? 0) + 1);
     });
-    return counts;
+    return applyActiveListTotal();
   }, [
     activeCoreFlow,
+    activeFlowListStage,
+    activeViewModeKey,
     asyncFlowItems,
+    asyncFlowPagination.total,
     asyncMediaBoard,
     asyncTechnicalIssueBoard,
     data.workTickets,
+    flowItemsModeKey,
   ]);
   const flowListVisibleCount = activeFlowListStage
     ? flowListStageCounts.get(activeFlowListStage) ?? 0
@@ -1061,13 +1149,13 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
         : "LIST";
     setWorkTicketView(nextView);
   }, []);
-  const refreshTechnicalIssueBoard = useCallback(async () => {
+  const refreshBoard = useCallback(async (kind: "technical" | "media") => {
     if (isBoardRefreshing) return;
     setError(null);
     setIsBoardRefreshing(true);
     try {
       const response = await fetch(
-        `/api/admin/coordination/operation/boards/technical-issue?taskId=${encodeURIComponent(data.cycle.id)}&pageSize=10&doneRange=${doneRange}`,
+        `/api/admin/coordination/operation/boards/${kind === "technical" ? "technical-issue" : "media-operation"}?taskId=${encodeURIComponent(data.cycle.id)}&pageSize=${kind === "technical" ? 10 : 20}&doneRange=${doneRange}`,
         { cache: "no-store" },
       );
       const result = await response.json().catch(() => null);
@@ -1085,6 +1173,31 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
       setIsBoardRefreshing(false);
     }
   }, [data.cycle.id, doneRange, handleDashboardResult, isBoardRefreshing]);
+  const refreshActiveData = useCallback(async () => {
+    if (isBoardRefreshing) return;
+    if (workTicketView === "TI_BOARD") {
+      await refreshBoard("technical");
+      return;
+    }
+    if (workTicketView === "MEDIA_BOARD") {
+      await refreshBoard("media");
+      return;
+    }
+    setIsBoardRefreshing(true);
+    try {
+      await loadFlowItems(activeFlowListStage, asyncFlowPagination.page, true);
+      setBoardRefreshedAt(new Date());
+    } finally {
+      setIsBoardRefreshing(false);
+    }
+  }, [
+    activeFlowListStage,
+    asyncFlowPagination.page,
+    isBoardRefreshing,
+    loadFlowItems,
+    refreshBoard,
+    workTicketView,
+  ]);
   useEffect(() => {
     if (
       activeViewMode?.key !== "technical-issue-flow" ||
@@ -1093,11 +1206,11 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
       technicalBoardLoadAttempted.current
     ) return;
     technicalBoardLoadAttempted.current = true;
-    void refreshTechnicalIssueBoard();
+    void refreshBoard("technical");
   }, [
     activeViewMode?.key,
     asyncTechnicalIssueBoard,
-    refreshTechnicalIssueBoard,
+    refreshBoard,
     workTicketView,
   ]);
   const loadMoreBoardColumn = useCallback(async (
@@ -1830,27 +1943,11 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
                   </>
                 )}
                 {filterQuery || filterCreator !== "ALL" || filterWorkStatus !== "ALL" || filterPayment !== "ALL" || technicalIssuePriorityFilter !== "ALL" || technicalIssueCommentFilter !== "ALL" ? <button type="button" onClick={() => { setFilterQuery(""); setFilterCreator("ALL"); setFilterWorkStatus("ALL"); setFilterPayment("ALL"); setTechnicalIssuePriorityFilter("ALL"); setTechnicalIssueCommentFilter("ALL"); }} className="inline-flex h-11 shrink-0 items-center rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800">Xóa lọc</button> : null}
-                {isOperationalBoardView ? (
-                  <button
-                    type="button"
-                    onClick={() => void refreshTechnicalIssueBoard()}
-                    disabled={isBoardRefreshing}
-                    title={boardRefreshedAt
-                      ? `Tải lại board · Cập nhật lúc ${boardRefreshedAt.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`
-                      : "Tải lại board"}
-                    aria-label="Tải lại board"
-                    className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 disabled:cursor-wait disabled:text-slate-400"
-                  >
-                    <RotateCcw className={`h-4 w-4 ${isBoardRefreshing ? "animate-spin" : ""}`} />
-                    <span className="hidden 2xl:inline">
-                      {isBoardRefreshing
-                        ? "Đang tải..."
-                        : boardRefreshedAt
-                          ? boardRefreshedAt.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
-                          : "Tải lại"}
-                    </span>
-                  </button>
-                ) : null}
+                <SpaceDataRefreshButton
+                  loading={isBoardRefreshing || isFlowItemsLoading}
+                  refreshedAt={boardRefreshedAt}
+                  onRefresh={() => void refreshActiveData()}
+                />
               </SpaceFilterBar>
               {!isOperationalBoardView && orderedFlowStages.length ? (
                 <div
@@ -2111,6 +2208,12 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
               onLoadMore={(stage, page) =>
                 void loadMoreBoardColumn("technical", stage, page)
               }
+              onStageMoved={(input) => reconcileMovedFlowItems({
+                itemIds: [input.itemId],
+                fromStageKey: input.fromStage,
+                toStageKey: input.toStage,
+                syncFlowList: false,
+              })}
             />
           ) : isMediaBoardView ? (
             <MediaProductionBoardView
@@ -2126,6 +2229,11 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
                 ...current,
                 items: current.items.map((item) => items.find((updated) => updated.id === item.id) ?? item),
               } : current)}
+              onStageMoved={(input) => reconcileMovedFlowItems({
+                itemIds: [input.itemId],
+                fromStageKey: input.fromStage,
+                toStageKey: input.toStage,
+              })}
             />
           ) : (
             <>
@@ -2155,6 +2263,7 @@ export default function OperationCoordinationWorkspace({ data, initialDashboard 
               );
               void loadFlowItems(activeFlowListStage, page, true);
             }}
+            onItemsMovedFromStage={reconcileMovedFlowItems}
           />
           <div className="hidden">
           <div className={cn("hidden border-y border-slate-100 bg-[#fbfcfe] px-5 py-3 text-xs font-bold uppercase tracking-[0.05em] text-slate-500 lg:grid", workTicketGridClass)}>
@@ -2586,6 +2695,7 @@ function MediaProductionBoardView({
   loadingColumn,
   onLoadMore,
   onChanged,
+  onStageMoved,
   doneRange,
   onDoneRangeChange,
 }: {
@@ -2594,10 +2704,15 @@ function MediaProductionBoardView({
   loadingColumn: string | null;
   onLoadMore: (stage: MediaBoardStage, page: number) => void;
   onChanged: (items: MediaBoardItem[]) => void;
+  onStageMoved: (input: {
+    itemId: string;
+    fromStage: MediaBoardStage;
+    toStage: MediaBoardStage;
+  }) => void;
   doneRange: "14D" | "30D" | "ALL";
   onDoneRangeChange: (value: "14D" | "30D" | "ALL") => void;
 }) {
-  const router = useRouter();
+  const transitionFeedback = useManualTransitionFeedback();
   const previewState = useBusinessEntityPreview();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -2626,16 +2741,43 @@ function MediaProductionBoardView({
           ? "mark-posted"
           : null;
     if (!actionKey) return;
+    const transition = {
+      actionKey,
+      label: actionKey,
+      manualActionLabel: targetStage === "DONE" ? "Đã đăng bài" : `Chuyển sang ${columns.find((column) => column.key === targetStage)?.label ?? targetStage}`,
+      fromState: item.stage,
+      toState: "DONE",
+      enabled: true,
+      reason: null,
+    };
+    const feedbackItem = {
+      id: item.bindingId,
+      label: item.title,
+    };
     setError(null);
     setPendingId(item.id);
+    transitionFeedback.begin(transition, [feedbackItem]);
     try {
-      await applyQueueItemManualTransitionAction({ bindingId: item.bindingId, actionKey });
+      const result = await applyQueueItemManualTransitionAction({ bindingId: item.bindingId, actionKey });
+      if (!result.result.applied) {
+        throw new Error(
+          ("reason" in result.result && result.result.reason) ||
+          "Workflow không áp dụng transition.",
+        );
+      }
       onChanged(items.map((candidate) => candidate.id === item.id
         ? { ...candidate, stage: targetStage }
         : candidate));
-      window.setTimeout(() => router.refresh(), 100);
+      onStageMoved({
+        itemId: item.bindingId,
+        fromStage: item.stage,
+        toStage: targetStage,
+      });
+      transitionFeedback.success(transition, feedbackItem);
     } catch (moveError) {
-      setError(moveError instanceof Error ? moveError.message : "Không thể chuyển Media sang stage tiếp theo.");
+      const message = moveError instanceof Error ? moveError.message : "Không thể chuyển Media sang stage tiếp theo.";
+      setError(message);
+      transitionFeedback.failure(transition, feedbackItem, message);
     } finally {
       setPendingId(null);
     }
@@ -2835,6 +2977,7 @@ function TechnicalIssueBoardView({
   columnPagination,
   loadingColumn,
   onLoadMore,
+  onStageMoved,
   doneRange,
   onDoneRangeChange,
 }: {
@@ -2848,6 +2991,11 @@ function TechnicalIssueBoardView({
   columnPagination: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["columnPagination"];
   loadingColumn: string | null;
   onLoadMore: (stage: TechnicalIssueBoardStage, page: number) => void;
+  onStageMoved: (input: {
+    itemId: string;
+    fromStage: TechnicalIssueBoardStage;
+    toStage: TechnicalIssueBoardStage;
+  }) => void;
   doneRange: "14D" | "30D" | "ALL";
   onDoneRangeChange: (value: "14D" | "30D" | "ALL") => void;
 }) {
@@ -3095,9 +3243,13 @@ function TechnicalIssueBoardView({
         setMoveRequest(null);
         setMoveValues({});
         setAdditionalIssues([]);
+        onStageMoved({
+          itemId: item.id,
+          fromStage: item.stage,
+          toStage: targetStage,
+        });
         moveProgressSteps = moveProgressSteps.map((step) => step.id === "sync" ? { ...step, status: "running" } : step);
         progress.update({ message: "Đã cập nhật card. Dashboard đang đồng bộ nền.", percent: 90, steps: moveProgressSteps });
-        window.setTimeout(() => router.refresh(), 100);
         window.setTimeout(() => progress.hide(), 1000);
       } catch (error) {
         moveProgressSteps = moveProgressSteps.map((step) => step.status === "running" ? { ...step, status: "error" } : step);

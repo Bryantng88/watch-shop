@@ -130,7 +130,7 @@ const PUBLISH_WORKFLOW: WorkflowDefinition = {
       toState: "DONE",
       triggerType: "MANUAL",
       triggerValue: "mark-posted",
-      manualActionLabel: "Đã đăng bài",
+      manualActionLabel: "Xác nhận đã đăng",
       condition: null,
       metadata: null,
     },

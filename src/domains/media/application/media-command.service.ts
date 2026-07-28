@@ -161,7 +161,7 @@ export async function listSelectedWatchMedia(input: {
   role?: MediaRole;
 }) {
   const watch = await watchOwner(input.productId);
-  let bindings = await prisma.mediaBinding.findMany({
+  const bindings = await prisma.mediaBinding.findMany({
     where: {
       ownerType: MediaOwnerType.WATCH,
       ownerId: watch.id,
@@ -187,32 +187,15 @@ export async function listSelectedWatchMedia(input: {
         key: { startsWith: `products/edit/chosen/watch/${input.productId}/pool/` },
       },
       orderBy: [{ sortOrder: "asc" }, { updatedAt: "asc" }],
-      select: { key: true, sortOrder: true },
+      select: { key: true, fileName: true, sortOrder: true },
     });
-    for (const legacy of legacyPool) {
-      await selectExistingMediaForWatch({
-        storageKey: legacy.key,
-        productId: input.productId,
-        role: input.role ?? MediaRole.GALLERY,
-        sortOrder: legacy.sortOrder,
-      });
-    }
-    if (legacyPool.length) {
-      bindings = await prisma.mediaBinding.findMany({
-        where: {
-          ownerType: MediaOwnerType.WATCH,
-          ownerId: watch.id,
-          ...(input.role ? { role: input.role } : {}),
-          lifecycle: MediaBindingLifecycle.SELECTED,
-        },
-        include: {
-          mediaObject: {
-            select: { storageKey: true, originalFileName: true },
-          },
-        },
-        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-      });
-    }
+    return legacyPool.map((asset) => ({
+      key: asset.key,
+      fileKey: asset.key,
+      url: `/api/media/sign?key=${encodeURIComponent(asset.key)}`,
+      name: asset.fileName || fileName(asset.key),
+      sortOrder: asset.sortOrder,
+    }));
   }
   return bindings.map((binding) => ({
     key: binding.mediaObject.storageKey,

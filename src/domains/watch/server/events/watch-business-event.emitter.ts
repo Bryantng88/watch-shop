@@ -174,6 +174,7 @@ export async function emitWatchPhotoshootRequestedEvent(
   input: Omit<WatchMediaPipelineEventPayloadInput, "sourceAction"> & {
     actorUserId?: string | null;
   },
+  options?: BusinessEventDispatchOptions,
 ) {
   return recordBusinessEvent(db, {
     eventKey: "watch.media.photoshoot.requested",
@@ -187,7 +188,7 @@ export async function emitWatchPhotoshootRequestedEvent(
       sourceId: input.sourceId ?? null,
       note: input.note ?? null,
     }),
-  });
+  }, options);
 }
 
 export async function emitWatchPhotoshootCompletedEvent(

@@ -1,5 +1,6 @@
 import { prisma, type DB } from "@/server/db/client";
 import {
+  claimProjectionDeliveryByKey,
   claimProjectionDeliveries,
   markProjectionDeliveryFailed,
   markProjectionDeliverySucceeded,
@@ -31,6 +32,23 @@ async function processClaimedDelivery(db: DB, row: ProjectionEventDeliveryRow) {
       error: error instanceof Error ? error.message : String(error),
     };
   }
+}
+
+export async function processProjectionDelivery(
+  idempotencyKey: string,
+  input?: { db?: DB },
+) {
+  const db = input?.db ?? prisma;
+  const row = await claimProjectionDeliveryByKey(db, idempotencyKey);
+
+  if (!row) {
+    return { claimed: false as const, result: null };
+  }
+
+  return {
+    claimed: true as const,
+    result: await processClaimedDelivery(db, row),
+  };
 }
 
 export async function processPendingProjectionDeliveries(input?: {

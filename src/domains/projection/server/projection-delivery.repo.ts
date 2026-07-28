@@ -179,6 +179,28 @@ export async function claimProjectionDeliveries(
   `);
 }
 
+export async function claimProjectionDeliveryByKey(
+  db: DB,
+  idempotencyKey: string,
+) {
+  const rows = await dbOrTx(db).$queryRaw<ProjectionEventDeliveryRow[]>(Prisma.sql`
+    UPDATE "ProjectionEventDelivery"
+    SET
+      "status" = 'PROCESSING',
+      "attempts" = "attempts" + 1,
+      "lockedAt" = NOW(),
+      "lastError" = NULL,
+      "updatedAt" = NOW()
+    WHERE "idempotencyKey" = ${idempotencyKey}
+      AND "status" IN ('PENDING', 'FAILED')
+      AND "nextAttemptAt" <= NOW()
+      AND "attempts" < 8
+    RETURNING *
+  `);
+
+  return rows[0] ?? null;
+}
+
 export function projectionDeliveryContext(
   row: ProjectionEventDeliveryRow,
 ): BusinessEventDispatchContext {

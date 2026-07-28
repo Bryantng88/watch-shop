@@ -8,6 +8,7 @@ import type {
 import { perfLog, perfNow } from "@/lib/server-perf";
 import { randomUUID } from "node:crypto";
 import { enqueueProjectionDelivery } from "@/domains/projection/server/projection-delivery.repo";
+import { processProjectionDelivery } from "@/domains/projection/server/projection-delivery.service";
 export type { BusinessEventEffect };
 
 export type BusinessEventInput = {
@@ -171,6 +172,9 @@ export async function recordBusinessEvent(
                 // Projection already has a durable outbox delivery written in
                 // the same transaction as the event.
                 excludedConsumerKeys: ["projection"],
+            });
+            await processProjectionDelivery(projectionDeliveryKey, {
+                db: prisma,
             });
             perfLog("business-event", `${eventKey}:deferred-total`, totalStartedAt);
         });

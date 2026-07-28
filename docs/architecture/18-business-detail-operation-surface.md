@@ -297,6 +297,49 @@ projection row needs to change after a Workbench save, verify that:
 - the relevant consumer subscribes to that event;
 - replay/repair can rebuild the same projection state without UI involvement.
 
+## Modal Data Loading Rule
+
+Operational modals must keep their initial read path bounded and read-only.
+Opening a modal must never trigger migration, storage moves, reconciliation
+writes, projection repair, or other maintenance work.
+
+The modal container should split its data into:
+
+- critical data required for the first usable render;
+- secondary or heavy data loaded independently after the shell is usable;
+- maintenance or migration work handled by a worker/job outside the request.
+
+Rules:
+
+- initial modal reads must use bounded selects and indexed predicates;
+- media galleries, histories, activities, and other growing collections must
+  be paginated, limited, or loaded lazily;
+- legacy fallback may read legacy data temporarily, but must not migrate it
+  during rendering;
+- storage `stat`, copy, move, delete, or ingest operations are forbidden in a
+  page/modal query path;
+- mutation and transition requests must not wait for modal/list revalidation;
+- the owning container may reconcile local state immediately and schedule one
+  coalesced background refresh;
+- migration and repair must be idempotent jobs with retry and observability.
+
+Canonical flow:
+
+```text
+Open modal
+-> load bounded critical read model
+-> render usable shell
+-> load heavy collections independently
+
+Migration / repair
+-> durable job
+-> canonical write model
+-> projection/read model
+```
+
+Do not hide a migration loop inside a function named `get`, `list`, `load`, or
+`detail`. Read functions must remain safe to call repeatedly.
+
 ## Anti-Patterns
 
 Avoid:

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { CalendarDays, ChevronDown, Search, SlidersHorizontal } from "lucide-react";
+import { CalendarDays, ChevronDown, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -55,6 +55,34 @@ export type SpaceSelectFilter = {
   options: SpaceFilterOption[];
   onChange: (value: string) => void;
 };
+
+export function SpaceDataRefreshButton({
+  loading = false,
+  refreshedAt,
+  onRefresh,
+}: {
+  loading?: boolean;
+  refreshedAt?: Date | null;
+  onRefresh: () => void;
+}) {
+  const time = refreshedAt?.toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return (
+    <button
+      type="button"
+      onClick={onRefresh}
+      disabled={loading}
+      title={time ? `Làm mới dữ liệu · Cập nhật lúc ${time}` : "Làm mới dữ liệu"}
+      aria-label="Làm mới dữ liệu list hoặc board"
+      className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 disabled:cursor-wait disabled:text-slate-400"
+    >
+      <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+      <span className="hidden xl:inline">{loading ? "Đang tải..." : "Làm mới"}</span>
+    </button>
+  );
+}
 
 export default function SpaceFilterBar({
   weekValue,

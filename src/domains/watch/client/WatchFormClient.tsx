@@ -12,11 +12,12 @@ import {
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import AfterSaveDialog from "@/domains/shared/ui/navigation/AfterSaveDialog";
 import { applyQueueItemManualTransitionAction } from "@/domains/task/actions/task.actions";
+import { notifyParentOfWorkspaceTransition } from "@/domains/shared/ui/transitions/workspace-transition-outcome";
 
 import { submitWatchForm } from "./form/watch-form.actions";
 import {
+    loadWatchMediaPoolAction,
     markWatchMediaAssetAttachedFromWatchAction,
-    requestWatchMediaReshootFromWatchAction,
     saveWatchMediaWorkDraftFromWatchAction,
 } from "./media-work/watch-media-work.actions";
 import { mapWatchDetailToFormValues } from "./form/watch-form.mapper";
@@ -142,9 +143,9 @@ function MediaWorkDoneButton({
                     ? "bg-emerald-100 text-emerald-800 ring-emerald-200 hover:bg-emerald-200"
                     : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50",
             ].join(" ")}
-            title={done ? "Bấm để mở lại và lưu mục này" : "Lưu và xác nhận mục này đã xong"}
+            title={done ? "Lưu cập nhật và giữ trạng thái đã hoàn tất" : "Lưu và xác nhận mục này đã xong"}
         >
-            {done ? "Đã lưu & xong" : "Lưu & đánh dấu xong"} {label}
+            {done ? "Lưu cập nhật" : "Lưu & đánh dấu xong"} {label}
         </button>
     );
 }
@@ -423,10 +424,42 @@ export default function WatchFormClient({
         });
     };
 
+    useEffect(() => {
+        if (!isMediaMode) {
+            return;
+        }
+
+        let cancelled = false;
+        void loadWatchMediaPoolAction({ productId: initialValues.productId })
+            .then((poolImages) => {
+                if (cancelled) return;
+                const applyPool = (current: WatchFormValues): WatchFormValues => ({
+                    ...current,
+                    media: {
+                        ...current.media,
+                        poolImages,
+                    },
+                });
+                setFormValues(applyPool);
+                setSavedValues(applyPool);
+            })
+            .catch((error: unknown) => {
+                if (cancelled) return;
+                notify.error({
+                    title: "Không thể tải kho ảnh",
+                    message: errorMessage(error, "Kho ảnh chưa tải được. Bạn có thể thử làm mới modal."),
+                });
+            })
+
+        return () => {
+            cancelled = true;
+        };
+    }, [initialValues.productId, isMediaMode, notify]);
+
     const saveMediaWorkspacePart = async (part: MediaWorkPart) => {
         if (!isMediaMode || !fromMediaWorkspace || mediaSubmitPending) return;
 
-        const nextDone = !mediaWorkDone[part];
+        const nextDone = true;
         const submitValues: WatchFormValues = {
             ...buildSubmitValues(),
             saveIntent: "MEDIA_WORKSPACE",
@@ -460,10 +493,8 @@ export default function WatchFormClient({
             });
 
             notify.success({
-                title: nextDone ? `Đã lưu ${partLabel}` : `Đã mở lại ${partLabel}`,
-                message: nextDone
-                    ? "Mục này đã được lưu và đánh dấu hoàn tất."
-                    : "Mục này đã được chuyển về trạng thái cần xử lý.",
+                title: `Đã lưu ${partLabel}`,
+                message: "Mục này đã được lưu và giữ trạng thái hoàn tất.",
             });
         } catch (error: unknown) {
             notify.error({
@@ -959,33 +990,65 @@ export default function WatchFormClient({
             saveIntent: "MEDIA_WORKSPACE",
         };
         setMediaSubmitPending(true);
+        let steps: AppProgressStep[] = [
+            {
+                id: "save",
+                label: "Lưu thay đổi hình ảnh",
+                detail: "Đang lưu dữ liệu mới nhất trước khi chuyển workflow.",
+                status: "running",
+            },
+            {
+                id: "transition",
+                label: "Chuyển về Photography",
+                detail: "Áp dụng action request-changes qua Workspace Workflow Processor.",
+                status: "pending",
+            },
+            {
+                id: "reconcile",
+                label: "Đồng bộ danh sách",
+                detail: "Cập nhật Media Processing và Photography.",
+                status: "pending",
+            },
+        ];
         progress.show({
             title: "Đang yêu cầu chụp lại",
-            message: "Hệ thống đang lưu watch, cập nhật activity và chuyển item về Photoshoot.",
+            message: "Hệ thống đang lưu thay đổi và chuyển item về Photography.",
+            steps,
         });
 
         try {
             const result = await submitWatchForm(submitValues);
             updateValuesAfterSave(result);
+            steps = setStepStatus(steps, "save", "done", "Đã lưu dữ liệu mới nhất.");
+            steps = setStepStatus(steps, "transition", "running");
+            progress.update({ steps });
 
-            const reshootResult = await requestWatchMediaReshootFromWatchAction({
+            const transitionResult = await applyQueueItemManualTransitionAction({
                 bindingId: workspaceBindingId,
-                productId: submitValues.productId,
+                actionKey: "request-changes",
                 note,
             });
+            const workflowResult = transitionResult?.result;
 
-            if (reshootResult?.skipped) {
-                await dialog.alert({
-                    title: "Chưa thể chuyển về Photoshoot",
-                    message:
-                        reshootResult.reason === "WATCH_ALREADY_IN_ACTIVE_PHOTOSHOOT"
-                            ? "Watch này đã có item Photoshoot đang mở."
-                            : "Không tìm thấy item Xử lý Media đang mở để chuyển về Photoshoot.",
-                    tone: "warning",
-                });
-                return;
+            if (
+                !workflowResult?.applied ||
+                workflowResult.toState !== "RETURNED"
+            ) {
+                throw new Error(
+                    `Workflow chưa chuyển về Photography: ${
+                        workflowResult && "reason" in workflowResult
+                            ? workflowResult.reason
+                            : "TRANSITION_NOT_APPLIED"
+                    }`,
+                );
             }
 
+            steps = setStepStatus(steps, "transition", "done", "Workflow đã chuyển khỏi Media Processing.");
+            steps = setStepStatus(steps, "reconcile", "done", "Danh sách cha đã nhận kết quả chuyển stage.");
+            progress.update({
+                message: "Yêu cầu chụp lại đã hoàn tất.",
+                steps,
+            });
             setMediaWorkDone((prev) => ({
                 ...prev,
                 image: false,
@@ -996,10 +1059,16 @@ export default function WatchFormClient({
 
             notify.success({
                 title: "Đã yêu cầu chụp lại",
-                message: "Item đã được chuyển về Photoshoot và activity đã được cập nhật.",
+                message: "Item đã rời Xử lý Media và được chuyển về Photography.",
             });
 
             if (embedded && window.parent && window.parent !== window) {
+                notifyParentOfWorkspaceTransition({
+                    bindingId: workspaceBindingId,
+                    actionKey: "request-changes",
+                    fromStageKey: "media-processing",
+                    toStageKey: "photography",
+                });
                 window.parent.postMessage(
                     { type: "workspace-target-modal-close" },
                     window.location.origin,
@@ -1123,6 +1192,15 @@ export default function WatchFormClient({
                 throw new Error(
                     `Chua tao duoc item Dang bai: ${coordinationResult.reason ?? coordinationResult.error ?? "COORDINATION_NOT_COMPLETED"}`,
                 );
+            }
+
+            if (embedded) {
+                notifyParentOfWorkspaceTransition({
+                    bindingId: workspaceBindingId,
+                    actionKey: "approve-media",
+                    fromStageKey: "media-processing",
+                    toStageKey: "publish",
+                });
             }
 
             steps = setStepStatus(steps, "approve", "done", "Content/image da duoc duyet.");
@@ -1250,6 +1328,12 @@ export default function WatchFormClient({
             });
 
             if (embedded && window.parent && window.parent !== window) {
+                notifyParentOfWorkspaceTransition({
+                    bindingId: workspaceBindingId,
+                    actionKey: "request-changes",
+                    fromStageKey: "media-processing",
+                    toStageKey: "photography",
+                });
                 window.parent.postMessage(
                     { type: "workspace-target-modal-close" },
                     window.location.origin,

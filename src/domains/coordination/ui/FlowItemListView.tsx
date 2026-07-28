@@ -11,7 +11,6 @@ import {
   ChevronRight,
   Activity,
   MoreHorizontal,
-  Radio,
   X,
 } from "lucide-react";
 import type { CoordinationFlowListItemDTO } from "../server/coordination-dashboard.types";
@@ -30,6 +29,12 @@ import {
 } from "@/domains/task/ui/task-work/QueueWorkQueue";
 import { PAYMENT_PURPOSE_LABEL } from "@/domains/payment/shared/payment.constants";
 import type { TaskItemActivityViewModel } from "@/domains/task/server/activity";
+import {
+  manualTransitionActionLabel,
+  manualTransitionMovesOutOfCurrentStage,
+} from "@/domains/task/ui/task-work/manual-transition-feedback";
+import { useManualTransitionFeedback } from "@/domains/task/ui/task-work/use-manual-transition-feedback";
+import { PostTargetChip } from "@/domains/shared/ui/post-target/PostTargetChip";
 
 type FlowStage = {
   key: string;
@@ -55,6 +60,11 @@ type Props = {
     totalPages: number;
   };
   onPageChange: (page: number) => void;
+  onItemsMovedFromStage?: (input: {
+    itemIds: string[];
+    fromStageKey: string;
+    toStageKey?: string;
+  }) => void;
 };
 
 type OperationalActionField = {
@@ -195,8 +205,10 @@ export default function FlowItemListView({
   completedIcon,
   pagination,
   onPageChange,
+  onItemsMovedFromStage,
 }: Props) {
   const router = useRouter();
+  const transitionFeedback = useManualTransitionFeedback();
   const [isActionPending, startActionTransition] = useTransition();
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -354,13 +366,20 @@ export default function FlowItemListView({
     }
   }
 
-  function runAction(item: CoordinationFlowListItemDTO, actionKey: string) {
+  function runAction(
+    item: CoordinationFlowListItemDTO,
+    transition: CoordinationFlowListItemDTO["manualTransitions"][number],
+  ) {
+    const actionKey = transition.actionKey;
+    const feedbackItem = {
+      id: item.id,
+      label: item.preview.title || item.preview.ref,
+    };
     setActionError(null);
     setPendingActionId(item.id);
-    const shouldMoveOptimistically = normalize(item.flowStageKey).includes("photography");
-    if (shouldMoveOptimistically) {
-      setOptimisticallyMovedIds((current) => [...current, item.id]);
-    }
+    const shouldMoveOptimistically =
+      manualTransitionMovesOutOfCurrentStage(transition);
+    transitionFeedback.begin(transition, [feedbackItem]);
     startActionTransition(async () => {
       try {
         const response = await fetch("/api/admin/task-items/manual-transition", {
@@ -375,15 +394,44 @@ export default function FlowItemListView({
         if (!result?.result?.applied) {
           throw new Error(result?.result?.reason ?? "Không thể thực hiện action.");
         }
-        window.setTimeout(() => router.refresh(), 6000);
-      } catch (error) {
         if (shouldMoveOptimistically) {
-          setOptimisticallyMovedIds((current) => current.filter((id) => id !== item.id));
+          setOptimisticallyMovedIds((current) => [...current, item.id]);
+          onItemsMovedFromStage?.({
+            itemIds: [item.id],
+            fromStageKey: item.flowStageKey || activeStage,
+          });
         }
-        setActionError(error instanceof Error ? error.message : "Không thể cập nhật workflow.");
+        transitionFeedback.success(transition, feedbackItem);
+        if (!shouldMoveOptimistically) router.refresh();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Không thể cập nhật workflow.";
+        setActionError(message);
+        transitionFeedback.failure(transition, feedbackItem, message);
       } finally {
         setPendingActionId(null);
       }
+    });
+  }
+
+  function reconcileModalTransition(
+    item: CoordinationFlowListItemDTO,
+    outcome: { fromStageKey?: string; toStageKey?: string },
+  ) {
+    const fromStageKey = outcome.fromStageKey || item.flowStageKey || activeStage;
+    const movedOut =
+      Boolean(outcome.toStageKey) &&
+      normalize(outcome.toStageKey) !== normalize(fromStageKey);
+
+    if (!movedOut) return;
+
+    setOptimisticallyMovedIds((current) =>
+      current.includes(item.id) ? current : [...current, item.id],
+    );
+    setSelectedIds((current) => current.filter((id) => id !== item.id));
+    onItemsMovedFromStage?.({
+      itemIds: [item.id],
+      fromStageKey,
+      toStageKey: outcome.toStageKey,
     });
   }
 
@@ -435,8 +483,15 @@ export default function FlowItemListView({
   }
 
   function runBulkAction(actionKey: string) {
+    const transition = commonActions.find((candidate) => candidate.actionKey === actionKey);
+    if (!transition) return;
+    const feedbackItems = selectedItems.map((item) => ({
+      id: item.id,
+      label: item.preview.title || item.preview.ref,
+    }));
     setActionError(null);
     setPendingActionId("BULK");
+    transitionFeedback.begin(transition, feedbackItems);
     startActionTransition(async () => {
       try {
         const result = await applyQueueItemManualTransitionsAction({
@@ -445,13 +500,28 @@ export default function FlowItemListView({
             actionKey,
           })),
         });
-        if (!result.ok) {
-          throw new Error(`${result.failed} item không thể thực hiện action.`);
+        const succeededIds = result.results
+          .filter((entry) => entry.ok)
+          .map((entry) => entry.bindingId);
+        if (manualTransitionMovesOutOfCurrentStage(transition) && succeededIds.length) {
+          setOptimisticallyMovedIds((current) => [...current, ...succeededIds]);
+          onItemsMovedFromStage?.({
+            itemIds: succeededIds,
+            fromStageKey: activeStage,
+          });
         }
-        setSelectedIds([]);
-        router.refresh();
+        setSelectedIds((current) => current.filter((id) => !succeededIds.includes(id)));
+        transitionFeedback.bulkResult(transition, feedbackItems, result.results);
+        if (!result.ok) {
+          setActionError(
+            `Đã xử lý ${result.applied}/${result.results.length} item. ${result.failed} item lỗi được giữ lại để xử lý tiếp.`,
+          );
+        }
+        if (!manualTransitionMovesOutOfCurrentStage(transition)) router.refresh();
       } catch (error) {
-        setActionError(error instanceof Error ? error.message : "Không thể cập nhật các item.");
+        const message = error instanceof Error ? error.message : "Không thể cập nhật các item.";
+        setActionError(message);
+        transitionFeedback.failure(transition, { id: "BULK", label: `${feedbackItems.length} item` }, message);
       } finally {
         setPendingActionId(null);
       }
@@ -512,8 +582,11 @@ export default function FlowItemListView({
         });
         setOptimisticallyMovedIds((current) => [...current, reconcileItem.id]);
         setSelectedIds((current) => current.filter((id) => id !== reconcileItem.id));
+        onItemsMovedFromStage?.({
+          itemIds: [reconcileItem.id],
+          fromStageKey: reconcileItem.flowStageKey || activeStage,
+        });
         setReconcileItem(null);
-        router.refresh();
       } catch (error) {
         setActionError(error instanceof Error ? error.message : "Không thể xác nhận đối soát.");
       } finally {
@@ -594,6 +667,10 @@ export default function FlowItemListView({
       if (succeeded.length) {
         setOptimisticallyMovedIds((current) => [...current, ...succeeded]);
         setSelectedIds((current) => current.filter((id) => !succeeded.includes(id)));
+        onItemsMovedFromStage?.({
+          itemIds: succeeded,
+          fromStageKey: activeStage,
+        });
       }
       if (failed.length) {
         setActionError(`Đã xử lý ${succeeded.length}/${selectedPaymentItems.length}. Lỗi: ${failed.join("; ")}`);
@@ -601,9 +678,20 @@ export default function FlowItemListView({
         setIsBulkReconcileOpen(false);
       }
       setPendingActionId(null);
-      router.refresh();
     });
   }
+
+  const hiddenItemsStillInServerPage = items.filter((item) =>
+    optimisticallyMovedIds.includes(item.id),
+  ).length;
+  const effectiveTotal = Math.max(
+    0,
+    pagination.total - hiddenItemsStillInServerPage,
+  );
+  const effectiveTotalPages = Math.max(
+    1,
+    Math.ceil(effectiveTotal / pagination.pageSize),
+  );
 
   return (
     <div className="bg-white">
@@ -628,7 +716,7 @@ export default function FlowItemListView({
               onClick={() => runBulkAction(transition.actionKey)}
               className="h-8 rounded-lg bg-violet-600 px-3 text-xs font-semibold text-white transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-60"
             >
-              {pendingActionId === "BULK" ? "Đang xử lý..." : transition.manualActionLabel || transition.label}
+              {pendingActionId === "BULK" ? "Đang xử lý..." : manualTransitionActionLabel(transition)}
             </button>
           ))}
           {!commonActions.length && !selectedPaymentItems.length ? <span className="text-xs text-violet-600">Các item đã chọn không có action chung.</span> : null}
@@ -774,14 +862,13 @@ export default function FlowItemListView({
                       {item.preview.postTargets?.length ? (
                         <div className="flex max-w-52 flex-wrap items-center gap-1.5">
                           {item.preview.postTargets.slice(0, 2).map((target) => (
-                            <span
+                            <PostTargetChip
                               key={target.id}
                               title={target.platform ? `${target.name} · ${target.platform}` : target.name}
-                              className="inline-flex max-w-36 items-center gap-1.5 rounded-md border border-violet-100 bg-violet-50/70 px-2 py-1 text-[11px] font-semibold text-violet-700"
+                              className="text-[11px]"
                             >
-                              <Radio className="h-3 w-3 shrink-0" />
-                              <span className="truncate">{target.name}</span>
-                            </span>
+                              {target.name}
+                            </PostTargetChip>
                           ))}
                           {item.preview.postTargets.length > 2 ? (
                             <span
@@ -878,19 +965,20 @@ export default function FlowItemListView({
                             queueItem={item as TaskItemQueueItem}
                             taskItemId={item.taskItemId}
                             transition={enabledActions[0]}
+                            onTransitionApplied={(outcome) => reconcileModalTransition(item, outcome)}
                             className="inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"
                           />
                         ) : (
                           <button
                             type="button"
                             disabled={isActionPending}
-                            onClick={() => runAction(item, enabledActions[0].actionKey)}
-                            title={enabledActions[0].manualActionLabel}
+                            onClick={() => runAction(item, enabledActions[0])}
+                            title={manualTransitionActionLabel(enabledActions[0])}
                             className="h-8 max-w-40 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"
                           >
                             {pendingActionId === item.id
                               ? "Äang xá»­ lÃ½..."
-                              : enabledActions[0].manualActionLabel || enabledActions[0].label}
+                              : manualTransitionActionLabel(enabledActions[0])}
                           </button>
                         )
                       ) : (
@@ -900,19 +988,20 @@ export default function FlowItemListView({
                               queueItem={item as TaskItemQueueItem}
                               taskItemId={item.taskItemId}
                               transition={enabledActions[0]}
+                              onTransitionApplied={(outcome) => reconcileModalTransition(item, outcome)}
                               className="inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"
                             />
                           ) : (
                             <button
                               type="button"
                               disabled={isActionPending}
-                              onClick={() => runAction(item, enabledActions[0].actionKey)}
-                              title={enabledActions[0].manualActionLabel}
+                              onClick={() => runAction(item, enabledActions[0])}
+                              title={manualTransitionActionLabel(enabledActions[0])}
                               className="h-8 max-w-36 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"
                             >
                               {pendingActionId === item.id
                                 ? "Äang xá»­ lÃ½..."
-                                : enabledActions[0].manualActionLabel || enabledActions[0].label}
+                                : manualTransitionActionLabel(enabledActions[0])}
                             </button>
                           )}
                           <details className="relative">
@@ -931,6 +1020,7 @@ export default function FlowItemListView({
                                     queueItem={item as TaskItemQueueItem}
                                     taskItemId={item.taskItemId}
                                     transition={transition}
+                                    onTransitionApplied={(outcome) => reconcileModalTransition(item, outcome)}
                                     className="flex h-8 w-full items-center rounded-lg px-2.5 text-left text-xs font-semibold text-slate-700 transition hover:bg-violet-50 hover:text-violet-700"
                                   />
                                 ) : (
@@ -938,10 +1028,10 @@ export default function FlowItemListView({
                                     key={transition.actionKey}
                                     type="button"
                                     disabled={isActionPending}
-                                    onClick={() => runAction(item, transition.actionKey)}
+                                    onClick={() => runAction(item, transition)}
                                     className="block h-8 w-full rounded-lg px-2.5 text-left text-xs font-semibold text-slate-700 transition hover:bg-violet-50 hover:text-violet-700 disabled:cursor-wait disabled:opacity-60"
                                   >
-                                    {transition.manualActionLabel || transition.label}
+                                    {manualTransitionActionLabel(transition)}
                                   </button>
                                 ),
                               )}
@@ -961,14 +1051,14 @@ export default function FlowItemListView({
                               onClick={() =>
                                 action
                                   ? openOperationalAction(item, action)
-                                  : runAction(item, transition.actionKey)
+                                  : runAction(item, transition)
                               }
-                              title={transition.manualActionLabel}
+                              title={manualTransitionActionLabel(transition)}
                               className="h-8 max-w-40 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"
                             >
                               {pendingActionId === item.id
                                 ? "Đang xử lý..."
-                                : transition.manualActionLabel || transition.label}
+                                : manualTransitionActionLabel(transition)}
                             </button>
                           );
                         })}
@@ -978,17 +1068,18 @@ export default function FlowItemListView({
                         queueItem={item as TaskItemQueueItem}
                         taskItemId={item.taskItemId}
                         transition={primaryAction}
+                        onTransitionApplied={(outcome) => reconcileModalTransition(item, outcome)}
                         className="inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"
                       />
                     ) : primaryAction ? (
                       <button
                         type="button"
                         disabled={isActionPending}
-                        onClick={() => runAction(item, primaryAction.actionKey)}
-                        title={primaryAction.manualActionLabel}
+                        onClick={() => runAction(item, primaryAction)}
+                        title={manualTransitionActionLabel(primaryAction)}
                         className="h-8 max-w-36 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"
                       >
-                        {pendingActionId === item.id ? "Đang xử lý..." : primaryAction.manualActionLabel || primaryAction.label}
+                        {pendingActionId === item.id ? "Đang xử lý..." : manualTransitionActionLabel(primaryAction)}
                       </button>
                     ) : null}
                   </td> : null}
@@ -1035,8 +1126,8 @@ export default function FlowItemListView({
         </div>
       ) : null}
       <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-5 py-3 text-xs text-slate-500">
-        <span>Hiển thị {visibleItems.length} / {pagination.total} item</span>
-        {pagination.totalPages > 1 ? (
+        <span>Hiển thị {visibleItems.length} / {effectiveTotal} item</span>
+        {effectiveTotalPages > 1 ? (
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -1047,11 +1138,11 @@ export default function FlowItemListView({
               Trước
             </button>
             <span className="min-w-20 text-center font-semibold text-slate-700">
-              {pagination.page} / {pagination.totalPages}
+              {pagination.page} / {effectiveTotalPages}
             </span>
             <button
               type="button"
-              disabled={pending || pagination.page >= pagination.totalPages}
+              disabled={pending || pagination.page >= effectiveTotalPages}
               onClick={() => onPageChange(pagination.page + 1)}
               className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-600 transition hover:border-violet-200 hover:text-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
             >

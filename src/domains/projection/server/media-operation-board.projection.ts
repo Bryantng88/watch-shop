@@ -80,7 +80,10 @@ function mediaBindingRank(input: {
   const recency = Number.isFinite(workflowUpdatedAt)
     ? workflowUpdatedAt
     : input.createdAt.getTime();
-  return stageRank * 10_000_000_000_000 + recency;
+  // The most recently active workflow owns the visible stage. Stage order is
+  // only a tie-breaker; otherwise an older Publish/Media binding can mask a
+  // newer reshoot binding in Photography.
+  return recency * 10 + stageRank;
 }
 
 function mediaStage(
