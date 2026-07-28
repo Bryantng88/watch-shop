@@ -81,6 +81,17 @@ function setShareUserIdsInNote(
   return lines.join("\n").trim() || null;
 }
 
+function shareUserIdsFromNoteLine(
+  note: string | null | undefined,
+  lineKey: string,
+) {
+  const escapedKey = lineKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = String(note ?? "").match(
+    new RegExp(`^${escapedKey}:\\s*([^\\r\\n]+)$`, "im"),
+  );
+  return uniqueShareIds(String(match?.[1] ?? "").split(","));
+}
+
 function contextPath(context: CoordinationContext) {
   if (context === "SALES") return "sales";
   if (context === "TECHNICAL") return "technical";
@@ -213,6 +224,65 @@ export async function updateSpaceSharingAction(input: {
   revalidatePath("/admin/task-items");
 
   return { ok: true, sharedUserIds: validIds };
+}
+
+export async function loadSpaceSharingAction(input: {
+  taskId: string;
+}) {
+  await requirePermission("TASK_VIEW");
+
+  const taskId = clean(input.taskId);
+  if (!taskId) throw new Error("Missing taskId");
+  const [users, items] = await Promise.all([
+    prisma.user.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, email: true, avatarUrl: true },
+      orderBy: [{ name: "asc" }, { email: "asc" }],
+    }),
+    prisma.taskItem.findMany({
+      where: {
+        taskId,
+        status: { not: TaskStatus.CANCELLED },
+      },
+      select: { note: true },
+    }),
+  ]);
+  const notes = items.map((item) => item.note);
+  const coreFlowKeys = Array.from(new Set(
+    notes.flatMap((note) =>
+      String(note ?? "")
+        .split(/\r?\n/)
+        .map((line) =>
+          line.match(/^coreFlowSharedUserIds:([a-z0-9-]+):/i)?.[1] ?? "",
+        )
+        .map(normalizeWorkTypeKey)
+        .filter(Boolean),
+    ),
+  ));
+
+  return {
+    users,
+    scopeUserIds: {
+      space: uniqueShareIds(
+        notes.flatMap((note) =>
+          shareUserIdsFromNoteLine(note, "spaceSharedUserIds"),
+        ),
+      ),
+      coreFlows: Object.fromEntries(
+        coreFlowKeys.map((coreFlowKey) => [
+          coreFlowKey,
+          uniqueShareIds(
+            notes.flatMap((note) =>
+              shareUserIdsFromNoteLine(
+                note,
+                `coreFlowSharedUserIds:${coreFlowKey}`,
+              ),
+            ),
+          ),
+        ]),
+      ),
+    },
+  };
 }
 
 export async function updateTechnicalIssuePriorityAction(input: {

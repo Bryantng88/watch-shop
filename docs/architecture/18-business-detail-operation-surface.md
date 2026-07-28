@@ -113,6 +113,19 @@ Watch Workbench actions should be direct Watch operation actions only, such as:
 - open storefront;
 - refresh projection status.
 
+### Activity Permission Rule
+
+Activity authorization is independent from TaskItem ownership and assignment:
+
+- `ACTIVITY_READ` allows loading Activity feeds and marking mentions as read;
+- `ACTIVITY_EDIT` allows creating discussions and replies;
+- workspace capability `discussion` remains an additional write constraint;
+- opening a business preview still requires the parent surface view permission.
+
+Activity loaders must not silently convert authorization or database failures
+into a missing panel. A user without `ACTIVITY_READ` receives no Activity data;
+unexpected load failures remain observable to the caller.
+
 ### Price Permission Rule
 
 The Price operation has field-level permission requirements.

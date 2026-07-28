@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { Prisma, TaskExecutionActionType, TaskExecutionTargetType, TaskStatus, TaskPriority, TaskKind } from "@prisma/client";
 import { requirePermission } from "@/server/auth/requirePermission";
+import { PERMISSIONS } from "@/constants/permissions";
 import { prisma } from "@/server/db/client";
 import { upsertTaskNotification } from "@/domains/notification/notification.repo";
 import {
@@ -65,7 +66,6 @@ import {
 } from "../server/business-binding.service";
 import type { BusinessBindingTargetType } from "../server/business-binding.types";
 import { isCoreWorkspaceBlueprint } from "../shared/workspace-flow-policy";
-import { authorizeTaskItemDetail } from "../server/core/task-item-detail.service";
 
 function authActorLabel(auth: unknown) {
   const root = auth && typeof auth === "object" && !Array.isArray(auth)
@@ -336,6 +336,11 @@ async function assertWorkspaceCreationAllowed(input: {
 
 async function getTaskAuth() {
   return requirePermission("TASK_VIEW");
+}
+
+async function getActivityAuth(permission: typeof PERMISSIONS.ACTIVITY_READ | typeof PERMISSIONS.ACTIVITY_EDIT) {
+  await requirePermission(PERMISSIONS.TASK_VIEW);
+  return requirePermission(permission);
 }
 
 export async function getTaskQuickCreateDataAction() {
@@ -903,7 +908,7 @@ export async function addTaskItemActivityReplyAction(input: {
   body: string;
   mentionedUserIds?: string[];
 }) {
-  const auth = await getTaskAuth();
+  const auth = await getActivityAuth(PERMISSIONS.ACTIVITY_EDIT);
   const activityId = String(input.activityId ?? "").trim();
   const body = String(input.body ?? "").trim();
 
@@ -952,7 +957,6 @@ export async function addTaskItemActivityReplyAction(input: {
   });
 
   if (!activity?.taskItem) throw new Error("Activity không tồn tại.");
-  authorizeTaskItemDetail(activity.taskItem, auth);
   if (!resolveWorkspaceCapabilities({ note: activity.taskItem.note }).discussion) {
     throw new Error("Workspace này không bật trao đổi.");
   }
@@ -1048,7 +1052,7 @@ export async function addTaskItemDiscussionAction(input: {
   body: string;
   mentionedUserIds?: string[];
 }) {
-  const auth = await getTaskAuth();
+  const auth = await getActivityAuth(PERMISSIONS.ACTIVITY_EDIT);
   const taskItemId = cleanText(input.taskItemId);
   const targetType = cleanText(input.targetType);
   const targetId = cleanText(input.targetId);
@@ -1087,7 +1091,6 @@ export async function addTaskItemDiscussionAction(input: {
   });
 
   if (!taskItem) throw new Error("Workspace không tồn tại.");
-  authorizeTaskItemDetail(taskItem, auth);
   if (!resolveWorkspaceCapabilities({ note: taskItem.note }).discussion) {
     throw new Error("Workspace này không bật trao đổi.");
   }
@@ -1177,7 +1180,7 @@ export async function markTaskItemMentionsReadAction(input: {
   targetType?: string;
   targetId?: string;
 }) {
-  const auth = await getTaskAuth();
+  const auth = await getActivityAuth(PERMISSIONS.ACTIVITY_READ);
   const userId = getAuthUserId(auth);
   const taskItemId = cleanText(input.taskItemId);
   const targetType = cleanText(input.targetType);
@@ -1189,8 +1192,6 @@ export async function markTaskItemMentionsReadAction(input: {
     select: { id: true, note: true, userId: true, assignedToUserId: true, task: { select: { createdByUserId: true, assignedToUserId: true } } },
   });
   if (!taskItem) return { ok: true, updated: 0 };
-  authorizeTaskItemDetail(taskItem, auth);
-
   const activities = await prisma.taskItemActivity.findMany({
     where: { taskItemId },
     select: { id: true, metadataJson: true, replies: { select: { id: true, metadataJson: true } } },

@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 import AdminBreadcrumbs from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
 import {
+  loadSpaceSharingAction,
   updateSpaceSharingAction,
   updateTechnicalIssuePriorityAction,
 } from "@/domains/coordination/actions/coordination.actions";
@@ -477,11 +478,15 @@ function SpaceSharingEditor({
   activeCoreFlow: SpaceCoreFlow | null;
   sharing: CoordinationDashboardDTO["spaceSharing"];
 }) {
-  const router = useRouter();
+  const progress = useAppProgress();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [sharingScope, setSharingScope] = useState<SpaceShareScope>("SPACE");
   const [localScopeIds, setLocalScopeIds] = useState(sharing.scopeUserIds);
+  const [localUsers, setLocalUsers] = useState(sharing.users);
+  const [sharingLoaded, setSharingLoaded] = useState(sharing.users.length > 0);
+  const [sharingError, setSharingError] = useState<string | null>(null);
+  const [isSharingLoading, setIsSharingLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
   const activeScope = sharingScope === "CORE_FLOW" && activeCoreFlow ? "CORE_FLOW" : "SPACE";
   const activeCoreFlowKey = activeCoreFlow?.key ?? null;
@@ -490,32 +495,89 @@ function SpaceSharingEditor({
     : localScopeIds.space;
   const sharedIdSet = new Set(activeSharedIds);
   const visibleSharedUsers = activeSharedIds
-    .map((id) => sharing.sharedUsers.find((user) => user.id === id) ?? sharing.users.find((user) => user.id === id))
+    .map((id) => localUsers.find((user) => user.id === id))
     .filter(Boolean) as CoordinationDashboardDTO["spaceSharing"]["users"];
-  const availableUsers = sharing.users.filter((user) => !sharedIdSet.has(user.id));
+  const availableUsers = localUsers.filter((user) => !sharedIdSet.has(user.id));
 
   useEffect(() => {
     setLocalScopeIds(sharing.scopeUserIds);
   }, [sharing.scopeUserIds]);
 
   useEffect(() => {
+    if (!sharing.users.length) return;
+    setLocalUsers(sharing.users);
+    setSharingLoaded(true);
+  }, [sharing.users]);
+
+  useEffect(() => {
     if (!activeCoreFlow && sharingScope === "CORE_FLOW") setSharingScope("SPACE");
   }, [activeCoreFlow, sharingScope]);
 
+  async function loadSharing() {
+    if (sharingLoaded || isSharingLoading) return;
+    setIsSharingLoading(true);
+    setSharingError(null);
+    try {
+      const result = await loadSpaceSharingAction({
+        taskId,
+      });
+      setLocalUsers(result.users);
+      setLocalScopeIds(result.scopeUserIds);
+      setSharingLoaded(true);
+    } catch (error) {
+      setSharingError(
+        error instanceof Error ? error.message : "Không thể tải thành viên Space.",
+      );
+    } finally {
+      setIsSharingLoading(false);
+    }
+  }
+
   function updateSharedUsers(nextSharedIds: string[]) {
+    const previousScopeIds = localScopeIds;
     setLocalScopeIds((current) => activeScope === "CORE_FLOW" && activeCoreFlowKey
       ? { ...current, coreFlows: { ...current.coreFlows, [activeCoreFlowKey]: nextSharedIds } }
       : { ...current, space: nextSharedIds });
+    setSharingError(null);
+    progress.show({
+      title: "Đang cập nhật thành viên Space",
+      message: activeScope === "CORE_FLOW"
+        ? "Đang lưu quyền truy cập cho core flow hiện tại."
+        : "Đang lưu quyền truy cập cho toàn bộ Space.",
+      percent: 30,
+    });
 
     startTransition(async () => {
-      await updateSpaceSharingAction({
-        taskId,
-        context,
-        sharingScope: activeScope,
-        coreFlowKey: activeCoreFlowKey,
-        sharedUserIds: nextSharedIds,
-      });
-      router.refresh();
+      try {
+        const result = await updateSpaceSharingAction({
+          taskId,
+          context,
+          sharingScope: activeScope,
+          coreFlowKey: activeCoreFlowKey,
+          sharedUserIds: nextSharedIds,
+        });
+        setLocalScopeIds((current) => activeScope === "CORE_FLOW" && activeCoreFlowKey
+          ? {
+              ...current,
+              coreFlows: {
+                ...current.coreFlows,
+                [activeCoreFlowKey]: result.sharedUserIds,
+              },
+            }
+          : { ...current, space: result.sharedUserIds });
+        progress.update({
+          message: "Đã cập nhật thành viên Space.",
+          percent: 100,
+        });
+        window.setTimeout(() => progress.hide(), 700);
+      } catch (error) {
+        setLocalScopeIds(previousScopeIds);
+        const message =
+          error instanceof Error ? error.message : "Không thể cập nhật thành viên Space.";
+        setSharingError(message);
+        progress.update({ message });
+        window.setTimeout(() => progress.hide(), 1400);
+      }
     });
   }
 
@@ -523,7 +585,11 @@ function SpaceSharingEditor({
     <div className="relative">
       <button
         type="button"
-        onClick={() => setIsOpen((open) => !open)}
+        onClick={() => {
+          const nextOpen = !isOpen;
+          setIsOpen(nextOpen);
+          if (nextOpen) void loadSharing();
+        }}
         className="inline-flex h-9 items-center rounded-md border border-violet-200 bg-white px-2.5 text-xs font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50"
         aria-expanded={isOpen}
         aria-label="Quản lý chia sẻ Space"
@@ -556,7 +622,11 @@ function SpaceSharingEditor({
           </div>
 
           <div className="mt-3 space-y-2">
-            {visibleSharedUsers.length ? visibleSharedUsers.map((user) => (
+            {isSharingLoading ? (
+              <div className="rounded-lg bg-slate-50 px-3 py-2 text-slate-500">
+                Đang tải thành viên...
+              </div>
+            ) : visibleSharedUsers.length ? visibleSharedUsers.map((user) => (
               <div key={user.id} className="flex items-center gap-2 rounded-lg bg-slate-50 px-2 py-1.5">
                 <SpaceShareAvatar user={user} />
                 <span className="min-w-0 flex-1 truncate font-medium">{shareUserLabel(user)}</span>
@@ -572,6 +642,11 @@ function SpaceSharingEditor({
               </div>
             )) : <div className="rounded-lg bg-slate-50 px-3 py-2 text-slate-500">Chưa chia sẻ với ai.</div>}
           </div>
+          {sharingError ? (
+            <div className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-rose-700">
+              {sharingError}
+            </div>
+          ) : null}
 
           <div className="mt-3 grid gap-2 border-t border-slate-100 pt-3">
             <select
@@ -587,7 +662,7 @@ function SpaceSharingEditor({
               <select
                 value={selectedUserId}
                 onChange={(event) => setSelectedUserId(event.target.value)}
-                disabled={isPending || !availableUsers.length}
+                disabled={isPending || isSharingLoading || !availableUsers.length}
                 className="h-9 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-violet-300"
               >
                 <option value="">Thêm thành viên</option>

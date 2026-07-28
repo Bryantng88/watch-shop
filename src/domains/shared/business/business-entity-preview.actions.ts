@@ -3,7 +3,7 @@
 import { TaskExecutionActionType, TaskExecutionTargetType } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import { requirePermission } from "@/server/auth/requirePermission";
-import { authorizeTaskItemDetail } from "@/domains/task/server/core/task-item-detail.service";
+import { PERMISSIONS } from "@/constants/permissions";
 import {
     getBusinessTargetActivityViewModels,
     getTaskItemActivityViewModels,
@@ -37,6 +37,12 @@ function mediaUrl(value?: string | null) {
     return `/api/media/sign?key=${encodeURIComponent(raw)}`;
 }
 
+function authHasPermission(auth: unknown, permission: string) {
+    if (!auth || typeof auth !== "object" || Array.isArray(auth)) return false;
+    const permissions = (auth as { permissions?: unknown }).permissions;
+    return Array.isArray(permissions) && permissions.includes(permission);
+}
+
 function imageUrlFromProduct(product?: ProductPreviewImageSource | null) {
     const img = product?.productImage?.[0];
 
@@ -60,6 +66,8 @@ export async function getBusinessEntityPreviewAction(input: {
     id: string;
 }): Promise<BusinessEntityPreview | null> {
     const auth = await requirePermission("TASK_VIEW");
+    const canReadActivity = authHasPermission(auth, PERMISSIONS.ACTIVITY_READ);
+    const canEditActivity = authHasPermission(auth, PERMISSIONS.ACTIVITY_EDIT);
     const id = input.id?.trim();
     if (!id) return null;
 
@@ -114,27 +122,24 @@ export async function getBusinessEntityPreviewAction(input: {
             },
         });
         let activity: BusinessEntityPreview["activity"];
-        if (watchWorkspace?.taskItem) {
-            try {
-                authorizeTaskItemDetail(watchWorkspace.taskItem, auth);
-                const capabilities = resolveWorkspaceCapabilities({ note: watchWorkspace.taskItem.note });
-                activity = {
-                    taskItemId: watchWorkspace.taskItem.id,
-                    discussionEnabled: capabilities.discussion,
-                    viewerUserId: getAuthUserId(auth),
-                    mentionableUsers: (await prisma.user.findMany({
+        if (watchWorkspace?.taskItem && canReadActivity) {
+            const capabilities = resolveWorkspaceCapabilities({ note: watchWorkspace.taskItem.note });
+            activity = {
+                taskItemId: watchWorkspace.taskItem.id,
+                discussionEnabled: canEditActivity && capabilities.discussion,
+                viewerUserId: getAuthUserId(auth),
+                mentionableUsers: canEditActivity
+                    ? (await prisma.user.findMany({
                         where: { isActive: true },
                         orderBy: [{ name: "asc" }, { email: "asc" }],
                         select: { id: true, name: true, email: true, avatarUrl: true },
-                    })).map((user) => ({ id: user.id, label: user.name || user.email, avatarUrl: user.avatarUrl })),
-                    items: await getTaskItemActivityViewModels(watchWorkspace.taskItem.id, {
-                        limit: 20,
-                        scope: { targets: [{ targetType: "WATCH", targetId: row.id }], includeWorkspaceLevel: false },
-                    }),
-                };
-            } catch {
-                activity = undefined;
-            }
+                    })).map((user) => ({ id: user.id, label: user.name || user.email, avatarUrl: user.avatarUrl }))
+                    : [],
+                items: await getTaskItemActivityViewModels(watchWorkspace.taskItem.id, {
+                    limit: 20,
+                    scope: { targets: [{ targetType: "WATCH", targetId: row.id }], includeWorkspaceLevel: false },
+                }),
+            };
         }
 
         return {
@@ -410,15 +415,14 @@ export async function getBusinessEntityPreviewAction(input: {
         const technicalWorkspaceItem = row.TaskExecution?.[0]?.taskItem ?? null;
         let activity: BusinessEntityPreview["activity"];
 
-        if (technicalWorkspaceItem) {
-            try {
-                authorizeTaskItemDetail(technicalWorkspaceItem, auth);
-                const capabilities = resolveWorkspaceCapabilities({ note: technicalWorkspaceItem.note });
-                activity = {
-                    taskItemId: technicalWorkspaceItem.id,
-                    discussionEnabled: capabilities.discussion,
-                    viewerUserId: getAuthUserId(auth),
-                    mentionableUsers: (await prisma.user.findMany({
+        if (technicalWorkspaceItem && canReadActivity) {
+            const capabilities = resolveWorkspaceCapabilities({ note: technicalWorkspaceItem.note });
+            activity = {
+                taskItemId: technicalWorkspaceItem.id,
+                discussionEnabled: canEditActivity && capabilities.discussion,
+                viewerUserId: getAuthUserId(auth),
+                mentionableUsers: canEditActivity
+                    ? (await prisma.user.findMany({
                         where: { isActive: true },
                         orderBy: [{ name: "asc" }, { email: "asc" }],
                         select: { id: true, name: true, email: true, avatarUrl: true },
@@ -426,16 +430,14 @@ export async function getBusinessEntityPreviewAction(input: {
                         id: user.id,
                         label: user.name || user.email,
                         avatarUrl: user.avatarUrl,
-                    })),
-                    items: await getBusinessTargetActivityViewModels(
-                        "TECHNICAL_ISSUE",
-                        row.id,
-                        20,
-                    ),
-                };
-            } catch {
-                activity = undefined;
-            }
+                    }))
+                    : [],
+                items: await getBusinessTargetActivityViewModels(
+                    "TECHNICAL_ISSUE",
+                    row.id,
+                    20,
+                ),
+            };
         }
 
         return {
