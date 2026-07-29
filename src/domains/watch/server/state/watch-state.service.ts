@@ -35,14 +35,6 @@ export function markWatchReady(productId: string) {
   return transitionWatchState(productId, "MARK_READY");
 }
 
-export function markWatchHold(productId: string) {
-  return transitionWatchState(productId, "MARK_HOLD");
-}
-
-export function releaseWatchHold(productId: string) {
-  return transitionWatchState(productId, "RELEASE_HOLD");
-}
-
 export function markWatchSold(productId: string) {
   return transitionWatchState(productId, "MARK_SOLD");
 }

@@ -33,7 +33,9 @@ export async function createWatchDraftForAcquisitionItem(
             type: ProductType.WATCH,
             title: input.title,
             vendorId: input.vendorId,
-            status: ProductStatus.HOLD,
+            // HOLD is owned exclusively by an active OrderItem. Acquisition
+            // creates inventory; Watch.saleStage carries its preparation state.
+            status: ProductStatus.AVAILABLE,
             contentStatus: ContentStatus.DRAFT,
             specStatus: "PENDING",
             sku: null,

@@ -7,8 +7,6 @@ import type {
 
 export type WatchStateAction =
   | "MARK_READY"
-  | "MARK_HOLD"
-  | "RELEASE_HOLD"
   | "MARK_SOLD"
   | "MARK_CONSIGNED_TO"
   | "MARK_SERVICE_PENDING"

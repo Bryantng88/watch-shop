@@ -109,4 +109,6 @@ export type ResolvedProductOrderItem = {
   listPrice: number;
   primaryImageUrl: string | null;
   productType: ProductType;
+  previousProductStatus: string | null;
+  previousWatchSaleStage: string | null;
 };

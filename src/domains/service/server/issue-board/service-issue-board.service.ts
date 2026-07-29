@@ -7,6 +7,7 @@ import {
     getTechnicalIssueBoardColumn,
     isTechnicalIssueDone,
 } from "@/domains/service/server/shared/service-request.rules";
+import { requiresTechnicalIssueVendorChangeNote } from "@/domains/service/shared/technical-issue-vendor-policy";
 
 type DeferConsumers = (work: () => Promise<void>) => void;
 
@@ -494,7 +495,11 @@ export async function startTechnicalIssue(input: {
 
     const vendorId = cleanId(input.vendorId);
     const actionMode = cleanId(input.actionMode) ?? "INTERNAL";
-    const isChangingVendor = vendorId !== cleanId((issue as any).vendorId);
+    const isChangingVendor = requiresTechnicalIssueVendorChangeNote({
+        executionStatus: issue.executionStatus,
+        currentVendorId: issue.vendorId,
+        nextVendorId: vendorId,
+    });
 
     if (String(actionMode).toUpperCase() === "VENDOR" && !vendorId) {
         throw new Error("Vui lòng chọn vendor khi xử lý bởi vendor.");
@@ -534,7 +539,7 @@ export async function startTechnicalIssue(input: {
         actorUserId: cleanId(input.actorId),
         note: `Technical Issue đã bắt đầu xử lý: ${detail.name}`,
     });
-    if (cleanText(input.vendorChangeNote)) {
+    if (isChangingVendor && cleanText(input.vendorChangeNote)) {
         await syncTechnicalIssueToTasks(prisma as any, {
             technicalIssueId: id,
             event: "TECHNICAL_ISSUE_VENDOR_CHANGED",
@@ -557,7 +562,7 @@ export async function startTechnicalIssue(input: {
             expectedWorkingDays,
             expectedCompletionAt: expectedCompletionAt.toISOString(),
             startedNote: cleanText(input.startedNote),
-            vendorChangeNote: cleanText(input.vendorChangeNote),
+            vendorChangeNote: isChangingVendor ? cleanText(input.vendorChangeNote) : null,
         },
         deferConsumers: input.deferConsumers,
     });

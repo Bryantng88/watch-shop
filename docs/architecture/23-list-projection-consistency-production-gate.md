@@ -26,14 +26,15 @@ rebuildable projection.
 ```text
 Business command
 -> business truth + catalogued event committed
--> completion-barrier consumer updates workflow/coordination truth
--> durable projection delivery is released
--> affected projection slice is rebuilt
--> client reconciles rows, board columns, counters, and last action
+-> command returns a committed outcome
+-> client reconciles the visible slice immediately from that outcome
+-> durable projection delivery converges in the background
+-> a scoped read confirms/replaces the temporary client state
 ```
 
-UI code must not infer a business state from a button label, patch a counter,
-move a row permanently, or call a projection builder directly.
+UI code must not infer a business state from a button label or call a projection
+builder directly. It may temporarily patch rows and counters only from an
+explicit committed outcome returned by the command.
 
 For chained transitions, reconciliation must use the final command outcome,
 not the transition originally rendered by the UI. For example, Photography may
@@ -52,13 +53,15 @@ stage must clear the previous stage's transient error.
 After a state-changing action succeeds:
 
 1. Disable the affected control and show application-level progress.
-2. Keep optimistic UI changes temporary and reversible.
-3. Track the durable delivery for the affected read model.
-4. Do not report completion until every projection required by the current
-   surface reaches `SUCCEEDED`.
-5. Re-fetch the affected projection slice once.
-6. Replace the optimistic state with projection data.
-7. Clear selected rows that are no longer eligible for the current stage.
+2. Commit business truth and its event/outbox atomically.
+3. Return an explicit outcome containing affected IDs and final states.
+4. Reconcile visible rows, membership, counters, pagination, and selection from
+   that committed outcome immediately.
+5. Do not wait for asynchronous projection consumers on the interaction path.
+6. Confirm once through a scoped read. When the projection can still be stale,
+   use an explicit source-consistency read instead of repeatedly refreshing.
+7. Replace temporary client state with the confirmed slice and allow the
+   durable projection delivery to converge in the background.
 
 The reconciled surface must update together:
 
@@ -85,6 +88,24 @@ Refresh:
 - prevents an older response from replacing a newer response;
 - displays progress and an actionable failure message;
 - never replays or submits a business command.
+
+`router.refresh()` is not a post-mutation list reconciliation mechanism. It may
+be used for structural page changes outside the list contract, but must not be
+the only success callback for a row, modal, bulk, or drag/drop command.
+
+Operational mutations use **committed reconciliation**:
+
+- the server returns the final transition outcome after commit;
+- the client applies that outcome without guessing;
+- the confirmation request targets the list/board endpoint, never the whole
+  page;
+- projection-backed endpoints expose an explicit source-consistency option
+  when immediate confirmation cannot wait for outbox delivery;
+- older confirmation responses cannot replace newer outcomes.
+
+The shared Coordination flow list and Watch list are guarded by
+`npm run check:list-reconciliation-contract`. Adding a whole-page
+`router.refresh()` to either mutation surface fails the architecture check.
 
 A full browser reload must not produce a different business result from the
 Refresh action. If it does, the Refresh implementation or projection

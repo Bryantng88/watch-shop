@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   ArrowDownToLine,
@@ -66,6 +65,7 @@ type Props = {
     fromStageKey: string;
     toStageKey?: string;
   }) => void;
+  onReloadRequested?: () => void | Promise<void>;
 };
 
 type OperationalActionField = {
@@ -207,8 +207,8 @@ export default function FlowItemListView({
   pagination,
   onPageChange,
   onItemsMovedFromStage,
+  onReloadRequested,
 }: Props) {
-  const router = useRouter();
   const progress = useAppProgress();
   const transitionFeedback = useManualTransitionFeedback();
   const [isActionPending, startActionTransition] = useTransition();
@@ -414,7 +414,7 @@ export default function FlowItemListView({
           });
         }
         transitionFeedback.success(transition, feedbackItem, result?.result);
-        if (!movedOut) router.refresh();
+        if (!movedOut) void onReloadRequested?.();
       } catch (error) {
         const message = error instanceof Error ? error.message : "Không thể cập nhật workflow.";
         setActionError(message);
@@ -483,7 +483,7 @@ export default function FlowItemListView({
         });
         setOperationalAction(null);
         setOperationalFields({});
-        router.refresh();
+        await onReloadRequested?.();
       } catch (error) {
         setActionError(
           error instanceof Error ? error.message : "Không thể thực hiện thao tác vận chuyển.",
@@ -540,7 +540,9 @@ export default function FlowItemListView({
             `Đã xử lý ${result.applied}/${result.results.length} item. Lỗi: ${failureDetails.join("; ")}`,
           );
         }
-        if (movedIds.length !== succeededIds.length) router.refresh();
+        if (movedIds.length !== succeededIds.length) {
+          void onReloadRequested?.();
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Không thể cập nhật các item.";
         setActionError(message);
@@ -623,7 +625,6 @@ export default function FlowItemListView({
           percent: 90,
           message: "Đã ghi nhận thanh toán, đang đồng bộ sang bước hoàn tất.",
         });
-        router.refresh();
         window.setTimeout(() => progress.hide(), 900);
       } catch (error) {
         setActionError(error instanceof Error ? error.message : "Không thể xác nhận đối soát.");
@@ -723,7 +724,6 @@ export default function FlowItemListView({
             normalize(stage.workspaceKey).includes("settled")
           )?.key,
         });
-        router.refresh();
       }
       if (failed.length) {
         setActionError(`Đã xử lý ${succeeded.length}/${selectedPaymentItems.length}. Lỗi: ${failed.join("; ")}`);

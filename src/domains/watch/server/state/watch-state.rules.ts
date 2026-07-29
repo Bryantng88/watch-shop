@@ -70,35 +70,6 @@ export function resolveWatchStateTransition(
       };
     }
 
-    case "MARK_HOLD": {
-      assertNotSold(current);
-      assertNotConsignedTo(current);
-      assertServiceReady(current);
-
-      return {
-        saleStage: WatchSaleStage.HOLD,
-        stockStage: WatchStockStage.RESERVED,
-        productStatus: ProductStatus.HOLD,
-      };
-    }
-
-    case "RELEASE_HOLD": {
-      assertNotSold(current);
-      assertNotConsignedTo(current);
-
-      if (current.saleStage !== WatchSaleStage.HOLD) {
-        fail("Chỉ watch đang HOLD mới được bỏ giữ.");
-      }
-
-      assertServiceReady(current);
-
-      return {
-        saleStage: WatchSaleStage.READY,
-        stockStage: WatchStockStage.IN_STOCK,
-        productStatus: ProductStatus.AVAILABLE,
-      };
-    }
-
     case "MARK_SOLD": {
       assertNotSold(current);
       assertNotConsignedTo(current);

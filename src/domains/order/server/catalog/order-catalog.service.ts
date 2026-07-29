@@ -1,3 +1,9 @@
+import {
+  ImageRole,
+  ProductStatus,
+  WatchSaleStage,
+  type Prisma,
+} from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import { toNumberPrice } from "../shared";
 
@@ -18,17 +24,23 @@ function buildMediaUrl(fileKey?: string | null) {
 }
 
 
-const BLOCKED_ORDER_PRODUCT_STATUSES = ["HOLD", "SOLD"] as const;
-const BLOCKED_ORDER_WATCH_SALE_STAGES = ["HOLD", "SOLD"] as const;
+const BLOCKED_ORDER_PRODUCT_STATUSES = [
+  ProductStatus.HOLD,
+  ProductStatus.SOLD,
+] as const;
+const BLOCKED_ORDER_WATCH_SALE_STAGES = [
+  WatchSaleStage.HOLD,
+  WatchSaleStage.SOLD,
+] as const;
 
-const ORDERABLE_PRODUCT_WHERE = {
-  status: { notIn: BLOCKED_ORDER_PRODUCT_STATUSES as any },
+const ORDERABLE_PRODUCT_WHERE: Prisma.ProductWhereInput = {
+  status: { notIn: [...BLOCKED_ORDER_PRODUCT_STATUSES] },
   OR: [
     { watch: null },
     {
       watch: {
         is: {
-          saleStage: { notIn: BLOCKED_ORDER_WATCH_SALE_STAGES as any },
+          saleStage: { notIn: [...BLOCKED_ORDER_WATCH_SALE_STAGES] },
         },
       },
     },
@@ -77,7 +89,7 @@ export async function getQuickOrderProductForOrderForm(productId: string) {
       storefrontImageKey: true,
       productImage: {
         where: {
-          role: "INLINE" as any,
+          role: ImageRole.INLINE,
         },
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
         select: {
@@ -122,7 +134,12 @@ export async function getQuickOrderProductForOrderForm(productId: string) {
   const productStatus = String(product.status ?? "").toUpperCase();
   const watchSaleStage = String(product.watch?.saleStage ?? "").toUpperCase();
 
-  if (watchSaleStage === "SOLD" || productStatus === "SOLD") {
+  if (
+    watchSaleStage === "HOLD" ||
+    watchSaleStage === "SOLD" ||
+    productStatus === "HOLD" ||
+    productStatus === "SOLD"
+  ) {
     return null;
   }
   const variant =
@@ -248,7 +265,7 @@ export async function searchOrderProducts(query: string) {
       primaryImageUrl: true,
       storefrontImageKey: true,
       productImage: {
-        where: { role: "INLINE" as any },
+        where: { role: ImageRole.INLINE },
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
         select: { fileKey: true },
         take: 1,

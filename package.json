@@ -9,6 +9,8 @@
     "lint": "eslint",
     "check:media-boundaries": "node scripts/check-media-boundaries.mjs",
     "check:manual-transition-outcome": "node scripts/check-manual-transition-outcome.mjs",
+    "check:watch-order-inventory-ownership": "node scripts/check-watch-order-inventory-ownership.mjs",
+    "check:list-reconciliation-contract": "node scripts/check-list-reconciliation-contract.mjs",
     "media:reconcile": "tsx scripts/media-reconcile.ts",
     "media:verify": "tsx scripts/verify-media-core.ts",
     "media:verify-segments": "tsx scripts/verify-segment-dashboards.ts",

@@ -395,3 +395,48 @@ endpoint only when the user opens `Lịch sử`. Hiding audit rows with CSS or
 filtering an already-loaded full timeline on the client does not satisfy this
 contract. Comment, reply, mention, unread state, and activity permissions remain
 unchanged.
+
+## Modal-first Business Commands
+
+A bounded command launched from a business list should complete in a modal when
+the user does not need a separate workbench. `Tạo đơn hàng từ Watch` is the
+reference implementation:
+
+- the Watch surface loads Order form context through an Order-owned endpoint;
+- the modal reuses Order form sections, validation, and the canonical create/
+  post command;
+- success closes the modal and reconciles the Watch list;
+- no duplicate quick-order write path is introduced.
+
+The full Order page remains available for deep work, but is not required merely
+to execute the create command.
+
+## Order-owned Watch HOLD
+
+`Watch.saleStage` is the business authority for Watch sale state.
+`Product.status` is a compatibility mirror and must never independently create a
+sale lock.
+
+The ownership invariant is:
+
+- only the Order domain may write or release Watch/Product `HOLD`;
+- creating an Order containing a Watch, including a `DRAFT` Order, creates the
+  `HOLD` and makes that active OrderItem its owner;
+- completing the owning Order changes the Watch to `SOLD`;
+- cancelling/removing the owning Order releases the Watch only when no other
+  active OrderItem owns it;
+- Acquisition creates Watch inventory as `Product.status=AVAILABLE` and uses
+  `Watch.saleStage=DRAFT|PROCESSING|READY` for preparation;
+- Media, Service, Review, Pricing, Consignment, and manual Watch state commands
+  cannot create or release `HOLD`;
+- Order catalog and write guards reject either `HOLD` or `SOLD` before creating
+  another Order.
+
+A `Product.status=HOLD` or `Watch.saleStage=HOLD` record without the
+corresponding active OrderItem is an invariant violation, not a valid business
+state. `SOLD` remains a terminal, non-orderable state and is not automatically
+reopened by reconciliation. Migration `20260729_order_owned_watch_hold_sold`
+repairs only orphaned historical HOLD mirrors and never updates a product owned
+by a non-cancelled Order. `npm run
+check:watch-order-inventory-ownership` prevents another domain from introducing
+direct HOLD assignments.

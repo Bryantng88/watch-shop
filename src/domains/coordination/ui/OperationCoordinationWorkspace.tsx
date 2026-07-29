@@ -1496,7 +1496,7 @@ export default function OperationCoordinationWorkspace({
       const result = await response.json().catch(() => null);
       if (response.ok) handleDashboardResult(result);
     } finally {
-      router.refresh();
+      setBoardRefreshedAt(new Date());
     }
   }, [data.context, data.cycle.id, handleDashboardResult, router, searchParams]);
   const activeStageByWorkspaceKey = useMemo(() => {
@@ -2352,6 +2352,7 @@ export default function OperationCoordinationWorkspace({
               onLoadMore={(stage, page) =>
                 void loadMoreBoardColumn("technical", stage, page)
               }
+              onReloadRequested={() => refreshBoard("technical")}
               onStageMoved={(input) => {
                 reconcileMovedFlowItems({
                   itemIds: [input.itemId],
@@ -2411,6 +2412,13 @@ export default function OperationCoordinationWorkspace({
               void loadFlowItems(activeFlowListStage, page, true);
             }}
             onItemsMovedFromStage={reconcileMovedFlowItems}
+            onReloadRequested={() =>
+              loadFlowItems(
+                activeFlowListStage,
+                asyncFlowPagination.page,
+                true,
+              )
+            }
           />
           <div className="hidden">
           <div className={cn("hidden border-y border-slate-100 bg-[#fbfcfe] px-5 py-3 text-xs font-bold uppercase tracking-[0.05em] text-slate-500 lg:grid", workTicketGridClass)}>
@@ -2760,7 +2768,6 @@ type PaymentBoardItem = {
 };
 
 export function PaymentCollectionBoard({ items }: { items: PaymentBoardItem[] }) {
-  const router = useRouter();
   const progress = useAppProgress();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [boardItems, setBoardItems] = useState(items);
@@ -2792,7 +2799,6 @@ export function PaymentCollectionBoard({ items }: { items: PaymentBoardItem[] })
         ? { ...candidate, stage: nextStage, status: reviewing ? candidate.status : "PAID" }
         : candidate));
       progress.update({ percent: 90, message: "Đã cập nhật Payment, đang đồng bộ dashboard." });
-      window.setTimeout(() => router.refresh(), 100);
       window.setTimeout(() => progress.hide(), 900);
     } catch (error) {
       progress.update({ message: error instanceof Error ? error.message : "Không thể cập nhật Payment." });
@@ -3129,6 +3135,7 @@ function TechnicalIssueBoardView({
   columnPagination,
   loadingColumn,
   onLoadMore,
+  onReloadRequested,
   onStageMoved,
   doneRange,
   onDoneRangeChange,
@@ -3143,6 +3150,7 @@ function TechnicalIssueBoardView({
   columnPagination: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["columnPagination"];
   loadingColumn: string | null;
   onLoadMore: (stage: TechnicalIssueBoardStage, page: number) => void;
+  onReloadRequested: () => void | Promise<void>;
   onStageMoved: (input: {
     itemId: string;
     fromStage: TechnicalIssueBoardStage;
@@ -3151,7 +3159,6 @@ function TechnicalIssueBoardView({
   doneRange: "14D" | "30D" | "ALL";
   onDoneRangeChange: (value: "14D" | "30D" | "ALL") => void;
 }) {
-  const router = useRouter();
   const progress = useAppProgress();
   const previewState = useBusinessEntityPreview();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -3217,7 +3224,13 @@ function TechnicalIssueBoardView({
           priority: nextPriority,
           context: "TECHNICAL",
         });
-        router.refresh();
+        setBoardItems((current) =>
+          current.map((candidate) =>
+            candidate.id === item.id
+              ? { ...candidate, priority: nextPriority }
+              : candidate,
+          ),
+        );
       } finally {
         setPriorityIssueId(null);
       }
@@ -3442,7 +3455,7 @@ function TechnicalIssueBoardView({
         setMoveRequest(null);
         setMoveValues({});
         setAdditionalIssues([]);
-        router.refresh();
+        await onReloadRequested();
       } catch (error) {
         setMoveError(error instanceof Error ? error.message : "Không thể gửi duyệt chi phí.");
       }

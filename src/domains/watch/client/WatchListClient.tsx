@@ -46,6 +46,7 @@ import {
     BusinessListShell,
     type BusinessListDashboardWidgetKey,
 } from "@/domains/shared/ui/business-list";
+import { QuickOrderFromWatchModal } from "@/domains/order/ui/quick-order";
 
 const WATCH_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = [
     "overview",
@@ -317,6 +318,7 @@ export default function WatchListClient(props: WatchListClientProps) {
     const [serviceSuspicion, setServiceSuspicion] = React.useState("");
     const [serviceIntakeError, setServiceIntakeError] = React.useState<string | null>(null);
     const [buyBackRow, setBuyBackRow] = React.useState<WatchRow | null>(null);
+    const [quickOrderRow, setQuickOrderRow] = React.useState<WatchRow | null>(null);
     const [buyBackSubmitting, setBuyBackSubmitting] = React.useState(false);
     const [buyBackError, setBuyBackError] = React.useState<string | null>(null);
     const [workCaseSource, setWorkCaseSource] =
@@ -400,13 +402,20 @@ export default function WatchListClient(props: WatchListClientProps) {
 
     async function loadList(
         next: URLSearchParams,
-        options?: { meta?: "full" | "lite"; withTotal?: boolean },
+        options?: {
+            meta?: "full" | "lite";
+            withTotal?: boolean;
+            consistency?: "projection" | "source";
+        },
     ) {
         const sanitized = replaceUrl(next);
         const requestParams = new URLSearchParams(sanitized.toString());
         if (options?.meta) requestParams.set("meta", options.meta);
         if (options?.withTotal !== undefined) {
             requestParams.set("withTotal", String(options.withTotal));
+        }
+        if (options?.consistency === "source") {
+            requestParams.set("consistency", "source");
         }
 
         setSelectedIds([]);
@@ -441,7 +450,13 @@ export default function WatchListClient(props: WatchListClientProps) {
             );
         } catch (error) {
             console.error("[WATCH_LIST][LOAD_ERROR]", error);
-            router.refresh();
+            notify.error({
+                title: "Không thể làm mới danh sách Watch",
+                message:
+                    error instanceof Error
+                        ? error.message
+                        : "Vui lòng thử lại.",
+            });
         } finally {
             setIsLoading(false);
         }
@@ -1222,7 +1237,60 @@ export default function WatchListClient(props: WatchListClientProps) {
     }
 
     function onQuickOrder(row: WatchRow) {
-        navigateWithProgress(`/admin/orders/new?mode=quick&productId=${row.productId}`, "Đang tạo đơn nhanh");
+        setQuickOrderRow(row);
+    }
+
+    function reconcileOrderInventoryOutcomes(
+        outcomes: Array<{
+            productId: string;
+            fromSaleStage: string | null;
+            toSaleStage: "HOLD";
+        }>,
+    ) {
+        const byProductId = new Map(
+            outcomes.map((outcome) => [outcome.productId, outcome]),
+        );
+        if (!byProductId.size) return;
+
+        setListData((current) => {
+            const nextCounts = { ...current.counts };
+            const touched = new Set<string>();
+            const items = current.items.map((item) => {
+                const outcome = byProductId.get(item.productId);
+                if (!outcome) return item;
+
+                if (!touched.has(item.productId)) {
+                    touched.add(item.productId);
+                    const fromKey = String(outcome.fromSaleStage ?? "")
+                        .trim()
+                        .toLowerCase() as keyof typeof nextCounts;
+                    if (fromKey in nextCounts) {
+                        nextCounts[fromKey] = Math.max(0, nextCounts[fromKey] - 1);
+                    }
+                    nextCounts.hold += 1;
+                }
+
+                return {
+                    ...item,
+                    saleState: "HOLD",
+                    stockState: "RESERVED",
+                    statusLabel: "HOLD",
+                    v2Row: item.v2Row
+                        ? {
+                            ...item.v2Row,
+                            saleStatus: "HOLD",
+                            saleStatusLabel: "Giữ hàng",
+                        }
+                        : item.v2Row,
+                };
+            });
+
+            return {
+                ...current,
+                items,
+                counts: nextCounts,
+            };
+        });
     }
 
     function onConsign(row: WatchRow) {
@@ -1313,7 +1381,11 @@ export default function WatchListClient(props: WatchListClientProps) {
                     "Đang mở phiếu mua lại",
                 );
             } else {
-                router.refresh();
+                void loadList(new URLSearchParams(params.toString()), {
+                    meta: "full",
+                    withTotal: true,
+                    consistency: "source",
+                });
             }
         } catch (error) {
             const message =
@@ -1478,6 +1550,24 @@ export default function WatchListClient(props: WatchListClientProps) {
                 />
             ) : null}
 
+            <QuickOrderFromWatchModal
+                productId={quickOrderRow?.productId ?? null}
+                title={quickOrderRow?.title ?? quickOrderRow?.sku}
+                onClose={() => setQuickOrderRow(null)}
+                onCompleted={(_orderId, inventoryOutcomes) => {
+                    reconcileOrderInventoryOutcomes(inventoryOutcomes);
+                    setQuickOrderRow(null);
+                    void loadList(
+                        new URLSearchParams(params.toString()),
+                        {
+                            meta: "full",
+                            withTotal: true,
+                            consistency: "source",
+                        },
+                    );
+                }}
+            />
+
             {serviceIntakeRow ? (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
                     <section className="w-full max-w-lg rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
@@ -1546,7 +1636,10 @@ export default function WatchListClient(props: WatchListClientProps) {
                 onClose={() => setWorkCaseSource(null)}
                 onSaved={() => {
                     setWorkCaseSource(null);
-                    router.refresh();
+                    void loadList(new URLSearchParams(params.toString()), {
+                        meta: "lite",
+                        consistency: "source",
+                    });
                 }}
             />
 
@@ -1564,7 +1657,10 @@ export default function WatchListClient(props: WatchListClientProps) {
                             title: "Đã tạo task",
                             message: "Task đã được gắn với watch đang chọn.",
                         });
-                        router.refresh();
+                        void loadList(new URLSearchParams(params.toString()), {
+                            meta: "lite",
+                            consistency: "source",
+                        });
                     }}
                 />
             ) : null}

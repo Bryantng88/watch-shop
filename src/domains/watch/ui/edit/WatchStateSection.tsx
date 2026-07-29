@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { CircleDollarSign, Handshake, PackageCheck, RotateCcw, ShieldCheck, Wrench } from "lucide-react";
+import { CircleDollarSign, PackageCheck, ShieldCheck, Wrench } from "lucide-react";
 
 import { Button, FieldLabel, SectionCard } from "./shared";
 import { transitionWatchStateAction } from "../../client/edit/watch-state.actions";
@@ -64,18 +64,6 @@ export default function WatchStateSection({
             action: "MARK_READY",
             icon: <PackageCheck className="h-4 w-4" />,
             variant: "primary",
-        },
-        {
-            label: "Giữ khách",
-            action: "MARK_HOLD",
-            icon: <Handshake className="h-4 w-4" />,
-            variant: "outline",
-        },
-        {
-            label: "Bỏ giữ",
-            action: "RELEASE_HOLD",
-            icon: <RotateCcw className="h-4 w-4" />,
-            variant: "outline",
         },
         {
             label: "Đã bán",

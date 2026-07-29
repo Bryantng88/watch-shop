@@ -14,6 +14,7 @@ type Props = {
     canEdit?: boolean;
     submitting?: boolean;
     backHref: string;
+    onCancel?: () => void;
     onSubmit: () => void;
 };
 
@@ -24,6 +25,7 @@ export default function OrderSummarySidebar({
     canEdit = true,
     submitting,
     backHref,
+    onCancel,
     onSubmit,
 }: Props) {
     return (
@@ -61,12 +63,22 @@ export default function OrderSummarySidebar({
                               : "Tạo đơn"}
                     </Button>
 
-                    <Link
-                        href={backHref}
-                        className="block rounded-xl border border-slate-200 px-4 py-2.5 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                    >
-                        Hủy
-                    </Link>
+                    {onCancel ? (
+                        <button
+                            type="button"
+                            onClick={onCancel}
+                            className="block w-full rounded-xl border border-slate-200 px-4 py-2.5 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                            Hủy
+                        </button>
+                    ) : (
+                        <Link
+                            href={backHref}
+                            className="block rounded-xl border border-slate-200 px-4 py-2.5 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                            Hủy
+                        </Link>
+                    )}
                 </div>
             </SectionCard>
         </aside>

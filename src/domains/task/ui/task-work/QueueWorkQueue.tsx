@@ -28,6 +28,7 @@ import {
   type AppProgressStep,
 } from "@/domains/shared/feedback/AppProgressProvider";
 import { repairVietnameseMojibake } from "@/domains/shared/text/vietnamese-mojibake";
+import { requiresTechnicalIssueVendorChangeNote } from "@/domains/service/shared/technical-issue-vendor-policy";
 import { targetLabel } from "@/domains/task/ui/execution/execution-ui.utils";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 import { cn } from "@/lib/utils";
@@ -1435,7 +1436,11 @@ export function QueueWorkQueue({
   });
   const vendorChangedFor = (queueItem: TaskItemQueueItem, action: OperationalBlueprintAction) => {
     const values = blueprintValuesFor(queueItem, action);
-    return String(values.vendorId ?? "") !== String(queueItem.technicalIssue?.vendorId ?? "");
+    return requiresTechnicalIssueVendorChangeNote({
+      executionStatus: queueItem.technicalIssue?.executionStatus,
+      currentVendorId: queueItem.technicalIssue?.vendorId,
+      nextVendorId: values.vendorId,
+    });
   };
   const updateBlueprintValue = (
     queueItem: TaskItemQueueItem,

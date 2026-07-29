@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getAdminWatchList } from "@/domains/watch/server";
+import { listAdminWatches } from "@/domains/watch/server/list/watch-list.repo";
 import type { WatchListSubFilter } from "@/domains/watch/ui/list/types";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -86,7 +87,10 @@ export async function GET(req: NextRequest) {
         await requirePermission(PERMISSIONS.PRODUCT_VIEW);
 
         const input = buildWatchListInput(req);
-        const result = await getAdminWatchList(input);
+        const consistency = req.nextUrl.searchParams.get("consistency");
+        const result = consistency === "source"
+            ? await listAdminWatches(input)
+            : await getAdminWatchList(input);
 
         return NextResponse.json({
             ok: true,

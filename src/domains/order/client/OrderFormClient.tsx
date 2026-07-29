@@ -44,6 +44,16 @@ type Props = {
   quickProduct?: QuickOrderProduct | null;
   backHref?: string;
   backLabel?: string;
+  surface?: "page" | "modal";
+  onCancel?: () => void;
+  onCompleted?: (
+    orderId: string,
+    inventoryOutcomes: Array<{
+      productId: string;
+      fromSaleStage: string | null;
+      toSaleStage: "HOLD";
+    }>,
+  ) => void;
 };
 
 export default function OrderFormClient({
@@ -54,6 +64,9 @@ export default function OrderFormClient({
   quickProduct = null,
   backHref = "/admin/orders",
   backLabel = "← Danh sách",
+  surface = "page",
+  onCancel,
+  onCompleted,
 }: Props) {
   const isEdit = mode === "edit";
   const quickMode = !isEdit && Boolean(quickProduct?.id);
@@ -325,7 +338,7 @@ export default function OrderFormClient({
           : "Tạo & post đơn hàng?",
       message:
         submitAs === "DRAFT"
-          ? "Đơn sẽ được lưu nháp, chưa tạo payment/shipment và chưa HOLD watch."
+          ? "Đơn sẽ được lưu nháp, chưa tạo payment/shipment nhưng sẽ HOLD watch liên quan."
           : quickMode
             ? "Đơn sẽ được post ngay. Hệ thống tạo payment/shipment và HOLD watch liên quan."
             : "Đơn sẽ được post ngay. Hệ thống tạo payment/shipment và đưa đơn vào vận hành.",
@@ -374,12 +387,20 @@ export default function OrderFormClient({
         message: "Order đã được lưu qua domain mới.",
       });
 
-      router.push(`/admin/orders/${isEdit ? orderId : json?.id}`);
-      router.refresh();
-    } catch (error: any) {
+      const savedOrderId = String(isEdit ? orderId : json?.id ?? "");
+      if (onCompleted && savedOrderId) {
+        onCompleted(
+          savedOrderId,
+          Array.isArray(json?.inventoryOutcomes) ? json.inventoryOutcomes : [],
+        );
+      } else {
+        router.push(`/admin/orders/${savedOrderId}`);
+        router.refresh();
+      }
+    } catch (error: unknown) {
       notify.error({
         title: "Không thể lưu đơn",
-        message: error?.message || "Có lỗi xảy ra.",
+        message: error instanceof Error ? error.message : "Có lỗi xảy ra.",
       });
     } finally {
       progress.hide();
@@ -388,8 +409,8 @@ export default function OrderFormClient({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1500px] space-y-5 px-4 pt-6 lg:px-6">
-      <OrderPageHeader
+    <div className={surface === "modal" ? "w-full space-y-5" : "mx-auto w-full max-w-[1500px] space-y-5 px-4 pt-6 lg:px-6"}>
+      {surface === "page" ? <OrderPageHeader
         eyebrow={quickMode ? "Watch bridge" : "Order domain"}
         title={
           isEdit
@@ -434,7 +455,7 @@ export default function OrderFormClient({
             </Button>
           </div>
         }
-      />
+      /> : null}
 
       {initialData?.status ? (
         <OrderInventoryNotice status={initialData.status} />
@@ -514,6 +535,7 @@ export default function OrderFormClient({
           canEdit={canEdit}
           submitting={submitting}
           backHref={backHref}
+          onCancel={onCancel}
           onSubmit={() => submit(isEdit ? "DRAFT" : "POSTED")}
         />
 

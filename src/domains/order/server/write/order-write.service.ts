@@ -120,6 +120,8 @@ async function resolveProductItems(
       listPrice,
       primaryImageUrl: product.primaryImageUrl ?? product.storefrontImageKey ?? null,
       productType: product.type ?? null,
+      previousProductStatus: product.status ?? null,
+      previousWatchSaleStage: product.watch?.saleStage ?? null,
     };
   });
 }
@@ -363,6 +365,15 @@ export async function createOrderWithItems(
     assertPositiveOrderSubtotal(subtotal);
 
     await updateOrderSubtotalRepo(tx as any, order.id, subtotal);
+    const inventoryOutcomes = resolvedProducts
+      .filter((product) => product.productType === "WATCH")
+      .map((product) => ({
+        productId: product.productId,
+        fromProductStatus: product.previousProductStatus,
+        toProductStatus: "HOLD" as const,
+        fromSaleStage: product.previousWatchSaleStage,
+        toSaleStage: "HOLD" as const,
+      }));
     // Business mới: chỉ cần order được tạo, kể cả DRAFT, watch phải HOLD ngay.
     await syncWatchInventoryFromOrders(
       tx,
@@ -370,10 +381,15 @@ export async function createOrderWithItems(
     );
     if (shouldPostAfterCreate) {
       const posted = await postOneOrderTx(tx, order.id);
-      return toPlain(posted);
+      return toPlain({ ...posted, inventoryOutcomes });
     }
 
-    return toPlain({ id: order.id, status: OrderStatus.DRAFT, refNo });
+    return toPlain({
+      id: order.id,
+      status: OrderStatus.DRAFT,
+      refNo,
+      inventoryOutcomes,
+    });
   });
   await publishOrderMutation({
     eventKey: result.status === OrderStatus.POSTED ? "order.posted" : "order.created",
