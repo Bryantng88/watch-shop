@@ -1,13 +1,22 @@
 import { NextResponse } from "next/server";
-import { getActiveShipmentByOrderIdApplication } from "@/domains/shipment/application";
+import { getShipmentContextByOrderIdApplication } from "@/domains/shipment/application";
+import { PERMISSIONS } from "@/constants/permissions";
+import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 
 export async function GET(_req: Request, ctx: { params: { id: string } }) {
+    const auth = await requirePermissionApi(PERMISSIONS.SHIPMENT_VIEW);
+    if (auth instanceof Response) return auth;
+
     try {
-        const data = await getActiveShipmentByOrderIdApplication(ctx.params.id);
-        return NextResponse.json(data ?? null);
-    } catch (e: any) {
+        const data = await getShipmentContextByOrderIdApplication(ctx.params.id);
+        return NextResponse.json(data);
+    } catch (error: unknown) {
         return NextResponse.json(
-            { error: e?.message ?? "Không thể tải shipment active của order." },
+            {
+                error: error instanceof Error
+                    ? error.message
+                    : "Không thể tải shipment active của order.",
+            },
             { status: 500 },
         );
     }

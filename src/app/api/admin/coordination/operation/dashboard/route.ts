@@ -145,6 +145,7 @@ export async function GET(request: NextRequest) {
           flowKey: modeKey,
           flowItems: flow.items,
           flowItemsPagination: flow.pagination,
+          flowStageCounts: flow.stageCounts,
         },
         { headers: { "Cache-Control": "no-store, max-age=0" } },
       );
@@ -288,6 +289,7 @@ export async function GET(request: NextRequest) {
       mediaBoardItemCount: data.mediaBoard?.items.length ?? 0,
       flowItems: flowItemsOnly ? data.flowItems : undefined,
       flowItemsPagination: flowItemsOnly ? data.flowItemsPagination : undefined,
+      flowStageCounts: flowItemsOnly ? data.flowStageCounts : undefined,
     }, {
       headers: { "Cache-Control": "no-store, max-age=0" },
     });

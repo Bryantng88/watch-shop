@@ -66,6 +66,7 @@ import {
   type AppProgressStep,
 } from "@/domains/shared/feedback/AppProgressProvider";
 import { useManualTransitionFeedback } from "@/domains/task/ui/task-work/use-manual-transition-feedback";
+import { manualTransitionOutcomeMovesOutOfCurrentStage } from "@/domains/task/ui/task-work/manual-transition-feedback";
 import { repairVietnameseMojibake } from "@/domains/shared/text/vietnamese-mojibake";
 import {
   AsyncBusinessListDashboard,
@@ -748,6 +749,12 @@ export default function OperationCoordinationWorkspace({
   const [asyncFlowPagination, setAsyncFlowPagination] = useState(
     data.flowItemsPagination,
   );
+  const [asyncFlowStageCounts, setAsyncFlowStageCounts] = useState(
+    data.flowStageCounts,
+  );
+  const [flowItemsStageKey, setFlowItemsStageKey] = useState(
+    () => searchParams.get("flowStage") ?? "",
+  );
   const [flowItemsModeKey, setFlowItemsModeKey] = useState(() =>
     data.flowItems.length > 0 || data.flowItemsPagination.total > 0
       ? activeViewModeKey
@@ -767,6 +774,23 @@ export default function OperationCoordinationWorkspace({
   const inFlightFlowRequestKey = useRef<string | null>(null);
   const lastFlowFilterRequestKey = useRef<string | null>(null);
   const technicalBoardLoadAttempted = useRef(false);
+
+  useEffect(() => {
+    if (
+      !focusedTechnicalIssueId ||
+      !asyncTechnicalIssueBoard?.items.some(
+        (item) => item.id === focusedTechnicalIssueId,
+      )
+    ) {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => {
+      setFocusedTechnicalIssueId((current) =>
+        current === focusedTechnicalIssueId ? null : current
+      );
+    }, 3_000);
+    return () => window.clearTimeout(timeoutId);
+  }, [asyncTechnicalIssueBoard?.items, focusedTechnicalIssueId]);
 
   useEffect(() => {
     const nextQuery = searchParams.get("flowQuery") ?? "";
@@ -791,6 +815,7 @@ export default function OperationCoordinationWorkspace({
     if (serverIncludesFlowItems) {
       setAsyncFlowItems(data.flowItems);
       setAsyncFlowPagination(data.flowItemsPagination);
+      setAsyncFlowStageCounts(data.flowStageCounts);
     } else {
       // The page returned only a dashboard shell. Keep the visible rows while
       // marking the dedicated flow payload stale so the flow endpoint reloads
@@ -800,6 +825,7 @@ export default function OperationCoordinationWorkspace({
   }, [
     data.flowItems,
     data.flowItemsPagination,
+    data.flowStageCounts,
     data.mediaBoard,
     data.technicalIssueBoard,
     serverIncludesFlowItems,
@@ -961,9 +987,14 @@ export default function OperationCoordinationWorkspace({
   const flowListStageCounts = useMemo(() => {
     const counts = new Map<string, number>();
     const applyActiveListTotal = () => {
+      for (const [stageKey, total] of Object.entries(asyncFlowStageCounts)) {
+        counts.set(stageKey, total);
+      }
       if (
         flowItemsModeKey === activeViewModeKey &&
-        activeFlowListStage
+        activeFlowListStage &&
+        normalizeStageKey(flowItemsStageKey) ===
+          normalizeStageKey(activeFlowListStage)
       ) {
         counts.set(activeFlowListStage, asyncFlowPagination.total);
       }
@@ -1021,10 +1052,12 @@ export default function OperationCoordinationWorkspace({
     activeViewModeKey,
     asyncFlowItems,
     asyncFlowPagination.total,
+    asyncFlowStageCounts,
     asyncMediaBoard,
     asyncTechnicalIssueBoard,
     data.workTickets,
     flowItemsModeKey,
+    flowItemsStageKey,
   ]);
   const flowListVisibleCount = activeFlowListStage
     ? flowListStageCounts.get(activeFlowListStage) ?? 0
@@ -1150,6 +1183,10 @@ export default function OperationCoordinationWorkspace({
       if (result?.flowItemsPagination) {
         setAsyncFlowPagination(result.flowItemsPagination);
       }
+      if (result?.flowStageCounts && typeof result.flowStageCounts === "object") {
+        setAsyncFlowStageCounts(result.flowStageCounts);
+      }
+      setFlowItemsStageKey(requestedFlowStageKey);
       setFlowItemsModeKey(activeViewModeKey);
     } catch (loadError) {
       if (requestId !== flowItemsRequestId.current) return;
@@ -2042,7 +2079,9 @@ export default function OperationCoordinationWorkspace({
                 ) : (
                   <>
                     <span className="inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-xl bg-slate-50 px-3 text-xs font-semibold text-slate-500">
-                      {isViewPending ? "Đang tải..." : `${flowListVisibleCount} item`}
+                      {isViewPending || isFlowItemsLoading
+                        ? "Đang tải..."
+                        : `${flowListVisibleCount} item`}
                     </span>
                   </>
                 )}
@@ -2103,7 +2142,8 @@ export default function OperationCoordinationWorkspace({
                             ? "bg-violet-100 text-violet-700"
                             : "bg-slate-100 text-slate-500",
                         )}>
-                          {flowListStageCounts.get(stage.key) ?? 0}
+                          {flowListStageCounts.get(stage.key) ??
+                            (isActive && isFlowItemsLoading ? "…" : "—")}
                         </span>
                       </button>
                       </Fragment>
@@ -2312,12 +2352,15 @@ export default function OperationCoordinationWorkspace({
               onLoadMore={(stage, page) =>
                 void loadMoreBoardColumn("technical", stage, page)
               }
-              onStageMoved={(input) => reconcileMovedFlowItems({
-                itemIds: [input.itemId],
-                fromStageKey: input.fromStage,
-                toStageKey: input.toStage,
-                syncFlowList: false,
-              })}
+              onStageMoved={(input) => {
+                reconcileMovedFlowItems({
+                  itemIds: [input.itemId],
+                  fromStageKey: input.fromStage,
+                  toStageKey: input.toStage,
+                  syncFlowList: false,
+                });
+                setFocusedTechnicalIssueId(input.itemId);
+              }}
             />
           ) : isMediaBoardView ? (
             <MediaProductionBoardView
@@ -2869,6 +2912,11 @@ function MediaProductionBoardView({
           "Workflow không áp dụng transition.",
         );
       }
+      if (!manualTransitionOutcomeMovesOutOfCurrentStage(result.result)) {
+        throw new Error(
+          "Workflow đã cập nhật nhưng chưa hoàn tất stage hiện tại. Danh sách sẽ không tự chuyển item.",
+        );
+      }
       onChanged(items.map((candidate) => candidate.id === item.id
         ? { ...candidate, stage: targetStage }
         : candidate));
@@ -2877,7 +2925,7 @@ function MediaProductionBoardView({
         fromStage: item.stage,
         toStage: targetStage,
       });
-      transitionFeedback.success(transition, feedbackItem);
+      transitionFeedback.success(transition, feedbackItem, result.result);
     } catch (moveError) {
       const message = moveError instanceof Error ? moveError.message : "Không thể chuyển Media sang stage tiếp theo.";
       setError(message);

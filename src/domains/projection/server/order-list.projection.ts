@@ -22,7 +22,7 @@ import type {
 } from "./projection.types";
 
 export const ORDER_LIST_PROJECTION_KEY = "order-list";
-export const ORDER_LIST_PROJECTION_VERSION = 1;
+export const ORDER_LIST_PROJECTION_VERSION = 2;
 const RELATED_EVENTS = [
   "payment.created",
   "payment.status_updated",
@@ -77,6 +77,7 @@ export async function buildOrderListProjectionRow(
       verificationStatus: true,
       customerName: true,
       shipPhone: true,
+      notes: true,
       reserveType: true,
       paymentMethod: true,
       depositRequired: true,
@@ -182,6 +183,7 @@ export async function buildOrderListProjectionRow(
           : order.source === "ADMIN"
             ? "Nội bộ"
             : null,
+    notes: order.notes,
     itemsCount: order._count.orderItem,
     totalAmount: total,
     paidAmount,
@@ -213,7 +215,7 @@ async function upsertRow(db: DB, row: OrderListProjectionRow) {
     entityType: "ORDER",
     entityId: row.id,
     status: row.status,
-    searchText: [row.refNo, row.customerName, row.shipPhone].filter(Boolean).join(" "),
+    searchText: [row.refNo, row.customerName, row.shipPhone, row.notes].filter(Boolean).join(" "),
     sortAt: row.updatedAt,
     sourceUpdatedAt: row.updatedAt,
     dataJson: row,

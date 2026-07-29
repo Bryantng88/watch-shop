@@ -9,6 +9,8 @@ import {
     ImagePlus,
     Loader2,
     RefreshCw,
+    RotateCcw,
+    Trash2,
 } from "lucide-react";
 
 export type SharedMediaProfile =
@@ -55,6 +57,7 @@ type Props = {
     description?: string;
     submitLabel?: string;
     contextImage?: ContextImage | null;
+    enableRecycle?: boolean;
 };
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -131,6 +134,7 @@ export default function MediaBrowserDialog({
     onSelect,
     onSubmit,
     contextImage,
+    enableRecycle = false,
     profile = "inline",
     audienceSegment,
     selectedKey,
@@ -154,12 +158,15 @@ export default function MediaBrowserDialog({
     );
     const [nextCursor, setNextCursor] = React.useState<string | null>(null);
     const [hasMore, setHasMore] = React.useState(false);
-    const [totalCount, setTotalCount] = React.useState(0);
+    const [recyclePending, setRecyclePending] = React.useState(false);
     const rootPrefix = React.useMemo(
         () => getRootPrefix(profile, audienceSegment),
         [audienceSegment, profile],
     );
     const profileLabel = getLabel(profile);
+    const recyclePrefix = `${rootPrefix}/recycle`;
+    const browsingRecycle =
+        prefix === recyclePrefix || prefix.startsWith(`${recyclePrefix}/`);
     const disabledKeySet = React.useMemo(
         () => new Set(disabledKeys.map((key) => String(key).trim()).filter(Boolean)),
         [disabledKeys],
@@ -296,12 +303,10 @@ export default function MediaBrowserDialog({
 
                 setNextCursor(json?.nextCursor ?? null);
                 setHasMore(Boolean(json?.hasMore));
-                setTotalCount((prev) => {
-                    const loaded = mode === "more" ? prev + nextFiles.length : nextFiles.length;
-                    return Number(json?.totalCount ?? json?.total ?? loaded);
-                });
-            } catch (e: any) {
-                setError(e?.message || "Không tải được thư viện ảnh");
+            } catch (e: unknown) {
+                setError(
+                    e instanceof Error ? e.message : "Không tải được thư viện ảnh"
+                );
             } finally {
                 setLoading(false);
             }
@@ -363,6 +368,64 @@ export default function MediaBrowserDialog({
         setPrefix(rootPrefix);
     }
 
+    async function handleRecycleAction(action: "RECYCLE" | "RESTORE") {
+        if (!enableRecycle || internalSelectedKeys.length === 0 || recyclePending) return;
+        const restoring = action === "RESTORE";
+        if (!window.confirm(
+            restoring
+                ? `Khôi phục ${internalSelectedKeys.length} ảnh về thư viện?`
+                : `Đưa ${internalSelectedKeys.length} ảnh vào Recycle? Các ảnh sẽ không còn xuất hiện trong thư viện hiện tại.`,
+        )) return;
+
+        setRecyclePending(true);
+        setError(null);
+        try {
+            const response = await fetch("/api/media/recycle", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    action,
+                    profile,
+                    segment: audienceSegment ?? null,
+                    keys: internalSelectedKeys,
+                    commandId: crypto.randomUUID(),
+                }),
+            });
+            const result = await response.json().catch(() => null);
+            if (!response.ok) {
+                throw new Error(result?.error ?? "Không thể xử lý Recycle.");
+            }
+            const succeededKeys = new Set<string>(
+                (Array.isArray(result?.results) ? result.results : [])
+                    .filter((item: { ok?: unknown }) => item?.ok === true)
+                    .map((item: { key?: unknown }) => String(item.key ?? "")),
+            );
+            setItems((current) =>
+                current.filter((item) => !succeededKeys.has(item.key))
+            );
+            setInternalSelectedKeys((current) =>
+                current.filter((key) => !succeededKeys.has(key))
+            );
+            const failures = (Array.isArray(result?.results) ? result.results : [])
+                .filter((item: { ok?: unknown }) => item?.ok !== true);
+            if (failures.length) {
+                setError(
+                    failures.map((item: { key?: unknown; error?: unknown }) =>
+                        `${basename(String(item.key ?? ""))}: ${String(item.error ?? "Không thể xử lý")}`
+                    ).join(" · "),
+                );
+            }
+        } catch (actionError) {
+            setError(
+                actionError instanceof Error
+                    ? actionError.message
+                    : "Không thể xử lý Recycle.",
+            );
+        } finally {
+            setRecyclePending(false);
+        }
+    }
+
     if (!open) return null;
 
     const canGoUp = prefix !== rootPrefix;
@@ -396,7 +459,6 @@ export default function MediaBrowserDialog({
                             onClick={() => {
                                 setItems([]);
                                 setFolders([]);
-                                setTotalCount(0);
                                 resetPagination();
                                 loadItems("reset");
                             }}
@@ -456,6 +518,25 @@ export default function MediaBrowserDialog({
                             <RefreshCw className="mr-1 h-4 w-4" />
                             Về root
                         </button>
+                        {enableRecycle ? (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setInternalSelectedKeys([]);
+                                    handleOpenFolder(
+                                        browsingRecycle ? rootPrefix : recyclePrefix
+                                    );
+                                }}
+                                className="inline-flex items-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 hover:bg-amber-100"
+                            >
+                                {browsingRecycle ? (
+                                    <RefreshCw className="mr-1 h-4 w-4" />
+                                ) : (
+                                    <Trash2 className="mr-1 h-4 w-4" />
+                                )}
+                                {browsingRecycle ? "Về thư viện" : "Xem Recycle"}
+                            </button>
+                        ) : null}
                     </div>
                 </div>
 
@@ -633,18 +714,57 @@ export default function MediaBrowserDialog({
                 {selectionMode === "multiple" ? (
                     <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4">
                         <div className="text-sm text-slate-500">
-                            Có thể chọn nhiều ảnh. Ảnh sẽ được chuyển sang thư
-                            mục chosen sau khi xác nhận.
+                            {browsingRecycle
+                                ? "Ảnh trong Recycle chỉ được đưa trở lại thư viện khi người dùng chọn khôi phục."
+                                : "Có thể chọn nhiều ảnh. Ảnh đã chọn có thể được xác nhận sử dụng hoặc đưa thủ công vào Recycle."}
                         </div>
 
-                        <button
-                            type="button"
-                            onClick={handleSubmit}
-                            disabled={internalSelectedKeys.length === 0}
-                            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                            {submitLabel}
-                        </button>
+                        <div className="flex items-center gap-2">
+                            {enableRecycle ? (
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        handleRecycleAction(
+                                            browsingRecycle ? "RESTORE" : "RECYCLE"
+                                        )
+                                    }
+                                    disabled={
+                                        internalSelectedKeys.length === 0 ||
+                                        recyclePending
+                                    }
+                                    className={cx(
+                                        "inline-flex items-center rounded-xl border px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50",
+                                        browsingRecycle
+                                            ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                            : "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100",
+                                    )}
+                                >
+                                    {recyclePending ? (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    ) : browsingRecycle ? (
+                                        <RotateCcw className="mr-2 h-4 w-4" />
+                                    ) : (
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                    )}
+                                    {browsingRecycle
+                                        ? "Khôi phục ảnh đã chọn"
+                                        : "Đưa vào Recycle"}
+                                </button>
+                            ) : null}
+                            {!browsingRecycle ? (
+                                <button
+                                    type="button"
+                                    onClick={handleSubmit}
+                                    disabled={
+                                        internalSelectedKeys.length === 0 ||
+                                        recyclePending
+                                    }
+                                    className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {submitLabel}
+                                </button>
+                            ) : null}
+                        </div>
                     </div>
                 ) : null}
             </div>

@@ -45,6 +45,7 @@ async function main() {
         loaded: flowPage.items.length,
         total: flowPage.pagination.total,
         totalPages: flowPage.pagination.totalPages,
+        stageCounts: flowPage.stageCounts,
         duplicateIds:
           flowPage.items.length -
           new Set(flowPage.items.map((item) => item.id)).size,

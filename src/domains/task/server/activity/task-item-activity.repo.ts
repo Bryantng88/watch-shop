@@ -140,27 +140,35 @@ export async function listTaskItemActivitiesRepo(db: DB, taskItemId: string) {
   });
 }
 
+type BusinessTargetActivityQuery = {
+  targetType: string;
+  targetId: string;
+  skip?: number;
+  take?: number;
+  sourceType?: ActivitySourceType;
+  excludeSourceType?: ActivitySourceType;
+};
+
+function businessTargetActivityWhere(input: BusinessTargetActivityQuery) {
+  return {
+    AND: [
+      { metadataJson: { path: ["targetType"], equals: input.targetType } },
+      { metadataJson: { path: ["targetId"], equals: input.targetId } },
+    ],
+    sourceType: input.sourceType
+      ? input.sourceType
+      : input.excludeSourceType
+        ? { not: input.excludeSourceType }
+        : undefined,
+  } satisfies Prisma.TaskItemActivityWhereInput;
+}
+
 export async function listBusinessTargetActivitiesRepo(
   db: DB,
-  input: { targetType: string; targetId: string; skip?: number; take?: number },
+  input: BusinessTargetActivityQuery,
 ) {
   return dbOrTx(db).taskItemActivity.findMany({
-    where: {
-      AND: [
-        {
-          metadataJson: {
-            path: ["targetType"],
-            equals: input.targetType,
-          },
-        },
-        {
-          metadataJson: {
-            path: ["targetId"],
-            equals: input.targetId,
-          },
-        },
-      ],
-    },
+    where: businessTargetActivityWhere(input),
     include: TASK_ITEM_ACTIVITY_INCLUDE,
     orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
     skip: input.skip,
@@ -170,14 +178,9 @@ export async function listBusinessTargetActivitiesRepo(
 
 export async function countBusinessTargetActivitiesRepo(
   db: DB,
-  input: { targetType: string; targetId: string },
+  input: BusinessTargetActivityQuery,
 ) {
   return dbOrTx(db).taskItemActivity.count({
-    where: {
-      AND: [
-        { metadataJson: { path: ["targetType"], equals: input.targetType } },
-        { metadataJson: { path: ["targetId"], equals: input.targetId } },
-      ],
-    },
+    where: businessTargetActivityWhere(input),
   });
 }

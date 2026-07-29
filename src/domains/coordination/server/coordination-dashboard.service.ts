@@ -3389,6 +3389,21 @@ export async function getCoordinationDashboard(input: {
   ]);
   const feedbackCountByTaskItem = activitySummary.feedbackCounts;
   const lastActivityMap = activitySummary.lastActivities;
+  const flowStageCounts: Record<string, number> = {};
+  if (isMediaFlow && mediaFlowBoardPromise) {
+    const board = await mediaFlowBoardPromise;
+    flowStageCounts.photography = board.columnPagination.PHOTOGRAPHY?.total ?? 0;
+    flowStageCounts["media-processing"] =
+      board.columnPagination.MEDIA_PROCESSING?.total ?? 0;
+    flowStageCounts.publish = board.columnPagination.PUBLISH?.total ?? 0;
+    flowStageCounts.done = board.columnPagination.DONE?.total ?? 0;
+  } else if (isTechnicalFlow && technicalFlowBoardPromise) {
+    const board = await technicalFlowBoardPromise;
+    flowStageCounts.inspect = board.columnPagination.INSPECT?.total ?? 0;
+    flowStageCounts.ready = board.columnPagination.READY?.total ?? 0;
+    flowStageCounts.processing = board.columnPagination.PROCESSING?.total ?? 0;
+    flowStageCounts.done = board.columnPagination.DONE?.total ?? 0;
+  }
 
   const queueCountByTaskItem = new Map(
     queueRows
@@ -3679,6 +3694,7 @@ export async function getCoordinationDashboard(input: {
       total: flowItemsTotal,
       totalPages: Math.max(1, Math.ceil(flowItemsTotal / flowPageSize)),
     },
+    flowStageCounts,
     technicalIssueBoard,
     mediaBoard,
   };
@@ -3746,6 +3762,7 @@ export async function getCoordinationFlowPage(input: {
     return {
       items: dashboard.flowItems,
       pagination: dashboard.flowItemsPagination,
+      stageCounts: dashboard.flowStageCounts,
     };
   });
 }

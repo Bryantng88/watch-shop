@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createManualShipmentApplication, listShipmentsApplication } from "@/domains/shipment/application";
+import { PERMISSIONS } from "@/constants/permissions";
+import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 
 function toPositiveInt(value: string | null, fallback: number) {
     const n = Number(value);
@@ -22,6 +24,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+    const auth = await requirePermissionApi(PERMISSIONS.SHIPMENT_CREATE);
+    if (auth instanceof Response) return auth;
+
     try {
         const body = await req.json().catch(() => ({}));
         const data = await createManualShipmentApplication({

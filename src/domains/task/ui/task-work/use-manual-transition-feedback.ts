@@ -49,7 +49,11 @@ export function useManualTransitionFeedback() {
     });
   }
 
-  function success(transition: Transition, item: Item) {
+  function success(
+    transition: Transition,
+    item: Item,
+    outcome?: { toState?: string | null } | null,
+  ) {
     appProgress.update({
       title: `${manualTransitionActionLabel(transition)} thành công`,
       message: "Workflow đã hoàn tất và danh sách đang được đồng bộ.",
@@ -64,6 +68,7 @@ export function useManualTransitionFeedback() {
     notify.success(manualTransitionSuccessFeedback({
       itemLabel: item.label,
       transition,
+      outcome,
     }));
     window.setTimeout(() => appProgress.hide(), 1200);
   }

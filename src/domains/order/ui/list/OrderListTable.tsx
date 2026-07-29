@@ -38,13 +38,14 @@ export default function OrderListTable(props: Props) {
   return (
     <div className="relative overflow-visible rounded-b-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
       <div className="relative w-full overflow-x-auto">
-        <table className="w-full min-w-[1240px] table-fixed text-sm">
+        <table className="w-full min-w-[1460px] table-fixed text-sm">
           <colgroup>
             <col className="w-[48px]" />
             <col className="w-[360px]" />
             <col className="w-[190px]" />
             <col className="w-[180px]" />
             <col className="w-[210px]" />
+            <col className="w-[220px]" />
             <col className="w-[160px]" />
             <col className="w-[140px]" />
             <col className="w-[80px]" />
@@ -67,6 +68,7 @@ export default function OrderListTable(props: Props) {
               <th className="px-4 py-3">Khách hàng</th>
               <th className="px-4 py-3">Thanh toán</th>
               <th className="px-4 py-3">Giao hàng</th>
+              <th className="px-4 py-3">Ghi chú</th>
               <th className="px-4 py-3 text-right">Tổng tiền</th>
               <th className="px-4 py-3">Cập nhật</th>
               <th className="px-5 py-3 text-right">Actions</th>
@@ -91,7 +93,7 @@ export default function OrderListTable(props: Props) {
               />
             )) : (
               <tr>
-                <td colSpan={8} className="px-4 py-12 text-center text-sm text-slate-500">
+                <td colSpan={9} className="px-4 py-12 text-center text-sm text-slate-500">
                   Chưa có đơn hàng nào khớp bộ lọc hiện tại.
                 </td>
               </tr>

@@ -18,16 +18,27 @@ export function manualTransitionMovesOutOfCurrentStage(transition: Transition) {
   return clean(transition.toState).toUpperCase() === "DONE";
 }
 
+export function manualTransitionOutcomeMovesOutOfCurrentStage(
+  outcome?: { toState?: string | null } | null,
+) {
+  return clean(outcome?.toState).toUpperCase() === "DONE";
+}
+
 export function manualTransitionSuccessFeedback(input: {
   itemLabel?: string | null;
   transition: Transition;
+  outcome?: { toState?: string | null } | null;
 }) {
   const actionLabel = manualTransitionActionLabel(input.transition);
   const subject = clean(input.itemLabel) || "Item";
 
   return {
     title: `${actionLabel} thành công`,
-    message: manualTransitionMovesOutOfCurrentStage(input.transition)
+    message: input.outcome
+      ? manualTransitionOutcomeMovesOutOfCurrentStage(input.outcome)
+        ? `${subject} đã hoàn tất bước hiện tại và được chuyển sang bước tiếp theo.`
+        : `${subject} đã được cập nhật trạng thái.`
+      : manualTransitionMovesOutOfCurrentStage(input.transition)
       ? `${subject} đã hoàn tất bước hiện tại và được chuyển sang bước tiếp theo.`
       : `${subject} đã được cập nhật trạng thái.`,
   };

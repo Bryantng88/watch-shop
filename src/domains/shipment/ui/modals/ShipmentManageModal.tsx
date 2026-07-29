@@ -58,6 +58,17 @@ type ShipmentDetail = {
     } | null;
 };
 
+type ShipmentContext = {
+    shipment: ShipmentDetail | null;
+    recipient?: Partial<Pick<
+        FormState,
+        "shipPhone" | "shipAddress" | "shipCity" | "shipDistrict" | "shipWard"
+    >> | null;
+    recipientSource?: "ORDER" | "CUSTOMER" | "NONE";
+    customerId?: string | null;
+    missingFields?: string[];
+};
+
 type FormState = {
     shipPhone: string;
     shipAddress: string;
@@ -168,6 +179,7 @@ export default function ShipmentManageModal({
     const [form, setForm] = useState<FormState>(() => initialForm());
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [recipientSource, setRecipientSource] = useState<ShipmentContext["recipientSource"]>("NONE");
 
     const shipmentId = shipment?.id ?? null;
     const amount = useMemo(() => parseAmount(form.shippingAmount), [form.shippingAmount]);
@@ -175,12 +187,20 @@ export default function ShipmentManageModal({
     const invalidShippingAmount = !isSelfDelivery && amount < 0;
     const currency = shipment?.currency ?? "VND";
     const payerLabel = form.payer === "CUSTOMER" ? "Khách trả - không tạo payment" : "Doanh nghiệp trả - tạo payment OUT";
+    const missingRecipientFields = [
+        !form.shipPhone.trim() ? "số điện thoại" : null,
+        !form.shipAddress.trim() ? "địa chỉ" : null,
+        !form.shipCity.trim() ? "tỉnh / thành" : null,
+    ].filter((value): value is string => Boolean(value));
 
     function applyShipment(data: ShipmentDetail | null) {
         setShipment(data);
 
         if (!data) {
-            setForm(initialForm());
+            setForm({
+                ...initialForm(),
+                shipPhone: order?.shipPhone ?? order?.customerPhone ?? "",
+            });
             return;
         }
 
@@ -210,7 +230,19 @@ export default function ShipmentManageModal({
             const json = await res.json().catch(() => null);
             if (!res.ok) throw new Error(json?.error || "Không thể tải shipment active.");
             if (!mounted) return;
-            applyShipment(json as ShipmentDetail | null);
+            const context = json as ShipmentContext;
+            applyShipment(context.shipment ?? null);
+            setRecipientSource(context.recipientSource ?? "NONE");
+            if (!context.shipment && context.recipient) {
+                setForm((current) => ({
+                    ...current,
+                    shipPhone: context.recipient?.shipPhone ?? "",
+                    shipAddress: context.recipient?.shipAddress ?? "",
+                    shipCity: context.recipient?.shipCity ?? "",
+                    shipDistrict: context.recipient?.shipDistrict ?? "",
+                    shipWard: context.recipient?.shipWard ?? "",
+                }));
+            }
         } catch (error: any) {
             if (!mounted) return;
             notify.error({
@@ -290,17 +322,13 @@ export default function ShipmentManageModal({
 
     async function createNewShipment() {
         if (!order?.id) return;
-
-        const ok = await dialog.confirm({
-            tone: "success",
-            title: "Tạo shipment giao lại?",
-            message:
-                "Hệ thống sẽ tạo shipment mới cho order này. Chỉ dùng khi shipment cũ đã RETURNED/CANCELLED hoặc order chưa có shipment active.",
-            confirmText: "Tạo shipment",
-            cancelText: "Hủy",
-        });
-
-        if (!ok) return;
+        if (missingRecipientFields.length) {
+            notify.error({
+                title: "Khách hàng chưa có thông tin vận chuyển",
+                message: `Cần nhập ${missingRecipientFields.join(", ")} trước khi tạo shipment.`,
+            });
+            return;
+        }
 
         setSubmitting(true);
         progress.show({
@@ -312,7 +340,17 @@ export default function ShipmentManageModal({
             const res = await fetch("/api/admin/shipments", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ orderId: order.id }),
+                body: JSON.stringify({
+                    orderId: order.id,
+                    shipPhone: form.shipPhone.trim() || null,
+                    shipAddress: form.shipAddress.trim() || null,
+                    shipCity: form.shipCity.trim() || null,
+                    shipDistrict: form.shipDistrict.trim() || null,
+                    shipWard: form.shipWard.trim() || null,
+                    carrier: form.carrier.trim() || null,
+                    trackingCode: form.trackingCode.trim() || null,
+                    notes: form.note.trim() || null,
+                }),
             });
             const json = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(json?.error || "Không thể tạo shipment.");
@@ -490,20 +528,66 @@ export default function ShipmentManageModal({
                         Đang tải shipment...
                     </div>
                 ) : !shipment ? (
-                    <div className="px-6 py-8">
-                        <div className="rounded-2xl border border-amber-100 bg-amber-50/60 px-4 py-3 text-sm text-amber-800">
-                            Order này không có shipment active để xử lý. Có thể shipment gần nhất đã RETURNED/CANCELLED,
-                            hoặc order chưa được tạo shipment.
+                    <div className="overflow-y-auto px-6 py-6">
+                        <div className={`mb-5 rounded-2xl border px-4 py-3 text-sm leading-6 ${
+                            missingRecipientFields.length
+                                ? "border-amber-200 bg-amber-50 text-amber-900"
+                                : "border-blue-100 bg-blue-50/60 text-blue-800"
+                        }`}>
+                            {missingRecipientFields.length
+                                ? `Khách hàng này chưa có đủ thông tin vận chuyển. Cần nhập ${missingRecipientFields.join(", ")} trước khi tạo shipment.`
+                                : recipientSource === "CUSTOMER"
+                                    ? "Thông tin nhận hàng đã được lấy từ hồ sơ khách hàng. Vui lòng kiểm tra lại trước khi tạo shipment."
+                                    : "Thông tin nhận hàng đã được lấy từ đơn hàng. Vui lòng kiểm tra lại trước khi tạo shipment."}
                         </div>
-                        <Button
-                            type="button"
-                            className="mt-4 justify-center"
-                            disabled={submitting}
-                            onClick={createNewShipment}
-                        >
-                            <Truck className="mr-2 h-4 w-4" />
-                            Tạo shipment mới / giao lại
-                        </Button>
+                        <div className="grid gap-5 md:grid-cols-2">
+                            <div>
+                                <FieldLabel>Số điện thoại nhận hàng</FieldLabel>
+                                <Input disabled={submitting} value={form.shipPhone} onChange={(event) => patch({ shipPhone: event.target.value })} />
+                            </div>
+                            <div>
+                                <FieldLabel>Đơn vị vận chuyển</FieldLabel>
+                                <Select
+                                    disabled={submitting}
+                                    value={form.carrier}
+                                    onChange={(event) => patch({ carrier: event.target.value })}
+                                    options={[{ value: "", label: "Chọn đơn vị vận chuyển" }, ...SHIPMENT_CARRIER_OPTIONS]}
+                                />
+                            </div>
+                            <div>
+                                <FieldLabel>Tỉnh / thành</FieldLabel>
+                                <Input disabled={submitting} value={form.shipCity} onChange={(event) => patch({ shipCity: event.target.value })} />
+                            </div>
+                            <div>
+                                <FieldLabel>Quận / huyện</FieldLabel>
+                                <Input disabled={submitting} value={form.shipDistrict} onChange={(event) => patch({ shipDistrict: event.target.value })} />
+                            </div>
+                            <div>
+                                <FieldLabel>Phường / xã</FieldLabel>
+                                <Input disabled={submitting} value={form.shipWard} onChange={(event) => patch({ shipWard: event.target.value })} />
+                            </div>
+                            <div>
+                                <FieldLabel>Mã vận đơn</FieldLabel>
+                                <Input disabled={submitting} value={form.trackingCode} onChange={(event) => patch({ trackingCode: event.target.value })} />
+                            </div>
+                            <div className="md:col-span-2">
+                                <FieldLabel>Địa chỉ</FieldLabel>
+                                <Input disabled={submitting} value={form.shipAddress} onChange={(event) => patch({ shipAddress: event.target.value })} />
+                            </div>
+                            <div className="md:col-span-2">
+                                <FieldLabel>Ghi chú shipment</FieldLabel>
+                                <Textarea disabled={submitting} value={form.note} onChange={(event) => patch({ note: event.target.value })} placeholder="Ghi chú nội bộ hoặc trường hợp ngoại lệ" />
+                            </div>
+                        </div>
+                        <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-5">
+                            <Button type="button" variant="outline" disabled={submitting} onClick={onClose}>
+                                Đóng
+                            </Button>
+                            <Button type="button" disabled={submitting || missingRecipientFields.length > 0} onClick={createNewShipment}>
+                                {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Truck className="mr-2 h-4 w-4" />}
+                                Tạo shipment
+                            </Button>
+                        </div>
                     </div>
                 ) : (
                     <>

@@ -513,6 +513,7 @@ export async function getBusinessTargetActivityViewModels(
   targetType: string,
   targetId: string,
   limit?: number,
+  mode: "ALL" | "DISCUSSION" | "HISTORY" = "ALL",
 ) {
   const cleanTargetType = clean(targetType);
   const cleanTargetId = clean(targetId);
@@ -527,6 +528,8 @@ export async function getBusinessTargetActivityViewModels(
     targetType: cleanTargetType,
     targetId: cleanTargetId,
     take: limitedTake,
+    sourceType: mode === "DISCUSSION" ? ActivitySourceType.DISCUSSION : undefined,
+    excludeSourceType: mode === "HISTORY" ? ActivitySourceType.DISCUSSION : undefined,
   });
 
   return items.map(toTaskItemActivityViewModel);
@@ -537,6 +540,7 @@ export async function getBusinessTargetActivityPage(input: {
   targetId: string;
   page?: number;
   pageSize?: number;
+  mode?: "ALL" | "DISCUSSION" | "HISTORY";
 }) {
   const targetType = clean(input.targetType);
   const targetId = clean(input.targetId);
@@ -550,8 +554,15 @@ export async function getBusinessTargetActivityPage(input: {
       targetId,
       skip: (page - 1) * pageSize,
       take: pageSize,
+      sourceType: input.mode === "DISCUSSION" ? ActivitySourceType.DISCUSSION : undefined,
+      excludeSourceType: input.mode === "HISTORY" ? ActivitySourceType.DISCUSSION : undefined,
     }),
-    countBusinessTargetActivitiesRepo(prisma, { targetType, targetId }),
+    countBusinessTargetActivitiesRepo(prisma, {
+      targetType,
+      targetId,
+      sourceType: input.mode === "DISCUSSION" ? ActivitySourceType.DISCUSSION : undefined,
+      excludeSourceType: input.mode === "HISTORY" ? ActivitySourceType.DISCUSSION : undefined,
+    }),
   ]);
   return {
     items: items.map(toTaskItemActivityViewModel),

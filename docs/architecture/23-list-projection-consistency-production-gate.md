@@ -35,6 +35,18 @@ Business command
 UI code must not infer a business state from a button label, patch a counter,
 move a row permanently, or call a projection builder directly.
 
+For chained transitions, reconciliation must use the final command outcome,
+not the transition originally rendered by the UI. For example, Photography may
+accept `IN_PROGRESS` and immediately advance to `DONE`; batch results therefore
+return the final `toState` for each item. Successful `DONE` items are removed
+from the current stage immediately and remain hidden until the authoritative
+projection no longer contains them. A partial batch must preserve and display
+the failed item's label plus its server-provided reason.
+
+Action feedback is scoped to the stage where the command ran. Because the list
+component can remain mounted while stage data changes, navigating to another
+stage must clear the previous stage's transient error.
+
 ## Post-Mutation Consistency Rule
 
 After a state-changing action succeeds:
@@ -299,6 +311,12 @@ The shared list follows these additional invariants:
   bulk actions;
 - pagination applies to the merged flow result, never independently to each
   Workspace before flattening.
+- stage counts have three distinct states: known zero, known positive, and
+  unknown/loading; the UI must not render unknown as `0`;
+- the active page total is tagged with the stage that produced it and must not
+  be reassigned to a newly selected stage while that stage is loading;
+- specialized flow endpoints return lightweight counts for all stages from the
+  same projection query used to load the active stage page.
 
 The generic Workspace-backed reader merges and sorts eligible Workspace items
 before applying one flow-level page window. This is the correctness fallback
@@ -362,3 +380,30 @@ Any failed row in this matrix blocks production sign-off for that flow.
 
 If any answer is unclear, the flow is not ready for production.
 
+## Order note and late-shipment list contract
+
+The Order list projection includes `notes` as display and search data. The list
+must not join back to the Order write model to render this column. Changes to
+the projection row shape require an `ORDER_LIST_PROJECTION_VERSION` increment
+so existing rows are rebuilt before the new field is relied on.
+
+An Order originally created with `hasShipment = false` may later require
+delivery. This is an explicit Shipment command, not a list-only flag change:
+
+1. the user opens the shared Shipment form from the Order row;
+2. `createManualShipment` creates the active Shipment;
+3. the same transaction changes `Order.hasShipment` to `true` and moves the
+   Order into `PROCESSING`;
+4. `shipment.created` refreshes Order list/detail projections.
+
+The list action is labelled `Tạo shipment` when there is no delivery yet and
+`Quản lý giao hàng` when Shipment management already applies. The modal reuses
+the shared form fields and feedback/progress surfaces used by Shipment
+management; it does not introduce a second form vocabulary.
+
+Recipient data for a late-created Shipment follows one server-owned fallback
+order: explicit form input, then the Order shipping snapshot, then the linked
+Customer profile. `shipPhone`, `shipAddress`, and `shipCity` are required
+invariants. When they are still missing, the modal names the missing fields and
+the Shipment command rejects the request as well; validation is not owned only
+by the client.

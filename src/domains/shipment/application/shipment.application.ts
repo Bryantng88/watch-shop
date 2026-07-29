@@ -4,6 +4,7 @@ import {
   createShipmentReturnFee,
   getShipmentDetail,
   getActiveShipmentByOrderId,
+  getShipmentContextByOrderId,
   listShipments,
   markShipmentDelivered,
   markShipmentReturned,
@@ -29,6 +30,10 @@ export async function getShipmentDetailApplication(shipmentId: string) {
 
 export async function getActiveShipmentByOrderIdApplication(orderId: string) {
   return getActiveShipmentByOrderId(orderId);
+}
+
+export async function getShipmentContextByOrderIdApplication(orderId: string) {
+  return getShipmentContextByOrderId(orderId);
 }
 
 export async function updateShipmentApplication(input: { shipmentId: string; data: UpdateShipmentInput }) {

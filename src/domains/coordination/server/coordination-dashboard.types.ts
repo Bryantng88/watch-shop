@@ -239,6 +239,7 @@ export type CoordinationDashboardDTO = {
     total: number;
     totalPages: number;
   };
+  flowStageCounts: Record<string, number>;
   technicalIssueBoard: {
     items: CoordinationTechnicalIssueBoardItemDTO[];
     columnPagination: CoordinationBoardColumnPaginationDTO;

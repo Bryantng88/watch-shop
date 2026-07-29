@@ -31,7 +31,7 @@ import { PAYMENT_PURPOSE_LABEL } from "@/domains/payment/shared/payment.constant
 import type { TaskItemActivityViewModel } from "@/domains/task/server/activity";
 import {
   manualTransitionActionLabel,
-  manualTransitionMovesOutOfCurrentStage,
+  manualTransitionOutcomeMovesOutOfCurrentStage,
 } from "@/domains/task/ui/task-work/manual-transition-feedback";
 import { useManualTransitionFeedback } from "@/domains/task/ui/task-work/use-manual-transition-feedback";
 import { PostTargetChip } from "@/domains/shared/ui/post-target/PostTargetChip";
@@ -242,10 +242,15 @@ export default function FlowItemListView({
     reviewNote: "",
   });
   useEffect(() => {
-    setOptimisticallyMovedIds([]);
     const authoritativeIds = new Set(items.map((item) => item.id));
+    setOptimisticallyMovedIds((current) =>
+      current.filter((id) => authoritativeIds.has(id)),
+    );
     setSelectedIds((current) => current.filter((id) => authoritativeIds.has(id)));
   }, [items]);
+  useEffect(() => {
+    setActionError(null);
+  }, [activeStage]);
   const [reconcileFields, setReconcileFields] = useState({
     reviewedAmount: "",
     method: "BANK_TRANSFER",
@@ -385,8 +390,6 @@ export default function FlowItemListView({
     };
     setActionError(null);
     setPendingActionId(item.id);
-    const shouldMoveOptimistically =
-      manualTransitionMovesOutOfCurrentStage(transition);
     transitionFeedback.begin(transition, [feedbackItem]);
     startActionTransition(async () => {
       try {
@@ -402,15 +405,16 @@ export default function FlowItemListView({
         if (!result?.result?.applied) {
           throw new Error(result?.result?.reason ?? "Không thể thực hiện action.");
         }
-        if (shouldMoveOptimistically) {
+        const movedOut = manualTransitionOutcomeMovesOutOfCurrentStage(result?.result);
+        if (movedOut) {
           setOptimisticallyMovedIds((current) => [...current, item.id]);
           onItemsMovedFromStage?.({
             itemIds: [item.id],
             fromStageKey: item.flowStageKey || activeStage,
           });
         }
-        transitionFeedback.success(transition, feedbackItem);
-        if (!shouldMoveOptimistically) router.refresh();
+        transitionFeedback.success(transition, feedbackItem, result?.result);
+        if (!movedOut) router.refresh();
       } catch (error) {
         const message = error instanceof Error ? error.message : "Không thể cập nhật workflow.";
         setActionError(message);
@@ -508,24 +512,35 @@ export default function FlowItemListView({
             actionKey,
           })),
         });
+        const movedIds = result.results
+          .filter((entry) =>
+            entry.ok && manualTransitionOutcomeMovesOutOfCurrentStage(entry)
+          )
+          .map((entry) => entry.bindingId);
         const succeededIds = result.results
           .filter((entry) => entry.ok)
           .map((entry) => entry.bindingId);
-        if (manualTransitionMovesOutOfCurrentStage(transition) && succeededIds.length) {
-          setOptimisticallyMovedIds((current) => [...current, ...succeededIds]);
+        if (movedIds.length) {
+          setOptimisticallyMovedIds((current) => [...current, ...movedIds]);
           onItemsMovedFromStage?.({
-            itemIds: succeededIds,
+            itemIds: movedIds,
             fromStageKey: activeStage,
           });
         }
         setSelectedIds((current) => current.filter((id) => !succeededIds.includes(id)));
         transitionFeedback.bulkResult(transition, feedbackItems, result.results);
         if (!result.ok) {
+          const labels = new Map(feedbackItems.map((item) => [item.id, item.label]));
+          const failureDetails = result.results
+            .filter((entry) => !entry.ok)
+            .map((entry) =>
+              `${labels.get(entry.bindingId) || entry.bindingId}: ${entry.reason || "Không thể thực hiện transition"}`
+            );
           setActionError(
-            `Đã xử lý ${result.applied}/${result.results.length} item. ${result.failed} item lỗi được giữ lại để xử lý tiếp.`,
+            `Đã xử lý ${result.applied}/${result.results.length} item. Lỗi: ${failureDetails.join("; ")}`,
           );
         }
-        if (!manualTransitionMovesOutOfCurrentStage(transition)) router.refresh();
+        if (movedIds.length !== succeededIds.length) router.refresh();
       } catch (error) {
         const message = error instanceof Error ? error.message : "Không thể cập nhật các item.";
         setActionError(message);

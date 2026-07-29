@@ -3,6 +3,7 @@
 import type { StoredMediaListItem } from "@/domains/media/storage";
 import { mediaStorage } from "@/domains/media/storage";
 import { executeMediaMove } from "@/domains/media/application";
+import { prisma } from "@/server/db/client";
 import {
     type MediaProfile,
     getProfileRoot,
@@ -99,11 +100,15 @@ export async function browseMediaFolder(input: {
         cursor: input.continuationToken,
     });
 
+    const recyclePrefix = recycleRoot(profile, segment);
+    const browsingRecycle =
+        prefix === recyclePrefix || prefix.startsWith(`${recyclePrefix}/`);
     const folders: NasMediaFolder[] = result.prefixes
         .map((item) => normalizeKey(item))
         .filter(Boolean)
         .filter((item) => item !== prefix)
         .filter((item) => !shouldHideName(nameFromKey(item)))
+        .filter((item) => browsingRecycle || item !== recyclePrefix)
         .map((item) => ({
             prefix: item,
             name: nameFromKey(item),
@@ -209,4 +214,171 @@ export async function organizeActiveLooseNasFiles(input: {
     throw new Error(
         "organizeActiveLooseNasFiles is not implemented for the current NAS media service.",
     );
+}
+
+type MediaSegment = "MEN" | "WOMEN" | "UNISEX" | null;
+
+function recycleRoot(profile: MediaProfile, segment: MediaSegment) {
+    return normalizeKey(`${getProfileRoot(profile, segment)}/recycle`);
+}
+
+function assertKeyInsideRoot(key: string, root: string) {
+    if (key !== root && !key.startsWith(`${root}/`)) {
+        throw new Error(`Media key nằm ngoài thư mục được phép: ${key}`);
+    }
+}
+
+async function assertMediaCanBeRecycled(key: string) {
+    const [productImage, mediaObject] = await Promise.all([
+        prisma.productImage.findFirst({
+            where: { fileKey: key },
+            select: { id: true },
+        }),
+        prisma.mediaObject.findUnique({
+            where: { storageKey: key },
+            select: {
+                id: true,
+                _count: { select: { bindings: true } },
+            },
+        }),
+    ]);
+    if (productImage) {
+        throw new Error("Ảnh đang được sử dụng trong Gallery/INLINE.");
+    }
+    if (mediaObject?._count.bindings) {
+        throw new Error("Ảnh đang có Media Core binding.");
+    }
+    return mediaObject?.id ?? null;
+}
+
+export async function recycleMediaFiles(input: {
+    profile?: MediaProfile | string | null;
+    segment?: string | null;
+    keys: string[];
+    commandId: string;
+    requestedByUserId?: string | null;
+}) {
+    const profile = resolveMediaProfile(String(input.profile ?? "inline"));
+    const segment =
+        input.segment === "WOMEN" || input.segment === "UNISEX"
+            ? input.segment
+            : input.segment === "MEN"
+              ? "MEN"
+              : null;
+    const root = normalizeKey(getProfileRoot(profile, segment));
+    const targetRoot = recycleRoot(profile, segment);
+    const commandId = String(input.commandId ?? "").trim();
+    if (!commandId) throw new Error("Thiếu commandId.");
+
+    const results = [];
+    for (const rawKey of [...new Set(input.keys)]) {
+        const sourceKey = normalizeKey(rawKey);
+        try {
+            assertKeyInsideRoot(sourceKey, root);
+            if (sourceKey === targetRoot || sourceKey.startsWith(`${targetRoot}/`)) {
+                throw new Error("Ảnh đã nằm trong Recycle.");
+            }
+            const mediaObjectId = await assertMediaCanBeRecycled(sourceKey);
+            const relativeKey = sourceKey.slice(root.length).replace(/^\/+/, "");
+            const destinationKey = normalizeKey(`${targetRoot}/${relativeKey}`);
+            if (await mediaStorage.stat(destinationKey)) {
+                throw new Error("Recycle đã có file cùng đường dẫn.");
+            }
+            await executeMediaMove({
+                idempotencyKey: `manual-recycle:${commandId}:${sourceKey}`,
+                mediaObjectId,
+                sourceKey,
+                destinationKey,
+                deleteSource: true,
+                requestedByUserId: input.requestedByUserId ?? null,
+            });
+            await prisma.mediaAsset.updateMany({
+                where: { key: sourceKey },
+                data: {
+                    key: destinationKey,
+                    parentPrefix: destinationKey.split("/").slice(0, -1).join("/"),
+                    status: "ARCHIVED",
+                    movedFromKey: sourceKey,
+                },
+            });
+            results.push({ key: sourceKey, destinationKey, ok: true as const });
+        } catch (error) {
+            results.push({
+                key: sourceKey,
+                ok: false as const,
+                error: error instanceof Error ? error.message : "Không thể đưa ảnh vào Recycle.",
+            });
+        }
+    }
+    return {
+        results,
+        moved: results.filter((item) => item.ok).length,
+        failed: results.filter((item) => !item.ok).length,
+    };
+}
+
+export async function restoreRecycledMediaFiles(input: {
+    profile?: MediaProfile | string | null;
+    segment?: string | null;
+    keys: string[];
+    commandId: string;
+    requestedByUserId?: string | null;
+}) {
+    const profile = resolveMediaProfile(String(input.profile ?? "inline"));
+    const segment =
+        input.segment === "WOMEN" || input.segment === "UNISEX"
+            ? input.segment
+            : input.segment === "MEN"
+              ? "MEN"
+              : null;
+    const root = normalizeKey(getProfileRoot(profile, segment));
+    const sourceRoot = recycleRoot(profile, segment);
+    const commandId = String(input.commandId ?? "").trim();
+    if (!commandId) throw new Error("Thiếu commandId.");
+
+    const results = [];
+    for (const rawKey of [...new Set(input.keys)]) {
+        const sourceKey = normalizeKey(rawKey);
+        try {
+            assertKeyInsideRoot(sourceKey, sourceRoot);
+            const relativeKey = sourceKey.slice(sourceRoot.length).replace(/^\/+/, "");
+            const destinationKey = normalizeKey(`${root}/${relativeKey}`);
+            if (await mediaStorage.stat(destinationKey)) {
+                throw new Error("Thư viện đã có file tại đường dẫn khôi phục.");
+            }
+            const mediaObject = await prisma.mediaObject.findUnique({
+                where: { storageKey: sourceKey },
+                select: { id: true },
+            });
+            await executeMediaMove({
+                idempotencyKey: `manual-restore:${commandId}:${sourceKey}`,
+                mediaObjectId: mediaObject?.id ?? null,
+                sourceKey,
+                destinationKey,
+                deleteSource: true,
+                requestedByUserId: input.requestedByUserId ?? null,
+            });
+            await prisma.mediaAsset.updateMany({
+                where: { key: sourceKey },
+                data: {
+                    key: destinationKey,
+                    parentPrefix: destinationKey.split("/").slice(0, -1).join("/"),
+                    status: "ACTIVE",
+                    movedFromKey: sourceKey,
+                },
+            });
+            results.push({ key: sourceKey, destinationKey, ok: true as const });
+        } catch (error) {
+            results.push({
+                key: sourceKey,
+                ok: false as const,
+                error: error instanceof Error ? error.message : "Không thể khôi phục ảnh.",
+            });
+        }
+    }
+    return {
+        results,
+        moved: results.filter((item) => item.ok).length,
+        failed: results.filter((item) => !item.ok).length,
+    };
 }

@@ -66,6 +66,7 @@ function compactId(id: string) {
 export async function getBusinessEntityPreviewAction(input: {
     type: BusinessEntityType;
     id: string;
+    activityMode?: "ALL" | "DISCUSSION";
 }): Promise<BusinessEntityPreview | null> {
     const auth = await requirePermission("TASK_VIEW");
     const canReadActivity = authHasPermission(auth, PERMISSIONS.ACTIVITY_READ);
@@ -137,10 +138,12 @@ export async function getBusinessEntityPreviewAction(input: {
                         select: { id: true, name: true, email: true, avatarUrl: true },
                     })).map((user) => ({ id: user.id, label: user.name || user.email, avatarUrl: user.avatarUrl }))
                     : [],
-                items: await getTaskItemActivityViewModels(watchWorkspace.taskItem.id, {
-                    limit: 20,
-                    scope: { targets: [{ targetType: "WATCH", targetId: row.id }], includeWorkspaceLevel: false },
-                }),
+                items: input.activityMode === "DISCUSSION"
+                    ? await getBusinessTargetActivityViewModels("WATCH", row.id, 8, "DISCUSSION")
+                    : await getTaskItemActivityViewModels(watchWorkspace.taskItem.id, {
+                        limit: 20,
+                        scope: { targets: [{ targetType: "WATCH", targetId: row.id }], includeWorkspaceLevel: false },
+                    }),
             };
         }
 
@@ -428,7 +431,12 @@ export async function getBusinessEntityPreviewAction(input: {
                 })
                 : Promise.resolve([]),
             technicalWorkspaceItem && canReadActivity
-                ? getBusinessTargetActivityViewModels("TECHNICAL_ISSUE", row.id, 20)
+                ? getBusinessTargetActivityViewModels(
+                    "TECHNICAL_ISSUE",
+                    row.id,
+                    input.activityMode === "DISCUSSION" ? 8 : 20,
+                    input.activityMode === "DISCUSSION" ? "DISCUSSION" : "ALL",
+                )
                 : Promise.resolve([]),
             technicalWorkspaceItem && canReadActivity && canEditActivity
                 ? prisma.user.findMany({

@@ -1418,6 +1418,7 @@ export async function applyQueueItemManualTransitionsAction(input: {
     bindingId: string;
     ok: boolean;
     reason?: string;
+    toState?: string | null;
   }> = [];
 
   for (const item of items) {
@@ -1427,6 +1428,7 @@ export async function applyQueueItemManualTransitionsAction(input: {
         bindingId: item.bindingId,
         ok: Boolean(result.result.applied),
         reason: result.result.applied ? undefined : result.result.reason,
+        toState: result.result.toState ?? null,
       });
     } catch (error) {
       results.push({

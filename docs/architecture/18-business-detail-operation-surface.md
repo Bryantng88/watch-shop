@@ -383,3 +383,15 @@ Business detail or Workspace surface
 
 The UI can look unified. The lifecycle must remain owned by the correct
 surface.
+
+## Quick Preview Activity Loading
+
+Business quick-preview modals are discussion-first. Their initial read may
+include a small, target-scoped page of `DISCUSSION` activities with replies,
+but must not load the complete audit timeline.
+
+`SYSTEM` and `BUSINESS_EVENT` activity is loaded from a separate paginated
+endpoint only when the user opens `Lịch sử`. Hiding audit rows with CSS or
+filtering an already-loaded full timeline on the client does not satisfy this
+contract. Comment, reply, mention, unread state, and activity permissions remain
+unchanged.

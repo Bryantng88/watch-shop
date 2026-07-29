@@ -20,12 +20,15 @@ export const revalidate = 0;
 export async function GET(request: NextRequest) {
   const type = request.nextUrl.searchParams.get("type") as BusinessEntityType | null;
   const id = request.nextUrl.searchParams.get("id")?.trim() ?? "";
+  const activityMode = request.nextUrl.searchParams.get("activityMode") === "DISCUSSION"
+    ? "DISCUSSION"
+    : "ALL";
   if (!type || !BUSINESS_ENTITY_TYPES.has(type) || !id) {
     return NextResponse.json({ error: "Ngữ cảnh xem nhanh không hợp lệ." }, { status: 400 });
   }
 
   try {
-    const preview = await getBusinessEntityPreviewAction({ type, id });
+    const preview = await getBusinessEntityPreviewAction({ type, id, activityMode });
     return NextResponse.json({ preview });
   } catch (error) {
     return NextResponse.json(

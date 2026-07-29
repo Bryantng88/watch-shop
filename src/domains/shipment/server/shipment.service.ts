@@ -27,6 +27,7 @@ import {
   createShipmentFromOrderRepo,
   getShipmentByIdRepo,
   getActiveShipmentByOrderIdRepo,
+  getShipmentCreateContextRepo,
   getShipmentListRepo,
   updateShipmentRepo,
 } from "./shipment.repo";
@@ -86,6 +87,43 @@ export async function getShipmentDetail(shipmentId: string) {
 
 export async function getActiveShipmentByOrderId(orderId: string) {
   return toPlain(await getActiveShipmentByOrderIdRepo(prisma as any, orderId));
+}
+
+function firstText(...values: Array<string | null | undefined>) {
+  return values.map((value) => String(value ?? "").trim()).find(Boolean) ?? "";
+}
+
+export async function getShipmentContextByOrderId(orderId: string) {
+  const [shipment, order] = await Promise.all([
+    getActiveShipmentByOrderIdRepo(prisma as any, orderId),
+    getShipmentCreateContextRepo(prisma as any, orderId),
+  ]);
+  if (!order) throw new Error("Order không tồn tại.");
+
+  const recipient = {
+    shipPhone: firstText(order.shipPhone, order.customer?.phone),
+    shipAddress: firstText(order.shipAddress, order.customer?.address),
+    shipCity: firstText(order.shipCity, order.customer?.city),
+    shipDistrict: firstText(order.shipDistrict, order.customer?.district),
+    shipWard: firstText(order.shipWard, order.customer?.ward),
+  };
+  const missingFields = [
+    !recipient.shipPhone ? "Số điện thoại" : null,
+    !recipient.shipAddress ? "Địa chỉ" : null,
+    !recipient.shipCity ? "Tỉnh / thành" : null,
+  ].filter((value): value is string => Boolean(value));
+
+  return toPlain({
+    shipment,
+    recipient,
+    recipientSource: order.shipPhone && order.shipAddress && order.shipCity
+      ? "ORDER"
+      : order.customerId
+        ? "CUSTOMER"
+        : "NONE",
+    customerId: order.customerId,
+    missingFields,
+  });
 }
 
 export async function updateShipment(input: { shipmentId: string; data: UpdateShipmentInput }) {
@@ -360,7 +398,11 @@ export async function createManualShipment(input: CreateManualShipmentInput) {
     const shipment = await createManualShipmentRepo(tx, input);
     await tx.order.update({
       where: { id: input.orderId },
-      data: { status: OrderStatus.PROCESSING, updatedAt: new Date() },
+      data: {
+        hasShipment: true,
+        status: OrderStatus.PROCESSING,
+        updatedAt: new Date(),
+      },
     });
     await syncWatchInventoryFromOrderId(tx, input.orderId);
     return {

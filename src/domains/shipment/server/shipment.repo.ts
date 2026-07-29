@@ -66,6 +66,30 @@ export async function getActiveShipmentByOrderIdRepo(db: DB | Tx, orderId: strin
   });
 }
 
+export async function getShipmentCreateContextRepo(db: DB | Tx, orderId: string) {
+  return (db as any).order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      customerId: true,
+      shipPhone: true,
+      shipAddress: true,
+      shipCity: true,
+      shipDistrict: true,
+      shipWard: true,
+      customer: {
+        select: {
+          phone: true,
+          address: true,
+          city: true,
+          district: true,
+          ward: true,
+        },
+      },
+    },
+  });
+}
+
 export async function getShipmentListRepo(db: DB | Tx, input: ShipmentListInput) {
   const page = Math.max(1, Number(input.page ?? 1));
   const pageSize = Math.min(100, Math.max(1, Number(input.pageSize ?? 20)));
@@ -236,12 +260,19 @@ export async function createManualShipmentRepo(tx: Tx, input: import("../shared"
       shipWard: true,
       status: true,
       hasShipment: true,
+      customer: {
+        select: {
+          phone: true,
+          address: true,
+          city: true,
+          district: true,
+          ward: true,
+        },
+      },
     },
   });
 
   if (!order) throw new Error("Order không tồn tại.");
-  if (!order.hasShipment) throw new Error("Order này không có giao hàng.");
-
   const activeShipment = await (tx as any).shipment.findFirst({
     where: {
       orderId: input.orderId,
@@ -255,17 +286,31 @@ export async function createManualShipmentRepo(tx: Tx, input: import("../shared"
     throw new Error("Order đang có shipment chưa hoàn trả/hủy. Chỉ tạo shipment giao lại sau khi shipment cũ đã RETURNED/CANCELLED.");
   }
 
+  const firstText = (...values: Array<string | null | undefined>) =>
+    values.map((value) => String(value ?? "").trim()).find(Boolean) ?? null;
+  const shipPhone = firstText(input.shipPhone, order.shipPhone, order.customer?.phone);
+  const shipAddress = firstText(input.shipAddress, order.shipAddress, order.customer?.address);
+  const shipCity = firstText(input.shipCity, order.shipCity, order.customer?.city);
+  const shipDistrict = firstText(input.shipDistrict, order.shipDistrict, order.customer?.district);
+  const shipWard = firstText(input.shipWard, order.shipWard, order.customer?.ward);
+
+  if (!shipPhone || !shipAddress || !shipCity) {
+    throw new Error(
+      "Khách hàng chưa có đủ thông tin vận chuyển. Vui lòng nhập số điện thoại, địa chỉ và tỉnh/thành.",
+    );
+  }
+
   return (tx as any).shipment.create({
     data: {
       refNo: await genShipmentRefNo(tx),
       orderId: input.orderId,
       orderRefNo: order.refNo ?? null,
       customerName: order.customerName ?? null,
-      shipPhone: input.shipPhone ?? order.shipPhone ?? null,
-      shipAddress: input.shipAddress ?? order.shipAddress ?? null,
-      shipCity: input.shipCity ?? order.shipCity ?? null,
-      shipDistrict: input.shipDistrict ?? order.shipDistrict ?? null,
-      shipWard: input.shipWard ?? order.shipWard ?? null,
+      shipPhone,
+      shipAddress,
+      shipCity,
+      shipDistrict,
+      shipWard,
       carrier: input.carrier ?? null,
       trackingCode: input.trackingCode ?? null,
       notes: input.notes ?? null,

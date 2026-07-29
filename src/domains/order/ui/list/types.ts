@@ -78,6 +78,7 @@ export type OrderListItem = {
   }[];
   source?: string | null;
   sourceLabel?: string | null;
+  notes?: string | null;
   createdByName?: string | null;
   previewImageUrl?: string | null;
   previewImageUrls?: string[];

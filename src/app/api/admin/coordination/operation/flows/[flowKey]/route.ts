@@ -70,6 +70,7 @@ export async function GET(
         flowKey: mode.key,
         flowItems: result.items,
         flowItemsPagination: result.pagination,
+        flowStageCounts: result.stageCounts,
       },
       { headers: { "Cache-Control": "no-store, max-age=0" } },
     );

@@ -50,6 +50,11 @@ function resolveShipmentProgressStatus(item: OrderListItem) {
   return "READY";
 }
 
+function canCreateShipment(item: OrderListItem) {
+  return !item.hasShipment && !["DRAFT", "CANCELLED", "CANCELED", "RETURNED"]
+    .includes(String(item.status ?? "").toUpperCase());
+}
+
 function OrderPreview({ item }: { item: OrderListItem }) {
   const images = item.previewImageUrls?.length
     ? item.previewImageUrls
@@ -159,6 +164,15 @@ export default function OrderListRow({
         </div>
       </td>
 
+      <td className="px-4 py-3">
+        <div
+          className="line-clamp-2 min-w-[180px] whitespace-pre-line text-sm leading-5 text-slate-600"
+          title={item.notes?.trim() || undefined}
+        >
+          {item.notes?.trim() || "-"}
+        </div>
+      </td>
+
       <td className="px-5 py-3 text-right">
         <PaymentAmountSummary
           className="min-w-[140px]"
@@ -206,10 +220,10 @@ export default function OrderListRow({
               onClick: onManagePayments,
             },
             !cancelled &&
-            item.hasShipment &&
+            (item.hasShipment || canCreateShipment(item)) &&
             onManageShipment && {
               key: "manage-shipment",
-              label: "Quản lý giao hàng",
+              label: item.hasShipment ? "Quản lý giao hàng" : "Tạo shipment",
               icon: <Truck className="h-4 w-4" />,
               onClick: onManageShipment,
             },

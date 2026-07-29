@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "check:media-boundaries": "node scripts/check-media-boundaries.mjs",
+    "check:manual-transition-outcome": "node scripts/check-manual-transition-outcome.mjs",
     "media:reconcile": "tsx scripts/media-reconcile.ts",
     "media:verify": "tsx scripts/verify-media-core.ts",
     "media:verify-segments": "tsx scripts/verify-segment-dashboards.ts",

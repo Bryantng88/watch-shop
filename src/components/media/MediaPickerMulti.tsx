@@ -534,6 +534,7 @@ export default function MediaPickerMulti({
                 onSubmit={handleDialogSubmit}
                 submitLabel="Xác nhận ảnh đã chọn"
                 contextImage={contextImage}
+                enableRecycle
             />
         </div>
     );

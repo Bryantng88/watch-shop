@@ -24,9 +24,10 @@ import {
 } from "@/domains/shared/business/business-entity-preview.actions";
 import { ActivityViewModelFeed } from "@/domains/task/ui/task-work/activity/ActivityFeed";
 import { markTaskItemMentionsReadAction } from "@/domains/task/actions/task.actions";
+import type { TaskItemActivityViewModel } from "@/domains/task/server/activity";
 
 async function loadBusinessEntityPreview(type: BusinessEntityType, id: string) {
-    const query = new URLSearchParams({ type, id });
+    const query = new URLSearchParams({ type, id, activityMode: "DISCUSSION" });
     const response = await fetch(`/api/admin/business-entity-preview?${query.toString()}`, {
         method: "GET",
         headers: { Accept: "application/json" },
@@ -162,8 +163,21 @@ function BusinessEntityActivityPanel({
     const [submitting, setSubmitting] = useState(false);
     const [commentError, setCommentError] = useState<string | null>(null);
     const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
+    const [activityTab, setActivityTab] = useState<"DISCUSSION" | "HISTORY">("DISCUSSION");
+    const [historyItems, setHistoryItems] = useState<TaskItemActivityViewModel[]>([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [historyError, setHistoryError] = useState<string | null>(null);
+    const [historyPage, setHistoryPage] = useState(1);
+    const [historyTotalPages, setHistoryTotalPages] = useState(1);
     const markedReadKeyRef = useRef<string | null>(null);
     const activity = preview.activity;
+    useEffect(() => {
+        setActivityTab("DISCUSSION");
+        setHistoryItems([]);
+        setHistoryError(null);
+        setHistoryPage(1);
+        setHistoryTotalPages(1);
+    }, [preview.id, preview.type]);
     useEffect(() => {
         if (!activity?.viewerUserId) return;
         const readKey = `${activity.taskItemId}:${preview.type}:${preview.id}`;
@@ -200,6 +214,36 @@ function BusinessEntityActivityPanel({
         }));
     }
 
+    async function loadHistory(page = 1) {
+        setActivityTab("HISTORY");
+        setHistoryLoading(true);
+        setHistoryError(null);
+        try {
+            const query = new URLSearchParams({
+                type: preview.type,
+                id: preview.id,
+                page: String(page),
+            });
+            const response = await fetch(
+                `/api/admin/business-entity-preview/activity?${query.toString()}`,
+                { headers: { Accept: "application/json" }, cache: "no-store" },
+            );
+            const result = await response.json().catch(() => null);
+            if (!response.ok) {
+                throw new Error(result?.error || "Không thể tải lịch sử activity.");
+            }
+            setHistoryItems(Array.isArray(result?.items) ? result.items : []);
+            setHistoryPage(Number(result?.pagination?.page ?? page));
+            setHistoryTotalPages(Number(result?.pagination?.totalPages ?? 1));
+        } catch (error) {
+            setHistoryError(
+                error instanceof Error ? error.message : "Không thể tải lịch sử activity.",
+            );
+        } finally {
+            setHistoryLoading(false);
+        }
+    }
+
     async function submitComment() {
         const text = body.trim();
         if (!text || submitting) return;
@@ -232,8 +276,8 @@ function BusinessEntityActivityPanel({
     return (
         <section className="rounded-3xl border border-slate-200/80 bg-white p-4 shadow-[0_4px_18px_rgba(15,23,42,0.035)]">
             <div>
-                <div className="text-sm font-semibold text-slate-950">Activity & trao đổi</div>
-                <div className="mt-0.5 text-xs text-slate-500">Lịch sử nghiệp vụ trong đúng ngữ cảnh đang xem.</div>
+                <div className="text-sm font-semibold text-slate-950">Trao đổi nghiệp vụ</div>
+                <div className="mt-0.5 text-xs text-slate-500">Ưu tiên comment, reply và mention trong đúng ngữ cảnh.</div>
             </div>
             {activity.discussionEnabled ? (
                 <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
@@ -281,9 +325,25 @@ function BusinessEntityActivityPanel({
                     </div>
                 </div>
             ) : null}
-            <div className="mt-5 [&>div]:!space-y-5 [&_article]:border-slate-200/80 [&_article]:shadow-[0_3px_12px_rgba(15,23,42,0.045)]">
+            <div className="mt-4 flex items-center gap-2">
+                <button type="button" onClick={() => setActivityTab("DISCUSSION")} className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${activityTab === "DISCUSSION" ? "border-violet-200 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-500"}`}>
+                    Trao đổi ({activity.items.length})
+                </button>
+                <button type="button" onClick={() => void loadHistory(historyPage)} className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${activityTab === "HISTORY" ? "border-violet-200 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-500"}`}>
+                    Lịch sử
+                </button>
+            </div>
+            <div className="mt-4 [&>div]:!space-y-5 [&_article]:border-slate-200/80 [&_article]:shadow-[0_3px_12px_rgba(15,23,42,0.045)]">
+                {historyLoading ? (
+                    <div className="flex items-center justify-center gap-2 py-8 text-sm text-slate-500">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Đang tải lịch sử...
+                    </div>
+                ) : historyError ? (
+                    <div className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{historyError}</div>
+                ) : (
                 <ActivityViewModelFeed
-                    items={activity.items}
+                    items={activityTab === "DISCUSSION" ? activity.items : historyItems}
                     mentionUsers={(activity.mentionableUsers ?? []).map((user) => ({
                         id: user.id,
                         name: user.label,
@@ -304,6 +364,14 @@ function BusinessEntityActivityPanel({
                     }}
                     onActivityChanged={() => onActivityChanged?.("COMMENT")}
                 />
+                )}
+                {activityTab === "HISTORY" && !historyLoading && historyTotalPages > 1 ? (
+                    <div className="flex items-center justify-end gap-2 pt-2">
+                        <button type="button" disabled={historyPage <= 1} onClick={() => void loadHistory(historyPage - 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs disabled:opacity-40">Trước</button>
+                        <span className="text-xs text-slate-500">{historyPage}/{historyTotalPages}</span>
+                        <button type="button" disabled={historyPage >= historyTotalPages} onClick={() => void loadHistory(historyPage + 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs disabled:opacity-40">Sau</button>
+                    </div>
+                ) : null}
             </div>
         </section>
     );

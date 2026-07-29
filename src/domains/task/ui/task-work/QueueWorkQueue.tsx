@@ -44,7 +44,7 @@ import {
 import { useManualTransitionFeedback } from "./use-manual-transition-feedback";
 import {
   manualTransitionActionLabel,
-  manualTransitionMovesOutOfCurrentStage,
+  manualTransitionOutcomeMovesOutOfCurrentStage,
 } from "./manual-transition-feedback";
 import {
   isWorkspaceTransitionOutcome,
@@ -1203,6 +1203,15 @@ export function QueueWorkQueue({
   const isServiceOperationWorkspace = workspaceWorkTypeKey === "service-operation";
   const isPaymentWorkspace = workspaceWorkTypeKey === "payment";
   const canCreateTechnicalIssue = Boolean(serviceRequestId);
+  useEffect(() => {
+    const authoritativeIds = new Set(items.map((item) => item.id));
+    setCompletedItemIds((current) =>
+      current.filter((id) => authoritativeIds.has(id)),
+    );
+    setSelectedIds((current) =>
+      current.filter((id) => authoritativeIds.has(id)),
+    );
+  }, [items]);
   const activeItems = items.filter((item) => !completedItemIds.includes(item.id));
   const reconcileEmbeddedTransition = (
     itemId: string,
@@ -1718,7 +1727,8 @@ export function QueueWorkQueue({
         if (!result?.result?.applied) {
           throw new Error(result?.result?.reason ?? "WORKFLOW_ACTION_NOT_APPLIED");
         }
-        if (manualTransitionMovesOutOfCurrentStage(transition)) {
+        const movedOut = manualTransitionOutcomeMovesOutOfCurrentStage(result.result);
+        if (movedOut) {
           setCompletedItemIds((current) => [...current, queueItem.id]);
           setSelectedIds((current) => current.filter((id) => id !== queueItem.id));
         }
@@ -1748,13 +1758,17 @@ export function QueueWorkQueue({
           });
         }
         if (!isRecallAction && !isPhotoshootCompletion) {
-          transitionFeedback.success(transition, {
-            id: queueItem.id,
-            label: queueItem.preview.title || queueItem.preview.ref,
-          });
+          transitionFeedback.success(
+            transition,
+            {
+              id: queueItem.id,
+              label: queueItem.preview.title || queueItem.preview.ref,
+            },
+            result.result,
+          );
         }
         setActionError(null);
-        if (!manualTransitionMovesOutOfCurrentStage(transition)) {
+        if (!movedOut) {
           window.setTimeout(() => router.refresh(), 0);
         }
       } catch (error) {
@@ -1889,12 +1903,11 @@ export function QueueWorkQueue({
         const succeededIds = result.results
           .filter((entry) => entry.ok)
           .map((entry) => entry.bindingId);
-        const completedIds = selectedTransitions
-          .filter(({ queueItem, transition }) =>
-            succeededIds.includes(queueItem.id) &&
-            manualTransitionMovesOutOfCurrentStage(transition),
+        const completedIds = result.results
+          .filter((entry) =>
+            entry.ok && manualTransitionOutcomeMovesOutOfCurrentStage(entry)
           )
-          .map(({ queueItem }) => queueItem.id);
+          .map((entry) => entry.bindingId);
         if (completedIds.length) {
           setCompletedItemIds((current) => [...current, ...completedIds]);
         }
@@ -1926,9 +1939,20 @@ export function QueueWorkQueue({
           result.results,
         );
         if (!result.ok) {
+          const labels = new Map(
+            selectedTransitions.map(({ queueItem }) => [
+              queueItem.id,
+              queueItem.preview.title || queueItem.preview.ref || queueItem.id,
+            ]),
+          );
+          const failureDetails = result.results
+            .filter((entry) => !entry.ok)
+            .map((entry) =>
+              `${labels.get(entry.bindingId) || entry.bindingId}: ${entry.reason || "Không thể thực hiện transition"}`
+            );
           setActionError({
             itemId: "bulk",
-            message: `Đã xử lý ${result.applied}/${selectedCount} item. ${result.failed} item lỗi được giữ lại.`,
+            message: `Đã xử lý ${result.applied}/${selectedCount} item. Lỗi: ${failureDetails.join("; ")}`,
           });
         }
       } catch (error) {
