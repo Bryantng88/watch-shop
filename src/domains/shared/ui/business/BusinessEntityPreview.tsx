@@ -66,7 +66,9 @@ function TechnicalIssueEditPanel({ preview }: { preview: BusinessEntityPreview }
     const inputClass = "h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100";
 
     async function save() {
-        if (!values.summary.trim()) {
+        const currentValues = values;
+        if (!currentValues) return;
+        if (!currentValues.summary.trim()) {
             setError("Vui lòng nhập nội dung TI.");
             return;
         }
@@ -75,7 +77,7 @@ function TechnicalIssueEditPanel({ preview }: { preview: BusinessEntityPreview }
         try {
             await updateTechnicalIssuePreviewAction({
                 id: preview.id,
-                ...values,
+                ...currentValues,
             });
             setEditing(false);
             router.refresh();
@@ -106,7 +108,21 @@ function TechnicalIssueEditPanel({ preview }: { preview: BusinessEntityPreview }
                     </label>
                     <label>
                         <span className="mb-1 block text-xs font-semibold text-slate-600">Khu vực kỹ thuật</span>
-                        <select className={inputClass} value={values.area} onChange={(event) => setValues({ ...values, area: event.target.value })}>
+                        <select
+                            className={inputClass}
+                            value={values.area}
+                            onChange={(event) => {
+                                const area = event.target.value;
+                                setValues({
+                                    ...values,
+                                    area,
+                                    machine: {
+                                        ...values.machine,
+                                        enabled: area === "MOVEMENT",
+                                    },
+                                });
+                            }}
+                        >
                             {TECHNICAL_AREAS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                         </select>
                     </label>
@@ -138,6 +154,84 @@ function TechnicalIssueEditPanel({ preview }: { preview: BusinessEntityPreview }
                         <span className="mb-1 block text-xs font-semibold text-slate-600">Ghi chú kỹ thuật</span>
                         <textarea rows={3} className={`${inputClass} h-auto py-2`} value={values.note} onChange={(event) => setValues({ ...values, note: event.target.value })} />
                     </label>
+                    {values.machine.enabled ? (
+                        <div className="sm:col-span-2 rounded-2xl border border-slate-200 bg-white p-4">
+                            <div className="flex flex-wrap items-start justify-between gap-2">
+                                <div>
+                                    <div className="text-sm font-semibold text-slate-900">Thông số máy</div>
+                                    <div className="mt-0.5 text-xs text-slate-500">
+                                        Mã máy đồng bộ trực tiếp với Watch.
+                                    </div>
+                                </div>
+                                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                                    {values.machine.mechanical ? "Máy cơ" : "Máy pin"}
+                                </span>
+                            </div>
+                            <label className="mt-3 block">
+                                <span className="mb-1 block text-xs font-semibold text-slate-600">Mã máy</span>
+                                <input
+                                    className={inputClass}
+                                    value={values.machine.movementCalibre}
+                                    placeholder="NH35A, 7S26, ETA 2824-2..."
+                                    onChange={(event) => setValues({
+                                        ...values,
+                                        machine: {
+                                            ...values.machine,
+                                            movementCalibre: event.target.value,
+                                        },
+                                    })}
+                                />
+                            </label>
+                            {values.machine.mechanical ? (
+                                <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                                    {([
+                                        ["before", "Trước xử lý"],
+                                        ["after", "Sau xử lý"],
+                                    ] as const).map(([phase, label]) => (
+                                        <div key={phase} className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                                            <div className="mb-3 text-xs font-bold uppercase tracking-[0.08em] text-slate-500">
+                                                {label}
+                                            </div>
+                                            <div className="grid gap-2 sm:grid-cols-3">
+                                                {([
+                                                    ["rate", "Sai số", "s/day", "1"],
+                                                    ["amplitude", "Biên độ", "°", "1"],
+                                                    ["beatError", "Lệch nhịp", "ms", "0.1"],
+                                                ] as const).map(([field, fieldLabel, unit, step]) => (
+                                                    <label key={field}>
+                                                        <span className="mb-1 block text-[11px] font-semibold text-slate-600">
+                                                            {fieldLabel}
+                                                        </span>
+                                                        <div className="relative">
+                                                            <input
+                                                                type="number"
+                                                                step={step}
+                                                                className={`${inputClass} pr-14`}
+                                                                value={values.machine[phase][field]}
+                                                                onChange={(event) => setValues({
+                                                                    ...values,
+                                                                    machine: {
+                                                                        ...values.machine,
+                                                                        [phase]: {
+                                                                            ...values.machine[phase],
+                                                                            [field]: event.target.value,
+                                                                        },
+                                                                    },
+                                                                })}
+                                                            />
+                                                            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[11px] font-medium text-slate-400">
+                                                                {unit}
+                                                            </span>
+                                                        </div>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : null}
+                        </div>
+                    ) : null}
                     {error ? <div className="sm:col-span-2 text-sm font-medium text-rose-600">{error}</div> : null}
                     <div className="flex justify-end sm:col-span-2">
                         <button type="button" disabled={saving} onClick={() => void save()} className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:bg-slate-300">

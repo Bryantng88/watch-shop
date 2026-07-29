@@ -75,6 +75,21 @@ export type BusinessEntityPreview = {
             vendorId: string;
             estimatedCost: string;
             expectedWorkingDays: string;
+            machine: {
+                enabled: boolean;
+                mechanical: boolean;
+                movementCalibre: string;
+                before: {
+                    rate: string;
+                    amplitude: string;
+                    beatError: string;
+                };
+                after: {
+                    rate: string;
+                    amplitude: string;
+                    beatError: string;
+                };
+            };
         };
         vendorOptions: Array<{ id: string; name: string }>;
     };

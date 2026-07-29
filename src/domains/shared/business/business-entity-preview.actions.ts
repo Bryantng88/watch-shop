@@ -15,8 +15,12 @@ import type {
     BusinessEntityPreview,
     BusinessEntityType,
 } from "./business-entity.types";
-import { updateTechnicalIssue } from "@/domains/service/server";
+import {
+    updateServiceMovementMeasurement,
+    updateTechnicalIssue,
+} from "@/domains/service/server";
 import { perfStep } from "@/lib/server-perf";
+import { resolveProductDisplayImage } from "@/domains/shared/media/server/display-image";
 
 type ProductPreviewImageSource = {
     primaryImageUrl?: string | null;
@@ -293,9 +297,10 @@ export async function getBusinessEntityPreviewAction(input: {
                     ? `SKU: ${row.skuSnapshot || row.product?.sku}`
                     : compactId(row.id),
             status: row.status,
-            imageUrl:
-                mediaUrl(row.primaryImageUrlSnapshot) ||
-                imageUrlFromProduct(row.product),
+            imageUrl: resolveProductDisplayImage(
+                row.product,
+                row.primaryImageUrlSnapshot,
+            ),
             href: workspaceHref ?? `/admin/service/${row.id}`,
             facts: [
                 { label: "Status", value: row.status || "-" },
@@ -347,8 +352,14 @@ export async function getBusinessEntityPreviewAction(input: {
             include: {
                 serviceRequest: {
                     include: {
+                        technicalAssessment: true,
                         product: {
                             include: {
+                                watch: {
+                                    include: {
+                                        watchSpecV2: true,
+                                    },
+                                },
                                 productImage: {
                                     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
                                     take: 1,
@@ -416,6 +427,14 @@ export async function getBusinessEntityPreviewAction(input: {
             ? `/admin/task-items/${sr.TaskExecution[0].taskItemId}`
             : null;
         const technicalWorkspaceItem = row.TaskExecution?.[0]?.taskItem ?? null;
+        const movementType = String(
+            sr.product?.watch?.movementType ??
+            sr.product?.watch?.watchSpecV2?.movementType ??
+            "",
+        ).toUpperCase();
+        const mechanical = !["QUARTZ", "SOLAR", "KINETIC", "MECHAQUARTZ", "HYBRID"]
+            .includes(movementType);
+        const assessment = sr.technicalAssessment;
         const isEditable = !["DONE", "CANCELED", "CANCELLED"].includes(
             String(row.executionStatus).toUpperCase(),
         );
@@ -475,9 +494,10 @@ export async function getBusinessEntityPreviewAction(input: {
                 ? `SR: ${sr.refNo}`
                 : sr.skuSnapshot || sr.product?.sku || compactId(sr.id),
             status: row.executionStatus,
-            imageUrl:
-                mediaUrl(sr.primaryImageUrlSnapshot) ||
-                imageUrlFromProduct(sr.product),
+            imageUrl: resolveProductDisplayImage(
+                sr.product,
+                sr.primaryImageUrlSnapshot,
+            ),
             facts: [
                 {
                     label: "SR",
@@ -492,6 +512,37 @@ export async function getBusinessEntityPreviewAction(input: {
                 { label: "Vendor", value: row.vendor?.name || row.vendorNameSnap || "-" },
                 { label: "Chi phí dự kiến", value: row.estimatedCost?.toString() || "-" },
                 { label: "Ghi chú kỹ thuật", value: row.note || "-" },
+                ...(String(row.area ?? "").toUpperCase() === "MOVEMENT"
+                    ? [
+                        {
+                            label: "Mã máy",
+                            value:
+                                sr.product?.watch?.movementCalibre ??
+                                sr.product?.watch?.watchSpecV2?.calibre ??
+                                "-",
+                        },
+                        ...(mechanical
+                            ? [
+                                {
+                                    label: "Đo trước xử lý",
+                                    value: [
+                                        assessment?.preRate != null ? `${assessment.preRate} s/day` : null,
+                                        assessment?.preAmplitude != null ? `${assessment.preAmplitude}°` : null,
+                                        assessment?.preBeatError != null ? `${assessment.preBeatError} ms` : null,
+                                    ].filter(Boolean).join(" · ") || "-",
+                                },
+                                {
+                                    label: "Đo sau xử lý",
+                                    value: [
+                                        assessment?.postRate != null ? `${assessment.postRate} s/day` : null,
+                                        assessment?.postAmplitude != null ? `${assessment.postAmplitude}°` : null,
+                                        assessment?.postBeatError != null ? `${assessment.postBeatError} ms` : null,
+                                    ].filter(Boolean).join(" · ") || "-",
+                                },
+                            ]
+                            : []),
+                    ]
+                    : []),
             ],
             activity,
             sections: [
@@ -525,6 +576,24 @@ export async function getBusinessEntityPreviewAction(input: {
                         vendorId: row.vendorId ?? "",
                         estimatedCost: row.estimatedCost?.toString() ?? "",
                         expectedWorkingDays: row.expectedWorkingDays?.toString() ?? "",
+                        machine: {
+                            enabled: String(row.area ?? "").toUpperCase() === "MOVEMENT",
+                            mechanical,
+                            movementCalibre:
+                                sr.product?.watch?.movementCalibre ??
+                                sr.product?.watch?.watchSpecV2?.calibre ??
+                                "",
+                            before: {
+                                rate: assessment?.preRate?.toString() ?? "",
+                                amplitude: assessment?.preAmplitude?.toString() ?? "",
+                                beatError: assessment?.preBeatError?.toString() ?? "",
+                            },
+                            after: {
+                                rate: assessment?.postRate?.toString() ?? "",
+                                amplitude: assessment?.postAmplitude?.toString() ?? "",
+                                beatError: assessment?.postBeatError?.toString() ?? "",
+                            },
+                        },
                     },
                     vendorOptions,
                 }
@@ -544,6 +613,21 @@ export async function updateTechnicalIssuePreviewAction(input: {
     vendorId?: string | null;
     estimatedCost?: string | number | null;
     expectedWorkingDays?: string | number | null;
+    machine?: {
+        enabled?: boolean;
+        mechanical?: boolean;
+        movementCalibre?: string;
+        before?: {
+            rate?: string;
+            amplitude?: string;
+            beatError?: string;
+        };
+        after?: {
+            rate?: string;
+            amplitude?: string;
+            beatError?: string;
+        };
+    };
 }) {
     const auth = await requirePermission("SERVICE_UPDATE");
     const issue = await prisma.technicalIssue.findUnique({
@@ -564,6 +648,9 @@ export async function updateTechnicalIssuePreviewAction(input: {
     if (String(input.actionMode).toUpperCase() === "VENDOR" && !input.vendorId) {
         throw new Error("Vui lòng chọn vendor.");
     }
+    if (input.machine?.enabled && !String(input.machine.movementCalibre ?? "").trim()) {
+        throw new Error("Vui lòng nhập mã máy.");
+    }
 
     await updateTechnicalIssue({
         id: input.id,
@@ -577,6 +664,23 @@ export async function updateTechnicalIssuePreviewAction(input: {
         expectedWorkingDays: input.expectedWorkingDays,
         deferConsumers: (work) => after(work),
     });
+    if (input.machine?.enabled) {
+        const serviceRequest = await prisma.technicalIssue.findUnique({
+            where: { id: input.id },
+            select: { serviceRequestId: true },
+        });
+        if (!serviceRequest?.serviceRequestId) {
+            throw new Error("Không tìm thấy Service Request của TI.");
+        }
+        await updateServiceMovementMeasurement({
+            serviceRequestId: serviceRequest.serviceRequestId,
+            movementCalibre: input.machine.movementCalibre ?? "",
+            before: input.machine.before,
+            after: input.machine.after,
+            actorUserId: getAuthUserId(auth),
+            deferConsumers: (work) => after(work),
+        });
+    }
 
     return { ok: true };
 }

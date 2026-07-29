@@ -39,6 +39,7 @@ import type {
 import type { CoordinationContext } from "./coordination-cycle.types";
 import { getPaymentOwnerSummaryProjections } from "@/domains/projection/server/payment-owner-summary.projection";
 import { perfStep } from "@/lib/server-perf";
+import { resolveProductDisplayImage } from "@/domains/shared/media/server/display-image";
 import { getAuthUserId } from "@/domains/task/server/core/task.service";
 import {
   isPaymentCollectionSettledStatus,
@@ -122,6 +123,20 @@ function imageUrlFromProduct(product?: {
     null;
 
   return mediaUrl(key);
+}
+
+function imageUrlFromServiceRequest(serviceRequest?: {
+  primaryImageUrlSnapshot?: string | null;
+  product?: {
+    primaryImageUrl?: string | null;
+    storefrontImageKey?: string | null;
+    productImage?: Array<{ fileKey?: string | null }> | null;
+  } | null;
+} | null) {
+  return resolveProductDisplayImage(
+    serviceRequest?.product,
+    serviceRequest?.primaryImageUrlSnapshot,
+  );
 }
 
 function parseDateInput(value?: string | null) {
@@ -2108,10 +2123,7 @@ async function loadTechnicalIssueBoardLive(input: {
             issue.serviceRequest?.skuSnapshot ??
             issue.serviceRequest?.product?.sku ??
             null,
-          imageUrl:
-            issue.serviceRequest?.primaryImageUrlSnapshot ??
-            issue.serviceRequest?.product?.primaryImageUrl ??
-            null,
+          imageUrl: imageUrlFromServiceRequest(issue.serviceRequest),
         },
       };
     })
@@ -2543,7 +2555,7 @@ async function loadWorkspaceIdentityPreviewMap(input: {
         targetId: identity.targetId,
         title: row.modelSnapshot ?? row.product?.title ?? row.refNo ?? "Service Request",
         ref: row.refNo ?? row.skuSnapshot ?? row.product?.sku ?? null,
-        imageUrl: mediaUrl(row.primaryImageUrlSnapshot) ?? imageUrlFromProduct(row.product),
+        imageUrl: imageUrlFromServiceRequest(row),
       });
     } else if (identity.targetType === TaskExecutionTargetType.WATCH) {
       const row = watchById.get(identity.targetId);

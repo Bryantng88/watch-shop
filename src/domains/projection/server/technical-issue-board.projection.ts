@@ -7,6 +7,7 @@ import {
 import { parseWorkspaceDefinitionSnapshot } from "@/domains/blueprint/shared/workspace-capabilities";
 import type { BusinessEventDispatchContext } from "@/domains/event/dispatcher/business-event-consumer.types";
 import type { CoordinationTechnicalIssueBoardItemDTO } from "@/domains/coordination/server/coordination-dashboard.types";
+import { resolveProductDisplayImage } from "@/domains/shared/media/server/display-image";
 import { dbOrTx, type DB } from "@/server/db/client";
 import { operationBoardDoneCutoff } from "./operation-board-retention.policy";
 import {
@@ -302,10 +303,10 @@ export async function buildTechnicalIssueBoardRow(
       refNo: issue.serviceRequest.refNo,
       productTitle: issue.serviceRequest.product?.title ?? null,
       sku: issue.serviceRequest.skuSnapshot ?? issue.serviceRequest.product?.sku ?? null,
-      imageUrl:
-        issue.serviceRequest.primaryImageUrlSnapshot ??
-        issue.serviceRequest.product?.primaryImageUrl ??
-        null,
+      imageUrl: resolveProductDisplayImage(
+        issue.serviceRequest.product,
+        issue.serviceRequest.primaryImageUrlSnapshot,
+      ),
     },
     workspaceId: binding.taskId,
     source,

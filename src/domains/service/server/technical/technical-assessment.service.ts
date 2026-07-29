@@ -7,6 +7,7 @@ import {
     TechnicalAssessmentStatus,
     TechnicalIssueExecutionStatus,
 } from "@prisma/client";
+import { emitWatchSpecUpdatedEvent } from "@/domains/watch/server/events";
 
 function toNumberOrNull(v: any) {
     if (v === "" || v === null || v === undefined) return null;
@@ -163,6 +164,134 @@ function inferPostAmplitude(input: any) {
 }
 function inferPostBeatError(input: any) {
     return toNumberOrNull(input?.movement?.afterSpecs?.err ?? input?.postBeatError);
+}
+
+function isMechanicalMovement(value: unknown) {
+    return !["QUARTZ", "SOLAR", "KINETIC", "MECHAQUARTZ", "HYBRID"].includes(
+        String(value ?? "").trim().toUpperCase(),
+    );
+}
+
+export async function updateServiceMovementMeasurement(input: {
+    serviceRequestId: string;
+    movementCalibre: string;
+    before?: {
+        rate?: string | number | null;
+        amplitude?: string | number | null;
+        beatError?: string | number | null;
+    } | null;
+    after?: {
+        rate?: string | number | null;
+        amplitude?: string | number | null;
+        beatError?: string | number | null;
+    } | null;
+    actorUserId?: string | null;
+    deferConsumers?: (work: () => Promise<void>) => void;
+}) {
+    const movementCalibre = toText(input.movementCalibre);
+    if (!movementCalibre) throw new Error("Vui lòng nhập mã máy.");
+
+    const result = await prisma.$transaction(async (tx) => {
+        const serviceRequest = await tx.serviceRequest.findUnique({
+            where: { id: input.serviceRequestId },
+            select: {
+                id: true,
+                product: {
+                    select: {
+                        id: true,
+                        title: true,
+                        sku: true,
+                        watch: {
+                            select: {
+                                id: true,
+                                productId: true,
+                                movementType: true,
+                                movementCalibre: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        const watch = serviceRequest?.product?.watch;
+        if (!serviceRequest || !watch) {
+            throw new Error("Không tìm thấy Watch của Service Request.");
+        }
+
+        const mechanical = isMechanicalMovement(watch.movementType);
+        const measurement = mechanical
+            ? {
+                preRate: toNumberOrNull(input.before?.rate),
+                preAmplitude: toNumberOrNull(input.before?.amplitude),
+                preBeatError: toNumberOrNull(input.before?.beatError),
+                postRate: toNumberOrNull(input.after?.rate),
+                postAmplitude: toNumberOrNull(input.after?.amplitude),
+                postBeatError: toNumberOrNull(input.after?.beatError),
+            }
+            : {
+                preRate: null,
+                preAmplitude: null,
+                preBeatError: null,
+                postRate: null,
+                postAmplitude: null,
+                postBeatError: null,
+            };
+
+        await tx.watch.update({
+            where: { id: watch.id },
+            data: { movementCalibre },
+        });
+        await tx.watchSpecV2.upsert({
+            where: { watchId: watch.id },
+            create: {
+                watchId: watch.id,
+                movementType: watch.movementType,
+                calibre: movementCalibre,
+            },
+            update: { calibre: movementCalibre },
+        });
+        await tx.technicalAssessment.upsert({
+            where: { serviceRequestId: serviceRequest.id },
+            create: {
+                serviceRequestId: serviceRequest.id,
+                movementKind: mechanical ? "MECHANICAL" : "BATTERY",
+                status: TechnicalAssessmentStatus.IN_PROGRESS,
+                ...measurement,
+            },
+            update: {
+                movementKind: mechanical ? "MECHANICAL" : "BATTERY",
+                status: TechnicalAssessmentStatus.IN_PROGRESS,
+                updatedAt: new Date(),
+                ...measurement,
+            },
+        });
+
+        return {
+            watch: {
+                id: watch.id,
+                productId: watch.productId,
+                product: {
+                    title: serviceRequest.product?.title ?? null,
+                    sku: serviceRequest.product?.sku ?? null,
+                },
+            },
+            previousCalibre: watch.movementCalibre,
+            movementCalibre,
+            mechanical,
+            measurement,
+        };
+    });
+
+    if (result.previousCalibre !== result.movementCalibre) {
+        await emitWatchSpecUpdatedEvent(prisma, {
+            watch: result.watch,
+            actorUserId: input.actorUserId ?? null,
+            before: { movementCalibre: result.previousCalibre },
+            after: { movementCalibre: result.movementCalibre },
+        }, { deferConsumers: input.deferConsumers });
+    }
+
+    return result;
 }
 
 function inferConclusion(input: any) {
@@ -467,6 +596,7 @@ export async function openTechnicalAssessment(serviceRequestId: string) {
 
         return created;
     });
+
 }
 
 async function resolveServiceRequestIdForSave(input: any) {
@@ -501,7 +631,7 @@ export async function saveTechnicalAssessment(input: any) {
         serviceRequestId,
     };
 
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
         const sr = await tx.serviceRequest.findUnique({
             where: { id: serviceRequestId },
             select: {
@@ -510,9 +640,19 @@ export async function saveTechnicalAssessment(input: any) {
                 technicianNameSnap: true,
                 product: {
                     select: {
+                        title: true,
+                        sku: true,
                         watchSpec: {
                             select: {
                                 movement: true,
+                            },
+                        },
+                        watch: {
+                            select: {
+                                id: true,
+                                productId: true,
+                                movementType: true,
+                                movementCalibre: true,
                             },
                         },
                     },
@@ -524,7 +664,11 @@ export async function saveTechnicalAssessment(input: any) {
             throw new Error("Service request not found");
         }
 
-        const productMovement = sr.product?.watchSpec?.movement ?? null;
+        const productMovement =
+            sr.product?.watch?.movementType ??
+            sr.product?.watchSpec?.movement ??
+            null;
+        const requestedCalibre = toText(payload?.movement?.calibre);
 
         const vendorIds = new Set<string>();
         const singleVendorId = inferVendorIdFromPayload(payload);
@@ -587,6 +731,22 @@ export async function saveTechnicalAssessment(input: any) {
             evaluatedByNameSnap: sr.technicianNameSnap ?? null,
         });
 
+        if (requestedCalibre && sr.product?.watch) {
+            await tx.watch.update({
+                where: { id: sr.product.watch.id },
+                data: { movementCalibre: requestedCalibre },
+            });
+            await tx.watchSpecV2.upsert({
+                where: { watchId: sr.product.watch.id },
+                create: {
+                    watchId: sr.product.watch.id,
+                    movementType: sr.product.watch.movementType,
+                    calibre: requestedCalibre,
+                },
+                update: { calibre: requestedCalibre },
+            });
+        }
+
         await syncTechnicalIssuesFromAssessment(tx, {
             assessmentId: assessment.id,
             serviceRequestId,
@@ -607,8 +767,37 @@ export async function saveTechnicalAssessment(input: any) {
             ok: true,
             serviceRequestId,
             item: assessment,
+            watchSpecUpdate:
+                requestedCalibre && sr.product?.watch
+                    ? {
+                        watch: {
+                            id: sr.product.watch.id,
+                            productId: sr.product.watch.productId,
+                            product: {
+                                title: sr.product.title ?? null,
+                                sku: sr.product.sku ?? null,
+                            },
+                        },
+                        before: sr.product.watch.movementCalibre,
+                        after: requestedCalibre,
+                    }
+                    : null,
         };
     });
+
+    if (
+        result.watchSpecUpdate &&
+        result.watchSpecUpdate.before !== result.watchSpecUpdate.after
+    ) {
+        await emitWatchSpecUpdatedEvent(prisma, {
+            watch: result.watchSpecUpdate.watch,
+            actorUserId: input.actorUserId ?? null,
+            before: { movementCalibre: result.watchSpecUpdate.before },
+            after: { movementCalibre: result.watchSpecUpdate.after },
+        }, { deferConsumers: input.deferConsumers });
+    }
+
+    return result;
 }
 
 export async function completeTechnicalAssessment(assessmentId: string) {

@@ -57,6 +57,19 @@ export async function getPanel(serviceRequestId: string) {
                             ref: true,
                         },
                     },
+                    watch: {
+                        select: {
+                            id: true,
+                            movementType: true,
+                            movementCalibre: true,
+                            watchSpecV2: {
+                                select: {
+                                    movementType: true,
+                                    calibre: true,
+                                },
+                            },
+                        },
+                    },
                     productImage: {
                         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
                         take: 8,
@@ -95,14 +108,14 @@ export async function getPanel(serviceRequestId: string) {
                     TechnicalIssue: {
                         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
                         include: {
-                            Vendor: { select: { id: true, name: true } },
-                            User: { select: { id: true, name: true, email: true } },
+                            vendor: { select: { id: true, name: true } },
+                            user: { select: { id: true, name: true, email: true } },
                             serviceCatalog: { select: { id: true, code: true, name: true } },
                             SupplyCatalog: { select: { id: true, code: true, name: true } },
                             MechanicalPartCatalog: {
                                 select: { id: true, code: true, name: true },
                             },
-                            MaintenanceRecord: {
+                            maintenanceRecord: {
                                 orderBy: { createdAt: "desc" },
                                 select: {
                                     id: true,
@@ -191,6 +204,15 @@ export async function getPanel(serviceRequestId: string) {
             skuSnapshot: sr.skuSnapshot ?? null,
             productTitle: sr.modelSnapshot ?? sr.product?.title ?? null,
             movement: sr.product?.watchSpec?.movement ?? null,
+            movementType:
+                sr.product?.watch?.movementType ??
+                sr.product?.watch?.watchSpecV2?.movementType ??
+                sr.product?.watchSpec?.movement ??
+                null,
+            movementCalibre:
+                sr.product?.watch?.movementCalibre ??
+                sr.product?.watch?.watchSpecV2?.calibre ??
+                null,
             model: sr.modelSnapshot ?? sr.product?.watchSpec?.model ?? null,
             ref: sr.refSnapshot ?? sr.product?.watchSpec?.ref ?? null,
             primaryImageUrl:
@@ -263,12 +285,12 @@ export async function getPanel(serviceRequestId: string) {
                     confirmedAt: (x as any).confirmedAt ?? null,
                     confirmedById: (x as any).confirmedById ?? null,
                     confirmedByNameSnap: (x as any).confirmedByNameSnap ?? null,
-                    Vendor: x.Vendor,
-                    User: x.User,
+                    Vendor: x.vendor,
+                    User: x.user,
                     ServiceCatalog: x.serviceCatalog,
                     SupplyCatalog: x.SupplyCatalog,
                     MechanicalPartCatalog: x.MechanicalPartCatalog,
-                    MaintenanceRecord: x.MaintenanceRecord.map((r) => ({
+                    MaintenanceRecord: x.maintenanceRecord.map((r) => ({
                         ...r,
                         totalCost: r.totalCost != null ? Number(r.totalCost) : null,
                     })),

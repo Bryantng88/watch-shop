@@ -355,6 +355,7 @@ export default function TechnicalAssessmentInlinePanelContainer({
 
     React.useEffect(() => {
         const next = createInitialFormState(inheritedMachineType);
+        next.movementCalibre = panel?.serviceRequest?.movementCalibre ?? "";
 
         if (assessment) {
             next.movementStatus = assessment.movementStatus === "ISSUE" ? "ISSUE" : "GOOD";
@@ -373,7 +374,6 @@ export default function TechnicalAssessmentInlinePanelContainer({
                 err: assessment.postBeatError != null ? String(assessment.postBeatError) : "",
             };
             next.technicalImageFileKey = assessment?.imageFileKey ?? "";
-            next.movementCalibre = panel?.serviceRequest?.movementCalibre ?? "";
         }
 
         const movementIssues = technicalIssues.filter(
@@ -576,6 +576,10 @@ export default function TechnicalAssessmentInlinePanelContainer({
     }
 
     function validateBeforeSave() {
+        if (!form.movementCalibre.trim()) {
+            throw new Error("Vui lòng nhập mã máy.");
+        }
+
         if (form.movementStatus === "ISSUE") {
             const editableMovementLines = form.movementLines.filter((x) => !x.isFromBoard);
 

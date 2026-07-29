@@ -97,6 +97,7 @@ type ScoreBlock = {
 type FormState = {
     machineType: MachineType;
     movementStatus: HealthStatus;
+    movementCalibre: string;
     showBeforeSpecs: boolean;
     beforeSpecs: {
         rate: string;
@@ -152,6 +153,8 @@ type PanelResponse = {
         sku?: string | null;
         primaryImageUrl?: string | null;
         movement?: string | null;
+        movementType?: string | null;
+        movementCalibre?: string | null;
     };
     assessment?: any;
     technicalAssessment?: any;
@@ -228,6 +231,7 @@ function createInitialState(machineType: MachineType): FormState {
     return {
         machineType,
         movementStatus: "GOOD",
+        movementCalibre: "",
         showBeforeSpecs: false,
         beforeSpecs: { rate: "", amp: "", err: "" },
         afterSpecs: { rate: "", amp: "", err: "" },
@@ -723,7 +727,34 @@ export default function TechnicalAssessmentModal({
                     const data = json?.data ?? json;
                     setPanel(data);
                     setCatalogs(data?.catalogs ?? null);
-                    setForm(createInitialState(mapMovementSpecLabelToMachineType(data?.serviceRequest?.movement ?? movementSpecLabel)));
+                    const next = createInitialState(
+                        mapMovementSpecLabelToMachineType(
+                            data?.serviceRequest?.movementType ??
+                            data?.serviceRequest?.movement ??
+                            movementSpecLabel,
+                        ),
+                    );
+                    const assessment = data?.assessment ?? data?.technicalAssessment;
+                    next.movementCalibre = data?.serviceRequest?.movementCalibre ?? "";
+                    if (assessment) {
+                        next.movementStatus =
+                            assessment.movementStatus === "ISSUE" ? "ISSUE" : "GOOD";
+                        next.showBeforeSpecs =
+                            assessment.preRate != null ||
+                            assessment.preAmplitude != null ||
+                            assessment.preBeatError != null;
+                        next.beforeSpecs = {
+                            rate: assessment.preRate != null ? String(assessment.preRate) : "",
+                            amp: assessment.preAmplitude != null ? String(assessment.preAmplitude) : "",
+                            err: assessment.preBeatError != null ? String(assessment.preBeatError) : "",
+                        };
+                        next.afterSpecs = {
+                            rate: assessment.postRate != null ? String(assessment.postRate) : "",
+                            amp: assessment.postAmplitude != null ? String(assessment.postAmplitude) : "",
+                            err: assessment.postBeatError != null ? String(assessment.postBeatError) : "",
+                        };
+                    }
+                    setForm(next);
                     return;
                 }
 
@@ -897,6 +928,10 @@ export default function TechnicalAssessmentModal({
             setErrorMessage("Thiếu product id");
             return;
         }
+        if (!form.movementCalibre.trim()) {
+            setErrorMessage("Vui lòng nhập mã máy.");
+            return;
+        }
 
         try {
             setSaving(true);
@@ -914,6 +949,7 @@ export default function TechnicalAssessmentModal({
                 movement: {
                     machineType: form.machineType,
                     status: form.movementStatus,
+                    calibre: form.movementCalibre || undefined,
                     beforeSpecs:
                         form.machineType === "MECHANICAL" && form.showBeforeSpecs
                             ? {
@@ -1110,7 +1146,7 @@ export default function TechnicalAssessmentModal({
                             )
                         }
                     >
-                        <div className="grid gap-4 md:grid-cols-[260px_1fr]">
+                        <div className="grid gap-4 md:grid-cols-3">
                             <Field label="Loại máy">
                                 <div className="flex h-11 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700">
                                     {form.machineType === "MECHANICAL" ? "Máy cơ" : "Máy pin"}
@@ -1118,6 +1154,19 @@ export default function TechnicalAssessmentModal({
                                         (kế thừa từ spec sản phẩm)
                                     </span>
                                 </div>
+                            </Field>
+
+                            <Field label="Mã máy">
+                                <TextInput
+                                    value={form.movementCalibre}
+                                    placeholder="NH35A, 7S26, ETA 2824-2..."
+                                    onChange={(event) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            movementCalibre: event.target.value,
+                                        }))
+                                    }
+                                />
                             </Field>
 
                             <Field label="Tình trạng máy">

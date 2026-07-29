@@ -8,7 +8,12 @@ import {
   MediaRole,
 } from "@prisma/client";
 import { prisma } from "@/server/db/client";
-import { bindMedia, registerExistingMediaObject } from "../application";
+import {
+  bindMedia,
+  ingestSelectedMedia,
+  registerExistingMediaObject,
+} from "../application";
+import { mediaPathPolicy } from "../core/media-path.policy";
 import { mediaStorage } from "../storage";
 
 export type LegacyMediaClassification =
@@ -19,6 +24,157 @@ export type LegacyMediaClassification =
   | "PRODUCT_REFERENCE_BROKEN"
   | "UNBOUND"
   | "NEEDS_REVIEW";
+
+const WATCH_MEDIA_SOURCE_PREFIXES = [
+  "media/men/inline/",
+  "media/men/edit/",
+  "media/women/inline/",
+  "media/women/edit/",
+  "media/unisex/inline/",
+  "media/unisex/edit/",
+  "products/edit/active/",
+  "products/inline/active/",
+  "products/edit/chosen/watch/",
+  "products/inline/chosen/watch/",
+] as const;
+
+/**
+ * Repairs the canonical-storage invariant for Watch media created before all
+ * attach commands were routed through ingestSelectedMedia().
+ *
+ * Segment only scopes source browsing and business metadata. Men, Women and
+ * Unisex use this exact same reconciliation path.
+ */
+export async function reconcileWatchMediaCanonicalStorage(input: {
+  take?: number;
+  dryRun?: boolean;
+  segment?: AudienceSegment;
+}) {
+  const take = Math.min(Math.max(input.take ?? 100, 1), 500);
+  const [productImages, bindings] = await Promise.all([
+    prisma.productImage.findMany({
+      where: {
+        ...(input.segment
+          ? { product: { watch: { audienceSegment: input.segment } } }
+          : {}),
+        OR: WATCH_MEDIA_SOURCE_PREFIXES.map((prefix) => ({
+          fileKey: { startsWith: prefix },
+        })),
+      },
+      select: {
+        fileKey: true,
+        product: {
+          select: {
+            watch: { select: { id: true, audienceSegment: true } },
+          },
+        },
+      },
+      take,
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.mediaBinding.findMany({
+      where: {
+        ownerType: MediaOwnerType.WATCH,
+        lifecycle: { not: MediaBindingLifecycle.REMOVED },
+        ...(input.segment ? { audienceSegment: input.segment } : {}),
+        OR: WATCH_MEDIA_SOURCE_PREFIXES.map((prefix) => ({
+          mediaObject: { storageKey: { startsWith: prefix } },
+        })),
+      },
+      select: {
+        ownerId: true,
+        audienceSegment: true,
+        mediaObject: { select: { storageKey: true } },
+      },
+      take,
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+
+  const candidates = new Map<
+    string,
+    { storageKey: string; watchIds: Set<string>; segments: Set<AudienceSegment> }
+  >();
+  const addCandidate = (
+    storageKey: string,
+    watchId?: string | null,
+    segment?: AudienceSegment | null,
+  ) => {
+    if (!mediaPathPolicy.isSource(storageKey) && !WATCH_MEDIA_SOURCE_PREFIXES.some(
+      (prefix) => storageKey.startsWith(prefix),
+    )) return;
+    const current = candidates.get(storageKey) ?? {
+      storageKey,
+      watchIds: new Set<string>(),
+      segments: new Set<AudienceSegment>(),
+    };
+    if (watchId) current.watchIds.add(watchId);
+    if (segment) current.segments.add(segment);
+    candidates.set(storageKey, current);
+  };
+
+  productImages.forEach((image) => {
+    addCandidate(
+      image.fileKey,
+      image.product.watch?.id,
+      image.product.watch?.audienceSegment,
+    );
+  });
+  bindings.forEach((binding) => {
+    addCandidate(
+      binding.mediaObject.storageKey,
+      binding.ownerId,
+      binding.audienceSegment,
+    );
+  });
+
+  const page = Array.from(candidates.values()).slice(0, take);
+  if (input.dryRun !== false) {
+    return {
+      dryRun: true,
+      segment: input.segment ?? null,
+      candidates: page.length,
+      items: page.map((item) => ({
+        storageKey: item.storageKey,
+        watchIds: Array.from(item.watchIds),
+        segments: Array.from(item.segments),
+      })),
+    };
+  }
+
+  const items = [];
+  for (const candidate of page) {
+    try {
+      const object = await ingestSelectedMedia({
+        storageKey: candidate.storageKey,
+      });
+      items.push({
+        sourceKey: candidate.storageKey,
+        destinationKey: object.storageKey,
+        watchIds: Array.from(candidate.watchIds),
+        segments: Array.from(candidate.segments),
+        ok: true,
+      });
+    } catch (error) {
+      items.push({
+        sourceKey: candidate.storageKey,
+        watchIds: Array.from(candidate.watchIds),
+        segments: Array.from(candidate.segments),
+        ok: false,
+        error: error instanceof Error ? error.message : "Unknown reconciliation error",
+      });
+    }
+  }
+
+  return {
+    dryRun: false,
+    segment: input.segment ?? null,
+    candidates: page.length,
+    migrated: items.filter((item) => item.ok).length,
+    failed: items.filter((item) => !item.ok).length,
+    items,
+  };
+}
 
 /**
  * Read-only audit. It intentionally never updates MediaAsset, ProductImage, or NAS.
