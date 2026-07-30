@@ -40,7 +40,7 @@ export default function TradeHistoryCard({
     }
 
     return (
-        <aside id="trade" className="scroll-mt-24 overflow-hidden rounded-lg border border-slate-200/80 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.045)]">
+        <aside id="trade" className="scroll-mt-24 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
             <Header icon={<ArrowLeftRight className="h-4 w-4" />} title="Lịch sử giao dịch" subtitle="Transaction context của watch." />
             <div className="p-4">
                 <div className="space-y-4">
@@ -72,11 +72,11 @@ export function Header({
     subtitle?: string;
 }) {
     return (
-        <div className="flex min-h-[76px] items-center gap-3 border-b border-slate-100 bg-white px-4 py-4">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100">{icon}</div>
+        <div className="flex min-h-[68px] items-center gap-3 border-b border-slate-100 bg-white px-4 py-3.5">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-violet-50 text-violet-600 ring-1 ring-violet-100">{icon}</div>
             <div>
-                <h3 className="text-[18px] font-semibold leading-6 text-slate-950">{title}</h3>
-                {subtitle ? <p className="mt-1.5 text-xs leading-5 text-slate-500">{subtitle}</p> : null}
+                <h3 className="text-[15px] font-bold leading-5 text-slate-950">{title}</h3>
+                {subtitle ? <p className="mt-1 text-[11px] leading-4 text-slate-500">{subtitle}</p> : null}
             </div>
         </div>
     );
