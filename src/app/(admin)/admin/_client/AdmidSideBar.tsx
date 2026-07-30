@@ -19,6 +19,7 @@ import {
     LogOut,
     Workflow,
     BellRing,
+    Activity,
 } from "lucide-react";
 
 import ActiveLink from "./AdminActiveLink";
@@ -115,6 +116,13 @@ const NAV: NavEntry[] = [
                 label: "Channels",
                 icon: BellRing,
                 permission: PERMISSIONS.SYSTEM_JOB_VIEW,
+            },
+            {
+                type: "item",
+                href: "/admin/activity",
+                label: "Activity",
+                icon: Activity,
+                permission: PERMISSIONS.ACTIVITY_READ,
             },
             {
                 type: "item",

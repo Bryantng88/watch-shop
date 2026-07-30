@@ -2276,6 +2276,7 @@ model TaskItemActivity {
   replies   TaskItemActivityReply[]
 
   @@index([taskItemId, occurredAt])
+  @@index([sourceType, occurredAt(sort: Desc)])
   @@index([sourceType, sourceId])
   @@index([actorUserId])
 }

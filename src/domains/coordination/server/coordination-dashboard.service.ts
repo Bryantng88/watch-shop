@@ -11,6 +11,7 @@ import { prisma, type DB } from "@/server/db/client";
 import {
   ensureCoordinationCycle,
   getWeekRange,
+  resolveCoordinationCycle,
 } from "./coordination-cycle.service";
 import {
   listWorkTypes,
@@ -871,13 +872,16 @@ export async function loadLastActivityMap(db: DB, taskItemIds: string[]) {
   const rows = await db.taskItemActivity.findMany({
     where: {
       taskItemId: { in: taskItemIds },
+      sourceType: { not: ActivitySourceType.DISCUSSION },
     },
+    distinct: ["taskItemId"],
     select: {
       taskItemId: true,
       title: true,
       occurredAt: true,
     },
     orderBy: [
+      { taskItemId: "asc" },
       { occurredAt: "desc" },
       { id: "desc" },
     ],
@@ -902,29 +906,44 @@ async function loadActivitySummaryByTaskItem(db: DB, taskItemIds: string[]) {
   const lastActivities = new Map<string, { title: string; occurredAt: Date }>();
   if (!taskItemIds.length) return { feedbackCounts, lastActivities };
 
-  const rows = await db.taskItemActivity.findMany({
-    where: { taskItemId: { in: taskItemIds } },
-    select: {
-      taskItemId: true,
-      sourceType: true,
-      title: true,
-      occurredAt: true,
-      metadataJson: true,
-    },
-    orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
-  });
+  const [latestRows, feedbackRows] = await Promise.all([
+    db.taskItemActivity.findMany({
+      where: {
+        taskItemId: { in: taskItemIds },
+        sourceType: { not: ActivitySourceType.DISCUSSION },
+      },
+      distinct: ["taskItemId"],
+      select: {
+        taskItemId: true,
+        title: true,
+        occurredAt: true,
+      },
+      orderBy: [
+        { taskItemId: "asc" },
+        { occurredAt: "desc" },
+        { id: "desc" },
+      ],
+    }),
+    db.taskItemActivity.findMany({
+      where: {
+        taskItemId: { in: taskItemIds },
+        sourceType: ActivitySourceType.BUSINESS_EVENT,
+      },
+      select: {
+        taskItemId: true,
+        metadataJson: true,
+      },
+    }),
+  ]);
 
-  for (const row of rows) {
-    if (!lastActivities.has(row.taskItemId)) {
-      lastActivities.set(row.taskItemId, {
-        title: row.title,
-        occurredAt: row.occurredAt,
-      });
-    }
-    if (
-      row.sourceType === ActivitySourceType.BUSINESS_EVENT &&
-      hasFeedbackSignal(row.metadataJson)
-    ) {
+  for (const row of latestRows) {
+    lastActivities.set(row.taskItemId, {
+      title: row.title,
+      occurredAt: row.occurredAt,
+    });
+  }
+  for (const row of feedbackRows) {
+    if (hasFeedbackSignal(row.metadataJson)) {
       feedbackCounts.set(
         row.taskItemId,
         (feedbackCounts.get(row.taskItemId) ?? 0) + 1,
@@ -1353,10 +1372,38 @@ async function loadMediaBoardFromProjection(input: {
   const taskItemIds = projection.rows.map((row) => row.workspaceTaskItemId).filter(Boolean);
   const activities = input.viewerUserId && taskItemIds.length
     ? await input.db.taskItemActivity.findMany({
-        where: { taskItemId: { in: taskItemIds } },
+        where: {
+          taskItemId: { in: taskItemIds },
+          OR: [
+            {
+              metadataJson: {
+                path: ["mentionedUserIds"],
+                array_contains: [input.viewerUserId!],
+              },
+            },
+            {
+              replies: {
+                some: {
+                  metadataJson: {
+                    path: ["mentionedUserIds"],
+                    array_contains: [input.viewerUserId!],
+                  },
+                },
+              },
+            },
+          ],
+        },
         select: {
           metadataJson: true,
-          replies: { select: { metadataJson: true } },
+          replies: {
+            where: {
+              metadataJson: {
+                path: ["mentionedUserIds"],
+                array_contains: [input.viewerUserId!],
+              },
+            },
+            select: { metadataJson: true },
+          },
         },
       })
     : [];
@@ -1718,10 +1765,38 @@ async function loadTechnicalIssueBoardFromProjection(input: {
     .filter((id): id is string => Boolean(id));
   const activities = input.viewerUserId && taskItemIds.length
     ? await input.db.taskItemActivity.findMany({
-        where: { taskItemId: { in: taskItemIds } },
+        where: {
+          taskItemId: { in: taskItemIds },
+          OR: [
+            {
+              metadataJson: {
+                path: ["mentionedUserIds"],
+                array_contains: [input.viewerUserId!],
+              },
+            },
+            {
+              replies: {
+                some: {
+                  metadataJson: {
+                    path: ["mentionedUserIds"],
+                    array_contains: [input.viewerUserId!],
+                  },
+                },
+              },
+            },
+          ],
+        },
         select: {
           metadataJson: true,
-          replies: { select: { metadataJson: true } },
+          replies: {
+            where: {
+              metadataJson: {
+                path: ["mentionedUserIds"],
+                array_contains: [input.viewerUserId!],
+              },
+            },
+            select: { metadataJson: true },
+          },
         },
       })
     : [];
@@ -2732,7 +2807,7 @@ export async function getCoordinationDashboard(input: {
   );
   const selectedDate = parseDateInput(input?.date);
   const trustedCycleTaskId = String(input.cycleTaskId ?? "").trim();
-  const cycle = trustedCycleTaskId
+  const resolvedCycle = trustedCycleTaskId
     ? {
         task: {
           id: trustedCycleTaskId,
@@ -2750,11 +2825,27 @@ export async function getCoordinationDashboard(input: {
         workTickets: [],
         workTicketsCreated: 0,
       }
-    : await dashboardStep("ensureCycle", () => ensureCoordinationCycle(db, {
-        context: input.context,
-        date: selectedDate,
-        provisionWorkTickets: false,
-      }));
+    : await dashboardStep("resolveCycle", async () => {
+        const resolved = await resolveCoordinationCycle(db, {
+          context: input.context,
+          date: selectedDate,
+        });
+        return resolved
+          ? {
+              ...resolved,
+              created: false,
+              workTickets: [],
+              workTicketsCreated: 0,
+            }
+          : null;
+      });
+  const cycle = resolvedCycle ?? await dashboardStep("ensureCycleFallback", () =>
+    ensureCoordinationCycle(db, {
+      context: input.context,
+      date: selectedDate,
+      provisionWorkTickets: false,
+    }),
+  );
 
   const earlyViewConfig = getSpaceViewConfig(input.context);
   const earlyMode = earlyViewConfig.modes.find((mode) => mode.key === input.modeKey);

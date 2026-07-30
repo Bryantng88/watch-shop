@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Activity,
+  MessageSquareText,
   MoreHorizontal,
   X,
 } from "lucide-react";
@@ -27,7 +28,6 @@ import {
   type TaskItemQueueItem,
 } from "@/domains/task/ui/task-work/QueueWorkQueue";
 import { PAYMENT_PURPOSE_LABEL } from "@/domains/payment/shared/payment.constants";
-import type { TaskItemActivityViewModel } from "@/domains/task/server/activity";
 import {
   manualTransitionActionLabel,
   manualTransitionOutcomeMovesOutOfCurrentStage,
@@ -234,17 +234,6 @@ export default function FlowItemListView({
   const [optimisticallyMovedIds, setOptimisticallyMovedIds] = useState<string[]>([]);
   const [reconcileItem, setReconcileItem] = useState<CoordinationFlowListItemDTO | null>(null);
   const [isBulkReconcileOpen, setIsBulkReconcileOpen] = useState(false);
-  const [activityTarget, setActivityTarget] =
-    useState<CoordinationFlowListItemDTO | null>(null);
-  const [activityItems, setActivityItems] = useState<TaskItemActivityViewModel[]>([]);
-  const [activityPagination, setActivityPagination] = useState({
-    page: 1,
-    pageSize: 10,
-    total: 0,
-    totalPages: 1,
-  });
-  const [activityLoading, setActivityLoading] = useState(false);
-  const [activityError, setActivityError] = useState<string | null>(null);
   const [operationalAction, setOperationalAction] = useState<{
     item: CoordinationFlowListItemDTO;
     action: OperationalActionForm;
@@ -363,37 +352,6 @@ export default function FlowItemListView({
   );
   const bulkRemainingTotal = Math.max(0, bulkExpectedTotal - bulkReviewedTotal);
   const bulkCurrency = selectedPaymentItems[0]?.payment?.currency ?? "VND";
-
-  async function loadActivityPage(
-    item: CoordinationFlowListItemDTO,
-    page: number,
-  ) {
-    setActivityTarget(item);
-    setActivityLoading(true);
-    setActivityError(null);
-    try {
-      const params = new URLSearchParams({
-        targetType: item.targetType,
-        targetId: item.targetId,
-        page: String(page),
-        pageSize: "10",
-      });
-      const response = await fetch(
-        `/api/admin/coordination/operation/activity?${params.toString()}`,
-        { cache: "no-store" },
-      );
-      const result = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(result?.error ?? "Không thể tải hoạt động.");
-      setActivityItems(Array.isArray(result?.items) ? result.items : []);
-      if (result?.pagination) setActivityPagination(result.pagination);
-    } catch (error) {
-      setActivityError(
-        error instanceof Error ? error.message : "Không thể tải hoạt động.",
-      );
-    } finally {
-      setActivityLoading(false);
-    }
-  }
 
   function runAction(
     item: CoordinationFlowListItemDTO,
@@ -915,6 +873,16 @@ export default function FlowItemListView({
                         <span className="mt-1 block truncate text-xs text-slate-500">{item.preview.ref || item.targetType}</span>
                       </span>
                     </Link>
+                    {item.discussionCount > 0 ? (
+                      <Link
+                        href={`/admin/task-items/${item.taskItemId}?focus=comments`}
+                        title={`${item.discussionCount} comment`}
+                        className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-1 text-[10px] font-bold text-violet-700 ring-1 ring-violet-100 transition hover:bg-violet-100"
+                      >
+                        <MessageSquareText className="h-3 w-3" />
+                        {item.discussionCount}
+                      </Link>
+                    ) : null}
                   </td>
                   {showReshootNote ? (
                     <td className="px-4 py-3">
@@ -1240,16 +1208,15 @@ export default function FlowItemListView({
                   </td>
                   <td className="px-4 py-3 text-center text-xs text-slate-500">{formatTime(item.updatedAt)}</td>
                   <td className="px-4 py-3">
-                    <button
-                      type="button"
-                      onClick={() => void loadActivityPage(item, 1)}
+                    <Link
+                      href={`/admin/activity?targetType=${encodeURIComponent(item.targetType)}&q=${encodeURIComponent(item.targetId)}&period=ALL`}
                       className="flex max-w-64 items-center gap-2 text-left text-xs text-slate-600 transition hover:text-violet-700"
                     >
                       <Activity className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                       <span className="truncate">
                         {item.latestActivityTitle || "Chưa có thao tác"}
                       </span>
-                    </button>
+                    </Link>
                   </td>
                   <td className="px-4 py-3">
                     <Link href={href} aria-label="Mở item" className="text-slate-400 transition group-hover:text-violet-600"><ChevronRight className="h-4 w-4" /></Link>
@@ -1873,95 +1840,6 @@ export default function FlowItemListView({
         </div>
       ) : null}
 
-      {activityTarget ? (
-        <div className="fixed inset-0 z-[90] flex justify-end bg-slate-950/30">
-          <button
-            type="button"
-            aria-label="Đóng hoạt động"
-            className="absolute inset-0 cursor-default"
-            onClick={() => setActivityTarget(null)}
-          />
-          <aside className="relative flex h-full w-full max-w-lg flex-col bg-white shadow-2xl">
-            <header className="flex items-start justify-between border-b border-slate-200 px-5 py-4">
-              <div className="min-w-0">
-                <h3 className="font-bold text-slate-950">Hoạt động</h3>
-                <p className="mt-1 truncate text-xs text-slate-500">
-                  {activityTarget.preview.title ?? activityTarget.preview.ref ?? activityTarget.targetId}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActivityTarget(null)}
-                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </header>
-            <div className="flex-1 space-y-3 overflow-y-auto p-5">
-              {activityLoading ? (
-                <p className="py-10 text-center text-sm text-slate-500">Đang tải hoạt động...</p>
-              ) : null}
-              {activityError ? (
-                <p className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{activityError}</p>
-              ) : null}
-              {!activityLoading && !activityError && !activityItems.length ? (
-                <p className="py-10 text-center text-sm text-slate-500">Chưa có hoạt động.</p>
-              ) : null}
-              {activityItems.map((activity) => (
-                <article key={activity.id} className="rounded-xl border border-slate-200 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-900">{activity.title}</p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {activity.actorLabel} · {formatTime(activity.occurredAt)}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">
-                      {activity.sourceType}
-                    </span>
-                  </div>
-                  {activity.body ? (
-                    <p className="mt-3 whitespace-pre-wrap text-sm text-slate-700">{activity.body}</p>
-                  ) : null}
-                  {activity.replies.length ? (
-                    <div className="mt-3 space-y-2 border-l-2 border-violet-100 pl-3">
-                      {activity.replies.map((reply) => (
-                        <div key={reply.id} className="rounded-lg bg-slate-50 px-3 py-2">
-                          <p className="text-xs font-semibold text-slate-700">{reply.actorLabel}</p>
-                          <p className="mt-1 whitespace-pre-wrap text-sm text-slate-600">{reply.body}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                </article>
-              ))}
-            </div>
-            <footer className="flex items-center justify-between border-t border-slate-200 px-5 py-4">
-              <span className="text-xs text-slate-500">
-                Trang {activityPagination.page}/{activityPagination.totalPages} · {activityPagination.total} hoạt động
-              </span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  disabled={activityLoading || activityPagination.page <= 1}
-                  onClick={() => void loadActivityPage(activityTarget, activityPagination.page - 1)}
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold disabled:opacity-40"
-                >
-                  Trước
-                </button>
-                <button
-                  type="button"
-                  disabled={activityLoading || activityPagination.page >= activityPagination.totalPages}
-                  onClick={() => void loadActivityPage(activityTarget, activityPagination.page + 1)}
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold disabled:opacity-40"
-                >
-                  Sau
-                </button>
-              </div>
-            </footer>
-          </aside>
-        </div>
-      ) : null}
     </div>
   );
 }

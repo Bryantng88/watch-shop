@@ -3,6 +3,12 @@
 Blueprint M1 made Workspace creation consistent: a Workspace is created from a
 Blueprint snapshot, then runs independently. That is still true.
 
+For established operational flows, Blueprint is a design-time/provisioning
+contract rather than the List/Board hot-path runtime. Explicit flow
+definitions, typed domain commands, events, and projections serve the running
+operation. See
+`docs/architecture/27-coordination-runtime-and-global-activity.md`.
+
 Blueprint M2 raises the bar: a Blueprint must be able to describe a complete
 business operation model for a Space/Workspace flow without moving business
 truth out of the business domain.

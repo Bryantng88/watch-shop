@@ -318,10 +318,11 @@ export async function findQueueActivityStatsByTaskItemTargets(
     aggregate AS (
       SELECT
         "targetId",
-        COUNT(*) AS "activityCount",
+        COUNT(*) FILTER (WHERE "sourceType" <> 'DISCUSSION') AS "activityCount",
         SUM(has_feedback) AS "feedbackCount",
         SUM(reply_count + CASE WHEN "sourceType" = 'DISCUSSION' THEN 1 ELSE 0 END)
           AS "discussionCount",
+        MAX("updatedAt") AS "latestUpdatedAt",
         BOOL_OR(has_feedback = 1) AS "hasRejectedOrFeedback",
         BOOL_OR(event_text ~ '(approved|done|completed)') AS "hasDoneSignal"
       FROM base
@@ -332,22 +333,21 @@ export async function findQueueActivityStatsByTaskItemTargets(
         "targetId",
         title AS "latestActivityTitle",
         "occurredAt" AS "latestActivityAt",
-        "updatedAt" AS "latestUpdatedAt",
         "actorUserId"
       FROM base
+      WHERE "sourceType" <> 'DISCUSSION'
       ORDER BY "targetId", "occurredAt" DESC, id DESC
     )
     SELECT
       aggregate.*,
       latest."latestActivityTitle",
       latest."latestActivityAt",
-      latest."latestUpdatedAt",
       latest."actorUserId",
       u.name AS "actorName",
       u.email AS "actorEmail",
       u."avatarUrl" AS "actorAvatarUrl"
     FROM aggregate
-    JOIN latest USING ("targetId")
+    LEFT JOIN latest USING ("targetId")
     LEFT JOIN "User" u ON u.id = latest."actorUserId"
   `);
 }
