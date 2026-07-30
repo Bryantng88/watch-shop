@@ -1,5 +1,6 @@
 import type {
   OrderListSort,
+  OrderPaymentTypeFilter,
   OrderProcessingSubFilter,
   OrderSearchInput,
   OrderViewKey,
@@ -34,6 +35,13 @@ const processingSubFilters = new Set<OrderProcessingSubFilter>([
   "delivered_remaining",
 ]);
 
+const paymentTypeFilters = new Set<OrderPaymentTypeFilter>([
+  "",
+  "full",
+  "cod",
+  "deposit",
+]);
+
 const sortKeys = new Set<OrderListSort>([
   "updatedDesc",
   "updatedAsc",
@@ -45,11 +53,13 @@ export function parseOrderSearchParams(params: URLSearchParams): OrderSearchInpu
   const rawView = first(params, "view") as OrderViewKey;
   const rawSort = first(params, "sort") as OrderListSort;
   const rawSubFilter = first(params, "subFilter") as OrderProcessingSubFilter;
+  const rawPaymentType = first(params, "paymentType") as OrderPaymentTypeFilter;
 
   return {
     q: first(params, "q").trim() || undefined,
     view: viewKeys.has(rawView) ? rawView : "all",
     subFilter: processingSubFilters.has(rawSubFilter) ? rawSubFilter : "",
+    paymentType: paymentTypeFilters.has(rawPaymentType) ? rawPaymentType : "",
     sort: sortKeys.has(rawSort) ? rawSort : "updatedDesc",
     page: toPositiveInt(params.get("page"), 1),
     pageSize: Math.min(100, toPositiveInt(params.get("pageSize"), 20)),

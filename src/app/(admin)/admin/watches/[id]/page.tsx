@@ -85,6 +85,28 @@ function scrubTradeFinancials(tradeHistory: any) {
                 amount: item.salePrice ?? item.amount ?? null,
             }))
             : tradeHistory.orders,
+        costLedger: Array.isArray(tradeHistory.costLedger)
+            ? tradeHistory.costLedger.map((item: any) => ({
+                ...item,
+                amount: null,
+            }))
+            : tradeHistory.costLedger,
+        serviceFees: Array.isArray(tradeHistory.serviceFees)
+            ? tradeHistory.serviceFees.map((item: any) => ({ ...item, amount: null }))
+            : tradeHistory.serviceFees,
+        shipmentFees: Array.isArray(tradeHistory.shipmentFees)
+            ? tradeHistory.shipmentFees.map((item: any) => ({ ...item, amount: null }))
+            : tradeHistory.shipmentFees,
+        costSummary: tradeHistory.costSummary
+            ? {
+                ...tradeHistory.costSummary,
+                acquisitionAmount: null,
+                serviceAmount: null,
+                shipmentAmount: null,
+                otherAmount: null,
+                landedCost: null,
+            }
+            : tradeHistory.costSummary,
     };
 }
 

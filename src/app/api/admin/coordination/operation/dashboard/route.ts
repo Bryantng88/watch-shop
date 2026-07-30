@@ -100,6 +100,8 @@ export async function GET(request: NextRequest) {
     const flowQuery = request.nextUrl.searchParams.get("flowQuery");
     const flowStatus = request.nextUrl.searchParams.get("flowStatus");
     const flowPaymentStatus = request.nextUrl.searchParams.get("flowPaymentStatus");
+    const flowPaymentType = request.nextUrl.searchParams.get("flowPaymentType");
+    const flowPaymentDirection = request.nextUrl.searchParams.get("flowPaymentDirection");
     const flowSort = request.nextUrl.searchParams.get("flowSort");
     const doneDays = doneRetentionDays(
       request.nextUrl.searchParams.get("doneRange"),
@@ -135,6 +137,8 @@ export async function GET(request: NextRequest) {
         query: flowQuery,
         status: flowStatus,
         paymentStatus: flowPaymentStatus,
+        paymentType: flowPaymentType,
+        paymentDirection: flowPaymentDirection,
         sort: flowSort,
         doneRetentionDays: doneDays,
         auth,
@@ -213,6 +217,8 @@ export async function GET(request: NextRequest) {
       flowQuery,
       flowStatus,
       flowPaymentStatus,
+      flowPaymentType,
+      flowPaymentDirection,
       flowSort,
       doneRetentionDays: doneDays,
       includeManagementDetails: false,

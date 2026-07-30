@@ -40,6 +40,7 @@ import type { CoordinationContext } from "./coordination-cycle.types";
 import { getPaymentOwnerSummaryProjections } from "@/domains/projection/server/payment-owner-summary.projection";
 import { perfStep } from "@/lib/server-perf";
 import { resolveProductDisplayImage } from "@/domains/shared/media/server/display-image";
+import { getBusinessEventDefinition } from "@/domains/event/registry/business-event-registry";
 import { getAuthUserId } from "@/domains/task/server/core/task.service";
 import {
   isPaymentCollectionSettledStatus,
@@ -136,6 +137,107 @@ function imageUrlFromServiceRequest(serviceRequest?: {
   return resolveProductDisplayImage(
     serviceRequest?.product,
     serviceRequest?.primaryImageUrlSnapshot,
+  );
+}
+
+async function loadLatestFlowEventSignals(
+  db: DB,
+  items: CoordinationFlowListItemDTO[],
+) {
+  const targets = Array.from(
+    new Map(
+      items.map((item) => [
+        `${String(item.targetType).toUpperCase()}:${item.targetId}`,
+        {
+          targetType: String(item.targetType).toUpperCase(),
+          targetId: item.targetId,
+        },
+      ]),
+    ).values(),
+  );
+  if (!targets.length) return new Map<string, {
+    title: string;
+    occurredAt: string;
+    actor: { label: string; avatarUrl: string | null; isSystem: boolean };
+  }>();
+
+  const [events, activities] = await Promise.all([
+    db.businessEventLog.findMany({
+      where: { OR: targets },
+      orderBy: { createdAt: "desc" },
+      select: {
+        eventKey: true,
+        targetType: true,
+        targetId: true,
+        actorUserId: true,
+        createdAt: true,
+      },
+    }),
+    db.taskItemActivity.findMany({
+      where: {
+        taskItemId: {
+          in: Array.from(new Set(items.map((item) => item.taskItemId).filter(Boolean))),
+        },
+      },
+      orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
+      take: Math.max(100, items.length * 10),
+      select: {
+        title: true,
+        occurredAt: true,
+        metadataJson: true,
+        actorUser: {
+          select: { name: true, email: true, avatarUrl: true },
+        },
+      },
+    }),
+  ]);
+  const latestByTarget = new Map<string, (typeof events)[number]>();
+  for (const event of events) {
+    const key = `${event.targetType.toUpperCase()}:${event.targetId}`;
+    if (!latestByTarget.has(key)) latestByTarget.set(key, event);
+  }
+  const actorIds = Array.from(
+    new Set(
+      [...latestByTarget.values()]
+        .map((event) => event.actorUserId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
+  const actors = actorIds.length
+    ? await db.user.findMany({
+        where: { id: { in: actorIds } },
+        select: { id: true, name: true, email: true, avatarUrl: true },
+      })
+    : [];
+  const actorById = new Map(actors.map((actor) => [actor.id, actor]));
+  const activityByTarget = new Map<string, (typeof activities)[number]>();
+  for (const activity of activities) {
+    const metadata = activity.metadataJson;
+    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) continue;
+    const target = metadata as { targetType?: unknown; targetId?: unknown };
+    const key = `${String(target.targetType ?? "").toUpperCase()}:${String(target.targetId ?? "")}`;
+    if (!activityByTarget.has(key)) activityByTarget.set(key, activity);
+  }
+
+  return new Map(
+    [...latestByTarget.entries()].map(([key, event]) => {
+      const activity = activityByTarget.get(key);
+      const eventActor = event.actorUserId ? actorById.get(event.actorUserId) : null;
+      const actor = activity?.actorUser ?? eventActor ?? null;
+      const definition = getBusinessEventDefinition(event.eventKey);
+      return [
+        key,
+        {
+          title: activity?.title ?? definition?.label ?? event.eventKey,
+          occurredAt: (activity?.occurredAt ?? event.createdAt).toISOString(),
+          actor: {
+            label: actor?.name ?? actor?.email ?? "Hệ thống",
+            avatarUrl: actor?.avatarUrl ?? null,
+            isSystem: !actor,
+          },
+        },
+      ];
+    }),
   );
 }
 
@@ -2602,6 +2704,8 @@ export async function getCoordinationDashboard(input: {
   flowQuery?: string | null;
   flowStatus?: string | null;
   flowPaymentStatus?: string | null;
+  flowPaymentType?: string | null;
+  flowPaymentDirection?: string | null;
   flowSort?: string | null;
   doneRetentionDays?: number | null;
   includeManagementDetails?: boolean;
@@ -2615,11 +2719,15 @@ export async function getCoordinationDashboard(input: {
   const flowQuery = String(input.flowQuery ?? "").trim().toLocaleLowerCase("vi");
   const flowStatus = normalizeStatus(input.flowStatus);
   const flowPaymentStatus = normalizeStatus(input.flowPaymentStatus);
+  const flowPaymentType = normalizeStatus(input.flowPaymentType);
+  const flowPaymentDirection = normalizeStatus(input.flowPaymentDirection);
   const flowSort = normalizeStatus(input.flowSort) || "UPDATED_DESC";
   const hasFlowFilters = Boolean(
     flowQuery ||
     (flowStatus && flowStatus !== "ALL") ||
     (flowPaymentStatus && flowPaymentStatus !== "ALL") ||
+    (flowPaymentType && flowPaymentType !== "ALL") ||
+    (flowPaymentDirection && flowPaymentDirection !== "ALL") ||
     flowSort !== "UPDATED_DESC"
   );
   const selectedDate = parseDateInput(input?.date);
@@ -3237,6 +3345,12 @@ export async function getCoordinationDashboard(input: {
                       reason: null,
                       metadata: {
                         operationalBlueprintAction: action,
+                        operationalInitialFields: {
+                          amount: String(row.shippingAmount ?? 0),
+                          payer: row.shippingFeePayer ?? "BUSINESS",
+                          carrier: row.carrier ?? "",
+                          trackingCode: row.trackingCode ?? "",
+                        },
                       },
                     })),
                     intakeNote: row.shipAddressLabel,
@@ -3493,7 +3607,24 @@ export async function getCoordinationDashboard(input: {
     if (leftOrder !== rightOrder) return leftOrder - rightOrder;
     return left.title.localeCompare(right.title);
   });
-  const unfilteredFlowItems: CoordinationFlowListItemDTO[] = flowItemGroups.flat();
+  const baseFlowItems: CoordinationFlowListItemDTO[] = flowItemGroups.flat();
+  const latestFlowEventSignals =
+    input.includeFlowItems === false
+      ? new Map()
+      : await dashboardStep("flowItemLastEvents", () =>
+          loadLatestFlowEventSignals(db, baseFlowItems));
+  const unfilteredFlowItems: CoordinationFlowListItemDTO[] = baseFlowItems.map((item) => {
+    const signal = latestFlowEventSignals.get(
+      `${String(item.targetType).toUpperCase()}:${item.targetId}`,
+    );
+    if (!signal) return item;
+    return {
+      ...item,
+      latestActivityTitle: signal.title,
+      lastUpdatedBy: signal.actor,
+      updatedAt: signal.occurredAt,
+    };
+  });
   const filteredFlowItems = unfilteredFlowItems.filter((item) => {
     const status = item.isWorkflowDone || item.status === "DONE"
       ? "DONE"
@@ -3508,6 +3639,18 @@ export async function getCoordinationDashboard(input: {
     ) return false;
     if (flowPaymentStatus === "PAID" && paymentStatus !== "PAID") return false;
     if (flowPaymentStatus === "NONE" && item.payment) return false;
+    const paymentType = normalizeStatus(item.payment?.type) || "NONE";
+    if (
+      flowPaymentType &&
+      flowPaymentType !== "ALL" &&
+      paymentType !== flowPaymentType
+    ) return false;
+    const paymentDirection = normalizeStatus(item.payment?.direction) || "NONE";
+    if (
+      flowPaymentDirection &&
+      flowPaymentDirection !== "ALL" &&
+      paymentDirection !== flowPaymentDirection
+    ) return false;
     if (!flowQuery) return true;
     return [
       item.preview.title,
@@ -3735,6 +3878,8 @@ export async function getCoordinationFlowPage(input: {
   query?: string | null;
   status?: string | null;
   paymentStatus?: string | null;
+  paymentType?: string | null;
+  paymentDirection?: string | null;
   sort?: string | null;
   doneRetentionDays?: number | null;
   auth?: unknown;
@@ -3761,6 +3906,8 @@ export async function getCoordinationFlowPage(input: {
       flowQuery: input.query,
       flowStatus: input.status,
       flowPaymentStatus: input.paymentStatus,
+      flowPaymentType: input.paymentType,
+      flowPaymentDirection: input.paymentDirection,
       flowSort: input.sort,
       doneRetentionDays: input.doneRetentionDays,
       includeFlowItems: true,

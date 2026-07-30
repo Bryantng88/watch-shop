@@ -5,11 +5,10 @@ import {
   PaymentPurpose,
   PaymentStatus,
   PaymentType,
-  Prisma,
 } from "@prisma/client";
 
 import { prisma } from "@/server/db/client";
-import { syncWatchInventoryFromOrderId } from "@/domains/order/server/order-watch-sync.service";
+import { reconcileOrderSettlementTx } from "@/domains/order/server/order-completion.service";
 import type { CreatePaymentInput, PaymentListItem, PaymentSummary } from "../shared";
 import { assertPaymentStatusCollectedExists, buildPaymentRef, money, toNumber, toPlain, type Tx } from "./payment.utils";
 
@@ -175,41 +174,11 @@ export async function listOrderPaymentsTx(tx: Tx, orderId: string): Promise<Paym
 export async function recomputeOrderPaymentRollupTx(tx: Tx, orderId: string) {
   const summary = await getOrderPaymentSummaryTx(tx, orderId);
 
-  const order = await tx.order.findUnique({
-    where: { id: orderId },
-    select: {
-      id: true,
-      status: true,
-      hasShipment: true,
-      shipments: {
-        orderBy: { updatedAt: "desc" },
-        select: { status: true },
-      },
-    },
+  await reconcileOrderSettlementTx(tx, orderId, {
+    totalDue: summary.totalDue,
+    paidTotal: summary.paidTotal,
+    depositPaid: summary.depositRequired > 0 ? summary.depositPaid : 0,
   });
-
-  if (!order) throw new Error("Order không tồn tại.");
-  if (order.status === OrderStatus.CANCELLED) return summary;
-
-  const status = String(order.status ?? "").toUpperCase();
-  const lockedStatuses = ["RETURNING", "RETURNED"];
-  const fullyPaid = summary.totalDue > 0 && summary.paidTotal >= summary.totalDue;
-  const shipmentCompleted =
-    !order.hasShipment ||
-    (order.shipments ?? []).some((shipment) => String(shipment.status ?? "").toUpperCase() === "DELIVERED");
-  const completed = fullyPaid && shipmentCompleted && !lockedStatuses.includes(status);
-
-  await tx.order.update({
-    where: { id: orderId },
-    data: {
-      depositPaid: summary.depositRequired > 0 ? money(summary.depositPaid) : null,
-      paymentStatus: fullyPaid ? PaymentStatus.PAID : PaymentStatus.UNPAID,
-      status: completed ? OrderStatus.COMPLETED : order.status,
-      updatedAt: new Date(),
-    },
-  });
-
-  await syncWatchInventoryFromOrderId(tx, orderId);
   return getOrderPaymentSummaryTx(tx, orderId);
 }
 

@@ -9,10 +9,29 @@ import PricePermissionNotice from "./PricePermissionNotice";
 
 type TradeHistory = {
     acquisitions?: Array<Record<string, unknown>>;
+    costLedger?: Array<Record<string, unknown>>;
+    serviceFees?: Array<Record<string, unknown>>;
+    shipmentFees?: Array<Record<string, unknown>>;
+    costSummary?: {
+        acquisitionAmount?: number | null;
+        serviceAmount?: number | null;
+        shipmentAmount?: number | null;
+        otherAmount?: number | null;
+        landedCost?: number | null;
+    } | null;
 };
 
 function stringValue(value: unknown) {
     return typeof value === "string" ? value : "";
+}
+
+function numberValue(value: unknown) {
+    const amount = Number(value ?? 0);
+    return Number.isFinite(amount) ? amount : 0;
+}
+
+function normalized(value: unknown) {
+    return String(value ?? "").trim().toUpperCase();
 }
 
 export default function PriceBlock({
@@ -33,10 +52,52 @@ export default function PriceBlock({
     const acquisitions = !Array.isArray(tradeHistory) && Array.isArray(tradeHistory?.acquisitions)
         ? tradeHistory.acquisitions
         : [];
+    const costLedger = !Array.isArray(tradeHistory) && Array.isArray(tradeHistory?.costLedger)
+        ? tradeHistory.costLedger
+        : [];
+    const serviceFees = !Array.isArray(tradeHistory) && Array.isArray(tradeHistory?.serviceFees)
+        ? tradeHistory.serviceFees
+        : [];
+    const shipmentFees = !Array.isArray(tradeHistory) && Array.isArray(tradeHistory?.shipmentFees)
+        ? tradeHistory.shipmentFees
+        : [];
     const acquisition = acquisitions[0] ?? {};
-    const acquisitionAmount = (acquisition.amount as string | number | null | undefined) ?? values.pricing.costPrice;
-    const shipmentAmount = values.pricing.serviceCost || "";
-    const landedCost = values.pricing.landedCost || values.pricing.costPrice || acquisitionAmount;
+    const costSummary = !Array.isArray(tradeHistory) ? tradeHistory?.costSummary : null;
+    const paymentGroups = {
+        acquisition: costLedger.filter((item) => normalized(item.type) === "ACQUISITION"),
+        service: costLedger.filter((item) => normalized(item.type) === "SERVICE"),
+        shipment: costLedger.filter((item) => normalized(item.type) === "SHIPMENT"),
+        other: costLedger.filter((item) =>
+            !["ACQUISITION", "SERVICE", "SHIPMENT"].includes(normalized(item.type))),
+    };
+    const paymentStatus = (items: Array<Record<string, unknown>>): PriceLedgerItem["status"] => {
+        if (!items.length) return "NONE";
+        return items.every((item) => ["PAID", "COLLECTED"].includes(normalized(item.status)))
+            ? "PAID"
+            : "UNPAID";
+    };
+    const linkedServiceIssueIds = new Set(
+        paymentGroups.service.map((item) => stringValue(item.technicalIssueId)).filter(Boolean),
+    );
+    const linkedServiceRequestIds = new Set(
+        paymentGroups.service.map((item) => stringValue(item.serviceRequestId)).filter(Boolean),
+    );
+    const linkedShipmentIds = new Set(
+        paymentGroups.shipment.map((item) => stringValue(item.shipmentId)).filter(Boolean),
+    );
+    const uncoveredServiceFees = serviceFees.filter(
+        (item) =>
+            !linkedServiceIssueIds.has(stringValue(item.id)) &&
+            !linkedServiceRequestIds.has(stringValue(item.serviceRequestId)),
+    );
+    const uncoveredShipmentFees = shipmentFees.filter(
+        (item) => !linkedShipmentIds.has(stringValue(item.id)),
+    );
+    const acquisitionLedgerAmount = numberValue(costSummary?.acquisitionAmount);
+    const serviceLedgerAmount = numberValue(costSummary?.serviceAmount);
+    const shipmentLedgerAmount = numberValue(costSummary?.shipmentAmount);
+    const otherLedgerAmount = numberValue(costSummary?.otherAmount);
+    const landedCost = numberValue(costSummary?.landedCost);
     const salePrice = values.pricing.salePrice;
     const profit = Number(salePrice || 0) - Number(landedCost || 0);
     const ledgerItems: PriceLedgerItem[] = [
@@ -45,26 +106,34 @@ export default function PriceBlock({
             description: stringValue(acquisition.code)
                 ? `${stringValue(acquisition.code)} · ${stringValue(acquisition.vendorName) || "Vendor"}`
                 : "Chi phí nhập từ phiếu nhập",
-            amount: acquisitionAmount,
-            status: acquisitionAmount ? "PAID" : "NONE",
+            amount: acquisitionLedgerAmount || null,
+            status: paymentGroups.acquisition.length
+                ? paymentStatus(paymentGroups.acquisition)
+                : acquisitionLedgerAmount
+                  ? "PAID"
+                  : "NONE",
         },
         {
             label: "Service payment OUT",
-            description: "Bảo dưỡng, kiểm tra máy và sinh tổng thể",
-            amount: values.pricing.serviceCost,
-            status: values.pricing.serviceCost ? "UNPAID" : "NONE",
+            description: `${serviceFees.length} TI · ${paymentGroups.service.length} payment OUT`,
+            amount: serviceLedgerAmount || null,
+            status: uncoveredServiceFees.some((item) => numberValue(item.amount) > 0)
+                ? "UNPAID"
+                : paymentStatus(paymentGroups.service),
         },
         {
             label: "Shipment / logistics OUT",
-            description: "Phí vận chuyển quốc tế và nội địa",
-            amount: shipmentAmount,
-            status: shipmentAmount ? "UNPAID" : "NONE",
+            description: `${shipmentFees.length} shipment · ${paymentGroups.shipment.length} payment OUT`,
+            amount: shipmentLedgerAmount || null,
+            status: uncoveredShipmentFees.some((item) => numberValue(item.amount) > 0)
+                ? "UNPAID"
+                : paymentStatus(paymentGroups.shipment),
         },
         {
             label: "Other costs / fees OUT",
-            description: "Phụ kiện, bao bì, dụng cụ",
-            amount: null,
-            status: "NONE",
+            description: `${paymentGroups.other.length} payment OUT khác liên kết với watch`,
+            amount: otherLedgerAmount || null,
+            status: paymentStatus(paymentGroups.other),
         },
     ];
 

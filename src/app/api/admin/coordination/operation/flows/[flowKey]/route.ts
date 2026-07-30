@@ -58,6 +58,8 @@ export async function GET(
       query: request.nextUrl.searchParams.get("flowQuery"),
       status: request.nextUrl.searchParams.get("flowStatus"),
       paymentStatus: request.nextUrl.searchParams.get("flowPaymentStatus"),
+      paymentType: request.nextUrl.searchParams.get("flowPaymentType"),
+      paymentDirection: request.nextUrl.searchParams.get("flowPaymentDirection"),
       sort: request.nextUrl.searchParams.get("flowSort"),
       doneRetentionDays: doneRetentionDays(
         request.nextUrl.searchParams.get("doneRange"),

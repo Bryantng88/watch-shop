@@ -28,6 +28,8 @@ export type OrderProcessingSubFilter =
   | "shipping"
   | "delivered_remaining";
 
+export type OrderPaymentTypeFilter = "" | "full" | "cod" | "deposit";
+
 export type OrderListSort =
   | "updatedDesc"
   | "updatedAsc"
@@ -38,6 +40,7 @@ export type OrderSearchInput = {
   q?: string;
   view?: OrderViewKey;
   subFilter?: OrderProcessingSubFilter;
+  paymentType?: OrderPaymentTypeFilter;
   sort?: OrderListSort;
   page?: number;
   pageSize?: number;

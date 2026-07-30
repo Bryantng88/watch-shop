@@ -39,11 +39,13 @@ export type CreateShipmentFeeInput = {
   reference?: string | null;
   note?: string | null;
   paidAt?: Date | string | null;
+  actorUserId?: string | null;
 };
 
 export type CompleteShipmentInput = {
   shipmentId: string;
   note?: string | null;
+  actorUserId?: string | null;
 };
 
 export type CreateManualShipmentInput = {
@@ -65,6 +67,7 @@ export type ReceiveShipmentReturnInput = {
   reference?: string | null;
   note?: string | null;
   paidAt?: Date | string | null;
+  actorUserId?: string | null;
 };
 
 export type CreateShipmentReturnFeeInput = ReceiveShipmentReturnInput;

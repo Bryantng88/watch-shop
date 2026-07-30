@@ -38,6 +38,7 @@ import {
   buildHref,
   isOrderSelectable,
   normalizeOrderProcessingSubFilter,
+  normalizeOrderPaymentTypeFilter,
   normalizeOrderSort,
   normalizeOrderView,
 } from "../ui/list/helpers";
@@ -63,6 +64,7 @@ function buildInitialFilters(input: { rawSearchParams: Props["rawSearchParams"];
     pageSize: firstRaw(input.rawSearchParams.pageSize, String(input.pageSize)),
     view: normalizeOrderView(firstRaw(input.rawSearchParams.view, "all")),
     subFilter: normalizeOrderProcessingSubFilter(firstRaw(input.rawSearchParams.subFilter)),
+    paymentType: normalizeOrderPaymentTypeFilter(firstRaw(input.rawSearchParams.paymentType)),
   };
 }
 
@@ -180,6 +182,7 @@ export default function OrderListClient({
         filters.view === "processing" && filters.subFilter
           ? filters.subFilter
           : null,
+      paymentType: filters.paymentType || null,
       pageSize: filters.pageSize,
       page: "1",
     });
@@ -193,12 +196,14 @@ export default function OrderListClient({
       pageSize: "20",
       view: "all",
       subFilter: "",
+      paymentType: "",
     });
     navigateWithLoading({
       q: null,
       sort: null,
       view: null,
       subFilter: null,
+      paymentType: null,
       pageSize: null,
       page: "1",
     });

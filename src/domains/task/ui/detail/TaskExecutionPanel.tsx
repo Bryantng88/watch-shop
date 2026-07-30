@@ -78,7 +78,7 @@ function targetHref(type: string, id: string) {
   if (type === "SERVICE_REQUEST") return `/admin/services/${id}`;
   if (type === "ORDER") return `/admin/orders/${id}`;
   if (type === "SHIPMENT") return `/admin/shipments/${id}`;
-  if (type === "PAYMENT") return `/admin/payments`;
+  if (type === "PAYMENT") return `/admin/coordination/payment`;
   if (type === "WATCH") return `/admin/watches/${id}`;
   if (type === "WORK_CASE") return `/admin/work-cases/${id}`;
   return null;

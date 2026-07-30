@@ -12,7 +12,6 @@ import {
     Menu,
     ChevronDown,
     ClipboardList,
-    CreditCard,
     LayoutList,
     MonitorCog,
     CameraIcon,
@@ -88,13 +87,6 @@ const NAV: NavEntry[] = [
                 label: "Đơn hàng",
                 icon: ClipboardList,
                 permission: PERMISSIONS.ORDER_VIEW,
-            },
-            {
-                type: "item",
-                href: "/admin/payments",
-                label: "Thanh toán",
-                icon: CreditCard,
-                permission: PERMISSIONS.PAYMENT_VIEW,
             },
             {
                 type: "item",

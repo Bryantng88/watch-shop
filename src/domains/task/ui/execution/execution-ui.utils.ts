@@ -17,7 +17,7 @@ export function targetHref(type: string, id: string) {
     if (type === "TECHNICAL_ISSUE") return `/admin/service/issues?issueId=${id}`;
     if (type === "ORDER") return `/admin/orders/${id}`;
     if (type === "SHIPMENT") return `/admin/shipments/${id}`;
-    if (type === "PAYMENT") return `/admin/payments`;
+    if (type === "PAYMENT") return `/admin/coordination/payment`;
     if (type === "WATCH") return `/admin/watches/${id}`;
     if (type === "WORK_CASE") return `/admin/work-cases/${id}`;
     if (type === "ACQUISITION") return `/admin/acquisitions/${id}`;

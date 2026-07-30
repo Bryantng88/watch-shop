@@ -396,7 +396,7 @@ function bindingHref(
   }
   if (binding.targetType === "ORDER") return `/admin/orders/${binding.targetId}`;
   if (binding.targetType === "SHIPMENT") return `/admin/shipments/${binding.targetId}`;
-  if (binding.targetType === "PAYMENT") return "/admin/payments";
+  if (binding.targetType === "PAYMENT") return "/admin/coordination/payment";
   if (binding.targetType === "WORK_CASE") return `/admin/work-cases/${binding.targetId}`;
   if (binding.targetType === "ACQUISITION") return `/admin/acquisitions/${binding.targetId}`;
 

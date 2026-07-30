@@ -6,6 +6,7 @@ import type {
   OrderListCounts,
   OrderListFiltersValue,
   OrderProcessingSubFilter,
+  OrderPaymentTypeFilter,
 } from "./types";
 import { ORDER_PAGE_SIZE_OPTIONS, ORDER_SORT_OPTIONS } from "./helpers";
 
@@ -56,6 +57,18 @@ export default function OrderListFilters({
       { value: "delivered_remaining", label: `Đã giao, còn phải thu · ${counts.processingSub?.delivered_remaining ?? 0}` },
     ],
   };
+  const paymentTypeField: FilterBarField = {
+    key: "paymentType",
+    label: "Hình thức thanh toán",
+    type: "select",
+    defaultValue: "",
+    options: [
+      { value: "", label: "Hình thức: Tất cả" },
+      { value: "full", label: `Thanh toán full · ${counts.paymentType?.full ?? 0}` },
+      { value: "cod", label: `COD · ${counts.paymentType?.cod ?? 0}` },
+      { value: "deposit", label: `Đặt cọc · ${counts.paymentType?.deposit ?? 0}` },
+    ],
+  };
   const sortField: FilterBarField = {
     key: "sort",
     label: "Sắp xếp",
@@ -66,7 +79,7 @@ export default function OrderListFilters({
       label: String(option.label),
     })),
   };
-  const advancedFields: FilterBarField[] = [{
+  const advancedFields: FilterBarField[] = [subFilterField, {
     key: "pageSize",
     label: "Số dòng mỗi trang",
     type: "select",
@@ -83,7 +96,7 @@ export default function OrderListFilters({
       total={total}
       visibleCount={visibleCount}
       search={{ key: "q", placeholder: "Tìm mã đơn, khách hàng, số điện thoại..." }}
-      primaryFields={[viewField, subFilterField]}
+      primaryFields={[viewField, paymentTypeField]}
       advancedFields={advancedFields}
       sortField={sortField}
       onChange={(patch) => {
@@ -95,6 +108,7 @@ export default function OrderListFilters({
       onClearField={(key) => {
         if (key === "view") onChange({ view: "all", subFilter: "" });
         else if (key === "subFilter") onChange({ subFilter: "" as OrderProcessingSubFilter });
+        else if (key === "paymentType") onChange({ paymentType: "" as OrderPaymentTypeFilter });
         else if (key === "sort") onChange({ sort: "updatedDesc" });
         else if (key === "pageSize") onChange({ pageSize: "20" });
         else onChange({ [key]: "" } as Partial<OrderListFiltersValue>);

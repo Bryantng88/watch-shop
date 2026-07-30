@@ -8,7 +8,7 @@ import {
 } from "@prisma/client";
 
 import { prisma } from "@/server/db/client";
-import { syncWatchInventoryFromOrderId } from "@/domains/order/server/order-watch-sync.service";
+import { reconcileOrderSettlementTx } from "@/domains/order/server/order-completion.service";
 import {
   COLLECTED,
   createPaymentRowTx,
@@ -157,21 +157,11 @@ export async function markOrderShipmentDeliveredAndCollectCod(input: {
     }
 
     const nextSummary = await recomputePaymentOwnerRollupTx(tx, "ORDER", order.id);
-
-    const shouldCompleteOrder = Number(nextSummary.remaining ?? 0) <= 0;
-
-    if (shouldCompleteOrder) {
-      await tx.order.update({
-        where: { id: order.id },
-        data: {
-          status: OrderStatus.COMPLETED,
-          paymentStatus: PaymentStatus.PAID,
-          updatedAt: new Date(),
-        },
-      });
-
-      await syncWatchInventoryFromOrderId(tx, order.id);
-    }
+    await reconcileOrderSettlementTx(tx, order.id, {
+      totalDue: nextSummary.totalDue,
+      paidTotal: nextSummary.paidTotal,
+      depositPaid: nextSummary.paidTotal + nextSummary.collectedTotal,
+    });
     return toPlain({ orderId: order.id, summary: nextSummary });
   });
 }
@@ -233,19 +223,22 @@ export async function finalizeOrderByPaidAmount(input: { orderId: string; note?:
     const currentNote = String(input.note ?? "").trim();
     const finalizedNote = currentNote || `Chốt order theo tiền đã nhận: ${Math.round(paidTotal).toLocaleString("vi-VN")} VND.`;
 
-    const updated = await tx.order.update({
+    await tx.order.update({
       where: { id: order.id },
       data: {
         subtotal: money(paidTotal),
         depositPaid: money(paidTotal),
-        paymentStatus: PaymentStatus.PAID,
-        status: OrderStatus.COMPLETED,
         notes: [order.notes, finalizedNote].filter(Boolean).join("\n") || finalizedNote,
         updatedAt: new Date(),
       },
     });
 
-    await syncWatchInventoryFromOrderId(tx, order.id);
+    await reconcileOrderSettlementTx(tx, order.id, {
+      totalDue: paidTotal,
+      paidTotal,
+      depositPaid: paidTotal,
+    });
+    const updated = await tx.order.findUniqueOrThrow({ where: { id: order.id } });
     const summary = await getPaymentSummaryTx(tx, "ORDER", order.id);
     return toPlain({ order: updated, summary });
   });

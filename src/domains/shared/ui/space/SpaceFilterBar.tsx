@@ -1,9 +1,10 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { CalendarDays, ChevronDown, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useDismissibleDetails } from "@/domains/shared/ui/popover/useDismissibleDetails";
 
 export type SpaceFilterOption = {
   label: string;
@@ -117,6 +118,8 @@ export default function SpaceFilterBar({
   frameless?: boolean;
   filterBadgeCount?: number;
 }) {
+  const filterBarRef = useRef<HTMLDivElement>(null);
+  useDismissibleDetails(filterBarRef);
   const activeFilterCount = selectFilters.filter(
     (filter) => filter.value !== filter.options[0]?.value,
   ).length;
@@ -124,14 +127,14 @@ export default function SpaceFilterBar({
     weekOptions.find((option) => option.value === weekValue)?.label ?? "Chọn thời gian";
 
   return (
-    <div className={cn(
+    <div ref={filterBarRef} className={cn(
       "rounded-xl bg-white",
       frameless
         ? "border-0 p-0 shadow-none"
         : "border border-slate-200 p-3 shadow-[0_1px_2px_rgba(15,23,42,0.025)]",
     )}>
       <div className="flex flex-wrap items-center gap-2">
-        <details className="group relative shrink-0">
+        <details data-dismissible-popover className="group relative shrink-0">
           <summary className="flex h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
             <CalendarDays className="h-4 w-4 text-slate-500" />
             <span className="max-w-[130px] truncate">{activeWeekLabel}</span>
@@ -179,7 +182,7 @@ export default function SpaceFilterBar({
         ) : null}
 
         {selectFilters.length ? (
-          <details className="group relative shrink-0">
+          <details data-dismissible-popover className="group relative shrink-0">
             <summary className="relative flex h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
               <SlidersHorizontal className="h-4 w-4 text-slate-500" />
               Bộ lọc

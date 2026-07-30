@@ -8,6 +8,7 @@ import {
 
 import { prisma } from "@/server/db/client";
 import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
+import { reconcileOrderSettlementTx } from "@/domains/order/server/order-completion.service";
 import { buildPaymentOwnerSummary, getPaymentOwnerSummaryProjection } from "@/domains/projection/server/payment-owner-summary.projection";
 import type {
   CreatePaymentInput,
@@ -329,16 +330,10 @@ async function syncPaymentOwnerBusinessStateTx(
 ) {
   if (ownerType !== "ORDER") return;
 
-  await tx.order.update({
-    where: { id: ownerId },
-    data: {
-      depositPaid: money(summary.paidTotal + summary.collectedTotal),
-      paymentStatus:
-        summary.totalDue > 0 && summary.remaining <= 0
-          ? PaymentStatus.PAID
-          : PaymentStatus.UNPAID,
-      updatedAt: new Date(),
-    },
+  await reconcileOrderSettlementTx(tx, ownerId, {
+    totalDue: summary.totalDue,
+    paidTotal: summary.paidTotal,
+    depositPaid: summary.paidTotal + summary.collectedTotal,
   });
 }
 

@@ -730,6 +730,12 @@ export default function OperationCoordinationWorkspace({
   const [filterPayment, setFilterPayment] = useState(
     () => searchParams.get("flowPaymentStatus") ?? "ALL",
   );
+  const [filterPaymentType, setFilterPaymentType] = useState(
+    () => searchParams.get("flowPaymentType") ?? "ALL",
+  );
+  const [filterPaymentDirection, setFilterPaymentDirection] = useState(
+    () => searchParams.get("flowPaymentDirection") ?? "ALL",
+  );
   const [flowListStageFilter, setFlowListStageFilter] = useState(
     () => searchParams.get("flowStage") ?? "",
   );
@@ -796,11 +802,19 @@ export default function OperationCoordinationWorkspace({
     const nextQuery = searchParams.get("flowQuery") ?? "";
     const nextStatus = searchParams.get("flowStatus") ?? "ALL";
     const nextPaymentStatus = searchParams.get("flowPaymentStatus") ?? "ALL";
+    const nextPaymentType = searchParams.get("flowPaymentType") ?? "ALL";
+    const nextPaymentDirection = searchParams.get("flowPaymentDirection") ?? "ALL";
     const nextStage = searchParams.get("flowStage") ?? "";
     setFilterQuery((current) => current === nextQuery ? current : nextQuery);
     setFilterWorkStatus((current) => current === nextStatus ? current : nextStatus);
     setFilterPayment((current) =>
       current === nextPaymentStatus ? current : nextPaymentStatus
+    );
+    setFilterPaymentType((current) =>
+      current === nextPaymentType ? current : nextPaymentType
+    );
+    setFilterPaymentDirection((current) =>
+      current === nextPaymentDirection ? current : nextPaymentDirection
     );
     setFlowListStageFilter((current) => current === nextStage ? current : nextStage);
   }, [searchParams]);
@@ -1074,6 +1088,8 @@ export default function OperationCoordinationWorkspace({
       "flowQuery",
       "flowStatus",
       "flowPaymentStatus",
+      "flowPaymentType",
+      "flowPaymentDirection",
       "flowSort",
       "includeBoard",
       "boardStage",
@@ -1151,6 +1167,8 @@ export default function OperationCoordinationWorkspace({
       flowQuery: filterQuery.trim(),
       flowStatus: filterWorkStatus,
       flowPaymentStatus: filterPayment,
+      flowPaymentType: filterPaymentType,
+      flowPaymentDirection: filterPaymentDirection,
       flowSort: "UPDATED_DESC",
       doneRange,
     });
@@ -1207,6 +1225,8 @@ export default function OperationCoordinationWorkspace({
     asyncFlowPagination.pageSize,
     flowEndpoint,
     filterPayment,
+    filterPaymentType,
+    filterPaymentDirection,
     filterQuery,
     filterWorkStatus,
     doneRange,
@@ -1222,7 +1242,10 @@ export default function OperationCoordinationWorkspace({
       filterQuery.trim(),
       filterWorkStatus,
       filterPayment,
+      filterPaymentType,
+      filterPaymentDirection,
       doneRange,
+      asyncFlowPagination.pageSize,
     ].join("|");
     const needsModeLoad = flowItemsModeKey !== activeViewModeKey;
     if (lastFlowFilterRequestKey.current === null) {
@@ -1245,10 +1268,13 @@ export default function OperationCoordinationWorkspace({
     activeFlowListStage,
     activeViewModeKey,
     filterPayment,
+    filterPaymentType,
+    filterPaymentDirection,
     filterQuery,
     filterWorkStatus,
     flowItemsModeKey,
     doneRange,
+    asyncFlowPagination.pageSize,
     loadFlowItems,
     workTicketView,
   ]);
@@ -1985,10 +2011,10 @@ export default function OperationCoordinationWorkspace({
                     label: "Trạng thái công việc",
                     value: filterWorkStatus,
                     options: [
-                      { label: `Tất cả công việc (${activeDisplayedWorkTickets.length})`, value: "ALL" },
-                      { label: `Đang mở (${filterFacets.open})`, value: "OPEN" },
-                      { label: `Cần phản hồi (${filterFacets.feedback})`, value: "FEEDBACK" },
-                      { label: `Đã hoàn tất (${filterFacets.done})`, value: "DONE" },
+                      { label: isPaymentCollectionFlow ? "Tất cả công việc" : `Tất cả công việc (${activeDisplayedWorkTickets.length})`, value: "ALL" },
+                      { label: isPaymentCollectionFlow ? "Đang mở" : `Đang mở (${filterFacets.open})`, value: "OPEN" },
+                      { label: isPaymentCollectionFlow ? "Cần phản hồi" : `Cần phản hồi (${filterFacets.feedback})`, value: "FEEDBACK" },
+                      { label: isPaymentCollectionFlow ? "Đã hoàn tất" : `Đã hoàn tất (${filterFacets.done})`, value: "DONE" },
                     ],
                     onChange: setFilterWorkStatus,
                   },
@@ -2041,24 +2067,59 @@ export default function OperationCoordinationWorkspace({
                     ],
                     onChange: (value: string) => setTechnicalIssueCommentFilter(value as TechnicalIssueCommentFilter),
                   }] : []),
-                  ...(showPaymentColumn && !isOperationalBoardView ? [{
+                  ...((showPaymentColumn || isPaymentCollectionFlow) && !isOperationalBoardView ? [{
                     key: "payment",
                     label: "Thanh toán",
                     value: filterPayment,
                     options: [
-                      { label: `Tất cả thanh toán (${activeDisplayedWorkTickets.length})`, value: "ALL" },
-                      { label: `Chưa thanh toán (${filterFacets.unpaid})`, value: "UNPAID" },
-                      { label: `Đã thanh toán (${filterFacets.paid})`, value: "PAID" },
-                      { label: `Chưa phát sinh (${filterFacets.none})`, value: "NONE" },
+                      { label: isPaymentCollectionFlow ? "Tất cả thanh toán" : `Tất cả thanh toán (${activeDisplayedWorkTickets.length})`, value: "ALL" },
+                      { label: isPaymentCollectionFlow ? "Chưa thanh toán" : `Chưa thanh toán (${filterFacets.unpaid})`, value: "UNPAID" },
+                      { label: isPaymentCollectionFlow ? "Đã thanh toán" : `Đã thanh toán (${filterFacets.paid})`, value: "PAID" },
+                      { label: isPaymentCollectionFlow ? "Chưa phát sinh" : `Chưa phát sinh (${filterFacets.none})`, value: "NONE" },
                     ],
                     onChange: setFilterPayment,
-                  }] : []),
+                  }, ...(isPaymentCollectionFlow ? [{
+                    key: "payment-type",
+                    label: "Nhóm nghiệp vụ",
+                    value: filterPaymentType,
+                    options: [
+                      { label: "Tất cả nghiệp vụ", value: "ALL" },
+                      { label: "Thanh toán đơn hàng", value: "ORDER" },
+                      { label: "Vận chuyển", value: "SHIPMENT" },
+                      { label: "Service / sửa chữa", value: "SERVICE" },
+                      { label: "Phiếu nhập", value: "ACQUISITION" },
+                      { label: "Hóa đơn", value: "INVOICE" },
+                      { label: "Khác", value: "OTHER" },
+                    ],
+                    onChange: setFilterPaymentType,
+                  }, {
+                    key: "payment-direction",
+                    label: "Loại phiếu",
+                    value: filterPaymentDirection,
+                    options: [
+                      { label: "Tất cả phiếu", value: "ALL" },
+                      { label: "Phiếu thu", value: "IN" },
+                      { label: "Phiếu chi", value: "OUT" },
+                    ],
+                    onChange: setFilterPaymentDirection,
+                  }] : [])] : []),
                   ...(!isOperationalBoardView ? [{
                     key: "page-size",
                     label: "Số dòng hiển thị",
-                    value: String(workspacePageSize),
+                    value: String(activeCoreFlow ? asyncFlowPagination.pageSize : workspacePageSize),
                     options: [10, 20, 50].map((size) => ({ label: `${size} dòng`, value: String(size) })),
-                    onChange: (value: string) => setWorkspacePageSize(Number(value)),
+                    onChange: (value: string) => {
+                      const pageSize = Number(value);
+                      if (activeCoreFlow) {
+                        setAsyncFlowPagination((current) => ({
+                          ...current,
+                          page: 1,
+                          pageSize,
+                        }));
+                      } else {
+                        setWorkspacePageSize(pageSize);
+                      }
+                    },
                   }] : []),
                 ]}
                 onWeekChange={(value) => {
@@ -2085,7 +2146,7 @@ export default function OperationCoordinationWorkspace({
                     </span>
                   </>
                 )}
-                {filterQuery || filterCreator !== "ALL" || filterWorkStatus !== "ALL" || filterPayment !== "ALL" || technicalIssuePriorityFilter !== "ALL" || technicalIssueCommentFilter !== "ALL" ? <button type="button" onClick={() => { setFilterQuery(""); setFilterCreator("ALL"); setFilterWorkStatus("ALL"); setFilterPayment("ALL"); setTechnicalIssuePriorityFilter("ALL"); setTechnicalIssueCommentFilter("ALL"); }} className="inline-flex h-11 shrink-0 items-center rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800">Xóa lọc</button> : null}
+                {filterQuery || filterCreator !== "ALL" || filterWorkStatus !== "ALL" || filterPayment !== "ALL" || filterPaymentType !== "ALL" || filterPaymentDirection !== "ALL" || technicalIssuePriorityFilter !== "ALL" || technicalIssueCommentFilter !== "ALL" ? <button type="button" onClick={() => { setFilterQuery(""); setFilterCreator("ALL"); setFilterWorkStatus("ALL"); setFilterPayment("ALL"); setFilterPaymentType("ALL"); setFilterPaymentDirection("ALL"); setTechnicalIssuePriorityFilter("ALL"); setTechnicalIssueCommentFilter("ALL"); }} className="inline-flex h-11 shrink-0 items-center rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800">Xóa lọc</button> : null}
                 <SpaceDataRefreshButton
                   loading={isBoardRefreshing || isFlowItemsLoading}
                   refreshedAt={boardRefreshedAt}

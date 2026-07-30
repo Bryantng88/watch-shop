@@ -16,12 +16,15 @@ export type OrderProcessingSubFilter =
   | "shipping"
   | "delivered_remaining";
 
+export type OrderPaymentTypeFilter = "" | "full" | "cod" | "deposit";
+
 export type OrderListFiltersValue = {
   q: string;
   sort: string;
   pageSize: string;
   view: OrderViewKey;
   subFilter: OrderProcessingSubFilter;
+  paymentType: OrderPaymentTypeFilter;
 };
 
 export const ORDER_LIST_VIEWS = [
@@ -46,6 +49,7 @@ export const ORDER_PROCESSING_SUB_FILTERS = [
 
 export type OrderListCounts = Partial<Record<OrderViewKey, number>> & {
   processingSub?: Partial<Record<Exclude<OrderProcessingSubFilter, "">, number>>;
+  paymentType?: Partial<Record<Exclude<OrderPaymentTypeFilter, "">, number>>;
 };
 
 export type OrderPaymentFlowTone =

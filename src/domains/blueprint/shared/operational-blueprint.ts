@@ -1,4 +1,5 @@
 import type { WorkTypeCoordinationContext } from "@/domains/task/server/work-type.types";
+import { SHIPMENT_CARRIER_OPTIONS } from "@/domains/shipment/shared/shipment-carriers";
 
 export type OperationalBlueprintCardinality =
   | "SINGLE_PER_ACTIVE_CYCLE"
@@ -1376,8 +1377,14 @@ const SHIPMENT_OPERATION_CONTRACT: OperationalBlueprintContract = {
           { value: "BUSINESS", label: "Doanh nghiệp" },
           { value: "CUSTOMER", label: "Khách hàng" },
         ] },
-        { key: "method", label: "Phương thức", kind: "text", required: true },
-        { key: "carrier", label: "Đơn vị vận chuyển", kind: "text", required: true },
+        { key: "method", label: "Phương thức", kind: "text", required: false },
+        {
+          key: "carrier",
+          label: "Đơn vị vận chuyển",
+          kind: "select",
+          required: true,
+          options: [...SHIPMENT_CARRIER_OPTIONS],
+        },
         { key: "trackingCode", label: "Mã vận đơn", kind: "text", required: false },
         { key: "note", label: "Ghi chú", kind: "textarea", required: false },
       ],

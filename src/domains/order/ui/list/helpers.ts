@@ -6,6 +6,7 @@ import type {
   OrderListCounts,
   OrderListItem,
   OrderProcessingSubFilter,
+  OrderPaymentTypeFilter,
   OrderViewKey,
 } from "./types";
 
@@ -53,6 +54,15 @@ export function normalizeOrderProcessingSubFilter(
 
   return allowed.includes(filter as OrderProcessingSubFilter)
     ? (filter as OrderProcessingSubFilter)
+    : "";
+}
+
+export function normalizeOrderPaymentTypeFilter(
+  value?: string | null,
+): OrderPaymentTypeFilter {
+  const filter = String(value ?? "").trim().toLowerCase();
+  return ["full", "cod", "deposit"].includes(filter)
+    ? (filter as OrderPaymentTypeFilter)
     : "";
 }
 

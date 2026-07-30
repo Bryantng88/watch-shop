@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
-import type { OrderListSort, OrderProcessingSubFilter, OrderViewKey } from "../shared";
+import type { OrderListSort, OrderPaymentTypeFilter, OrderProcessingSubFilter, OrderViewKey } from "../shared";
 
 function buildOrderBy(sort?: OrderListSort): Prisma.OrderOrderByWithRelationInput {
   switch (sort) {
@@ -27,6 +27,15 @@ function buildBaseWhere(q?: string): Prisma.OrderWhereInput {
       { shipPhone: { contains: keyword, mode: "insensitive" } },
     ],
   };
+}
+
+function buildPaymentTypeWhere(paymentType?: OrderPaymentTypeFilter): Prisma.OrderWhereInput {
+  if (paymentType === "full") {
+    return { OR: [{ reserveType: null }, { reserveType: "NONE" }] };
+  }
+  if (paymentType === "cod") return { reserveType: "COD" };
+  if (paymentType === "deposit") return { reserveType: "DEPOSIT" };
+  return {};
 }
 
 function zeroOrNullDecimal(field: "depositPaid" | "depositRequired"): Prisma.OrderWhereInput {
@@ -316,13 +325,17 @@ export async function listAdminOrdersRepo(
     q?: string;
     view?: OrderViewKey;
     subFilter?: OrderProcessingSubFilter;
+    paymentType?: OrderPaymentTypeFilter;
     sort?: OrderListSort;
     page: number;
     pageSize: number;
   },
 ) {
   const client = dbOrTx(db);
-  const base = buildBaseWhere(input.q);
+  const searchBase = buildBaseWhere(input.q);
+  const base: Prisma.OrderWhereInput = {
+    AND: [searchBase, buildPaymentTypeWhere(input.paymentType)],
+  };
   const where = buildViewWhere(base, input.view, input.subFilter);
   const skip = (input.page - 1) * input.pageSize;
   const take = input.pageSize;
@@ -343,8 +356,11 @@ export async function listAdminOrdersRepo(
     awaitingShipment,
     shipping,
     deliveredRemaining,
+    paymentFull,
+    paymentCod,
+    paymentDeposit,
   ] = await Promise.all([
-    client.order.count({ where: base }),
+    client.order.count({ where: searchBase }),
     client.order.count({ where }),
     client.order.findMany({ where, orderBy: buildOrderBy(input.sort), skip, take, select: orderListSelect }),
     client.order.count({ where: buildViewWhere(base, "pending") }),
@@ -359,6 +375,9 @@ export async function listAdminOrdersRepo(
     client.order.count({ where: buildViewWhere(base, "processing", "awaiting_shipment") }),
     client.order.count({ where: buildViewWhere(base, "processing", "shipping") }),
     client.order.count({ where: buildViewWhere(base, "processing", "delivered_remaining") }),
+    client.order.count({ where: { AND: [searchBase, buildPaymentTypeWhere("full")] } }),
+    client.order.count({ where: { AND: [searchBase, buildPaymentTypeWhere("cod")] } }),
+    client.order.count({ where: { AND: [searchBase, buildPaymentTypeWhere("deposit")] } }),
   ]);
 
   return {
@@ -384,6 +403,11 @@ export async function listAdminOrdersRepo(
         awaiting_shipment: awaitingShipment,
         shipping,
         delivered_remaining: deliveredRemaining,
+      },
+      paymentType: {
+        full: paymentFull,
+        cod: paymentCod,
+        deposit: paymentDeposit,
       },
     },
   };

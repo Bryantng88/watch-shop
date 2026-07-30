@@ -23,6 +23,7 @@ import {
   getWatchServiceProjectionSource,
   getWatchTradeHistory,
 } from "./watch-detail.repo";
+import { getWatchCostLedgerProjection } from "@/domains/projection/server/watch-cost-ledger.projection";
 
 type ReviewFeedbackTarget = "CONTENT" | "IMAGE";
 
@@ -253,7 +254,28 @@ export async function getWatchRow(productId: string) {
 }
 
 export async function getWatchTradeHistoryDetail(productId: string) {
-  return getWatchTradeHistory(prisma, productId);
+  const [tradeHistory, costLedger] = await Promise.all([
+    getWatchTradeHistory(prisma, productId),
+    getWatchCostLedgerProjection(prisma, productId),
+  ]);
+
+  return {
+    ...tradeHistory,
+    costLedger: costLedger?.costLedger ?? [],
+    serviceFees: costLedger?.serviceFees ?? [],
+    shipmentFees: costLedger?.shipmentFees ?? [],
+    costSummary: costLedger
+      ? {
+          currency: costLedger.currency,
+          acquisitionAmount: costLedger.acquisitionAmount,
+          serviceAmount: costLedger.serviceAmount,
+          shipmentAmount: costLedger.shipmentAmount,
+          otherAmount: costLedger.otherAmount,
+          landedCost: costLedger.landedCost,
+          sourceUpdatedAt: costLedger.sourceUpdatedAt,
+        }
+      : null,
+  };
 }
 
 export async function getWatchServiceHistoryDetail(productId: string) {

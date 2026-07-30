@@ -72,6 +72,7 @@ export async function runShipmentOperationBlueprintAction(
         reference: clean(fields.reference) || null,
         note: clean(fields.note) || null,
         paidAt: clean(fields.paidAt) || null,
+        actorUserId: input.actorUserId ?? null,
       });
       return { ok: true, actionKey, shipmentId: targetId, result };
     }
@@ -79,13 +80,18 @@ export async function runShipmentOperationBlueprintAction(
       const result = await markShipmentDeliveredApplication({
         shipmentId: targetId,
         note: clean(fields.note) || null,
+        actorUserId: input.actorUserId ?? null,
       });
       return { ok: true, actionKey, shipmentId: targetId, result };
     }
     if (action.command === "shipment.markReturning") {
       const note = clean(fields.note);
       if (!note) return { ok: false, actionKey, error: "RETURN_REASON_REQUIRED" };
-      const result = await markShipmentReturnedApplication({ shipmentId: targetId, note });
+      const result = await markShipmentReturnedApplication({
+        shipmentId: targetId,
+        note,
+        actorUserId: input.actorUserId ?? null,
+      });
       return { ok: true, actionKey, shipmentId: targetId, result };
     }
     if (action.command === "shipment.receiveReturn") {
@@ -100,6 +106,7 @@ export async function runShipmentOperationBlueprintAction(
         reference: clean(fields.reference) || null,
         note: clean(fields.note) || null,
         paidAt: clean(fields.paidAt) || null,
+        actorUserId: input.actorUserId ?? null,
       });
       return { ok: true, actionKey, shipmentId: targetId, result };
     }

@@ -46,6 +46,8 @@ export default async function OperationCoordinationPage(props: PageProps) {
         flowQuery: first(searchParams.flowQuery) ?? null,
         flowStatus: first(searchParams.flowStatus) ?? null,
         flowPaymentStatus: first(searchParams.flowPaymentStatus) ?? null,
+        flowPaymentType: first(searchParams.flowPaymentType) ?? null,
+        flowPaymentDirection: first(searchParams.flowPaymentDirection) ?? null,
         flowSort: first(searchParams.flowSort) ?? null,
         includeDashboardDetails: false,
         includeManagementDetails: false,

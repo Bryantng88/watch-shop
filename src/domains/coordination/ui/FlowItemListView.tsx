@@ -35,6 +35,7 @@ import {
 import { useManualTransitionFeedback } from "@/domains/task/ui/task-work/use-manual-transition-feedback";
 import { PostTargetChip } from "@/domains/shared/ui/post-target/PostTargetChip";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
+import { ResponsiveSelectionCheckbox } from "@/domains/shared/ui/selection/ResponsiveSelectionCheckbox";
 
 type FlowStage = {
   key: string;
@@ -81,6 +82,7 @@ type OperationalActionForm = {
   label: string;
   description?: string | null;
   fields: OperationalActionField[];
+  initialFields: Record<string, string>;
 };
 
 function operationalActionFromMetadata(metadata: unknown): OperationalActionForm | null {
@@ -88,6 +90,19 @@ function operationalActionFromMetadata(metadata: unknown): OperationalActionForm
   const candidate = (metadata as Record<string, unknown>).operationalBlueprintAction;
   if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return null;
   const action = candidate as Record<string, unknown>;
+  const initialFieldsCandidate =
+    (metadata as Record<string, unknown>).operationalInitialFields;
+  const initialFields =
+    initialFieldsCandidate &&
+    typeof initialFieldsCandidate === "object" &&
+    !Array.isArray(initialFieldsCandidate)
+      ? Object.fromEntries(
+          Object.entries(initialFieldsCandidate).map(([fieldKey, value]) => [
+            fieldKey,
+            value == null ? "" : String(value),
+          ]),
+        )
+      : {};
   const key = String(action.key ?? "").trim();
   if (!key) return null;
   return {
@@ -100,6 +115,7 @@ function operationalActionFromMetadata(metadata: unknown): OperationalActionForm
             Boolean(field) && typeof field === "object" && !Array.isArray(field),
         )
       : [],
+    initialFields,
   };
 }
 
@@ -455,7 +471,8 @@ export default function FlowItemListView({
     setOperationalFields(Object.fromEntries(
       action.fields.map((field) => [
         field.key,
-        field.kind === "select" ? field.options?.[0]?.value ?? "" : "",
+        action.initialFields[field.key] ??
+          (field.kind === "select" ? field.options?.[0]?.value ?? "" : ""),
       ]),
     ));
     setOperationalAction({ item, action });
@@ -472,6 +489,14 @@ export default function FlowItemListView({
     }
     setActionError(null);
     setPendingActionId(operationalAction.item.id);
+    progress.show({
+      title: `Đang ${operationalAction.action.label.toLocaleLowerCase("vi")}`,
+      message:
+        operationalAction.item.preview.title ??
+        operationalAction.item.preview.ref ??
+        operationalAction.item.targetId,
+      percent: 20,
+    });
     startActionTransition(async () => {
       try {
         await submitOperationalBlueprintActionAction({
@@ -481,13 +506,21 @@ export default function FlowItemListView({
           targetId: operationalAction.item.targetId,
           fields: operationalFields,
         });
+        progress.update({
+          percent: 85,
+          message: "Đã xử lý nghiệp vụ, đang đồng bộ danh sách và trạng thái.",
+        });
         setOperationalAction(null);
         setOperationalFields({});
         await onReloadRequested?.();
+        progress.update({ percent: 100, message: "Đã hoàn tất." });
+        window.setTimeout(() => progress.hide(), 700);
       } catch (error) {
-        setActionError(
-          error instanceof Error ? error.message : "Không thể thực hiện thao tác vận chuyển.",
-        );
+        const message =
+          error instanceof Error ? error.message : "Không thể thực hiện thao tác vận chuyển.";
+        setActionError(message);
+        progress.update({ message });
+        window.setTimeout(() => progress.hide(), 1400);
       } finally {
         setPendingActionId(null);
       }
@@ -801,7 +834,11 @@ export default function FlowItemListView({
           <thead>
             <tr className="border-b border-slate-200 bg-[#fbfcfe] text-left text-[11px] font-bold uppercase tracking-[0.05em] text-slate-500">
               <th className="w-12 px-5 py-3">
-                <input type="checkbox" aria-label="Chọn tất cả item đang hiển thị" checked={allVisibleSelected} onChange={(event) => setSelectedIds(event.target.checked ? Array.from(new Set([...selectedIds, ...visibleIds])) : selectedIds.filter((id) => !visibleIds.includes(id)))} />
+                <ResponsiveSelectionCheckbox
+                  aria-label="Chọn tất cả item đang hiển thị"
+                  checked={allVisibleSelected}
+                  onCheckedChange={(checked) => setSelectedIds(checked ? Array.from(new Set([...selectedIds, ...visibleIds])) : selectedIds.filter((id) => !visibleIds.includes(id)))}
+                />
               </th>
               <th className="px-2 py-3">Item</th>
               {showReshootNote ? <th className="w-80 px-4 py-3">Yêu cầu xử lý</th> : null}
@@ -864,7 +901,11 @@ export default function FlowItemListView({
               return (
                 <tr key={item.id} className={cn("group transition hover:bg-slate-50", checked && "bg-violet-50/50")}>
                   <td className="px-5 py-3">
-                    <input type="checkbox" aria-label={`Chọn ${item.preview.title ?? "item"}`} checked={checked} onChange={(event) => setSelectedIds((current) => event.target.checked ? [...current, item.id] : current.filter((id) => id !== item.id))} />
+                    <ResponsiveSelectionCheckbox
+                      aria-label={`Chọn ${item.preview.title ?? "item"}`}
+                      checked={checked}
+                      onCheckedChange={(nextChecked) => setSelectedIds((current) => nextChecked ? [...current, item.id] : current.filter((id) => id !== item.id))}
+                    />
                   </td>
                   <td className="px-2 py-3">
                     <Link href={href} className="flex min-w-0 items-center gap-3">
@@ -1115,12 +1156,12 @@ export default function FlowItemListView({
                         </div>
                       )
                     ) : item.targetType === "SHIPMENT" && enabledActions.length ? (
-                      <div className="flex flex-wrap gap-2">
-                        {enabledActions.map((transition) => {
+                      <div className="flex items-center gap-1.5">
+                        {(() => {
+                          const transition = enabledActions[0];
                           const action = operationalActionFromMetadata(transition.metadata);
                           return (
                             <button
-                              key={transition.actionKey}
                               type="button"
                               disabled={isActionPending}
                               onClick={() =>
@@ -1136,7 +1177,34 @@ export default function FlowItemListView({
                                 : manualTransitionActionLabel(transition)}
                             </button>
                           );
-                        })}
+                        })()}
+                        {enabledActions.length > 1 ? (
+                          <details className="group relative">
+                            <summary className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-violet-300 hover:text-violet-700">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </summary>
+                            <div className="absolute right-0 top-9 z-30 min-w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                              {enabledActions.slice(1).map((transition) => {
+                                const action = operationalActionFromMetadata(transition.metadata);
+                                return (
+                                  <button
+                                    key={transition.actionKey}
+                                    type="button"
+                                    disabled={isActionPending}
+                                    onClick={() =>
+                                      action
+                                        ? openOperationalAction(item, action)
+                                        : runAction(item, transition)
+                                    }
+                                    className="block h-8 w-full rounded-lg px-2.5 text-left text-xs font-semibold text-slate-700 transition hover:bg-violet-50 hover:text-violet-700 disabled:opacity-50"
+                                  >
+                                    {manualTransitionActionLabel(transition)}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </details>
+                        ) : null}
                       </div>
                     ) : primaryAction && isOpenTargetTransition(primaryAction) ? (
                       <OpenTargetAction

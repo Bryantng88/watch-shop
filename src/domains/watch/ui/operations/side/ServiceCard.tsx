@@ -32,7 +32,7 @@ export default function ServiceCard({
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const rows = projection.requests.slice(0, 4);
+    const rows = projection.requests;
     const cleanProductId = String(productId ?? "").trim();
     const watchLabel = title || sku || cleanProductId || "watch";
 
@@ -194,17 +194,14 @@ export default function ServiceCard({
                     subtitle={`${projection.activeRequestCount} SR active · ${projection.activeIssueCount} TI active`}
                 />
                 <div className="p-4">
-                    <div className="overflow-hidden rounded-lg border border-slate-200/80">
-                        <div className="grid grid-cols-[minmax(0,1fr)_80px_28px] gap-2 bg-slate-50/80 px-3 py-2.5 text-[10px] font-semibold uppercase text-slate-400">
-                            <div>Service code</div>
+                    <div className="max-h-[420px] overflow-y-auto rounded-lg border border-slate-200/80">
+                        <div className="grid grid-cols-[minmax(0,1fr)_88px] gap-2 bg-slate-50/80 px-3 py-2.5 text-[10px] font-semibold uppercase text-slate-400">
+                            <div>Service / Technical Issue</div>
                             <div>Trạng thái</div>
-                            <div>+</div>
                         </div>
                         {rows.map((item) => (
-                                <div
-                                    key={item.id}
-                                    className="grid min-h-[44px] grid-cols-[minmax(0,1fr)_80px_28px] items-center gap-2 border-t border-slate-100 px-3 py-2 text-xs"
-                                >
+                            <div key={item.id} className="border-t border-slate-100">
+                                <div className="grid min-h-[44px] grid-cols-[minmax(0,1fr)_88px] items-center gap-2 bg-slate-50/40 px-3 py-2 text-xs">
                                     {item.workspaceHref ? (
                                         <button
                                             type="button"
@@ -219,8 +216,37 @@ export default function ServiceCard({
                                     <div className="truncate font-medium text-indigo-600">
                                         {item.status}
                                     </div>
-                                    <div className="font-medium text-slate-500">{item.issueCount}</div>
                                 </div>
+                                {item.issues.map((issue) => (
+                                    <div
+                                        key={issue.id}
+                                        className="grid grid-cols-[minmax(0,1fr)_88px] items-start gap-2 border-t border-dashed border-slate-100 px-3 py-2.5 text-xs"
+                                    >
+                                        <div className="min-w-0 pl-2">
+                                            <div className="line-clamp-2 font-medium leading-5 text-slate-800">
+                                                {issue.summary}
+                                            </div>
+                                            <div className="mt-1 text-[10px] text-slate-400">
+                                                TI · {issue.isConfirmed ? "Đã xác nhận" : "Chưa xác nhận"}
+                                            </div>
+                                        </div>
+                                        <div className={
+                                            issue.status === "DONE"
+                                                ? "font-medium text-emerald-600"
+                                                : issue.status === "CANCELED"
+                                                  ? "font-medium text-slate-400"
+                                                  : "font-medium text-amber-600"
+                                        }>
+                                            {issue.status}
+                                        </div>
+                                    </div>
+                                ))}
+                                {!item.issues.length ? (
+                                    <div className="border-t border-dashed border-slate-100 px-5 py-2.5 text-xs text-slate-400">
+                                        SR chưa có Technical Issue.
+                                    </div>
+                                ) : null}
+                            </div>
                         ))}
                         {!rows.length ? (
                             <div className="border-t border-slate-100 px-3 py-4 text-xs text-slate-400">

@@ -227,6 +227,7 @@ export async function createShipmentFeeAndShip(input: CreateShipmentFeeInput) {
         carrier: updated.carrier,
         trackingCode: updated.trackingCode,
         note: input.note,
+        actorUserId: input.actorUserId ?? null,
       } satisfies ShipmentMutation,
     });
   });
@@ -276,6 +277,7 @@ export async function markShipmentDelivered(input: CompleteShipmentInput) {
         carrier: shipment.carrier,
         trackingCode: shipment.trackingCode,
         note: input.note,
+        actorUserId: input.actorUserId ?? null,
       } satisfies ShipmentMutation,
     });
   });
@@ -325,6 +327,7 @@ export async function markShipmentReturned(input: CompleteShipmentInput) {
         carrier: shipment.carrier,
         trackingCode: shipment.trackingCode,
         note: input.note,
+        actorUserId: input.actorUserId ?? null,
       } satisfies ShipmentMutation,
     });
   });
@@ -380,6 +383,7 @@ export async function receiveShipmentReturn(input: ReceiveShipmentReturnInput) {
         carrier: shipment.carrier,
         trackingCode: shipment.trackingCode,
         note: input.note,
+        actorUserId: input.actorUserId ?? null,
       } satisfies ShipmentMutation,
     });
   });

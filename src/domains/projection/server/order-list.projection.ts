@@ -341,6 +341,9 @@ type AggregateCountRow = {
   awaitingShipment: bigint | number;
   shipping: bigint | number;
   deliveredRemaining: bigint | number;
+  paymentFull: bigint | number;
+  paymentCod: bigint | number;
+  paymentDeposit: bigint | number;
 };
 
 function viewCondition(input: OrderSearchInput) {
@@ -391,6 +394,13 @@ function whereConditions(input: OrderSearchInput) {
   if (view) conditions.push(view);
   const subFilter = subFilterCondition(input);
   if (subFilter) conditions.push(subFilter);
+  if (input.paymentType === "full") {
+    conditions.push(Prisma.sql`COALESCE("dataJson"->>'reserveType', 'NONE') = 'NONE'`);
+  } else if (input.paymentType === "cod") {
+    conditions.push(Prisma.sql`"dataJson"->>'reserveType' = 'COD'`);
+  } else if (input.paymentType === "deposit") {
+    conditions.push(Prisma.sql`"dataJson"->>'reserveType' = 'DEPOSIT'`);
+  }
   return conditions;
 }
 
@@ -472,7 +482,10 @@ export async function queryOrderListProjection(
           COUNT(*) FILTER (WHERE
             "dataJson"->>'shipmentStatus' = 'DELIVERED' AND
             ("dataJson"->>'remainingAmount')::numeric > 0
-          ) AS "deliveredRemaining"
+          ) AS "deliveredRemaining",
+          COUNT(*) FILTER (WHERE COALESCE("dataJson"->>'reserveType', 'NONE') = 'NONE') AS "paymentFull",
+          COUNT(*) FILTER (WHERE "dataJson"->>'reserveType' = 'COD') AS "paymentCod",
+          COUNT(*) FILTER (WHERE "dataJson"->>'reserveType' = 'DEPOSIT') AS "paymentDeposit"
         FROM "ProjectionRecord"
         WHERE "projectionKey" = ${ORDER_LIST_PROJECTION_KEY}
       `),
@@ -503,6 +516,11 @@ export async function queryOrderListProjection(
         awaiting_shipment: number(aggregate?.awaitingShipment),
         shipping: number(aggregate?.shipping),
         delivered_remaining: number(aggregate?.deliveredRemaining),
+      },
+      paymentType: {
+        full: number(aggregate?.paymentFull),
+        cod: number(aggregate?.paymentCod),
+        deposit: number(aggregate?.paymentDeposit),
       },
     },
   };
