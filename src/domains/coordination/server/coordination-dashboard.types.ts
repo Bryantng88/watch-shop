@@ -25,6 +25,7 @@ export type QueueSummaryDTO = {
 export type CoordinationWorkTicketSummaryDTO = {
   id: string;
   title: string;
+  status: string;
   identityPreview?: {
     targetType: string;
     targetId: string;
@@ -38,6 +39,11 @@ export type CoordinationWorkTicketSummaryDTO = {
     avatarUrl: string | null;
     isSystem: boolean;
   };
+  assignee: {
+    label: string;
+    avatarUrl: string | null;
+    isSystem: boolean;
+  } | null;
   queueSummary: QueueSummaryDTO;
   paymentSummary?: {
     scope: "TECHNICAL_ISSUE_ROLLUP";

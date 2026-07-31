@@ -47,7 +47,7 @@ type Props = {
     onSelect?: (fileKey: string) => void;
     onSubmit?: (fileKeys: string[]) => void;
     profile?: SharedMediaProfile;
-    audienceSegment?: "MEN" | "WOMEN";
+    audienceSegment?: "MEN" | "WOMEN" | "UNISEX";
     selectedKey?: string | null;
     selectedKeys?: string[];
     disabledKeys?: string[];
@@ -66,7 +66,7 @@ function cx(...classes: Array<string | false | null | undefined>) {
 
 function getRootPrefix(
     profile: SharedMediaProfile,
-    audienceSegment?: "MEN" | "WOMEN",
+    audienceSegment?: "MEN" | "WOMEN" | "UNISEX",
 ) {
     if (audienceSegment && (profile === "inline" || profile === "edit")) {
         return mediaSourceRoot(audienceSegment, profile);

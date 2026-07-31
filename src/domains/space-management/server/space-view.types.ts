@@ -4,6 +4,7 @@ export type SpaceViewRowModel =
   | "WORKSPACE"
   | "FLOW_STAGE_WORKSPACE"
   | "CASE_WORKSPACE"
+  | "TASK_ITEM"
   | "BUSINESS_ITEM"
   | "BENCH_WORKSPACE"
   | "WORKSPACE_BUCKET"
@@ -17,6 +18,7 @@ export type WorkspaceKind =
 
 export type SpaceViewPrimaryTarget =
   | "workspace"
+  | "taskItem"
   | "businessItem"
   | "stage";
 
@@ -42,6 +44,11 @@ export type SpaceViewModeConfig = {
   primaryTarget: SpaceViewPrimaryTarget;
   coreFlowKey?: string;
   allowedWorkspaceKinds?: WorkspaceKind[];
+  workTypeKeys?: string[];
+  taskItemStages?: Array<{
+    key: "OPEN" | "DONE";
+    label: string;
+  }>;
   columns: SpaceViewColumnConfig[];
 };
 

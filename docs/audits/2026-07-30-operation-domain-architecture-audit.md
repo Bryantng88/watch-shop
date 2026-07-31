@@ -520,6 +520,47 @@ Minimum gate:
 
 Status: **temporarily closed with runtime-evidence exceptions**.
 
+### 2026-07-31 follow-up: Watch duplicate quarantine projection gap
+
+- Finding: `confirmDuplicateWatchAction` updated the Watch source row and
+  cancelled related Task executions, but the active `watch-list` projection
+  retained its previous snapshot. The normal Watch list could therefore keep
+  rendering a quarantined duplicate while the duplicate view (source read)
+  already contained it.
+- Root cause: duplicate quarantine/restore had no business event subscription,
+  and a scoped Watch projection rebuild only upserted rows; it did not remove a
+  row that had become ineligible for the read model.
+- Resolution:
+  - added `watch.duplicate.confirmed` and `watch.duplicate.restored`;
+  - command state and event/outbox are recorded in the same transaction;
+  - delivery is processed after commit;
+  - active Watch projection sources exclude `duplicateConfirmedAt != null`;
+  - scoped rebuild deletes the previous row before conditionally rebuilding it.
+- Contract: confirm removes the Watch from the active projection and exposes it
+  through the duplicate source view; restore performs the inverse. UI-side row
+  hiding is not part of correctness.
+- Validation: targeted ESLint passed. Repository-wide TypeScript remains blocked
+  by pre-existing parse errors under `component for chatGPT/**` and
+  `src/note.ts`. The legacy Sprint 75 verifier also currently fails on the
+  unrelated pre-existing `service_request.created` subscription expectation.
+
+### 2026-07-31 temporary maintenance: repair missing Watch INLINE media
+
+- Purpose: allow an operator to click a Watch-list thumbnail and select the
+  correct image from the current segment INLINE source folder while legacy
+  missing references are being repaired.
+- This is only a new UI entry point. It does not introduce a separate image
+  write path: selection uses the shared Media browser and
+  `ingestSelectedMedia`, replaces the Watch `INLINE` image and binding in one
+  transaction, emits `watch.media.asset.attached`, and waits for the normal
+  consumer/projection operation.
+- Acquisition and Watch-creation behavior are not invoked or duplicated.
+- Permission remains `PRODUCT_UPDATE`; AppLoading covers ingest, binding,
+  event and projection completion.
+- Removal gate: set `NEXT_PUBLIC_WATCH_INLINE_REPAIR=0` after the production
+  media migration is complete. The dedicated application command and client
+  entry point can then be removed without affecting normal Media flows.
+
 ### Architecture work closed in this cycle
 
 - Payment Operation List now reads Payment rows, stage state, filters,
@@ -637,3 +678,46 @@ the corrected adapter still emits invalid envelopes.
   row cannot overwrite the newly selected item.
 - A comment refreshes the preview and requests the common List reload so
   comment counts remain synchronized.
+# 2026-07-31 — Việc phát sinh trong Unified Operation Space
+
+- Giữ nguyên invariant: toàn hệ thống chỉ có **một** Operation Space (`Task`).
+- “Việc phát sinh” là một `SpaceViewMode`, không phải Space/domain mới.
+- Mỗi dòng việc phát sinh là một Workspace (`TaskItem`) với:
+  - `workspaceKind: STANDALONE_WORKSPACE`
+  - `operationWorkspaceRole: AD_HOC_WORK`
+  - `workTypeKey/blueprintKey: ad-hoc-work`
+- Trạng thái dùng trực tiếp `TaskItem.status`: `TODO` tương ứng **Chưa làm**, `DONE` tương ứng **Đã xong**. Không tạo state machine riêng.
+- Đối tượng nghiệp vụ được gắn bằng `TaskExecution`/BusinessBinding; đợt đầu gồm `WATCH`, `ACQUISITION`, `ORDER`.
+- Binding của Workspace độc lập là **reference binding**, không khởi tạo workflow runtime. Chỉ `FLOW_STAGE_WORKSPACE` mới dùng queue/workflow binding adapter.
+- `ad-hoc-work` là Work Type được đăng ký và bật để tham gia read/access filtering, nhưng dùng provisioning `MANUAL/FIRST_INTAKE_EVENT`; registry không được tự tạo một Workspace rỗng khi mở Space.
+- Dashboard metrics phải scope theo `SpaceViewMode` đang chọn, không đổi nhãn rồi tiếp tục tổng hợp toàn Operation Space.
+- Projection `coordination-workspace-summary` thực hiện bounded read-repair theo `rowKey/sourceUpdatedAt`: bổ sung row thiếu, rebuild row stale và loại row đã bị cancel. Projection có dữ liệu không còn đồng nghĩa projection đã đầy đủ.
+- Refresh ở mode Workspace không có Core Flow phải refresh dashboard/Workspace summary; không gọi nhầm Flow Item loader.
+- Command tạo Workspace, binding và `task.item.created` event chạy trong cùng transaction.
+- UI dùng một modal/action chung tại các list Watch (Sản phẩm), Phiếu nhập và Đơn hàng; submit dùng AppLoading toàn cục.
+- List Vận hành lọc theo `workTypeKeys`, tránh trộn các `STANDALONE_WORKSPACE` khác.
+- Preview, activity, comment, mention và thao tác hoàn tất tiếp tục dùng TaskItem detail/runtime chung; không tạo implementation riêng cho “Việc phát sinh”.
+
+## Boundary giữa Workspace mode và Core Flow reader
+
+- `SpaceViewMode` chỉ được tải Flow Item khi mode khai báo `coreFlowKey` hợp lệ. Mode dạng Workspace/Case không được suy diễn thành generic flow chỉ vì `includeFlowItems` đang bật.
+- `flowLoadTaskItems` phải rỗng khi không có active Core Flow; dashboard của mode không-flow đọc Workspace summary/projection làm nguồn dữ liệu.
+- Work Type có thể tồn tại hợp lệ mà không sở hữu `workflowKey`. Binding workflow resolver phải trả về `null` cho trường hợp này; API bắt buộc-workflow vẫn giữ fail-fast qua `getWorkTypeWorkflowDefinition`.
+- Rule này ngăn binding tham chiếu của `ad-hoc-work` bị đưa qua queue/workflow runtime, đồng thời giữ kiểm tra chặt cho các Work Type thực sự thuộc Core Flow.
+
+## Read model của danh sách Việc phát sinh
+
+- Operation Space vẫn là một Space duy nhất; `ad-hoc-work` không tạo thêm Space hoặc Core Flow.
+- Mode `ad-hoc-work` dùng `rowModel: TASK_ITEM`: mỗi dòng UI là một TaskItem, không phải một Workspace summary.
+- Hai stage `OPEN/DONE` ánh xạ trực tiếp từ `TaskItem.status` thành “Chưa làm/Đã xong”. Không suy trạng thái từ số BusinessBinding hoặc queue count vì TaskItem tự do có thể không gắn business object.
+- Chuyển stage dùng TaskItem mutation chung, app-loading chung, optimistic removal khỏi stage hiện tại và refresh projection/dashboard sau khi lưu thành công.
+- Dashboard của mode TASK_ITEM đếm trực tiếp TaskItem theo status và chỉ biểu diễn hai trạng thái; không dùng bốn bucket của Core Flow.
+- Cột chuẩn của TASK_ITEM list: `Item → Yêu cầu → Đối tượng → Người tạo → Người xử lý → Cập nhật → Thao tác cuối → Thao tác`. Mutation chuyển stage nằm ở cột Thao tác riêng, không trộn vào nội dung Yêu cầu hoặc lịch sử Thao tác cuối.
+- Item có BusinessBinding dùng chính identity projection của business object (title/ref/image); TaskItem tự do dùng icon trung tính và nhãn “Việc tự do”. UI không truy vấn riêng từng domain để dựng lại ảnh.
+- “Việc tự do/phát sinh” là loại công việc, không đồng nghĩa “không có đối tượng”: công việc được tạo từ Watch/Order/... phải giữ reference binding và render chính business object đó ở cột Item. Chỉ TaskItem được tạo độc lập, không có binding, mới mang identity “Việc tự do”.
+- TASK_ITEM list vẫn tải identity và activity projection khi dashboard chạy chế độ payload nhẹ (`includeDashboardDetails=false`); đây là dữ liệu cốt lõi của row, không phải dashboard enrichment tùy chọn.
+- Assignment dùng `TaskItem.assignedToUserId`, độc lập với share và mention:
+  - assignee có quyền truy cập đúng Workspace được giao;
+  - share Workspace/flow/Space tiếp tục quyết định phạm vi cộng tác rộng hơn;
+  - mention chỉ tạo ngữ cảnh trao đổi/notification, không thay đổi người chịu trách nhiệm.
+- Modal mặc định gán cho người tạo, đồng thời hỗ trợ chọn user active khác hoặc để `Chưa gán`. Server luôn xác thực lại user active trước khi ghi.

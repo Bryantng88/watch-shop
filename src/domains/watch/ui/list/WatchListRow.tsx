@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { BusinessEntityPreview } from "@/domains/shared/business/business-entity.types";
 import RowActions from "@/domains/shared/ui/list/RowActions";
+import { useAdHocWorkRowAction } from "@/domains/task/ui/ad-hoc-work/AdHocWorkRowAction";
 import {
     VisualStatusSignal,
     type VisualStatusIcon,
@@ -59,6 +60,7 @@ type Props = {
     onRaiseCase?: (row: WatchRow) => void;
     onCreateTask?: (row: WatchRow) => void;
     onPreview?: (preview: BusinessEntityPreview) => void;
+    onRepairInline?: (row: WatchRow) => void;
 };
 
 function initials(label?: string | null) {
@@ -104,19 +106,19 @@ function LastActionAvatar({
 
 type BadgeTone = VisualStatusTone;
 
-function Thumb({ src, alt }: { src?: string | null; alt: string }) {
+function Thumb({ src, alt, onClick }: { src?: string | null; alt: string; onClick?: () => void }) {
     if (!src) {
         return (
-            <div className="flex h-[64px] w-[64px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+            <button type="button" onClick={onClick} title="Chọn lại ảnh INLINE" className="flex h-[64px] w-[64px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-100 transition hover:border-violet-300 hover:bg-violet-50">
                 <ImageIcon className="h-6 w-6 text-slate-400" />
-            </div>
+            </button>
         );
     }
 
     return (
-        <div className="h-[64px] w-[64px] shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+        <button type="button" onClick={onClick} title="Chọn lại ảnh INLINE" className="h-[64px] w-[64px] shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 transition hover:border-violet-300">
             <img src={src} alt={alt} className="h-full w-full object-cover object-center" />
-        </div>
+        </button>
     );
 }
 
@@ -311,7 +313,16 @@ export default function WatchListRow({
     onConsign,
     onBuyBack,
     onPreview,
+    onRepairInline,
 }: Props) {
+    const adHocWork = useAdHocWorkRowAction<WatchRow>((row) => ({
+        targetType: "WATCH",
+        targetId: row.id,
+        title: row.title,
+        ref: row.sku,
+        imageUrl: row.imageUrl,
+        href: `/admin/watches/${row.productId}`,
+    }));
     const isRecent =
         product.updatedAt &&
         Date.now() - new Date(product.updatedAt).getTime() < 1000 * 60 * 60 * 24;
@@ -515,9 +526,11 @@ export default function WatchListRow({
             separatorBefore: true,
             onClick: onDelete,
         },
+        adHocWork.action,
     ].filter(Boolean) as WatchRowAction[];
 
     return (
+        <>
         <tr className="border-t border-slate-100 align-middle hover:bg-slate-50/40">
             <td className="px-4 py-3">
                 <input
@@ -530,7 +543,7 @@ export default function WatchListRow({
 
             <td className="px-4 py-3">
                 <div className="flex min-w-[340px] items-center gap-3">
-                    <Thumb src={product.imageUrl} alt={product.title} />
+                    <Thumb src={product.imageUrl} alt={product.title} onClick={onRepairInline ? () => onRepairInline(product) : undefined} />
 
                     <div className="min-w-0 flex-1">
                         <Link
@@ -696,5 +709,7 @@ export default function WatchListRow({
                 />
             </td>
         </tr>
+        {adHocWork.modal}
+        </>
     );
 }

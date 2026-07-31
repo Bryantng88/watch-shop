@@ -138,9 +138,14 @@ export async function queryCoordinationWorkspaceSummary(
   db: DB,
   taskId: string,
 ): Promise<CoordinationWorkspaceSourceRow[]> {
-  const records = await dbOrTx(db).$queryRaw<Array<{ dataJson: Prisma.JsonValue }>>(
+  const client = dbOrTx(db);
+  const loadRecords = () => client.$queryRaw<Array<{
+    rowKey: string;
+    sourceUpdatedAt: Date | null;
+    dataJson: Prisma.JsonValue;
+  }>>(
     Prisma.sql`
-      SELECT "dataJson"
+      SELECT "rowKey", "sourceUpdatedAt", "dataJson"
       FROM "ProjectionRecord"
       WHERE "projectionKey" = ${COORDINATION_WORKSPACE_SUMMARY_PROJECTION_KEY}
         AND "workspaceId" = ${taskId}
@@ -148,6 +153,39 @@ export async function queryCoordinationWorkspaceSummary(
       LIMIT 500
     `,
   );
+  let records = await loadRecords();
+  const sourceRows = await client.taskItem.findMany({
+    where: { taskId, status: { not: TaskStatus.CANCELLED } },
+    select: { id: true, updatedAt: true },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    take: 500,
+  });
+  const sourceById = new Map(sourceRows.map((row) => [row.id, row.updatedAt]));
+  const projectionById = new Map(records.map((record) => [record.rowKey, record]));
+  const staleIds = sourceRows
+    .filter((row) => {
+      const projectedAt = projectionById.get(row.id)?.sourceUpdatedAt;
+      return !projectedAt || projectedAt.getTime() < row.updatedAt.getTime();
+    })
+    .map((row) => row.id);
+  const removedIds = records
+    .filter((record) => !sourceById.has(record.rowKey))
+    .map((record) => record.rowKey);
+
+  if (removedIds.length) {
+    await deleteProjectionRecords(db, {
+      projectionKey: COORDINATION_WORKSPACE_SUMMARY_PROJECTION_KEY,
+      rowKeys: removedIds,
+    });
+  }
+  for (let index = 0; index < staleIds.length; index += 20) {
+    await Promise.all(
+      staleIds.slice(index, index + 20).map((id) =>
+        buildCoordinationWorkspaceSummaryRow(db, id),
+      ),
+    );
+  }
+  if (staleIds.length || removedIds.length) records = await loadRecords();
   const stored = records
     .map((record) => record.dataJson as StoredRow)
     .sort((left, right) =>

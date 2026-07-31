@@ -1,7 +1,6 @@
 "use client";
 
 import { Fragment, type FormEvent, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -21,6 +20,7 @@ import {
   Camera,
   CalendarClock,
   CheckCircle2,
+  ClipboardList,
   ChevronDown,
   ChevronRight,
   BookOpen,
@@ -50,6 +50,7 @@ import {
 } from "@/domains/coordination/actions/coordination.actions";
 import {
   applyQueueItemManualTransitionAction,
+  changeTaskItemDoneAction,
   createTaskItemAction,
   submitOperationalBlueprintActionAction,
 } from "@/domains/task/actions/task.actions";
@@ -129,6 +130,20 @@ function formatDateTime(value: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+}
+
+function adHocTargetLabel(targetType?: string | null) {
+  const normalized = String(targetType ?? "").trim().toUpperCase();
+  if (!normalized) return "Tự do";
+  const labels: Record<string, string> = {
+    WATCH: "Watch",
+    ORDER: "Order",
+    SHIPMENT: "Shipment",
+    ACQUISITION: "Phiếu nhập",
+    SERVICE_REQUEST: "Service",
+    PAYMENT: "Payment",
+  };
+  return labels[normalized] ?? normalized.replaceAll("_", " ");
 }
 
 function vietnamDateKey(date: Date) {
@@ -408,6 +423,14 @@ function WorkspaceIdentityFrame({
     );
   }
 
+  if (!ticket.identityPreview && ticket.blueprint?.key === "ad-hoc-work") {
+    return (
+      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md border border-violet-100 bg-violet-50 text-violet-600 shadow-sm">
+        <ClipboardList className="h-6 w-6" strokeWidth={1.7} />
+      </span>
+    );
+  }
+
   return <StageIconFrame stageKey={ticketFlowStageKey(ticket)} />;
 }
 
@@ -419,14 +442,18 @@ function formatMoneyCompact(value?: number | null) {
 
 function CreatorCell({
   creator,
+  className,
+  label = "Người tạo",
 }: {
   creator: CoordinationDashboardDTO["workTickets"][number]["creator"];
+  className?: string;
+  label?: string;
 }) {
   const src = resolveMediaPreviewSrc(creator.avatarUrl);
 
   return (
-    <div className="text-sm">
-      <div className="text-xs font-medium text-slate-500 lg:hidden">Người tạo</div>
+    <div className={cn("text-sm", className)}>
+      <div className="text-xs font-medium text-slate-500 lg:hidden">{label}</div>
       <div className="mt-1 inline-flex min-w-0 items-center gap-2 lg:mt-0">
         <span className={`flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-semibold ${creator.isSystem ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}>
           {src ? (
@@ -699,6 +726,7 @@ export default function OperationCoordinationWorkspace({
   const router = useRouter();
   const searchParams = useSearchParams();
   const dialog = useAppDialog();
+  const progress = useAppProgress();
   const [blueprintKey, setBlueprintKey] = useState(
     data.blueprints[0]?.selectionKey ?? "",
   );
@@ -773,6 +801,8 @@ export default function OperationCoordinationWorkspace({
   const [boardRefreshedAt, setBoardRefreshedAt] = useState<Date | null>(null);
   const [workspacePage, setWorkspacePage] = useState(1);
   const [workspacePageSize, setWorkspacePageSize] = useState(10);
+  const [adHocStatusOverrides, setAdHocStatusOverrides] = useState<Record<string, "OPEN" | "DONE">>({});
+  const [updatingAdHocItemId, setUpdatingAdHocItemId] = useState<string | null>(null);
   const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isViewPending, startViewTransition] = useTransition();
@@ -902,6 +932,8 @@ export default function OperationCoordinationWorkspace({
         (flow) => flow.key === activeViewMode.coreFlowKey,
       ) ?? null
     : null;
+  const isTaskItemListMode = activeViewMode?.rowModel === "TASK_ITEM";
+  const activeTaskItemStage = filterWorkStatus === "DONE" ? "DONE" : "OPEN";
   const orderedFlowStages = useMemo(
     () => {
       const stages =
@@ -1334,6 +1366,13 @@ export default function OperationCoordinationWorkspace({
   }, [data.cycle.id, doneRange, handleDashboardResult, isBoardRefreshing]);
   const refreshActiveData = useCallback(async () => {
     if (isBoardRefreshing) return;
+    if (!activeCoreFlow?.key) {
+      setIsBoardRefreshing(true);
+      startViewTransition(() => router.refresh());
+      setBoardRefreshedAt(new Date());
+      setIsBoardRefreshing(false);
+      return;
+    }
     if (workTicketView === "TI_BOARD") {
       await refreshBoard("technical");
       return;
@@ -1364,6 +1403,8 @@ export default function OperationCoordinationWorkspace({
     isBoardRefreshing,
     loadFlowItems,
     refreshBoard,
+    router,
+    startViewTransition,
     workTicketView,
   ]);
   useEffect(() => {
@@ -1550,9 +1591,18 @@ export default function OperationCoordinationWorkspace({
   const displayedWorkTickets = useMemo(() => {
     if (!activeCoreFlow || activeViewMode?.rowModel !== "FLOW_STAGE_WORKSPACE") {
       const allowedKinds = activeViewMode?.allowedWorkspaceKinds ?? [];
-      if (!allowedKinds.length) return data.workTickets;
+      const allowedWorkTypes = new Set(
+        (activeViewMode?.workTypeKeys ?? []).map(normalizeStageKey),
+      );
+      if (!allowedKinds.length && !allowedWorkTypes.size) return data.workTickets;
 
       return data.workTickets.filter((ticket) => {
+        if (
+          allowedWorkTypes.size &&
+          !allowedWorkTypes.has(normalizeStageKey(ticket.blueprint?.key))
+        ) {
+          return false;
+        }
         const inferredWorkspaceKind =
           ticket.blueprint?.workspaceKind ??
           (flowStageKeys.has(normalizeStageKey(ticketFlowStageKey(ticket)))
@@ -1619,6 +1669,8 @@ export default function OperationCoordinationWorkspace({
     const query = filterQuery.trim().toLocaleLowerCase("vi");
     return activeDisplayedWorkTickets.filter((ticket) => {
       const openItems = ticket.queueSummary.ready + ticket.queueSummary.review + ticket.queueSummary.feedback;
+      const taskItemStage = adHocStatusOverrides[ticket.id] ?? (ticket.status === "DONE" ? "DONE" : "OPEN");
+      if (isTaskItemListMode && taskItemStage !== activeTaskItemStage) return false;
       const searchable = [ticket.title, ticket.creator.label, ticket.lastActivity, ticket.identityPreview?.title, ticket.identityPreview?.ref]
         .filter(Boolean)
         .join(" ")
@@ -1634,7 +1686,31 @@ export default function OperationCoordinationWorkspace({
       if (filterPayment === "NONE" && paymentStatus !== "NONE") return false;
       return true;
     });
-  }, [activeDisplayedWorkTickets, filterCreator, filterPayment, filterQuery, filterWorkStatus]);
+  }, [activeDisplayedWorkTickets, activeTaskItemStage, adHocStatusOverrides, filterCreator, filterPayment, filterQuery, filterWorkStatus, isTaskItemListMode]);
+  const taskItemStageCounts = useMemo(() => {
+    const counts = { OPEN: 0, DONE: 0 };
+    activeDisplayedWorkTickets.forEach((ticket) => {
+      const stage = adHocStatusOverrides[ticket.id] ?? (ticket.status === "DONE" ? "DONE" : "OPEN");
+      counts[stage] += 1;
+    });
+    return counts;
+  }, [activeDisplayedWorkTickets, adHocStatusOverrides]);
+  const updateAdHocItemStage = useCallback(async (itemId: string, nextStage: "OPEN" | "DONE") => {
+    setUpdatingAdHocItemId(itemId);
+    progress.show({ message: nextStage === "DONE" ? "Đang hoàn tất công việc..." : "Đang mở lại công việc...", percent: 20 });
+    try {
+      await changeTaskItemDoneAction(itemId, nextStage === "DONE");
+      setAdHocStatusOverrides((current) => ({ ...current, [itemId]: nextStage }));
+      progress.update({ message: "Đã cập nhật trạng thái. Đang đồng bộ danh sách...", percent: 90 });
+      router.refresh();
+      window.setTimeout(() => progress.hide(), 700);
+    } catch (cause) {
+      progress.update({ message: cause instanceof Error ? cause.message : "Không thể cập nhật trạng thái." });
+      window.setTimeout(() => progress.hide(), 1400);
+    } finally {
+      setUpdatingAdHocItemId(null);
+    }
+  }, [progress, router]);
   const workspacePageCount = Math.max(1, Math.ceil(filteredWorkTickets.length / workspacePageSize));
   const safeWorkspacePage = Math.min(workspacePage, workspacePageCount);
   const workspacePageStart = (safeWorkspacePage - 1) * workspacePageSize;
@@ -1717,7 +1793,9 @@ export default function OperationCoordinationWorkspace({
     }
   }, [activeViewMode?.key, workTicketView]);
   const showPaymentColumn = activeDisplayedWorkTickets.some((ticket) => ticket.paymentSummary);
-  const workTicketGridClass = showPaymentColumn
+  const workTicketGridClass = isTaskItemListMode
+    ? "lg:grid-cols-[1.35fr_1.55fr_0.75fr_0.85fr_0.85fr_0.8fr_1.15fr_auto]"
+    : showPaymentColumn
     ? "lg:grid-cols-[1.85fr_0.85fr_1.05fr_1.08fr_0.6fr_0.8fr_1.2fr_auto]"
     : "lg:grid-cols-[2fr_1fr_1.1fr_0.7fr_0.9fr_1.5fr_auto]";
   const activeEmptyState =
@@ -2143,7 +2221,7 @@ export default function OperationCoordinationWorkspace({
                     <span className="inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-xl bg-slate-50 px-3 text-xs font-semibold text-slate-500">
                       {isViewPending || isFlowItemsLoading
                         ? "Đang tải..."
-                        : `${flowListVisibleCount} item`}
+                        : `${activeCoreFlow ? flowListVisibleCount : filteredWorkTickets.length} item`}
                     </span>
                   </>
                 )}
@@ -2154,6 +2232,34 @@ export default function OperationCoordinationWorkspace({
                   onRefresh={() => void refreshActiveData()}
                 />
               </SpaceFilterBar>
+              {!isOperationalBoardView && isTaskItemListMode ? (
+                <div className="mt-3 flex min-w-0 items-center overflow-x-auto rounded-xl border border-slate-200 bg-slate-50/70 p-1.5" aria-label="Lọc theo trạng thái công việc">
+                  {(activeViewMode.taskItemStages ?? []).map((stage, index) => {
+                    const isActive = stage.key === activeTaskItemStage;
+                    return (
+                      <Fragment key={stage.key}>
+                        {index > 0 ? <ChevronRight className="mx-1.5 h-4 w-4 shrink-0 text-violet-300" strokeWidth={1.5} /> : null}
+                        <button
+                          type="button"
+                          onClick={() => setFilterWorkStatus(stage.key)}
+                          aria-current={isActive ? "step" : undefined}
+                          className={cn(
+                            "group flex min-w-0 flex-1 items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-all duration-200",
+                            isActive ? "border-violet-300 bg-violet-50 text-violet-700 shadow-sm" : "border-transparent text-slate-500 hover:border-slate-200 hover:bg-white/80 hover:text-slate-800",
+                          )}
+                        >
+                          <span className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold", isActive ? "bg-violet-600 text-white" : "bg-slate-200 text-slate-600")}>{index + 1}</span>
+                          <span className="min-w-0">
+                            <span className="block text-[10px] font-bold uppercase tracking-wide opacity-70">Bước {index + 1}</span>
+                            <span className="block truncate text-xs font-semibold">{stage.label}</span>
+                          </span>
+                          <span className={cn("ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold", isActive ? "bg-violet-100 text-violet-700" : "bg-slate-100 text-slate-500")}>{taskItemStageCounts[stage.key]}</span>
+                        </button>
+                      </Fragment>
+                    );
+                  })}
+                </div>
+              ) : null}
               {!isOperationalBoardView && orderedFlowStages.length ? (
                 <div
                   className="mt-3 flex min-w-0 items-center overflow-x-auto rounded-xl border border-slate-200 bg-slate-50/70 p-1.5"
@@ -2447,7 +2553,7 @@ export default function OperationCoordinationWorkspace({
             />
           ) : (
             <>
-          <FlowItemListView
+          {activeCoreFlow ? <FlowItemListView
             key={activeCoreFlow?.key ?? activeViewModeKey}
             items={asyncFlowItems}
             stages={orderedFlowStages}
@@ -2481,9 +2587,21 @@ export default function OperationCoordinationWorkspace({
                 true,
               )
             }
-          />
-          <div className="hidden">
+          /> : null}
+          <div className={cn(activeCoreFlow && "hidden")}>
           <div className={cn("hidden border-y border-slate-100 bg-[#fbfcfe] px-5 py-3 text-xs font-bold uppercase tracking-[0.05em] text-slate-500 lg:grid", workTicketGridClass)}>
+            {isTaskItemListMode ? (
+              <>
+                <div>Item</div>
+                <div>Yêu cầu</div>
+                <div>Đối tượng</div>
+                <div>Người tạo</div>
+                <div>Người xử lý</div>
+                <div className="text-center">Cập nhật</div>
+                <div>Thao tác cuối</div>
+                <div className="text-right">Thao tác</div>
+              </>
+            ) : <>
             <div>Workspace</div>
             <div>Người tạo</div>
             <div>Item / Trạng thái</div>
@@ -2497,24 +2615,30 @@ export default function OperationCoordinationWorkspace({
             <div className="text-center">Cập nhật</div>
             <div>Hoạt động gần nhất</div>
             <div />
+            </>}
           </div>
 
           <div className="divide-y divide-slate-200 bg-white">
             {!isViewPending ? pagedWorkTickets.map((ticket) => (
-              <Link
+              <div
                 key={ticket.id}
-                href={`/admin/task-items/${ticket.id}`}
+                role="link"
+                tabIndex={0}
+                onClick={() => router.push(`/admin/task-items/${ticket.id}`)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") router.push(`/admin/task-items/${ticket.id}`);
+                }}
                 className={cn(
-                  "grid gap-4 px-5 py-4 transition hover:bg-slate-50 lg:items-center",
+                  "grid cursor-pointer gap-4 px-5 py-4 transition hover:bg-slate-50 lg:items-center",
                   workTicketGridClass,
                 )}
               >
-                <div className="flex min-w-0 items-center gap-4">
+                <div className={cn("flex min-w-0 items-center gap-4", isTaskItemListMode && "lg:order-1")}>
                   <WorkspaceIdentityFrame ticket={ticket} />
                   <div className="min-w-0">
                     <div className="flex min-w-0 items-center">
                       <span className="truncate text-sm font-semibold text-slate-950">
-                        {prefixedLabel("Workspace", ticket.title)}
+                        {isTaskItemListMode ? ticket.identityPreview?.title ?? "Việc tự do" : prefixedLabel("Workspace", ticket.title)}
                       </span>
                     </div>
                     {ticketFlowStageKey(ticket) &&
@@ -2532,25 +2656,29 @@ export default function OperationCoordinationWorkspace({
                       </div>
                     ) : null}
                     <div className="mt-2 truncate text-xs text-slate-500">
-                      {stageVisual(ticketFlowStageKey(ticket)).description}
+                      {isTaskItemListMode ? ticket.identityPreview?.ref ?? "Không gắn đối tượng nghiệp vụ" : stageVisual(ticketFlowStageKey(ticket)).description}
                     </div>
                   </div>
                 </div>
 
-                <CreatorCell creator={ticket.creator} />
-                <QueueSummaryCell summary={ticket.queueSummary} />
+                <CreatorCell creator={ticket.creator} className={isTaskItemListMode ? "lg:order-4" : undefined} />
+                {isTaskItemListMode ? (
+                  <div className="text-sm lg:order-2">
+                    <div className="font-semibold text-slate-900">{ticket.title}</div>
+                  </div>
+                ) : <QueueSummaryCell summary={ticket.queueSummary} />}
                 {showPaymentColumn ? (
                   <PaymentSummaryCell summary={ticket.paymentSummary ?? null} />
                 ) : null}
-                <div className="text-sm lg:flex lg:items-center lg:justify-center">
+                <div className={cn("text-sm lg:flex lg:items-center", isTaskItemListMode ? "lg:order-3" : "lg:justify-center")}>
                   <div className="text-xs font-medium uppercase tracking-wide text-slate-500 lg:hidden">
-                    Phản hồi
+                    {isTaskItemListMode ? "Đối tượng" : "Phản hồi"}
                   </div>
                   <div className="mt-2 font-semibold text-slate-900 lg:mt-0">
-                    {ticket.feedbackCount}
+                    {isTaskItemListMode ? adHocTargetLabel(ticket.identityPreview?.targetType) : ticket.feedbackCount}
                   </div>
                 </div>
-                <div className="text-sm lg:flex lg:items-center lg:justify-center lg:text-center">
+                <div className={cn("text-sm lg:flex lg:items-center lg:justify-center lg:text-center", isTaskItemListMode && "lg:order-6")}>
                   <div className="text-xs font-medium uppercase tracking-wide text-slate-500 lg:hidden">
                     Cập nhật
                   </div>
@@ -2559,13 +2687,13 @@ export default function OperationCoordinationWorkspace({
                   </div>
                 </div>
 
-                <div className="flex min-w-0 items-start gap-3 text-sm lg:items-center">
+                <div className={cn("flex min-w-0 items-start gap-3 text-sm lg:items-center", isTaskItemListMode && "lg:order-7")}>
                   <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-violet-50 text-violet-600">
                     <Zap className="h-3.5 w-3.5" />
                   </span>
                   <div className="min-w-0">
                     <div className="mb-1 text-xs font-medium text-slate-500 lg:hidden">
-                      Hoạt động gần nhất
+                      {isTaskItemListMode ? "Thao tác cuối" : "Hoạt động gần nhất"}
                     </div>
                     <div className="truncate font-medium text-slate-800">
                       {ticket.lastActivity || "-"}
@@ -2576,10 +2704,31 @@ export default function OperationCoordinationWorkspace({
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end text-slate-400">
-                  <ChevronRight className="h-4 w-4" />
+                <div className={cn("flex items-center justify-end gap-2 text-slate-400", isTaskItemListMode && "lg:order-5 lg:justify-start")}>
+                  {isTaskItemListMode ? (
+                    ticket.assignee
+                      ? <CreatorCell creator={ticket.assignee} label="Người xử lý" />
+                      : <span className="text-xs font-medium text-slate-400">Chưa gán</span>
+                  ) : null}
+                  {!isTaskItemListMode ? <ChevronRight className="h-4 w-4" /> : null}
                 </div>
-              </Link>
+                {isTaskItemListMode ? (
+                  <div className="flex items-center justify-end lg:order-8">
+                    <button
+                      type="button"
+                      disabled={updatingAdHocItemId === ticket.id}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void updateAdHocItemStage(ticket.id, activeTaskItemStage === "DONE" ? "OPEN" : "DONE");
+                      }}
+                      className="inline-flex h-8 items-center whitespace-nowrap rounded-lg border border-violet-200 bg-white px-3 text-xs font-semibold text-violet-700 transition hover:bg-violet-50 disabled:opacity-50"
+                    >
+                      {updatingAdHocItemId === ticket.id ? <LoaderCircle className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+                      {activeTaskItemStage === "DONE" ? "Mở lại" : "Hoàn tất"}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
             )) : null}
 
             {isViewPending ? (

@@ -24,7 +24,9 @@ export function workspaceProvisioningForWorkType(input: {
   workTypeKey: string;
   coordinationContext: WorkTypeCoordinationContext | "DRAFT";
   enabled?: boolean;
+  provisioning?: WorkspaceProvisioningPolicy | null;
 }): WorkspaceProvisioningPolicy {
+  if (input.provisioning) return input.provisioning;
   if (input.coordinationContext === "DRAFT" || !input.enabled) {
     return MANUAL_WORKSPACE_PROVISIONING;
   }

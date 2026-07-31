@@ -7,6 +7,8 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
 import { invalidateWatchListCountCache } from "@/domains/watch/server/list/watch-list.repo";
+import { emitWatchDuplicateStateEvent } from "@/domains/watch/server/events/watch-business-event.emitter";
+import { processBusinessEventOperation } from "@/domains/event/delivery";
 
 export async function confirmDuplicateWatchAction(input: { productId: string }) {
   const user = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
@@ -40,7 +42,7 @@ export async function confirmDuplicateWatchAction(input: { productId: string }) 
     item.technicalIssue.map((issue) => issue.id),
   );
 
-  await prisma.$transaction(async (tx) => {
+  const event = await prisma.$transaction(async (tx) => {
     const executions = await tx.taskExecution.findMany({
       where: {
         actionType: { not: TaskExecutionActionType.CANCELLED },
@@ -83,7 +85,16 @@ export async function confirmDuplicateWatchAction(input: { productId: string }) 
         duplicateConfirmedByUserId: user.id,
       },
     });
+
+    return emitWatchDuplicateStateEvent(tx, {
+      watchId: watch.id,
+      productId,
+      state: "CONFIRMED",
+      actorUserId: user.id,
+      occurredAt: confirmedAt,
+    });
   });
+  await processBusinessEventOperation(event.projectionDeliveryKey);
 
   invalidateWatchListCountCache();
   revalidatePath("/admin/watches");
@@ -93,11 +104,11 @@ export async function confirmDuplicateWatchAction(input: { productId: string }) 
 }
 
 export async function restoreDuplicateWatchAction(input: { productId: string }) {
-  await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+  const user = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
   const productId = String(input.productId ?? "").trim();
   if (!productId) throw new Error("Thiếu productId của watch.");
 
-  await prisma.$transaction(async (tx) => {
+  const event = await prisma.$transaction(async (tx) => {
     const watch = await tx.watch.findUnique({ where: { productId }, select: { id: true } });
     if (!watch) throw new Error("Không tìm thấy watch.");
 
@@ -127,11 +138,21 @@ export async function restoreDuplicateWatchAction(input: { productId: string }) 
       });
     }
 
+    const restoredAt = new Date();
     await tx.watch.update({
       where: { id: watch.id },
       data: { duplicateConfirmedAt: null, duplicateConfirmedByUserId: null },
     });
+
+    return emitWatchDuplicateStateEvent(tx, {
+      watchId: watch.id,
+      productId,
+      state: "RESTORED",
+      actorUserId: user.id,
+      occurredAt: restoredAt,
+    });
   });
+  await processBusinessEventOperation(event.projectionDeliveryKey);
 
   invalidateWatchListCountCache();
   revalidatePath("/admin/watches");

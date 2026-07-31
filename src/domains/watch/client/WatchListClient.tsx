@@ -47,6 +47,8 @@ import {
     type BusinessListDashboardWidgetKey,
 } from "@/domains/shared/ui/business-list";
 import { QuickOrderFromWatchModal } from "@/domains/order/ui/quick-order";
+import MediaBrowserDialog from "@/components/media/MediaBrowserDialog";
+import { repairWatchInlineMediaAction } from "./inline-repair/watch-inline-repair.actions";
 
 const WATCH_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = [
     "overview",
@@ -58,6 +60,11 @@ const WATCH_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = [
     "watch-readiness",
     "watch-aging",
 ];
+
+// Temporary maintenance surface. Set to "0" after legacy INLINE references
+// have been repaired and the production media migration is complete.
+const WATCH_INLINE_REPAIR_ENABLED =
+    process.env.NEXT_PUBLIC_WATCH_INLINE_REPAIR !== "0";
 
 type WatchListClientProps = Partial<WatchListPageProps> & {
     initialResult?: WatchListResult;
@@ -340,6 +347,8 @@ export default function WatchListClient(props: WatchListClientProps) {
     const [mediaReviewSubmitting, setMediaReviewSubmitting] = useState(false);
     const [mediaRowSubmittingId, setMediaRowSubmittingId] = useState<string | null>(null);
     const [duplicateSubmittingId, setDuplicateSubmittingId] = useState<string | null>(null);
+    const [inlineRepairRow, setInlineRepairRow] = useState<WatchRow | null>(null);
+    const [inlineRepairSubmitting, setInlineRepairSubmitting] = useState(false);
     const [dashboardCustomizationRequest, setDashboardCustomizationRequest] = useState(0);
 
     /**
@@ -874,6 +883,37 @@ export default function WatchListClient(props: WatchListClientProps) {
             });
         } finally {
             setDuplicateSubmittingId(null);
+            window.setTimeout(() => progress.hide(), 900);
+        }
+    }
+
+    async function repairInlineImage(storageKey: string) {
+        if (!inlineRepairRow || inlineRepairSubmitting) return;
+        setInlineRepairSubmitting(true);
+        progress.show({
+            title: "Đang sửa ảnh INLINE",
+            message: "Media đang được ingest, gắn vào Watch và đồng bộ danh sách.",
+        });
+        try {
+            await repairWatchInlineMediaAction({
+                productId: inlineRepairRow.productId,
+                storageKey,
+            });
+            notify.success({
+                title: "Đã cập nhật ảnh INLINE",
+                message: "Ảnh đại diện Watch đã được cập nhật qua luồng Media.",
+            });
+            setInlineRepairRow(null);
+            await loadList(new URLSearchParams(params.toString()), {
+                meta: "lite",
+            });
+        } catch (error) {
+            notify.error({
+                title: "Không thể sửa ảnh INLINE",
+                message: error instanceof Error ? error.message : "Có lỗi khi xử lý ảnh Media.",
+            });
+        } finally {
+            setInlineRepairSubmitting(false);
             window.setTimeout(() => progress.hide(), 900);
         }
     }
@@ -1525,6 +1565,7 @@ export default function WatchListClient(props: WatchListClientProps) {
                     onRaiseCase={openWorkCaseFromWatch}
                     onCreateTask={onCreateTask}
                     onPreview={previewState.openPreview}
+                    onRepairInline={WATCH_INLINE_REPAIR_ENABLED ? setInlineRepairRow : undefined}
                 />
             </div>
 
@@ -1672,6 +1713,30 @@ export default function WatchListClient(props: WatchListClientProps) {
                 error={previewState.error}
                 onClose={previewState.closePreview}
                 onActivityChanged={previewState.refreshPreview}
+            />
+            <MediaBrowserDialog
+                open={Boolean(inlineRepairRow)}
+                onClose={() => {
+                    if (!inlineRepairSubmitting) setInlineRepairRow(null);
+                }}
+                profile="inline"
+                audienceSegment={
+                    params.get("segment") === "WOMEN"
+                        ? "WOMEN"
+                        : params.get("segment") === "UNISEX"
+                            ? "UNISEX"
+                            : "MEN"
+                }
+                selectedKey={null}
+                selectedKeys={[]}
+                selectionMode="single"
+                title="Sửa nhanh ảnh INLINE"
+                description="Chọn ảnh INLINE hiện có. Ảnh sẽ đi qua đầy đủ luồng Media và cập nhật lại Watch."
+                submitLabel={inlineRepairSubmitting ? "Đang xử lý..." : "Chọn ảnh"}
+                onSelect={(key) => void repairInlineImage(key)}
+                onSubmit={(keys) => {
+                    if (keys[0]) void repairInlineImage(keys[0]);
+                }}
             />
         </BusinessListShell>
 

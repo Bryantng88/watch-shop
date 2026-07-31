@@ -98,6 +98,29 @@ export function getWorkTypeWorkflowDefinition(workTypeKey: string) {
   return workflowDefinition;
 }
 
+/**
+ * Resolves the workflow owned by a work type without requiring every work type
+ * to be flow-backed. Workspace/case work types intentionally return null.
+ */
+export function resolveWorkTypeWorkflowDefinition(workTypeKey: string) {
+  const workType = resolveWorkTypeByKey(workTypeKey);
+
+  if (!workType) {
+    throw new Error(`Work type "${workTypeKey}" was not found.`);
+  }
+
+  if (!workType.workflowKey) return null;
+
+  const workflowDefinition = resolveWorkflowDefinition(workType.workflowKey);
+  if (!workflowDefinition) {
+    throw new Error(
+      `Workflow definition "${workType.workflowKey}" is missing for work type "${workType.key}".`,
+    );
+  }
+
+  return workflowDefinition;
+}
+
 export function listWorkTypesWithWorkflow(
   context?: WorkTypeCoordinationContext,
 ) {

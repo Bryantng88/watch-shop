@@ -105,6 +105,35 @@ export async function emitWatchReviewBusinessEvent(
   }, { deferConsumers: input.deferConsumers });
 }
 
+export async function emitWatchDuplicateStateEvent(
+  db: DB,
+  input: {
+    watchId: string;
+    productId: string;
+    state: "CONFIRMED" | "RESTORED";
+    actorUserId?: string | null;
+    occurredAt: Date;
+  },
+) {
+  return recordBusinessEvent(db, {
+    eventKey: input.state === "CONFIRMED"
+      ? "watch.duplicate.confirmed"
+      : "watch.duplicate.restored",
+    targetType: "WATCH",
+    targetId: input.watchId,
+    targetAliasIds: [input.watchId, input.productId],
+    actorUserId: input.actorUserId ?? null,
+    payload: {
+      watchId: input.watchId,
+      productId: input.productId,
+      duplicateState: input.state,
+      occurredAt: input.occurredAt.toISOString(),
+      sourceId: `watch-duplicate:${input.watchId}:${input.state}`,
+      eventInstanceId: `watch-duplicate:${input.watchId}:${input.state}:${input.occurredAt.toISOString()}`,
+    },
+  });
+}
+
 export async function emitWatchContentModifiedEvent(
   db: DB,
   input: {

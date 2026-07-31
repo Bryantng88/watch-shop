@@ -369,6 +369,7 @@ export async function createTaskAction(input: CreateTaskInput) {
 
   revalidatePath("/admin/tasks");
   revalidatePath("/admin/task-items");
+  revalidatePath("/admin/coordination/operation");
 
   return {
     ok: true,
@@ -574,6 +575,7 @@ export async function updateTaskItemAction(
   revalidatePath("/admin/tasks");
   revalidatePath(`/admin/tasks/${item.taskId}`);
   revalidatePath("/admin/task-items");
+  revalidatePath("/admin/coordination/operation");
 
   return {
     ok: true,
@@ -706,6 +708,7 @@ export async function changeTaskItemDoneAction(
   revalidatePath("/admin/tasks");
   revalidatePath(`/admin/tasks/${item.taskId}`);
   revalidatePath("/admin/task-items");
+  revalidatePath("/admin/coordination/operation");
 
   return { ok: true, item };
 }
