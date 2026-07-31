@@ -39,6 +39,8 @@ export type CreatePaymentInput = {
   purpose?: PaymentPurpose | string | null;
   note?: string | null;
   markPaidNow?: boolean | null;
+  actorUserId?: string | null;
+  deferConsumers?: (work: () => Promise<void>) => void;
 };
 
 export type CompletePaymentInput = {

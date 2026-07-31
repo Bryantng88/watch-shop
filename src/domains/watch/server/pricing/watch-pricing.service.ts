@@ -1,4 +1,4 @@
-import { prisma } from "@/server/db/client";
+import { prisma, type DB } from "@/server/db/client";
 import {
   getWatchPricingRepo,
   updateWatchPricingRepo,
@@ -26,10 +26,11 @@ export async function updateWatchPricing(
 
 export async function updateWatchPricingWithDiff(
   productId: string,
-  input: UpdateWatchPricingInput
+  input: UpdateWatchPricingInput,
+  db: DB = prisma,
 ) {
-  const before = await getWatchPricingRepo(prisma as any, productId);
-  const next = await updateWatchPricingRepo(prisma as any, productId, input);
+  const before = await getWatchPricingRepo(db as any, productId);
+  const next = await updateWatchPricingRepo(db as any, productId, input);
 
   const changedFields = [
     hasChanged(before.price?.salePrice, next.salePrice) ? "salePrice" : null,

@@ -36,6 +36,7 @@ import { useManualTransitionFeedback } from "@/domains/task/ui/task-work/use-man
 import { PostTargetChip } from "@/domains/shared/ui/post-target/PostTargetChip";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { ResponsiveSelectionCheckbox } from "@/domains/shared/ui/selection/ResponsiveSelectionCheckbox";
+import { waitForOperationProjectionDeliveries } from "./operation-delivery.client";
 
 type FlowStage = {
   key: string;
@@ -457,7 +458,7 @@ export default function FlowItemListView({
     });
     startActionTransition(async () => {
       try {
-        await submitOperationalBlueprintActionAction({
+        const result = await submitOperationalBlueprintActionAction({
           taskItemId: operationalAction.item.taskItemId,
           actionKey: operationalAction.action.key,
           targetType: operationalAction.item.targetType,
@@ -467,6 +468,14 @@ export default function FlowItemListView({
         progress.update({
           percent: 85,
           message: "Đã xử lý nghiệp vụ, đang đồng bộ danh sách và trạng thái.",
+        });
+        await waitForOperationProjectionDeliveries(result, {
+          onStatus: (completed, total) => {
+            progress.update({
+              percent: 85 + Math.round((completed / Math.max(1, total)) * 10),
+              message: `Đang đồng bộ danh sách (${completed}/${total}).`,
+            });
+          },
         });
         setOperationalAction(null);
         setOperationalFields({});

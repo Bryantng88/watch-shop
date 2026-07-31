@@ -4,7 +4,7 @@ import {
   recordBusinessEvent,
   type BusinessEventDispatchOptions,
 } from "@/domains/event/server/business-event.service";
-import { prisma } from "@/server/db/client";
+import { prisma, type DB } from "@/server/db/client";
 
 export type ShipmentMutation = {
   eventKey:
@@ -29,11 +29,12 @@ export type ShipmentMutation = {
   eventInstanceId?: string | null;
 };
 
-export async function publishShipmentMutation(
+export async function recordShipmentMutation(
+  db: DB,
   mutation: ShipmentMutation,
   options?: BusinessEventDispatchOptions,
 ) {
-  return recordBusinessEvent(prisma, {
+  return recordBusinessEvent(db, {
     eventKey: mutation.eventKey,
     targetType: "SHIPMENT",
     targetId: mutation.shipmentId,
@@ -56,6 +57,13 @@ export async function publishShipmentMutation(
   }, options);
 }
 
+export async function publishShipmentMutation(
+  mutation: ShipmentMutation,
+  options?: BusinessEventDispatchOptions,
+) {
+  return recordShipmentMutation(prisma, mutation, options);
+}
+
 export async function publishShipmentMutations(
   mutations: ShipmentMutation[],
   options?: BusinessEventDispatchOptions,
@@ -63,6 +71,18 @@ export async function publishShipmentMutations(
   const results = [];
   for (const mutation of mutations) {
     results.push(await publishShipmentMutation(mutation, options));
+  }
+  return results;
+}
+
+export async function recordShipmentMutations(
+  db: DB,
+  mutations: ShipmentMutation[],
+  options?: BusinessEventDispatchOptions,
+) {
+  const results = [];
+  for (const mutation of mutations) {
+    results.push(await recordShipmentMutation(db, mutation, options));
   }
   return results;
 }

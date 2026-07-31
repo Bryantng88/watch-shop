@@ -1,4 +1,10 @@
-import { prisma } from "@/server/db/client";
+import {
+    isPrismaClient,
+    prisma,
+    withDbTransaction,
+    type DB,
+} from "@/server/db/client";
+import type { TechnicalIssue } from "@prisma/client";
 import { ensureTechnicalIssuePaymentTx } from "@/domains/payment/server/payment.service";
 import { syncTechnicalIssueToTasks } from "@/domains/task/server/task-technical-issue-sync.service";
 import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
@@ -46,7 +52,7 @@ function adminRoute(path: string) {
     return appUrl ? `${appUrl}${path}` : path;
 }
 
-async function recordTechnicalIssueEvent(input: {
+async function recordTechnicalIssueEvent(db: DB, input: {
     eventKey: string;
     technicalIssueId: string;
     serviceRequestId?: string | null;
@@ -54,7 +60,7 @@ async function recordTechnicalIssueEvent(input: {
     payload?: Record<string, unknown>;
     deferConsumers?: (work: () => Promise<void>) => void;
 }) {
-    await recordBusinessEvent(prisma, {
+    return recordBusinessEvent(db, {
         eventKey: input.eventKey,
         targetType: "TECHNICAL_ISSUE",
         targetId: input.technicalIssueId,
@@ -68,11 +74,11 @@ async function recordTechnicalIssueEvent(input: {
     }, { deferConsumers: input.deferConsumers });
 }
 
-async function vendorName(vendorId?: string | null) {
+async function vendorName(db: DB, vendorId?: string | null) {
     const id = cleanId(vendorId);
     if (!id) return null;
 
-    const vendor = await prisma.vendor.findUnique({
+    const vendor = await db.vendor.findUnique({
         where: { id },
         select: { name: true },
     });
@@ -302,14 +308,17 @@ export async function createTechnicalIssue(input: {
     priority?: string | null;
     actorUserId?: string | null;
     deferConsumers?: (work: () => Promise<void>) => void;
-}) {
+}, db: DB = prisma): Promise<TechnicalIssue> {
+    if (isPrismaClient(db)) {
+        return db.$transaction((tx) => createTechnicalIssue(input, tx));
+    }
     const serviceRequestId = cleanId(input.serviceRequestId);
     if (!serviceRequestId) throw new Error("Missing serviceRequestId");
 
     let assessmentId = cleanId(input.assessmentId);
 
     if (!assessmentId) {
-        const existing = await prisma.technicalAssessment.findUnique({
+        const existing = await db.technicalAssessment.findUnique({
             where: { serviceRequestId },
             select: { id: true },
         });
@@ -317,7 +326,7 @@ export async function createTechnicalIssue(input: {
     }
 
     if (!assessmentId) {
-        const createdAssessment = await prisma.technicalAssessment.create({
+        const createdAssessment = await db.technicalAssessment.create({
             data: {
                 serviceRequestId,
                 status: "DRAFT" as any,
@@ -330,7 +339,7 @@ export async function createTechnicalIssue(input: {
     const now = new Date();
     const vendorId = cleanId(input.vendorId);
 
-    const created = await prisma.technicalIssue.create({
+    const created = await db.technicalIssue.create({
         data: {
             assessmentId,
             serviceRequestId,
@@ -341,7 +350,7 @@ export async function createTechnicalIssue(input: {
             summary: cleanId(input.summary) ?? cleanId(input.note) ?? "Technical issue",
             estimatedCost: decimalOrNull(input.estimatedCost),
             vendorId,
-            vendorNameSnap: await vendorName(vendorId),
+            vendorNameSnap: await vendorName(db, vendorId),
             technicianId: cleanId(input.technicianId),
             serviceCatalogId: cleanId(input.serviceCatalogId),
             supplyCatalogId: cleanId(input.supplyCatalogId),
@@ -354,7 +363,7 @@ export async function createTechnicalIssue(input: {
         } as any,
     });
 
-    const serviceRequest = await prisma.serviceRequest.findUnique({
+    const serviceRequest = await db.serviceRequest.findUnique({
         where: { id: serviceRequestId },
         select: {
             refNo: true,
@@ -370,8 +379,8 @@ export async function createTechnicalIssue(input: {
         .filter(Boolean)
         .join(" ") || serviceRequest?.skuSnapshot || "Chưa có thông tin đồng hồ";
 
-    await syncServiceRequestStatusFromIssues(prisma as any, serviceRequestId);
-    await recordTechnicalIssueEvent({
+    await syncServiceRequestStatusFromIssues(db as any, serviceRequestId);
+    await recordTechnicalIssueEvent(db, {
         eventKey: "technical_issue.created",
         technicalIssueId: created.id,
         serviceRequestId,
@@ -399,13 +408,16 @@ export async function confirmTechnicalIssue(input: {
     summary?: string | null;
     note?: string | null;
     deferConsumers?: DeferConsumers;
-}) {
+}, db: DB = prisma): Promise<TechnicalIssue> {
+    if (isPrismaClient(db)) {
+        return db.$transaction((tx) => confirmTechnicalIssue(input, tx));
+    }
     const id = cleanId(input.id);
     if (!id) throw new Error("Missing issue id");
     const summary = cleanText(input.summary);
     const note = cleanText(input.note);
 
-    const updated = await prisma.technicalIssue.update({
+    const updated = await db.technicalIssue.update({
         where: { id },
         data: {
             summary: summary || undefined,
@@ -419,16 +431,16 @@ export async function confirmTechnicalIssue(input: {
         } as any,
     });
 
-    await syncServiceRequestStatusFromIssues(prisma as any, (updated as any).serviceRequestId);
+    await syncServiceRequestStatusFromIssues(db as any, (updated as any).serviceRequestId);
 
-    await syncTechnicalIssueToTasks(prisma as any, {
+    await syncTechnicalIssueToTasks(db as any, {
         technicalIssueId: id,
         event: "TECHNICAL_ISSUE_CONFIRMED",
         actorUserId: cleanId(input.actorId),
         note: "Technical Issue đã xác nhận",
     });
 
-    await recordTechnicalIssueEvent({
+    await recordTechnicalIssueEvent(db, {
         eventKey: "technical_issue.confirmed",
         technicalIssueId: id,
         serviceRequestId: (updated as any).serviceRequestId,
@@ -455,11 +467,14 @@ export async function startTechnicalIssue(input: {
     startedNote?: string | null;
     vendorChangeNote?: string | null;
     deferConsumers?: DeferConsumers;
-}) {
+}, db: DB = prisma): Promise<TechnicalIssue> {
+    if (isPrismaClient(db)) {
+        return db.$transaction((tx) => startTechnicalIssue(input, tx));
+    }
     const id = cleanId(input.id);
     if (!id) throw new Error("Missing issue id");
 
-    const issue = await prisma.technicalIssue.findUnique({
+    const issue = await db.technicalIssue.findUnique({
         where: { id },
         select: {
             id: true,
@@ -509,7 +524,7 @@ export async function startTechnicalIssue(input: {
         throw new Error("Vui lòng nhập lý do đổi vendor.");
     }
 
-    const updated = await prisma.technicalIssue.update({
+    const updated = await db.technicalIssue.update({
         where: { id },
         data: {
             isConfirmed: true,
@@ -521,7 +536,7 @@ export async function startTechnicalIssue(input: {
             expectedWorkingDays,
             expectedCompletionAt,
             vendorId,
-            vendorNameSnap: await vendorName(vendorId),
+            vendorNameSnap: await vendorName(db, vendorId),
             technicalDetailCatalogId: detail.id,
             estimatedCost: input.estimatedCost === undefined ? undefined : decimalOrNull(input.estimatedCost),
             updatedAt: new Date(),
@@ -529,25 +544,25 @@ export async function startTechnicalIssue(input: {
     });
 
     const syncedWatch = await syncServiceRequestStatusFromIssues(
-        prisma as any,
+        db as any,
         (updated as any).serviceRequestId,
     );
 
-    await syncTechnicalIssueToTasks(prisma as any, {
+    await syncTechnicalIssueToTasks(db as any, {
         technicalIssueId: id,
         event: "TECHNICAL_ISSUE_STARTED",
         actorUserId: cleanId(input.actorId),
         note: `Technical Issue đã bắt đầu xử lý: ${detail.name}`,
     });
     if (isChangingVendor && cleanText(input.vendorChangeNote)) {
-        await syncTechnicalIssueToTasks(prisma as any, {
+        await syncTechnicalIssueToTasks(db as any, {
             technicalIssueId: id,
-            event: "TECHNICAL_ISSUE_VENDOR_CHANGED",
+            event: "TECHNICAL_ISSUE_UPDATED",
             actorUserId: cleanId(input.actorId),
             note: `Ly do doi vendor: ${cleanText(input.vendorChangeNote)}`,
         });
     }
-    await recordTechnicalIssueEvent({
+    await recordTechnicalIssueEvent(db, {
         eventKey: "technical_issue.started",
         technicalIssueId: id,
         serviceRequestId: (updated as any).serviceRequestId,
@@ -567,7 +582,7 @@ export async function startTechnicalIssue(input: {
         deferConsumers: input.deferConsumers,
     });
     if (syncedWatch) {
-        await recordBusinessEvent(prisma, {
+        await recordBusinessEvent(db, {
             eventKey: "watch.service.eta.updated",
             targetType: "WATCH",
             targetId: syncedWatch.id,
@@ -596,7 +611,7 @@ export async function completeTechnicalIssue(input: {
     mechanicalPartCatalogId?: string | null;
     createPayment?: boolean;
     deferConsumers?: DeferConsumers;
-}) {
+}, db: DB = prisma): Promise<TechnicalIssue> {
     const id = cleanId(input.id);
     if (!id) throw new Error("Missing issue id");
 
@@ -605,7 +620,7 @@ export async function completeTechnicalIssue(input: {
         throw new Error("Vui lòng nhập chi phí thực tế hợp lệ. Chi phí có thể bằng 0.");
     }
 
-    const completion = await prisma.$transaction(async (tx) => {
+    const completion = await withDbTransaction(db, async (tx) => {
         const issue = await tx.technicalIssue.findUnique({
             where: { id },
             select: {
@@ -664,40 +679,39 @@ export async function completeTechnicalIssue(input: {
             note: "Technical Issue đã hoàn tất",
         });
 
+        await recordTechnicalIssueEvent(tx, {
+            eventKey: "technical_issue.completed",
+            technicalIssueId: id,
+            serviceRequestId: (updated as any).serviceRequestId,
+            actorUserId: cleanId(input.actorId),
+            payload: {
+                executionStatus: "DONE",
+                actualCost,
+                createPayment: input.createPayment !== false,
+            },
+            deferConsumers: input.deferConsumers,
+        });
+
+        if (createdPayment) {
+            await recordBusinessEvent(tx, {
+                eventKey: "payment.created",
+                targetType: "PAYMENT",
+                targetId: createdPayment.id,
+                actorUserId: cleanId(input.actorId),
+                payload: {
+                    ownerType: "TECHNICAL_ISSUE",
+                    ownerId: id,
+                    status: createdPayment.status,
+                    amount: createdPayment.amount,
+                    sourceId: `${createdPayment.id}:payment.created`,
+                },
+            }, { deferConsumers: input.deferConsumers });
+        }
+
         return { issue: updated, createdPayment };
     });
 
-    const updated = completion.issue;
-
-    await recordTechnicalIssueEvent({
-        eventKey: "technical_issue.completed",
-        technicalIssueId: id,
-        serviceRequestId: (updated as any).serviceRequestId,
-        actorUserId: cleanId(input.actorId),
-        payload: {
-            executionStatus: "DONE",
-            actualCost,
-            createPayment: input.createPayment !== false,
-        },
-        deferConsumers: input.deferConsumers,
-    });
-
-    if (completion.createdPayment) {
-        await recordBusinessEvent(prisma, {
-            eventKey: "payment.created",
-            targetType: "PAYMENT",
-            targetId: completion.createdPayment.id,
-            payload: {
-                ownerType: "TECHNICAL_ISSUE",
-                ownerId: id,
-                status: completion.createdPayment.status,
-                amount: completion.createdPayment.amount,
-                sourceId: `${completion.createdPayment.id}:payment.created`,
-            },
-        }, { deferConsumers: input.deferConsumers });
-    }
-
-    return updated;
+    return completion.issue;
 }
 
 export async function closeTechnicalIssueNoIssue(input: {
@@ -706,11 +720,14 @@ export async function closeTechnicalIssueNoIssue(input: {
     actorName?: string | null;
     resolutionNote?: string | null;
     deferConsumers?: DeferConsumers;
-}) {
+}, db: DB = prisma): Promise<TechnicalIssue> {
+    if (isPrismaClient(db)) {
+        return db.$transaction((tx) => closeTechnicalIssueNoIssue(input, tx));
+    }
     const id = cleanId(input.id);
     if (!id) throw new Error("Missing issue id");
 
-    const updated = await prisma.technicalIssue.update({
+    const updated = await db.technicalIssue.update({
         where: { id },
         data: {
             isConfirmed: true,
@@ -723,16 +740,16 @@ export async function closeTechnicalIssueNoIssue(input: {
         } as any,
     });
 
-    await syncServiceRequestStatusFromIssues(prisma as any, (updated as any).serviceRequestId);
+    await syncServiceRequestStatusFromIssues(db as any, (updated as any).serviceRequestId);
 
-    await syncTechnicalIssueToTasks(prisma as any, {
+    await syncTechnicalIssueToTasks(db as any, {
         technicalIssueId: id,
         event: "TECHNICAL_ISSUE_DONE",
         actorUserId: cleanId(input.actorId),
         note: "Technical Issue không phát hiện vấn đề",
     });
 
-    await recordTechnicalIssueEvent({
+    await recordTechnicalIssueEvent(db, {
         eventKey: "technical_issue.completed",
         technicalIssueId: id,
         serviceRequestId: (updated as any).serviceRequestId,
@@ -755,11 +772,15 @@ export async function cancelTechnicalIssue(
         actorId?: string | null;
         deferConsumers?: DeferConsumers;
     } = {},
-) {
+    db: DB = prisma,
+): Promise<TechnicalIssue> {
+    if (isPrismaClient(db)) {
+        return db.$transaction((tx) => cancelTechnicalIssue(idInput, input, tx));
+    }
     const id = cleanId(idInput);
     if (!id) throw new Error("Missing issue id");
 
-    const updated = await prisma.technicalIssue.update({
+    const updated = await db.technicalIssue.update({
         where: { id },
         data: {
             executionStatus: "CANCELED" as any,
@@ -769,15 +790,15 @@ export async function cancelTechnicalIssue(
         } as any,
     });
 
-    await syncServiceRequestStatusFromIssues(prisma as any, (updated as any).serviceRequestId);
+    await syncServiceRequestStatusFromIssues(db as any, (updated as any).serviceRequestId);
 
-    await syncTechnicalIssueToTasks(prisma as any, {
+    await syncTechnicalIssueToTasks(db as any, {
         technicalIssueId: id,
         event: "TECHNICAL_ISSUE_CANCELED",
         note: cleanId(input.reason) ?? "Technical Issue đã hủy",
     });
 
-    await recordTechnicalIssueEvent({
+    await recordTechnicalIssueEvent(db, {
         eventKey: "technical_issue.canceled",
         technicalIssueId: id,
         serviceRequestId: (updated as any).serviceRequestId,
@@ -810,7 +831,10 @@ export async function updateTechnicalIssue(input: {
     technicalDetailCatalogId?: string | null;
     expectedWorkingDays?: unknown;
     deferConsumers?: DeferConsumers;
-}) {
+}, db: DB = prisma): Promise<TechnicalIssue> {
+    if (isPrismaClient(db)) {
+        return db.$transaction((tx) => updateTechnicalIssue(input, tx));
+    }
     const id = cleanId(input.id);
     if (!id) throw new Error("Missing issue id");
 
@@ -828,7 +852,7 @@ export async function updateTechnicalIssue(input: {
                 ? null
                 : addCalendarDays(new Date(), expectedWorkingDays);
 
-    const updated = await prisma.technicalIssue.update({
+    const updated = await db.technicalIssue.update({
         where: { id },
         data: {
             note: input.note === undefined ? undefined : cleanId(input.note),
@@ -839,7 +863,7 @@ export async function updateTechnicalIssue(input: {
             resolutionNote: input.resolutionNote === undefined ? undefined : cleanId(input.resolutionNote),
             actionMode: input.actionMode === undefined ? undefined : (cleanId(input.actionMode) as any),
             vendorId: input.vendorId === undefined ? undefined : vendorId,
-            vendorNameSnap: input.vendorId === undefined ? undefined : await vendorName(vendorId),
+            vendorNameSnap: input.vendorId === undefined ? undefined : await vendorName(db, vendorId),
             technicianId: input.technicianId === undefined ? undefined : cleanId(input.technicianId),
             serviceCatalogId: input.serviceCatalogId === undefined ? undefined : cleanId(input.serviceCatalogId),
             supplyCatalogId: input.supplyCatalogId === undefined ? undefined : cleanId(input.supplyCatalogId),
@@ -854,17 +878,17 @@ export async function updateTechnicalIssue(input: {
     });
 
     const syncedWatch = await syncServiceRequestStatusFromIssues(
-        prisma as any,
+        db as any,
         (updated as any).serviceRequestId,
     );
 
-    await syncTechnicalIssueToTasks(prisma as any, {
+    await syncTechnicalIssueToTasks(db as any, {
         technicalIssueId: id,
         event: "TECHNICAL_ISSUE_UPDATED",
         actorUserId: cleanId(input.actorId),
         note: "Technical Issue đã được cập nhật",
     });
-    await recordTechnicalIssueEvent({
+    await recordTechnicalIssueEvent(db, {
         eventKey: "technical_issue.updated",
         technicalIssueId: id,
         serviceRequestId: (updated as any).serviceRequestId,
@@ -877,7 +901,7 @@ export async function updateTechnicalIssue(input: {
         deferConsumers: input.deferConsumers,
     });
     if (syncedWatch) {
-        await recordBusinessEvent(prisma, {
+        await recordBusinessEvent(db, {
             eventKey: "watch.service.eta.updated",
             targetType: "WATCH",
             targetId: syncedWatch.id,
@@ -1337,7 +1361,7 @@ export async function rejectTechnicalIssueMaintenanceLog(input: {
             const newVendorId = cleanId(input.newVendorId);
             if (!newVendorId) throw new Error("Vui lòng chọn vendor mới.");
 
-            const vendorNameSnap = await vendorName(newVendorId);
+            const vendorNameSnap = await vendorName(tx, newVendorId);
 
             await tx.technicalIssue.update({
                 where: { id: technicalIssueId },
@@ -1362,18 +1386,31 @@ export async function rejectTechnicalIssueMaintenanceLog(input: {
                     servicedAt: new Date(),
                 } as any,
             });
+
+            await syncTechnicalIssueToTasks(tx as any, {
+                technicalIssueId,
+                event: "TECHNICAL_ISSUE_UPDATED",
+                actorUserId: cleanId(input.actorId),
+                note: "Technical Issue đã đổi vendor sau khi từ chối phát sinh.",
+            });
+            await recordTechnicalIssueEvent(tx, {
+                eventKey: "technical_issue.updated",
+                technicalIssueId,
+                serviceRequestId: (log as any).serviceRequestId,
+                actorUserId: cleanId(input.actorId),
+                payload: {
+                    vendorId: newVendorId,
+                    vendorName: vendorNameSnap,
+                    reason: cleanText(input.reason),
+                },
+            });
         }
 
         if (input.nextAction === "CANCEL_ISSUE") {
-            await tx.technicalIssue.update({
-                where: { id: technicalIssueId },
-                data: {
-                    executionStatus: "CANCELED" as any,
-                    canceledAt: new Date(),
-                    resolutionNote: cleanText(input.reason),
-                    updatedAt: new Date(),
-                } as any,
-            });
+            await cancelTechnicalIssue(technicalIssueId, {
+                reason: cleanText(input.reason),
+                actorId: cleanId(input.actorId),
+            }, tx);
 
             await tx.maintenanceRecord.create({
                 data: {

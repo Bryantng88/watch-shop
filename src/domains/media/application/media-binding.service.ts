@@ -5,7 +5,7 @@ import {
   MediaPipelineKey,
   MediaRole,
 } from "@prisma/client";
-import { prisma } from "@/server/db/client";
+import { prisma, type DB } from "@/server/db/client";
 
 export type BindMediaInput = {
   mediaObjectId: string;
@@ -18,8 +18,8 @@ export type BindMediaInput = {
   lifecycle?: MediaBindingLifecycle;
 };
 
-export async function bindMedia(input: BindMediaInput) {
-  const conflictingBinding = await prisma.mediaBinding.findFirst({
+export async function bindMedia(input: BindMediaInput, db: DB = prisma) {
+  const conflictingBinding = await db.mediaBinding.findFirst({
     where: {
       mediaObjectId: input.mediaObjectId,
       audienceSegment: { not: input.audienceSegment },
@@ -33,7 +33,7 @@ export async function bindMedia(input: BindMediaInput) {
     );
   }
 
-  return prisma.mediaBinding.upsert({
+  return db.mediaBinding.upsert({
     where: {
       mediaObjectId_ownerType_ownerId_role: {
         mediaObjectId: input.mediaObjectId,

@@ -9,7 +9,8 @@ import {
 import { prisma } from "@/server/db/client";
 import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
 import { reconcileOrderSettlementTx } from "@/domains/order/server/order-completion.service";
-import { buildPaymentOwnerSummary, getPaymentOwnerSummaryProjection } from "@/domains/projection/server/payment-owner-summary.projection";
+import { processBusinessEventOperation } from "@/domains/event/delivery";
+import { getPaymentOwnerSummaryProjection } from "@/domains/projection/server/payment-owner-summary.projection";
 import type {
   CreatePaymentInput,
   PaymentListItem,
@@ -319,7 +320,7 @@ export async function recomputePaymentOwnerRollupTx(
   ownerType: PaymentOwnerType,
   ownerId: string,
 ) {
-  return buildPaymentOwnerSummary(tx, ownerType, ownerId);
+  return getPaymentSummaryTx(tx, ownerType, ownerId);
 }
 
 async function syncPaymentOwnerBusinessStateTx(
@@ -404,29 +405,35 @@ export async function createPayment(input: CreatePaymentInput) {
       await recomputePaymentOwnerRollupTx(tx, exposure.ownerType, exposure.ownerId);
     }
 
-    return toPlain({
+    const commandResult = toPlain({
       ...payment,
       ...resolvePaymentOwner(payment),
     });
+    const event = await recordBusinessEvent(tx, {
+      eventKey: "payment.created",
+      targetType: "PAYMENT",
+      targetId: commandResult.id,
+      actorUserId: input.actorUserId ?? null,
+      payload: {
+        ownerType: commandResult.ownerType ?? input.ownerType,
+        ownerId: commandResult.ownerId ?? input.ownerId,
+        status: commandResult.status ?? PaymentStatus.UNPAID,
+        amount: commandResult.amount ?? null,
+        direction: commandResult.direction ?? null,
+        type: commandResult.type ?? null,
+        purpose: commandResult.purpose ?? null,
+        currency: commandResult.currency ?? "VND",
+        sourceId: `${commandResult.id}:payment.created`,
+      },
+    }, { deferConsumers: input.deferConsumers });
+    return {
+      ...commandResult,
+      events: [{ projectionDeliveryKey: event.projectionDeliveryKey }],
+    };
   });
-
-  await recordBusinessEvent(prisma, {
-    eventKey: "payment.created",
-    targetType: "PAYMENT",
-    targetId: payment.id,
-    payload: {
-      ownerType: payment.ownerType ?? input.ownerType,
-      ownerId: payment.ownerId ?? input.ownerId,
-      status: payment.status ?? PaymentStatus.UNPAID,
-      amount: payment.amount ?? null,
-      direction: payment.direction ?? null,
-      type: payment.type ?? null,
-      purpose: payment.purpose ?? null,
-      currency: payment.currency ?? "VND",
-      sourceId: `${payment.id}:payment.created`,
-    },
-  });
-
+  if (!input.deferConsumers) {
+    await processBusinessEventOperation(payment.events[0].projectionDeliveryKey);
+  }
   return payment;
 }
 
@@ -450,6 +457,7 @@ export async function splitPayment(input: {
   reference?: string | null;
   note?: string | null;
   deferConsumers?: (work: () => Promise<void>) => void;
+  actorUserId?: string | null;
 }) {
   const result = await prisma.$transaction(async (tx) => {
     const payment = await tx.payment.findUnique({ where: { id: input.paymentId } });
@@ -509,7 +517,7 @@ export async function splitPayment(input: {
       summary,
     );
 
-    return toPlain({
+    const commandResult = toPlain({
       paymentId: payment.id,
       remainderPaymentId: remainder.id,
       ownerType: owner.ownerType,
@@ -524,63 +532,73 @@ export async function splitPayment(input: {
       remainderPurpose,
       summary,
     });
-  });
-
-  await recordBusinessEvent(prisma, {
-    eventKey: "payment.created",
-    targetType: "PAYMENT",
-    targetId: result.remainderPaymentId,
-    payload: {
-      ownerType: result.ownerType,
-      ownerId: result.ownerId,
+    const createdEvent = await recordBusinessEvent(tx, {
+      eventKey: "payment.created",
+      targetType: "PAYMENT",
+      targetId: commandResult.remainderPaymentId,
+      actorUserId: input.actorUserId ?? null,
+      payload: {
+      ownerType: commandResult.ownerType,
+      ownerId: commandResult.ownerId,
       status: PaymentStatus.UNPAID,
-      amount: result.remainderAmount,
-      direction: result.direction,
-      purpose: result.remainderPurpose,
-      currency: result.currency,
-      splitFromPaymentId: result.paymentId,
-      sourceId: `${result.remainderPaymentId}:payment.created:split`,
+      amount: commandResult.remainderAmount,
+      direction: commandResult.direction,
+      purpose: commandResult.remainderPurpose,
+      currency: commandResult.currency,
+      splitFromPaymentId: commandResult.paymentId,
+      sourceId: `${commandResult.remainderPaymentId}:payment.created:split`,
     },
-  }, { deferConsumers: input.deferConsumers });
-
-  await recordBusinessEvent(prisma, {
-    eventKey: "payment.status_updated",
-    targetType: "PAYMENT",
-    targetId: result.paymentId,
-    payload: {
-      ownerType: result.ownerType,
-      ownerId: result.ownerId,
+    }, { deferConsumers: input.deferConsumers });
+    const statusEvent = await recordBusinessEvent(tx, {
+      eventKey: "payment.status_updated",
+      targetType: "PAYMENT",
+      targetId: commandResult.paymentId,
+      actorUserId: input.actorUserId ?? null,
+      payload: {
+      ownerType: commandResult.ownerType,
+      ownerId: commandResult.ownerId,
       status: PaymentStatus.PAID,
-      direction: result.direction,
-      amount: result.paidAmount,
-      currency: result.currency,
-      method: result.method,
-      occurredAt: result.occurredAt,
-      summary: result.summary,
-      splitRemainderPaymentId: result.remainderPaymentId,
-      sourceId: `${result.paymentId}:payment.status_updated:PAID:SPLIT`,
+      direction: commandResult.direction,
+      amount: commandResult.paidAmount,
+      currency: commandResult.currency,
+      method: commandResult.method,
+      occurredAt: commandResult.occurredAt,
+      summary: commandResult.summary,
+      splitRemainderPaymentId: commandResult.remainderPaymentId,
+      sourceId: `${commandResult.paymentId}:payment.status_updated:PAID:SPLIT`,
     },
-  }, { deferConsumers: input.deferConsumers });
-
-  await recordBusinessEvent(prisma, {
-    eventKey: "payment.paid",
-    targetType: "PAYMENT",
-    targetId: result.paymentId,
-    payload: {
-      ownerType: result.ownerType,
-      ownerId: result.ownerId,
+    }, { deferConsumers: input.deferConsumers });
+    const paidEvent = await recordBusinessEvent(tx, {
+      eventKey: "payment.paid",
+      targetType: "PAYMENT",
+      targetId: commandResult.paymentId,
+      actorUserId: input.actorUserId ?? null,
+      payload: {
+      ownerType: commandResult.ownerType,
+      ownerId: commandResult.ownerId,
       status: PaymentStatus.PAID,
-      direction: result.direction,
-      amount: result.paidAmount,
-      currency: result.currency,
-      method: result.method,
-      occurredAt: result.occurredAt,
-      summary: result.summary,
-      splitRemainderPaymentId: result.remainderPaymentId,
-      sourceId: `${result.paymentId}:payment.paid:SPLIT`,
+      direction: commandResult.direction,
+      amount: commandResult.paidAmount,
+      currency: commandResult.currency,
+      method: commandResult.method,
+      occurredAt: commandResult.occurredAt,
+      summary: commandResult.summary,
+      splitRemainderPaymentId: commandResult.remainderPaymentId,
+      sourceId: `${commandResult.paymentId}:payment.paid:SPLIT`,
     },
-  }, { deferConsumers: input.deferConsumers });
-
+    }, { deferConsumers: input.deferConsumers });
+    return {
+      ...commandResult,
+      events: [createdEvent, statusEvent, paidEvent].map((event) => ({
+        projectionDeliveryKey: event.projectionDeliveryKey,
+      })),
+    };
+  });
+  if (!input.deferConsumers) {
+    for (const event of result.events) {
+      await processBusinessEventOperation(event.projectionDeliveryKey);
+    }
+  }
   return result;
 }
 
@@ -591,6 +609,7 @@ export async function completePayment(input: {
   reference?: string | null;
   note?: string | null;
   deferConsumers?: (work: () => Promise<void>) => void;
+  actorUserId?: string | null;
 }) {
   const result = await prisma.$transaction(async (tx) => {
     if (!input.paymentId) throw new Error("Thiếu paymentId.");
@@ -634,7 +653,7 @@ export async function completePayment(input: {
       owner.ownerId,
       summary,
     );
-    return toPlain({
+    const commandResult = toPlain({
       paymentId: payment.id,
       ownerType: owner.ownerType,
       ownerId: owner.ownerId,
@@ -645,48 +664,63 @@ export async function completePayment(input: {
       occurredAt: updatedPayment.paidAt,
       summary,
     });
+    const statusEvent = await recordBusinessEvent(tx, {
+      eventKey: "payment.status_updated",
+      targetType: "PAYMENT",
+      targetId: commandResult.paymentId,
+      actorUserId: input.actorUserId ?? null,
+      payload: {
+      ownerType: commandResult.ownerType,
+      ownerId: commandResult.ownerId,
+      status: PaymentStatus.PAID,
+      direction: commandResult.direction,
+      amount: commandResult.amount,
+      currency: commandResult.currency,
+      method: commandResult.method,
+      occurredAt: commandResult.occurredAt,
+      summary: commandResult.summary,
+      sourceId: `${commandResult.paymentId}:payment.status_updated:PAID`,
+    },
+    }, { deferConsumers: input.deferConsumers });
+    const paidEvent = await recordBusinessEvent(tx, {
+      eventKey: "payment.paid",
+      targetType: "PAYMENT",
+      targetId: commandResult.paymentId,
+      actorUserId: input.actorUserId ?? null,
+      payload: {
+      ownerType: commandResult.ownerType,
+      ownerId: commandResult.ownerId,
+      status: PaymentStatus.PAID,
+      direction: commandResult.direction,
+      amount: commandResult.amount,
+      currency: commandResult.currency,
+      method: commandResult.method,
+      occurredAt: commandResult.occurredAt,
+      summary: commandResult.summary,
+      sourceId: `${commandResult.paymentId}:payment.paid`,
+    },
+    }, { deferConsumers: input.deferConsumers });
+    return {
+      ...commandResult,
+      events: [statusEvent, paidEvent].map((event) => ({
+        projectionDeliveryKey: event.projectionDeliveryKey,
+      })),
+    };
   });
-
-  await recordBusinessEvent(prisma, {
-    eventKey: "payment.status_updated",
-    targetType: "PAYMENT",
-    targetId: result.paymentId,
-    payload: {
-      ownerType: result.ownerType,
-      ownerId: result.ownerId,
-      status: PaymentStatus.PAID,
-      direction: result.direction,
-      amount: result.amount,
-      currency: result.currency,
-      method: result.method,
-      occurredAt: result.occurredAt,
-      summary: result.summary,
-      sourceId: `${result.paymentId}:payment.status_updated:PAID`,
-    },
-  }, { deferConsumers: input.deferConsumers });
-
-  await recordBusinessEvent(prisma, {
-    eventKey: "payment.paid",
-    targetType: "PAYMENT",
-    targetId: result.paymentId,
-    payload: {
-      ownerType: result.ownerType,
-      ownerId: result.ownerId,
-      status: PaymentStatus.PAID,
-      direction: result.direction,
-      amount: result.amount,
-      currency: result.currency,
-      method: result.method,
-      occurredAt: result.occurredAt,
-      summary: result.summary,
-      sourceId: `${result.paymentId}:payment.paid`,
-    },
-  }, { deferConsumers: input.deferConsumers });
-
+  if (!input.deferConsumers) {
+    for (const event of result.events) {
+      await processBusinessEventOperation(event.projectionDeliveryKey);
+    }
+  }
   return result;
 }
 
-export async function cancelPayment(input: { paymentId: string; note?: string | null }) {
+export async function cancelPayment(input: {
+  paymentId: string;
+  note?: string | null;
+  actorUserId?: string | null;
+  deferConsumers?: (work: () => Promise<void>) => void;
+}) {
   const result = await prisma.$transaction(async (tx) => {
     if (!input.paymentId) throw new Error("Thiếu paymentId để hủy payment.");
 
@@ -721,22 +755,33 @@ export async function cancelPayment(input: { paymentId: string; note?: string | 
       owner.ownerId,
       summary,
     );
-    return toPlain({ paymentId: payment.id, ownerType: owner.ownerType, ownerId: owner.ownerId, summary });
+    const commandResult = toPlain({
+      paymentId: payment.id,
+      ownerType: owner.ownerType,
+      ownerId: owner.ownerId,
+      summary,
+    });
+    const event = await recordBusinessEvent(tx, {
+      eventKey: "payment.status_updated",
+      targetType: "PAYMENT",
+      targetId: commandResult.paymentId,
+      actorUserId: input.actorUserId ?? null,
+      payload: {
+        ownerType: commandResult.ownerType,
+        ownerId: commandResult.ownerId,
+        status: "CANCELED",
+        summary: commandResult.summary,
+        sourceId: `${commandResult.paymentId}:payment.status_updated:CANCELED`,
+      },
+    }, { deferConsumers: input.deferConsumers });
+    return {
+      ...commandResult,
+      events: [{ projectionDeliveryKey: event.projectionDeliveryKey }],
+    };
   });
-
-  await recordBusinessEvent(prisma, {
-    eventKey: "payment.status_updated",
-    targetType: "PAYMENT",
-    targetId: result.paymentId,
-    payload: {
-      ownerType: result.ownerType,
-      ownerId: result.ownerId,
-      status: "CANCELED",
-      summary: result.summary,
-      sourceId: `${result.paymentId}:payment.status_updated:CANCELED`,
-    },
-  });
-
+  if (!input.deferConsumers) {
+    await processBusinessEventOperation(result.events[0].projectionDeliveryKey);
+  }
   return result;
 }
 

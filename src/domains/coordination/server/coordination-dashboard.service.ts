@@ -3633,6 +3633,21 @@ export async function getCoordinationDashboard(input: {
   for (const [taskItemId, count] of paymentQueueCountByTaskItem) {
     queueCountByTaskItem.set(taskItemId, count);
   }
+  if (!isMediaFlow && !isTechnicalFlow) {
+    for (const workspace of flowLoadTaskItems) {
+      const metadata = workspaceRoleMetadataFromNote(workspace.note);
+      const stageKey = normalizeWorkTypeKey(
+        metadata.flowStageKey ??
+          metadata.operationWorkspaceRole ??
+          ticketWorkTypeKey(workspace.note) ??
+          "",
+      );
+      if (!stageKey) continue;
+      flowStageCounts[stageKey] =
+        (flowStageCounts[stageKey] ?? 0) +
+        (queueCountByTaskItem.get(workspace.id) ?? 0);
+    }
+  }
   const now = new Date();
   const currentUser = authUserSummary(input?.auth);
 

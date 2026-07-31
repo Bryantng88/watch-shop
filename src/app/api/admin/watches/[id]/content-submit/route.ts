@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import { PERMISSIONS } from "@/constants/permissions";
 import { requirePermission } from "@/server/auth/requirePermission";
@@ -30,6 +30,7 @@ export async function POST(
             productId,
             targetType: "CONTENT",
             userId: getAuthUserId(auth),
+            deferConsumers: (work) => after(work),
         });
 
         return NextResponse.json({ ok: true, item: state });

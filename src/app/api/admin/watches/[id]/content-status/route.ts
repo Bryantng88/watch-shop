@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { PERMISSIONS } from "@/constants/permissions";
@@ -76,12 +76,14 @@ export async function POST(
                     productId,
                     targetType: "CONTENT",
                     userId,
+                    deferConsumers: (work) => after(work),
                 })
                 : body.action === "approve"
                     ? await approveWatchReview({
                         productId,
                         targetType: "CONTENT",
                         userId,
+                        deferConsumers: (work) => after(work),
                     })
                     : body.action === "reject"
                         ? await rejectWatchReview({
@@ -89,11 +91,13 @@ export async function POST(
                             targetType: "CONTENT",
                             userId,
                             note: String(body.note ?? "").trim(),
+                            deferConsumers: (work) => after(work),
                         })
                         : await resetWatchReviewToDraft({
                             productId,
                             targetType: "CONTENT",
                             userId,
+                            deferConsumers: (work) => after(work),
                         });
 
         return NextResponse.json({

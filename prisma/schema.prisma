@@ -453,6 +453,41 @@ model BusinessEventLog {
   @@index([createdAt])
 }
 
+model BusinessEventConsumerDelivery {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  idempotencyKey String @unique
+  operationKey String
+  businessEventLogId String?
+  consumerKey String
+  eventKey String
+  targetType String
+  targetId String
+  actorUserId String?
+  effect String @default("ASSERT")
+  revokeEventKey String?
+  targetAliasIds Json?
+  eventInstanceId String?
+  payloadJson Json?
+
+  status String @default("PENDING")
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now())
+  lockedAt DateTime?
+  completedAt DateTime?
+  lastError String?
+  resultJson Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([operationKey, consumerKey])
+  @@index([status, nextAttemptAt])
+  @@index([businessEventLogId])
+  @@index([operationKey, status])
+  @@index([eventKey, consumerKey])
+  @@ignore
+}
+
 model ProjectionEventDelivery {
   id String @id @default(dbgenerated("(gen_random_uuid())::text"))
 

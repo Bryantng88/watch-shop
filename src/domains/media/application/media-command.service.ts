@@ -5,7 +5,7 @@ import {
   MediaPipelineKey,
   MediaRole,
 } from "@prisma/client";
-import { prisma } from "@/server/db/client";
+import { prisma, type DB } from "@/server/db/client";
 import { normalizeKey } from "@/server/lib/storage-key";
 import { bindMedia } from "./media-binding.service";
 import {
@@ -23,8 +23,8 @@ function fileName(key: string) {
   return key.split("/").pop() ?? key;
 }
 
-async function watchOwner(productId: string) {
-  const watch = await prisma.watch.findUnique({
+async function watchOwner(productId: string, db: DB = prisma) {
+  const watch = await db.watch.findUnique({
     where: { productId },
     select: {
       id: true,
@@ -34,6 +34,21 @@ async function watchOwner(productId: string) {
   });
   if (!watch) throw new Error(`Watch not found for product ${productId}.`);
   return watch;
+}
+
+export async function ingestExistingMediaForWatch(input: {
+  storageKey: string;
+}) {
+  const storageKey = normalizeKey(input.storageKey);
+  if (!storageKey) throw new Error("Media key is required.");
+  const object = await ingestSelectedMedia({ storageKey });
+  return {
+    object,
+    key: object.storageKey,
+    fileKey: object.storageKey,
+    name: object.originalFileName ?? fileName(object.storageKey),
+    url: `/api/media/sign?key=${encodeURIComponent(object.storageKey)}`,
+  };
 }
 
 export async function selectExistingMediaForWatch(input: {
@@ -130,14 +145,54 @@ export async function attachWatchMedia(input: {
   return results;
 }
 
+export async function attachIngestedWatchMedia(
+  input: {
+    productId: string;
+    images: Array<{ storageKey: string; role: MediaRole; sortOrder?: number }>;
+  },
+  db: DB,
+) {
+  const watch = await watchOwner(input.productId, db);
+  const storageKeys = input.images
+    .map((image) => normalizeKey(image.storageKey))
+    .filter(Boolean);
+  const objects = await db.mediaObject.findMany({
+    where: { storageKey: { in: storageKeys } },
+  });
+  const objectByKey = new Map(objects.map((object) => [object.storageKey, object]));
+  const results = [];
+
+  for (const image of input.images) {
+    const storageKey = normalizeKey(image.storageKey);
+    const object = objectByKey.get(storageKey);
+    if (!object) {
+      throw new Error(`Ingested MediaObject not found: ${storageKey}`);
+    }
+    results.push(
+      await bindMedia({
+        mediaObjectId: object.id,
+        ownerType: MediaOwnerType.WATCH,
+        ownerId: watch.id,
+        role: image.role,
+        sortOrder: image.sortOrder ?? 0,
+        audienceSegment: watch.audienceSegment,
+        pipelineKey: watch.mediaPipelineKey,
+        lifecycle: MediaBindingLifecycle.ATTACHED,
+      }, db),
+    );
+  }
+
+  return results;
+}
+
 export async function releaseWatchMediaNotIn(input: {
   productId: string;
   role: MediaRole;
   keepStorageKeys: string[];
-}) {
-  const watch = await watchOwner(input.productId);
+}, db: DB = prisma) {
+  const watch = await watchOwner(input.productId, db);
   const keep = new Set(input.keepStorageKeys.map(normalizeKey).filter(Boolean));
-  const bindings = await prisma.mediaBinding.findMany({
+  const bindings = await db.mediaBinding.findMany({
     where: {
       ownerType: MediaOwnerType.WATCH,
       ownerId: watch.id,
@@ -148,7 +203,7 @@ export async function releaseWatchMediaNotIn(input: {
   });
   const removed = bindings.filter((binding) => !keep.has(binding.mediaObject.storageKey));
   if (removed.length) {
-    await prisma.mediaBinding.updateMany({
+    await db.mediaBinding.updateMany({
       where: { id: { in: removed.map((binding) => binding.id) } },
       data: { lifecycle: MediaBindingLifecycle.REMOVED },
     });

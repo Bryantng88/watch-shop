@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 
 import { PERMISSIONS } from "@/constants/permissions";
 import { requirePermission } from "@/server/auth/requirePermission";
@@ -65,6 +65,7 @@ export async function POST(
                 productId,
                 targetType: "IMAGE",
                 userId: getAuthUserId(auth),
+                deferConsumers: (work) => after(work),
             }),
             );
             perfLog("watch-review-route", "image:total", totalStartedAt);
@@ -88,6 +89,7 @@ export async function POST(
                 targetType: "IMAGE",
                 userId: getAuthUserId(auth),
                 note,
+                deferConsumers: (work) => after(work),
             }),
             );
             perfLog("watch-review-route", "image:total", totalStartedAt);
@@ -102,6 +104,7 @@ export async function POST(
                 productId,
                 targetType: "IMAGE",
                 userId: getAuthUserId(auth),
+                deferConsumers: (work) => after(work),
             }),
             );
             perfLog("watch-review-route", "image:total", totalStartedAt);

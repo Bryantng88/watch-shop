@@ -1,5 +1,5 @@
 import type { DB } from "@/server/db/client";
-import { dbOrTx } from "@/server/db/client";
+import { dbOrTx, withDbTransaction } from "@/server/db/client";
 import type { WatchReviewAction, WatchReviewStatus, WatchReviewTargetType } from "./watch-review.types";
 
 export async function getWatchReviewTargetRepo(
@@ -60,9 +60,7 @@ export async function updateWatchReviewStatusRepo(
         reviewNote?: string | null;
     }
 ) {
-    const client = dbOrTx(db);
-
-    return client.$transaction(async (tx: any) => {
+    return withDbTransaction(db, async (tx) => {
         const watch = await tx.watch.findUnique({
             where: { productId: input.productId },
             select: { id: true, productId: true },

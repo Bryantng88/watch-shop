@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { PERMISSIONS } from "@/constants/permissions";
-import { rebuildWatchListProjectionRows } from "@/domains/projection/server/watch-list";
+import {
+    emitWatchPriceUpdatedEvent,
+    emitWatchSpecUpdatedEvent,
+} from "@/domains/watch/server/events";
 import { prisma } from "@/server/db/client";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { updateWatchPricingWithDiff } from "../../server/pricing";
@@ -27,6 +30,10 @@ function authHasRole(auth: AuthLike, role: string) {
         const value = item?.name ?? item?.code ?? item?.key ?? item?.slug ?? "";
         return String(value).toUpperCase() === target;
     });
+}
+
+function authUserId(auth: AuthLike) {
+    return String(auth?.userId ?? auth?.id ?? auth?.user?.id ?? "").trim() || null;
 }
 
 function priceSnapshot(value: unknown) {
@@ -57,18 +64,29 @@ export async function saveWatchWorkbenchPricingAction(input: {
     const productId = String(input.productId ?? "").trim();
     if (!productId) throw new Error("Missing productId.");
 
-    const result = await updateWatchPricingWithDiff(productId, {
-        salePrice: input.pricing.salePrice,
-        minPrice: input.pricing.minPrice,
-        costPrice: input.pricing.costPrice,
-        serviceCost: input.pricing.serviceCost,
-        landedCost: input.pricing.landedCost,
-        pricingNote: input.pricing.pricingNote,
-    });
+    const result = await prisma.$transaction(async (tx) => {
+        const pricing = await updateWatchPricingWithDiff(productId, {
+            salePrice: input.pricing.salePrice,
+            minPrice: input.pricing.minPrice,
+            costPrice: input.pricing.costPrice,
+            serviceCost: input.pricing.serviceCost,
+            landedCost: input.pricing.landedCost,
+            pricingNote: input.pricing.pricingNote,
+        }, tx);
 
-    await rebuildWatchListProjectionRows(prisma, {
-        watchIds: [result.watchId],
-        limit: 1,
+        await emitWatchPriceUpdatedEvent(tx, {
+            watch: {
+                id: pricing.watchId,
+                productId,
+                product: pricing.product,
+            },
+            actorUserId: authUserId(auth),
+            changedFields: pricing.changedFields,
+            before: priceSnapshot(pricing.before),
+            after: priceSnapshot(pricing.after),
+        });
+
+        return pricing;
     });
     revalidatePath("/admin/watches");
     revalidatePath(`/admin/watches/${productId}`);
@@ -84,7 +102,7 @@ export async function saveWatchWorkbenchTitleAction(input: {
     productId: string;
     title: string;
 }) {
-    await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+    const auth = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
 
     const productId = String(input.productId ?? "").trim();
     const title = String(input.title ?? "").trim().replace(/\s+/g, " ");
@@ -98,15 +116,25 @@ export async function saveWatchWorkbenchTitleAction(input: {
     });
     if (!watch) throw new Error("Không tìm thấy watch cần cập nhật.");
 
-    const product = await prisma.product.update({
-        where: { id: productId },
-        data: { title },
-        select: { title: true },
-    });
+    const product = await prisma.$transaction(async (tx) => {
+        const updatedProduct = await tx.product.update({
+            where: { id: productId },
+            data: { title },
+            select: { title: true, sku: true },
+        });
 
-    await rebuildWatchListProjectionRows(prisma, {
-        watchIds: [watch.id],
-        limit: 1,
+        await emitWatchSpecUpdatedEvent(tx, {
+            watch: {
+                id: watch.id,
+                productId,
+                product: updatedProduct,
+            },
+            actorUserId: authUserId(auth),
+            before: null,
+            after: { title: updatedProduct.title },
+        });
+
+        return updatedProduct;
     });
     revalidatePath("/admin/watches");
     revalidatePath(`/admin/watches/${productId}`);

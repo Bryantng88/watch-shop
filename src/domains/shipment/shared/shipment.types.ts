@@ -40,12 +40,14 @@ export type CreateShipmentFeeInput = {
   note?: string | null;
   paidAt?: Date | string | null;
   actorUserId?: string | null;
+  deferConsumers?: (work: () => Promise<void>) => void;
 };
 
 export type CompleteShipmentInput = {
   shipmentId: string;
   note?: string | null;
   actorUserId?: string | null;
+  deferConsumers?: (work: () => Promise<void>) => void;
 };
 
 export type CreateManualShipmentInput = {
@@ -68,6 +70,7 @@ export type ReceiveShipmentReturnInput = {
   note?: string | null;
   paidAt?: Date | string | null;
   actorUserId?: string | null;
+  deferConsumers?: (work: () => Promise<void>) => void;
 };
 
 export type CreateShipmentReturnFeeInput = ReceiveShipmentReturnInput;

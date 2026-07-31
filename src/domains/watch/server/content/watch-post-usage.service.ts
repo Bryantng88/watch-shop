@@ -87,36 +87,38 @@ export async function markWatchPostUsage(input: {
             input.kind
         );
 
-        return {
+        const result = {
             current,
             usage: buildUsagePayload(updated),
         };
-    });
 
-    await emitWatchPublishAssetsDownloadedEvent(prisma, {
-        watch: {
-            id: result.current.id,
-            productId: result.current.productId,
-            saleStage: result.current.saleStage,
-            product: {
-                title: result.current.product?.title ?? null,
-                sku: result.current.product?.sku ?? null,
-                primaryImageUrl: result.current.product?.primaryImageUrl ?? null,
-                status: result.current.product?.status ?? null,
+        await emitWatchPublishAssetsDownloadedEvent(tx, {
+            watch: {
+                id: result.current.id,
+                productId: result.current.productId,
+                saleStage: result.current.saleStage,
+                product: {
+                    title: result.current.product?.title ?? null,
+                    sku: result.current.product?.sku ?? null,
+                    primaryImageUrl: result.current.product?.primaryImageUrl ?? null,
+                    status: result.current.product?.status ?? null,
+                },
             },
-        },
-        actorUserId: input.actorUserId ?? null,
-        sourceId: `publish-assets-downloaded:${result.current.id}:${input.kind}`,
-        note: input.kind === "CONTENT_COPIED"
-            ? "Publish content copied from Watch detail."
-            : "Publish gallery assets downloaded from Watch detail.",
-        extraPayload: {
-            publishAssetKind: input.kind,
-            isContentDownloaded: result.usage.isContentDownloaded,
-            isImageDownloaded: result.usage.isImageDownloaded,
-            isPosted: result.usage.isPosted,
-        },
-        deferConsumers: input.deferConsumers,
+            actorUserId: input.actorUserId ?? null,
+            sourceId: `publish-assets-downloaded:${result.current.id}:${input.kind}`,
+            note: input.kind === "CONTENT_COPIED"
+                ? "Publish content copied from Watch detail."
+                : "Publish gallery assets downloaded from Watch detail.",
+            extraPayload: {
+                publishAssetKind: input.kind,
+                isContentDownloaded: result.usage.isContentDownloaded,
+                isImageDownloaded: result.usage.isImageDownloaded,
+                isPosted: result.usage.isPosted,
+            },
+            deferConsumers: input.deferConsumers,
+        });
+
+        return result;
     });
 
     return result.usage;

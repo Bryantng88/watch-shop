@@ -74,6 +74,7 @@ export async function emitWatchReviewBusinessEvent(
     effect?: BusinessEventEffect;
     revokeEventKey?: string | null;
     extraPayload?: Record<string, unknown>;
+    deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
   },
 ) {
   const eventKey = watchReviewEventKey(input.reviewTargetType, input.sourceAction);
@@ -101,7 +102,7 @@ export async function emitWatchReviewBusinessEvent(
     effect: input.effect,
     revokeEventKey: input.revokeEventKey ?? null,
     payload,
-  });
+  }, { deferConsumers: input.deferConsumers });
 }
 
 export async function emitWatchContentModifiedEvent(

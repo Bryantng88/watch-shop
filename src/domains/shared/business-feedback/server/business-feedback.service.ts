@@ -5,6 +5,7 @@ import {
     listBusinessFeedbackRecordsForTargets,
     type CreateBusinessFeedbackRecordInput,
 } from "./business-feedback.repo";
+import { prisma, type DB } from "@/server/db/client";
 
 export const BUSINESS_FEEDBACK_TARGET_TYPES = {
     WATCH_CONTENT_REVIEW: "WATCH_CONTENT_REVIEW",
@@ -52,7 +53,10 @@ export function getWatchReviewFeedbackTargetType(
         : BUSINESS_FEEDBACK_TARGET_TYPES.WATCH_IMAGE_REVIEW;
 }
 
-export async function createBusinessFeedback(input: CreateBusinessFeedbackInput) {
+export async function createBusinessFeedback(
+    input: CreateBusinessFeedbackInput,
+    db: DB = prisma,
+) {
     const targetType = clean(input.targetType);
     const targetId = clean(input.targetId);
     const message = clean(input.message);
@@ -66,7 +70,7 @@ export async function createBusinessFeedback(input: CreateBusinessFeedbackInput)
         targetType,
         targetId,
         message,
-    });
+    }, db);
 }
 
 export async function createWatchReviewRejectionFeedback(input: {
@@ -77,7 +81,7 @@ export async function createWatchReviewRejectionFeedback(input: {
     eventKey: string;
     actorUserId?: string | null;
     message?: string | null;
-}) {
+}, db: DB = prisma) {
     const message = normalizeBusinessFeedbackMessage(input.message);
 
     return createBusinessFeedback({
@@ -92,7 +96,7 @@ export async function createWatchReviewRejectionFeedback(input: {
             reviewTargetType: input.reviewTargetType,
             reviewStateId: input.reviewStateId,
         },
-    });
+    }, db);
 }
 
 export async function listBusinessFeedbacks(input: {

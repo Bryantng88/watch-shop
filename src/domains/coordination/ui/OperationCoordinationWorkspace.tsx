@@ -73,6 +73,7 @@ import {
   DashboardCustomizeButton,
 } from "@/domains/shared/ui/business-list";
 import { SoftIconBadge } from "@/domains/shared/ui/icons";
+import { waitForOperationProjectionDeliveries } from "./operation-delivery.client";
 import type { BusinessListDashboardWidgetKey } from "@/domains/shared/ui/business-list";
 import type { BusinessListDashboardData } from "@/domains/shared/ui/business-list";
 import { mapCoordinationDashboardShell } from "@/domains/coordination/shared/coordination-dashboard-shell.mapper";
@@ -2849,12 +2850,20 @@ export function PaymentCollectionBoard({ items }: { items: PaymentBoardItem[] })
       percent: 25,
     });
     try {
-      await submitOperationalBlueprintActionAction({
+      const result = await submitOperationalBlueprintActionAction({
         taskItemId: item.workspaceTaskItemId,
         actionKey: reviewing ? "review_payment" : "mark_payment_paid",
         targetType: "PAYMENT",
         targetId: item.id,
         fields: reviewing ? {} : { paidAt: new Date().toISOString(), method: item.method ?? "BANK_TRANSFER" },
+      });
+      await waitForOperationProjectionDeliveries(result, {
+        onStatus: (completed, total) => {
+          progress.update({
+            percent: 85 + Math.round((completed / Math.max(1, total)) * 10),
+            message: `Đang đồng bộ dashboard (${completed}/${total}).`,
+          });
+        },
       });
       setBoardItems((current) => current.map((candidate) => candidate.id === item.id
         ? { ...candidate, stage: nextStage, status: reviewing ? candidate.status : "PAID" }

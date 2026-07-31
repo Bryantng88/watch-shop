@@ -11,7 +11,11 @@ import {
 import { prisma } from "@/server/db/client";
 
 import { recomputeOrderPaymentRollupTx } from "@/domains/payment/payment/server";
-import { publishPaymentMutations, replaceShipmentExpenseTx, setOrderCodCollectedTx } from "@/domains/payment/server";
+import {
+  recordPaymentMutations,
+  replaceShipmentExpenseTx,
+  setOrderCodCollectedTx,
+} from "@/domains/payment/server";
 import { syncWatchInventoryFromOrderId } from "@/domains/order/server/order-watch-sync.service";
 import type {
   CompleteShipmentInput,
@@ -33,9 +37,10 @@ import {
 } from "./shipment.repo";
 import { money, toPlain, type Tx } from "./shipment.utils";
 import {
-  publishShipmentMutation,
+  recordShipmentMutation,
   type ShipmentMutation,
 } from "./events";
+import { processBusinessEventOperation } from "@/domains/event/delivery";
 
 const SHIPMENT_STATUS_RETURNING = "RETURNING" as ShipmentStatus;
 const SHIPMENT_STATUS_RETURNED = "RETURNED" as ShipmentStatus;
@@ -131,7 +136,7 @@ export async function updateShipment(input: { shipmentId: string; data: UpdateSh
     const shipment = await requireShipmentTx(tx, input.shipmentId);
     assertEditable(shipment.status);
     const updated = await updateShipmentRepo(tx, input.shipmentId, input.data);
-    return {
+    const commandResult = {
       shipment: toPlain(updated),
       mutation: {
         eventKey: "shipment.updated",
@@ -146,8 +151,10 @@ export async function updateShipment(input: { shipmentId: string; data: UpdateSh
         note: updated.notes,
       } satisfies ShipmentMutation,
     };
+    const event = await recordShipmentMutation(tx, commandResult.mutation);
+    return { ...commandResult, event };
   });
-  await publishShipmentMutation(result.mutation);
+  await processBusinessEventOperation(result.event.projectionDeliveryKey);
   return result.shipment;
 }
 
@@ -211,7 +218,7 @@ export async function createShipmentFeeAndShip(input: CreateShipmentFeeInput) {
     const summary = await recomputeOrderPaymentRollupTx(tx, shipment.orderId);
     await syncWatchInventoryFromOrderId(tx, shipment.orderId);
 
-    return toPlain({
+    const commandResult = toPlain({
       shipment: updated,
       payment,
       summary,
@@ -230,9 +237,28 @@ export async function createShipmentFeeAndShip(input: CreateShipmentFeeInput) {
         actorUserId: input.actorUserId ?? null,
       } satisfies ShipmentMutation,
     });
+    const paymentEvents = await recordPaymentMutations(
+      tx,
+      commandResult.paymentMutations,
+      { deferConsumers: input.deferConsumers, actorUserId: input.actorUserId ?? null },
+    );
+    const shipmentEvent = await recordShipmentMutation(
+      tx,
+      commandResult.shipmentMutation,
+      { deferConsumers: input.deferConsumers },
+    );
+    return {
+      ...commandResult,
+      events: [...paymentEvents, shipmentEvent].map((event) => ({
+        projectionDeliveryKey: event.projectionDeliveryKey,
+      })),
+    };
   });
-  await publishPaymentMutations(result.paymentMutations);
-  await publishShipmentMutation(result.shipmentMutation);
+  if (!input.deferConsumers) {
+    for (const event of result.events) {
+      await processBusinessEventOperation(event.projectionDeliveryKey);
+    }
+  }
   return result;
 }
 
@@ -261,7 +287,7 @@ export async function markShipmentDelivered(input: CompleteShipmentInput) {
     }
     const summary = await recomputeOrderPaymentRollupTx(tx, shipment.orderId);
     await syncWatchInventoryFromOrderId(tx, shipment.orderId);
-    return toPlain({
+    const commandResult = toPlain({
       shipment: updated,
       isCod,
       summary,
@@ -280,9 +306,28 @@ export async function markShipmentDelivered(input: CompleteShipmentInput) {
         actorUserId: input.actorUserId ?? null,
       } satisfies ShipmentMutation,
     });
+    const paymentEvents = await recordPaymentMutations(
+      tx,
+      commandResult.paymentMutations,
+      { deferConsumers: input.deferConsumers, actorUserId: input.actorUserId ?? null },
+    );
+    const shipmentEvent = await recordShipmentMutation(
+      tx,
+      commandResult.shipmentMutation,
+      { deferConsumers: input.deferConsumers },
+    );
+    return {
+      ...commandResult,
+      events: [...paymentEvents, shipmentEvent].map((event) => ({
+        projectionDeliveryKey: event.projectionDeliveryKey,
+      })),
+    };
   });
-  await publishPaymentMutations(result.paymentMutations);
-  await publishShipmentMutation(result.shipmentMutation);
+  if (!input.deferConsumers) {
+    for (const event of result.events) {
+      await processBusinessEventOperation(event.projectionDeliveryKey);
+    }
+  }
   return result;
 }
 
@@ -314,7 +359,7 @@ export async function markShipmentReturned(input: CompleteShipmentInput) {
     });
 
     // Không sync watch ở bước đang hoàn: watch vẫn HOLD theo order RETURNING.
-    return toPlain({
+    const commandResult = toPlain({
       shipment: updated,
       shipmentMutation: {
         eventKey: "shipment.returning",
@@ -330,8 +375,21 @@ export async function markShipmentReturned(input: CompleteShipmentInput) {
         actorUserId: input.actorUserId ?? null,
       } satisfies ShipmentMutation,
     });
+    const shipmentEvent = await recordShipmentMutation(
+      tx,
+      commandResult.shipmentMutation,
+      { deferConsumers: input.deferConsumers },
+    );
+    return {
+      ...commandResult,
+      events: [{ projectionDeliveryKey: shipmentEvent.projectionDeliveryKey }],
+    };
   });
-  await publishShipmentMutation(result.shipmentMutation);
+  if (!input.deferConsumers) {
+    for (const event of result.events) {
+      await processBusinessEventOperation(event.projectionDeliveryKey);
+    }
+  }
   return result;
 }
 
@@ -367,7 +425,7 @@ export async function receiveShipmentReturn(input: ReceiveShipmentReturnInput) {
     await tx.order.update({ where: { id: shipment.orderId }, data: { status: ORDER_STATUS_RETURNED, updatedAt: new Date() } });
     const summary = await recomputeOrderPaymentRollupTx(tx, shipment.orderId);
     await syncWatchInventoryFromOrderId(tx, shipment.orderId);
-    return toPlain({
+    const commandResult = toPlain({
       shipment: updated,
       payment: paymentResult.payment,
       summary,
@@ -386,9 +444,28 @@ export async function receiveShipmentReturn(input: ReceiveShipmentReturnInput) {
         actorUserId: input.actorUserId ?? null,
       } satisfies ShipmentMutation,
     });
+    const paymentEvents = await recordPaymentMutations(
+      tx,
+      commandResult.paymentMutations,
+      { deferConsumers: input.deferConsumers, actorUserId: input.actorUserId ?? null },
+    );
+    const shipmentEvent = await recordShipmentMutation(
+      tx,
+      commandResult.shipmentMutation,
+      { deferConsumers: input.deferConsumers },
+    );
+    return {
+      ...commandResult,
+      events: [...paymentEvents, shipmentEvent].map((event) => ({
+        projectionDeliveryKey: event.projectionDeliveryKey,
+      })),
+    };
   });
-  await publishPaymentMutations(result.paymentMutations);
-  await publishShipmentMutation(result.shipmentMutation);
+  if (!input.deferConsumers) {
+    for (const event of result.events) {
+      await processBusinessEventOperation(event.projectionDeliveryKey);
+    }
+  }
   return result;
 }
 
@@ -409,7 +486,7 @@ export async function createManualShipment(input: CreateManualShipmentInput) {
       },
     });
     await syncWatchInventoryFromOrderId(tx, input.orderId);
-    return {
+    const commandResult = {
       shipment: toPlain(shipment),
       mutation: {
         eventKey: "shipment.created",
@@ -424,7 +501,9 @@ export async function createManualShipment(input: CreateManualShipmentInput) {
         note: shipment.notes,
       } satisfies ShipmentMutation,
     };
+    const event = await recordShipmentMutation(tx, commandResult.mutation);
+    return { ...commandResult, event };
   });
-  await publishShipmentMutation(result.mutation);
+  await processBusinessEventOperation(result.event.projectionDeliveryKey);
   return result.shipment;
 }

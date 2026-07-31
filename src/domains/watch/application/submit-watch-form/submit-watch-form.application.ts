@@ -1,15 +1,17 @@
-import { prisma } from "@/server/db/client";
-import { attachWatchMedia } from "@/domains/media/application";
+import { prisma, type DB } from "@/server/db/client";
+import { attachIngestedWatchMedia } from "@/domains/media/application";
 import { notifyUsersByRole } from "@/app/(admin)/admin/notifications/notification.service";
 
 import { MediaRole, WatchSpecStatus } from "@prisma/client";
 import type { WatchFormValues } from "../../client/form/watch-form.types";
-import { replaceWatchGalleryImagesRepo } from "../../server/media";
+import {
+    ensureWatchInlineImageFromFirstGalleryRepo,
+    replaceWatchGalleryImagesRepo,
+} from "../../server/media";
 import {
     selectWatchGalleryImages,
     selectWatchPoolImages,
     releaseRemovedWatchPoolImagesToActive,
-    ensureWatchInlineImageFromFirstGallery,
 } from "../../server/media";
 import { updateWatchPricingWithDiff } from "../../server/pricing";
 import {
@@ -243,7 +245,7 @@ async function genUniqueWatchSkuForSubmit(
 
     return `${base}-${padSkuSeqForSubmit(maxSeq + 1)}`;
 }
-async function syncWatchSaleStageAfterPostAssets(input: {
+async function syncWatchSaleStageAfterPostAssets(db: DB, input: {
     productId: string;
     hasContentData: boolean;
     hasGalleryImages: boolean;
@@ -251,7 +253,7 @@ async function syncWatchSaleStageAfterPostAssets(input: {
     const nextSaleStage =
         input.hasContentData && input.hasGalleryImages ? "READY" : "PROCESSING";
 
-    await prisma.watch.updateMany({
+    await db.watch.updateMany({
         where: {
             productId: input.productId,
             saleStage: {
@@ -647,6 +649,32 @@ export async function submitWatchFormApplication(
                 hashTags: values.content.hashTags || null,
             } as any,
         });
+
+        if (contentChanged) {
+            await emitWatchContentModifiedEvent(tx, {
+                watch: {
+                    id: current.id,
+                    productId,
+                },
+                actorUserId: context.userId ?? null,
+            }, { deferConsumers: context.deferConsumers });
+        }
+
+        if (specChanged) {
+            await emitWatchSpecUpdatedEvent(tx, {
+                watch: {
+                    id: current.id,
+                    productId,
+                    product: {
+                        title: current.product?.title ?? values.basic.title ?? null,
+                        sku: current.product?.sku ?? values.header.sku ?? null,
+                    },
+                },
+                actorUserId: context.userId ?? null,
+                before: beforeSpec,
+                after: afterSpec,
+            }, { deferConsumers: context.deferConsumers });
+        }
     });
 
     const galleryOriginalKeys = new Set(
@@ -673,19 +701,12 @@ export async function submitWatchFormApplication(
         // NAS/media reconciliation is comparatively expensive. Only run it when
         // gallery keys actually changed; content/progress-only saves must not
         // move and re-attach every existing image again.
-        await releaseRemovedWatchPoolImagesToActive({
-            productId,
-            keepItems: [...remainingPoolImages, ...requestedGalleryImages],
-        });
-
         normalizedGalleryImages = await selectWatchGalleryImages(
             requestedGalleryImages,
-            { productId, acquisitionId: current.acquisitionId },
         );
 
         normalizedPoolImages = await selectWatchPoolImages(
             remainingPoolImages,
-            { productId },
         );
 
         const galleryImageInputs = normalizedGalleryImages
@@ -708,101 +729,92 @@ export async function submitWatchFormApplication(
                 sortOrder: number;
             }>;
 
-        await replaceWatchGalleryImagesRepo(prisma as any, {
-            productId,
-            images: galleryImageInputs,
-        });
-
-        await attachWatchMedia({
-            productId,
-            images: galleryImageInputs.map((image) => ({
-                storageKey: image.fileKey,
-                role: MediaRole.GALLERY,
-                sortOrder: image.sortOrder,
-            })),
-        });
-        await ensureWatchInlineImageFromFirstGallery({
-            productId,
+        await prisma.$transaction(async (tx) => {
+            await replaceWatchGalleryImagesRepo(tx, {
+                productId,
+                images: galleryImageInputs,
+            });
+            await attachIngestedWatchMedia({
+                productId,
+                images: galleryImageInputs.map((image) => ({
+                    storageKey: image.fileKey,
+                    role: MediaRole.GALLERY,
+                    sortOrder: image.sortOrder,
+                })),
+            }, tx);
+            await releaseRemovedWatchPoolImagesToActive({
+                productId,
+                keepItems: [...normalizedPoolImages, ...normalizedGalleryImages],
+            }, tx);
+            await ensureWatchInlineImageFromFirstGalleryRepo(tx, {
+                productId,
+            });
+            await syncWatchSaleStageAfterPostAssets(tx, {
+                productId,
+                hasContentData: hasContentSnapshotData(afterContent),
+                hasGalleryImages: normalizedGalleryImages.length > 0,
+            });
+            await emitWatchMediaAssetAttachedEvent(tx, {
+                watch: {
+                    id: current.id,
+                    productId,
+                    product: {
+                        title: current.product?.title ?? values.basic.title ?? null,
+                        sku: current.product?.sku ?? values.header.sku ?? null,
+                    },
+                },
+                actorUserId: context.userId ?? null,
+                sourceId: productId,
+                note: "Watch Workbench image save.",
+            }, { deferConsumers: context.deferConsumers });
         });
     }
     const hasContentData = hasContentSnapshotData(afterContent);
     const hasGalleryImages = normalizedGalleryImages.length > 0;
 
-    await syncWatchSaleStageAfterPostAssets({
-        productId,
-        hasContentData,
-        hasGalleryImages,
-    });
-
-    if (contentChanged) {
-        await emitWatchContentModifiedEvent(prisma, {
-            watch: {
-                id: current.id,
+    if (!imagesChanged) {
+        await prisma.$transaction((tx) =>
+            syncWatchSaleStageAfterPostAssets(tx, {
                 productId,
-            },
-            actorUserId: context.userId ?? null,
-        }, { deferConsumers: context.deferConsumers });
-    }
-
-    if (specChanged) {
-        await emitWatchSpecUpdatedEvent(prisma, {
-            watch: {
-                id: current.id,
-                productId,
-                product: {
-                    title: current.product?.title ?? values.basic.title ?? null,
-                    sku: current.product?.sku ?? values.header.sku ?? null,
-                },
-            },
-            actorUserId: context.userId ?? null,
-            before: beforeSpec,
-            after: afterSpec,
-        }, { deferConsumers: context.deferConsumers });
-    }
-
-    if (imagesChanged) {
-        await emitWatchMediaAssetAttachedEvent(prisma, {
-            watch: {
-                id: current.id,
-                productId,
-                product: {
-                    title: current.product?.title ?? values.basic.title ?? null,
-                    sku: current.product?.sku ?? values.header.sku ?? null,
-                },
-            },
-            actorUserId: context.userId ?? null,
-            sourceId: productId,
-            note: "Watch Workbench image save.",
-        }, { deferConsumers: context.deferConsumers });
+                hasContentData,
+                hasGalleryImages,
+            }),
+        );
     }
 
     const pricingResult = context.canEditPrice
-        ? await updateWatchPricingWithDiff(productId, {
-            salePrice: values.pricing.salePrice,
-            minPrice: values.pricing.minPrice,
-            costPrice: values.pricing.costPrice,
-            serviceCost: values.pricing.serviceCost,
-            landedCost: values.pricing.landedCost,
-            pricingNote: values.pricing.pricingNote,
+        ? await prisma.$transaction(async (tx) => {
+            const result = await updateWatchPricingWithDiff(productId, {
+                salePrice: values.pricing.salePrice,
+                minPrice: values.pricing.minPrice,
+                costPrice: values.pricing.costPrice,
+                serviceCost: values.pricing.serviceCost,
+                landedCost: values.pricing.landedCost,
+                pricingNote: values.pricing.pricingNote,
+            }, tx);
+
+            if (result.changedFields.length > 0) {
+                await emitWatchPriceUpdatedEvent(tx, {
+                    watch: {
+                        id: result.watchId,
+                        productId,
+                        product: {
+                            title: result.product?.title ?? values.basic.title ?? null,
+                            sku: result.product?.sku ?? values.header.sku ?? null,
+                        },
+                    },
+                    actorUserId: context.userId ?? null,
+                    changedFields: result.changedFields,
+                    before: priceSnapshot(result.before),
+                    after: priceSnapshot(result.after),
+                }, { deferConsumers: context.deferConsumers });
+            }
+
+            return result;
         })
         : null;
 
     if (pricingResult && pricingResult.changedFields.length > 0) {
-        await emitWatchPriceUpdatedEvent(prisma, {
-            watch: {
-                id: pricingResult.watchId,
-                productId,
-                product: {
-                    title: pricingResult.product?.title ?? values.basic.title ?? null,
-                    sku: pricingResult.product?.sku ?? values.header.sku ?? null,
-                },
-            },
-            actorUserId: context.userId ?? null,
-            changedFields: pricingResult.changedFields,
-            before: priceSnapshot(pricingResult.before),
-            after: priceSnapshot(pricingResult.after),
-        }, { deferConsumers: context.deferConsumers });
-
         await notifyUsersByRole({
             role: "SALE",
             type: "WATCH_PRICE_UPDATED",

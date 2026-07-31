@@ -30,6 +30,7 @@
     "projection:smoke-admin-core": "tsx scripts/smoke-admin-core-projections.ts",
     "projection:rebuild-all": "tsx scripts/rebuild-all-projections.ts",
     "projection:smoke-runtime": "tsx scripts/smoke-projection-runtime.ts",
+    "event:smoke-consumer-outbox": "tsx scripts/smoke-business-event-consumer-outbox.ts",
     "coordination:smoke-board-query": "tsx scripts/smoke-coordination-board-query.ts",
     "coordination:smoke-bootstrap": "tsx scripts/smoke-coordination-bootstrap.ts",
     "coordination:smoke-operation-flows": "tsx scripts/smoke-coordination-operation-flows.ts",

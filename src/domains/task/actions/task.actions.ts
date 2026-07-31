@@ -66,6 +66,7 @@ import {
 } from "../server/business-binding.service";
 import type { BusinessBindingTargetType } from "../server/business-binding.types";
 import { isCoreWorkspaceBlueprint } from "../shared/workspace-flow-policy";
+import { getProjectionDeliveryStatus } from "@/domains/projection/server";
 
 function authActorLabel(auth: unknown) {
   const root = auth && typeof auth === "object" && !Array.isArray(auth)
@@ -1287,39 +1288,43 @@ export async function applyQueueItemManualTransitionAction(input: {
     }
   }
 
-  let result = await applyManualWorkflowAction(prisma, {
-    ...transitionInput,
-  });
-
-  if (
-    result.applied &&
-    result.workflowKey === "watch-photography" &&
-    result.toState === "IN_PROGRESS"
-  ) {
-    const nextResult = await applyManualWorkflowAction(prisma, {
-      bindingId,
-      actionKey: "mark-done",
-      actorUserId,
-      actorLabel,
-      note: input.note ?? null,
+  const { result, workflowProcessorResult } = await prisma.$transaction(async (tx) => {
+    let transactionResult = await applyManualWorkflowAction(tx, {
+      ...transitionInput,
     });
 
-    if (nextResult.applied) {
-      result = nextResult;
-    }
-  }
+    if (
+      transactionResult.applied &&
+      transactionResult.workflowKey === "watch-photography" &&
+      transactionResult.toState === "IN_PROGRESS"
+    ) {
+      const nextResult = await applyManualWorkflowAction(tx, {
+        bindingId,
+        actionKey: "mark-done",
+        actorUserId,
+        actorLabel,
+        note: input.note ?? null,
+      });
 
-  const workflowProcessorResult = await processManualWorkspaceWorkflowTransition(
-    prisma,
-    {
+      if (nextResult.applied) {
+        transactionResult = nextResult;
+      }
+    }
+
+    const processorResult = await processManualWorkspaceWorkflowTransition(tx, {
       bindingId,
-      transition: result,
+      transition: transactionResult,
       actorUserId,
       actorLabel,
       note: input.note ?? null,
       deferConsumers: (work) => after(work),
-    },
-  );
+    });
+
+    return {
+      result: transactionResult,
+      workflowProcessorResult: processorResult,
+    };
+  });
   const serviceDoneMove =
     result.applied &&
     result.workflowKey === "service-operation-technical-bench" &&
@@ -1498,18 +1503,23 @@ export async function submitOperationalBlueprintActionAction(input: {
     });
 
     if (binding?.id) {
-      const workflowResult = await applyManualWorkflowAction(prisma, {
-        bindingId: binding.id,
-        actionKey: manualActionKey,
-        actorUserId,
-        actorLabel,
-      });
+      const workflowResult = await prisma.$transaction(async (tx) => {
+        const transactionResult = await applyManualWorkflowAction(tx, {
+          bindingId: binding.id,
+          actionKey: manualActionKey,
+          actorUserId,
+          actorLabel,
+        });
 
-      await processManualWorkspaceWorkflowTransition(prisma, {
-        bindingId: binding.id,
-        transition: workflowResult,
-        actorUserId,
-        actorLabel,
+        await processManualWorkspaceWorkflowTransition(tx, {
+          bindingId: binding.id,
+          transition: transactionResult,
+          actorUserId,
+          actorLabel,
+          deferConsumers: (work) => after(work),
+        });
+
+        return transactionResult;
       });
 
       if (
@@ -1536,6 +1546,24 @@ export async function submitOperationalBlueprintActionAction(input: {
   }
 
   return { ok: true, result };
+}
+
+export async function getOperationProjectionDeliveriesAction(input: {
+  projectionDeliveryKeys: string[];
+}) {
+  await getTaskAuth();
+  const keys = [...new Set(
+    (input.projectionDeliveryKeys ?? [])
+      .map((key) => String(key ?? "").trim())
+      .filter(Boolean),
+  )].slice(0, 20);
+
+  return Promise.all(
+    keys.map(async (projectionDeliveryKey) => ({
+      projectionDeliveryKey,
+      delivery: await getProjectionDeliveryStatus(prisma, projectionDeliveryKey),
+    })),
+  );
 }
 
 export async function searchManualQueueTargetsAction(input: {

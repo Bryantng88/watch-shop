@@ -63,7 +63,7 @@ export async function getOrderDetailProjection(db: DB, orderId: string) {
     entityId: orderId,
     limit: 1,
   });
-  return rows[0]?.dataJson ?? buildOrderDetailProjectionRow(db, orderId);
+  return rows[0]?.dataJson;
 }
 
 export async function rebuildOrderDetailProjectionRows(db: DB, orderIds?: string[]) {

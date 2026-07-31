@@ -60,14 +60,16 @@ export async function markWatchMediaAssetAttachedAction(input: {
 }) {
   const user = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
 
-  const result = await markWatchMediaAssetAttachedFromQueueItem(
-    {
-      bindingId: input.bindingId,
-      actorUserId: user.id,
-      note: input.note ?? null,
-      deferConsumers: (work) => after(work),
-    },
-    prisma,
+  const result = await prisma.$transaction((tx) =>
+    markWatchMediaAssetAttachedFromQueueItem(
+      {
+        bindingId: input.bindingId,
+        actorUserId: user.id,
+        note: input.note ?? null,
+        deferConsumers: (work) => after(work),
+      },
+      tx,
+    ),
   );
 
   revalidatePath("/admin/watches");
@@ -90,15 +92,17 @@ export async function markWatchMediaAssetAttachedFromWatchAction(input: {
   const user = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
   const authorizedAt = Date.now();
 
-  const result = await markWatchMediaAssetAttachedFromWatch(
-    {
-      productId: input.productId,
-      actorUserId: user.id,
-      note: input.note ?? null,
-      origin: input.origin ?? "WATCH_DETAIL",
-      deferConsumers: (work) => after(work),
-    },
-    prisma,
+  const result = await prisma.$transaction((tx) =>
+    markWatchMediaAssetAttachedFromWatch(
+      {
+        productId: input.productId,
+        actorUserId: user.id,
+        note: input.note ?? null,
+        origin: input.origin ?? "WATCH_DETAIL",
+        deferConsumers: (work) => after(work),
+      },
+      tx,
+    ),
   );
   console.info(
     `[perf:watch-media-intake-action] auth=${authorizedAt - startedAt}ms domain=${Date.now() - authorizedAt}ms total=${Date.now() - startedAt}ms productId=${input.productId}`,

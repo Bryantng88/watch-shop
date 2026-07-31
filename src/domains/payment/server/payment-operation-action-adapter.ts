@@ -231,6 +231,7 @@ export async function runPaymentOperationBlueprintAction(
           reference: optionalField(fields, "transactionReference"),
           note: optionalField(fields, "reviewNote"),
           deferConsumers: input.deferConsumers,
+          actorUserId: input.actorUserId ?? null,
         });
         await recordBusinessEvent(db, {
           eventKey: "payment.status_updated",
@@ -323,6 +324,7 @@ export async function runPaymentOperationBlueprintAction(
       reference: optionalField(fields, isReconciliation ? "transactionReference" : "reference"),
       note: optionalField(fields, isReconciliation ? "reviewNote" : "settlementNote"),
       deferConsumers: input.deferConsumers,
+      actorUserId: input.actorUserId ?? null,
     });
 
     return { ok: true, actionKey, paymentId: targetId, result };

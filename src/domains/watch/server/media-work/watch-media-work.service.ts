@@ -436,6 +436,7 @@ export async function completeWatchPhotoshootFromQueueItem(
   });
 
   if (!binding) return { ok: false, skipped: true, reason: "BINDING_NOT_FOUND" };
+  if (!binding.taskItem) return { ok: false, skipped: true, reason: "TASK_ITEM_NOT_FOUND" };
   if (binding.targetType !== TaskExecutionTargetType.WATCH) {
     return { ok: true, skipped: true, reason: "NOT_WATCH_BINDING" };
   }
@@ -550,6 +551,7 @@ export async function markWatchMediaAssetAttachedFromQueueItem(
   });
 
   if (!binding) return { ok: false, skipped: true, reason: "BINDING_NOT_FOUND" };
+  if (!binding.taskItem) return { ok: false, skipped: true, reason: "TASK_ITEM_NOT_FOUND" };
   if (binding.targetType !== TaskExecutionTargetType.WATCH) {
     return { ok: true, skipped: true, reason: "NOT_WATCH_BINDING" };
   }
@@ -802,6 +804,7 @@ export async function saveWatchMediaWorkDraftFromQueueItem(
   });
 
   if (!binding) return { ok: false, skipped: true, reason: "BINDING_NOT_FOUND" };
+  if (!binding.taskItem) return { ok: false, skipped: true, reason: "TASK_ITEM_NOT_FOUND" };
   if (binding.targetType !== TaskExecutionTargetType.WATCH) {
     return { ok: true, skipped: true, reason: "NOT_WATCH_BINDING" };
   }
@@ -986,6 +989,7 @@ export async function requestWatchMediaReshootFromQueueItem(
   });
 
   if (!binding) return { ok: false, skipped: true, reason: "BINDING_NOT_FOUND" };
+  if (!binding.taskItem) return { ok: false, skipped: true, reason: "TASK_ITEM_NOT_FOUND" };
   if (binding.targetType !== TaskExecutionTargetType.WATCH) {
     return { ok: true, skipped: true, reason: "NOT_WATCH_BINDING" };
   }
@@ -1005,6 +1009,11 @@ export async function requestWatchMediaReshootFromQueueItem(
           sku: true,
           primaryImageUrl: true,
           status: true,
+          productImage: {
+            where: { role: ImageRole.GALLERY },
+            select: { id: true },
+            take: 1,
+          },
         },
       },
     },
@@ -1027,7 +1036,8 @@ export async function requestWatchMediaReshootFromQueueItem(
     productId: watch.productId,
     targetType: "IMAGE",
     userId: input.actorUserId ?? null,
-  });
+    deferConsumers: input.deferConsumers,
+  }, db);
 
   await db.taskExecution.update({
     where: { id: binding.id },
@@ -1080,28 +1090,9 @@ export async function requestWatchMediaReshootFromQueueItem(
     deferConsumers: input.deferConsumers,
   });
 
-  const photoshootBindingId = event.consumers.coordination?.skipped === false
-    ? event.consumers.coordination.bindingId
-    : null;
-  if (photoshootBindingId) {
-    const photoshootBinding = await db.taskExecution.findUnique({
-      where: { id: photoshootBindingId },
-      select: { metadataJson: true },
-    });
-    const photoshootMetadata = asRecord(photoshootBinding?.metadataJson);
-
-    await db.taskExecution.update({
-      where: { id: photoshootBindingId },
-      data: {
-        metadataJson: {
-          ...photoshootMetadata,
-          reshootNote: note,
-          reshootRequestedAt: updatedAt,
-          reshootRequestedByUserId: input.actorUserId ?? null,
-        },
-      },
-    });
-  }
+  // The coordination consumer seeds `reshootNote` from this event payload.
+  // Do not read a newly-created binding here: the durable consumer runs only
+  // after this transaction commits.
 
   return {
     ok: true,
@@ -1186,13 +1177,15 @@ export async function completeWatchMediaProcessingFromQueueItem(
     targetType: "CONTENT",
     userId: input.actorUserId ?? null,
     emitBusinessEvent: false,
-  });
+    deferConsumers: input.deferConsumers,
+  }, db);
   await approveWatchReview({
     productId: watch.productId,
     targetType: "IMAGE",
     userId: input.actorUserId ?? null,
     emitBusinessEvent: false,
-  });
+    deferConsumers: input.deferConsumers,
+  }, db);
 
   const readyAt = new Date().toISOString();
   const event = await emitWatchMediaReadyForPublishEvent(db, {
@@ -1239,6 +1232,7 @@ export async function recallWatchMediaFromPublishQueueItem(
   });
 
   if (!binding) return { ok: false, skipped: true, reason: "BINDING_NOT_FOUND" };
+  if (!binding.taskItem) return { ok: false, skipped: true, reason: "TASK_ITEM_NOT_FOUND" };
   if (binding.targetType !== TaskExecutionTargetType.WATCH) {
     return { ok: true, skipped: true, reason: "NOT_WATCH_BINDING" };
   }
@@ -1274,12 +1268,14 @@ export async function recallWatchMediaFromPublishQueueItem(
     productId: watch.productId,
     targetType: "CONTENT",
     userId: input.actorUserId ?? null,
-  });
+    deferConsumers: input.deferConsumers,
+  }, db);
   await resetWatchReviewToDraft({
     productId: watch.productId,
     targetType: "IMAGE",
     userId: input.actorUserId ?? null,
-  });
+    deferConsumers: input.deferConsumers,
+  }, db);
   const reopenedMediaBindings = await reopenMediaProcessingBindingsForRecall({
     db,
     watchId: watch.id,
@@ -1324,6 +1320,7 @@ export async function completeWatchPublishFromQueueItem(
     bindingId: string;
     actorUserId?: string | null;
     note?: string | null;
+    deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
   },
   db: DB = prisma,
 ) {
@@ -1360,6 +1357,11 @@ export async function completeWatchPublishFromQueueItem(
           sku: true,
           primaryImageUrl: true,
           status: true,
+          productImage: {
+            where: { role: ImageRole.GALLERY },
+            select: { id: true },
+            take: 1,
+          },
         },
       },
     },
@@ -1372,7 +1374,7 @@ export async function completeWatchPublishFromQueueItem(
     actorUserId: input.actorUserId ?? null,
     sourceId: `publish-posted:${binding.id}`,
     note: input.note ?? "Watch đã được xác nhận đăng bài.",
-  });
+  }, { deferConsumers: input.deferConsumers });
 
   return {
     ok: true,

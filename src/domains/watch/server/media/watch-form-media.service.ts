@@ -1,8 +1,9 @@
 import { MediaRole } from "@prisma/client";
 import {
+    ingestExistingMediaForWatch,
     releaseWatchMediaNotIn,
-    selectExistingMediaForWatch,
 } from "@/domains/media/application";
+import { prisma, type DB } from "@/server/db/client";
 
 import {
     dedupeMediaItems,
@@ -13,7 +14,6 @@ import {
 
 export async function selectWatchPoolImages(
     items: WatchFormMediaItem[],
-    input: { productId: string },
 ) {
     const normalized = dedupeMediaItems(items);
     const result: WatchFormMediaItem[] = [];
@@ -22,11 +22,8 @@ export async function selectWatchPoolImages(
         const key = mediaKey(item);
         if (!key) continue;
 
-        const selected = await selectExistingMediaForWatch({
+        const selected = await ingestExistingMediaForWatch({
             storageKey: key,
-            productId: input.productId,
-            role: MediaRole.GALLERY,
-            sortOrder: result.length,
         });
 
         result.push({
@@ -43,7 +40,6 @@ export async function selectWatchPoolImages(
 
 export async function selectWatchGalleryImages(
     items: WatchFormMediaItem[],
-    input: { productId: string; acquisitionId?: string | null },
 ) {
     const normalized = dedupeMediaItems(items);
     const result: WatchFormMediaItem[] = [];
@@ -53,11 +49,8 @@ export async function selectWatchGalleryImages(
         const key = mediaKey(item);
         if (!key) continue;
 
-        const selected = await selectExistingMediaForWatch({
+        const selected = await ingestExistingMediaForWatch({
             storageKey: key,
-            productId: input.productId,
-            role: MediaRole.GALLERY,
-            sortOrder: index,
         });
 
         result.push({
@@ -75,7 +68,7 @@ export async function selectWatchGalleryImages(
 export async function releaseRemovedWatchPoolImagesToActive(input: {
     productId: string;
     keepItems: WatchFormMediaItem[];
-}) {
+}, db: DB = prisma) {
     const keepStorageKeys = dedupeMediaItems(input.keepItems)
         .map(mediaKey)
         .filter(Boolean);
@@ -84,5 +77,5 @@ export async function releaseRemovedWatchPoolImagesToActive(input: {
         productId: input.productId,
         role: MediaRole.GALLERY,
         keepStorageKeys,
-    });
+    }, db);
 }

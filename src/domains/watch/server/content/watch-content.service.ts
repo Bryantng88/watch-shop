@@ -18,24 +18,6 @@ type MeaningfulWatchContent = {
   bulletSpecs?: unknown;
 };
 
-async function safeEmitWatchContentUpdatedEvent(input: {
-  productId: string;
-  userId?: string | null;
-}) {
-  try {
-    const target = await getReviewTargetOrThrow(input.productId);
-
-    await emitWatchContentModifiedEvent(prisma, {
-      watch: target,
-      actorUserId: input.userId ?? null,
-    });
-  } catch (error) {
-    console.error("WORKFLOW_EMIT_WATCH_CONTENT_UPDATED_FAILED", {
-      productId: input.productId,
-      error,
-    });
-  }
-}
 function hasMeaningfulContent(content: MeaningfulWatchContent | null | undefined) {
   const bulletSpecs = Array.isArray(content?.bulletSpecs) ? content.bulletSpecs : [];
 
@@ -65,17 +47,21 @@ export async function saveWatchContent(
     userId?: string | null;
   },
 ) {
-  const content = await saveWatchContentRepo(prisma, productId, {
-    productId,
-    ...input,
-  });
+  return prisma.$transaction(async (tx) => {
+    const content = await saveWatchContentRepo(tx, productId, {
+      productId,
+      ...input,
+    });
+    const target = await getWatchContentReviewTargetRepo(tx, productId);
+    if (!target) throw new Error("KhÃ´ng tÃ¬m tháº¥y watch");
 
-  await safeEmitWatchContentUpdatedEvent({
-    productId,
-    userId: input.userId ?? null,
-  });
+    await emitWatchContentModifiedEvent(tx, {
+      watch: target,
+      actorUserId: input.userId ?? null,
+    });
 
-  return content;
+    return content;
+  });
 }
 
 export async function syncWatchContentSnapshot(productId: string) {

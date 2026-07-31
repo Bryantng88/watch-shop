@@ -8,7 +8,10 @@ import type {
   OrderListProjectionRow,
 } from "@/domains/order/shared/order-list.projection";
 import { buildOrderPaymentFlow } from "@/domains/order/shared";
-import { getPaymentOwnerSummaryProjection } from "./payment-owner-summary.projection";
+import {
+  buildPaymentOwnerSummary,
+  getPaymentOwnerSummaryProjection,
+} from "./payment-owner-summary.projection";
 import { dbOrTx, type DB } from "@/server/db/client";
 import {
   deleteProjectionRecords,
@@ -117,7 +120,9 @@ export async function buildOrderListProjectionRow(
   if (!order) return null;
 
   const total = Number(order.subtotal ?? 0);
-  const payment = await getPaymentOwnerSummaryProjection(db, "ORDER", order.id);
+  const payment =
+    await getPaymentOwnerSummaryProjection(db, "ORDER", order.id) ??
+    await buildPaymentOwnerSummary(db, "ORDER", order.id);
   const paidAmount = Number(payment.paidTotal ?? 0);
   const collectedAmount = Number(payment.collectedTotal ?? 0);
   const unpaidPaymentAmount = Number(payment.unpaidTotal ?? 0);

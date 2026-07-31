@@ -18,6 +18,7 @@ export type ShipmentOperationBlueprintActionInput = {
   fields?: Record<string, unknown>;
   actorUserId?: string | null;
   actorName?: string | null;
+  deferConsumers?: (work: () => Promise<void>) => void;
 };
 
 function clean(value: unknown) {
@@ -73,6 +74,7 @@ export async function runShipmentOperationBlueprintAction(
         note: clean(fields.note) || null,
         paidAt: clean(fields.paidAt) || null,
         actorUserId: input.actorUserId ?? null,
+        deferConsumers: input.deferConsumers,
       });
       return { ok: true, actionKey, shipmentId: targetId, result };
     }
@@ -81,6 +83,7 @@ export async function runShipmentOperationBlueprintAction(
         shipmentId: targetId,
         note: clean(fields.note) || null,
         actorUserId: input.actorUserId ?? null,
+        deferConsumers: input.deferConsumers,
       });
       return { ok: true, actionKey, shipmentId: targetId, result };
     }
@@ -91,6 +94,7 @@ export async function runShipmentOperationBlueprintAction(
         shipmentId: targetId,
         note,
         actorUserId: input.actorUserId ?? null,
+        deferConsumers: input.deferConsumers,
       });
       return { ok: true, actionKey, shipmentId: targetId, result };
     }
@@ -107,6 +111,7 @@ export async function runShipmentOperationBlueprintAction(
         note: clean(fields.note) || null,
         paidAt: clean(fields.paidAt) || null,
         actorUserId: input.actorUserId ?? null,
+        deferConsumers: input.deferConsumers,
       });
       return { ok: true, actionKey, shipmentId: targetId, result };
     }

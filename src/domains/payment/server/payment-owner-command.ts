@@ -1,6 +1,6 @@
 import { PaymentDirection, PaymentMethod, PaymentPurpose, PaymentStatus, PaymentType } from "@prisma/client";
 
-import { prisma } from "@/server/db/client";
+import { prisma, type DB } from "@/server/db/client";
 import {
   recordBusinessEvent,
   type BusinessEventDispatchOptions,
@@ -10,18 +10,24 @@ import { buildPaymentRef, money, toNumber, type Tx } from "./payment.utils";
 
 export type PaymentMutation = { paymentId: string; eventKey: "payment.created" | "payment.status_updated" | "payment.paid" };
 
-export async function publishPaymentMutations(
+export async function recordPaymentMutations(
+  db: DB,
   mutations: PaymentMutation[],
-  options?: BusinessEventDispatchOptions & { skipProjectionKeys?: string[] },
+  options?: BusinessEventDispatchOptions & {
+    skipProjectionKeys?: string[];
+    actorUserId?: string | null;
+  },
 ) {
+  const results = [];
   for (const mutation of mutations) {
-    const payment = await prisma.payment.findUnique({ where: { id: mutation.paymentId } });
+    const payment = await db.payment.findUnique({ where: { id: mutation.paymentId } });
     if (!payment) continue;
     const owner = resolvePaymentOwner(payment);
-    await recordBusinessEvent(prisma, {
+    results.push(await recordBusinessEvent(db, {
       eventKey: mutation.eventKey,
       targetType: "PAYMENT",
       targetId: payment.id,
+      actorUserId: options?.actorUserId ?? null,
       payload: {
         ...owner,
         status: payment.status,
@@ -35,8 +41,19 @@ export async function publishPaymentMutations(
         sourceId: `${payment.id}:${mutation.eventKey}:${payment.updatedAt.getTime()}`,
         skipProjectionKeys: options?.skipProjectionKeys ?? [],
       },
-    }, options);
+    }, options));
   }
+  return results;
+}
+
+export async function publishPaymentMutations(
+  mutations: PaymentMutation[],
+  options?: BusinessEventDispatchOptions & {
+    skipProjectionKeys?: string[];
+    actorUserId?: string | null;
+  },
+) {
+  return recordPaymentMutations(prisma, mutations, options);
 }
 
 export async function syncAcquisitionPaymentDueTx(

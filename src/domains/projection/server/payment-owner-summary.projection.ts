@@ -207,23 +207,13 @@ async function rebuild(db: DB, context: ProjectionBuildContext & { scope: Projec
 
 export async function getPaymentOwnerSummaryProjection(db: DB, ownerType: PaymentOwnerType, ownerId: string) {
   const rows = await listProjectionRecords(db, { projectionKey: PAYMENT_OWNER_SUMMARY_PROJECTION_KEY, projectionVersion: PAYMENT_OWNER_SUMMARY_PROJECTION_VERSION, entityType: ownerType, entityId: ownerId, limit: 1 });
-  const data = rows[0]?.dataJson as PaymentOwnerSummaryProjection | undefined;
-  return data ?? buildPaymentOwnerSummary(db, ownerType, ownerId);
+  return rows[0]?.dataJson as PaymentOwnerSummaryProjection | undefined;
 }
 
 export async function getPaymentOwnerSummaryProjections(db: DB, ownerType: PaymentOwnerType, ownerIds: string[]) {
   const uniqueIds = [...new Set(ownerIds.filter(Boolean))];
   const rows = await listProjectionRecords(db, { projectionKey: PAYMENT_OWNER_SUMMARY_PROJECTION_KEY, projectionVersion: PAYMENT_OWNER_SUMMARY_PROJECTION_VERSION, entityType: ownerType, limit: Math.max(100, uniqueIds.length) });
-  const map = new Map(rows.map((row) => [row.entityId ?? "", row.dataJson as PaymentOwnerSummaryProjection]));
-  const missingIds = uniqueIds.filter((ownerId) => !map.has(ownerId));
-  for (let index = 0; index < missingIds.length; index += 8) {
-    const ids = missingIds.slice(index, index + 8);
-    const summaries = await Promise.all(
-      ids.map((ownerId) => buildPaymentOwnerSummary(db, ownerType, ownerId)),
-    );
-    summaries.forEach((summary, summaryIndex) => map.set(ids[summaryIndex], summary));
-  }
-  return map;
+  return new Map(rows.map((row) => [row.entityId ?? "", row.dataJson as PaymentOwnerSummaryProjection]));
 }
 
 export const paymentOwnerSummaryProjectionBuilder: ProjectionBuilder = {

@@ -266,7 +266,7 @@ export async function updateServiceMovementMeasurement(input: {
             },
         });
 
-        return {
+        const result = {
             watch: {
                 id: watch.id,
                 productId: watch.productId,
@@ -280,16 +280,18 @@ export async function updateServiceMovementMeasurement(input: {
             mechanical,
             measurement,
         };
-    });
 
-    if (result.previousCalibre !== result.movementCalibre) {
-        await emitWatchSpecUpdatedEvent(prisma, {
-            watch: result.watch,
-            actorUserId: input.actorUserId ?? null,
-            before: { movementCalibre: result.previousCalibre },
-            after: { movementCalibre: result.movementCalibre },
-        }, { deferConsumers: input.deferConsumers });
-    }
+        if (result.previousCalibre !== result.movementCalibre) {
+            await emitWatchSpecUpdatedEvent(tx, {
+                watch: result.watch,
+                actorUserId: input.actorUserId ?? null,
+                before: { movementCalibre: result.previousCalibre },
+                after: { movementCalibre: result.movementCalibre },
+            }, { deferConsumers: input.deferConsumers });
+        }
+
+        return result;
+    });
 
     return result;
 }
@@ -763,7 +765,7 @@ export async function saveTechnicalAssessment(input: any) {
             },
         });
 
-        return {
+        const result = {
             ok: true,
             serviceRequestId,
             item: assessment,
@@ -783,19 +785,21 @@ export async function saveTechnicalAssessment(input: any) {
                     }
                     : null,
         };
-    });
 
-    if (
-        result.watchSpecUpdate &&
-        result.watchSpecUpdate.before !== result.watchSpecUpdate.after
-    ) {
-        await emitWatchSpecUpdatedEvent(prisma, {
-            watch: result.watchSpecUpdate.watch,
-            actorUserId: input.actorUserId ?? null,
-            before: { movementCalibre: result.watchSpecUpdate.before },
-            after: { movementCalibre: result.watchSpecUpdate.after },
-        }, { deferConsumers: input.deferConsumers });
-    }
+        if (
+            result.watchSpecUpdate &&
+            result.watchSpecUpdate.before !== result.watchSpecUpdate.after
+        ) {
+            await emitWatchSpecUpdatedEvent(tx, {
+                watch: result.watchSpecUpdate.watch,
+                actorUserId: input.actorUserId ?? null,
+                before: { movementCalibre: result.watchSpecUpdate.before },
+                after: { movementCalibre: result.watchSpecUpdate.after },
+            }, { deferConsumers: input.deferConsumers });
+        }
+
+        return result;
+    });
 
     return result;
 }

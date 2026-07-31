@@ -186,13 +186,35 @@ async function createQuickServiceRequest(client: DB, productId: string) {
   return request;
 }
 
-async function getOrCreateActiveServiceRequestId(productId: string) {
+async function getOrCreateActiveServiceRequestId(
+  productId: string,
+  eventInput?: {
+    actorUserId?: string | null;
+    deferConsumers?: (work: () => Promise<void>) => void;
+    source?: string;
+  },
+) {
   const existing = await findActiveServiceRequest(prisma, productId);
   if (existing?.id) return existing.id;
 
   try {
-    const created = await createQuickServiceRequest(prisma, productId);
-    return created.id;
+    return await prisma.$transaction(async (tx) => {
+      const created = await createQuickServiceRequest(tx, productId);
+      await ensureAssessment(tx, created.id);
+      await recordBusinessEvent(tx, {
+        eventKey: "service_request.created",
+        targetType: "SERVICE_REQUEST",
+        targetId: created.id,
+        actorUserId: eventInput?.actorUserId ?? null,
+        payload: {
+          source: eventInput?.source ?? "watch-active-service-force-create",
+          productId,
+          serviceRequestId: created.id,
+        },
+        targetAliasIds: [productId],
+      }, { deferConsumers: eventInput?.deferConsumers });
+      return created.id;
+    });
   } catch (error) {
     // Nếu 2 request cùng tạo SR active, partial unique index sẽ chặn.
     // Khi đó lấy lại SR active vừa được request khác tạo.
@@ -245,7 +267,7 @@ export async function getOrCreateServiceOperationWorkspaceForWatch(input: {
       };
     }
 
-    const event = await recordBusinessEvent(prisma, {
+    await recordBusinessEvent(prisma, {
       eventKey: "service_request.created",
       targetType: "SERVICE_REQUEST",
       targetId: existing.id,
@@ -262,7 +284,7 @@ export async function getOrCreateServiceOperationWorkspaceForWatch(input: {
     const binding = input.deferConsumers
       ? null
       : await findServiceRequestWorkspaceBinding(prisma, existing.id);
-    const taskItemId = binding?.taskItemId ?? event.consumers.coordination?.taskItemId ?? null;
+    const taskItemId = binding?.taskItemId ?? null;
 
     return {
       status: "BOUND_EXISTING_SERVICE_REQUEST" as const,
@@ -275,27 +297,29 @@ export async function getOrCreateServiceOperationWorkspaceForWatch(input: {
     };
   }
 
-  const request = await createQuickServiceRequest(prisma, productId);
-  await ensureAssessment(prisma, request.id);
-
-  const event = await recordBusinessEvent(prisma, {
-    eventKey: "service_request.created",
-    targetType: "SERVICE_REQUEST",
-    targetId: request.id,
-    actorUserId: input.actorUserId ?? null,
-    payload: {
-      source: "watch-list-service-operation-intake",
-      productId,
-      serviceRequestId: request.id,
-      refNo: request.refNo ?? null,
-    },
-    targetAliasIds: [productId],
-  }, { deferConsumers: input.deferConsumers });
+  const request = await prisma.$transaction(async (tx) => {
+    const created = await createQuickServiceRequest(tx, productId);
+    await ensureAssessment(tx, created.id);
+    await recordBusinessEvent(tx, {
+      eventKey: "service_request.created",
+      targetType: "SERVICE_REQUEST",
+      targetId: created.id,
+      actorUserId: input.actorUserId ?? null,
+      payload: {
+        source: "watch-list-service-operation-intake",
+        productId,
+        serviceRequestId: created.id,
+        refNo: created.refNo ?? null,
+      },
+      targetAliasIds: [productId],
+    }, { deferConsumers: input.deferConsumers });
+    return created;
+  });
 
   const binding = input.deferConsumers
     ? null
     : await findServiceRequestWorkspaceBinding(prisma, request.id);
-  const taskItemId = binding?.taskItemId ?? event.consumers.coordination?.taskItemId ?? null;
+  const taskItemId = binding?.taskItemId ?? null;
 
   return {
     status: "CREATED_WORKSPACE" as const,
@@ -386,7 +410,7 @@ export async function watchIntakeWithInitialSuspicion(input: {
       };
     }
 
-    const event = await recordBusinessEvent(prisma, {
+    await recordBusinessEvent(prisma, {
       eventKey: "service_request.created",
       targetType: "SERVICE_REQUEST",
       targetId: existing.id,
@@ -403,7 +427,7 @@ export async function watchIntakeWithInitialSuspicion(input: {
     const binding = input.deferConsumers
       ? null
       : await findServiceRequestWorkspaceBinding(prisma, existing.id);
-    const taskItemId = binding?.taskItemId ?? event.consumers.coordination?.taskItemId ?? null;
+    const taskItemId = binding?.taskItemId ?? null;
 
     return {
       status: "BOUND_EXISTING_SERVICE_REQUEST" as const,
@@ -419,41 +443,44 @@ export async function watchIntakeWithInitialSuspicion(input: {
 
   if (!suspicion) throw new Error("Vui long nhap nghi ngo ky thuat dau tien.");
 
-  const request = await createQuickServiceRequest(prisma, productId);
-  await ensureAssessment(prisma, request.id);
+  const { request, issue } = await prisma.$transaction(async (tx) => {
+    const createdRequest = await createQuickServiceRequest(tx, productId);
+    await ensureAssessment(tx, createdRequest.id);
+    await recordBusinessEvent(tx, {
+      eventKey: "service_request.created",
+      targetType: "SERVICE_REQUEST",
+      targetId: createdRequest.id,
+      actorUserId: input.actorUserId ?? null,
+      payload: {
+        source: "watch-list-service-operation-intake",
+        actionKey: "watch_intake_with_suspicion",
+        skipProjection: true,
+        productId,
+        serviceRequestId: createdRequest.id,
+        refNo: createdRequest.refNo ?? null,
+      },
+      targetAliasIds: [productId],
+    }, { deferConsumers: input.deferConsumers });
 
-  const event = await recordBusinessEvent(prisma, {
-    eventKey: "service_request.created",
-    targetType: "SERVICE_REQUEST",
-    targetId: request.id,
-    actorUserId: input.actorUserId ?? null,
-    payload: {
-      source: "watch-list-service-operation-intake",
-      actionKey: "watch_intake_with_suspicion",
-      skipProjection: true,
-      productId,
-      serviceRequestId: request.id,
-      refNo: request.refNo ?? null,
-    },
-    targetAliasIds: [productId],
-  }, { deferConsumers: input.deferConsumers });
+    const createdIssue = await createTechnicalIssue({
+      serviceRequestId: createdRequest.id,
+      area: normalizeArea(input.area),
+      issueType: "CHECK",
+      actionMode: "INTERNAL",
+      summary: suspicion,
+      note: cleanText(input.note) ?? suspicion,
+      priority: normalizePriority(input.priority),
+      actorUserId: input.actorUserId,
+      deferConsumers: input.deferConsumers,
+    }, tx);
 
-  const issue = await createTechnicalIssue({
-    serviceRequestId: request.id,
-    area: normalizeArea(input.area),
-    issueType: "CHECK",
-    actionMode: "INTERNAL",
-    summary: suspicion,
-    note: cleanText(input.note) ?? suspicion,
-    priority: normalizePriority(input.priority),
-    actorUserId: input.actorUserId,
-    deferConsumers: input.deferConsumers,
+    return { request: createdRequest, issue: createdIssue };
   });
 
   const binding = input.deferConsumers
     ? null
     : await findServiceRequestWorkspaceBinding(prisma, request.id);
-  const taskItemId = binding?.taskItemId ?? event.consumers.coordination?.taskItemId ?? null;
+  const taskItemId = binding?.taskItemId ?? null;
 
   return {
     status: "CREATED_WORKSPACE_WITH_INITIAL_ISSUE" as const,
@@ -577,26 +604,15 @@ export async function getOrCreateActiveWatchService(input: {
   if (!productId) throw new Error("Missing productId");
 
   const existing = await findActiveServiceRequest(prisma, productId);
-  const serviceRequestId = await getOrCreateActiveServiceRequestId(productId);
+  const serviceRequestId = await getOrCreateActiveServiceRequestId(productId, {
+    actorUserId: input.actorUserId,
+    deferConsumers: input.deferConsumers,
+    source: "watch-active-service-force-create",
+  });
 
   // Không gọi getQuickServiceById bên trong transaction.
   // Transaction cũ bị timeout vì vừa gen ref / create SR / query detail trong cùng interactive transaction.
-  await ensureAssessment(prisma, serviceRequestId);
-
-  if (!existing?.id) {
-    await recordBusinessEvent(prisma, {
-      eventKey: "service_request.created",
-      targetType: "SERVICE_REQUEST",
-      targetId: serviceRequestId,
-      actorUserId: input.actorUserId ?? null,
-      payload: {
-        source: "watch-active-service-force-create",
-        productId,
-        serviceRequestId,
-      },
-      targetAliasIds: [productId],
-    }, { deferConsumers: input.deferConsumers });
-  }
+  if (existing?.id) await ensureAssessment(prisma, serviceRequestId);
 
   return getQuickServiceById(serviceRequestId);
 }
@@ -646,33 +662,40 @@ export async function createQuickIssueForActiveWatchService(input: {
   }
 
   if (!serviceRequestId) {
-    serviceRequestId = await getOrCreateActiveServiceRequestId(productId);
+    serviceRequestId = await getOrCreateActiveServiceRequestId(productId, {
+      actorUserId: input.actorUserId,
+      deferConsumers: input.deferConsumers,
+      source: "watch-quick-issue",
+    });
   }
 
-  const createdIssue = await createTechnicalIssue({
-    serviceRequestId,
-    area: normalizeArea(input.area),
-    summary,
-    note: cleanText(input.note),
-    issueType: normalizeIssueType(input.issueType),
-    actionMode: "INTERNAL",
-    priority: normalizedPriority,
-    actorUserId: input.actorUserId,
-    deferConsumers: input.deferConsumers,
-  });
+  const createdIssue = await prisma.$transaction(async (tx) => {
+    const issue = await createTechnicalIssue({
+      serviceRequestId,
+      area: normalizeArea(input.area),
+      summary,
+      note: cleanText(input.note),
+      issueType: normalizeIssueType(input.issueType),
+      actionMode: "INTERNAL",
+      priority: normalizedPriority,
+      actorUserId: input.actorUserId,
+      deferConsumers: input.deferConsumers,
+    }, tx);
 
-  const now = new Date();
-  await prisma.serviceRequest.update({
-    where: { id: serviceRequestId },
-    data: {
-      status: ServiceRequestStatus.IN_PROGRESS,
-      priority: normalizedPriority as any,
-      prioritySource: "WATCH_QUICK_ISSUE",
-      priorityMarkedAt: now,
-      updatedAt: now,
-    } as any,
+    const now = new Date();
+    await tx.serviceRequest.update({
+      where: { id: serviceRequestId },
+      data: {
+        status: ServiceRequestStatus.IN_PROGRESS,
+        priority: normalizedPriority as any,
+        prioritySource: "WATCH_QUICK_ISSUE",
+        priorityMarkedAt: now,
+        updatedAt: now,
+      } as any,
+    });
+    await markProductInServiceIfNeeded(tx, productId);
+    return issue;
   });
-  await markProductInServiceIfNeeded(prisma, productId);
 
   const detail = await getQuickServiceById(serviceRequestId);
   return detail ? { ...detail, createdTechnicalIssueId: createdIssue.id } : detail;

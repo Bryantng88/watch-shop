@@ -1,4 +1,4 @@
-import { prisma } from "@/server/db/client";
+import { prisma, type DB } from "@/server/db/client";
 import type { Prisma } from "@prisma/client";
 
 export type CreateBusinessFeedbackRecordInput = {
@@ -13,8 +13,9 @@ export type CreateBusinessFeedbackRecordInput = {
 
 export async function createBusinessFeedbackRecord(
     input: CreateBusinessFeedbackRecordInput,
+    db: DB = prisma,
 ) {
-    return prisma.businessFeedback.create({
+    return db.businessFeedback.create({
         data: {
             targetType: input.targetType,
             targetId: input.targetId,

@@ -1,16 +1,21 @@
-import { dbOrTx, prisma, type DB } from "@/server/db/client";
+import { dbOrTx, isPrismaClient, prisma, type DB } from "@/server/db/client";
 import { validateBusinessEventInput } from "@/domains/event/validator/business-event-validator";
-import { dispatchBusinessEvent } from "@/domains/event/dispatcher/business-event-dispatcher";
 import type {
-    BusinessEventDispatchContext,
+    BusinessEventDispatchResult,
     BusinessEventEffect,
 } from "@/domains/event/dispatcher/business-event-consumer.types";
+import type { BusinessEventLog } from "@prisma/client";
 import { perfLog, perfNow } from "@/lib/server-perf";
 import { randomUUID } from "node:crypto";
 import { enqueueProjectionDelivery } from "@/domains/projection/server/projection-delivery.repo";
 import { markProjectionDeliveryReady } from "@/domains/projection/server/projection-delivery.repo";
-import { processProjectionDelivery } from "@/domains/projection/server/projection-delivery.service";
 import { getBusinessEventContract } from "@/domains/event/catalog/business-event-catalog";
+import {
+    DURABLE_BUSINESS_EVENT_CONSUMERS,
+    enqueueBusinessEventConsumerDeliveries,
+    processBusinessEventOperation,
+    type DurableBusinessEventConsumerKey,
+} from "@/domains/event/delivery";
 export type { BusinessEventEffect };
 
 export type BusinessEventInput = {
@@ -29,6 +34,14 @@ export type BusinessEventDispatchOptions = {
     deferConsumers?: (work: () => Promise<void>) => void;
 };
 
+export type RecordedBusinessEvent = {
+    ok: true;
+    eventLog: BusinessEventLog;
+    projectionDeliveryKey: string;
+    deferred: boolean;
+    consumers: BusinessEventDispatchResult;
+};
+
 function clean(value: unknown) {
     return String(value ?? "").trim();
 }
@@ -40,18 +53,6 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function eventInstanceIdFromPayload(payload: Record<string, unknown>) {
     return clean(payload.eventInstanceId) || clean(payload.sourceId) || null;
-}
-
-function failedProjectionBarrier(
-    eventKey: string,
-    results: Awaited<ReturnType<typeof dispatchBusinessEvent>>,
-) {
-    const consumers = getBusinessEventContract(eventKey)?.knownConsumers ?? [];
-    const barrierKeys = ["coordination", "workflow"] as const;
-    return barrierKeys
-        .filter((key) => consumers.includes(key))
-        .map((key) => results[key])
-        .find((result) => result?.ok === false);
 }
 
 function formatValidationErrors(
@@ -67,9 +68,34 @@ export async function recordBusinessEvent(
     db: DB,
     input: BusinessEventInput,
     options?: BusinessEventDispatchOptions,
-) {
+): Promise<RecordedBusinessEvent> {
     const totalStartedAt = perfNow();
     const client = dbOrTx(db);
+
+    // A direct PrismaClient call still needs one atomic boundary for the event
+    // log and both delivery outboxes. Domain commands that already own a
+    // transaction pass their TransactionClient and use the branch below.
+    if (isPrismaClient(client)) {
+        const result = await client.$transaction((tx) =>
+            recordBusinessEvent(tx, input, options),
+        );
+
+        if (!options?.deferConsumers) {
+            await processBusinessEventOperation(result.projectionDeliveryKey, {
+                db: client,
+            });
+        }
+
+        perfLog(
+            "business-event",
+            `${clean(input.eventKey)}:${options?.deferConsumers ? "accepted" : "total"}`,
+            totalStartedAt,
+        );
+        return {
+            ...result,
+            deferred: Boolean(options?.deferConsumers),
+        };
+    }
 
     const eventKey = clean(input.eventKey);
     const targetType = clean(input.targetType);
@@ -152,9 +178,14 @@ export async function recordBusinessEvent(
         eventInstanceId,
         payload: metadataJson,
     });
-
-    const consumerContext: BusinessEventDispatchContext = {
-        eventLog,
+    const knownConsumers = getBusinessEventContract(eventKey)?.knownConsumers ?? [];
+    const durableConsumerKeys = DURABLE_BUSINESS_EVENT_CONSUMERS.filter(
+        (key): key is DurableBusinessEventConsumerKey => knownConsumers.includes(key),
+    );
+    await enqueueBusinessEventConsumerDeliveries(db, {
+        operationKey: projectionDeliveryKey,
+        businessEventLogId: eventLog.id,
+        consumerKeys: [...durableConsumerKeys],
         eventKey,
         targetType,
         targetId,
@@ -163,47 +194,23 @@ export async function recordBusinessEvent(
         revokeEventKey: revokeEventKey || null,
         targetAliasIds: input.targetAliasIds ?? [],
         eventInstanceId,
-        idempotencyKey,
-        projectionDeliveryKey,
-    };
+        payload: metadataJson,
+    });
+    const hasProjectionBarrier = ["coordination", "workflow"].some(
+        (key) => durableConsumerKeys.includes(key as DurableBusinessEventConsumerKey),
+    );
+    if (!hasProjectionBarrier) {
+        await markProjectionDeliveryReady(db, projectionDeliveryKey);
+    }
 
     if (options?.deferConsumers) {
         options.deferConsumers(async () => {
-            // Deferred work runs after the mutation transaction has finished.
-            // Never retain its TransactionClient: Prisma correctly invalidates
-            // that client as soon as the transaction commits or rolls back.
-            const committedEventLog = await prisma.businessEventLog.findUnique({
-                where: { id: eventLog.id },
-            });
-            if (!committedEventLog) return;
-
-            const consumerResults = await dispatchBusinessEvent({
-                client: prisma,
-                context: {
-                    ...consumerContext,
-                    eventLog: committedEventLog,
-                },
-                // Projection already has a durable outbox delivery written in
-                // the same transaction as the event.
-                excludedConsumerKeys: ["projection"],
-            });
-            const failedBarrier = failedProjectionBarrier(eventKey, consumerResults);
-            if (failedBarrier) {
-                console.warn("[business-event] projection held because a completion barrier failed", {
-                    eventKey,
-                    targetType,
-                    targetId,
-                    projectionDeliveryKey,
-                    consumer: failedBarrier.consumer,
-                    status: failedBarrier.status,
-                    error: failedBarrier.error,
-                });
-                return;
-            }
-            await markProjectionDeliveryReady(prisma, projectionDeliveryKey);
-            await processProjectionDelivery(projectionDeliveryKey, {
+            await processBusinessEventOperation(
+              projectionDeliveryKey,
+              {
                 db: prisma,
-            });
+              },
+            );
             perfLog("business-event", `${eventKey}:deferred-total`, totalStartedAt);
         });
         perfLog("business-event", `${eventKey}:accepted`, totalStartedAt);
@@ -223,51 +230,19 @@ export async function recordBusinessEvent(
         };
     }
 
-    const consumerResults = await dispatchBusinessEvent({
-        client,
-        context: consumerContext,
-        // Projection is durably queued above. Synchronous mutation paths must not
-        // pay projection fan-out latency; the system worker will drain the outbox.
-        excludedConsumerKeys: ["projection"],
-    });
-    let compatibilityProjectionDelivery:
-        | Awaited<ReturnType<typeof processProjectionDelivery>>
-        | null = null;
-    if (!failedProjectionBarrier(eventKey, consumerResults)) {
-        await markProjectionDeliveryReady(client, projectionDeliveryKey);
-        // Compatibility fail-safe for producers that have not yet adopted the
-        // runtime after-commit scheduler. Correctness wins over request latency:
-        // never leave an operation-visible delivery at PENDING/attempts=0 and
-        // rely solely on the periodic worker.
-        compatibilityProjectionDelivery = await processProjectionDelivery(
-            projectionDeliveryKey,
-            { db: client },
-        );
-    }
     perfLog("business-event", `${eventKey}:total`, totalStartedAt);
 
     return {
         ok: true,
         eventLog,
         projectionDeliveryKey,
+        deferred: true,
         consumers: {
-            coordination: consumerResults.coordination,
-            workflow: consumerResults.workflow,
-            notification: consumerResults.notification,
-            timeline: consumerResults.timeline,
-            projection: compatibilityProjectionDelivery?.result
-                ? {
-                    ok: compatibilityProjectionDelivery.result.ok,
-                    consumer: "projection" as const,
-                    status: compatibilityProjectionDelivery.result.ok ? "success" as const : "failed" as const,
-                    attempts: 1,
-                    durationMs: 0,
-                    error: compatibilityProjectionDelivery.result.ok
-                        ? undefined
-                        : compatibilityProjectionDelivery.result.error,
-                    result: compatibilityProjectionDelivery.result,
-                }
-                : consumerResults.projection,
+            coordination: undefined,
+            workflow: undefined,
+            notification: undefined,
+            timeline: undefined,
+            projection: undefined,
         },
     };
 }

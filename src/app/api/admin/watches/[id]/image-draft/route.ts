@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 
 import { PERMISSIONS } from "@/constants/permissions";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
@@ -26,6 +26,7 @@ export async function POST(
             productId: params.id,
             targetType: "IMAGE",
             userId: getAuthUserId(auth),
+            deferConsumers: (work) => after(work),
         });
 
         return NextResponse.json({

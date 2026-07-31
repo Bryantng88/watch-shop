@@ -4,7 +4,11 @@ import { genRefNo } from "@/domains/shared/utils/AutoGenRef";
 import * as serviceRequestService from "@/app/(admin)/admin/services/_server/service_request.service";
 import { createFromOrderTx } from "@/domains/shipment/server";
 import { createInitialPaymentsForOrderApplicationTx } from "@/domains/payment/application";
-import { cancelPendingOwnerPaymentsTx, publishPaymentMutations, type PaymentMutation } from "@/domains/payment/server";
+import {
+  cancelPendingOwnerPaymentsTx,
+  recordPaymentMutations,
+  type PaymentMutation,
+} from "@/domains/payment/server";
 import { toPlain } from "../shared";
 import {
   cancelOrderRepo,
@@ -15,15 +19,26 @@ import {
 } from "./order-post.repo";
 import { syncWatchInventoryFromOrderId } from "../order-watch-sync.service";
 import {
-  publishShipmentMutation,
-  publishShipmentMutations,
+  recordShipmentMutation,
+  recordShipmentMutations,
   type ShipmentMutation,
 } from "@/domains/shipment/server/events";
 import {
-  publishOrderMutation,
-  publishOrderMutations,
+  recordOrderMutation,
+  recordOrderMutations,
   type OrderMutation,
 } from "../events";
+import { processBusinessEventOperation } from "@/domains/event/delivery";
+
+async function processRecordedOperations(
+  events: Array<{ projectionDeliveryKey?: string | null }>,
+) {
+  for (const key of [...new Set(
+    events.map((event) => String(event.projectionDeliveryKey ?? "").trim()).filter(Boolean),
+  )]) {
+    await processBusinessEventOperation(key);
+  }
+}
 function assertPositiveOrderSubtotal(order: { subtotal?: unknown; orderItem?: any[] }) {
   const subtotal = Number(order.subtotal ?? 0);
 
@@ -84,36 +99,47 @@ export async function postOneOrderTx(tx: Prisma.TransactionClient, orderId: stri
 }
 
 export async function postOneOrder(orderId: string) {
-  const result = await prisma.$transaction((tx) => postOneOrderTx(tx, orderId));
-  if (result.shipment) {
-    await publishShipmentMutation({
+  const result = await prisma.$transaction(async (tx) => {
+    const posted = await postOneOrderTx(tx, orderId);
+    const events = [];
+    if (posted.shipment) {
+      events.push(await recordShipmentMutation(tx, {
       eventKey: "shipment.created",
-      shipmentId: result.shipment.id,
-      orderId: result.id,
-      orderRefNo: result.refNo,
-      shipmentRefNo: result.shipment.refNo,
+      shipmentId: posted.shipment.id,
+      orderId: posted.id,
+      orderRefNo: posted.refNo,
+      shipmentRefNo: posted.shipment.refNo,
       fromStatus: null,
-      toStatus: String(result.shipment.status),
-      carrier: result.shipment.carrier,
-      trackingCode: result.shipment.trackingCode,
-      note: result.shipment.notes,
+      toStatus: String(posted.shipment.status),
+      carrier: posted.shipment.carrier,
+      trackingCode: posted.shipment.trackingCode,
+      note: posted.shipment.notes,
       source: "ORDER_POST",
-    });
-  }
-  await publishPaymentMutations(
-    result.initialPayments.map((payment) => ({
+      }));
+    }
+    events.push(...await recordPaymentMutations(
+      tx,
+      posted.initialPayments.map((payment) => ({
       paymentId: payment.id,
       eventKey: "payment.created",
-    })),
-  );
-  await publishOrderMutation({
-    eventKey: "order.posted",
-    orderId: result.id,
-    refNo: result.refNo,
-    fromStatus: "DRAFT",
-    toStatus: "POSTED",
-    source: "ORDER_POST",
+      })),
+    ));
+    events.push(await recordOrderMutation(tx, {
+      eventKey: "order.posted",
+      orderId: posted.id,
+      refNo: posted.refNo,
+      fromStatus: "DRAFT",
+      toStatus: "POSTED",
+      source: "ORDER_POST",
+    }));
+    return {
+      ...posted,
+      events: events.map((event) => ({
+        projectionDeliveryKey: event.projectionDeliveryKey,
+      })),
+    };
   });
+  await processRecordedOperations(result.events);
   return result;
 }
 
@@ -159,11 +185,22 @@ export async function postOrders(orderIds: string[]) {
       toStatus: "POSTED",
       source: "ORDER_POST_BULK",
     }));
-    return { count: posted, shipmentMutations, paymentMutations, orderMutations };
+    const events = [
+      ...await recordPaymentMutations(tx, paymentMutations),
+      ...await recordShipmentMutations(tx, shipmentMutations),
+      ...await recordOrderMutations(tx, orderMutations),
+    ];
+    return {
+      count: posted,
+      shipmentMutations,
+      paymentMutations,
+      orderMutations,
+      events: events.map((event) => ({
+        projectionDeliveryKey: event.projectionDeliveryKey,
+      })),
+    };
   });
-  await publishPaymentMutations(result.paymentMutations);
-  await publishShipmentMutations(result.shipmentMutations);
-  await publishOrderMutations(result.orderMutations);
+  await processRecordedOperations(result.events);
   return result;
 }
 
@@ -237,28 +274,48 @@ export async function cancelOrder(input: { id: string; reason?: string | null })
 
     await syncWatchInventoryFromOrderId(tx, input.id);
 
-    return { updated: toPlain(updated), ...sideEffects };
+    const orderMutation = {
+      eventKey: "order.cancelled",
+      orderId: input.id,
+      fromStatus: "POSTED",
+      toStatus: "CANCELLED",
+      note: input.reason,
+      source: "ORDER_CANCEL",
+    } satisfies OrderMutation;
+    const events = [
+      ...await recordPaymentMutations(tx, sideEffects.paymentMutations),
+      ...await recordShipmentMutations(tx, sideEffects.shipmentMutations),
+      await recordOrderMutation(tx, orderMutation),
+    ];
+    return {
+      updated: toPlain(updated),
+      ...sideEffects,
+      events: events.map((event) => ({
+        projectionDeliveryKey: event.projectionDeliveryKey,
+      })),
+    };
   });
-  await publishPaymentMutations(result.paymentMutations);
-  await publishShipmentMutations(result.shipmentMutations);
-  await publishOrderMutation({
-    eventKey: "order.cancelled",
-    orderId: input.id,
-    fromStatus: "POSTED",
-    toStatus: "CANCELLED",
-    note: input.reason,
-    source: "ORDER_CANCEL",
-  });
+  await processRecordedOperations(result.events);
   return result.updated;
 }
 
 export async function verifyOrder(input: { id: string; status: "VERIFIED" | "REJECTED" }) {
-  const result = toPlain(await updateOrderVerificationRepo(prisma, input.id, input.status as OrderVerificationStatus));
-  await publishOrderMutation({
-    eventKey: input.status === "VERIFIED" ? "order.verified" : "order.rejected",
-    orderId: input.id,
-    toStatus: input.status,
-    source: "ORDER_VERIFY",
+  const result = await prisma.$transaction(async (tx) => {
+    const updated = toPlain(
+      await updateOrderVerificationRepo(
+        tx,
+        input.id,
+        input.status as OrderVerificationStatus,
+      ),
+    );
+    const event = await recordOrderMutation(tx, {
+      eventKey: input.status === "VERIFIED" ? "order.verified" : "order.rejected",
+      orderId: input.id,
+      toStatus: input.status,
+      source: "ORDER_VERIFY",
+    });
+    return { updated, event };
   });
-  return result;
+  await processRecordedOperations([result.event]);
+  return result.updated;
 }
