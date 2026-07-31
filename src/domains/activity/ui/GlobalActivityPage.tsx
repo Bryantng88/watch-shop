@@ -45,6 +45,16 @@ function initials(label: string) {
     .join("") || "HT";
 }
 
+function actionText(actorLabel: string, actionLabel: string) {
+  const actor = actorLabel.trim();
+  const action = actionLabel.trim();
+  if (!actor) return action;
+  if (action.toLocaleLowerCase("vi").startsWith(actor.toLocaleLowerCase("vi"))) {
+    return action.slice(actor.length).trim().replace(/^[-–—:·]\s*/, "") || action;
+  }
+  return action;
+}
+
 function hrefWithPage(data: GlobalActivityResult, page: number) {
   const params = new URLSearchParams();
   if (data.filters.query) params.set("q", data.filters.query);
@@ -187,23 +197,21 @@ export default function GlobalActivityPage({ data }: Props) {
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1180px] table-fixed">
+          <table className="w-full min-w-[1120px] table-fixed">
             <colgroup>
+              <col className="w-[390px]" />
               <col className="w-[130px]" />
-              <col className="w-[300px]" />
-              <col className="w-[330px]" />
-              <col className="w-[210px]" />
-              <col className="w-[150px]" />
+              <col className="w-[250px]" />
+              <col className="w-[270px]" />
               <col className="w-[80px]" />
             </colgroup>
             <thead className="border-b border-slate-200 bg-slate-50/80 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
               <tr>
-                <th className="px-5 py-3">Thời gian</th>
+                <th className="px-5 py-3">Action</th>
+                <th className="px-4 py-3">Thời gian</th>
                 <th className="px-4 py-3">Domain / Event</th>
-                <th className="px-4 py-3">Hoạt động / Đối tượng</th>
-                <th className="px-4 py-3">Người thao tác</th>
-                <th className="px-4 py-3">Workspace</th>
-                <th className="px-4 py-3 text-center">Action</th>
+                <th className="px-4 py-3">Đối tượng / Workspace</th>
+                <th className="px-4 py-3 text-center">Mở</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -212,9 +220,34 @@ export default function GlobalActivityPage({ data }: Props) {
                 const avatarSrc = item.actor.avatarUrl
                   ? resolveMediaPreviewSrc(item.actor.avatarUrl) ?? item.actor.avatarUrl
                   : null;
+                const action = actionText(item.actor.label, item.actionLabel);
                 return (
                   <tr key={item.id} className="group transition hover:bg-violet-50/30">
                     <td className="px-5 py-4 align-top">
+                      <div className="flex items-start gap-3">
+                        <span className="relative grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-slate-900 text-[10px] font-bold text-white ring-2 ring-white shadow-sm">
+                          {avatarSrc ? (
+                            <Image src={avatarSrc} alt="" fill sizes="36px" unoptimized className="object-cover" />
+                          ) : item.actor.isSystem ? (
+                            <ServerCog className="h-4 w-4" />
+                          ) : (
+                            initials(item.actor.label)
+                          )}
+                        </span>
+                        <div className="min-w-0 pt-0.5">
+                          <div className="line-clamp-2 text-sm leading-5 text-slate-900">
+                            <span className="font-bold">{item.actor.label}</span>{" "}
+                            <span className="font-medium">vừa {action}</span>
+                          </div>
+                          {item.body ? <div className="mt-1 line-clamp-1 text-xs text-slate-500">{item.body}</div> : null}
+                          <div className="mt-1 flex items-center gap-1 text-[10px] text-slate-400">
+                            <UserRound className="h-3 w-3" />
+                            {item.actor.isSystem ? "System" : "User"}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 align-top">
                       <div className="text-sm font-semibold tabular-nums text-slate-800">{date.time}</div>
                       <div className="mt-1 text-xs tabular-nums text-slate-400">{date.date}</div>
                     </td>
@@ -227,35 +260,10 @@ export default function GlobalActivityPage({ data }: Props) {
                       </div>
                     </td>
                     <td className="px-4 py-4 align-top">
-                      <div className="truncate text-sm font-bold text-slate-950">{item.title}</div>
-                      {item.body ? <div className="mt-1 line-clamp-1 text-xs text-slate-500">{item.body}</div> : null}
-                      <div className="mt-2 truncate text-[11px] text-slate-400">
-                        {item.taskItemTitle} · {item.targetId}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 align-top">
-                      <div className="flex items-center gap-2">
-                        <span className="relative grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-slate-900 text-[10px] font-bold text-white">
-                          {avatarSrc ? (
-                            <Image src={avatarSrc} alt="" fill sizes="32px" unoptimized className="object-cover" />
-                          ) : item.actor.isSystem ? (
-                            <ServerCog className="h-3.5 w-3.5" />
-                          ) : (
-                            initials(item.actor.label)
-                          )}
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block truncate text-xs font-semibold text-slate-800">{item.actor.label}</span>
-                          <span className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-400">
-                            <UserRound className="h-3 w-3" />
-                            {item.actor.isSystem ? "System" : "User"}
-                          </span>
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 align-top">
-                      <div className="line-clamp-2 text-xs font-medium leading-5 text-slate-600">
-                        {item.workspaceTitle}
+                      <div className="truncate text-xs font-semibold text-slate-700">{item.taskItemTitle}</div>
+                      <div className="mt-1 line-clamp-1 text-[11px] text-slate-500">{item.workspaceTitle}</div>
+                      <div className="mt-1 truncate font-mono text-[10px] text-slate-400">
+                        {item.targetId}
                       </div>
                     </td>
                     <td className="px-4 py-4 text-center align-top">

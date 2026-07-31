@@ -26,17 +26,17 @@ export function OperationShell({
         <section
             id={id}
             className={cx(
-                "scroll-mt-24 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[0_14px_34px_rgba(30,41,59,0.055)] ring-1 ring-white/70",
+                "scroll-mt-24 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
                 className,
             )}
         >
-            <div className="flex min-h-[76px] items-center justify-between gap-4 border-b border-slate-100 bg-gradient-to-r from-white via-white to-violet-50/40 px-4 py-4">
+            <div className="flex min-h-[72px] items-center justify-between gap-4 border-b border-slate-100 bg-white px-4 py-4">
                 <div className="flex min-w-0 items-start gap-3">
-                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-50 text-sm font-semibold text-violet-700 ring-1 ring-violet-100">
+                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-violet-50 text-sm font-semibold text-violet-700 ring-1 ring-violet-100">
                         {icon}
                     </div>
                     <div className="min-w-0">
-                        <h2 className="text-[18px] font-semibold leading-6 text-slate-950">
+                        <h2 className="text-[16px] font-bold leading-6 text-slate-950">
                             {number ? `${number}. ` : null}
                             {title}
                         </h2>

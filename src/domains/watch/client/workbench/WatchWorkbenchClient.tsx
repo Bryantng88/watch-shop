@@ -16,12 +16,10 @@ import ContentBlock from "../../ui/operations/content/ContentBlock";
 import ImageBlock from "../../ui/operations/images/ImageBlock";
 import TradeHistoryCard from "../../ui/operations/side/TradeHistoryCard";
 import ServiceCard from "../../ui/operations/side/ServiceCard";
-import ProjectionFeedCard from "../../ui/operations/side/ProjectionFeedCard";
-import MediaWorkspaceModalDemo from "../../ui/operations/side/MediaWorkspaceModalDemo";
 import WatchWorkbenchDirtyBar from "./WatchWorkbenchDirtyBar";
-import WatchWorkbenchHeader from "./WatchWorkbenchHeader";
+import WatchWorkbenchIdentityHeader from "./WatchWorkbenchIdentityHeader";
 import WatchWorkbenchNav from "./WatchWorkbenchNav";
-import type { WatchWorkbenchProps, WatchWorkbenchSection, WatchWorkbenchValues } from "./types";
+import type { WatchWorkbenchProps, WatchWorkbenchSection } from "./types";
 import { titleForWatch } from "./workbench-utils";
 
 const TRACKED_SECTIONS: WatchWorkbenchSection[] = [
@@ -30,9 +28,6 @@ const TRACKED_SECTIONS: WatchWorkbenchSection[] = [
     "content",
     "images",
     "trade",
-    "timeline",
-    "projection",
-    "media-modal",
 ];
 
 function stableStringify(value: unknown) {
@@ -47,21 +42,6 @@ function stableStringify(value: unknown) {
         }
         return item ?? null;
     });
-}
-
-function firstImageUrl(values: WatchWorkbenchValues, detail: Record<string, unknown>) {
-    const record = detail as {
-        primaryImageUrl?: string | null;
-        images?: Array<{ url?: string | null }> | null;
-    };
-
-    return (
-        values.media.inlineImage?.url ||
-        values.media.galleryImages?.[0]?.url ||
-        record.primaryImageUrl ||
-        record.images?.[0]?.url ||
-        null
-    );
 }
 
 function withTimeout<T>(work: Promise<T>, timeoutMs: number, message: string) {
@@ -190,7 +170,6 @@ export default function WatchWorkbenchClient({
     };
 
     const title = titleForWatch(detail, values);
-    const imageUrl = firstImageUrl(values, detail);
     const watchDetailHref = `/admin/watches/${values.productId}`;
     const mediaWorkspaceHref = `/admin/watches/${values.productId}/edit?embedded=1&mode=media&returnTo=${encodeURIComponent(watchDetailHref)}`;
     const openMediaWorkspace = async () => {
@@ -231,17 +210,11 @@ export default function WatchWorkbenchClient({
 
     return (
         <main className="mx-auto w-full max-w-[1600px] space-y-4 px-4 py-5 pb-28 text-slate-900 lg:px-6 xl:px-8">
-            <WatchWorkbenchHeader
+            <WatchWorkbenchIdentityHeader
                 detail={detail}
                 values={values}
-                permissions={permissions}
                 onOpenMediaWorkspace={openMediaWorkspace}
                 onSaveTitle={saveTitle}
-                onOpenPricing={() => {
-                    setActiveSection("pricing");
-                    document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                }}
-                pricingDirty={stableStringify(values.pricing) !== stableStringify(savedValues.pricing)}
                 openingMediaWorkspace={mediaWorkspaceOpening}
             />
 
@@ -286,26 +259,19 @@ export default function WatchWorkbenchClient({
                         onOpenMediaWorkspace={openMediaWorkspace}
                         openingMediaWorkspace={mediaWorkspaceOpening}
                     />
-                    <MediaWorkspaceModalDemo
-                        title={title}
-                        imageUrl={imageUrl}
-                        onOpenMediaWorkspace={openMediaWorkspace}
-                        openingMediaWorkspace={mediaWorkspaceOpening}
-                    />
                 </div>
 
                 <div className="space-y-4 xl:sticky xl:top-[76px] xl:self-start">
-                    <TradeHistoryCard
-                        tradeHistory={tradeHistory}
-                        canViewSensitivePrice={permissions.canViewSensitivePrice}
-                    />
                     <ServiceCard
                         projection={serviceProjection}
                         productId={values.productId}
                         title={title}
                         sku={values.header.sku}
                     />
-                    <ProjectionFeedCard />
+                    <TradeHistoryCard
+                        tradeHistory={tradeHistory}
+                        canViewSensitivePrice={permissions.canViewSensitivePrice}
+                    />
                 </div>
             </div>
 

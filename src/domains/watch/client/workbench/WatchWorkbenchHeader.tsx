@@ -9,6 +9,7 @@ import {
     ChevronRight,
     Circle,
     FileText,
+    FlaskConical,
     Loader2,
     Pencil,
     Save,
@@ -225,9 +226,18 @@ export default function WatchWorkbenchHeader({
                     <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
                     <span className="truncate font-semibold text-slate-800">{title}</span>
                 </nav>
-                <Link href="/admin/services/operation" className={operationButtonClass({ variant: "secondary", size: "sm" })}>
-                    <Wrench className="h-4 w-4" />Mở Service Board
-                </Link>
+                <div className="flex items-center gap-2">
+                    <Link
+                        href={`/admin/watches/${values.productId}/ui-proposal`}
+                        className="inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 text-xs font-bold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"
+                    >
+                        <FlaskConical className="h-4 w-4" />
+                        Xem UI đề xuất
+                    </Link>
+                    <Link href="/admin/services/operation" className={operationButtonClass({ variant: "secondary", size: "sm" })}>
+                        <Wrench className="h-4 w-4" />Mở Service Board
+                    </Link>
+                </div>
             </div>
 
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_310px]">

@@ -1,7 +1,10 @@
 import { ActivitySourceType, type Prisma } from "@prisma/client";
 
 import { prisma } from "@/server/db/client";
-import { listBusinessEventContracts } from "@/domains/event/catalog/business-event-catalog";
+import {
+  getBusinessEventDefinition,
+  listBusinessEventContracts,
+} from "@/domains/event/catalog/business-event-catalog";
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
 const TARGET_TYPE_OPTIONS = [
@@ -42,6 +45,81 @@ function metadataRecord(value: Prisma.JsonValue | null) {
 
 function actorLabel(actor: { name: string | null; email: string | null } | null) {
   return actor?.name?.trim() || actor?.email?.trim() || "Hệ thống";
+}
+
+const TARGET_LABELS: Record<string, string> = {
+  WATCH: "đồng hồ",
+  ORDER: "đơn hàng",
+  ACQUISITION: "phiếu nhập",
+  PAYMENT: "thanh toán",
+  SHIPMENT: "vận chuyển",
+  SERVICE_REQUEST: "yêu cầu dịch vụ",
+  TECHNICAL_ISSUE: "Technical Issue",
+  TASK_ITEM: "công việc",
+};
+
+const ACTION_LABELS: Record<string, string> = {
+  "technical_issue.confirmed": "xác nhận Technical Issue",
+  "technical_issue.started": "bắt đầu một Technical Issue",
+  "technical_issue.completed": "hoàn tất Technical Issue",
+  "technical_issue.created": "tạo một Technical Issue",
+  "payment.created": "tạo một khoản thanh toán",
+  "payment.paid": "xác nhận đã thanh toán",
+  "payment.status_updated": "cập nhật trạng thái thanh toán",
+  "shipment.created": "tạo một vận chuyển",
+  "shipment.shipped": "bàn giao đơn vị vận chuyển",
+  "shipment.delivered": "xác nhận giao hàng thành công",
+  "shipment.returned": "đánh dấu vận chuyển hoàn về",
+  "order.created": "tạo một đơn hàng",
+  "order.completed": "hoàn tất đơn hàng",
+  "watch.media.photoshoot.requested": "yêu cầu photoshoot",
+  "watch.media.photoshoot.completed": "hoàn tất photoshoot",
+  "watch.media.asset.attached": "thêm media cho đồng hồ",
+  "watch.media.ready_for_publish": "đưa media sang bước đăng bán",
+  "watch.publish.assets.downloaded": "tải bộ media đăng bán",
+};
+
+const TITLE_ACTIONS: Record<string, string> = {
+  "confirm issue": "xác nhận Technical Issue",
+  "start issue": "bắt đầu một Technical Issue",
+  "mark done": "hoàn tất Technical Issue",
+  "complete issue": "hoàn tất Technical Issue",
+  "request photoshoot": "yêu cầu photoshoot",
+};
+
+function friendlyActionLabel(eventKey: string, title: string, targetType: string) {
+  const normalizedKey = eventKey.toLowerCase();
+  const exact = ACTION_LABELS[normalizedKey];
+  if (exact) return exact;
+
+  const normalizedTitle = title.trim().toLowerCase();
+  const titleAction = Object.entries(TITLE_ACTIONS).find(
+    ([source]) =>
+      normalizedTitle === source || normalizedTitle.endsWith(` ${source}`),
+  )?.[1];
+  if (titleAction) return titleAction;
+
+  const target = TARGET_LABELS[targetType] || "đối tượng";
+  const verb = normalizedKey.split(".").at(-1);
+  const genericActions: Record<string, string> = {
+    created: `tạo ${target}`,
+    requested: `gửi yêu cầu cho ${target}`,
+    confirmed: `xác nhận ${target}`,
+    started: `bắt đầu xử lý ${target}`,
+    updated: `cập nhật ${target}`,
+    completed: `hoàn tất ${target}`,
+    cancelled: `hủy ${target}`,
+    canceled: `hủy ${target}`,
+    approved: `duyệt ${target}`,
+    rejected: `từ chối ${target}`,
+    assigned: `phân công ${target}`,
+    paid: `xác nhận thanh toán cho ${target}`,
+    attached: `đính kèm dữ liệu cho ${target}`,
+    downloaded: `tải dữ liệu của ${target}`,
+    published: `đăng ${target}`,
+    returned: `đánh dấu ${target} hoàn về`,
+  };
+  return genericActions[verb ?? ""] || getBusinessEventDefinition(eventKey)?.label || title;
 }
 
 function periodStart(period: GlobalActivityQuery["period"]) {
@@ -190,6 +268,11 @@ export async function listGlobalActivity(input: GlobalActivityQuery) {
       sourceType: row.sourceType,
       eventKey: resolvedEventKey,
       title: row.title,
+      actionLabel: friendlyActionLabel(
+        resolvedEventKey,
+        row.title,
+        resolvedTargetType,
+      ),
       body: row.body,
       occurredAt: row.occurredAt.toISOString(),
       targetType: resolvedTargetType,

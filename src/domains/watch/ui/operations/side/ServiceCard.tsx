@@ -187,7 +187,7 @@ export default function ServiceCard({
 
     return (
         <>
-            <aside className="overflow-hidden rounded-lg border border-slate-200/80 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.045)]">
+            <aside className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                 <Header
                     icon={<Wrench className="h-4 w-4" />}
                     title="Service"

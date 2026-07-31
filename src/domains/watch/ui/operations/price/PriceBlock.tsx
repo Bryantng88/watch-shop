@@ -1,10 +1,10 @@
 "use client";
 
-import { Calculator, Loader2, Wand2 } from "lucide-react";
+import { Calculator, ChevronDown, Loader2 } from "lucide-react";
 import type { WatchWorkbenchPermissions, WatchWorkbenchValues } from "@/domains/watch/client/workbench/types";
 import { maskMoney, moneyText, onlyMoney, updateValues } from "@/domains/watch/client/workbench/workbench-utils";
 import { Field, inputClass, OperationShell, operationButtonClass } from "../shared/OperationShell";
-import PriceLedgerTable, { PriceLedgerItem, PriceSnapshot } from "./PriceLedgerTable";
+import PriceLedgerTable, { PriceLedgerItem } from "./PriceLedgerTable";
 import PricePermissionNotice from "./PricePermissionNotice";
 
 type TradeHistory = {
@@ -32,6 +32,31 @@ function numberValue(value: unknown) {
 
 function normalized(value: unknown) {
     return String(value ?? "").trim().toUpperCase();
+}
+
+function FinancialMetric({
+    label,
+    value,
+    note,
+    tone,
+}: {
+    label: string;
+    value: string;
+    note: string;
+    tone: "slate" | "emerald" | "rose";
+}) {
+    const styles = {
+        slate: "text-slate-950",
+        emerald: "text-emerald-700",
+        rose: "text-rose-600",
+    }[tone];
+    return (
+        <div className={`min-w-0 px-4 py-4 ${styles}`}>
+            <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">{label}</div>
+            <div className="mt-2 truncate text-xl font-bold tracking-[-0.03em]">{value}</div>
+            <div className="mt-1 text-[11px] text-slate-400">{note}</div>
+        </div>
+    );
 }
 
 export default function PriceBlock({
@@ -100,9 +125,12 @@ export default function PriceBlock({
     const landedCost = numberValue(costSummary?.landedCost);
     const salePrice = values.pricing.salePrice;
     const profit = Number(salePrice || 0) - Number(landedCost || 0);
+    const margin = Number(salePrice || 0) > 0
+        ? profit / Number(salePrice) * 100
+        : 0;
     const ledgerItems: PriceLedgerItem[] = [
         {
-            label: "Acquisition payment OUT",
+            label: "Giá nhập",
             description: stringValue(acquisition.code)
                 ? `${stringValue(acquisition.code)} · ${stringValue(acquisition.vendorName) || "Vendor"}`
                 : "Chi phí nhập từ phiếu nhập",
@@ -114,7 +142,7 @@ export default function PriceBlock({
                   : "NONE",
         },
         {
-            label: "Service payment OUT",
+            label: "Chi phí service",
             description: `${serviceFees.length} TI · ${paymentGroups.service.length} payment OUT`,
             amount: serviceLedgerAmount || null,
             status: uncoveredServiceFees.some((item) => numberValue(item.amount) > 0)
@@ -122,7 +150,7 @@ export default function PriceBlock({
                 : paymentStatus(paymentGroups.service),
         },
         {
-            label: "Shipment / logistics OUT",
+            label: "Vận chuyển / logistics",
             description: `${shipmentFees.length} shipment · ${paymentGroups.shipment.length} payment OUT`,
             amount: shipmentLedgerAmount || null,
             status: uncoveredShipmentFees.some((item) => numberValue(item.amount) > 0)
@@ -130,7 +158,7 @@ export default function PriceBlock({
                 : paymentStatus(paymentGroups.shipment),
         },
         {
-            label: "Other costs / fees OUT",
+            label: "Chi phí khác",
             description: `${paymentGroups.other.length} payment OUT khác liên kết với watch`,
             amount: otherLedgerAmount || null,
             status: paymentStatus(paymentGroups.other),
@@ -144,78 +172,61 @@ export default function PriceBlock({
         <OperationShell
             id="pricing"
             number="1"
-            title="Giá & cost ledger"
+            title="Giá & lợi nhuận"
             icon={<Calculator className="h-4 w-4" />}
-            description="Thiết lập giá bán và quản lý cost. Field nhạy cảm được gate theo quyền admin."
+            description="Giá bán, giá vốn và lợi nhuận trong một financial view thống nhất."
             actions={
-                <>
-                    <button type="button" disabled title="Tinh nang nay chua san sang tren Watch Workbench." className={operationButtonClass({ variant: "softAmber", size: "sm", className: "disabled:opacity-60" })}>
-                        Phụ phí/chi phí
-                    </button>
-                    <button type="button" onClick={onSave} disabled={saving} className={operationButtonClass({ variant: "primary", size: "sm", className: "disabled:opacity-70" })}>
-                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                        Lưu thay đổi
-                    </button>
-                </>
+                <button type="button" onClick={onSave} disabled={saving} className={operationButtonClass({ variant: "primary", size: "sm", className: "disabled:opacity-70" })}>
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    Lưu giá bán
+                </button>
             }
         >
-            <div className="grid gap-4 xl:grid-cols-[minmax(260px,0.54fr)_minmax(0,1fr)]">
-                <div className="rounded-lg border border-blue-100 bg-gradient-to-br from-blue-50/65 via-white to-emerald-50/45 p-4">
-                    <div className="text-[11px] font-semibold uppercase text-blue-600">Suggested listing price</div>
-                    <div className="mt-2 text-[30px] font-semibold leading-9 text-slate-950">
-                        {salePrice ? moneyText(salePrice) : maskMoney(permissions.canViewSensitivePrice, landedCost)} VND
+            <div className="grid gap-3 xl:grid-cols-[minmax(250px,0.85fr)_minmax(0,1.5fr)]">
+                <div className="relative overflow-hidden rounded-lg border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-indigo-50/70 p-5">
+                    <span className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-violet-500 to-indigo-500" />
+                    <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-violet-600">Giá bán hiện tại</div>
+                    <div className="mt-3 text-[30px] font-bold tracking-[-0.045em] text-slate-950">
+                        {salePrice ? moneyText(salePrice) : "0"} ₫
                     </div>
-                    <div className="mt-2 text-xs leading-5 text-slate-500">Giá bán có thể hiển thị, cost/margin/payment OUT chỉ mở cho admin.</div>
-                    <div className="mt-9 grid grid-cols-2 gap-3">
-                        <PriceSnapshot label="Giá vốn" value={permissions.canViewSensitivePrice ? landedCost : null} />
-                        <PriceSnapshot label="Lợi nhuận dự kiến" value={permissions.canViewSensitivePrice ? profit : null} tone={profit < 0 ? "red" : "slate"} />
-                    </div>
-                    {!permissions.canViewSensitivePrice ? <div className="mt-3"><PricePermissionNotice /></div> : null}
+                    <div className="mt-2 text-xs text-slate-500">Giá đang áp dụng cho Watch</div>
                 </div>
+                <div className="grid overflow-hidden rounded-lg border border-slate-200 bg-slate-50/70 sm:grid-cols-3 sm:divide-x sm:divide-slate-200">
+                    <FinancialMetric label="Tổng giá vốn" value={maskMoney(permissions.canViewSensitivePrice, landedCost)} note="Đọc từ cost ledger" tone="slate" />
+                    <FinancialMetric label="Lợi nhuận" value={maskMoney(permissions.canViewSensitivePrice, profit)} note="Giá bán − giá vốn" tone={profit < 0 ? "rose" : "emerald"} />
+                    <FinancialMetric label="Biên lợi nhuận" value={permissions.canViewSensitivePrice ? `${margin.toFixed(1)}%` : "••••••"} note="Theo giá bán" tone={margin < 0 ? "rose" : "emerald"} />
+                </div>
+            </div>
+            {!permissions.canViewSensitivePrice ? <div className="mt-3"><PricePermissionNotice /></div> : null}
 
+            <div className="mt-5">
+                <div className="mb-3 flex items-center justify-between">
+                    <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Cấu thành giá vốn</div>
+                    <div className="text-[10px] text-slate-400">Dữ liệu projection · chỉ đọc</div>
+                </div>
                 <PriceLedgerTable items={ledgerItems} canViewSensitivePrice={permissions.canViewSensitivePrice} />
             </div>
 
-            <div className="mt-4 grid gap-3 md:grid-cols-4">
-                <Field label="Số tiền">
-                    <input
-                        className={inputClass}
-                        value={permissions.canViewSensitivePrice ? values.pricing.costPrice : "••••••"}
-                        disabled={!permissions.canEditPrice}
-                        onChange={(event) => setPricing({ costPrice: onlyMoney(event.target.value) })}
-                    />
-                </Field>
-                <Field label="Service rate">
-                    <input
-                        className={inputClass}
-                        value={permissions.canViewSensitivePrice ? values.pricing.serviceCost : "••••••"}
-                        disabled={!permissions.canEditPrice}
-                        onChange={(event) => setPricing({ serviceCost: onlyMoney(event.target.value) })}
-                    />
-                </Field>
-                <Field label="Profit amount">
-                    <input className={inputClass} value={permissions.canViewSensitivePrice ? moneyText(profit) : "••••••"} disabled />
-                </Field>
-                <Field label="Bán price">
-                    <input
-                        className={inputClass}
-                        value={values.pricing.salePrice}
-                        disabled={!permissions.canEditPrice}
-                        placeholder="Nhập giá bán"
-                        onChange={(event) => setPricing({ salePrice: onlyMoney(event.target.value) })}
-                    />
-                </Field>
-            </div>
-
-            <div className="mt-4 flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50/70 p-3 text-xs leading-5 text-amber-800 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <b>Projection advice:</b> cost ledger cần financial rollup từ payment OUT service/shipment/acquisition. UI này không tự ghi projection, chỉ emit event/domain save.
+            <details className="group mt-4 rounded-lg border border-slate-200 bg-slate-50/70">
+                <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-xs font-bold text-slate-600">
+                    Điều chỉnh giá và dữ liệu thủ công
+                    <ChevronDown className="h-4 w-4 transition group-open:rotate-180" />
+                </summary>
+                <div className="grid gap-3 border-t border-slate-200 bg-white p-4 md:grid-cols-4">
+                    <Field label="Giá vốn thủ công">
+                        <input className={inputClass} value={permissions.canViewSensitivePrice ? values.pricing.costPrice : "••••••"} disabled={!permissions.canEditPrice} onChange={(event) => setPricing({ costPrice: onlyMoney(event.target.value) })} />
+                    </Field>
+                    <Field label="Service rate">
+                        <input className={inputClass} value={permissions.canViewSensitivePrice ? values.pricing.serviceCost : "••••••"} disabled={!permissions.canEditPrice} onChange={(event) => setPricing({ serviceCost: onlyMoney(event.target.value) })} />
+                    </Field>
+                    <Field label="Lợi nhuận">
+                        <input className={inputClass} value={permissions.canViewSensitivePrice ? moneyText(profit) : "••••••"} disabled />
+                    </Field>
+                    <Field label="Giá bán">
+                        <input className={inputClass} value={values.pricing.salePrice} disabled={!permissions.canEditPrice} placeholder="Nhập giá bán" onChange={(event) => setPricing({ salePrice: onlyMoney(event.target.value) })} />
+                    </Field>
                 </div>
-                <button type="button" disabled title="Projection đang nằm ở feed bên cạnh; nút chi tiết sẽ được nối sau." className={operationButtonClass({ variant: "softAmber", size: "xs", className: "bg-white text-amber-800 disabled:opacity-60" })}>
-                    <Wand2 className="h-4 w-4" />
-                    Xem projection
-                </button>
-            </div>
+            </details>
         </OperationShell>
     );
 }
