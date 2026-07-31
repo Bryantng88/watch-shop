@@ -2,14 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition, type MouseEvent } from "react";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
   CheckCircle2,
   ChevronRight,
   Activity,
-  MessageSquareText,
   MoreHorizontal,
   X,
 } from "lucide-react";
@@ -33,10 +32,17 @@ import {
   manualTransitionOutcomeMovesOutOfCurrentStage,
 } from "@/domains/task/ui/task-work/manual-transition-feedback";
 import { useManualTransitionFeedback } from "@/domains/task/ui/task-work/use-manual-transition-feedback";
-import { PostTargetChip } from "@/domains/shared/ui/post-target/PostTargetChip";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { ResponsiveSelectionCheckbox } from "@/domains/shared/ui/selection/ResponsiveSelectionCheckbox";
 import { waitForOperationProjectionDeliveries } from "./operation-delivery.client";
+import {
+  BusinessEntityPreviewModal,
+  useBusinessEntityPreview,
+} from "@/domains/shared/ui/business/BusinessEntityPreview";
+import type {
+  BusinessEntityPreview,
+  BusinessEntityType,
+} from "@/domains/shared/business/business-entity.types";
 
 type FlowStage = {
   key: string;
@@ -179,6 +185,41 @@ function itemStatus(item: CoordinationFlowListItemDTO) {
   return "OPEN";
 }
 
+function previewType(targetType: string): BusinessEntityType | null {
+  const normalized = String(targetType ?? "").trim().toUpperCase();
+  if (normalized === "SERVICE_REQUEST") return "SERVICE";
+  if (
+    normalized === "WATCH" ||
+    normalized === "ORDER" ||
+    normalized === "SHIPMENT" ||
+    normalized === "PAYMENT" ||
+    normalized === "TECHNICAL_ISSUE" ||
+    normalized === "ACQUISITION"
+  ) {
+    return normalized;
+  }
+  return null;
+}
+
+function previewSeed(item: CoordinationFlowListItemDTO): BusinessEntityPreview | null {
+  const type = previewType(item.targetType);
+  if (!type) return null;
+  return {
+    type,
+    id: item.targetId,
+    title: item.preview.title || item.preview.ref || "Item",
+    subtitle: item.preview.ref || item.workspaceTitle || null,
+    status: item.currentWorkflowStateLabel || item.preview.status || item.status,
+    imageUrl: item.preview.imageUrl,
+    href: item.href || `/admin/task-items/${item.taskItemId}`,
+  };
+}
+
+function isInteractiveTarget(target: EventTarget | null) {
+  return target instanceof HTMLElement &&
+    Boolean(target.closest("a, button, input, select, textarea, [role='checkbox'], [data-row-action]"));
+}
+
 function UserAvatar({
   label,
   avatarUrl,
@@ -226,6 +267,7 @@ export default function FlowItemListView({
   onItemsMovedFromStage,
   onReloadRequested,
 }: Props) {
+  const previewState = useBusinessEntityPreview();
   const progress = useAppProgress();
   const transitionFeedback = useManualTransitionFeedback();
   const [isActionPending, startActionTransition] = useTransition();
@@ -247,6 +289,17 @@ export default function FlowItemListView({
     transactionReference: "",
     reviewNote: "",
   });
+  function openItemPreview(item: CoordinationFlowListItemDTO) {
+    const seed = previewSeed(item);
+    if (seed) previewState.openPreview(seed);
+  }
+  function handleRowClick(
+    event: MouseEvent<HTMLTableRowElement>,
+    item: CoordinationFlowListItemDTO,
+  ) {
+    if (isInteractiveTarget(event.target)) return;
+    openItemPreview(item);
+  }
   useEffect(() => {
     const authoritativeIds = new Set(items.map((item) => item.id));
     setOptimisticallyMovedIds((current) =>
@@ -512,6 +565,7 @@ export default function FlowItemListView({
             actionKey,
           })),
         });
+        await waitForOperationProjectionDeliveries(result);
         const movedIds = result.results
           .filter((entry) =>
             entry.ok && manualTransitionOutcomeMovesOutOfCurrentStage(entry)
@@ -825,7 +879,6 @@ export default function FlowItemListView({
           <tbody className="divide-y divide-slate-100">
             {!pending && visibleItems.map((item) => {
               const stage = stageByKey.get(normalize(item.flowStageKey));
-              const href = item.href || `/admin/task-items/${item.taskItemId}`;
               const checked = selectedIds.includes(item.id);
               const imageUrl = imageOverrides[item.targetId] || item.preview.imageUrl;
               const thumbnailItem = imageOverrides[item.targetId]
@@ -866,7 +919,21 @@ export default function FlowItemListView({
                 !normalize(item.flowStageKey).includes("settled"),
               );
               return (
-                <tr key={item.id} className={cn("group transition hover:bg-slate-50", checked && "bg-violet-50/50")}>
+                <tr
+                  key={item.id}
+                  tabIndex={previewType(item.targetType) ? 0 : undefined}
+                  onClick={(event) => handleRowClick(event, item)}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter" && event.key !== " ") return;
+                    event.preventDefault();
+                    openItemPreview(item);
+                  }}
+                  className={cn(
+                    "group transition hover:bg-slate-50",
+                    previewType(item.targetType) && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-violet-300",
+                    checked && "bg-violet-50/50",
+                  )}
+                >
                   <td className="px-5 py-3">
                     <ResponsiveSelectionCheckbox
                       aria-label={`Chọn ${item.preview.title ?? "item"}`}
@@ -875,23 +942,27 @@ export default function FlowItemListView({
                     />
                   </td>
                   <td className="px-2 py-3">
-                    <Link href={href} className="flex min-w-0 items-center gap-3">
-                      <QueueItemThumbnail item={thumbnailItem as TaskItemQueueItem} />
+                    <button
+                      type="button"
+                      onClick={() => openItemPreview(item)}
+                      className="flex min-w-0 items-center gap-3 text-left"
+                    >
+                      <span className="relative shrink-0">
+                        <QueueItemThumbnail item={thumbnailItem as TaskItemQueueItem} />
+                        {item.discussionCount > 0 ? (
+                          <span
+                            title={`${item.discussionCount} comment`}
+                            className="absolute -left-1 -top-1 inline-flex min-h-3.5 min-w-3.5 items-center justify-center rounded-full bg-violet-500 px-0.5 text-[8px] font-bold leading-none text-white shadow-[0_1px_2px_rgba(76,29,149,0.22)] ring-[1.5px] ring-white"
+                          >
+                            {item.discussionCount > 99 ? "99+" : item.discussionCount}
+                          </span>
+                        ) : null}
+                      </span>
                       <span className="min-w-0">
                         <span className="block max-w-[340px] truncate text-sm font-semibold text-slate-950">{item.preview.title || "Item chưa đặt tên"}</span>
                         <span className="mt-1 block truncate text-xs text-slate-500">{item.preview.ref || item.targetType}</span>
                       </span>
-                    </Link>
-                    {item.discussionCount > 0 ? (
-                      <Link
-                        href={`/admin/task-items/${item.taskItemId}?focus=comments`}
-                        title={`${item.discussionCount} comment`}
-                        className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-1 text-[10px] font-bold text-violet-700 ring-1 ring-violet-100 transition hover:bg-violet-100"
-                      >
-                        <MessageSquareText className="h-3 w-3" />
-                        {item.discussionCount}
-                      </Link>
-                    ) : null}
+                    </button>
                   </td>
                   {showReshootNote ? (
                     <td className="px-4 py-3">
@@ -953,25 +1024,18 @@ export default function FlowItemListView({
                   {showPublishChannels ? (
                     <td className="px-4 py-3">
                       {item.preview.postTargets?.length ? (
-                        <div className="flex max-w-52 flex-wrap items-center gap-1.5">
-                          {item.preview.postTargets.slice(0, 2).map((target) => (
-                            <PostTargetChip
-                              key={target.id}
-                              title={target.platform ? `${target.name} · ${target.platform}` : target.name}
-                              className="text-[11px]"
-                            >
-                              {target.name}
-                            </PostTargetChip>
-                          ))}
-                          {item.preview.postTargets.length > 2 ? (
-                            <span
-                              title={item.preview.postTargets.slice(2).map((target) => target.name).join(", ")}
-                              className="text-[11px] font-semibold text-slate-400"
-                            >
-                              +{item.preview.postTargets.length - 2}
-                            </span>
-                          ) : null}
-                        </div>
+                        <span
+                          title={item.preview.postTargets
+                            .map((target) =>
+                              target.platform
+                                ? `${target.name} · ${target.platform}`
+                                : target.name,
+                            )
+                            .join(", ")}
+                          className="block max-w-52 truncate text-xs font-medium text-slate-600"
+                        >
+                          {item.preview.postTargets.map((target) => target.name).join(", ")}
+                        </span>
                       ) : (
                         <span className="text-xs text-slate-400">Chưa chọn kênh</span>
                       )}
@@ -1228,7 +1292,14 @@ export default function FlowItemListView({
                     </Link>
                   </td>
                   <td className="px-4 py-3">
-                    <Link href={href} aria-label="Mở item" className="text-slate-400 transition group-hover:text-violet-600"><ChevronRight className="h-4 w-4" /></Link>
+                    <button
+                      type="button"
+                      onClick={() => openItemPreview(item)}
+                      aria-label="Xem nhanh item"
+                      className="text-slate-400 transition group-hover:text-violet-600"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
                   </td>
                 </tr>
               );
@@ -1236,6 +1307,17 @@ export default function FlowItemListView({
           </tbody>
         </table>
       </div>
+      <BusinessEntityPreviewModal
+        open={previewState.open}
+        preview={previewState.preview}
+        loading={previewState.loading}
+        error={previewState.error}
+        onClose={previewState.closePreview}
+        onActivityChanged={() => {
+          previewState.refreshPreview();
+          void onReloadRequested?.();
+        }}
+      />
       {pending ? <div className="px-5 py-12 text-center text-sm text-slate-500">Đang tải danh sách item...</div> : null}
       {!pending && !visibleItems.length ? (
         <div className="flex flex-col items-center px-5 py-14 text-center">

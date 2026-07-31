@@ -43,6 +43,16 @@ export type BusinessEventConsumerDeliveryRow = {
   updatedAt: Date;
 };
 
+export type DurableBusinessEventLog = {
+  id: string;
+  eventKey: string;
+  targetType: string;
+  targetId: string;
+  actorUserId: string | null;
+  metadataJson: unknown;
+  createdAt: Date;
+};
+
 function clean(value: unknown) {
   return String(value ?? "").trim();
 }
@@ -191,8 +201,11 @@ export async function getBusinessEventConsumerDeliverySummary(
     attempts: number;
     lastError: string | null;
     completedAt: Date | null;
+    resultJson: unknown;
   }>>(Prisma.sql`
-    SELECT "consumerKey", "status", "attempts", "lastError", "completedAt"
+    SELECT
+      "consumerKey", "status", "attempts", "lastError", "completedAt",
+      "resultJson"
     FROM "BusinessEventConsumerDelivery"
     WHERE "operationKey" = ${operationKey}
     ORDER BY "consumerKey" ASC
@@ -203,18 +216,32 @@ export async function getBusinessEventConsumerDeliverySummary(
 export function businessEventConsumerDeliveryContext(
   row: BusinessEventConsumerDeliveryRow,
 ): BusinessEventDispatchContext {
+  const businessEventLogId = clean(row.businessEventLogId);
+  const eventKey = clean(row.eventKey);
+  const targetType = clean(row.targetType);
+  const targetId = clean(row.targetId);
+  if (!businessEventLogId || !eventKey || !targetType || !targetId) {
+    throw new Error("INVALID_BUSINESS_EVENT_CONSUMER_DELIVERY_CONTEXT");
+  }
+
   const aliases = Array.isArray(row.targetAliasIds)
     ? row.targetAliasIds.map(String).filter(Boolean)
     : [];
+  const eventLog: DurableBusinessEventLog = {
+    id: businessEventLogId,
+    eventKey,
+    targetType,
+    targetId,
+    actorUserId: row.actorUserId,
+    metadataJson: row.payloadJson,
+    createdAt: row.createdAt,
+  };
+
   return {
-    eventLog: {
-      id: row.businessEventLogId,
-      metadataJson: row.payloadJson,
-      createdAt: row.createdAt,
-    },
-    eventKey: row.eventKey,
-    targetType: row.targetType,
-    targetId: row.targetId,
+    eventLog,
+    eventKey,
+    targetType,
+    targetId,
     actorUserId: row.actorUserId,
     effect: row.effect === "REVOKE" ? "REVOKE" : "ASSERT",
     revokeEventKey: row.revokeEventKey,

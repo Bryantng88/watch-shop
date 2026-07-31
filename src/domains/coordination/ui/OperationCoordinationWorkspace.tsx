@@ -2993,6 +2993,7 @@ function MediaProductionBoardView({
           "Workflow đã cập nhật nhưng chưa hoàn tất stage hiện tại. Danh sách sẽ không tự chuyển item.",
         );
       }
+      await waitForOperationProjectionDeliveries(result);
       onChanged(items.map((candidate) => candidate.id === item.id
         ? { ...candidate, stage: targetStage }
         : candidate));
@@ -3415,26 +3416,36 @@ function TechnicalIssueBoardView({
     setMoveError(null);
     startMoveTransition(async () => {
       try {
-        await submitOperationalBlueprintActionAction({
+        const deliveryResults: unknown[] = [];
+        deliveryResults.push(await submitOperationalBlueprintActionAction({
           taskItemId: item.workspaceTaskItemId as string,
           actionKey: action.key,
           targetType: "TECHNICAL_ISSUE",
           targetId: item.id,
           fields: actionFields,
-        });
+        }));
         moveProgressSteps = moveProgressSteps.map((step) => step.id === "move" ? { ...step, status: "done" } : step);
         moveProgressSteps = moveProgressSteps.map((step) => step.id === "additional" && normalizedAdditionalIssues.length ? { ...step, status: "running" } : step);
         progress.update({ message: "Đã chuyển stage, đang xử lý dữ liệu liên quan.", percent: normalizedAdditionalIssues.length ? 55 : 75, steps: moveProgressSteps });
         if (normalizedAdditionalIssues.length && item.srCaseTaskItemId) {
           for (const additionalIssue of normalizedAdditionalIssues) {
-            await submitOperationalBlueprintActionAction({
+            deliveryResults.push(await submitOperationalBlueprintActionAction({
               taskItemId: item.srCaseTaskItemId,
               actionKey: "create_technical_issue",
               fields: additionalIssue,
-            });
+            }));
           }
           moveProgressSteps = moveProgressSteps.map((step) => step.id === "additional" ? { ...step, status: "done" } : step);
         }
+        await waitForOperationProjectionDeliveries(deliveryResults, {
+          onStatus: (completed, total) => {
+            progress.update({
+              message: `Đang đồng bộ danh sách (${completed}/${total}).`,
+              percent: 80 + Math.round((completed / Math.max(1, total)) * 15),
+              steps: moveProgressSteps,
+            });
+          },
+        });
         setBoardItems((current) => current.map((candidate) =>
           candidate.id === item.id
             ? {

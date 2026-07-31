@@ -5,10 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
     ExternalLink,
-    AtSign,
     ImageIcon,
     Loader2,
-    MessageSquare,
     Pencil,
     Save,
     Send,
@@ -19,12 +17,14 @@ import type {
     BusinessEntityPreview,
     BusinessEntityType,
 } from "@/domains/shared/business/business-entity.types";
+import { businessEntityTargetType } from "@/domains/shared/business/business-entity.types";
 import {
     updateTechnicalIssuePreviewAction,
 } from "@/domains/shared/business/business-entity-preview.actions";
 import { ActivityViewModelFeed } from "@/domains/task/ui/task-work/activity/ActivityFeed";
 import { markTaskItemMentionsReadAction } from "@/domains/task/actions/task.actions";
 import type { TaskItemActivityViewModel } from "@/domains/task/server/activity";
+import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 
 async function loadBusinessEntityPreview(type: BusinessEntityType, id: string) {
     const query = new URLSearchParams({ type, id, activityMode: "DISCUSSION" });
@@ -36,6 +36,48 @@ async function loadBusinessEntityPreview(type: BusinessEntityType, id: string) {
     const result = await response.json().catch(() => null);
     if (!response.ok) throw new Error(result?.error || "Không thể tải xem nhanh.");
     return (result?.preview ?? null) as BusinessEntityPreview | null;
+}
+
+function PreviewUserAvatar({
+    label,
+    avatarUrl,
+    size = "md",
+}: {
+    label: string;
+    avatarUrl?: string | null;
+    size?: "sm" | "md" | "lg";
+}) {
+    const resolvedAvatarUrl = resolveMediaPreviewSrc(avatarUrl);
+    const [imageFailed, setImageFailed] = useState(false);
+
+    useEffect(() => {
+        setImageFailed(false);
+    }, [resolvedAvatarUrl]);
+
+    const sizeClass = size === "sm"
+        ? "h-5 w-5 text-[9px]"
+        : size === "lg"
+            ? "h-9 w-9 text-xs"
+            : "h-7 w-7 text-xs";
+
+    return (
+        <span
+            title={label}
+            className={`relative grid shrink-0 place-items-center overflow-hidden rounded-full bg-violet-100 font-bold text-violet-700 ring-1 ring-white ${sizeClass}`}
+        >
+            {resolvedAvatarUrl && !imageFailed ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                    src={resolvedAvatarUrl}
+                    alt={label}
+                    className="h-full w-full object-cover"
+                    onError={() => setImageFailed(true)}
+                />
+            ) : (
+                label.trim().slice(0, 1).toUpperCase() || "?"
+            )}
+        </span>
+    );
 }
 
 const TECHNICAL_AREAS = [
@@ -265,6 +307,7 @@ function BusinessEntityActivityPanel({
     const [historyTotalPages, setHistoryTotalPages] = useState(1);
     const markedReadKeyRef = useRef<string | null>(null);
     const activity = preview.activity;
+    const activityTargetType = businessEntityTargetType(preview.type);
     useEffect(() => {
         setActivityTab("DISCUSSION");
         setHistoryItems([]);
@@ -279,7 +322,7 @@ function BusinessEntityActivityPanel({
         markedReadKeyRef.current = readKey;
         void markTaskItemMentionsReadAction({
             taskItemId: activity.taskItemId,
-            targetType: preview.type,
+            targetType: activityTargetType,
             targetId: preview.id,
         }).then((result) => {
             if (result.updated) {
@@ -287,14 +330,18 @@ function BusinessEntityActivityPanel({
                 router.refresh();
             }
         });
-    }, [activity?.taskItemId, activity?.viewerUserId, onActivityChanged, preview.id, preview.type, router]);
+    }, [activity?.taskItemId, activity?.viewerUserId, activityTargetType, onActivityChanged, preview.id, preview.type, router]);
     if (!activity) return null;
     const activityTaskItemId = activity.taskItemId;
     const mentionQuery = body.match(/(?:^|\s)@([^@\s]*)$/)?.[1]?.toLocaleLowerCase("vi") ?? null;
     const mentionMatches = mentionQuery === null ? [] : (activity.mentionableUsers ?? [])
         .filter((user) => !mentionedUserIds.includes(user.id) && user.label.toLocaleLowerCase("vi").includes(mentionQuery))
         .slice(0, 6);
-
+    const viewer = activity.mentionableUsers?.find(
+        (user) => user.id === activity.viewerUserId,
+    );
+    const viewerInitial = viewer?.label.trim().slice(0, 1).toUpperCase() || "?";
+    const viewerAvatarUrl = resolveMediaPreviewSrc(viewer?.avatarUrl);
     function addMention(user: { id: string; label: string }) {
         setBody((current) => current.replace(/(?:^|\s)@([^@\s]*)$/, (match) => `${match.startsWith(" ") ? " " : ""}@${user.label} `));
         setMentionedUserIds((current) => [...current, user.id]);
@@ -303,7 +350,7 @@ function BusinessEntityActivityPanel({
     function updateBody(nextBody: string) {
         setBody(nextBody);
         setMentionedUserIds((current) => current.filter((userId) => {
-            const user = activity.mentionableUsers?.find((candidate) => candidate.id === userId);
+            const user = activity?.mentionableUsers?.find((candidate) => candidate.id === userId);
             return Boolean(user?.label) && nextBody.includes(`@${user?.label}`);
         }));
     }
@@ -314,7 +361,7 @@ function BusinessEntityActivityPanel({
         setHistoryError(null);
         try {
             const query = new URLSearchParams({
-                type: preview.type,
+                type: activityTargetType,
                 id: preview.id,
                 page: String(page),
             });
@@ -349,7 +396,7 @@ function BusinessEntityActivityPanel({
                 headers: { "Content-Type": "application/json", Accept: "application/json" },
                 body: JSON.stringify({
                     taskItemId: activityTaskItemId,
-                    targetType: preview.type,
+                    targetType: activityTargetType,
                     targetId: preview.id,
                     body: text,
                     mentionedUserIds,
@@ -375,33 +422,45 @@ function BusinessEntityActivityPanel({
             </div>
             {activity.discussionEnabled ? (
                 <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                    <div className="flex items-start gap-2">
-                        <MessageSquare className="mt-2 h-4 w-4 shrink-0 text-slate-400" />
+                    <div className="flex items-start gap-2.5">
+                        <span
+                            title={viewer?.label || "Người đang thao tác"}
+                            className="relative grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-slate-900 text-xs font-bold text-white ring-2 ring-white"
+                        >
+                            {viewerAvatarUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                    src={viewerAvatarUrl}
+                                    alt={viewer?.label || "Người đang thao tác"}
+                                    className="h-full w-full object-cover"
+                                />
+                            ) : viewerInitial}
+                        </span>
                         <textarea
                             value={body}
                             onChange={(event) => updateBody(event.target.value)}
                             rows={2}
                             disabled={submitting}
                             placeholder="Thêm trao đổi về nghiệp vụ này..."
-                            className="min-h-[68px] flex-1 resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                            className="min-h-[68px] flex-1 resize-y rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                         />
                     </div>
                     {mentionMatches.length ? (
-                        <div className="ml-6 mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                        <div className="ml-11 mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
                             {mentionMatches.map((user) => (
                                 <button key={user.id} type="button" onClick={() => addMention(user)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-violet-50">
-                                    <span className="grid h-7 w-7 place-items-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">{user.label.slice(0, 1).toUpperCase()}</span>
+                                    <PreviewUserAvatar label={user.label} avatarUrl={user.avatarUrl} />
                                     <span className="font-medium text-slate-800">{user.label}</span>
                                 </button>
                             ))}
                         </div>
                     ) : null}
                     {mentionedUserIds.length ? (
-                        <div className="ml-6 mt-2 flex flex-wrap gap-1.5">
+                        <div className="ml-11 mt-2 flex flex-wrap gap-1.5">
                             {mentionedUserIds.map((userId) => {
                                 const user = activity.mentionableUsers?.find((candidate) => candidate.id === userId);
                                 if (!user) return null;
-                                return <button key={user.id} type="button" onClick={() => setMentionedUserIds((current) => current.filter((id) => id !== user.id))} className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-1 text-xs font-semibold text-violet-700"><AtSign className="h-3 w-3" />{user.label}<X className="h-3 w-3" /></button>;
+                                return <button key={user.id} type="button" onClick={() => setMentionedUserIds((current) => current.filter((id) => id !== user.id))} className="inline-flex items-center gap-1.5 rounded-full bg-violet-100 py-1 pl-1 pr-2 text-xs font-semibold text-violet-700"><PreviewUserAvatar label={user.label} avatarUrl={user.avatarUrl} size="sm" />{user.label}<X className="h-3 w-3" /></button>;
                             })}
                         </div>
                     ) : null}
@@ -652,7 +711,7 @@ export function BusinessEntityPreviewModal({
                                             ) : (
                                                 <div
                                                     className={`mt-0.5 truncate text-xs font-semibold ${String(fact.value).toUpperCase() === "URGENT" ? "text-rose-600" : "text-slate-800"}`}
-                                                    title={fact.value ?? "-"}
+                                                    title={String(fact.value ?? "-")}
                                                 >
                                                     {fact.value ?? "-"}
                                                 </div>
@@ -846,8 +905,11 @@ export function useBusinessEntityPreview() {
     const [preview, setPreview] = useState<BusinessEntityPreview | null>(null);
     const [loading, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
+    const requestVersionRef = useRef(0);
 
     function openPreview(seed: BusinessEntityPreview) {
+        const requestVersion = requestVersionRef.current + 1;
+        requestVersionRef.current = requestVersion;
         setOpen(true);
         setPreview(seed);
         setError(null);
@@ -855,6 +917,7 @@ export function useBusinessEntityPreview() {
         startTransition(async () => {
             try {
                 const live = await loadBusinessEntityPreview(seed.type, seed.id);
+                if (requestVersion !== requestVersionRef.current) return;
 
                 if (live) {
                     setPreview({
@@ -865,12 +928,14 @@ export function useBusinessEntityPreview() {
                     });
                 }
             } catch (err: unknown) {
+                if (requestVersion !== requestVersionRef.current) return;
                 setError(err instanceof Error ? err.message : "Không thể tải preview.");
             }
         });
     }
 
     function closePreview() {
+        requestVersionRef.current += 1;
         setOpen(false);
         setError(null);
     }
@@ -878,12 +943,16 @@ export function useBusinessEntityPreview() {
     function refreshPreview() {
         if (!preview) return;
         const current = preview;
+        const requestVersion = requestVersionRef.current + 1;
+        requestVersionRef.current = requestVersion;
 
         startTransition(async () => {
             try {
                 const live = await loadBusinessEntityPreview(current.type, current.id);
+                if (requestVersion !== requestVersionRef.current) return;
                 if (live) setPreview(live);
             } catch (err: unknown) {
+                if (requestVersion !== requestVersionRef.current) return;
                 setError(err instanceof Error ? err.message : "Không thể tải lại preview.");
             }
         });

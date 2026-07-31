@@ -52,6 +52,7 @@ import {
 } from "@/domains/task/server/business-binding.service";
 import type { CoordinationFlowListItemDTO } from "./coordination-dashboard.types";
 import {
+  countShipmentOperationQueueProjectionByStage,
   listShipmentOperationQueueProjection,
   type ShipmentOperationStage,
 } from "@/domains/projection/server/shipment-operation-queue.projection";
@@ -60,8 +61,8 @@ import {
   type TechnicalIssueBoardStage,
 } from "@/domains/projection/server/technical-issue-board.projection";
 import {
-  hasPaymentListProjectionRows,
   listSettledPaymentCashFlowProjection,
+  queryPaymentListProjection,
 } from "@/domains/projection/server/payment-list.projection";
 import {
   queryMediaOperationBoardProjection,
@@ -224,13 +225,29 @@ async function loadLatestFlowEventSignals(
     [...latestByTarget.entries()].map(([key, event]) => {
       const activity = activityByTarget.get(key);
       const eventActor = event.actorUserId ? actorById.get(event.actorUserId) : null;
-      const actor = activity?.actorUser ?? eventActor ?? null;
+      const activityMatchesLatestEvent =
+        Boolean(activity) &&
+        activity!.occurredAt.getTime() >= event.createdAt.getTime();
+      // BusinessEventLog is the canonical last-action source. A Task activity
+      // may lag behind its event consumer, so an older activity must never
+      // overwrite the newest action or actor shown by List/Board.
+      const actor =
+        event.actorUserId
+          ? eventActor ?? null
+          : activityMatchesLatestEvent
+            ? activity?.actorUser ?? null
+            : null;
       const definition = getBusinessEventDefinition(event.eventKey);
       return [
         key,
         {
-          title: activity?.title ?? definition?.label ?? event.eventKey,
-          occurredAt: (activity?.occurredAt ?? event.createdAt).toISOString(),
+          title:
+            (activityMatchesLatestEvent ? activity?.title : null) ??
+            definition?.label ??
+            event.eventKey,
+          occurredAt:
+            (activityMatchesLatestEvent ? activity?.occurredAt : null)?.toISOString() ??
+            event.createdAt.toISOString(),
           actor: {
             label: actor?.name ?? actor?.email ?? "Hệ thống",
             avatarUrl: actor?.avatarUrl ?? null,
@@ -3066,6 +3083,30 @@ export async function getCoordinationDashboard(input: {
           query: input.flowQuery,
         })
       : null;
+  const shipmentStageCountsPromise =
+    input.includeFlowItems !== false && isShipmentFlow
+      ? countShipmentOperationQueueProjectionByStage(db, {
+          query: input.flowQuery,
+        })
+      : null;
+  const paymentStageCountsPromise =
+    input.includeFlowItems !== false && isPaymentFlow
+      ? queryPaymentListProjection(db, {
+          q: input.flowQuery ?? undefined,
+          type:
+            flowPaymentType && flowPaymentType !== "ALL"
+              ? flowPaymentType
+              : undefined,
+          direction:
+            flowPaymentDirection && flowPaymentDirection !== "ALL"
+              ? flowPaymentDirection
+              : undefined,
+          positiveAmountOnly: true,
+          page: 1,
+          pageSize: 1,
+          sort: "createdDesc",
+        }).then((result) => result.counts)
+      : null;
   const requestedMediaBoardStage =
     normalizeWorkTypeKey(input.flowStageKey ?? "") === "done"
       ? "DONE"
@@ -3122,14 +3163,10 @@ export async function getCoordinationDashboard(input: {
                 (board) => board.columnPagination[requestedTechnicalBoardStage]?.total ?? 0,
               )
             : isPaymentFlow
-            ? db.payment.count({
-                where: {
-                  amount: { gt: 0 },
-                  status: normalizeStatus(input.flowStageKey).includes("SETTLED")
-                    ? { not: PaymentStatus.UNPAID }
-                    : PaymentStatus.UNPAID,
-                },
-              })
+            ? paymentStageCountsPromise!.then((counts) =>
+                normalizeStatus(input.flowStageKey).includes("SETTLED")
+                  ? counts.all - counts.unpaid
+                  : counts.unpaid)
             : db.taskExecution.count({
                 where: {
                   taskId: cycle.task.id,
@@ -3139,6 +3176,7 @@ export async function getCoordinationDashboard(input: {
               }),
         );
 
+  let paymentFlowProjectionTotal: number | null = null;
   const [
     queueRows,
     mediaQueueSummaryByTaskItem,
@@ -3244,46 +3282,7 @@ export async function getCoordinationDashboard(input: {
       : Promise.resolve([]),
     isPaymentFlow && input.includeDashboardDetails !== false
       ? dashboardStep("paymentCashFlow", () =>
-          hasPaymentListProjectionRows(db).then((ready) =>
-            ready
-              ? listSettledPaymentCashFlowProjection(db)
-              : db.payment.findMany({
-                  where: { status: { in: [PaymentStatus.PAID, PaymentStatus.COLLECTED] } },
-                  select: {
-                    amount: true,
-                    direction: true,
-                    paidAt: true,
-                    createdAt: true,
-                    updatedAt: true,
-                    id: true,
-                    refNo: true,
-                    method: true,
-                    currency: true,
-                    reference: true,
-                    note: true,
-                    status: true,
-                    purpose: true,
-                    type: true,
-                    order_id: true,
-                    service_request_id: true,
-                    technical_issue_id: true,
-                    vendor_id: true,
-                    acquisition_id: true,
-                    shipment_id: true,
-                  },
-                }).then((rows) => rows.map((row) => ({
-                  ...row,
-                  amount: Number(row.amount),
-                  method: String(row.method),
-                  direction: String(row.direction),
-                  status: String(row.status),
-                  purpose: String(row.purpose),
-                  type: String(row.type),
-                  paidAt: row.paidAt?.toISOString() ?? null,
-                  createdAt: row.createdAt.toISOString(),
-                  updatedAt: row.updatedAt.toISOString(),
-                })))
-          ).then((rows) =>
+          listSettledPaymentCashFlowProjection(db).then((rows) =>
             paymentCashFlowPeriods(rows.map((row) => ({
               amount: row.amount,
               direction: row.direction as PaymentDirection,
@@ -3550,9 +3549,25 @@ export async function getCoordinationDashboard(input: {
                     : "REVIEW",
                   page: flowPage,
                   pageSize: flowPageSize,
-                  paginate: !hasFlowFilters,
-                }).then((items) => [
-                  items.map((queueItem) => {
+                  paginate: true,
+                  query: input.flowQuery,
+                  type:
+                    flowPaymentType && flowPaymentType !== "ALL"
+                      ? flowPaymentType
+                      : null,
+                  direction:
+                    flowPaymentDirection && flowPaymentDirection !== "ALL"
+                      ? flowPaymentDirection
+                      : null,
+                  status:
+                    flowPaymentStatus === "PAID"
+                      ? PaymentStatus.PAID
+                      : null,
+                  sort: flowSort === "UPDATED_ASC" ? "updatedAsc" : "updatedDesc",
+                }).then((result) => {
+                  paymentFlowProjectionTotal = result.total;
+                  return [
+                  result.items.map((queueItem) => {
                     const metadata = metadataByTaskItemId.get(queueItem.taskItemId);
                     return {
                       ...queueItem,
@@ -3563,7 +3578,8 @@ export async function getCoordinationDashboard(input: {
                       flowStageOrder: metadata?.flowStageOrder ?? null,
                     };
                   }),
-                ]);
+                ];
+                });
               })()
             : Promise.all(flowLoadTaskItems.map(async (item) => {
                 const metadata = workspaceRoleMetadataFromNote(item.note);
@@ -3620,6 +3636,21 @@ export async function getCoordinationDashboard(input: {
     flowStageCounts.ready = board.columnPagination.READY?.total ?? 0;
     flowStageCounts.processing = board.columnPagination.PROCESSING?.total ?? 0;
     flowStageCounts.done = board.columnPagination.DONE?.total ?? 0;
+  } else if (isPaymentFlow && paymentStageCountsPromise) {
+    const counts = await paymentStageCountsPromise;
+    flowStageCounts["payment-review"] = counts.unpaid;
+    flowStageCounts["payment-settled"] = counts.all - counts.unpaid;
+  } else if (isShipmentFlow && shipmentStageCountsPromise) {
+    const counts = await shipmentStageCountsPromise;
+    flowStageCounts["shipment-waiting"] =
+      counts.get("SHIPMENT_WAITING") ?? 0;
+    flowStageCounts["shipment-processing"] =
+      counts.get("SHIPMENT_PROCESSING") ?? 0;
+    flowStageCounts["shipment-done"] = counts.get("SHIPMENT_DONE") ?? 0;
+  }
+  if (input.includeFlowItems !== false && isPaymentFlow) {
+    await dashboardStep("paymentProjectionReady", () =>
+      ensureProjectionReady(db, "payment-list"));
   }
 
   const queueCountByTaskItem = new Map(
@@ -3757,7 +3788,7 @@ export async function getCoordinationDashboard(input: {
       flowPaymentDirection !== "ALL" &&
       paymentDirection !== flowPaymentDirection
     ) return false;
-    if (!flowQuery) return true;
+    if (!flowQuery || isPaymentFlow) return true;
     return [
       item.preview.title,
       item.preview.ref,
@@ -3791,10 +3822,14 @@ export async function getCoordinationDashboard(input: {
   });
   const flowItemsTotal = input.includeFlowItems === false
     ? 0
+    : isPaymentFlow && paymentFlowProjectionTotal != null
+      ? paymentFlowProjectionTotal
     : hasFlowFilters || usesGenericFlowItemReader
       ? filteredFlowItems.length
       : await unfilteredFlowItemsTotalPromise;
-  const flowItems = hasFlowFilters || usesGenericFlowItemReader
+  const flowItems = isPaymentFlow
+    ? filteredFlowItems
+    : hasFlowFilters || usesGenericFlowItemReader
     ? filteredFlowItems.slice((flowPage - 1) * flowPageSize, flowPage * flowPageSize)
     : filteredFlowItems;
 

@@ -25,6 +25,7 @@ import {
   resetWatchReviewToDraft,
 } from "@/domains/watch/server/review";
 import { resolveMediaWorkProgressFromMetadata } from "@/domains/task/server/business-binding.service";
+import { updateBusinessBindingMetadata } from "@/domains/task/server/business-binding.repo";
 
 type WatchPhotoshootRow = {
   id: string;
@@ -494,15 +495,10 @@ export async function completeWatchPhotoshootFromQueueItem(
   });
   const completedBindingMetadata = asRecord(completedBinding?.metadataJson);
   if (clean(completedBindingMetadata.reshootNote)) {
-    await db.taskExecution.update({
-      where: { id: binding.id },
-      data: {
-        metadataJson: {
-          ...completedBindingMetadata,
-          reshootNote: null,
-          reshootCompletedAt: new Date().toISOString(),
-        },
-      },
+    await updateBusinessBindingMetadata(db, binding.id, {
+      ...completedBindingMetadata,
+      reshootNote: null,
+      reshootCompletedAt: new Date().toISOString(),
     });
   }
 
@@ -611,17 +607,12 @@ export async function markWatchMediaAssetAttachedFromQueueItem(
     numberValue(metadata.mediaAssetRevision),
     numberValue(runtimeMetadata.mediaAssetRevision),
   ) + 1;
-  await db.taskExecution.update({
-    where: { id: binding.id },
-    data: {
-      metadataJson: {
-        ...metadataWithProgress,
-        mediaAssetAttachedAt: attachedAt,
-        mediaAssetAttachedByUserId: input.actorUserId ?? null,
-        mediaAssetRevision: revision,
-        mediaAssetLastAction: wasAttached ? "UPDATE" : "ATTACH",
-      },
-    },
+  await updateBusinessBindingMetadata(db, binding.id, {
+    ...metadataWithProgress,
+    mediaAssetAttachedAt: attachedAt,
+    mediaAssetAttachedByUserId: input.actorUserId ?? null,
+    mediaAssetRevision: revision,
+    mediaAssetLastAction: wasAttached ? "UPDATE" : "ATTACH",
   });
 
   if (runtime && runtime.currentState !== "DONE") {
@@ -829,20 +820,15 @@ export async function saveWatchMediaWorkDraftFromQueueItem(
   const updatedAt = new Date().toISOString();
   const completed = mediaWorkCompletedLabel(nextParts);
 
-  await db.taskExecution.update({
-    where: { id: binding.id },
-    data: {
-      metadataJson: {
-        ...metadata,
-        mediaWorkProgress: {
-          parts: nextParts,
-          completed,
-          total: 3,
-          updatedAt,
-          updatedByUserId: input.actorUserId ?? null,
-          note: clean(input.note) || null,
-        },
-      },
+  await updateBusinessBindingMetadata(db, binding.id, {
+    ...metadata,
+    mediaWorkProgress: {
+      parts: nextParts,
+      completed,
+      total: 3,
+      updatedAt,
+      updatedByUserId: input.actorUserId ?? null,
+      note: clean(input.note) || null,
     },
   });
 
@@ -1039,21 +1025,16 @@ export async function requestWatchMediaReshootFromQueueItem(
     deferConsumers: input.deferConsumers,
   }, db);
 
-  await db.taskExecution.update({
-    where: { id: binding.id },
-    data: {
-      metadataJson: {
-        ...metadata,
-        mediaWorkProgress: {
-          ...currentProgress,
-          parts: nextParts,
-          completed,
-          total: 3,
-          updatedAt,
-          updatedByUserId: input.actorUserId ?? null,
-          note,
-        },
-      },
+  await updateBusinessBindingMetadata(db, binding.id, {
+    ...metadata,
+    mediaWorkProgress: {
+      ...currentProgress,
+      parts: nextParts,
+      completed,
+      total: 3,
+      updatedAt,
+      updatedByUserId: input.actorUserId ?? null,
+      note,
     },
   });
 

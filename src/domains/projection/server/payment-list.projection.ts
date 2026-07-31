@@ -11,7 +11,7 @@ import type {
 } from "./projection.types";
 
 export const PAYMENT_LIST_PROJECTION_KEY = "payment-list";
-export const PAYMENT_LIST_PROJECTION_VERSION = 1;
+export const PAYMENT_LIST_PROJECTION_VERSION = 2;
 const PAYMENT_LIST_EVENTS = [
   "payment.created",
   "payment.status_updated",
@@ -43,10 +43,11 @@ export type PaymentListProjectionRow = {
   shipment_id: string | null;
 };
 
-type PaymentListProjectionInput = {
+export type PaymentListProjectionInput = {
   q?: string;
   purpose?: string;
   status?: string;
+  statusNot?: string;
   type?: string;
   direction?: string;
   method?: string;
@@ -55,7 +56,8 @@ type PaymentListProjectionInput = {
   paidTo?: string;
   createdFrom?: string;
   createdTo?: string;
-  sort?: "createdDesc" | "createdAsc" | "paidDesc" | "paidAsc" | "amountDesc" | "amountAsc";
+  positiveAmountOnly?: boolean;
+  sort?: "updatedDesc" | "updatedAsc" | "createdDesc" | "createdAsc" | "paidDesc" | "paidAsc" | "amountDesc" | "amountAsc";
   page: number;
   pageSize: number;
 };
@@ -148,7 +150,7 @@ export async function buildPaymentListProjectionRow(db: DB, paymentId: string) {
       data.acquisition_id,
       data.shipment_id,
     ].filter(Boolean).join(" ").toLowerCase(),
-    sortAt: payment.createdAt,
+    sortAt: payment.updatedAt,
     sourceUpdatedAt: payment.updatedAt,
     dataJson: data,
   });
@@ -195,6 +197,9 @@ function baseConditions(input: PaymentListProjectionInput) {
     Prisma.sql`"projectionKey" = ${PAYMENT_LIST_PROJECTION_KEY}`,
     Prisma.sql`"projectionVersion" = ${PAYMENT_LIST_PROJECTION_VERSION}`,
   ];
+  if (input.positiveAmountOnly) {
+    conditions.push(Prisma.sql`("dataJson"->>'amount')::numeric > 0`);
+  }
   if (clean(input.q)) {
     conditions.push(Prisma.sql`COALESCE("searchText", '') ILIKE ${`%${clean(input.q)}%`}`);
   }
@@ -222,7 +227,9 @@ function baseConditions(input: PaymentListProjectionInput) {
 }
 
 function projectionOrder(sort: PaymentListProjectionInput["sort"]) {
-  if (sort === "createdAsc") return Prisma.sql`"sortAt" ASC`;
+  if (sort === "updatedAsc") return Prisma.sql`"sortAt" ASC`;
+  if (sort === "createdDesc") return Prisma.sql`("dataJson"->>'createdAt')::timestamptz DESC`;
+  if (sort === "createdAsc") return Prisma.sql`("dataJson"->>'createdAt')::timestamptz ASC`;
   if (sort === "paidDesc") return Prisma.sql`("dataJson"->>'paidAt')::timestamptz DESC NULLS LAST`;
   if (sort === "paidAsc") return Prisma.sql`("dataJson"->>'paidAt')::timestamptz ASC NULLS LAST`;
   if (sort === "amountDesc") return Prisma.sql`("dataJson"->>'amount')::numeric DESC`;
@@ -234,6 +241,7 @@ export async function queryPaymentListProjection(db: DB, input: PaymentListProje
   const offset = (input.page - 1) * input.pageSize;
   const baseWhere = Prisma.join(baseConditions(input), " AND ");
   const status = clean(input.status).toUpperCase() || null;
+  const statusNot = clean(input.statusNot).toUpperCase() || null;
   const rows = await dbOrTx(db).$queryRaw<Array<{
     kind: "ROW" | "COUNT";
     key: string;
@@ -249,6 +257,7 @@ export async function queryPaymentListProjection(db: DB, input: PaymentListProje
       SELECT "dataJson"
       FROM base
       WHERE (${status}::text IS NULL OR "status" = ${status})
+        AND (${statusNot}::text IS NULL OR "status" <> ${statusNot})
       ORDER BY ${projectionOrder(input.sort)}
       LIMIT ${input.pageSize}
       OFFSET ${offset}
@@ -258,7 +267,9 @@ export async function queryPaymentListProjection(db: DB, input: PaymentListProje
       UNION ALL SELECT 'paid', COUNT(*) FROM base WHERE "status" = 'PAID'
       UNION ALL SELECT 'unpaid', COUNT(*) FROM base WHERE "status" = 'UNPAID'
       UNION ALL SELECT 'canceled', COUNT(*) FROM base WHERE "status" = 'CANCELED'
-      UNION ALL SELECT 'total', COUNT(*) FROM base WHERE (${status}::text IS NULL OR "status" = ${status})
+      UNION ALL SELECT 'total', COUNT(*) FROM base
+        WHERE (${status}::text IS NULL OR "status" = ${status})
+          AND (${statusNot}::text IS NULL OR "status" <> ${statusNot})
     )
     SELECT 'ROW'::text AS "kind", ''::text AS "key", "dataJson", 0::bigint AS "count"
     FROM selected

@@ -461,3 +461,179 @@ Minimum gate:
   the targeted compiler also reports existing cross-domain type debt outside
   this migration, retained as audit evidence rather than hidden or patched
   locally.
+
+### 2026-07-31 - Runtime reconciliation and common flow pass
+
+- Added `operation:audit-runtime-matrix`. It audits Payment, Shipment, Order,
+  Watch, Technical Issue and Service Request against consumer outbox and
+  projection-delivery state without mutating business data.
+- Current development data has no post-migration domain-command sample for
+  those six families. The matrix therefore reports
+  `NO_POST_MIGRATION_SAMPLE` instead of incorrectly treating old
+  projection-only deliveries as current evidence. A-01 remains open until
+  representative commands are exercised.
+- Projection runtime smoke found four missing
+  `coordination-workspace-summary` rows (320/324) and repaired them through the
+  canonical projection-maintenance path. Coverage is now 324/324.
+- Payment and Shipment stage counters now use their canonical projections and
+  the same predicates as their lists. The operation-flow smoke is now a
+  failing gate for duplicate IDs, wrong-stage items and stage-count/list-total
+  mismatch. Current Payment, Shipment, Technical and Media flows reconcile.
+- Technical manual, bulk and board actions now return/collect projection
+  delivery handles and wait on the shared delivery barrier before moving an
+  item or reporting completion.
+- Technical classification fields and the confirm event are now committed by
+  the Technical Issue command in one transaction. The adapter no longer
+  performs a separate pre-command mutation.
+- Payment review, exception and follow-up mutations now commit their event and
+  outbox rows in the same short transaction and return a projection delivery
+  handle to the common progress waiter.
+- Targeted ESLint passed for the changed adapters, actions and Coordination UI.
+  `service-issue-board.service.ts` still carries pre-existing repository lint
+  debt (`no-explicit-any` throughout the legacy file); no new lint exception
+  was introduced.
+
+### 2026-07-31 - Actor and last-action pass
+
+- Authenticated manual and Blueprint operation actions now reject a missing
+  actor instead of silently recording the operation as System.
+- Coordination List/Board last action now treats the latest BusinessEvent as
+  canonical. A delayed, older Task activity can no longer overwrite the
+  newest event title, timestamp or actor.
+- The operation-flow smoke now compares every loaded item with the latest
+  BusinessEvent actor. Payment, Shipment, Technical and Media stages passed
+  with zero actor mismatches, zero wrong-stage items and reconciled counts.
+- Technical Issue Board projection now derives `lastUpdatedBy` and `updatedAt`
+  from the latest Technical Issue event before using compatibility fallbacks.
+- Legacy Service Request post, complete, vendor assignment and bulk vendor
+  assignment commands were found mutating domain state without an event.
+  They now write `service_request.status_changed` or
+  `service_request.completed`, actor and delivery outbox in the owning
+  transaction. Their server actions require the authenticated user and pass
+  the standard after-commit consumer scheduler.
+- No domain fixture was inserted into the shared development data. Runtime
+  matrix closure still requires representative authenticated operations or a
+  disposable test database; modifying real orders, payments, shipments or
+  watches solely to manufacture audit evidence is prohibited.
+
+## 2026-07-31 - Audit cycle closure
+
+Status: **temporarily closed with runtime-evidence exceptions**.
+
+### Architecture work closed in this cycle
+
+- Payment Operation List now reads Payment rows, stage state, filters,
+  pagination, sorting and totals from `payment-list` projection version 2.
+  Binding, activity and business preview hydration is limited to the current
+  projection page. The direct `Payment.findMany` list path and cash-flow
+  source fallback were removed.
+- Payment projection version 2 sorts canonically by `updatedAt`, supports
+  positive-amount, status inclusion/exclusion, type, direction and query
+  predicates, and has complete source coverage: 229/229.
+- Watch Media metadata writes now cross the Task-owned
+  `BusinessBinding` repository boundary. Order-from-task and
+  Service-from-task create bindings through the same boundary instead of
+  writing `TaskExecution` directly.
+- The only remaining direct `TaskExecution` mutations outside Task are in the
+  authenticated Watch duplicate quarantine/restore/delete maintenance tool.
+  They intentionally cancel, restore or remove the complete binding set as
+  part of destructive duplicate cleanup and are recorded as an explicit
+  maintenance exception, not a normal operation flow.
+
+### Final sweep evidence
+
+- Projection runtime: 258/258 succeeded deliveries, zero stale, failed or dead
+  deliveries, nine consistency checks and zero drift.
+- Operation flows: Payment, Shipment, Technical and Media all have matching
+  stage/list totals, zero duplicate IDs, zero wrong-stage items and zero actor
+  mismatches.
+- Payment projection: 229 source rows / 229 projection rows; compare passed.
+- Order projection: 74 source / 74 list / 74 detail rows; image hydration and
+  payment-type/progress counters passed.
+- Service Request projection: 61 source / 61 projection rows.
+- Coordination summary: 324 source / 324 projection rows.
+- Media: 437 watches, 1,744 MediaObjects, 404 bindings, zero unavailable
+  objects, zero pipeline/segment/cross-segment mismatches; sampled storage
+  misses 0/25. Men/Women Watch and Acquisition dashboard counts match source.
+- Board gateway, Flow gateway, stale-request rejection, inflight dedupe and
+  refresh read architecture passed.
+- Durable outbox idempotency, terminal claiming, ordered consumers and
+  transaction rollback smoke passed.
+
+### Explicit closure exceptions
+
+- Runtime matrix has a post-migration PASS for Watch
+  (`watch.saleStage.posted`) with actor, terminal consumer and successful
+  projection delivery.
+- Payment, Shipment, Order, Technical Issue and Service Request have no fresh
+  authenticated post-migration command sample in the shared development
+  database. They remain `NO_POST_MIGRATION_SAMPLE`; no real business record was
+  mutated solely to manufacture audit evidence.
+- Full repository `tsc --noEmit` remains outside the closure gate because of
+  the pre-existing invalid note sources and legacy cross-domain type debt
+  already documented in this audit. Targeted ESLint, Prisma validation and
+  `git diff --check` are the applicable code gates for this cycle.
+
+This audit cycle is closed for implementation work. Reopen it only if a fresh
+runtime sample fails, a projection-health gate reports drift, or the explicit
+duplicate-maintenance exception is redesigned.
+
+## 2026-07-31 — Durable consumer envelope regression
+
+Status: adapter corrected; historical delivery recovery remains a separate,
+scoped operation.
+
+A fresh `watch.media.ready_for_publish` runtime sample reopened the audit. The
+durable delivery row contained the complete event identity, but
+`businessEventConsumerDeliveryContext` reconstructed `eventLog` with only
+`id`, `metadataJson` and `createdAt`. Timeline therefore observed the event as
+`unknown`; Notification returned `INVALID_EVENT_LOG`.
+
+The correction is made once at the durable delivery adapter:
+
+- reconstruct the canonical event log envelope with `id`, `eventKey`,
+  `targetType`, `targetId`, `actorUserId`, `metadataJson` and `createdAt`;
+- reject an incomplete delivery identity before dispatch so it becomes a
+  retryable delivery failure instead of a contract-invalid terminal skip;
+- keep Coordination, Workflow, Timeline and Notification on the same durable
+  context instead of adding consumer-specific fallbacks.
+
+The durable outbox smoke now uses a real `BusinessEventLog`, asserts the full
+adapter envelope and rejects `INVALID_EVENT_LOG` as a valid terminal result.
+The runtime matrix also treats contract-invalid terminal skips as unhealthy.
+The smoke passed with `NO_NOTIFICATION_RULE`, proving that Notification
+received and validated the event identity.
+
+Existing terminal deliveries created while the adapter was defective are not
+automatically reclaimed. Recovery must first inventory affected Timeline and
+Notification deliveries, then replay only those deliveries with their
+original operation keys. It must not emit a new business event or write a
+projection directly.
+
+Read-only runtime inventory at `2026-07-31T03:39:49Z` found four confirmed
+contract-invalid terminal deliveries, all Notification:
+
+- one `task.item.activity.commented`;
+- two `watch.saleStage.posted`;
+- one `watch.media.ready_for_publish`.
+
+The runtime matrix intentionally fails while these four historical rows remain
+terminal with `INVALID_EVENT_LOG`. This is a production gate, not evidence that
+the corrected adapter still emits invalid envelopes.
+
+### 2026-07-31 — Shared operation List preview
+
+- Coordination operation Lists now open the same shared
+  `BusinessEntityPreview` used by Media and Technical Issue boards.
+- Row selection, action buttons, menus, and explicit activity links remain
+  isolated from row-preview clicks.
+- Watch, Order, Shipment, Service Request, Payment, and Acquisition resolve
+  discussion through one target-scoped activity loader. Technical Issue keeps
+  its SR-specific sections while using the same preview/activity shell.
+- `SERVICE` UI identity is canonically mapped to the
+  `SERVICE_REQUEST` activity target; no alternate activity namespace was
+  introduced.
+- Preview requests are versioned client-side so a slower response for an old
+  row cannot overwrite the newly selected item.
+- A comment refreshes the preview and requests the common List reload so
+  comment counts remain synchronized.

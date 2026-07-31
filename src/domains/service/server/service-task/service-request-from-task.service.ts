@@ -5,6 +5,7 @@ import {
     TaskStatus,
 } from "@prisma/client";
 import type { DB } from "@/server/db/client";
+import { createBusinessBinding } from "@/domains/task/server/business-binding.repo";
 
 export type ServiceRequestFromTaskInput = {
     taskId: string;
@@ -108,15 +109,13 @@ async function linkSrToTask(
     });
 
     if (!existing) {
-        await db.taskExecution.create({
-            data: {
+        await createBusinessBinding(db, {
                 taskId: input.taskId,
                 targetType: TaskExecutionTargetType.SERVICE_REQUEST,
                 targetId: input.serviceRequestId,
                 actionType: TaskExecutionActionType.LINKED,
                 note: input.note ?? "Gán Service Request đang active vào task",
                 createdByUserId: input.userId,
-            },
         });
     }
 
@@ -180,15 +179,13 @@ export async function createOrLinkServiceRequestFromTask(
         },
     });
 
-    await db.taskExecution.create({
-        data: {
+    await createBusinessBinding(db, {
             taskId: task.id,
             targetType: TaskExecutionTargetType.SERVICE_REQUEST,
             targetId: serviceRequest.id,
             actionType: TaskExecutionActionType.CREATED,
             note: "Tạo Service Request từ task",
             createdByUserId: userId,
-        },
     });
 
     await db.task.update({

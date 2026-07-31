@@ -124,13 +124,6 @@ function activityTimeValue(activity: TaskItemActivityViewModel) {
   return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
-function formatDate(value?: Date | string | null, fallback = "Chưa có") {
-  if (!value) return fallback;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return fallback;
-  return date.toLocaleDateString("vi-VN");
-}
-
 function formatDateTime(value?: Date | string | null, fallback = "-") {
   if (!value) return fallback;
   const date = new Date(value);
@@ -138,16 +131,6 @@ function formatDateTime(value?: Date | string | null, fallback = "-") {
   return date.toLocaleString("vi-VN", {
     dateStyle: "short",
     timeStyle: "short",
-  });
-}
-
-function formatTime(value?: Date | string | null) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
   });
 }
 
@@ -497,7 +480,6 @@ function ActivityReplies({
         onClick={onToggleOpen}
         className="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
       >
-        <MessageSquare className="h-4 w-4" />
         {open ? (
           <ChevronDown className="h-3.5 w-3.5" />
         ) : (
@@ -594,37 +576,19 @@ function ActivityViewModelCard({
   }
 
   return (
-    <div className="grid grid-cols-[52px_minmax(0,1fr)] gap-3 sm:grid-cols-[76px_minmax(0,1fr)] sm:gap-4">
-      <div className="pt-3 text-right text-xs leading-5 text-slate-500">
-        <div className="font-semibold text-slate-700">
-          {formatTime(activity.occurredAt)}
-        </div>
-        <div>{formatDate(activity.occurredAt, "")}</div>
-      </div>
-
-      <article
-        className={cn(
-          "min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-shadow hover:shadow-md",
-          classes.card,
-        )}
-      >
+    <article
+      className={cn(
+        "min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-shadow hover:shadow-md",
+        classes.card,
+      )}
+    >
         <div className="flex min-w-0 gap-3">
-          <div className="relative shrink-0">
-            <UserAvatar
-              label={actor}
-              avatarUrl={activity.actorAvatarUrl}
-              isSystem={isSystemActor}
-              className="h-10 w-10"
-            />
-            <span
-              className={cn(
-                "absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white text-[10px]",
-                classes.dot,
-              )}
-            >
-              <ActivityViewModelIcon activity={activity} />
-            </span>
-          </div>
+          <UserAvatar
+            label={actor}
+            avatarUrl={activity.actorAvatarUrl}
+            isSystem={isSystemActor}
+            className="h-10 w-10 shrink-0"
+          />
 
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -659,8 +623,7 @@ function ActivityViewModelCard({
           replyCount={optimisticReplyCount}
           discussionEnabled={discussionEnabled}
         />
-      </article>
-    </div>
+    </article>
   );
 }
 

@@ -12,6 +12,7 @@ import {
 import { Prisma } from "@prisma/client";
 import type { DB } from "@/server/db/client";
 import { createOrderWithItems } from "../write";
+import { createBusinessBinding } from "@/domains/task/server/business-binding.repo";
 
 export type CreateOrderFromTaskInput = {
   taskId: string;
@@ -211,8 +212,7 @@ export async function createOrderFromTask(
     ],
   } as any);
 
-  const execution = await db.taskExecution.create({
-    data: {
+  const execution = await createBusinessBinding(db, {
       taskId: task.id,
       targetType: TaskExecutionTargetType.ORDER,
       targetId: order.id,
@@ -221,7 +221,6 @@ export async function createOrderFromTask(
         ? "Tạo order từ task, có yêu cầu tạo shipment"
         : "Tạo order từ task",
       createdByUserId: userId,
-    },
   });
 
   if (task.status === TaskStatus.TODO) {

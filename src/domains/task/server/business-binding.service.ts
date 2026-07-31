@@ -44,6 +44,10 @@ import type {
 } from "./business-binding.types";
 import { findTaskItemIdsByTargetIds, findTaskItemIdsByTargets } from "./business-binding.repo";
 import type { BusinessBindingTargetType } from "./business-binding.types";
+import {
+  queryPaymentListProjection,
+  type PaymentListProjectionInput,
+} from "@/domains/projection/server/payment-list.projection";
 function clean(value: unknown) {
   return String(value ?? "").trim();
 }
@@ -1507,8 +1511,13 @@ export async function listPaymentCollectionQueueItems(
     page?: number;
     pageSize?: number;
     paginate?: boolean;
+    query?: string | null;
+    type?: string | null;
+    direction?: string | null;
+    status?: string | null;
+    sort?: PaymentListProjectionInput["sort"];
   },
-): Promise<QueueItemDTO[]> {
+): Promise<{ items: QueueItemDTO[]; total: number }> {
   const client = dbOrTx(db);
   const page = Math.max(1, Math.trunc(input.page ?? 1));
   const pageSize = Math.min(100, Math.max(10, Math.trunc(input.pageSize ?? 20)));
@@ -1517,37 +1526,32 @@ export async function listPaymentCollectionQueueItems(
     : input.stage === "SETTLED"
       ? [input.settledTaskItemId]
       : [input.reviewTaskItemId, input.settledTaskItemId];
-  const payments = await perfStep("payment-flow-items", "payments", () => client.payment.findMany({
-    where: {
-      amount: { gt: 0 },
-      status: input.stage === "REVIEW"
-        ? PaymentStatus.UNPAID
-        : input.stage === "SETTLED"
-          ? { not: PaymentStatus.UNPAID }
-          : undefined,
-    },
-    select: {
-      id: true,
-      refNo: true,
-      status: true,
-      amount: true,
-      currency: true,
-      method: true,
-      direction: true,
-      type: true,
-      purpose: true,
-      paidAt: true,
-      createdAt: true,
-      updatedAt: true,
-      acquisition_id: true,
-      order_id: true,
-      service_request_id: true,
-      technical_issue_id: true,
-      shipment_id: true,
-    },
-    orderBy: { updatedAt: "desc" },
-    skip: input.paginate === false ? undefined : (page - 1) * pageSize,
-    take: input.paginate === false ? undefined : pageSize,
+  const projection = await perfStep("payment-flow-items", "payments", () =>
+    queryPaymentListProjection(db, {
+      q: input.query ?? undefined,
+      type: input.type ?? undefined,
+      direction: input.direction ?? undefined,
+      status:
+        input.status ??
+        (input.stage === "REVIEW" ? PaymentStatus.UNPAID : undefined),
+      statusNot:
+        input.status
+          ? undefined
+          : input.stage === "SETTLED"
+            ? PaymentStatus.UNPAID
+            : undefined,
+      positiveAmountOnly: true,
+      sort: input.sort ?? "updatedDesc",
+      page: input.paginate === false ? 1 : page,
+      pageSize: input.paginate === false ? 100_000 : pageSize,
+    }),
+  );
+  const payments = projection.items.map((payment) => ({
+    ...payment,
+    status: payment.status as PaymentStatus,
+    paidAt: payment.paidAt ? new Date(payment.paidAt) : null,
+    createdAt: new Date(payment.createdAt),
+    updatedAt: new Date(payment.updatedAt),
   }));
   const paymentIds = payments.map((payment) => payment.id);
   const [bindings, activityGroups, businessPreviews] = await Promise.all([
@@ -1594,7 +1598,9 @@ export async function listPaymentCollectionQueueItems(
     activityGroups.flat(),
   );
 
-  return payments.map((payment) => {
+  return {
+    total: projection.total,
+    items: payments.map((payment) => {
     const binding = bindingByPaymentId.get(payment.id);
     const metadata = asRecord(binding?.metadataJson);
     const key = queueKey(TaskExecutionTargetType.PAYMENT, payment.id);
@@ -1644,7 +1650,8 @@ export async function listPaymentCollectionQueueItems(
       href: preview?.href ?? null,
       updatedAt: formatDate(updatedAt),
     };
-  });
+    }),
+  };
 }
 
 export async function listTaskItemQueueItems(

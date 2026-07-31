@@ -32,27 +32,51 @@ export async function createTechnicalChecksFromProductsAction(input: Parameters<
 }
 
 export async function postServiceRequestsAction(ids: string[]) {
-  const result = await postServiceRequestsApplication(ids);
+  const actor = await getCurrentUser();
+  if (!actor?.id) throw new Error("AUTHENTICATED_ACTOR_REQUIRED");
+  const result = await postServiceRequestsApplication({
+    ids,
+    actorUserId: actor.id,
+    deferConsumers: (work) => after(work),
+  });
   revalidateService();
   return serialize(result);
 }
 
 export async function completeServiceRequestAction(input: { serviceRequestId: string; note?: string | null }) {
-  const result = await completeServiceRequestApplication(input);
+  const actor = await getCurrentUser();
+  if (!actor?.id) throw new Error("AUTHENTICATED_ACTOR_REQUIRED");
+  const result = await completeServiceRequestApplication({
+    ...input,
+    actorUserId: actor.id,
+    deferConsumers: (work) => after(work),
+  });
   revalidateService();
   revalidatePath(`/admin/services/${input.serviceRequestId}`);
   return serialize(result);
 }
 
 export async function assignVendorForServiceRequestAction(input: { serviceRequestId: string; vendorId: string; reason?: string | null; setInProgress?: boolean }) {
-  const result = await assignVendorForServiceRequestApplication(input);
+  const actor = await getCurrentUser();
+  if (!actor?.id) throw new Error("AUTHENTICATED_ACTOR_REQUIRED");
+  const result = await assignVendorForServiceRequestApplication({
+    ...input,
+    actorUserId: actor.id,
+    deferConsumers: (work) => after(work),
+  });
   revalidateService();
   revalidatePath(`/admin/services/${input.serviceRequestId}`);
   return serialize(result);
 }
 
 export async function bulkAssignVendorAndCreateMaintenanceAction(input: { ids: string[]; vendorId: string | null; reason?: string | null }) {
-  const result = await bulkAssignVendorAndCreateMaintenanceApplication(input);
+  const actor = await getCurrentUser();
+  if (!actor?.id) throw new Error("AUTHENTICATED_ACTOR_REQUIRED");
+  const result = await bulkAssignVendorAndCreateMaintenanceApplication({
+    ...input,
+    actorUserId: actor.id,
+    deferConsumers: (work) => after(work),
+  });
   revalidateService();
   return serialize(result);
 }
@@ -73,6 +97,7 @@ export async function createTechnicalIssueForServiceRequestAction(input: {
   vendorId?: string | null;
 }) {
   const actor = await getCurrentUser();
+  if (!actor?.id) throw new Error("AUTHENTICATED_ACTOR_REQUIRED");
   const result = await createTechnicalIssue({
     serviceRequestId: input.serviceRequestId,
     summary: input.summary,
@@ -82,7 +107,7 @@ export async function createTechnicalIssueForServiceRequestAction(input: {
     note: input.note ?? null,
     technicalDetailCatalogId: input.technicalDetailCatalogId ?? null,
     vendorId: input.vendorId ?? null,
-    actorUserId: actor?.id ?? null,
+    actorUserId: actor.id,
     deferConsumers: (work) => after(work),
   });
 

@@ -407,6 +407,10 @@ export async function confirmTechnicalIssue(input: {
     actorName?: string | null;
     summary?: string | null;
     note?: string | null;
+    technicalArea?: string | null;
+    actionMode?: string | null;
+    vendorId?: string | null;
+    estimatedCost?: unknown;
     deferConsumers?: DeferConsumers;
 }, db: DB = prisma): Promise<TechnicalIssue> {
     if (isPrismaClient(db)) {
@@ -416,12 +420,33 @@ export async function confirmTechnicalIssue(input: {
     if (!id) throw new Error("Missing issue id");
     const summary = cleanText(input.summary);
     const note = cleanText(input.note);
+    const vendorId =
+        input.vendorId === undefined ? undefined : cleanId(input.vendorId);
+    const vendorNameSnap =
+        vendorId === undefined
+            ? undefined
+            : vendorId
+              ? (
+                    await db.vendor.findUnique({
+                        where: { id: vendorId },
+                        select: { name: true },
+                    })
+                )?.name ?? null
+              : null;
 
     const updated = await db.technicalIssue.update({
         where: { id },
         data: {
             summary: summary || undefined,
             note: note || undefined,
+            area: cleanId(input.technicalArea) ?? undefined,
+            actionMode: cleanId(input.actionMode) ?? undefined,
+            vendorId,
+            vendorNameSnap,
+            estimatedCost:
+                input.estimatedCost === undefined
+                    ? undefined
+                    : decimalOrNull(input.estimatedCost),
             isConfirmed: true,
             confirmedAt: new Date(),
             confirmedById: cleanId(input.actorId),

@@ -67,6 +67,84 @@ function compactId(id: string) {
     return `${id.slice(0, 8)}...${id.slice(-6)}`;
 }
 
+const PREVIEW_TASK_TARGET = {
+    WATCH: TaskExecutionTargetType.WATCH,
+    ORDER: TaskExecutionTargetType.ORDER,
+    SHIPMENT: TaskExecutionTargetType.SHIPMENT,
+    PAYMENT: TaskExecutionTargetType.PAYMENT,
+    SERVICE: TaskExecutionTargetType.SERVICE_REQUEST,
+    TECHNICAL_ISSUE: TaskExecutionTargetType.TECHNICAL_ISSUE,
+    ACQUISITION: TaskExecutionTargetType.ACQUISITION,
+} satisfies Record<BusinessEntityType, TaskExecutionTargetType>;
+
+async function loadPreviewActivity(input: {
+    auth: unknown;
+    type: BusinessEntityType;
+    targetId: string;
+    activityMode?: "ALL" | "DISCUSSION";
+    canRead: boolean;
+    canEdit: boolean;
+}): Promise<BusinessEntityPreview["activity"]> {
+    if (!input.canRead) return undefined;
+    const taskItem = await prisma.taskExecution.findFirst({
+        where: {
+            targetType: PREVIEW_TASK_TARGET[input.type],
+            targetId: input.targetId,
+            actionType: { not: TaskExecutionActionType.CANCELLED },
+            taskItemId: { not: null },
+        },
+        orderBy: { createdAt: "desc" },
+        select: {
+            taskItem: {
+                select: {
+                    id: true,
+                    note: true,
+                },
+            },
+        },
+    });
+    if (!taskItem?.taskItem) return undefined;
+
+    const targetType = PREVIEW_TASK_TARGET[input.type];
+    const [items, users] = await Promise.all([
+        input.activityMode === "DISCUSSION"
+            ? getBusinessTargetActivityViewModels(
+                targetType,
+                input.targetId,
+                8,
+                "DISCUSSION",
+            )
+            : getTaskItemActivityViewModels(taskItem.taskItem.id, {
+                limit: 20,
+                scope: {
+                    targets: [{ targetType, targetId: input.targetId }],
+                    includeWorkspaceLevel: false,
+                },
+            }),
+        input.canEdit
+            ? prisma.user.findMany({
+                where: { isActive: true },
+                orderBy: [{ name: "asc" }, { email: "asc" }],
+                select: { id: true, name: true, email: true, avatarUrl: true },
+            })
+            : Promise.resolve([]),
+    ]);
+    const capabilities = resolveWorkspaceCapabilities({
+        note: taskItem.taskItem.note,
+    });
+    return {
+        taskItemId: taskItem.taskItem.id,
+        discussionEnabled: input.canEdit && capabilities.discussion,
+        viewerUserId: getAuthUserId(input.auth),
+        mentionableUsers: users.map((user) => ({
+            id: user.id,
+            label: user.name || user.email,
+            avatarUrl: user.avatarUrl,
+        })),
+        items,
+    };
+}
+
 export async function getBusinessEntityPreviewAction(input: {
     type: BusinessEntityType;
     id: string;
@@ -108,48 +186,14 @@ export async function getBusinessEntityPreviewAction(input: {
         if (!row) return null;
 
         const product = row.product;
-        const watchWorkspace = await prisma.taskExecution.findFirst({
-            where: {
-                targetType: TaskExecutionTargetType.WATCH,
-                targetId: row.id,
-                actionType: { not: TaskExecutionActionType.CANCELLED },
-                taskItemId: { not: null },
-            },
-            orderBy: { createdAt: "desc" },
-            select: {
-                taskItem: {
-                    select: {
-                        id: true,
-                        note: true,
-                        userId: true,
-                        assignedToUserId: true,
-                        task: { select: { kind: true, createdByUserId: true, assignedToUserId: true } },
-                    },
-                },
-            },
+        const activity = await loadPreviewActivity({
+            auth,
+            type: "WATCH",
+            targetId: row.id,
+            activityMode: input.activityMode,
+            canRead: canReadActivity,
+            canEdit: canEditActivity,
         });
-        let activity: BusinessEntityPreview["activity"];
-        if (watchWorkspace?.taskItem && canReadActivity) {
-            const capabilities = resolveWorkspaceCapabilities({ note: watchWorkspace.taskItem.note });
-            activity = {
-                taskItemId: watchWorkspace.taskItem.id,
-                discussionEnabled: canEditActivity && capabilities.discussion,
-                viewerUserId: getAuthUserId(auth),
-                mentionableUsers: canEditActivity
-                    ? (await prisma.user.findMany({
-                        where: { isActive: true },
-                        orderBy: [{ name: "asc" }, { email: "asc" }],
-                        select: { id: true, name: true, email: true, avatarUrl: true },
-                    })).map((user) => ({ id: user.id, label: user.name || user.email, avatarUrl: user.avatarUrl }))
-                    : [],
-                items: input.activityMode === "DISCUSSION"
-                    ? await getBusinessTargetActivityViewModels("WATCH", row.id, 8, "DISCUSSION")
-                    : await getTaskItemActivityViewModels(watchWorkspace.taskItem.id, {
-                        limit: 20,
-                        scope: { targets: [{ targetType: "WATCH", targetId: row.id }], includeWorkspaceLevel: false },
-                    }),
-            };
-        }
 
         return {
             type: "WATCH",
@@ -191,6 +235,14 @@ export async function getBusinessEntityPreviewAction(input: {
         if (!row) return null;
 
         const firstProduct = row.orderItem?.[0]?.product;
+        const activity = await loadPreviewActivity({
+            auth,
+            type: "ORDER",
+            targetId: row.id,
+            activityMode: input.activityMode,
+            canRead: canReadActivity,
+            canEdit: canEditActivity,
+        });
 
         return {
             type: "ORDER",
@@ -200,6 +252,7 @@ export async function getBusinessEntityPreviewAction(input: {
             subtitle: row.customerName ? `Khách: ${row.customerName}` : compactId(row.id),
             status: row.status,
             imageUrl: imageUrlFromProduct(firstProduct),
+            activity,
             href: `/admin/orders/${row.id}`,
             facts: [
                 { label: "Khách", value: row.customerName || "-" },
@@ -219,6 +272,14 @@ export async function getBusinessEntityPreviewAction(input: {
         });
 
         if (!row) return null;
+        const activity = await loadPreviewActivity({
+            auth,
+            type: "SHIPMENT",
+            targetId: row.id,
+            activityMode: input.activityMode,
+            canRead: canReadActivity,
+            canEdit: canEditActivity,
+        });
 
         return {
             type: "SHIPMENT",
@@ -227,6 +288,7 @@ export async function getBusinessEntityPreviewAction(input: {
             title: row.refNo || row.trackingCode || "Shipment",
             subtitle: row.order?.refNo ? `Order: ${row.order.refNo}` : compactId(row.id),
             status: row.status,
+            activity,
             href: `/admin/shipments/${row.id}`,
             facts: [
                 { label: "Carrier", value: row.carrier || "-" },
@@ -266,25 +328,21 @@ export async function getBusinessEntityPreviewAction(input: {
                         },
                     },
                 },
-                TaskExecution: {
-                    where: {
-                        targetType: "SERVICE_REQUEST",
-                        actionType: { not: "CANCELLED" },
-                        taskItemId: { not: null },
-                    },
-                    orderBy: { createdAt: "desc" },
-                    take: 1,
-                    select: {
-                        taskItemId: true,
-                    },
-                },
             },
         });
 
         if (!row) return null;
 
-        const workspaceHref = row.TaskExecution?.[0]?.taskItemId
-            ? `/admin/task-items/${row.TaskExecution[0].taskItemId}`
+        const activity = await loadPreviewActivity({
+            auth,
+            type: "SERVICE",
+            targetId: row.id,
+            activityMode: input.activityMode,
+            canRead: canReadActivity,
+            canEdit: canEditActivity,
+        });
+        const workspaceHref = activity?.taskItemId
+            ? `/admin/task-items/${activity.taskItemId}`
             : null;
 
         return {
@@ -301,6 +359,7 @@ export async function getBusinessEntityPreviewAction(input: {
                 row.product,
                 row.primaryImageUrlSnapshot,
             ),
+            activity,
             href: workspaceHref ?? `/admin/service/${row.id}`,
             facts: [
                 { label: "Status", value: row.status || "-" },
@@ -341,6 +400,112 @@ export async function getBusinessEntityPreviewAction(input: {
                 : [],
             actions: workspaceHref
                 ? [{ label: "Mở workspace SR", href: workspaceHref }]
+                : undefined,
+        };
+    }
+
+    if (input.type === "PAYMENT") {
+        const row = await prisma.payment.findUnique({ where: { id } });
+        if (!row) return null;
+        const activity = await loadPreviewActivity({
+            auth,
+            type: "PAYMENT",
+            targetId: row.id,
+            activityMode: input.activityMode,
+            canRead: canReadActivity,
+            canEdit: canEditActivity,
+        });
+        const owner =
+            row.order_id ||
+            row.shipment_id ||
+            row.service_request_id ||
+            row.technical_issue_id ||
+            row.acquisition_id ||
+            row.vendor_id ||
+            null;
+
+        return {
+            type: "PAYMENT",
+            id: row.id,
+            refNo: row.refNo,
+            title: row.refNo || "Payment",
+            subtitle: owner ? `Đối tượng: ${compactId(owner)}` : compactId(row.id),
+            status: row.status,
+            activity,
+            facts: [
+                { label: "Loại", value: row.type },
+                { label: "Mục đích", value: row.purpose },
+                { label: "Thu/chi", value: row.direction || "-" },
+                {
+                    label: "Số tiền",
+                    value: `${Number(row.amount).toLocaleString("vi-VN")} ${row.currency}`,
+                },
+                { label: "Phương thức", value: row.method || "-" },
+                { label: "Tham chiếu", value: row.reference || "-" },
+            ],
+            notes: row.note
+                ? [{ label: "Ghi chú", body: row.note, tone: "neutral" }]
+                : undefined,
+        };
+    }
+
+    if (input.type === "ACQUISITION") {
+        const row = await prisma.acquisition.findUnique({
+            where: { id },
+            include: {
+                vendor: { select: { name: true } },
+                customer: { select: { name: true } },
+                _count: { select: { acquisitionItem: true } },
+                acquisitionItem: {
+                    take: 1,
+                    orderBy: { createdAt: "asc" },
+                    include: {
+                        product: {
+                            include: {
+                                productImage: {
+                                    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+                                    take: 1,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        if (!row) return null;
+        const activity = await loadPreviewActivity({
+            auth,
+            type: "ACQUISITION",
+            targetId: row.id,
+            activityMode: input.activityMode,
+            canRead: canReadActivity,
+            canEdit: canEditActivity,
+        });
+        const firstItem = row.acquisitionItem[0];
+
+        return {
+            type: "ACQUISITION",
+            id: row.id,
+            refNo: row.refNo,
+            title: row.refNo || firstItem?.productTitle || "Acquisition",
+            subtitle: row.vendor?.name || row.customer?.name || compactId(row.id),
+            status: row.accquisitionStt,
+            imageUrl: imageUrlFromProduct(firstItem?.product),
+            activity,
+            facts: [
+                { label: "Loại", value: row.type },
+                { label: "Vendor", value: row.vendor?.name || "-" },
+                { label: "Khách", value: row.customer?.name || "-" },
+                { label: "Số item", value: row._count.acquisitionItem },
+                {
+                    label: "Tổng tiền",
+                    value: row.totalAmount
+                        ? `${Number(row.totalAmount).toLocaleString("vi-VN")} ${row.currency || "VND"}`
+                        : "-",
+                },
+            ],
+            notes: row.notes
+                ? [{ label: "Ghi chú", body: row.notes, tone: "neutral" }]
                 : undefined,
         };
     }

@@ -181,7 +181,7 @@ export async function buildTechnicalIssueBoardRow(
   });
   if (!binding) return null;
 
-  const [srBinding, startedEvent, activities, createdEvent] = await Promise.all([
+  const [srBinding, startedEvent, activities, createdEvent, latestIssueEvent] = await Promise.all([
     client.taskExecution.findFirst({
       where: {
         taskId: binding.taskId,
@@ -226,10 +226,24 @@ export async function buildTechnicalIssueBoardRow(
       orderBy: { createdAt: "asc" },
       select: { actorUserId: true },
     }),
+    client.businessEventLog.findFirst({
+      where: {
+        targetType: "TECHNICAL_ISSUE",
+        targetId: issue.id,
+      },
+      orderBy: { createdAt: "desc" },
+      select: { actorUserId: true, createdAt: true },
+    }),
   ]);
   const createdEventActor = createdEvent?.actorUserId
     ? await client.user.findUnique({
         where: { id: createdEvent.actorUserId },
+        select: { name: true, email: true, avatarUrl: true },
+      })
+    : null;
+  const latestIssueEventActor = latestIssueEvent?.actorUserId
+    ? await client.user.findUnique({
+        where: { id: latestIssueEvent.actorUserId },
         select: { name: true, email: true, avatarUrl: true },
       })
     : null;
@@ -245,12 +259,15 @@ export async function buildTechnicalIssueBoardRow(
     if (!lastActivity && String(activity.sourceType) !== "DISCUSSION") lastActivity = activity;
   }
 
-  const actor =
-    (lastActivity && userLabel(lastActivity.actorUser) !== "-" ? lastActivity.actorUser : null) ??
-    (userLabel(binding.createdByUser) !== "-" ? binding.createdByUser : null) ??
-    (userLabel(srBinding?.createdByUser) !== "-" ? srBinding?.createdByUser : null) ??
-    createdEventActor ??
-    null;
+  const actor = latestIssueEvent
+    ? latestIssueEventActor
+    : (
+        (lastActivity && userLabel(lastActivity.actorUser) !== "-" ? lastActivity.actorUser : null) ??
+        (userLabel(binding.createdByUser) !== "-" ? binding.createdByUser : null) ??
+        (userLabel(srBinding?.createdByUser) !== "-" ? srBinding?.createdByUser : null) ??
+        createdEventActor ??
+        null
+      );
   const actorName = userLabel(actor);
   const startedMetadata = startedEvent?.metadataJson;
   const replacementPartCodes =
@@ -291,7 +308,8 @@ export async function buildTechnicalIssueBoardRow(
     unreadMentionCount: 0,
     stage,
     actualCost: nullableNumber(issue.actualCost),
-    updatedAt: (lastActivity?.occurredAt ?? issue.updatedAt).toISOString(),
+    updatedAt:
+      (latestIssueEvent?.createdAt ?? lastActivity?.occurredAt ?? issue.updatedAt).toISOString(),
     lastUpdatedBy: {
       label: actorName === "-" ? "Hệ thống" : actorName,
       avatarUrl: actor?.avatarUrl ?? null,

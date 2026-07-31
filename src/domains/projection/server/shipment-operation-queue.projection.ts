@@ -320,3 +320,23 @@ export async function listShipmentOperationQueueProjection(
     total: Number(totals[0]?.count ?? 0),
   };
 }
+
+export async function countShipmentOperationQueueProjectionByStage(
+  db: DB,
+  input?: { query?: string | null },
+) {
+  const client = dbOrTx(db);
+  const query = String(input?.query ?? "").trim();
+  const rows = await client.$queryRaw<Array<{
+    status: ShipmentOperationStage;
+    count: bigint;
+  }>>(Prisma.sql`
+    SELECT "status", COUNT(*) AS "count"
+    FROM "ProjectionRecord"
+    WHERE "projectionKey" = ${SHIPMENT_OPERATION_QUEUE_PROJECTION_KEY}
+      AND "projectionVersion" = ${SHIPMENT_OPERATION_QUEUE_PROJECTION_VERSION}
+      AND (${query || null}::text IS NULL OR "searchText" ILIKE ${query ? `%${query}%` : null})
+    GROUP BY "status"
+  `);
+  return new Map(rows.map((row) => [row.status, Number(row.count)]));
+}

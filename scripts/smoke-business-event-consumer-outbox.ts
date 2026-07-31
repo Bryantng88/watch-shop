@@ -2,22 +2,34 @@ import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 
 import {
+  businessEventConsumerDeliveryContext,
   enqueueBusinessEventConsumerDeliveries,
   getBusinessEventConsumerDeliverySummary,
   processBusinessEventConsumerDeliveries,
   processBusinessEventOperation,
 } from "../src/domains/event/delivery";
+import type { BusinessEventConsumerDeliveryRow } from "../src/domains/event/delivery/business-event-consumer-delivery.repo";
 import { prisma } from "../src/server/db/client";
 
 async function main() {
   const operationKey = `consumer-outbox-smoke:${randomUUID()}`;
   const rollbackOperationKey = `${operationKey}:rollback`;
   const orderedOperationKey = `${operationKey}:ordered`;
+  const eventKey = "audit.consumer_delivery.smoke";
+  const eventLog = await prisma.businessEventLog.create({
+    data: {
+      eventKey,
+      targetType: "GENERAL",
+      targetId: operationKey,
+      metadataJson: { sourceId: operationKey },
+    },
+  });
   try {
     const input = {
       operationKey,
+      businessEventLogId: eventLog.id,
       consumerKeys: ["notification"] as const,
-      eventKey: "audit.consumer_delivery.smoke",
+      eventKey,
       targetType: "GENERAL",
       targetId: operationKey,
       effect: "ASSERT" as const,
@@ -37,6 +49,46 @@ async function main() {
       throw new Error(`Expected one PENDING idempotent row, received ${JSON.stringify(before)}`);
     }
 
+    const context = businessEventConsumerDeliveryContext({
+      id: operationKey,
+      idempotencyKey: `${operationKey}:notification`,
+      operationKey,
+      businessEventLogId: eventLog.id,
+      consumerKey: "notification",
+      eventKey,
+      targetType: "GENERAL",
+      targetId: operationKey,
+      actorUserId: null,
+      effect: "ASSERT",
+      revokeEventKey: null,
+      targetAliasIds: [],
+      eventInstanceId: operationKey,
+      payloadJson: { sourceId: operationKey },
+      status: "PENDING",
+      attempts: 0,
+      nextAttemptAt: eventLog.createdAt,
+      lockedAt: null,
+      completedAt: null,
+      lastError: null,
+      resultJson: null,
+      createdAt: eventLog.createdAt,
+      updatedAt: eventLog.createdAt,
+    } satisfies BusinessEventConsumerDeliveryRow);
+    const canonicalEventLog = context.eventLog as Record<string, unknown>;
+    for (const [field, expected] of Object.entries({
+      id: eventLog.id,
+      eventKey,
+      targetType: "GENERAL",
+      targetId: operationKey,
+      actorUserId: null,
+    })) {
+      if (canonicalEventLog[field] !== expected) {
+        throw new Error(
+          `Durable consumer context lost ${field}: ${JSON.stringify(canonicalEventLog)}`,
+        );
+      }
+    }
+
     const first = await processBusinessEventConsumerDeliveries({
       db: prisma,
       operationKey,
@@ -47,6 +99,12 @@ async function main() {
     const after = await getBusinessEventConsumerDeliverySummary(prisma, operationKey);
     if (first.claimed !== 1 || after[0]?.status !== "SKIPPED") {
       throw new Error(`Expected one SKIPPED delivery, received ${JSON.stringify({ first, after })}`);
+    }
+    const invalidSkip = after.some((delivery) =>
+      JSON.stringify(delivery).includes("INVALID_EVENT_LOG"),
+    );
+    if (invalidSkip) {
+      throw new Error(`Invalid event log was accepted as a terminal skip: ${JSON.stringify(after)}`);
     }
 
     const second = await processBusinessEventConsumerDeliveries({
@@ -112,6 +170,9 @@ async function main() {
         ${orderedOperationKey}
       )
     `);
+    await prisma.businessEventLog.deleteMany({
+      where: { id: eventLog.id },
+    });
     await prisma.$disconnect();
   }
 }

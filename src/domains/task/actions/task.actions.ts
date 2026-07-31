@@ -57,6 +57,7 @@ import { processManualWorkspaceWorkflowTransition } from "../server/workspace-wo
 import {
   runServiceOperationBlueprintAction,
   runServiceOperationManualAction,
+  type ServiceOperationActionAdapterResult,
 } from "@/domains/service/server/operation/service-operation-action-adapter";
 import { runPaymentOperationBlueprintAction } from "@/domains/payment/server/payment-operation-action-adapter";
 import { runShipmentOperationBlueprintAction } from "@/domains/shipment/server/shipment-operation-action-adapter";
@@ -1259,6 +1260,7 @@ export async function applyQueueItemManualTransitionAction(input: {
   if (!actionKey && !toState) throw new Error("Missing manual workflow action");
 
   const actorUserId = getAuthUserId(auth);
+  if (!actorUserId) throw new Error("AUTHENTICATED_ACTOR_REQUIRED");
   const actorLabel = auth?.user?.name ?? auth?.name ?? auth?.user?.email ?? auth?.email ?? null;
   const transitionInput = {
     bindingId,
@@ -1270,11 +1272,12 @@ export async function applyQueueItemManualTransitionAction(input: {
   };
   const resolvedTransition = await resolveManualWorkflowAction(prisma, transitionInput);
 
+  let serviceActionResult: ServiceOperationActionAdapterResult | null = null;
   if (
     resolvedTransition.applied &&
     resolvedTransition.workflowKey === "service-operation-technical-bench"
   ) {
-    const serviceActionResult = await runServiceOperationManualAction(prisma, {
+    serviceActionResult = await runServiceOperationManualAction(prisma, {
       bindingId,
       transition: resolvedTransition,
       actorUserId,
@@ -1357,6 +1360,7 @@ export async function applyQueueItemManualTransitionAction(input: {
     mediaProcessingResult: workflowProcessorResult.mediaProcessingResult,
     workflowProcessorResult,
     serviceDoneMove,
+    serviceActionResult,
   };
 }
 
@@ -1424,6 +1428,7 @@ export async function applyQueueItemManualTransitionsAction(input: {
     ok: boolean;
     reason?: string;
     toState?: string | null;
+    serviceActionResult?: ServiceOperationActionAdapterResult | null;
   }> = [];
 
   for (const item of items) {
@@ -1434,6 +1439,7 @@ export async function applyQueueItemManualTransitionsAction(input: {
         ok: Boolean(result.result.applied),
         reason: result.result.applied ? undefined : result.result.reason,
         toState: result.result.toState ?? null,
+        serviceActionResult: result.serviceActionResult,
       });
     } catch (error) {
       results.push({
@@ -1468,6 +1474,7 @@ export async function submitOperationalBlueprintActionAction(input: {
   if (!actionKey) throw new Error("Missing Blueprint action");
 
   const actorUserId = getAuthUserId(auth);
+  if (!actorUserId) throw new Error("AUTHENTICATED_ACTOR_REQUIRED");
   const actorLabel =
     auth?.user?.name ?? auth?.name ?? auth?.user?.email ?? auth?.email ?? null;
   const actionInput = {

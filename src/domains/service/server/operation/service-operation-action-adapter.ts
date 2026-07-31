@@ -27,6 +27,7 @@ export type ServiceOperationActionAdapterResult = {
   error?: string;
   actionKey?: string;
   technicalIssueId?: string;
+  projectionDeliveryKey?: string;
   result?: unknown;
 };
 
@@ -43,6 +44,23 @@ export type ServiceOperationBlueprintActionAdapterInput = {
 
 function clean(value: unknown) {
   return String(value ?? "").trim();
+}
+
+async function latestTechnicalIssueProjectionDeliveryKey(
+  db: DB,
+  technicalIssueId: string,
+  eventKey: string,
+) {
+  const delivery = await db.projectionEventDelivery.findFirst({
+    where: {
+      eventKey,
+      targetType: "TECHNICAL_ISSUE",
+      targetId: technicalIssueId,
+    },
+    select: { idempotencyKey: true },
+    orderBy: { createdAt: "desc" },
+  });
+  return delivery?.idempotencyKey ?? undefined;
 }
 
 function noteValue(note: string | null | undefined, key: string) {
@@ -228,7 +246,18 @@ export async function runServiceOperationManualAction(
         actorName: input.actorName ?? null,
         deferConsumers: input.deferConsumers,
       });
-      return { ok: true, actionKey, technicalIssueId, result };
+      return {
+        ok: true,
+        actionKey,
+        technicalIssueId,
+        projectionDeliveryKey:
+          await latestTechnicalIssueProjectionDeliveryKey(
+            db,
+            technicalIssueId,
+            "technical_issue.confirmed",
+          ),
+        result,
+      };
     }
 
     if (actionKey === "close-no-issue") {
@@ -239,7 +268,18 @@ export async function runServiceOperationManualAction(
         resolutionNote: input.note ?? null,
         deferConsumers: input.deferConsumers,
       });
-      return { ok: true, actionKey, technicalIssueId, result };
+      return {
+        ok: true,
+        actionKey,
+        technicalIssueId,
+        projectionDeliveryKey:
+          await latestTechnicalIssueProjectionDeliveryKey(
+            db,
+            technicalIssueId,
+            "technical_issue.completed",
+          ),
+        result,
+      };
     }
 
     if (actionKey === "start-work") {
@@ -249,7 +289,18 @@ export async function runServiceOperationManualAction(
         actorName: input.actorName ?? null,
         deferConsumers: input.deferConsumers,
       });
-      return { ok: true, actionKey, technicalIssueId, result };
+      return {
+        ok: true,
+        actionKey,
+        technicalIssueId,
+        projectionDeliveryKey:
+          await latestTechnicalIssueProjectionDeliveryKey(
+            db,
+            technicalIssueId,
+            "technical_issue.started",
+          ),
+        result,
+      };
     }
 
     if (actionKey === "mark-done") {
@@ -264,7 +315,18 @@ export async function runServiceOperationManualAction(
         deferConsumers: input.deferConsumers,
         ...completionInput,
       });
-      return { ok: true, actionKey, technicalIssueId, result };
+      return {
+        ok: true,
+        actionKey,
+        technicalIssueId,
+        projectionDeliveryKey:
+          await latestTechnicalIssueProjectionDeliveryKey(
+            db,
+            technicalIssueId,
+            "technical_issue.completed",
+          ),
+        result,
+      };
     }
 
     return {
@@ -357,6 +419,12 @@ export async function runServiceOperationBlueprintAction(
         ok: true,
         actionKey,
         technicalIssueId: result.id,
+        projectionDeliveryKey:
+          await latestTechnicalIssueProjectionDeliveryKey(
+            db,
+            result.id,
+            "technical_issue.created",
+          ),
         result,
       };
     }
@@ -390,49 +458,32 @@ export async function runServiceOperationBlueprintAction(
         throw new Error("Missing vendorId");
       }
 
-      if (technicalArea || actionMode || vendorId || estimatedCost != null || summary || note != null) {
-        const nextVendorId =
-          actionKey === "classify_technical_issue" && actionMode !== "VENDOR"
-            ? null
-            : vendorId ?? undefined;
-        const nextVendorName =
-          nextVendorId === null
-            ? null
-            : nextVendorId
-              ? (
-                  await db.vendor.findUnique({
-                    where: { id: nextVendorId },
-                    select: { name: true },
-                  })
-                )?.name ?? null
-              : undefined;
-
-        await db.technicalIssue.update({
-          where: { id: targetId },
-          data: {
-            summary: summary ?? undefined,
-            note: note ?? undefined,
-            area: technicalArea ?? undefined,
-            actionMode: actionMode ?? undefined,
-            vendorId: nextVendorId,
-            vendorNameSnap: nextVendorName,
-            estimatedCost: estimatedCost ?? undefined,
-            updatedAt: new Date(),
-          },
-        });
-      }
-
       const result = await confirmTechnicalIssue({
         id: targetId,
         actorId: input.actorUserId ?? null,
         actorName: input.actorName ?? null,
+        summary,
+        note,
+        technicalArea,
+        actionMode,
+        vendorId:
+          actionKey === "classify_technical_issue" && actionMode !== "VENDOR"
+            ? null
+            : vendorId ?? undefined,
+        estimatedCost: estimatedCost ?? undefined,
         deferConsumers: input.deferConsumers,
-      });
+      }, db);
 
       return {
         ok: true,
         actionKey,
         technicalIssueId: targetId,
+        projectionDeliveryKey:
+          await latestTechnicalIssueProjectionDeliveryKey(
+            db,
+            targetId,
+            "technical_issue.confirmed",
+          ),
         result,
       };
     }
@@ -454,6 +505,12 @@ export async function runServiceOperationBlueprintAction(
         ok: true,
         actionKey,
         technicalIssueId: targetId,
+        projectionDeliveryKey:
+          await latestTechnicalIssueProjectionDeliveryKey(
+            db,
+            targetId,
+            "technical_issue.completed",
+          ),
         result,
       };
     }
@@ -483,6 +540,12 @@ export async function runServiceOperationBlueprintAction(
         ok: true,
         actionKey,
         technicalIssueId: targetId,
+        projectionDeliveryKey:
+          await latestTechnicalIssueProjectionDeliveryKey(
+            db,
+            targetId,
+            "technical_issue.started",
+          ),
         result,
       };
     }
@@ -506,6 +569,12 @@ export async function runServiceOperationBlueprintAction(
         ok: true,
         actionKey,
         technicalIssueId: targetId,
+        projectionDeliveryKey:
+          await latestTechnicalIssueProjectionDeliveryKey(
+            db,
+            targetId,
+            "technical_issue.completed",
+          ),
         result,
       };
     }
@@ -525,6 +594,12 @@ export async function runServiceOperationBlueprintAction(
         ok: true,
         actionKey,
         technicalIssueId: targetId,
+        projectionDeliveryKey:
+          await latestTechnicalIssueProjectionDeliveryKey(
+            db,
+            targetId,
+            "technical_issue.canceled",
+          ),
         result,
       };
     }

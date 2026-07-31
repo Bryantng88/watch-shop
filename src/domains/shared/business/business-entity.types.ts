@@ -7,6 +7,10 @@ export type BusinessEntityType =
     | "PAYMENT"
     | "ACQUISITION";
 
+export function businessEntityTargetType(type: BusinessEntityType) {
+    return type === "SERVICE" ? "SERVICE_REQUEST" : type;
+}
+
 export type BusinessEntityFact = {
     label: string;
     value: string | number | null;

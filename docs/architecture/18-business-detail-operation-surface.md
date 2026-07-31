@@ -396,6 +396,26 @@ filtering an already-loaded full timeline on the client does not satisfy this
 contract. Comment, reply, mention, unread state, and activity permissions remain
 unchanged.
 
+### Operation List preview contract
+
+Every operation List opens the shared `BusinessEntityPreview` when the user
+clicks an item row. Board and List use the same preview loader and discussion
+contract; a flow must not introduce its own quick-view modal.
+
+The shared shell owns identity, lightweight facts, activity, comments,
+mentions, permissions, loading, and stale-request protection. Domain-specific
+information is additive:
+
+- Technical Issue may include its Service Request, related TI rows, and
+  technical edit controls;
+- other domains initially show only their lightweight facts and discussion;
+- new domain detail is added through shared preview DTO sections/actions, not
+  by branching the operation List.
+
+Checkboxes, row actions, menus, and explicit navigation links remain
+independent interactive targets and must not open the preview. A successful
+comment refreshes both the preview activity and the current List projection.
+
 ## Modal-first Business Commands
 
 A bounded command launched from a business list should complete in a modal when

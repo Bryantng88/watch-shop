@@ -4,6 +4,7 @@ import { ensureServiceRequestPaymentApplicationTx } from "@/domains/payment/appl
 import * as serviceRepo from "../server/repository/service-request.repo";
 import * as maintRepo from "../server/maintenance/maintenance.repo";
 import { OPEN_SERVICE_STATUSES, canCompleteServiceStatus } from "../server/shared/service-request.rules";
+import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
 
 async function restoreProductStatusIfDone(tx: DB, productId?: string | null) {
   if (!productId) return;
@@ -16,7 +17,12 @@ async function restoreProductStatusIfDone(tx: DB, productId?: string | null) {
   }
 }
 
-export async function completeServiceRequestApplication(input: { serviceRequestId: string; note?: string | null }) {
+export async function completeServiceRequestApplication(input: {
+  serviceRequestId: string;
+  note?: string | null;
+  actorUserId?: string | null;
+  deferConsumers?: (work: () => Promise<void>) => void;
+}) {
   const serviceRequestId = String(input.serviceRequestId || "").trim();
   if (!serviceRequestId) throw new Error("Missing serviceRequestId");
 
@@ -109,6 +115,23 @@ export async function completeServiceRequestApplication(input: { serviceRequestI
     const payment = await ensureServiceRequestPaymentApplicationTx(tx, updated.id);
 
     await restoreProductStatusIfDone(tx, updated.productId ?? null);
-    return { ok: true, skipped: false, status: updated.status, paymentId: payment?.id ?? null };
+    const event = await recordBusinessEvent(tx, {
+      eventKey: "service_request.completed",
+      targetType: "SERVICE_REQUEST",
+      targetId: updated.id,
+      actorUserId: input.actorUserId ?? null,
+      payload: {
+        status: updated.status,
+        note: input.note ?? null,
+        sourceId: `${updated.id}:service_request.completed`,
+      },
+    }, { deferConsumers: input.deferConsumers });
+    return {
+      ok: true,
+      skipped: false,
+      status: updated.status,
+      paymentId: payment?.id ?? null,
+      projectionDeliveryKey: event.projectionDeliveryKey,
+    };
   });
 }
