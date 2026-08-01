@@ -1291,43 +1291,46 @@ export async function applyQueueItemManualTransitionAction(input: {
     }
   }
 
-  const { result, workflowProcessorResult } = await prisma.$transaction(async (tx) => {
-    let transactionResult = await applyManualWorkflowAction(tx, {
-      ...transitionInput,
-    });
+  const { result, workflowProcessorResult } = await prisma.$transaction(
+    async (tx) => {
+      let transactionResult = await applyManualWorkflowAction(tx, {
+        ...transitionInput,
+      });
 
-    if (
-      transactionResult.applied &&
-      transactionResult.workflowKey === "watch-photography" &&
-      transactionResult.toState === "IN_PROGRESS"
-    ) {
-      const nextResult = await applyManualWorkflowAction(tx, {
+      if (
+        transactionResult.applied &&
+        transactionResult.workflowKey === "watch-photography" &&
+        transactionResult.toState === "IN_PROGRESS"
+      ) {
+        const nextResult = await applyManualWorkflowAction(tx, {
+          bindingId,
+          actionKey: "mark-done",
+          actorUserId,
+          actorLabel,
+          note: input.note ?? null,
+        });
+
+        if (nextResult.applied) {
+          transactionResult = nextResult;
+        }
+      }
+
+      const processorResult = await processManualWorkspaceWorkflowTransition(tx, {
         bindingId,
-        actionKey: "mark-done",
+        transition: transactionResult,
         actorUserId,
         actorLabel,
         note: input.note ?? null,
+        deferConsumers: (work) => after(work),
       });
 
-      if (nextResult.applied) {
-        transactionResult = nextResult;
-      }
-    }
-
-    const processorResult = await processManualWorkspaceWorkflowTransition(tx, {
-      bindingId,
-      transition: transactionResult,
-      actorUserId,
-      actorLabel,
-      note: input.note ?? null,
-      deferConsumers: (work) => after(work),
-    });
-
-    return {
-      result: transactionResult,
-      workflowProcessorResult: processorResult,
-    };
-  });
+      return {
+        result: transactionResult,
+        workflowProcessorResult: processorResult,
+      };
+    },
+    { maxWait: 10000, timeout: 30000 },
+  );
   const serviceDoneMove =
     result.applied &&
     result.workflowKey === "service-operation-technical-bench" &&
