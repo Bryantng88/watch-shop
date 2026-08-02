@@ -17,11 +17,29 @@ export function mapCoordinationDashboardShell(
   const scopeLabel = data.viewConfig.coreFlows?.find(
     (item) => item.key === flow?.coreFlowKey,
   )?.label ?? flow?.label ?? "Vận hành";
-  const totals = data.workTickets.reduce((result, ticket) => {
-    result.ready += ticket.queueSummary.ready;
-    result.review += ticket.queueSummary.review;
-    result.feedback += ticket.queueSummary.feedback;
-    result.done += ticket.queueSummary.done;
+  const isTaskItemMode = flow?.rowModel === "TASK_ITEM";
+  const scopedWorkTickets = data.workTickets.filter((ticket) => {
+    if (flow?.workTypeKeys?.length) {
+      return flow.workTypeKeys.includes(ticket.blueprint?.key ?? "");
+    }
+    if (flow?.allowedWorkspaceKinds?.length) {
+      return Boolean(
+        ticket.blueprint?.workspaceKind &&
+        flow.allowedWorkspaceKinds.includes(ticket.blueprint.workspaceKind),
+      );
+    }
+    return true;
+  });
+  const totals = scopedWorkTickets.reduce((result, ticket) => {
+    if (isTaskItemMode) {
+      if (ticket.status === "DONE") result.done += 1;
+      else result.ready += 1;
+    } else {
+      result.ready += ticket.queueSummary.ready;
+      result.review += ticket.queueSummary.review;
+      result.feedback += ticket.queueSummary.feedback;
+      result.done += ticket.queueSummary.done;
+    }
     if (ticket.feedbackCount > 0) result.feedbackWorkspaces += 1;
     const paymentStatus = ticket.paymentSummary?.status ?? "NONE";
     if (paymentStatus !== "NONE" && paymentStatus !== "PAID") {
@@ -44,12 +62,12 @@ export function mapCoordinationDashboardShell(
   });
   const items = totals.ready + totals.review + totals.feedback + totals.done;
   const openItems = totals.ready + totals.review + totals.feedback;
-  const activeWorkspaces = data.workTickets.filter((ticket) =>
-    ticket.queueSummary.ready +
-    ticket.queueSummary.review +
-    ticket.queueSummary.feedback > 0
+  const activeWorkspaces = scopedWorkTickets.filter((ticket) =>
+    isTaskItemMode
+      ? ticket.status !== "DONE"
+      : ticket.queueSummary.ready + ticket.queueSummary.review + ticket.queueSummary.feedback > 0,
   ).length;
-  const activities = data.workTickets
+  const activities = scopedWorkTickets
     .filter((ticket) => ticket.lastActivityAt)
     .slice()
     .sort((left, right) =>
@@ -58,7 +76,7 @@ export function mapCoordinationDashboardShell(
     .map((ticket) => ({
       id: ticket.id,
       title: ticket.lastActivity || ticket.title,
-      description: `Workspace ${ticket.title}`,
+      description: `${isTaskItemMode ? "Công việc" : "Workspace"} ${ticket.title}`,
       occurredAt: ticket.lastActivityAt,
       href: `/admin/task-items/${ticket.id}`,
       kind: "updated" as const,
@@ -72,8 +90,8 @@ export function mapCoordinationDashboardShell(
     metrics: [
       {
         key: "workspaces",
-        label: "Workspace",
-        value: data.workTickets.length,
+        label: isTaskItemMode ? "Công việc" : "Workspace",
+        value: scopedWorkTickets.length,
         helper: `${activeWorkspaces}`,
         helperSuffix: "đang mở",
         helperTone: activeWorkspaces ? "positive" : "neutral",
@@ -89,10 +107,10 @@ export function mapCoordinationDashboardShell(
       {
         key: "feedback",
         label: "Cần phản hồi",
-        value: totals.feedback,
+        value: isTaskItemMode ? totals.feedbackWorkspaces : totals.feedback,
         helper: `${totals.feedbackWorkspaces}`,
-        helperSuffix: "workspace",
-        helperTone: totals.feedback ? "negative" : "neutral",
+        helperSuffix: isTaskItemMode ? "công việc" : "workspace",
+        helperTone: totals.feedbackWorkspaces ? "negative" : "neutral",
       },
       {
         key: "unpaid",
@@ -112,7 +130,10 @@ export function mapCoordinationDashboardShell(
     breakdown: {
       label: `Trạng thái · ${scopeLabel}`,
       total: Math.max(items, 1),
-      items: [
+      items: isTaskItemMode ? [
+        { key: "ready", label: "Chưa làm", value: totals.ready, tone: "violet" },
+        { key: "done", label: "Đã xong", value: totals.done, tone: "emerald" },
+      ] : [
         { key: "ready", label: "Sẵn sàng", value: totals.ready, tone: "blue" },
         { key: "review", label: "Đang xử lý", value: totals.review, tone: "violet" },
         { key: "feedback", label: "Phản hồi", value: totals.feedback, tone: "amber" },

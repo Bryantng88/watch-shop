@@ -425,6 +425,7 @@ export async function loadWatchListProjectionSourceRows(
   const offset = Math.max(0, Number(input.offset || 0));
 
   const where: Prisma.WatchWhereInput = {
+    duplicateConfirmedAt: null,
     ...(watchIds.length ? { id: { in: watchIds } } : {}),
     ...(productIds.length ? { productId: { in: productIds } } : {}),
   };

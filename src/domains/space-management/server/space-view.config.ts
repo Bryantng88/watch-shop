@@ -459,6 +459,20 @@ function unifiedOperationSpaceViewConfig(): SpaceViewConfig {
         columns: WORKSPACE_COLUMNS,
       },
       {
+        key: "ad-hoc-work",
+        label: "Việc phát sinh",
+        description: "Danh sách công việc ngoài luồng nghiệp vụ cốt lõi: Chưa làm và Đã xong.",
+        rowModel: "TASK_ITEM",
+        primaryTarget: "taskItem",
+        allowedWorkspaceKinds: ["STANDALONE_WORKSPACE"],
+        workTypeKeys: ["ad-hoc-work"],
+        taskItemStages: [
+          { key: "OPEN", label: "Chưa làm" },
+          { key: "DONE", label: "Đã xong" },
+        ],
+        columns: WORKSPACE_COLUMNS,
+      },
+      {
         key: "workspaces",
         label: "Tất cả Workspace",
         description: "Fallback index for Core Flows that do not yet define ordered stages.",

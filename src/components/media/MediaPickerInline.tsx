@@ -8,7 +8,7 @@ type Props = {
     value: string | null;
     onChange: (key: string) => void;
     profile?: SharedMediaProfile;
-    audienceSegment?: "MEN" | "WOMEN";
+    audienceSegment?: "MEN" | "WOMEN" | "UNISEX";
     pending?: boolean;
     disabled?: boolean;
     compact?: boolean;

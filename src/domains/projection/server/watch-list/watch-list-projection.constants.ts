@@ -3,6 +3,8 @@ export const WATCH_LIST_PROJECTION_VERSION = 2;
 
 export const WATCH_LIST_PROJECTION_SOURCE_EVENTS = [
   "watch.created",
+  "watch.duplicate.confirmed",
+  "watch.duplicate.restored",
   "watch.media.photoshoot.requested",
   "watch.media.photoshoot.completed",
   "watch.content.modified",

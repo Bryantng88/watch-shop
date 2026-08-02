@@ -88,6 +88,28 @@ const WORK_TYPES: WorkTypeDefinition[] = [
     metadata: null,
   },
   {
+    key: "ad-hoc-work",
+    title: "Việc phát sinh",
+    coordinationContext: "OPERATION",
+    icon: "list-todo",
+    defaultOwnerRole: "OPERATION",
+    defaultParticipants: ["OPERATION"],
+    workflowKey: null,
+    routingKeys: ["ad-hoc-work", "incidental-work", "free-work"],
+    enabled: true,
+    provisioning: {
+      mode: "MANUAL",
+      scope: "CURRENT_ACTIVE_SPACE",
+      trigger: "FIRST_INTAKE_EVENT",
+    },
+    sortOrder: 90,
+    metadata: {
+      workspaceType: "ad-hoc-work",
+      itemLabel: "Việc phát sinh",
+      defaultView: "items",
+    },
+  },
+  {
     key: "order",
     title: "Đơn hàng",
     coordinationContext: "OPERATION",

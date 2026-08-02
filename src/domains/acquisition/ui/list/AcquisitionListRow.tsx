@@ -16,6 +16,7 @@ import { postAcquisitions } from "@/domains/acquisition/client/list/post-acquisi
 import AcquisitionItemsPreview from "./AcquisitionItemsPreview";
 import type { AcquisitionListItem } from "./types";
 import { fmtDateCompact } from "./helpers";
+import { useAdHocWorkRowAction } from "@/domains/task/ui/ad-hoc-work/AdHocWorkRowAction";
 
 type Props = {
     item: AcquisitionListItem;
@@ -36,6 +37,14 @@ export default function AcquisitionListRow({
     const notify = useNotify();
     const dialog = useAppDialog();
     const progress = useAppProgress();
+    const adHocWork = useAdHocWorkRowAction<AcquisitionListItem>((row) => ({
+        targetType: "ACQUISITION",
+        targetId: row.id,
+        title: row.refNo || "Phiếu nhập",
+        ref: row.refNo,
+        imageUrl: row.detailItems[0]?.imageUrl ?? null,
+        href: `/admin/acquisitions/${row.id}/edit`,
+    }));
 
     const posted = String(item.approvalStatus).toUpperCase() === "POSTED";
     const draft = String(item.approvalStatus).toUpperCase() === "DRAFT";
@@ -140,6 +149,7 @@ export default function AcquisitionListRow({
     const updated = fmtDateCompact(item.updatedAt);
 
     return (
+        <>
         <tr className="align-middle hover:bg-slate-50/40">
             <td className="px-4 py-4">
                 <input
@@ -212,6 +222,12 @@ export default function AcquisitionListRow({
                             ...(canManage ? {} : { hidden: true }),
                         },
                         {
+                            key: adHocWork.action.key,
+                            label: adHocWork.action.label,
+                            onClick: () => adHocWork.action.onClick(item),
+                            icon: adHocWork.action.icon,
+                        },
+                        {
                             key: "approve",
                             label: "Duyệt phiếu",
                             onClick: handleApprove,
@@ -231,6 +247,8 @@ export default function AcquisitionListRow({
                 />
             </td>
         </tr>
+        {adHocWork.modal}
+        </>
     );
 }
 

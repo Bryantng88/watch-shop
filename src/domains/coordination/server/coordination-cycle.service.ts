@@ -125,6 +125,7 @@ function workTypeNote(
     workTypeKey: workType.key,
     coordinationContext: workType.coordinationContext,
     enabled: workType.enabled,
+    provisioning: workType.provisioning,
   });
   const lines = [
     `workTypeKey: ${workType.key}`,
@@ -228,6 +229,7 @@ function shouldAutoCreateWorkTicket(workType: WorkTypeDefinition) {
       workTypeKey: workType.key,
       coordinationContext: workType.coordinationContext,
       enabled: workType.enabled,
+      provisioning: workType.provisioning,
     }),
   );
 }

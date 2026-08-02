@@ -28,6 +28,7 @@ type Props = {
     onRaiseCase?: (row: WatchRow) => void;
     onCreateTask?: (row: WatchRow) => void;
     onPreview?: (preview: BusinessEntityPreview) => void;
+    onRepairInline?: (row: WatchRow) => void;
 };
 
 export default function WatchListTable({
@@ -52,6 +53,7 @@ export default function WatchListTable({
     onRaiseCase,
     onCreateTask,
     onPreview,
+    onRepairInline,
 }: Props) {
     const safeItems = Array.isArray(items) ? items : [];
     const safeSelectedIds = Array.isArray(selectedIds) ? selectedIds : [];
@@ -153,6 +155,7 @@ export default function WatchListTable({
                                     onRaiseCase={onRaiseCase}
                                     onCreateTask={onCreateTask}
                                     onPreview={onPreview}
+                                    onRepairInline={onRepairInline}
                                 />
                             ))
                         )}

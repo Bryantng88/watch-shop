@@ -6,7 +6,7 @@ import {
 import type { WorkflowDefinition } from "@/domains/workflow-definition/server";
 import { resolveAppliedWorkflowSnapshot } from "@/domains/blueprint/shared/workspace-capabilities";
 import { createSystemActivity } from "./activity";
-import { getWorkTypeWorkflowDefinition } from "./work-type.service";
+import { resolveWorkTypeWorkflowDefinition } from "./work-type.service";
 import {
   findBusinessBindingById,
   updateBusinessBindingMetadata,
@@ -415,7 +415,7 @@ export function resolveBindingWorkflowDefinition(metadataJson: unknown) {
   const workTypeKey = clean(metadata.workTypeKey);
   if (!workTypeKey) return null;
 
-  return getWorkTypeWorkflowDefinition(workTypeKey);
+  return resolveWorkTypeWorkflowDefinition(workTypeKey);
 }
 
 export function initializeQueueItemWorkflowState(

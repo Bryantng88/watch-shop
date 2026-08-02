@@ -27,7 +27,9 @@ export default async function OperationCoordinationPage(props: PageProps) {
   const effectiveModeKey = viewConfig.modes.some((mode) => mode.key === modeKey)
     ? modeKey
     : viewConfig.defaultModeKey;
+  const effectiveMode = viewConfig.modes.find((mode) => mode.key === effectiveModeKey);
   const serverIncludesFlowItems =
+    Boolean(effectiveMode?.coreFlowKey) &&
     effectiveModeKey !== "technical-issue-flow" &&
     effectiveModeKey !== "media-production-flow";
 

@@ -575,7 +575,10 @@ function canShowWorkspaceIdentityPreview(note?: string | null) {
   if (metadata.workspaceKind !== "STANDALONE_WORKSPACE") return false;
 
   const itemTargetTypes = workspaceRole?.itemTargetTypes ?? [];
-  return itemTargetTypes.some((targetType) => Boolean(normalizeStatus(targetType)));
+  return (
+    itemTargetTypes.some((targetType) => Boolean(normalizeStatus(targetType))) ||
+    Boolean(normalizeStatus(noteLineValue(note, "identityTargetType")))
+  );
 }
 
 function blueprintUsageKey(input: { key: string; source?: string | null }) {
@@ -2594,7 +2597,13 @@ async function loadWorkspaceIdentityPreviewMap(input: {
     WATCH: 1,
     ORDER: 2,
   };
-  const chosen = new Map<string, { targetType: string; targetId: string }>();
+  const chosen = new Map<string, {
+    targetType: string;
+    targetId: string;
+    title?: string | null;
+    ref?: string | null;
+    imageUrl?: string | null;
+  }>();
 
   for (const item of input.taskItems) {
     if (workspaceRoleMetadataFromNote(item.note).workspaceKind !== "CASE_WORKSPACE") {
@@ -2618,19 +2627,13 @@ async function loadWorkspaceIdentityPreviewMap(input: {
     where: {
       taskId: input.taskId,
       taskItemId: { in: taskItemIds },
-      targetType: {
-        in: [
-          TaskExecutionTargetType.SERVICE_REQUEST,
-          TaskExecutionTargetType.WATCH,
-          TaskExecutionTargetType.ORDER,
-        ],
-      },
       actionType: { not: TaskExecutionActionType.CANCELLED },
     },
     select: {
       taskItemId: true,
       targetType: true,
       targetId: true,
+      metadataJson: true,
     },
     orderBy: { createdAt: "asc" },
   });
@@ -2644,9 +2647,13 @@ async function loadWorkspaceIdentityPreviewMap(input: {
     ) {
       continue;
     }
+    const metadata = asRecord(binding.metadataJson);
     chosen.set(binding.taskItemId, {
       targetType: binding.targetType,
       targetId: binding.targetId,
+      title: String(metadata.targetTitle ?? metadata.title ?? "").trim() || null,
+      ref: String(metadata.targetRef ?? metadata.targetRefNo ?? metadata.ref ?? "").trim() || null,
+      imageUrl: String(metadata.targetImageUrl ?? metadata.imageUrl ?? "").trim() || null,
     });
   }
 
@@ -2741,6 +2748,13 @@ async function loadWorkspaceIdentityPreviewMap(input: {
   const orderById = new Map(orders.map((item) => [item.id, item]));
 
   for (const [taskItemId, identity] of chosen.entries()) {
+    result.set(taskItemId, {
+      targetType: identity.targetType,
+      targetId: identity.targetId,
+      title: identity.title ?? null,
+      ref: identity.ref ?? null,
+      imageUrl: identity.imageUrl ?? null,
+    });
     if (identity.targetType === TaskExecutionTargetType.SERVICE_REQUEST) {
       const row = srById.get(identity.targetId);
       if (!row) continue;
@@ -3027,6 +3041,7 @@ export async function getCoordinationDashboard(input: {
   const isShipmentFlow = activeFlow?.key === "shipment-operation-core-flow";
   const usesGenericFlowItemReader =
     input.includeFlowItems !== false &&
+    Boolean(activeFlow) &&
     !isTechnicalFlow &&
     !isMediaFlow &&
     !isPaymentFlow &&
@@ -3044,7 +3059,9 @@ export async function getCoordinationDashboard(input: {
       normalizeWorkTypeKey(stage.key) === normalizeWorkTypeKey(input.flowStageKey ?? "") ||
       normalizeWorkTypeKey(stage.workspaceKey) === normalizeWorkTypeKey(input.flowStageKey ?? ""),
   ) ?? activeFlow?.stages[0] ?? null;
-  const flowLoadTaskItems = requestedFlowStage
+  const flowLoadTaskItems = !activeFlow
+    ? []
+    : requestedFlowStage
     ? taskItems.filter((item) => {
         const metadata = workspaceRoleMetadataFromNote(item.note);
         const stageKey = normalizeWorkTypeKey(
@@ -3230,7 +3247,7 @@ export async function getCoordinationDashboard(input: {
         }))
       : Promise.resolve(new Map<string, number>()),
     input.includeWorkspaceSummaries !== false &&
-      input.includeDashboardDetails !== false
+      (input.includeDashboardDetails !== false || activeMode?.rowModel === "TASK_ITEM")
       ? dashboardStep("activitySummary", () => loadActivitySummaryByTaskItem(db, taskItemIds))
       : Promise.resolve({ feedbackCounts: new Map<string, number>(), lastActivities: new Map() }),
     input.includeWorkspaceSummaries !== false &&
@@ -3241,7 +3258,7 @@ export async function getCoordinationDashboard(input: {
         }))
       : Promise.resolve(new Map()),
     input.includeWorkspaceSummaries !== false &&
-      input.includeDashboardDetails !== false
+      (input.includeDashboardDetails !== false || activeMode?.rowModel === "TASK_ITEM")
       ? dashboardStep("identityPreviews", () => loadWorkspaceIdentityPreviewMap({
           db,
           taskId: cycle.task.id,
@@ -3717,9 +3734,17 @@ export async function getCoordinationDashboard(input: {
     return {
       id: item.id,
       title: item.title,
+      status: item.status,
       identityPreview: identityPreviewMap.get(item.id) ?? null,
       creatorLabel: ticketCreator(item, currentUser).label,
       creator: ticketCreator(item, currentUser),
+      assignee: item.assignedToUser
+        ? {
+            label: userLabel(item.assignedToUser),
+            avatarUrl: item.assignedToUser.avatarUrl ?? null,
+            isSystem: false,
+          }
+        : null,
       queueSummary,
       paymentSummary,
       rollover,

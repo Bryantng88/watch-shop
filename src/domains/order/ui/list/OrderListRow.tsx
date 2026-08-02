@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Eye, Pencil, Send, Truck, WalletCards, XCircle, ClipboardPlus } from "lucide-react";
 
 import RowActions from "@/domains/shared/ui/list/RowActions";
+import { useAdHocWorkRowAction } from "@/domains/task/ui/ad-hoc-work/AdHocWorkRowAction";
 import { PaymentAmountSummary, PaymentStatusSignal } from "@/domains/payment/ui/signals";
 import { ShipmentLiveRouteSignal } from "@/domains/shipment/ui/progress";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
@@ -94,10 +95,19 @@ export default function OrderListRow({
   onCancel,
   isCancelledOrder,
 }: Props) {
+  const adHocWork = useAdHocWorkRowAction<OrderListItem>((row) => ({
+    targetType: "ORDER",
+    targetId: row.id,
+    title: row.refNo || "Đơn hàng",
+    ref: row.refNo,
+    imageUrl: row.previewImageUrl,
+    href: `/admin/orders/${row.id}`,
+  }));
   const itemsCount = Number(item.itemsCount ?? 0);
   const cancelled = isCancelledOrder(item.status);
   const remainingAmount = cancelled ? 0 : Number(item.remainingAmount ?? 0);
   return (
+    <>
     <tr className="border-t border-slate-100 align-middle hover:bg-slate-50/40">
       <td className="px-4 py-3">
         <input
@@ -204,6 +214,7 @@ export default function OrderListRow({
               icon: <ClipboardPlus className="h-4 w-4" />,
               onClick: onCreateWorkCase,
             },
+            adHocWork.action,
             !cancelled &&
             canPostOrder(item) &&
             onPost && {
@@ -249,5 +260,7 @@ export default function OrderListRow({
         />
       </td>
     </tr>
+    {adHocWork.modal}
+    </>
   );
 }

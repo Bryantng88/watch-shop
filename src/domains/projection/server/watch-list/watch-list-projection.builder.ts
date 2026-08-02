@@ -69,6 +69,14 @@ export async function rebuildWatchListProjectionRows(
     await deleteProjectionRecords(db, {
       projectionKey: WATCH_LIST_PROJECTION_KEY,
     });
+  } else if (input.watchIds?.length) {
+    // A scoped rebuild is also responsible for removing rows that no longer
+    // belong to this read model (for example a quarantined duplicate).
+    await deleteProjectionRecords(db, {
+      projectionKey: WATCH_LIST_PROJECTION_KEY,
+      projectionVersion: WATCH_LIST_PROJECTION_VERSION,
+      rowKeys: input.watchIds,
+    });
   }
 
   for (;;) {
