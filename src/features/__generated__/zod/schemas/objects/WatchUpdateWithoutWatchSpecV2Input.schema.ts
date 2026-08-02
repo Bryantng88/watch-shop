@@ -31,7 +31,8 @@ import { WatchContentUpdateOneWithoutWatchNestedInputObjectSchema as WatchConten
 import { WatchPriceUpdateOneWithoutWatchNestedInputObjectSchema as WatchPriceUpdateOneWithoutWatchNestedInputObjectSchema } from './WatchPriceUpdateOneWithoutWatchNestedInput.schema';
 import { WatchReviewStateUpdateManyWithoutWatchNestedInputObjectSchema as WatchReviewStateUpdateManyWithoutWatchNestedInputObjectSchema } from './WatchReviewStateUpdateManyWithoutWatchNestedInput.schema';
 import { TaskUpdateManyWithoutWatchNestedInputObjectSchema as TaskUpdateManyWithoutWatchNestedInputObjectSchema } from './TaskUpdateManyWithoutWatchNestedInput.schema';
-import { WorkCaseUpdateManyWithoutWatchNestedInputObjectSchema as WorkCaseUpdateManyWithoutWatchNestedInputObjectSchema } from './WorkCaseUpdateManyWithoutWatchNestedInput.schema'
+import { WorkCaseUpdateManyWithoutWatchNestedInputObjectSchema as WorkCaseUpdateManyWithoutWatchNestedInputObjectSchema } from './WorkCaseUpdateManyWithoutWatchNestedInput.schema';
+import { WatchStrapInstallationUpdateManyWithoutWatchNestedInputObjectSchema as WatchStrapInstallationUpdateManyWithoutWatchNestedInputObjectSchema } from './WatchStrapInstallationUpdateManyWithoutWatchNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -67,7 +68,8 @@ const makeSchema = () => z.object({
   watchPrice: z.lazy(() => WatchPriceUpdateOneWithoutWatchNestedInputObjectSchema).optional(),
   reviewStates: z.lazy(() => WatchReviewStateUpdateManyWithoutWatchNestedInputObjectSchema).optional(),
   tasks: z.lazy(() => TaskUpdateManyWithoutWatchNestedInputObjectSchema).optional(),
-  workCases: z.lazy(() => WorkCaseUpdateManyWithoutWatchNestedInputObjectSchema).optional()
+  workCases: z.lazy(() => WorkCaseUpdateManyWithoutWatchNestedInputObjectSchema).optional(),
+  strapInstallations: z.lazy(() => WatchStrapInstallationUpdateManyWithoutWatchNestedInputObjectSchema).optional()
 }).strict();
 export const WatchUpdateWithoutWatchSpecV2InputObjectSchema: z.ZodType<Prisma.WatchUpdateWithoutWatchSpecV2Input> = makeSchema() as unknown as z.ZodType<Prisma.WatchUpdateWithoutWatchSpecV2Input>;
 export const WatchUpdateWithoutWatchSpecV2InputObjectZodSchema = makeSchema();

@@ -36,6 +36,16 @@ export type OrderFormValues = {
     reserveExpiresAt: string;
 
     items: OrderFormItem[];
+    tradeIn: OrderTradeInDraft | null;
+};
+
+export type OrderTradeInDraft = {
+    productId?: string | null;
+    sku?: string | null;
+    title: string;
+    amount: number;
+    notes: string;
+    audienceSegment: "MEN" | "WOMEN";
 };
 export type ProductSearchItem = {
     id: string;
@@ -98,6 +108,7 @@ export type OrderFormInitialData = {
     shipWard?: string | null;
     paymentMethod?: string | null;
     notes?: string | null;
+    tradeIn?: OrderTradeInDraft | null;
     reserve?: {
         type?: string | null;
         amount?: number | null;

@@ -65,6 +65,7 @@ export type OrderItemInput = {
 };
 
 export type OrderDraftInput = {
+  customerId?: string | null;
   customerName: string;
   shipPhone?: string | null;
   hasShipment: boolean;
@@ -81,10 +82,16 @@ export type OrderDraftInput = {
     expiresAt?: string | null;
   } | null;
   items: OrderItemInput[];
+  tradeIn?: {
+    productId?: string | null;
+    title: string;
+    amount: number;
+    notes?: string | null;
+    audienceSegment?: "MEN" | "WOMEN";
+  } | null;
 };
 
 export type CreateOrderInput = Omit<OrderDraftInput, "createdAt"> & {
-  customerId?: string | null;
   orderDate?: Date | string | null;
   status?: OrderStatus;
   source?: OrderSource;

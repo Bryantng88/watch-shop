@@ -21,7 +21,11 @@ import { ProductScalarRelationFilterObjectSchema as ProductScalarRelationFilterO
 import { ProductWhereInputObjectSchema as ProductWhereInputObjectSchema } from './ProductWhereInput.schema';
 import { ServiceRequestListRelationFilterObjectSchema as ServiceRequestListRelationFilterObjectSchema } from './ServiceRequestListRelationFilter.schema';
 import { StrapVariantSpecNullableScalarRelationFilterObjectSchema as StrapVariantSpecNullableScalarRelationFilterObjectSchema } from './StrapVariantSpecNullableScalarRelationFilter.schema';
-import { StrapVariantSpecWhereInputObjectSchema as StrapVariantSpecWhereInputObjectSchema } from './StrapVariantSpecWhereInput.schema'
+import { StrapVariantSpecWhereInputObjectSchema as StrapVariantSpecWhereInputObjectSchema } from './StrapVariantSpecWhereInput.schema';
+import { ClaspVariantSpecNullableScalarRelationFilterObjectSchema as ClaspVariantSpecNullableScalarRelationFilterObjectSchema } from './ClaspVariantSpecNullableScalarRelationFilter.schema';
+import { ClaspVariantSpecWhereInputObjectSchema as ClaspVariantSpecWhereInputObjectSchema } from './ClaspVariantSpecWhereInput.schema';
+import { WatchStrapInstallationListRelationFilterObjectSchema as WatchStrapInstallationListRelationFilterObjectSchema } from './WatchStrapInstallationListRelationFilter.schema';
+import { StrapInventoryMovementListRelationFilterObjectSchema as StrapInventoryMovementListRelationFilterObjectSchema } from './StrapInventoryMovementListRelationFilter.schema'
 
 const productvariantwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => ProductVariantWhereInputObjectSchema), z.lazy(() => ProductVariantWhereInputObjectSchema).array()]).optional(),
@@ -52,7 +56,10 @@ const productvariantwhereinputSchema = z.object({
   PartVariantSpec: z.union([z.lazy(() => PartVariantSpecNullableScalarRelationFilterObjectSchema), z.lazy(() => PartVariantSpecWhereInputObjectSchema)]).optional(),
   Product: z.union([z.lazy(() => ProductScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional(),
-  StrapVariantSpec: z.union([z.lazy(() => StrapVariantSpecNullableScalarRelationFilterObjectSchema), z.lazy(() => StrapVariantSpecWhereInputObjectSchema)]).optional()
+  StrapVariantSpec: z.union([z.lazy(() => StrapVariantSpecNullableScalarRelationFilterObjectSchema), z.lazy(() => StrapVariantSpecWhereInputObjectSchema)]).optional(),
+  ClaspVariantSpec: z.union([z.lazy(() => ClaspVariantSpecNullableScalarRelationFilterObjectSchema), z.lazy(() => ClaspVariantSpecWhereInputObjectSchema)]).optional(),
+  strapInstallations: z.lazy(() => WatchStrapInstallationListRelationFilterObjectSchema).optional(),
+  strapMovements: z.lazy(() => StrapInventoryMovementListRelationFilterObjectSchema).optional()
 }).strict();
 export const ProductVariantWhereInputObjectSchema: z.ZodType<Prisma.ProductVariantWhereInput> = productvariantwhereinputSchema as unknown as z.ZodType<Prisma.ProductVariantWhereInput>;
 export const ProductVariantWhereInputObjectZodSchema = productvariantwhereinputSchema;

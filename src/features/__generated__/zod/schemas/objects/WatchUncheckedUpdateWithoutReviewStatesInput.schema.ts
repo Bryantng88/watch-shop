@@ -30,7 +30,8 @@ import { WatchContentUncheckedUpdateOneWithoutWatchNestedInputObjectSchema as Wa
 import { WatchPriceUncheckedUpdateOneWithoutWatchNestedInputObjectSchema as WatchPriceUncheckedUpdateOneWithoutWatchNestedInputObjectSchema } from './WatchPriceUncheckedUpdateOneWithoutWatchNestedInput.schema';
 import { WatchSpecV2UncheckedUpdateOneWithoutWatchNestedInputObjectSchema as WatchSpecV2UncheckedUpdateOneWithoutWatchNestedInputObjectSchema } from './WatchSpecV2UncheckedUpdateOneWithoutWatchNestedInput.schema';
 import { TaskUncheckedUpdateManyWithoutWatchNestedInputObjectSchema as TaskUncheckedUpdateManyWithoutWatchNestedInputObjectSchema } from './TaskUncheckedUpdateManyWithoutWatchNestedInput.schema';
-import { WorkCaseUncheckedUpdateManyWithoutWatchNestedInputObjectSchema as WorkCaseUncheckedUpdateManyWithoutWatchNestedInputObjectSchema } from './WorkCaseUncheckedUpdateManyWithoutWatchNestedInput.schema'
+import { WorkCaseUncheckedUpdateManyWithoutWatchNestedInputObjectSchema as WorkCaseUncheckedUpdateManyWithoutWatchNestedInputObjectSchema } from './WorkCaseUncheckedUpdateManyWithoutWatchNestedInput.schema';
+import { WatchStrapInstallationUncheckedUpdateManyWithoutWatchNestedInputObjectSchema as WatchStrapInstallationUncheckedUpdateManyWithoutWatchNestedInputObjectSchema } from './WatchStrapInstallationUncheckedUpdateManyWithoutWatchNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -66,7 +67,8 @@ const makeSchema = () => z.object({
   watchPrice: z.lazy(() => WatchPriceUncheckedUpdateOneWithoutWatchNestedInputObjectSchema).optional(),
   watchSpecV2: z.lazy(() => WatchSpecV2UncheckedUpdateOneWithoutWatchNestedInputObjectSchema).optional(),
   tasks: z.lazy(() => TaskUncheckedUpdateManyWithoutWatchNestedInputObjectSchema).optional(),
-  workCases: z.lazy(() => WorkCaseUncheckedUpdateManyWithoutWatchNestedInputObjectSchema).optional()
+  workCases: z.lazy(() => WorkCaseUncheckedUpdateManyWithoutWatchNestedInputObjectSchema).optional(),
+  strapInstallations: z.lazy(() => WatchStrapInstallationUncheckedUpdateManyWithoutWatchNestedInputObjectSchema).optional()
 }).strict();
 export const WatchUncheckedUpdateWithoutReviewStatesInputObjectSchema: z.ZodType<Prisma.WatchUncheckedUpdateWithoutReviewStatesInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchUncheckedUpdateWithoutReviewStatesInput>;
 export const WatchUncheckedUpdateWithoutReviewStatesInputObjectZodSchema = makeSchema();

@@ -1,6 +1,6 @@
-import { prisma } from "@/server/db/client";
 import { emitWatchPublishAssetsDownloadedEvent } from "@/domains/watch/server/events";
 import type { BusinessEventDispatchOptions } from "@/domains/event/server/business-event.service";
+import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
 import {
     getWatchPostUsageStateRepo,
     markWatchPostUsageRepo,
@@ -54,7 +54,7 @@ export async function markWatchPostUsage(input: {
     actorUserId?: string | null;
     deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
 }) {
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await runBusinessEventTransaction(async (tx, delivery) => {
         const current = await getWatchPostUsageStateRepo(tx, input.productId);
 
         if (!current) {
@@ -92,7 +92,7 @@ export async function markWatchPostUsage(input: {
             usage: buildUsagePayload(updated),
         };
 
-        await emitWatchPublishAssetsDownloadedEvent(tx, {
+        const event = await emitWatchPublishAssetsDownloadedEvent(tx, {
             watch: {
                 id: result.current.id,
                 productId: result.current.productId,
@@ -115,11 +115,11 @@ export async function markWatchPostUsage(input: {
                 isImageDownloaded: result.usage.isImageDownloaded,
                 isPosted: result.usage.isPosted,
             },
-            deferConsumers: input.deferConsumers,
         });
+        delivery.track(event);
 
         return result;
-    });
+    }, { deferConsumers: input.deferConsumers });
 
     return result.usage;
 }

@@ -12,5 +12,9 @@ export function toDraftItem(input: WatchItemInput) {
         quickSpec: input.quickSpec,
         aiMeta: input.aiMeta,
         pricing: input.salePrice == null ? undefined : { proposedSalePrice: input.salePrice },
+        sourceOrderItemId: input.sourceOrderItemId ?? null,
+        productType: input.productType,
+        strapSpec: input.strapSpec,
+        claspSpec: input.claspSpec,
     };
 }

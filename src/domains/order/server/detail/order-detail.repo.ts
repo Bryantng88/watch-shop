@@ -8,6 +8,7 @@ export async function getOrderDetailRepo(db: DB, id: string) {
     where: { id },
     select: {
       id: true,
+      customerId: true,
       refNo: true,
       status: true,
       paymentStatus: true,
@@ -62,6 +63,7 @@ export async function getOrderDraftForEditRepo(db: DB, orderId: string) {
     where: { id: orderId },
     select: {
       id: true,
+      customerId: true,
       status: true,
       refNo: true,
       customerName: true,

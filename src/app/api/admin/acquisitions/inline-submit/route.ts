@@ -18,7 +18,8 @@ const WatchLineSchema = z.object({
 
 const BodySchema = z.object({
     audienceSegment: z.enum(["MEN", "WOMEN"]).default("MEN"),
-    vendorId: z.string().min(1),
+    vendorId: z.string().optional(),
+    sourceOrderId: z.string().nullish(),
     currency: z.string(),
     type: z.string(),
     createdAt: z.string(),
@@ -27,7 +28,7 @@ const BodySchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-    const auth = await requirePermissionApi(PERMISSIONS.PRODUCT_CREATE);
+    const auth = await requirePermissionApi(PERMISSIONS.ACQUISITION_CREATE);
     if (auth instanceof Response) return auth;
 
     try {
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest) {
 
         const result = await createAcquisitionWithItemApplication({
             vendorId: body.vendorId,
+            sourceOrderId: body.sourceOrderId ?? null,
             audienceSegment: body.audienceSegment,
             currency: body.currency,
             type: body.type as AcquisitionType,
@@ -63,7 +65,7 @@ export async function POST(req: NextRequest) {
                     },
                 };
             }),
-        });
+        }, { actorUserId: auth.id ?? null });
 
         return NextResponse.json({ success: true, ...result });
     } catch (e: unknown) {

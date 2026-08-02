@@ -35,7 +35,8 @@ export const WatchAggregateResultSchema = z.object({  _count: z.object({
     watchSpecV2: z.number(),
     reviewStates: z.number(),
     tasks: z.number(),
-    workCases: z.number()
+    workCases: z.number(),
+    strapInstallations: z.number()
   }).optional(),
   _sum: z.object({
     serviceExpectedWorkingDays: z.number().nullable()

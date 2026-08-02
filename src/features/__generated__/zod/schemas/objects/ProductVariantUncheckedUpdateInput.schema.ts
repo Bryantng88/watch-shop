@@ -17,7 +17,10 @@ import { MaintenancePartUncheckedUpdateManyWithoutProductVariantNestedInputObjec
 import { MaintenanceRecordUncheckedUpdateManyWithoutProductVariantNestedInputObjectSchema as MaintenanceRecordUncheckedUpdateManyWithoutProductVariantNestedInputObjectSchema } from './MaintenanceRecordUncheckedUpdateManyWithoutProductVariantNestedInput.schema';
 import { PartVariantSpecUncheckedUpdateOneWithoutProductVariantNestedInputObjectSchema as PartVariantSpecUncheckedUpdateOneWithoutProductVariantNestedInputObjectSchema } from './PartVariantSpecUncheckedUpdateOneWithoutProductVariantNestedInput.schema';
 import { ServiceRequestUncheckedUpdateManyWithoutProductVariantNestedInputObjectSchema as ServiceRequestUncheckedUpdateManyWithoutProductVariantNestedInputObjectSchema } from './ServiceRequestUncheckedUpdateManyWithoutProductVariantNestedInput.schema';
-import { StrapVariantSpecUncheckedUpdateOneWithoutProductVariantNestedInputObjectSchema as StrapVariantSpecUncheckedUpdateOneWithoutProductVariantNestedInputObjectSchema } from './StrapVariantSpecUncheckedUpdateOneWithoutProductVariantNestedInput.schema'
+import { StrapVariantSpecUncheckedUpdateOneWithoutProductVariantNestedInputObjectSchema as StrapVariantSpecUncheckedUpdateOneWithoutProductVariantNestedInputObjectSchema } from './StrapVariantSpecUncheckedUpdateOneWithoutProductVariantNestedInput.schema';
+import { ClaspVariantSpecUncheckedUpdateOneWithoutProductVariantNestedInputObjectSchema as ClaspVariantSpecUncheckedUpdateOneWithoutProductVariantNestedInputObjectSchema } from './ClaspVariantSpecUncheckedUpdateOneWithoutProductVariantNestedInput.schema';
+import { WatchStrapInstallationUncheckedUpdateManyWithoutStrapVariantNestedInputObjectSchema as WatchStrapInstallationUncheckedUpdateManyWithoutStrapVariantNestedInputObjectSchema } from './WatchStrapInstallationUncheckedUpdateManyWithoutStrapVariantNestedInput.schema';
+import { StrapInventoryMovementUncheckedUpdateManyWithoutStrapVariantNestedInputObjectSchema as StrapInventoryMovementUncheckedUpdateManyWithoutStrapVariantNestedInputObjectSchema } from './StrapInventoryMovementUncheckedUpdateManyWithoutStrapVariantNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -44,7 +47,10 @@ const makeSchema = () => z.object({
   MaintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedUpdateManyWithoutProductVariantNestedInputObjectSchema).optional(),
   PartVariantSpec: z.lazy(() => PartVariantSpecUncheckedUpdateOneWithoutProductVariantNestedInputObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestUncheckedUpdateManyWithoutProductVariantNestedInputObjectSchema).optional(),
-  StrapVariantSpec: z.lazy(() => StrapVariantSpecUncheckedUpdateOneWithoutProductVariantNestedInputObjectSchema).optional()
+  StrapVariantSpec: z.lazy(() => StrapVariantSpecUncheckedUpdateOneWithoutProductVariantNestedInputObjectSchema).optional(),
+  ClaspVariantSpec: z.lazy(() => ClaspVariantSpecUncheckedUpdateOneWithoutProductVariantNestedInputObjectSchema).optional(),
+  strapInstallations: z.lazy(() => WatchStrapInstallationUncheckedUpdateManyWithoutStrapVariantNestedInputObjectSchema).optional(),
+  strapMovements: z.lazy(() => StrapInventoryMovementUncheckedUpdateManyWithoutStrapVariantNestedInputObjectSchema).optional()
 }).strict();
 export const ProductVariantUncheckedUpdateInputObjectSchema: z.ZodType<Prisma.ProductVariantUncheckedUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductVariantUncheckedUpdateInput>;
 export const ProductVariantUncheckedUpdateInputObjectZodSchema = makeSchema();

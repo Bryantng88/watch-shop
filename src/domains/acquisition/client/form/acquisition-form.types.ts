@@ -21,10 +21,21 @@ export type AcquisitionFormVendor = {
     phone?: string | null;
 };
 
+export type AcquisitionTradeInOrder = {
+    id: string;
+    refNo?: string | null;
+    status: string;
+    customerId?: string | null;
+    customerName: string;
+    customerPhone?: string | null;
+    productTitle?: string | null;
+};
+
 export type AcquisitionInlineSubmitPayload = {
     /** Default for the whole receipt; each item persists its own resolved segment. */
     audienceSegment: "MEN" | "WOMEN";
-    vendorId: string;
+    vendorId?: string;
+    sourceOrderId?: string | null;
     createdAt: string;
     currency: string;
     type: string;

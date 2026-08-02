@@ -29,7 +29,10 @@ export const ProductVariantInputSchema = z.object({
     PartVariantSpec: z.unknown().optional().nullable(),
     Product: z.unknown(),
     ServiceRequest: z.array(z.unknown()),
-    StrapVariantSpec: z.unknown().optional().nullable()
+    StrapVariantSpec: z.unknown().optional().nullable(),
+    ClaspVariantSpec: z.unknown().optional().nullable(),
+    strapInstallations: z.array(z.unknown()),
+    strapMovements: z.array(z.unknown())
 }).strict();
 
 export type ProductVariantInputType = z.infer<typeof ProductVariantInputSchema>;

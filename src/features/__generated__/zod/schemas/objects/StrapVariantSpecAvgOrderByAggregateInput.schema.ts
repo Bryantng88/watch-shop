@@ -4,7 +4,13 @@ import { SortOrderSchema } from '../enums/SortOrder.schema'
 
 const makeSchema = () => z.object({
   lugWidthMM: SortOrderSchema.optional(),
-  buckleWidthMM: SortOrderSchema.optional()
+  buckleWidthMM: SortOrderSchema.optional(),
+  claspWidthMM: SortOrderSchema.optional(),
+  minStockQty: SortOrderSchema.optional(),
+  targetStockQty: SortOrderSchema.optional(),
+  defaultFullLinks: SortOrderSchema.optional(),
+  defaultHalfLinks: SortOrderSchema.optional(),
+  defaultEndLinks: SortOrderSchema.optional()
 }).strict();
 export const StrapVariantSpecAvgOrderByAggregateInputObjectSchema: z.ZodType<Prisma.StrapVariantSpecAvgOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.StrapVariantSpecAvgOrderByAggregateInput>;
 export const StrapVariantSpecAvgOrderByAggregateInputObjectZodSchema = makeSchema();

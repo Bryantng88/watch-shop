@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WatchStrapInstallationSelectObjectSchema as WatchStrapInstallationSelectObjectSchema } from './objects/WatchStrapInstallationSelect.schema';
+import { WatchStrapInstallationIncludeObjectSchema as WatchStrapInstallationIncludeObjectSchema } from './objects/WatchStrapInstallationInclude.schema';
+import { WatchStrapInstallationWhereUniqueInputObjectSchema as WatchStrapInstallationWhereUniqueInputObjectSchema } from './objects/WatchStrapInstallationWhereUniqueInput.schema';
+import { WatchStrapInstallationCreateInputObjectSchema as WatchStrapInstallationCreateInputObjectSchema } from './objects/WatchStrapInstallationCreateInput.schema';
+import { WatchStrapInstallationUncheckedCreateInputObjectSchema as WatchStrapInstallationUncheckedCreateInputObjectSchema } from './objects/WatchStrapInstallationUncheckedCreateInput.schema';
+import { WatchStrapInstallationUpdateInputObjectSchema as WatchStrapInstallationUpdateInputObjectSchema } from './objects/WatchStrapInstallationUpdateInput.schema';
+import { WatchStrapInstallationUncheckedUpdateInputObjectSchema as WatchStrapInstallationUncheckedUpdateInputObjectSchema } from './objects/WatchStrapInstallationUncheckedUpdateInput.schema';
+
+export const WatchStrapInstallationUpsertOneSchema: z.ZodType<Prisma.WatchStrapInstallationUpsertArgs> = z.object({ select: WatchStrapInstallationSelectObjectSchema.optional(), include: WatchStrapInstallationIncludeObjectSchema.optional(), where: WatchStrapInstallationWhereUniqueInputObjectSchema, create: z.union([ WatchStrapInstallationCreateInputObjectSchema, WatchStrapInstallationUncheckedCreateInputObjectSchema ]), update: z.union([ WatchStrapInstallationUpdateInputObjectSchema, WatchStrapInstallationUncheckedUpdateInputObjectSchema ]) }).strict() as unknown as z.ZodType<Prisma.WatchStrapInstallationUpsertArgs>;
+
+export const WatchStrapInstallationUpsertOneZodSchema = z.object({ select: WatchStrapInstallationSelectObjectSchema.optional(), include: WatchStrapInstallationIncludeObjectSchema.optional(), where: WatchStrapInstallationWhereUniqueInputObjectSchema, create: z.union([ WatchStrapInstallationCreateInputObjectSchema, WatchStrapInstallationUncheckedCreateInputObjectSchema ]), update: z.union([ WatchStrapInstallationUpdateInputObjectSchema, WatchStrapInstallationUncheckedUpdateInputObjectSchema ]) }).strict();

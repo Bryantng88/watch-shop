@@ -5,6 +5,24 @@ import type {
 
 const WORK_TYPES: WorkTypeDefinition[] = [
   {
+    key: "strap-processing",
+    title: "Xử lý dây",
+    coordinationContext: "OPERATION",
+    icon: "link",
+    defaultOwnerRole: "OPERATION",
+    defaultParticipants: ["OPERATION", "TECHNICAL"],
+    workflowKey: null,
+    routingKeys: ["strap-processing", "strap", "watch-strap"],
+    enabled: true,
+    sortOrder: 25,
+    metadata: {
+      workspaceType: "strap-processing",
+      itemLabel: "Dây / khóa",
+      defaultView: "items",
+      stages: ["INTAKE", "CLASSIFY", "INSPECT", "PROCESSING", "READY", "COMPLETED"],
+    },
+  },
+  {
     key: "publish",
     title: "Đăng bài",
     coordinationContext: "MEDIA",

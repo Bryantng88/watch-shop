@@ -84,6 +84,37 @@ same transaction. Projection building still occurs after commit.
 - Projection maintenance drains consumer deliveries before projection
   deliveries, providing recovery when the runtime callback does not run.
 
+### Managed transaction boundary
+
+Commands that write business truth and enqueue events in the same Prisma
+transaction must use `runBusinessEventTransaction()`.
+
+The wrapper owns the complete command boundary:
+
+```text
+runBusinessEventTransaction
+  -> open owning Prisma transaction
+  -> write business truth
+  -> enqueue BusinessEventLog and durable delivery rows
+  -> collect projectionDeliveryKey with delivery.track(event)
+  -> commit
+  -> schedule the exact operation keys with Next.js after(), or
+     process them synchronously when no scheduler is supplied
+```
+
+An emitter called with a `TransactionClient` never owns after-commit dispatch.
+It only enqueues durable state. Calling `revalidatePath()` or `router.refresh()`
+does not satisfy the delivery contract.
+
+Direct event emitters inside a raw `prisma.$transaction()` are prohibited for
+new code. `npm run check:business-event-after-commit` enforces this rule. The
+small reviewed legacy list contains producers that already forward an explicit
+after-commit scheduler or drain returned delivery keys; it must only shrink.
+
+The recurring projection-maintenance worker remains the recovery layer. It is
+not the normal immediate runner: a successful interactive command must attempt
+its exact delivery without waiting for cron.
+
 ## Compatibility
 
 The existing `ProjectionEventDelivery` remains the public progress handle.

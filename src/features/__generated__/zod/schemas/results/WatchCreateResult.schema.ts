@@ -35,5 +35,6 @@ export const WatchCreateResultSchema = z.object({
   watchSpecV2: z.unknown().optional(),
   reviewStates: z.array(z.unknown()),
   tasks: z.array(z.unknown()),
-  workCases: z.array(z.unknown())
+  workCases: z.array(z.unknown()),
+  strapInstallations: z.array(z.unknown())
 });

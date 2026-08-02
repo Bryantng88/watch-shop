@@ -52,6 +52,10 @@ export type StrapSpecInput = {
     color?: string | null;
     quickRelease?: boolean | null;
     sellPrice?: number | null;
+    originType?: "OEM" | "AFTERMARKET" | null;
+    brandName?: string | null;
+    leatherType?: string | null;
+    surface?: "SMOOTH" | "GRAINED" | null;
 };
 
 export type AcquisitionAiMeta = {
@@ -115,6 +119,10 @@ export function stringifyAcquisitionItemMeta(input: {
             quickRelease:
                 input.strapSpec.quickRelease == null ? undefined : Boolean(input.strapSpec.quickRelease),
             sellPrice: normalizeNumber(input.strapSpec.sellPrice),
+            originType: input.strapSpec.originType ?? "AFTERMARKET",
+            brandName: input.strapSpec.brandName ?? null,
+            leatherType: input.strapSpec.leatherType ?? null,
+            surface: input.strapSpec.surface ?? null,
         }
         : undefined;
 

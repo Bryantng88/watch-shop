@@ -24,6 +24,7 @@ import { publishOrderMutation } from "../events";
 import type { BusinessEventDispatchOptions } from "@/domains/event/server/business-event.service";
 import { publishShipmentMutation } from "@/domains/shipment/server/events";
 import { publishPaymentMutations } from "@/domains/payment/server";
+import { emitAcquisitionBusinessEvent } from "@/domains/acquisition/server";
 
 async function resolveCustomer(tx: Prisma.TransactionClient, input: CreateOrderInput) {
   const shipPhone = norm(input.shipPhone);
@@ -283,7 +284,54 @@ function normalizeCreateInput(raw: any): CreateOrderInput {
       taxRate: item.taxRate == null ? null : Number(item.taxRate),
       createdFromFlow: item.createdFromFlow ?? raw.quickFlowType ?? "STANDARD",
     })),
+    tradeIn: raw.tradeIn
+      ? {
+        productId: norm(raw.tradeIn.productId),
+        title: norm(raw.tradeIn.title) || "Đồng hồ trade-in",
+        amount: Number(raw.tradeIn.amount ?? 0),
+        notes: norm(raw.tradeIn.notes) || null,
+        audienceSegment: raw.tradeIn.audienceSegment === "WOMEN" ? "WOMEN" : "MEN",
+      }
+      : null,
   };
+}
+
+async function assertTradeInWatchBelongsToCustomer(
+  tx: Prisma.TransactionClient,
+  input: { productId?: string | null; customerId: string; excludeAcquisitionId?: string | null },
+) {
+  const productId = norm(input.productId);
+  if (!productId) return;
+
+  const soldItem = await tx.orderItem.findFirst({
+    where: {
+      productId,
+      order: {
+        customerId: input.customerId,
+        status: { notIn: [OrderStatus.DRAFT, OrderStatus.CANCELLED] },
+      },
+      product: { watch: { saleStage: "SOLD" } },
+    },
+    select: { id: true },
+  });
+  if (!soldItem) {
+    throw new Error("Watch trade-in không phải đồng hồ SOLD từng bán cho khách hàng này.");
+  }
+
+  const openAcquisition = await tx.acquisitionItem.findFirst({
+    where: {
+      productId,
+      acquisition: {
+        id: input.excludeAcquisitionId ? { not: input.excludeAcquisitionId } : undefined,
+        accquisitionStt: "DRAFT",
+        type: { in: ["TRADE_IN", "BUY_BACK"] },
+      },
+    },
+    select: { acquisition: { select: { refNo: true, id: true } } },
+  });
+  if (openAcquisition) {
+    throw new Error(`Watch đã có phiếu thu lại đang mở (${openAcquisition.acquisition.refNo ?? openAcquisition.acquisition.id}).`);
+  }
 }
 
 export async function createOrderWithItems(
@@ -292,6 +340,9 @@ export async function createOrderWithItems(
 ) {
   const input = normalizeCreateInput(raw);
   assertValidReserveBusiness(input);
+  if (input.tradeIn && input.tradeIn.amount <= 0) {
+    throw new Error("Giá thu vào của trade-in phải lớn hơn 0.");
+  }
   if (!input.customerName) throw new Error("Thiếu tên khách hàng");
   if (!input.items.length) throw new Error("Phải có ít nhất 1 dòng sản phẩm / dịch vụ");
 
@@ -365,6 +416,49 @@ export async function createOrderWithItems(
     assertPositiveOrderSubtotal(subtotal);
 
     await updateOrderSubtotalRepo(tx as any, order.id, subtotal);
+    let tradeInAcquisitionId: string | null = null;
+    if (input.tradeIn) {
+      if (!customerId) {
+        throw new Error("Trade-in cần khách hàng có số điện thoại để tạo hồ sơ thu mua.");
+      }
+
+      await assertTradeInWatchBelongsToCustomer(tx, {
+        productId: input.tradeIn.productId,
+        customerId,
+      });
+
+      const sourceOrderItem = rows.find((row: any) => row.kind === "PRODUCT") ?? rows[0];
+      const acquisition = await tx.acquisition.create({
+        data: {
+          vendorId: null,
+          customerId,
+          type: "TRADE_IN",
+          acquiredAt: input.orderDate ? new Date(input.orderDate) : new Date(),
+          currency: "VND",
+          accquisitionStt: "DRAFT",
+          totalAmount: new Prisma.Decimal(input.tradeIn.amount),
+          notes: input.tradeIn.notes,
+          audienceSegment: input.tradeIn.audienceSegment,
+        },
+        select: { id: true },
+      });
+      tradeInAcquisitionId = acquisition.id;
+
+      await tx.acquisitionItem.create({
+        data: {
+          acquisitionId: acquisition.id,
+          productId: input.tradeIn.productId ?? null,
+          sourceOrderItemId: sourceOrderItem?.id ?? null,
+          productTitle: input.tradeIn.title,
+          audienceSegment: input.tradeIn.audienceSegment,
+          quantity: 1,
+          unitCost: new Prisma.Decimal(input.tradeIn.amount),
+          productType: "WATCH",
+          capitalizeToProduct: true,
+          notes: input.tradeIn.notes,
+        },
+      });
+    }
     const inventoryOutcomes = resolvedProducts
       .filter((product) => product.productType === "WATCH")
       .map((product) => ({
@@ -381,7 +475,7 @@ export async function createOrderWithItems(
     );
     if (shouldPostAfterCreate) {
       const posted = await postOneOrderTx(tx, order.id);
-      return toPlain({ ...posted, inventoryOutcomes });
+      return toPlain({ ...posted, inventoryOutcomes, tradeInAcquisitionId });
     }
 
     return toPlain({
@@ -389,6 +483,7 @@ export async function createOrderWithItems(
       status: OrderStatus.DRAFT,
       refNo,
       inventoryOutcomes,
+      tradeInAcquisitionId,
     });
   });
   await publishOrderMutation({
@@ -399,6 +494,14 @@ export async function createOrderWithItems(
     toStatus: String(result.status),
     source: "ORDER_CREATE",
   }, runtime);
+  if (result.tradeInAcquisitionId) {
+    await emitAcquisitionBusinessEvent(prisma, {
+      eventKey: "acquisition.created",
+      acquisitionId: result.tradeInAcquisitionId,
+      payload: { source: "ORDER_TRADE_IN", orderId: result.id },
+      deferConsumers: runtime?.deferConsumers,
+    });
+  }
   if ("shipment" in result && result.shipment) {
     await publishShipmentMutation({
       eventKey: "shipment.created",
@@ -431,6 +534,15 @@ export async function updateOrderDraft(orderId: string, input: OrderDraftInput) 
   const reserveType = normalizeReserveType(input.reserve?.type);
   const normalizedInput: OrderDraftInput = {
     ...input,
+    tradeIn: input.tradeIn
+      ? {
+        productId: norm(input.tradeIn.productId),
+        title: norm(input.tradeIn.title) || "Đồng hồ trade-in",
+        amount: Number(input.tradeIn.amount ?? 0),
+        notes: norm(input.tradeIn.notes) || null,
+        audienceSegment: input.tradeIn.audienceSegment === "WOMEN" ? "WOMEN" : "MEN",
+      }
+      : null,
     hasShipment: reserveType === ReserveType.COD ? true : input.hasShipment,
     paymentMethod:
       reserveType === ReserveType.COD
@@ -447,6 +559,29 @@ export async function updateOrderDraft(orderId: string, input: OrderDraftInput) 
 
   const result = await prisma.$transaction(async (tx) => {
     await assertCanEditOrderDraftRepo(tx as any, orderId);
+
+    const existingTradeIn = await tx.acquisition.findFirst({
+      where: {
+        type: "TRADE_IN",
+        acquisitionItem: { some: { orderItem: { orderId } } },
+      },
+      orderBy: { createdAt: "desc" },
+      include: {
+        acquisitionItem: {
+          orderBy: { createdAt: "asc" },
+          take: 1,
+        },
+      },
+    });
+
+    if (existingTradeIn?.accquisitionStt === "DRAFT" && !normalizedInput.tradeIn) {
+      await tx.acquisition.delete({ where: { id: existingTradeIn.id } });
+    } else if (existingTradeIn) {
+      await tx.acquisitionItem.updateMany({
+        where: { acquisitionId: existingTradeIn.id },
+        data: { sourceOrderItemId: null },
+      });
+    }
 
     const beforeItems = await tx.orderItem.findMany({
       where: { orderId },
@@ -465,14 +600,101 @@ export async function updateOrderDraft(orderId: string, input: OrderDraftInput) 
       currentOrderId: orderId,
     });
 
-    const result = await replaceOrderDraftRepo(tx as any, orderId, normalizedInput);
+    const updatedOrder = await replaceOrderDraftRepo(tx as any, orderId, normalizedInput);
+
+    let tradeInMutation: { id: string; eventKey: "acquisition.created" | "acquisition.updated" } | null = null;
+    if (normalizedInput.tradeIn) {
+      if (normalizedInput.tradeIn.amount <= 0) {
+        throw new Error("Giá thu vào của trade-in phải lớn hơn 0.");
+      }
+
+      const customerId = await resolveCustomer(tx, normalizedInput as unknown as CreateOrderInput);
+      if (!customerId) {
+        throw new Error("Trade-in cần khách hàng có số điện thoại để tạo hồ sơ thu mua.");
+      }
+      await assertTradeInWatchBelongsToCustomer(tx, {
+        productId: normalizedInput.tradeIn.productId,
+        customerId,
+        excludeAcquisitionId: existingTradeIn?.id,
+      });
+      await tx.order.update({ where: { id: orderId }, data: { customerId } });
+
+      const sourceOrderItem = await tx.orderItem.findFirst({
+        where: { orderId, kind: "PRODUCT" },
+        orderBy: { createdAt: "asc" },
+        select: { id: true },
+      }) ?? await tx.orderItem.findFirst({
+        where: { orderId },
+        orderBy: { createdAt: "asc" },
+        select: { id: true },
+      });
+
+      if (existingTradeIn) {
+        if (existingTradeIn.accquisitionStt !== "DRAFT") {
+          throw new Error("Phiếu trade-in đã được duyệt nên không thể sửa từ Order.");
+        }
+        await tx.acquisition.update({
+          where: { id: existingTradeIn.id },
+          data: {
+            customerId,
+            totalAmount: new Prisma.Decimal(normalizedInput.tradeIn.amount),
+            notes: normalizedInput.tradeIn.notes,
+            audienceSegment: normalizedInput.tradeIn.audienceSegment,
+          },
+        });
+        const item = existingTradeIn.acquisitionItem[0];
+        if (item) {
+          await tx.acquisitionItem.update({
+            where: { id: item.id },
+            data: {
+              sourceOrderItemId: sourceOrderItem?.id ?? null,
+              productId: normalizedInput.tradeIn.productId ?? null,
+              productTitle: normalizedInput.tradeIn.title,
+              unitCost: new Prisma.Decimal(normalizedInput.tradeIn.amount),
+              notes: normalizedInput.tradeIn.notes,
+              audienceSegment: normalizedInput.tradeIn.audienceSegment,
+            },
+          });
+        }
+        tradeInMutation = { id: existingTradeIn.id, eventKey: "acquisition.updated" };
+      } else {
+        const acquisition = await tx.acquisition.create({
+          data: {
+            vendorId: null,
+            customerId,
+            type: "TRADE_IN",
+            acquiredAt: new Date(),
+            currency: "VND",
+            accquisitionStt: "DRAFT",
+            totalAmount: new Prisma.Decimal(normalizedInput.tradeIn.amount),
+            notes: normalizedInput.tradeIn.notes,
+            audienceSegment: normalizedInput.tradeIn.audienceSegment,
+            acquisitionItem: {
+              create: {
+                sourceOrderItemId: sourceOrderItem?.id ?? null,
+                productId: normalizedInput.tradeIn.productId ?? null,
+                productTitle: normalizedInput.tradeIn.title,
+                audienceSegment: normalizedInput.tradeIn.audienceSegment,
+                quantity: 1,
+                unitCost: new Prisma.Decimal(normalizedInput.tradeIn.amount),
+                productType: "WATCH",
+                capitalizeToProduct: true,
+                notes: normalizedInput.tradeIn.notes,
+              },
+            },
+          },
+          select: { id: true },
+        });
+        tradeInMutation = { id: acquisition.id, eventKey: "acquisition.created" };
+      }
+    }
 
     await syncWatchInventoryFromOrders(tx, [
       ...beforeItems.map((item) => item.productId),
       ...normalizedInput.items.map((item) => item.productId),
     ]);
 
-    return result;
+    return { ...updatedOrder, tradeInMutation };
   });
   await publishOrderMutation({
     eventKey: "order.updated",
@@ -480,5 +702,12 @@ export async function updateOrderDraft(orderId: string, input: OrderDraftInput) 
     toStatus: "DRAFT",
     source: "ORDER_DRAFT_UPDATE",
   });
+  if (result.tradeInMutation) {
+    await emitAcquisitionBusinessEvent(prisma, {
+      eventKey: result.tradeInMutation.eventKey,
+      acquisitionId: result.tradeInMutation.id,
+      payload: { source: "ORDER_TRADE_IN_EDIT", orderId },
+    });
+  }
   return result;
 }

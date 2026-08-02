@@ -1056,7 +1056,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                         )}
 
                         <Link
-                            href={isStrapCatalog ? "/admin/acquisitions/new?focus=strap" : "/admin/products/new"}
+                            href={isStrapCatalog ? "/admin/acquisitions/straps/new" : "/admin/products/new"}
                             className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-900 bg-slate-900 px-4 text-sm font-medium text-white transition hover:bg-slate-800"
                         >
                             {isStrapCatalog ? "+ Nhập dây" : "+ Tạo sản phẩm"}

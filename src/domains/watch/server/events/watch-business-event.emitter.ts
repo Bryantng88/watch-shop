@@ -335,6 +335,46 @@ export async function emitWatchPostedEvent(
   }, options);
 }
 
+export async function emitWatchBoughtBackEvent(
+  db: DB,
+  input: {
+    watch: {
+      id: string;
+      productId: string;
+      saleStage?: unknown;
+    };
+    acquisitionId: string;
+    acquisitionType: "BUY_BACK" | "TRADE_IN";
+    unitCost: number;
+    sourceOrderItemId?: string | null;
+    actorUserId?: string | null;
+    deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
+  },
+) {
+  return recordBusinessEvent(db, {
+    eventKey: "watch.bought_back",
+    targetType: "WATCH",
+    targetId: input.watch.id,
+    targetAliasIds: [
+      input.watch.id,
+      input.watch.productId,
+      input.acquisitionId,
+      input.sourceOrderItemId,
+    ].filter((value): value is string => Boolean(value)),
+    actorUserId: input.actorUserId ?? null,
+    payload: {
+      watchId: input.watch.id,
+      productId: input.watch.productId,
+      saleStage: input.watch.saleStage ?? null,
+      acquisitionId: input.acquisitionId,
+      acquisitionType: input.acquisitionType,
+      unitCost: input.unitCost,
+      sourceOrderItemId: input.sourceOrderItemId ?? null,
+      sourceAction: "BUY_BACK",
+    },
+  }, { deferConsumers: input.deferConsumers });
+}
+
 export {
   watchReviewEventKey,
   type WatchReviewSourceAction,

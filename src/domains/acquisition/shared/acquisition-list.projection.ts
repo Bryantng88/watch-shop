@@ -23,6 +23,7 @@ export type AcquisitionListProjectionRow = {
     acquisitionType: string;
     currency: string;
     itemCount: number;
+    productTypes: string[];
     linkedWatchCount: number;
     totalAmount: number | null;
     notes: string;

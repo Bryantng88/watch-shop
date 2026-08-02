@@ -41,6 +41,9 @@ function conditions(input: AcquisitionListFilters) {
   }
   if (clean(input.vendorId)) result.push(Prisma.sql`"dataJson"->>'vendorId' = ${clean(input.vendorId)}`);
   if (clean(input.type)) result.push(Prisma.sql`"dataJson"->>'acquisitionType' = ${clean(input.type)}`);
+  if (input.productScope === "ACCESSORY_ONLY") {
+    result.push(Prisma.sql`jsonb_array_length(COALESCE("dataJson"->'productTypes', '[]'::jsonb)) > 0 AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(COALESCE("dataJson"->'productTypes', '[]'::jsonb)) AS p(value) WHERE p.value NOT IN ('WATCH_STRAP', 'WATCH_CLASP'))`);
+  }
   return result;
 }
 

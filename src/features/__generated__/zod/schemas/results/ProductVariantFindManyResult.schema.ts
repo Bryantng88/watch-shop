@@ -26,7 +26,10 @@ export const ProductVariantFindManyResultSchema = z.object({
   PartVariantSpec: z.unknown().optional(),
   Product: z.unknown(),
   ServiceRequest: z.array(z.unknown()),
-  StrapVariantSpec: z.unknown().optional()
+  StrapVariantSpec: z.unknown().optional(),
+  ClaspVariantSpec: z.unknown().optional(),
+  strapInstallations: z.array(z.unknown()),
+  strapMovements: z.array(z.unknown())
 })),
   pagination: z.object({
   page: z.number().int().min(1),

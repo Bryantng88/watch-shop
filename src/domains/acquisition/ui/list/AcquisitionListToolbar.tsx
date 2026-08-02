@@ -54,11 +54,13 @@ export default function AcquisitionListToolbar({
     total,
     visibleCount,
     selectedCount,
+    strapOnly = false,
 }: {
     vendors: AcquisitionVendorOption[];
     total: number;
     visibleCount: number;
     selectedCount: number;
+    strapOnly?: boolean;
 }) {
     const router = useRouter();
     const pathname = usePathname();
@@ -141,11 +143,11 @@ export default function AcquisitionListToolbar({
                         </span>
                     ) : null}
                     <Link
-                        href="/admin/acquisitions/new"
+                        href={strapOnly ? "/admin/acquisitions/accessories/new" : "/admin/acquisitions/new"}
                         className="inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-slate-950 px-3.5 text-sm font-semibold text-white transition hover:bg-slate-800"
                     >
                         <Plus className="h-4 w-4" />
-                        Tạo phiếu nhập
+                        {strapOnly ? "Tạo phiếu phụ kiện" : "Tạo phiếu nhập"}
                     </Link>
                 </>
             }

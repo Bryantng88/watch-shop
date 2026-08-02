@@ -258,6 +258,24 @@ export function mapWatchDetail(row: any): WatchDetailModel {
             }
             : null,
 
+        strapInstallation: row.strapInstallations?.[0]
+            ? {
+                id: row.strapInstallations[0].id,
+                variantId: row.strapInstallations[0].strapVariantId,
+                ownershipMode: row.strapInstallations[0].ownershipMode,
+                installedAt: row.strapInstallations[0].installedAt,
+                installedFullLinks: row.strapInstallations[0].installedFullLinks,
+                installedHalfLinks: row.strapInstallations[0].installedHalfLinks,
+                spareFullLinks: row.strapInstallations[0].spareFullLinks,
+                spareHalfLinks: row.strapInstallations[0].spareHalfLinks,
+                endLinkCount: row.strapInstallations[0].endLinkCount,
+                wristSizeMM: row.strapInstallations[0].wristSizeMM,
+                title: row.strapInstallations[0].strapVariant?.Product?.title ?? null,
+                sku: row.strapInstallations[0].strapVariant?.sku ?? null,
+                spec: row.strapInstallations[0].strapVariant?.StrapVariantSpec ?? null,
+            }
+            : null,
+
         price: row.watchPrice
             ? {
                 costPrice: decimalToString(row.watchPrice.costPrice),

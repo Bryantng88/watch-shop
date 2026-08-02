@@ -9,7 +9,10 @@ import { MaintenanceRecordCreateNestedManyWithoutProductVariantInputObjectSchema
 import { PartVariantSpecCreateNestedOneWithoutProductVariantInputObjectSchema as PartVariantSpecCreateNestedOneWithoutProductVariantInputObjectSchema } from './PartVariantSpecCreateNestedOneWithoutProductVariantInput.schema';
 import { ProductCreateNestedOneWithoutProductVariantInputObjectSchema as ProductCreateNestedOneWithoutProductVariantInputObjectSchema } from './ProductCreateNestedOneWithoutProductVariantInput.schema';
 import { ServiceRequestCreateNestedManyWithoutProductVariantInputObjectSchema as ServiceRequestCreateNestedManyWithoutProductVariantInputObjectSchema } from './ServiceRequestCreateNestedManyWithoutProductVariantInput.schema';
-import { StrapVariantSpecCreateNestedOneWithoutProductVariantInputObjectSchema as StrapVariantSpecCreateNestedOneWithoutProductVariantInputObjectSchema } from './StrapVariantSpecCreateNestedOneWithoutProductVariantInput.schema'
+import { StrapVariantSpecCreateNestedOneWithoutProductVariantInputObjectSchema as StrapVariantSpecCreateNestedOneWithoutProductVariantInputObjectSchema } from './StrapVariantSpecCreateNestedOneWithoutProductVariantInput.schema';
+import { ClaspVariantSpecCreateNestedOneWithoutProductVariantInputObjectSchema as ClaspVariantSpecCreateNestedOneWithoutProductVariantInputObjectSchema } from './ClaspVariantSpecCreateNestedOneWithoutProductVariantInput.schema';
+import { WatchStrapInstallationCreateNestedManyWithoutStrapVariantInputObjectSchema as WatchStrapInstallationCreateNestedManyWithoutStrapVariantInputObjectSchema } from './WatchStrapInstallationCreateNestedManyWithoutStrapVariantInput.schema';
+import { StrapInventoryMovementCreateNestedManyWithoutStrapVariantInputObjectSchema as StrapInventoryMovementCreateNestedManyWithoutStrapVariantInputObjectSchema } from './StrapInventoryMovementCreateNestedManyWithoutStrapVariantInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -36,7 +39,10 @@ const makeSchema = () => z.object({
   PartVariantSpec: z.lazy(() => PartVariantSpecCreateNestedOneWithoutProductVariantInputObjectSchema).optional(),
   Product: z.lazy(() => ProductCreateNestedOneWithoutProductVariantInputObjectSchema),
   ServiceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutProductVariantInputObjectSchema),
-  StrapVariantSpec: z.lazy(() => StrapVariantSpecCreateNestedOneWithoutProductVariantInputObjectSchema).optional()
+  StrapVariantSpec: z.lazy(() => StrapVariantSpecCreateNestedOneWithoutProductVariantInputObjectSchema).optional(),
+  ClaspVariantSpec: z.lazy(() => ClaspVariantSpecCreateNestedOneWithoutProductVariantInputObjectSchema).optional(),
+  strapInstallations: z.lazy(() => WatchStrapInstallationCreateNestedManyWithoutStrapVariantInputObjectSchema),
+  strapMovements: z.lazy(() => StrapInventoryMovementCreateNestedManyWithoutStrapVariantInputObjectSchema)
 }).strict();
 export const ProductVariantCreateInputObjectSchema: z.ZodType<Prisma.ProductVariantCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductVariantCreateInput>;
 export const ProductVariantCreateInputObjectZodSchema = makeSchema();

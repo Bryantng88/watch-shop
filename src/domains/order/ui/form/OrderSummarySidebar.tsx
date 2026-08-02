@@ -10,6 +10,7 @@ import { fmtMoney } from "@/domains/order/ui/order-ui.helpers";
 type Props = {
     itemsCount: number;
     subtotal: number;
+    tradeInAmount?: number;
     isEdit?: boolean;
     canEdit?: boolean;
     submitting?: boolean;
@@ -21,6 +22,7 @@ type Props = {
 export default function OrderSummarySidebar({
     itemsCount,
     subtotal,
+    tradeInAmount = 0,
     isEdit,
     canEdit = true,
     submitting,
@@ -49,6 +51,21 @@ export default function OrderSummarySidebar({
                             {fmtMoney(subtotal)}
                         </div>
                     </div>
+
+                    {tradeInAmount > 0 ? (
+                        <div className="rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3">
+                            <div className="flex items-center justify-between gap-3 text-xs text-violet-700">
+                                <span>Giá trị trade-in</span>
+                                <span className="font-semibold">− {fmtMoney(tradeInAmount)}</span>
+                            </div>
+                            <div className="mt-3 border-t border-violet-200 pt-3">
+                                <div className="text-xs text-violet-600">Chênh lệch giao dịch dự kiến</div>
+                                <div className="mt-1 text-lg font-semibold text-violet-950">
+                                    {fmtMoney(Math.max(0, subtotal - tradeInAmount))}
+                                </div>
+                            </div>
+                        </div>
+                    ) : null}
 
                     <Button
                         type="button"

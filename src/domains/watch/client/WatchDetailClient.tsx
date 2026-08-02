@@ -10,6 +10,7 @@ import WatchPricingPanel from "../ui/detail/WatchPricingPanel";
 import WatchContentPanel from "../ui/detail/WatchContentPanel";
 import WatchServicePanel from "../ui/detail/WatchServicePanel";
 import WatchTradePanel from "../ui/detail/WatchTradePanel";
+import WatchStrapPanel from "../ui/detail/WatchStrapPanel";
 import { ADMIN_DETAIL_CONTENT_CLASS } from "@/domains/shared/ui/layout/admin-content";
 
 type Props = {
@@ -131,6 +132,7 @@ export default function WatchDetailClient({
                         detail={detail}
                         canViewTradeFinancials={canViewTradeFinancials}
                     />
+                    <WatchStrapPanel detail={detail} />
                     <WatchTradePanel
                         tradeHistory={tradeHistory}
                         canViewTradeFinancials={canViewTradeFinancials}

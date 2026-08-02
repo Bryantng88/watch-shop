@@ -2,7 +2,8 @@ import { AudienceSegment, Prisma, type AcquisitionType } from "@prisma/client";
 import { type DB, dbOrTx } from "@/server/db/client";
 
 export type CreateDraftInput = {
-    vendorId: string;
+    vendorId?: string | null;
+    customerId?: string | null;
     currency?: string;
     type?: AcquisitionType;
     createdAt?: Date;
@@ -65,11 +66,15 @@ export async function ensureVendorExists(tx: DB, vendorId: string) {
 export async function createDraft(tx: DB, input: CreateDraftInput) {
     const db = getDb(tx);
 
-    await ensureVendorExists(tx, input.vendorId);
+    if (input.vendorId) await ensureVendorExists(tx, input.vendorId);
+    if (!input.vendorId && !input.customerId) {
+        throw new Error("Phiếu nhập cần vendor hoặc customer");
+    }
 
     return db.acquisition.create({
         data: {
             vendorId: input.vendorId,
+            customerId: input.customerId ?? null,
             acquiredAt: input.createdAt ?? new Date(),
             currency: input.currency ?? "VND",
             accquisitionStt: "DRAFT",

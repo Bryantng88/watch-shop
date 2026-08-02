@@ -349,7 +349,11 @@ export async function createConsignToFromProduct(input: {
     return result;
 }
 
-export async function restoreBuyBackWatchAfterAcquisitionPostTx(tx: DB, acquisitionId: string) {
+export async function restoreBuyBackWatchAfterAcquisitionPostTx(
+    tx: DB,
+    acquisitionId: string,
+    options?: { tradeInProductIds?: string[] },
+) {
     const db = dbOrTx(tx);
 
     const acquisition = await db.acquisition.findUnique({
@@ -362,22 +366,35 @@ export async function restoreBuyBackWatchAfterAcquisitionPostTx(tx: DB, acquisit
                 select: {
                     id: true,
                     productId: true,
+                    unitCost: true,
+                    sourceOrderItemId: true,
                 },
             },
         },
     });
 
-    if (!acquisition || acquisition.type !== AcquisitionType.BUY_BACK) {
+    if (
+        !acquisition ||
+        (acquisition.type !== AcquisitionType.BUY_BACK && acquisition.type !== AcquisitionType.TRADE_IN)
+    ) {
         return null;
     }
 
+    const eligibleTradeInIds = new Set(options?.tradeInProductIds ?? []);
     const productIds = acquisition.acquisitionItem
         .map((item) => item.productId)
-        .filter((id): id is string => Boolean(id));
+        .filter((id): id is string => Boolean(id))
+        .filter((id) => acquisition.type === AcquisitionType.BUY_BACK || eligibleTradeInIds.has(id));
 
     if (!productIds.length) return null;
 
-    const updated: Array<{ productId: string; saleStage: WatchSaleStage }> = [];
+    const updated: Array<{
+        watchId: string;
+        productId: string;
+        saleStage: WatchSaleStage;
+        unitCost: number;
+        sourceOrderItemId: string | null;
+    }> = [];
 
     for (const productId of productIds) {
         const watch = await db.watch.findUnique({
@@ -412,7 +429,14 @@ export async function restoreBuyBackWatchAfterAcquisitionPostTx(tx: DB, acquisit
             },
         });
 
-        updated.push({ productId, saleStage: nextSaleStage });
+        const sourceItem = acquisition.acquisitionItem.find((item) => item.productId === productId);
+        updated.push({
+            watchId: watch.id,
+            productId,
+            saleStage: nextSaleStage,
+            unitCost: Number(sourceItem?.unitCost ?? 0),
+            sourceOrderItemId: sourceItem?.sourceOrderItemId ?? null,
+        });
     }
 
     return updated;

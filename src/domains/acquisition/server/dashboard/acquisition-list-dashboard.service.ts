@@ -21,9 +21,18 @@ function statusLabel(status: string) {
 
 export async function getAcquisitionListDashboard(
     audienceSegment?: "MEN" | "WOMEN",
+    productScope?: "ACCESSORY_ONLY",
 ): Promise<BusinessListDashboardData> {
     const rows = await prisma.acquisition.findMany({
-        where: audienceSegment ? { audienceSegment } : undefined,
+        where: {
+            ...(audienceSegment ? { audienceSegment } : {}),
+            ...(productScope === "ACCESSORY_ONLY" ? {
+                acquisitionItem: {
+                    some: { productType: { in: ["WATCH_STRAP" as const, "WATCH_CLASP" as const] } },
+                    every: { productType: { in: ["WATCH_STRAP" as const, "WATCH_CLASP" as const] } },
+                },
+            } : {}),
+        },
         orderBy: { updatedAt: "desc" },
         select: {
             id: true,

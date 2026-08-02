@@ -11,6 +11,7 @@ export const WATCH_ACTIVITY_LABELS: Record<string, string> = {
   "watch.image.unapproved": "Đã thu hồi duyệt hình ảnh",
   "watch.spec.updated": "Đã cập nhật thông số",
   "watch.price.updated": "Đã cập nhật giá",
+  "watch.bought_back": "Đã thu lại đồng hồ",
   "watch.media.photoshoot.requested": "Đã gửi sang chụp ảnh",
   "watch.media.photoshoot.completed": "Đã hoàn tất chụp ảnh",
   "watch.media.asset.attached": "Đã đưa vào xử lý Media",

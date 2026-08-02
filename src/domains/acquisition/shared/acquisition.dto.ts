@@ -1,4 +1,4 @@
-import type { AcquisitionType, AudienceSegment } from "@prisma/client";
+import type { AcquisitionType, AudienceSegment, ProductType } from "@prisma/client";
 
 export type WatchItemInput = {
     id: string;
@@ -17,6 +17,10 @@ export type WatchItemInput = {
         }>;
         aiHint?: string | null;
     };
+    sourceOrderItemId?: string | null;
+    productType?: ProductType;
+    strapSpec?: Record<string, unknown> | null;
+    claspSpec?: Record<string, unknown> | null;
 };
 
 export type CreateAcquisitionInput = {
@@ -27,5 +31,6 @@ export type CreateAcquisitionInput = {
     createdAt?: string;
     notes?: string | null;
     audienceSegment?: AudienceSegment;
+    sourceOrderId?: string | null;
     items: WatchItemInput[];
 };

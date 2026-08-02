@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { StrapCatalogOptionOrderByWithRelationInputObjectSchema as StrapCatalogOptionOrderByWithRelationInputObjectSchema } from './objects/StrapCatalogOptionOrderByWithRelationInput.schema';
+import { StrapCatalogOptionWhereInputObjectSchema as StrapCatalogOptionWhereInputObjectSchema } from './objects/StrapCatalogOptionWhereInput.schema';
+import { StrapCatalogOptionWhereUniqueInputObjectSchema as StrapCatalogOptionWhereUniqueInputObjectSchema } from './objects/StrapCatalogOptionWhereUniqueInput.schema';
+import { StrapCatalogOptionCountAggregateInputObjectSchema as StrapCatalogOptionCountAggregateInputObjectSchema } from './objects/StrapCatalogOptionCountAggregateInput.schema';
+
+export const StrapCatalogOptionCountSchema: z.ZodType<Prisma.StrapCatalogOptionCountArgs> = z.object({ orderBy: z.union([StrapCatalogOptionOrderByWithRelationInputObjectSchema, StrapCatalogOptionOrderByWithRelationInputObjectSchema.array()]).optional(), where: StrapCatalogOptionWhereInputObjectSchema.optional(), cursor: StrapCatalogOptionWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), StrapCatalogOptionCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.StrapCatalogOptionCountArgs>;
+
+export const StrapCatalogOptionCountZodSchema = z.object({ orderBy: z.union([StrapCatalogOptionOrderByWithRelationInputObjectSchema, StrapCatalogOptionOrderByWithRelationInputObjectSchema.array()]).optional(), where: StrapCatalogOptionWhereInputObjectSchema.optional(), cursor: StrapCatalogOptionWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), StrapCatalogOptionCountAggregateInputObjectSchema ]).optional() }).strict();

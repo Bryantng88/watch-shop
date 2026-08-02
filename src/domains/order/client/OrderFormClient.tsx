@@ -18,6 +18,7 @@ import {
   OrderNotesSection,
   OrderShipmentSection,
   OrderSummarySidebar,
+  OrderTradeInSection,
   buildInitialOrderFormValues,
   buildOrderPayload,
   canEditOrder,
@@ -521,6 +522,15 @@ export default function OrderFormClient({
             onRemoveItem={removeItem}
           />
 
+          <OrderTradeInSection
+            value={values.tradeIn}
+            customerId={values.customerId}
+            customerName={values.customerName}
+            customerPhone={values.shipPhone}
+            disabled={!canEdit}
+            onChange={(tradeIn) => patchValues({ tradeIn })}
+          />
+
           <OrderNotesSection
             value={values.notes}
             disabled={!canEdit}
@@ -531,6 +541,7 @@ export default function OrderFormClient({
         <OrderSummarySidebar
           itemsCount={values.items.length}
           subtotal={subtotal}
+          tradeInAmount={values.tradeIn?.amount ?? 0}
           isEdit={isEdit}
           canEdit={canEdit}
           submitting={submitting}

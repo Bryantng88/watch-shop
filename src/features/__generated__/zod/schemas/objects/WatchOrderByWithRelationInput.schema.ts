@@ -8,7 +8,8 @@ import { WatchPriceOrderByWithRelationInputObjectSchema as WatchPriceOrderByWith
 import { WatchSpecV2OrderByWithRelationInputObjectSchema as WatchSpecV2OrderByWithRelationInputObjectSchema } from './WatchSpecV2OrderByWithRelationInput.schema';
 import { WatchReviewStateOrderByRelationAggregateInputObjectSchema as WatchReviewStateOrderByRelationAggregateInputObjectSchema } from './WatchReviewStateOrderByRelationAggregateInput.schema';
 import { TaskOrderByRelationAggregateInputObjectSchema as TaskOrderByRelationAggregateInputObjectSchema } from './TaskOrderByRelationAggregateInput.schema';
-import { WorkCaseOrderByRelationAggregateInputObjectSchema as WorkCaseOrderByRelationAggregateInputObjectSchema } from './WorkCaseOrderByRelationAggregateInput.schema'
+import { WorkCaseOrderByRelationAggregateInputObjectSchema as WorkCaseOrderByRelationAggregateInputObjectSchema } from './WorkCaseOrderByRelationAggregateInput.schema';
+import { WatchStrapInstallationOrderByRelationAggregateInputObjectSchema as WatchStrapInstallationOrderByRelationAggregateInputObjectSchema } from './WatchStrapInstallationOrderByRelationAggregateInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -46,7 +47,8 @@ const makeSchema = () => z.object({
   watchSpecV2: z.lazy(() => WatchSpecV2OrderByWithRelationInputObjectSchema).optional(),
   reviewStates: z.lazy(() => WatchReviewStateOrderByRelationAggregateInputObjectSchema).optional(),
   tasks: z.lazy(() => TaskOrderByRelationAggregateInputObjectSchema).optional(),
-  workCases: z.lazy(() => WorkCaseOrderByRelationAggregateInputObjectSchema).optional()
+  workCases: z.lazy(() => WorkCaseOrderByRelationAggregateInputObjectSchema).optional(),
+  strapInstallations: z.lazy(() => WatchStrapInstallationOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const WatchOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.WatchOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchOrderByWithRelationInput>;
 export const WatchOrderByWithRelationInputObjectZodSchema = makeSchema();

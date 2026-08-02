@@ -20,6 +20,7 @@ import {
     Workflow,
     BellRing,
     Activity,
+    Link2,
 } from "lucide-react";
 
 import ActiveLink from "./AdminActiveLink";
@@ -43,6 +44,7 @@ type NavItem = {
     icon: ComponentType<{ size?: number; className?: string }>;
     exact?: boolean;
     permission?: string;
+    permissionsAny?: string[];
 };
 
 type NavGroup = {
@@ -77,10 +79,17 @@ const NAV: NavEntry[] = [
             },
             {
                 type: "item",
+                href: "/admin/straps",
+                label: "Phụ kiện",
+                icon: Link2,
+                permission: PERMISSIONS.PRODUCT_VIEW,
+            },
+            {
+                type: "item",
                 href: "/admin/acquisitions",
                 label: "Phiếu nhập",
                 icon: Tags,
-                permission: PERMISSIONS.ACQUISITION_VIEW,
+                permissionsAny: [PERMISSIONS.ACQUISITION_VIEW, PERMISSIONS.STRAP_ACQUISITION_VIEW],
             },
             {
                 type: "item",
@@ -183,6 +192,9 @@ function isCurrentRoute(pathname: string, item: NavItem) {
 }
 
 function canAccess(user: Props["user"], item: NavItem) {
+    if (item.permissionsAny?.length) {
+        return item.permissionsAny.some((permission) => user.permissions.includes(permission));
+    }
     return !item.permission || user.permissions.includes(item.permission);
 }
 

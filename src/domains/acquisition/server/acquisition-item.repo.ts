@@ -16,6 +16,10 @@ export type CreateOrUpdateAcqItemInput = {
     aiMeta?: any;
     pricing?: AcquisitionPricingMeta;
     audienceSegment?: AudienceSegment;
+    sourceOrderItemId?: string | null;
+    productType?: ProductType;
+    strapSpec?: Record<string, unknown> | null;
+    claspSpec?: Record<string, unknown> | null;
 };
 
 function getDb(tx?: DB) {
@@ -35,6 +39,8 @@ function buildItemDescription(input: CreateOrUpdateAcqItemInput) {
         quickSpec: input.quickSpec,
         aiMeta: input.aiMeta,
         pricing: input.pricing,
+        strapSpec: input.strapSpec ?? undefined,
+        claspSpec: input.claspSpec ?? undefined,
     });
 }
 
@@ -52,10 +58,11 @@ export async function createAcqItem(
             audienceSegment: item.audienceSegment ?? AudienceSegment.MEN,
             quantity: 1,
             unitCost: resolveItemUnitCost(item),
-            productType: ProductType.WATCH,
+            productType: item.productType ?? ProductType.WATCH,
             productId: null,
             variantId: null,
             description: buildItemDescription(item),
+            sourceOrderItemId: item.sourceOrderItemId ?? null,
         },
         select: {
             id: true,

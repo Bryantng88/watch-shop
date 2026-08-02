@@ -57,6 +57,19 @@ export function listCoordinationRoutes() {
 
 registerCoordinationRoutes([
   {
+    eventKey: "strap.intake.requested",
+    targetType: "STRAP",
+    coordinationType: "operation",
+    workTypeKey: "strap-processing",
+    enabled: true,
+    metadata: {
+      note: "Intake Strap into the established Strap Processing operation.",
+      scopeType: "CURRENT_ACTIVE_SPACE",
+      scopeContext: "OPERATION",
+      bindingMode: "INTAKE",
+    },
+  },
+  {
     eventKey: "service_request.created",
     targetType: "SERVICE_REQUEST",
     coordinationType: "technical",

@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WatchStrapInstallationOrderByWithRelationInputObjectSchema as WatchStrapInstallationOrderByWithRelationInputObjectSchema } from './objects/WatchStrapInstallationOrderByWithRelationInput.schema';
+import { WatchStrapInstallationWhereInputObjectSchema as WatchStrapInstallationWhereInputObjectSchema } from './objects/WatchStrapInstallationWhereInput.schema';
+import { WatchStrapInstallationWhereUniqueInputObjectSchema as WatchStrapInstallationWhereUniqueInputObjectSchema } from './objects/WatchStrapInstallationWhereUniqueInput.schema';
+import { WatchStrapInstallationCountAggregateInputObjectSchema as WatchStrapInstallationCountAggregateInputObjectSchema } from './objects/WatchStrapInstallationCountAggregateInput.schema';
+
+export const WatchStrapInstallationCountSchema: z.ZodType<Prisma.WatchStrapInstallationCountArgs> = z.object({ orderBy: z.union([WatchStrapInstallationOrderByWithRelationInputObjectSchema, WatchStrapInstallationOrderByWithRelationInputObjectSchema.array()]).optional(), where: WatchStrapInstallationWhereInputObjectSchema.optional(), cursor: WatchStrapInstallationWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), WatchStrapInstallationCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.WatchStrapInstallationCountArgs>;
+
+export const WatchStrapInstallationCountZodSchema = z.object({ orderBy: z.union([WatchStrapInstallationOrderByWithRelationInputObjectSchema, WatchStrapInstallationOrderByWithRelationInputObjectSchema.array()]).optional(), where: WatchStrapInstallationWhereInputObjectSchema.optional(), cursor: WatchStrapInstallationWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), WatchStrapInstallationCountAggregateInputObjectSchema ]).optional() }).strict();

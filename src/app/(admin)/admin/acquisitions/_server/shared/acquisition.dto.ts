@@ -53,6 +53,10 @@ export type StrapSpecInput = {
     color?: string;
     quickRelease?: boolean;
     sellPrice?: number;
+    originType?: "OEM" | "AFTERMARKET";
+    brandName?: string;
+    leatherType?: string;
+    surface?: "SMOOTH" | "GRAINED";
 };
 
 export type WatchFlagsInput = {
@@ -106,6 +110,10 @@ export const ItemDTO = z.object({
             color: z.string().optional(),
             quickRelease: z.boolean().optional(),
             sellPrice: z.number().optional(),
+            originType: z.enum(["OEM", "AFTERMARKET"]).optional(),
+            brandName: z.string().optional(),
+            leatherType: z.string().optional(),
+            surface: z.enum(["SMOOTH", "GRAINED"]).optional(),
         })
         .optional(),
     watchFlags: z

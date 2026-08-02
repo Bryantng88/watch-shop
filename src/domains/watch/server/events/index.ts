@@ -26,5 +26,6 @@ export {
   emitWatchSpecUpdatedEvent,
   emitWatchPublishAssetsDownloadedEvent,
   emitWatchPostedEvent,
+  emitWatchBoughtBackEvent,
   emitWatchReviewBusinessEvent,
 } from "./watch-business-event.emitter";

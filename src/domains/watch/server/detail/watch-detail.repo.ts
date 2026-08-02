@@ -29,6 +29,16 @@ export async function getAdminWatchRow(db: DB, productId: string) {
       watchPrice: true,
       watchContent: true,
       reviewStates: true,
+      strapInstallations: {
+        where: { removedAt: null },
+        orderBy: { installedAt: "desc" },
+        take: 1,
+        include: {
+          strapVariant: {
+            include: { Product: true, StrapVariantSpec: true },
+          },
+        },
+      },
 
     },
   });

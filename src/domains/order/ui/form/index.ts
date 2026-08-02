@@ -6,3 +6,4 @@ export { default as OrderShipmentSection } from "./OrderShipmentSection";
 export { default as OrderItemsSection } from "./OrderItemsSection";
 export { default as OrderNotesSection } from "./OrderNotesSection";
 export { default as OrderSummarySidebar } from "./OrderSummarySidebar";
+export { default as OrderTradeInSection } from "./OrderTradeInSection";

@@ -9,7 +9,10 @@ import { MaintenanceRecordOrderByRelationAggregateInputObjectSchema as Maintenan
 import { PartVariantSpecOrderByWithRelationInputObjectSchema as PartVariantSpecOrderByWithRelationInputObjectSchema } from './PartVariantSpecOrderByWithRelationInput.schema';
 import { ProductOrderByWithRelationInputObjectSchema as ProductOrderByWithRelationInputObjectSchema } from './ProductOrderByWithRelationInput.schema';
 import { ServiceRequestOrderByRelationAggregateInputObjectSchema as ServiceRequestOrderByRelationAggregateInputObjectSchema } from './ServiceRequestOrderByRelationAggregateInput.schema';
-import { StrapVariantSpecOrderByWithRelationInputObjectSchema as StrapVariantSpecOrderByWithRelationInputObjectSchema } from './StrapVariantSpecOrderByWithRelationInput.schema'
+import { StrapVariantSpecOrderByWithRelationInputObjectSchema as StrapVariantSpecOrderByWithRelationInputObjectSchema } from './StrapVariantSpecOrderByWithRelationInput.schema';
+import { ClaspVariantSpecOrderByWithRelationInputObjectSchema as ClaspVariantSpecOrderByWithRelationInputObjectSchema } from './ClaspVariantSpecOrderByWithRelationInput.schema';
+import { WatchStrapInstallationOrderByRelationAggregateInputObjectSchema as WatchStrapInstallationOrderByRelationAggregateInputObjectSchema } from './WatchStrapInstallationOrderByRelationAggregateInput.schema';
+import { StrapInventoryMovementOrderByRelationAggregateInputObjectSchema as StrapInventoryMovementOrderByRelationAggregateInputObjectSchema } from './StrapInventoryMovementOrderByRelationAggregateInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -37,7 +40,10 @@ const makeSchema = () => z.object({
   PartVariantSpec: z.lazy(() => PartVariantSpecOrderByWithRelationInputObjectSchema).optional(),
   Product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestOrderByRelationAggregateInputObjectSchema).optional(),
-  StrapVariantSpec: z.lazy(() => StrapVariantSpecOrderByWithRelationInputObjectSchema).optional()
+  StrapVariantSpec: z.lazy(() => StrapVariantSpecOrderByWithRelationInputObjectSchema).optional(),
+  ClaspVariantSpec: z.lazy(() => ClaspVariantSpecOrderByWithRelationInputObjectSchema).optional(),
+  strapInstallations: z.lazy(() => WatchStrapInstallationOrderByRelationAggregateInputObjectSchema).optional(),
+  strapMovements: z.lazy(() => StrapInventoryMovementOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const ProductVariantOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.ProductVariantOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductVariantOrderByWithRelationInput>;
 export const ProductVariantOrderByWithRelationInputObjectZodSchema = makeSchema();

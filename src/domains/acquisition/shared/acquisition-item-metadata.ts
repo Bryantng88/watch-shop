@@ -24,6 +24,8 @@ export type AcquisitionItemMeta = {
     watchFlags?: AcquisitionWatchFlags;
     pricing?: AcquisitionPricingMeta;
     quickSpec?: AcquisitionQuickSpec;
+    strapSpec?: Record<string, unknown>;
+    claspSpec?: Record<string, unknown>;
 };
 
 const META_PREFIX = "__ACQ_META__:";
@@ -115,6 +117,11 @@ function normalizeMeta(input: AcquisitionItemMeta): AcquisitionItemMeta {
     const quickSpec = normalizeObjectLike(input.quickSpec);
     if (quickSpec) next.quickSpec = quickSpec;
 
+    const strapSpec = normalizeObjectLike(input.strapSpec);
+    if (strapSpec) next.strapSpec = strapSpec;
+    const claspSpec = normalizeObjectLike(input.claspSpec);
+    if (claspSpec) next.claspSpec = claspSpec;
+
     return next;
 }
 
@@ -164,6 +171,8 @@ export function parseAcquisitionItemMeta(
             watchFlags: parsed.watchFlags,
             pricing: parsed.pricing,
             quickSpec: parsed.quickSpec,
+            strapSpec: parsed.strapSpec,
+            claspSpec: parsed.claspSpec,
         });
     } catch {
         return {};
@@ -206,6 +215,14 @@ export function getPricingFromDescription(
     description: string | null | undefined
 ): AcquisitionPricingMeta | undefined {
     return parseAcquisitionItemMeta(description).pricing;
+}
+
+export function getStrapSpecFromDescription(description: string | null | undefined) {
+    return parseAcquisitionItemMeta(description).strapSpec;
+}
+
+export function getClaspSpecFromDescription(description: string | null | undefined) {
+    return parseAcquisitionItemMeta(description).claspSpec;
 }
 
 export function cleanAcquisitionItemDescription(

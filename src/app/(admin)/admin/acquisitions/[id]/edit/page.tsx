@@ -3,6 +3,8 @@ import { ProductType } from "@prisma/client";
 import EditAcqForm from "../../_client/EditAcqForm";
 import * as service from "../../_server/core/acquisition.service"
 import { getVendorList } from "../../../vendors/_server/vendor.service";
+import { authorizeAcquisitionAccess } from "@/domains/acquisition/server";
+import { redirect } from "next/navigation";
 
 type WatchFlags = {
     hasStrap: boolean;
@@ -103,6 +105,8 @@ function parseItemMeta(description?: string | null): {
 }
 
 export default async function EditAcquisitionPage({ params }: { params: { id: string } }) {
+    const access = await authorizeAcquisitionAccess(params.id, "VIEW");
+    if (!access.ok) redirect(access.status === 401 ? "/login" : "/403");
     const acquisitionData = await service.getAcquisitionDetail(params.id);
     const vendors = await getVendorList();
     const productTypes = Object.values(ProductType);

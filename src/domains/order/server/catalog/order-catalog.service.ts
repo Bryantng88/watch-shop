@@ -351,3 +351,52 @@ export async function searchOrderProducts(query: string) {
     };
   });
 }
+
+export async function searchCustomerSoldWatches(input: {
+  customerId?: string | null;
+  phone?: string | null;
+  q?: string | null;
+}) {
+  const customerId = String(input.customerId ?? "").trim();
+  const phone = String(input.phone ?? "").trim();
+  const q = String(input.q ?? "").trim();
+  if (!customerId && !phone) return [];
+
+  const rows = await prisma.orderItem.findMany({
+    where: {
+      kind: "PRODUCT",
+      productId: { not: null },
+      order: {
+        status: { notIn: ["DRAFT", "CANCELLED"] },
+        customer: customerId
+          ? { id: customerId }
+          : { phone },
+      },
+      product: {
+        watch: { saleStage: "SOLD" },
+        ...(q ? { OR: [
+          { title: { contains: q, mode: "insensitive" } },
+          { sku: { contains: q, mode: "insensitive" } },
+        ] } : {}),
+      },
+    },
+    distinct: ["productId"],
+    orderBy: { createdAt: "desc" },
+    take: 20,
+    select: {
+      productId: true,
+      orderId: true,
+      order: { select: { refNo: true } },
+      product: { select: { title: true, sku: true, primaryImageUrl: true } },
+    },
+  });
+
+  return rows.map((row) => ({
+    productId: row.productId!,
+    title: row.product.title,
+    sku: row.product.sku,
+    imageUrl: row.product.primaryImageUrl,
+    soldOrderId: row.orderId,
+    soldOrderRefNo: row.order.refNo,
+  }));
+}

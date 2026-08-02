@@ -5,7 +5,8 @@ import {
 } from "@/domains/acquisition/server";
 //import AcquisitionListClient from "./_client/ListAcq";
 import AcquisitionListClient from "@/domains/acquisition/client/AcquisitionListClient";
-import { requirePermission } from "@/server/auth/requirePermission";
+import { getCurrentUserPermissions } from "@/server/auth/requirePermission";
+import { redirect } from "next/navigation";
 import { PERMISSIONS } from "@/constants/permissions";
 import { parseAcquisitionListSearchParams } from "@/domains/acquisition/shared/search-params";
 import { getListVendors } from "../vendors/_server/vendor.repo";
@@ -32,7 +33,11 @@ export default async function AcquisitionListPage({
 }: {
     searchParams: SearchParams;
 }) {
-    await requirePermission(PERMISSIONS.PRODUCT_VIEW);
+    const { user, permissions } = await getCurrentUserPermissions();
+    if (!user) redirect("/login");
+    const canViewAll = permissions.includes(PERMISSIONS.ACQUISITION_VIEW);
+    const canViewStraps = permissions.includes(PERMISSIONS.STRAP_ACQUISITION_VIEW);
+    if (!canViewAll && !canViewStraps) redirect("/403");
 
     const resolvedSearchParams = await searchParams;
 
@@ -47,11 +52,12 @@ export default async function AcquisitionListPage({
         page: firstValue(resolvedSearchParams.page),
         pageSize: firstValue(resolvedSearchParams.pageSize),
     });
+    if (!canViewAll) input.productScope = "ACCESSORY_ONLY";
 
     const [result, vendors, dashboardData] = await Promise.all([
         getAcquisitionListProjection(input),
         getListVendors(),
-        getAcquisitionListDashboard(input.audienceSegment),
+        getAcquisitionListDashboard(input.audienceSegment, input.productScope),
     ]);
 
     const vendorOptions = (vendors ?? []).map((vendor: any) => ({
@@ -64,6 +70,8 @@ export default async function AcquisitionListPage({
             {...serialize(result)}
             vendors={serialize(vendorOptions)}
             dashboardData={serialize(dashboardData)}
+            strapOnly={!canViewAll}
+            canManage={permissions.includes(PERMISSIONS.ACQUISITION_UPDATE)}
         />
     );
 }

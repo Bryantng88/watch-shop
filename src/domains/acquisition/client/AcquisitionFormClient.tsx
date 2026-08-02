@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
     BookOpen,
@@ -13,6 +13,7 @@ import {
     PackagePlus,
     Plus,
     Save,
+    Search,
     WalletCards,
     X,
 } from "lucide-react";
@@ -29,6 +30,7 @@ import { submitInlineAcquisition } from "./form/acquisition-form.submit";
 import type {
     AcquisitionFormVendor,
     AcquisitionPreparedImage,
+    AcquisitionTradeInOrder,
     AcquisitionWatchLine,
 } from "./form/acquisition-form.types";
 import WatchLineCard from "../ui/new/WatchLineCard";
@@ -241,6 +243,83 @@ function VendorQuickField({
     );
 }
 
+function TradeInOrderField({
+    value,
+    disabled,
+    onChange,
+}: {
+    value: AcquisitionTradeInOrder | null;
+    disabled?: boolean;
+    onChange: (order: AcquisitionTradeInOrder | null) => void;
+}) {
+    const [query, setQuery] = useState("");
+    const [items, setItems] = useState<AcquisitionTradeInOrder[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        const q = query.trim();
+        if (q.length < 2 || value) {
+            setItems([]);
+            return;
+        }
+        let cancelled = false;
+        const timer = window.setTimeout(async () => {
+            setLoading(true);
+            try {
+                const res = await fetch(`/api/admin/acquisitions/trade-in-orders?q=${encodeURIComponent(q)}`);
+                const json = await res.json().catch(() => null);
+                if (!cancelled) setItems(Array.isArray(json?.items) ? json.items : []);
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        }, 300);
+        return () => {
+            cancelled = true;
+            window.clearTimeout(timer);
+        };
+    }, [query, value]);
+
+    return (
+        <div className="md:col-span-2">
+            <label className="mb-2 block text-sm font-semibold text-slate-900">
+                Đơn hàng trade-in <span className="text-rose-500">*</span>
+            </label>
+            {value ? (
+                <div className="flex items-center justify-between gap-4 rounded-md border border-violet-200 bg-violet-50 px-4 py-3">
+                    <div className="min-w-0">
+                        <div className="text-sm font-semibold text-violet-950">{value.refNo || value.id}</div>
+                        <div className="mt-1 text-xs text-violet-700">
+                            {value.customerName} · {value.customerPhone || "Chưa có SĐT"} · {value.status}
+                        </div>
+                    </div>
+                    <button type="button" disabled={disabled} onClick={() => { onChange(null); setQuery(""); }} className="rounded-md border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-violet-700">
+                        Chọn lại
+                    </button>
+                </div>
+            ) : (
+                <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
+                    <input value={query} onChange={(e) => setQuery(e.target.value)} disabled={disabled} placeholder="Tìm theo mã đơn, tên khách hoặc số điện thoại..." className={`${FIELD_CLASS} pl-10`} />
+                    {query.trim().length >= 2 ? (
+                        <div className="absolute z-30 mt-2 max-h-72 w-full overflow-y-auto rounded-md border border-slate-200 bg-white p-2 shadow-xl">
+                            {loading ? <div className="px-3 py-4 text-sm text-slate-500">Đang tìm đơn hàng...</div> : items.length ? items.map((order) => (
+                                <button key={order.id} type="button" onClick={() => { onChange(order); setQuery(""); }} className="block w-full rounded-md px-3 py-3 text-left hover:bg-slate-50">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span className="text-sm font-semibold text-slate-900">{order.refNo || order.id}</span>
+                                        <span className="text-xs font-medium text-slate-500">{order.status}</span>
+                                    </div>
+                                    <div className="mt-1 text-xs text-slate-500">{order.customerName} · {order.customerPhone || "Chưa có SĐT"}</div>
+                                </button>
+                            )) : <div className="px-3 py-4 text-sm text-slate-500">Không tìm thấy đơn hàng.</div>}
+                        </div>
+                    ) : null}
+                </div>
+            )}
+            <p className="mt-2 text-xs text-slate-500">Phiếu nhập sẽ kế thừa Customer và liên kết giao dịch từ Order này.</p>
+        </div>
+    );
+}
+
 export default function AcquisitionFormClient({ vendors: initialVendors }: Props) {
     const notify = useNotify();
     const dialog = useAppDialog();
@@ -254,6 +333,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
     );
     const [currency, setCurrency] = useState("VND");
     const [type, setType] = useState("PURCHASE");
+    const [tradeInOrder, setTradeInOrder] = useState<AcquisitionTradeInOrder | null>(null);
     const [audienceSegment, setAudienceSegment] = useState<"MEN" | "WOMEN">("MEN");
     const [notes, setNotes] = useState("");
     const [watchLines, setWatchLines] = useState<AcquisitionWatchLine[]>([
@@ -285,6 +365,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
         setCreatedAt(toLocalDateTimeInputValue(new Date()));
         setCurrency("VND");
         setType("PURCHASE");
+        setTradeInOrder(null);
         setAudienceSegment("MEN");
         setNotes("");
         setWatchLines([createEmptyWatchLine("MEN")]);
@@ -345,7 +426,15 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
     }
 
     async function submit() {
-        if (!vendorId) {
+        if (type === "TRADE_IN" && !tradeInOrder) {
+            notify.warning({
+                title: "Thiếu đơn hàng",
+                message: "Vui lòng chọn đơn hàng phát sinh trade-in.",
+            });
+            return;
+        }
+
+        if (type !== "TRADE_IN" && !vendorId) {
             notify.warning({
                 title: "Thieu vendor",
                 message: "Vui long chon vendor truoc khi luu phieu nhap.",
@@ -385,6 +474,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
             const result = await submitInlineAcquisition({
                 audienceSegment,
                 vendorId,
+                sourceOrderId: type === "TRADE_IN" ? tradeInOrder?.id ?? null : null,
                 createdAt: new Date(createdAt).toISOString(),
                 currency,
                 type,
@@ -555,13 +645,21 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
                                     Áp dụng cho toàn bộ danh sách. Bạn vẫn có thể đổi riêng từng dòng.
                                 </p>
                             </div>
-                            <VendorQuickField
-                                value={vendorId}
-                                vendors={vendors}
-                                disabled={submitting}
-                                onChange={setVendorId}
-                                onVendorsChange={setVendors}
-                            />
+                            {type === "TRADE_IN" ? (
+                                <TradeInOrderField
+                                    value={tradeInOrder}
+                                    disabled={submitting}
+                                    onChange={setTradeInOrder}
+                                />
+                            ) : (
+                                <VendorQuickField
+                                    value={vendorId}
+                                    vendors={vendors}
+                                    disabled={submitting}
+                                    onChange={setVendorId}
+                                    onVendorsChange={setVendors}
+                                />
+                            )}
 
                             <div>
                                 <label className="mb-2 block text-sm font-semibold text-slate-900">
@@ -598,7 +696,11 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
                                 </label>
                                 <select
                                     value={type}
-                                    onChange={(e) => setType(e.target.value)}
+                                    onChange={(e) => {
+                                        const nextType = e.target.value;
+                                        setType(nextType);
+                                        if (nextType !== "TRADE_IN") setTradeInOrder(null);
+                                    }}
                                     className={FIELD_CLASS}
                                 >
                                     <option value="PURCHASE">PURCHASE</option>

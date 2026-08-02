@@ -96,6 +96,7 @@ export function buildInitialOrderFormValues(
         reserveExpiresAt: toDateTimeLocal(initialData?.reserve?.expiresAt ?? null),
 
         items: normalizeInitialItems(initialData),
+        tradeIn: initialData?.tradeIn ?? null,
     };
 }
 
@@ -204,6 +205,15 @@ export function buildOrderPayload(input: {
                 ? "QUICK_ORDER"
                 : "STANDARD",
         })),
+        tradeIn: values.tradeIn
+            ? {
+                productId: values.tradeIn.productId ?? null,
+                title: values.tradeIn.title.trim() || "Đồng hồ trade-in",
+                amount: Number(values.tradeIn.amount || 0),
+                notes: values.tradeIn.notes.trim() || null,
+                audienceSegment: values.tradeIn.audienceSegment,
+            }
+            : null,
     };
 }
 
@@ -214,6 +224,12 @@ export function validateOrderForm(values: OrderFormValues) {
 
     if (!values.items.length) {
         return "Vui lòng thêm ít nhất một sản phẩm hoặc dịch vụ.";
+    }
+
+    if (values.tradeIn) {
+        if (Number(values.tradeIn.amount) <= 0) {
+            return "Vui lòng nhập giá thu vào cho đồng hồ trade-in.";
+        }
     }
 
     const reserveType = normalizeOrderReserveType(values.reserveType);

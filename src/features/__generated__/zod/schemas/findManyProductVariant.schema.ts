@@ -36,6 +36,9 @@ export const ProductVariantFindManySelectSchema: z.ZodType<Prisma.ProductVariant
     Product: z.boolean().optional(),
     ServiceRequest: z.boolean().optional(),
     StrapVariantSpec: z.boolean().optional(),
+    ClaspVariantSpec: z.boolean().optional(),
+    strapInstallations: z.boolean().optional(),
+    strapMovements: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.ProductVariantSelect>;
 
@@ -66,6 +69,9 @@ export const ProductVariantFindManySelectZodSchema = z.object({
     Product: z.boolean().optional(),
     ServiceRequest: z.boolean().optional(),
     StrapVariantSpec: z.boolean().optional(),
+    ClaspVariantSpec: z.boolean().optional(),
+    strapInstallations: z.boolean().optional(),
+    strapMovements: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

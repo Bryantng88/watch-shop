@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { StrapInventoryMovementOrderByWithRelationInputObjectSchema as StrapInventoryMovementOrderByWithRelationInputObjectSchema } from './objects/StrapInventoryMovementOrderByWithRelationInput.schema';
+import { StrapInventoryMovementWhereInputObjectSchema as StrapInventoryMovementWhereInputObjectSchema } from './objects/StrapInventoryMovementWhereInput.schema';
+import { StrapInventoryMovementWhereUniqueInputObjectSchema as StrapInventoryMovementWhereUniqueInputObjectSchema } from './objects/StrapInventoryMovementWhereUniqueInput.schema';
+import { StrapInventoryMovementCountAggregateInputObjectSchema as StrapInventoryMovementCountAggregateInputObjectSchema } from './objects/StrapInventoryMovementCountAggregateInput.schema';
+
+export const StrapInventoryMovementCountSchema: z.ZodType<Prisma.StrapInventoryMovementCountArgs> = z.object({ orderBy: z.union([StrapInventoryMovementOrderByWithRelationInputObjectSchema, StrapInventoryMovementOrderByWithRelationInputObjectSchema.array()]).optional(), where: StrapInventoryMovementWhereInputObjectSchema.optional(), cursor: StrapInventoryMovementWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), StrapInventoryMovementCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.StrapInventoryMovementCountArgs>;
+
+export const StrapInventoryMovementCountZodSchema = z.object({ orderBy: z.union([StrapInventoryMovementOrderByWithRelationInputObjectSchema, StrapInventoryMovementOrderByWithRelationInputObjectSchema.array()]).optional(), where: StrapInventoryMovementWhereInputObjectSchema.optional(), cursor: StrapInventoryMovementWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), StrapInventoryMovementCountAggregateInputObjectSchema ]).optional() }).strict();

@@ -47,7 +47,8 @@ export const WatchModelSchema = z.object({
     watchSpecV2: z.unknown().nullable(),
     reviewStates: z.array(z.unknown()),
     tasks: z.array(z.unknown()),
-    workCases: z.array(z.unknown())
+    workCases: z.array(z.unknown()),
+    strapInstallations: z.array(z.unknown())
 }).strict();
 
 export type WatchPureType = z.infer<typeof WatchModelSchema>;

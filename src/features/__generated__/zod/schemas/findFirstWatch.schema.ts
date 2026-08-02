@@ -46,6 +46,7 @@ export const WatchFindFirstSelectSchema: z.ZodType<Prisma.WatchSelect> = z.objec
     reviewStates: z.boolean().optional(),
     tasks: z.boolean().optional(),
     workCases: z.boolean().optional(),
+    strapInstallations: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.WatchSelect>;
 
@@ -86,6 +87,7 @@ export const WatchFindFirstSelectZodSchema = z.object({
     reviewStates: z.boolean().optional(),
     tasks: z.boolean().optional(),
     workCases: z.boolean().optional(),
+    strapInstallations: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

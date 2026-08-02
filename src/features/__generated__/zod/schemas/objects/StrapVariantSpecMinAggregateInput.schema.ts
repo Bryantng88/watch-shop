@@ -10,7 +10,23 @@ const makeSchema = () => z.object({
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
   lugWidthMM: z.literal(true).optional(),
-  buckleWidthMM: z.literal(true).optional()
+  buckleWidthMM: z.literal(true).optional(),
+  originType: z.literal(true).optional(),
+  brandName: z.literal(true).optional(),
+  leatherType: z.literal(true).optional(),
+  surface: z.literal(true).optional(),
+  inventoryPolicy: z.literal(true).optional(),
+  claspType: z.literal(true).optional(),
+  claspWidthMM: z.literal(true).optional(),
+  claspOriginType: z.literal(true).optional(),
+  finish: z.literal(true).optional(),
+  lengthClass: z.literal(true).optional(),
+  minStockQty: z.literal(true).optional(),
+  targetStockQty: z.literal(true).optional(),
+  braceletReference: z.literal(true).optional(),
+  defaultFullLinks: z.literal(true).optional(),
+  defaultHalfLinks: z.literal(true).optional(),
+  defaultEndLinks: z.literal(true).optional()
 }).strict();
 export const StrapVariantSpecMinAggregateInputObjectSchema: z.ZodType<Prisma.StrapVariantSpecMinAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.StrapVariantSpecMinAggregateInputType>;
 export const StrapVariantSpecMinAggregateInputObjectZodSchema = makeSchema();

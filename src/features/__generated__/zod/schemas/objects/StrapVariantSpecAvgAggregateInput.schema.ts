@@ -4,7 +4,13 @@ import type { Prisma } from '@prisma/client';
 
 const makeSchema = () => z.object({
   lugWidthMM: z.literal(true).optional(),
-  buckleWidthMM: z.literal(true).optional()
+  buckleWidthMM: z.literal(true).optional(),
+  claspWidthMM: z.literal(true).optional(),
+  minStockQty: z.literal(true).optional(),
+  targetStockQty: z.literal(true).optional(),
+  defaultFullLinks: z.literal(true).optional(),
+  defaultHalfLinks: z.literal(true).optional(),
+  defaultEndLinks: z.literal(true).optional()
 }).strict();
 export const StrapVariantSpecAvgAggregateInputObjectSchema: z.ZodType<Prisma.StrapVariantSpecAvgAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.StrapVariantSpecAvgAggregateInputType>;
 export const StrapVariantSpecAvgAggregateInputObjectZodSchema = makeSchema();

@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { ClaspVariantSpecOrderByWithRelationInputObjectSchema as ClaspVariantSpecOrderByWithRelationInputObjectSchema } from './objects/ClaspVariantSpecOrderByWithRelationInput.schema';
+import { ClaspVariantSpecWhereInputObjectSchema as ClaspVariantSpecWhereInputObjectSchema } from './objects/ClaspVariantSpecWhereInput.schema';
+import { ClaspVariantSpecWhereUniqueInputObjectSchema as ClaspVariantSpecWhereUniqueInputObjectSchema } from './objects/ClaspVariantSpecWhereUniqueInput.schema';
+import { ClaspVariantSpecCountAggregateInputObjectSchema as ClaspVariantSpecCountAggregateInputObjectSchema } from './objects/ClaspVariantSpecCountAggregateInput.schema';
+
+export const ClaspVariantSpecCountSchema: z.ZodType<Prisma.ClaspVariantSpecCountArgs> = z.object({ orderBy: z.union([ClaspVariantSpecOrderByWithRelationInputObjectSchema, ClaspVariantSpecOrderByWithRelationInputObjectSchema.array()]).optional(), where: ClaspVariantSpecWhereInputObjectSchema.optional(), cursor: ClaspVariantSpecWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), ClaspVariantSpecCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.ClaspVariantSpecCountArgs>;
+
+export const ClaspVariantSpecCountZodSchema = z.object({ orderBy: z.union([ClaspVariantSpecOrderByWithRelationInputObjectSchema, ClaspVariantSpecOrderByWithRelationInputObjectSchema.array()]).optional(), where: ClaspVariantSpecWhereInputObjectSchema.optional(), cursor: ClaspVariantSpecWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), ClaspVariantSpecCountAggregateInputObjectSchema ]).optional() }).strict();

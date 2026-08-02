@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { updateAcquisitionEditApplication } from "@/domains/acquisition/application/update-acquisition-edit.application";
 import { getAcquisitionEditDetail } from "@/domains/acquisition/server/acquisition-edit.service";
+import { authorizeAcquisitionAccess } from "@/domains/acquisition/server";
 
 export async function GET(
     _req: Request,
@@ -9,6 +10,8 @@ export async function GET(
 ) {
     try {
         const { id } = await ctx.params;
+        const access = await authorizeAcquisitionAccess(id, "VIEW");
+        if (!access.ok) return NextResponse.json({ error: "Forbidden" }, { status: access.status });
         const detail = await getAcquisitionEditDetail(id);
 
         if (!detail) {
@@ -16,9 +19,9 @@ export async function GET(
         }
 
         return NextResponse.json(detail);
-    } catch (error: any) {
+    } catch (error: unknown) {
         return NextResponse.json(
-            { error: error?.message || "Không thể tải phiếu nhập." },
+            { error: error instanceof Error ? error.message : "Không thể tải phiếu nhập." },
             { status: 400 },
         );
     }
@@ -30,6 +33,8 @@ export async function PUT(
 ) {
     try {
         const { id } = await ctx.params;
+        const access = await authorizeAcquisitionAccess(id, "UPDATE");
+        if (!access.ok) return NextResponse.json({ error: "Forbidden" }, { status: access.status });
         const body = await req.json().catch(() => ({}));
 
         const result = await updateAcquisitionEditApplication({
@@ -39,9 +44,9 @@ export async function PUT(
         });
 
         return NextResponse.json(result);
-    } catch (error: any) {
+    } catch (error: unknown) {
         return NextResponse.json(
-            { error: error?.message || "Không thể cập nhật phiếu nhập." },
+            { error: error instanceof Error ? error.message : "Không thể cập nhật phiếu nhập." },
             { status: 400 },
         );
     }

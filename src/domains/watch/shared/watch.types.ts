@@ -140,6 +140,22 @@ export type WatchDetailModel = {
         cardIncluded?: boolean | null;
     } | null;
 
+    strapInstallation?: {
+        id: string;
+        variantId: string;
+        ownershipMode: string;
+        installedAt?: Date | string | null;
+        installedFullLinks?: number | null;
+        installedHalfLinks?: number | null;
+        spareFullLinks?: number | null;
+        spareHalfLinks?: number | null;
+        endLinkCount?: number | null;
+        wristSizeMM?: number | null;
+        title?: string | null;
+        sku?: string | null;
+        spec?: unknown;
+    } | null;
+
     price?: {
         costPrice?: string | null;
         serviceCost?: string | null;

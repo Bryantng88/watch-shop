@@ -45,6 +45,15 @@ function formatStatusLabel(value: unknown) {
 function buildWhere(input: AcquisitionListFilters, acquisitionIds: string[] = []) {
     const and: any[] = [];
 
+    if (input.productScope === "ACCESSORY_ONLY") {
+        and.push({
+            acquisitionItem: {
+                some: { productType: { in: ["WATCH_STRAP", "WATCH_CLASP"] } },
+                every: { productType: { in: ["WATCH_STRAP", "WATCH_CLASP"] } },
+            },
+        });
+    }
+
     if (input.audienceSegment) {
         and.push({ audienceSegment: input.audienceSegment });
     }
@@ -225,6 +234,7 @@ export async function listAdminAcquisitionsFromSource(
                     product: {
                         select: {
                             id: true,
+                            type: true,
                             title: true,
                             sku: true,
                             updatedAt: true,
@@ -391,6 +401,7 @@ export async function listAdminAcquisitionsFromSource(
             vendorId: row.vendorId ?? null,
             vendorName: row.vendor?.name ?? "-",
             itemCount: acquisitionItems.length,
+            productTypes: Array.from(new Set(acquisitionItems.map((item) => String(item.productType ?? item.product?.type ?? "WATCH")))),
             linkedWatchCount,
             totalAmount: row.totalAmount != null ? Number(row.totalAmount) : null,
             notes: row.notes ?? "",

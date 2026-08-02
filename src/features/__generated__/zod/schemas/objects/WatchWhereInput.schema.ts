@@ -36,7 +36,8 @@ import { WatchSpecV2NullableScalarRelationFilterObjectSchema as WatchSpecV2Nulla
 import { WatchSpecV2WhereInputObjectSchema as WatchSpecV2WhereInputObjectSchema } from './WatchSpecV2WhereInput.schema';
 import { WatchReviewStateListRelationFilterObjectSchema as WatchReviewStateListRelationFilterObjectSchema } from './WatchReviewStateListRelationFilter.schema';
 import { TaskListRelationFilterObjectSchema as TaskListRelationFilterObjectSchema } from './TaskListRelationFilter.schema';
-import { WorkCaseListRelationFilterObjectSchema as WorkCaseListRelationFilterObjectSchema } from './WorkCaseListRelationFilter.schema'
+import { WorkCaseListRelationFilterObjectSchema as WorkCaseListRelationFilterObjectSchema } from './WorkCaseListRelationFilter.schema';
+import { WatchStrapInstallationListRelationFilterObjectSchema as WatchStrapInstallationListRelationFilterObjectSchema } from './WatchStrapInstallationListRelationFilter.schema'
 
 const watchwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => WatchWhereInputObjectSchema), z.lazy(() => WatchWhereInputObjectSchema).array()]).optional(),
@@ -77,7 +78,8 @@ const watchwhereinputSchema = z.object({
   watchSpecV2: z.union([z.lazy(() => WatchSpecV2NullableScalarRelationFilterObjectSchema), z.lazy(() => WatchSpecV2WhereInputObjectSchema)]).optional(),
   reviewStates: z.lazy(() => WatchReviewStateListRelationFilterObjectSchema).optional(),
   tasks: z.lazy(() => TaskListRelationFilterObjectSchema).optional(),
-  workCases: z.lazy(() => WorkCaseListRelationFilterObjectSchema).optional()
+  workCases: z.lazy(() => WorkCaseListRelationFilterObjectSchema).optional(),
+  strapInstallations: z.lazy(() => WatchStrapInstallationListRelationFilterObjectSchema).optional()
 }).strict();
 export const WatchWhereInputObjectSchema: z.ZodType<Prisma.WatchWhereInput> = watchwhereinputSchema as unknown as z.ZodType<Prisma.WatchWhereInput>;
 export const WatchWhereInputObjectZodSchema = watchwhereinputSchema;

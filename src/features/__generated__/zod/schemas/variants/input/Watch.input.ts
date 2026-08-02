@@ -47,7 +47,8 @@ export const WatchInputSchema = z.object({
     watchSpecV2: z.unknown().optional().nullable(),
     reviewStates: z.array(z.unknown()),
     tasks: z.array(z.unknown()),
-    workCases: z.array(z.unknown())
+    workCases: z.array(z.unknown()),
+    strapInstallations: z.array(z.unknown())
 }).strict();
 
 export type WatchInputType = z.infer<typeof WatchInputSchema>;

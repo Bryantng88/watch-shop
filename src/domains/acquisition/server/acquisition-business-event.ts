@@ -17,6 +17,7 @@ export async function emitAcquisitionBusinessEvent(
     eventKey: AcquisitionBusinessEventKey;
     acquisitionId: string;
     payload?: Record<string, unknown>;
+    actorUserId?: string | null;
     deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
   },
 ) {
@@ -28,5 +29,6 @@ export async function emitAcquisitionBusinessEvent(
       acquisitionId: input.acquisitionId,
       ...input.payload,
     },
+    actorUserId: input.actorUserId ?? null,
   }, { deferConsumers: input.deferConsumers });
 }

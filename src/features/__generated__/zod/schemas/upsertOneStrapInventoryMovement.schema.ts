@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { StrapInventoryMovementSelectObjectSchema as StrapInventoryMovementSelectObjectSchema } from './objects/StrapInventoryMovementSelect.schema';
+import { StrapInventoryMovementIncludeObjectSchema as StrapInventoryMovementIncludeObjectSchema } from './objects/StrapInventoryMovementInclude.schema';
+import { StrapInventoryMovementWhereUniqueInputObjectSchema as StrapInventoryMovementWhereUniqueInputObjectSchema } from './objects/StrapInventoryMovementWhereUniqueInput.schema';
+import { StrapInventoryMovementCreateInputObjectSchema as StrapInventoryMovementCreateInputObjectSchema } from './objects/StrapInventoryMovementCreateInput.schema';
+import { StrapInventoryMovementUncheckedCreateInputObjectSchema as StrapInventoryMovementUncheckedCreateInputObjectSchema } from './objects/StrapInventoryMovementUncheckedCreateInput.schema';
+import { StrapInventoryMovementUpdateInputObjectSchema as StrapInventoryMovementUpdateInputObjectSchema } from './objects/StrapInventoryMovementUpdateInput.schema';
+import { StrapInventoryMovementUncheckedUpdateInputObjectSchema as StrapInventoryMovementUncheckedUpdateInputObjectSchema } from './objects/StrapInventoryMovementUncheckedUpdateInput.schema';
+
+export const StrapInventoryMovementUpsertOneSchema: z.ZodType<Prisma.StrapInventoryMovementUpsertArgs> = z.object({ select: StrapInventoryMovementSelectObjectSchema.optional(), include: StrapInventoryMovementIncludeObjectSchema.optional(), where: StrapInventoryMovementWhereUniqueInputObjectSchema, create: z.union([ StrapInventoryMovementCreateInputObjectSchema, StrapInventoryMovementUncheckedCreateInputObjectSchema ]), update: z.union([ StrapInventoryMovementUpdateInputObjectSchema, StrapInventoryMovementUncheckedUpdateInputObjectSchema ]) }).strict() as unknown as z.ZodType<Prisma.StrapInventoryMovementUpsertArgs>;
+
+export const StrapInventoryMovementUpsertOneZodSchema = z.object({ select: StrapInventoryMovementSelectObjectSchema.optional(), include: StrapInventoryMovementIncludeObjectSchema.optional(), where: StrapInventoryMovementWhereUniqueInputObjectSchema, create: z.union([ StrapInventoryMovementCreateInputObjectSchema, StrapInventoryMovementUncheckedCreateInputObjectSchema ]), update: z.union([ StrapInventoryMovementUpdateInputObjectSchema, StrapInventoryMovementUncheckedUpdateInputObjectSchema ]) }).strict();

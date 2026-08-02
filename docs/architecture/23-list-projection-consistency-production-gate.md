@@ -240,6 +240,13 @@ Implemented 2026-07-28:
 - automated coverage tests prevent adding a catalogued projection event with
   no matching builder.
 
+Commands that combine a domain write and event enqueue in one Prisma
+transaction use `runBusinessEventTransaction()`. The boundary collects each
+event's exact delivery key and starts delivery only after commit. New raw event
+emitters inside `prisma.$transaction()` are rejected by
+`npm run check:business-event-after-commit`; UI cache invalidation is never a
+substitute for this runner.
+
 Production acceptance now also requires:
 
 | Check | Required result |
@@ -249,6 +256,7 @@ Production acceptance now also requires:
 | Backlog liveness | No `PENDING` delivery with `attempts = 0` exceeds the agreed SLA |
 | Catalog coverage | Every event declaring `projection` matches a registered builder |
 | Domain coverage | Source and list/detail projection entity counts have zero missing rows |
+| Transaction boundary | Architecture check rejects new unmanaged transactional event producers |
 
 The synchronous compatibility path may add latency and must be removed from a
 domain only after every entry point for that domain forwards the after-commit

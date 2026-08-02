@@ -7,6 +7,7 @@ import { WatchSpecV2ArgsObjectSchema as WatchSpecV2ArgsObjectSchema } from './Wa
 import { WatchReviewStateFindManySchema as WatchReviewStateFindManySchema } from '../findManyWatchReviewState.schema';
 import { TaskFindManySchema as TaskFindManySchema } from '../findManyTask.schema';
 import { WorkCaseFindManySchema as WorkCaseFindManySchema } from '../findManyWorkCase.schema';
+import { WatchStrapInstallationFindManySchema as WatchStrapInstallationFindManySchema } from '../findManyWatchStrapInstallation.schema';
 import { WatchCountOutputTypeArgsObjectSchema as WatchCountOutputTypeArgsObjectSchema } from './WatchCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -46,6 +47,7 @@ const makeSchema = () => z.object({
   reviewStates: z.union([z.boolean(), z.lazy(() => WatchReviewStateFindManySchema)]).optional(),
   tasks: z.union([z.boolean(), z.lazy(() => TaskFindManySchema)]).optional(),
   workCases: z.union([z.boolean(), z.lazy(() => WorkCaseFindManySchema)]).optional(),
+  strapInstallations: z.union([z.boolean(), z.lazy(() => WatchStrapInstallationFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => WatchCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const WatchSelectObjectSchema: z.ZodType<Prisma.WatchSelect> = makeSchema() as unknown as z.ZodType<Prisma.WatchSelect>;

@@ -5,6 +5,10 @@ import {
     Prisma,
     ProductStatus,
     ProductType,
+    Strap,
+    StrapClaspType,
+    StrapOriginType,
+    StrapSurface,
 } from "@prisma/client";
 import { type DB, dbOrTx } from "@/server/db/client";
 import { getPricingFromDescription } from "../shared/acquisition-item-metadata";
@@ -13,12 +17,89 @@ function getDb(tx?: DB) {
     return dbOrTx(tx);
 }
 
+export async function createStrapDraftForAcquisitionItem(tx: DB, input: {
+    acquisitionItemId: string;
+    vendorId: string | null;
+    title: string;
+    quantity: number;
+    unitCost: number;
+    spec: Record<string, unknown>;
+}) {
+    const db = getDb(tx);
+    const product = await db.product.create({ data: {
+        type: ProductType.WATCH_STRAP,
+        title: input.title,
+        vendorId: input.vendorId,
+        status: ProductStatus.AVAILABLE,
+        contentStatus: ContentStatus.DRAFT,
+        specStatus: "COMPLETE",
+    }, select: { id: true } });
+    const variant = await db.productVariant.create({ data: {
+        productId: product.id,
+        stockQty: Math.max(0, Math.trunc(input.quantity)),
+        costPrice: new Prisma.Decimal(input.unitCost),
+        price: new Prisma.Decimal(Number(input.spec.sellPrice ?? 0)),
+        updatedAt: new Date(),
+        StrapVariantSpec: { create: {
+            material: String(input.spec.material ?? "LEATHER") as Strap,
+            lugWidthMM: Number(input.spec.lugWidthMM ?? 0),
+            buckleWidthMM: input.spec.buckleWidthMM == null ? null : Number(input.spec.buckleWidthMM),
+            color: String(input.spec.color ?? "").trim() || null,
+            quickRelease: Boolean(input.spec.quickRelease),
+            originType: String(input.spec.originType ?? "AFTERMARKET") as StrapOriginType,
+            brandName: String(input.spec.brandName ?? "").trim() || null,
+            leatherType: String(input.spec.leatherType ?? "").trim() || null,
+            surface: input.spec.surface ? String(input.spec.surface) as StrapSurface : null,
+            inventoryPolicy: "STOCKED",
+            updatedAt: new Date(),
+        } },
+    }, select: { id: true } });
+    await db.acquisitionItem.update({ where: { id: input.acquisitionItemId }, data: { productId: product.id, variantId: variant.id } });
+    return { productId: product.id, variantId: variant.id };
+}
+
+export async function createClaspDraftForAcquisitionItem(tx: DB, input: {
+    acquisitionItemId: string;
+    vendorId: string | null;
+    title: string;
+    quantity: number;
+    unitCost: number;
+    spec: Record<string, unknown>;
+}) {
+    const db = getDb(tx);
+    const product = await db.product.create({ data: {
+        type: ProductType.WATCH_CLASP,
+        title: input.title,
+        vendorId: input.vendorId,
+        status: ProductStatus.AVAILABLE,
+        contentStatus: ContentStatus.DRAFT,
+        specStatus: "COMPLETE",
+    }, select: { id: true } });
+    const variant = await db.productVariant.create({ data: {
+        productId: product.id,
+        stockQty: Math.max(0, Math.trunc(input.quantity)),
+        costPrice: new Prisma.Decimal(input.unitCost),
+        price: new Prisma.Decimal(Number(input.spec.sellPrice ?? 0)),
+        updatedAt: new Date(),
+        ClaspVariantSpec: { create: {
+            claspType: String(input.spec.claspType ?? "PIN_BUCKLE") as StrapClaspType,
+            widthMM: Number(input.spec.widthMM ?? 0),
+            originType: String(input.spec.originType ?? "AFTERMARKET") as StrapOriginType,
+            brandName: String(input.spec.brandName ?? "").trim() || null,
+            color: String(input.spec.color ?? "").trim() || null,
+            finish: String(input.spec.finish ?? "").trim() || null,
+        } },
+    }, select: { id: true } });
+    await db.acquisitionItem.update({ where: { id: input.acquisitionItemId }, data: { productId: product.id, variantId: variant.id } });
+    return { productId: product.id, variantId: variant.id };
+}
+
 export async function createWatchDraftForAcquisitionItem(
     tx: DB,
     input: {
         acquisitionItemId: string;
         acquisitionId: string;
-        vendorId: string;
+        vendorId: string | null;
         title: string;
         unitCost?: number | null;
         salePrice?: number | null;
@@ -121,17 +202,21 @@ export async function syncLinkedProductFromAcquisitionItem(tx: DB, itemId: strin
             productTitle: true,
             unitCost: true,
             description: true,
+            acquisition: { select: { type: true } },
         },
     });
 
     if (!item?.productId) return null;
 
-    await db.product.update({
-        where: { id: item.productId },
-        data: {
-            title: item.productTitle ?? "Untitled watch",
-        },
-    });
+    const isReturningSoldWatch = item.acquisition.type === "BUY_BACK" || item.acquisition.type === "TRADE_IN";
+    if (!isReturningSoldWatch) {
+        await db.product.update({
+            where: { id: item.productId },
+            data: {
+                title: item.productTitle ?? "Untitled watch",
+            },
+        });
+    }
 
     const watch = await db.watch.findUnique({
         where: { productId: item.productId },

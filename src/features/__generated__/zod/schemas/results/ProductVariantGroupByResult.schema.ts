@@ -42,7 +42,10 @@ export const ProductVariantGroupByResultSchema = z.array(z.object({
     PartVariantSpec: z.number(),
     Product: z.number(),
     ServiceRequest: z.number(),
-    StrapVariantSpec: z.number()
+    StrapVariantSpec: z.number(),
+    ClaspVariantSpec: z.number(),
+    strapInstallations: z.number(),
+    strapMovements: z.number()
   }).optional(),
   _sum: z.object({
     price: z.number().nullable(),

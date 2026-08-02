@@ -1,471 +1,599 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Gem } from "lucide-react";
+import { Gem, PackagePlus } from "lucide-react";
+import AccessoryAcquisitionEntryClient from "@/domains/acquisition/client/AccessoryAcquisitionEntryClient";
+import type { AcquisitionFormVendor } from "@/domains/acquisition/client/form/acquisition-form.types";
+import { listAccessoryVendorsAction } from "@/domains/vendor/client/vendor.actions";
+import {
+  installStrapFromSpecAction,
+  listAvailableStrapsAction,
+} from "@/domains/strap/client/strap.actions";
+import type { StrapListProjectionRow } from "@/domains/projection/server/strap-list";
 import type { WatchFormValues } from "../../client/form/watch-form.types";
 import {
-    Button,
-    Dialog,
-    DialogFooter,
-    FieldLabel,
-    Input,
-    Select,
-    Toggle,
-    Textarea
+  Button,
+  Dialog,
+  DialogFooter,
+  FieldLabel,
+  Input,
+  Select,
+  Toggle,
+  Textarea,
 } from "./shared";
 
 type Props = {
-    open: boolean;
-    values: WatchFormValues["spec"];
-    onClose: () => void;
-    onSave: (patch: WatchFormValues["spec"]) => void;
+  open: boolean;
+  watchId: string;
+  values: WatchFormValues["spec"];
+  onClose: () => void;
+  onSave: (patch: WatchFormValues["spec"]) => void;
 };
 
 const CASE_SHAPE_OPTIONS = [
-    "ROUND",
-    "TANK",
-    "SQUARE",
-    "SPECIAL",
-    "OTHER",
-    "TONNEAU",
-    "CUSHION",
-    "OVAL",
-    "ASYMMETRICAL",
-    "OCTAGON",
-    "POLYGON",
+  "ROUND",
+  "TANK",
+  "SQUARE",
+  "SPECIAL",
+  "OTHER",
+  "TONNEAU",
+  "CUSHION",
+  "OVAL",
+  "ASYMMETRICAL",
+  "OCTAGON",
+  "POLYGON",
 ].map((x) => ({ value: x, label: x }));
 
 const CRYSTAL_OPTIONS = [
-    "SAPPHIRE",
-    "ACRYLIC",
-    "MINERAL",
-    "HARDLEX",
-    "AR_COATED",
+  "SAPPHIRE",
+  "ACRYLIC",
+  "MINERAL",
+  "HARDLEX",
+  "AR_COATED",
 ].map((x) => ({ value: x, label: x }));
 
 const MATERIAL_PROFILE_OPTIONS = [
-    { value: "SINGLE_MATERIAL", label: "Single material" },
-    { value: "BIMETAL", label: "Bi-metal / Two tone" },
-    { value: "COATED", label: "Coated / Plated" },
+  { value: "SINGLE_MATERIAL", label: "Single material" },
+  { value: "BIMETAL", label: "Bi-metal / Two tone" },
+  { value: "COATED", label: "Coated / Plated" },
 ];
 
 const MATERIAL_OPTIONS = [
-    "STAINLESS_STEEL",
-    "TITANIUM",
-    "CERAMIC",
-    "CARBON",
-    "GOLD",
-    "PLATINUM",
-    "SILVER",
-    "BRASS",
-    "OTHER",
+  "STAINLESS_STEEL",
+  "TITANIUM",
+  "CERAMIC",
+  "CARBON",
+  "GOLD",
+  "PLATINUM",
+  "SILVER",
+  "BRASS",
+  "OTHER",
 ].map((x) => ({ value: x, label: x }));
 
 const GOLD_TREATMENT_OPTIONS = [
-    "SOLID_GOLD",
-    "CAPPED_GOLD",
-    "GOLD_PLATED",
-    "GOLD_VERMEIL",
-    "GOLD_FILLED",
+  "SOLID_GOLD",
+  "CAPPED_GOLD",
+  "GOLD_PLATED",
+  "GOLD_VERMEIL",
+  "GOLD_FILLED",
 ].map((x) => ({ value: x, label: x }));
 
 const GOLD_COLOR_OPTIONS = ["YELLOW", "WHITE", "ROSE", "MIXED"];
 
 const GOLD_KARAT_OPTIONS = ["8", "9", "10", "14", "18"].map((x) => ({
-    value: x,
-    label: `${x}K`,
+  value: x,
+  label: `${x}K`,
 }));
 
 const BRACELET_OPTIONS = [
-    "LEATHER",
-    "BRACELET",
-    "RUBBER",
-    "NATO",
-    "CANVASS",
-    "SPECIAL",
+  "LEATHER",
+  "BRACELET",
+  "RUBBER",
+  "NATO",
+  "CANVASS",
+  "SPECIAL",
 ].map((x) => ({ value: x, label: x }));
 const STRAP_SET_TYPE_OPTIONS = [
-    { value: "BRAND_ORIGINAL", label: "Dây khóa hãng" },
-    { value: "COMPONENT", label: "Dây khóa linh kiện" },
+  { value: "BRAND_ORIGINAL", label: "Dây khóa hãng" },
+  { value: "COMPONENT", label: "Dây khóa linh kiện" },
 ];
 const STRAP_COMPONENT_SOURCE_OPTIONS = [
-    {
-        value: "KEEP_CURRENT",
-        label: "Giữ nguyên hiện trạng",
-    },
-    {
-        value: "FROM_STOCK",
-        label: "Lấy dây thay từ kho",
-    },
+  {
+    value: "KEEP_CURRENT",
+    label: "Giữ nguyên hiện trạng",
+  },
+  {
+    value: "FROM_STOCK",
+    label: "Lấy dây thay từ kho",
+  },
 ];
 export function buildWatchSpecSummary(spec: WatchFormValues["spec"]) {
-    const parts = [
-        spec.model,
-        spec.referenceNumber,
-        spec.caseShape,
-        spec.caseSizeMM ? `${spec.caseSizeMM}mm` : "",
-        spec.dialColor,
-        spec.materialProfile,
-    ].filter(Boolean);
+  const parts = [
+    spec.model,
+    spec.referenceNumber,
+    spec.caseShape,
+    spec.caseSizeMM ? `${spec.caseSizeMM}mm` : "",
+    spec.dialColor,
+    spec.materialProfile,
+  ].filter(Boolean);
 
-    return parts.length > 0 ? parts.join(" · ") : "Chưa có spec chi tiết";
+  return parts.length > 0 ? parts.join(" · ") : "Chưa có spec chi tiết";
 }
 
 export default function WatchSpecModal({
-    open,
-    values,
-    onClose,
-    onSave,
+  open,
+  watchId,
+  values,
+  onClose,
+  onSave,
 }: Props) {
-    const [draft, setDraft] = useState<WatchFormValues["spec"]>(values);
+  const [draft, setDraft] = useState<WatchFormValues["spec"]>(values);
+  const [accessoryOpen, setAccessoryOpen] = useState(false);
+  const [accessoryVendors, setAccessoryVendors] = useState<
+    AcquisitionFormVendor[]
+  >([]);
+  const [loadingAccessory, setLoadingAccessory] = useState(false);
+  const [availableStraps, setAvailableStraps] = useState<
+    StrapListProjectionRow[]
+  >([]);
+  const [selectedStrapId, setSelectedStrapId] = useState("");
+  const [loadingStraps, setLoadingStraps] = useState(false);
+  const [installingStrap, setInstallingStrap] = useState(false);
+  const [strapMessage, setStrapMessage] = useState("");
 
-    useEffect(() => {
-        if (open) {
-            setDraft(values);
-        }
-    }, [open, values]);
+  async function loadAvailableStraps() {
+    setLoadingStraps(true);
+    setStrapMessage("");
+    try {
+      setAvailableStraps(await listAvailableStrapsAction());
+    } finally {
+      setLoadingStraps(false);
+    }
+  }
 
-    const materialProfile = draft.materialProfile || "SINGLE_MATERIAL";
+  async function installSelectedStrap() {
+    if (!selectedStrapId) return;
+    setInstallingStrap(true);
+    setStrapMessage("");
+    try {
+      await installStrapFromSpecAction({ watchId, variantId: selectedStrapId });
+      const installed = availableStraps.find(
+        (item) => item.variantId === selectedStrapId,
+      );
+      setStrapMessage(`Đã gắn ${installed?.title ?? "dây"} vào Watch.`);
+      setAvailableStraps((rows) =>
+        rows.filter((item) => item.variantId !== selectedStrapId),
+      );
+      setSelectedStrapId("");
+    } catch (error) {
+      setStrapMessage(
+        error instanceof Error ? error.message : "Không thể gắn dây.",
+      );
+    } finally {
+      setInstallingStrap(false);
+    }
+  }
 
-    const missingCount = useMemo(() => {
-        const required = [
-            draft.model,
-            draft.referenceNumber,
-            draft.caseShape,
-            draft.caseSizeMM,
-            draft.dialColor,
-            draft.primaryCaseMaterial,
-        ];
-        return required.filter((x) => !String(x ?? "").trim()).length;
-    }, [
-        draft.model,
-        draft.referenceNumber,
-        draft.caseShape,
-        draft.caseSizeMM,
-        draft.dialColor,
-        draft.primaryCaseMaterial,
-    ]);
+  async function openAccessoryIntake() {
+    setLoadingAccessory(true);
+    try {
+      setAccessoryVendors(await listAccessoryVendorsAction());
+      setAccessoryOpen(true);
+    } finally {
+      setLoadingAccessory(false);
+    }
+  }
 
-    const patch = (next: Partial<WatchFormValues["spec"]>) => {
-        setDraft((prev) => ({ ...prev, ...next }));
-    };
+  useEffect(() => {
+    if (open) {
+      setDraft(values);
+      setStrapMessage("");
+    }
+  }, [open, values]);
 
-    return (
-        <Dialog
-            open={open}
-            onClose={onClose}
-            title="Spec & vật liệu"
-            description="Giữ phần này riêng để màn hình edit chính gọn hơn, dễ thao tác hơn."
-            maxWidthClass="max-w-6xl"
-        >
-            <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-800">
-                    <Gem className="h-4 w-4" />
-                    Snapshot spec
-                </div>
-                <div className="mt-1 text-sm text-slate-600">
-                    {buildWatchSpecSummary(draft)}
-                </div>
-                <div className="mt-2 text-xs font-medium text-amber-700">
-                    {missingCount > 0
-                        ? `Còn thiếu ${missingCount} trường spec quan trọng`
-                        : "Spec cơ bản đã đủ"}
-                </div>
+  useEffect(() => {
+    if (open && draft.strapComponentSource === "FROM_STOCK") {
+      void loadAvailableStraps();
+    }
+  }, [open, draft.strapComponentSource]);
+
+  const materialProfile = draft.materialProfile || "SINGLE_MATERIAL";
+
+  const missingCount = useMemo(() => {
+    const required = [
+      draft.model,
+      draft.referenceNumber,
+      draft.caseShape,
+      draft.caseSizeMM,
+      draft.dialColor,
+      draft.primaryCaseMaterial,
+    ];
+    return required.filter((x) => !String(x ?? "").trim()).length;
+  }, [
+    draft.model,
+    draft.referenceNumber,
+    draft.caseShape,
+    draft.caseSizeMM,
+    draft.dialColor,
+    draft.primaryCaseMaterial,
+  ]);
+
+  const patch = (next: Partial<WatchFormValues["spec"]>) => {
+    setDraft((prev) => ({ ...prev, ...next }));
+  };
+
+  return (
+    <>
+      <Dialog
+        open={open}
+        onClose={onClose}
+        title="Spec & vật liệu"
+        description="Giữ phần này riêng để màn hình edit chính gọn hơn, dễ thao tác hơn."
+        maxWidthClass="max-w-6xl"
+      >
+        <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-sm font-medium text-slate-800">
+                <Gem className="h-4 w-4" />
+                Snapshot spec
+              </div>
+              <div className="mt-1 text-sm text-slate-600">
+                {buildWatchSpecSummary(draft)}
+              </div>
+              <div className="mt-2 text-xs font-medium text-amber-700">
+                {missingCount > 0
+                  ? `Còn thiếu ${missingCount} trường spec quan trọng`
+                  : "Spec cơ bản đã đủ"}
+              </div>
             </div>
+            <Button
+              variant="outline"
+              onClick={openAccessoryIntake}
+              disabled={loadingAccessory}
+              className="shrink-0 border-violet-200 bg-white text-violet-700 hover:bg-violet-50"
+            >
+              <PackagePlus className="h-4 w-4" />
+              {loadingAccessory ? "Đang tải..." : "Nhập dây / khóa"}
+            </Button>
+          </div>
+        </div>
 
-            <div className="space-y-8">
-                <section>
-                    <div className="mb-3 text-sm font-semibold text-slate-900">
-                        Identity
-                    </div>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <div>
-                            <FieldLabel>Model</FieldLabel>
-                            <Input
-                                value={draft.model}
-                                onChange={(e) => patch({ model: e.target.value })}
-                                placeholder="De Ville / Datejust / Tank..."
-                            />
-                        </div>
-
-                        <div>
-                            <FieldLabel>Reference</FieldLabel>
-                            <Input
-                                value={draft.referenceNumber}
-                                onChange={(e) =>
-                                    patch({ referenceNumber: e.target.value })
-                                }
-
-                            />
-                        </div>
-
-                        <div>
-                            <FieldLabel>Nickname</FieldLabel>
-                            <Input
-                                value={draft.nickname}
-                                onChange={(e) => patch({ nickname: e.target.value })}
-
-                            />
-                        </div>
-                    </div>
-                </section>
-
-                <section>
-                    <div className="mb-3 text-sm font-semibold text-slate-900">
-                        Case & movement
-                    </div>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div>
-                            <FieldLabel>Case form</FieldLabel>
-                            <Select
-                                value={draft.caseShape}
-                                onChange={(e) => patch({ caseShape: e.target.value })}
-                                options={CASE_SHAPE_OPTIONS}
-                                placeholder="Round / Square / Tank / ..."
-                            />
-                        </div>
-
-                        <div>
-                            <FieldLabel>Dial color</FieldLabel>
-                            <Input
-                                value={draft.dialColor}
-                                onChange={(e) => patch({ dialColor: e.target.value })}
-                                placeholder="Dial color"
-                            />
-                        </div>
-
-                        <div>
-                            <FieldLabel>Thickness (mm)</FieldLabel>
-                            <Input
-                                value={draft.thicknessMM}
-                                onChange={(e) => patch({ thicknessMM: e.target.value })}
-                                placeholder="11"
-                            />
-                        </div>
-
-                        <div>
-                            <FieldLabel>Crystal</FieldLabel>
-                            <Select
-                                value={draft.crystal}
-                                onChange={(e) => patch({ crystal: e.target.value })}
-                                options={CRYSTAL_OPTIONS}
-                                placeholder="Chọn crystal"
-                            />
-                        </div>
-
-                        <div>
-                            <FieldLabel>Calibre</FieldLabel>
-                            <Input
-                                value={draft.calibre}
-                                onChange={(e) => patch({ calibre: e.target.value })}
-                                placeholder="7S26 / L993.1 / ..."
-                            />
-                        </div>
-
-                        <div className="hidden">
-                            <FieldLabel>Dial finish</FieldLabel>
-                            <Input
-                                value={draft.dialFinish}
-                                onChange={(e) => patch({ dialFinish: e.target.value })}
-                                placeholder="Sunburst / linen / brushed / ..."
-                            />
-                        </div>
-                    </div>
-                </section>
-
-                <section>
-                    <div className="mb-3 text-sm font-semibold text-slate-900">
-                        Material
-                    </div>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div>
-                            <FieldLabel>Material profile</FieldLabel>
-                            <Select
-                                value={draft.materialProfile}
-                                onChange={(e) => {
-                                    const next = e.target.value;
-                                    patch({
-                                        materialProfile: next,
-                                        ...(next === "SINGLE_MATERIAL"
-                                            ? {
-                                                secondaryCaseMaterial: "",
-                                                goldTreatment: "",
-                                                goldColors: [],
-                                                goldKarat: "",
-                                            }
-                                            : {}),
-                                        ...(next === "BIMETAL"
-                                            ? {
-                                                goldTreatment: "",
-                                                goldColors: [],
-                                                goldKarat: "",
-                                            }
-                                            : {}),
-                                    });
-                                }}
-                                options={MATERIAL_PROFILE_OPTIONS}
-                            />
-                        </div>
-
-                        <div>
-                            <FieldLabel>Primary material</FieldLabel>
-                            <Select
-                                value={draft.primaryCaseMaterial}
-                                onChange={(e) =>
-                                    patch({ primaryCaseMaterial: e.target.value })
-                                }
-                                options={MATERIAL_OPTIONS}
-                                placeholder="Chọn chất liệu"
-                            />
-                        </div>
-
-                        {materialProfile === "BIMETAL" ? (
-                            <div>
-                                <FieldLabel>Secondary material</FieldLabel>
-                                <Select
-                                    value={draft.secondaryCaseMaterial}
-                                    onChange={(e) =>
-                                        patch({
-                                            secondaryCaseMaterial: e.target.value,
-                                        })
-                                    }
-                                    options={MATERIAL_OPTIONS}
-                                    placeholder="Chọn chất liệu phụ"
-                                />
-                            </div>
-                        ) : null}
-
-                        {materialProfile === "COATED" ? (
-                            <>
-                                <div>
-                                    <FieldLabel>Gold treatment</FieldLabel>
-                                    <Select
-                                        value={draft.goldTreatment}
-                                        onChange={(e) =>
-                                            patch({ goldTreatment: e.target.value })
-                                        }
-                                        options={GOLD_TREATMENT_OPTIONS}
-                                        placeholder="Chọn gold treatment"
-                                    />
-                                </div>
-
-                                <div>
-                                    <FieldLabel>Gold karat</FieldLabel>
-                                    <Select
-                                        value={draft.goldKarat}
-                                        onChange={(e) =>
-                                            patch({ goldKarat: e.target.value })
-                                        }
-                                        options={GOLD_KARAT_OPTIONS}
-                                        placeholder="Chọn gold karat"
-                                    />
-                                </div>
-
-                                <div className="md:col-span-2">
-                                    <FieldLabel>Gold colors</FieldLabel>
-                                    <div className="flex flex-wrap gap-2">
-                                        {GOLD_COLOR_OPTIONS.map((color) => {
-                                            const checked = draft.goldColors.includes(color);
-                                            return (
-                                                <Toggle
-                                                    key={color}
-                                                    checked={checked}
-                                                    label={color}
-                                                    onChange={(next) => {
-                                                        const current =
-                                                            draft.goldColors || [];
-                                                        patch({
-                                                            goldColors: next
-                                                                ? [...current, color]
-                                                                : current.filter(
-                                                                    (x) => x !== color
-                                                                ),
-                                                        });
-                                                    }}
-                                                />
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </>
-                        ) : null}
-
-                        <div className="hidden">
-                            <FieldLabel>Bracelet type</FieldLabel>
-                            <Select
-                                value={draft.braceletType}
-                                onChange={(e) =>
-                                    patch({ braceletType: e.target.value })
-                                }
-                                options={BRACELET_OPTIONS}
-                                placeholder="Chọn bracelet type"
-                            />
-                        </div>
-
-                        <div className="hidden">
-                            <FieldLabel>Dây / khóa</FieldLabel>
-                            <Select
-                                value={draft.strapSetType}
-                                onChange={(e) =>
-                                    patch({
-                                        strapSetType: e.target.value,
-                                        strapComponentSource: "",
-                                    })
-                                }
-                                options={STRAP_SET_TYPE_OPTIONS}
-                                placeholder="Chọn dây hãng / linh kiện"
-                            />
-                        </div>
-
-                        {false && draft.strapSetType === "COMPONENT" ? (
-                            <div>
-                                <FieldLabel>Nguồn dây</FieldLabel>
-                                <Select
-                                    value={draft.strapComponentSource}
-                                    onChange={(e) =>
-                                        patch({
-                                            strapComponentSource: e.target.value,
-                                        })
-                                    }
-                                    options={STRAP_COMPONENT_SOURCE_OPTIONS}
-                                    placeholder="Chọn nguồn dây"
-                                />
-                            </div>
-                        ) : null}
-                        <div className="hidden">
-                            <FieldLabel>Buckle type</FieldLabel>
-                            <Input
-                                value={draft.buckleType}
-                                onChange={(e) => patch({ buckleType: e.target.value })}
-                                placeholder="Pin buckle / deployant / ..."
-                            />
-                        </div>
-
-                        <div className="md:col-span-2">
-                            <FieldLabel>Material note</FieldLabel>
-                            <Textarea
-                                value={draft.materialNote}
-                                onChange={(e) => patch({ materialNote: e.target.value })}
-                                placeholder="Ghi chú vật liệu"
-                            />
-                        </div>
-                    </div>
-                </section>
+        <div className="space-y-8">
+          <section>
+            <div className="mb-3 text-sm font-semibold text-slate-900">
+              Identity
             </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div>
+                <FieldLabel>Model</FieldLabel>
+                <Input
+                  value={draft.model}
+                  onChange={(e) => patch({ model: e.target.value })}
+                  placeholder="De Ville / Datejust / Tank..."
+                />
+              </div>
 
-            <DialogFooter>
-                <Button variant="outline" onClick={onClose}>
-                    Hủy
-                </Button>
-                <Button
-                    onClick={() => {
-                        onSave(draft);
-                        onClose();
-                    }}
-                >
-                    Lưu spec
-                </Button>
-            </DialogFooter>
-        </Dialog>
-    );
+              <div>
+                <FieldLabel>Reference</FieldLabel>
+                <Input
+                  value={draft.referenceNumber}
+                  onChange={(e) => patch({ referenceNumber: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <FieldLabel>Nickname</FieldLabel>
+                <Input
+                  value={draft.nickname}
+                  onChange={(e) => patch({ nickname: e.target.value })}
+                />
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <div className="mb-3 text-sm font-semibold text-slate-900">
+              Case & movement
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <FieldLabel>Case form</FieldLabel>
+                <Select
+                  value={draft.caseShape}
+                  onChange={(e) => patch({ caseShape: e.target.value })}
+                  options={CASE_SHAPE_OPTIONS}
+                  placeholder="Round / Square / Tank / ..."
+                />
+              </div>
+
+              <div>
+                <FieldLabel>Dial color</FieldLabel>
+                <Input
+                  value={draft.dialColor}
+                  onChange={(e) => patch({ dialColor: e.target.value })}
+                  placeholder="Dial color"
+                />
+              </div>
+
+              <div>
+                <FieldLabel>Thickness (mm)</FieldLabel>
+                <Input
+                  value={draft.thicknessMM}
+                  onChange={(e) => patch({ thicknessMM: e.target.value })}
+                  placeholder="11"
+                />
+              </div>
+
+              <div>
+                <FieldLabel>Crystal</FieldLabel>
+                <Select
+                  value={draft.crystal}
+                  onChange={(e) => patch({ crystal: e.target.value })}
+                  options={CRYSTAL_OPTIONS}
+                  placeholder="Chọn crystal"
+                />
+              </div>
+
+              <div>
+                <FieldLabel>Calibre</FieldLabel>
+                <Input
+                  value={draft.calibre}
+                  onChange={(e) => patch({ calibre: e.target.value })}
+                  placeholder="7S26 / L993.1 / ..."
+                />
+              </div>
+
+              <div>
+                <FieldLabel>Dial finish</FieldLabel>
+                <Input
+                  value={draft.dialFinish}
+                  onChange={(e) => patch({ dialFinish: e.target.value })}
+                  placeholder="Sunburst / linen / brushed / ..."
+                />
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <div className="mb-3 text-sm font-semibold text-slate-900">
+              Material
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <FieldLabel>Material profile</FieldLabel>
+                <Select
+                  value={draft.materialProfile}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    patch({
+                      materialProfile: next,
+                      ...(next === "SINGLE_MATERIAL"
+                        ? {
+                            secondaryCaseMaterial: "",
+                            goldTreatment: "",
+                            goldColors: [],
+                            goldKarat: "",
+                          }
+                        : {}),
+                      ...(next === "BIMETAL"
+                        ? {
+                            goldTreatment: "",
+                            goldColors: [],
+                            goldKarat: "",
+                          }
+                        : {}),
+                    });
+                  }}
+                  options={MATERIAL_PROFILE_OPTIONS}
+                />
+              </div>
+
+              <div>
+                <FieldLabel>Primary material</FieldLabel>
+                <Select
+                  value={draft.primaryCaseMaterial}
+                  onChange={(e) =>
+                    patch({ primaryCaseMaterial: e.target.value })
+                  }
+                  options={MATERIAL_OPTIONS}
+                  placeholder="Chọn chất liệu"
+                />
+              </div>
+
+              {materialProfile === "BIMETAL" ? (
+                <div>
+                  <FieldLabel>Secondary material</FieldLabel>
+                  <Select
+                    value={draft.secondaryCaseMaterial}
+                    onChange={(e) =>
+                      patch({
+                        secondaryCaseMaterial: e.target.value,
+                      })
+                    }
+                    options={MATERIAL_OPTIONS}
+                    placeholder="Chọn chất liệu phụ"
+                  />
+                </div>
+              ) : null}
+
+              {materialProfile === "COATED" ? (
+                <>
+                  <div>
+                    <FieldLabel>Gold treatment</FieldLabel>
+                    <Select
+                      value={draft.goldTreatment}
+                      onChange={(e) => patch({ goldTreatment: e.target.value })}
+                      options={GOLD_TREATMENT_OPTIONS}
+                      placeholder="Chọn gold treatment"
+                    />
+                  </div>
+
+                  <div>
+                    <FieldLabel>Gold karat</FieldLabel>
+                    <Select
+                      value={draft.goldKarat}
+                      onChange={(e) => patch({ goldKarat: e.target.value })}
+                      options={GOLD_KARAT_OPTIONS}
+                      placeholder="Chọn gold karat"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <FieldLabel>Gold colors</FieldLabel>
+                    <div className="flex flex-wrap gap-2">
+                      {GOLD_COLOR_OPTIONS.map((color) => {
+                        const checked = draft.goldColors.includes(color);
+                        return (
+                          <Toggle
+                            key={color}
+                            checked={checked}
+                            label={color}
+                            onChange={(next) => {
+                              const current = draft.goldColors || [];
+                              patch({
+                                goldColors: next
+                                  ? [...current, color]
+                                  : current.filter((x) => x !== color),
+                              });
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              ) : null}
+
+              <div>
+                <FieldLabel>Bracelet type</FieldLabel>
+                <Select
+                  value={draft.braceletType}
+                  onChange={(e) => patch({ braceletType: e.target.value })}
+                  options={BRACELET_OPTIONS}
+                  placeholder="Chọn bracelet type"
+                />
+              </div>
+
+              <div>
+                <FieldLabel>Dây / khóa</FieldLabel>
+                <Select
+                  value={draft.strapSetType}
+                  onChange={(e) =>
+                    patch({
+                      strapSetType: e.target.value,
+                      strapComponentSource: "",
+                    })
+                  }
+                  options={STRAP_SET_TYPE_OPTIONS}
+                  placeholder="Chọn dây hãng / linh kiện"
+                />
+              </div>
+
+              {draft.strapSetType === "COMPONENT" ? (
+                <div>
+                  <FieldLabel>Nguồn dây</FieldLabel>
+                  <Select
+                    value={draft.strapComponentSource}
+                    onChange={(e) =>
+                      patch({
+                        strapComponentSource: e.target.value,
+                      })
+                    }
+                    options={STRAP_COMPONENT_SOURCE_OPTIONS}
+                    placeholder="Chọn nguồn dây"
+                  />
+                </div>
+              ) : null}
+              <div>
+                <FieldLabel>Buckle type</FieldLabel>
+                <Input
+                  value={draft.buckleType}
+                  onChange={(e) => patch({ buckleType: e.target.value })}
+                  placeholder="Pin buckle / deployant / ..."
+                />
+              </div>
+
+              {draft.strapComponentSource === "FROM_STOCK" ? (
+                <div className="md:col-span-2 rounded-xl border border-violet-200 bg-violet-50/60 p-4">
+                  <div className="mb-3">
+                    <div className="text-sm font-semibold text-slate-900">
+                      Chọn dây đang có trong kho
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      Khi gắn, tồn kho giảm 1 và Watch lưu lịch sử dây xuyên
+                      suốt.
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Select
+                      value={selectedStrapId}
+                      onChange={(event) =>
+                        setSelectedStrapId(event.target.value)
+                      }
+                      options={availableStraps.map((item) => ({
+                        value: item.variantId,
+                        label: `${item.title} · ${item.lugWidthMM}-${item.buckleWidthMM ?? "—"} · tồn ${item.stockQty}`,
+                      }))}
+                      placeholder={
+                        loadingStraps
+                          ? "Đang tải tồn kho..."
+                          : availableStraps.length
+                            ? "Chọn dây phù hợp"
+                            : "Không có dây còn tồn"
+                      }
+                    />
+                    <Button
+                      type="button"
+                      onClick={installSelectedStrap}
+                      disabled={!selectedStrapId || installingStrap}
+                      className="shrink-0"
+                    >
+                      {installingStrap ? "Đang gắn..." : "Gắn vào Watch"}
+                    </Button>
+                  </div>
+                  {strapMessage ? (
+                    <div className="mt-2 text-xs font-medium text-violet-700">
+                      {strapMessage}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div className="md:col-span-2">
+                <FieldLabel>Material note</FieldLabel>
+                <Textarea
+                  value={draft.materialNote}
+                  onChange={(e) => patch({ materialNote: e.target.value })}
+                  placeholder="Ghi chú vật liệu"
+                />
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Hủy
+          </Button>
+          <Button
+            onClick={() => {
+              onSave(draft);
+              onClose();
+            }}
+          >
+            Lưu spec
+          </Button>
+        </DialogFooter>
+      </Dialog>
+      {accessoryOpen ? (
+        <div className="fixed inset-0 z-[100] overflow-y-auto bg-slate-50">
+          <AccessoryAcquisitionEntryClient
+            vendors={accessoryVendors}
+            onClose={() => setAccessoryOpen(false)}
+          />
+        </div>
+      ) : null}
+    </>
+  );
 }

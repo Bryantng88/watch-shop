@@ -8,6 +8,7 @@ import {
     getAiMetaFromDescription,
     getPricingFromDescription,
 } from "../shared/acquisition-item-metadata";
+import { getClaspSpecFromDescription, getStrapSpecFromDescription } from "../shared/acquisition-item-metadata";
 import * as repoAcq from "../server";
 import {
     attachInlineImageToAcquisitionWatchDraft,
@@ -16,7 +17,7 @@ import {
 } from "../server/acquisition-media.service";
 import { ensureInitialPaymentForAcquisitionTx, publishPaymentMutations } from "@/domains/payment/server";
 import { restoreBuyBackWatchAfterAcquisitionPostTx } from "../server";
-import { emitWatchCreatedEvent } from "@/domains/watch/server/events";
+import { emitWatchBoughtBackEvent, emitWatchCreatedEvent } from "@/domains/watch/server/events";
 import type { BusinessEventDispatchOptions } from "@/domains/event/server/business-event.service";
 
 type PendingInlineImageAttach = {
@@ -87,7 +88,9 @@ export async function postAcquisitionApplication(
 
     const isBuyBack = acq.type === "BUY_BACK";
 
-    if (!isBuyBack && !acq.vendorId) {
+    const isTradeIn = acq.type === "TRADE_IN";
+
+    if (!isBuyBack && !isTradeIn && !acq.vendorId) {
         throw new Error("Không tìm thấy vendor để post phiếu");
     }
     const items = acq.acquisitionItem ?? [];
@@ -98,14 +101,42 @@ export async function postAcquisitionApplication(
 
     const pendingInlineImages: PendingInlineImageAttach[] = [];
     const createdWatchEvents: CreatedWatchEvent[] = [];
+    const returningTradeInProductIds = isTradeIn
+        ? items.map((item) => item.productId).filter((id): id is string => Boolean(id))
+        : [];
 
     const result = await prisma.$transaction(
         async (tx) => {
             for (const [index, item] of items.entries()) {
                 let productId = item.productId;
+                const isReturningSoldWatch = Boolean(productId && (isBuyBack || isTradeIn));
                 const audienceSegment = item.audienceSegment ?? acq.audienceSegment;
 
                 if (!productId) {
+                    if (item.productType === "WATCH_CLASP") {
+                        const clasp = await repoAcq.createClaspDraftForAcquisitionItem(tx as any, {
+                            acquisitionItemId: item.id,
+                            vendorId,
+                            title: item.productTitle ?? "Khóa đồng hồ",
+                            quantity: Number(item.quantity ?? 1),
+                            unitCost: Number(item.unitCost ?? 0),
+                            spec: getClaspSpecFromDescription(item.description) ?? {},
+                        });
+                        productId = clasp.productId;
+                        continue;
+                    }
+                    if (item.productType === "WATCH_STRAP") {
+                        const strap = await repoAcq.createStrapDraftForAcquisitionItem(tx as any, {
+                            acquisitionItemId: item.id,
+                            vendorId,
+                            title: item.productTitle ?? "Dây đồng hồ",
+                            quantity: Number(item.quantity ?? 1),
+                            unitCost: Number(item.unitCost ?? 0),
+                            spec: getStrapSpecFromDescription(item.description) ?? {},
+                        });
+                        productId = strap.productId;
+                        continue;
+                    }
                     const draft = await repoAcq.createWatchDraftForAcquisitionItem(tx as any, {
                         acquisitionItemId: item.id,
                         acquisitionId: acqId,
@@ -154,10 +185,12 @@ export async function postAcquisitionApplication(
                     );
                 }
 
-                await enqueueAcquisitionSpecJob(tx as any, {
-                    acquisitionItemId: item.id,
-                    productId,
-                });
+                if (!isReturningSoldWatch) {
+                    await enqueueAcquisitionSpecJob(tx as any, {
+                        acquisitionItemId: item.id,
+                        productId,
+                    });
+                }
             }
 
             await repoAcq.updateAcquisitionItemStatus(tx as any, {
@@ -173,9 +206,11 @@ export async function postAcquisitionApplication(
             // BUY_BACK: chỉ khi phiếu nhập được POST mới trả watch về kho.
             // SaleStage không bị hard-code; helper sẽ quyết định READY/PROCESSING
             // theo dữ liệu content + gallery hiện có.
-            await restoreBuyBackWatchAfterAcquisitionPostTx(tx as any, acqId);
+            const restoredWatches = await restoreBuyBackWatchAfterAcquisitionPostTx(tx as any, acqId, {
+                tradeInProductIds: returningTradeInProductIds,
+            });
 
-            return { posted, paymentResult };
+            return { posted, paymentResult, restoredWatches };
         },
         {
             maxWait: 5000,
@@ -222,6 +257,21 @@ export async function postAcquisitionApplication(
             deferConsumers,
         });
     }));
+
+    await Promise.all((result.restoredWatches ?? []).map((watch) =>
+        emitWatchBoughtBackEvent(prisma, {
+            watch: {
+                id: watch.watchId,
+                productId: watch.productId,
+                saleStage: watch.saleStage,
+            },
+            acquisitionId: acqId,
+            acquisitionType: isTradeIn ? "TRADE_IN" : "BUY_BACK",
+            unitCost: watch.unitCost,
+            sourceOrderItemId: watch.sourceOrderItemId,
+            deferConsumers,
+        })
+    ));
 
     await repoAcq.emitAcquisitionBusinessEvent(prisma, {
         eventKey: "acquisition.items.updated",

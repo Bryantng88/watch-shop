@@ -15,6 +15,7 @@ import { adminDashboardSummaryProjectionBuilder } from "./admin-dashboard-summar
 import { serviceRequestListProjectionBuilder } from "./service-request-list.projection";
 import { normalizeBusinessEventKey } from "@/domains/event/contract/business-event-contract.helpers";
 import { watchCostLedgerProjectionBuilder } from "./watch-cost-ledger.projection";
+import { strapListProjectionBuilder } from "./strap-list";
 
 const PROJECTION_BUILDERS: ProjectionBuilder[] = [
   watchMediaQueueProjectionBuilder,
@@ -31,6 +32,7 @@ const PROJECTION_BUILDERS: ProjectionBuilder[] = [
   adminDashboardSummaryProjectionBuilder,
   serviceRequestListProjectionBuilder,
   watchCostLedgerProjectionBuilder,
+  strapListProjectionBuilder,
 ];
 
 function clean(value: unknown) {

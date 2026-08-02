@@ -22,6 +22,7 @@ type Props = {
     checked: boolean;
     onCheckedChange: (checked: boolean) => void;
     onOpenEdit?: (id: string) => void;
+    canManage?: boolean;
 };
 
 export default function AcquisitionListRow({
@@ -29,6 +30,7 @@ export default function AcquisitionListRow({
     checked,
     onCheckedChange,
     onOpenEdit,
+    canManage = false,
 }: Props) {
     const router = useRouter();
     const notify = useNotify();
@@ -143,7 +145,7 @@ export default function AcquisitionListRow({
                 <input
                     type="checkbox"
                     checked={checked}
-                    disabled={!selectable}
+                    disabled={!selectable || !canManage}
                     onChange={(event) => onCheckedChange(event.target.checked)}
                 />
             </td>
@@ -207,6 +209,7 @@ export default function AcquisitionListRow({
                             onClick: () => onOpenEdit?.(item.id),
                             icon: "edit",
                             hidden: !draft,
+                            ...(canManage ? {} : { hidden: true }),
                         },
                         {
                             key: "approve",
@@ -214,6 +217,7 @@ export default function AcquisitionListRow({
                             onClick: handleApprove,
                             icon: <BadgeCheck className="h-4 w-4" />,
                             hidden: posted,
+                            ...(canManage ? {} : { hidden: true }),
                         },
                         {
                             key: "cancel",
@@ -221,6 +225,7 @@ export default function AcquisitionListRow({
                             onClick: handleCancel,
                             icon: <XCircle className="h-4 w-4" />,
                             hidden: !draft,
+                            ...(canManage ? {} : { hidden: true }),
                         },
                     ]}
                 />

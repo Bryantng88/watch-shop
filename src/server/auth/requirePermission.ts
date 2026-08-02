@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "./getCurrentUser";
+import { PERMISSIONS } from "@/constants/permissions";
 
 type AuthUserWithPermissions = {
     id: string;
@@ -44,9 +45,11 @@ export async function getCurrentUserPermissions(): Promise<CurrentUserPermission
         };
     }
 
-    const permissions: string[] = Array.from(
-        new Set<string>(Array.isArray(currentUser?.permissions) ? currentUser.permissions : []),
-    );
+    const roles = Array.isArray(currentUser?.roles) ? currentUser.roles : [];
+    const permissions: string[] = Array.from(new Set<string>([
+        ...(Array.isArray(currentUser?.permissions) ? currentUser.permissions : []),
+        ...(roles.includes("ADMIN") ? Object.values(PERMISSIONS) : []),
+    ]));
 
     return {
         user: {
@@ -55,7 +58,7 @@ export async function getCurrentUserPermissions(): Promise<CurrentUserPermission
             userId,
             email,
             name: currentUser?.name ?? null,
-            roles: Array.isArray(currentUser?.roles) ? currentUser.roles : [],
+            roles,
             permissions,
         },
         permissions,
@@ -69,7 +72,9 @@ export async function requirePermission(code: string) {
         redirect("/login");
     }
 
-    if (!permissions.includes(code)) {
+    const isAdmin = user.roles.includes("ADMIN");
+
+    if (!isAdmin && !permissions.includes(code)) {
         console.warn("[requirePermission denied]", {
             required: code,
             userId: user.id,
@@ -84,7 +89,7 @@ export async function requirePermission(code: string) {
 }
 
 export async function hasPermission(code: string) {
-    const { permissions } = await getCurrentUserPermissions();
+    const { user, permissions } = await getCurrentUserPermissions();
 
-    return permissions.includes(code);
+    return Boolean(user?.roles.includes("ADMIN") || permissions.includes(code));
 }

@@ -8,6 +8,7 @@ import {
   updateWatchContentStatusRepo,
 } from "./watch-content.repo";
 import { emitWatchContentModifiedEvent } from "@/domains/watch/server/events";
+import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
 
 type MeaningfulWatchContent = {
   titleOverride?: unknown;
@@ -47,7 +48,7 @@ export async function saveWatchContent(
     userId?: string | null;
   },
 ) {
-  return prisma.$transaction(async (tx) => {
+  return runBusinessEventTransaction(async (tx, delivery) => {
     const content = await saveWatchContentRepo(tx, productId, {
       productId,
       ...input,
@@ -55,10 +56,11 @@ export async function saveWatchContent(
     const target = await getWatchContentReviewTargetRepo(tx, productId);
     if (!target) throw new Error("KhÃ´ng tÃ¬m tháº¥y watch");
 
-    await emitWatchContentModifiedEvent(tx, {
+    const event = await emitWatchContentModifiedEvent(tx, {
       watch: target,
       actorUserId: input.userId ?? null,
     });
+    delivery.track(event);
 
     return content;
   });

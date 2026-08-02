@@ -44,7 +44,7 @@ function isSelectable(item: { approvalStatus: string }) {
     return String(item.approvalStatus).toUpperCase() !== "POSTED";
 }
 
-export default function AcquisitionListClient(props: AcquisitionListClientProps) {
+export default function AcquisitionListClient(props: AcquisitionListClientProps & { strapOnly?: boolean; canManage?: boolean }) {
     const router = useRouter();
     const pathname = usePathname();
     const sp = useSearchParams();
@@ -59,8 +59,8 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
     }, [sp.toString(), props.page]);
 
     const selectableIds = React.useMemo(
-        () => props.items.filter(isSelectable).map((item) => item.id),
-        [props.items],
+        () => props.canManage ? props.items.filter(isSelectable).map((item) => item.id) : [],
+        [props.canManage, props.items],
     );
 
     function toggleOne(id: string, checked: boolean) {
@@ -158,6 +158,7 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
                     total={props.total}
                     visibleCount={props.items.length}
                     selectedCount={selectedIds.length}
+                    strapOnly={Boolean(props.strapOnly)}
                 />
             }
         >
@@ -197,6 +198,7 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
                 onToggleOne={toggleOne}
                 onToggleAll={toggleAll}
                 onOpenEdit={setEditAcquisitionId}
+                canManage={Boolean(props.canManage)}
             />
 
             {editAcquisitionId ? (

@@ -17,6 +17,7 @@ export type BusinessEventTargetType =
   | "TECHNICAL_ISSUE"
   | "ACQUISITION"
   | "WORK_CASE"
+  | "STRAP"
   | "TASK"
   | "TASK_ITEM"
   | "GENERAL";

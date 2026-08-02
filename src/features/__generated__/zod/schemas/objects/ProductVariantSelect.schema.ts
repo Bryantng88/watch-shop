@@ -8,6 +8,9 @@ import { PartVariantSpecArgsObjectSchema as PartVariantSpecArgsObjectSchema } fr
 import { ProductArgsObjectSchema as ProductArgsObjectSchema } from './ProductArgs.schema';
 import { ServiceRequestFindManySchema as ServiceRequestFindManySchema } from '../findManyServiceRequest.schema';
 import { StrapVariantSpecArgsObjectSchema as StrapVariantSpecArgsObjectSchema } from './StrapVariantSpecArgs.schema';
+import { ClaspVariantSpecArgsObjectSchema as ClaspVariantSpecArgsObjectSchema } from './ClaspVariantSpecArgs.schema';
+import { WatchStrapInstallationFindManySchema as WatchStrapInstallationFindManySchema } from '../findManyWatchStrapInstallation.schema';
+import { StrapInventoryMovementFindManySchema as StrapInventoryMovementFindManySchema } from '../findManyStrapInventoryMovement.schema';
 import { ProductVariantCountOutputTypeArgsObjectSchema as ProductVariantCountOutputTypeArgsObjectSchema } from './ProductVariantCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -37,6 +40,9 @@ const makeSchema = () => z.object({
   Product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),
   ServiceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestFindManySchema)]).optional(),
   StrapVariantSpec: z.union([z.boolean(), z.lazy(() => StrapVariantSpecArgsObjectSchema)]).optional(),
+  ClaspVariantSpec: z.union([z.boolean(), z.lazy(() => ClaspVariantSpecArgsObjectSchema)]).optional(),
+  strapInstallations: z.union([z.boolean(), z.lazy(() => WatchStrapInstallationFindManySchema)]).optional(),
+  strapMovements: z.union([z.boolean(), z.lazy(() => StrapInventoryMovementFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => ProductVariantCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const ProductVariantSelectObjectSchema: z.ZodType<Prisma.ProductVariantSelect> = makeSchema() as unknown as z.ZodType<Prisma.ProductVariantSelect>;

@@ -37,6 +37,7 @@ type Props = {
     onToggleOne: (id: string, checked: boolean) => void;
     onToggleAll: (checked: boolean) => void;
     onOpenEdit?: (id: string) => void;
+    canManage?: boolean;
 };
 
 export default function AcquisitionListTable({
@@ -50,8 +51,9 @@ export default function AcquisitionListTable({
     onToggleOne,
     onToggleAll,
     onOpenEdit,
+    canManage = false,
 }: Props) {
-    const selectableIds = items.filter(isSelectable).map((item) => item.id);
+    const selectableIds = canManage ? items.filter(isSelectable).map((item) => item.id) : [];
 
     const allChecked =
         selectableIds.length > 0 &&
@@ -119,6 +121,7 @@ export default function AcquisitionListTable({
                                 checked={selectedIds.includes(item.id)}
                                 onCheckedChange={(checked) => onToggleOne(item.id, checked)}
                                 onOpenEdit={onOpenEdit}
+                                canManage={canManage}
                             />
                         ))}
 

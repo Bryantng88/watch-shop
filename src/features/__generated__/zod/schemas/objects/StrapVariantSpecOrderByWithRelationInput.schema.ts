@@ -13,6 +13,22 @@ const makeSchema = () => z.object({
   updatedAt: SortOrderSchema.optional(),
   lugWidthMM: SortOrderSchema.optional(),
   buckleWidthMM: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  originType: SortOrderSchema.optional(),
+  brandName: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  leatherType: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  surface: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  inventoryPolicy: SortOrderSchema.optional(),
+  claspType: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  claspWidthMM: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  claspOriginType: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  finish: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  lengthClass: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  minStockQty: SortOrderSchema.optional(),
+  targetStockQty: SortOrderSchema.optional(),
+  braceletReference: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  defaultFullLinks: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  defaultHalfLinks: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  defaultEndLinks: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   ProductVariant: z.lazy(() => ProductVariantOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const StrapVariantSpecOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.StrapVariantSpecOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.StrapVariantSpecOrderByWithRelationInput>;

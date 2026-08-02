@@ -56,9 +56,13 @@ const TARGET_LABELS: Record<string, string> = {
   SERVICE_REQUEST: "yêu cầu dịch vụ",
   TECHNICAL_ISSUE: "Technical Issue",
   TASK_ITEM: "công việc",
+  STRAP: "dây đồng hồ",
 };
 
 const ACTION_LABELS: Record<string, string> = {
+  "acquisition.created": "tạo phiếu nhập",
+  "acquisition.updated": "cập nhật phiếu nhập",
+  "acquisition.posted": "duyệt phiếu nhập",
   "technical_issue.confirmed": "xác nhận Technical Issue",
   "technical_issue.started": "bắt đầu một Technical Issue",
   "technical_issue.completed": "hoàn tất Technical Issue",
@@ -77,6 +81,13 @@ const ACTION_LABELS: Record<string, string> = {
   "watch.media.asset.attached": "thêm media cho đồng hồ",
   "watch.media.ready_for_publish": "đưa media sang bước đăng bán",
   "watch.publish.assets.downloaded": "tải bộ media đăng bán",
+  "watch.bought_back": "thu lại đồng hồ đã bán",
+  "strap.created": "tạo dây đồng hồ",
+  "strap.intake.requested": "đưa dây vào xử lý",
+  "strap.stock.adjusted": "điều chỉnh tồn dây",
+  "strap.installed": "gắn dây vào Watch",
+  "strap.removed": "tháo dây khỏi Watch",
+  "strap.links.adjusted": "điều chỉnh mắt dây",
 };
 
 const TITLE_ACTIONS: Record<string, string> = {
@@ -142,6 +153,7 @@ function todayStart() {
 
 function targetHref(targetType: string, targetId: string, taskItemId: string) {
   if (targetType === "WATCH") return `/admin/watches/${targetId}`;
+  if (targetType === "STRAP") return `/admin/straps/${targetId}`;
   if (targetType === "ORDER") return `/admin/orders?search=${encodeURIComponent(targetId)}`;
   if (targetType === "ACQUISITION") {
     return `/admin/acquisitions?search=${encodeURIComponent(targetId)}`;
@@ -171,6 +183,22 @@ export async function listGlobalActivity(input: GlobalActivityQuery) {
     : 50;
   const occurredAt = periodStart(period);
 
+  const acquisitionEventWhere: Prisma.BusinessEventLogWhereInput = {
+    targetType: "ACQUISITION",
+    eventKey: eventKey || undefined,
+    actorUserId: actorUserId || undefined,
+    createdAt: occurredAt ? { gte: occurredAt } : undefined,
+    ...(targetType && targetType !== "ACQUISITION" ? { id: "__none__" } : {}),
+    ...(query
+      ? {
+        OR: [
+          { eventKey: { contains: query, mode: "insensitive" } },
+          { targetId: { contains: query, mode: "insensitive" } },
+        ],
+      }
+      : {}),
+  };
+
   const where: Prisma.TaskItemActivityWhereInput = {
     sourceType: {
       in: [ActivitySourceType.BUSINESS_EVENT, ActivitySourceType.SYSTEM],
@@ -199,13 +227,12 @@ export async function listGlobalActivity(input: GlobalActivityQuery) {
     ],
   };
 
-  const [total, rows, actorRows, todayTotal, sourceGroups] = await Promise.all([
+  const [total, rows, actorRows, todayTotal, sourceGroups, acquisitionTotal, acquisitionRows, acquisitionToday] = await Promise.all([
     prisma.taskItemActivity.count({ where }),
     prisma.taskItemActivity.findMany({
       where,
       orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+      take: page * pageSize,
       select: {
         id: true,
         taskItemId: true,
@@ -253,9 +280,37 @@ export async function listGlobalActivity(input: GlobalActivityQuery) {
       where,
       _count: { _all: true },
     }),
+    prisma.businessEventLog.count({ where: acquisitionEventWhere }),
+    prisma.businessEventLog.findMany({
+      where: acquisitionEventWhere,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: page * pageSize,
+      select: {
+        id: true,
+        eventKey: true,
+        targetType: true,
+        targetId: true,
+        actorUserId: true,
+        metadataJson: true,
+        createdAt: true,
+      },
+    }),
+    prisma.businessEventLog.count({
+      where: { ...acquisitionEventWhere, createdAt: { gte: todayStart() } },
+    }),
   ]);
 
-  const items = rows.map((row) => {
+  const projectedSourceIds = new Set(rows.map((row) => clean(row.sourceId)).filter(Boolean));
+  const rawActorIds = Array.from(new Set(acquisitionRows.map((row) => clean(row.actorUserId)).filter(Boolean)));
+  const rawActors = rawActorIds.length
+    ? await prisma.user.findMany({
+      where: { id: { in: rawActorIds } },
+      select: { id: true, name: true, email: true, avatarUrl: true },
+    })
+    : [];
+  const rawActorById = new Map(rawActors.map((actor) => [actor.id, actor]));
+
+  const taskItems = rows.map((row) => {
     const metadata = metadataRecord(row.metadataJson);
     const resolvedTargetType = clean(metadata.targetType).toUpperCase() || "TASK_ITEM";
     const resolvedTargetId = clean(metadata.targetId) || row.taskItemId;
@@ -290,14 +345,54 @@ export async function listGlobalActivity(input: GlobalActivityQuery) {
     };
   });
 
+  const acquisitionItems = acquisitionRows
+    .filter((row) => !projectedSourceIds.has(row.id))
+    .map((row) => {
+      const metadata = metadataRecord(row.metadataJson);
+      const actor = row.actorUserId ? rawActorById.get(row.actorUserId) ?? null : null;
+      const type = clean(metadata.type).toUpperCase();
+      const orderRef = clean(metadata.orderRefNo) || clean(metadata.sourceOrderRefNo) || clean(metadata.sourceOrderId);
+      const body = [
+        type ? `Loại phiếu: ${type}` : null,
+        orderRef ? `Từ đơn hàng: ${orderRef}` : null,
+      ].filter(Boolean).join(" · ") || null;
+
+      return {
+        id: `business-event:${row.id}`,
+        sourceType: ActivitySourceType.BUSINESS_EVENT,
+        eventKey: row.eventKey,
+        title: row.eventKey,
+        actionLabel: friendlyActionLabel(row.eventKey, row.eventKey, row.targetType),
+        body,
+        occurredAt: row.createdAt.toISOString(),
+        targetType: row.targetType,
+        targetId: row.targetId,
+        targetHref: targetHref(row.targetType, row.targetId, row.targetId),
+        taskItemId: row.targetId,
+        taskItemTitle: type === "TRADE_IN" ? "Phiếu nhập Trade-in" : "Phiếu nhập",
+        workspaceTitle: "Thu mua",
+        actor: {
+          id: actor?.id ?? null,
+          label: actorLabel(actor ?? null),
+          avatarUrl: actor?.avatarUrl ?? null,
+          isSystem: !actor,
+        },
+      };
+    });
+
+  const items = [...taskItems, ...acquisitionItems]
+    .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))
+    .slice((page - 1) * pageSize, page * pageSize);
+
   const targetTypes = [...TARGET_TYPE_OPTIONS];
   const eventKeys = Array.from(new Set(
     listBusinessEventContracts().map((contract) => contract.key),
   )).sort();
-  const actors = actorRows
-    .map((row) => row.actorUser)
-    .filter((actor): actor is NonNullable<typeof actor> => Boolean(actor))
-    .sort((a, b) => actorLabel(a).localeCompare(actorLabel(b), "vi"));
+  const actors = Array.from(new Map(
+    [...actorRows.map((row) => row.actorUser), ...rawActors]
+      .filter((actor): actor is NonNullable<typeof actor> => Boolean(actor))
+      .map((actor) => [actor.id, actor]),
+  ).values()).sort((a, b) => actorLabel(a).localeCompare(actorLabel(b), "vi"));
   const sourceCount = new Map(
     sourceGroups.map((group) => [group.sourceType, group._count._all]),
   );
@@ -305,9 +400,9 @@ export async function listGlobalActivity(input: GlobalActivityQuery) {
   return {
     items,
     summary: {
-      total,
-      today: todayTotal,
-      businessEvents: sourceCount.get(ActivitySourceType.BUSINESS_EVENT) ?? 0,
+      total: total + acquisitionTotal,
+      today: todayTotal + acquisitionToday,
+      businessEvents: (sourceCount.get(ActivitySourceType.BUSINESS_EVENT) ?? 0) + acquisitionTotal,
       systemUpdates: sourceCount.get(ActivitySourceType.SYSTEM) ?? 0,
     },
     filters: { query, targetType, eventKey, actorUserId, period },
@@ -315,8 +410,8 @@ export async function listGlobalActivity(input: GlobalActivityQuery) {
     pagination: {
       page,
       pageSize,
-      total,
-      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+      total: total + acquisitionTotal,
+      totalPages: Math.max(1, Math.ceil((total + acquisitionTotal) / pageSize)),
     },
   };
 }

@@ -7,6 +7,16 @@ export const StrapVariantSpecGroupByResultSchema = z.array(z.object({
   updatedAt: z.date(),
   lugWidthMM: z.number().int(),
   buckleWidthMM: z.number().int(),
+  brandName: z.string(),
+  leatherType: z.string(),
+  claspWidthMM: z.number().int(),
+  finish: z.string(),
+  minStockQty: z.number().int(),
+  targetStockQty: z.number().int(),
+  braceletReference: z.string(),
+  defaultFullLinks: z.number().int(),
+  defaultHalfLinks: z.number().int(),
+  defaultEndLinks: z.number().int(),
   _count: z.object({
     variantId: z.number(),
     color: z.number(),
@@ -16,15 +26,43 @@ export const StrapVariantSpecGroupByResultSchema = z.array(z.object({
     updatedAt: z.number(),
     lugWidthMM: z.number(),
     buckleWidthMM: z.number(),
+    originType: z.number(),
+    brandName: z.number(),
+    leatherType: z.number(),
+    surface: z.number(),
+    inventoryPolicy: z.number(),
+    claspType: z.number(),
+    claspWidthMM: z.number(),
+    claspOriginType: z.number(),
+    finish: z.number(),
+    lengthClass: z.number(),
+    minStockQty: z.number(),
+    targetStockQty: z.number(),
+    braceletReference: z.number(),
+    defaultFullLinks: z.number(),
+    defaultHalfLinks: z.number(),
+    defaultEndLinks: z.number(),
     ProductVariant: z.number()
   }).optional(),
   _sum: z.object({
     lugWidthMM: z.number().nullable(),
-    buckleWidthMM: z.number().nullable()
+    buckleWidthMM: z.number().nullable(),
+    claspWidthMM: z.number().nullable(),
+    minStockQty: z.number().nullable(),
+    targetStockQty: z.number().nullable(),
+    defaultFullLinks: z.number().nullable(),
+    defaultHalfLinks: z.number().nullable(),
+    defaultEndLinks: z.number().nullable()
   }).nullable().optional(),
   _avg: z.object({
     lugWidthMM: z.number().nullable(),
-    buckleWidthMM: z.number().nullable()
+    buckleWidthMM: z.number().nullable(),
+    claspWidthMM: z.number().nullable(),
+    minStockQty: z.number().nullable(),
+    targetStockQty: z.number().nullable(),
+    defaultFullLinks: z.number().nullable(),
+    defaultHalfLinks: z.number().nullable(),
+    defaultEndLinks: z.number().nullable()
   }).nullable().optional(),
   _min: z.object({
     variantId: z.string().nullable(),
@@ -32,7 +70,17 @@ export const StrapVariantSpecGroupByResultSchema = z.array(z.object({
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
     lugWidthMM: z.number().int().nullable(),
-    buckleWidthMM: z.number().int().nullable()
+    buckleWidthMM: z.number().int().nullable(),
+    brandName: z.string().nullable(),
+    leatherType: z.string().nullable(),
+    claspWidthMM: z.number().int().nullable(),
+    finish: z.string().nullable(),
+    minStockQty: z.number().int().nullable(),
+    targetStockQty: z.number().int().nullable(),
+    braceletReference: z.string().nullable(),
+    defaultFullLinks: z.number().int().nullable(),
+    defaultHalfLinks: z.number().int().nullable(),
+    defaultEndLinks: z.number().int().nullable()
   }).nullable().optional(),
   _max: z.object({
     variantId: z.string().nullable(),
@@ -40,6 +88,16 @@ export const StrapVariantSpecGroupByResultSchema = z.array(z.object({
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
     lugWidthMM: z.number().int().nullable(),
-    buckleWidthMM: z.number().int().nullable()
+    buckleWidthMM: z.number().int().nullable(),
+    brandName: z.string().nullable(),
+    leatherType: z.string().nullable(),
+    claspWidthMM: z.number().int().nullable(),
+    finish: z.string().nullable(),
+    minStockQty: z.number().int().nullable(),
+    targetStockQty: z.number().int().nullable(),
+    braceletReference: z.string().nullable(),
+    defaultFullLinks: z.number().int().nullable(),
+    defaultHalfLinks: z.number().int().nullable(),
+    defaultEndLinks: z.number().int().nullable()
   }).nullable().optional()
 }));
