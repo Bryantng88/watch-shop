@@ -472,8 +472,7 @@ function scopeOperationWorkspaceTickets<T extends { item: { note: string | null 
 function workTypeKeyFromWorkspaceSnapshot(note: string | null | undefined) {
   const snapshot = parseWorkspaceDefinitionSnapshot(note);
   return clean(
-    snapshot?.workspaceDefinition?.workTypeKey ??
-      snapshot?.workTypeKey ??
+    snapshot?.workTypeKey ??
       getWorkTypeKeyFromTicketNote(note),
   );
 }
@@ -791,7 +790,7 @@ function skipped(
   reason: CoordinationConsumerSkipReason,
   route?: CoordinationRoute | null,
   scope?: CoordinationBindingScope | null,
-): CoordinationEventConsumerResult {
+): Extract<CoordinationEventConsumerResult, { skipped: true }> {
   return {
     ok: true,
     skipped: true,
@@ -1186,7 +1185,7 @@ async function moveExistingFlowStageBindingToWorkspace(input: {
           metadataJson: {
             ...preservedMetadata,
             ...input.metadataJson,
-          },
+          } as Prisma.InputJsonObject,
         },
       });
     }

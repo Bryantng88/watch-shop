@@ -149,9 +149,9 @@ export default function WatchHeader({ detail, inlineImage }: Props) {
 
       <RaiseWorkCaseModal
         open={raiseCaseOpen}
-        watch={watchId ? {
-          watchId,
-          productId,
+        source={watchId ? {
+          type: "WATCH",
+          id: watchId,
           title,
           sku: detail?.sku,
           imageUrl: imageSrc,

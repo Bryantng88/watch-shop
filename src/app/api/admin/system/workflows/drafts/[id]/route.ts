@@ -16,12 +16,12 @@ function errorMessage(error: unknown, fallback: string) {
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const auth = await requirePermissionApi("TASK_VIEW");
   if (isApiResponse(auth)) return auth;
 
-  const draft = await getWorkflowDefinitionDraft(params.id);
+  const draft = await getWorkflowDefinitionDraft((await params).id);
   if (!draft) {
     return NextResponse.json(
       { ok: false, error: "Workflow draft not found" },
@@ -34,14 +34,14 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const auth = await requirePermissionApi("TASK_VIEW");
   if (isApiResponse(auth)) return auth;
 
   try {
     const body = await request.json().catch(() => ({}));
-    const draft = await updateWorkflowDefinitionDraft(params.id, {
+    const draft = await updateWorkflowDefinitionDraft((await params).id, {
       key: body?.key,
       workspaceTemplateKey: body?.workspaceTemplateKey,
       workTypeKey: body?.workTypeKey,
@@ -70,12 +70,12 @@ export async function PATCH(
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const auth = await requirePermissionApi("TASK_VIEW");
   if (isApiResponse(auth)) return auth;
 
-  const draft = await archiveWorkflowDefinitionDraft(params.id, auth.id ?? null);
+  const draft = await archiveWorkflowDefinitionDraft((await params).id, auth.id ?? null);
   if (!draft) {
     return NextResponse.json(
       { ok: false, error: "Workflow draft not found" },

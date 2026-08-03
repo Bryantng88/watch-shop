@@ -3,12 +3,12 @@ import { setWatchStorefrontImage } from "@/domains/watch/server";
 
 export async function PUT(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     const body = await req.json();
 
     const image = await setWatchStorefrontImage({
-        productId: params.id,
+        productId: (await params).id,
         imageId: body?.imageId ?? null,
     });
 

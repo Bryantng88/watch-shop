@@ -1,4 +1,4 @@
-import type { ExtractedSpec, GeneratedPayload, TonePreset } from "./product-ai.types";
+import type { ExtractedSpec, GeneratedPayload, TonePreset } from "./product-ai.type";
 
 function text(v: any) {
     if (v == null) return "";

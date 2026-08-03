@@ -31,6 +31,8 @@ const TASK_LIST_INCLUDE = {
   _count: { select: { taskItems: true } },
 } satisfies Prisma.TaskInclude;
 
+type TaskWithInclude = Prisma.TaskGetPayload<{ include: typeof TASK_INCLUDE }>;
+
 type TimelineStatsHydratableTaskItem = {
   id: string;
   [key: string]: unknown;
@@ -556,7 +558,7 @@ export async function getTaskByIdRepo(db: DB, id: string) {
   const client = dbOrTx(db);
   const task = await client.task.findUnique({ where: { id }, include: TASK_INCLUDE });
   if (!task) return null;
-  const hydrated = await hydrateTaskBusinessLinks(db, task);
+  const hydrated = await hydrateTaskBusinessLinks(db, task) as TaskWithInclude;
   const [withTags] =
     await hydrateTasksWithTaskItemTagsRepo(
       db,

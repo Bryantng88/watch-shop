@@ -8,6 +8,7 @@ npm-debug.log*
 # Secrets must be supplied at build/runtime, never copied into an image.
 .env
 .env.*
+!.env.build.example
 !.env.production.example
 *.zip
 

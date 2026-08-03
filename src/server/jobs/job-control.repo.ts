@@ -1,13 +1,13 @@
 import { prisma } from "@/server/db/client";
 
 export async function getJobControl(key: string) {
-    return prisma.system_job_control.findUnique({
+    return prisma.systemJobControl.findUnique({
         where: { key },
     });
 }
 
 export async function listJobControls() {
-    return prisma.system_job_control.findMany({
+    return prisma.systemJobControl.findMany({
         orderBy: { key: "asc" },
     });
 }
@@ -22,14 +22,14 @@ export async function updateJobControlByKey(
         updatedBy?: string | null;
     }
 ) {
-    return prisma.system_job_control.update({
+    return prisma.systemJobControl.update({
         where: { key },
         data: {
             ...(input.enabled != null ? { enabled: input.enabled } : {}),
-            ...(input.batchSize != null ? { batch_size: input.batchSize } : {}),
-            ...(input.pausedReason !== undefined ? { paused_reason: input.pausedReason } : {}),
+            ...(input.batchSize != null ? { batchSize: input.batchSize } : {}),
+            ...(input.pausedReason !== undefined ? { pausedReason: input.pausedReason } : {}),
             ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
-            ...(input.updatedBy !== undefined ? { updated_by: input.updatedBy } : {}),
+            ...(input.updatedBy !== undefined ? { updatedBy: input.updatedBy } : {}),
         },
     });
 }

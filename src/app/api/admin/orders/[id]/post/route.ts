@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { postOneOrder } from "@/domains/order/server";
 
-export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
     try {
-        const orderId = ctx.params.id;
+        const orderId = (await ctx.params).id;
         const body = await req.json().catch(() => ({}));
 
 

@@ -12,14 +12,13 @@ import {
     MoreHorizontal,
     Plus,
 } from "lucide-react";
-import { TaskDomain, TaskMode, WorkCaseStatus } from "@prisma/client";
+import { WorkCaseStatus } from "@prisma/client";
 import AdminBreadcrumbs from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
 import { TaskStatusBadge } from "@/domains/task/ui/shared/TaskBadges";
 import TaskQuickCreateModal, {
     type TaskQuickCreateContext,
     type TaskUserOption,
 } from "@/domains/task/ui/quick-create/TaskQuickCreateModal";
-import type { TaskTypeOption } from "@/domains/task/server/task-type.types";
 import { ADMIN_DETAIL_CONTENT_CLASS } from "@/domains/shared/ui/layout/admin-content";
 import type { WorkCaseWithRelations } from "../server/work-case.repo";
 import { updateWorkCaseAction } from "../actions/work-case.actions";
@@ -52,13 +51,11 @@ function isClosed(status: WorkCaseStatus) {
 export default function WorkCaseDetailClient({
     item,
     users,
-    taskTypes,
     currentUserId,
     canManage,
 }: {
     item: WorkCaseWithRelations;
     users: TaskUserOption[];
-    taskTypes: TaskTypeOption[];
     currentUserId: string;
     canManage?: boolean;
 }) {
@@ -100,8 +97,6 @@ export default function WorkCaseDetailClient({
         setTaskContext({
             workCaseId: localItem.id,
             watchId: localItem.watchId,
-            domain: TaskDomain.WORK_CASE,
-            mode: TaskMode.NORMAL,
             titlePreset: localItem.refNo
                 ? `Xử lý ${localItem.refNo}: ${localItem.title}`
                 : `Xử lý phiếu: ${localItem.title}`,
@@ -470,7 +465,6 @@ export default function WorkCaseDetailClient({
             <TaskQuickCreateModal
                 open={taskModalOpen}
                 users={users}
-                taskTypes={taskTypes}
                 currentUserId={currentUserId}
                 context={taskContext}
                 onClose={() => setTaskModalOpen(false)}

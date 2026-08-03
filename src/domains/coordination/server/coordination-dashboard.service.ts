@@ -2020,7 +2020,7 @@ async function loadTechnicalIssueBoardLive(input: {
     }
     if (!binding.taskItemId || srCaseTaskItemIdByServiceRequestId.has(binding.targetId)) continue;
     const metadata = workspaceRoleMetadataFromNote(binding.taskItem?.note ?? null);
-    if (metadata.workspaceRole && metadata.workspaceRole !== "SR_CASE") continue;
+    if (metadata.operationWorkspaceRole && metadata.operationWorkspaceRole !== "SR_CASE") continue;
     srCaseTaskItemIdByServiceRequestId.set(binding.targetId, binding.taskItemId);
   }
 

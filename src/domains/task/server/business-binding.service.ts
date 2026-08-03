@@ -407,7 +407,11 @@ export function mapProductPostTargets(
   const byName = new Map<string, { id: string; name: string; platform?: string | null }>();
 
   for (const item of relations) {
-    const target = item?.postTarget ?? item;
+    const target = (item && "postTarget" in item ? item.postTarget : item) as {
+      id?: string | null;
+      name?: string | null;
+      platform?: string | null;
+    } | null | undefined;
     const id = clean(target?.id);
     const name = clean(target?.name);
 
@@ -630,7 +634,7 @@ async function buildQueueBusinessPreviewMap(
               },
               productImage: {
                 where: { role: "GALLERY" },
-                select: { id: true },
+                select: { fileKey: true },
                 take: 1,
               },
               postTargets: {
@@ -1338,9 +1342,8 @@ export async function findTaskItemBusinessBinding(
   assertPresent(input.taskItemId, "Missing taskItemId");
 
   const binding = await findBusinessBindingByTaskItemTarget(db, {
-    ...input,
-    taskId: clean(input.taskId),
     taskItemId: clean(input.taskItemId),
+    targetType: input.targetType,
     targetId: clean(input.targetId),
   });
 
@@ -1485,7 +1488,7 @@ async function buildPaymentQueuePreviewMapFromProjections(
         clean(item.title) ||
         clean(item.linkedWatchTitle) ||
         clean(item.subtitle) ||
-        null,
+        "Item",
       ref: clean(item.sku) || clean(item.linkedWatchSku) || null,
     }));
 

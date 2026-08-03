@@ -210,12 +210,12 @@ export default function OrderDetailClient({ data }: { data: OrderDetailData }) {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2">
-                            <StatusBadge value={data.status} map={ORDER_STATUS} />
-                            {data.source ? <StatusBadge value={data.source} map={ORDER_SOURCE} /> : null}
+                            <StatusBadge status={data.status} />
+                            {data.source ? <StatusBadge status={data.source} /> : null}
                             {data.verificationStatus ? (
-                                <StatusBadge value={data.verificationStatus} map={VERIFICATION_STATUS} />
+                                <StatusBadge status={data.verificationStatus} />
                             ) : null}
-                            <StatusBadge value={data.reserveType ?? "NONE"} map={RESERVE_TYPE} />
+                            <StatusBadge status={data.reserveType ?? "NONE"} />
                         </div>
                     </div>
 

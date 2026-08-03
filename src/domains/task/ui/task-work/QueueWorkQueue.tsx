@@ -1750,10 +1750,11 @@ export function QueueWorkQueue({
           bindingId: queueItem.id,
           actionKey,
         });
-        if (!result?.result?.applied) {
-          throw new Error(result?.result?.reason ?? "WORKFLOW_ACTION_NOT_APPLIED");
+        const outcome = result.result;
+        if (!outcome.applied) {
+          throw new Error(outcome.reason ?? "WORKFLOW_ACTION_NOT_APPLIED");
         }
-        const movedOut = manualTransitionOutcomeMovesOutOfCurrentStage(result.result);
+        const movedOut = manualTransitionOutcomeMovesOutOfCurrentStage(outcome);
         if (movedOut) {
           setCompletedItemIds((current) => [...current, queueItem.id]);
           setSelectedIds((current) => current.filter((id) => id !== queueItem.id));
@@ -1790,7 +1791,7 @@ export function QueueWorkQueue({
               id: queueItem.id,
               label: queueItem.preview.title || queueItem.preview.ref,
             },
-            result.result,
+            outcome,
           );
         }
         setActionError(null);
@@ -2393,7 +2394,7 @@ export function QueueWorkQueue({
                               ) : (
                                 <span>{queueItemRef(queueItem)}</span>
                               )}
-                              {false && queueItem.payment ? (
+                              {queueItem.payment ? (
                                 <div className="mt-1.5 flex w-full flex-wrap items-center gap-1.5">
                                   <span className={cn(
                                     "rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset",
@@ -2553,7 +2554,7 @@ export function QueueWorkQueue({
                               >
                                 Xử lý
                               </button>
-                              {false ? (
+                              {srCaseHref ? (
                                 <Link
                                   href={srCaseHref}
                                   className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"

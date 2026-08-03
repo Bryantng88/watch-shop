@@ -18,7 +18,7 @@ export async function POST(
         const params = await context.params;
 
         const auth = await requirePermissionApi(
-            PERMISSIONS.PRODUCT_CONTENT_REVIEW
+            PERMISSIONS.PRODUCT_APPROVE
         );
         if (auth instanceof Response) return auth;
 

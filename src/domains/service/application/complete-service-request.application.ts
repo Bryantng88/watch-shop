@@ -130,7 +130,7 @@ export async function completeServiceRequestApplication(input: {
       ok: true,
       skipped: false,
       status: updated.status,
-      paymentId: payment?.id ?? null,
+      paymentId: payment?.[0]?.id ?? null,
       projectionDeliveryKey: event.projectionDeliveryKey,
     };
   });

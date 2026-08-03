@@ -137,7 +137,7 @@ export default function WatchStateSection({
                         <Button
                             key={item.action}
                             type="button"
-                            variant={item.variant === "primary" ? "primary" : "outline"}
+                            variant={item.variant === "primary" ? "default" : "outline"}
                             disabled={pending}
                             onClick={() => runAction(item.action)}
                             className={

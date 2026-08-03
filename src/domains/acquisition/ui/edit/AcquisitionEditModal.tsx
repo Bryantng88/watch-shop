@@ -328,7 +328,7 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
                                         <AcquisitionBulkImagePicker
                                             onImport={importImages}
                                             disabled={submitting}
-                                            audienceSegment={detail.audienceSegment}
+                                            audienceSegment={detail?.audienceSegment ?? "MEN"}
                                         />
                                         <Button type="button" variant="outline" onClick={addItem}>
                                             <Plus className="mr-2 h-4 w-4" />

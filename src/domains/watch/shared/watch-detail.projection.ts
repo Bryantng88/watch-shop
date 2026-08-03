@@ -31,5 +31,10 @@ export type WatchServiceProjection = {
 export type WatchDetailProjection = {
   detail: Record<string, unknown>;
   service: WatchServiceProjection;
-  tradeHistory: unknown;
+  tradeHistory:
+    | Array<Record<string, unknown>>
+    | {
+        acquisitions?: Array<Record<string, unknown>>;
+        orders?: Array<Record<string, unknown>>;
+      };
 };

@@ -19,6 +19,7 @@ import {
   type OperationalBlueprintTemplate,
 } from "@/domains/blueprint/shared/operational-blueprint";
 import { buildStarterOperationalBlueprintContract } from "@/domains/blueprint/shared/operation-authoring";
+import { MANUAL_WORKSPACE_PROVISIONING } from "@/domains/blueprint/shared/workspace-provisioning";
 import type {
   WorkflowDefinition,
   WorkflowDefinitionDraft,
@@ -297,6 +298,8 @@ function draftWorkspaceDefinition(
       assignee: false,
       priority: true,
     },
+    provisioning: MANUAL_WORKSPACE_PROVISIONING,
+    eventBindings: [],
     instantiationNotes:
       "Ở V1, Workspace Definition của draft được derive và chưa publish cho runtime.",
   };

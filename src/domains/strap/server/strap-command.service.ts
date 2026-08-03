@@ -16,7 +16,7 @@ export async function requestStrapProcessing(input: {
           id: true,
           productId: true,
           Product: { select: { type: true, title: true } },
-          StrapVariantSpec: { select: { id: true } },
+          StrapVariantSpec: { select: { variantId: true } },
         },
       });
       if (

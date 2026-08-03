@@ -150,7 +150,7 @@ export default function WatchDetailUiProposal({
   ];
 
   const contentReady = Boolean(values.content.titleOverride || values.content.body);
-  const imageReady = ["APPROVED", "READY", "PUBLISHED"].includes(values.imageReviewStatus.toUpperCase());
+  const imageReady = ["APPROVED", "READY", "PUBLISHED"].includes(String(values.imageReviewStatus ?? "").toUpperCase());
   const attention = [
     ...(!imageReady ? [{ label: "Gallery đang chờ duyệt", href: "#media", icon: ImageIcon }] : []),
     ...(!contentReady ? [{ label: "Chưa có nội dung bán hàng", href: "#content", icon: FileText }] : []),

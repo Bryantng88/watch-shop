@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { processQueuedAcquisitionSpecJobs } from "@/app/(admin)/admin/acquisitions/_server/ai/acquisition-spec-job.service";
+import { processQueuedAcquisitionSpecJobs } from "@/domains/acquisition/server/acquisition-spec-job.service";
 
 function isAuthorized(req: Request) {
     const header = req.headers.get("x-internal-job-secret");

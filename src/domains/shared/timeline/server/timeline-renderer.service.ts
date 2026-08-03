@@ -72,8 +72,12 @@ export function mapTimelineEntryToViewModel(
         subtitle: nullableClean(entry?.subtitle),
         body: nullableClean(entry?.bodySnapshot),
         actorLabel: nullableClean(entry?.actorLabel),
-        occurredAt: entry?.occurredAt ?? null,
-        createdAt: entry?.createdAt ?? null,
+        occurredAt: entry?.occurredAt instanceof Date || typeof entry?.occurredAt === "string"
+            ? entry.occurredAt
+            : null,
+        createdAt: entry?.createdAt instanceof Date || typeof entry?.createdAt === "string"
+            ? entry.createdAt
+            : null,
         tone: preset.tone,
         icon: preset.icon,
         metadataJson: entry?.metadataJson,

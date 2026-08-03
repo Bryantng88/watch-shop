@@ -8,7 +8,7 @@ import {
 } from "@/app/(admin)/admin/users/_server/user.service";
 
 type RouteContext = {
-    params: Promise<{ id: string }> | { id: string };
+    params: Promise<{ id: string }>;
 };
 
 async function getParams(params: RouteContext["params"]) {

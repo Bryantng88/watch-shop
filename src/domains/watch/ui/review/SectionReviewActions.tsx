@@ -137,15 +137,11 @@ export default function SectionReviewActions({
 
         return json;
     }
-    function taskTypeCodeForTarget(target: ReviewTarget) {
-        return target === "image" ? "WATCH_IMAGE" : "WATCH_CONTENT";
-    }
     async function getOpenReviewTasks() {
         if (!watchId) return [];
 
         const result = await findOpenRelatedTasksAction({
             watchId,
-            taskTypeCode: taskTypeCodeForTarget(target),
             limit: 10,
         });
 

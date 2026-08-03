@@ -85,8 +85,8 @@ export async function getAcquisitionEditDetail(acquisitionId: string) {
         type: acquisition.type,
         notes: acquisition.notes ?? "",
         totalAmount: toNumber(acquisition.totalAmount),
-        paidAmount: paymentSummary.paidTotal + paymentSummary.collectedTotal,
-        unpaidAmount: paymentSummary.unpaidTotal,
+        paidAmount: (paymentSummary?.paidTotal ?? 0) + (paymentSummary?.collectedTotal ?? 0),
+        unpaidAmount: paymentSummary?.unpaidTotal ?? 0,
         items,
     };
 }

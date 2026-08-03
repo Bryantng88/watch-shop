@@ -16,6 +16,7 @@ type Props = {
     canViewCost: boolean;
     onChange: (patch: Partial<WatchFormValues["pricing"]>) => void;
     canEditPrice: boolean;
+    notificationDiff?: string | null;
 };
 
 function onlyMoney(value: string) {

@@ -2,7 +2,7 @@ import { prisma, type DB } from "@/server/db/client";
 import {
   getWatchPricingRepo,
   updateWatchPricingRepo,
-  type UpdateWatchPricingInput,
+  type WatchPricingUpdateInput,
 } from "./watch-pricing.repo";
 
 function moneyString(value: unknown) {
@@ -19,14 +19,14 @@ export async function getWatchPricing(productId: string) {
 
 export async function updateWatchPricing(
   productId: string,
-  input: UpdateWatchPricingInput
+  input: WatchPricingUpdateInput
 ) {
   return updateWatchPricingRepo(prisma as any, productId, input);
 }
 
 export async function updateWatchPricingWithDiff(
   productId: string,
-  input: UpdateWatchPricingInput,
+  input: WatchPricingUpdateInput,
   db: DB = prisma,
 ) {
   const before = await getWatchPricingRepo(db as any, productId);

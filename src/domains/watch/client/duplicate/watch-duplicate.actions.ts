@@ -61,7 +61,8 @@ export async function confirmDuplicateWatchAction(input: { productId: string }) 
 
     const confirmedAt = new Date();
     for (const execution of executions) {
-      const metadata = isJsonObject(execution.metadataJson) ? execution.metadataJson : {};
+      const rawMetadata = execution.metadataJson ?? null;
+      const metadata = isJsonObject(rawMetadata) ? rawMetadata : {};
       await tx.taskExecution.update({
         where: { id: execution.id },
         data: {
@@ -120,9 +121,11 @@ export async function restoreDuplicateWatchAction(input: { productId: string }) 
       select: { id: true, metadataJson: true },
     });
     for (const execution of executions) {
-      const metadata = isJsonObject(execution.metadataJson) ? execution.metadataJson : {};
-      const quarantine = isJsonObject(metadata.duplicateQuarantine)
-        ? metadata.duplicateQuarantine
+      const rawMetadata = execution.metadataJson ?? null;
+      const metadata = isJsonObject(rawMetadata) ? rawMetadata : {};
+      const rawQuarantine = metadata.duplicateQuarantine ?? null;
+      const quarantine = isJsonObject(rawQuarantine)
+        ? rawQuarantine
         : {};
       const originalActionType = quarantine.originalActionType;
       if (!isTaskExecutionActionType(originalActionType)) continue;

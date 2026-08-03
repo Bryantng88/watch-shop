@@ -8,12 +8,12 @@ function isApiResponse(value: unknown): value is NextResponse {
 
 export async function POST(
   _request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const auth = await requirePermissionApi("TASK_VIEW");
   if (isApiResponse(auth)) return auth;
 
-  const draft = await validateWorkflowDefinitionDraft(params.id);
+  const draft = await validateWorkflowDefinitionDraft((await params).id);
   if (!draft) {
     return NextResponse.json(
       { ok: false, error: "Workflow draft not found" },

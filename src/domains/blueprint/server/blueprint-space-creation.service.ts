@@ -1,4 +1,4 @@
-import { TaskKind, TaskPriority, TaskSource, TaskStatus } from "@prisma/client";
+import { TaskExecutionTargetType, TaskKind, TaskPriority, TaskSource, TaskStatus } from "@prisma/client";
 import { dbOrTx, prisma, withDbTransaction, type DB } from "@/server/db/client";
 import type {
   BlueprintPublishedVersion,
@@ -254,7 +254,7 @@ export async function ensureDeferredWorkspaceFromPublishedBlueprintEvent(input: 
     const existingBinding = await client.taskExecution.findFirst({
       where: {
         taskId: space.id,
-        targetType,
+        targetType: targetType as TaskExecutionTargetType,
         targetId,
         actionType: { not: "CANCELLED" },
         taskItemId: { not: null },

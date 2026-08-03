@@ -13,29 +13,43 @@ projection maintenance are explicit release operations.
 
 ## First deployment
 
-1. Copy `.env.production.example` to `.env.production` on the deployment host.
-2. Replace every placeholder and restrict read access to that file.
-3. Build the images:
+1. Copy `.env.build.example` to `.env.build` and
+   `.env.production.example` to `.env.production` on the deployment host.
+2. Replace every placeholder and restrict read access to both files. Keep only
+   public build values and, if prerendering requires it, a restricted database
+   account in `.env.build`. Runtime credentials belong in `.env.production`.
+3. Run the source preflight with the same revision that will be deployed:
+
+   ```sh
+   npm ci
+   npx prisma generate
+   npx tsc --noEmit
+   npm run build
+   ```
+
+4. Build the images. `NEXT_PUBLIC_*` values are embedded in the web image here,
+   so changing them requires another build:
 
    ```sh
    docker compose build app migrate
    ```
 
-4. Apply committed Prisma migrations exactly once:
+5. Apply committed Prisma migrations exactly once:
 
    ```sh
    docker compose --profile tools run --rm migrate
    ```
 
-5. Start the web application:
+6. Start the web application:
 
    ```sh
    docker compose up -d app
    docker compose ps
    ```
 
-6. Verify `http://NAS_HOST:APP_PORT/api/health`, then configure the NAS reverse
-   proxy to forward HTTPS traffic to that address.
+7. Verify `http://NAS_HOST:APP_PORT/api/health`, then smoke-test login and the
+   critical admin workflows. Configure the NAS reverse proxy to forward HTTPS
+   traffic to that address.
 
 Do not use `prisma db push` in production. Do not run projection rebuilds on
 every container startup. Run a rebuild only when its release notes require it,
@@ -54,6 +68,10 @@ docker compose ps
 
 After deployment, verify the health endpoint and the critical admin workflows.
 Keep the previous image tag until the release has been accepted.
+
+Keep `.env.build` and `.env.production` out of source control. Docker mounts
+`.env.build` as a BuildKit secret for the build command; it is not copied into
+an image layer.
 
 ## Rollback
 

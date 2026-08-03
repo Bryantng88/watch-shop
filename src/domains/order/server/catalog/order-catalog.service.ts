@@ -393,9 +393,9 @@ export async function searchCustomerSoldWatches(input: {
 
   return rows.map((row) => ({
     productId: row.productId!,
-    title: row.product.title,
-    sku: row.product.sku,
-    imageUrl: row.product.primaryImageUrl,
+    title: row.product!.title,
+    sku: row.product!.sku,
+    imageUrl: row.product!.primaryImageUrl,
     soldOrderId: row.orderId,
     soldOrderRefNo: row.order.refNo,
   }));

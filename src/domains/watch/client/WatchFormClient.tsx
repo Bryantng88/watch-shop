@@ -1232,10 +1232,12 @@ export default function WatchFormClient({
       const workflowResult = transitionResult?.result;
       const mediaProcessingResult = transitionResult?.mediaProcessingResult;
 
-      if (!workflowResult?.applied || workflowResult.toState !== "DONE") {
-        throw new Error(
-          `Workflow chua hoan tat: ${workflowResult?.reason ?? "UNKNOWN"}`,
-        );
+      if (!workflowResult) throw new Error("Workflow chua hoan tat: UNKNOWN");
+      if (!workflowResult.applied) {
+        throw new Error(`Workflow chua hoan tat: ${workflowResult.reason}`);
+      }
+      if (workflowResult.toState !== "DONE") {
+        throw new Error("Workflow chua hoan tat: INVALID_STATE");
       }
 
       if (
@@ -1464,9 +1466,9 @@ export default function WatchFormClient({
         note: "Reopened from Watch media workspace modal.",
       });
 
-      if (!result?.result?.applied || result.result.toState !== "RETURNED") {
-        throw new Error(result?.result?.reason ?? "REOPEN_MEDIA_NOT_APPLIED");
-      }
+      const outcome = result.result;
+      if (!outcome.applied) throw new Error(outcome.reason ?? "REOPEN_MEDIA_NOT_APPLIED");
+      if (outcome.toState !== "RETURNED") throw new Error("REOPEN_MEDIA_INVALID_STATE");
 
       setWorkspaceState("RETURNED");
       notify.success({

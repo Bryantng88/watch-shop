@@ -32,7 +32,7 @@ function getAuthUserId(auth: AuthLike) {
 
 export async function POST(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const body = BodySchema.parse(await req.json());
@@ -45,7 +45,7 @@ export async function POST(
         if (auth instanceof Response) return auth;
 
         const userId = getAuthUserId(auth);
-        const productId = params.id;
+        const productId = (await params).id;
 
         if (body.action === "reject" && !String(body.note ?? "").trim()) {
             return NextResponse.json(

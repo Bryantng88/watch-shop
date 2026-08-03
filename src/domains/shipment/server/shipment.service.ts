@@ -273,7 +273,7 @@ export async function markShipmentDelivered(input: CompleteShipmentInput) {
       where: { id: shipment.id },
       data: { status: ShipmentStatus.DELIVERED, deliveredAt: new Date(), notes: input.note ?? shipment.notes ?? null, updatedAt: new Date() },
     });
-    let paymentMutations = [];
+    let paymentMutations: Awaited<ReturnType<typeof setOrderCodCollectedTx>> = [];
     if (isCod) {
       const summary = await recomputeOrderPaymentRollupTx(tx, shipment.orderId);
       paymentMutations = await setOrderCodCollectedTx(tx, {

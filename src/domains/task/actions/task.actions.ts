@@ -1008,7 +1008,8 @@ export async function addTaskItemActivityReplyAction(input: {
       targetId,
       metadata: activityMetadata,
     });
-    const watchTitle = [TaskExecutionTargetType.WATCH, TaskExecutionTargetType.TECHNICAL_ISSUE].includes(targetType as TaskExecutionTargetType)
+    const watchTitle = targetType === TaskExecutionTargetType.WATCH ||
+      targetType === TaskExecutionTargetType.TECHNICAL_ISSUE
       ? targetTitle
       : null;
 
@@ -1141,8 +1142,8 @@ export async function addTaskItemDiscussionAction(input: {
     targetId,
     metadata: {},
   });
-  const watchTitle = [TaskExecutionTargetType.WATCH, TaskExecutionTargetType.TECHNICAL_ISSUE]
-    .includes(targetType as TaskExecutionTargetType)
+  const watchTitle = targetType === TaskExecutionTargetType.WATCH ||
+    targetType === TaskExecutionTargetType.TECHNICAL_ISSUE
     ? targetTitle
     : null;
 
@@ -1215,7 +1216,7 @@ export async function markTaskItemMentionsReadAction(input: {
 
   const taskItem = await prisma.taskItem.findUnique({
     where: { id: taskItemId },
-    select: { id: true, note: true, userId: true, assignedToUserId: true, task: { select: { createdByUserId: true, assignedToUserId: true } } },
+    select: { id: true, note: true, userId: true, assignedToUserId: true, task: { select: { id: true, createdByUserId: true, assignedToUserId: true } } },
   });
   if (!taskItem) return { ok: true, updated: 0 };
   const activities = await prisma.taskItemActivity.findMany({
@@ -1468,7 +1469,7 @@ export async function applyQueueItemManualTransitionsAction(input: {
         bindingId: item.bindingId,
         ok: Boolean(result.result.applied),
         reason: result.result.applied ? undefined : result.result.reason,
-        toState: result.result.toState ?? null,
+        toState: result.result.applied ? result.result.toState : null,
         serviceActionResult: result.serviceActionResult,
         projectionDeliveryKeys,
         reconciliationMode: projectionDeliveryKeys.length

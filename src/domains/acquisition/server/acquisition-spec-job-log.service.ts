@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 
 export async function appendAcquisitionSpecJobLog(input: {
@@ -19,7 +20,9 @@ export async function appendAcquisitionSpecJobLog(input: {
             stage: input.stage,
             level: input.level ?? "INFO",
             message: input.message,
-            payload: input.payload ?? null,
+            payload: input.payload == null
+                ? Prisma.JsonNull
+                : input.payload as Prisma.InputJsonValue,
         },
     });
 }

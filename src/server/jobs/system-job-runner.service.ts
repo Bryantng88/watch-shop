@@ -1,6 +1,6 @@
 import { getJobControl } from "./job-control.repo";
 import { createJobRunLog, finishJobRunLog } from "./job-run-log.repo";
-import { processQueuedAcquisitionSpecJobs } from "@/app/(admin)/admin/acquisitions/_server/ai/acquisition-spec-job.service";
+import { processQueuedAcquisitionSpecJobs } from "@/domains/acquisition/server/acquisition-spec-job.service";
 import { runProjectionMaintenance } from "@/domains/projection/server/projection-maintenance.service";
 
 export async function runSystemJobs(input?: {
@@ -19,13 +19,13 @@ export async function runSystemJobs(input?: {
             triggerSource,
             status: "RUNNING",
             detail: {
-                batchSize: acquisitionSpecControl.batch_size ?? 6,
+                batchSize: acquisitionSpecControl.batchSize ?? 6,
             },
         });
 
         try {
             const result = await processQueuedAcquisitionSpecJobs({
-                limit: acquisitionSpecControl.batch_size ?? 6,
+                limit: acquisitionSpecControl.batchSize ?? 6,
                 includeFailed: false,
             });
 
@@ -34,7 +34,7 @@ export async function runSystemJobs(input?: {
                 processedCount: result.processed ?? 0,
                 errorCount: 0,
                 detail: {
-                    batchSize: acquisitionSpecControl.batch_size ?? 6,
+                    batchSize: acquisitionSpecControl.batchSize ?? 6,
                     processed: result.processed ?? 0,
                 },
             });
@@ -61,7 +61,7 @@ export async function runSystemJobs(input?: {
         summary.acquisitionSpec = {
             enabled: false,
             processed: 0,
-            reason: acquisitionSpecControl?.paused_reason ?? null,
+            reason: acquisitionSpecControl?.pausedReason ?? null,
         };
     }
 

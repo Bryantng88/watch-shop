@@ -112,7 +112,7 @@ export function InventoryEffectBadge({ status }: { status?: string | null }) {
 
 export function OrderStateBadge({ status }: { status?: string | null }) {
   const effect = getOrderInventoryEffect(status);
-  const tone = effect === "SOLD" ? "danger" : effect === "HOLD" ? "warning" : "info";
+  const tone = effect === "SOLD" ? "success" : effect === "HOLD" ? "warning" : "info";
 
   return <Badge tone={tone}>{getOrderStatusLabel(status)}</Badge>;
 }

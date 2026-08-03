@@ -86,11 +86,6 @@ export default function RelatedTaskCompleteModal({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-semibold text-slate-950">{item.title}</span>
-                    {item.taskType ? (
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
-                        {item.taskType.code}
-                      </span>
-                    ) : null}
                   </div>
 
                   {item.description ? <p className="mt-1 line-clamp-2 text-sm text-slate-500">{item.description}</p> : null}

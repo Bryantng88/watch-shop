@@ -39,6 +39,24 @@
     "node_modules",
     "component for chatGPT",
     "src/note.ts",
-    "src/features/__generated__"
+    "src/features/__generated__",
+    "src/app/(admin)/admin/services/_server",
+    "src/app/(admin)/admin/products",
+    "src/app/(admin)/admin/__components/ProductSearchInput.tsx",
+    "src/app/(admin)/admin/acquisitions/_client/NewAcquisitionForm.tsx",
+    "src/app/(admin)/admin/acquisitions/_client",
+    "src/app/(admin)/admin/acquisitions/_server",
+    "src/app/(admin)/admin/acquisitions/components",
+    "src/app/(admin)/admin/acquisitions/hooks",
+    "src/app/(admin)/admin/products/_client/ListProductsOld.tsx",
+    "src/components/common/Header/Header.tsx",
+    "src/components/common/Header/Header2.tsx",
+    "src/components/hooks/useCart.ts",
+    "src/domains/shipment1",
+    "src/domains/task/actions/task.actions.integration.snippet.ts",
+    "src/domains/task/client/TaskTypeSettingsClient copy.tsx",
+    "src/domains/work-case/ui/WorkCaseDetailDrawer.tsx",
+    "src/server/jobs/generate-spec.job.ts",
+    "src/types/cart.ts"
   ]
 }

@@ -17,14 +17,14 @@ export async function transitionWatchStateAction(input: {
 
     return {
         productId: result.productId,
-        saleState: result.saleState,
-        serviceState: result.serviceState,
-        stockState: result.stockState,
+        saleState: result.saleStage,
+        serviceState: result.serviceStage,
+        stockState: result.stockStage,
         productStatus: result.product.status,
         previous: {
-            saleState: result.previous.saleState,
-            serviceState: result.previous.serviceState,
-            stockState: result.previous.stockState,
+            saleState: result.previous.saleStage,
+            serviceState: result.previous.serviceStage,
+            stockState: result.previous.stockStage,
             productStatus: result.previous.product.status,
         },
     };

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getOrderDetail } from "@/domains/order/server";
+import { getOrderDetailRepo } from "@/domains/order/server";
+import { prisma } from "@/server/db/client";
 
 export async function GET(
     _req: Request,
@@ -7,13 +8,13 @@ export async function GET(
 ) {
     const { id } = await ctx.params;
 
-    const order = await getOrderDetail(id);
+    const order = await getOrderDetailRepo(prisma, id);
     if (!order) {
         return NextResponse.json({ items: [] });
     }
 
     return NextResponse.json({
-        items: order.items.map((i) => ({
+        items: order.orderItem.map((i) => ({
             id: i.id,
             title: i.title,
             quantity: i.quantity ?? 1,

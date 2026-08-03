@@ -10,7 +10,7 @@ import type {
 } from "@/domains/coordination/server/coordination-dashboard.types";
 import type {
   WorkTypeDefinition,
-  WorkTypeContext,
+  WorkTypeCoordinationContext,
 } from "@/domains/task/server/work-type.types";
 import type {
   SpaceViewColumnConfig as BaseSpaceViewColumnConfig,
@@ -18,7 +18,7 @@ import type {
   SpaceViewModeConfig as BaseSpaceViewModeConfig,
 } from "./space-view.types";
 
-export type SpaceContext = WorkTypeContext;
+export type SpaceContext = WorkTypeCoordinationContext;
 export type WorkspaceTemplateDefinition = WorkTypeDefinition;
 
 export type SpaceDashboardDTO = CoordinationDashboardDTO;

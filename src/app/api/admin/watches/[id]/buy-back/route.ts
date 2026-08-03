@@ -3,12 +3,12 @@ import { buyBackFromWatch } from "@/domains/watch/server/bridge";
 
 export async function POST(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     const body = await req.json();
 
     const result = await buyBackFromWatch({
-        productId: params.id,
+        productId: (await params).id,
         unitCost: Number(body?.unitCost ?? 0),
         notes: body?.notes ?? null,
         customerId: body?.customerId ?? null,

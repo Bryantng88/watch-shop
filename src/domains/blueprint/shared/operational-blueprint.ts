@@ -1458,7 +1458,7 @@ const SHIPMENT_OPERATION_CONTRACT: OperationalBlueprintContract = {
 const BLANK_OPERATION_CONTRACT: OperationalBlueprintContract = {
   key: "blank-operation",
   version: 1,
-  context: "DRAFT",
+  context: "GENERAL",
   summary: "A minimal editable operation model shell for a new Blueprint draft.",
   objectTypes: [],
   workspaceRoles: [],

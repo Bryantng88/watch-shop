@@ -27,10 +27,10 @@ import {
 import {
     enqueueAcquisitionSpecJob,
     processQueuedAcquisitionSpecJobs,
-} from "../ai/acquisition-spec-job.service";
+} from "@/domains/acquisition/server/acquisition-spec-job.service";
 import { createInvoiceFromAcquisition } from "../../../invoices/_servers/invoices.repo";
-import { createTechnicalCheckFromAcquisitionTx } from "../../../services/_server/service_request.service";
-import { genUniqueProductSku } from "../../../products/_server/shared/helper";
+import { createTechnicalCheckFromAcquisitionTx } from "@/domains/service/server";
+import { genUniqueAcquisitionSku } from "@/domains/acquisition/shared/sku.helper";
 import { emitAcquisitionBusinessEvent } from "@/domains/acquisition/server/acquisition-business-event";
 
 type ExistingAcqItem = Awaited<ReturnType<typeof repoAcq.findAcqItems>>[number];
@@ -88,7 +88,7 @@ async function createProductForPostedItem(
     if (item.productType === "WATCH_STRAP") {
         const strapSpec = getStrapSpecFromDescription(item.description);
         const aiMeta = getAiMetaFromDescription(item.description);
-        const sku = await genUniqueProductSku(tx as any, item.productType ?? "WATCH_STRAP");
+        const sku = await genUniqueAcquisitionSku(tx, { kind: "STRAP" });
         const primaryImageUrl = aiMeta?.images?.[0]?.key ?? null;
 
         const created = await repoAcq.createStrapProduct(tx, {

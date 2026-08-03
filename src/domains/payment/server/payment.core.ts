@@ -97,11 +97,21 @@ export function paymentScopeWhere(ownerType: PaymentOwnerType, ownerId: string) 
   return base;
 }
 
+type PaymentOwnerSeed = {
+  ownerType: PaymentOwnerType;
+  ownerId: string;
+  totalDue: number;
+  depositAmount: number;
+  direction: PaymentDirection;
+  defaultMethod: PaymentMethod;
+  status: string;
+};
+
 export async function getPaymentOwnerSeedTx(
   tx: Tx,
   ownerType: PaymentOwnerType,
   ownerId: string,
-) {
+): Promise<PaymentOwnerSeed> {
   if (ownerType === "ORDER") {
     const order = await tx.order.findUnique({
       where: { id: ownerId },
@@ -162,7 +172,7 @@ export async function getPaymentOwnerSeedTx(
 
     return {
       ownerType: "TECHNICAL_ISSUE" as PaymentOwnerType,
-      ownerId: issue.id,
+      ownerId: String(issue.id),
       totalDue: toNumber(issue.actualCost),
       depositAmount: 0,
       direction: PaymentDirection.OUT,

@@ -5,12 +5,12 @@ import { PERMISSIONS } from "@/constants/permissions";
 
 export async function PATCH(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     await requirePermission(PERMISSIONS.USER_UPDATE);
 
     const body = await req.json();
-    await updateUserService(params.id, body);
+    await updateUserService((await params).id, body);
 
     return NextResponse.json({ success: true });
 }

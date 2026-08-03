@@ -49,11 +49,15 @@ const globalForPrisma = globalThis as typeof globalThis & {
 
 export const prisma = globalForPrisma.__prisma ?? new PrismaClient();
 
+// Compatibility for older server modules while they migrate to named imports.
+export default prisma;
+
 if (process.env.NODE_ENV !== "production") {
     globalForPrisma.__prisma = prisma;
 }
 
 export type DB = PrismaClient | Prisma.TransactionClient;
+export type Tx = Prisma.TransactionClient;
 
 export function dbOrTx(db?: DB): DB {
     return db ?? prisma;

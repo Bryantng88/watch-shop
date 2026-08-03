@@ -236,7 +236,7 @@ export default function OrderFormClient({
         const timer = setTimeout(async () => {
             try {
                 setIsSearching(true);
-                const res = await fetch(`/api/admin/products/search?q=${encodeURIComponent(q)}`);
+                const res = await fetch(`/api/admin/orders/catalog/products?q=${encodeURIComponent(q)}`);
                 const json = await res.json();
                 setProductResults(Array.isArray(json?.items) ? json.items : []);
             } catch {

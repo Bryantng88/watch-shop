@@ -469,7 +469,7 @@ function effectiveWorkspaceRoleKind(
   if (isInCoreFlow && role.cardinality === "SINGLE_PER_ACTIVE_CYCLE") {
     return "FLOW_STAGE_WORKSPACE";
   }
-  if (role.cardinality === "MULTIPLE_PER_ACTIVE_CYCLE") return "BENCH_WORKSPACE";
+  if (role.cardinality === "MANY_PER_ACTIVE_CYCLE") return "BENCH_WORKSPACE";
   return "STANDALONE_WORKSPACE";
 }
 
@@ -946,9 +946,9 @@ function ActivityBlockCard({ block }: { block: TimelineActivityBlock }) {
     <div className="grid grid-cols-[58px_34px_minmax(0,1fr)] gap-3 sm:grid-cols-[82px_42px_minmax(0,1fr)] sm:gap-4">
       <div className="pt-4 text-right text-xs leading-5 text-slate-500">
         <div className="font-semibold text-slate-700">
-          {formatTime(activityValue(entry))}
+          {formatTime(entry.occurredAt)}
         </div>
-        <div>{formatDate(activityValue(entry), "")}</div>
+        <div>{formatDate(entry.occurredAt, "")}</div>
       </div>
 
       <div className="relative flex justify-center">
@@ -1003,7 +1003,7 @@ function ActivityBlockCard({ block }: { block: TimelineActivityBlock }) {
             <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
               <span>{actor}</span>
               <span>·</span>
-              <span>{formatDateTime(activityValue(entry), "")}</span>
+              <span>{formatDateTime(entry.occurredAt, "")}</span>
             </div>
           </div>
         </div>
@@ -1030,9 +1030,9 @@ function ActivityBlockCard({ block }: { block: TimelineActivityBlock }) {
                 <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-rose-700">
                   <MessageSquare className="h-3.5 w-3.5" />
                   <span>Lý do / Feedback</span>
-                  {formatDateTime(activityValue(feedback), "") ? (
+                  {formatDateTime(feedback.occurredAt, "") ? (
                     <span className="font-medium text-rose-600/80">
-                      {formatDateTime(activityValue(feedback), "")}
+                      {formatDateTime(feedback.occurredAt, "")}
                     </span>
                   ) : null}
                 </div>
@@ -1774,7 +1774,7 @@ function OverviewPanel({
   }).length;
   const commentCount = activities.reduce(
     (count, activity) =>
-      count + activity.replies.length + (activity.sourceType === "USER_COMMENT" ? 1 : 0),
+      count + activity.replies.length + (activity.sourceType === "DISCUSSION" ? 1 : 0),
     0,
   );
   const latestActivities = activities.slice(0, 3);
@@ -1923,10 +1923,6 @@ function WorkspaceSummaryDashboard({
           </span>
         ) : null}
       </div>
-      {false && workspaceSnapshot ? (
-        <WorkspaceDefinitionSnapshotPanel snapshot={workspaceSnapshot} />
-      ) : null}
-
       <div className="grid gap-3 lg:grid-cols-4">
         <OverviewCard icon={<FileText className="h-4 w-4" />} title="Context" tone="emerald">
           <OverviewFact
@@ -2281,7 +2277,7 @@ function GenericFlowWorkspaceNav({
           snapshot?.workspaceType ?? workspace.title,
         );
         const description = repairVietnameseMojibake(
-          snapshot?.defaultDescription ?? workspaceType,
+          snapshot?.workspaceDefinition?.defaultDescription ?? workspaceType,
         );
         const content = (
           <div
@@ -2918,6 +2914,7 @@ export default function TaskItemDetailClient({
   technicalDetailCatalogOptions?: TechnicalDetailCatalogOption[];
   currentUser?: UserSummary | null;
 }) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<DetailTab>(() =>
     initialWorkspaceTab(item.note),
   );

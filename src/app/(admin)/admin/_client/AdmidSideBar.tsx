@@ -15,7 +15,6 @@ import {
     LayoutList,
     MonitorCog,
     CameraIcon,
-    CheckSquare,
     LogOut,
     Workflow,
     BellRing,
@@ -139,13 +138,6 @@ const NAV: NavEntry[] = [
                 label: "Catalog",
                 icon: LayoutList,
                 permission: PERMISSIONS.SERVICE_VIEW,
-            },
-            {
-                type: "item",
-                href: "/admin/settings/task-types",
-                label: "Workspace Templates",
-                icon: CheckSquare,
-                permission: PERMISSIONS.TASK_MANAGE,
             },
             {
                 type: "item",

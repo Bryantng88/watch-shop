@@ -11,7 +11,7 @@ import {
   RotateCcw,
   XCircle,
 } from "lucide-react";
-import { TaskStatus } from "@prisma/client";
+import { TaskPriority, TaskStatus } from "@prisma/client";
 import RowActions from "@/domains/shared/ui/list/RowActions";
 import type { TaskWithRelations } from "../../server/core/task.repo";
 import { getTaskWorkPanelAction } from "../../actions/task.actions";
@@ -37,7 +37,7 @@ type AddSubtaskInput = {
   taskId: string;
   title: string;
   assignedToUserId?: string | null;
-  priority?: string | null;
+  priority?: TaskPriority | null;
   dueAt?: string | null;
   tagNames?: string[];
 };
@@ -365,7 +365,7 @@ export default function TaskListTable({
             ) : (
               localItems.map((row) => {
                 const expanded = expandedTaskId === row.id;
-                const expandable = canExpand(row);
+                const expandable = canExpand();
                 const progress = taskProgress(row);
                 const rowAccess = String((row as any).rowAccess || "OWNER");
                 const visibleTaskItemIds = (row as any).visibleTaskItemIds ?? null;

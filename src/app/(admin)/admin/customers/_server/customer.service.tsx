@@ -1,12 +1,13 @@
 // app/(admin)/admin/customers/_server/customers.service.ts
 import * as repo from "./customer.repo";
+import { prisma } from "@/server/db/client";
 
 export async function getCustomerList() {
     return repo.listCustomers();
 }
 
 export async function getCustomerById(id: string) {
-    return repo.findCustomerById(id);
+    return repo.findCustomerById(prisma, id);
 }
 
 export async function searchCustomer(keyword: string) {
@@ -24,13 +25,13 @@ export async function searchCustomer(keyword: string) {
 export async function getOrCreateCustomer(phone: string, name?: string) {
     if (!phone) throw new Error("Phone is required");
 
-    const existing = await repo.findCustomerByPhone(phone);
+    const existing = await repo.findByPhone(prisma, phone);
     if (existing) return { customer: existing, isNew: false };
 
     if (!name || name.trim() === "")
         throw new Error("Customer does not exist — name required for creation.");
 
-    const created = await repo.createCustomer({
+    const created = await repo.createCustomer(prisma, {
         name: name.trim(),
         phone,
     });
@@ -50,13 +51,13 @@ export async function createCustomer(data: {
 
     // check trùng số điện thoại
     const exists = await repo.searchCustomersByPhone(data.phone);
-    if (exists) throw new Error("Phone already used by another customer");
+    if (exists.length) throw new Error("Phone already used by another customer");
 
-    return repo.createCustomer(data);
+    return repo.createCustomer(prisma, data);
 }
 
 export async function updateCustomer(id: string, data: any) {
-    return repo.updateCustomer(id, data);
+    return repo.updateCustomer(prisma, id, data);
 }
 
 

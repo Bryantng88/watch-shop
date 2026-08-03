@@ -14,14 +14,14 @@ function errorMessage(error: unknown, fallback: string) {
 
 export async function POST(
   _request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const auth = await requirePermissionApi("TASK_VIEW");
   if (isApiResponse(auth)) return auth;
 
   try {
     const result = await publishWorkflowDefinitionDraftBlueprint({
-      draftId: params.id,
+      draftId: (await params).id,
       publishedByUserId: auth.id ?? null,
     });
 

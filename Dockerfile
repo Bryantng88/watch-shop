@@ -14,9 +14,9 @@ RUN npm ci
 FROM deps AS builder
 COPY . .
 RUN npx prisma generate
-# Next may evaluate server code while prerendering. The production environment is
-# mounted only for this command and is not stored in an image layer.
-RUN --mount=type=secret,id=env_production,target=/app/.env.production,required=true \
+# NEXT_PUBLIC values are inlined by Next.js during this step. A dedicated build
+# environment keeps unrelated runtime credentials out of the build process.
+RUN --mount=type=secret,id=env_build,target=/app/.env.production,required=true \
     npm run build
 
 FROM base AS runtime

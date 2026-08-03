@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import ActionMenu from "../../acquisitions/components/ActionMenu"
 // =====================
 // Formatters
 // =====================
@@ -46,8 +44,6 @@ export default function UserListPageClient({
     totalPages,
     rawSearchParams,
 }: PageProps) {
-    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-
     const url = new URLSearchParams(rawSearchParams as any);
 
     const gotoPageHref = (p: number) => {
@@ -168,18 +164,7 @@ export default function UserListPageClient({
                                     </td>
 
                                     <td className="relative px-3 py-2 text-right">
-                                        <button
-                                            className="p-2 rounded hover:bg-gray-100"
-                                            onClick={() =>
-                                                setOpenMenuId(openMenuId === u.id ? null : u.id)
-                                            }
-                                        >
-                                            ⋮
-                                        </button>
-
-                                        {openMenuId === u.id && (
-                                            <ActionMenu userId={u.id} isActive={u.isActive} />
-                                        )}
+                                        <span className="text-xs text-gray-400">-</span>
                                     </td>
                                 </tr>
                             ))

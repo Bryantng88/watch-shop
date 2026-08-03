@@ -1,15 +1,12 @@
-import { Prisma, shipmentstatus } from "@prisma/client";
+import { Prisma, ShipmentStatus } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import * as shipmentRepo from "./shipment.repo";
-import * as paymentRepo from "../../payments/_server/payment.repo";
-import * as orderRepo from "../../orders/_servers/order.repo";
-import * as productRepo from "../../products/_server/product.repo";
 
 import { ShipmentSearchInput, ShipmentViewKey } from "./shipment.type";
 
 export type OrderForShipment = {
     id: string;
-    orderRefNo: string | null;
+    refNo: string | null;
     customerName: string | null;
     shipPhone: string | null;
     shipAddress: string | null;
@@ -24,7 +21,7 @@ export async function createFromOrderTx(
 ) {
     if (!order?.id) throw new Error("Missing order.id");
 
-    const existed = await tx.shipment.findUnique({
+    const existed = await tx.shipment.findFirst({
         where: { orderId: order.id },
         select: { id: true },
     });
@@ -36,7 +33,7 @@ export async function createFromOrderTx(
     return tx.shipment.create({
         data: {
             orderId: order.id,
-            orderRefNo: order.orderRefNo ?? null,
+            orderRefNo: order.refNo ?? null,
             customerName: order.customerName ?? "",
             shipPhone: order.shipPhone ?? "",
             shipAddress: order.shipAddress ?? "",
@@ -71,7 +68,7 @@ export async function createFromOrder(orderId: string) {
     });
 }
 
-function viewToStatus(view?: ShipmentViewKey): shipmentstatus | undefined {
+function viewToStatus(view?: ShipmentViewKey): ShipmentStatus | undefined {
     switch (view) {
         case "draft":
             return "DRAFT";
@@ -92,9 +89,9 @@ function viewToStatus(view?: ShipmentViewKey): shipmentstatus | undefined {
 export async function getAdminShipmentList(input: ShipmentSearchInput) {
     const { page, pageSize, q, status, view } = input;
 
-    const explicitStatus: shipmentstatus | undefined =
-        status && Object.values(shipmentstatus).includes(status as shipmentstatus)
-            ? (status as shipmentstatus)
+    const explicitStatus: ShipmentStatus | undefined =
+        status && Object.values(ShipmentStatus).includes(status as ShipmentStatus)
+            ? (status as ShipmentStatus)
             : undefined;
 
     const effectiveStatus = explicitStatus ?? viewToStatus(view);
@@ -145,10 +142,10 @@ export async function getAdminShipmentList(input: ShipmentSearchInput) {
         createdAt: s.createdAt,
         updatedAt: s.updatedAt,
         orderId: s.orderId,
-        orderRefNo: s.orderRefNo ?? s.Order?.refNo ?? null,
-        customerName: s.customerName ?? s.Order?.customerName ?? "",
-        shipPhone: s.shipPhone ?? s.Order?.shipPhone ?? "",
-        shipAddress: s.shipAddress ?? s.Order?.shipAddress ?? "",
+        orderRefNo: s.orderRefNo ?? s.order?.refNo ?? null,
+        customerName: s.customerName ?? s.order?.customerName ?? "",
+        shipPhone: s.shipPhone ?? s.order?.shipPhone ?? "",
+        shipAddress: s.shipAddress ?? s.order?.shipAddress ?? "",
         carrier: s.carrier,
         trackingNo: s.trackingCode,
         shippingAmount: s.shippingAmount == null ? null : Number(s.shippingAmount),

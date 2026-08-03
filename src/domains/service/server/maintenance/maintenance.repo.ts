@@ -26,7 +26,7 @@ export async function getPanelByServiceRequestId(tx: DB, serviceRequestId: strin
                     id: true,
                     title: true,
                     primaryImageUrl: true,
-                    image: {
+                    productImage: {
                         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
                         select: { fileKey: true, role: true },
                         take: 8,
@@ -35,7 +35,7 @@ export async function getPanelByServiceRequestId(tx: DB, serviceRequestId: strin
             },
             vendor: { select: { id: true, name: true } },
             user: { select: { id: true, name: true, email: true } },
-            _count: { select: { maintenance: true } },
+            _count: { select: { maintenanceRecord: true } },
         },
     });
 
@@ -86,8 +86,8 @@ export async function getPanelByServiceRequestId(tx: DB, serviceRequestId: strin
     return {
         sr: {
             ...sr,
-            maintenanceCount: sr._count.maintenance,
-            productImages: sr.product?.image ?? [],
+            maintenanceCount: sr._count.maintenanceRecord,
+            productImages: sr.product?.productImage ?? [],
             effectivePrimaryImage: sr.primaryImageUrlSnapshot ?? sr.product?.primaryImageUrl ?? null,
         },
         logs,

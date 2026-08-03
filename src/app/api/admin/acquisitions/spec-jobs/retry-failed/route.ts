@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { processQueuedAcquisitionSpecJobs } from "@/app/(admin)/admin/acquisitions/_server/ai/acquisition-spec-job.service";
+import { processQueuedAcquisitionSpecJobs } from "@/domains/acquisition/server/acquisition-spec-job.service";
 
 export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));

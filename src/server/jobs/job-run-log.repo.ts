@@ -1,8 +1,8 @@
 import { prisma } from "@/server/db/client";
 
 export async function findRecentJobRunLogs(limit = 50) {
-    return prisma.system_job_run_log.findMany({
-        orderBy: { started_at: "desc" },
+    return prisma.systemJobRunLog.findMany({
+        orderBy: { startedAt: "desc" },
         take: limit,
     });
 }
@@ -16,13 +16,13 @@ export async function createJobRunLog(input: {
     note?: string | null;
     detail?: any;
 }) {
-    return prisma.system_job_run_log.create({
+    return prisma.systemJobRunLog.create({
         data: {
-            processor_key: input.processorKey,
-            trigger_source: input.triggerSource,
+            processorKey: input.processorKey,
+            triggerSource: input.triggerSource,
             status: input.status,
-            processed_count: input.processedCount ?? 0,
-            error_count: input.errorCount ?? 0,
+            processedCount: input.processedCount ?? 0,
+            errorCount: input.errorCount ?? 0,
             note: input.note ?? null,
             detail: input.detail ?? null,
         },
@@ -39,15 +39,15 @@ export async function finishJobRunLog(
         detail?: any;
     }
 ) {
-    return prisma.system_job_run_log.update({
+    return prisma.systemJobRunLog.update({
         where: { id },
         data: {
             status: input.status,
-            processed_count: input.processedCount ?? 0,
-            error_count: input.errorCount ?? 0,
+            processedCount: input.processedCount ?? 0,
+            errorCount: input.errorCount ?? 0,
             note: input.note ?? null,
             detail: input.detail ?? null,
-            finished_at: new Date(),
+            finishedAt: new Date(),
         },
     });
 }

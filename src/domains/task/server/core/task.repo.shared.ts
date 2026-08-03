@@ -8,6 +8,7 @@ import {
 import type {
   CompleteRelatedTasksInput,
   CreateTaskInput,
+  TaskDomainLinksInput,
   CreateTaskItemInput,
   EnsureSystemTaskInput,
   FindOpenRelatedTasksInput,
@@ -380,7 +381,7 @@ export function buildFilterWhere(filters: TaskListFilters): Prisma.TaskWhereInpu
 }
 
 export function createLinkData(
-  input: Partial<CreateTaskInput | EnsureSystemTaskInput | CreateTaskItemInput>,
+  input: Partial<TaskDomainLinksInput>,
 ) {
   return {
     watchId: input.watchId ?? null,

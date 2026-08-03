@@ -6,9 +6,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type RouteParams = {
-  params:
-  | Promise<{ id?: string; productId?: string }>
-  | { id?: string; productId?: string };
+  params: Promise<{ id?: string; productId?: string }>;
 };
 
 export async function GET(req: Request, ctx: RouteParams) {

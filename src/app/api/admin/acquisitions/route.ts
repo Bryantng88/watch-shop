@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
                 );
             }
 
-            if (!item.quantity || item.quantity < 1) {
+            if (Number(item.quantity ?? 0) < 1) {
                 return NextResponse.json(
                     { error: `Sản phẩm dòng ${i + 1} số lượng phải > 0` },
                     { status: 400 }

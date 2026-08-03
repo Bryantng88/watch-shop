@@ -19,7 +19,7 @@ type ToastItem = {
     duration: number;
 };
 
-export type NotifyInput = string | { title?: string; message: string; duration?: number };
+export type NotifyInput = string | { title?: string; message?: string; duration?: number };
 
 type NotifyApi = {
     success: (input: NotifyInput) => void;
@@ -47,7 +47,7 @@ function normalizeInput(input: NotifyInput) {
 
     return {
         title: input.title,
-        message: input.message,
+        message: input.message ?? input.title ?? "",
         duration: input.duration ?? DEFAULT_DURATION,
     };
 }

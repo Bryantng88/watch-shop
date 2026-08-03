@@ -10,8 +10,11 @@ export type ServiceRequestDetailViewModel = {
     productTitle?: string | null;
     skuSnapshot?: string | null;
     primaryImageUrl?: string | null;
+    primaryImageUrlSnapshot?: string | null;
     ref?: string | null;
     model?: string | null;
+    modelSnapshot?: string | null;
+    notes?: string | null;
     movement?: string | null;
     technicianNameSnap?: string | null;
     vendorNameSnap?: string | null;

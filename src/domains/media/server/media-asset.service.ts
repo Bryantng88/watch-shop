@@ -21,7 +21,6 @@ import {
   markMissingMediaAssetsNotInKeysRepo,
   upsertMediaAssetRepo,
 } from "./media-asset.repo";
-import { organizeActiveLooseNasFiles } from "./nas-media.service";
 
 export function getMediaProfile(value: string | null): MediaProfile {
   if (value === "edit") return "edit";
@@ -430,49 +429,6 @@ export async function listMediaAssets(input: {
     pageSize,
     total,
     pageCount: Math.max(1, Math.ceil(total / pageSize)),
-  };
-}
-
-export async function organizeActiveMediaAssets(input: {
-  dryRun?: boolean;
-  maxFiles?: number;
-} = {}) {
-  const result = await organizeActiveLooseNasFiles({
-    dryRun: input.dryRun,
-    maxFiles: input.maxFiles,
-  });
-
-  if (!input.dryRun) {
-    for (const item of result.moved) {
-      await upsertMediaAssetRepo(prisma as any, {
-        key: item.toKey,
-        profile: "edit",
-        sizeBytes: item.sizeBytes ?? null,
-        etag: item.etag ?? null,
-        lastModified: item.lastModifiedDate ?? null,
-        status: "ACTIVE",
-        movedFromKey: item.fromKey,
-      });
-
-      await markMediaAssetArchivedRepo(prisma as any, item.fromKey);
-    }
-  }
-
-  return {
-    success: true,
-    scanned: result.scanned,
-    processed: result.processed,
-    movedCount: result.moved.length,
-    skippedCount: result.skipped.length,
-    dryRun: result.dryRun,
-    root: result.root,
-    moved: result.moved.map((item) => ({
-      fromKey: item.fromKey,
-      toKey: item.toKey,
-      batchPrefix: item.batchPrefix,
-      date: item.date,
-    })),
-    skipped: result.skipped,
   };
 }
 

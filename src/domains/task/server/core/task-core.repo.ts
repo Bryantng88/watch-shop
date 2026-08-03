@@ -27,10 +27,12 @@ export async function createTaskRepo(
   const client = dbOrTx(db);
   const createdByUserId = input.createdByUserId ?? null;
   const assignedToUserId = input.assignedToUserId ?? createdByUserId;
+  const title = input.title?.trim();
+  if (!title) throw new Error("Task title is required");
 
   return client.task.create({
     data: {
-      title: input.title.trim(),
+      title,
       description: input.description?.trim() || null,
       source: input.source ?? "MANUAL",
       kind: input.kind ?? TaskKind.BUSINESS,

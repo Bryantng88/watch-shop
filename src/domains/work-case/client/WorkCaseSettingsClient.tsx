@@ -5,7 +5,14 @@ import { WorkCaseScope, type WorkCaseCategory } from "@prisma/client";
 import { createWorkCaseCategoryAction, updateWorkCaseCategoryAction } from "../actions/work-case.actions";
 import { WORK_CASE_SCOPE_LABEL } from "../utils/work-case-labels";
 
-function emptyForm() {
+function emptyForm(): {
+  code: string;
+  name: string;
+  description: string;
+  scope: WorkCaseScope;
+  isActive: boolean;
+  sortOrder: number;
+} {
   return { code: "", name: "", description: "", scope: WorkCaseScope.BUSINESS, isActive: true, sortOrder: 0 };
 }
 

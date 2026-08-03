@@ -1,5 +1,4 @@
 import { WorkCaseStatus } from "@prisma/client";
-import { getActiveTaskTypeOptions } from "@/domains/task/server/task-type.service";
 import type { DB } from "@/server/db/client";
 import {
   countWorkCaseViewsRepo,
@@ -113,19 +112,16 @@ export async function getWorkCaseDetailPageData(db: DB, id: string, auth: any) {
   const userId = getAuthUserId(auth);
   assertUser(userId);
 
-  const [item, users, categories, taskTypes] = await Promise.all([
+  const [item, users, categories] = await Promise.all([
     getWorkCaseDetail(db, id, auth),
     listAssignableUsersRepo(db),
     listWorkCaseCategoriesRepo(db, true),
-    getActiveTaskTypeOptions(db),
   ]);
 
   return {
     item,
     users,
     categories,
-    taskTypes,
-
     currentUserId: userId,
     canManage: authCanManageWorkCases(auth),
   };

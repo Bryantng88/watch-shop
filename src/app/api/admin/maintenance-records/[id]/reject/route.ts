@@ -3,13 +3,13 @@ import { rejectTechnicalIssueMaintenanceLog } from "@/domains/service/server/iss
 
 export async function POST(
     req: NextRequest,
-    { params }: { params: { id: string } },
+    { params }: { params: Promise<{ id: string }> },
 ) {
     try {
         const body = await req.json();
 
         const result = await rejectTechnicalIssueMaintenanceLog({
-            id: params.id,
+            id: (await params).id,
             reason: body.reason,
             nextAction: body.nextAction,
             newVendorId: body.newVendorId,

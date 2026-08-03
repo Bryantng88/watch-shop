@@ -1,5 +1,6 @@
 import { AudienceSegment, Prisma, type AcquisitionType } from "@prisma/client";
 import { type DB, dbOrTx } from "@/server/db/client";
+import type { AcquisitionInlineImageInput } from "./acquisition-media.service";
 
 export type CreateDraftInput = {
     vendorId?: string | null;
@@ -182,7 +183,7 @@ export async function findFirstAcquisitionInlineMediaAsset(
     tx: DB,
     input: { acquisitionId: string }
 ): Promise<AcquisitionInlineImageInput | null> {
-    const db = tx ?? prisma;
+    const db = getDb(tx);
 
     const asset = await db.mediaAsset.findFirst({
         where: {

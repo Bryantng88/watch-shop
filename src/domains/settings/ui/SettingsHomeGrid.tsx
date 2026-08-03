@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ComponentType } from "react";
-import { ArrowRight, ClipboardList, Settings } from "lucide-react";
+import { ArrowRight, Settings } from "lucide-react";
 
 type SettingsCard = {
   title: string;
@@ -12,15 +12,7 @@ type SettingsCard = {
   badge?: string;
 };
 
-const SETTINGS_CARDS: SettingsCard[] = [
-  {
-    title: "Task Types",
-    description: "Quản lý danh mục loại công việc như WATCH_IMAGE, WATCH_CONTENT, WATCH_CLEAN, WATCH_PRICE_SALE.",
-    href: "/admin/settings/task-types",
-    icon: ClipboardList,
-    badge: "Task",
-  },
-];
+const SETTINGS_CARDS: SettingsCard[] = [];
 
 export default function SettingsHomeGrid() {
   return (

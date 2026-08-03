@@ -4,4 +4,5 @@ export * from "./acquisition.mapper";
 export * from "./filters";
 export * from "./helper";
 export * from "./acquisition-item-metadata";
-export * from "./search-params";
+export { parseAcquisitionListSearchParams } from "./search-params";
+export type { AcquisitionListView } from "./search-params";

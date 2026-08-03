@@ -53,7 +53,7 @@ export async function createAcquisitionWithItemApplication(
                     where: { phone: order.shipPhone },
                     select: { id: true },
                 }) ?? await tx.customer.create({
-                    data: { name: order.customerName, phone: order.shipPhone },
+                    data: { name: order.customerName ?? order.shipPhone, phone: order.shipPhone },
                     select: { id: true },
                 });
                 customerId = customer.id;

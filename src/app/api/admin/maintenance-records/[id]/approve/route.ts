@@ -3,11 +3,11 @@ import { approveTechnicalIssueMaintenanceLog } from "@/domains/service/server/is
 
 export async function POST(
     _req: NextRequest,
-    { params }: { params: { id: string } },
+    { params }: { params: Promise<{ id: string }> },
 ) {
     try {
         const result = await approveTechnicalIssueMaintenanceLog({
-            id: params.id,
+            id: (await params).id,
         });
 
         return NextResponse.json({ ok: true, data: result });

@@ -1,7 +1,7 @@
 import { OrderStatus, OrderVerificationStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import { genRefNo } from "@/domains/shared/utils/AutoGenRef";
-import * as serviceRequestService from "@/app/(admin)/admin/services/_server/service_request.service";
+import * as serviceRequestService from "@/domains/service/server";
 import { createFromOrderTx } from "@/domains/shipment/server";
 import { createInitialPaymentsForOrderApplicationTx } from "@/domains/payment/application";
 import {

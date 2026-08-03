@@ -10,7 +10,7 @@ export type ShipmentListRow = {
 
     createdAt: Date;
 
-    Order: {
+    order: {
         id: string;
         refNo: string | null;
         customerName: string | null;
@@ -54,7 +54,7 @@ export async function getShipmentList(
             skip,
             take,
             include: {
-                Order: {
+                order: {
                     select: {
                         refNo: true,
                         customerName: true,

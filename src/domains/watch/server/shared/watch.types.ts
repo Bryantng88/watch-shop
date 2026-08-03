@@ -51,6 +51,8 @@ export type WatchListComputedItem = {
   serviceState?: string | null;
 
   gender?: Gender | null;
+  audienceSegment?: string | null;
+  mediaPipelineKey?: string | null;
   siteChannel?: WatchSiteChannel | null;
 
   primaryCaseMaterial?: WatchCaseMaterialFamily | null;

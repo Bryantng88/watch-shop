@@ -78,14 +78,14 @@ export default function FlowItemListPrototypePage() {
     REVIEW: ITEMS.filter((item) => item.stage === "REVIEW").length,
     SETTLED: ITEMS.filter((item) => item.stage === "SETTLED").length,
   }), []);
-  const visibleIds = filtered.map((item) => item.id);
+  const visibleIds: string[] = filtered.map((item) => item.id);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selected.includes(id));
 
   function toggleAll() {
     setSelected((current) =>
       allVisibleSelected
         ? current.filter((id) => !visibleIds.includes(id))
-        : Array.from(new Set([...current, ...visibleIds])),
+        : Array.from(new Set<string>([...current, ...visibleIds])),
     );
   }
 

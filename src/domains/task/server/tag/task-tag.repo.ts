@@ -251,7 +251,7 @@ export async function hydrateTaskItemsWithTagsRepo<T extends { id: string }>(
 }
 
 export async function hydrateTasksWithTaskItemTagsRepo<
-  T extends { taskItems?: any[] },
+  T extends { taskItems?: Array<{ id: string }> },
 >(db: DB, tasks: T[]): Promise<T[]> {
   const allItems = tasks.flatMap((task) => task.taskItems ?? []);
   if (!allItems.length) return tasks;

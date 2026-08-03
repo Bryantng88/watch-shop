@@ -14,7 +14,7 @@ export async function POST(
     _req: Request,
     {
         params,
-    }: { params: Promise<{ id: string }> | { id: string } },
+    }: { params: Promise<{ id: string }> },
 ) {
     try {
         const auth = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);

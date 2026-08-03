@@ -10,7 +10,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing ids" }, { status: 400 });
     }
 
-    const result = await postServiceRequests(ids);
+    const result = await postServiceRequests({ ids });
     return NextResponse.json(result);
   } catch (e: any) {
     return NextResponse.json(

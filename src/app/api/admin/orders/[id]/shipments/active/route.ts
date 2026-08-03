@@ -3,12 +3,12 @@ import { getShipmentContextByOrderIdApplication } from "@/domains/shipment/appli
 import { PERMISSIONS } from "@/constants/permissions";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 
-export async function GET(_req: Request, ctx: { params: { id: string } }) {
+export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
     const auth = await requirePermissionApi(PERMISSIONS.SHIPMENT_VIEW);
     if (auth instanceof Response) return auth;
 
     try {
-        const data = await getShipmentContextByOrderIdApplication(ctx.params.id);
+        const data = await getShipmentContextByOrderIdApplication((await ctx.params).id);
         return NextResponse.json(data);
     } catch (error: unknown) {
         return NextResponse.json(

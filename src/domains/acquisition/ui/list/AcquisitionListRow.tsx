@@ -210,7 +210,7 @@ export default function AcquisitionListRow({
                         {
                             key: "view",
                             label: "Xem chi tiết",
-                            href: `/admin/acquisitions/${item.id}/edit`,
+                            onClick: () => onOpenEdit?.(item.id),
                             icon: "view",
                         },
                         {

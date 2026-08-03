@@ -57,7 +57,10 @@ export default async function AcquisitionListPage({
     const [result, vendors, dashboardData] = await Promise.all([
         getAcquisitionListProjection(input),
         getListVendors(),
-        getAcquisitionListDashboard(input.audienceSegment, input.productScope),
+        getAcquisitionListDashboard(
+            input.audienceSegment === "UNISEX" ? undefined : input.audienceSegment,
+            input.productScope,
+        ),
     ]);
 
     const vendorOptions = (vendors ?? []).map((vendor: any) => ({

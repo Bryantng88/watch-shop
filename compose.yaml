@@ -7,7 +7,7 @@ services:
       context: .
       target: runtime
       secrets:
-        - env_production
+        - env_build
     env_file:
       - .env.production
     environment:
@@ -32,5 +32,5 @@ services:
     restart: "no"
 
 secrets:
-  env_production:
-    file: .env.production
+  env_build:
+    file: .env.build

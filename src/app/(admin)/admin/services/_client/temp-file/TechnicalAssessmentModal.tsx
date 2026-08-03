@@ -997,7 +997,7 @@ export default function TechnicalAssessmentModal({
                                     <Button
                                         type="button"
                                         variant="outline"
-                                        onClick={() => router.push(`/admin/products/${productId}/edit`)}
+                                        onClick={() => router.push(`/admin/watches/${productId}/edit`)}
                                     >
                                         Sửa spec sản phẩm
                                         <ExternalLink className="ml-2 h-4 w-4" />

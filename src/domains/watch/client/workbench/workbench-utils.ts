@@ -31,7 +31,13 @@ export function normalizeDate(value: unknown) {
 
 export function updateValues(
     values: WatchWorkbenchValues,
-    patch: Partial<WatchWorkbenchValues>,
+    patch: Partial<Omit<WatchWorkbenchValues, "basic" | "spec" | "content" | "pricing" | "media">> & {
+        basic?: Partial<WatchWorkbenchValues["basic"]>;
+        spec?: Partial<WatchWorkbenchValues["spec"]>;
+        content?: Partial<WatchWorkbenchValues["content"]>;
+        pricing?: Partial<WatchWorkbenchValues["pricing"]>;
+        media?: Partial<WatchWorkbenchValues["media"]>;
+    },
 ): WatchWorkbenchValues {
     return {
         ...values,

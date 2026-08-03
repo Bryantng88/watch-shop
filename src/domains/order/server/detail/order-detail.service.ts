@@ -47,7 +47,7 @@ export async function getOrderDraftForEdit(orderId: string) {
         title: tradeIn.acquisitionItem[0]?.productTitle ?? "Đồng hồ trade-in",
         amount: toNumberPrice(tradeIn.acquisitionItem[0]?.unitCost ?? tradeIn.totalAmount),
         notes: tradeIn.notes ?? "",
-        audienceSegment: tradeIn.audienceSegment === "WOMEN" ? "WOMEN" : "MEN",
+        audienceSegment: tradeIn.audienceSegment === "WOMEN" ? "WOMEN" as const : "MEN" as const,
       }
       : null,
     reserve: row.reserveType

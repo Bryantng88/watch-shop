@@ -26,15 +26,13 @@ export function buildProductTitleFromSpec(input: {
     return parts.join(" ").trim() || "Untitled Product";
 }
 
-function formatMovement(m?: string | null) {
-    if (!m) return null;
+function formatMovement(m: string) {
     if (m === "AUTOMATIC") return "Automatic";
     if (m === "QUARTZ") return "Quartz";
     if (m === "MANUAL") return "Manual";
     return m;
 }
 
-function capitalize(str?: string | null) {
-    if (!str) return null;
+function capitalize(str: string) {
     return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }

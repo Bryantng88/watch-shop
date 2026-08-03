@@ -8,6 +8,7 @@ export * from "./operation";
 export * from "./technical/technical-assessment.service";
 export * from "../application";
 export * from "./service_request.service.compat";
+export * from "./service-request-from-order.service";
 export {
     createTechnicalChecksFromProductsApplication as createTechnicalChecksFromProducts,
 } from "../application/create-technical-checks-from-products.application";

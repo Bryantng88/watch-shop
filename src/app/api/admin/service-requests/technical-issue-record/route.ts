@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
-import { addTechnicalIssueRecord } from "@/domains/service/server";
+import { createMaintenanceRecordForServiceRequest } from "@/domains/service/server";
 
 export async function POST(req: Request) {
     try {
         const body = await req.json().catch(() => ({}));
 
-        const item = await addTechnicalIssueRecord({
-            id: body.id,
-            actorName: body.actorName ?? null,
+        const item = await createMaintenanceRecordForServiceRequest({
+            serviceRequestId: body.id,
             notes: body.notes ?? null,
             diagnosis: body.diagnosis ?? null,
             workSummary: body.workSummary ?? null,

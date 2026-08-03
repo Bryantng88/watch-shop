@@ -313,13 +313,13 @@ export async function listAdminAcquisitionsFromSource(
             })
             : Promise.resolve([]),
     ]);
-    const roleWeight = new Map([
+    const roleWeight = new Map<MediaRole, number>([
         [MediaRole.COVER, 0],
         [MediaRole.THUMBNAIL, 1],
         [MediaRole.INLINE, 2],
         [MediaRole.GALLERY, 3],
     ]);
-    const lifecycleWeight = new Map([
+    const lifecycleWeight = new Map<MediaBindingLifecycle, number>([
         [MediaBindingLifecycle.PUBLISHED, 0],
         [MediaBindingLifecycle.APPROVED, 1],
         [MediaBindingLifecycle.ATTACHED, 2],

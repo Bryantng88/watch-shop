@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 
 export type DashboardWidgetSize = "1x1" | "2x1";
-export type DashboardWidgetScope = "SHARED" | "WATCH" | "ACQUISITION" | "SPACE";
+export type DashboardWidgetScope = "SHARED" | "WATCH" | "ACQUISITION" | "SPACE" | "PAYMENT" | "TECHNICAL";
 
 export type DashboardWidgetDefinition<Key extends string, Props> = {
     key: Key;

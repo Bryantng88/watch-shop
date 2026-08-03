@@ -16,6 +16,7 @@ import type {
   WorkflowDefinitionDraftBlueprintJson,
   WorkflowDefinitionDraft,
 } from "./workflow-definition-draft.types";
+import { MANUAL_WORKSPACE_PROVISIONING } from "@/domains/blueprint/shared/workspace-provisioning";
 
 function clean(value: unknown) {
   return String(value ?? "").trim();
@@ -190,6 +191,8 @@ function defaultBlueprintJson(
         assignee: false,
         priority: true,
       },
+      provisioning: MANUAL_WORKSPACE_PROVISIONING,
+      eventBindings: [],
       instantiationNotes:
         "Ở V1, Workspace lưu ý định định nghĩa này dưới dạng snapshot note.",
     },

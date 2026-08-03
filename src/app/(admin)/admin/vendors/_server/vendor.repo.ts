@@ -52,7 +52,7 @@ export async function createVendor(
     data: { name: string; phone: string; email?: string | null }
 ) {
     // Kiểm tra số điện thoại đã tồn tại chưa
-    const exists = await tx.vendor.findUnique({ where: { phone: data.phone } });
+    const exists = await tx.vendor.findFirst({ where: { phone: data.phone } });
     if (exists) throw new Error("Số điện thoại đã tồn tại!");
     return tx.vendor.create({
         data,
@@ -62,7 +62,7 @@ export async function createVendor(
 
 // Tìm vendor theo số điện thoại
 export async function getVendorByPhone(tx: Tx, phone: string) {
-    return tx.vendor.findUnique({ where: { phone } });
+    return tx.vendor.findFirst({ where: { phone } });
 }
 
 // Tìm vendor theo id
@@ -76,7 +76,7 @@ export async function getListBrands(): Promise<BrandOption[]> {
             name: true,
             id: true,
             _count: {
-                select: { products: true },
+                select: { product: true },
             }
         },
         orderBy: { name: "asc" },
@@ -84,7 +84,7 @@ export async function getListBrands(): Promise<BrandOption[]> {
     const brandsWithCount = brands.map(b => ({
         id: b.id,
         name: b.name,
-        productCount: b._count.products,
+        productCount: b._count.product,
     }));
 
     return brandsWithCount;

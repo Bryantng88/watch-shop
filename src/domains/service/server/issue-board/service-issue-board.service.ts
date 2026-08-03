@@ -125,21 +125,21 @@ async function syncServiceRequestStatusFromIssues(client: any, serviceRequestId?
     if (!productId) return null;
 
     const activeIssues = issues.filter(
-        (issue) => !["CANCELED", "CANCELLED"].includes(String(issue.executionStatus ?? "").toUpperCase()),
+        (issue: any) => !["CANCELED", "CANCELLED"].includes(String(issue.executionStatus ?? "").toUpperCase()),
     );
     const allDone =
         activeIssues.length > 0 &&
-        activeIssues.every((issue) => isTechnicalIssueDone(issue.executionStatus));
+        activeIssues.every((issue: any) => isTechnicalIssueDone(issue.executionStatus));
     const nextServiceStage = activeIssues.length === 0
         ? "NOT_REQUIRED"
         : allDone
             ? "DONE"
             : "IN_SERVICE";
     const pendingEtaIssues = activeIssues
-        .filter((issue) => !isTechnicalIssueDone(issue.executionStatus))
-        .filter((issue) => issue.expectedCompletionAt)
+        .filter((issue: any) => !isTechnicalIssueDone(issue.executionStatus))
+        .filter((issue: any) => issue.expectedCompletionAt)
         .sort(
-            (left, right) =>
+            (left: any, right: any) =>
                 new Date(right.expectedCompletionAt).getTime() -
                 new Date(left.expectedCompletionAt).getTime(),
         );

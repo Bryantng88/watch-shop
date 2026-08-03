@@ -16,11 +16,8 @@ export async function POST(
 
         await completeTechnicalIssue({
             id,
-            technicalDetailCatalogId: body.technicalDetailCatalogId,
             supplyCatalogId: body.supplyCatalogId,
             mechanicalPartCatalogId: body.mechanicalPartCatalogId,
-            actionMode: body.actionMode,
-            vendorId: body.vendorId,
             actualCost: body.actualCost,
             resolutionNote: body.resolutionNote,
             actorId: actor.id,

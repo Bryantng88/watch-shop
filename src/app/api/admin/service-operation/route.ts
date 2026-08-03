@@ -106,14 +106,14 @@ export async function POST(request: Request) {
             area: body?.area,
             note: body?.note,
             priority: body?.priority,
-            actorUserId: auth.id ?? auth.userId ?? null,
+            actorUserId: auth.id ?? null,
             openExisting: body?.openExisting === true,
             createIssueIfExisting: body?.createIssueIfExisting === true,
             deferConsumers: (work) => after(work),
           })
         : await getOrCreateServiceOperationWorkspaceForWatch({
             productId: body?.productId,
-            actorUserId: auth.id ?? auth.userId ?? null,
+            actorUserId: auth.id ?? null,
             openExisting: body?.openExisting === true,
             deferConsumers: (work) => after(work),
           });

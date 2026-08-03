@@ -78,7 +78,7 @@ function buildInitialWatchListInput(searchParams: SearchParams) {
         view,
         audienceSegment: audienceSegment as "MEN" | "WOMEN" | "UNISEX",
 
-        subFilter: "",
+        subFilter: "" as const,
 
         q: firstValue(searchParams.q),
         sku: firstValue(searchParams.sku),

@@ -15,7 +15,7 @@ export async function createNewVendor(
 
 // Tìm vendor theo số điện thoại (cho chức năng quick check khi add)
 export async function findVendorByPhone(phone: string) {
-    return prisma.$transaction((tx) => vendorRepo.getVendorByPhone()
+    return prisma.$transaction((tx) => vendorRepo.getVendorByPhone(tx, phone)
     )
 }
 // Tìm vendor theo id

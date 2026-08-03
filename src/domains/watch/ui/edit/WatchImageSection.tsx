@@ -218,7 +218,7 @@ export default function WatchImageSection({
                 setCurrentUserId(data.currentUserId);
                 setTaskContext({
                     watchId,
-                    kind: TaskKind.WATCH_IMAGE,
+                    kind: TaskKind.OPERATION,
                     titlePreset: watchTitle
                         ? `Bổ sung hình ảnh cho ${watchTitle}`
                         : "Bổ sung hình ảnh cho watch",
@@ -228,7 +228,7 @@ export default function WatchImageSection({
             } catch (err: unknown) {
                 notify.error({
                     title: "Không thể mở tạo task",
-                    message: err?.message || "Có lỗi xảy ra khi tải dữ liệu task.",
+                    message: err instanceof Error ? err.message : "Có lỗi xảy ra khi tải dữ liệu task.",
                 });
             }
         });

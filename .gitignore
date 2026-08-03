@@ -436,6 +436,7 @@ pnpm-debug.log*
 bun-debug.log*
 
 # Environment files
+.env.build
 .env.production
 .env.local
 .env.development.local

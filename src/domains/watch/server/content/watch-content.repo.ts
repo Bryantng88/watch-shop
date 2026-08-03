@@ -167,9 +167,7 @@ export async function updateWatchContentStatusRepo(
 
     const now = new Date();
 
-    const statusData:
-      | Prisma.WatchContentCreateInput
-      | Prisma.WatchContentUpdateInput =
+    const statusData =
       input.status === "SUBMITTED"
         ? {
           contentStatus: input.status,
@@ -198,7 +196,6 @@ export async function updateWatchContentStatusRepo(
       where: { watchId: watch.id },
       create: {
         watch: { connect: { id: watch.id } },
-        contentStatus: input.status,
         ...statusData,
       },
       update: statusData,

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import * as maintenanceService from "@/domains/service/server";
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const serviceRequestId = String(params?.id || "").trim();
+        const serviceRequestId = String((await params).id || "").trim();
         if (!serviceRequestId) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
         const body = await req.json().catch(() => ({}));
@@ -17,14 +17,6 @@ export async function POST(req: Request, { params }: { params: { id: string } })
             serviceRequestId,
             vendorId,
             reason,
-            notes,
-            servicedAt: body?.servicedAt ? new Date(body.servicedAt) : null,
-            totalCost: body?.totalCost ?? null,
-            currency: body?.currency ?? null,
-            paymentMethod: body?.paymentMethod ?? null,
-            paymentStatus: body?.paymentStatus ?? null,
-            paymentType: body?.paymentType ?? null,
-            paymentPurpose: body?.paymentPurpose ?? null,
             setInProgress: true,
         });
 

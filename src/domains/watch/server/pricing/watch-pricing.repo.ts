@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import type { DB } from "@/server/db/client";
 import { dbOrTx } from "@/server/db/client";
 
-export type UpdateWatchPricingInput = {
+export type WatchPricingUpdateInput = {
   salePrice?: number | string | null;
   minPrice?: number | string | null;
   costPrice?: number | string | null;
@@ -59,7 +59,7 @@ export async function getWatchPricingRepo(db: DB, productId: string) {
 export async function updateWatchPricingRepo(
   db: DB,
   productId: string,
-  input: UpdateWatchPricingInput
+  input: WatchPricingUpdateInput
 ) {
   const client = dbOrTx(db);
 

@@ -12,3 +12,4 @@ export * from "./review";
 export * from "./bridge";
 export * from "./media-work";
 export * from "./dashboard";
+export * from "./post-target";

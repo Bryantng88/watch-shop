@@ -50,8 +50,6 @@ import TaskQuickCreateModal, {
   type TaskQuickCreateContext,
   type TaskUserOption,
 } from "@/domains/task/ui/quick-create/TaskQuickCreateModal";
-import type { TaskTypeOption } from "@/domains/task/server/task-type.types";
-import { TaskDomain, TaskMode } from "@prisma/client";
 import {
   AsyncBusinessListDashboard,
   BusinessListShell,
@@ -349,7 +347,6 @@ export default function WatchListClient(props: WatchListClientProps) {
     useState<RaiseWorkCaseSourceContext | null>(null);
   const [taskModalOpen, setTaskModalOpen] = React.useState(false);
   const [taskUsers, setTaskUsers] = React.useState<TaskUserOption[]>([]);
-  const [taskTypes, setTaskTypes] = React.useState<TaskTypeOption[]>([]);
   const [taskCurrentUserId, setTaskCurrentUserId] = React.useState("");
   const [taskContext, setTaskContext] =
     React.useState<TaskQuickCreateContext | null>(null);
@@ -1487,12 +1484,9 @@ export default function WatchListClient(props: WatchListClientProps) {
     try {
       const data = await getTaskQuickCreateDataAction();
       setTaskUsers(data.users ?? []);
-      setTaskTypes(data.taskTypes ?? []);
       setTaskCurrentUserId(data.currentUserId ?? "");
       setTaskContext({
         watchId: row.id,
-        domain: TaskDomain.WATCH,
-        mode: TaskMode.NORMAL,
         titlePreset: inferWatchTaskTitle(row),
         descriptionPreset: [
           row.sku ? `SKU: ${row.sku}` : null,
@@ -1505,7 +1499,7 @@ export default function WatchListClient(props: WatchListClientProps) {
     } catch (error) {
       notify.error({
         title: "Không thể mở tạo task",
-        message: error?.message || "Không tải được dữ liệu tạo task.",
+        message: error instanceof Error ? error.message : "Không tải được dữ liệu tạo task.",
       });
     }
   }
@@ -1835,7 +1829,6 @@ export default function WatchListClient(props: WatchListClientProps) {
         <TaskQuickCreateModal
           open
           users={taskUsers}
-          taskTypes={taskTypes}
           currentUserId={taskCurrentUserId}
           context={taskContext}
           onClose={() => setTaskModalOpen(false)}

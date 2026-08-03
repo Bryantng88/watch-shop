@@ -35,7 +35,7 @@ export async function POST(
     req: NextRequest,
     {
         params,
-    }: { params: Promise<{ id: string }> | { id: string } },
+    }: { params: Promise<{ id: string }> },
 ) {
     const totalStartedAt = perfNow();
     try {

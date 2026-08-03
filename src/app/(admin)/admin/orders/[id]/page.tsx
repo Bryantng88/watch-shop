@@ -1,6 +1,6 @@
 import { getAdminOrderDetail } from "@/domains/order/server";
 import OrderDetailClient from "@/domains/order/client/OrderDetailClient";
-import type { OrderDetailData } from "@/domains/order/OrderDetailClient";
+import type { OrderDetailData } from "@/domains/order/ui/detail/shared";
 import { serializeForClient } from "@/shared/utils/serialize-for-client";
 
 export default async function OrderDetailPage({

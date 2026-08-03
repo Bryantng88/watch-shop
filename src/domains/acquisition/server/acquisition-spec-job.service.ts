@@ -301,7 +301,7 @@ async function fileKeyToDataUrl(
         const buffer = Buffer.from(obj.bytes);
         if (!buffer.length) return null;
 
-        const mime = inferMimeType(obj.ContentType ?? mimeHint ?? key);
+        const mime = inferMimeType(obj.contentType ?? mimeHint ?? key);
         return `data:${mime};base64,${buffer.toString("base64")}`;
     } catch (error) {
         console.error("[ACQ_SPEC][READ_IMAGE_FAILED]", { key, error });
@@ -529,7 +529,6 @@ async function prepareAcquisitionSpecJobData(input: {
         referenceNumber: inferredReference,
         movementType: mappedMovementType ?? null,
         calibre: inferredCalibre,
-        dialColor: inferredDialColor,
         caseSizeMM: inferredCaseSize,
     });
 
@@ -625,7 +624,6 @@ async function persistPreparedAcquisitionSpecJob(
         brandName: resolvedBrandName,
         model: inferredModel,
         movement: mappedMovementType ? String(mappedMovementType) : null,
-        dialColor: inferredDialColor,
         acquiredAt: item.acquisition?.acquiredAt ?? new Date(),
     });
 

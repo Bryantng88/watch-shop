@@ -385,7 +385,9 @@ export default function TaskListClient(props: Props) {
         onPage={(page) => navigate({ page: String(page) })}
         onStatus={changeStatus}
         onEdit={openEdit}
-        onAddTaskItem={addTaskItem}
+        onAddTaskItem={async (input) => {
+          await addTaskItem(input);
+        }}
         onCreateRelatedTask={createRelatedTask}
         onToggleTaskItem={toggleTaskItem}
         onDeleteTaskItem={deleteTaskItem}

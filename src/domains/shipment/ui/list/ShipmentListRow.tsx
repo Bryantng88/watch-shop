@@ -33,14 +33,14 @@ export default function ShipmentListRow({
     onCreateFee,
     onDelivered,
     onReturned,
-    onCreateReturnFee
+    onReceiveReturn
 }: {
     item: ShipmentListItem;
     onEdit?: (row: ShipmentListItem) => void;
     onCreateFee?: (row: ShipmentListItem) => void;
     onDelivered?: (row: ShipmentListItem) => void;
     onReturned?: (row: ShipmentListItem) => void;
-    onCreateReturnFee?: (row: ShipmentListItem) => void;
+    onReceiveReturn?: (row: ShipmentListItem) => void;
 }) {
     const cod = isCodShipment(item);
     const address = fullAddress(item);
@@ -49,7 +49,7 @@ export default function ShipmentListRow({
 
     const isCustomerPaidShipping =
         shippingAmount > 0 &&
-        String(item.shippingAmountPayer ?? "").toUpperCase() === "CUSTOMER";
+        String(item.shippingFeePayer ?? "").toUpperCase() === "CUSTOMER";
 
     const sourceForIcon = order?.quickFromProductId
         ? "WATCH_QUICK_ORDER"
@@ -154,11 +154,11 @@ export default function ShipmentListRow({
                             onClick: onReturned,
                         },
                         canReceiveReturnedShipment(item) &&
-                        onCreateReturnFee && {
+                        onReceiveReturn && {
                             key: "receive-return",
                             label: status === "RETURNED" ? "Cập nhật phí hoàn" : "Nhận hàng hoàn",
                             icon: <Banknote className="h-4 w-4" />,
-                            onClick: onCreateReturnFee,
+                            onClick: onReceiveReturn,
                         },
 
                         onEdit && {

@@ -102,7 +102,9 @@ function normalizeObjectLike<T extends Record<string, unknown>>(
     return value as T;
 }
 
-function normalizeMeta(input: AcquisitionItemMeta): AcquisitionItemMeta {
+function normalizeMeta(
+    input: Partial<Record<keyof AcquisitionItemMeta, unknown>>
+): AcquisitionItemMeta {
     const next: AcquisitionItemMeta = {};
 
     const aiMeta = normalizeAiMeta(input.aiMeta);

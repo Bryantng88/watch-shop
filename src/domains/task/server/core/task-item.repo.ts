@@ -28,7 +28,7 @@ export async function createTaskItemRepo(db: DB, input: CreateTaskItemInput) {
       title: input.title.trim(),
       note: input.note?.trim() || null,
       userId: input.ownerUserId || null,
-      status: input.status ?? TaskStatus.TODO,
+      status: TaskStatus.TODO,
       priority: input.priority ?? "MEDIUM",
       dueAt: toDate(input.dueAt),
       assignedToUserId: input.assignedToUserId || null,

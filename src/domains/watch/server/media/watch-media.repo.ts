@@ -44,7 +44,7 @@ function hasMeaningfulContent(content: any) {
     hasText(content.body) ||
     hasText(content.summary) ||
     (Array.isArray(content.bulletSpecs) &&
-      content.bulletSpecs.some((item) => hasText(item)))
+      content.bulletSpecs.some((item: unknown) => hasText(item)))
   );
 }
 
