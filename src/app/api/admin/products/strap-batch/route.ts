@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { adminProductService } from "@/features/products/server/product.service";
+import { adminProductService } from "@/app/(admin)/admin/products/_server/product.service";
 
 const StrapMaterialSchema = z.enum([
     "LEATHER",

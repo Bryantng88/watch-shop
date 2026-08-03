@@ -2,7 +2,7 @@
 
 import { prisma, DB } from "@/server/db/client";
 import * as dto from "../shared/acquisition.dto";
-import * as repoAcq from "./acquisition.repo";
+import * as repoAcq from "@/domains/acquisition/server";
 import { buildAcqWhere, buildAcqOrderBy, DEFAULT_PAGE_SIZE } from "../shared/filters";
 import { AcquisitionType } from "@prisma/client";
 import { ItemInput } from "../shared/acquisition.dto";

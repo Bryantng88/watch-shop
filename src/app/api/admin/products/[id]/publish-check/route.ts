@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminProductService } from "@/features/products/server/product.service";
+import { adminProductService } from "@/app/(admin)/admin/products/_server/product.service";
 
 export async function GET(
     _req: Request,

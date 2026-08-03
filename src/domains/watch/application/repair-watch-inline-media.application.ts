@@ -9,12 +9,12 @@ import { ingestExistingMediaForWatch, attachIngestedWatchMedia } from "@/domains
 import { processBusinessEventOperation } from "@/domains/event/delivery";
 import { prisma } from "@/server/db/client";
 import { replaceWatchImagesRepo } from "@/domains/watch/server/media/watch-media.repo";
-import { emitWatchMediaAssetAttachedEvent } from "@/domains/watch/server/events";
+import { emitWatchInlineImageUpdatedEvent } from "@/domains/watch/server/events";
 
 /**
  * Temporary maintenance entry point for repairing a missing Watch INLINE image.
- * It intentionally uses the normal Media ingest/binding/event pipeline; only
- * the UI entry point differs from Watch creation and the acquisition form.
+ * It reuses canonical Media ingest/binding storage, but emits a Watch thumbnail
+ * event that cannot create or advance operational Media workflow membership.
  */
 export async function repairWatchInlineMedia(input: {
   productId: string;
@@ -31,7 +31,6 @@ export async function repairWatchInlineMedia(input: {
       select: {
         id: true,
         productId: true,
-        product: { select: { title: true, sku: true } },
       },
     });
     if (!watch) throw new Error("Không tìm thấy Watch cần sửa ảnh INLINE.");
@@ -75,15 +74,14 @@ export async function repairWatchInlineMedia(input: {
       }],
     }, tx);
 
-    return emitWatchMediaAssetAttachedEvent(tx, {
+    return emitWatchInlineImageUpdatedEvent(tx, {
       watch: {
         id: watch.id,
         productId: watch.productId,
-        product: watch.product,
       },
+      storageKey: selected.fileKey,
       actorUserId: input.actorUserId,
       sourceId: `watch-inline-repair:${watch.id}:${Date.now()}`,
-      note: "Temporary Watch List INLINE image repair.",
     });
   });
 

@@ -31,11 +31,14 @@
   },
   "include": [
     "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
     ".next/types/**/*.ts"
-, "src/ult/S3.js", "src/ult/S3.js"  ],
+  ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "component for chatGPT",
+    "src/note.ts",
+    "src/features/__generated__"
   ]
 }

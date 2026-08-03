@@ -11,7 +11,7 @@ import type {
 import { LEGACY_BUSINESS_EVENT_CONTRACTS } from "@/domains/event/catalog/legacy-business-events.catalog";
 import { SHIPMENT_BUSINESS_EVENT_CONTRACTS } from "@/domains/shipment/server/events/shipment-business-event.contract";
 import { ORDER_BUSINESS_EVENT_CONTRACTS } from "@/domains/order/server/events/order-business-event.contract";
-import { STRAP_BUSINESS_EVENT_CONTRACTS } from "@/domains/strap/server/events";
+import { STRAP_BUSINESS_EVENT_CONTRACTS } from "@/domains/strap/server/events/strap-business-event.contract";
 
 const WATCH_BUSINESS_EVENT_CONTRACTS = WATCH_BUSINESS_EVENT_DEFINITIONS.map(
   definitionToBusinessEventContract,

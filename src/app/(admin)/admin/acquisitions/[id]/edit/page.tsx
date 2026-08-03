@@ -104,10 +104,11 @@ function parseItemMeta(description?: string | null): {
     return {};
 }
 
-export default async function EditAcquisitionPage({ params }: { params: { id: string } }) {
-    const access = await authorizeAcquisitionAccess(params.id, "VIEW");
+export default async function EditAcquisitionPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    const access = await authorizeAcquisitionAccess(id, "VIEW");
     if (!access.ok) redirect(access.status === 401 ? "/login" : "/403");
-    const acquisitionData = await service.getAcquisitionDetail(params.id);
+    const acquisitionData = await service.getAcquisitionDetail(id);
     const vendors = await getVendorList();
     const productTypes = Object.values(ProductType);
 

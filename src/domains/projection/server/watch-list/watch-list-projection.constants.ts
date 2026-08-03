@@ -8,6 +8,7 @@ export const WATCH_LIST_PROJECTION_SOURCE_EVENTS = [
   "watch.media.photoshoot.requested",
   "watch.media.photoshoot.completed",
   "watch.content.modified",
+  "watch.inline.image.updated",
   "watch.spec.updated",
   "watch.price.updated",
   "watch.content.submitted",

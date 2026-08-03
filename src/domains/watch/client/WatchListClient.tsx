@@ -981,7 +981,7 @@ export default function WatchListClient(props: WatchListClientProps) {
     setInlineRepairSubmitting(true);
     progress.show({
       title: "Đang sửa ảnh INLINE",
-      message: "Media đang được ingest, gắn vào Watch và đồng bộ danh sách.",
+        message: "Ảnh đang được ingest, gắn vào Watch và đồng bộ thumbnail.",
     });
     try {
       await repairWatchInlineMediaAction({
@@ -990,7 +990,7 @@ export default function WatchListClient(props: WatchListClientProps) {
       });
       notify.success({
         title: "Đã cập nhật ảnh INLINE",
-        message: "Ảnh đại diện Watch đã được cập nhật qua luồng Media.",
+        message: "Ảnh đại diện Watch đã được cập nhật, không thay đổi luồng xử lý Media.",
       });
       setInlineRepairRow(null);
       await loadList(new URLSearchParams(params.toString()), {
@@ -1878,7 +1878,7 @@ export default function WatchListClient(props: WatchListClientProps) {
         selectedKeys={[]}
         selectionMode="single"
         title="Sửa nhanh ảnh INLINE"
-        description="Chọn ảnh INLINE hiện có. Ảnh sẽ đi qua đầy đủ luồng Media và cập nhật lại Watch."
+        description="Chọn ảnh INLINE hiện có để cập nhật thumbnail Watch; thao tác này không tạo Media Processing item."
         submitLabel={inlineRepairSubmitting ? "Đang xử lý..." : "Chọn ảnh"}
         onSelect={(key) => void repairInlineImage(key)}
         onSubmit={(keys) => {

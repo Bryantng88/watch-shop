@@ -24,16 +24,17 @@ function statusFromView(view: string) {
     }
 }
 
-export default async function AdminShipmentsPage({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {
-    const page = toPositiveInt(searchParams.page, 1);
-    const pageSize = toPositiveInt(searchParams.pageSize, 20);
-    const view = firstRaw(searchParams.view, "all");
-    const status = firstRaw(searchParams.status) || statusFromView(view);
+export default async function AdminShipmentsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+    const resolvedSearchParams = await searchParams;
+    const page = toPositiveInt(resolvedSearchParams.page, 1);
+    const pageSize = toPositiveInt(resolvedSearchParams.pageSize, 20);
+    const view = firstRaw(resolvedSearchParams.view, "all");
+    const status = firstRaw(resolvedSearchParams.status) || statusFromView(view);
 
     const data = await listShipmentsApplication({
         page,
         pageSize,
-        q: firstRaw(searchParams.q) || null,
+        q: firstRaw(resolvedSearchParams.q) || null,
         status,
     });
 
@@ -44,7 +45,7 @@ export default async function AdminShipmentsPage({ searchParams }: { searchParam
             page={data.page ?? page}
             pageSize={data.pageSize ?? pageSize}
             totalPages={Math.max(1, data.pageCount ?? 1)}
-            rawSearchParams={searchParams}
+            rawSearchParams={resolvedSearchParams}
         />
     );
 }

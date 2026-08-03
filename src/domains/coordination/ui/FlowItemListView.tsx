@@ -411,6 +411,7 @@ export default function FlowItemListView({
     item: CoordinationFlowListItemDTO,
     transition: CoordinationFlowListItemDTO["manualTransitions"][number],
   ) {
+    previewState.closePreview();
     const actionKey = transition.actionKey;
     const feedbackItem = {
       id: item.id,
@@ -457,6 +458,7 @@ export default function FlowItemListView({
     item: CoordinationFlowListItemDTO,
     outcome: { fromStageKey?: string; toStageKey?: string },
   ) {
+    previewState.closePreview();
     const fromStageKey = outcome.fromStageKey || item.flowStageKey || activeStage;
     const movedOut =
       Boolean(outcome.toStageKey) &&
@@ -594,9 +596,7 @@ export default function FlowItemListView({
             `Đã xử lý ${result.applied}/${result.results.length} item. Lỗi: ${failureDetails.join("; ")}`,
           );
         }
-        if (movedIds.length !== succeededIds.length) {
-          void onReloadRequested?.();
-        }
+        await onReloadRequested?.();
       } catch (error) {
         const message = error instanceof Error ? error.message : "Không thể cập nhật các item.";
         setActionError(message);
@@ -1114,7 +1114,12 @@ export default function FlowItemListView({
                       ) : <span className="text-xs text-slate-400">-</span>}
                     </td>
                   ) : null}
-                  {!showPaymentAmount ? <td className="px-4 py-3">
+                  {!showPaymentAmount ? <td
+                    className="px-4 py-3"
+                    data-row-action
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
+                  >
                     {item.targetType === "WATCH" && showPublishChannels && enabledActions.length ? (
                       enabledActions.length === 1 ? (
                         isOpenTargetTransition(enabledActions[0]) ? (
@@ -1122,6 +1127,8 @@ export default function FlowItemListView({
                             queueItem={item as TaskItemQueueItem}
                             taskItemId={item.taskItemId}
                             transition={enabledActions[0]}
+                            onActivate={previewState.closePreview}
+                            onRefreshRequested={onReloadRequested}
                             onTransitionApplied={(outcome) => reconcileModalTransition(item, outcome)}
                             className="inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"
                           />
@@ -1145,6 +1152,8 @@ export default function FlowItemListView({
                               queueItem={item as TaskItemQueueItem}
                               taskItemId={item.taskItemId}
                               transition={enabledActions[0]}
+                              onActivate={previewState.closePreview}
+                              onRefreshRequested={onReloadRequested}
                               onTransitionApplied={(outcome) => reconcileModalTransition(item, outcome)}
                               className="inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"
                             />
@@ -1177,6 +1186,8 @@ export default function FlowItemListView({
                                     queueItem={item as TaskItemQueueItem}
                                     taskItemId={item.taskItemId}
                                     transition={transition}
+                                    onActivate={previewState.closePreview}
+                                    onRefreshRequested={onReloadRequested}
                                     onTransitionApplied={(outcome) => reconcileModalTransition(item, outcome)}
                                     className="flex h-8 w-full items-center rounded-lg px-2.5 text-left text-xs font-semibold text-slate-700 transition hover:bg-violet-50 hover:text-violet-700"
                                   />
@@ -1252,6 +1263,8 @@ export default function FlowItemListView({
                         queueItem={item as TaskItemQueueItem}
                         taskItemId={item.taskItemId}
                         transition={primaryAction}
+                        onActivate={previewState.closePreview}
+                        onRefreshRequested={onReloadRequested}
                         onTransitionApplied={(outcome) => reconcileModalTransition(item, outcome)}
                         className="inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"
                       />

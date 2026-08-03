@@ -14,10 +14,11 @@ export const dynamic = "force-dynamic";
 export default async function OrderListPage({
     searchParams,
 }: {
-    searchParams: SearchParams;
+    searchParams: Promise<SearchParams>;
 }) {
+    const resolvedSearchParams = await searchParams;
     const sp = new URLSearchParams(
-        Object.entries(searchParams).flatMap(([key, value]) => {
+        Object.entries(resolvedSearchParams).flatMap(([key, value]) => {
             if (Array.isArray(value)) {
                 return value.map((item) => [key, item]);
             }
@@ -44,7 +45,7 @@ export default async function OrderListPage({
             page={result.page}
             pageSize={result.pageSize}
             totalPages={totalPages}
-            rawSearchParams={searchParams}
+            rawSearchParams={resolvedSearchParams}
         />
     );
 }

@@ -26,8 +26,9 @@ function toURLSearchParams(searchParams: SearchParams) {
     return sp;
 }
 
-export default async function ServiceRequestListPage({ searchParams }: { searchParams: SearchParams }) {
-    const input = parseServiceRequestSearchParams(toURLSearchParams(searchParams));
+export default async function ServiceRequestListPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+    const resolvedSearchParams = await searchParams;
+    const input = parseServiceRequestSearchParams(toURLSearchParams(resolvedSearchParams));
     const { items, total, counts, page, pageSize } = await getAdminServiceRequestList(input);
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -39,7 +40,7 @@ export default async function ServiceRequestListPage({ searchParams }: { searchP
             page={page}
             pageSize={pageSize}
             totalPages={totalPages}
-            rawSearchParams={searchParams}
+            rawSearchParams={resolvedSearchParams}
         />
     );
 }

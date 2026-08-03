@@ -3,8 +3,8 @@ import {
     callResponsesJson,
     fetchImageAsDataUrl,
     specExtractSchema,
-} from "@/app/(admin)/admin/products/_server/product-ai.server";
-import type { ExtractedSpec } from "@/app/(admin)/admin/products/_server/product-ai.type";
+} from "@/app/(admin)/admin/products/_server/ai/product-ai.server";
+import type { ExtractedSpec } from "@/app/(admin)/admin/products/_server/ai/product-ai.types";
 
 export async function POST(req: NextRequest) {
     try {

@@ -16,7 +16,7 @@ function firstValue(value: string | string[] | undefined) {
 export default async function NewOrderPage({
     searchParams,
 }: {
-    searchParams?: Promise<SearchParams> | SearchParams;
+    searchParams?: Promise<SearchParams>;
 }) {
     const sp = (await searchParams) ?? {};
     const mode = firstValue(sp.mode);

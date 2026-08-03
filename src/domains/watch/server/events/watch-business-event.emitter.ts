@@ -155,6 +155,31 @@ export async function emitWatchContentModifiedEvent(
   }, options);
 }
 
+export async function emitWatchInlineImageUpdatedEvent(
+  db: DB,
+  input: {
+    watch: Pick<WatchEventWatchSnapshot, "id" | "productId">;
+    storageKey: string;
+    actorUserId?: string | null;
+    sourceId?: string | null;
+  },
+  options?: BusinessEventDispatchOptions,
+) {
+  return recordBusinessEvent(db, {
+    eventKey: "watch.inline.image.updated",
+    targetType: "WATCH",
+    targetId: input.watch.id,
+    targetAliasIds: [input.watch.id, input.watch.productId],
+    actorUserId: input.actorUserId ?? null,
+    payload: {
+      watchId: input.watch.id,
+      productId: input.watch.productId,
+      storageKey: input.storageKey,
+      sourceId: input.sourceId ?? null,
+    },
+  }, options);
+}
+
 export async function emitWatchSpecUpdatedEvent(
   db: DB,
   input: {

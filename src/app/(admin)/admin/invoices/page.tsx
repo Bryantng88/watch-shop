@@ -15,9 +15,10 @@ function serialize(obj: any) {
     );
 }
 
-export default async function InvoiceListPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function InvoiceListPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+    const resolvedSearchParams = await searchParams;
     const sp = new URLSearchParams(
-        Object.entries(searchParams).flatMap(([k, v]) =>
+        Object.entries(resolvedSearchParams).flatMap(([k, v]) =>
             Array.isArray(v) ? v.map((x) => [k, x]) : [[k, v ?? ""]]
         )
     );
@@ -35,7 +36,7 @@ export default async function InvoiceListPage({ searchParams }: { searchParams: 
             page={page}
             pageSize={pageSize}
             totalPages={totalPages}
-            rawSearchParams={searchParams}
+            rawSearchParams={resolvedSearchParams}
         />
     );
 }

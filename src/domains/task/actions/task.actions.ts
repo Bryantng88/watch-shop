@@ -68,6 +68,7 @@ import {
 import type { BusinessBindingTargetType } from "../server/business-binding.types";
 import { isCoreWorkspaceBlueprint } from "../shared/workspace-flow-policy";
 import { getProjectionDeliveryStatus } from "@/domains/projection/server";
+import { getTaskItemDetailPageRepo } from "../server/core/task-item-detail.repo";
 
 function authActorLabel(auth: unknown) {
   const root = auth && typeof auth === "object" && !Array.isArray(auth)
@@ -87,6 +88,26 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
+}
+
+function collectProjectionDeliveryKeys(value: unknown) {
+  const keys = new Set<string>();
+  const seen = new Set<object>();
+  const visit = (candidate: unknown) => {
+    if (!candidate || typeof candidate !== "object") return;
+    if (seen.has(candidate)) return;
+    seen.add(candidate);
+    if (Array.isArray(candidate)) {
+      candidate.forEach(visit);
+      return;
+    }
+    const record = candidate as Record<string, unknown>;
+    const key = String(record.projectionDeliveryKey ?? "").trim();
+    if (key) keys.add(key);
+    Object.values(record).forEach(visit);
+  };
+  visit(value);
+  return [...keys];
 }
 
 const PAYMENT_OPERATION_BLUEPRINT_ACTION_KEYS = new Set([
@@ -1435,17 +1456,24 @@ export async function applyQueueItemManualTransitionsAction(input: {
     reason?: string;
     toState?: string | null;
     serviceActionResult?: ServiceOperationActionAdapterResult | null;
+    projectionDeliveryKeys?: string[];
+    reconciliationMode?: "ASYNC_DELIVERY" | "SOURCE_RELOAD";
   }> = [];
 
   for (const item of items) {
     try {
       const result = await applyQueueItemManualTransitionAction(item);
+      const projectionDeliveryKeys = collectProjectionDeliveryKeys(result);
       results.push({
         bindingId: item.bindingId,
         ok: Boolean(result.result.applied),
         reason: result.result.applied ? undefined : result.result.reason,
         toState: result.result.toState ?? null,
         serviceActionResult: result.serviceActionResult,
+        projectionDeliveryKeys,
+        reconciliationMode: projectionDeliveryKeys.length
+          ? "ASYNC_DELIVERY"
+          : "SOURCE_RELOAD",
       });
     } catch (error) {
       results.push({
@@ -1464,6 +1492,15 @@ export async function applyQueueItemManualTransitionsAction(input: {
     failed: results.filter((result) => !result.ok).length,
     results,
   };
+}
+
+export async function reloadTaskItemQueueAction(input: { taskItemId: string }) {
+  await getTaskAuth();
+  const taskItemId = String(input.taskItemId ?? "").trim();
+  if (!taskItemId) throw new Error("Missing taskItemId");
+  const detail = await getTaskItemDetailPageRepo(prisma, taskItemId);
+  if (!detail) throw new Error("TASK_ITEM_NOT_FOUND");
+  return { items: detail.queueItems };
 }
 
 export async function submitOperationalBlueprintActionAction(input: {
@@ -1569,14 +1606,21 @@ export async function getOperationProjectionDeliveriesAction(input: {
     (input.projectionDeliveryKeys ?? [])
       .map((key) => String(key ?? "").trim())
       .filter(Boolean),
-  )].slice(0, 20);
+  )];
 
-  return Promise.all(
-    keys.map(async (projectionDeliveryKey) => ({
-      projectionDeliveryKey,
-      delivery: await getProjectionDeliveryStatus(prisma, projectionDeliveryKey),
-    })),
-  );
+  const rows: Array<{
+    projectionDeliveryKey: string;
+    delivery: Awaited<ReturnType<typeof getProjectionDeliveryStatus>>;
+  }> = [];
+  for (let index = 0; index < keys.length; index += 8) {
+    rows.push(...await Promise.all(
+      keys.slice(index, index + 8).map(async (projectionDeliveryKey) => ({
+        projectionDeliveryKey,
+        delivery: await getProjectionDeliveryStatus(prisma, projectionDeliveryKey),
+      })),
+    ));
+  }
+  return rows;
 }
 
 export async function searchManualQueueTargetsAction(input: {

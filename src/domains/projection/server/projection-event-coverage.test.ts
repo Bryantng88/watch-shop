@@ -41,3 +41,21 @@ test("every projection builder subscription is catalogued and allows projection"
 
   assert.deepEqual(invalidSubscriptions, []);
 });
+
+test("INLINE thumbnail updates never enter Media workflow", () => {
+  const contract = listBusinessEventContracts().find(
+    (candidate) => candidate.key === "watch.inline.image.updated",
+  );
+  assert.ok(contract);
+  assert.equal(contract.knownConsumers?.includes("coordination"), false);
+  assert.equal(contract.knownConsumers?.includes("workflow"), false);
+
+  const builders = listProjectionBuildersForEvent({
+    eventKey: "watch.inline.image.updated",
+    targetType: "WATCH",
+  }).map((builder) => builder.key);
+  assert.ok(builders.includes("watch-list"));
+  assert.ok(builders.includes("acquisition-list"));
+  assert.equal(builders.includes("media-operation-board"), false);
+  assert.equal(builders.includes("watch-media-queue"), false);
+});

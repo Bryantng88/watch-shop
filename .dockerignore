@@ -1,0 +1,23 @@
+.git
+.github
+.next
+node_modules
+npm-debug.log*
+*.log
+
+# Secrets must be supplied at build/runtime, never copied into an image.
+.env
+.env.*
+!.env.production.example
+*.zip
+
+# Local/editor artifacts and archived source snapshots.
+.vscode
+.vs
+component for chatGPT
+tsconfig.tsbuildinfo
+coverage
+Dockerfile*
+compose*.yml
+compose*.yaml
+README*.md

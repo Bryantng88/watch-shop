@@ -6,8 +6,6 @@ import * as prodRepo from '../../_server/core/product.repo';
 import { getOptions } from '../../_components/options';
 
 import { prisma } from '@/server/db/client';
-import { listBrands } from '@/features/catalog/server/brands.repo';
-import { listVendor } from '@/features/vendors/server/vendor.repo';
 import { getCurrentUser } from '@/server/auth/getCurrentUser';
 import { requirePermission } from '@/server/auth/requirePermission';
 import { PERMISSIONS } from '@/constants/permissions';
@@ -53,8 +51,8 @@ export default async function EditProductPage({
     const [data, brands, vendors, opts, categoryOptions, strapInventoryOptions] =
         await Promise.all([
             detail(id),
-            listBrands(),
-            listVendor(),
+            prisma.brand.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+            prisma.vendor.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } }),
             getOptions(),
             prodRepo.listActiveProductCategories(prisma),
             prodRepo.listAvailableStrapInventory(prisma),

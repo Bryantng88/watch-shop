@@ -1,4 +1,4 @@
-import { GeneratedPayload } from "@/app/(admin)/admin/products/_server/product-ai.type";
+import { GeneratedPayload } from "@/app/(admin)/admin/products/_server/ai/product-ai.types";
 
 const SYSTEM_PROMPT = `
 Bạn là người bán đồng hồ vintage/pre-owned cao cấp tại Việt Nam, có gu rõ ràng.

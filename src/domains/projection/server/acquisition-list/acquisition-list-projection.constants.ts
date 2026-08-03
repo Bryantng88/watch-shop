@@ -13,6 +13,7 @@ export const ACQUISITION_LIST_PROJECTION_SOURCE_EVENTS = [
   "payment.refunded",
   "payment.exception_marked",
   "watch.media.photoshoot.completed",
+  "watch.inline.image.updated",
   "watch.media.asset.attached",
   "watch.media.ready_for_publish",
   "watch.media.recalled",

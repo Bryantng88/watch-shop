@@ -17,7 +17,28 @@ function collectDeliveryKeys(value: unknown, keys: Set<string>, seen: Set<object
   const record = value as Record<string, unknown>;
   const key = String(record.projectionDeliveryKey ?? "").trim();
   if (key) keys.add(key);
+  if (Array.isArray(record.projectionDeliveryKeys)) {
+    record.projectionDeliveryKeys.forEach((candidate) => {
+      const candidateKey = String(candidate ?? "").trim();
+      if (candidateKey) keys.add(candidateKey);
+    });
+  }
   Object.values(record).forEach((entry) => collectDeliveryKeys(entry, keys, seen));
+}
+
+function hasInvalidAsyncDeliveryContract(value: unknown, seen = new Set<object>()): boolean {
+  if (!value || typeof value !== "object") return false;
+  if (seen.has(value)) return false;
+  seen.add(value);
+  if (Array.isArray(value)) return value.some((entry) => hasInvalidAsyncDeliveryContract(entry, seen));
+  const record = value as Record<string, unknown>;
+  if (record.reconciliationMode === "ASYNC_DELIVERY") {
+    const keys = Array.isArray(record.projectionDeliveryKeys)
+      ? record.projectionDeliveryKeys.map((key) => String(key ?? "").trim()).filter(Boolean)
+      : [];
+    if (!keys.length && !String(record.projectionDeliveryKey ?? "").trim()) return true;
+  }
+  return Object.values(record).some((entry) => hasInvalidAsyncDeliveryContract(entry, seen));
 }
 
 export function operationProjectionDeliveryKeys(result: unknown) {
@@ -33,6 +54,9 @@ export async function waitForOperationProjectionDeliveries(
     onStatus?: (completed: number, total: number) => void;
   },
 ) {
+  if (hasInvalidAsyncDeliveryContract(result)) {
+    throw new Error("Kết quả đã commit nhưng thiếu projection delivery key.");
+  }
   const keys = operationProjectionDeliveryKeys(result);
   if (!keys.length) return { tracked: false as const, completed: 0, total: 0 };
 

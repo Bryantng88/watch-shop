@@ -36,6 +36,7 @@ import {
   addPhotoshootReshootNoteAction,
   applyQueueItemManualTransitionsAction,
   applyQueueItemManualTransitionAction,
+  reloadTaskItemQueueAction,
   submitOperationalBlueprintActionAction,
 } from "@/domains/task/actions/task.actions";
 import {
@@ -52,6 +53,7 @@ import {
   type WorkspaceTransitionOutcome,
 } from "@/domains/shared/ui/transitions/workspace-transition-outcome";
 import { useCoalescedRouterRefresh } from "@/domains/shared/ui/transitions/use-coalesced-router-refresh";
+import { waitForOperationProjectionDeliveries } from "@/domains/coordination/ui/operation-delivery.client";
 
 export type UserSummary = {
   id: string;
@@ -1019,6 +1021,7 @@ export function OpenTargetAction({
   iconOnly = false,
   onActivate,
   onTransitionApplied,
+  onRefreshRequested,
 }: {
   queueItem: TaskItemQueueItem;
   taskItemId: string;
@@ -1028,6 +1031,7 @@ export function OpenTargetAction({
   iconOnly?: boolean;
   onActivate?: () => void;
   onTransitionApplied?: (outcome: WorkspaceTransitionOutcome) => void;
+  onRefreshRequested?: () => void | Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const transitionAppliedRef = useRef(false);
@@ -1060,12 +1064,15 @@ export function OpenTargetAction({
       if (event.data?.type === "workspace-target-modal-close") {
         setOpen(false);
       }
-      if (!transitionAppliedRef.current) scheduleRefresh();
+      if (!transitionAppliedRef.current) {
+        if (onRefreshRequested) void onRefreshRequested();
+        else scheduleRefresh();
+      }
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [onTransitionApplied, open, queueItem.id, scheduleRefresh]);
+  }, [onRefreshRequested, onTransitionApplied, open, queueItem.id, scheduleRefresh]);
 
   if (!href) return null;
 
@@ -1119,7 +1126,10 @@ export function OpenTargetAction({
                   type="button"
                   onClick={() => {
                     setOpen(false);
-                    if (!transitionAppliedRef.current) scheduleRefresh();
+                    if (!transitionAppliedRef.current) {
+                      if (onRefreshRequested) void onRefreshRequested();
+                      else scheduleRefresh();
+                    }
                   }}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
                   aria-label="Close modal"
@@ -1167,6 +1177,7 @@ export function QueueWorkQueue({
   const [filter, setFilter] = useState<QueueFilter>("ALL");
   const [paymentTypeFilter, setPaymentTypeFilter] = useState("ALL");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [authoritativeItems, setAuthoritativeItems] = useState(items);
   const [completedItemIds, setCompletedItemIds] = useState<string[]>([]);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
@@ -1205,6 +1216,7 @@ export function QueueWorkQueue({
   const isPaymentWorkspace = workspaceWorkTypeKey === "payment";
   const canCreateTechnicalIssue = Boolean(serviceRequestId);
   useEffect(() => {
+    setAuthoritativeItems(items);
     const authoritativeIds = new Set(items.map((item) => item.id));
     setCompletedItemIds((current) =>
       current.filter((id) => authoritativeIds.has(id)),
@@ -1213,7 +1225,16 @@ export function QueueWorkQueue({
       current.filter((id) => authoritativeIds.has(id)),
     );
   }, [items]);
-  const activeItems = items.filter((item) => !completedItemIds.includes(item.id));
+  const reloadQueue = async () => {
+    const result = await reloadTaskItemQueueAction({ taskItemId });
+    const nextItems = result.items as TaskItemQueueItem[];
+    setAuthoritativeItems(nextItems);
+    const nextIds = new Set(nextItems.map((item) => item.id));
+    setSelectedIds((current) => current.filter((id) => nextIds.has(id)));
+    setCompletedItemIds((current) => current.filter((id) => nextIds.has(id)));
+    return nextItems;
+  };
+  const activeItems = authoritativeItems.filter((item) => !completedItemIds.includes(item.id));
   const reconcileEmbeddedTransition = (
     itemId: string,
     outcome: WorkspaceTransitionOutcome,
@@ -1269,7 +1290,7 @@ export function QueueWorkQueue({
           normalizeQueueStatusForWorkspace(item.status, workspaceWorkTypeKey) === filter,
       );
   const paymentTypeOptions = Array.from(
-    new Set(items.map((item) => String(item.payment?.type ?? "").toUpperCase()).filter(Boolean)),
+    new Set(authoritativeItems.map((item) => String(item.payment?.type ?? "").toUpperCase()).filter(Boolean)),
   ).sort();
   const visibleItems = isPaymentWorkspace && paymentTypeFilter !== "ALL"
     ? statusFilteredItems.filter(
@@ -1593,7 +1614,7 @@ export function QueueWorkQueue({
       : "grid-cols-[42px_minmax(270px,1.45fr)_120px_180px_96px_108px]";
   const detailColumnLabel = isPaymentWorkspace ? "Đối tác / thời điểm" : isServiceOperationWorkspace ? "Issue detail" : "Progress";
   const openBlueprintQueueItem = openBlueprintAction
-    ? items.find((item) => item.id === openBlueprintAction.itemId) ?? null
+    ? authoritativeItems.find((item) => item.id === openBlueprintAction.itemId) ?? null
     : null;
   const openBlueprintModalActions = openBlueprintQueueItem
     ? blueprintActionsForItem(openBlueprintQueueItem).filter(
@@ -1905,6 +1926,7 @@ export function QueueWorkQueue({
             actionKey: transition.actionKey,
           })),
         });
+        await waitForOperationProjectionDeliveries(result);
         const succeededIds = result.results
           .filter((entry) => entry.ok)
           .map((entry) => entry.bindingId);
@@ -1925,7 +1947,7 @@ export function QueueWorkQueue({
           appProgress.update({ percent: 90 });
         }
         setSelectedIds((current) => current.filter((id) => !succeededIds.includes(id)));
-        if (!completedIds.length) router.refresh();
+        await reloadQueue();
         if (isBulkPhotoshootCompletion) {
           setBulkProgressStep("refresh", "done", "Workspace đã được cập nhật.");
           appProgress.update({
@@ -2023,16 +2045,18 @@ export function QueueWorkQueue({
     });
     startTransition(async () => {
       const failures: string[] = [];
+      const committedResults: unknown[] = [];
       for (let index = 0; index < selectedTechnicalItems.length; index += 1) {
         const { queueItem, action } = selectedTechnicalItems[index];
         try {
-          await submitOperationalBlueprintActionAction({
+          const result = await submitOperationalBlueprintActionAction({
             taskItemId,
             actionKey: action.key,
             targetType: queueItem.targetType,
             targetId: queueItem.targetId,
             fields: blueprintValuesFor(queueItem, action),
           });
+          committedResults.push(result);
         } catch (error) {
           failures.push(`${queueItem.preview.ref ?? queueItem.targetId}: ${error instanceof Error ? error.message : "Lỗi xử lý"}`);
         }
@@ -2041,8 +2065,13 @@ export function QueueWorkQueue({
           percent: Math.round(((index + 1) / selectedTechnicalItems.length) * 90),
         });
       }
+      try {
+        await waitForOperationProjectionDeliveries(committedResults);
+        await reloadQueue();
+      } catch (error) {
+        failures.push(`Đồng bộ danh sách: ${error instanceof Error ? error.message : "Lỗi không xác định"}`);
+      }
       setSelectedIds([]);
-      router.refresh();
       setActionError(
         failures.length
           ? { itemId: "bulk", message: `${failures.length} dòng lỗi: ${failures.slice(0, 3).join("; ")}` }
@@ -2090,10 +2119,11 @@ export function QueueWorkQueue({
     appProgress.show({ title: "Đang xử lý Payment hàng loạt", message: `0/${selectedPaymentItems.length} Payment`, percent: 5 });
     startTransition(async () => {
       const failures: string[] = [];
+      const committedResults: unknown[] = [];
       for (let index = 0; index < selectedPaymentItems.length; index += 1) {
         const { queueItem, action } = selectedPaymentItems[index];
         try {
-          await submitOperationalBlueprintActionAction({
+          const result = await submitOperationalBlueprintActionAction({
             taskItemId,
             actionKey: action.key,
             targetType: "PAYMENT",
@@ -2110,13 +2140,19 @@ export function QueueWorkQueue({
                 }
               : {},
           });
+          committedResults.push(result);
         } catch (error) {
           failures.push(`${queueItem.preview.ref ?? queueItem.targetId}: ${error instanceof Error ? error.message : "Lỗi xử lý"}`);
         }
         appProgress.update({ message: `${index + 1}/${selectedPaymentItems.length} Payment`, percent: Math.round(((index + 1) / selectedPaymentItems.length) * 90) });
       }
+      try {
+        await waitForOperationProjectionDeliveries(committedResults);
+        await reloadQueue();
+      } catch (error) {
+        failures.push(`Đồng bộ danh sách: ${error instanceof Error ? error.message : "Lỗi không xác định"}`);
+      }
       setSelectedIds([]);
-      router.refresh();
       setActionError(failures.length ? { itemId: "bulk", message: `${failures.length} Payment lỗi: ${failures.slice(0, 3).join("; ")}` } : null);
       appProgress.update({
         title: failures.length ? "Bulk Payment hoàn tất một phần" : "Bulk Payment hoàn tất",

@@ -163,7 +163,14 @@ export async function buildMediaOperationBoardRow(
   const binding = bindings
     .filter((row) => mediaStage(row.taskItem?.note, row.metadataJson))
     .sort((left, right) => mediaBindingRank(right) - mediaBindingRank(left))[0];
-  if (!binding?.taskItemId) return null;
+  if (!binding?.taskItemId) {
+    await deleteProjectionRecords(db, {
+      projectionKey: MEDIA_OPERATION_BOARD_PROJECTION_KEY,
+      projectionVersion: MEDIA_OPERATION_BOARD_PROJECTION_VERSION,
+      rowKeys: [input.watchId],
+    });
+    return null;
+  }
   const [watch, activities] = await Promise.all([
     client.watch.findUnique({
       where: { id: input.watchId },

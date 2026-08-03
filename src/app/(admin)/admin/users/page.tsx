@@ -7,12 +7,13 @@ import UserListPageClient from "./_client/ListUser";
 export default async function UsersPage({
     searchParams,
 }: {
-    searchParams: Record<string, string | string[] | undefined>;
+    searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+    const resolvedSearchParams = await searchParams;
     await requirePermission(PERMISSIONS.USER_MANAGE);
 
     const { items, total, page, pageSize } =
-        await getAdminUserList(searchParams);
+        await getAdminUserList(resolvedSearchParams);
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -23,7 +24,7 @@ export default async function UsersPage({
             page={page}
             pageSize={pageSize}
             totalPages={totalPages}
-            rawSearchParams={searchParams}
+            rawSearchParams={resolvedSearchParams}
         />
     );
 

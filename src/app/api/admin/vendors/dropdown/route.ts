@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { listVendor } from "@/features/vendors/server/vendor.repo";
+import { getListVendors as listVendor } from "@/app/(admin)/admin/vendors/_server/vendor.repo";
 
 export async function GET() {
     try {

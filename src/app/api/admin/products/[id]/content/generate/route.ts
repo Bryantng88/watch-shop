@@ -5,11 +5,11 @@ import {
     callResponsesJson,
     contentSchema,
     contentToneInstruction,
-} from "@/app/(admin)/admin/products/_server/product-ai.server";
+} from "@/app/(admin)/admin/products/_server/ai/product-ai.server";
 import type {
     GeneratedPayload,
     TonePreset,
-} from "@/app/(admin)/admin/products/_server/product-ai.type";
+} from "@/app/(admin)/admin/products/_server/ai/product-ai.types";
 
 export async function POST(req: NextRequest) {
     try {

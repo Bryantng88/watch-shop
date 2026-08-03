@@ -3,7 +3,7 @@ import ListProducts from "./_client/ListProducts";
 import { parseProductListSearchParams } from "./helpers/search-params";
 import { getCurrentUser } from "@/server/auth/getCurrentUser";
 import { PERMISSIONS } from "@/constants/permissions";
-import { listVendor } from "@/features/vendors/server/vendor.repo";
+import { getListVendors as listVendor } from "@/app/(admin)/admin/vendors/_server/vendor.repo";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 

@@ -1,8 +1,8 @@
 import NewProductForm2 from "../_client/NewProductForm";
 import NewStrapBatchForm from "../_client/NewStrapBatchForm";
-import { listBrands } from "@/features/catalog/server/brands.repo";
-import { listVendor } from "@/features/vendors/server/vendor.repo";
-import { getOptions } from "@/features/products/components/options";
+import { prisma } from "@/server/db/client";
+import { getListVendors as listVendor } from "@/app/(admin)/admin/vendors/_server/vendor.repo";
+import { getOptions } from "../_components/options";
 
 export const metadata = { title: "New Product · Admin" };
 
@@ -32,7 +32,10 @@ export default async function NewProductPage({
         );
     }
 
-    const [brands, opts] = await Promise.all([listBrands(), getOptions()]);
+    const [brands, opts] = await Promise.all([
+        prisma.brand.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+        getOptions(),
+    ]);
 
     return (
         <div className="space-y-6">
