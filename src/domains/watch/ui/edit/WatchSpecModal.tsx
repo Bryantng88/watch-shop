@@ -100,7 +100,7 @@ const STRAP_SET_TYPE_OPTIONS = [
 const STRAP_COMPONENT_SOURCE_OPTIONS = [
   {
     value: "KEEP_CURRENT",
-    label: "Giữ nguyên hiện trạng",
+    label: "Dây đi kèm đồng hồ",
   },
   {
     value: "FROM_STOCK",
@@ -479,32 +479,25 @@ export default function WatchSpecModal({
                 <FieldLabel>Dây / khóa</FieldLabel>
                 <Select
                   value={draft.strapSetType}
-                  onChange={(e) =>
-                    patch({
-                      strapSetType: e.target.value,
-                      strapComponentSource: "",
-                    })
-                  }
+                  onChange={(e) => patch({ strapSetType: e.target.value })}
                   options={STRAP_SET_TYPE_OPTIONS}
                   placeholder="Chọn dây hãng / linh kiện"
                 />
               </div>
 
-              {draft.strapSetType === "COMPONENT" ? (
-                <div>
-                  <FieldLabel>Nguồn dây</FieldLabel>
-                  <Select
-                    value={draft.strapComponentSource}
-                    onChange={(e) =>
-                      patch({
-                        strapComponentSource: e.target.value,
-                      })
-                    }
-                    options={STRAP_COMPONENT_SOURCE_OPTIONS}
-                    placeholder="Chọn nguồn dây"
-                  />
-                </div>
-              ) : null}
+              <div>
+                <FieldLabel>Dây trên đồng hồ</FieldLabel>
+                <Select
+                  value={draft.strapComponentSource}
+                  onChange={(e) =>
+                    patch({
+                      strapComponentSource: e.target.value,
+                    })
+                  }
+                  options={STRAP_COMPONENT_SOURCE_OPTIONS}
+                  placeholder="Chọn dây đi kèm / từ kho"
+                />
+              </div>
               <div>
                 <FieldLabel>Buckle type</FieldLabel>
                 <Input

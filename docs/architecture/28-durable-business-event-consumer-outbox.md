@@ -138,6 +138,34 @@ then finalizes database references and the business event in a short database
 transaction. A caller must not hold a database transaction while invoking
 `executeMediaMove`.
 
+## UI completion and bulk consistency
+
+Command commit and UI completion are distinct milestones:
+
+```text
+command committed
+-> projectionDeliveryKey returned for every committed item
+-> affected action remains locked
+-> required delivery reaches SUCCEEDED
+-> scoped projection endpoint reloads
+-> selection and eligibility are recalculated
+-> action unlocks
+```
+
+The UI waits only for the projection delivery representing the required
+coordination/workflow barriers plus projection reconciliation. It does not wait
+for unrelated Timeline or Notification delivery.
+
+For bulk commands, delivery handles are mandatory per committed item and are
+waited with bounded concurrency. `revalidatePath()`, `router.refresh()`, and a
+no-store request are cache/read controls, not completion barriers. Reporting a
+bulk item as complete before its required delivery succeeds violates this
+contract because the stale row can remain eligible and be submitted again.
+
+Delivery failure does not authorize repeating the business command. The
+durable delivery is retried or repaired idempotently, while the UI reports the
+affected item and keeps command acceptance distinct from projection completion.
+
 ## Ownership rules
 
 - Owning domains write business truth and enqueue events only.

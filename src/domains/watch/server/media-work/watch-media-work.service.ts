@@ -65,6 +65,7 @@ export type RequestWatchPhotoshootResult = {
     productId: string;
     status: "REQUESTED" | "SKIPPED";
     reason?: string;
+    projectionDeliveryKey?: string | null;
   }>;
 };
 
@@ -126,7 +127,10 @@ function hasWatchContent(watch: WatchPhotoshootRow) {
   );
 }
 
-function seedMediaWorkProgressFromWatch(watch: WatchPhotoshootRow, updatedAt = new Date().toISOString()) {
+function seedMediaWorkProgressFromWatch(
+  watch: WatchPhotoshootRow,
+  updatedAt = new Date().toISOString(),
+) {
   const parts = {
     profile: false,
     content: hasWatchContent(watch),
@@ -149,7 +153,10 @@ function mediaWorkProgressPayload(
   const parts = mediaWorkParts(progress.parts);
   const completed = mediaWorkCompletedLabel(parts);
 
-  if (![parts.profile, parts.content, parts.image].some(Boolean) && !clean(progress.updatedAt)) {
+  if (
+    ![parts.profile, parts.content, parts.image].some(Boolean) &&
+    !clean(progress.updatedAt)
+  ) {
     return null;
   }
 
@@ -169,7 +176,9 @@ function mergeMediaWorkProgressSeed(
 ) {
   const current = asRecord(metadata.mediaWorkProgress);
   const currentParts = mediaWorkParts(current.parts);
-  const seededParts = mediaWorkParts(seedMediaWorkProgressFromWatch(watch, updatedAt).parts);
+  const seededParts = mediaWorkParts(
+    seedMediaWorkProgressFromWatch(watch, updatedAt).parts,
+  );
   const parts = {
     profile: currentParts.profile || seededParts.profile,
     content: currentParts.content || seededParts.content,
@@ -217,7 +226,11 @@ async function reopenMediaProcessingBindingsForRecall(input: {
   let reopened = 0;
 
   for (const binding of bindings) {
-    if (!/workTypeKey:\s*media-processing/i.test(String(binding.taskItem?.note ?? ""))) {
+    if (
+      !/workTypeKey:\s*media-processing/i.test(
+        String(binding.taskItem?.note ?? ""),
+      )
+    ) {
       continue;
     }
 
@@ -349,7 +362,10 @@ export async function requestWatchPhotoshoot(
     },
   });
   const watchById = new Map(watches.map((watch) => [watch.id, watch]));
-  const activePhotoshootWatchIds = await findActivePhotoshootWatchIds(db, watchIds);
+  const activePhotoshootWatchIds = await findActivePhotoshootWatchIds(
+    db,
+    watchIds,
+  );
   const items: RequestWatchPhotoshootResult["items"] = [];
 
   for (const watchId of watchIds) {
@@ -385,19 +401,24 @@ export async function requestWatchPhotoshoot(
       continue;
     }
 
-    await emitWatchPhotoshootRequestedEvent(db, {
-      watch: toWatchEventSnapshot(watch),
-      actorUserId: input.actorUserId ?? null,
-      sourceId: `photoshoot:${watch.id}`,
-      note: input.note ?? null,
-    }, {
-      deferConsumers: input.deferConsumers,
-    });
+    const event = await emitWatchPhotoshootRequestedEvent(
+      db,
+      {
+        watch: toWatchEventSnapshot(watch),
+        actorUserId: input.actorUserId ?? null,
+        sourceId: `photoshoot:${watch.id}`,
+        note: input.note ?? null,
+      },
+      {
+        deferConsumers: input.deferConsumers,
+      },
+    );
 
     items.push({
       watchId: watch.id,
       productId: watch.productId,
       status: "REQUESTED",
+      projectionDeliveryKey: event.projectionDeliveryKey,
     });
   }
 
@@ -419,7 +440,8 @@ export async function completeWatchPhotoshootFromQueueItem(
   db: DB = prisma,
 ) {
   const bindingId = clean(input.bindingId);
-  if (!bindingId) return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
+  if (!bindingId)
+    return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
 
   const binding = await db.taskExecution.findUnique({
     where: { id: bindingId },
@@ -436,12 +458,16 @@ export async function completeWatchPhotoshootFromQueueItem(
     },
   });
 
-  if (!binding) return { ok: false, skipped: true, reason: "BINDING_NOT_FOUND" };
-  if (!binding.taskItem) return { ok: false, skipped: true, reason: "TASK_ITEM_NOT_FOUND" };
+  if (!binding)
+    return { ok: false, skipped: true, reason: "BINDING_NOT_FOUND" };
+  if (!binding.taskItem)
+    return { ok: false, skipped: true, reason: "TASK_ITEM_NOT_FOUND" };
   if (binding.targetType !== TaskExecutionTargetType.WATCH) {
     return { ok: true, skipped: true, reason: "NOT_WATCH_BINDING" };
   }
-  if (!/workTypeKey:\s*photography/i.test(String(binding.taskItem?.note ?? ""))) {
+  if (
+    !/workTypeKey:\s*photography/i.test(String(binding.taskItem?.note ?? ""))
+  ) {
     return { ok: true, skipped: true, reason: "NOT_PHOTOSHOOT_WORKSPACE" };
   }
 
@@ -502,12 +528,16 @@ export async function completeWatchPhotoshootFromQueueItem(
     });
   }
 
-  const event = await emitWatchPhotoshootCompletedEvent(db, {
-    watch: toWatchEventSnapshot(watch),
-    actorUserId: input.actorUserId ?? null,
-    sourceId: `photoshoot-completed:${binding.id}`,
-    note: input.note ?? null,
-  }, { deferConsumers: input.deferConsumers });
+  const event = await emitWatchPhotoshootCompletedEvent(
+    db,
+    {
+      watch: toWatchEventSnapshot(watch),
+      actorUserId: input.actorUserId ?? null,
+      sourceId: `photoshoot-completed:${binding.id}`,
+      note: input.note ?? null,
+    },
+    { deferConsumers: input.deferConsumers },
+  );
 
   return {
     ok: true,
@@ -528,7 +558,8 @@ export async function markWatchMediaAssetAttachedFromQueueItem(
   db: DB = prisma,
 ) {
   const bindingId = clean(input.bindingId);
-  if (!bindingId) return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
+  if (!bindingId)
+    return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
 
   const binding = await db.taskExecution.findUnique({
     where: { id: bindingId },
@@ -546,13 +577,23 @@ export async function markWatchMediaAssetAttachedFromQueueItem(
     },
   });
 
-  if (!binding) return { ok: false, skipped: true, reason: "BINDING_NOT_FOUND" };
-  if (!binding.taskItem) return { ok: false, skipped: true, reason: "TASK_ITEM_NOT_FOUND" };
+  if (!binding)
+    return { ok: false, skipped: true, reason: "BINDING_NOT_FOUND" };
+  if (!binding.taskItem)
+    return { ok: false, skipped: true, reason: "TASK_ITEM_NOT_FOUND" };
   if (binding.targetType !== TaskExecutionTargetType.WATCH) {
     return { ok: true, skipped: true, reason: "NOT_WATCH_BINDING" };
   }
-  if (!/workTypeKey:\s*media-processing/i.test(String(binding.taskItem?.note ?? ""))) {
-    return { ok: true, skipped: true, reason: "NOT_MEDIA_PROCESSING_WORKSPACE" };
+  if (
+    !/workTypeKey:\s*media-processing/i.test(
+      String(binding.taskItem?.note ?? ""),
+    )
+  ) {
+    return {
+      ok: true,
+      skipped: true,
+      reason: "NOT_MEDIA_PROCESSING_WORKSPACE",
+    };
   }
 
   const watch = await db.watch.findUnique({
@@ -601,12 +642,19 @@ export async function markWatchMediaAssetAttachedFromQueueItem(
   const runtimeMetadata = asRecord(runtime?.metadata);
   const wasAttached = Boolean(clean(metadata.mediaAssetAttachedAt));
   const attachedAt = new Date().toISOString();
-  const metadataWithProgress = mergeMediaWorkProgressSeed(metadata, watch, attachedAt);
-  const seededProgress = mediaWorkProgressPayload(metadataWithProgress.mediaWorkProgress);
-  const revision = Math.max(
-    numberValue(metadata.mediaAssetRevision),
-    numberValue(runtimeMetadata.mediaAssetRevision),
-  ) + 1;
+  const metadataWithProgress = mergeMediaWorkProgressSeed(
+    metadata,
+    watch,
+    attachedAt,
+  );
+  const seededProgress = mediaWorkProgressPayload(
+    metadataWithProgress.mediaWorkProgress,
+  );
+  const revision =
+    Math.max(
+      numberValue(metadata.mediaAssetRevision),
+      numberValue(runtimeMetadata.mediaAssetRevision),
+    ) + 1;
   await updateBusinessBindingMetadata(db, binding.id, {
     ...metadataWithProgress,
     mediaAssetAttachedAt: attachedAt,
@@ -626,37 +674,44 @@ export async function markWatchMediaAssetAttachedFromQueueItem(
     } as Prisma.JsonObject);
   }
 
-  await createSystemActivity({
-    taskItemId: binding.taskItem.id,
-    sourceId: `media-asset-review:${binding.id}:${revision}:${attachedAt}`,
-    title: wasAttached
-      ? "Media updated and sent to review"
-      : "Media attached and sent to review",
-    body: clean(input.note) || null,
-    actorUserId: input.actorUserId ?? null,
-    metadataJson: {
-      bindingId: binding.id,
-      targetType: binding.targetType,
-      targetId: binding.targetId,
-      workTypeKey: "media-processing",
-      mediaAssetAttachedAt: attachedAt,
-      mediaAssetRevision: revision,
-      mediaAssetLastAction: wasAttached ? "UPDATE" : "ATTACH",
-      ...(seededProgress ? { mediaWorkProgress: seededProgress } : {}),
-      workflowState: "REVIEW",
+  await createSystemActivity(
+    {
+      taskItemId: binding.taskItem.id,
+      sourceId: `media-asset-review:${binding.id}:${revision}:${attachedAt}`,
+      title: wasAttached
+        ? "Media updated and sent to review"
+        : "Media attached and sent to review",
+      body: clean(input.note) || null,
+      actorUserId: input.actorUserId ?? null,
+      metadataJson: {
+        bindingId: binding.id,
+        targetType: binding.targetType,
+        targetId: binding.targetId,
+        workTypeKey: "media-processing",
+        mediaAssetAttachedAt: attachedAt,
+        mediaAssetRevision: revision,
+        mediaAssetLastAction: wasAttached ? "UPDATE" : "ATTACH",
+        ...(seededProgress ? { mediaWorkProgress: seededProgress } : {}),
+        workflowState: "REVIEW",
+      },
     },
-  }, db);
+    db,
+  );
 
-  const event = await emitWatchMediaAssetAttachedEvent(db, {
-    watch: toWatchEventSnapshot(watch),
-    actorUserId: input.actorUserId ?? null,
-    sourceId: `media-asset-attached:${binding.id}`,
-    note: input.note ?? null,
-    mediaSource: "MEDIA_WORKSPACE",
-    origin: "MEDIA_WORKSPACE",
-    galleryImageCount: watch.product?.productImage?.length ?? 0,
-    mediaWorkProgress: seededProgress,
-  }, { deferConsumers: input.deferConsumers });
+  const event = await emitWatchMediaAssetAttachedEvent(
+    db,
+    {
+      watch: toWatchEventSnapshot(watch),
+      actorUserId: input.actorUserId ?? null,
+      sourceId: `media-asset-attached:${binding.id}`,
+      note: input.note ?? null,
+      mediaSource: "MEDIA_WORKSPACE",
+      origin: "MEDIA_WORKSPACE",
+      galleryImageCount: watch.product?.productImage?.length ?? 0,
+      mediaWorkProgress: seededProgress,
+    },
+    { deferConsumers: input.deferConsumers },
+  );
 
   return {
     ok: true,
@@ -680,7 +735,8 @@ export async function markWatchMediaAssetAttachedFromWatch(
   db: DB = prisma,
 ) {
   const productId = clean(input.productId);
-  if (!productId) return { ok: false, skipped: true, reason: "MISSING_PRODUCT_ID" };
+  if (!productId)
+    return { ok: false, skipped: true, reason: "MISSING_PRODUCT_ID" };
 
   const watch = await db.watch.findUnique({
     where: { productId },
@@ -728,17 +784,21 @@ export async function markWatchMediaAssetAttachedFromWatch(
   if (!binding) {
     const attachedAt = new Date().toISOString();
     const seededProgress = seedMediaWorkProgressFromWatch(watch, attachedAt);
-    const event = await emitWatchMediaAssetAttachedEvent(db, {
-      watch: toWatchEventSnapshot(watch),
-      actorUserId: input.actorUserId ?? null,
-      sourceId: `media-intake:gallery:${watch.id}`,
-      note: input.note ?? null,
-      mediaSource: "GALLERY",
-      intakeRoute: "DIRECT_TO_MEDIA_PROCESSING",
-      origin: input.origin ?? "WATCH_DETAIL",
-      galleryImageCount,
-      mediaWorkProgress: seededProgress,
-    }, { deferConsumers: input.deferConsumers });
+    const event = await emitWatchMediaAssetAttachedEvent(
+      db,
+      {
+        watch: toWatchEventSnapshot(watch),
+        actorUserId: input.actorUserId ?? null,
+        sourceId: `media-intake:gallery:${watch.id}`,
+        note: input.note ?? null,
+        mediaSource: "GALLERY",
+        intakeRoute: "DIRECT_TO_MEDIA_PROCESSING",
+        origin: input.origin ?? "WATCH_DETAIL",
+        galleryImageCount,
+        mediaWorkProgress: seededProgress,
+      },
+      { deferConsumers: input.deferConsumers },
+    );
 
     return {
       ok: true,
@@ -776,7 +836,8 @@ export async function saveWatchMediaWorkDraftFromQueueItem(
   db: DB = prisma,
 ) {
   const bindingId = clean(input.bindingId);
-  if (!bindingId) return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
+  if (!bindingId)
+    return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
 
   const binding = await db.taskExecution.findUnique({
     where: { id: bindingId },
@@ -794,28 +855,41 @@ export async function saveWatchMediaWorkDraftFromQueueItem(
     },
   });
 
-  if (!binding) return { ok: false, skipped: true, reason: "BINDING_NOT_FOUND" };
-  if (!binding.taskItem) return { ok: false, skipped: true, reason: "TASK_ITEM_NOT_FOUND" };
+  if (!binding)
+    return { ok: false, skipped: true, reason: "BINDING_NOT_FOUND" };
+  if (!binding.taskItem)
+    return { ok: false, skipped: true, reason: "TASK_ITEM_NOT_FOUND" };
   if (binding.targetType !== TaskExecutionTargetType.WATCH) {
     return { ok: true, skipped: true, reason: "NOT_WATCH_BINDING" };
   }
-  if (!/workTypeKey:\s*media-processing/i.test(String(binding.taskItem?.note ?? ""))) {
-    return { ok: true, skipped: true, reason: "NOT_MEDIA_PROCESSING_WORKSPACE" };
+  if (
+    !/workTypeKey:\s*media-processing/i.test(
+      String(binding.taskItem?.note ?? ""),
+    )
+  ) {
+    return {
+      ok: true,
+      skipped: true,
+      reason: "NOT_MEDIA_PROCESSING_WORKSPACE",
+    };
   }
 
   const metadata = asRecord(binding.metadataJson);
   const currentProgress = asRecord(metadata.mediaWorkProgress);
   const currentParts = mediaWorkParts(currentProgress.parts);
   const nextParts = {
-    profile: typeof input.parts.profile === "boolean"
-      ? input.parts.profile
-      : currentParts.profile,
-    content: typeof input.parts.content === "boolean"
-      ? input.parts.content
-      : currentParts.content,
-    image: typeof input.parts.image === "boolean"
-      ? input.parts.image
-      : currentParts.image,
+    profile:
+      typeof input.parts.profile === "boolean"
+        ? input.parts.profile
+        : currentParts.profile,
+    content:
+      typeof input.parts.content === "boolean"
+        ? input.parts.content
+        : currentParts.content,
+    image:
+      typeof input.parts.image === "boolean"
+        ? input.parts.image
+        : currentParts.image,
   };
   const updatedAt = new Date().toISOString();
   const completed = mediaWorkCompletedLabel(nextParts);
@@ -832,25 +906,28 @@ export async function saveWatchMediaWorkDraftFromQueueItem(
     },
   });
 
-  await createSystemActivity({
-    taskItemId: binding.taskItem.id,
-    sourceId: `media-work-draft:${binding.id}:${updatedAt}`,
-    title: `Media work saved ${completed}`,
-    body: clean(input.note) || null,
-    actorUserId: input.actorUserId ?? null,
-    metadataJson: {
-      bindingId: binding.id,
-      targetType: binding.targetType,
-      targetId: binding.targetId,
-      workTypeKey: "media-processing",
-      mediaWorkProgress: {
-        parts: nextParts,
-        completed,
-        total: 3,
-        updatedAt,
+  await createSystemActivity(
+    {
+      taskItemId: binding.taskItem.id,
+      sourceId: `media-work-draft:${binding.id}:${updatedAt}`,
+      title: `Media work saved ${completed}`,
+      body: clean(input.note) || null,
+      actorUserId: input.actorUserId ?? null,
+      metadataJson: {
+        bindingId: binding.id,
+        targetType: binding.targetType,
+        targetId: binding.targetId,
+        workTypeKey: "media-processing",
+        mediaWorkProgress: {
+          parts: nextParts,
+          completed,
+          total: 3,
+          updatedAt,
+        },
       },
     },
-  }, db);
+    db,
+  );
 
   return {
     ok: true,
@@ -876,15 +953,13 @@ export async function getWatchMediaWorkProgressFromQueueItem(
       metadataJson: true,
     },
   });
-  if (
-    !binding ||
-    binding.targetType !== TaskExecutionTargetType.WATCH
-  ) {
+  if (!binding || binding.targetType !== TaskExecutionTargetType.WATCH) {
     return null;
   }
 
-  const progress =
-    resolveMediaWorkProgressFromMetadata(asRecord(binding.metadataJson));
+  const progress = resolveMediaWorkProgressFromMetadata(
+    asRecord(binding.metadataJson),
+  );
   return {
     profile: Boolean(progress?.profile),
     content: Boolean(progress?.content),
@@ -906,7 +981,8 @@ export async function saveWatchMediaWorkDraftFromWatch(
   db: DB = prisma,
 ) {
   const productId = clean(input.productId);
-  if (!productId) return { ok: false, skipped: true, reason: "MISSING_PRODUCT_ID" };
+  if (!productId)
+    return { ok: false, skipped: true, reason: "MISSING_PRODUCT_ID" };
 
   const watch = await db.watch.findUnique({
     where: { productId },
@@ -932,7 +1008,11 @@ export async function saveWatchMediaWorkDraftFromWatch(
   });
 
   if (!binding) {
-    return { ok: true, skipped: true, reason: "NO_ACTIVE_MEDIA_PROCESSING_ITEM" };
+    return {
+      ok: true,
+      skipped: true,
+      reason: "NO_ACTIVE_MEDIA_PROCESSING_ITEM",
+    };
   }
 
   return saveWatchMediaWorkDraftFromQueueItem(
@@ -956,7 +1036,8 @@ export async function requestWatchMediaReshootFromQueueItem(
   db: DB = prisma,
 ) {
   const bindingId = clean(input.bindingId);
-  if (!bindingId) return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
+  if (!bindingId)
+    return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
 
   const binding = await db.taskExecution.findUnique({
     where: { id: bindingId },
@@ -974,13 +1055,23 @@ export async function requestWatchMediaReshootFromQueueItem(
     },
   });
 
-  if (!binding) return { ok: false, skipped: true, reason: "BINDING_NOT_FOUND" };
-  if (!binding.taskItem) return { ok: false, skipped: true, reason: "TASK_ITEM_NOT_FOUND" };
+  if (!binding)
+    return { ok: false, skipped: true, reason: "BINDING_NOT_FOUND" };
+  if (!binding.taskItem)
+    return { ok: false, skipped: true, reason: "TASK_ITEM_NOT_FOUND" };
   if (binding.targetType !== TaskExecutionTargetType.WATCH) {
     return { ok: true, skipped: true, reason: "NOT_WATCH_BINDING" };
   }
-  if (!/workTypeKey:\s*media-processing/i.test(String(binding.taskItem?.note ?? ""))) {
-    return { ok: true, skipped: true, reason: "NOT_MEDIA_PROCESSING_WORKSPACE" };
+  if (
+    !/workTypeKey:\s*media-processing/i.test(
+      String(binding.taskItem?.note ?? ""),
+    )
+  ) {
+    return {
+      ok: true,
+      skipped: true,
+      reason: "NOT_MEDIA_PROCESSING_WORKSPACE",
+    };
   }
 
   const watch = await db.watch.findUnique({
@@ -1018,12 +1109,15 @@ export async function requestWatchMediaReshootFromQueueItem(
   const completed = mediaWorkCompletedLabel(nextParts);
   const note = clean(input.note) || "Hình ảnh chưa đạt, yêu cầu chụp lại.";
 
-  await resetWatchReviewToDraft({
-    productId: watch.productId,
-    targetType: "IMAGE",
-    userId: input.actorUserId ?? null,
-    deferConsumers: input.deferConsumers,
-  }, db);
+  await resetWatchReviewToDraft(
+    {
+      productId: watch.productId,
+      targetType: "IMAGE",
+      userId: input.actorUserId ?? null,
+      deferConsumers: input.deferConsumers,
+    },
+    db,
+  );
 
   await updateBusinessBindingMetadata(db, binding.id, {
     ...metadata,
@@ -1038,38 +1132,47 @@ export async function requestWatchMediaReshootFromQueueItem(
     },
   });
 
-  await createSystemActivity({
-    taskItemId: binding.taskItem.id,
-    sourceId: `media-reshoot-requested:${binding.id}:${updatedAt}`,
-    title: "Yêu cầu chụp lại ảnh",
-    body: note,
-    actorUserId: input.actorUserId ?? null,
-    metadataJson: {
-      bindingId: binding.id,
-      targetType: binding.targetType,
-      targetId: binding.targetId,
-      workTypeKey: "media-processing",
-      workflowState: "RESHOOT_REQUESTED",
-      mediaWorkProgress: {
-        parts: nextParts,
-        completed,
-        total: 3,
-        updatedAt,
+  await createSystemActivity(
+    {
+      taskItemId: binding.taskItem.id,
+      sourceId: `media-reshoot-requested:${binding.id}:${updatedAt}`,
+      title: "Yêu cầu chụp lại ảnh",
+      body: note,
+      actorUserId: input.actorUserId ?? null,
+      metadataJson: {
+        bindingId: binding.id,
+        targetType: binding.targetType,
+        targetId: binding.targetId,
+        workTypeKey: "media-processing",
+        workflowState: "RESHOOT_REQUESTED",
+        mediaWorkProgress: {
+          parts: nextParts,
+          completed,
+          total: 3,
+          updatedAt,
+        },
       },
     },
-  }, db);
+    db,
+  );
 
-  const activePhotoshootWatchIds = await findActivePhotoshootWatchIds(db, [watch.id]);
+  const activePhotoshootWatchIds = await findActivePhotoshootWatchIds(db, [
+    watch.id,
+  ]);
   const photoshootAlreadyActive = activePhotoshootWatchIds.has(watch.id);
 
-  const event = await emitWatchPhotoshootRequestedEvent(db, {
-    watch: toWatchEventSnapshot(watch),
-    actorUserId: input.actorUserId ?? null,
-    sourceId: `media-reshoot:${binding.id}`,
-    note,
-  }, {
-    deferConsumers: input.deferConsumers,
-  });
+  const event = await emitWatchPhotoshootRequestedEvent(
+    db,
+    {
+      watch: toWatchEventSnapshot(watch),
+      actorUserId: input.actorUserId ?? null,
+      sourceId: `media-reshoot:${binding.id}`,
+      note,
+    },
+    {
+      deferConsumers: input.deferConsumers,
+    },
+  );
 
   // The coordination consumer seeds `reshootNote` from this event payload.
   // Do not read a newly-created binding here: the durable consumer runs only
@@ -1098,7 +1201,8 @@ export async function completeWatchMediaProcessingFromQueueItem(
   db: DB = prisma,
 ) {
   const bindingId = clean(input.bindingId);
-  if (!bindingId) return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
+  if (!bindingId)
+    return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
 
   const binding = await db.taskExecution.findUnique({
     where: { id: bindingId },
@@ -1116,12 +1220,21 @@ export async function completeWatchMediaProcessingFromQueueItem(
     },
   });
 
-  if (!binding) return { ok: false, skipped: true, reason: "BINDING_NOT_FOUND" };
+  if (!binding)
+    return { ok: false, skipped: true, reason: "BINDING_NOT_FOUND" };
   if (binding.targetType !== TaskExecutionTargetType.WATCH) {
     return { ok: true, skipped: true, reason: "NOT_WATCH_BINDING" };
   }
-  if (!/workTypeKey:\s*media-processing/i.test(String(binding.taskItem?.note ?? ""))) {
-    return { ok: true, skipped: true, reason: "NOT_MEDIA_PROCESSING_WORKSPACE" };
+  if (
+    !/workTypeKey:\s*media-processing/i.test(
+      String(binding.taskItem?.note ?? ""),
+    )
+  ) {
+    return {
+      ok: true,
+      skipped: true,
+      reason: "NOT_MEDIA_PROCESSING_WORKSPACE",
+    };
   }
 
   const runtime = getQueueItemWorkflowState(binding);
@@ -1153,28 +1266,38 @@ export async function completeWatchMediaProcessingFromQueueItem(
 
   if (!watch) return { ok: false, skipped: true, reason: "WATCH_NOT_FOUND" };
 
-  await approveWatchReview({
-    productId: watch.productId,
-    targetType: "CONTENT",
-    userId: input.actorUserId ?? null,
-    emitBusinessEvent: false,
-    deferConsumers: input.deferConsumers,
-  }, db);
-  await approveWatchReview({
-    productId: watch.productId,
-    targetType: "IMAGE",
-    userId: input.actorUserId ?? null,
-    emitBusinessEvent: false,
-    deferConsumers: input.deferConsumers,
-  }, db);
+  await approveWatchReview(
+    {
+      productId: watch.productId,
+      targetType: "CONTENT",
+      userId: input.actorUserId ?? null,
+      emitBusinessEvent: false,
+      deferConsumers: input.deferConsumers,
+    },
+    db,
+  );
+  await approveWatchReview(
+    {
+      productId: watch.productId,
+      targetType: "IMAGE",
+      userId: input.actorUserId ?? null,
+      emitBusinessEvent: false,
+      deferConsumers: input.deferConsumers,
+    },
+    db,
+  );
 
   const readyAt = new Date().toISOString();
-  const event = await emitWatchMediaReadyForPublishEvent(db, {
-    watch: toWatchEventSnapshot(watch),
-    actorUserId: input.actorUserId ?? null,
-    sourceId: `media-ready-for-publish:${binding.id}:${readyAt}`,
-    note: input.note ?? null,
-  }, { deferConsumers: input.deferConsumers });
+  const event = await emitWatchMediaReadyForPublishEvent(
+    db,
+    {
+      watch: toWatchEventSnapshot(watch),
+      actorUserId: input.actorUserId ?? null,
+      sourceId: `media-ready-for-publish:${binding.id}:${readyAt}`,
+      note: input.note ?? null,
+    },
+    { deferConsumers: input.deferConsumers },
+  );
 
   return {
     ok: true,
@@ -1195,7 +1318,8 @@ export async function recallWatchMediaFromPublishQueueItem(
   db: DB = prisma,
 ) {
   const bindingId = clean(input.bindingId);
-  if (!bindingId) return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
+  if (!bindingId)
+    return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
 
   const binding = await db.taskExecution.findUnique({
     where: { id: bindingId },
@@ -1212,8 +1336,10 @@ export async function recallWatchMediaFromPublishQueueItem(
     },
   });
 
-  if (!binding) return { ok: false, skipped: true, reason: "BINDING_NOT_FOUND" };
-  if (!binding.taskItem) return { ok: false, skipped: true, reason: "TASK_ITEM_NOT_FOUND" };
+  if (!binding)
+    return { ok: false, skipped: true, reason: "BINDING_NOT_FOUND" };
+  if (!binding.taskItem)
+    return { ok: false, skipped: true, reason: "TASK_ITEM_NOT_FOUND" };
   if (binding.targetType !== TaskExecutionTargetType.WATCH) {
     return { ok: true, skipped: true, reason: "NOT_WATCH_BINDING" };
   }
@@ -1245,39 +1371,48 @@ export async function recallWatchMediaFromPublishQueueItem(
 
   if (!watch) return { ok: false, skipped: true, reason: "WATCH_NOT_FOUND" };
 
-  await resetWatchReviewToDraft({
-    productId: watch.productId,
-    targetType: "CONTENT",
-    userId: input.actorUserId ?? null,
-    deferConsumers: input.deferConsumers,
-  }, db);
-  await resetWatchReviewToDraft({
-    productId: watch.productId,
-    targetType: "IMAGE",
-    userId: input.actorUserId ?? null,
-    deferConsumers: input.deferConsumers,
-  }, db);
+  await resetWatchReviewToDraft(
+    {
+      productId: watch.productId,
+      targetType: "CONTENT",
+      userId: input.actorUserId ?? null,
+      deferConsumers: input.deferConsumers,
+    },
+    db,
+  );
+  await resetWatchReviewToDraft(
+    {
+      productId: watch.productId,
+      targetType: "IMAGE",
+      userId: input.actorUserId ?? null,
+      deferConsumers: input.deferConsumers,
+    },
+    db,
+  );
   const reopenedMediaBindings = await reopenMediaProcessingBindingsForRecall({
     db,
     watchId: watch.id,
     actorUserId: input.actorUserId ?? null,
   });
 
-  await createSystemActivity({
-    taskItemId: binding.taskItem.id,
-    sourceId: `media-recalled:${binding.id}`,
-    title: "Media recalled from publish",
-    body: clean(input.note) || null,
-    actorUserId: input.actorUserId ?? null,
-    metadataJson: {
-      bindingId: binding.id,
-      targetType: binding.targetType,
-      targetId: binding.targetId,
-      workTypeKey: "publish",
-      workflowState: "RECALLED",
-      reopenedMediaBindings,
+  await createSystemActivity(
+    {
+      taskItemId: binding.taskItem.id,
+      sourceId: `media-recalled:${binding.id}`,
+      title: "Media recalled from publish",
+      body: clean(input.note) || null,
+      actorUserId: input.actorUserId ?? null,
+      metadataJson: {
+        bindingId: binding.id,
+        targetType: binding.targetType,
+        targetId: binding.targetId,
+        workTypeKey: "publish",
+        workflowState: "RECALLED",
+        reopenedMediaBindings,
+      },
     },
-  }, db);
+    db,
+  );
 
   const event = await emitWatchMediaRecalledEvent(db, {
     watch: toWatchEventSnapshot(watch),
@@ -1306,7 +1441,8 @@ export async function completeWatchPublishFromQueueItem(
   db: DB = prisma,
 ) {
   const bindingId = clean(input.bindingId);
-  if (!bindingId) return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
+  if (!bindingId)
+    return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
 
   const binding = await db.taskExecution.findUnique({
     where: { id: bindingId },
@@ -1318,7 +1454,8 @@ export async function completeWatchPublishFromQueueItem(
     },
   });
 
-  if (!binding) return { ok: false, skipped: true, reason: "BINDING_NOT_FOUND" };
+  if (!binding)
+    return { ok: false, skipped: true, reason: "BINDING_NOT_FOUND" };
   if (binding.targetType !== TaskExecutionTargetType.WATCH) {
     return { ok: true, skipped: true, reason: "NOT_WATCH_BINDING" };
   }
@@ -1350,12 +1487,16 @@ export async function completeWatchPublishFromQueueItem(
 
   if (!watch) return { ok: false, skipped: true, reason: "WATCH_NOT_FOUND" };
 
-  const event = await emitWatchPostedEvent(db, {
-    watch: toWatchEventSnapshot(watch),
-    actorUserId: input.actorUserId ?? null,
-    sourceId: `publish-posted:${binding.id}`,
-    note: input.note ?? "Watch đã được xác nhận đăng bài.",
-  }, { deferConsumers: input.deferConsumers });
+  const event = await emitWatchPostedEvent(
+    db,
+    {
+      watch: toWatchEventSnapshot(watch),
+      actorUserId: input.actorUserId ?? null,
+      sourceId: `publish-posted:${binding.id}`,
+      note: input.note ?? "Watch đã được xác nhận đăng bài.",
+    },
+    { deferConsumers: input.deferConsumers },
+  );
 
   return {
     ok: true,

@@ -571,19 +571,18 @@ Rules proven by Watch Media:
 Future domains should follow the same shape instead of calling Space
 Management services directly from domain actions.
 
-## Mutation-to-read refresh contract
+## Mutation-to-read completion contract
 
-A successful command, consumer delivery, and binding transition do not by
-themselves refresh an already rendered Next.js route. Every server action that
-changes a business flow must invalidate both:
+A successful command commit does not mean an already rendered projection is
+current. Every operation-visible command must return its exact
+`projectionDeliveryKey`; the client keeps the affected action locked, waits for
+that delivery to reach `SUCCEEDED`, and then reloads the scoped list/board
+projection before recalculating selection and eligibility.
 
-- the direct Task/TaskItem surfaces affected by the command; and
-- every coordination route that reads the changed domain state.
-
-The client may remove an item optimistically from its current stage, but it
-must call `router.refresh()` after the command succeeds when the destination
-stage is server-rendered. Optimistic state is presentation feedback, not a
-replacement for reloading the authoritative read model.
+Server actions still invalidate direct Task/TaskItem and coordination routes as
+cache hygiene. `router.refresh()` and `revalidatePath()` are not completion
+barriers and must never be the only success callback. Optimistic row removal is
+presentation feedback only.
 
 Payment reconciliation is the reference implementation:
 
@@ -591,8 +590,9 @@ Payment reconciliation is the reference implementation:
   `payment-review` to `payment-settled`;
 - `submitOperationalBlueprintActionAction` invalidates both Payment and
   Operation coordination routes for Payment commands;
-- `FlowItemListView` refreshes after single and bulk reconciliation so the
-  settled stage and its counts see the new source state immediately.
+- `FlowItemListView` waits for the required delivery and then reloads the
+  projection after single and bulk reconciliation, so stage membership and
+  counts are authoritative before actions unlock.
 
 When an item disappears from the source stage but does not appear in the
 destination stage, verify source state, event delivery, and binding first. If

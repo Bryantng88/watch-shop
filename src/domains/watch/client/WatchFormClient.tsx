@@ -1668,6 +1668,7 @@ export default function WatchFormClient({
 
   const basicSection = (
     <WatchBasicSection
+      watchId={values.watchId}
       values={values.basic}
       spec={values.spec}
       pricing={values.pricing}

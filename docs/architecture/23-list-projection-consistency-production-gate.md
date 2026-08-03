@@ -3,8 +3,10 @@
 ## Purpose
 
 Every operational list and board must reflect a completed business action
-without requiring a full page reload and without making the write path wait for
-all downstream read models.
+without requiring a full page reload. The command commit does not wait for all
+downstream consumers, but an operation-visible UI must wait for the durable
+projection delivery that owns its next authoritative read before it unlocks the
+same action or reports reconciliation complete.
 
 This rule applies globally to:
 
@@ -26,10 +28,11 @@ rebuildable projection.
 ```text
 Business command
 -> business truth + catalogued event committed
--> command returns a committed outcome
--> client reconciles the visible slice immediately from that outcome
--> durable projection delivery converges in the background
--> a scoped read confirms/replaces the temporary client state
+-> command returns affected IDs + projectionDeliveryKey per committed item
+-> client locks affected controls and waits for required projection delivery
+-> durable projection reaches SUCCEEDED
+-> a scoped projection read replaces the visible slice
+-> selection and action eligibility are recalculated
 ```
 
 UI code must not infer a business state from a button label or call a projection
@@ -55,13 +58,48 @@ After a state-changing action succeeds:
 1. Disable the affected control and show application-level progress.
 2. Commit business truth and its event/outbox atomically.
 3. Return an explicit outcome containing affected IDs and final states.
-4. Reconcile visible rows, membership, counters, pagination, and selection from
-   that committed outcome immediately.
-5. Do not wait for asynchronous projection consumers on the interaction path.
-6. Confirm once through a scoped read. When the projection can still be stale,
-   use an explicit source-consistency read instead of repeatedly refreshing.
-7. Replace temporary client state with the confirmed slice and allow the
-   durable projection delivery to converge in the background.
+4. Optimistically remove or disable affected rows only as provisional feedback;
+   never use that patch as the authoritative completion signal.
+5. Wait for the exact durable projection delivery required by the current
+   list/board surface. Unrelated Timeline/Notification consumers do not block.
+6. After delivery is `SUCCEEDED`, reload the scoped projection endpoint once.
+7. Replace temporary state, intersect selection with authoritative IDs, and
+   recalculate row/bulk action eligibility before unlocking controls.
+
+`revalidatePath()`, `router.refresh()`, cache busting, and `fetch(...,
+{ cache: "no-store" })` only trigger another read. None of them proves that the
+projection has consumed the command event.
+
+### Bulk delivery contract
+
+Every committed item in a projection-visible bulk command returns:
+
+```ts
+type ProjectionVisibleBulkOutcome = {
+  entityId: string;
+  status: "COMMITTED" | "SKIPPED" | "FAILED";
+  projectionDeliveryKey: string | null;
+  reason?: string | null;
+};
+```
+
+Rules:
+
+- `COMMITTED` requires a non-empty `projectionDeliveryKey`; a missing key is a
+  contract failure, not a reason to refresh optimistically;
+- poll deliveries with bounded concurrency; the default UI budget is four and
+  the hard ceiling is eight concurrent delivery waits;
+- keep affected actions disabled while any committed item is awaiting its
+  required projection;
+- show command acceptance separately from projection completion;
+- reload the list/board only after all successful items reach `SUCCEEDED`;
+- on partial failure, identify each item and preserve the server reason;
+- cancellation stops pending client work only and cannot undo a committed item;
+- after reload, clear/intersect selection and recompute eligibility so an item
+  cannot be submitted twice from a stale row.
+
+This applies to row, modal, drag/drop and bulk entry points. A bulk delivery
+helper is shared infrastructure, not domain-specific Photoshoot behavior.
 
 The reconciled surface must update together:
 
@@ -95,12 +133,12 @@ the only success callback for a row, modal, bulk, or drag/drop command.
 
 Operational mutations use **committed reconciliation**:
 
-- the server returns the final transition outcome after commit;
+- the server returns the final transition outcome and delivery handle after commit;
 - the client applies that outcome without guessing;
 - the confirmation request targets the list/board endpoint, never the whole
   page;
-- projection-backed endpoints expose an explicit source-consistency option
-  when immediate confirmation cannot wait for outbox delivery;
+- projection-backed endpoints are read after their required delivery succeeds;
+  source-consistency reads are reserved for recovery and diagnostics;
 - older confirmation responses cannot replace newer outcomes.
 
 The shared Coordination flow list and Watch list are guarded by
@@ -119,7 +157,7 @@ Display status is derived centrally from current domain/workflow truth.
 - A watch with gallery images but no Media binding is `not in Media`.
 - A watch sent directly to Media processing is `Media processing`.
 - A watch returned for reshoot is `Photography` / `needs reshoot`, not `not in
-  Media`.
+Media`.
 - Completed/cancelled historical bindings must not override the newest active
   binding.
 - List, board, detail, filters, and counters use the same status mapper and
@@ -249,14 +287,14 @@ substitute for this runner.
 
 Production acceptance now also requires:
 
-| Check | Required result |
-| --- | --- |
-| Immediate runner | A normal mutation increments delivery attempts without waiting for cron |
-| Worker fallback | A released delivery survives process loss and is later claimed |
-| Backlog liveness | No `PENDING` delivery with `attempts = 0` exceeds the agreed SLA |
-| Catalog coverage | Every event declaring `projection` matches a registered builder |
-| Domain coverage | Source and list/detail projection entity counts have zero missing rows |
-| Transaction boundary | Architecture check rejects new unmanaged transactional event producers |
+| Check                | Required result                                                         |
+| -------------------- | ----------------------------------------------------------------------- |
+| Immediate runner     | A normal mutation increments delivery attempts without waiting for cron |
+| Worker fallback      | A released delivery survives process loss and is later claimed          |
+| Backlog liveness     | No `PENDING` delivery with `attempts = 0` exceeds the agreed SLA        |
+| Catalog coverage     | Every event declaring `projection` matches a registered builder         |
+| Domain coverage      | Source and list/detail projection entity counts have zero missing rows  |
+| Transaction boundary | Architecture check rejects new unmanaged transactional event producers  |
 
 The synchronous compatibility path may add latency and must be removed from a
 domain only after every entry point for that domain forwards the after-commit
@@ -375,20 +413,20 @@ Regression scenarios for every flow:
 Before a list/board flow is production-ready, test every state-changing action
 from every supported entry point:
 
-| Check | Required result |
-| --- | --- |
-| Row action | Row reconciles without full page reload |
-| Modal action then close | Source row changes or leaves immediately after delivery |
-| Bulk action | Per-item progress, cancel remaining work, partial failure visible |
-| Drag/drop | Same command/event/projection contract as other entry points |
-| List vs board | Same membership and status |
-| Counters | Stage, total, and footer counts agree with rows |
-| Refresh | Same result as full page reload |
-| Filters/pagination | No stale row remains eligible after transition |
-| Activity/last action | Event, actor, time, and context agree |
-| Retry/idempotency | Repeated delivery does not duplicate side effects |
-| Performance | No N+1; p50/p95 recorded and within agreed budget |
-| Repair | Projection rebuild restores UI without business side effects |
+| Check                   | Required result                                                   |
+| ----------------------- | ----------------------------------------------------------------- |
+| Row action              | Row reconciles without full page reload                           |
+| Modal action then close | Source row changes or leaves immediately after delivery           |
+| Bulk action             | Per-item progress, cancel remaining work, partial failure visible |
+| Drag/drop               | Same command/event/projection contract as other entry points      |
+| List vs board           | Same membership and status                                        |
+| Counters                | Stage, total, and footer counts agree with rows                   |
+| Refresh                 | Same result as full page reload                                   |
+| Filters/pagination      | No stale row remains eligible after transition                    |
+| Activity/last action    | Event, actor, time, and context agree                             |
+| Retry/idempotency       | Repeated delivery does not duplicate side effects                 |
+| Performance             | No N+1; p50/p95 recorded and within agreed budget                 |
+| Repair                  | Projection rebuild restores UI without business side effects      |
 
 Any failed row in this matrix blocks production sign-off for that flow.
 
@@ -406,6 +444,8 @@ Any failed row in this matrix blocks production sign-off for that flow.
 10. Does a full page reload match the in-app Refresh result?
 11. Are list, modal, bulk, drag/drop, and API entry points covered?
 12. Are latency and query-count measurements recorded?
+13. Does every committed bulk item return a delivery key and remain ineligible
+    for repeat submission until projection-backed eligibility is reloaded?
 
 If any answer is unclear, the flow is not ready for production.
 

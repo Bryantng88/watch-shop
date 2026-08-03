@@ -29,6 +29,8 @@ type Line = {
   unitCost: number;
   sellPrice: number;
   quickRelease: boolean;
+  hasClasp: boolean;
+  claspFinish: "STEEL" | "GOLD_PLATED";
 };
 
 const MATERIALS: Array<[Material, string]> = [
@@ -65,6 +67,8 @@ function newLine(): Line {
     unitCost: 0,
     sellPrice: 0,
     quickRelease: false,
+    hasClasp: false,
+    claspFinish: "STEEL",
   };
 }
 function leatherLabel(code: string) {
@@ -180,26 +184,52 @@ export default function StrapAcquisitionFormClient({
           currency: "VND",
           type: "PURCHASE",
           notes,
-          items: lines.map((line) => ({
-            title: titleOf(line),
-            quantity: line.quantity,
-            unitCost: line.unitCost,
-            productType: "WATCH_STRAP",
-            strapSpec: {
-              material: line.material,
-              originType: line.originType,
-              brandName:
-                line.originType === "OEM" ? line.brandName.trim() : null,
-              leatherType:
-                line.material === "LEATHER" ? line.leatherType : null,
-              surface: line.material === "LEATHER" ? line.surface : null,
-              lugWidthMM: line.lugWidthMM,
-              buckleWidthMM: line.buckleWidthMM,
-              color: line.color.trim(),
-              quickRelease: line.quickRelease,
-              sellPrice: line.sellPrice,
-            },
-          })),
+          items: lines.flatMap((line) => {
+            const pairKey = `strap-set:${line.id}`;
+            const strapItem = {
+              title: titleOf(line),
+              quantity: line.quantity,
+              unitCost: line.unitCost,
+              productType: "WATCH_STRAP",
+              strapSpec: {
+                material: line.material,
+                originType: line.originType,
+                brandName:
+                  line.originType === "OEM" ? line.brandName.trim() : null,
+                leatherType:
+                  line.material === "LEATHER" ? line.leatherType : null,
+                surface: line.material === "LEATHER" ? line.surface : null,
+                lugWidthMM: line.lugWidthMM,
+                buckleWidthMM: line.buckleWidthMM,
+                color: line.color.trim(),
+                quickRelease: line.quickRelease,
+                sellPrice: line.sellPrice,
+                pairKey: line.hasClasp ? pairKey : null,
+              },
+            };
+            if (!line.hasClasp) return [strapItem];
+            const plated = line.claspFinish === "GOLD_PLATED";
+            return [
+              strapItem,
+              {
+                title: `Khóa kim ${plated ? "mạ vàng" : "thép"} ${line.buckleWidthMM}mm`,
+                quantity: line.quantity,
+                unitCost: 0,
+                productType: "WATCH_CLASP",
+                claspSpec: {
+                  claspType: "PIN_BUCKLE",
+                  widthMM: line.buckleWidthMM,
+                  originType: line.originType,
+                  brandName:
+                    line.originType === "OEM" ? line.brandName.trim() : null,
+                  color: plated ? "Vàng" : "Thép",
+                  finish: line.claspFinish,
+                  sellPrice: 0,
+                  pairKey,
+                },
+              },
+            ];
+          }),
         }),
       });
       const data = await response.json().catch(() => null);
@@ -349,6 +379,14 @@ export default function StrapAcquisitionFormClient({
                     <div className="mt-0.5 truncate font-semibold text-slate-950">
                       {titleOf(line)}
                     </div>
+                    {line.hasClasp ? (
+                      <div className="mt-1 text-xs font-medium text-emerald-700">
+                        + {line.quantity} khóa {line.buckleWidthMM} mm ·{" "}
+                        {line.claspFinish === "GOLD_PLATED"
+                          ? "mạ vàng"
+                          : "thép"}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
                 <button
@@ -517,6 +555,45 @@ export default function StrapAcquisitionFormClient({
                       <span className="pr-3 text-xs text-slate-400">mm</span>
                     </div>
                   </label>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <label className="flex cursor-pointer items-center justify-between gap-3">
+                      <span>
+                        <span className="block text-xs font-semibold text-slate-700">
+                          Có kèm khóa
+                        </span>
+                        <span className="mt-0.5 block text-[11px] text-slate-500">
+                          Tự thêm {line.quantity} khóa {line.buckleWidthMM} mm
+                          vào kho
+                        </span>
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={line.hasClasp}
+                        onChange={(event) =>
+                          patchLine(line.id, { hasClasp: event.target.checked })
+                        }
+                        className="h-4 w-4 accent-violet-600"
+                      />
+                    </label>
+                    {line.hasClasp ? (
+                      <label className="mt-3 block text-xs font-medium text-slate-600">
+                        Hoàn thiện khóa
+                        <select
+                          className={`${inputClass} mt-1.5`}
+                          value={line.claspFinish}
+                          onChange={(event) =>
+                            patchLine(line.id, {
+                              claspFinish: event.target
+                                .value as Line["claspFinish"],
+                            })
+                          }
+                        >
+                          <option value="STEEL">Khóa thép</option>
+                          <option value="GOLD_PLATED">Khóa mạ vàng</option>
+                        </select>
+                      </label>
+                    ) : null}
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <label className="block text-xs font-medium text-slate-600">
                       Số lượng

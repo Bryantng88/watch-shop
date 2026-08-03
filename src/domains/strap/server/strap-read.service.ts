@@ -17,6 +17,24 @@ export async function listStraps() {
   return records.map((record) => record.dataJson as StrapListProjectionRow);
 }
 
+export async function listAvailableClasps() {
+  return prisma.productVariant.findMany({
+    where: {
+      stockQty: { gt: 0 },
+      Product: { type: "WATCH_CLASP" },
+      ClaspVariantSpec: { isNot: null },
+    },
+    orderBy: [{ updatedAt: "desc" }],
+    select: {
+      id: true,
+      sku: true,
+      stockQty: true,
+      Product: { select: { title: true } },
+      ClaspVariantSpec: true,
+    },
+  });
+}
+
 export async function getStrapDetail(variantId: string) {
   const id = String(variantId ?? "").trim();
   if (!id) return null;
@@ -56,7 +74,13 @@ export async function getStrapDetail(variantId: string) {
           endLinkCount: true,
           wristSizeMM: true,
           note: true,
-          watch: { select: { id: true, productId: true, product: { select: { title: true, sku: true } } } },
+          watch: {
+            select: {
+              id: true,
+              productId: true,
+              product: { select: { title: true, sku: true } },
+            },
+          },
         },
       },
       strapMovements: { orderBy: { createdAt: "desc" }, take: 20 },
