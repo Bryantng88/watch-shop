@@ -9,7 +9,7 @@ services:
       secrets:
         - env_build
     env_file:
-      - .env.production
+      - ${APP_ENV_FILE:-.env.production}
     environment:
       NODE_ENV: production
       HOSTNAME: 0.0.0.0
@@ -26,11 +26,37 @@ services:
       context: .
       target: ops
     env_file:
-      - .env.production
+      - ${APP_ENV_FILE:-.env.production}
     profiles:
       - tools
     restart: "no"
 
+  db-backup:
+    image: postgres:17-bookworm
+    env_file:
+      - ${APP_ENV_FILE:-.env.production}
+    environment:
+      BACKUP_DIR: /backups
+    volumes:
+      - "${DB_BACKUP_DIR:-./backups/database}:/backups"
+      - ./ops/database/backup.sh:/opt/watch-shop/backup.sh:ro
+    profiles:
+      - tools
+    entrypoint: ["/bin/bash", "/opt/watch-shop/backup.sh"]
+    restart: "no"
+
+  db-restore-drill:
+    image: postgres:17-bookworm
+    environment:
+      RESTORE_TEST_DATABASE_URL: ${RESTORE_TEST_DATABASE_URL:-}
+    volumes:
+      - "${DB_BACKUP_DIR:-./backups/database}:/backups:ro"
+      - ./ops/database/restore-drill.sh:/opt/watch-shop/restore-drill.sh:ro
+    profiles:
+      - tools
+    entrypoint: ["/bin/bash", "/opt/watch-shop/restore-drill.sh"]
+    restart: "no"
+
 secrets:
   env_build:
-    file: .env.build
+    file: ${BUILD_ENV_FILE:-.env.build}
