@@ -76,17 +76,17 @@ export default function AcquisitionListTable({
             </div>
 
             <div className="w-full overflow-x-auto">
-                <table className="w-full min-w-[1180px] table-fixed text-sm">
+                <table className="w-full table-fixed text-sm">
                     <colgroup>
-                        <col className="w-[44px]" />
-                        <col className="w-[300px]" />
-                        <col className="w-[200px]" />
-                        <col className="w-[170px]" />
-                        <col className="w-[220px]" />
-                        <col />
-                        <col className="w-[150px]" />
-                        <col className="w-[130px]" />
-                        <col className="w-[70px]" />
+                        <col className="w-[3%]" />
+                        <col className="w-[23%]" />
+                        <col className="w-[14%]" />
+                        <col className="w-[12%]" />
+                        <col className="w-[14%]" />
+                        <col className="w-[10%]" />
+                        <col className="w-[10%]" />
+                        <col className="w-[7%]" />
+                        <col className="w-[7%]" />
                     </colgroup>
 
                     <thead className="bg-slate-50 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
@@ -109,7 +109,7 @@ export default function AcquisitionListTable({
                             <th className="px-4 py-4">Vendor</th>
                             <th className="px-4 py-4 text-right">Tổng tiền</th>
                             <th className="px-4 py-4">Cập nhật</th>
-                            <th className="px-3 py-4 text-right">Action</th>
+                            <th className="sticky right-0 z-10 bg-slate-50 px-3 py-4 text-right">Action</th>
                         </tr>
                     </thead>
 

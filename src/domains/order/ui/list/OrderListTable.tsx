@@ -36,7 +36,7 @@ export default function OrderListTable(props: Props) {
     selectableIds.some((id) => props.selectedIds.includes(id)) && !allChecked;
 
   return (
-    <div className="relative overflow-visible rounded-b-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
+    <div className="relative max-w-full overflow-hidden rounded-b-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
       <div className="relative w-full overflow-x-auto">
         <table className="w-full min-w-[1460px] table-fixed text-sm">
           <colgroup>
@@ -71,7 +71,7 @@ export default function OrderListTable(props: Props) {
               <th className="px-4 py-3">Ghi chú</th>
               <th className="px-4 py-3 text-right">Tổng tiền</th>
               <th className="px-4 py-3">Cập nhật</th>
-              <th className="px-5 py-3 text-right">Actions</th>
+              <th className="sticky right-0 z-10 bg-slate-50 px-3 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">

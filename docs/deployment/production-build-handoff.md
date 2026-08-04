@@ -177,3 +177,86 @@ been removed. Any future schema removal must be handled as a separate, backed-up
 and reviewed migration.
 
 Related deployment instructions: `docs/deployment/nas-docker.md`.
+
+## Pending laptop UI refresh deployment (2026-08-04)
+
+The admin laptop-layout refresh is complete locally but has **not** been
+uploaded to or deployed on the NAS. The currently running NAS container was not
+changed.
+
+Included UI changes:
+
+- The desktop sidebar is icon-only below `2200px`, expands automatically on
+  wider screens and no longer duplicates the account/logout controls from the
+  top bar.
+- Business-list dashboard cards and filter controls reflow more safely on
+  laptop-width content areas.
+- Watch-list columns have explicit widths, horizontal scrolling is allowed when
+  required, and the Actions column remains pinned to the right.
+- Watch Media, Service and Sale statuses retain their icon and text labels.
+- Watch `Ngày tạo`, `Cập nhật` and `Thao tác cuối` information is present; no
+  activity/actor columns are intentionally hidden in this pending build.
+- Action columns were normalized on the Watch, Acquisition, Order, Service,
+  Shipment, Task and Work Case lists.
+- Shared row-action popovers now render through a document-body portal, update
+  their position on scroll/resize and are not clipped by table overflow.
+
+Local validation completed:
+
+```text
+npx tsc --noEmit: passed
+npm run build: passed
+Compiled successfully
+Generated static pages: 124/124
+```
+
+A deployment bundle was created on the Windows development machine:
+
+```text
+C:\Users\MRD734~1.DUC\AppData\Local\Temp\watch-shop-ui-20260804.tar.gz
+size: 4,165,817 bytes
+```
+
+The archive safety check confirmed that it contains no `.env*`, `.git`,
+`.next`, `node_modules`, logs, zip/tar archives, `tsconfig.tsbuildinfo` or
+`component for chatGPT` content. The bundle is stored in the Windows temporary
+directory and should be recreated if it is no longer present.
+
+Deployment was paused because the development machine could not reach the
+LAN-only NAS SSH endpoint:
+
+```text
+192.168.1.253:22253: connection timed out
+longnd.myqnapcloud.com:22253: connection refused
+```
+
+Resume only after the laptop is connected to the home LAN or an authorized VPN.
+Upload the bundle with legacy SCP mode if QNAP SFTP remains disabled:
+
+```sh
+scp -O -P 22253 watch-shop-ui-20260804.tar.gz \
+  admin@192.168.1.253:/share/WatchShop/
+```
+
+On the NAS, preserve `.env.production` and `.env.build`, extract the source into
+`/share/WatchShop/app`, and do not treat extraction as deletion of retired
+files. Then build and replace only the application service; this UI release has
+no database migration:
+
+```sh
+cd /share/WatchShop/app
+docker compose --env-file .env.production build app
+docker compose --env-file .env.production up -d --no-deps app
+docker compose --env-file .env.production ps
+```
+
+Verify before accepting the release:
+
+```text
+http://192.168.1.253:3000/api/health
+http://192.168.1.253:3000/api/ready
+```
+
+Smoke-test the Watch and Order lists in particular: sidebar auto-collapse,
+horizontal table scrolling, pinned Actions, visible Watch activity columns and
+row-action popovers near the top, middle and bottom of the viewport.

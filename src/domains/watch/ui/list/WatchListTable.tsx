@@ -64,7 +64,7 @@ export default function WatchListTable({
         safeItems.every((item) => safeSelectedIds.includes(item.id));
 
     return (
-        <div className="relative overflow-visible rounded-b-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
+        <div className="relative max-w-full overflow-hidden rounded-b-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
             <div className="hidden">
                 <div>
                     <div className="text-[18px] font-semibold text-slate-900">
@@ -80,18 +80,18 @@ export default function WatchListTable({
             </div>
 
             <div className="relative overflow-x-auto">
-                <table className="w-full min-w-[1910px] table-fixed text-sm">
+                <table className="w-full min-w-[1720px] table-fixed text-sm">
                     <colgroup>
-                        <col className="w-14" />
-                        <col className="w-[500px]" />
-                        <col className="w-[210px]" />
-                        <col className="w-[210px]" />
+                        <col className="w-12" />
+                        <col className="w-[440px]" />
+                        <col className="hidden w-[180px] xl:table-column" />
+                        <col className="hidden w-[180px] xl:table-column" />
                         <col className="w-[150px]" />
                         <col className="w-[130px]" />
-                        <col className="w-[160px]" />
-                        <col className="w-[160px]" />
-                        <col className="w-[260px]" />
-                        <col className="w-[74px]" />
+                        <col className="w-[135px]" />
+                        <col className="w-[150px]" />
+                        <col className="w-[210px]" />
+                        <col className="w-[90px]" />
                     </colgroup>
                     <thead className="bg-slate-50/80 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
                         <tr>
@@ -104,8 +104,8 @@ export default function WatchListTable({
                                 />
                             </th>
                             <th className="px-4 py-3">Watch</th>
-                            <th className="px-4 py-3">Media</th>
-                            <th className="px-4 py-3">Service</th>
+                            <th className="hidden px-4 py-3 xl:table-cell">Media</th>
+                            <th className="hidden px-4 py-3 xl:table-cell">Service</th>
                             <th className="px-4 py-3">Bán hàng</th>
                             <th className="px-4 py-3">Giá bán</th>
                             <th
@@ -116,7 +116,7 @@ export default function WatchListTable({
                             </th>
                             <th className="px-4 py-3">Cập nhật</th>
                             <th className="px-4 py-3">Thao tác cuối</th>
-                            <th className="px-4 py-3 text-right">Actions</th>
+                            <th className="sticky right-0 z-10 bg-slate-50 px-3 py-3 text-right">Actions</th>
                         </tr>
                     </thead>
 

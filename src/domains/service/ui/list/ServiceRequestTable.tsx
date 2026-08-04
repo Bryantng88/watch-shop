@@ -138,7 +138,7 @@ export default function ServiceRequestTable({
                             <th className="w-[12%] px-4 py-4">Issue</th>
                             <th className="w-[13%] px-4 py-4">Payment</th>
                             <th className="w-[14%] px-4 py-4">Thời gian</th>
-                            <th className="w-[7%] px-4 py-4 text-right">Action</th>
+                            <th className="sticky right-0 z-10 w-[8%] bg-slate-50 px-3 py-4 text-right">Action</th>
                         </tr>
                     </thead>
 
@@ -330,7 +330,7 @@ function ServiceRequestRow({
                 <div className="mt-1 text-xs text-slate-400">Updated: {formatServiceDateTime(row.updatedAt)}</div>
             </td>
 
-            <td className="px-4 py-4 text-right align-middle">
+            <td className="sticky right-0 z-[1] bg-white px-3 py-4 text-right align-middle shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]">
                 <RowActions row={row} actions={actions} />
             </td>
         </tr>

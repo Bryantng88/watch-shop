@@ -145,8 +145,8 @@ export default function FilterBar({
     return (
         <div className="rounded-t-xl border border-b-0 border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.025)]">
             <div className={trailingActions
-                ? "grid grid-cols-1 gap-3 xl:grid-cols-[minmax(240px,1fr)_repeat(2,minmax(150px,200px))_minmax(170px,220px)_auto_auto_auto_auto] xl:items-center"
-                : "grid grid-cols-1 gap-3 xl:grid-cols-[minmax(280px,1fr)_repeat(2,minmax(170px,220px))_minmax(190px,240px)_auto_auto_auto] xl:items-center"
+                ? "grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-[minmax(240px,1fr)_repeat(2,minmax(150px,200px))_minmax(170px,220px)_auto_auto_auto_auto] xl:items-center"
+                : "grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-[minmax(280px,1fr)_repeat(2,minmax(170px,220px))_minmax(190px,240px)_auto_auto_auto] xl:items-center"
             }>
                 {search ? (
                     <label className="relative block min-w-0">

@@ -324,7 +324,7 @@ export default function WorkCaseListTable({
               <th className="px-4 py-3">Người tạo</th>
               <th className="px-4 py-3">Task</th>
               <th className="px-4 py-3">Ngày tạo</th>
-              <th className="w-[110px] px-4 py-3 text-right">Action</th>
+              <th className="sticky right-0 z-10 w-[110px] bg-slate-50 px-3 py-3 text-right">Action</th>
             </tr>
           </thead>
 
@@ -408,7 +408,7 @@ export default function WorkCaseListTable({
                     </td>
 
                     <td
-                      className="px-4 py-4 align-top text-right"
+                      className="sticky right-0 z-[1] bg-white px-3 py-4 text-right align-top shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]"
                       onClick={(event) => event.stopPropagation()}
                     >
                       <RowActions

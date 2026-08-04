@@ -204,7 +204,7 @@ export default function AcquisitionListRow({
                 <div className="text-xs text-slate-400">{updated.date}</div>
             </td>
 
-            <td className="px-3 py-4 text-right">
+            <td className="sticky right-0 z-[1] bg-white px-3 py-4 text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]">
                 <RowActionMenu
                     actions={[
                         {

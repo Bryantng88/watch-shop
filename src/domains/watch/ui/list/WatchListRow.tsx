@@ -541,8 +541,8 @@ export default function WatchListRow({
                 />
             </td>
 
-            <td className="px-4 py-3">
-                <div className="flex min-w-[340px] items-center gap-3">
+            <td className="px-3 py-3 sm:px-4">
+                <div className="flex min-w-0 items-center gap-3">
                     <Thumb src={product.imageUrl} alt={product.title} onClick={onRepairInline ? () => onRepairInline(product) : undefined} />
 
                     <div className="min-w-0 flex-1">
@@ -557,11 +557,16 @@ export default function WatchListRow({
                             <span>SKU: {product.sku || "-"}</span>
                             {product.brandName ? <span>{product.brandName}</span> : null}
                         </div>
+                        <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px] text-slate-500 xl:hidden">
+                            <span className="truncate">Media: {media.label}</span>
+                            <span aria-hidden="true">·</span>
+                            <span className="truncate">Service: {service.label}</span>
+                        </div>
                     </div>
                 </div>
             </td>
 
-            <td className="px-4 py-3 align-middle">
+            <td className="hidden px-2 py-3 align-middle xl:table-cell">
                 <WatchStatusSignal
                     kind="media"
                     label={media.label}
@@ -603,7 +608,7 @@ export default function WatchListRow({
                 />
             </td>
 
-            <td className="px-4 py-3 align-middle">
+            <td className="hidden px-2 py-3 align-middle xl:table-cell">
                 <WatchStatusSignal
                     kind="service"
                     label={service.label}
@@ -637,7 +642,7 @@ export default function WatchListRow({
                 />
             </td>
 
-            <td className="px-4 py-3 align-middle">
+            <td className="px-2 py-3 align-middle">
                 <SaleStatusBadge
                     label={sale.label}
                     status={product.v2Row?.saleStatus ?? product.saleState}
@@ -702,7 +707,7 @@ export default function WatchListRow({
                 )}
             </td>
 
-            <td className="px-4 py-3 text-right">
+            <td className="sticky right-0 z-[1] bg-white px-3 py-3 text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]">
                 <RowActions<WatchRow>
                     row={product}
                     actions={actions}

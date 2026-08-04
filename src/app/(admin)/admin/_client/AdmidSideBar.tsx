@@ -303,10 +303,13 @@ export default function AdminSidebar({
                 className="group relative"
                 onClick={(event) => handleMenuSwitch(item, event)}
             >
-                <ActiveLink href={item.href} exact={item.exact}>
+                <ActiveLink
+                    href={item.href}
+                    exact={item.exact}
+                >
                     <Icon size={18} className="shrink-0 opacity-80" />
 
-                    <span className="hidden min-w-0 items-center gap-2 xl:inline-flex">
+                    <span className="hidden min-w-0 items-center gap-2 min-[2200px]:inline-flex">
                         <span
                             className={[
                                 "truncate text-[14px] leading-none",
@@ -319,7 +322,7 @@ export default function AdminSidebar({
                     </span>
                 </ActiveLink>
 
-                <div className="pointer-events-none absolute left-[68px] top-1/2 z-[9999] hidden -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white shadow-xl group-hover:block xl:hidden">
+                <div className="pointer-events-none absolute left-[68px] top-1/2 z-[9999] hidden -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white shadow-xl group-hover:block min-[2200px]:hidden">
                     {item.label}
                 </div>
             </div>
@@ -365,31 +368,19 @@ export default function AdminSidebar({
                 className={[
                     "fixed left-0 top-0 z-50 h-full overflow-visible bg-[#11191f] text-gray-200",
                     "flex flex-col transition-transform",
-                    "w-[76px] xl:w-[240px]",
+                    "w-[76px] min-[2200px]:w-[240px]",
                     "lg:static lg:h-screen lg:translate-x-0",
                     open ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
                 ].join(" ")}
             >
-                <div className="flex h-12 items-center gap-2 border-b border-white/10 px-4">
+                {isMobile ? <div className="flex h-12 items-center gap-2 border-b border-white/10 px-4">
                     <div className="rounded bg-white/10 px-2 py-0.5 text-[10px]">
                         Admin
                     </div>
 
-                    <span className="hidden text-xs opacity-70 xl:inline">
+                    <span className="text-xs opacity-70">
                         Control Panel
                     </span>
-
-                    {!isMobile ? (
-                        <button
-                            type="button"
-                            onClick={handleLogout}
-                            disabled={loggingOut}
-                            title="Logout"
-                            className="ml-auto hidden h-8 w-8 items-center justify-center rounded-lg text-white/60 hover:bg-white/10 hover:text-white disabled:cursor-wait disabled:opacity-50 xl:flex"
-                        >
-                            <LogOut className="h-4 w-4" />
-                        </button>
-                    ) : null}
 
                     {isMobile ? (
                         <button
@@ -401,7 +392,7 @@ export default function AdminSidebar({
                             ✕
                         </button>
                     ) : null}
-                </div>
+                </div> : null}
 
                 <nav className="relative z-50 space-y-1 overflow-visible px-3 py-3">
                     {allowedNav.map((entry, index) => {
@@ -419,7 +410,7 @@ export default function AdminSidebar({
                                         <button
                                             type="button"
                                             onClick={() => toggleGroup(entry.label)}
-                                            className="mx-2 hidden w-[calc(100%-1rem)] items-center justify-between border-t border-white/10 pt-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45 transition hover:text-white/70 xl:flex"
+                                            className="mx-2 hidden w-[calc(100%-1rem)] items-center justify-between border-t border-white/10 pt-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45 transition hover:text-white/70 min-[2200px]:flex"
                                             aria-expanded={isOpen}
                                         >
                                             <span>{entry.label}</span>
@@ -431,15 +422,15 @@ export default function AdminSidebar({
                                             />
                                         </button>
                                     ) : (
-                                        <div className="mx-2 hidden border-t border-white/10 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35 xl:block">
+                                        <div className="mx-2 hidden border-t border-white/10 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35 min-[2200px]:block">
                                             {entry.label}
                                         </div>
                                     )}
 
-                                    <div className="mx-auto h-px w-7 bg-white/10 xl:hidden" />
+                                    <div className="mx-auto h-px w-7 bg-white/10 min-[2200px]:hidden" />
 
                                     {isOpen ? (
-                                        <div className="mt-1 space-y-1 xl:pl-2">
+                                        <div className="mt-1 space-y-1 min-[2200px]:pl-2">
                                             {entry.children?.map((item) =>
                                                 renderNavItem(item, true),
                                             )}
@@ -454,7 +445,7 @@ export default function AdminSidebar({
                 </nav>
 
                 <div className="mt-auto p-3 text-[11px] opacity-50">
-                    <span className="hidden xl:inline">
+                    <span className="hidden min-[2200px]:inline">
                         © {new Date().getFullYear()} Admin
                     </span>
                 </div>

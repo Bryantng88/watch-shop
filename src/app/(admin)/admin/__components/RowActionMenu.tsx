@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
     MoreHorizontal,
@@ -84,15 +85,21 @@ export default function RowActionsMenu({
     buttonClassName,
 }: Props) {
     const [open, setOpen] = React.useState(false);
-    const [openUp, setOpenUp] = React.useState(false);
+    const [menuPosition, setMenuPosition] = React.useState<{
+        top: number;
+        maxHeight: number;
+        left?: number;
+        right?: number;
+    } | null>(null);
 
     const wrapRef = React.useRef<HTMLDivElement | null>(null);
     const buttonRef = React.useRef<HTMLButtonElement | null>(null);
+    const menuRef = React.useRef<HTMLDivElement | null>(null);
 
     React.useEffect(() => {
         function handlePointerDown(e: MouseEvent) {
-            if (!wrapRef.current) return;
-            if (!wrapRef.current.contains(e.target as Node)) {
+            const target = e.target as Node;
+            if (!wrapRef.current?.contains(target) && !menuRef.current?.contains(target)) {
                 setOpen(false);
             }
         }
@@ -112,23 +119,41 @@ export default function RowActionsMenu({
 
     const visibleActions = actions.filter((item) => !item.hidden);
 
-    function toggleMenu() {
-        if (!open && buttonRef.current) {
-            const rect = buttonRef.current.getBoundingClientRect();
+    const updateMenuPosition = React.useCallback(() => {
+        const rect = buttonRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const viewportPadding = 12;
+        const menuGap = 6;
+        const estimatedHeight = Math.min(Math.max(visibleActions.length, 1), 6) * 52 + 16;
+        const menuHeight = menuRef.current?.offsetHeight ?? estimatedHeight;
+        const spaceBelow = window.innerHeight - rect.bottom - viewportPadding;
+        const spaceAbove = rect.top - viewportPadding;
+        const openUp = spaceBelow < menuHeight && spaceAbove > spaceBelow;
+        const availableHeight = Math.max(120, (openUp ? spaceAbove : spaceBelow) - menuGap);
 
-            // Ước lượng chiều cao menu. Mỗi item ~ 50px + padding
-            const estimatedMenuHeight =
-                Math.min(Math.max(visibleActions.length, 1), 6) * 52 + 16;
+        setMenuPosition({
+            top: openUp
+                ? Math.max(viewportPadding, rect.top - Math.min(menuHeight, availableHeight) - menuGap)
+                : rect.bottom + menuGap,
+            maxHeight: availableHeight,
+            ...(align === "right"
+                ? { right: Math.max(viewportPadding, window.innerWidth - rect.right) }
+                : { left: Math.max(viewportPadding, rect.left) }),
+        });
+    }, [align, visibleActions.length]);
 
-            const spaceBelow = window.innerHeight - rect.bottom;
-            const spaceAbove = rect.top;
-
-            // Nếu dưới không đủ chỗ và trên có chỗ hơn thì bung lên
-            setOpenUp(spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow);
-        }
-
-        setOpen((prev) => !prev);
-    }
+    React.useEffect(() => {
+        if (!open) return;
+        updateMenuPosition();
+        const frame = window.requestAnimationFrame(updateMenuPosition);
+        window.addEventListener("scroll", updateMenuPosition, true);
+        window.addEventListener("resize", updateMenuPosition);
+        return () => {
+            window.cancelAnimationFrame(frame);
+            window.removeEventListener("scroll", updateMenuPosition, true);
+            window.removeEventListener("resize", updateMenuPosition);
+        };
+    }, [open, updateMenuPosition]);
 
     if (!visibleActions.length) {
         return (
@@ -147,7 +172,7 @@ export default function RowActionsMenu({
             <button
                 ref={buttonRef}
                 type="button"
-                onClick={toggleMenu}
+                onClick={() => setOpen((prev) => !prev)}
                 className={cx(
                     "inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700",
                     open && "bg-slate-100 text-slate-700",
@@ -159,13 +184,11 @@ export default function RowActionsMenu({
                 <MoreHorizontal className="h-4.5 w-4.5" />
             </button>
 
-            {open ? (
+            {open && menuPosition ? createPortal(
                 <div
-                    className={cx(
-                        "absolute z-[80] min-w-[210px] overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-[0_16px_40px_rgba(15,23,42,0.12)]",
-                        openUp ? "bottom-11" : "top-11",
-                        align === "right" ? "right-0" : "left-0"
-                    )}
+                    ref={menuRef}
+                    style={menuPosition}
+                    className="fixed z-[100] min-w-[210px] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-[0_16px_40px_rgba(15,23,42,0.12)]"
                     role="menu"
                 >
                     {visibleActions.map((item, index) => {
@@ -233,7 +256,7 @@ export default function RowActionsMenu({
                         );
                     })}
                 </div>
-            ) : null}
+            , document.body) : null}
         </div>
     );
 }

@@ -61,6 +61,7 @@ type Props = {
     title?: string;
     className?: string;
     singleLine?: boolean;
+    iconOnly?: boolean;
 };
 
 export function VisualStatusSignal({
@@ -72,6 +73,7 @@ export function VisualStatusSignal({
     title,
     className,
     singleLine = false,
+    iconOnly = false,
 }: Props) {
     const Icon = ICONS[icon];
     const styles = TONE_CLASSES[tone];
@@ -80,7 +82,7 @@ export function VisualStatusSignal({
             <span className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-lg border transition group-hover:-translate-y-0.5 group-hover:shadow-sm", styles.icon)}>
                 <Icon aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2} />
             </span>
-            <span className="min-w-0 text-left">
+            <span className={cn("min-w-0 text-left", iconOnly && "sr-only")}>
                 <span className="block truncate text-[13px] font-semibold leading-5 text-slate-800">{label}</span>
                 {!singleLine && detail ? <span className={cn("mt-0.5 block truncate text-[11px] font-medium leading-4", styles.detail)}>{detail}</span> : null}
             </span>
@@ -89,7 +91,8 @@ export function VisualStatusSignal({
     const rootClassName = cn(
         "group inline-flex min-w-[160px] max-w-[210px] items-center gap-2.5 rounded-lg",
         onClick && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
-        singleLine && "min-w-[130px]",
+        singleLine && !iconOnly && "min-w-[130px]",
+        iconOnly && "min-w-0 max-w-none",
         className,
     );
     const resolvedTitle = title ?? [label, detail].filter(Boolean).join(" · ");

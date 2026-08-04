@@ -24,9 +24,9 @@ const registryWidgets = Object.keys(
 
 function dashboardColumns(widgetCount: number) {
     if (widgetCount <= 1) return "xl:grid-cols-1";
-    if (widgetCount === 2) return "xl:grid-cols-[1.65fr_1fr]";
-    if (widgetCount === 3) return "xl:grid-cols-[1.65fr_1fr_1.12fr]";
-    return "xl:grid-cols-[1.65fr_1fr_1fr_1.12fr]";
+    if (widgetCount === 2) return "xl:grid-cols-2";
+    if (widgetCount === 3) return "xl:grid-cols-2 2xl:grid-cols-3";
+    return "xl:grid-cols-2 2xl:grid-cols-4";
 }
 
 function normalizeWidgets(

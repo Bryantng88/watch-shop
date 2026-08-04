@@ -30,9 +30,11 @@ export default function AdminShell({ user, children }: AdminShellProps) {
     }
 
     return (
-        <div className="grid h-screen overflow-hidden bg-slate-50 lg:grid-cols-[76px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)]">
+        <div className="grid h-screen overflow-hidden bg-slate-50 lg:grid-cols-[76px_minmax(0,1fr)] min-[2200px]:grid-cols-[240px_minmax(0,1fr)]">
             <div className="relative z-50 hidden overflow-visible bg-[#11191f] lg:block">
-                <AdminSidebar user={{ permissions: user.permissions, name: user.name, roles: user.roles }} />
+                <AdminSidebar
+                    user={{ permissions: user.permissions, name: user.name, roles: user.roles }}
+                />
             </div>
 
             <div className="lg:hidden">

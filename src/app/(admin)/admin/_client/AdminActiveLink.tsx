@@ -25,9 +25,10 @@ export default function ActiveLink({
     return (
         <Link
             href={href}
+            title={title}
             className={cn(
                 "flex h-12 items-center rounded-xl px-4 text-slate-300 transition hover:bg-white/5 hover:text-white",
-                "justify-center xl:justify-start xl:gap-3",
+                "justify-center min-[2200px]:justify-start min-[2200px]:gap-3",
                 isActive && activeClassName,
                 className
             )}

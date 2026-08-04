@@ -198,7 +198,7 @@ export default function OrderListRow({
         </div>
       </td>
 
-      <td className="px-4 py-3 text-right">
+      <td className="sticky right-0 z-[1] bg-white px-3 py-3 text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]">
         <RowActions
           row={item}
           actions={[

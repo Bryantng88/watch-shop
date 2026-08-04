@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -122,7 +123,7 @@ export default function RowActions<T>({
                 <MoreHorizontal className="h-5 w-5" />
             </button>
 
-            {open && menuPosition ? (
+            {open && menuPosition ? createPortal(
                 <div
                     ref={menuRef}
                     style={menuPosition}
@@ -160,7 +161,7 @@ export default function RowActions<T>({
                         </div>
                     ))}
                 </div>
-            ) : null}
+            , document.body) : null}
         </div>
     );
 }
