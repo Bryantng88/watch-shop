@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# This script is mounted directly into a Linux container; keep LF line endings.
 set -Eeuo pipefail
 
 if [[ $# -ne 1 ]]; then
@@ -18,7 +19,12 @@ if [[ -z "${RESTORE_TEST_DATABASE_URL:-}" ]]; then
 fi
 
 if [[ -f "$dump_path.sha256" ]]; then
-  sha256sum --check "$dump_path.sha256"
+  dump_dir="$(dirname -- "$dump_path")"
+  dump_name="$(basename -- "$dump_path")"
+  (
+    cd -- "$dump_dir"
+    sha256sum --check "$dump_name.sha256"
+  )
 fi
 
 pg_restore --list "$dump_path" >/dev/null

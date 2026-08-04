@@ -20,6 +20,28 @@ fully automated ecommerce checkout.
 - Admin keeps confirming, reserving, payment tracking, shipment, and operations
   in the local admin surface.
 
+## Phase 0: Mobile-First and PWA-Ready Foundation
+
+This is the first implementation phase when the storefront rebuild starts. Do
+not begin by extending the current desktop prototype.
+
+- Design the public list, detail and order-request flow mobile-first, then expand
+  them for tablet and desktop.
+- Verify the primary flows at 360 px, 390 px and 430 px widths. Controls must not
+  overlap, depend on hover, or require page-level horizontal scrolling.
+- Keep tap targets at least 44 px where practical; use mobile drawers/sheets for
+  filters and menus, and stable aspect ratios for product media.
+- Add a web app manifest, install icons, theme metadata and an installable HTTPS
+  shell. Treat offline support as progressive enhancement, not as a requirement
+  to submit orders without a connection.
+- Cache only versioned static assets and explicitly public catalog/media
+  responses. Never cache admin pages, authenticated API responses, customer
+  details, order submissions or other business mutations in a service worker.
+- Show an explicit offline/read-only state. Availability, price and order
+  submission must be revalidated against the server when online.
+- Keep the admin application responsive where practical, but do not include it
+  in the storefront PWA offline/cache scope.
+
 ## Current Evidence
 
 - Public route group exists under `src/app/(public)`.
@@ -89,15 +111,17 @@ The public order form should be a request/lead flow:
 
 ## Suggested Implementation Plan
 
-1. Replace old public catalog imports with a current public watch catalog query.
-2. Rebuild public list/detail UI as a compact mobile-first storefront.
-3. Implement public filters on top of the public-safe query.
-4. Rewire `api/public/orders` to the modern order application boundary.
-5. Add schema validation for public order input.
-6. Add spam/rate-limit guardrails.
-7. Fix middleware filename/config and reverse proxy rules for `/admin` and
+1. Establish the mobile-first layout, responsive navigation, viewport test
+   matrix and PWA-ready public shell described in Phase 0.
+2. Replace old public catalog imports with a current public watch catalog query.
+3. Rebuild public list/detail UI on that foundation.
+4. Implement public filters on top of the public-safe query.
+5. Rewire `api/public/orders` to the modern order application boundary.
+6. Add schema validation for public order input.
+7. Add spam/rate-limit guardrails.
+8. Fix middleware filename/config and reverse proxy rules for `/admin` and
    `/api/admin`.
-8. Test the NAS deployment path with public-only access.
+9. Test the NAS deployment path with public-only access over HTTPS.
 
 ## Acceptance Checklist
 
@@ -105,6 +129,14 @@ The public order form should be a request/lead flow:
 - `/products` renders without missing imports.
 - `/products/[slug]` renders with correct data and no mojibake.
 - Filters work on desktop and mobile.
+- List, detail, navigation, filters and order request pass at 360 px, 390 px and
+  430 px without overlap or page-level horizontal overflow.
+- Public storefront has a valid web app manifest, install icons and theme
+  metadata, and is installable when served over HTTPS.
+- Service-worker caching excludes admin/authenticated routes and all order or
+  business mutations.
+- Offline mode is visibly read-only and cannot present stale availability as a
+  confirmed order.
 - Public order creates a `WEB` pending draft order.
 - Public order cannot submit sold/hold/unavailable watches.
 - Client-submitted price cannot override DB price.
@@ -114,6 +146,8 @@ The public order form should be a request/lead flow:
 
 ## Next Prompt
 
-Resume from this doc and build the public storefront MVP hardening pass. Start
-by auditing the current public route imports and rewiring the public order API
-to the modern order application boundary before exposing anything on NAS.
+Resume from this doc and rebuild the public storefront. Start with Phase 0:
+audit the current public routes at the required mobile widths, establish the
+mobile-first/PWA-ready shell and its cache boundaries, then rewire the catalog
+and public order API to the modern domain/application boundaries. Do not expose
+the storefront publicly until the security and NAS acceptance gates pass.

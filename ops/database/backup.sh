@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# This script is mounted directly into a Linux container; keep LF line endings.
 set -Eeuo pipefail
 
 backup_dir="${BACKUP_DIR:-/backups}"
@@ -41,7 +42,10 @@ pg_dump \
 
 pg_restore --list "$temp_path" >/dev/null
 mv -- "$temp_path" "$final_path"
-sha256sum "$final_path" >"$final_path.sha256"
+(
+  cd -- "$backup_dir"
+  sha256sum "$(basename -- "$final_path")"
+) >"$final_path.sha256"
 
 # Retention applies only to files created by this script inside the validated
 # backup mount. Weekly/monthly copies should live in separate directories.

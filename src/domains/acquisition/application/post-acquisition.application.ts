@@ -2,9 +2,6 @@
 
 import { prisma } from "@/server/db/client";
 import {
-    enqueueAcquisitionSpecJob,
-} from "../server/acquisition-spec-job.service";
-import {
     getAiMetaFromDescription,
     getPricingFromDescription,
 } from "../shared/acquisition-item-metadata";
@@ -185,12 +182,6 @@ export async function postAcquisitionApplication(
                     );
                 }
 
-                if (!isReturningSoldWatch) {
-                    await enqueueAcquisitionSpecJob(tx as any, {
-                        acquisitionItemId: item.id,
-                        productId,
-                    });
-                }
             }
 
             await repoAcq.updateAcquisitionItemStatus(tx as any, {

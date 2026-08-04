@@ -24,10 +24,6 @@ import {
     getStrapSpecFromDescription,
     getWatchFlagsFromDescription,
 } from "../content/acquisition-item-metadata";
-import {
-    enqueueAcquisitionSpecJob,
-    processQueuedAcquisitionSpecJobs,
-} from "@/domains/acquisition/server/acquisition-spec-job.service";
 import { createInvoiceFromAcquisition } from "../../../invoices/_servers/invoices.repo";
 import { createTechnicalCheckFromAcquisitionTx } from "@/domains/service/server";
 import { genUniqueAcquisitionSku } from "@/domains/acquisition/shared/sku.helper";
@@ -137,10 +133,6 @@ async function createProductForPostedItem(
         variantId: createdVariant.id,
     });
 
-    await enqueueAcquisitionSpecJob(tx, {
-        acquisitionItemId: item.id,
-        productId: createdProduct.id,
-    });
 
     await maybeCreateTechnicalCheckForPostedWatch(tx, {
         acqId,
@@ -467,20 +459,6 @@ export async function postAcquisition(acqId: string, vendorName?: string | null)
         }
     );
 
-    if (newItems.length > 0) {
-        const jobResult = await processQueuedAcquisitionSpecJobs({
-            limit: newItems.length,
-            acquisitionItemIds: newItems.map((x) => x.id),
-            includeFailed: false,
-        });
-
-        console.log("[ACQ_POST][SPEC_JOB_TRIGGERED]", {
-            acqId,
-            newItems: newItems.length,
-            acquisitionItemIds: newItems.map((x) => x.id),
-            processed: jobResult?.processed ?? 0,
-        });
-    }
     await emitAcquisitionBusinessEvent(prisma, {
         eventKey: "acquisition.posted",
         acquisitionId: acqId,

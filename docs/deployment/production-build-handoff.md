@@ -1,8 +1,8 @@
 # Production build handoff
 
-Status: source and local Docker validation passed. The QNAP deployment host and
-files are prepared, but the NAS image has not been built and no production backup
-or migration has been run yet.
+Status: deployed successfully on the QNAP LAN host. The application container is
+healthy and both liveness and Supabase readiness checks pass. Public Internet
+exposure remains blocked pending reverse proxy/TLS and security hardening.
 
 ## Completed
 
@@ -28,6 +28,9 @@ or migration has been run yet.
 
 - Legacy invoice, admin product and other superseded compatibility routes were
   removed or connected to the current domain contracts.
+- The unused OpenAI acquisition/product generation paths, processors, endpoints,
+  UI and package dependency were removed. Production build no longer requires an
+  OpenAI build secret.
 - The Next.js 15 async request API migration and remaining source type errors are
   complete.
 - Local source validation passed on 2026-08-03:
@@ -54,8 +57,8 @@ or migration has been run yet.
 
 - Target: QNAP TS-473A, QTS 5.1.7, x86-64, 16 GB usable memory.
 - NAS LAN address: `192.168.1.253`.
-- Container Station is installed and opens successfully. No application or
-  container has been created there yet.
+- Container Station is installed. Docker Engine `27.1.2-qnap8` and Docker Compose
+  `v2.29.1-qnap2` are available.
 - Shared folders were created on `DataVol1`:
 
   ```text
@@ -80,28 +83,45 @@ or migration has been run yet.
   DIRECT_URL=<Supabase session pooler on port 5432 for initial IPv4 deployment>
   ```
 
-- The next action is to enable LAN-only SSH in QTS, connect from the workstation,
-  `cd /share/WatchShop/app`, validate Compose/env without printing secrets, and
-  build the NAS images. Do not use Container Station's manual Create Application
-  flow before this because the relative build context must be the source folder.
-- No Supabase backup, Prisma migration, NAS image build, reverse proxy or business
-  smoke test has been performed.
+- LAN-only SSH was enabled on port `22253`. The deployment was performed from the
+  normal admin shell in `/share/WatchShop/app`.
+- Compose/env validation passed without printing secrets.
+- The NAS built `watch-shop:local` (353 MB) and `watch-shop-ops:local` (1.71 GB).
+- The initial Supabase backup completed and its SHA-256 checksum passed:
+
+  ```text
+  /share/WatchShopBackup/database/watch-shop-20260804T064659Z.dump (3.6 MB)
+  /share/WatchShopBackup/database/watch-shop-20260804T064659Z.dump.sha256
+  ```
+
+- `prisma migrate deploy` found 31 migrations and reported no pending migrations.
+- `watch-shop-app-1` started healthy. Next.js production was ready in 197 ms.
+- Runtime verification passed:
+
+  ```text
+  GET /api/health: 200 {"status":"ok",...}
+  GET /api/ready: 200 {"status":"ready","database":"reachable",...}
+  initial readiness latency: 740 ms
+  ```
+- Initial LAN access at `http://192.168.1.253:3000` was confirmed. QNAP reverse
+  proxy/TLS and a comprehensive critical-flow smoke record are not complete.
 
 ## Remaining deployment work
 
-Before enabling normal users on the NAS:
+Before public Internet exposure:
 
-1. Validate the NAS env files and build both images from `/share/WatchShop/app`.
-2. Create and verify the first Supabase dump in the NAS backup folder.
-3. Only after the backup, run `prisma migrate deploy` once.
-4. Start the Compose application and verify `/api/health` and `/api/ready` at
-   `http://192.168.1.253:3000`.
-5. Smoke-test login and the critical admin flows for watches, acquisitions,
+1. Complete and record smoke tests for login and the critical admin flows:
+   watches, acquisitions,
    accessories, orders, services, shipments and payments.
-6. Configure QNAP reverse proxy/TLS and an HBS 3 off-NAS backup copy.
-7. Review the dependency audit findings before exposing the service to the public
+2. Configure QNAP reverse proxy/TLS; expose only HTTPS, not ports `3000`, `8080`
+   or `22253`.
+3. Configure the nightly database backup schedule, QTS snapshot policy and an
+   HBS 3 encrypted off-NAS copy.
+4. Run the first restore drill against a disposable database.
+5. Review the dependency audit findings before exposing the service to the public
    Internet. The local `npm ci` reported 38 findings (1 low, 20 moderate, 15 high,
    2 critical); no automatic force-fix was applied.
+6. Disable SSH after deployment work, or restrict it to LAN/VPN administration.
 
 The generated Prisma/Zod directory, `component for chatGPT`, and `src/note.ts`
 are excluded from production TypeScript scanning because they are generated or

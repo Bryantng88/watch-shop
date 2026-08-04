@@ -78,20 +78,26 @@ ports or expose Container Station management to the Internet.
    docker compose --env-file .env.production build app migrate
    ```
 
-5. Apply committed Prisma migrations exactly once:
+5. Create and verify a database backup before applying migrations:
+
+   ```sh
+   docker compose --env-file .env.production --profile tools run --rm db-backup
+   ```
+
+6. Apply committed Prisma migrations exactly once:
 
    ```sh
    docker compose --env-file .env.production --profile tools run --rm migrate
    ```
 
-6. Start the web application:
+7. Start the web application:
 
    ```sh
    docker compose --env-file .env.production up -d app
    docker compose --env-file .env.production ps
    ```
 
-7. Verify both endpoints, then smoke-test login and the critical admin workflows:
+8. Verify both endpoints, then smoke-test login and the critical admin workflows:
 
    ```text
    http://NAS_HOST:APP_PORT/api/health  # process liveness
@@ -112,6 +118,7 @@ Use an immutable tag such as a Git commit SHA in `IMAGE_TAG`:
 
 ```sh
 docker compose --env-file .env.production build app migrate
+docker compose --env-file .env.production --profile tools run --rm db-backup
 docker compose --env-file .env.production --profile tools run --rm migrate
 docker compose --env-file .env.production up -d --no-deps app
 docker compose --env-file .env.production ps
@@ -143,6 +150,21 @@ after this manual check should the same command be scheduled nightly in the NAS
 scheduler. Keep 14 daily copies by default, copy selected archives into separate
 weekly/monthly directories, and maintain at least one encrypted copy outside the
 NAS.
+
+The checksum file uses the dump basename rather than the container mount path, so
+it can be verified from either the container or the NAS host backup directory.
+
+## QNAP operational notes
+
+- Run Docker Compose from the QNAP normal admin shell. A non-admin account may
+  fail when Compose tries to create Container Station's internal home directory.
+- Current OpenSSH clients use SFTP for `scp` by default. When QNAP SFTP is
+  disabled, upload with legacy SCP mode: `scp -O -P SSH_PORT ...`.
+- Keep mounted shell scripts in LF format. The repo enforces `*.sh text eol=lf`
+  in `.gitattributes`; CRLF causes Bash options such as `pipefail` to fail.
+- Source archives must exclude all `.env*`, `.git`, `.next`, `node_modules`, logs
+  and previous archives. Extracting an archive does not delete retired files, so
+  deployment cleanup/removal steps must be explicit.
 
 The backup connects with `DIRECT_URL`. If the NAS cannot reach Supabase's IPv6
 direct endpoint and the project has no IPv4 add-on, set `DIRECT_URL` to the
