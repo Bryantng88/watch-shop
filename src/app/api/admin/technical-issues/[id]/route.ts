@@ -12,7 +12,7 @@ type RouteContext = {
 
 export async function PATCH(req: Request, context: RouteContext) {
     try {
-        const actor = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+        const actor = await requirePermission(PERMISSIONS.SERVICE_UPDATE);
         const { id } = await context.params;
         const body = await req.json().catch(() => ({}));
 
@@ -44,7 +44,7 @@ export async function PATCH(req: Request, context: RouteContext) {
 
 export async function DELETE(_: Request, context: RouteContext) {
     try {
-        await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+        await requirePermission(PERMISSIONS.SERVICE_DELETE);
         const { id } = await context.params;
         const result = await removeTechnicalIssue(id);
         return NextResponse.json(result);

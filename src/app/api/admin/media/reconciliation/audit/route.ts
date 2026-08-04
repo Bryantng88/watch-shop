@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   try {
-    await requirePermission(PERMISSIONS.PRODUCT_VIEW);
+    await requirePermission(PERMISSIONS.MEDIA_VIEW);
     const params = request.nextUrl.searchParams;
     const take = Number(params.get("take") ?? 100);
     const result = await auditLegacyMediaAssets({

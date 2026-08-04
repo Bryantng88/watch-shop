@@ -7,6 +7,7 @@ import {
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/server/auth/requirePermission";
+import { PERMISSIONS } from "@/constants/permissions";
 import { prisma } from "@/server/db/client";
 import { AppTagOwnerType, AppTagScope } from "@prisma/client";
 import { tagSlug } from "@/domains/task/server/tag/task-tag.repo";
@@ -28,7 +29,7 @@ export type WorkflowTemplateInput = {
 };
 
 export async function listWorkflowTemplatesAction() {
-  await requirePermission("TASK_VIEW");
+  await requirePermission(PERMISSIONS.TASK_VIEW);
 
   const items = await prisma.workflowTemplate.findMany({
     include: {
@@ -43,7 +44,7 @@ export async function listWorkflowTemplatesAction() {
 }
 
 export async function saveWorkflowTemplateAction(input: WorkflowTemplateInput) {
-  await requirePermission("TASK_VIEW");
+  await requirePermission(PERMISSIONS.WORK_CASE_MANAGE);
 
   const name = String(input.name || "").trim();
   if (!name) throw new Error("Vui lòng nhập tên workflow.");
@@ -130,7 +131,7 @@ export async function saveWorkflowTemplateAction(input: WorkflowTemplateInput) {
 }
 
 export async function deleteWorkflowTemplateAction(id: string) {
-  await requirePermission("TASK_VIEW");
+  await requirePermission(PERMISSIONS.WORK_CASE_MANAGE);
 
   const cleanId = String(id || "").trim();
   if (!cleanId) throw new Error("Missing workflow id");
@@ -150,7 +151,7 @@ export async function assignWorkflowTemplateToTagAction(input: {
   tagName: string;
   workflowTemplateId: string | null;
 }) {
-  await requirePermission("TASK_VIEW");
+  await requirePermission(PERMISSIONS.WORK_CASE_MANAGE);
 
   const taskId = String(input.taskId || "").trim();
   const tagName = String(input.tagName || "").trim();

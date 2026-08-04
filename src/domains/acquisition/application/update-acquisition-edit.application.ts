@@ -1,5 +1,3 @@
-"use server";
-
 import { Prisma, ProductType } from "@prisma/client";
 
 import { prisma, type DB } from "@/server/db/client";

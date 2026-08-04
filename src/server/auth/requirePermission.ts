@@ -93,3 +93,19 @@ export async function hasPermission(code: string) {
 
     return Boolean(user?.roles.includes("ADMIN") || permissions.includes(code));
 }
+
+export async function requireAnyPermission(codes: readonly string[]) {
+    const { user, permissions } = await getCurrentUserPermissions();
+
+    if (!user) redirect("/login");
+    if (!user.roles.includes("ADMIN") && !codes.some((code) => permissions.includes(code))) {
+        console.warn("[requireAnyPermission denied]", {
+            requiredAny: codes,
+            userId: user.id,
+            email: user.email,
+        });
+        redirect("/403");
+    }
+
+    return user;
+}

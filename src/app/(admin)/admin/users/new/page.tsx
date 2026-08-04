@@ -1,17 +1,9 @@
-// app/(admin)/admin/users/new/page.tsx
-import { requirePermission } from "@/server/auth/requirePermission";
+import { redirect } from "next/navigation";
+
 import { PERMISSIONS } from "@/constants/permissions";
-import { getAllRoles } from "../_server/user.service";
-import UserCreateDrawer from "../_client/UserCreateDrawer";
+import { requireAnyPermission } from "@/server/auth/requirePermission";
 
 export default async function NewUserPage() {
-    await requirePermission(PERMISSIONS.USER_MANAGE);
-
-    const roles = await getAllRoles();
-
-    return (
-        <UserCreateDrawer
-            roles={roles}
-        />
-    );
+    await requireAnyPermission([PERMISSIONS.USER_CREATE, PERMISSIONS.USER_MANAGE]);
+    redirect("/admin/users?create=1");
 }

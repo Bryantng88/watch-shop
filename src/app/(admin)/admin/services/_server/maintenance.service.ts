@@ -1,5 +1,3 @@
-"use server";
-
 import { prisma } from "@/server/db/client";
 import * as maintenanceRepo from "./maintenance.repo";
 import { MaintenanceEventType, Prisma } from "@prisma/client";

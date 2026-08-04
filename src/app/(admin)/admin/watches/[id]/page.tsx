@@ -31,6 +31,24 @@ function hasAdmin(user: AuthUser) {
     return roles.includes("ADMIN") || permissions.includes("ADMIN");
 }
 
+function canViewCost(user: AuthUser) {
+    const permissions = normalizeAuthValues(user?.permissions);
+
+    return (
+        hasAdmin(user) ||
+        permissions.includes(PERMISSIONS.PRODUCT_COST_VIEW)
+    );
+}
+
+function canEditPrice(user: AuthUser) {
+    const permissions = normalizeAuthValues(user?.permissions);
+
+    return (
+        hasAdmin(user) ||
+        permissions.includes(PERMISSIONS.PRODUCT_PRICE_EDIT)
+    );
+}
+
 function serialize(obj: any) {
     return JSON.parse(
         JSON.stringify(obj, (_key, value) => {
@@ -127,9 +145,10 @@ export default async function WatchDetailPage({
         ]);
 
     if (!detail) notFound();
-    const isAdmin = hasAdmin(user);
-    const safeDetail = isAdmin ? detail : scrubSensitivePrice(detail);
-    const safeTradeHistory = isAdmin
+    const mayViewCost = canViewCost(user);
+    const mayEditPrice = canEditPrice(user);
+    const safeDetail = mayViewCost ? detail : scrubSensitivePrice(detail);
+    const safeTradeHistory = mayViewCost
         ? tradeHistory
         : scrubTradeFinancials(tradeHistory);
 
@@ -141,8 +160,8 @@ export default async function WatchDetailPage({
                 tradeHistory: serialize(safeTradeHistory),
             }}
             permissions={{
-                canViewSensitivePrice: isAdmin,
-                canEditPrice: isAdmin,
+                canViewSensitivePrice: mayViewCost,
+                canEditPrice: mayEditPrice,
             }}
             postTargets={serialize(editOptions.postTargets ?? [])}
         />

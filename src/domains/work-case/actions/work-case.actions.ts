@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/server/auth/requirePermission";
+import { PERMISSIONS } from "@/constants/permissions";
 import { prisma } from "@/server/db/client";
 import {
   createWorkCase,
@@ -17,7 +18,7 @@ import type {
 } from "../server/work-case.types";
 import { TaskPriority, WorkCaseScope } from "@prisma/client";
 async function getWorkCaseAuth() {
-  return requirePermission("TASK_VIEW");
+  return requirePermission(PERMISSIONS.WORK_CASE_MANAGE);
 }
 
 export async function createWorkCaseAction(input: CreateWorkCaseInput) {
@@ -36,14 +37,14 @@ export async function updateWorkCaseAction(id: string, input: UpdateWorkCaseInpu
 }
 
 export async function createWorkCaseCategoryAction(input: CreateWorkCaseCategoryInput) {
-  await requirePermission("TASK_VIEW");
+  await requirePermission(PERMISSIONS.WORK_CASE_MANAGE);
   const item = await createWorkCaseCategory(prisma, input);
   revalidatePath("/admin/work-cases/settings");
   return { ok: true, item };
 }
 
 export async function updateWorkCaseCategoryAction(id: string, input: UpdateWorkCaseCategoryInput) {
-  await requirePermission("TASK_VIEW");
+  await requirePermission(PERMISSIONS.WORK_CASE_MANAGE);
   const item = await updateWorkCaseCategory(prisma, id, input);
   revalidatePath("/admin/work-cases/settings");
   return { ok: true, item };
@@ -81,6 +82,7 @@ export async function searchWorkCaseLinkTargetsAction(input: {
   type: "WATCH" | "ORDER" | "SHIPMENT" | "SERVICE";
   q: string;
 }) {
+  await requirePermission(PERMISSIONS.TASK_VIEW);
   const q = input.q.trim();
   if (!q) return [];
 

@@ -6,9 +6,35 @@ const activityCodes = [
   PERMISSIONS.ACTIVITY_READ,
   PERMISSIONS.ACTIVITY_EDIT,
 ] as const;
+const expectedRolePermissions: Record<string, readonly string[]> = {
+  ACCESSORY_MANAGER: [
+    PERMISSIONS.ACCESSORY_VIEW,
+    PERMISSIONS.ACCESSORY_CREATE,
+    PERMISSIONS.ACCESSORY_UPDATE,
+    PERMISSIONS.ACCESSORY_DELETE,
+    PERMISSIONS.STRAP_ACQUISITION_VIEW,
+    PERMISSIONS.STRAP_ACQUISITION_CREATE,
+    PERMISSIONS.STRAP_ACQUISITION_UPDATE,
+  ],
+  SALE_ADMIN: [
+    PERMISSIONS.TASK_VIEW,
+    PERMISSIONS.PAYMENT_VIEW,
+    PERMISSIONS.PAYMENT_CREATE,
+    PERMISSIONS.PAYMENT_UPDATE,
+    PERMISSIONS.PRODUCT_COST_VIEW,
+    PERMISSIONS.ACTIVITY_READ,
+    PERMISSIONS.ACTIVITY_EDIT,
+  ],
+};
+const retiredPermissionCodes = [
+  "INVOICE_VIEW",
+  "INVOICE_CREATE",
+  "INVOICE_UPDATE",
+  "INVOICE_DELETE",
+] as const;
 
 async function main() {
-  const [permissions, taskViewRoles] = await Promise.all([
+  const [permissions, taskViewRoles, expectedRoles, retiredPermissions] = await Promise.all([
     prisma.permission.findMany({
       where: { code: { in: catalogCodes } },
       select: { code: true },
@@ -26,6 +52,17 @@ async function main() {
         },
       },
     }),
+    prisma.role.findMany({
+      where: { name: { in: Object.keys(expectedRolePermissions) } },
+      select: {
+        name: true,
+        permissions: { select: { code: true } },
+      },
+    }),
+    prisma.permission.findMany({
+      where: { code: { in: [...retiredPermissionCodes] } },
+      select: { code: true },
+    }),
   ]);
 
   const persistedCodes = new Set(permissions.map((permission) => permission.code));
@@ -35,13 +72,23 @@ async function main() {
     const missing = activityCodes.filter((code) => !assigned.has(code));
     return missing.length ? [{ role: role.name, missing }] : [];
   });
+  const roleByName = new Map(expectedRoles.map((role) => [role.name, role]));
+  const expectedRoleDrift = Object.entries(expectedRolePermissions).flatMap(([roleName, expected]) => {
+    const role = roleByName.get(roleName);
+    if (!role) return [{ role: roleName, missing: ["ROLE_MISSING"] }];
+    const assigned = new Set(role.permissions.map((permission) => permission.code));
+    const missing = expected.filter((code) => !assigned.has(code));
+    return missing.length ? [{ role: roleName, missing }] : [];
+  });
   const result = {
-    ok: missingCatalogCodes.length === 0 && roleDrift.length === 0,
+    ok: missingCatalogCodes.length === 0 && roleDrift.length === 0 && expectedRoleDrift.length === 0 && retiredPermissions.length === 0,
     catalogCount: catalogCodes.length,
     persistedCatalogCount: persistedCodes.size,
     taskViewRoleCount: taskViewRoles.length,
     missingCatalogCodes,
     roleDrift,
+    expectedRoleDrift,
+    retiredPermissionCodesPresent: retiredPermissions.map((permission) => permission.code),
   };
 
   console.log(JSON.stringify(result, null, 2));

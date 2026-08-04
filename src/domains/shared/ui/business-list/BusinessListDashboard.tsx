@@ -75,6 +75,7 @@ export default function BusinessListDashboard({
     storageKey,
     customizationRequest = 0,
     showCustomizationTrigger = true,
+    collapsible = false,
 }: {
     data: BusinessListDashboardData;
     views?: BusinessListDashboardView[];
@@ -84,6 +85,7 @@ export default function BusinessListDashboard({
     storageKey?: string;
     customizationRequest?: number;
     showCustomizationTrigger?: boolean;
+    collapsible?: boolean;
 }) {
     const availableWidgets = useMemo(
         () => normalizeWidgets(widgets, registryWidgets, registryWidgets.length) ?? defaultWidgets,
@@ -93,6 +95,7 @@ export default function BusinessListDashboard({
     const [selectedWidgets, setSelectedWidgets] = useState(configuredWidgets);
     const [draftWidgets, setDraftWidgets] = useState(configuredWidgets);
     const [customizing, setCustomizing] = useState(false);
+    const [expanded, setExpanded] = useState(false);
     const selectedWidgetsRef = useRef(selectedWidgets);
 
     useEffect(() => {
@@ -250,13 +253,35 @@ export default function BusinessListDashboard({
                 </div>
             ) : null}
 
-            <DashboardWidgetGrid columns={dashboardColumns(selectedWidgets.length)}>
-                {selectedWidgets.map((widgetKey) => {
+            <DashboardWidgetGrid
+                columns={collapsible ? "sm:!grid-cols-2 min-[1100px]:!grid-cols-4" : dashboardColumns(selectedWidgets.length)}
+            >
+                {selectedWidgets.map((widgetKey, index) => {
                     const definition = BUSINESS_LIST_DASHBOARD_WIDGET_REGISTRY[widgetKey];
                     const Widget = definition.component;
-                    return <Widget key={definition.key} data={data} />;
+                    return (
+                        <div
+                            key={definition.key}
+                            className={`h-full [&>article]:h-full ${index >= 2 && !expanded ? "hidden min-[1100px]:block" : ""}`}
+                        >
+                            <Widget data={data} />
+                        </div>
+                    );
                 })}
             </DashboardWidgetGrid>
+            {collapsible && selectedWidgets.length > 2 ? (
+                <div className="flex justify-end min-[1100px]:hidden">
+                    <button
+                        type="button"
+                        onClick={() => setExpanded((current) => !current)}
+                        aria-expanded={expanded}
+                        className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
+                    >
+                        {expanded ? "Thu gọn" : `Xem thêm ${selectedWidgets.length - 2} mục`}
+                        <ChevronDown className={`h-3.5 w-3.5 transition ${expanded ? "rotate-180" : ""}`} />
+                    </button>
+                </div>
+            ) : null}
         </section>
     );
 }

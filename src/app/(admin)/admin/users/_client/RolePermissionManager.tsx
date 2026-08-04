@@ -3,546 +3,131 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowLeft, Check, Plus, Save, Search, Shield, UsersRound, X } from "lucide-react";
+
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 
-type PermissionItem = {
-    id: string;
-    code: string;
-    description: string | null;
-};
+type PermissionItem = { id: string; code: string; description: string | null };
+type RoleItem = { id: string; name: string; description: string | null; permissions: PermissionItem[] };
+type RoleDraft = { id?: string; name: string; description: string; permissionIds: string[] };
 
-type RoleItem = {
-    id: string;
-    name: string;
-    description: string | null;
-    permissions: PermissionItem[];
-};
+const EMPTY_ROLE: RoleDraft = { name: "", description: "", permissionIds: [] };
 
-type FormState = {
-    id?: string;
-    name: string;
-    description: string;
-    permissionIds: string[];
-};
-
-type PermissionFormState = {
-    code: string;
-    description: string;
-    autoAssignToCurrentRole: boolean;
-};
-
-function groupPermissions(items: PermissionItem[]) {
-    return items.reduce<Record<string, PermissionItem[]>>((acc, p) => {
-        const group = p.code.split("_")[0] || "OTHER";
-        (acc[group] ||= []).push(p);
-        return acc;
-    }, {});
+function permissionGroup(code: string) {
+    const prefixes: Array<[string, string]> = [
+        ["ACCESSORY_", "Phụ kiện"], ["PRODUCT_", "Sản phẩm"], ["ACQUISITION_", "Phiếu nhập"],
+        ["STRAP_ACQUISITION_", "Nhập phụ kiện"], ["ORDER_", "Đơn hàng"], ["PAYMENT_", "Thanh toán"],
+        ["SHIPMENT_", "Vận chuyển"], ["SERVICE_", "Dịch vụ"], ["TASK_", "Công việc"],
+        ["USER_", "Người dùng"], ["CUSTOMER_", "Khách hàng"], ["MEDIA_", "Media"],
+        ["ACTIVITY_", "Hoạt động"], ["SYSTEM_", "Hệ thống"], ["DASHBOARD_", "Dashboard"],
+    ];
+    return prefixes.find(([prefix]) => code.startsWith(prefix))?.[1] ?? "Khác";
 }
 
-function normalizePermissionCodeInput(value: string) {
-    return String(value ?? "")
-        .trim()
-        .replace(/[^a-zA-Z0-9]+/g, "_")
-        .replace(/^_+|_+$/g, "")
-        .replace(/_+/g, "_")
-        .toUpperCase();
-}
-
-function PermissionChip({ code }: { code: string }) {
-    return <span className="rounded bg-blue-50 px-2 py-0.5 text-xs text-blue-700">{code}</span>;
-}
-
-function PermissionCreator({
-    open,
-    form,
-    disabled,
-    currentRoleName,
-    onClose,
-    onChange,
-    onSubmit,
-}: {
-    open: boolean;
-    form: PermissionFormState;
-    disabled: boolean;
-    currentRoleName?: string;
-    onClose: () => void;
-    onChange: (patch: Partial<PermissionFormState>) => void;
-    onSubmit: () => void;
-}) {
-    if (!open) return null;
-
-    const normalizedCode = normalizePermissionCodeInput(form.code);
-
-    return (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
-            <div className="mb-4 flex items-start justify-between gap-3">
-                <div>
-                    <div className="text-sm font-semibold text-slate-900">Thêm permission mới</div>
-                    <p className="mt-1 text-xs text-slate-500">
-                        Tạo permission vào catalog hệ thống, sau đó có thể tick/gán cho role.
-                    </p>
-                </div>
-                <button
-                    type="button"
-                    onClick={onClose}
-                    disabled={disabled}
-                    className="rounded border bg-white px-3 py-1.5 text-xs hover:bg-slate-50 disabled:opacity-50"
-                >
-                    Đóng
-                </button>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-[1fr_1.5fr]">
-                <div>
-                    <label className="text-xs text-gray-600">Mã permission</label>
-                    <input
-                        className="mt-1 h-10 w-full rounded border bg-white px-3 font-mono text-sm"
-                        value={form.code}
-                        onChange={(e) => onChange({ code: e.target.value })}
-                        placeholder="SYSTEM_JOB_VIEW"
-                        disabled={disabled}
-                    />
-                    {normalizedCode ? (
-                        <div className="mt-1 text-xs text-slate-500">
-                            Sẽ lưu thành: <b>{normalizedCode}</b>
-                        </div>
-                    ) : null}
-                </div>
-
-                <div>
-                    <label className="text-xs text-gray-600">Mô tả</label>
-                    <input
-                        className="mt-1 h-10 w-full rounded border bg-white px-3 text-sm"
-                        value={form.description}
-                        onChange={(e) => onChange({ description: e.target.value })}
-                        placeholder="Xem system jobs"
-                        disabled={disabled}
-                    />
-                </div>
-            </div>
-
-            {currentRoleName ? (
-                <label className="mt-3 flex items-center gap-2 text-sm text-slate-700">
-                    <input
-                        type="checkbox"
-                        checked={form.autoAssignToCurrentRole}
-                        onChange={(e) => onChange({ autoAssignToCurrentRole: e.target.checked })}
-                        disabled={disabled}
-                    />
-                    Tạo xong tự tick quyền này cho role {currentRoleName}
-                </label>
-            ) : null}
-
-            <div className="mt-4 flex justify-end gap-2">
-                <button
-                    type="button"
-                    onClick={onClose}
-                    disabled={disabled}
-                    className="rounded border bg-white px-4 py-2 text-sm disabled:opacity-50"
-                >
-                    Hủy
-                </button>
-                <button
-                    type="button"
-                    onClick={onSubmit}
-                    disabled={disabled || !normalizedCode}
-                    className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
-                >
-                    {disabled ? "Đang tạo..." : "Tạo permission"}
-                </button>
-            </div>
-        </div>
-    );
-}
-
-function RoleEditor({
-    open,
-    title,
-    form,
-    permissions,
-    permissionCreatorOpen,
-    permissionForm,
-    creatingPermission,
-    onClose,
-    onToggle,
-    onChange,
-    onSubmit,
-    onOpenPermissionCreator,
-    onClosePermissionCreator,
-    onPermissionFormChange,
-    onCreatePermission,
-    submitting,
-}: {
-    open: boolean;
-    title: string;
-    form: FormState;
-    permissions: PermissionItem[];
-    permissionCreatorOpen: boolean;
-    permissionForm: PermissionFormState;
-    creatingPermission: boolean;
-    onClose: () => void;
-    onToggle: (permissionId: string) => void;
-    onChange: (patch: Partial<FormState>) => void;
-    onSubmit: () => void;
-    onOpenPermissionCreator: () => void;
-    onClosePermissionCreator: () => void;
-    onPermissionFormChange: (patch: Partial<PermissionFormState>) => void;
-    onCreatePermission: () => void;
-    submitting: boolean;
-}) {
-    if (!open) return null;
-
-    const groups = groupPermissions(permissions);
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-            <div className="max-h-[90vh] w-full max-w-5xl overflow-hidden rounded-xl bg-white shadow-2xl">
-                <div className="flex items-center justify-between border-b px-5 py-4">
-                    <div>
-                        <h2 className="text-lg font-semibold">{title}</h2>
-                        <p className="text-sm text-gray-500">Quản lý role và quyền truy cập chi tiết.</p>
-                    </div>
-                    <button type="button" onClick={onClose} className="rounded border px-3 py-1.5 text-sm hover:bg-gray-50">
-                        Đóng
-                    </button>
-                </div>
-
-                <div className="max-h-[calc(90vh-76px)] space-y-5 overflow-y-auto p-5">
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <div>
-                            <label className="text-xs text-gray-600">Tên role</label>
-                            <input
-                                className="mt-1 h-10 w-full rounded border px-3"
-                                value={form.name}
-                                onChange={(e) => onChange({ name: e.target.value })}
-                                placeholder="TECHNICIAN"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs text-gray-600">Mô tả</label>
-                            <input
-                                className="mt-1 h-10 w-full rounded border px-3"
-                                value={form.description}
-                                onChange={(e) => onChange({ description: e.target.value })}
-                                placeholder="Mô tả role"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div className="flex items-start justify-between gap-3">
-                            <div>
-                                <div className="text-sm font-medium">Quyền truy cập</div>
-                                <div className="mt-1 text-xs text-gray-500">
-                                    Chọn permission áp dụng cho role này, hoặc tạo permission mới vào catalog.
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={onOpenPermissionCreator}
-                                disabled={permissionCreatorOpen || submitting}
-                                className="rounded bg-slate-900 px-3 py-2 text-sm text-white disabled:opacity-50"
-                            >
-                                + Thêm quyền mới
-                            </button>
-                        </div>
-
-                        <PermissionCreator
-                            open={permissionCreatorOpen}
-                            form={permissionForm}
-                            disabled={creatingPermission}
-                            currentRoleName={form.name}
-                            onClose={onClosePermissionCreator}
-                            onChange={onPermissionFormChange}
-                            onSubmit={onCreatePermission}
-                        />
-
-                        {Object.entries(groups).map(([group, items]) => (
-                            <div key={group} className="rounded-lg border p-4">
-                                <div className="mb-3 flex items-center justify-between">
-                                    <div className="font-medium">{group}</div>
-                                    <div className="text-xs text-gray-500">{items.length} quyền</div>
-                                </div>
-                                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                                    {items.map((p) => {
-                                        const checked = form.permissionIds.includes(p.id);
-                                        return (
-                                            <label key={p.id} className="flex items-start gap-2 rounded border p-2 hover:bg-gray-50">
-                                                <input
-                                                    type="checkbox"
-                                                    className="mt-1"
-                                                    checked={checked}
-                                                    onChange={() => onToggle(p.id)}
-                                                />
-                                                <div>
-                                                    <div className="text-sm font-medium">{p.code}</div>
-                                                    {p.description ? <div className="text-xs text-gray-500">{p.description}</div> : null}
-                                                </div>
-                                            </label>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="flex justify-end gap-2 border-t pt-4">
-                        <button type="button" onClick={onClose} className="rounded border px-4 py-2">
-                            Hủy
-                        </button>
-                        <button
-                            type="button"
-                            onClick={onSubmit}
-                            disabled={submitting}
-                            className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
-                        >
-                            {submitting ? "Đang lưu..." : "Lưu role"}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-export default function RolePermissionManager({
-    initialRoles,
-    permissions,
-}: {
+export default function RolePermissionManager({ initialRoles, permissions }: {
     initialRoles: RoleItem[];
     permissions: PermissionItem[];
 }) {
     const router = useRouter();
     const notify = useNotify();
     const [roles, setRoles] = useState(initialRoles);
-    const [permissionCatalog, setPermissionCatalog] = useState(permissions);
-    const [form, setForm] = useState<FormState>({ name: "", description: "", permissionIds: [] });
-    const [permissionForm, setPermissionForm] = useState<PermissionFormState>({
-        code: "",
-        description: "",
-        autoAssignToCurrentRole: true,
-    });
-    const [open, setOpen] = useState(false);
-    const [permissionCreatorOpen, setPermissionCreatorOpen] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
-    const [creatingPermission, setCreatingPermission] = useState(false);
+    const [draft, setDraft] = useState<RoleDraft>(() => initialRoles[0]
+        ? { id: initialRoles[0].id, name: initialRoles[0].name, description: initialRoles[0].description ?? "", permissionIds: initialRoles[0].permissions.map((item) => item.id) }
+        : EMPTY_ROLE);
+    const [query, setQuery] = useState("");
+    const [busy, setBusy] = useState(false);
 
-    const totalPermissionCount = permissionCatalog.length;
+    const groups = useMemo(() => {
+        const normalizedQuery = query.trim().toLowerCase();
+        return permissions.reduce<Record<string, PermissionItem[]>>((result, permission) => {
+            if (normalizedQuery && !`${permission.code} ${permission.description ?? ""}`.toLowerCase().includes(normalizedQuery)) return result;
+            (result[permissionGroup(permission.code)] ||= []).push(permission);
+            return result;
+        }, {});
+    }, [permissions, query]);
 
-    function openCreate() {
-        setForm({ name: "", description: "", permissionIds: [] });
-        setPermissionCreatorOpen(false);
-        setOpen(true);
-    }
-
-    function openEdit(role: RoleItem) {
-        setForm({
-            id: role.id,
-            name: role.name,
-            description: role.description ?? "",
-            permissionIds: role.permissions.map((p) => p.id),
-        });
-        setPermissionCreatorOpen(false);
-        setOpen(true);
-    }
-
-    function closeEditor() {
-        if (submitting || creatingPermission) return;
-        setOpen(false);
-        setPermissionCreatorOpen(false);
-    }
-
-    function openPermissionCreator() {
-        setPermissionForm({ code: "", description: "", autoAssignToCurrentRole: Boolean(form.id) });
-        setPermissionCreatorOpen(true);
-    }
-
-    function closePermissionCreator() {
-        if (creatingPermission) return;
-        setPermissionCreatorOpen(false);
+    function selectRole(role: RoleItem) {
+        setDraft({ id: role.id, name: role.name, description: role.description ?? "", permissionIds: role.permissions.map((permission) => permission.id) });
     }
 
     function togglePermission(permissionId: string) {
-        setForm((prev) => ({
-            ...prev,
-            permissionIds: prev.permissionIds.includes(permissionId)
-                ? prev.permissionIds.filter((id) => id !== permissionId)
-                : [...prev.permissionIds, permissionId],
-        }));
+        setDraft((current) => ({ ...current, permissionIds: current.permissionIds.includes(permissionId)
+            ? current.permissionIds.filter((id) => id !== permissionId)
+            : [...current.permissionIds, permissionId] }));
     }
 
-    async function createPermission() {
-        const code = normalizePermissionCodeInput(permissionForm.code);
-        if (!code) {
-            notify.error("Mã permission không được để trống");
-            return;
-        }
-
-        setCreatingPermission(true);
-        try {
-            const res = await fetch("/api/admin/permissions", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    code,
-                    description: permissionForm.description,
-                }),
-            });
-
-            const data = await res.json().catch(() => null);
-            if (!res.ok) {
-                throw new Error(data?.message || data?.detail || "Tạo permission thất bại");
-            }
-
-            const nextPermissions: PermissionItem[] = Array.isArray(data?.permissions)
-                ? data.permissions
-                : data?.permission
-                    ? [...permissionCatalog, data.permission]
-                    : permissionCatalog;
-
-            setPermissionCatalog(nextPermissions);
-
-            if (data?.permission?.id && permissionForm.autoAssignToCurrentRole) {
-                setForm((prev) => ({
-                    ...prev,
-                    permissionIds: prev.permissionIds.includes(data.permission.id)
-                        ? prev.permissionIds
-                        : [...prev.permissionIds, data.permission.id],
-                }));
-            }
-
-            notify.success("Đã tạo permission mới");
-            setPermissionCreatorOpen(false);
-            setPermissionForm({ code: "", description: "", autoAssignToCurrentRole: true });
-            router.refresh();
-        } catch (e: any) {
-            notify.error(e?.message || "Tạo permission thất bại");
-        } finally {
-            setCreatingPermission(false);
-        }
+    function toggleGroup(items: PermissionItem[]) {
+        const allSelected = items.every((item) => draft.permissionIds.includes(item.id));
+        const ids = new Set(draft.permissionIds);
+        items.forEach((item) => allSelected ? ids.delete(item.id) : ids.add(item.id));
+        setDraft((current) => ({ ...current, permissionIds: Array.from(ids) }));
     }
 
-    async function submitForm() {
-        if (!form.name.trim()) {
-            notify.error("Tên role không được để trống");
-            return;
-        }
-
-        setSubmitting(true);
+    async function saveRole() {
+        if (!draft.name.trim()) return notify.error("Tên role không được để trống");
+        setBusy(true);
         try {
-            const res = await fetch(form.id ? `/api/admin/roles/${form.id}` : "/api/admin/roles", {
-                method: form.id ? "PUT" : "POST",
+            const response = await fetch(draft.id ? `/api/admin/roles/${draft.id}` : "/api/admin/roles", {
+                method: draft.id ? "PUT" : "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: form.name,
-                    description: form.description,
-                    permissionIds: form.permissionIds,
-                }),
+                body: JSON.stringify(draft),
             });
-
-            const data = await res.json().catch(() => null);
-            if (!res.ok) {
-                throw new Error(data?.message || data?.detail || "Lưu role thất bại");
-            }
-
-            notify.success(form.id ? "Đã cập nhật role" : "Đã tạo role mới");
-            setOpen(false);
-            router.refresh();
+            const data = await response.json().catch(() => null);
+            if (!response.ok) throw new Error(data?.message || data?.detail || "Không thể lưu role");
             if (Array.isArray(data?.roles)) {
                 setRoles(data.roles);
+                const saved = data.roles.find((role: RoleItem) => role.name === draft.name.trim().toUpperCase());
+                if (saved) selectRole(saved);
             }
-            if (Array.isArray(data?.permissions)) {
-                setPermissionCatalog(data.permissions);
-            }
-        } catch (e: any) {
-            notify.error(e?.message || "Lưu role thất bại");
+            notify.success(draft.id ? "Đã cập nhật role" : "Đã tạo role");
+            router.refresh();
+        } catch (error) {
+            notify.error(error instanceof Error ? error.message : "Không thể lưu role");
         } finally {
-            setSubmitting(false);
+            setBusy(false);
         }
     }
 
     return (
-        <div className="space-y-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                    <h1 className="text-xl font-semibold">Quản lý role & permission</h1>
-                    <p className="text-sm text-gray-500">Tạo permission mới, sau đó gán quyền cho từng role.</p>
+        <div className="min-h-full bg-slate-50/60">
+            <header className="border-b bg-white px-5 py-5 lg:px-7">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex items-start gap-3"><span className="grid h-10 w-10 place-items-center rounded-md bg-slate-100 text-slate-700"><Shield size={19} /></span><div><h1 className="text-xl font-semibold text-slate-950">Role & quyền truy cập</h1><p className="mt-1 text-sm text-slate-500">Thiết lập phạm vi nghiệp vụ theo từng nhóm người dùng.</p></div></div>
+                    <Link href="/admin/users" className="inline-flex h-10 items-center gap-2 rounded-md border bg-white px-3 text-sm font-medium hover:bg-slate-50"><ArrowLeft size={16} /> Người dùng</Link>
                 </div>
-                <div className="flex gap-2">
-                    <Link href="/admin/users" className="rounded border px-3 py-2 text-sm hover:bg-gray-50">
-                        ← Danh sách user
-                    </Link>
-                    <button type="button" onClick={openCreate} className="rounded bg-black px-3 py-2 text-sm text-white">
-                        + Tạo role
-                    </button>
-                </div>
-            </div>
+            </header>
 
-            <div className="rounded-lg border bg-white">
-                <div className="grid grid-cols-12 border-b bg-gray-50 px-4 py-3 text-sm font-medium">
-                    <div className="col-span-2">Role</div>
-                    <div className="col-span-4">Mô tả</div>
-                    <div className="col-span-4">Quyền</div>
-                    <div className="col-span-1 text-center">Số quyền</div>
-                    <div className="col-span-1 text-right">Hành động</div>
-                </div>
+            <main className="grid min-h-[calc(100vh-180px)] grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)]">
+                <aside className="border-r bg-white p-4">
+                    <button type="button" onClick={() => setDraft(EMPTY_ROLE)} className="mb-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-slate-950 text-sm font-medium text-white"><Plus size={16} /> Tạo role mới</button>
+                    <div className="space-y-1">
+                        {roles.map((role) => <button key={role.id} type="button" onClick={() => selectRole(role)} className={`flex w-full items-center justify-between rounded-md px-3 py-3 text-left ${draft.id === role.id ? "bg-slate-100" : "hover:bg-slate-50"}`}><span className="min-w-0"><b className="block truncate text-sm text-slate-900">{role.name}</b><span className="text-xs text-slate-500">{role.permissions.length} quyền</span></span>{draft.id === role.id ? <Check size={16} className="text-slate-700" /> : null}</button>)}
+                    </div>
+                    <div className="mt-5 border-t pt-4 text-xs text-slate-500"><UsersRound size={15} className="mb-2" />Mỗi người dùng có thể được gán nhiều role. Quyền hiệu lực là tổng quyền từ các role đó.</div>
+                </aside>
 
-                <div className="divide-y">
-                    {roles.map((role) => (
-                        <div key={role.id} className="grid grid-cols-12 items-start gap-4 px-4 py-4 text-sm">
-                            <div className="col-span-2 font-semibold">{role.name}</div>
-                            <div className="col-span-4 text-gray-600">{role.description || <span className="text-gray-400">-</span>}</div>
-                            <div className="col-span-4 flex flex-wrap gap-2">
-                                {role.permissions.length ? (
-                                    role.permissions.map((p) => <PermissionChip key={p.id} code={p.code} />)
-                                ) : (
-                                    <span className="text-gray-400">Chưa có quyền</span>
-                                )}
-                            </div>
-                            <div className="col-span-1 text-center font-medium">{role.permissions.length}</div>
-                            <div className="col-span-1 text-right">
-                                <button
-                                    type="button"
-                                    onClick={() => openEdit(role)}
-                                    className="rounded border px-3 py-1.5 text-sm hover:bg-gray-50"
-                                >
-                                    Sửa
-                                </button>
-                            </div>
+                <section className="min-w-0 px-5 py-5 lg:px-7">
+                    <div className="flex flex-wrap items-end justify-between gap-4 border-b pb-5">
+                        <div className="grid flex-1 gap-4 sm:grid-cols-2">
+                            <label className="text-sm font-medium text-slate-700">Tên role<input value={draft.name} onChange={(e) => setDraft((current) => ({ ...current, name: e.target.value }))} className="mt-1.5 h-10 w-full rounded-md border bg-white px-3 font-normal outline-none focus:border-slate-500" placeholder="ACCESSORY_MANAGER" disabled={draft.name === "ADMIN"} /></label>
+                            <label className="text-sm font-medium text-slate-700">Mô tả<input value={draft.description} onChange={(e) => setDraft((current) => ({ ...current, description: e.target.value }))} className="mt-1.5 h-10 w-full rounded-md border bg-white px-3 font-normal outline-none focus:border-slate-500" placeholder="Phạm vi trách nhiệm của role" /></label>
                         </div>
-                    ))}
-                </div>
-            </div>
+                        <button type="button" onClick={saveRole} disabled={busy} className="inline-flex h-10 items-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-medium text-white disabled:opacity-50"><Save size={16} /> {busy ? "Đang lưu..." : "Lưu role"}</button>
+                    </div>
 
-            <div className="rounded-lg border bg-white p-4 text-sm text-gray-600">
-                Tổng permission catalog: <b>{totalPermissionCount}</b>
-                <div className="mt-2 flex flex-wrap gap-2">
-                    {permissionCatalog.map((p) => (
-                        <span key={p.id} className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
-                            {p.code}
-                        </span>
-                    ))}
-                </div>
-            </div>
+                    <div className="mt-5 flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold text-slate-900">Permission</h2><p className="text-xs text-slate-500">Đã chọn {draft.permissionIds.length}/{permissions.length} quyền</p></div><div className="relative w-full sm:w-80"><Search className="absolute left-3 top-2.5 text-slate-400" size={17} /><input value={query} onChange={(e) => setQuery(e.target.value)} className="h-10 w-full rounded-md border bg-white pl-10 pr-9 text-sm outline-none focus:border-slate-500" placeholder="Tìm permission" />{query ? <button type="button" onClick={() => setQuery("")} className="absolute right-2 top-2 grid h-6 w-6 place-items-center text-slate-400"><X size={14} /></button> : null}</div></div>
 
-            <RoleEditor
-                open={open}
-                title={form.id ? `Chỉnh role ${form.name}` : "Tạo role mới"}
-                form={form}
-                permissions={permissionCatalog}
-                permissionCreatorOpen={permissionCreatorOpen}
-                permissionForm={permissionForm}
-                creatingPermission={creatingPermission}
-                onClose={closeEditor}
-                onToggle={togglePermission}
-                onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
-                onSubmit={submitForm}
-                onOpenPermissionCreator={openPermissionCreator}
-                onClosePermissionCreator={closePermissionCreator}
-                onPermissionFormChange={(patch) => setPermissionForm((prev) => ({ ...prev, ...patch }))}
-                onCreatePermission={createPermission}
-                submitting={submitting}
-            />
+                    <div className="mt-5 space-y-5">
+                        {Object.entries(groups).map(([group, items]) => {
+                            const selected = items.filter((item) => draft.permissionIds.includes(item.id)).length;
+                            return <div key={group} className="border-t pt-4 first:border-0 first:pt-0"><div className="mb-3 flex items-center justify-between"><div><h3 className="text-sm font-semibold text-slate-900">{group}</h3><span className="text-xs text-slate-500">{selected}/{items.length} đã chọn</span></div><button type="button" onClick={() => toggleGroup(items)} className="text-xs font-semibold text-slate-600 hover:text-slate-950">{selected === items.length ? "Bỏ chọn nhóm" : "Chọn cả nhóm"}</button></div><div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{items.map((permission) => {
+                                const checked = draft.permissionIds.includes(permission.id);
+                                return <button key={permission.id} type="button" onClick={() => togglePermission(permission.id)} className={`flex min-h-16 items-start gap-3 rounded-md border p-3 text-left transition-colors ${checked ? "border-violet-200 bg-violet-50/70" : "border-slate-200 bg-white hover:border-slate-400"}`}><span className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded border transition-colors ${checked ? "border-violet-500 bg-violet-500 text-white" : "border-slate-300 bg-white"}`}>{checked ? <Check size={13} /> : null}</span><span className="min-w-0"><b className={`block break-all font-mono text-xs ${checked ? "text-violet-950" : "text-slate-800"}`}>{permission.code}</b><span className={`mt-1 block text-xs ${checked ? "text-violet-700" : "text-slate-500"}`}>{permission.description || "Chưa có mô tả"}</span></span></button>;
+                            })}</div></div>;
+                        })}
+                    </div>
+                </section>
+            </main>
         </div>
     );
 }

@@ -1,4 +1,5 @@
 import { after, NextRequest, NextResponse } from "next/server";
+
 import { createOrderApplication } from "@/domains/order/application";
 import type { CreateOrderInput } from "@/domains/order/server/shared";
 
@@ -8,110 +9,86 @@ type PublicOrderItem = {
     title?: unknown;
 };
 
-type PublicOrderBody = Record<string, unknown> & {
+type PublicOrderBody = {
     customerName?: unknown;
     shipPhone?: unknown;
     shipAddress?: unknown;
+    shipCity?: unknown;
+    shipDistrict?: unknown;
+    shipWard?: unknown;
     items?: PublicOrderItem[];
 };
 
-// POST /api/public/orders
+function optionalText(value: unknown, maxLength: number) {
+    return typeof value === "string" ? value.trim().slice(0, maxLength) : null;
+}
+
 export async function POST(req: NextRequest) {
     let body: PublicOrderBody;
 
-    // ==========================
-    // Parse JSON
-    // ==========================
     try {
         body = await req.json() as PublicOrderBody;
     } catch {
-        return NextResponse.json(
-            { error: "Body không hợp lệ (không phải JSON)" },
-            { status: 400 }
-        );
+        return NextResponse.json({ error: "Body must be valid JSON" }, { status: 400 });
     }
 
-    // ==========================
-    // Validate tối thiểu (public)
-    // ==========================
-    // public thường không có customerId → yêu cầu customerName + shipPhone + shipAddress tối thiểu
-    if (!body.customerName || typeof body.customerName !== "string") {
-        return NextResponse.json({ error: "Thiếu tên khách hàng" }, { status: 400 });
+    if (typeof body.customerName !== "string" || !body.customerName.trim()) {
+        return NextResponse.json({ error: "Customer name is required" }, { status: 400 });
+    }
+    if (typeof body.shipPhone !== "string" || !body.shipPhone.trim()) {
+        return NextResponse.json({ error: "Phone number is required" }, { status: 400 });
+    }
+    if (typeof body.shipAddress !== "string" || !body.shipAddress.trim()) {
+        return NextResponse.json({ error: "Shipping address is required" }, { status: 400 });
+    }
+    if (!Array.isArray(body.items) || body.items.length === 0 || body.items.length > 20) {
+        return NextResponse.json({ error: "Order must contain 1 to 20 products" }, { status: 400 });
     }
 
-    if (!body.shipPhone || typeof body.shipPhone !== "string") {
-        return NextResponse.json({ error: "Thiếu số điện thoại" }, { status: 400 });
-    }
-
-    if (!body.shipAddress || typeof body.shipAddress !== "string") {
-        return NextResponse.json({ error: "Thiếu địa chỉ" }, { status: 400 });
-    }
-
-    if (!Array.isArray(body.items) || body.items.length === 0) {
-        return NextResponse.json(
-            { error: "Phải có ít nhất 1 sản phẩm" },
-            { status: 400 }
-        );
-    }
-
-    // Với public: KHÔNG tin price từ client (nếu service của bạn tự lookup giá từ product thì OK)
-    // Nếu service hiện tại cần price thì tạm vẫn validate, nhưng khuyến nghị bỏ price khỏi public input.
-    for (const [i, item] of body.items.entries()) {
-        if (!item.productId || typeof item.productId !== "string") {
-            return NextResponse.json(
-                { error: `Sản phẩm dòng ${i + 1} thiếu productId` },
-                { status: 400 }
-            );
+    for (const item of body.items) {
+        if (typeof item.productId !== "string" || !item.productId) {
+            return NextResponse.json({ error: "Every product must have an id" }, { status: 400 });
         }
-
-        if (typeof item.quantity !== "number" || item.quantity < 1) {
-            return NextResponse.json(
-                { error: `Sản phẩm dòng ${i + 1} số lượng phải ≥ 1` },
-                { status: 400 }
-            );
-        }
-
-        // optional: nếu bạn vẫn đang truyền title từ UI
-        if (item.title != null && typeof item.title !== "string") {
-            return NextResponse.json(
-                { error: `Sản phẩm dòng ${i + 1} title không hợp lệ` },
-                { status: 400 }
-            );
+        if (!Number.isInteger(item.quantity) || Number(item.quantity) < 1 || Number(item.quantity) > 20) {
+            return NextResponse.json({ error: "Product quantity must be between 1 and 20" }, { status: 400 });
         }
     }
 
-    // ==========================
-    // Force flags for WEB orders
-    // ==========================
-    // Ép cứng: không cho client tự set/override
-    const payload = {
-        ...body,
-        customerId: null, // public thường không có customerId (tuỳ bạn)
+    const payload: CreateOrderInput = {
+        customerName: body.customerName.trim().slice(0, 120),
+        shipPhone: body.shipPhone.trim().slice(0, 30),
+        shipAddress: body.shipAddress.trim().slice(0, 500),
+        shipCity: optionalText(body.shipCity, 120),
+        shipDistrict: optionalText(body.shipDistrict, 120),
+        shipWard: optionalText(body.shipWard, 120),
+        customerId: null,
         source: "WEB",
         verificationStatus: "PENDING",
-        hasShipment: true
-        // status: "DRAFT", // nếu service không tự set status thì bạn có thể ép ở đây
+        hasShipment: true,
+        paymentMethod: "BANK_TRANSFER",
+        notes: null,
+        reserve: null,
+        tradeIn: null,
+        items: body.items.map((item) => ({
+            kind: "PRODUCT",
+            productId: String(item.productId),
+            title: typeof item.title === "string" ? item.title.slice(0, 200) : "",
+            quantity: Number(item.quantity),
+            listPrice: 0,
+            unitPriceAgreed: null,
+        })),
     };
-    // OPTIONAL: chặn các field nhạy cảm từ public (tuỳ dự án bạn)
-    // delete payload.discount;
-    // delete payload.manualPrice;
-    // delete payload.internalNotes;
 
-    // ==========================
-    // Create order
-    // ==========================
     try {
-        const order = await createOrderApplication(
-            payload as unknown as CreateOrderInput,
-            { deferConsumers: (work) => after(work) },
-        );
-        return NextResponse.json(order, { status: 201 });
-    } catch (err: unknown) {
-        console.error("Create public order failed:", err);
-        const message = err instanceof Error ? err.message : null;
+        const order = await createOrderApplication(payload, {
+            deferConsumers: (work) => after(work),
+        });
         return NextResponse.json(
-            { error: message || "Lỗi hệ thống" },
-            { status: 400 }
+            { id: order.id, status: order.status },
+            { status: 201 }
         );
+    } catch (error) {
+        console.error("Create public order failed:", error);
+        return NextResponse.json({ error: "Unable to create order" }, { status: 400 });
     }
 }

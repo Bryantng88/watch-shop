@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
+import { PERMISSIONS } from "@/constants/permissions";
+import { requirePermission } from "@/server/auth/requirePermission";
 import { transitionWatchStateApplication } from "../../application";
 import type { WatchStateAction } from "../../server/state";
 
@@ -9,6 +11,7 @@ export async function transitionWatchStateAction(input: {
     productId: string;
     action: WatchStateAction;
 }) {
+    await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
     const result = await transitionWatchStateApplication(input);
 
     revalidatePath("/admin/watches");

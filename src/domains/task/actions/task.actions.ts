@@ -361,6 +361,25 @@ async function getTaskAuth() {
   return requirePermission("TASK_VIEW");
 }
 
+function operationalPermission(targetType?: string | null) {
+  const normalized = String(targetType ?? "").trim().toUpperCase();
+  if (normalized === TaskExecutionTargetType.PAYMENT) return PERMISSIONS.PAYMENT_UPDATE;
+  if (normalized === TaskExecutionTargetType.SHIPMENT) return PERMISSIONS.SHIPMENT_UPDATE;
+  if (normalized === TaskExecutionTargetType.ORDER) return PERMISSIONS.ORDER_UPDATE;
+  if (normalized === TaskExecutionTargetType.WATCH) return PERMISSIONS.PRODUCT_UPDATE;
+  if (
+    normalized === TaskExecutionTargetType.SERVICE_REQUEST ||
+    normalized === TaskExecutionTargetType.TECHNICAL_ISSUE
+  ) {
+    return PERMISSIONS.SERVICE_UPDATE;
+  }
+  return PERMISSIONS.TASK_MANAGE;
+}
+
+async function requireOperationalPermission(targetType?: string | null) {
+  return requirePermission(operationalPermission(targetType));
+}
+
 async function getActivityAuth(permission: typeof PERMISSIONS.ACTIVITY_READ | typeof PERMISSIONS.ACTIVITY_EDIT) {
   await requirePermission(PERMISSIONS.TASK_VIEW);
   return requirePermission(permission);
@@ -1284,6 +1303,13 @@ export async function applyQueueItemManualTransitionAction(input: {
   if (!bindingId) throw new Error("Missing bindingId");
   if (!actionKey && !toState) throw new Error("Missing manual workflow action");
 
+  const bindingAccess = await prisma.taskExecution.findUnique({
+    where: { id: bindingId },
+    select: { targetType: true },
+  });
+  if (!bindingAccess) throw new Error("BINDING_NOT_FOUND");
+  await requireOperationalPermission(bindingAccess.targetType);
+
   const actorUserId = getAuthUserId(auth);
   if (!actorUserId) throw new Error("AUTHENTICATED_ACTOR_REQUIRED");
   const actorLabel = auth?.user?.name ?? auth?.name ?? auth?.user?.email ?? auth?.email ?? null;
@@ -1516,6 +1542,13 @@ export async function submitOperationalBlueprintActionAction(input: {
   const actionKey = String(input.actionKey ?? "").trim();
   if (!taskItemId) throw new Error("Missing taskItemId");
   if (!actionKey) throw new Error("Missing Blueprint action");
+
+  const actionTargetType = PAYMENT_OPERATION_BLUEPRINT_ACTION_KEYS.has(actionKey)
+    ? TaskExecutionTargetType.PAYMENT
+    : SHIPMENT_OPERATION_BLUEPRINT_ACTION_KEYS.has(actionKey)
+      ? TaskExecutionTargetType.SHIPMENT
+      : input.targetType;
+  await requireOperationalPermission(actionTargetType);
 
   const actorUserId = getAuthUserId(auth);
   if (!actorUserId) throw new Error("AUTHENTICATED_ACTOR_REQUIRED");

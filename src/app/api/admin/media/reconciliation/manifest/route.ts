@@ -9,7 +9,7 @@ import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const auth = await requirePermissionApi(PERMISSIONS.PRODUCT_VIEW);
+  const auth = await requirePermissionApi(PERMISSIONS.MEDIA_VIEW);
   if (auth instanceof Response) return auth;
   return NextResponse.json({ ok: true, data: await getLegacyManifestSummary() });
 }

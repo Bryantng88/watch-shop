@@ -1,8 +1,18 @@
 import { prisma, DB } from "@/server/db/client";
 
-export async function getUserListRepo(params: { skip: number; take: number }) {
+export async function getUserListRepo(params: { skip: number; take: number; q?: string }) {
+    const where = params.q
+        ? {
+            OR: [
+                { email: { contains: params.q, mode: "insensitive" as const } },
+                { name: { contains: params.q, mode: "insensitive" as const } },
+                { roles: { some: { name: { contains: params.q, mode: "insensitive" as const } } } },
+            ],
+        }
+        : {};
     const [items, total] = await Promise.all([
         prisma.user.findMany({
+            where,
             skip: params.skip,
             take: params.take,
             orderBy: { createdAt: "desc" },
@@ -15,12 +25,13 @@ export async function getUserListRepo(params: { skip: number; take: number }) {
                 updatedAt: true,
                 roles: {
                     select: {
+                        id: true,
                         name: true,
                     },
                 },
             },
         }),
-        prisma.user.count(),
+        prisma.user.count({ where }),
     ]);
 
     return { items, total };
@@ -43,16 +54,16 @@ export async function createUserRepo(data: {
     email: string;
     name?: string;
     passwordHash: string;
-    roleId: string;
+    roleIds: string[];
+    isActive: boolean;
 }) {
     return prisma.user.create({
         data: {
             email: data.email,
             name: data.name,
             passwordHash: data.passwordHash,
-            roles: {
-                connect: { id: data.roleId },
-            },
+            isActive: data.isActive,
+            roles: { connect: data.roleIds.map((id) => ({ id })) },
         },
         select: {
             id: true,
@@ -66,13 +77,24 @@ export async function updateUserRepo(
     db: DB,
     id: string,
     data: {
+        email?: string;
         name?: string;
         isActive?: boolean;
+        passwordHash?: string;
+        roleIds?: string[];
     }
 ) {
     return db.user.update({
         where: { id },
-        data,
+        data: {
+            ...(data.email !== undefined ? { email: data.email } : {}),
+            ...(data.name !== undefined ? { name: data.name } : {}),
+            ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
+            ...(data.passwordHash !== undefined ? { passwordHash: data.passwordHash } : {}),
+            ...(data.roleIds !== undefined
+                ? { roles: { set: data.roleIds.map((roleId) => ({ id: roleId })) } }
+                : {}),
+        },
     });
 }
 

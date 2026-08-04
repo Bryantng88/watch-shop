@@ -56,6 +56,15 @@ function canEditPrice(user: AuthUser) {
     );
 }
 
+function canApproveProduct(user: AuthUser) {
+    const permissions = normalizeAuthValues(user?.permissions);
+
+    return (
+        hasAdmin(user) ||
+        permissions.includes(PERMISSIONS.PRODUCT_APPROVE)
+    );
+}
+
 function serialize<T>(value: T): T {
     return JSON.parse(JSON.stringify(value));
 }
@@ -188,7 +197,7 @@ export default async function WatchEditPage({
                 postTargets={serialize(editOptions.postTargets ?? [])}
                 canViewCost={canViewCost(user)}
                 canEditPrice={canEditPrice(user)}
-                canReviewContent={hasAdmin(user)}
+                canReviewContent={canApproveProduct(user)}
                 initialMediaWorkDone={mediaWorkDone}
             />
         </div>

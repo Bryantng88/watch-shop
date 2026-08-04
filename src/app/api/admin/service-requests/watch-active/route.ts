@@ -33,7 +33,7 @@ function fail(error: unknown, status = 400) {
 
 export async function GET(request: NextRequest) {
     try {
-        await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+        await requirePermission(PERMISSIONS.SERVICE_VIEW);
 
         const productId = request.nextUrl.searchParams.get("productId");
         if (!productId) throw new Error("Missing productId");
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        const actor = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+        const actor = await requirePermission(PERMISSIONS.SERVICE_CREATE);
 
         const body = await request.json().catch(() => ({}));
         if (!body?.productId) throw new Error("Missing productId");
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
     try {
-        const actor = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+        const actor = await requirePermission(PERMISSIONS.SERVICE_UPDATE);
 
         const body = await request.json().catch(() => ({}));
         if (!body?.productId) throw new Error("Missing productId");

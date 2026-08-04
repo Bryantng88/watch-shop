@@ -3,6 +3,7 @@ import {
   publishWorkflowDefinitionDraftBlueprint,
 } from "@/domains/blueprint/server";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
+import { PERMISSIONS } from "@/constants/permissions";
 
 function isApiResponse(value: unknown): value is NextResponse {
   return value instanceof NextResponse;
@@ -16,7 +17,7 @@ export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requirePermissionApi("TASK_VIEW");
+  const auth = await requirePermissionApi(PERMISSIONS.WORK_CASE_MANAGE);
   if (isApiResponse(auth)) return auth;
 
   try {
@@ -47,4 +48,3 @@ export async function POST(
     );
   }
 }
-

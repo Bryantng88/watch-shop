@@ -9,7 +9,7 @@ export async function POST(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const actor = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+        const actor = await requirePermission(PERMISSIONS.SERVICE_UPDATE);
         const { id } = await params;
         const body = await req.json().catch(() => ({}));
 

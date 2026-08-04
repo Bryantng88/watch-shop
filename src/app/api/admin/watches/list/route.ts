@@ -5,6 +5,7 @@ import { listAdminWatches } from "@/domains/watch/server/list/watch-list.repo";
 import type { WatchListSubFilter } from "@/domains/watch/ui/list/types";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
+import { scrubWatchListSensitivePrices } from "@/domains/watch/server/list/watch-list-visibility";
 
 export const dynamic = "force-dynamic";
 
@@ -84,7 +85,7 @@ function buildWatchListInput(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
     try {
-        await requirePermission(PERMISSIONS.PRODUCT_VIEW);
+        const user = await requirePermission(PERMISSIONS.PRODUCT_VIEW);
 
         const input = buildWatchListInput(req);
         const consistency = req.nextUrl.searchParams.get("consistency");
@@ -92,9 +93,13 @@ export async function GET(req: NextRequest) {
             ? await listAdminWatches(input)
             : await getAdminWatchList(input);
 
+        const canViewCost =
+            user.roles.includes("ADMIN") ||
+            user.permissions.includes(PERMISSIONS.PRODUCT_COST_VIEW);
+
         return NextResponse.json({
             ok: true,
-            data: serialize(result),
+            data: serialize(canViewCost ? result : scrubWatchListSensitivePrices(result)),
         });
     } catch (error) {
         console.error("[WATCH_LIST_API_ERROR]", error);

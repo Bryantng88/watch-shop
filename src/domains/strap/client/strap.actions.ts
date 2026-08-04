@@ -8,7 +8,7 @@ import { listAvailableClasps, listStraps } from "../server/strap-read.service";
 import { installStrapOnWatch } from "../server/strap-command.service";
 
 export async function listAvailableStrapsAction() {
-  await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+  await requirePermission(PERMISSIONS.ACCESSORY_UPDATE);
   const rows = await listStraps();
   return rows.filter(
     (row) =>
@@ -19,7 +19,7 @@ export async function listAvailableStrapsAction() {
 }
 
 export async function listAvailableClaspsAction() {
-  await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+  await requirePermission(PERMISSIONS.ACCESSORY_UPDATE);
   const rows = await listAvailableClasps();
   return rows.map((row) => ({
     variantId: row.id,
@@ -38,7 +38,7 @@ export async function installStrapFromSpecAction(input: {
   variantId: string;
   claspVariantId?: string | null;
 }) {
-  const actor = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+  const actor = await requirePermission(PERMISSIONS.ACCESSORY_UPDATE);
   const result = await installStrapOnWatch({
     watchId: input.watchId,
     variantId: input.variantId,

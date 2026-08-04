@@ -2,6 +2,7 @@
 
 import { AppTagOwnerType, AppTagTargetType } from "@prisma/client";
 import { requirePermission } from "@/server/auth/requirePermission";
+import { PERMISSIONS } from "@/constants/permissions";
 import { prisma } from "@/server/db/client";
 import {
     ensureOwnerTagsRepo,
@@ -10,7 +11,7 @@ import {
 } from "../server/tag/task-tag.repo";
 
 async function getTaskAuth() {
-    return requirePermission("TASK_VIEW");
+    return requirePermission(PERMISSIONS.TASK_VIEW);
 }
 
 export async function listTaskScopeTagsAction(taskId: string) {
@@ -31,7 +32,7 @@ export async function ensureTaskScopeTagsAction(input: {
     taskId: string;
     names: string[];
 }) {
-    await getTaskAuth();
+    await requirePermission(PERMISSIONS.TASK_MANAGE);
 
     const taskId = String(input.taskId || "").trim();
     if (!taskId) throw new Error("Missing taskId");
@@ -50,7 +51,7 @@ export async function setTaskItemTagsAction(input: {
     taskItemId: string;
     names: string[];
 }) {
-    await getTaskAuth();
+    await requirePermission(PERMISSIONS.TASK_MANAGE);
 
     const taskId = String(input.taskId || "").trim();
     const taskItemId = String(input.taskItemId || "").trim();

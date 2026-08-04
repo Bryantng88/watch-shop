@@ -55,6 +55,8 @@ ports or expose Container Station management to the Internet.
 
 1. Copy `.env.build.example` to `.env.build` and
    `.env.production.example` to `.env.production` on the deployment host.
+   Generate a unique `AUTH_SECRET` of at least 32 random characters and keep it
+   stable in `.env.production`. Changing it invalidates every login session.
 2. Replace every placeholder and restrict read access to both files. Keep only
    public build values and, if prerendering requires it, a restricted database
    account in `.env.build`. Runtime credentials belong in `.env.production`.
@@ -114,6 +116,11 @@ using the ops image and after taking a database backup.
 
 ## Release update
 
+Build release images on the NAS from the uploaded/checked-out source. The normal
+workflow is to SSH into the QNAP admin shell, change to `/share/WatchShop/app`,
+validate Compose and run the build there. Do not copy a locally built Windows
+image to the NAS.
+
 Use an immutable tag such as a Git commit SHA in `IMAGE_TAG`:
 
 ```sh
@@ -132,6 +139,17 @@ Keep `.env.build` and `.env.production` out of source control. Docker mounts
 an image layer.
 
 ## Database backup
+
+Production revision 2 contains authorization migrations. Follow the revision 2
+release record in `docs/deployment/production-build-handoff.md`: verify a backup,
+run `migrate`, run the read-only permission catalog audit inside the migrate
+image, and only then recreate the app service.
+
+At the time of revision 2, development and NAS use the same Supabase database.
+Running Prisma migration commands from either machine affects that shared
+database. Apply the release migrations only through the documented backup,
+migrate and audit sequence. Use a separate Supabase development project for
+future schema work.
 
 `db-backup` creates a compressed custom-format dump of the application's `public`
 schema, validates that the archive is readable and writes a SHA-256 checksum. It
@@ -156,6 +174,11 @@ it can be verified from either the container or the NAS host backup directory.
 
 ## QNAP operational notes
 
+- The step-by-step upload, login, privilege elevation, checksum, backup, build,
+  migration, permission audit and rollout commands are maintained under
+  `QNAP operator runbook` in `docs/deployment/production-build-handoff.md`.
+- Upload and SSH as `user`, then run `sudo -i` before Docker commands. Direct
+  `admin` SSH authentication is disabled in the current NAS configuration.
 - Run Docker Compose from the QNAP normal admin shell. A non-admin account may
   fail when Compose tries to create Container Station's internal home directory.
 - Current OpenSSH clients use SFTP for `scp` by default. When QNAP SFTP is

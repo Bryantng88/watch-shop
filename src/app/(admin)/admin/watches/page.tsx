@@ -2,6 +2,7 @@ import { getAdminWatchList } from "@/domains/watch/server";
 import WatchListClient from "@/domains/watch/client/WatchListClient";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
+import { scrubWatchListSensitivePrices } from "@/domains/watch/server/list/watch-list-visibility";
 import { getListVendors } from "../vendors/_server/vendor.repo";
 import { unstable_cache } from "next/cache";
 
@@ -131,10 +132,13 @@ export default async function WatchesPage({
 
     const input = buildInitialWatchListInput(resolvedSearchParams);
 
-    const [initialResult, vendors] = await Promise.all([
+    const [watchListResult, vendors] = await Promise.all([
         getAdminWatchList(input),
         getCachedListVendors(),
     ]);
+    const initialResult = canViewCost
+        ? watchListResult
+        : scrubWatchListSensitivePrices(watchListResult);
 
     return (
         <WatchListClient

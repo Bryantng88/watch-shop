@@ -9,7 +9,7 @@ type RouteContext = {
 
 export async function POST(req: Request, context: RouteContext) {
     try {
-        const actor = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+        const actor = await requirePermission(PERMISSIONS.SERVICE_UPDATE);
         const { id } = await context.params;
         const body = await req.json().catch(() => ({}));
 

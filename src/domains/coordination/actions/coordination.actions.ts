@@ -4,6 +4,7 @@ import { TaskStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { parseWorkspaceDefinitionSnapshot } from "@/domains/blueprint/shared/workspace-capabilities";
 import { requirePermission } from "@/server/auth/requirePermission";
+import { PERMISSIONS } from "@/constants/permissions";
 import { prisma } from "@/server/db/client";
 import type { CoordinationContext } from "../server/coordination-cycle.types";
 import { normalizeWorkTypeKey } from "@/domains/task/server/work-type.service";
@@ -108,7 +109,7 @@ export async function setWorkspaceAutoBindingReceiverAction(input: {
   blueprintKey: string;
   blueprintSource: string;
 }) {
-  await requirePermission("TASK_VIEW");
+  await requirePermission(PERMISSIONS.TASK_MANAGE);
 
   const taskId = clean(input.taskId);
   const taskItemId = clean(input.taskItemId);
@@ -169,7 +170,7 @@ export async function updateSpaceSharingAction(input: {
   coreFlowKey?: string | null;
   sharedUserIds: string[];
 }) {
-  await requirePermission("TASK_VIEW");
+  await requirePermission(PERMISSIONS.TASK_MANAGE);
 
   const taskId = clean(input.taskId);
   const sharingScope = input.sharingScope;
@@ -229,7 +230,7 @@ export async function updateSpaceSharingAction(input: {
 export async function loadSpaceSharingAction(input: {
   taskId: string;
 }) {
-  await requirePermission("TASK_VIEW");
+  await requirePermission(PERMISSIONS.TASK_VIEW);
 
   const taskId = clean(input.taskId);
   if (!taskId) throw new Error("Missing taskId");
@@ -290,7 +291,7 @@ export async function updateTechnicalIssuePriorityAction(input: {
   priority: "URGENT" | "NORMAL";
   context: CoordinationContext;
 }) {
-  await requirePermission("TASK_VIEW");
+  await requirePermission(PERMISSIONS.SERVICE_UPDATE);
 
   const issueId = clean(input.issueId);
   const priority = input.priority === "URGENT" ? "URGENT" : "NORMAL";

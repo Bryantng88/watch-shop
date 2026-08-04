@@ -10,7 +10,7 @@ import { requestStrapProcessingAction } from "./actions";
 function money(value: unknown) { return new Intl.NumberFormat("vi-VN").format(Number(value ?? 0)); }
 
 export default async function StrapDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requirePermission(PERMISSIONS.PRODUCT_VIEW);
+  await requirePermission(PERMISSIONS.ACCESSORY_VIEW);
   const { id } = await params;
   const row = await getStrapDetail(id);
   if (!row?.StrapVariantSpec) notFound();

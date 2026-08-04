@@ -39,6 +39,7 @@
     "coordination:smoke-operation-flows": "tsx scripts/smoke-coordination-operation-flows.ts",
     "coordination:audit-read-architecture": "tsx scripts/audit-operation-read-architecture.ts",
     "auth:audit-permissions": "tsx scripts/audit-permission-catalog.ts",
+    "auth:audit-policy": "tsx scripts/audit-admin-permission-policy.ts",
     "gen": "prisma generate && node scripts/trim-zod.js"
   },
   "prisma": {

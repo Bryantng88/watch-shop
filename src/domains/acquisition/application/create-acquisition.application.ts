@@ -1,5 +1,3 @@
-"use server";
-
 import { prisma } from "@/server/db/client";
 import * as dto from "../shared/acquisition.dto";
 import { toDraftItem } from "../shared/acquisition.mapper";

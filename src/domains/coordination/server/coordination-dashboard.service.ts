@@ -653,6 +653,15 @@ function authRoles(auth: unknown) {
     : [];
 }
 
+function authPermissions(auth: unknown) {
+  const authRecord = asRecord(auth);
+  const user = asRecord(authRecord.user);
+  const permissions = authRecord.permissions ?? user.permissions ?? [];
+  return Array.isArray(permissions)
+    ? permissions.map((permission) => text(permission).toUpperCase()).filter(Boolean)
+    : [];
+}
+
 function authCanViewAll(auth: unknown) {
   const authRecord = asRecord(auth);
   const user = asRecord(authRecord.user);
@@ -723,7 +732,16 @@ function canViewTicket(
   const shareGroupKey = ticketShareGroupKey(item.note) ?? "operation";
 
   const roles = authRoles(auth);
-  return roles.includes(shareGroupKey);
+  if (roles.includes(shareGroupKey)) return true;
+
+  const permissionByShareGroup: Record<string, string> = {
+    payment: "PAYMENT_VIEW",
+    sales: "ORDER_VIEW",
+    technical: "SERVICE_VIEW",
+    media: "MEDIA_VIEW",
+  };
+  const requiredPermission = permissionByShareGroup[shareGroupKey];
+  return Boolean(requiredPermission && authPermissions(auth).includes(requiredPermission));
 }
 
 function buildQueueSummary(input: {

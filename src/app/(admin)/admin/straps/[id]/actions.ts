@@ -8,7 +8,7 @@ import { requestStrapProcessing } from "@/domains/strap/server";
 import { requirePermission } from "@/server/auth/requirePermission";
 
 export async function requestStrapProcessingAction(variantId: string) {
-  const actor = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+  const actor = await requirePermission(PERMISSIONS.ACCESSORY_UPDATE);
   await requestStrapProcessing({
     variantId,
     actorUserId: actor.id,

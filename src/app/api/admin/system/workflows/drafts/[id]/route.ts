@@ -5,6 +5,7 @@ import {
   updateWorkflowDefinitionDraft,
 } from "@/domains/workflow-definition/server/workflow-definition-draft.service";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
+import { PERMISSIONS } from "@/constants/permissions";
 
 function isApiResponse(value: unknown): value is NextResponse {
   return value instanceof NextResponse;
@@ -18,7 +19,7 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requirePermissionApi("TASK_VIEW");
+  const auth = await requirePermissionApi(PERMISSIONS.TASK_VIEW);
   if (isApiResponse(auth)) return auth;
 
   const draft = await getWorkflowDefinitionDraft((await params).id);
@@ -36,7 +37,7 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requirePermissionApi("TASK_VIEW");
+  const auth = await requirePermissionApi(PERMISSIONS.WORK_CASE_MANAGE);
   if (isApiResponse(auth)) return auth;
 
   try {
@@ -72,7 +73,7 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requirePermissionApi("TASK_VIEW");
+  const auth = await requirePermissionApi(PERMISSIONS.WORK_CASE_MANAGE);
   if (isApiResponse(auth)) return auth;
 
   const draft = await archiveWorkflowDefinitionDraft((await params).id, auth.id ?? null);

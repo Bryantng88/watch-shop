@@ -88,7 +88,7 @@ function isAuthResponse(value: unknown): value is NextResponse {
 
 export async function POST(request: Request) {
   try {
-    const auth = await requirePermissionApi(PERMISSIONS.PRODUCT_UPDATE);
+    const auth = await requirePermissionApi(PERMISSIONS.SERVICE_UPDATE);
     if (isAuthResponse(auth)) return auth;
 
     const body = await request.json().catch(() => ({}));

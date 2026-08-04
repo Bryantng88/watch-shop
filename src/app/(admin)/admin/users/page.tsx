@@ -1,7 +1,7 @@
 // app/(admin)/admin/users/page.tsx
-import { requirePermission } from "@/server/auth/requirePermission";
+import { requireAnyPermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
-import { getAdminUserList } from "./_server/user.service";
+import { getAdminUserList, getAllRoles } from "./_server/user.service";
 import UserListPageClient from "./_client/ListUser";
 
 export default async function UsersPage({
@@ -10,10 +10,14 @@ export default async function UsersPage({
     searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
     const resolvedSearchParams = await searchParams;
-    await requirePermission(PERMISSIONS.USER_MANAGE);
+    const user = await requireAnyPermission([PERMISSIONS.USER_VIEW, PERMISSIONS.USER_MANAGE]);
+    const permissionSet = new Set(user.permissions);
+    const isAdmin = user.roles.includes("ADMIN");
 
-    const { items, total, page, pageSize } =
-        await getAdminUserList(resolvedSearchParams);
+    const [{ items, total, page, pageSize }, roles] = await Promise.all([
+        getAdminUserList(resolvedSearchParams),
+        getAllRoles(),
+    ]);
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -25,6 +29,10 @@ export default async function UsersPage({
             pageSize={pageSize}
             totalPages={totalPages}
             rawSearchParams={resolvedSearchParams}
+            roles={roles}
+            canCreate={isAdmin || permissionSet.has(PERMISSIONS.USER_CREATE) || permissionSet.has(PERMISSIONS.USER_MANAGE)}
+            canUpdate={isAdmin || permissionSet.has(PERMISSIONS.USER_UPDATE) || permissionSet.has(PERMISSIONS.USER_MANAGE)}
+            canManageRoles={isAdmin || permissionSet.has(PERMISSIONS.USER_MANAGE)}
         />
     );
 

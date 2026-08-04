@@ -1,5 +1,3 @@
-"use server";
-
 import { prisma } from "@/server/db/client";
 import { getPaymentOwnerSummaryProjection } from "@/domains/projection/server/payment-owner-summary.projection";
 import {

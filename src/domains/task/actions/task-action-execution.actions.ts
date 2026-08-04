@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/server/db/client";
 import { requirePermission } from "@/server/auth/requirePermission";
+import { PERMISSIONS } from "@/constants/permissions";
 import {
   executeTaskAction,
   previewTaskAction,
@@ -15,7 +16,7 @@ type ExecuteTaskActionActionInput = {
 };
 
 export async function previewTaskActionAction(taskId: string) {
-  const auth = await requirePermission("TASK_UPDATE");
+  const auth = await requirePermission(PERMISSIONS.TASK_MANAGE);
   const result = await previewTaskAction(prisma, { taskId }, auth);
   return serialize(result);
 }
@@ -24,7 +25,7 @@ export async function executeTaskActionAction(
   inputOrTaskId: string | ExecuteTaskActionActionInput,
   serviceMode?: "SR_ONLY" | "SR_WITH_TECHNICAL_ISSUE",
 ) {
-  const auth = await requirePermission("TASK_UPDATE");
+  const auth = await requirePermission(PERMISSIONS.TASK_MANAGE);
 
   const input =
     typeof inputOrTaskId === "string"
@@ -70,7 +71,7 @@ function serialize<T>(value: T): T {
 export async function deleteTaskExecutionAction(input: {
   executionId: string;
 }) {
-  await requirePermission("TASK_UPDATE");
+  await requirePermission(PERMISSIONS.TASK_MANAGE);
 
   const executionId = String(input.executionId || "").trim();
   if (!executionId) throw new Error("Missing executionId");
@@ -99,7 +100,7 @@ export async function moveTaskExecutionAction(input: {
   executionId: string;
   toTaskItemId: string;
 }) {
-  await requirePermission("TASK_UPDATE");
+  await requirePermission(PERMISSIONS.TASK_MANAGE);
 
   const executionId = String(input.executionId || "").trim();
   const toTaskItemId = String(input.toTaskItemId || "").trim();

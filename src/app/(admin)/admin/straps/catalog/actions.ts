@@ -7,7 +7,7 @@ import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
 
 export async function createStrapCatalogOption(formData: FormData) {
-  await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+  await requirePermission(PERMISSIONS.ACCESSORY_UPDATE);
   const kind = String(formData.get("kind") ?? "").trim().toUpperCase() as StrapCatalogOptionKind;
   const name = String(formData.get("name") ?? "").trim();
   const code = String(formData.get("code") ?? name).trim().toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "");

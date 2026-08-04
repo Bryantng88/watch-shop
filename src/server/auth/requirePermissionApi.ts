@@ -28,3 +28,10 @@ export async function requirePermissionApi(code: string) {
 
     return user;
 }
+
+export async function requireAnyPermissionApi(codes: readonly string[]) {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    if (user.roles?.includes("ADMIN") || codes.some((code) => user.permissions.includes(code))) return user;
+    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+}

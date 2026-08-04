@@ -2,11 +2,11 @@
 import { NextResponse } from "next/server";
 
 import { PERMISSIONS } from "@/constants/permissions";
-import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
+import { requireAnyPermissionApi } from "@/server/auth/requirePermissionApi";
 import { createAdminUser } from "@/app/(admin)/admin/users/_server/user.service";
 
 export async function POST(req: Request) {
-    const auth = await requirePermissionApi(PERMISSIONS.USER_MANAGE);
+    const auth = await requireAnyPermissionApi([PERMISSIONS.USER_CREATE, PERMISSIONS.USER_MANAGE]);
     if (auth instanceof Response) return auth;
 
     try {

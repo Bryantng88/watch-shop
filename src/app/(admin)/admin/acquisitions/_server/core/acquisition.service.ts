@@ -1,5 +1,3 @@
-"use server";
-
 import { prisma, DB } from "@/server/db/client";
 import * as dto from "../shared/acquisition.dto";
 import * as repoAcq from "@/domains/acquisition/server";

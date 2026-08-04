@@ -11,7 +11,8 @@ import {
   postServiceRequestsApplication,
 } from "../application";
 import { createTechnicalIssue } from "../server/issue-board";
-import { getCurrentUser } from "@/server/auth/getCurrentUser";
+import { PERMISSIONS } from "@/constants/permissions";
+import { requirePermission } from "@/server/auth/requirePermission";
 function serialize<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj, (_key, value) => {
     if (value instanceof Date) return value.toISOString();
@@ -26,13 +27,14 @@ function revalidateService() {
 }
 
 export async function createTechnicalChecksFromProductsAction(input: Parameters<typeof createTechnicalChecksFromProductsApplication>[0]) {
+  await requirePermission(PERMISSIONS.SERVICE_CREATE);
   const result = await createTechnicalChecksFromProductsApplication(input);
   revalidateService();
   return serialize(result);
 }
 
 export async function postServiceRequestsAction(ids: string[]) {
-  const actor = await getCurrentUser();
+  const actor = await requirePermission(PERMISSIONS.SERVICE_UPDATE);
   if (!actor?.id) throw new Error("AUTHENTICATED_ACTOR_REQUIRED");
   const result = await postServiceRequestsApplication({
     ids,
@@ -44,7 +46,7 @@ export async function postServiceRequestsAction(ids: string[]) {
 }
 
 export async function completeServiceRequestAction(input: { serviceRequestId: string; note?: string | null }) {
-  const actor = await getCurrentUser();
+  const actor = await requirePermission(PERMISSIONS.SERVICE_UPDATE);
   if (!actor?.id) throw new Error("AUTHENTICATED_ACTOR_REQUIRED");
   const result = await completeServiceRequestApplication({
     ...input,
@@ -57,7 +59,7 @@ export async function completeServiceRequestAction(input: { serviceRequestId: st
 }
 
 export async function assignVendorForServiceRequestAction(input: { serviceRequestId: string; vendorId: string; reason?: string | null; setInProgress?: boolean }) {
-  const actor = await getCurrentUser();
+  const actor = await requirePermission(PERMISSIONS.SERVICE_UPDATE);
   if (!actor?.id) throw new Error("AUTHENTICATED_ACTOR_REQUIRED");
   const result = await assignVendorForServiceRequestApplication({
     ...input,
@@ -70,7 +72,7 @@ export async function assignVendorForServiceRequestAction(input: { serviceReques
 }
 
 export async function bulkAssignVendorAndCreateMaintenanceAction(input: { ids: string[]; vendorId: string | null; reason?: string | null }) {
-  const actor = await getCurrentUser();
+  const actor = await requirePermission(PERMISSIONS.SERVICE_UPDATE);
   if (!actor?.id) throw new Error("AUTHENTICATED_ACTOR_REQUIRED");
   const result = await bulkAssignVendorAndCreateMaintenanceApplication({
     ...input,
@@ -82,6 +84,7 @@ export async function bulkAssignVendorAndCreateMaintenanceAction(input: { ids: s
 }
 
 export async function createMaintenanceRecordForServiceRequestAction(input: Parameters<typeof createMaintenanceRecordForServiceRequestApplication>[0]) {
+  await requirePermission(PERMISSIONS.SERVICE_UPDATE);
   const result = await createMaintenanceRecordForServiceRequestApplication(input);
   revalidateService();
   revalidatePath(`/admin/services/${input.serviceRequestId}`);
@@ -96,7 +99,7 @@ export async function createTechnicalIssueForServiceRequestAction(input: {
   technicalDetailCatalogId?: string | null;
   vendorId?: string | null;
 }) {
-  const actor = await getCurrentUser();
+  const actor = await requirePermission(PERMISSIONS.SERVICE_UPDATE);
   if (!actor?.id) throw new Error("AUTHENTICATED_ACTOR_REQUIRED");
   const result = await createTechnicalIssue({
     serviceRequestId: input.serviceRequestId,

@@ -2,13 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/server/auth/requirePermission";
+import { PERMISSIONS } from "@/constants/permissions";
 import { prisma } from "@/server/db/client";
 import { linkTaskExecution, listTaskExecutions } from "../server/execution/task-execution.service";
 import type { LinkTaskExecutionInput } from "../server/execution/task-execution.types";
 import { TaskExecutionActionType, TaskExecutionTargetType } from "@prisma/client";
 import { TASK_EXECUTION_INCLUDE } from "../server/core/task.repo.shared";
 async function getTaskAuth() {
-  return requirePermission("TASK_VIEW");
+  return requirePermission(PERMISSIONS.TASK_VIEW);
 }
 
 export async function listTaskExecutionsAction(taskId: string) {
@@ -25,7 +26,7 @@ export async function linkTaskExecutionAction(input: {
   note?: string | null;
   metadataJson?: any;
 }) {
-  const auth = await requirePermission("TASK_VIEW");
+  const auth = await requirePermission(PERMISSIONS.TASK_MANAGE);
 
   const taskId = String(input.taskId || "").trim();
   const targetId = String(input.targetId || "").trim();
@@ -58,7 +59,7 @@ export async function linkTaskExecutionsAction(input: {
   note?: string | null;
   metadataJson?: any;
 }) {
-  const auth = await requirePermission("TASK_VIEW");
+  const auth = await requirePermission(PERMISSIONS.TASK_MANAGE);
 
   const taskId = String(input.taskId || "").trim();
   const targetIds = Array.from(

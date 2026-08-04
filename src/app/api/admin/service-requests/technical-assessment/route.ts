@@ -5,7 +5,7 @@ import { PERMISSIONS } from "@/constants/permissions";
 
 export async function POST(req: Request) {
     try {
-        const actor = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+        const actor = await requirePermission(PERMISSIONS.SERVICE_UPDATE);
         const body = await req.json().catch(() => ({}));
         const result = await saveTechnicalAssessment({
             ...body,

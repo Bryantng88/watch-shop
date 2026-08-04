@@ -4,6 +4,7 @@ import {
   listWorkflowDefinitionDrafts,
 } from "@/domains/workflow-definition/server/workflow-definition-draft.service";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
+import { PERMISSIONS } from "@/constants/permissions";
 
 function isApiResponse(value: unknown): value is NextResponse {
   return value instanceof NextResponse;
@@ -14,7 +15,7 @@ function errorMessage(error: unknown, fallback: string) {
 }
 
 export async function GET() {
-  const auth = await requirePermissionApi("TASK_VIEW");
+  const auth = await requirePermissionApi(PERMISSIONS.TASK_VIEW);
   if (isApiResponse(auth)) return auth;
 
   try {
@@ -30,7 +31,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const auth = await requirePermissionApi("TASK_VIEW");
+  const auth = await requirePermissionApi(PERMISSIONS.WORK_CASE_MANAGE);
   if (isApiResponse(auth)) return auth;
 
   try {

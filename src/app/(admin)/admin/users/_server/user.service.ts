@@ -31,14 +31,15 @@ export async function getAdminUserList(raw: Record<string, unknown>) {
     const skip = (page - 1) * pageSize;
     const take = pageSize;
 
-    const { items, total } = await userRepo.getUserListRepo({ skip, take });
+    const q = String(raw.q ?? "").trim();
+    const { items, total } = await userRepo.getUserListRepo({ skip, take, q });
 
     const rows = items.map((u) => ({
         id: u.id,
         email: u.email,
         name: u.name,
         isActive: u.isActive,
-        roles: u.roles.map((r) => r.name),
+        roles: u.roles.map((r) => ({ id: r.id, name: r.name })),
         createdAt: u.createdAt.toISOString(),
         updatedAt: u.updatedAt.toISOString(),
     }));
@@ -55,18 +56,20 @@ export async function createAdminUser(input: {
     email: string;
     name?: string;
     password: string;
-    roleId: string;
+    roleId?: string;
+    roleIds?: string[];
+    isActive?: boolean;
 }) {
     if (!input.email || !input.password) {
         throw new Error("Thiếu email hoặc mật khẩu");
     }
 
-    if (input.password.length < 6) {
+    if (input.password.length < 8) {
         throw new Error("Mật khẩu tối thiểu 6 ký tự");
     }
 
     const existed = await prisma.user.findUnique({
-        where: { email: input.email },
+        where: { email: input.email.trim().toLowerCase() },
         select: { id: true },
     });
 
@@ -75,23 +78,46 @@ export async function createAdminUser(input: {
     }
 
     const passwordHash = await bcrypt.hash(input.password, 10);
+    const roleIds = Array.from(new Set(input.roleIds ?? (input.roleId ? [input.roleId] : [])));
+    if (!roleIds.length) throw new Error("INVALID_INPUT");
 
     return userRepo.createUserRepo({
-        email: input.email,
+        email: input.email.trim().toLowerCase(),
         name: input.name,
         passwordHash,
-        roleId: input.roleId,
+        roleIds,
+        isActive: input.isActive !== false,
     });
 }
 
 export async function updateUserService(
     userId: string,
     input: {
+        email?: string;
         name?: string;
         isActive?: boolean;
+        password?: string;
+        roleIds?: string[];
     }
 ) {
-    return userRepo.updateUserRepo(prisma, userId, input);
+    const email = input.email?.trim().toLowerCase();
+    if (email) {
+        const duplicate = await prisma.user.findFirst({
+            where: { email, id: { not: userId } },
+            select: { id: true },
+        });
+        if (duplicate) throw new Error("EMAIL_EXISTS");
+    }
+    if (input.password && input.password.length < 8) throw new Error("PASSWORD_TOO_SHORT");
+    if (Array.isArray(input.roleIds) && input.roleIds.length === 0) throw new Error("ROLE_REQUIRED");
+
+    return userRepo.updateUserRepo(prisma, userId, {
+        ...(email ? { email } : {}),
+        ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+        ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+        ...(input.password ? { passwordHash: await bcrypt.hash(input.password, 10) } : {}),
+        ...(Array.isArray(input.roleIds) ? { roleIds: Array.from(new Set(input.roleIds)) } : {}),
+    });
 }
 
 export async function getAllRoles(): Promise<RoleDTO[]> {

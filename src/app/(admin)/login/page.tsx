@@ -1,13 +1,12 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import LoginForm from "./_client/LoginForm";
+import { getCurrentUser } from "@/server/auth/getCurrentUser";
 
 export default async function LoginPage() {
     // 🔥 PHẢI await
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token")?.value;
+    const user = await getCurrentUser();
 
-    if (token) {
+    if (user) {
         redirect("/admin/orders");
     }
 

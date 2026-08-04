@@ -11,7 +11,7 @@ function materialLabel(value: string) {
 }
 
 export default async function StrapListPage() {
-  await requirePermission(PERMISSIONS.PRODUCT_VIEW);
+  await requirePermission(PERMISSIONS.ACCESSORY_VIEW);
   const rows = await listStraps();
   const stocked = rows.filter((row) => row.inventoryPolicy === "STOCKED");
   const lowStock = stocked.filter((row) => row.lowStock);

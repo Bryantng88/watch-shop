@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, type ReactNode } from "react";
-import { CalendarDays, ChevronDown, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
+import { CalendarDays, ChevronDown, MoreHorizontal, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useDismissibleDetails } from "@/domains/shared/ui/popover/useDismissibleDetails";
@@ -133,7 +133,7 @@ export default function SpaceFilterBar({
         ? "border-0 p-0 shadow-none"
         : "border border-slate-200 p-3 shadow-[0_1px_2px_rgba(15,23,42,0.025)]",
     )}>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-nowrap items-center gap-2">
         <details data-dismissible-popover className="group relative shrink-0">
           <summary className="flex h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
             <CalendarDays className="h-4 w-4 text-slate-500" />
@@ -170,7 +170,7 @@ export default function SpaceFilterBar({
         </details>
 
         {onSearchChange ? (
-          <label className="flex h-11 min-w-[220px] flex-1 basis-[260px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 transition focus-within:border-slate-400">
+          <label className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 transition focus-within:border-slate-400">
             <Search className="h-4 w-4 shrink-0 text-slate-400" />
             <input
               value={searchValue}
@@ -235,12 +235,22 @@ export default function SpaceFilterBar({
           </details>
         ) : null}
 
-        {children}
-
-        {viewOptions.length ? (
-          <div className="shrink-0 border-l border-slate-200 pl-2">
-            <SpaceViewSwitch activeView={activeView} options={viewOptions} onChange={onViewChange} />
-          </div>
+        {children || viewOptions.length ? (
+          <details data-dismissible-popover className="group relative shrink-0">
+            <summary className="flex h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+              <MoreHorizontal className="h-4 w-4 text-slate-500" />
+              <span>Thêm</span>
+              <ChevronDown className="h-4 w-4 text-slate-400 transition group-open:rotate-180" />
+            </summary>
+            <div className="absolute right-0 top-full z-40 mt-2 flex w-[min(540px,calc(100vw-7rem))] flex-wrap items-center justify-end gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-xl [&>*]:min-w-0">
+              {children}
+              {viewOptions.length ? (
+                <div className="shrink-0 border-l border-slate-200 pl-2">
+                  <SpaceViewSwitch activeView={activeView} options={viewOptions} onChange={onViewChange} />
+                </div>
+              ) : null}
+            </div>
+          </details>
         ) : null}
       </div>
     </div>
