@@ -31,6 +31,10 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
     const normalizedMethod = method.toUpperCase();
     const read = READ_METHODS.has(normalizedMethod);
 
+    if (pathname === "/api/media/sign" && read) {
+        return publicToAuthenticatedUser();
+    }
+
     if (/^\/api\/media(\/|$)/.test(pathname)) {
         return anyOf(read ? PERMISSIONS.MEDIA_VIEW : PERMISSIONS.PRODUCT_UPDATE);
     }
@@ -64,13 +68,13 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
         if (/\/payment$/.test(pathname)) {
             return anyOf(read ? PERMISSIONS.PAYMENT_VIEW : PERMISSIONS.PAYMENT_CREATE, PERMISSIONS.PAYMENT_UPDATE);
         }
-        if (read) return anyOf(PERMISSIONS.ACQUISITION_VIEW, PERMISSIONS.STRAP_ACQUISITION_VIEW);
+        if (read) return anyOf(PERMISSIONS.ACQUISITION_VIEW_ALL, PERMISSIONS.WATCH_ACQUISITION_VIEW, PERMISSIONS.ACCESSORY_ACQUISITION_VIEW);
         if (pathname === "/api/admin/acquisitions" || /\/(inline-submit|create-with-ai|ai-draft|line-ai-draft)$/.test(pathname)) {
-            return anyOf(PERMISSIONS.ACQUISITION_CREATE, PERMISSIONS.STRAP_ACQUISITION_CREATE);
+            return anyOf(PERMISSIONS.ACQUISITION_CREATE_ALL, PERMISSIONS.WATCH_ACQUISITION_CREATE, PERMISSIONS.ACCESSORY_ACQUISITION_CREATE);
         }
-        if (/\/(post|bulk-post)$/.test(pathname)) return anyOf(PERMISSIONS.ACQUISITION_APPROVE);
-        if (/\/cancel$/.test(pathname)) return anyOf(PERMISSIONS.ACQUISITION_DELETE);
-        return anyOf(PERMISSIONS.ACQUISITION_UPDATE, PERMISSIONS.STRAP_ACQUISITION_UPDATE);
+        if (/\/(post|bulk-post)$/.test(pathname)) return anyOf(PERMISSIONS.ACQUISITION_APPROVE_ALL, PERMISSIONS.WATCH_ACQUISITION_APPROVE, PERMISSIONS.ACCESSORY_ACQUISITION_APPROVE);
+        if (/\/cancel$/.test(pathname)) return anyOf(PERMISSIONS.ACQUISITION_DELETE_ALL, PERMISSIONS.WATCH_ACQUISITION_DELETE, PERMISSIONS.ACCESSORY_ACQUISITION_DELETE);
+        return anyOf(PERMISSIONS.ACQUISITION_UPDATE_ALL, PERMISSIONS.WATCH_ACQUISITION_UPDATE, PERMISSIONS.ACCESSORY_ACQUISITION_UPDATE);
     }
 
     if (/^\/api\/admin\/orders(\/|$)/.test(pathname)) {
@@ -158,7 +162,7 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
         return anyOf(PERMISSIONS.CUSTOMER_VIEW, PERMISSIONS.ORDER_VIEW);
     }
     if (/^\/api\/admin\/vendors(\/|$)/.test(pathname)) {
-        return anyOf(PERMISSIONS.SERVICE_VIEW, PERMISSIONS.ACQUISITION_VIEW, PERMISSIONS.PRODUCT_VIEW);
+        return anyOf(PERMISSIONS.SERVICE_VIEW, PERMISSIONS.ACQUISITION_VIEW_ALL, PERMISSIONS.WATCH_ACQUISITION_VIEW, PERMISSIONS.ACCESSORY_ACQUISITION_VIEW, PERMISSIONS.PRODUCT_VIEW);
     }
     if (/^\/api\/admin\/post-targets(\/|$)/.test(pathname)) {
         return anyOf(PERMISSIONS.PRODUCT_VIEW);
@@ -170,9 +174,9 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
 export function getAdminPagePolicy(pathname: string): AdminAccessPolicy | null {
     if (pathname === "/admin" || pathname.startsWith("/admin/dashboard")) return anyOf(PERMISSIONS.DASHBOARD_VIEW);
     if (/^\/admin\/(profile|users\/profile)(\/|$)/.test(pathname)) return publicToAuthenticatedUser();
-    if (/^\/admin\/acquisitions\/(accessories|straps|clasps)\/new$/.test(pathname)) return anyOf(PERMISSIONS.STRAP_ACQUISITION_CREATE);
-    if (/^\/admin\/acquisitions\/(watches\/)?new$/.test(pathname)) return anyOf(PERMISSIONS.ACQUISITION_CREATE);
-    if (/^\/admin\/acquisitions(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.ACQUISITION_VIEW, PERMISSIONS.STRAP_ACQUISITION_VIEW);
+    if (/^\/admin\/acquisitions\/(accessories|straps|clasps)\/new$/.test(pathname)) return anyOf(PERMISSIONS.ACCESSORY_ACQUISITION_CREATE, PERMISSIONS.ACQUISITION_CREATE_ALL);
+    if (/^\/admin\/acquisitions\/(watches\/)?new$/.test(pathname)) return anyOf(PERMISSIONS.WATCH_ACQUISITION_CREATE, PERMISSIONS.ACQUISITION_CREATE_ALL);
+    if (/^\/admin\/acquisitions(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.ACQUISITION_VIEW_ALL, PERMISSIONS.WATCH_ACQUISITION_VIEW, PERMISSIONS.ACCESSORY_ACQUISITION_VIEW);
     if (pathname === "/admin/watches/new") return anyOf(PERMISSIONS.PRODUCT_CREATE);
     if (/^\/admin\/watches\/[^/]+\/edit$/.test(pathname)) return anyOf(PERMISSIONS.PRODUCT_UPDATE);
     if (/^\/admin\/watches(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.PRODUCT_VIEW);

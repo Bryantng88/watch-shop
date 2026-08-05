@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import * as authRepo from "./auth.repo";
 import { AUTH_TOKEN_MAX_AGE, createAuthToken } from "@/server/auth/auth-token";
+import { isAuthCookieSecure } from "@/server/auth/auth-cookie";
 
 type LoginInput = {
     email: string;
@@ -29,7 +30,7 @@ export async function loginService(input: LoginInput) {
     cookieStore.set("auth_token", createAuthToken(user.id), {
         httpOnly: true,
         sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
+        secure: isAuthCookieSecure(),
         path: "/",
         maxAge: AUTH_TOKEN_MAX_AGE,
     });

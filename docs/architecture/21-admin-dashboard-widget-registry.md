@@ -26,6 +26,12 @@ Current consumers:
 presentation. A registry resolves a configured key to its definition and
 renderer.
 
+`BusinessListDashboard` also owns the responsive disclosure contract for every
+consumer. At widths from 1100px it renders up to four widgets in one row. On
+laptop widths it keeps one row of two widgets and places the remainder behind
+`Xem thêm`; on mobile it keeps one widget visible and places the remainder
+behind the same control. Domains must not opt out of or reimplement this layout.
+
 ## Initial registry
 
 The business-list registry contains four shared widgets:

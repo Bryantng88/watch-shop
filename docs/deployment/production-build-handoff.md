@@ -318,6 +318,10 @@ Included changes:
   `USER_MANAGE -> USER_VIEW/CREATE/UPDATE/DELETE` and domain write permissions
   implying their matching view permission. Middleware, server code and UI use
   the same expanded permission set.
+- Media rendering is infrastructure, not the Media Library business permission:
+  every authenticated user may call `/api/media/sign` so required images and
+  avatars render across domains. `MEDIA_VIEW` continues to protect Media Library
+  pages, asset browsing and other media-business reads.
 - Aligned granular user view/create/update controls and hid unavailable commands
   from read-only user administrators.
 - Added accessory permissions and the `ACCESSORY_MANAGER` role.
@@ -342,7 +346,7 @@ Committed migrations in this release:
 ```
 
 The third migration is a corrective catalog migration. The original accessory
-migration granted `STRAP_ACQUISITION_*` permissions only when those permission
+migration granted the legacy `STRAP_ACQUISITION_*` permissions only when those permission
 rows already existed. The release audit caught the missing rows before the app
 container was replaced; the corrective migration inserts the catalog entries
 and grants them to `ACCESSORY_MANAGER` idempotently.
@@ -362,10 +366,105 @@ Compiled successfully
 Generated static pages: 124/124
 ```
 
-`next dev` and `next build` must not run concurrently in the same checkout. Both
-write to `.next`; doing so produced mixed development/production manifests, HTTP
-500 responses and missing CSS. Stop the dev server before a release build, then
-start it again after the build or use a separate clean release checkout.
+Development now writes compiler artifacts to `.next-dev`; production builds
+continue to write to `.next`. This prevents a release build from removing the
+running dev server's CSS chunks. Restart an older dev process once after
+receiving this change so it loads the new `distDir` configuration.
+
+## Scoped acquisition permission hotfix (2026-08-05)
+
+### Symptom and root cause
+
+- ADMIN lost the Acquisition sidebar entry because application code expected
+  scoped permission codes while the database still contained the legacy
+  `ACQUISITION_*` catalog.
+- SALE could see and enter the Watch acquisition flow because compatibility
+  mapping preserved its former general permission as `ACQUISITION_*_ALL`.
+- Sidebar visibility is not the security boundary. The hotfix also derives item
+  scope on the server for list/dashboard queries and create, update, approve,
+  bulk approve and cancel endpoints.
+
+### Required patch contents
+
+The production patch must include the application changes and all three ordered
+migrations:
+
+```text
+20260805_scoped_acquisition_permissions
+20260805_sync_admin_permission_catalog
+20260806_restrict_sale_acquisition_scope
+```
+
+The first migration replaces the legacy catalog with Watch, Accessory and All
+permissions. The second synchronizes the persisted ADMIN role with its runtime
+full access. The third removes every acquisition permission from SALE except:
+
+```text
+ACCESSORY_ACQUISITION_VIEW
+ACCESSORY_ACQUISITION_CREATE
+```
+
+Do not manually grant SALE `WATCH_ACQUISITION_*`,
+`ACCESSORY_ACQUISITION_UPDATE/APPROVE/DELETE`, or `ACQUISITION_*_ALL`.
+
+### NAS hotfix sequence
+
+From `/share/WatchShop/app` as the elevated NAS administrator, after extracting
+and verifying the patch archive:
+
+```sh
+docker compose --env-file .env.production config --quiet
+docker compose --env-file .env.production --profile tools run --rm db-backup
+echo $?
+ls -lht /share/WatchShopBackup/database | head
+
+docker compose --env-file .env.production build app migrate
+docker compose --env-file .env.production --profile tools run --rm migrate
+docker compose --env-file .env.production --profile tools run --rm migrate \
+  npm run auth:audit-permissions
+docker compose --env-file .env.production up -d --no-deps --force-recreate app
+docker compose --env-file .env.production ps
+docker compose --env-file .env.production logs --tail=80 app
+curl -f http://127.0.0.1:3000/api/health
+curl -f http://127.0.0.1:3000/api/ready
+```
+
+Stop before replacing the app container if backup, build, migration or audit
+fails. If development and NAS still point to the same Supabase project, these
+migrations may already be recorded when the hotfix reaches the NAS. `migrate`
+may therefore report no pending migrations; do not treat that as an error. The
+new application image and successful permission audit are still required.
+
+A successful audit must report:
+
+```text
+ok: true
+catalogCount: 62
+persistedCatalogCount: 62
+missingCatalogCodes: []
+expectedRoleDrift: []
+forbiddenRoleDrift: []
+retiredPermissionCodesPresent: []
+```
+
+### Acceptance checks
+
+1. Logout/login after rollout so cached session permissions are rebuilt.
+2. ADMIN sees Acquisition in the sidebar and Role UI shows the full catalog.
+3. SALE lists only accessory acquisitions; its create action opens the
+   accessory acquisition form.
+4. SALE cannot open the Watch create page and receives `403` when a Watch or
+   mixed payload is sent directly to the create API.
+5. SALE cannot update, approve or cancel an accessory acquisition.
+6. An account with both Watch and Accessory scoped permissions still cannot
+   access mixed documents without the matching `*_ALL` permission.
+
+### Rollback warning
+
+These migrations remove legacy `ACQUISITION_*` and
+`STRAP_ACQUISITION_*` permission rows. Reverting only to an older application
+image is not a complete rollback for non-ADMIN users. Keep the hotfix image and
+the verified pre-migration database backup until acceptance is complete.
 
 ### QNAP operator runbook
 

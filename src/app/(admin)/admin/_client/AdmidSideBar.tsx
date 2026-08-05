@@ -15,6 +15,8 @@ import {
     BellRing,
     Activity,
     Link2,
+    PanelLeftClose,
+    PanelLeftOpen,
 } from "lucide-react";
 
 import ActiveLink from "./AdminActiveLink";
@@ -50,6 +52,8 @@ type NavGroup = {
 
 type NavEntry = NavItem | NavGroup;
 
+const DESKTOP_SIDEBAR_STORAGE_KEY = "admin-sidebar:expanded";
+
 const NAV: NavEntry[] = [
     {
         type: "item",
@@ -83,7 +87,7 @@ const NAV: NavEntry[] = [
                 href: "/admin/acquisitions",
                 label: "Phiếu nhập",
                 icon: Tags,
-                permissionsAny: [PERMISSIONS.ACQUISITION_VIEW, PERMISSIONS.STRAP_ACQUISITION_VIEW],
+                permissionsAny: [PERMISSIONS.ACQUISITION_VIEW_ALL, PERMISSIONS.WATCH_ACQUISITION_VIEW, PERMISSIONS.ACCESSORY_ACQUISITION_VIEW],
             },
             {
                 type: "item",
@@ -137,6 +141,10 @@ function isCurrentRoute(pathname: string, item: NavItem) {
 }
 
 function canAccess(user: Props["user"], item: NavItem) {
+    // ADMIN is a system-level bypass. Navigation must not disappear during a
+    // permission-catalog migration just because the persisted role still has
+    // legacy permission codes.
+    if (user.roles?.includes("ADMIN")) return true;
     if (item.permissionsAny?.length) {
         return item.permissionsAny.some((permission) => user.permissions.includes(permission));
     }
@@ -180,6 +188,7 @@ export default function AdminSidebar({
     const progress = useAppProgress();
     const notify = useNotify();
     const [open, setOpen] = useState(false);
+    const [desktopExpanded, setDesktopExpanded] = useState(false);
     const [loggingOut, setLoggingOut] = useState(false);
     const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
         () => new Set(),
@@ -191,6 +200,11 @@ export default function AdminSidebar({
             if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
         };
     }, []);
+
+    useEffect(() => {
+        if (isMobile) return;
+        setDesktopExpanded(window.localStorage.getItem(DESKTOP_SIDEBAR_STORAGE_KEY) === "true");
+    }, [isMobile]);
 
     const allowedNav = useMemo(() => buildAllowedNav(user), [user]);
 
@@ -248,6 +262,14 @@ export default function AdminSidebar({
         window.location.replace("/login");
     }, [loggingOut]);
 
+    const toggleDesktopSidebar = useCallback(() => {
+        setDesktopExpanded((current) => {
+            const next = !current;
+            window.localStorage.setItem(DESKTOP_SIDEBAR_STORAGE_KEY, String(next));
+            return next;
+        });
+    }, []);
+
     function renderNavItem(item: NavItem, nested = false) {
         const Icon = item.icon;
         return (
@@ -259,10 +281,11 @@ export default function AdminSidebar({
                 <ActiveLink
                     href={item.href}
                     exact={item.exact}
+                    expanded={!isMobile && desktopExpanded}
                 >
                     <Icon size={18} className="shrink-0 opacity-80" />
 
-                    <span className="hidden min-w-0 items-center gap-2 min-[2200px]:inline-flex">
+                    <span className={`${desktopExpanded && !isMobile ? "inline-flex" : "hidden min-[2200px]:inline-flex"} min-w-0 items-center gap-2`}>
                         <span
                             className={[
                                 "truncate text-[14px] leading-none",
@@ -275,7 +298,7 @@ export default function AdminSidebar({
                     </span>
                 </ActiveLink>
 
-                <div className="pointer-events-none absolute left-[68px] top-1/2 z-[9999] hidden -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white shadow-xl group-hover:block min-[2200px]:hidden">
+                <div className={`pointer-events-none absolute left-[68px] top-1/2 z-[9999] -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white shadow-xl min-[2200px]:hidden ${desktopExpanded && !isMobile ? "hidden" : "hidden group-hover:block"}`}>
                     {item.label}
                 </div>
             </div>
@@ -320,12 +343,34 @@ export default function AdminSidebar({
             <aside
                 className={[
                     "fixed left-0 top-0 z-50 h-full overflow-visible bg-[#11191f] text-gray-200",
-                    "flex flex-col transition-transform",
-                    "w-[76px] min-[2200px]:w-[240px]",
+                    "flex flex-col transition-[width,transform,box-shadow] duration-200 ease-out",
+                    desktopExpanded && !isMobile
+                        ? "w-[240px] shadow-[18px_0_40px_rgba(15,23,42,0.22)]"
+                        : "w-[76px] min-[2200px]:w-[240px]",
                     "lg:static lg:h-screen lg:translate-x-0",
                     open ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
                 ].join(" ")}
             >
+                {!isMobile ? (
+                    <div className={`flex h-14 shrink-0 items-center border-b border-white/10 px-3 min-[2200px]:hidden ${desktopExpanded ? "justify-between" : "justify-center"}`}>
+                        {desktopExpanded ? (
+                            <span aria-label="Menu" className="pl-2 text-[0px] font-semibold uppercase tracking-[0.16em] text-white/55 before:text-xs before:content-['MENU']">
+                                Äiá»u hÆ°á»›ng
+                            </span>
+                        ) : null}
+                        <button
+                            type="button"
+                            onClick={toggleDesktopSidebar}
+                            className="grid h-9 w-9 place-items-center rounded-lg text-white/65 transition hover:bg-white/10 hover:text-white"
+                            aria-label={desktopExpanded ? "Thu gá»n thanh Ä‘iá»u hÆ°á»›ng" : "Má»Ÿ rá»™ng thanh Ä‘iá»u hÆ°á»›ng"}
+                            aria-expanded={desktopExpanded}
+                            title={desktopExpanded ? "Thu gá»n sidebar" : "Má»Ÿ rá»™ng sidebar"}
+                        >
+                            {desktopExpanded ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+                        </button>
+                    </div>
+                ) : null}
+
                 {isMobile ? <div className="flex h-12 items-center gap-2 border-b border-white/10 px-4">
                     <div className="rounded bg-white/10 px-2 py-0.5 text-[10px]">
                         Admin
@@ -363,7 +408,7 @@ export default function AdminSidebar({
                                         <button
                                             type="button"
                                             onClick={() => toggleGroup(entry.label)}
-                                            className="mx-2 hidden w-[calc(100%-1rem)] items-center justify-between border-t border-white/10 pt-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45 transition hover:text-white/70 min-[2200px]:flex"
+                                            className={`mx-2 w-[calc(100%-1rem)] items-center justify-between border-t border-white/10 pt-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45 transition hover:text-white/70 ${desktopExpanded && !isMobile ? "flex" : "hidden min-[2200px]:flex"}`}
                                             aria-expanded={isOpen}
                                         >
                                             <span>{entry.label}</span>
@@ -375,15 +420,15 @@ export default function AdminSidebar({
                                             />
                                         </button>
                                     ) : (
-                                        <div className="mx-2 hidden border-t border-white/10 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35 min-[2200px]:block">
+                                        <div className={`mx-2 border-t border-white/10 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35 ${desktopExpanded && !isMobile ? "block" : "hidden min-[2200px]:block"}`}>
                                             {entry.label}
                                         </div>
                                     )}
 
-                                    <div className="mx-auto h-px w-7 bg-white/10 min-[2200px]:hidden" />
+                                    <div className={`mx-auto h-px w-7 bg-white/10 min-[2200px]:hidden ${desktopExpanded && !isMobile ? "hidden" : "block"}`} />
 
                                     {isOpen ? (
-                                        <div className="mt-1 space-y-1 min-[2200px]:pl-2">
+                                        <div className={`mt-1 space-y-1 ${desktopExpanded && !isMobile ? "pl-2" : "min-[2200px]:pl-2"}`}>
                                             {entry.children?.map((item) =>
                                                 renderNavItem(item, true),
                                             )}
@@ -398,7 +443,7 @@ export default function AdminSidebar({
                 </nav>
 
                 <div className="mt-auto p-3 text-[11px] opacity-50">
-                    <span className="hidden min-[2200px]:inline">
+                    <span className={desktopExpanded && !isMobile ? "inline" : "hidden min-[2200px]:inline"}>
                         © {new Date().getFullYear()} Admin
                     </span>
                 </div>

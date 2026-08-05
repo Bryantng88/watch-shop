@@ -15,8 +15,10 @@ const EMPTY_ROLE: RoleDraft = { name: "", description: "", permissionIds: [] };
 
 function permissionGroup(code: string) {
     const prefixes: Array<[string, string]> = [
-        ["ACCESSORY_", "Phụ kiện"], ["PRODUCT_", "Sản phẩm"], ["ACQUISITION_", "Phiếu nhập"],
-        ["STRAP_ACQUISITION_", "Nhập phụ kiện"], ["ORDER_", "Đơn hàng"], ["PAYMENT_", "Thanh toán"],
+        ["WATCH_ACQUISITION_", "Phiếu nhập · Đồng hồ"],
+        ["ACCESSORY_ACQUISITION_", "Phiếu nhập · Phụ kiện"],
+        ["ACQUISITION_", "Phiếu nhập · Toàn bộ"],
+        ["ACCESSORY_", "Phụ kiện"], ["PRODUCT_", "Sản phẩm"], ["ORDER_", "Đơn hàng"], ["PAYMENT_", "Thanh toán"],
         ["SHIPMENT_", "Vận chuyển"], ["SERVICE_", "Dịch vụ"], ["TASK_", "Công việc"],
         ["USER_", "Người dùng"], ["CUSTOMER_", "Khách hàng"], ["MEDIA_", "Media"],
         ["ACTIVITY_", "Hoạt động"], ["SYSTEM_", "Hệ thống"], ["DASHBOARD_", "Dashboard"],

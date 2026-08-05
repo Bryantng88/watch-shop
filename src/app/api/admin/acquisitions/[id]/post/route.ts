@@ -1,6 +1,7 @@
 import { after, NextResponse } from "next/server";
 
 import { postAcquisitionApplication } from "@/domains/acquisition/application";
+import { authorizeAcquisitionAccess } from "@/domains/acquisition/server";
 
 export async function POST(
     req: Request,
@@ -8,6 +9,8 @@ export async function POST(
 ) {
     try {
         const { id } = await params;
+        const access = await authorizeAcquisitionAccess(id, "APPROVE");
+        if (!access.ok) return NextResponse.json({ error: "Forbidden" }, { status: access.status });
         const body = await req.json().catch(() => ({}));
 
         if (!id) {

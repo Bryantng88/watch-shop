@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { updateAcquisitionItemsApplication } from "@/domains/acquisition/application";
+import { authorizeAcquisitionAccess } from "@/domains/acquisition/server";
+import { authorizeAcquisitionScope } from "@/domains/acquisition/server/acquisition-access.service";
 
 export async function POST(
     req: Request,
@@ -9,6 +11,11 @@ export async function POST(
     try {
         const { id } = await params;
         const body = await req.json();
+        const access = await authorizeAcquisitionAccess(id, "UPDATE");
+        if (!access.ok) return NextResponse.json({ error: "Forbidden" }, { status: access.status });
+        const items = Array.isArray(body?.items) ? body.items : [];
+        const targetAccess = await authorizeAcquisitionScope(items.map((item: { productType?: unknown }) => item.productType), "UPDATE");
+        if (!targetAccess.ok) return NextResponse.json({ error: "Forbidden" }, { status: targetAccess.status });
 
         if (!id) {
             return NextResponse.json(
@@ -19,7 +26,7 @@ export async function POST(
 
         const result = await updateAcquisitionItemsApplication({
             acquisitionId: id,
-            items: body?.items ?? [],
+            items,
         });
 
         return NextResponse.json(result, { status: 200 });

@@ -7,7 +7,7 @@ export type AcquisitionListView =
     | "cancelled";
 
 export type AcquisitionListFilters = {
-    productScope?: "ACCESSORY_ONLY";
+    productScope?: "WATCH_ONLY" | "ACCESSORY_ONLY" | "WATCH_AND_ACCESSORY_ONLY";
     audienceSegment?: "MEN" | "WOMEN" | "UNISEX";
     /** Legacy tab parameter. New list surfaces should use status. */
     view?: AcquisitionListView;

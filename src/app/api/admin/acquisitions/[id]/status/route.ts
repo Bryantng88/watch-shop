@@ -1,6 +1,7 @@
 import { after, NextRequest, NextResponse } from "next/server";
 
 import { postAcquisitionApplication } from "@/domains/acquisition/application";
+import { authorizeAcquisitionAccess } from "@/domains/acquisition/server";
 
 export async function PUT(
     req: NextRequest,
@@ -9,6 +10,8 @@ export async function PUT(
     try {
         const { id } = await params;
         const body = await req.json();
+        const access = await authorizeAcquisitionAccess(id, "APPROVE");
+        if (!access.ok) return NextResponse.json({ error: "Forbidden" }, { status: access.status });
 
         if (!id) {
             return NextResponse.json(

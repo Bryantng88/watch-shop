@@ -2,17 +2,17 @@
 
 import { createVendorQuick, getVendorList } from "@/domains/vendor/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { requirePermission } from "@/server/auth/requirePermission";
+import { requireAnyPermission } from "@/server/auth/requirePermission";
 
 export async function createQuickVendor(input: {
   name: string;
   phone?: string | null;
 }) {
-  await requirePermission(PERMISSIONS.STRAP_ACQUISITION_CREATE);
+  await requireAnyPermission([PERMISSIONS.ACCESSORY_ACQUISITION_CREATE, PERMISSIONS.ACQUISITION_CREATE_ALL]);
   return createVendorQuick(input);
 }
 
 export async function listAccessoryVendorsAction() {
-  await requirePermission(PERMISSIONS.STRAP_ACQUISITION_VIEW);
+  await requireAnyPermission([PERMISSIONS.ACCESSORY_ACQUISITION_VIEW, PERMISSIONS.ACQUISITION_VIEW_ALL]);
   return getVendorList();
 }

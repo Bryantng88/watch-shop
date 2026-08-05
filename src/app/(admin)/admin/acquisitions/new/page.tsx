@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { ArrowRight, Link2, Watch } from "lucide-react";
 import { PERMISSIONS } from "@/constants/permissions";
-import { requirePermission } from "@/server/auth/requirePermission";
+import { requireAnyPermission } from "@/server/auth/requirePermission";
 
 export default async function AcquisitionNewPage() {
-    await requirePermission(PERMISSIONS.ACQUISITION_CREATE);
+    await requireAnyPermission([PERMISSIONS.WATCH_ACQUISITION_CREATE, PERMISSIONS.ACQUISITION_CREATE_ALL]);
 
     return (
         <main className="min-h-screen bg-slate-50 px-6 py-8">

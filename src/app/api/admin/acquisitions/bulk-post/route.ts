@@ -1,6 +1,7 @@
 import { after, NextRequest, NextResponse } from "next/server";
 
 import { postAcquisitionApplication } from "@/domains/acquisition/application";
+import { authorizeAcquisitionAccess } from "@/domains/acquisition/server";
 
 export async function POST(req: NextRequest) {
     try {
@@ -37,6 +38,11 @@ export async function POST(req: NextRequest) {
 
         for (const acquisitionId of acquisitionIds) {
             try {
+                const access = await authorizeAcquisitionAccess(acquisitionId, "APPROVE");
+                if (!access.ok) {
+                    failed.push({ id: acquisitionId, error: "Forbidden" });
+                    continue;
+                }
                 const result = await postAcquisitionApplication({
                     acquisitionId,
                     deferConsumers: (work) => after(work),

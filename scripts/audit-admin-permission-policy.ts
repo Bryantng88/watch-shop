@@ -8,6 +8,10 @@ import {
   getAdminPagePolicy,
   isAdminAccessAllowed,
 } from "../src/server/auth/admin-api-policy";
+import {
+  canAccessAcquisitionScope,
+  classifyAcquisitionScope,
+} from "../src/domains/acquisition/server/acquisition-access.service";
 
 const root = process.cwd();
 
@@ -136,13 +140,21 @@ const cases: Array<[string, boolean]> = [
   ["order cancel rejects ORDER_UPDATE", !allowed(getAdminApiPolicy("/api/admin/orders/sample/cancel", "POST"), PERMISSIONS.ORDER_UPDATE)],
   ["watch review accepts PRODUCT_APPROVE", allowed(getAdminApiPolicy("/api/admin/watches/sample/image-review", "POST"), PERMISSIONS.PRODUCT_APPROVE)],
   ["watch review rejects PRODUCT_UPDATE", !allowed(getAdminApiPolicy("/api/admin/watches/sample/image-review", "POST"), PERMISSIONS.PRODUCT_UPDATE)],
-  ["acquisition post accepts ACQUISITION_APPROVE", allowed(getAdminApiPolicy("/api/admin/acquisitions/sample/post", "POST"), PERMISSIONS.ACQUISITION_APPROVE)],
-  ["acquisition cancel accepts ACQUISITION_DELETE", allowed(getAdminApiPolicy("/api/admin/acquisitions/sample/cancel", "POST"), PERMISSIONS.ACQUISITION_DELETE)],
+  ["acquisition post accepts scoped approve", allowed(getAdminApiPolicy("/api/admin/acquisitions/sample/post", "POST"), PERMISSIONS.ACCESSORY_ACQUISITION_APPROVE)],
+  ["acquisition cancel accepts scoped delete", allowed(getAdminApiPolicy("/api/admin/acquisitions/sample/cancel", "POST"), PERMISSIONS.WATCH_ACQUISITION_DELETE)],
   ["shipment create accepts SHIPMENT_CREATE", allowed(getAdminApiPolicy("/api/admin/shipments", "POST"), PERMISSIONS.SHIPMENT_CREATE)],
   ["service create accepts SERVICE_CREATE", allowed(getAdminApiPolicy("/api/admin/service-requests", "POST"), PERMISSIONS.SERVICE_CREATE)],
   ["technical issue delete accepts SERVICE_DELETE", allowed(getAdminApiPolicy("/api/admin/technical-issues/sample", "DELETE"), PERMISSIONS.SERVICE_DELETE)],
   ["payment transition reaches coarse gate", allowed(getAdminApiPolicy("/api/admin/task-items/manual-transition", "POST"), PERMISSIONS.PAYMENT_UPDATE)],
-  ["accessory acquisition page accepts strap view", allowed(getAdminPagePolicy("/admin/acquisitions"), PERMISSIONS.STRAP_ACQUISITION_VIEW)],
+  ["media sign is available to every authenticated user", allowed(getAdminApiPolicy("/api/media/sign", "GET"))],
+  ["media library read still rejects users without MEDIA_VIEW", !allowed(getAdminApiPolicy("/api/media/assets", "GET"))],
+  ["media library read accepts MEDIA_VIEW", allowed(getAdminApiPolicy("/api/media/assets", "GET"), PERMISSIONS.MEDIA_VIEW)],
+  ["accessory acquisition page accepts accessory view", allowed(getAdminPagePolicy("/admin/acquisitions"), PERMISSIONS.ACCESSORY_ACQUISITION_VIEW)],
+  ["watch item scope is WATCH", classifyAcquisitionScope(["WATCH"]) === "WATCH"],
+  ["strap and clasp scope is ACCESSORY", classifyAcquisitionScope(["WATCH_STRAP", "WATCH_CLASP"]) === "ACCESSORY"],
+  ["mixed item scope requires ALL", classifyAcquisitionScope(["WATCH", "WATCH_STRAP"]) === "ALL"],
+  ["watch permission cannot view accessory scope", !canAccessAcquisitionScope([PERMISSIONS.WATCH_ACQUISITION_VIEW], "VIEW", "ACCESSORY")],
+  ["all permission can view mixed scope", canAccessAcquisitionScope([PERMISSIONS.ACQUISITION_VIEW_ALL], "VIEW", "ALL")],
   ["reports page accepts REPORT_VIEW", allowed(getAdminPagePolicy("/admin/reports"), PERMISSIONS.REPORT_VIEW)],
 ];
 

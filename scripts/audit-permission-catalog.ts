@@ -7,14 +7,19 @@ const activityCodes = [
   PERMISSIONS.ACTIVITY_EDIT,
 ] as const;
 const expectedRolePermissions: Record<string, readonly string[]> = {
+  ADMIN: catalogCodes,
+  SALE: [
+    PERMISSIONS.ACCESSORY_ACQUISITION_VIEW,
+    PERMISSIONS.ACCESSORY_ACQUISITION_CREATE,
+  ],
   ACCESSORY_MANAGER: [
     PERMISSIONS.ACCESSORY_VIEW,
     PERMISSIONS.ACCESSORY_CREATE,
     PERMISSIONS.ACCESSORY_UPDATE,
     PERMISSIONS.ACCESSORY_DELETE,
-    PERMISSIONS.STRAP_ACQUISITION_VIEW,
-    PERMISSIONS.STRAP_ACQUISITION_CREATE,
-    PERMISSIONS.STRAP_ACQUISITION_UPDATE,
+    PERMISSIONS.ACCESSORY_ACQUISITION_VIEW,
+    PERMISSIONS.ACCESSORY_ACQUISITION_CREATE,
+    PERMISSIONS.ACCESSORY_ACQUISITION_UPDATE,
   ],
   SALE_ADMIN: [
     PERMISSIONS.TASK_VIEW,
@@ -31,7 +36,19 @@ const retiredPermissionCodes = [
   "INVOICE_CREATE",
   "INVOICE_UPDATE",
   "INVOICE_DELETE",
+  "ACQUISITION_VIEW",
+  "ACQUISITION_CREATE",
+  "ACQUISITION_UPDATE",
+  "ACQUISITION_DELETE",
+  "ACQUISITION_APPROVE",
+  "STRAP_ACQUISITION_VIEW",
+  "STRAP_ACQUISITION_CREATE",
+  "STRAP_ACQUISITION_UPDATE",
 ] as const;
+const saleAcquisitionAllowlist = new Set<string>([
+  PERMISSIONS.ACCESSORY_ACQUISITION_VIEW,
+  PERMISSIONS.ACCESSORY_ACQUISITION_CREATE,
+]);
 
 async function main() {
   const [permissions, taskViewRoles, expectedRoles, retiredPermissions] = await Promise.all([
@@ -80,14 +97,20 @@ async function main() {
     const missing = expected.filter((code) => !assigned.has(code));
     return missing.length ? [{ role: roleName, missing }] : [];
   });
+  const saleRole = roleByName.get("SALE");
+  const forbiddenRoleDrift = (saleRole?.permissions ?? [])
+    .map((permission) => permission.code)
+    .filter((code) => code.includes("ACQUISITION") && !saleAcquisitionAllowlist.has(code))
+    .map((code) => ({ role: "SALE", forbidden: code }));
   const result = {
-    ok: missingCatalogCodes.length === 0 && roleDrift.length === 0 && expectedRoleDrift.length === 0 && retiredPermissions.length === 0,
+    ok: missingCatalogCodes.length === 0 && roleDrift.length === 0 && expectedRoleDrift.length === 0 && forbiddenRoleDrift.length === 0 && retiredPermissions.length === 0,
     catalogCount: catalogCodes.length,
     persistedCatalogCount: persistedCodes.size,
     taskViewRoleCount: taskViewRoles.length,
     missingCatalogCodes,
     roleDrift,
     expectedRoleDrift,
+    forbiddenRoleDrift,
     retiredPermissionCodesPresent: retiredPermissions.map((permission) => permission.code),
   };
 

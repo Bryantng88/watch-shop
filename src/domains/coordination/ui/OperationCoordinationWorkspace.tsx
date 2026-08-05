@@ -1900,7 +1900,6 @@ export default function OperationCoordinationWorkspace({
           storageKey={`admin-dashboard:${data.context.toLowerCase()}-space:${activeCoreFlow?.key ?? activeViewMode?.key ?? "default"}`}
            customizationRequest={dashboardCustomizationRequest}
            showCustomizationTrigger={false}
-           collapsible
            cashFlowPeriods={isPaymentCollectionFlow}
            onResult={handleDashboardResult}
          />

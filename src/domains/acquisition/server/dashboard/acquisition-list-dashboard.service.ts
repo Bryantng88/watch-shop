@@ -21,7 +21,7 @@ function statusLabel(status: string) {
 
 export async function getAcquisitionListDashboard(
     audienceSegment?: "MEN" | "WOMEN",
-    productScope?: "ACCESSORY_ONLY",
+    productScope?: "WATCH_ONLY" | "ACCESSORY_ONLY" | "WATCH_AND_ACCESSORY_ONLY",
 ): Promise<BusinessListDashboardData> {
     const rows = await prisma.acquisition.findMany({
         where: {
@@ -31,6 +31,21 @@ export async function getAcquisitionListDashboard(
                     some: { productType: { in: ["WATCH_STRAP" as const, "WATCH_CLASP" as const] } },
                     every: { productType: { in: ["WATCH_STRAP" as const, "WATCH_CLASP" as const] } },
                 },
+            } : productScope === "WATCH_ONLY" ? {
+                acquisitionItem: {
+                    some: { productType: "WATCH" as const },
+                    every: { productType: "WATCH" as const },
+                },
+            } : productScope === "WATCH_AND_ACCESSORY_ONLY" ? {
+                OR: [
+                    { acquisitionItem: { some: { productType: "WATCH" as const }, every: { productType: "WATCH" as const } } },
+                    {
+                        acquisitionItem: {
+                            some: { productType: { in: ["WATCH_STRAP" as const, "WATCH_CLASP" as const] } },
+                            every: { productType: { in: ["WATCH_STRAP" as const, "WATCH_CLASP" as const] } },
+                        },
+                    },
+                ],
             } : {}),
         },
         orderBy: { updatedAt: "desc" },

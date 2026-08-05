@@ -28,7 +28,7 @@ const BodySchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-    const auth = await requirePermissionApi(PERMISSIONS.ACQUISITION_CREATE);
+    const auth = await requirePermissionApi(PERMISSIONS.WATCH_ACQUISITION_CREATE);
     if (auth instanceof Response) return auth;
 
     try {

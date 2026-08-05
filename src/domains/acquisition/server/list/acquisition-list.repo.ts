@@ -53,6 +53,27 @@ function buildWhere(input: AcquisitionListFilters, acquisitionIds: string[] = []
             },
         });
     }
+    if (input.productScope === "WATCH_ONLY") {
+        and.push({
+            acquisitionItem: {
+                some: { productType: "WATCH" },
+                every: { productType: "WATCH" },
+            },
+        });
+    }
+    if (input.productScope === "WATCH_AND_ACCESSORY_ONLY") {
+        and.push({
+            OR: [
+                { acquisitionItem: { some: { productType: "WATCH" }, every: { productType: "WATCH" } } },
+                {
+                    acquisitionItem: {
+                        some: { productType: { in: ["WATCH_STRAP", "WATCH_CLASP"] } },
+                        every: { productType: { in: ["WATCH_STRAP", "WATCH_CLASP"] } },
+                    },
+                },
+            ],
+        });
+    }
 
     if (input.audienceSegment) {
         and.push({ audienceSegment: input.audienceSegment });

@@ -22,13 +22,6 @@ const registryWidgets = Object.keys(
     BUSINESS_LIST_DASHBOARD_WIDGET_REGISTRY,
 ) as BusinessListDashboardWidgetKey[];
 
-function dashboardColumns(widgetCount: number) {
-    if (widgetCount <= 1) return "xl:grid-cols-1";
-    if (widgetCount === 2) return "xl:grid-cols-2";
-    if (widgetCount === 3) return "xl:grid-cols-2 2xl:grid-cols-3";
-    return "xl:grid-cols-2 2xl:grid-cols-4";
-}
-
 function normalizeWidgets(
     value: unknown,
     availableWidgets: BusinessListDashboardWidgetKey[],
@@ -51,12 +44,9 @@ export function BusinessListDashboardSkeleton({ count = 4 }: { count?: number })
     const skeletonCount = Math.min(Math.max(count, 1), 4);
 
     return (
-        <DashboardWidgetGrid
-            columns={dashboardColumns(skeletonCount)}
-            className="animate-pulse"
-        >
+        <DashboardWidgetGrid columns="sm:!grid-cols-2 min-[1100px]:!grid-cols-4" className="animate-pulse">
             {Array.from({ length: skeletonCount }, (_, item) => (
-                <div key={item} className="h-[190px] rounded-xl border border-slate-200 bg-white p-5 shadow-[0_4px_14px_rgba(15,23,42,0.055)]">
+                <div key={item} className={`${item === 1 ? "hidden sm:block" : item >= 2 ? "hidden min-[1100px]:block" : ""} h-[190px] rounded-xl border border-slate-200 bg-white p-5 shadow-[0_4px_14px_rgba(15,23,42,0.055)]`}>
                     <div className="h-3 w-24 rounded bg-slate-100" />
                     <div className="mt-6 h-8 w-32 rounded bg-slate-100" />
                     <div className="mt-5 h-12 rounded bg-slate-50" />
@@ -75,7 +65,6 @@ export default function BusinessListDashboard({
     storageKey,
     customizationRequest = 0,
     showCustomizationTrigger = true,
-    collapsible = false,
 }: {
     data: BusinessListDashboardData;
     views?: BusinessListDashboardView[];
@@ -85,7 +74,6 @@ export default function BusinessListDashboard({
     storageKey?: string;
     customizationRequest?: number;
     showCustomizationTrigger?: boolean;
-    collapsible?: boolean;
 }) {
     const availableWidgets = useMemo(
         () => normalizeWidgets(widgets, registryWidgets, registryWidgets.length) ?? defaultWidgets,
@@ -165,7 +153,7 @@ export default function BusinessListDashboard({
     }
 
     return (
-        <section aria-label="Tổng quan danh sách" className="space-y-3">
+        <section aria-label="Tổng quan danh sách" className="relative space-y-3">
             {views.length > 1 || (storageKey && showCustomizationTrigger) || customizing ? (
                 <div
                     className={
@@ -254,7 +242,7 @@ export default function BusinessListDashboard({
             ) : null}
 
             <DashboardWidgetGrid
-                columns={collapsible ? "sm:!grid-cols-2 min-[1100px]:!grid-cols-4" : dashboardColumns(selectedWidgets.length)}
+                columns="sm:!grid-cols-2 min-[1100px]:!grid-cols-4"
             >
                 {selectedWidgets.map((widgetKey, index) => {
                     const definition = BUSINESS_LIST_DASHBOARD_WIDGET_REGISTRY[widgetKey];
@@ -262,23 +250,24 @@ export default function BusinessListDashboard({
                     return (
                         <div
                             key={definition.key}
-                            className={`h-full [&>article]:h-full ${index >= 2 && !expanded ? "hidden min-[1100px]:block" : ""}`}
+                            className={`h-full [&>article]:h-full ${!expanded && index === 1 ? "hidden sm:block" : ""} ${!expanded && index >= 2 ? "hidden min-[1100px]:block" : ""}`}
                         >
                             <Widget data={data} />
                         </div>
                     );
                 })}
             </DashboardWidgetGrid>
-            {collapsible && selectedWidgets.length > 2 ? (
-                <div className="flex justify-end min-[1100px]:hidden">
+            {selectedWidgets.length > 1 ? (
+                <div className={`pointer-events-none absolute bottom-2 right-2 z-10 justify-end min-[1100px]:hidden ${selectedWidgets.length > 2 ? "flex" : "flex sm:hidden"}`}>
                     <button
                         type="button"
                         onClick={() => setExpanded((current) => !current)}
                         aria-expanded={expanded}
-                        className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
+                        aria-label={expanded ? "Thu gọn dashboard" : "Xem thêm dashboard"}
+                        title={expanded ? "Thu gọn dashboard" : "Xem thêm dashboard"}
+                        className="pointer-events-auto grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white/95 text-slate-600 shadow-md backdrop-blur transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
                     >
-                        {expanded ? "Thu gọn" : `Xem thêm ${selectedWidgets.length - 2} mục`}
-                        <ChevronDown className={`h-3.5 w-3.5 transition ${expanded ? "rotate-180" : ""}`} />
+                        <ChevronDown className={`h-4 w-4 transition ${expanded ? "rotate-180" : ""}`} />
                     </button>
                 </div>
             ) : null}

@@ -23,7 +23,6 @@ export default function AsyncBusinessListDashboard({
     onResult,
     initialData,
     preferInitialData = false,
-    collapsible = false,
 }: {
     endpoint: string;
     widgets?: BusinessListDashboardWidgetKey[];
@@ -37,7 +36,6 @@ export default function AsyncBusinessListDashboard({
     onResult?: (result: unknown) => void;
     initialData?: BusinessListDashboardData | null;
     preferInitialData?: boolean;
-    collapsible?: boolean;
 }) {
     const initialEndpoint = useRef(endpoint);
     const [data, setData] = useState<BusinessListDashboardData | null>(
@@ -115,7 +113,7 @@ export default function AsyncBusinessListDashboard({
             </div>
         );
     }
-    if (!data) return <BusinessListDashboardSkeleton count={collapsible ? Math.min(widgets?.length ?? 4, 2) : widgets?.length} />;
+    if (!data) return <BusinessListDashboardSkeleton count={widgets?.length} />;
     return (
         <BusinessListDashboard
             data={data}
@@ -126,7 +124,6 @@ export default function AsyncBusinessListDashboard({
             views={views}
             activeView={activeView}
             onViewChange={onViewChange}
-            collapsible={collapsible}
         />
     );
 }

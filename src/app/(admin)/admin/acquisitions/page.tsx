@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 import { PERMISSIONS } from "@/constants/permissions";
 import { parseAcquisitionListSearchParams } from "@/domains/acquisition/shared/search-params";
 import { getListVendors } from "../vendors/_server/vendor.repo";
+import { resolveAcquisitionListScope } from "@/domains/acquisition/server/acquisition-access.service";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
@@ -18,7 +19,7 @@ function firstValue(value: string | string[] | undefined) {
     return value ?? "";
 }
 
-function serialize(obj: any) {
+function serialize<T>(obj: T): T {
     return JSON.parse(
         JSON.stringify(obj, (_key, value) => {
             if (value instanceof Date) return value.toISOString();
@@ -35,9 +36,8 @@ export default async function AcquisitionListPage({
 }) {
     const { user, permissions } = await getCurrentUserPermissions();
     if (!user) redirect("/login");
-    const canViewAll = permissions.includes(PERMISSIONS.ACQUISITION_VIEW);
-    const canViewStraps = permissions.includes(PERMISSIONS.STRAP_ACQUISITION_VIEW);
-    if (!canViewAll && !canViewStraps) redirect("/403");
+    const listScope = resolveAcquisitionListScope(permissions);
+    if (listScope === "NONE") redirect("/403");
 
     const resolvedSearchParams = await searchParams;
 
@@ -52,7 +52,7 @@ export default async function AcquisitionListPage({
         page: firstValue(resolvedSearchParams.page),
         pageSize: firstValue(resolvedSearchParams.pageSize),
     });
-    if (!canViewAll) input.productScope = "ACCESSORY_ONLY";
+    if (listScope !== "ALL") input.productScope = listScope;
 
     const [result, vendors, dashboardData] = await Promise.all([
         getAcquisitionListProjection(input),
@@ -63,7 +63,7 @@ export default async function AcquisitionListPage({
         ),
     ]);
 
-    const vendorOptions = (vendors ?? []).map((vendor: any) => ({
+    const vendorOptions = (vendors ?? []).map((vendor) => ({
         id: String(vendor.id),
         name: String(vendor.name ?? "-"),
     }));
@@ -73,8 +73,10 @@ export default async function AcquisitionListPage({
             {...serialize(result)}
             vendors={serialize(vendorOptions)}
             dashboardData={serialize(dashboardData)}
-            strapOnly={!canViewAll}
-            canManage={permissions.includes(PERMISSIONS.ACQUISITION_UPDATE)}
+            strapOnly={listScope === "ACCESSORY_ONLY"}
+            canManage={permissions.includes(PERMISSIONS.ACQUISITION_UPDATE_ALL)
+                || permissions.includes(PERMISSIONS.WATCH_ACQUISITION_UPDATE)
+                || permissions.includes(PERMISSIONS.ACCESSORY_ACQUISITION_UPDATE)}
         />
     );
 }

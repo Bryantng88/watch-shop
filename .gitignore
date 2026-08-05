@@ -419,6 +419,7 @@ FodyWeavers.xsd
 
 # Next.js build output
 .next/
+.next-dev/
 out/
 
 # Next.js cache

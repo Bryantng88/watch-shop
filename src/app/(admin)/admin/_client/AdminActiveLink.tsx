@@ -12,6 +12,7 @@ export default function ActiveLink({
     className,
     activeClassName = "bg-gray-900 text-white",
     title,
+    expanded = false,
 }: {
     href: string;
     children: React.ReactNode;
@@ -19,6 +20,7 @@ export default function ActiveLink({
     className?: string;
     activeClassName?: string;
     title?: string;
+    expanded?: boolean;
 }) {
     const pathname = usePathname();
     const isActive = exact ? pathname === href : pathname?.startsWith(href);
@@ -28,7 +30,9 @@ export default function ActiveLink({
             title={title}
             className={cn(
                 "flex h-12 items-center rounded-xl px-4 text-slate-300 transition hover:bg-white/5 hover:text-white",
-                "justify-center min-[2200px]:justify-start min-[2200px]:gap-3",
+                expanded
+                    ? "justify-start gap-3"
+                    : "justify-center min-[2200px]:justify-start min-[2200px]:gap-3",
                 isActive && activeClassName,
                 className
             )}

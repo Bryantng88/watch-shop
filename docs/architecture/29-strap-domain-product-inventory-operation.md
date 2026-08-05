@@ -89,16 +89,28 @@ classification, measurements, inventory and installation truth.
 
 ## Acquisition access boundary
 
-- Watch acquisition remains behind the general `ACQUISITION_*` permissions,
-  assigned to ADMIN by the current role catalog.
-- Sales users receive only `STRAP_ACQUISITION_VIEW` and
-  `STRAP_ACQUISITION_CREATE`.
+- Watch acquisition uses `WATCH_ACQUISITION_{VIEW,CREATE,UPDATE,APPROVE,DELETE}`.
+- Accessory acquisition uses
+  `ACCESSORY_ACQUISITION_{VIEW,CREATE,UPDATE,APPROVE,DELETE}`.
+- Mixed Watch/accessory documents require the matching
+  `ACQUISITION_{VIEW,CREATE,UPDATE,APPROVE,DELETE}_ALL` permission. Holding both
+  scoped permissions does not grant access to mixed documents.
+- Sales users receive only `ACCESSORY_ACQUISITION_VIEW` and
+  `ACCESSORY_ACQUISITION_CREATE`. Watch and mixed acquisitions require their
+  own scoped permission (or the corresponding `ACQUISITION_*_ALL` permission).
+- Acquisition scope is derived on the server from persisted item product
+  types. Images/media assets are not part of this permission decision.
 - An accessory-scoped acquisition must contain at least one item and every item
-  must have `productType` in `WATCH_STRAP | WATCH_CLASP`. Mixed Watch/accessory documents are general
-  acquisitions and are not exposed to Sales.
+  must have `productType` in `WATCH_STRAP | WATCH_CLASP`. A Watch-scoped
+  acquisition must contain only `WATCH` items. Empty, unknown and mixed item
+  sets are classified as `ALL` (fail closed) and are not exposed to Sales.
 - The scope is enforced in source reads, list projection queries, dashboard
   aggregation, page authorization, and create API authorization. UI visibility
   is not treated as an authorization boundary.
+- `SALE` is an exact acquisition allowlist: only
+  `ACCESSORY_ACQUISITION_VIEW` and `ACCESSORY_ACQUISITION_CREATE`. It must not
+  receive Watch, accessory update/approve/delete, or any `*_ALL` acquisition
+  permission. The permission catalog audit rejects this forbidden-role drift.
 
 ## Compatibility migration
 

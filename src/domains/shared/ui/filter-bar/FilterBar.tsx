@@ -144,12 +144,9 @@ export default function FilterBar({
 
     return (
         <div className="rounded-t-xl border border-b-0 border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.025)]">
-            <div className={trailingActions
-                ? "grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-[minmax(240px,1fr)_repeat(2,minmax(150px,200px))_minmax(170px,220px)_auto_auto_auto_auto] xl:items-center"
-                : "grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(210px,1fr)_repeat(2,minmax(120px,0.72fr))_minmax(175px,0.9fr)_auto_auto_auto] xl:items-center xl:gap-2"
-            }>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 {search ? (
-                    <label className="relative block min-w-0">
+                    <label className="relative block min-w-0 flex-1">
                         <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                         <input
                             value={valueOf(values, search.key)}
@@ -163,37 +160,11 @@ export default function FilterBar({
                     </label>
                 ) : null}
 
-                {primaryFields.map((field) => (
-                    <FilterFieldControl
-                        key={field.key}
-                        field={field}
-                        value={valueOf(values, field.key)}
-                        onChange={(value) => onChange({ [field.key]: value })}
-                        onApply={onApply}
-                    />
-                ))}
-
-                {sortField ? (
-                    <FilterFieldControl
-                        field={sortField}
-                        value={valueOf(values, sortField.key)}
-                        onChange={(value) => onChange({ [sortField.key]: value })}
-                        onApply={onApply}
-                    />
-                ) : null}
-
-                <button
-                    type="button"
-                    onClick={onApply}
-                    className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
-                >
-                    Lọc
-                </button>
-
                 <button
                     type="button"
                     onClick={() => setAdvancedOpen((current) => !current)}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white"
+                    aria-expanded={advancedOpen}
+                    className={`inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition ${advancedOpen ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-white"}`}
                 >
                     <Filter className="h-4 w-4" />
                     Bộ lọc
@@ -204,17 +175,8 @@ export default function FilterBar({
                     ) : null}
                 </button>
 
-                <button
-                    type="button"
-                    onClick={onSaveView}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                >
-                    <Bookmark className="h-4 w-4" />
-                    Lưu view
-                </button>
-
                 {trailingActions ? (
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex shrink-0 items-center justify-end gap-2">
                         {trailingActions}
                     </div>
                 ) : null}
@@ -222,7 +184,7 @@ export default function FilterBar({
 
             {advancedOpen ? (
                 <div className="mt-3 grid grid-cols-1 gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-3 md:grid-cols-2 xl:grid-cols-4">
-                    {advancedFields.map((field) => (
+                    {[...primaryFields, ...advancedFields].map((field) => (
                         <label key={field.key} className="flex min-w-0 flex-col gap-1">
                             <span className="text-xs font-semibold text-slate-500">
                                 {field.label}
@@ -235,6 +197,19 @@ export default function FilterBar({
                             />
                         </label>
                     ))}
+                    {sortField ? (
+                        <label className="flex min-w-0 flex-col gap-1">
+                            <span className="text-xs font-semibold text-slate-500">
+                                {sortField.label}
+                            </span>
+                            <FilterFieldControl
+                                field={sortField}
+                                value={valueOf(values, sortField.key)}
+                                onChange={(value) => onChange({ [sortField.key]: value })}
+                                onApply={onApply}
+                            />
+                        </label>
+                    ) : null}
                     <button
                         type="button"
                         onClick={onApply}
@@ -243,6 +218,16 @@ export default function FilterBar({
                         <SlidersHorizontal className="h-4 w-4" />
                         Áp dụng
                     </button>
+                    {onSaveView ? (
+                        <button
+                            type="button"
+                            onClick={onSaveView}
+                            className="inline-flex h-11 items-center justify-center gap-2 self-end rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                        >
+                            <Bookmark className="h-4 w-4" />
+                            Lưu view
+                        </button>
+                    ) : null}
                 </div>
             ) : null}
 

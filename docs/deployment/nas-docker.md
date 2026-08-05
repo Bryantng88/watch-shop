@@ -46,6 +46,8 @@ APP_PORT=3000
 APP_ENV_FILE=.env.production
 BUILD_ENV_FILE=.env.build
 DB_BACKUP_DIR=/share/WatchShopBackup/database
+# Current direct LAN/WireGuard URL uses HTTP. Switch to true with HTTPS.
+AUTH_COOKIE_SECURE=false
 ```
 
 Use QTS reverse proxy/TLS for user access; do not forward Supabase/PostgreSQL
@@ -139,6 +141,12 @@ Keep `.env.build` and `.env.production` out of source control. Docker mounts
 an image layer.
 
 ## Database backup
+
+For the scoped Acquisition permission hotfix, follow `Scoped acquisition
+permission hotfix (2026-08-05)` in
+`docs/deployment/production-build-handoff.md`. The patch includes three ordered
+migrations, an exact SALE allowlist and a permission audit with forbidden-role
+drift detection. Do not recreate the app container until that audit passes.
 
 Production revision 2 contains authorization migrations. Follow the revision 2
 release record in `docs/deployment/production-build-handoff.md`: verify a backup,
