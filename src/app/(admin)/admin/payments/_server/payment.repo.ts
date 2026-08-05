@@ -197,13 +197,13 @@ export async function createshippingAmountPayment(
  * ========================= */
 export async function listAdmin(
     tx: DB,
-    input: PaymentListInput & { page: number; pageSize: number }
+    input: PaymentListInput & { page: number; pageSize: number; businessWhere?: Prisma.PaymentWhereInput }
 ) {
     const db = dbOrTx(tx);
 
     const q = (input.q || "").trim();
 
-    const whereBase: Prisma.PaymentWhereInput = {};
+    const whereBase: Prisma.PaymentWhereInput = input.businessWhere ? { AND: [input.businessWhere] } : {};
 
     if (input.purpose) whereBase.purpose = input.purpose as any;
     if (input.type) whereBase.type = input.type as any;

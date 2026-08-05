@@ -31,6 +31,11 @@ const makeSchema = () => z.object({
   quick_from_product_id: z.literal(true).optional(),
   quickFromProductId: z.literal(true).optional(),
   quickFlowType: z.literal(true).optional(),
+  publicRequestKey: z.literal(true).optional(),
+  publicRequestHash: z.literal(true).optional(),
+  publicRequestChannel: z.literal(true).optional(),
+  publicExternalId: z.literal(true).optional(),
+  publicFingerprintHash: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const OrderCountAggregateInputObjectSchema: z.ZodType<Prisma.OrderCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.OrderCountAggregateInputType>;

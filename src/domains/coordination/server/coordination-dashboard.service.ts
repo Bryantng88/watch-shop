@@ -39,6 +39,7 @@ import type {
 } from "./coordination-dashboard.types";
 import type { CoordinationContext } from "./coordination-cycle.types";
 import { getPaymentOwnerSummaryProjections } from "@/domains/projection/server/payment-owner-summary.projection";
+import { resolvePaymentBusinessScopes } from "@/domains/payment/server";
 import { perfStep } from "@/lib/server-perf";
 import { resolveProductDisplayImage } from "@/domains/shared/media/server/display-image";
 import { getBusinessEventDefinition } from "@/domains/event/registry/business-event-registry";
@@ -735,11 +736,15 @@ function canViewTicket(
   if (roles.includes(shareGroupKey)) return true;
 
   const permissionByShareGroup: Record<string, string> = {
-    payment: "PAYMENT_VIEW",
     sales: "ORDER_VIEW",
     technical: "SERVICE_VIEW",
     media: "MEDIA_VIEW",
   };
+  if (shareGroupKey === "payment") {
+    const permissions = authPermissions(auth);
+    return ["PAYMENT_VIEW_ALL", "ORDER_PAYMENT_VIEW", "ACQUISITION_PAYMENT_VIEW", "SERVICE_PAYMENT_VIEW", "SHIPMENT_PAYMENT_VIEW"]
+      .some((permission) => permissions.includes(permission));
+  }
   const requiredPermission = permissionByShareGroup[shareGroupKey];
   return Boolean(requiredPermission && authPermissions(auth).includes(requiredPermission));
 }
@@ -3137,6 +3142,7 @@ export async function getCoordinationDashboard(input: {
               ? flowPaymentDirection
               : undefined,
           positiveAmountOnly: true,
+          businessScopes: resolvePaymentBusinessScopes(authPermissions(input.auth), "VIEW"),
           page: 1,
           pageSize: 1,
           sort: "createdDesc",
@@ -3317,7 +3323,10 @@ export async function getCoordinationDashboard(input: {
       : Promise.resolve([]),
     isPaymentFlow && input.includeDashboardDetails !== false
       ? dashboardStep("paymentCashFlow", () =>
-          listSettledPaymentCashFlowProjection(db).then((rows) =>
+           listSettledPaymentCashFlowProjection(
+             db,
+             resolvePaymentBusinessScopes(authPermissions(input.auth), "VIEW"),
+           ).then((rows) =>
             paymentCashFlowPeriods(rows.map((row) => ({
               amount: row.amount,
               direction: row.direction as PaymentDirection,
@@ -3598,6 +3607,7 @@ export async function getCoordinationDashboard(input: {
                     flowPaymentStatus === "PAID"
                       ? PaymentStatus.PAID
                       : null,
+                  businessScopes: resolvePaymentBusinessScopes(authPermissions(input.auth), "VIEW"),
                   sort: flowSort === "UPDATED_ASC" ? "updatedAsc" : "updatedDesc",
                 }).then((result) => {
                   paymentFlowProjectionTotal = result.total;

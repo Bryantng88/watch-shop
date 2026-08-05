@@ -98,6 +98,15 @@ export type CreateOrderInput = Omit<OrderDraftInput, "createdAt"> & {
   verificationStatus?: OrderVerificationStatus;
   quickFromProductId?: string | null;
   quickFlowType?: OrderFlowType | "STANDARD" | "QUICK_ORDER" | null;
+  publicRequest?: {
+    key: string;
+    hash: string;
+    channel: "STOREFRONT" | "ZALO";
+    externalRequestId?: string | null;
+    fingerprintHash: string;
+    rateLimitSince: Date;
+    rateLimitMax: number;
+  } | null;
 };
 
 export type QuickOrderFromProductInput = {

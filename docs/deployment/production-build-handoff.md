@@ -471,9 +471,15 @@ the verified pre-migration database backup until acceptance is complete.
 Run these steps from a Windows machine on the NAS LAN. Upload with the `user`
 account because direct SSH authentication for `admin` is disabled on this NAS:
 
+This hotfix supersedes both `watch-shop-production-r2-20260804.tar.gz` and
+`watch-shop-ui-auth-patch-20260805.tar.gz`. Do not combine or deploy those two
+older archives: neither one contains the complete application and migration set
+required by this release. Use only the consolidated archive below.
+
 ```powershell
 scp -O -P 22253 `
-  D:\workspace\project\watch-shop\watch-shop-production-r2-20260804.tar.gz `
+  D:\workspace\project\watch-shop\watch-shop-hotfix-acquisition-20260805-bc00fe0a.tar.gz `
+  D:\workspace\project\watch-shop\watch-shop-hotfix-acquisition-20260805-bc00fe0a.tar.gz.sha256 `
   user@192.168.1.253:/share/WatchShop/app/
 ssh -p 22253 user@192.168.1.253
 ```
@@ -485,21 +491,16 @@ prompted and verify that the prompt changes from `$` to `#`:
 sudo -i
 whoami
 cd /share/WatchShop/app
-sha256sum watch-shop-production-r2-20260804.tar.gz
+sha256sum -c watch-shop-hotfix-acquisition-20260805-bc00fe0a.tar.gz.sha256
 ```
 
-For this revision, the expected SHA-256 is:
-
-```text
-092c0ee8d67013b4d20d19e5ffc0ddbd2488e686c4649b45707caa3fd6130df4
-```
-
-Stop if the hash differs. Extracting the bundle preserves `.env.build` and
+Stop unless the checksum command reports `OK`. The checksum sidecar is generated
+and reviewed together with the release archive. Extracting the bundle preserves `.env.build` and
 `.env.production` because real environment files are excluded from the archive.
 Validate Compose and complete a database backup before any migration:
 
 ```sh
-tar -xzf watch-shop-production-r2-20260804.tar.gz -C /share/WatchShop/app
+tar -xzf watch-shop-hotfix-acquisition-20260805-bc00fe0a.tar.gz -C /share/WatchShop/app
 sed -i 's/\r$//' ops/database/backup.sh ops/database/restore-drill.sh
 docker compose --env-file .env.production config --quiet
 docker compose --env-file .env.production --profile tools run --rm db-backup
@@ -529,7 +530,7 @@ the existing container running while the new image is being built.
 
 ```sh
 cd /share/WatchShop/app
-tar -xzf watch-shop-production-r2-20260804.tar.gz -C /share/WatchShop/app
+tar -xzf watch-shop-hotfix-acquisition-20260805-bc00fe0a.tar.gz -C /share/WatchShop/app
 sed -i 's/\r$//' ops/database/backup.sh ops/database/restore-drill.sh
 docker compose --env-file .env.production config --quiet
 docker compose --env-file .env.production build app migrate
@@ -560,3 +561,42 @@ Acceptance smoke tests:
    insufficient permissions.
 6. The operation dashboard stays on one row at normal desktop width and exposes
    `Xem thêm` only when the viewport is narrow.
+
+## Scoped Payment business permissions hotfix (2026-08-05)
+
+This hotfix replaces coarse `PAYMENT_VIEW/CREATE/UPDATE/DELETE` permissions with
+owner-aware Order, Acquisition, Service and Shipment permissions plus explicit
+`PAYMENT_*_ALL` permissions. `TECHNICAL_ISSUE` payments belong to Service.
+Shipment payments may retain an Order reference but belong to Shipment whenever
+`shipment_id` is present. Conflicting unrelated owners fail closed.
+
+Committed migration:
+
+```text
+20260807_scoped_payment_permissions
+```
+
+Legacy assignments map to `PAYMENT_*_ALL` to preserve existing access. ADMIN
+receives the full catalog. SALE must have no Payment permission. Enforcement
+covers owner APIs, generic complete/cancel APIs, Payment lists, projections,
+cash-flow reads and Payment workflow actions. Acquisition financial fields also
+require `PRODUCT_COST_VIEW` and the matching Acquisition Payment permission.
+
+Run these gates before replacing the app container:
+
+```sh
+docker compose --env-file .env.production --profile tools run --rm db-backup
+IMAGE_TAG=payment-scope-20260805-r1 docker compose --env-file .env.production build app migrate
+IMAGE_TAG=payment-scope-20260805-r1 docker compose --env-file .env.production --profile tools run --rm migrate
+IMAGE_TAG=payment-scope-20260805-r1 docker compose --env-file .env.production --profile tools run --rm migrate npm run auth:audit-permissions
+```
+
+The audit must report `ok: true`, catalog counts `78/78`, no drift, no retired
+codes and no forbidden Payment permission on SALE. Only then run:
+
+```sh
+IMAGE_TAG=payment-scope-20260805-r1 docker compose --env-file .env.production up -d --no-deps --force-recreate app
+```
+
+Keep `watch-shop:pre-payment-scope-20260805` and the verified pre-migration
+backup until acceptance. Image rollback does not restore retired Permission rows.

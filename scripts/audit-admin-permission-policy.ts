@@ -12,6 +12,12 @@ import {
   canAccessAcquisitionScope,
   classifyAcquisitionScope,
 } from "../src/domains/acquisition/server/acquisition-access.service";
+import {
+  canAccessPaymentBusiness,
+  normalizePaymentBusinessScope,
+  paymentBusinessWhere,
+  resolvePaymentBusinessScopes,
+} from "../src/domains/payment/server/payment-access.service";
 
 const root = process.cwd();
 
@@ -145,7 +151,7 @@ const cases: Array<[string, boolean]> = [
   ["shipment create accepts SHIPMENT_CREATE", allowed(getAdminApiPolicy("/api/admin/shipments", "POST"), PERMISSIONS.SHIPMENT_CREATE)],
   ["service create accepts SERVICE_CREATE", allowed(getAdminApiPolicy("/api/admin/service-requests", "POST"), PERMISSIONS.SERVICE_CREATE)],
   ["technical issue delete accepts SERVICE_DELETE", allowed(getAdminApiPolicy("/api/admin/technical-issues/sample", "DELETE"), PERMISSIONS.SERVICE_DELETE)],
-  ["payment transition reaches coarse gate", allowed(getAdminApiPolicy("/api/admin/task-items/manual-transition", "POST"), PERMISSIONS.PAYMENT_UPDATE)],
+  ["payment transition reaches scoped gate", allowed(getAdminApiPolicy("/api/admin/task-items/manual-transition", "POST"), PERMISSIONS.ORDER_PAYMENT_UPDATE)],
   ["media sign is available to every authenticated user", allowed(getAdminApiPolicy("/api/media/sign", "GET"))],
   ["media library read still rejects users without MEDIA_VIEW", !allowed(getAdminApiPolicy("/api/media/assets", "GET"))],
   ["media library read accepts MEDIA_VIEW", allowed(getAdminApiPolicy("/api/media/assets", "GET"), PERMISSIONS.MEDIA_VIEW)],
@@ -155,6 +161,15 @@ const cases: Array<[string, boolean]> = [
   ["mixed item scope requires ALL", classifyAcquisitionScope(["WATCH", "WATCH_STRAP"]) === "ALL"],
   ["watch permission cannot view accessory scope", !canAccessAcquisitionScope([PERMISSIONS.WATCH_ACQUISITION_VIEW], "VIEW", "ACCESSORY")],
   ["all permission can view mixed scope", canAccessAcquisitionScope([PERMISSIONS.ACQUISITION_VIEW_ALL], "VIEW", "ALL")],
+  ["order payment view cannot read acquisition payments", !canAccessPaymentBusiness([PERMISSIONS.ORDER_PAYMENT_VIEW], "VIEW", "ACQUISITION")],
+  ["acquisition payment view reads acquisition payments", canAccessPaymentBusiness([PERMISSIONS.ACQUISITION_PAYMENT_VIEW], "VIEW", "ACQUISITION")],
+  ["payment view all reads every business", canAccessPaymentBusiness([PERMISSIONS.PAYMENT_VIEW_ALL], "VIEW", "SHIPMENT")],
+  ["technical issue normalizes to service payment", normalizePaymentBusinessScope("TECHNICAL_ISSUE") === "SERVICE"],
+  ["unknown payment owner requires all", normalizePaymentBusinessScope("UNKNOWN") === "ALL"],
+  ["order scoped list excludes all-owner mode", !resolvePaymentBusinessScopes([PERMISSIONS.ORDER_PAYMENT_VIEW]).includes("ALL")],
+  ["no payment scope produces fail-closed query", JSON.stringify(paymentBusinessWhere([])).includes("__no_authorized_payment__")],
+  ["acquisition payment API rejects order payment view", !allowed(getAdminApiPolicy("/api/admin/acquisitions/sample/payment", "GET"), PERMISSIONS.ORDER_PAYMENT_VIEW)],
+  ["acquisition payment API accepts acquisition payment view", allowed(getAdminApiPolicy("/api/admin/acquisitions/sample/payment", "GET"), PERMISSIONS.ACQUISITION_PAYMENT_VIEW)],
   ["reports page accepts REPORT_VIEW", allowed(getAdminPagePolicy("/admin/reports"), PERMISSIONS.REPORT_VIEW)],
 ];
 

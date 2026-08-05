@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createPaymentApplication } from "@/domains/payment/application";
+import { authorizePaymentOwner } from "@/domains/payment/server";
 
 export async function POST(
     req: Request,
@@ -9,6 +10,8 @@ export async function POST(
     try {
         const params = await ctx.params;
         const body = await req.json().catch(() => ({}));
+        const access = await authorizePaymentOwner("ORDER", "CREATE");
+        if (!access.ok) return NextResponse.json({ error: "Forbidden" }, { status: access.status });
 
         const result = await createPaymentApplication({
             ownerType: "ORDER",

@@ -26,6 +26,7 @@ export { ProjectionEventDeliveryResultSchema } from './ProjectionEventDelivery.r
 export { ProjectionRecordResultSchema } from './ProjectionRecord.result';
 export { OrderResultSchema } from './Order.result';
 export { OrderItemResultSchema } from './OrderItem.result';
+export { IntegrationIngressReceiptResultSchema } from './IntegrationIngressReceipt.result';
 export { PartVariantSpecResultSchema } from './PartVariantSpec.result';
 export { PaymentResultSchema } from './Payment.result';
 export { ProductResultSchema } from './Product.result';

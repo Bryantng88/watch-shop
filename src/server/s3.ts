@@ -1,6 +1,4 @@
 import { S3Client } from "@aws-sdk/client-s3";
-import { NodeHttpHandler } from "@smithy/node-http-handler";
-import https from "https";
 
 export const s3 = new S3Client({
     endpoint: process.env.S3_ENDPOINT!,          // https://<myqnapcloud>:8010
@@ -15,5 +13,4 @@ export const s3 = new S3Client({
 
 
 export const S3_BUCKET = process.env.S3_BUCKET!;
-console.log(S3_BUCKET)
 export const PUBLIC_BASE = `${process.env.S3_ENDPOINT}/${S3_BUCKET}`;

@@ -10,6 +10,36 @@ storefront, but the current public surface should be treated as a prototype.
 Target the first release as a public catalog plus order-request flow, not a
 fully automated ecommerce checkout.
 
+The legacy storefront is a visual reference only. Preserve its approved visual
+direction where useful, but do not restore or extend its obsolete feature,
+cart, catalog, data-access, or service code.
+
+## Storefront Engineering Contract
+
+- Rebuild the UI with current project conventions and mobile-first responsive
+  components; use the legacy list/detail styling only as a design reference.
+- Keep channel UI and transport thin. Storefront and Zalo adapters validate and
+  translate requests, then call explicit application/domain boundaries.
+- Put public-safe watch selection, availability, pricing and order-request rules
+  in shared application/domain services. Do not duplicate those rules across
+  pages, route handlers or Zalo integrations.
+- Query through an explicit public catalog read service/projection that returns
+  a small public DTO. Never expose a Prisma entity or reuse an admin DTO and
+  redact it afterward.
+- Keep repositories focused on persistence and optimized projections. Select
+  only fields required by the public contract, avoid N+1 queries, paginate list
+  reads, and define cache/revalidation behavior explicitly.
+- Keep write flows transactional where business invariants require it. Resolve
+  price, availability and locks on the server; never trust client-derived
+  business values.
+- Define and version request/response schemas for storefront and Zalo ingress.
+  Validate at the boundary and cover application contracts with automated
+  tests.
+- Do not import from admin route folders or legacy `features/cart`,
+  `features/catalog`, static demo data, or abandoned storefront components.
+- Delete superseded legacy storefront code only after the replacement list,
+  detail and order-request flows pass their acceptance gates.
+
 ## Recommended MVP Scope
 
 - Public visitors can browse watches.
@@ -84,6 +114,36 @@ NAS hosting is acceptable for the public storefront if access is split clearly:
 - Do not rely only on UI hiding for admin protection.
 - Use HTTPS, backups, and a restore plan for database and media.
 
+## Zalo Public API Boundary
+
+Zalo integrations have the same internet-reachability requirement as the
+storefront: Zalo cannot call admin routes that are intentionally available only
+from the LAN or VPN. The public reverse proxy may therefore expose a narrowly
+scoped Zalo ingress alongside the storefront.
+
+- Keep `/admin` and `/api/admin/*` private.
+- Expose dedicated HTTPS endpoints such as `/api/integrations/zalo/*`; do not
+  expose admin APIs for Zalo and do not treat a Zalo webhook as an anonymous
+  storefront request.
+- Storefront and Zalo may share the same public-safe catalog query and modern
+  Order application/domain boundary. Share application services and business
+  rules rather than making one channel call another channel's HTTP endpoint.
+- Watch lookup from Zalo must return only the same public-safe fields and
+  availability rules as the storefront catalog. It must never leak cost,
+  vendor, acquisition, service, task, or other internal metadata.
+- A Zalo order request must resolve current product, price, availability and
+  order locks on the server, then create a `WEB`/channel-attributed pending
+  draft through the same safe order flow used by storefront requests.
+- Verify the Zalo webhook signature/token before processing, allow only known
+  event types, validate payload schemas, apply rate limits, record delivery or
+  event ids for idempotency, and reject replayed or duplicate requests.
+- Acknowledge webhooks quickly and move slow processing to a durable background
+  flow where needed. Log correlation ids and sanitized outcomes without logging
+  secrets or unnecessary customer data.
+- Configure the reverse proxy to expose only the required Zalo paths, with HTTPS
+  and request-size/time limits. Public reachability must not widen access to the
+  admin surface.
+
 ## Public Catalog Rules
 
 Only show watches that are safe to sell publicly:
@@ -121,7 +181,153 @@ The public order form should be a request/lead flow:
 7. Add spam/rate-limit guardrails.
 8. Fix middleware filename/config and reverse proxy rules for `/admin` and
    `/api/admin`.
-9. Test the NAS deployment path with public-only access over HTTPS.
+9. Add the authenticated Zalo ingress on the same public-safe catalog and Order
+   application boundaries, including signature verification, validation,
+   idempotency, rate limiting and channel attribution.
+10. Test the NAS deployment path with storefront/Zalo-only access over HTTPS.
+
+## Delivery Phases And Gates
+
+Each phase must close its gate before work depending on it is considered ready.
+Visual work may be prototyped in parallel, but it must not bypass the public
+data and application contracts.
+
+### Phase 0: Baseline, Contracts And Legacy UI Inventory
+
+Deliverables:
+
+- Inventory current public routes, legacy storefront components/assets and
+  broken or abandoned imports.
+- Capture the approved legacy visual direction as screenshots/tokens/component
+  references without adopting its implementation.
+- Define public Watch list/detail DTOs, filter/pagination contract, public image
+  policy and public-sale eligibility rules.
+- Define storefront order-request and Zalo channel contracts, including error
+  shapes, idempotency keys and channel attribution.
+- Verify middleware naming/behavior and document the reverse-proxy exposure
+  matrix for public, Zalo and private admin paths.
+
+Gate:
+
+- Contracts and exposure matrix are reviewed; no public DTO includes internal
+  cost, vendor, acquisition, service, task or operational fields.
+
+### Phase 1: Public Catalog Read Boundary
+
+Implementation handoff:
+
+- `docs/sprints/SM-Storefront-Phase-1-public-catalog-boundary.md`
+
+Deliverables:
+
+- Add a dedicated public catalog query/application service and repository
+  projection over current Watch business truth/read models.
+- Implement sale-ready filters, stable sorting, cursor or bounded pagination,
+  search/filter normalization and public image resolution.
+- Add list/detail contract tests, query-count checks where practical and tests
+  proving `SOLD`, `HOLD`, draft and internal records cannot leak.
+- Make the same application query callable by storefront and future Zalo
+  adapters without HTTP-to-HTTP calls.
+
+Gate:
+
+- Public list/detail contracts pass, return only eligible watches and remain
+  independent from admin route folders and legacy storefront features.
+
+### Phase 2: Mobile-First Storefront Shell And Catalog UI
+
+Implementation handoff:
+
+- `docs/sprints/SM-Storefront-Phase-2-mobile-shell-and-catalog-ui.md`
+
+Deliverables:
+
+- Build the new public layout, header/navigation, footer, theme metadata and
+  responsive content shell using the legacy UI only as visual reference.
+- Implement Watch list, cards, loading/empty/error states, pagination and a
+  mobile filter sheet on the Phase 1 contract.
+- Implement the Watch detail page with stable media layout and public-safe
+  specifications.
+- Validate 360 px, 390 px, 430 px, tablet and desktop layouts, keyboard use and
+  basic accessibility.
+
+Gate:
+
+- List/detail flows render from real public data without missing imports,
+  mojibake, horizontal page overflow or admin/internal data exposure.
+
+### Phase 3: Cart-Like Selection And Order Request
+
+Deliverables:
+
+- Implement a lightweight client selection/cart for composing an order request;
+  it is not authoritative inventory or checkout state.
+- Define validated public order schemas and keep the route handler thin.
+- Complete the modern Order application flow with server-resolved price,
+  availability and locking, transactional invariants, `source=WEB`,
+  `status=DRAFT` and `verificationStatus=PENDING`.
+- Add idempotency, duplicate protection, rate limiting and a honeypot/captcha
+  strategy; return stable safe errors without leaking internals.
+- Cover successful, unavailable, sold/hold, price-tampering, duplicate and
+  concurrent request cases.
+
+Gate:
+
+- A public request creates exactly one valid pending draft; client price cannot
+  affect persisted price and unavailable watches cannot be ordered.
+
+### Phase 4: Zalo Adapter On Shared Contracts
+
+Deliverables:
+
+- Add dedicated `/api/integrations/zalo/*` ingress and signature/token
+  verification, supported-event allow-list, payload schemas and replay defense.
+- Adapt Zalo Watch lookup to the Phase 1 public catalog service.
+- Adapt Zalo order creation to the Phase 3 Order application flow with explicit
+  Zalo channel attribution and idempotent event/delivery ids.
+- Add fast acknowledgement, sanitized correlated logging and durable background
+  processing for slow work where needed.
+
+Gate:
+
+- Valid Zalo requests use the same business rules as storefront; invalid,
+  replayed or duplicate events create no order and no admin API is exposed.
+
+### Phase 5: PWA, Security And NAS Exposure
+
+Deliverables:
+
+- Add manifest, install icons, theme metadata and an HTTPS-installable shell.
+- Define service-worker cache allow-lists for versioned static assets and safe
+  public reads only; explicitly exclude mutations, customer data and all admin
+  or authenticated responses.
+- Add a visible offline/read-only state and revalidate price/availability before
+  submission.
+- Configure reverse proxy, HTTPS, request-size/time limits and public route
+  allow-lists while keeping `/admin` and `/api/admin/*` LAN/VPN-only.
+- Run security, restore, media URL and external-network acceptance checks.
+
+Gate:
+
+- Storefront and Zalo work through public HTTPS, admin remains unreachable from
+  the public internet, and cache/security acceptance checks pass.
+
+### Phase 6: Controlled Release And Legacy Cleanup
+
+Deliverables:
+
+- Release behind an explicit public exposure switch or reverse-proxy rule,
+  monitor errors, latency, order duplication and availability conflicts.
+- Document rollback for application, proxy configuration and storefront cache.
+- Remove superseded legacy pages/components/assets and broken feature imports
+  only after the replacement passes production smoke checks.
+- Update the handoff with final contracts, operational ownership and deferred
+  ecommerce features.
+
+Gate:
+
+- Production smoke and monitoring are stable, rollback is proven, and removed
+  legacy code has no remaining imports or runtime dependency.
 
 ## Acceptance Checklist
 
@@ -142,6 +348,10 @@ The public order form should be a request/lead flow:
 - Client-submitted price cannot override DB price.
 - `/admin` is not reachable from the public internet.
 - `/api/admin/*` is not reachable from the public internet.
+- Zalo can reach only its dedicated authenticated integration endpoints; valid
+  watch lookup and order-request flows reuse the public-safe application rules.
+- Invalid signatures, replayed events, duplicate order requests and unsupported
+  Zalo events are rejected without creating an order.
 - Images render from NAS/public URLs.
 
 ## Next Prompt

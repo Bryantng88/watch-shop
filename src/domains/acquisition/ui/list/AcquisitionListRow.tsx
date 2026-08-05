@@ -24,6 +24,7 @@ type Props = {
     onCheckedChange: (checked: boolean) => void;
     onOpenEdit?: (id: string) => void;
     canManage?: boolean;
+    canViewFinancials?: boolean;
 };
 
 export default function AcquisitionListRow({
@@ -32,6 +33,7 @@ export default function AcquisitionListRow({
     onCheckedChange,
     onOpenEdit,
     canManage = false,
+    canViewFinancials = false,
 }: Props) {
     const router = useRouter();
     const notify = useNotify();
@@ -172,7 +174,7 @@ export default function AcquisitionListRow({
             <td className="px-4 py-4">
                 <AcquisitionStatusSignal status={item.approvalStatus} />
             </td>
-            <td className="px-4 py-4">
+            <td className={canViewFinancials ? "px-4 py-4" : "hidden"}>
                 <div className="flex items-center">
                     <PaymentStatusSignal
                         status={!posted && !draft ? "CANCELLED" : item.paymentStatus ?? "UNPAID"}
@@ -190,7 +192,7 @@ export default function AcquisitionListRow({
                 <div className="mt-1 text-xs text-slate-400">{item.acquisitionType || "-"}</div>
             </td>
 
-            <td className="px-4 py-4 text-right whitespace-nowrap">
+            <td className={canViewFinancials ? "px-4 py-4 text-right whitespace-nowrap" : "hidden"}>
                 <PaymentAmountSummary
                     totalAmount={item.totalAmount}
                     remainingAmount={item.paymentRemainingAmount}

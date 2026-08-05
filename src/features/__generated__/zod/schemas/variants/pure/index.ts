@@ -26,6 +26,7 @@ export { ProjectionEventDeliveryModelSchema } from './ProjectionEventDelivery.pu
 export { ProjectionRecordModelSchema } from './ProjectionRecord.pure';
 export { OrderModelSchema } from './Order.pure';
 export { OrderItemModelSchema } from './OrderItem.pure';
+export { IntegrationIngressReceiptModelSchema } from './IntegrationIngressReceipt.pure';
 export { PartVariantSpecModelSchema } from './PartVariantSpec.pure';
 export { PaymentModelSchema } from './Payment.pure';
 export { ProductModelSchema } from './Product.pure';

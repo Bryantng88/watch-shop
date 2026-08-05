@@ -22,6 +22,7 @@ function statusLabel(status: string) {
 export async function getAcquisitionListDashboard(
     audienceSegment?: "MEN" | "WOMEN",
     productScope?: "WATCH_ONLY" | "ACCESSORY_ONLY" | "WATCH_AND_ACCESSORY_ONLY",
+    includeFinancials = false,
 ): Promise<BusinessListDashboardData> {
     const rows = await prisma.acquisition.findMany({
         where: {
@@ -53,7 +54,7 @@ export async function getAcquisitionListDashboard(
             id: true,
             refNo: true,
             accquisitionStt: true,
-            totalAmount: true,
+            totalAmount: includeFinancials,
             updatedAt: true,
             vendor: { select: { name: true } },
         },
@@ -85,7 +86,7 @@ export async function getAcquisitionListDashboard(
             { key: "posted", label: "Đã nhập kho", value: counts.get("POSTED") ?? 0 },
             { key: "canceled", label: "Đã hủy", value: canceled },
         ],
-        inventoryValue: {
+        ...(includeFinancials ? { inventoryValue: {
             label: "Giá trị nhập",
             value: totalValue,
             currency: "VND",
@@ -94,7 +95,7 @@ export async function getAcquisitionListDashboard(
                 .slice(0, 12)
                 .reverse()
                 .map((row) => Number(row.totalAmount ?? 0)),
-        },
+        } } : {}),
         breakdown: {
             label: "Theo trạng thái phiếu",
             total: rows.length,

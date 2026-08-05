@@ -53,7 +53,12 @@ const orderscalarwherewithaggregatesinputSchema = z.object({
   verificationStatus: z.union([z.lazy(() => EnumOrderVerificationStatusWithAggregatesFilterObjectSchema), OrderVerificationStatusSchema]).optional(),
   quick_from_product_id: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   quickFromProductId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
-  quickFlowType: z.union([z.lazy(() => EnumOrderFlowTypeWithAggregatesFilterObjectSchema), OrderFlowTypeSchema]).optional()
+  quickFlowType: z.union([z.lazy(() => EnumOrderFlowTypeWithAggregatesFilterObjectSchema), OrderFlowTypeSchema]).optional(),
+  publicRequestKey: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  publicRequestHash: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  publicRequestChannel: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  publicExternalId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  publicFingerprintHash: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const OrderScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.OrderScalarWhereWithAggregatesInput> = orderscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.OrderScalarWhereWithAggregatesInput>;
 export const OrderScalarWhereWithAggregatesInputObjectZodSchema = orderscalarwherewithaggregatesinputSchema;

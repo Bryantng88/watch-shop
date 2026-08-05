@@ -44,7 +44,7 @@ function isSelectable(item: { approvalStatus: string }) {
     return String(item.approvalStatus).toUpperCase() !== "POSTED";
 }
 
-export default function AcquisitionListClient(props: AcquisitionListClientProps & { strapOnly?: boolean; canManage?: boolean }) {
+export default function AcquisitionListClient(props: AcquisitionListClientProps & { strapOnly?: boolean; canManage?: boolean; canViewFinancials?: boolean }) {
     const router = useRouter();
     const pathname = usePathname();
     const sp = useSearchParams();
@@ -199,6 +199,7 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps 
                 onToggleAll={toggleAll}
                 onOpenEdit={setEditAcquisitionId}
                 canManage={Boolean(props.canManage)}
+                canViewFinancials={Boolean(props.canViewFinancials)}
             />
 
             {editAcquisitionId ? (

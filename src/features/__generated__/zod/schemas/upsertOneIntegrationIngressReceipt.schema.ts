@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { IntegrationIngressReceiptSelectObjectSchema as IntegrationIngressReceiptSelectObjectSchema } from './objects/IntegrationIngressReceiptSelect.schema';
+import { IntegrationIngressReceiptWhereUniqueInputObjectSchema as IntegrationIngressReceiptWhereUniqueInputObjectSchema } from './objects/IntegrationIngressReceiptWhereUniqueInput.schema';
+import { IntegrationIngressReceiptCreateInputObjectSchema as IntegrationIngressReceiptCreateInputObjectSchema } from './objects/IntegrationIngressReceiptCreateInput.schema';
+import { IntegrationIngressReceiptUncheckedCreateInputObjectSchema as IntegrationIngressReceiptUncheckedCreateInputObjectSchema } from './objects/IntegrationIngressReceiptUncheckedCreateInput.schema';
+import { IntegrationIngressReceiptUpdateInputObjectSchema as IntegrationIngressReceiptUpdateInputObjectSchema } from './objects/IntegrationIngressReceiptUpdateInput.schema';
+import { IntegrationIngressReceiptUncheckedUpdateInputObjectSchema as IntegrationIngressReceiptUncheckedUpdateInputObjectSchema } from './objects/IntegrationIngressReceiptUncheckedUpdateInput.schema';
+
+export const IntegrationIngressReceiptUpsertOneSchema: z.ZodType<Prisma.IntegrationIngressReceiptUpsertArgs> = z.object({ select: IntegrationIngressReceiptSelectObjectSchema.optional(),  where: IntegrationIngressReceiptWhereUniqueInputObjectSchema, create: z.union([ IntegrationIngressReceiptCreateInputObjectSchema, IntegrationIngressReceiptUncheckedCreateInputObjectSchema ]), update: z.union([ IntegrationIngressReceiptUpdateInputObjectSchema, IntegrationIngressReceiptUncheckedUpdateInputObjectSchema ]) }).strict() as unknown as z.ZodType<Prisma.IntegrationIngressReceiptUpsertArgs>;
+
+export const IntegrationIngressReceiptUpsertOneZodSchema = z.object({ select: IntegrationIngressReceiptSelectObjectSchema.optional(),  where: IntegrationIngressReceiptWhereUniqueInputObjectSchema, create: z.union([ IntegrationIngressReceiptCreateInputObjectSchema, IntegrationIngressReceiptUncheckedCreateInputObjectSchema ]), update: z.union([ IntegrationIngressReceiptUpdateInputObjectSchema, IntegrationIngressReceiptUncheckedUpdateInputObjectSchema ]) }).strict();

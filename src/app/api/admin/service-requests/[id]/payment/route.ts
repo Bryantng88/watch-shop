@@ -5,9 +5,12 @@ import {
   createPaymentApplication,
   listServicePaymentsApplication,
 } from "@/domains/payment/application";
+import { authorizePaymentAccess, authorizePaymentOwner } from "@/domains/payment/server";
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
+  const access = await authorizePaymentOwner("SERVICE", "VIEW");
+  if (!access.ok) return NextResponse.json({ error: "Forbidden" }, { status: access.status });
   const items = await listServicePaymentsApplication(id);
   return NextResponse.json({ items });
 }
@@ -18,6 +21,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const body = await req.json().catch(() => ({}));
 
     if (body?.action === "cancel" || body?.cancelPaymentId) {
+      const access = await authorizePaymentAccess(body.cancelPaymentId ?? body.paymentId, "DELETE");
+      if (!access.ok) return NextResponse.json({ error: "Forbidden" }, { status: access.status });
       const result = await cancelPaymentApplication({
         paymentId: body.cancelPaymentId ?? body.paymentId,
         note: body.note ?? null,
@@ -26,6 +31,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     }
 
     if (body?.paymentId || body?.action === "complete") {
+      const access = await authorizePaymentAccess(body.paymentId, "UPDATE");
+      if (!access.ok) return NextResponse.json({ error: "Forbidden" }, { status: access.status });
       const result = await completePaymentApplication({
         paymentId: body.paymentId,
         reference: body.reference ?? null,
@@ -34,6 +41,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       });
       return NextResponse.json({ ok: true, result });
     }
+
+    const access = await authorizePaymentOwner("SERVICE", "CREATE");
+    if (!access.ok) return NextResponse.json({ error: "Forbidden" }, { status: access.status });
 
     const result = await createPaymentApplication({
       ownerType: "SERVICE",

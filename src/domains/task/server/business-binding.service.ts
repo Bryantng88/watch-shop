@@ -1550,6 +1550,7 @@ export async function listPaymentCollectionQueueItems(
     type?: string | null;
     direction?: string | null;
     status?: string | null;
+    businessScopes?: Array<"ORDER" | "ACQUISITION" | "SERVICE" | "SHIPMENT" | "ALL">;
     sort?: PaymentListProjectionInput["sort"];
   },
 ): Promise<{ items: QueueItemDTO[]; total: number }> {
@@ -1576,6 +1577,7 @@ export async function listPaymentCollectionQueueItems(
             ? PaymentStatus.UNPAID
             : undefined,
       positiveAmountOnly: true,
+      businessScopes: input.businessScopes,
       sort: input.sort ?? "updatedDesc",
       page: input.paginate === false ? 1 : page,
       pageSize: input.paginate === false ? 100_000 : pageSize,

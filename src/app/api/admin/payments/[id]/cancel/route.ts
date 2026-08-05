@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { cancelPayment } from "@/domains/payment/server";
+import { authorizePaymentAccess } from "@/domains/payment/server";
 
 export async function POST(
     req: NextRequest,
@@ -8,6 +9,8 @@ export async function POST(
 ) {
     try {
         const { id } = await context.params;
+        const access = await authorizePaymentAccess(id, "DELETE");
+        if (!access.ok) return NextResponse.json({ error: "Forbidden" }, { status: access.status });
 
         if (!id || id === "undefined") {
             return NextResponse.json(

@@ -35,7 +35,12 @@ const makeSchema = () => z.object({
   verificationStatus: OrderVerificationStatusSchema.optional(),
   quick_from_product_id: z.string().optional().nullable(),
   quickFromProductId: z.string().optional().nullable(),
-  quickFlowType: OrderFlowTypeSchema.optional()
+  quickFlowType: OrderFlowTypeSchema.optional(),
+  publicRequestKey: z.string().optional().nullable(),
+  publicRequestHash: z.string().optional().nullable(),
+  publicRequestChannel: z.string().optional().nullable(),
+  publicExternalId: z.string().optional().nullable(),
+  publicFingerprintHash: z.string().optional().nullable()
 }).strict();
 export const OrderCreateManyCustomerInputObjectSchema: z.ZodType<Prisma.OrderCreateManyCustomerInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderCreateManyCustomerInput>;
 export const OrderCreateManyCustomerInputObjectZodSchema = makeSchema();

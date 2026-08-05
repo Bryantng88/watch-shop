@@ -579,6 +579,11 @@ model Order {
   quick_from_product_id String?
   quickFromProductId    String?
   quickFlowType         OrderFlowType           @default(STANDARD)
+  publicRequestKey      String?                 @unique
+  publicRequestHash     String?
+  publicRequestChannel  String?
+  publicExternalId      String?
+  publicFingerprintHash String?
   Invoice               Invoice[]
   customer              Customer?               @relation(fields: [customerId], references: [id])
   orderItem             OrderItem[]
@@ -586,6 +591,7 @@ model Order {
   task                  Task[]
   workCase              WorkCase[]
 
+  @@unique([publicRequestChannel, publicExternalId], map: "Order_public_channel_external_key")
   @@index([createdAt])
   @@index([customerId])
   @@index([source])
@@ -593,6 +599,7 @@ model Order {
   @@index([verificationStatus])
   @@index([quickFlowType], map: "idx_order_quickFlowType")
   @@index([quickFromProductId], map: "idx_order_quickFromProductId")
+  @@index([publicFingerprintHash, createdAt], map: "idx_order_public_fingerprint_created")
 }
 
 model OrderItem {
@@ -639,6 +646,26 @@ model OrderItem {
   @@index([serviceCatalogId], map: "idx_order_item_service_catalog_id")
   @@index([linkedOrderItemId], map: "idx_orderitem_linked_order_item")
   @@index([serviceScope], map: "idx_orderitem_service_scope")
+}
+
+model IntegrationIngressReceipt {
+  id           String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  channel      String
+  keyId        String
+  nonce        String
+  eventId      String
+  eventType    String
+  requestHash  String
+  status       String
+  responseJson Json?
+  lastError    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  expiresAt    DateTime @db.Timestamptz(6)
+
+  @@unique([channel, nonce], map: "IntegrationIngressReceipt_channel_nonce_key")
+  @@unique([channel, eventId], map: "IntegrationIngressReceipt_channel_event_key")
+  @@index([expiresAt])
 }
 
 model PartVariantSpec {

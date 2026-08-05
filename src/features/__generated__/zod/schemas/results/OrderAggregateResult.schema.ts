@@ -28,6 +28,11 @@ export const OrderAggregateResultSchema = z.object({  _count: z.object({
     quick_from_product_id: z.number(),
     quickFromProductId: z.number(),
     quickFlowType: z.number(),
+    publicRequestKey: z.number(),
+    publicRequestHash: z.number(),
+    publicRequestChannel: z.number(),
+    publicExternalId: z.number(),
+    publicFingerprintHash: z.number(),
     Invoice: z.number(),
     customer: z.number(),
     orderItem: z.number(),
@@ -66,7 +71,12 @@ export const OrderAggregateResultSchema = z.object({  _count: z.object({
     depositRequired: z.number().nullable(),
     depositPaid: z.number().nullable(),
     quick_from_product_id: z.string().nullable(),
-    quickFromProductId: z.string().nullable()
+    quickFromProductId: z.string().nullable(),
+    publicRequestKey: z.string().nullable(),
+    publicRequestHash: z.string().nullable(),
+    publicRequestChannel: z.string().nullable(),
+    publicExternalId: z.string().nullable(),
+    publicFingerprintHash: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -87,5 +97,10 @@ export const OrderAggregateResultSchema = z.object({  _count: z.object({
     depositRequired: z.number().nullable(),
     depositPaid: z.number().nullable(),
     quick_from_product_id: z.string().nullable(),
-    quickFromProductId: z.string().nullable()
+    quickFromProductId: z.string().nullable(),
+    publicRequestKey: z.string().nullable(),
+    publicRequestHash: z.string().nullable(),
+    publicRequestChannel: z.string().nullable(),
+    publicExternalId: z.string().nullable(),
+    publicFingerprintHash: z.string().nullable()
   }).nullable().optional()});

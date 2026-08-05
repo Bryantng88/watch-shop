@@ -59,7 +59,7 @@ export async function authorizeAcquisitionScope(productTypes: readonly unknown[]
   if (!user) return { ok: false as const, status: 401 as const };
   const scope = classifyAcquisitionScope(productTypes);
   return canAccessAcquisitionScope(permissions, action, scope)
-    ? { ok: true as const, user, scope }
+    ? { ok: true as const, user, permissions, scope }
     : { ok: false as const, status: 403 as const };
 }
 

@@ -1,0 +1,22 @@
+import * as z from 'zod';
+import type { Prisma } from '@prisma/client';
+
+
+const makeSchema = () => z.object({
+  id: z.literal(true).optional(),
+  channel: z.literal(true).optional(),
+  keyId: z.literal(true).optional(),
+  nonce: z.literal(true).optional(),
+  eventId: z.literal(true).optional(),
+  eventType: z.literal(true).optional(),
+  requestHash: z.literal(true).optional(),
+  status: z.literal(true).optional(),
+  responseJson: z.literal(true).optional(),
+  lastError: z.literal(true).optional(),
+  createdAt: z.literal(true).optional(),
+  updatedAt: z.literal(true).optional(),
+  expiresAt: z.literal(true).optional(),
+  _all: z.literal(true).optional()
+}).strict();
+export const IntegrationIngressReceiptCountAggregateInputObjectSchema: z.ZodType<Prisma.IntegrationIngressReceiptCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.IntegrationIngressReceiptCountAggregateInputType>;
+export const IntegrationIngressReceiptCountAggregateInputObjectZodSchema = makeSchema();

@@ -60,6 +60,7 @@ import {
   type ServiceOperationActionAdapterResult,
 } from "@/domains/service/server/operation/service-operation-action-adapter";
 import { runPaymentOperationBlueprintAction } from "@/domains/payment/server/payment-operation-action-adapter";
+import { authorizePaymentAccess } from "@/domains/payment/server";
 import { runShipmentOperationBlueprintAction } from "@/domains/shipment/server/shipment-operation-action-adapter";
 import {
   addManualQueueItem,
@@ -363,7 +364,7 @@ async function getTaskAuth() {
 
 function operationalPermission(targetType?: string | null) {
   const normalized = String(targetType ?? "").trim().toUpperCase();
-  if (normalized === TaskExecutionTargetType.PAYMENT) return PERMISSIONS.PAYMENT_UPDATE;
+  if (normalized === TaskExecutionTargetType.PAYMENT) return null;
   if (normalized === TaskExecutionTargetType.SHIPMENT) return PERMISSIONS.SHIPMENT_UPDATE;
   if (normalized === TaskExecutionTargetType.ORDER) return PERMISSIONS.ORDER_UPDATE;
   if (normalized === TaskExecutionTargetType.WATCH) return PERMISSIONS.PRODUCT_UPDATE;
@@ -376,8 +377,15 @@ function operationalPermission(targetType?: string | null) {
   return PERMISSIONS.TASK_MANAGE;
 }
 
-async function requireOperationalPermission(targetType?: string | null) {
-  return requirePermission(operationalPermission(targetType));
+async function requireOperationalPermission(targetType?: string | null, targetId?: string | null) {
+  if (String(targetType ?? "").trim().toUpperCase() === TaskExecutionTargetType.PAYMENT) {
+    const access = await authorizePaymentAccess(String(targetId ?? ""), "UPDATE");
+    if (!access.ok) throw new Error("FORBIDDEN");
+    return access.user;
+  }
+  const permission = operationalPermission(targetType);
+  if (!permission) throw new Error("FORBIDDEN");
+  return requirePermission(permission);
 }
 
 async function getActivityAuth(permission: typeof PERMISSIONS.ACTIVITY_READ | typeof PERMISSIONS.ACTIVITY_EDIT) {
@@ -1305,10 +1313,10 @@ export async function applyQueueItemManualTransitionAction(input: {
 
   const bindingAccess = await prisma.taskExecution.findUnique({
     where: { id: bindingId },
-    select: { targetType: true },
+    select: { targetType: true, targetId: true },
   });
   if (!bindingAccess) throw new Error("BINDING_NOT_FOUND");
-  await requireOperationalPermission(bindingAccess.targetType);
+  await requireOperationalPermission(bindingAccess.targetType, bindingAccess.targetId);
 
   const actorUserId = getAuthUserId(auth);
   if (!actorUserId) throw new Error("AUTHENTICATED_ACTOR_REQUIRED");
@@ -1548,7 +1556,7 @@ export async function submitOperationalBlueprintActionAction(input: {
     : SHIPMENT_OPERATION_BLUEPRINT_ACTION_KEYS.has(actionKey)
       ? TaskExecutionTargetType.SHIPMENT
       : input.targetType;
-  await requireOperationalPermission(actionTargetType);
+  await requireOperationalPermission(actionTargetType, input.targetId);
 
   const actorUserId = getAuthUserId(auth);
   if (!actorUserId) throw new Error("AUTHENTICATED_ACTOR_REQUIRED");

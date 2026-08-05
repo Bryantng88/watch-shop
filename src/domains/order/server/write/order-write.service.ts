@@ -266,6 +266,7 @@ function normalizeCreateInput(raw: any): CreateOrderInput {
     verificationStatus: raw.verificationStatus ?? OrderVerificationStatus.VERIFIED,
     quickFromProductId: raw.quickFromProductId ?? null,
     quickFlowType: raw.quickFlowType ?? OrderFlowType.STANDARD,
+    publicRequest: raw.publicRequest ?? null,
     reserve,
     items: (raw.items ?? []).map((item: any) => ({
       id: item.id,
@@ -347,6 +348,31 @@ export async function createOrderWithItems(
   if (!input.items.length) throw new Error("Phải có ít nhất 1 dòng sản phẩm / dịch vụ");
 
   const result = await prisma.$transaction(async (tx) => {
+    if (input.publicRequest) {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`public-order:${input.publicRequest.key}`}, 0))`;
+      const replay = await tx.order.findUnique({
+        where: { publicRequestKey: input.publicRequest.key },
+        select: { id: true, refNo: true, status: true, publicRequestHash: true },
+      });
+      if (replay) {
+        if (replay.publicRequestHash !== input.publicRequest.hash) {
+          throw new Error("PUBLIC_ORDER_IDEMPOTENCY_CONFLICT");
+        }
+        return toPlain({ ...replay, idempotentReplay: true, inventoryOutcomes: [], tradeInAcquisitionId: null });
+      }
+
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`public-rate:${input.publicRequest.fingerprintHash}`}, 0))`;
+      const recentRequestCount = await tx.order.count({
+        where: {
+          publicFingerprintHash: input.publicRequest.fingerprintHash,
+          createdAt: { gte: input.publicRequest.rateLimitSince },
+        },
+      });
+      if (recentRequestCount >= input.publicRequest.rateLimitMax) {
+        throw new Error("PUBLIC_ORDER_RATE_LIMITED");
+      }
+    }
+
     const customerId = await resolveCustomer(tx, input);
     const strictActiveOnly = input.quickFlowType === "QUICK_ORDER" ? false : true;
 
@@ -356,6 +382,10 @@ export async function createOrderWithItems(
         productId: item.productId!,
         quantity: input.quickFlowType === "QUICK_ORDER" ? 1 : Number(item.quantity ?? 1),
       }));
+
+    for (const productId of Array.from(new Set(rawProductItems.map((item) => item.productId))).sort()) {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`order-product:${productId}`}, 0))`;
+    }
 
     const resolvedProducts = await resolveProductItems(tx, rawProductItems, { strictActiveOnly });
 
@@ -391,6 +421,11 @@ export async function createOrderWithItems(
       reserveUntil: input.reserve?.expiresAt ? new Date(input.reserve.expiresAt) : null,
       quickFromProductId: input.quickFromProductId ?? null,
       quickFlowType: (input.quickFlowType ?? "STANDARD") as any,
+      publicRequestKey: input.publicRequest?.key ?? null,
+      publicRequestHash: input.publicRequest?.hash ?? null,
+      publicRequestChannel: input.publicRequest?.channel ?? null,
+      publicExternalId: input.publicRequest?.externalRequestId ?? null,
+      publicFingerprintHash: input.publicRequest?.fingerprintHash ?? null,
     });
 
     const productItems: OrderItemInput[] = resolvedProducts.map((product) => {
@@ -486,6 +521,7 @@ export async function createOrderWithItems(
       tradeInAcquisitionId,
     });
   });
+  if ("idempotentReplay" in result && result.idempotentReplay) return result;
   await publishOrderMutation({
     eventKey: result.status === OrderStatus.POSTED ? "order.posted" : "order.created",
     orderId: result.id,

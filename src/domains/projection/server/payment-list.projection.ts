@@ -57,6 +57,7 @@ export type PaymentListProjectionInput = {
   createdFrom?: string;
   createdTo?: string;
   positiveAmountOnly?: boolean;
+  businessScopes?: Array<"ORDER" | "ACQUISITION" | "SERVICE" | "SHIPMENT" | "ALL">;
   sort?: "updatedDesc" | "updatedAsc" | "createdDesc" | "createdAsc" | "paidDesc" | "paidAsc" | "amountDesc" | "amountAsc";
   page: number;
   pageSize: number;
@@ -200,6 +201,15 @@ function baseConditions(input: PaymentListProjectionInput) {
   if (input.positiveAmountOnly) {
     conditions.push(Prisma.sql`("dataJson"->>'amount')::numeric > 0`);
   }
+  const businessScopes = input.businessScopes ?? ["ALL"];
+  if (!businessScopes.includes("ALL")) {
+    const ownerConditions: Prisma.Sql[] = [];
+    if (businessScopes.includes("ORDER")) ownerConditions.push(Prisma.sql`"dataJson"->>'order_id' IS NOT NULL AND "dataJson"->>'acquisition_id' IS NULL AND "dataJson"->>'service_request_id' IS NULL AND "dataJson"->>'technical_issue_id' IS NULL AND "dataJson"->>'shipment_id' IS NULL`);
+    if (businessScopes.includes("ACQUISITION")) ownerConditions.push(Prisma.sql`"dataJson"->>'acquisition_id' IS NOT NULL AND "dataJson"->>'order_id' IS NULL AND "dataJson"->>'service_request_id' IS NULL AND "dataJson"->>'technical_issue_id' IS NULL AND "dataJson"->>'shipment_id' IS NULL`);
+    if (businessScopes.includes("SERVICE")) ownerConditions.push(Prisma.sql`("dataJson"->>'service_request_id' IS NOT NULL OR "dataJson"->>'technical_issue_id' IS NOT NULL) AND "dataJson"->>'order_id' IS NULL AND "dataJson"->>'acquisition_id' IS NULL AND "dataJson"->>'shipment_id' IS NULL`);
+    if (businessScopes.includes("SHIPMENT")) ownerConditions.push(Prisma.sql`"dataJson"->>'shipment_id' IS NOT NULL AND "dataJson"->>'acquisition_id' IS NULL AND "dataJson"->>'service_request_id' IS NULL AND "dataJson"->>'technical_issue_id' IS NULL`);
+    conditions.push(ownerConditions.length ? Prisma.sql`(${Prisma.join(ownerConditions, " OR ")})` : Prisma.sql`FALSE`);
+  }
   if (clean(input.q)) {
     conditions.push(Prisma.sql`COALESCE("searchText", '') ILIKE ${`%${clean(input.q)}%`}`);
   }
@@ -304,15 +314,15 @@ export async function hasPaymentListProjectionRows(db: DB) {
   return Boolean(rows[0]?.exists);
 }
 
-export async function listSettledPaymentCashFlowProjection(db: DB) {
-  const rows = await dbOrTx(db).$queryRaw<Array<{ dataJson: unknown }>>(Prisma.sql`
-    SELECT "dataJson"
-    FROM "ProjectionRecord"
-    WHERE "projectionKey" = ${PAYMENT_LIST_PROJECTION_KEY}
-      AND "projectionVersion" = ${PAYMENT_LIST_PROJECTION_VERSION}
-      AND "status" IN ('PAID', 'COLLECTED')
-  `);
-  return rows.map((row) => row.dataJson as PaymentListProjectionRow);
+export async function listSettledPaymentCashFlowProjection(
+  db: DB,
+  businessScopes: PaymentListProjectionInput["businessScopes"] = ["ALL"],
+) {
+  const [paid, collected] = await Promise.all([
+    queryPaymentListProjection(db, { status: "PAID", businessScopes, page: 1, pageSize: 100_000 }),
+    queryPaymentListProjection(db, { status: "COLLECTED", businessScopes, page: 1, pageSize: 100_000 }),
+  ]);
+  return [...paid.items, ...collected.items];
 }
 
 export async function comparePaymentListProjection(db: DB) {

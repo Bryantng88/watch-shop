@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { IntegrationIngressReceiptOrderByWithRelationInputObjectSchema as IntegrationIngressReceiptOrderByWithRelationInputObjectSchema } from './objects/IntegrationIngressReceiptOrderByWithRelationInput.schema';
+import { IntegrationIngressReceiptWhereInputObjectSchema as IntegrationIngressReceiptWhereInputObjectSchema } from './objects/IntegrationIngressReceiptWhereInput.schema';
+import { IntegrationIngressReceiptWhereUniqueInputObjectSchema as IntegrationIngressReceiptWhereUniqueInputObjectSchema } from './objects/IntegrationIngressReceiptWhereUniqueInput.schema';
+import { IntegrationIngressReceiptCountAggregateInputObjectSchema as IntegrationIngressReceiptCountAggregateInputObjectSchema } from './objects/IntegrationIngressReceiptCountAggregateInput.schema';
+
+export const IntegrationIngressReceiptCountSchema: z.ZodType<Prisma.IntegrationIngressReceiptCountArgs> = z.object({ orderBy: z.union([IntegrationIngressReceiptOrderByWithRelationInputObjectSchema, IntegrationIngressReceiptOrderByWithRelationInputObjectSchema.array()]).optional(), where: IntegrationIngressReceiptWhereInputObjectSchema.optional(), cursor: IntegrationIngressReceiptWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), IntegrationIngressReceiptCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.IntegrationIngressReceiptCountArgs>;
+
+export const IntegrationIngressReceiptCountZodSchema = z.object({ orderBy: z.union([IntegrationIngressReceiptOrderByWithRelationInputObjectSchema, IntegrationIngressReceiptOrderByWithRelationInputObjectSchema.array()]).optional(), where: IntegrationIngressReceiptWhereInputObjectSchema.optional(), cursor: IntegrationIngressReceiptWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), IntegrationIngressReceiptCountAggregateInputObjectSchema ]).optional() }).strict();

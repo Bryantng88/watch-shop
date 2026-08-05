@@ -1,0 +1,30 @@
+.storefront-surface {
+  --storefront-ink: #252525;
+  --storefront-muted: #77746f;
+  --storefront-line: #dedbd4;
+  --storefront-paper: #fbfaf7;
+  color-scheme: light;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.storefront-display {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+}
+
+.storefront-focus:focus-visible {
+  outline: 2px solid #252525;
+  outline-offset: 3px;
+}
+
+.storefront-card-image {
+  transition: transform 500ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@media (hover: hover) {
+  .storefront-card:hover .storefront-card-image {
+    transform: scale(1.025);
+  }
+}
+

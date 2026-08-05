@@ -299,7 +299,9 @@ export async function listAdminAcquisitionsFromSource(
             .filter((id): id is string => Boolean(id))),
     ));
     const [paymentSummaries, canonicalWatchMedia] = await Promise.all([
-        getPaymentOwnerSummaryProjections(prisma, "ACQUISITION", pagedIds),
+        input.includeFinancials
+            ? getPaymentOwnerSummaryProjections(prisma, "ACQUISITION", pagedIds)
+            : Promise.resolve(new Map()),
         watchOwnerIds.length
             ? prisma.mediaBinding.findMany({
                 where: {
@@ -376,7 +378,7 @@ export async function listAdminAcquisitionsFromSource(
                 item.quantity != null && Number.isFinite(Number(item.quantity))
                     ? Number(item.quantity)
                     : null;
-            const cost = item.unitCost != null ? Number(item.unitCost) : null;
+            const cost = input.includeFinancials && item.unitCost != null ? Number(item.unitCost) : null;
             const totalAmount = cost != null ? cost * (quantity ?? 1) : null;
 
             return {
@@ -400,7 +402,7 @@ export async function listAdminAcquisitionsFromSource(
 
         const previewTitles = detailItems.slice(0, 2).map((item) => item.title);
         const remaining = Math.max(detailItems.length - previewTitles.length, 0);
-        const totalAmount = row.totalAmount != null ? Number(row.totalAmount) : 0;
+        const totalAmount = input.includeFinancials && row.totalAmount != null ? Number(row.totalAmount) : 0;
         const projection = paymentSummaries.get(row.id);
         const recognizedPaid = (projection?.paidTotal ?? 0) + (projection?.collectedTotal ?? 0);
         const remainingAmount = projection?.remaining ?? totalAmount;
@@ -424,7 +426,7 @@ export async function listAdminAcquisitionsFromSource(
             itemCount: acquisitionItems.length,
             productTypes: Array.from(new Set(acquisitionItems.map((item) => String(item.productType ?? item.product?.type ?? "WATCH")))),
             linkedWatchCount,
-            totalAmount: row.totalAmount != null ? Number(row.totalAmount) : null,
+            totalAmount: input.includeFinancials && row.totalAmount != null ? Number(row.totalAmount) : null,
             notes: row.notes ?? "",
             acquiredAt: row.acquiredAt ? row.acquiredAt.toISOString() : "",
             createdAt: row.createdAt ? row.createdAt.toISOString() : "",
@@ -435,7 +437,14 @@ export async function listAdminAcquisitionsFromSource(
             previewTitles,
             remainingCount: remaining,
             detailItems,
-            ...paymentSummary,
+            ...(input.includeFinancials ? paymentSummary : {
+                paymentStatus: "HIDDEN",
+                paymentPaidAmount: null,
+                paymentPendingAmount: null,
+                paymentActiveAmount: null,
+                paymentRemainingAmount: null,
+                paymentIsFullyPaid: false,
+            }),
         };
     });
 

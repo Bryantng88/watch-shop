@@ -14,6 +14,8 @@ import {
     queryPaymentListProjection,
 } from "@/domains/projection/server/payment-list.projection";
 import { ensureProjectionReady } from "@/domains/projection/server/projection-read.service";
+import { getCurrentUserPermissions } from "@/server/auth/requirePermission";
+import { paymentBusinessWhere, resolvePaymentBusinessScopes } from "@/domains/payment/server";
 
 export async function createPaymentsForOrder(tx: any, order: Order) {
     const payments: paymentRepo.CreatePaymentInput[] = [];
@@ -112,6 +114,11 @@ function viewToStatus(view?: PaymentViewKey): string | undefined {
  * - ưu tiên status explicit nếu có, còn không thì map từ view
  */
 export async function getAdminPaymentList(input: PaymentListInput) {
+    const { user, permissions } = await getCurrentUserPermissions();
+    if (!user) throw new Error("Unauthorized");
+    const businessScopes = resolvePaymentBusinessScopes(permissions, "VIEW");
+    if (!businessScopes.length) throw new Error("Forbidden");
+    const businessWhere = paymentBusinessWhere(businessScopes);
     const page = Math.max(1, Number(input.page ?? 1));
     const pageSize = Math.min(100, Math.max(1, Number(input.pageSize ?? 20)));
 
@@ -120,7 +127,7 @@ export async function getAdminPaymentList(input: PaymentListInput) {
     let result;
     try {
         const projectionReady = await ensureProjectionReady(prisma, "payment-list");
-        result = projectionReady.ready
+        result = projectionReady.ready && businessScopes.includes("ALL")
             ? await queryPaymentListProjection(prisma, {
                 ...input,
                 status: effectiveStatus,
@@ -132,6 +139,7 @@ export async function getAdminPaymentList(input: PaymentListInput) {
                 status: effectiveStatus,
                 page,
                 pageSize,
+                businessWhere,
             });
     } catch {
         result = await paymentRepo.listAdmin(prisma, {
@@ -139,6 +147,7 @@ export async function getAdminPaymentList(input: PaymentListInput) {
             status: effectiveStatus,
             page,
             pageSize,
+            businessWhere,
         });
     }
     const { items, total, counts } = result;

@@ -53,7 +53,12 @@ const orderscalarwhereinputSchema = z.object({
   verificationStatus: z.union([z.lazy(() => EnumOrderVerificationStatusFilterObjectSchema), OrderVerificationStatusSchema]).optional(),
   quick_from_product_id: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   quickFromProductId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  quickFlowType: z.union([z.lazy(() => EnumOrderFlowTypeFilterObjectSchema), OrderFlowTypeSchema]).optional()
+  quickFlowType: z.union([z.lazy(() => EnumOrderFlowTypeFilterObjectSchema), OrderFlowTypeSchema]).optional(),
+  publicRequestKey: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  publicRequestHash: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  publicRequestChannel: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  publicExternalId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  publicFingerprintHash: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const OrderScalarWhereInputObjectSchema: z.ZodType<Prisma.OrderScalarWhereInput> = orderscalarwhereinputSchema as unknown as z.ZodType<Prisma.OrderScalarWhereInput>;
 export const OrderScalarWhereInputObjectZodSchema = orderscalarwhereinputSchema;

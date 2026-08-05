@@ -26,6 +26,7 @@ export { ProjectionEventDeliveryInputSchema } from './ProjectionEventDelivery.in
 export { ProjectionRecordInputSchema } from './ProjectionRecord.input';
 export { OrderInputSchema } from './Order.input';
 export { OrderItemInputSchema } from './OrderItem.input';
+export { IntegrationIngressReceiptInputSchema } from './IntegrationIngressReceipt.input';
 export { PartVariantSpecInputSchema } from './PartVariantSpec.input';
 export { PaymentInputSchema } from './Payment.input';
 export { ProductInputSchema } from './Product.input';

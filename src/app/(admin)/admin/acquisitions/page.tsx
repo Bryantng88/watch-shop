@@ -53,6 +53,9 @@ export default async function AcquisitionListPage({
         pageSize: firstValue(resolvedSearchParams.pageSize),
     });
     if (listScope !== "ALL") input.productScope = listScope;
+    input.includeFinancials = permissions.includes(PERMISSIONS.PRODUCT_COST_VIEW)
+        && (permissions.includes(PERMISSIONS.ACQUISITION_PAYMENT_VIEW)
+            || permissions.includes(PERMISSIONS.PAYMENT_VIEW_ALL));
 
     const [result, vendors, dashboardData] = await Promise.all([
         getAcquisitionListProjection(input),
@@ -60,6 +63,7 @@ export default async function AcquisitionListPage({
         getAcquisitionListDashboard(
             input.audienceSegment === "UNISEX" ? undefined : input.audienceSegment,
             input.productScope,
+            input.includeFinancials,
         ),
     ]);
 
@@ -74,9 +78,13 @@ export default async function AcquisitionListPage({
             vendors={serialize(vendorOptions)}
             dashboardData={serialize(dashboardData)}
             strapOnly={listScope === "ACCESSORY_ONLY"}
-            canManage={permissions.includes(PERMISSIONS.ACQUISITION_UPDATE_ALL)
-                || permissions.includes(PERMISSIONS.WATCH_ACQUISITION_UPDATE)
-                || permissions.includes(PERMISSIONS.ACCESSORY_ACQUISITION_UPDATE)}
+            canManage={permissions.includes(PERMISSIONS.PRODUCT_COST_VIEW)
+                && (permissions.includes(PERMISSIONS.ACQUISITION_PAYMENT_UPDATE)
+                    || permissions.includes(PERMISSIONS.PAYMENT_UPDATE_ALL))
+                && (permissions.includes(PERMISSIONS.ACQUISITION_UPDATE_ALL)
+                    || permissions.includes(PERMISSIONS.WATCH_ACQUISITION_UPDATE)
+                    || permissions.includes(PERMISSIONS.ACCESSORY_ACQUISITION_UPDATE))}
+            canViewFinancials={Boolean(input.includeFinancials)}
         />
     );
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { completePaymentApplication } from "@/domains/payment/application";
+import { authorizePaymentAccess } from "@/domains/payment/server";
 
 export async function POST(
   req: NextRequest,
@@ -8,6 +9,8 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
+    const access = await authorizePaymentAccess(id, "UPDATE");
+    if (!access.ok) return NextResponse.json({ error: "Forbidden" }, { status: access.status });
     const body = await req.json().catch(() => ({}));
 
     const result = await completePaymentApplication({

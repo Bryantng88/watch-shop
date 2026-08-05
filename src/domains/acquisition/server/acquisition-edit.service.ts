@@ -27,7 +27,7 @@ function pickImage(description?: string | null, product?: any) {
     };
 }
 
-export async function getAcquisitionEditDetail(acquisitionId: string) {
+export async function getAcquisitionEditDetail(acquisitionId: string, includeFinancials = false) {
     const acquisition = await prisma.acquisition.findUnique({
         where: { id: acquisitionId },
         include: {
@@ -62,7 +62,7 @@ export async function getAcquisitionEditDetail(acquisitionId: string) {
             linkedWatchTitle: item.product?.title ?? null,
             title: item.productTitle ?? item.product?.title ?? "Untitled watch",
             quantity: item.quantity ?? 1,
-            unitCost: toNumber(item.unitCost),
+            unitCost: includeFinancials ? toNumber(item.unitCost) : null,
             imageKey: image.imageKey,
             imageUrl: image.imageUrl,
             aiHint: String(aiMeta?.aiHint ?? ""),
@@ -70,7 +70,9 @@ export async function getAcquisitionEditDetail(acquisitionId: string) {
         };
     });
 
-    const paymentSummary = await getPaymentOwnerSummaryProjection(prisma, "ACQUISITION", acquisitionId);
+    const paymentSummary = includeFinancials
+        ? await getPaymentOwnerSummaryProjection(prisma, "ACQUISITION", acquisitionId)
+        : null;
 
     return {
         id: acquisition.id,
@@ -82,9 +84,9 @@ export async function getAcquisitionEditDetail(acquisitionId: string) {
         currency: acquisition.currency ?? "VND",
         type: acquisition.type,
         notes: acquisition.notes ?? "",
-        totalAmount: toNumber(acquisition.totalAmount),
-        paidAmount: (paymentSummary?.paidTotal ?? 0) + (paymentSummary?.collectedTotal ?? 0),
-        unpaidAmount: paymentSummary?.unpaidTotal ?? 0,
+        totalAmount: includeFinancials ? toNumber(acquisition.totalAmount) : null,
+        paidAmount: includeFinancials ? (paymentSummary?.paidTotal ?? 0) + (paymentSummary?.collectedTotal ?? 0) : null,
+        unpaidAmount: includeFinancials ? paymentSummary?.unpaidTotal ?? 0 : null,
         items,
     };
 }

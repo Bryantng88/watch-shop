@@ -66,7 +66,7 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
     if (/^\/api\/admin\/acquisitions(\/|$)/.test(pathname)) {
         if (/\/trade-in-orders$/.test(pathname)) return anyOf(PERMISSIONS.PRODUCT_CREATE);
         if (/\/payment$/.test(pathname)) {
-            return anyOf(read ? PERMISSIONS.PAYMENT_VIEW : PERMISSIONS.PAYMENT_CREATE, PERMISSIONS.PAYMENT_UPDATE);
+            return anyOf(read ? PERMISSIONS.ACQUISITION_PAYMENT_VIEW : PERMISSIONS.ACQUISITION_PAYMENT_CREATE, PERMISSIONS.ACQUISITION_PAYMENT_UPDATE, PERMISSIONS.ACQUISITION_PAYMENT_DELETE, read ? PERMISSIONS.PAYMENT_VIEW_ALL : PERMISSIONS.PAYMENT_CREATE_ALL, PERMISSIONS.PAYMENT_UPDATE_ALL, PERMISSIONS.PAYMENT_DELETE_ALL);
         }
         if (read) return anyOf(PERMISSIONS.ACQUISITION_VIEW_ALL, PERMISSIONS.WATCH_ACQUISITION_VIEW, PERMISSIONS.ACCESSORY_ACQUISITION_VIEW);
         if (pathname === "/api/admin/acquisitions" || /\/(inline-submit|create-with-ai|ai-draft|line-ai-draft)$/.test(pathname)) {
@@ -82,7 +82,7 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
         if (/\/shipments\/active$/.test(pathname)) return anyOf(PERMISSIONS.SHIPMENT_VIEW);
         if (/\/mark-shipment-delivered$/.test(pathname)) return anyOf(PERMISSIONS.SHIPMENT_UPDATE);
         if (/\/payments?$/.test(pathname)) {
-            return anyOf(read ? PERMISSIONS.PAYMENT_VIEW : PERMISSIONS.PAYMENT_CREATE, PERMISSIONS.PAYMENT_UPDATE);
+            return anyOf(read ? PERMISSIONS.ORDER_PAYMENT_VIEW : PERMISSIONS.ORDER_PAYMENT_CREATE, PERMISSIONS.ORDER_PAYMENT_UPDATE, PERMISSIONS.ORDER_PAYMENT_DELETE, read ? PERMISSIONS.PAYMENT_VIEW_ALL : PERMISSIONS.PAYMENT_CREATE_ALL, PERMISSIONS.PAYMENT_UPDATE_ALL, PERMISSIONS.PAYMENT_DELETE_ALL);
         }
         if (read) return anyOf(PERMISSIONS.ORDER_VIEW);
         if (pathname === "/api/admin/orders") return anyOf(PERMISSIONS.ORDER_CREATE);
@@ -92,7 +92,11 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
     }
 
     if (/^\/api\/admin\/payments(\/|$)/.test(pathname)) {
-        return anyOf(read ? PERMISSIONS.PAYMENT_VIEW : PERMISSIONS.PAYMENT_UPDATE);
+        return anyOf(
+            ...(read
+                ? [PERMISSIONS.PAYMENT_VIEW_ALL, PERMISSIONS.ORDER_PAYMENT_VIEW, PERMISSIONS.ACQUISITION_PAYMENT_VIEW, PERMISSIONS.SERVICE_PAYMENT_VIEW, PERMISSIONS.SHIPMENT_PAYMENT_VIEW]
+                : [PERMISSIONS.PAYMENT_UPDATE_ALL, PERMISSIONS.PAYMENT_DELETE_ALL, PERMISSIONS.ORDER_PAYMENT_UPDATE, PERMISSIONS.ORDER_PAYMENT_DELETE, PERMISSIONS.ACQUISITION_PAYMENT_UPDATE, PERMISSIONS.ACQUISITION_PAYMENT_DELETE, PERMISSIONS.SERVICE_PAYMENT_UPDATE, PERMISSIONS.SERVICE_PAYMENT_DELETE, PERMISSIONS.SHIPMENT_PAYMENT_UPDATE, PERMISSIONS.SHIPMENT_PAYMENT_DELETE]),
+        );
     }
 
     if (/^\/api\/admin\/shipments(\/|$)/.test(pathname)) {
@@ -102,6 +106,9 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
     }
 
     if (/^\/api\/admin\/(service-requests|service-operation)(\/|$)/.test(pathname)) {
+        if (/\/payments?$/.test(pathname)) {
+            return anyOf(read ? PERMISSIONS.SERVICE_PAYMENT_VIEW : PERMISSIONS.SERVICE_PAYMENT_CREATE, PERMISSIONS.SERVICE_PAYMENT_UPDATE, PERMISSIONS.SERVICE_PAYMENT_DELETE, read ? PERMISSIONS.PAYMENT_VIEW_ALL : PERMISSIONS.PAYMENT_CREATE_ALL, PERMISSIONS.PAYMENT_UPDATE_ALL, PERMISSIONS.PAYMENT_DELETE_ALL);
+        }
         if (/\/watch-active$/.test(pathname)) {
             if (read) return anyOf(PERMISSIONS.SERVICE_VIEW);
             if (normalizedMethod === "POST") return anyOf(PERMISSIONS.SERVICE_CREATE);
@@ -130,7 +137,11 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
     if (/^\/api\/admin\/task-items\/manual-transition$/.test(pathname)) {
         return anyOf(
             PERMISSIONS.TASK_MANAGE,
-            PERMISSIONS.PAYMENT_UPDATE,
+            PERMISSIONS.PAYMENT_UPDATE_ALL,
+            PERMISSIONS.ORDER_PAYMENT_UPDATE,
+            PERMISSIONS.ACQUISITION_PAYMENT_UPDATE,
+            PERMISSIONS.SERVICE_PAYMENT_UPDATE,
+            PERMISSIONS.SHIPMENT_PAYMENT_UPDATE,
             PERMISSIONS.SHIPMENT_UPDATE,
             PERMISSIONS.ORDER_UPDATE,
             PERMISSIONS.SERVICE_UPDATE,
@@ -183,7 +194,7 @@ export function getAdminPagePolicy(pathname: string): AdminAccessPolicy | null {
     if (pathname === "/admin/orders/new") return anyOf(PERMISSIONS.ORDER_CREATE);
     if (/^\/admin\/orders\/[^/]+\/edit$/.test(pathname)) return anyOf(PERMISSIONS.ORDER_UPDATE);
     if (/^\/admin\/orders(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.ORDER_VIEW);
-    if (/^\/admin\/payments(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.PAYMENT_VIEW);
+    if (/^\/admin\/payments(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.PAYMENT_VIEW_ALL, PERMISSIONS.ORDER_PAYMENT_VIEW, PERMISSIONS.ACQUISITION_PAYMENT_VIEW, PERMISSIONS.SERVICE_PAYMENT_VIEW, PERMISSIONS.SHIPMENT_PAYMENT_VIEW);
     if (/^\/admin\/shipments(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.SHIPMENT_VIEW);
     if (/^\/admin\/(services|catalogs\/technical)(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.SERVICE_VIEW);
     if (/^\/admin\/media(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.MEDIA_VIEW);

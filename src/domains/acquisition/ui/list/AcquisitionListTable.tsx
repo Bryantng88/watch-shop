@@ -38,6 +38,7 @@ type Props = {
     onToggleAll: (checked: boolean) => void;
     onOpenEdit?: (id: string) => void;
     canManage?: boolean;
+    canViewFinancials?: boolean;
 };
 
 export default function AcquisitionListTable({
@@ -52,6 +53,7 @@ export default function AcquisitionListTable({
     onToggleAll,
     onOpenEdit,
     canManage = false,
+    canViewFinancials = false,
 }: Props) {
     const selectableIds = canManage ? items.filter(isSelectable).map((item) => item.id) : [];
 
@@ -105,9 +107,9 @@ export default function AcquisitionListTable({
                             <th className="px-3 py-4">Sản phẩm</th>
                             <th className="px-4 py-4">Phiếu nhập</th>
                             <th className="px-4 py-4">Trạng thái phiếu</th>
-                            <th className="px-4 py-4">Thanh toán</th>
+                            <th className={canViewFinancials ? "px-4 py-4" : "hidden"}>Thanh toán</th>
                             <th className="px-4 py-4">Vendor</th>
-                            <th className="px-4 py-4 text-right">Tổng tiền</th>
+                            <th className={canViewFinancials ? "px-4 py-4 text-right" : "hidden"}>Tổng tiền</th>
                             <th className="px-4 py-4">Cập nhật</th>
                             <th className="sticky right-0 z-10 bg-slate-50 px-3 py-4 text-right">Action</th>
                         </tr>
@@ -122,6 +124,7 @@ export default function AcquisitionListTable({
                                 onCheckedChange={(checked) => onToggleOne(item.id, checked)}
                                 onOpenEdit={onOpenEdit}
                                 canManage={canManage}
+                                canViewFinancials={canViewFinancials}
                             />
                         ))}
 

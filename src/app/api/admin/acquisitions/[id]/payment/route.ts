@@ -4,12 +4,15 @@ import {
     createPaymentApplication,
     listAcquisitionPaymentsApplication,
 } from "@/domains/payment/application";
+import { authorizePaymentAccess, authorizePaymentOwner } from "@/domains/payment/server";
 
 export async function GET(
     _req: Request,
     ctx: { params: Promise<{ id: string }> },
 ) {
     const { id } = await ctx.params;
+    const access = await authorizePaymentOwner("ACQUISITION", "VIEW");
+    if (!access.ok) return NextResponse.json({ error: "Forbidden" }, { status: access.status });
     const items = await listAcquisitionPaymentsApplication(id);
     return NextResponse.json({ items });
 }
@@ -23,6 +26,8 @@ export async function POST(
         const body = await req.json().catch(() => ({}));
 
         if (body?.paymentId || body?.action === "complete") {
+            const access = await authorizePaymentAccess(body.paymentId, "UPDATE");
+            if (!access.ok) return NextResponse.json({ error: "Forbidden" }, { status: access.status });
             const result = await completePaymentApplication({
                 paymentId: body.paymentId,
                 reference: body.reference ?? null,
@@ -32,6 +37,9 @@ export async function POST(
 
             return NextResponse.json({ ok: true, result });
         }
+
+        const access = await authorizePaymentOwner("ACQUISITION", "CREATE");
+        if (!access.ok) return NextResponse.json({ error: "Forbidden" }, { status: access.status });
 
         const result = await createPaymentApplication({
             ownerType: "ACQUISITION",

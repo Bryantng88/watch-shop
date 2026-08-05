@@ -23,9 +23,9 @@ const expectedRolePermissions: Record<string, readonly string[]> = {
   ],
   SALE_ADMIN: [
     PERMISSIONS.TASK_VIEW,
-    PERMISSIONS.PAYMENT_VIEW,
-    PERMISSIONS.PAYMENT_CREATE,
-    PERMISSIONS.PAYMENT_UPDATE,
+    PERMISSIONS.PAYMENT_VIEW_ALL,
+    PERMISSIONS.PAYMENT_CREATE_ALL,
+    PERMISSIONS.PAYMENT_UPDATE_ALL,
     PERMISSIONS.PRODUCT_COST_VIEW,
     PERMISSIONS.ACTIVITY_READ,
     PERMISSIONS.ACTIVITY_EDIT,
@@ -44,6 +44,10 @@ const retiredPermissionCodes = [
   "STRAP_ACQUISITION_VIEW",
   "STRAP_ACQUISITION_CREATE",
   "STRAP_ACQUISITION_UPDATE",
+  "PAYMENT_VIEW",
+  "PAYMENT_CREATE",
+  "PAYMENT_UPDATE",
+  "PAYMENT_DELETE",
 ] as const;
 const saleAcquisitionAllowlist = new Set<string>([
   PERMISSIONS.ACCESSORY_ACQUISITION_VIEW,
@@ -100,7 +104,10 @@ async function main() {
   const saleRole = roleByName.get("SALE");
   const forbiddenRoleDrift = (saleRole?.permissions ?? [])
     .map((permission) => permission.code)
-    .filter((code) => code.includes("ACQUISITION") && !saleAcquisitionAllowlist.has(code))
+    .filter((code) =>
+      (code.includes("ACQUISITION") && !saleAcquisitionAllowlist.has(code))
+      || code.includes("PAYMENT"),
+    )
     .map((code) => ({ role: "SALE", forbidden: code }));
   const result = {
     ok: missingCatalogCodes.length === 0 && roleDrift.length === 0 && expectedRoleDrift.length === 0 && forbiddenRoleDrift.length === 0 && retiredPermissions.length === 0,

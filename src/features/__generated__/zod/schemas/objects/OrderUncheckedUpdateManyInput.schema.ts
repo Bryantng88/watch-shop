@@ -50,7 +50,12 @@ const makeSchema = () => z.object({
   verificationStatus: z.union([OrderVerificationStatusSchema, z.lazy(() => EnumOrderVerificationStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
   quick_from_product_id: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   quickFromProductId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  quickFlowType: z.union([OrderFlowTypeSchema, z.lazy(() => EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema)]).optional()
+  quickFlowType: z.union([OrderFlowTypeSchema, z.lazy(() => EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  publicRequestKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  publicRequestHash: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  publicRequestChannel: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  publicExternalId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  publicFingerprintHash: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
 }).strict();
 export const OrderUncheckedUpdateManyInputObjectSchema: z.ZodType<Prisma.OrderUncheckedUpdateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderUncheckedUpdateManyInput>;
 export const OrderUncheckedUpdateManyInputObjectZodSchema = makeSchema();
