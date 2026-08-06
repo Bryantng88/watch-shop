@@ -197,92 +197,138 @@ is complete and explicitly approved.
 Until all gates close, Phase 6 is release-ready preparation only—not a
 production release and not authorization to delete legacy code.
 
-## NAS Staging Checkpoint: 2026-08-06
+## NAS Staging Checkpoint: 2026-08-06 (latest)
 
-NAS staging is in progress on the QNAP host. Production was inspected only and
-remains unchanged: the existing `watch-shop-app-1` container continues to run
-the `watch-shop:payment-scope-20260805-r1` image on port `3000`.
-
-The staging release source is revision `5fc0cdc8` under:
+NAS staging is running on the QNAP host from revision `5fc0cdc8`. Production
+remains online and unchanged: `watch-shop-app-1` is healthy on the
+`watch-shop:payment-scope-20260805-r1` image. The staging release is:
 
 ```text
 /share/WatchShop/staging/release-5fc0cdc8
 ```
 
-The first Windows `tar` archive was internally truncated even though its upload
-checksum matched. It was replaced by a verified `git archive` named
-`watch-shop-storefront-5fc0cdc8-v2.tar.gz`; `tar -tzf` returned zero on the NAS.
-The partial extraction is quarantined as `release-5fc0cdc8-corrupt` and must not
-be used. The tracked `.env.zip` copy was removed from the valid extracted
-release before configuration.
+The valid source archive is `watch-shop-storefront-5fc0cdc8-v2.tar.gz`, created
+with `git archive` and verified with `tar -tzf`. Do not use the quarantined
+`release-5fc0cdc8-corrupt` directory produced by the earlier truncated Windows
+archive.
 
-Completed staging preparation:
+### Running staging stack
 
-- isolated Docker network `watch-shop-staging`;
-- PostgreSQL 17 container `watch-shop-staging-db` with persistent volume
-  `watch-shop-staging-postgres` and disposable database
-  `watch_shop_storefront_staging`;
-- MinIO container `watch-shop-staging-minio`, pinned to
-  `minio/minio:RELEASE.2025-09-07T16-13-09Z`, with persistent volume
-  `watch-shop-staging-minio`;
-- private MinIO host binding `127.0.0.1:9000` and bucket
-  `storefront-test-staging`;
-- infrastructure secrets stored only on the NAS in
-  `/share/WatchShop/staging/.env.infra` with mode `600`;
-- runtime/build configuration stored as `.env.staging` and
-  `.env.build.staging` in the valid release directory with mode `600`;
-- staging URL `https://staging.vinticwatches.vn`, secure auth cookies, app bind
-  `127.0.0.1:3001`, and separate generated application secrets;
-- DNS A record for `staging.vinticwatches.vn` resolves to the current WAN IPv4;
-  the WAN connection uses PPPoE, so a later IP change requires DNS update or
-  DDNS/static-IP handling;
-- Compose override `compose.staging.yaml` attaches app/tool containers to the
-  external staging network while retaining the project default network;
-- immutable images `watch-shop:storefront-staging-5fc0cdc8` and
-  `watch-shop-ops:storefront-staging-5fc0cdc8` built successfully on the NAS;
-- pre-schema staging backup and checksum written under
-  `/share/WatchShop/staging/backups/database`;
-- the verified empty disposable database was bootstrapped with
-  `prisma db push --force-reset --skip-generate`, as required by the isolated DB
-  guide because the historical migration chain cannot bootstrap a blank DB.
+- external Docker network: `watch-shop-staging`;
+- PostgreSQL 17: `watch-shop-staging-db`, volume
+  `watch-shop-staging-postgres`, database `watch_shop_storefront_staging`;
+- MinIO: `watch-shop-staging-minio`, volume `watch-shop-staging-minio`, private
+  binding `127.0.0.1:9000`, bucket `storefront-test-staging`;
+- app: `watch-shop-storefront-staging-app-1`, immutable image
+  `watch-shop:storefront-staging-5fc0cdc8`, private binding
+  `127.0.0.1:3001 -> 3000`;
+- deny-by-default Nginx: `watch-shop-staging-public-proxy`, private binding
+  `127.0.0.1:8088 -> 8080`;
+- operations image: `watch-shop-ops:storefront-staging-5fc0cdc8`;
+- Compose project: `watch-shop-storefront-staging`, using `compose.yaml`,
+  `compose.staging.yaml` and `.env.staging`;
+- NAS-only secrets: `/share/WatchShop/staging/.env.infra`, `.env.staging` and
+  `.env.build.staging`, all mode `600`.
 
-No router port forwarding, QNAP public reverse proxy, TLS certificate, staging
-app container, production migration or production restart has been performed.
-Do not expose port `3001` directly and do not modify `.env.production`.
+Verified after the latest restart:
 
-### Resume From Here
+- `/api/ready` reports `ready` with the database reachable;
+- proxy `/products` returns 200;
+- proxy `/admin` and `/api/health` return 404;
+- production app remains healthy.
 
-SSH as the deployment user, elevate with `sudo -i`, then:
+### Production database clone
 
-```sh
-cd /share/WatchShop/staging/release-5fc0cdc8
+A fresh production dump was created and checksum-verified at:
+
+```text
+/share/WatchShopBackup/database/watch-shop-20260806T093700Z.dump
 ```
 
-First confirm that schema bootstrap produced public tables:
+It was restored only into `watch_shop_storefront_staging` while the staging app
+and proxy were stopped. The restore drill passed with 41 recorded Prisma
+migrations. Before applying new migrations, a checksum-verified staging clone
+backup was written as:
 
-```sh
-docker exec watch-shop-staging-db \
-  psql -U watch_shop_staging -d watch_shop_storefront_staging -Atc \
-  "select count(*) from information_schema.tables where table_schema='public';"
+```text
+/share/WatchShop/staging/backups/database/watch-shop-20260806T094327Z.dump
 ```
 
-If the count is greater than zero, run the isolated database integration gate.
-The command deliberately clears the application URLs before the test runner so
-its protected-database equality guard remains effective:
+The two pending migrations, `20260807_remove_sale_payment_permissions` and
+`20260808_storefront_public_order_ingress`, were applied successfully with
+`prisma migrate deploy`; `prisma migrate status` now reports the schema is up to
+date. The clone includes 94 public tables and representative production counts
+including 74 Customers, 82 Orders and 7 Users.
 
-```sh
-docker run --rm \
-  --network watch-shop-staging \
-  --env-file /share/WatchShop/staging/release-5fc0cdc8/.env.staging \
-  watch-shop-ops:storefront-staging-5fc0cdc8 \
-  sh -c 'export STOREFRONT_TEST_DATABASE_URL="$DATABASE_URL"; unset DATABASE_URL DIRECT_URL; export ALLOW_REMOTE_STOREFRONT_TEST_DB=1; npm run storefront:test-db'
+This is now a production-data clone, not a disposable synthetic test database.
+Do **not** run `storefront:test-db`, acceptance seed/cleanup scripts, `db push
+--force-reset`, or destructive drills against it. Do not print customer rows or
+credentials during diagnostics.
+
+The cloned `zalo_oa_token` entry in `SystemJobControl` was disabled and its
+metadata cleared. `.env.staging` also has blank production Zalo OA credentials
+and separate staging application secrets. The verification result was:
+
+```text
+zalo_oa_token|f|t
 ```
 
-Require an `ok: true` result and confirm cleanup before continuing. Next work is
-to seed the six browser-acceptance Watches/media, start the staging app through
-the two-file Compose configuration, validate loopback health/readiness, then
-configure a deny-by-default QNAP reverse proxy and TLS for
-`staging.vinticwatches.vn`. Open only HTTPS after the proxy allow/deny rules are
-verified; then run external-host, real-phone, PWA, Order and signed-Zalo
-acceptance. Production activation remains blocked until those gates pass and
-receive explicit approval.
+### Production media clone
+
+Production media remains in the external `image-browsing` S3 bucket (about
+26 GiB and 35,836 objects). The whole bucket was deliberately not copied.
+Instead, the 1,639 distinct `ProductImage.fileKey` values marked for storefront
+use were exported to the mode-600 file:
+
+```text
+/share/WatchShop/staging/storefront-media-keys.txt
+```
+
+Selective copy placed 1,625 referenced objects into
+`storefront-test-staging`; 14 references were already missing at the production
+source. This 14-object gap is explicitly accepted for staging. Do not point the
+staging app directly at the production bucket and do not delete the 14 database
+rows merely to hide the gap.
+
+### DNS, TLS and external access
+
+The domain `vinticwatches.vn` was added to the Cloudflare Free plan. DNSSEC was
+disabled at the registrar before changing delegation. Public DNS now returns
+the assigned Cloudflare nameservers:
+
+```text
+aragon.ns.cloudflare.com
+roxy.ns.cloudflare.com
+```
+
+Cloudflare was still showing `Waiting for your registrar to propagate your new
+nameservers` at the last check. Use **Check nameservers now** and wait for the
+zone to become **Active**. Do not re-enable registrar DNSSEC yet.
+
+The Viettel router rejects external ports 80 and 443. A temporary test mapping
+of external 10443 to NAS 8443 proved the QNAP reverse proxy, but the final design
+is Cloudflare Tunnel, with no public router ports. Confirm that the temporary
+10443 rule is disabled or removed before completing staging exposure. A QNAP
+reverse-proxy rule exists for HTTPS `staging.vinticwatches.vn:8443` to
+`http://127.0.0.1:8088`; it is not required by the final tunnel path.
+
+### Resume from here
+
+1. In Cloudflare, wait until `vinticwatches.vn` is **Active**.
+2. Create a Cloudflared tunnel named `watch-shop-storefront-staging`. Never
+   paste its tunnel token into chat or documentation.
+3. Run Cloudflared on Docker network `watch-shop-staging` and route the public
+   hostname `staging.vinticwatches.vn` to:
+
+   ```text
+   http://watch-shop-staging-public-proxy:8080
+   ```
+
+4. Verify external HTTPS has a valid certificate with no browser warning, then
+   require `/products=200`, `/admin=404` and `/api/health=404`.
+5. Perform real-device catalog/detail/image, 360/390/430 responsive, PWA
+   install/offline/reconnect and controlled Order acceptance. Remember that 14
+   stale media references may return unavailable images.
+6. Keep production activation blocked until all Phase 6 gates pass and receive
+   explicit approval. Re-enable DNSSEC later through Cloudflare using the new DS
+   data, never the registrar's old DS record.
