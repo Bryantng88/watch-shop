@@ -197,7 +197,7 @@ is complete and explicitly approved.
 Until all gates close, Phase 6 is release-ready preparation only—not a
 production release and not authorization to delete legacy code.
 
-## NAS Staging Checkpoint: 2026-08-06 (latest)
+## NAS Staging Checkpoint: 2026-08-06
 
 NAS staging is running on the QNAP host from revision `5fc0cdc8`. Production
 remains online and unchanged: `watch-shop-app-1` is healthy on the
@@ -332,3 +332,152 @@ reverse-proxy rule exists for HTTPS `staging.vinticwatches.vn:8443` to
 6. Keep production activation blocked until all Phase 6 gates pass and receive
    explicit approval. Re-enable DNSSEC later through Cloudflare using the new DS
    data, never the registrar's old DS record.
+
+## NAS Staging Checkpoint: 2026-08-07 (latest)
+
+Continue from this section on another workstation. The production container and
+database remain out of scope and must not be used for staging acceptance.
+
+### Storefront eligibility and deployed image
+
+The storefront publish contract was aligned with the actual media workflow:
+
+- both `WatchReviewState` records (`CONTENT` and `IMAGE`) must be `APPROVED`;
+- Publish readiness does not require the later Done/posting step;
+- legacy `Product.contentStatus` and `WatchContent.contentStatus` are not
+  storefront gates;
+- a stable product slug is generated when both reviews become approved;
+- a `COVER` image is the intended production card-image gate, controlled by
+  `STOREFRONT_REQUIRE_COVER_IMAGE`; staging temporarily sets this to `0` while
+  cover assignment is not yet operational.
+
+The resulting NAS image is running as:
+
+```text
+watch-shop:storefront-staging-20260807-r2
+```
+
+Container `watch-shop-storefront-staging-app-1` uses that image, remains bound
+to `127.0.0.1:3001`, and passed health/readiness and `/products=200` checks.
+The source changes are still local and uncommitted. The intended files include:
+
+- `.env.production.example`;
+- `scripts/seed-storefront-acceptance.ts`;
+- `scripts/smoke-storefront-contract.ts`;
+- `src/domains/storefront/server/public-catalog.repo.ts`;
+- `src/domains/storefront/server/public-catalog.service.ts`;
+- `src/domains/watch/server/review/watch-review.service.ts`;
+- `scripts/backfill-storefront-slugs.ts`.
+
+`storefront:verify`, scoped lint/typecheck and the production build passed before
+deployment; the build generated 127/127 pages.
+
+### Production-clone catalog backfill
+
+An audit of the cloned staging database found 47 Watches at the exact storefront
+eligibility intersection when the cover-role gate is bypassed. All 475 Products
+initially had no slug. Before changing them, the latest staging backup checksum
+was verified:
+
+```text
+watch-shop-20260806T094327Z.dump: OK
+```
+
+The guarded `scripts/backfill-storefront-slugs.ts` runner:
+
+- refuses a database whose name does not contain `staging`;
+- is dry-run unless `--apply` and
+  `ALLOW_STOREFRONT_SLUG_BACKFILL=1` are both supplied;
+- only fills null/empty slugs for the exact eligible intersection;
+- uses the same title plus stable product-id suffix algorithm as review
+  approval.
+
+Dry-run reported 47 candidates and apply reported `updated: 47`. Do not rerun
+destructive database utilities or acceptance fixture cleanup on this clone.
+
+### Media and LAN preview
+
+The staging MinIO bucket still contains 1,625 of 1,639 referenced storefront
+objects; the accepted 14 missing source objects were not fabricated or removed
+from the database.
+
+QNAP SSH disables TCP forwarding (`administratively prohibited`). A temporary
+LAN-only preview proxy was therefore created as:
+
+```text
+container: watch-shop-staging-lan-preview
+binding:   192.168.1.253:18088 -> 8080
+URL:       http://192.168.1.253:18088/products
+```
+
+Do not add router forwarding for port 18088. Any device on the same LAN can
+reach it. Remove it after Cloudflare Tunnel acceptance:
+
+```sh
+docker rm -f watch-shop-staging-lan-preview
+```
+
+The temporary router `10443 -> 8443` mapping and QNAP 8443 path are not part of
+the final design and should remain disabled/removed. Final public access remains
+Cloudflare Tunnel without inbound router ports.
+
+### SSH access constraint
+
+The Windows key is `~/.ssh/watchshop_nas_ed25519`. It authenticates as NAS user
+`user` on port 22253. Adding it in QTS did not permit direct `admin` login. Use:
+
+```powershell
+ssh -i "$env:USERPROFILE\.ssh\watchshop_nas_ed25519" -p 22253 user@192.168.1.253
+```
+
+Then run `sudo -i` and enter the password interactively. QTS administrator-group
+membership does not turn an SSH `user` session into an admin shell, and no
+passwordless-all sudo policy should be added.
+
+### Purchase-request product decisions
+
+The public CTA needs to distinguish intent:
+
+- primary: **Send purchase request**, allowing multiple unique Watches in one
+  request, quantity fixed at one;
+- secondary: **Ask on Instagram**, opening the shop's Instagram DM surface and
+  carrying/copying the product title, stable code and URL for context;
+- consultation does not reserve inventory or create an Order;
+- a staff-confirmed purchase request may proceed to reservation/order handling.
+
+Related suggestions on the request page should show up to four eligible Watches,
+exclude current selections and unavailable inventory, and rank primarily by
+market segment/site channel, price proximity, audience, style, brand, size,
+movement and decade. Use deterministic scoring and diversity penalties before
+behavioral personalization.
+
+### Admin staging is the immediate next task
+
+There is currently no safe admin staging URL. The public proxy deliberately
+returns 404 for `/admin`, `/login`, admin/media/internal APIs and health routes.
+The existing `192.168.1.253:3000/admin` surface is production and must never be
+used to process staging requests.
+
+Build a separate admin staging ingress using the same r2 application and
+`watch_shop_storefront_staging` database. Requirements:
+
+1. use a distinct hostname such as `admin-staging.vinticwatches.vn`; do not rely
+   only on a different port because authentication cookies do not isolate by
+   port;
+2. initially bind it to LAN only (a proposed port is 18089), with no router
+   forwarding;
+3. allow only the admin/login and required admin API/media routes; keep the
+   public storefront hostname deny-by-default;
+4. confirm staging users/roles can authenticate without changing production;
+5. verify the storefront request record type and the existing admin screen that
+   reads it before submitting a test request;
+6. keep Zalo, email, webhook and other outbound production integrations disabled;
+7. map the request lifecycle through staff acceptance, reservation/cancellation
+   and storefront availability updates, including multi-Watch requests;
+8. when exposed externally, protect the admin hostname with Cloudflare Access.
+
+After admin staging is available, prioritize end-to-end business acceptance over
+UI polish: submit a controlled purchase request, receive it in admin, process
+each item, verify audit/state transitions, and verify immediate storefront
+availability. Record the visible Vietnamese typography, raw enum labels and
+layout defects for the later UI/UX pass.

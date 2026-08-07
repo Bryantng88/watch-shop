@@ -77,6 +77,7 @@ async function main() {
           tag,
           productImage: { create: {
             fileKey: `storefront-acceptance/${slug}.png`,
+            role: "COVER",
             alt: title,
             width: 600,
             height: 800,
@@ -96,6 +97,10 @@ async function main() {
             serviceStage: "NOT_REQUIRED",
             audienceSegment: audience,
             conditionGrade: "Excellent",
+            reviewStates: { create: [
+              { productId: id, targetType: "CONTENT", status: "APPROVED" },
+              { productId: id, targetType: "IMAGE", status: "APPROVED" },
+            ] },
             watchContent: { create: {
               contentStatus: "PUBLISHED",
               publishedAt: new Date(),

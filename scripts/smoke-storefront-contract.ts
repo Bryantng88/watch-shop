@@ -10,6 +10,7 @@ import {
   publicWatchDetailSelect,
   publicWatchEligibilityWhere,
   publicWatchListSelect,
+  storefrontCoverImageRequired,
   type PublicWatchDetailRow,
 } from "../src/domains/storefront/server/public-catalog.repo";
 import {
@@ -64,6 +65,7 @@ function fixture(priceVisibility: "SHOW" | "HIDE" = "SHOW") {
       {
         id: "image-1",
         fileKey: "products/storefront/chosen/omega.jpg",
+        role: "COVER",
         alt: null,
         width: 1200,
         height: 1600,
@@ -105,10 +107,19 @@ function main() {
   assertNoForbiddenKeys(publicWatchListSelect, "public list select");
   assertNoForbiddenKeys(publicWatchDetailSelect, "public detail select");
 
-  const eligibility = JSON.stringify(publicWatchEligibilityWhere());
-  for (const required of ["AVAILABLE", "READY", "IN_STOCK", "PUBLISHED", "isForStorefront"]) {
+  const eligibility = JSON.stringify(publicWatchEligibilityWhere({ requireCoverImage: true }));
+  for (const required of ["AVAILABLE", "READY", "IN_STOCK", "APPROVED", "isForStorefront", "COVER"]) {
     assert.ok(eligibility.includes(required), `eligibility is missing ${required}`);
   }
+  assert.equal(eligibility.includes("publishedAt"), false, "storefront must not require channel posting");
+  assert.equal(eligibility.includes("contentStatus"), false, "approved review pair is the media readiness source of truth");
+  assert.equal(storefrontCoverImageRequired(undefined), true, "cover gate must fail closed");
+  assert.equal(storefrontCoverImageRequired("0"), false, "staging bypass must be explicit");
+  assert.equal(
+    JSON.stringify(publicWatchEligibilityWhere({ requireCoverImage: false })).includes("COVER"),
+    false,
+    "cover bypass must retain the rest of the storefront eligibility gate",
+  );
   for (const blocked of ["HOLD", "SOLD", "DRAFT", "PROCESSING"]) {
     assert.ok(!eligibility.includes(`\"${blocked}\"`), `eligibility must not include ${blocked}`);
   }

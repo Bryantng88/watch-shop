@@ -1,8 +1,10 @@
 import {
-  ContentStatus,
+  ImageRole,
   ProductStatus,
   ProductType,
   WatchSaleStage,
+  WatchReviewStatus,
+  WatchReviewTargetType,
   WatchServiceStage,
   WatchStockStage,
   type Prisma,
@@ -14,10 +16,27 @@ import type { PublicCatalogQuery } from "../contracts";
 const publicImageSelect = {
   id: true,
   fileKey: true,
+  role: true,
   alt: true,
   width: true,
   height: true,
 } satisfies Prisma.ProductImageSelect;
+
+export function storefrontCoverImageRequired(
+  configured = process.env.STOREFRONT_REQUIRE_COVER_IMAGE,
+) {
+  return configured !== "0";
+}
+
+function storefrontImageWhere(requireCoverImage: boolean): Prisma.ProductImageWhereInput {
+  return {
+    isForStorefront: true,
+    fileKey: { not: "" },
+    ...(requireCoverImage ? { role: ImageRole.COVER } : {}),
+  };
+}
+
+const requireCoverImage = storefrontCoverImageRequired();
 
 const publicWatchCoreSelect = {
   id: true,
@@ -71,7 +90,7 @@ const publicWatchCoreSelect = {
 export const publicWatchListSelect = {
   ...publicWatchCoreSelect,
   productImage: {
-    where: { isForStorefront: true, fileKey: { not: "" } },
+    where: storefrontImageWhere(requireCoverImage),
     orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
     select: publicImageSelect,
     take: 1,
@@ -96,20 +115,18 @@ export type PublicWatchDetailRow = Prisma.ProductGetPayload<{
   select: typeof publicWatchDetailSelect;
 }>;
 
-export function publicWatchEligibilityWhere(): Prisma.ProductWhereInput {
+export function publicWatchEligibilityWhere(options?: {
+  requireCoverImage?: boolean;
+}): Prisma.ProductWhereInput {
+  const enforceCover = options?.requireCoverImage ?? storefrontCoverImageRequired();
   return {
     AND: [
       {
         type: ProductType.WATCH,
         status: ProductStatus.AVAILABLE,
         slug: { not: "" },
-        publishedAt: { not: null },
-        contentStatus: ContentStatus.PUBLISHED,
         productImage: {
-          some: {
-            isForStorefront: true,
-            fileKey: { not: "" },
-          },
+          some: storefrontImageWhere(enforceCover),
         },
         watch: {
           is: {
@@ -118,9 +135,24 @@ export function publicWatchEligibilityWhere(): Prisma.ProductWhereInput {
             serviceStage: {
               in: [WatchServiceStage.NOT_REQUIRED, WatchServiceStage.DONE],
             },
-            watchContent: {
-              is: { contentStatus: ContentStatus.PUBLISHED },
-            },
+            AND: [
+              {
+                reviewStates: {
+                  some: {
+                    targetType: WatchReviewTargetType.CONTENT,
+                    status: WatchReviewStatus.APPROVED,
+                  },
+                },
+              },
+              {
+                reviewStates: {
+                  some: {
+                    targetType: WatchReviewTargetType.IMAGE,
+                    status: WatchReviewStatus.APPROVED,
+                  },
+                },
+              },
+            ],
           },
         },
       },

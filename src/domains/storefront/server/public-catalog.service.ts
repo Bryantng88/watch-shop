@@ -70,7 +70,7 @@ function mapPrice(row: PublicWatchListRow): PublicWatchPrice {
 }
 
 export function mapPublicWatchCard(row: PublicWatchListRow): PublicWatchCard {
-  const image = row.productImage[0];
+  const image = row.productImage.find((item) => item.role === "COVER") ?? row.productImage[0];
   if (!row.slug || !row.watch || !image) {
     throw new Error("PUBLIC_WATCH_ELIGIBILITY_INVARIANT_VIOLATION");
   }

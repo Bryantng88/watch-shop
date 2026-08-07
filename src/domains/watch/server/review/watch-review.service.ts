@@ -20,6 +20,7 @@ import {
     type WatchReviewTargetType,
 } from "@/domains/watch/server/events";
 import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
+import slugify from "slugify";
 type ReviewTargetType = WatchReviewTargetType;
 type ReviewStatus = WatchReviewStatus;
 
@@ -50,6 +51,7 @@ async function getWatchOrThrow(db: DB, productId: string) {
             product: {
                 select: {
                     title: true,
+                    slug: true,
                     sku: true,
                     primaryImageUrl: true,
                     status: true,
@@ -257,6 +259,7 @@ async function getReviewPair(db: DB, productId: string) {
             product: {
                 select: {
                     title: true,
+                    slug: true,
                 },
             },
             reviewStates: {
@@ -421,6 +424,15 @@ async function finalizeWatchIfFullyApproved(db: DB, productId: string) {
             },
         }));
 
+    const slugBase = slugify(pair.watch.product.title || "watch", {
+        lower: true,
+        strict: true,
+        locale: "vi",
+        trim: true,
+    }).slice(0, 80) || "watch";
+    const slugSuffix = productId.replace(/[^a-zA-Z0-9]/g, "").slice(-8).toLowerCase();
+    const storefrontSlug = `${slugBase}-${slugSuffix || "item"}`;
+
     await db.watch.updateMany({
             where: {
                 productId,
@@ -438,6 +450,7 @@ async function finalizeWatchIfFullyApproved(db: DB, productId: string) {
             where: { id: productId },
             data: {
                 status: ProductStatus.AVAILABLE,
+                ...(pair.watch.product.slug ? {} : { slug: storefrontSlug }),
                 updatedAt: new Date(),
             },
         });
