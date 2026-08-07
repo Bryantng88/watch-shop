@@ -38,6 +38,7 @@ export const ProductResultSchema = z.object({
     invoiceItem: z.array(z.unknown()),
     maintenanceRecord: z.array(z.unknown()),
     orderItem: z.array(z.unknown()),
+    purchaseRequestItem: z.array(z.unknown()),
     brand: z.unknown().nullable(),
     productCategory: z.unknown().nullable(),
     vendor: z.unknown().nullable(),

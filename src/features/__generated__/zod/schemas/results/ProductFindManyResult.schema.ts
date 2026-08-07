@@ -32,6 +32,7 @@ export const ProductFindManyResultSchema = z.object({
   invoiceItem: z.array(z.unknown()),
   maintenanceRecord: z.array(z.unknown()),
   orderItem: z.array(z.unknown()),
+  purchaseRequestItem: z.array(z.unknown()),
   brand: z.unknown().optional(),
   productCategory: z.unknown().optional(),
   vendor: z.unknown().optional(),

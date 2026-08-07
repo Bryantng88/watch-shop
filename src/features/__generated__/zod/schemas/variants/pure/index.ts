@@ -25,6 +25,8 @@ export { BusinessEventLogModelSchema } from './BusinessEventLog.pure';
 export { ProjectionEventDeliveryModelSchema } from './ProjectionEventDelivery.pure';
 export { ProjectionRecordModelSchema } from './ProjectionRecord.pure';
 export { OrderModelSchema } from './Order.pure';
+export { PurchaseRequestModelSchema } from './PurchaseRequest.pure';
+export { PurchaseRequestItemModelSchema } from './PurchaseRequestItem.pure';
 export { OrderItemModelSchema } from './OrderItem.pure';
 export { IntegrationIngressReceiptModelSchema } from './IntegrationIngressReceipt.pure';
 export { PartVariantSpecModelSchema } from './PartVariantSpec.pure';

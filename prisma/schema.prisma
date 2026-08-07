@@ -590,6 +590,7 @@ model Order {
   shipments             Shipment[]
   task                  Task[]
   workCase              WorkCase[]
+  purchaseRequest       PurchaseRequest?
 
   @@unique([publicRequestChannel, publicExternalId], map: "Order_public_channel_external_key")
   @@index([createdAt])
@@ -600,6 +601,57 @@ model Order {
   @@index([quickFlowType], map: "idx_order_quickFlowType")
   @@index([quickFromProductId], map: "idx_order_quickFromProductId")
   @@index([publicFingerprintHash, createdAt], map: "idx_order_public_fingerprint_created")
+}
+
+model PurchaseRequest {
+  id                  String                           @id @default(dbgenerated("(gen_random_uuid())::text"))
+  reference           String                           @unique
+  status              PurchaseRequestStatus            @default(WAITING)
+  outcome             PurchaseRequestOutcome?
+  channel             String
+  externalRequestId   String?
+  requestKey          String                           @unique
+  requestHash         String
+  fingerprintHash     String
+  customerName        String
+  phone               String
+  contactPreference   PurchaseRequestContactPreference @default(PHONE)
+  address             String?
+  city                String?
+  district            String?
+  ward                String?
+  customerNote        String?
+  processingNote      String?
+  completionReason    String?
+  assignedUserId      String?
+  followUpAt          DateTime?                        @db.Timestamptz(6)
+  processingStartedAt DateTime?                        @db.Timestamptz(6)
+  completedAt         DateTime?                        @db.Timestamptz(6)
+  orderId             String?                          @unique
+  createdAt           DateTime                         @default(now())
+  updatedAt           DateTime                         @updatedAt
+  items               PurchaseRequestItem[]
+  order               Order?                           @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@unique([channel, externalRequestId], map: "PurchaseRequest_channel_external_key")
+  @@index([status, createdAt(sort: Desc)])
+  @@index([fingerprintHash, createdAt])
+  @@index([assignedUserId, status])
+}
+
+model PurchaseRequestItem {
+  id                String          @id @default(dbgenerated("(gen_random_uuid())::text"))
+  purchaseRequestId String
+  productId         String
+  titleSnapshot     String
+  listPriceSnapshot Decimal         @db.Decimal(12, 2)
+  quantity          Int             @default(1)
+  createdAt         DateTime        @default(now())
+  purchaseRequest   PurchaseRequest @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
+  product           Product         @relation(fields: [productId], references: [id])
+
+  @@unique([purchaseRequestId, productId])
+  @@index([productId])
 }
 
 model OrderItem {
@@ -710,47 +762,48 @@ model Payment {
 }
 
 model Product {
-  id                 String               @id @default(cuid())
-  slug               String?              @unique
-  title              String
-  primaryImageUrl    String?
-  type               ProductType
-  priceVisibility    PriceVisibility      @default(SHOW)
-  brandId            String?
-  seoTitle           String?
-  seoDescription     String?
-  isStockManaged     Boolean              @default(true)
-  maxQtyPerOrder     Int                  @default(1)
-  publishedAt        DateTime?
-  vendorId           String?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  tag                Tag                  @default(PRE_OWNED)
-  status             ProductStatus        @default(AVAILABLE)
-  categoryId         String?
-  contentStatus      ContentStatus        @default(DRAFT)
-  postContent        String?
-  aiPromptUsed       String?
-  aiGeneratedAt      DateTime?
-  sku                String?              @unique
-  nickname           String?
-  specStatus         String               @default("PENDING")
-  storefrontImageKey String?
-  acquisitionItem    AcquisitionItem[]
-  acquisitionSpecJob AcquisitionSpecJob[]
-  invoiceItem        InvoiceItem[]
-  maintenanceRecord  MaintenanceRecord[]
-  orderItem          OrderItem[]
-  brand              Brand?               @relation(fields: [brandId], references: [id])
-  productCategory    ProductCategory?     @relation(fields: [categoryId], references: [id])
-  vendor             Vendor?              @relation(fields: [vendorId], references: [id])
-  productContent     ProductContent?
-  productImage       ProductImage[]
-  productVariant     ProductVariant[]
-  reservation        Reservation[]
-  serviceRequest     ServiceRequest[]
-  watch              Watch?
-  watchSpec          WatchSpec?
+  id                  String                @id @default(cuid())
+  slug                String?               @unique
+  title               String
+  primaryImageUrl     String?
+  type                ProductType
+  priceVisibility     PriceVisibility       @default(SHOW)
+  brandId             String?
+  seoTitle            String?
+  seoDescription      String?
+  isStockManaged      Boolean               @default(true)
+  maxQtyPerOrder      Int                   @default(1)
+  publishedAt         DateTime?
+  vendorId            String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  tag                 Tag                   @default(PRE_OWNED)
+  status              ProductStatus         @default(AVAILABLE)
+  categoryId          String?
+  contentStatus       ContentStatus         @default(DRAFT)
+  postContent         String?
+  aiPromptUsed        String?
+  aiGeneratedAt       DateTime?
+  sku                 String?               @unique
+  nickname            String?
+  specStatus          String                @default("PENDING")
+  storefrontImageKey  String?
+  acquisitionItem     AcquisitionItem[]
+  acquisitionSpecJob  AcquisitionSpecJob[]
+  invoiceItem         InvoiceItem[]
+  maintenanceRecord   MaintenanceRecord[]
+  orderItem           OrderItem[]
+  purchaseRequestItem PurchaseRequestItem[]
+  brand               Brand?                @relation(fields: [brandId], references: [id])
+  productCategory     ProductCategory?      @relation(fields: [categoryId], references: [id])
+  vendor              Vendor?               @relation(fields: [vendorId], references: [id])
+  productContent      ProductContent?
+  productImage        ProductImage[]
+  productVariant      ProductVariant[]
+  reservation         Reservation[]
+  serviceRequest      ServiceRequest[]
+  watch               Watch?
+  watchSpec           WatchSpec?
 
   postTargets ProductPostTarget[]
 
@@ -2889,6 +2942,25 @@ enum OrderVerificationStatus {
   VERIFIED
   REJECTED
   EXPIRED
+}
+
+enum PurchaseRequestStatus {
+  WAITING
+  PROCESSING
+  COMPLETED
+}
+
+enum PurchaseRequestOutcome {
+  CONVERTED
+  REJECTED
+  CANCELLED
+  EXPIRED
+  DUPLICATE
+}
+
+enum PurchaseRequestContactPreference {
+  PHONE
+  ZALO
 }
 
 enum PartType {

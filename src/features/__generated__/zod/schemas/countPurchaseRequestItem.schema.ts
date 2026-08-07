@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { PurchaseRequestItemOrderByWithRelationInputObjectSchema as PurchaseRequestItemOrderByWithRelationInputObjectSchema } from './objects/PurchaseRequestItemOrderByWithRelationInput.schema';
+import { PurchaseRequestItemWhereInputObjectSchema as PurchaseRequestItemWhereInputObjectSchema } from './objects/PurchaseRequestItemWhereInput.schema';
+import { PurchaseRequestItemWhereUniqueInputObjectSchema as PurchaseRequestItemWhereUniqueInputObjectSchema } from './objects/PurchaseRequestItemWhereUniqueInput.schema';
+import { PurchaseRequestItemCountAggregateInputObjectSchema as PurchaseRequestItemCountAggregateInputObjectSchema } from './objects/PurchaseRequestItemCountAggregateInput.schema';
+
+export const PurchaseRequestItemCountSchema: z.ZodType<Prisma.PurchaseRequestItemCountArgs> = z.object({ orderBy: z.union([PurchaseRequestItemOrderByWithRelationInputObjectSchema, PurchaseRequestItemOrderByWithRelationInputObjectSchema.array()]).optional(), where: PurchaseRequestItemWhereInputObjectSchema.optional(), cursor: PurchaseRequestItemWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), PurchaseRequestItemCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.PurchaseRequestItemCountArgs>;
+
+export const PurchaseRequestItemCountZodSchema = z.object({ orderBy: z.union([PurchaseRequestItemOrderByWithRelationInputObjectSchema, PurchaseRequestItemOrderByWithRelationInputObjectSchema.array()]).optional(), where: PurchaseRequestItemWhereInputObjectSchema.optional(), cursor: PurchaseRequestItemWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), PurchaseRequestItemCountAggregateInputObjectSchema ]).optional() }).strict();

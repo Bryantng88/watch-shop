@@ -21,6 +21,7 @@ import { AcquisitionSpecJobUpdateManyWithoutProductNestedInputObjectSchema as Ac
 import { InvoiceItemUpdateManyWithoutProductNestedInputObjectSchema as InvoiceItemUpdateManyWithoutProductNestedInputObjectSchema } from './InvoiceItemUpdateManyWithoutProductNestedInput.schema';
 import { MaintenanceRecordUpdateManyWithoutProductNestedInputObjectSchema as MaintenanceRecordUpdateManyWithoutProductNestedInputObjectSchema } from './MaintenanceRecordUpdateManyWithoutProductNestedInput.schema';
 import { OrderItemUpdateManyWithoutProductNestedInputObjectSchema as OrderItemUpdateManyWithoutProductNestedInputObjectSchema } from './OrderItemUpdateManyWithoutProductNestedInput.schema';
+import { PurchaseRequestItemUpdateManyWithoutProductNestedInputObjectSchema as PurchaseRequestItemUpdateManyWithoutProductNestedInputObjectSchema } from './PurchaseRequestItemUpdateManyWithoutProductNestedInput.schema';
 import { BrandUpdateOneWithoutProductNestedInputObjectSchema as BrandUpdateOneWithoutProductNestedInputObjectSchema } from './BrandUpdateOneWithoutProductNestedInput.schema';
 import { VendorUpdateOneWithoutProductNestedInputObjectSchema as VendorUpdateOneWithoutProductNestedInputObjectSchema } from './VendorUpdateOneWithoutProductNestedInput.schema';
 import { ProductContentUpdateOneWithoutProductNestedInputObjectSchema as ProductContentUpdateOneWithoutProductNestedInputObjectSchema } from './ProductContentUpdateOneWithoutProductNestedInput.schema';
@@ -61,6 +62,7 @@ const makeSchema = () => z.object({
   invoiceItem: z.lazy(() => InvoiceItemUpdateManyWithoutProductNestedInputObjectSchema).optional(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordUpdateManyWithoutProductNestedInputObjectSchema).optional(),
   orderItem: z.lazy(() => OrderItemUpdateManyWithoutProductNestedInputObjectSchema).optional(),
+  purchaseRequestItem: z.lazy(() => PurchaseRequestItemUpdateManyWithoutProductNestedInputObjectSchema).optional(),
   brand: z.lazy(() => BrandUpdateOneWithoutProductNestedInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorUpdateOneWithoutProductNestedInputObjectSchema).optional(),
   productContent: z.lazy(() => ProductContentUpdateOneWithoutProductNestedInputObjectSchema).optional(),

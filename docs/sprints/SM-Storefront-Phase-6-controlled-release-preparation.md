@@ -481,3 +481,32 @@ UI polish: submit a controlled purchase request, receive it in admin, process
 each item, verify audit/state transitions, and verify immediate storefront
 availability. Record the visible Vietnamese typography, raw enum labels and
 layout defects for the later UI/UX pass.
+
+## Local Purchase Request Intake: 2026-08-07
+
+The first additive implementation slice now separates storefront intent from
+Order and Payment:
+
+- public submission creates `PurchaseRequest` plus immutable product/price
+  snapshots, not an Order;
+- request status is `WAITING -> PROCESSING -> COMPLETED`, with terminal outcomes
+  `CONVERTED`, `REJECTED`, `CANCELLED`, `EXPIRED` and `DUPLICATE`;
+- multiple unique Watches are allowed, with quantity fixed at one;
+- admin `/admin/purchase-requests` can accept a request, end it with a required
+  reason, or record an agreed price for each Watch and convert it idempotently
+  into a verified WEB Order in `DRAFT`;
+- conversion does not create Payment. Existing Payment issuance remains a
+  deliberate Order operation after commercial terms are confirmed;
+- the existing Payment command already enforces unpaid-to-cancelled and rejects
+  cancellation of paid Payment, which must use a refund flow instead.
+
+Migration `20260809_purchase_request_intake` is additive. Legacy WEB Orders
+remain readable and are not backfilled into PurchaseRequest automatically.
+
+Local gates passed: Prisma format/generate, TypeScript no-emit, scoped ESLint,
+all storefront verification scripts and the production build (127/127 pages).
+Docker Desktop 4.85 and a loopback PostgreSQL 17 container were installed on
+this workstation. The disposable `watch_shop_storefront_test` database was
+bootstrapped from the current Prisma schema and the updated nine-assertion DB
+integration suite passed, including request idempotency, non-reserving
+concurrent intent, rate limiting and Zalo replay/conflict behavior.

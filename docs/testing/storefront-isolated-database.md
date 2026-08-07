@@ -2,7 +2,8 @@
 
 The integration suite must never run against the application database. It
 requires `STOREFRONT_TEST_DATABASE_URL` and applies several independent public
-Order requests that temporarily create and HOLD synthetic Watches.
+Purchase Requests against synthetic Watches. Purchase Requests do not reserve
+or HOLD inventory before qualification.
 
 ## Safety Guards
 
@@ -49,14 +50,14 @@ then set `ALLOW_REMOTE_STOREFRONT_TEST_DB=1` only for that test process.
 
 ## Assertions
 
-- first request creates one pending Order;
-- identical retry returns the same Order after the Watch is already HOLD;
+- first submission creates one waiting Purchase Request and no Order;
+- identical retry returns the same Purchase Request;
 - changed body on the same key conflicts;
-- two distinct concurrent keys for one Watch produce one Order only;
+- two distinct requests for one Watch are both accepted without reserving it;
 - the sixth request from one fingerprint inside ten minutes is rejected;
 - first Zalo lookup event completes, identical event replays its stored result,
   and changed payload hash conflicts;
-- synthetic Orders, customers, receipts and products are cleaned up.
+- synthetic Purchase Requests, receipts and products are cleaned up.
 
 Run `npm run storefront:verify` and `npm run build` again after the database gate.
 

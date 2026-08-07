@@ -38,6 +38,7 @@ export const ProductInputSchema = z.object({
     invoiceItem: z.array(z.unknown()),
     maintenanceRecord: z.array(z.unknown()),
     orderItem: z.array(z.unknown()),
+    purchaseRequestItem: z.array(z.unknown()),
     brand: z.unknown().optional().nullable(),
     productCategory: z.unknown().optional().nullable(),
     vendor: z.unknown().optional().nullable(),

@@ -1,6 +1,5 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
-import { createOrderApplication } from "@/domains/order/application";
 import type { BusinessEventDispatchOptions } from "@/domains/event/server/business-event.service";
 import { prisma } from "@/server/db/client";
 import {
@@ -39,13 +38,13 @@ export async function submitPublicOrder(
 
   const requestHash = digest(canonicalRequest(request));
   const namespacedKey = `${raw.channel}:${raw.externalRequestId?.trim() || idempotencyKey}`;
-  const existing = await prisma.order.findUnique({
-    where: { publicRequestKey: namespacedKey },
-    select: { id: true, refNo: true, publicRequestHash: true },
+  const existing = await prisma.purchaseRequest.findUnique({
+    where: { requestKey: namespacedKey },
+    select: { id: true, reference: true, requestHash: true },
   });
   if (existing) {
-    if (existing.publicRequestHash !== requestHash) throw new Error("PUBLIC_ORDER_IDEMPOTENCY_CONFLICT");
-    return { orderId: existing.id, reference: existing.refNo, status: "PENDING_VERIFICATION", replayed: true };
+    if (existing.requestHash !== requestHash) throw new Error("PUBLIC_ORDER_IDEMPOTENCY_CONFLICT");
+    return { requestId: existing.id, reference: existing.reference, status: "RECEIVED", replayed: true };
   }
 
   const productIds = Array.from(new Set(request.items.map((item) => item.productId)));
@@ -55,50 +54,66 @@ export async function submitPublicOrder(
 
   const now = context.now ?? new Date();
   const fingerprintHash = digest(`${process.env.PUBLIC_ORDER_FINGERPRINT_SECRET ?? "watch-shop"}:${context.fingerprint}`);
-  const noteParts = [
-    request.note,
-    `Kênh liên hệ: ${request.contactPreference === "ZALO" ? "Zalo" : "Điện thoại"}`,
-  ].filter(Boolean);
+  const id = randomUUID();
+  const datePart = now.toISOString().slice(0, 10).replaceAll("-", "");
+  const reference = `PR-${datePart}-${id.slice(0, 8).toUpperCase()}`;
 
-  const order = await createOrderApplication({
-    customerId: null,
-    customerName: request.customerName,
-    shipPhone: request.phone,
-    shipAddress: request.address ?? "",
-    shipCity: request.city ?? "",
-    shipDistrict: request.district ?? null,
-    shipWard: request.ward ?? null,
-    hasShipment: Boolean(request.address),
-    paymentMethod: "BANK_TRANSFER",
-    notes: noteParts.join("\n"),
-    reserve: null,
-    tradeIn: null,
-    source: "WEB",
-    verificationStatus: "PENDING",
-    status: "DRAFT",
-    items: request.items.map((item) => ({
-      kind: "PRODUCT",
-      productId: item.productId,
-      title: "",
-      quantity: item.quantity,
-      listPrice: 0,
-      unitPriceAgreed: null,
-    })),
-    publicRequest: {
-      key: namespacedKey,
-      hash: requestHash,
-      channel: raw.channel,
-      externalRequestId: raw.externalRequestId ?? null,
-      fingerprintHash,
-      rateLimitSince: new Date(now.getTime() - RATE_LIMIT_WINDOW_MS),
-      rateLimitMax: RATE_LIMIT_MAX,
-    },
-  }, context.runtime);
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`purchase-request:${namespacedKey}`}, 0))`;
+    const replay = await tx.purchaseRequest.findUnique({
+      where: { requestKey: namespacedKey },
+      select: { id: true, reference: true, requestHash: true },
+    });
+    if (replay) {
+      if (replay.requestHash !== requestHash) throw new Error("PUBLIC_ORDER_IDEMPOTENCY_CONFLICT");
+      return { ...replay, replayed: true };
+    }
 
-  return {
-    orderId: order.id,
-    reference: order.refNo ?? null,
-    status: "PENDING_VERIFICATION",
-    replayed: "idempotentReplay" in order && order.idempotentReplay === true,
-  };
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`public-rate:${fingerprintHash}`}, 0))`;
+    const recentRequestCount = await tx.purchaseRequest.count({
+      where: { fingerprintHash, createdAt: { gte: new Date(now.getTime() - RATE_LIMIT_WINDOW_MS) } },
+    });
+    if (recentRequestCount >= RATE_LIMIT_MAX) throw new Error("PUBLIC_ORDER_RATE_LIMITED");
+
+    const products = await tx.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, title: true, watch: { select: { watchPrice: { select: { salePrice: true } } } } },
+    });
+    const productById = new Map(products.map((product) => [product.id, product]));
+    const created = await tx.purchaseRequest.create({
+      data: {
+        id,
+        reference,
+        channel: raw.channel,
+        externalRequestId: raw.externalRequestId?.trim() || null,
+        requestKey: namespacedKey,
+        requestHash,
+        fingerprintHash,
+        customerName: request.customerName,
+        phone: request.phone,
+        contactPreference: request.contactPreference,
+        address: request.address ?? null,
+        city: request.city ?? null,
+        district: request.district ?? null,
+        ward: request.ward ?? null,
+        customerNote: request.note ?? null,
+        items: {
+          create: request.items.map((item) => {
+            const product = productById.get(item.productId);
+            if (!product) throw new Error("PUBLIC_ORDER_PRODUCT_UNAVAILABLE");
+            return {
+              productId: item.productId,
+              titleSnapshot: product.title,
+              listPriceSnapshot: product.watch?.watchPrice?.salePrice ?? 0,
+              quantity: 1,
+            };
+          }),
+        },
+      },
+      select: { id: true, reference: true, requestHash: true },
+    });
+    return { ...created, replayed: false };
+  });
+
+  return { requestId: result.id, reference: result.reference, status: "RECEIVED", replayed: result.replayed };
 }

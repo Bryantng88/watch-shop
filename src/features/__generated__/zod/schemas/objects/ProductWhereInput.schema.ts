@@ -21,6 +21,7 @@ import { AcquisitionSpecJobListRelationFilterObjectSchema as AcquisitionSpecJobL
 import { InvoiceItemListRelationFilterObjectSchema as InvoiceItemListRelationFilterObjectSchema } from './InvoiceItemListRelationFilter.schema';
 import { MaintenanceRecordListRelationFilterObjectSchema as MaintenanceRecordListRelationFilterObjectSchema } from './MaintenanceRecordListRelationFilter.schema';
 import { OrderItemListRelationFilterObjectSchema as OrderItemListRelationFilterObjectSchema } from './OrderItemListRelationFilter.schema';
+import { PurchaseRequestItemListRelationFilterObjectSchema as PurchaseRequestItemListRelationFilterObjectSchema } from './PurchaseRequestItemListRelationFilter.schema';
 import { BrandNullableScalarRelationFilterObjectSchema as BrandNullableScalarRelationFilterObjectSchema } from './BrandNullableScalarRelationFilter.schema';
 import { BrandWhereInputObjectSchema as BrandWhereInputObjectSchema } from './BrandWhereInput.schema';
 import { ProductCategoryNullableScalarRelationFilterObjectSchema as ProductCategoryNullableScalarRelationFilterObjectSchema } from './ProductCategoryNullableScalarRelationFilter.schema';
@@ -74,6 +75,7 @@ const productwhereinputSchema = z.object({
   invoiceItem: z.lazy(() => InvoiceItemListRelationFilterObjectSchema).optional(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
   orderItem: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional(),
+  purchaseRequestItem: z.lazy(() => PurchaseRequestItemListRelationFilterObjectSchema).optional(),
   brand: z.union([z.lazy(() => BrandNullableScalarRelationFilterObjectSchema), z.lazy(() => BrandWhereInputObjectSchema)]).optional(),
   productCategory: z.union([z.lazy(() => ProductCategoryNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductCategoryWhereInputObjectSchema)]).optional(),
   vendor: z.union([z.lazy(() => VendorNullableScalarRelationFilterObjectSchema), z.lazy(() => VendorWhereInputObjectSchema)]).optional(),

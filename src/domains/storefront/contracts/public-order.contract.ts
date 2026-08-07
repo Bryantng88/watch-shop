@@ -17,14 +17,20 @@ export const publicOrderRequestSchema = z
       .array(
         z.object({
           productId: z.string().trim().min(1).max(100),
-          quantity: z.number().int().min(1).max(20),
+          quantity: z.literal(1),
         }),
       )
       .min(1)
       .max(20),
     website: z.string().max(0).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    const productIds = value.items.map((item) => item.productId);
+    if (new Set(productIds).size !== productIds.length) {
+      context.addIssue({ code: "custom", path: ["items"], message: "Mỗi Watch chỉ được xuất hiện một lần." });
+    }
+  });
 
 export const publicOrderIdempotencyKeySchema = z
   .string()
@@ -36,9 +42,9 @@ export const publicOrderIdempotencyKeySchema = z
 export type PublicOrderRequest = z.infer<typeof publicOrderRequestSchema>;
 
 export type PublicOrderAccepted = {
-  orderId: string;
-  reference: string | null;
-  status: "PENDING_VERIFICATION";
+  requestId: string;
+  reference: string;
+  status: "RECEIVED";
 };
 
 export const publicOrderChannelSchema = z.enum(["STOREFRONT", "ZALO"]);
@@ -50,4 +56,3 @@ export type SubmitPublicOrderCommand = {
   channel: PublicOrderChannel;
   externalRequestId?: string | null;
 };
-

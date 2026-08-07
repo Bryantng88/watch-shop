@@ -31,6 +31,7 @@ export const ProductAggregateResultSchema = z.object({  _count: z.object({
     invoiceItem: z.number(),
     maintenanceRecord: z.number(),
     orderItem: z.number(),
+    purchaseRequestItem: z.number(),
     brand: z.number(),
     productCategory: z.number(),
     vendor: z.number(),

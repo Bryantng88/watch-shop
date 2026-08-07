@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { PurchaseRequestWhereInputObjectSchema as PurchaseRequestWhereInputObjectSchema } from './objects/PurchaseRequestWhereInput.schema';
+import { PurchaseRequestOrderByWithAggregationInputObjectSchema as PurchaseRequestOrderByWithAggregationInputObjectSchema } from './objects/PurchaseRequestOrderByWithAggregationInput.schema';
+import { PurchaseRequestScalarWhereWithAggregatesInputObjectSchema as PurchaseRequestScalarWhereWithAggregatesInputObjectSchema } from './objects/PurchaseRequestScalarWhereWithAggregatesInput.schema';
+import { PurchaseRequestScalarFieldEnumSchema } from './enums/PurchaseRequestScalarFieldEnum.schema';
+import { PurchaseRequestCountAggregateInputObjectSchema as PurchaseRequestCountAggregateInputObjectSchema } from './objects/PurchaseRequestCountAggregateInput.schema';
+import { PurchaseRequestMinAggregateInputObjectSchema as PurchaseRequestMinAggregateInputObjectSchema } from './objects/PurchaseRequestMinAggregateInput.schema';
+import { PurchaseRequestMaxAggregateInputObjectSchema as PurchaseRequestMaxAggregateInputObjectSchema } from './objects/PurchaseRequestMaxAggregateInput.schema';
+
+export const PurchaseRequestGroupBySchema: z.ZodType<Prisma.PurchaseRequestGroupByArgs> = z.object({ where: PurchaseRequestWhereInputObjectSchema.optional(), orderBy: z.union([PurchaseRequestOrderByWithAggregationInputObjectSchema, PurchaseRequestOrderByWithAggregationInputObjectSchema.array()]).optional(), having: PurchaseRequestScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(PurchaseRequestScalarFieldEnumSchema), _count: z.union([ z.literal(true), PurchaseRequestCountAggregateInputObjectSchema ]).optional(), _min: PurchaseRequestMinAggregateInputObjectSchema.optional(), _max: PurchaseRequestMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.PurchaseRequestGroupByArgs>;
+
+export const PurchaseRequestGroupByZodSchema = z.object({ where: PurchaseRequestWhereInputObjectSchema.optional(), orderBy: z.union([PurchaseRequestOrderByWithAggregationInputObjectSchema, PurchaseRequestOrderByWithAggregationInputObjectSchema.array()]).optional(), having: PurchaseRequestScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(PurchaseRequestScalarFieldEnumSchema), _count: z.union([ z.literal(true), PurchaseRequestCountAggregateInputObjectSchema ]).optional(), _min: PurchaseRequestMinAggregateInputObjectSchema.optional(), _max: PurchaseRequestMaxAggregateInputObjectSchema.optional() }).strict();

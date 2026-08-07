@@ -7,6 +7,7 @@ import { AcquisitionSpecJobOrderByRelationAggregateInputObjectSchema as Acquisit
 import { InvoiceItemOrderByRelationAggregateInputObjectSchema as InvoiceItemOrderByRelationAggregateInputObjectSchema } from './InvoiceItemOrderByRelationAggregateInput.schema';
 import { MaintenanceRecordOrderByRelationAggregateInputObjectSchema as MaintenanceRecordOrderByRelationAggregateInputObjectSchema } from './MaintenanceRecordOrderByRelationAggregateInput.schema';
 import { OrderItemOrderByRelationAggregateInputObjectSchema as OrderItemOrderByRelationAggregateInputObjectSchema } from './OrderItemOrderByRelationAggregateInput.schema';
+import { PurchaseRequestItemOrderByRelationAggregateInputObjectSchema as PurchaseRequestItemOrderByRelationAggregateInputObjectSchema } from './PurchaseRequestItemOrderByRelationAggregateInput.schema';
 import { BrandOrderByWithRelationInputObjectSchema as BrandOrderByWithRelationInputObjectSchema } from './BrandOrderByWithRelationInput.schema';
 import { ProductCategoryOrderByWithRelationInputObjectSchema as ProductCategoryOrderByWithRelationInputObjectSchema } from './ProductCategoryOrderByWithRelationInput.schema';
 import { VendorOrderByWithRelationInputObjectSchema as VendorOrderByWithRelationInputObjectSchema } from './VendorOrderByWithRelationInput.schema';
@@ -51,6 +52,7 @@ const makeSchema = () => z.object({
   invoiceItem: z.lazy(() => InvoiceItemOrderByRelationAggregateInputObjectSchema).optional(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordOrderByRelationAggregateInputObjectSchema).optional(),
   orderItem: z.lazy(() => OrderItemOrderByRelationAggregateInputObjectSchema).optional(),
+  purchaseRequestItem: z.lazy(() => PurchaseRequestItemOrderByRelationAggregateInputObjectSchema).optional(),
   brand: z.lazy(() => BrandOrderByWithRelationInputObjectSchema).optional(),
   productCategory: z.lazy(() => ProductCategoryOrderByWithRelationInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorOrderByWithRelationInputObjectSchema).optional(),

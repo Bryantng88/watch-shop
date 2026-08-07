@@ -8,6 +8,7 @@ const makeSchema = () => z.object({
   invoiceItem: z.boolean().optional(),
   maintenanceRecord: z.boolean().optional(),
   orderItem: z.boolean().optional(),
+  purchaseRequestItem: z.boolean().optional(),
   productImage: z.boolean().optional(),
   productVariant: z.boolean().optional(),
   reservation: z.boolean().optional(),

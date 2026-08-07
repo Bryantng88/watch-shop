@@ -9,6 +9,7 @@ import { AcquisitionItemCreateNestedManyWithoutProductInputObjectSchema as Acqui
 import { AcquisitionSpecJobCreateNestedManyWithoutProductInputObjectSchema as AcquisitionSpecJobCreateNestedManyWithoutProductInputObjectSchema } from './AcquisitionSpecJobCreateNestedManyWithoutProductInput.schema';
 import { InvoiceItemCreateNestedManyWithoutProductInputObjectSchema as InvoiceItemCreateNestedManyWithoutProductInputObjectSchema } from './InvoiceItemCreateNestedManyWithoutProductInput.schema';
 import { MaintenanceRecordCreateNestedManyWithoutProductInputObjectSchema as MaintenanceRecordCreateNestedManyWithoutProductInputObjectSchema } from './MaintenanceRecordCreateNestedManyWithoutProductInput.schema';
+import { PurchaseRequestItemCreateNestedManyWithoutProductInputObjectSchema as PurchaseRequestItemCreateNestedManyWithoutProductInputObjectSchema } from './PurchaseRequestItemCreateNestedManyWithoutProductInput.schema';
 import { BrandCreateNestedOneWithoutProductInputObjectSchema as BrandCreateNestedOneWithoutProductInputObjectSchema } from './BrandCreateNestedOneWithoutProductInput.schema';
 import { ProductCategoryCreateNestedOneWithoutProductInputObjectSchema as ProductCategoryCreateNestedOneWithoutProductInputObjectSchema } from './ProductCategoryCreateNestedOneWithoutProductInput.schema';
 import { VendorCreateNestedOneWithoutProductInputObjectSchema as VendorCreateNestedOneWithoutProductInputObjectSchema } from './VendorCreateNestedOneWithoutProductInput.schema';
@@ -49,6 +50,7 @@ const makeSchema = () => z.object({
   acquisitionSpecJob: z.lazy(() => AcquisitionSpecJobCreateNestedManyWithoutProductInputObjectSchema).optional(),
   invoiceItem: z.lazy(() => InvoiceItemCreateNestedManyWithoutProductInputObjectSchema).optional(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutProductInputObjectSchema).optional(),
+  purchaseRequestItem: z.lazy(() => PurchaseRequestItemCreateNestedManyWithoutProductInputObjectSchema).optional(),
   brand: z.lazy(() => BrandCreateNestedOneWithoutProductInputObjectSchema).optional(),
   productCategory: z.lazy(() => ProductCategoryCreateNestedOneWithoutProductInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorCreateNestedOneWithoutProductInputObjectSchema).optional(),

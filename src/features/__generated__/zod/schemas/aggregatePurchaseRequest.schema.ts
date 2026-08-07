@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { PurchaseRequestOrderByWithRelationInputObjectSchema as PurchaseRequestOrderByWithRelationInputObjectSchema } from './objects/PurchaseRequestOrderByWithRelationInput.schema';
+import { PurchaseRequestWhereInputObjectSchema as PurchaseRequestWhereInputObjectSchema } from './objects/PurchaseRequestWhereInput.schema';
+import { PurchaseRequestWhereUniqueInputObjectSchema as PurchaseRequestWhereUniqueInputObjectSchema } from './objects/PurchaseRequestWhereUniqueInput.schema';
+import { PurchaseRequestCountAggregateInputObjectSchema as PurchaseRequestCountAggregateInputObjectSchema } from './objects/PurchaseRequestCountAggregateInput.schema';
+import { PurchaseRequestMinAggregateInputObjectSchema as PurchaseRequestMinAggregateInputObjectSchema } from './objects/PurchaseRequestMinAggregateInput.schema';
+import { PurchaseRequestMaxAggregateInputObjectSchema as PurchaseRequestMaxAggregateInputObjectSchema } from './objects/PurchaseRequestMaxAggregateInput.schema';
+
+export const PurchaseRequestAggregateSchema: z.ZodType<Prisma.PurchaseRequestAggregateArgs> = z.object({ orderBy: z.union([PurchaseRequestOrderByWithRelationInputObjectSchema, PurchaseRequestOrderByWithRelationInputObjectSchema.array()]).optional(), where: PurchaseRequestWhereInputObjectSchema.optional(), cursor: PurchaseRequestWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), PurchaseRequestCountAggregateInputObjectSchema ]).optional(), _min: PurchaseRequestMinAggregateInputObjectSchema.optional(), _max: PurchaseRequestMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.PurchaseRequestAggregateArgs>;
+
+export const PurchaseRequestAggregateZodSchema = z.object({ orderBy: z.union([PurchaseRequestOrderByWithRelationInputObjectSchema, PurchaseRequestOrderByWithRelationInputObjectSchema.array()]).optional(), where: PurchaseRequestWhereInputObjectSchema.optional(), cursor: PurchaseRequestWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), PurchaseRequestCountAggregateInputObjectSchema ]).optional(), _min: PurchaseRequestMinAggregateInputObjectSchema.optional(), _max: PurchaseRequestMaxAggregateInputObjectSchema.optional() }).strict();

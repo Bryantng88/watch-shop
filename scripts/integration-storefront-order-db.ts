@@ -32,10 +32,14 @@ async function main() {
       id, slug: id, title: `Integration Watch ${suffix}`, type: "WATCH",
       status: "AVAILABLE", contentStatus: "PUBLISHED", priceVisibility: "SHOW",
       publishedAt: new Date(),
-      productImage: { create: { fileKey: `integration/${id}.jpg`, isPrimary: true, isForStorefront: true } },
+      productImage: { create: { fileKey: `integration/${id}.jpg`, role: "COVER", isPrimary: true, isForStorefront: true } },
       productVariant: { create: { availabilityStatus: "ACTIVE", stockQty: 1, salePrice: 10_000_000, updatedAt: new Date() } },
       watch: { create: {
         saleStage: "READY", stockStage: "IN_STOCK", serviceStage: "NOT_REQUIRED",
+        reviewStates: { create: [
+          { productId: id, targetType: "CONTENT", status: "APPROVED" },
+          { productId: id, targetType: "IMAGE", status: "APPROVED" },
+        ] },
         watchContent: { create: { contentStatus: "PUBLISHED", publishedAt: new Date() } },
         watchPrice: { create: { salePrice: 10_000_000, listPrice: 10_000_000 } },
       } },
@@ -53,6 +57,7 @@ async function main() {
 
   async function cleanup() {
   await prisma.integrationIngressReceipt.deleteMany({ where: { eventId: { startsWith: prefix } } });
+  await prisma.purchaseRequest.deleteMany({ where: { requestKey: { contains: prefix } } });
   await prisma.order.deleteMany({ where: { publicRequestKey: { contains: prefix } } });
   await prisma.customer.deleteMany({ where: { phone } });
   await prisma.product.deleteMany({ where: { id: { startsWith: prefix } } });
@@ -61,7 +66,7 @@ async function main() {
   try {
   const columns = await prisma.$queryRaw<Array<{ count: bigint }>>`
     SELECT COUNT(*)::bigint AS count FROM information_schema.columns
-    WHERE table_name = 'Order' AND column_name = 'publicRequestKey'
+    WHERE table_name = 'PurchaseRequest' AND column_name = 'requestKey'
   `;
   assert.equal(Number(columns[0]?.count ?? 0), 1, "Storefront migration is not applied");
   await cleanup();
@@ -76,7 +81,7 @@ async function main() {
     { request: request(replayProduct), idempotencyKey: replayKey, channel: "STOREFRONT" },
     { fingerprint: `${prefix}:replay`, runtime: { deferConsumers } },
   );
-  assert.equal(replay.orderId, first.orderId);
+  assert.equal(replay.requestId, first.requestId);
   assert.equal(replay.replayed, true);
   await assert.rejects(() => submitPublicOrder(
     { request: request(replayProduct, "Changed body"), idempotencyKey: replayKey, channel: "STOREFRONT" },
@@ -88,9 +93,9 @@ async function main() {
     { request: request(concurrentProduct), idempotencyKey: `${prefix}-concurrent-key-000${n}`, channel: "STOREFRONT" },
     { fingerprint: `${prefix}:concurrent:${n}`, runtime: { deferConsumers } },
   )));
-  assert.equal(concurrent.filter((result) => result.status === "fulfilled").length, 1);
-  const concurrentOrderCount = await prisma.orderItem.count({ where: { productId: concurrentProduct } });
-  assert.equal(concurrentOrderCount, 1);
+  assert.equal(concurrent.filter((result) => result.status === "fulfilled").length, 2);
+  const concurrentRequestCount = await prisma.purchaseRequestItem.count({ where: { productId: concurrentProduct } });
+  assert.equal(concurrentRequestCount, 2, "Purchase requests do not reserve inventory before qualification");
 
   const rateProducts = await Promise.all(Array.from({ length: 6 }, (_, index) => seedWatch(`rate-${index}`)));
   for (let index = 0; index < 5; index += 1) {
@@ -112,7 +117,7 @@ async function main() {
   assert.equal(zaloReplay.replayed, true);
   await assert.rejects(() => processZaloIngressEvent({ event, keyId: "integration", nonce: `${prefix}-nonce-0003`, requestHash: `${prefix}-changed`, runtime: { deferConsumers } }), /ZALO_EVENT_CONFLICT/);
 
-  console.log(JSON.stringify({ ok: true, database: databaseName, checks: 9, firstOrderId: first.orderId }, null, 2));
+  console.log(JSON.stringify({ ok: true, database: databaseName, checks: 9, firstRequestId: first.requestId }, null, 2));
   } finally {
     await cleanup().catch(() => undefined);
     await prisma.$disconnect();

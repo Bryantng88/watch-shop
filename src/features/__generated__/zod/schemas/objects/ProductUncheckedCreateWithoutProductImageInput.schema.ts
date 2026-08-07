@@ -10,6 +10,7 @@ import { AcquisitionSpecJobUncheckedCreateNestedManyWithoutProductInputObjectSch
 import { InvoiceItemUncheckedCreateNestedManyWithoutProductInputObjectSchema as InvoiceItemUncheckedCreateNestedManyWithoutProductInputObjectSchema } from './InvoiceItemUncheckedCreateNestedManyWithoutProductInput.schema';
 import { MaintenanceRecordUncheckedCreateNestedManyWithoutProductInputObjectSchema as MaintenanceRecordUncheckedCreateNestedManyWithoutProductInputObjectSchema } from './MaintenanceRecordUncheckedCreateNestedManyWithoutProductInput.schema';
 import { OrderItemUncheckedCreateNestedManyWithoutProductInputObjectSchema as OrderItemUncheckedCreateNestedManyWithoutProductInputObjectSchema } from './OrderItemUncheckedCreateNestedManyWithoutProductInput.schema';
+import { PurchaseRequestItemUncheckedCreateNestedManyWithoutProductInputObjectSchema as PurchaseRequestItemUncheckedCreateNestedManyWithoutProductInputObjectSchema } from './PurchaseRequestItemUncheckedCreateNestedManyWithoutProductInput.schema';
 import { ProductContentUncheckedCreateNestedOneWithoutProductInputObjectSchema as ProductContentUncheckedCreateNestedOneWithoutProductInputObjectSchema } from './ProductContentUncheckedCreateNestedOneWithoutProductInput.schema';
 import { ProductVariantUncheckedCreateNestedManyWithoutProductInputObjectSchema as ProductVariantUncheckedCreateNestedManyWithoutProductInputObjectSchema } from './ProductVariantUncheckedCreateNestedManyWithoutProductInput.schema';
 import { ReservationUncheckedCreateNestedManyWithoutProductInputObjectSchema as ReservationUncheckedCreateNestedManyWithoutProductInputObjectSchema } from './ReservationUncheckedCreateNestedManyWithoutProductInput.schema';
@@ -50,6 +51,7 @@ const makeSchema = () => z.object({
   invoiceItem: z.lazy(() => InvoiceItemUncheckedCreateNestedManyWithoutProductInputObjectSchema).optional(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutProductInputObjectSchema).optional(),
   orderItem: z.lazy(() => OrderItemUncheckedCreateNestedManyWithoutProductInputObjectSchema).optional(),
+  purchaseRequestItem: z.lazy(() => PurchaseRequestItemUncheckedCreateNestedManyWithoutProductInputObjectSchema).optional(),
   productContent: z.lazy(() => ProductContentUncheckedCreateNestedOneWithoutProductInputObjectSchema).optional(),
   productVariant: z.lazy(() => ProductVariantUncheckedCreateNestedManyWithoutProductInputObjectSchema).optional(),
   reservation: z.lazy(() => ReservationUncheckedCreateNestedManyWithoutProductInputObjectSchema).optional(),

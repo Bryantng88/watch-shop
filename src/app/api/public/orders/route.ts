@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
       { request, idempotencyKey, channel: "STOREFRONT" },
       { fingerprint: fingerprint(req), runtime: { deferConsumers: (work) => after(work) } },
     );
-    console.info("[storefront-order] accepted", {
-      orderId: result.orderId,
+    console.info("[storefront-purchase-request] accepted", {
+      requestId: result.requestId,
       reference: result.reference,
       replayed: result.replayed,
       durationMs: Date.now() - startedAt,

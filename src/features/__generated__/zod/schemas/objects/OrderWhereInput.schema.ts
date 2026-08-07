@@ -27,7 +27,9 @@ import { CustomerWhereInputObjectSchema as CustomerWhereInputObjectSchema } from
 import { OrderItemListRelationFilterObjectSchema as OrderItemListRelationFilterObjectSchema } from './OrderItemListRelationFilter.schema';
 import { ShipmentListRelationFilterObjectSchema as ShipmentListRelationFilterObjectSchema } from './ShipmentListRelationFilter.schema';
 import { TaskListRelationFilterObjectSchema as TaskListRelationFilterObjectSchema } from './TaskListRelationFilter.schema';
-import { WorkCaseListRelationFilterObjectSchema as WorkCaseListRelationFilterObjectSchema } from './WorkCaseListRelationFilter.schema'
+import { WorkCaseListRelationFilterObjectSchema as WorkCaseListRelationFilterObjectSchema } from './WorkCaseListRelationFilter.schema';
+import { PurchaseRequestNullableScalarRelationFilterObjectSchema as PurchaseRequestNullableScalarRelationFilterObjectSchema } from './PurchaseRequestNullableScalarRelationFilter.schema';
+import { PurchaseRequestWhereInputObjectSchema as PurchaseRequestWhereInputObjectSchema } from './PurchaseRequestWhereInput.schema'
 
 const orderwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => OrderWhereInputObjectSchema), z.lazy(() => OrderWhereInputObjectSchema).array()]).optional(),
@@ -71,7 +73,8 @@ const orderwhereinputSchema = z.object({
   orderItem: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional(),
   shipments: z.lazy(() => ShipmentListRelationFilterObjectSchema).optional(),
   task: z.lazy(() => TaskListRelationFilterObjectSchema).optional(),
-  workCase: z.lazy(() => WorkCaseListRelationFilterObjectSchema).optional()
+  workCase: z.lazy(() => WorkCaseListRelationFilterObjectSchema).optional(),
+  purchaseRequest: z.union([z.lazy(() => PurchaseRequestNullableScalarRelationFilterObjectSchema), z.lazy(() => PurchaseRequestWhereInputObjectSchema)]).optional()
 }).strict();
 export const OrderWhereInputObjectSchema: z.ZodType<Prisma.OrderWhereInput> = orderwhereinputSchema as unknown as z.ZodType<Prisma.OrderWhereInput>;
 export const OrderWhereInputObjectZodSchema = orderwhereinputSchema;

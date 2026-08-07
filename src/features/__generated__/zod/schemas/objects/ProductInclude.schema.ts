@@ -5,6 +5,7 @@ import { AcquisitionSpecJobFindManySchema as AcquisitionSpecJobFindManySchema } 
 import { InvoiceItemFindManySchema as InvoiceItemFindManySchema } from '../findManyInvoiceItem.schema';
 import { MaintenanceRecordFindManySchema as MaintenanceRecordFindManySchema } from '../findManyMaintenanceRecord.schema';
 import { OrderItemFindManySchema as OrderItemFindManySchema } from '../findManyOrderItem.schema';
+import { PurchaseRequestItemFindManySchema as PurchaseRequestItemFindManySchema } from '../findManyPurchaseRequestItem.schema';
 import { BrandArgsObjectSchema as BrandArgsObjectSchema } from './BrandArgs.schema';
 import { ProductCategoryArgsObjectSchema as ProductCategoryArgsObjectSchema } from './ProductCategoryArgs.schema';
 import { VendorArgsObjectSchema as VendorArgsObjectSchema } from './VendorArgs.schema';
@@ -24,6 +25,7 @@ const makeSchema = () => z.object({
   invoiceItem: z.union([z.boolean(), z.lazy(() => InvoiceItemFindManySchema)]).optional(),
   maintenanceRecord: z.union([z.boolean(), z.lazy(() => MaintenanceRecordFindManySchema)]).optional(),
   orderItem: z.union([z.boolean(), z.lazy(() => OrderItemFindManySchema)]).optional(),
+  purchaseRequestItem: z.union([z.boolean(), z.lazy(() => PurchaseRequestItemFindManySchema)]).optional(),
   brand: z.union([z.boolean(), z.lazy(() => BrandArgsObjectSchema)]).optional(),
   productCategory: z.union([z.boolean(), z.lazy(() => ProductCategoryArgsObjectSchema)]).optional(),
   vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional(),

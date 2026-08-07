@@ -91,6 +91,12 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
         return anyOf(PERMISSIONS.ORDER_UPDATE);
     }
 
+    if (/^\/api\/admin\/purchase-requests(\/|$)/.test(pathname)) {
+        if (read) return anyOf(PERMISSIONS.ORDER_VIEW);
+        if (/\/convert$/.test(pathname)) return anyOf(PERMISSIONS.ORDER_CREATE);
+        return anyOf(PERMISSIONS.ORDER_UPDATE);
+    }
+
     if (/^\/api\/admin\/payments(\/|$)/.test(pathname)) {
         return anyOf(
             ...(read
@@ -194,6 +200,7 @@ export function getAdminPagePolicy(pathname: string): AdminAccessPolicy | null {
     if (pathname === "/admin/orders/new") return anyOf(PERMISSIONS.ORDER_CREATE);
     if (/^\/admin\/orders\/[^/]+\/edit$/.test(pathname)) return anyOf(PERMISSIONS.ORDER_UPDATE);
     if (/^\/admin\/orders(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.ORDER_VIEW);
+    if (/^\/admin\/purchase-requests(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.ORDER_VIEW);
     if (/^\/admin\/payments(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.PAYMENT_VIEW_ALL, PERMISSIONS.ORDER_PAYMENT_VIEW, PERMISSIONS.ACQUISITION_PAYMENT_VIEW, PERMISSIONS.SERVICE_PAYMENT_VIEW, PERMISSIONS.SHIPMENT_PAYMENT_VIEW);
     if (/^\/admin\/shipments(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.SHIPMENT_VIEW);
     if (/^\/admin\/(services|catalogs\/technical)(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.SERVICE_VIEW);

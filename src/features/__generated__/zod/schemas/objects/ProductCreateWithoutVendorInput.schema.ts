@@ -10,6 +10,7 @@ import { AcquisitionSpecJobCreateNestedManyWithoutProductInputObjectSchema as Ac
 import { InvoiceItemCreateNestedManyWithoutProductInputObjectSchema as InvoiceItemCreateNestedManyWithoutProductInputObjectSchema } from './InvoiceItemCreateNestedManyWithoutProductInput.schema';
 import { MaintenanceRecordCreateNestedManyWithoutProductInputObjectSchema as MaintenanceRecordCreateNestedManyWithoutProductInputObjectSchema } from './MaintenanceRecordCreateNestedManyWithoutProductInput.schema';
 import { OrderItemCreateNestedManyWithoutProductInputObjectSchema as OrderItemCreateNestedManyWithoutProductInputObjectSchema } from './OrderItemCreateNestedManyWithoutProductInput.schema';
+import { PurchaseRequestItemCreateNestedManyWithoutProductInputObjectSchema as PurchaseRequestItemCreateNestedManyWithoutProductInputObjectSchema } from './PurchaseRequestItemCreateNestedManyWithoutProductInput.schema';
 import { BrandCreateNestedOneWithoutProductInputObjectSchema as BrandCreateNestedOneWithoutProductInputObjectSchema } from './BrandCreateNestedOneWithoutProductInput.schema';
 import { ProductCategoryCreateNestedOneWithoutProductInputObjectSchema as ProductCategoryCreateNestedOneWithoutProductInputObjectSchema } from './ProductCategoryCreateNestedOneWithoutProductInput.schema';
 import { ProductContentCreateNestedOneWithoutProductInputObjectSchema as ProductContentCreateNestedOneWithoutProductInputObjectSchema } from './ProductContentCreateNestedOneWithoutProductInput.schema';
@@ -50,6 +51,7 @@ const makeSchema = () => z.object({
   invoiceItem: z.lazy(() => InvoiceItemCreateNestedManyWithoutProductInputObjectSchema).optional(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutProductInputObjectSchema).optional(),
   orderItem: z.lazy(() => OrderItemCreateNestedManyWithoutProductInputObjectSchema).optional(),
+  purchaseRequestItem: z.lazy(() => PurchaseRequestItemCreateNestedManyWithoutProductInputObjectSchema).optional(),
   brand: z.lazy(() => BrandCreateNestedOneWithoutProductInputObjectSchema).optional(),
   productCategory: z.lazy(() => ProductCategoryCreateNestedOneWithoutProductInputObjectSchema).optional(),
   productContent: z.lazy(() => ProductContentCreateNestedOneWithoutProductInputObjectSchema).optional(),

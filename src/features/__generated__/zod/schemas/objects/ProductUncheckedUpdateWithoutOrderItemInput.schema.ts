@@ -20,6 +20,7 @@ import { AcquisitionItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema
 import { AcquisitionSpecJobUncheckedUpdateManyWithoutProductNestedInputObjectSchema as AcquisitionSpecJobUncheckedUpdateManyWithoutProductNestedInputObjectSchema } from './AcquisitionSpecJobUncheckedUpdateManyWithoutProductNestedInput.schema';
 import { InvoiceItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema as InvoiceItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema } from './InvoiceItemUncheckedUpdateManyWithoutProductNestedInput.schema';
 import { MaintenanceRecordUncheckedUpdateManyWithoutProductNestedInputObjectSchema as MaintenanceRecordUncheckedUpdateManyWithoutProductNestedInputObjectSchema } from './MaintenanceRecordUncheckedUpdateManyWithoutProductNestedInput.schema';
+import { PurchaseRequestItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema as PurchaseRequestItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema } from './PurchaseRequestItemUncheckedUpdateManyWithoutProductNestedInput.schema';
 import { ProductContentUncheckedUpdateOneWithoutProductNestedInputObjectSchema as ProductContentUncheckedUpdateOneWithoutProductNestedInputObjectSchema } from './ProductContentUncheckedUpdateOneWithoutProductNestedInput.schema';
 import { ProductImageUncheckedUpdateManyWithoutProductNestedInputObjectSchema as ProductImageUncheckedUpdateManyWithoutProductNestedInputObjectSchema } from './ProductImageUncheckedUpdateManyWithoutProductNestedInput.schema';
 import { ProductVariantUncheckedUpdateManyWithoutProductNestedInputObjectSchema as ProductVariantUncheckedUpdateManyWithoutProductNestedInputObjectSchema } from './ProductVariantUncheckedUpdateManyWithoutProductNestedInput.schema';
@@ -60,6 +61,7 @@ const makeSchema = () => z.object({
   acquisitionSpecJob: z.lazy(() => AcquisitionSpecJobUncheckedUpdateManyWithoutProductNestedInputObjectSchema).optional(),
   invoiceItem: z.lazy(() => InvoiceItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema).optional(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedUpdateManyWithoutProductNestedInputObjectSchema).optional(),
+  purchaseRequestItem: z.lazy(() => PurchaseRequestItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema).optional(),
   productContent: z.lazy(() => ProductContentUncheckedUpdateOneWithoutProductNestedInputObjectSchema).optional(),
   productImage: z.lazy(() => ProductImageUncheckedUpdateManyWithoutProductNestedInputObjectSchema).optional(),
   productVariant: z.lazy(() => ProductVariantUncheckedUpdateManyWithoutProductNestedInputObjectSchema).optional(),
