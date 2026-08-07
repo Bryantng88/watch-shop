@@ -152,6 +152,17 @@ export type QueueItemDTO = {
     itemCount: number;
     relatedItems: Array<{ title: string; ref: string | null }>;
   } | null;
+  purchaseRequest?: {
+    customerName: string;
+    phone: string;
+    contactPreference: string;
+    customerNote: string | null;
+    completionReason: string | null;
+    outcome: string | null;
+    items: Array<{ id: string; title: string; listPrice: number }>;
+    orderId: string | null;
+    orderRefNo: string | null;
+  } | null;
   updatedAt: string;
 };
 

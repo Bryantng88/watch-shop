@@ -2017,6 +2017,7 @@ enum TaskKind {
 enum TaskExecutionTargetType {
   WATCH
   ORDER
+  PURCHASE_REQUEST
   SHIPMENT
   PAYMENT
   SERVICE_REQUEST

@@ -400,6 +400,41 @@ const SHIPMENT_OPERATION_FLOW = {
   ],
 } as const satisfies NonNullable<SpaceViewConfig["coreFlows"]>[number];
 
+const PURCHASE_REQUEST_OPERATION_FLOW = {
+  key: "purchase-request-operation-core-flow",
+  label: "Xử lý đơn hàng",
+  description: "Tiếp nhận yêu cầu mua, xác minh nhu cầu và kết thúc hoặc chuyển thành đơn hàng nháp.",
+  rowModel: "FLOW_STAGE_WORKSPACE",
+  primaryTarget: "workspace",
+  itemTargetType: "PURCHASE_REQUEST",
+  stages: [
+    {
+      key: "purchase-request-waiting",
+      label: "Chờ xử lý",
+      workspaceKey: "purchase-request-waiting",
+      sortOrder: 10,
+      itemTargetType: "PURCHASE_REQUEST",
+      evidenceEvents: [],
+    },
+    {
+      key: "purchase-request-processing",
+      label: "Đang xử lý",
+      workspaceKey: "purchase-request-processing",
+      sortOrder: 20,
+      itemTargetType: "PURCHASE_REQUEST",
+      evidenceEvents: [],
+    },
+    {
+      key: "purchase-request-completed",
+      label: "Kết thúc",
+      workspaceKey: "purchase-request-completed",
+      sortOrder: 30,
+      itemTargetType: "PURCHASE_REQUEST",
+      evidenceEvents: [],
+    },
+  ],
+} as const satisfies NonNullable<SpaceViewConfig["coreFlows"]>[number];
+
 function unifiedOperationSpaceViewConfig(): SpaceViewConfig {
   return {
     ...defaultSpaceViewConfig("OPERATION"),
@@ -436,6 +471,16 @@ function unifiedOperationSpaceViewConfig(): SpaceViewConfig {
         rowModel: "FLOW_STAGE_WORKSPACE",
         primaryTarget: "workspace",
         coreFlowKey: MEDIA_PRODUCTION_FLOW.key,
+        allowedWorkspaceKinds: ["FLOW_STAGE_WORKSPACE"],
+        columns: WORKSPACE_COLUMNS,
+      },
+      {
+        key: "purchase-request-operation-flow",
+        label: "Xử lý đơn hàng",
+        description: "Chờ xử lý -> Đang xử lý -> Kết thúc.",
+        rowModel: "FLOW_STAGE_WORKSPACE",
+        primaryTarget: "workspace",
+        coreFlowKey: PURCHASE_REQUEST_OPERATION_FLOW.key,
         allowedWorkspaceKinds: ["FLOW_STAGE_WORKSPACE"],
         columns: WORKSPACE_COLUMNS,
       },
@@ -486,6 +531,7 @@ function unifiedOperationSpaceViewConfig(): SpaceViewConfig {
       TECHNICAL_ISSUE_FLOW,
       PAYMENT_COLLECTION_FLOW,
       MEDIA_PRODUCTION_FLOW,
+      PURCHASE_REQUEST_OPERATION_FLOW,
       SHIPMENT_OPERATION_FLOW,
     ],
   };

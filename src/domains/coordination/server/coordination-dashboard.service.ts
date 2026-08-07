@@ -3062,13 +3062,15 @@ export async function getCoordinationDashboard(input: {
   const isMediaFlow = input.context === "MEDIA" || activeFlow?.key === "media-production-flow";
   const isPaymentFlow = input.context === "PAYMENT" || activeFlow?.key === "payment-collection-core-flow";
   const isShipmentFlow = activeFlow?.key === "shipment-operation-core-flow";
+  const isPurchaseRequestFlow = activeFlow?.key === "purchase-request-operation-core-flow";
   const usesGenericFlowItemReader =
     input.includeFlowItems !== false &&
     Boolean(activeFlow) &&
     !isTechnicalFlow &&
     !isMediaFlow &&
     !isPaymentFlow &&
-    !isShipmentFlow;
+    !isShipmentFlow &&
+    !isPurchaseRequestFlow;
   const isServiceRequestCaseMode = activeMode?.key === "sr-cases";
   const requestedFlowStage =
     activeFlow?.key === "media-production-flow" &&
@@ -3122,6 +3124,42 @@ export async function getCoordinationDashboard(input: {
           pageSize: flowPageSize,
           query: input.flowQuery,
         })
+      : null;
+  const purchaseRequestStatus = normalizeWorkTypeKey(input.flowStageKey ?? "").includes("processing")
+    ? "PROCESSING"
+    : normalizeWorkTypeKey(input.flowStageKey ?? "").includes("completed")
+      ? "COMPLETED"
+      : "WAITING";
+  const purchaseRequestWhere = isPurchaseRequestFlow
+    ? {
+        status: purchaseRequestStatus as "WAITING" | "PROCESSING" | "COMPLETED",
+        ...(input.flowQuery?.trim()
+          ? {
+              OR: [
+                { reference: { contains: input.flowQuery.trim(), mode: "insensitive" as const } },
+                { customerName: { contains: input.flowQuery.trim(), mode: "insensitive" as const } },
+                { phone: { contains: input.flowQuery.trim() } },
+              ],
+            }
+          : {}),
+      }
+    : null;
+  const purchaseRequestProjectionPromise =
+    input.includeFlowItems !== false && purchaseRequestWhere
+      ? db.purchaseRequest.findMany({
+          where: purchaseRequestWhere,
+          include: {
+            items: { orderBy: { createdAt: "asc" } },
+            order: { select: { id: true, refNo: true } },
+          },
+          orderBy: { updatedAt: "desc" },
+          skip: (flowPage - 1) * flowPageSize,
+          take: flowPageSize,
+        })
+      : null;
+  const purchaseRequestTotalPromise =
+    input.includeFlowItems !== false && purchaseRequestWhere
+      ? db.purchaseRequest.count({ where: purchaseRequestWhere })
       : null;
   const shipmentStageCountsPromise =
     input.includeFlowItems !== false && isShipmentFlow
@@ -3199,6 +3237,8 @@ export async function getCoordinationDashboard(input: {
               )
             : isShipmentFlow && shipmentProjectionPromise
             ? shipmentProjectionPromise.then((result) => result.total)
+            : isPurchaseRequestFlow && purchaseRequestTotalPromise
+            ? purchaseRequestTotalPromise
             : isTechnicalFlow && technicalFlowBoardPromise
             ? technicalFlowBoardPromise.then(
                 (board) => board.columnPagination[requestedTechnicalBoardStage]?.total ?? 0,
@@ -3500,6 +3540,62 @@ export async function getCoordinationDashboard(input: {
                   })),
                 ];
               })
+            : isPurchaseRequestFlow && purchaseRequestProjectionPromise
+              ? purchaseRequestProjectionPromise.then((rows) => {
+                  const workspace = flowLoadTaskItems[0] ?? null;
+                  const metadata = workspaceRoleMetadataFromNote(workspace?.note);
+                  return [rows.map((row): CoordinationFlowListItemDTO => ({
+                    id: `purchase-request:${row.id}`,
+                    taskItemId: workspace?.id ?? "",
+                    targetType: TaskExecutionTargetType.PURCHASE_REQUEST,
+                    targetId: row.id,
+                    source: "AUTO",
+                    status: row.status === "COMPLETED" ? "DONE" : row.status === "PROCESSING" ? "IN_PROGRESS" : "WAITING",
+                    preview: {
+                      title: `${row.customerName} · ${row.phone}`,
+                      ref: row.reference,
+                      status: row.status,
+                      imageUrl: null,
+                      imageUrls: [],
+                      postTargets: [],
+                    },
+                    latestActivityTitle: row.completionReason,
+                    feedbackCount: 0,
+                    discussionCount: 0,
+                    activityCount: 0,
+                    lastUpdatedBy: { label: "Hệ thống", avatarUrl: null, isSystem: true },
+                    workflowKey: "purchase-request-operation",
+                    currentWorkflowState: row.status,
+                    currentWorkflowStateLabel: row.status === "WAITING" ? "Chờ xử lý" : row.status === "PROCESSING" ? "Đang xử lý" : "Kết thúc",
+                    isWorkflowDone: row.status === "COMPLETED",
+                    manualTransitions: [],
+                    intakeNote: row.customerNote,
+                    reshootNote: null,
+                    mediaWorkProgress: null,
+                    technicalIssue: null,
+                    payment: null,
+                    purchaseRequest: {
+                      customerName: row.customerName,
+                      phone: row.phone,
+                      contactPreference: row.contactPreference,
+                      customerNote: row.customerNote,
+                      completionReason: row.completionReason,
+                      outcome: row.outcome,
+                      items: row.items.map((item) => ({
+                        id: item.id,
+                        title: item.titleSnapshot,
+                        listPrice: Number(item.listPriceSnapshot),
+                      })),
+                      orderId: row.order?.id ?? null,
+                      orderRefNo: row.order?.refNo ?? null,
+                    },
+                    href: row.order ? `/admin/orders/${row.order.id}` : null,
+                    updatedAt: row.updatedAt.toISOString(),
+                    workspaceTitle: workspace?.title ?? "Xử lý đơn hàng",
+                    flowStageKey: metadata.flowStageKey ?? requestedFlowStage?.key ?? null,
+                    flowStageOrder: metadata.flowStageOrder ?? requestedFlowStage?.sortOrder ?? null,
+                  }))];
+                })
             : isTechnicalFlow && technicalFlowBoardPromise
             ? technicalFlowBoardPromise.then((board) => [
                 board.items.map((item): CoordinationFlowListItemDTO => ({
@@ -3692,6 +3788,15 @@ export async function getCoordinationDashboard(input: {
     flowStageCounts["shipment-processing"] =
       counts.get("SHIPMENT_PROCESSING") ?? 0;
     flowStageCounts["shipment-done"] = counts.get("SHIPMENT_DONE") ?? 0;
+  } else if (isPurchaseRequestFlow) {
+    const [waiting, processing, completed] = await Promise.all([
+      db.purchaseRequest.count({ where: { status: "WAITING" } }),
+      db.purchaseRequest.count({ where: { status: "PROCESSING" } }),
+      db.purchaseRequest.count({ where: { status: "COMPLETED" } }),
+    ]);
+    flowStageCounts["purchase-request-waiting"] = waiting;
+    flowStageCounts["purchase-request-processing"] = processing;
+    flowStageCounts["purchase-request-completed"] = completed;
   }
   if (input.includeFlowItems !== false && isPaymentFlow) {
     await dashboardStep("paymentProjectionReady", () =>

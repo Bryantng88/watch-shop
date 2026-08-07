@@ -289,6 +289,69 @@ export default function FlowItemListView({
     transactionReference: "",
     reviewNote: "",
   });
+  async function runPurchaseRequestAction(
+    item: CoordinationFlowListItemDTO,
+    action: "start" | "complete" | "convert",
+  ) {
+    const request = item.purchaseRequest;
+    if (!request) return;
+    let body: Record<string, unknown> | undefined;
+    if (action === "complete") {
+      const outcome = window.prompt(
+        "Kết quả: REJECTED, CANCELLED, EXPIRED hoặc DUPLICATE",
+        "REJECTED",
+      )?.trim().toUpperCase();
+      if (!outcome) return;
+      const reason = window.prompt("Lý do kết thúc yêu cầu")?.trim();
+      if (!reason) return;
+      body = { outcome, reason };
+    }
+    if (action === "convert") {
+      const agreedPrices: Record<string, number> = {};
+      for (const requestItem of request.items) {
+        const raw = window.prompt(
+          `Giá đã chốt cho ${requestItem.title}`,
+          String(requestItem.listPrice),
+        );
+        if (raw == null) return;
+        const value = Number(raw.replaceAll(/[.,\s]/g, ""));
+        if (!Number.isFinite(value) || value <= 0) {
+          setActionError(`Giá chốt của ${requestItem.title} không hợp lệ.`);
+          return;
+        }
+        agreedPrices[requestItem.id] = value;
+      }
+      body = { agreedPrices };
+    }
+    setActionError(null);
+    setPendingActionId(item.id);
+    try {
+      const response = await fetch(`/api/admin/purchase-requests/${item.targetId}/${action}`, {
+        method: "POST",
+        headers: body ? { "content-type": "application/json" } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.error ?? "Không thể xử lý yêu cầu mua hàng.");
+      setOptimisticallyMovedIds((current) => [...current, item.id]);
+      onItemsMovedFromStage?.({
+        itemIds: [item.id],
+        fromStageKey: item.flowStageKey || activeStage,
+        toStageKey: action === "start"
+          ? "purchase-request-processing"
+          : "purchase-request-completed",
+      });
+      if (action === "convert" && result?.id) {
+        window.location.href = `/admin/orders/${result.id}`;
+      } else {
+        await onReloadRequested?.();
+      }
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Không thể xử lý yêu cầu mua hàng.");
+    } finally {
+      setPendingActionId(null);
+    }
+  }
   function openItemPreview(item: CoordinationFlowListItemDTO) {
     const seed = previewSeed(item);
     if (seed) previewState.openPreview(seed);
@@ -1120,7 +1183,29 @@ export default function FlowItemListView({
                     onClick={(event) => event.stopPropagation()}
                     onKeyDown={(event) => event.stopPropagation()}
                   >
-                    {item.targetType === "WATCH" && showPublishChannels && enabledActions.length ? (
+                    {item.targetType === "PURCHASE_REQUEST" && item.purchaseRequest ? (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {item.currentWorkflowState === "WAITING" ? (
+                          <button type="button" disabled={pendingActionId === item.id} onClick={() => void runPurchaseRequestAction(item, "start")} className="h-8 rounded-lg bg-violet-600 px-3 text-xs font-semibold text-white disabled:opacity-60">
+                            Tiếp nhận
+                          </button>
+                        ) : null}
+                        {item.currentWorkflowState === "PROCESSING" ? (
+                          <button type="button" disabled={pendingActionId === item.id} onClick={() => void runPurchaseRequestAction(item, "convert")} className="h-8 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white disabled:opacity-60">
+                            Chốt giá & tạo đơn
+                          </button>
+                        ) : null}
+                        {!item.isWorkflowDone ? (
+                          <button type="button" disabled={pendingActionId === item.id} onClick={() => void runPurchaseRequestAction(item, "complete")} className="h-8 rounded-lg border border-rose-200 px-3 text-xs font-semibold text-rose-700 disabled:opacity-60">
+                            Kết thúc
+                          </button>
+                        ) : item.purchaseRequest.orderId ? (
+                          <Link href={`/admin/orders/${item.purchaseRequest.orderId}`} className="h-8 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700">
+                            Mở {item.purchaseRequest.orderRefNo ?? "đơn hàng"}
+                          </Link>
+                        ) : <span className="text-xs text-slate-400">Đã kết thúc</span>}
+                      </div>
+                    ) : item.targetType === "WATCH" && showPublishChannels && enabledActions.length ? (
                       enabledActions.length === 1 ? (
                         isOpenTargetTransition(enabledActions[0]) ? (
                           <OpenTargetAction

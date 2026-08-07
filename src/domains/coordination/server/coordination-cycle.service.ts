@@ -77,6 +77,12 @@ const SHIPMENT_OPERATION_WORKSPACES = [
   { role: "SHIPMENT_DONE", title: "Shipment Operation - Xong", flowStageKey: "shipment-done", flowStageOrder: 30, sortOrder: 23 },
 ] as const;
 
+const PURCHASE_REQUEST_OPERATION_WORKSPACES = [
+  { role: "PURCHASE_REQUEST_WAITING", title: "Xử lý đơn hàng - Chờ xử lý", flowStageKey: "purchase-request-waiting", flowStageOrder: 10, sortOrder: 24 },
+  { role: "PURCHASE_REQUEST_PROCESSING", title: "Xử lý đơn hàng - Đang xử lý", flowStageKey: "purchase-request-processing", flowStageOrder: 20, sortOrder: 25 },
+  { role: "PURCHASE_REQUEST_COMPLETED", title: "Xử lý đơn hàng - Kết thúc", flowStageKey: "purchase-request-completed", flowStageOrder: 30, sortOrder: 26 },
+] as const;
+
 function startOfUtcDate(date: Date) {
   return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
 }
@@ -635,6 +641,42 @@ export async function ensureWorkTickets(
     existingByTitle.set(workType.title, createdItem);
     existingTitles.add(workType.title);
     createdCount += 1;
+  }
+
+  if (input.context === "OPERATION") {
+    const baseWorkType = listWorkTypes("OPERATION").find(
+      (workType) => normalizeWorkTypeKey(workType.key) === "shipment",
+    ) ?? listWorkTypes("OPERATION")[0];
+    if (baseWorkType) {
+      for (const workspace of PURCHASE_REQUEST_OPERATION_WORKSPACES) {
+        if (existingByTitle.has(workspace.title)) continue;
+        const note = workTypeNote(baseWorkType, adminUserIds, {
+          extraLines: [
+            `operationWorkspaceRole: ${workspace.role}`,
+            "workspaceKind: FLOW_STAGE_WORKSPACE",
+            "coreFlowKey: purchase-request-operation-core-flow",
+            `flowStageKey: ${workspace.flowStageKey}`,
+            `flowStageOrder: ${workspace.flowStageOrder}`,
+          ],
+          eventTargetTypes: ["PURCHASE_REQUEST"],
+          workspaceType: `${workspace.title} Workspace`,
+          itemLabel: "Yêu cầu mua hàng",
+        });
+        const createdItem = await client.taskItem.create({
+          data: {
+            taskId: input.taskId,
+            title: workspace.title,
+            note,
+            status: TaskStatus.TODO,
+            priority: "MEDIUM",
+            assignedToUserId: null,
+            sortOrder: workspace.sortOrder,
+          },
+        });
+        existingByTitle.set(workspace.title, createdItem);
+        createdCount += 1;
+      }
+    }
   }
 
   return {

@@ -98,13 +98,6 @@ const NAV: NavEntry[] = [
             },
             {
                 type: "item",
-                href: "/admin/purchase-requests",
-                label: "Yêu cầu mua",
-                icon: ClipboardList,
-                permission: PERMISSIONS.ORDER_VIEW,
-            },
-            {
-                type: "item",
                 href: "/admin/coordination/operation",
                 label: "Vận hành",
                 icon: Workflow,
