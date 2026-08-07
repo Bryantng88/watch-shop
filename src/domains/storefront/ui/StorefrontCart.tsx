@@ -7,12 +7,12 @@ type CartValue = { items: StorefrontCartItem[]; add: (item: StorefrontCartItem) 
 const STORAGE_KEY = "watch-shop:storefront-request:v1";
 const CartContext = createContext<CartValue | null>(null);
 
-export function StorefrontCartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<StorefrontCartItem[]>([]);
+export function StorefrontCartProvider({ children, initialItems = [] }: { children: React.ReactNode; initialItems?: StorefrontCartItem[] }) {
+  const [items, setItems] = useState<StorefrontCartItem[]>(initialItems);
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
-      if (Array.isArray(stored)) setItems(stored.slice(0, 20));
+      if (Array.isArray(stored)) setItems((current) => [...current, ...stored.filter((storedItem) => !current.some((item) => item.productId === storedItem?.productId))].slice(0, 20));
     } catch { localStorage.removeItem(STORAGE_KEY); }
   }, []);
   useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }, [items]);

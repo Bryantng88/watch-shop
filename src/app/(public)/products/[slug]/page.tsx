@@ -7,6 +7,7 @@ import { cache } from "react";
 
 import { getPublicWatchBySlug } from "@/domains/storefront/server";
 import AddToRequestButton from "@/domains/storefront/ui/AddToRequestButton";
+import { loadStorefrontCartItems } from "@/domains/storefront/server/request-cart.service";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const { slug } = await params;
   const watch = await getWatch(slug);
   if (!watch) notFound();
+  const requestItems = await loadStorefrontCartItems();
 
   return (
     <article className="mx-auto max-w-[1440px] px-4 pb-8 pt-6 sm:px-6 lg:px-10 lg:pt-10">
@@ -69,7 +71,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
           {watch.summary ? <p className="mt-7 text-sm leading-7 text-[#66635e] sm:text-base">{watch.summary}</p> : null}
 
-          <AddToRequestButton orderable={watch.price.mode === "SHOW"} item={{ productId: watch.productId, slug: watch.slug, title: watch.title, imageUrl: watch.image.url }} />
+          <AddToRequestButton added={requestItems.some((item) => item.productId === watch.productId)} orderable={watch.price.mode === "SHOW"} item={{ productId: watch.productId, slug: watch.slug, title: watch.title, imageUrl: watch.image.url }} />
 
           {watch.specs.length ? (
             <div className="mt-10 border-t border-[#dedbd4]">

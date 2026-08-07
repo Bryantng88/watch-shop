@@ -10,14 +10,14 @@ import { useOnlineStatus } from "./PwaRuntime";
 type State = { kind: "idle" | "submitting" } | { kind: "success"; reference: string | null } | { kind: "error"; message: string };
 const idempotencyKey = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-export default function PublicOrderForm({ initialItem = null }: { initialItem?: StorefrontCartItem | null }) {
+export default function PublicOrderForm({ initialItems = [] }: { initialItems?: StorefrontCartItem[] }) {
   const { items, add, remove: removeFromCart, clear: clearCart } = useStorefrontCart();
-  const [dismissedInitial, setDismissedInitial] = useState(false);
+  const [dismissedInitialIds, setDismissedInitialIds] = useState<string[]>([]);
   const effectiveItems = useMemo(() => {
-    if (!initialItem || dismissedInitial || items.some((item) => item.productId === initialItem.productId)) return items;
-    return [initialItem, ...items].slice(0, 20);
-  }, [dismissedInitial, initialItem, items]);
-  useEffect(() => { if (initialItem) add(initialItem); }, [add, initialItem]);
+    const visibleInitialItems = initialItems.filter((item) => !dismissedInitialIds.includes(item.productId));
+    return [...visibleInitialItems, ...items.filter((item) => !visibleInitialItems.some((initial) => initial.productId === item.productId) && !dismissedInitialIds.includes(item.productId))].slice(0, 20);
+  }, [dismissedInitialIds, initialItems, items]);
+  useEffect(() => { initialItems.forEach(add); }, [add, initialItems]);
   const [state, setState] = useState<State>({ kind: "idle" });
   const requestKey = useRef<string | null>(null);
   const online = useOnlineStatus();
@@ -45,7 +45,8 @@ export default function PublicOrderForm({ initialItem = null }: { initialItem?: 
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error?.code ?? "ORDER_NOT_ACCEPTED");
       clearCart();
-      setDismissedInitial(true);
+      document.cookie = "watch-shop-storefront-request=; Max-Age=0; Path=/; SameSite=Lax";
+      setDismissedInitialIds(initialItems.map((item) => item.productId));
       setState({ kind: "success", reference: payload.reference ?? null });
     } catch (error) {
       const unavailable = error instanceof Error && error.message === "PUBLIC_ORDER_PRODUCT_UNAVAILABLE";
@@ -56,7 +57,7 @@ export default function PublicOrderForm({ initialItem = null }: { initialItem?: 
   if (state.kind === "success") return <div className="mx-auto max-w-xl py-20 text-center"><h1 className="storefront-display text-4xl">Đã nhận yêu cầu</h1><p className="mt-5 text-[#66635e]">Mã tham chiếu: {state.reference ?? "đang cập nhật"}. Đội ngũ sẽ liên hệ để xác nhận.</p><Link className="storefront-focus mt-8 inline-flex min-h-11 items-center border border-[#333] px-5 text-xs uppercase tracking-widest" href="/products">Tiếp tục xem</Link></div>;
 
   return <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr]">
-    <section><h2 className="storefront-display text-2xl">Sản phẩm</h2>{effectiveItems.length ? <ul className="mt-5 divide-y divide-[#dedbd4] border-y border-[#dedbd4]">{effectiveItems.map((item) => <li key={item.productId} className="flex items-center gap-4 py-4"><div className="relative h-20 w-16 shrink-0 overflow-hidden bg-[#efede8]"><Image src={item.imageUrl} alt="" fill sizes="64px" className="object-cover" /></div><div className="min-w-0 flex-1"><Link href={`/products/${item.slug}`} className="font-medium">{item.title}</Link><p className="mt-1 text-xs text-[#77746f]">Số lượng 1</p></div><button type="button" onClick={() => { removeFromCart(item.productId); if (initialItem?.productId === item.productId) setDismissedInitial(true); }} className="storefront-focus grid h-11 w-11 place-items-center" aria-label={`Xóa ${item.title}`}><Trash2 className="h-4 w-4" /></button></li>)}</ul> : <p className="mt-5 text-[#77746f]">Chưa có sản phẩm. <Link className="underline" href="/products">Xem bộ sưu tập</Link>.</p>}</section>
+    <section><h2 className="storefront-display text-2xl">Sản phẩm</h2>{effectiveItems.length ? <ul className="mt-5 divide-y divide-[#dedbd4] border-y border-[#dedbd4]">{effectiveItems.map((item) => <li key={item.productId} className="flex items-center gap-4 py-4"><div className="relative h-20 w-16 shrink-0 overflow-hidden bg-[#efede8]"><Image src={item.imageUrl} alt="" fill sizes="64px" className="object-cover" /></div><div className="min-w-0 flex-1"><Link href={`/products/${item.slug}`} className="font-medium">{item.title}</Link><p className="mt-1 text-xs text-[#77746f]">Số lượng 1</p></div><button type="button" onClick={() => { const remaining = effectiveItems.filter((candidate) => candidate.productId !== item.productId); removeFromCart(item.productId); setDismissedInitialIds((current) => [...current, item.productId]); document.cookie = `watch-shop-storefront-request=${encodeURIComponent(JSON.stringify(remaining.map((candidate) => candidate.slug)))}; Max-Age=${60 * 60 * 24 * 14}; Path=/; SameSite=Lax`; }} className="storefront-focus grid h-11 w-11 place-items-center" aria-label={`Xóa ${item.title}`}><Trash2 className="h-4 w-4" /></button></li>)}</ul> : <p className="mt-5 text-[#77746f]">Chưa có sản phẩm. <Link className="underline" href="/products">Xem bộ sưu tập</Link>.</p>}</section>
     <form onSubmit={submit} className="space-y-5"><h2 className="storefront-display text-2xl">Thông tin liên hệ</h2><input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
       <label className="block text-sm">Họ và tên<input required maxLength={120} name="customerName" className="mt-2 min-h-12 w-full border border-[#cbc7bf] bg-white px-4" /></label>
       <label className="block text-sm">Số điện thoại<input required minLength={8} maxLength={30} name="phone" inputMode="tel" className="mt-2 min-h-12 w-full border border-[#cbc7bf] bg-white px-4" /></label>

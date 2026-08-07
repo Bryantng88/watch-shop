@@ -5,6 +5,7 @@ import PublicHeader from "@/domains/storefront/ui/PublicHeader";
 import { StorefrontCartProvider } from "@/domains/storefront/ui/StorefrontCart";
 import PwaRuntime from "@/domains/storefront/ui/PwaRuntime";
 import "./storefront.css";
+import { loadStorefrontCartItems } from "@/domains/storefront/server/request-cart.service";
 
 export const metadata: Metadata = {
   applicationName: "Watch Shop",
@@ -20,9 +21,10 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { themeColor: "#252525", width: "device-width", initialScale: 1 };
 
-export default function PublicLayout({ children }: { children: React.ReactNode }) {
+export default async function PublicLayout({ children }: { children: React.ReactNode }) {
+  const initialItems = await loadStorefrontCartItems();
   return (
-    <StorefrontCartProvider>
+    <StorefrontCartProvider initialItems={initialItems}>
       <div className="storefront-surface min-h-screen bg-[#fbfaf7] text-[#252525]">
         <PwaRuntime />
         <PublicHeader />
