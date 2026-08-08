@@ -3565,8 +3565,16 @@ export async function getCoordinationDashboard(input: {
                     activityCount: 0,
                     lastUpdatedBy: { label: "Hệ thống", avatarUrl: null, isSystem: true },
                     workflowKey: "purchase-request-operation",
-                    currentWorkflowState: row.status,
-                    currentWorkflowStateLabel: row.status === "WAITING" ? "Chờ xử lý" : row.status === "PROCESSING" ? "Đang xử lý" : "Kết thúc",
+                    currentWorkflowState: row.status === "COMPLETED"
+                      ? row.outcome === "CONVERTED" ? "CONVERTED" : "CANCELLED"
+                      : row.status,
+                    currentWorkflowStateLabel: row.status === "WAITING"
+                      ? "Chờ xử lý"
+                      : row.status === "PROCESSING"
+                        ? "Đang xử lý"
+                        : row.outcome === "CONVERTED"
+                          ? "Đã tạo đơn nháp"
+                          : "Đã hủy",
                     isWorkflowDone: row.status === "COMPLETED",
                     manualTransitions: [],
                     intakeNote: row.customerNote,

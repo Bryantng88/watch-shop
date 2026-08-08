@@ -23,6 +23,24 @@ function workflowStatusPresentation(
   const normalized = normalize(status || label);
   const displayLabel = String(label ?? "").trim();
 
+  if (["CANCELLED", "CANCELED"].includes(normalized)) {
+    return {
+      label: displayLabel || "Đã hủy",
+      detail: "Đã hủy",
+      tone: "rose",
+      icon: "warning",
+    };
+  }
+
+  if (normalized === "CONVERTED") {
+    return {
+      label: displayLabel || "Đã tạo đơn nháp",
+      detail: "Đã tạo đơn nháp",
+      tone: "emerald",
+      icon: completedIcon,
+    };
+  }
+
   if (["DONE", "COMPLETED", "APPROVED", "PUBLISHED"].includes(normalized)) {
     return {
       label: "Đã hoàn tất",
