@@ -92,6 +92,7 @@ export type OrderDraftInput = {
 };
 
 export type CreateOrderInput = Omit<OrderDraftInput, "createdAt"> & {
+  purchaseRequestId?: string | null;
   orderDate?: Date | string | null;
   status?: OrderStatus;
   source?: OrderSource;

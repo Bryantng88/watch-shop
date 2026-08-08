@@ -43,6 +43,7 @@ import type {
   BusinessEntityPreview,
   BusinessEntityType,
 } from "@/domains/shared/business/business-entity.types";
+import PurchaseRequestOrderModal from "@/domains/purchase-request/ui/PurchaseRequestOrderModal";
 
 type FlowStage = {
   key: string;
@@ -274,6 +275,7 @@ export default function FlowItemListView({
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [purchaseRequestItem, setPurchaseRequestItem] = useState<CoordinationFlowListItemDTO | null>(null);
+  const [purchaseRequestOrderItem, setPurchaseRequestOrderItem] = useState<CoordinationFlowListItemDTO | null>(null);
   const [showPurchaseRequestCancellation, setShowPurchaseRequestCancellation] = useState(false);
   const [purchaseRequestOutcome, setPurchaseRequestOutcome] = useState("REJECTED");
   const [purchaseRequestReason, setPurchaseRequestReason] = useState("");
@@ -1497,13 +1499,27 @@ export default function FlowItemListView({
                 <>
                   <button type="button" disabled={Boolean(pendingActionId)} onClick={() => setShowPurchaseRequestCancellation(true)} className="h-10 rounded-xl border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-700 disabled:opacity-50">Hủy yêu cầu</button>
                   {purchaseRequestItem.currentWorkflowState === "WAITING" ? <button type="button" disabled={Boolean(pendingActionId)} onClick={() => void runPurchaseRequestAction(purchaseRequestItem, "start")} className="h-10 rounded-xl bg-violet-600 px-5 text-sm font-semibold text-white disabled:opacity-50">{pendingActionId ? "Đang xử lý..." : "Tiếp nhận & xử lý"}</button> : null}
-                  {purchaseRequestItem.currentWorkflowState === "PROCESSING" ? <button type="button" disabled={Boolean(pendingActionId)} onClick={() => void runPurchaseRequestAction(purchaseRequestItem, "convert")} className="h-10 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white disabled:opacity-50">{pendingActionId ? "Đang xử lý..." : "Chốt giá & tạo đơn nháp"}</button> : null}
+                  {purchaseRequestItem.currentWorkflowState === "PROCESSING" ? <button type="button" disabled={Boolean(pendingActionId)} onClick={() => setPurchaseRequestOrderItem(purchaseRequestItem)} className="h-10 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white disabled:opacity-50">Lập đơn hàng</button> : null}
                 </>
               )}
             </div>
           </div>
         </div>
       ) : null}
+      <PurchaseRequestOrderModal
+        requestId={purchaseRequestOrderItem?.targetId ?? null}
+        reference={purchaseRequestOrderItem?.preview.ref}
+        onClose={() => setPurchaseRequestOrderItem(null)}
+        onCompleted={(orderId) => {
+          if (!purchaseRequestOrderItem) return;
+          setOptimisticallyMovedIds((current) => [...current, purchaseRequestOrderItem.id]);
+          onItemsMovedFromStage?.({ itemIds: [purchaseRequestOrderItem.id], fromStageKey: purchaseRequestOrderItem.flowStageKey || activeStage, toStageKey: "purchase-request-completed" });
+          setPurchaseRequestOrderItem(null);
+          setPurchaseRequestItem(null);
+          void onReloadRequested?.();
+          window.location.href = `/admin/orders/${orderId}`;
+        }}
+      />
       {pending ? <div className="px-5 py-12 text-center text-sm text-slate-500">Đang tải danh sách item...</div> : null}
       {!pending && !visibleItems.length ? (
         <div className="flex flex-col items-center px-5 py-14 text-center">

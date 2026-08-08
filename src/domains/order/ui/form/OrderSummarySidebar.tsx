@@ -16,6 +16,7 @@ type Props = {
     submitting?: boolean;
     backHref: string;
     onCancel?: () => void;
+    submitLabel?: string;
     onSubmit: () => void;
 };
 
@@ -28,6 +29,7 @@ export default function OrderSummarySidebar({
     submitting,
     backHref,
     onCancel,
+    submitLabel,
     onSubmit,
 }: Props) {
     return (
@@ -77,7 +79,7 @@ export default function OrderSummarySidebar({
                             ? "Đang lưu..."
                             : isEdit
                               ? "Lưu thay đổi"
-                              : "Tạo đơn"}
+                              : submitLabel ?? "Tạo đơn"}
                     </Button>
 
                     {onCancel ? (

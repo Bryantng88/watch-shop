@@ -40,6 +40,8 @@ import type {
 type Props = {
   mode: "create" | "edit";
   orderId?: string;
+  purchaseRequestId?: string | null;
+  createSubmitAs?: "DRAFT" | "POSTED";
   initialData?: OrderFormInitialData | null;
   services?: ServiceOption[];
   quickProduct?: QuickOrderProduct | null;
@@ -60,6 +62,8 @@ type Props = {
 export default function OrderFormClient({
   mode,
   orderId,
+  purchaseRequestId = null,
+  createSubmitAs = "POSTED",
   initialData,
   services = [],
   quickProduct = null,
@@ -360,13 +364,16 @@ export default function OrderFormClient({
     });
 
     try {
-      const payload = buildOrderPayload({
-        values,
-        quickMode,
-        quickProductId: quickProduct?.id ?? null,
-        status: initialData?.status ?? null,
-        submitAs: isEdit ? undefined : submitAs,
-      });
+      const payload = {
+        ...buildOrderPayload({
+          values,
+          quickMode,
+          quickProductId: quickProduct?.id ?? null,
+          status: initialData?.status ?? null,
+          submitAs: isEdit ? undefined : submitAs,
+        }),
+        ...(purchaseRequestId ? { purchaseRequestId } : {}),
+      };
 
       const res = await fetch(
         isEdit ? `/api/admin/orders/${orderId}` : "/api/admin/orders",
@@ -547,7 +554,8 @@ export default function OrderFormClient({
           submitting={submitting}
           backHref={backHref}
           onCancel={onCancel}
-          onSubmit={() => submit(isEdit ? "DRAFT" : "POSTED")}
+          submitLabel={!isEdit && createSubmitAs === "DRAFT" ? "Lưu đơn nháp" : undefined}
+          onSubmit={() => submit(isEdit ? "DRAFT" : createSubmitAs)}
         />
 
       </div>

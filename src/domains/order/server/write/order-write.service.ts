@@ -1,4 +1,4 @@
-import { OrderFlowType, OrderSource, OrderStatus, OrderVerificationStatus, PaymentMethod, Prisma, ReserveType } from "@prisma/client";
+import { OrderFlowType, OrderSource, OrderStatus, OrderVerificationStatus, PaymentMethod, Prisma, PurchaseRequestOutcome, PurchaseRequestStatus, ReserveType } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import { genRefNo } from "@/domains/shared/utils/AutoGenRef";
 import { assertCanEditOrderDraftRepo } from "../detail";
@@ -251,6 +251,7 @@ function normalizeCreateInput(raw: any): CreateOrderInput {
 
   return {
     customerId: raw.customerId ?? null,
+    purchaseRequestId: raw.purchaseRequestId ?? null,
     customerName: norm(raw.customerName),
     shipPhone: raw.shipPhone ?? "",
     hasShipment: reserve.type === ReserveType.COD ? true : Boolean(raw.hasShipment),
@@ -348,6 +349,30 @@ export async function createOrderWithItems(
   if (!input.items.length) throw new Error("Phải có ít nhất 1 dòng sản phẩm / dịch vụ");
 
   const result = await prisma.$transaction(async (tx) => {
+    const purchaseRequest = input.purchaseRequestId
+      ? await tx.purchaseRequest.findUnique({ where: { id: input.purchaseRequestId } })
+      : null;
+    if (input.purchaseRequestId && !purchaseRequest) {
+      throw new Error("Không tìm thấy yêu cầu mua hàng.");
+    }
+    if (purchaseRequest?.orderId) {
+      const replay = await tx.order.findUniqueOrThrow({ where: { id: purchaseRequest.orderId } });
+      return toPlain({ ...replay, idempotentReplay: true, inventoryOutcomes: [], tradeInAcquisitionId: null });
+    }
+    if (purchaseRequest && purchaseRequest.status !== PurchaseRequestStatus.PROCESSING) {
+      throw new Error("Yêu cầu mua hàng phải ở bước đang xử lý trước khi lập đơn.");
+    }
+    if (purchaseRequest) {
+      input.publicRequest = {
+        key: purchaseRequest.requestKey,
+        hash: purchaseRequest.requestHash,
+        channel: purchaseRequest.channel as "STOREFRONT" | "ZALO",
+        externalRequestId: purchaseRequest.externalRequestId,
+        fingerprintHash: purchaseRequest.fingerprintHash,
+        rateLimitSince: new Date(0),
+        rateLimitMax: Number.MAX_SAFE_INTEGER,
+      };
+    }
     if (input.publicRequest) {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`public-order:${input.publicRequest.key}`}, 0))`;
       const replay = await tx.order.findUnique({
@@ -357,6 +382,18 @@ export async function createOrderWithItems(
       if (replay) {
         if (replay.publicRequestHash !== input.publicRequest.hash) {
           throw new Error("PUBLIC_ORDER_IDEMPOTENCY_CONFLICT");
+        }
+        if (purchaseRequest) {
+          await tx.purchaseRequest.update({
+            where: { id: purchaseRequest.id },
+            data: {
+              orderId: replay.id,
+              status: PurchaseRequestStatus.COMPLETED,
+              outcome: PurchaseRequestOutcome.CONVERTED,
+              completedAt: new Date(),
+              completionReason: "Đã liên kết với đơn hàng được tạo từ yêu cầu mua hàng.",
+            },
+          });
         }
         return toPlain({ ...replay, idempotentReplay: true, inventoryOutcomes: [], tradeInAcquisitionId: null });
       }
@@ -508,6 +545,18 @@ export async function createOrderWithItems(
       tx,
       resolvedProducts.map((product) => product.productId),
     );
+    if (purchaseRequest) {
+      await tx.purchaseRequest.update({
+        where: { id: purchaseRequest.id },
+        data: {
+          orderId: order.id,
+          status: PurchaseRequestStatus.COMPLETED,
+          outcome: PurchaseRequestOutcome.CONVERTED,
+          completedAt: new Date(),
+          completionReason: "Đã xác minh nhu cầu và lập đơn hàng từ luồng xử lý.",
+        },
+      });
+    }
     if (shouldPostAfterCreate) {
       const posted = await postOneOrderTx(tx, order.id);
       return toPlain({ ...posted, inventoryOutcomes, tradeInAcquisitionId });
