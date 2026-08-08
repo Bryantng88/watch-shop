@@ -15,7 +15,6 @@ function tagLabel(tag: string | null) {
 }
 
 function availabilityLabel(availability: PublicWatchCard["availability"]) {
-  if (availability === "HOLD") return "Đang giữ";
   if (availability === "SOLD") return "Đã bán";
   return null;
 }
@@ -32,6 +31,11 @@ export default function PublicWatchCardView({ watch }: { watch: PublicWatchCard 
             sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 25vw"
             className="storefront-card-image object-cover"
           />
+          {watch.availability === "HOLD" ? (
+            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-y border-white/35 bg-[#2f2d2a]/65 px-3 py-3 text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-white backdrop-blur-[2px]">
+              Đang giữ · Hold
+            </div>
+          ) : null}
           {availabilityLabel(watch.availability) ? (
             <span className="absolute left-3 top-3 rounded-full bg-[#fbfaf7]/95 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#34322f] shadow-sm">
               {availabilityLabel(watch.availability)}
