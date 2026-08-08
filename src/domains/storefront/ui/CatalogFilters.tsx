@@ -3,6 +3,7 @@
 import * as Slider from "@radix-ui/react-slider";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, RotateCcw, Search } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
@@ -34,13 +35,16 @@ export default function CatalogFilters({ query, facets, compact = false }: { que
   useEffect(() => setRange(selectedRange), [selectedRange]);
   useEffect(() => setSearch(query.q ?? ""), [query.q]);
 
-  const navigate = useCallback((patch: Record<string, string | undefined>, mode: "push" | "replace" = "replace") => {
+  const hrefFor = useCallback((patch: Record<string, string | undefined>) => {
     const next = new URLSearchParams(searchParams.toString());
     Object.entries(patch).forEach(([key, value]) => value ? next.set(key, value) : next.delete(key));
     next.delete("cursor");
-    const href = next.size ? `/products?${next.toString()}` : "/products";
-    startTransition(() => router[mode](href, { scroll: false }));
-  }, [router, searchParams]);
+    return next.size ? `/products?${next.toString()}` : "/products";
+  }, [searchParams]);
+  const navigate = useCallback((patch: Record<string, string | undefined>, mode: "push" | "replace" = "replace") => {
+    const href = hrefFor(patch);
+    startTransition(() => mode === "push" ? router.push(href, { scroll: false }) : router.replace(href, { scroll: false }));
+  }, [hrefFor, router]);
 
   useEffect(() => {
     const normalized = search.trim();
@@ -57,30 +61,33 @@ export default function CatalogFilters({ query, facets, compact = false }: { que
         {activeCount || query.q ? <button type="button" onClick={() => { setSearch(""); setRange([facets.priceBounds.min, facets.priceBounds.max]); router.push("/products", { scroll: false }); }} className="storefront-focus flex items-center gap-1.5 text-[10px] uppercase tracking-[0.12em] text-[#817d76] hover:text-black"><RotateCcw className="h-3 w-3" /> Xóa tất cả</button> : null}
       </div>
 
-      <label className="relative block border-b border-[#dedbd4] py-5" id="catalog-search">
-        <Search className="pointer-events-none absolute left-0 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8c877f]" />
-        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tên, thương hiệu, mã tham chiếu" className="storefront-focus h-10 w-full border-0 bg-transparent pl-7 pr-2 text-sm outline-none placeholder:text-[#aaa59d]" />
-      </label>
+      <form onSubmit={(event) => { event.preventDefault(); navigate({ q: search.trim() || undefined }, "push"); }} className="flex items-center gap-2 border-b border-[#dedbd4] py-5" role="search">
+        <label className="relative min-w-0 flex-1" htmlFor="catalog-search">
+          <Search className="pointer-events-none absolute left-0 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8c877f]" />
+          <input id="catalog-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tên, thương hiệu, mã tham chiếu" className="storefront-focus h-10 w-full border-0 bg-transparent pl-7 pr-2 text-sm outline-none placeholder:text-[#aaa59d]" />
+        </label>
+        <button type="submit" className="storefront-focus border border-[#383530] px-3 py-2 text-[10px] uppercase tracking-[0.12em] text-[#383530] transition hover:bg-[#383530] hover:text-white">Tìm</button>
+      </form>
 
       <FilterSection title="Tình trạng" active={Boolean(query.availability)} defaultOpen>
         {[{ value: undefined, label: "Tất cả", count: facets.availability.reduce((sum, item) => sum + item.count, 0) }, ...facets.availability.map((item) => ({ ...item, label: item.value === "AVAILABLE" ? "Có sẵn" : item.value === "HOLD" ? "HOLD" : "Đã bán" }))].map((item) => {
           const selected = query.availability === item.value || (!query.availability && !item.value);
-          return <button key={item.value ?? "ALL"} type="button" onClick={() => navigate({ availability: item.value })} className={optionClass(selected)}><span className="flex items-center gap-3"><span className={`grid h-4 w-4 place-items-center rounded-full border ${selected ? "border-[#34312d]" : "border-[#bbb6ae]"}`}>{selected ? <span className="h-2 w-2 rounded-full bg-[#34312d]" /> : null}</span>{item.label}</span><span className="text-xs font-normal text-[#aaa59d]">{item.count}</span></button>;
+          return <Link key={item.value ?? "ALL"} href={hrefFor({ availability: item.value })} scroll={false} className={optionClass(selected)}><span className="flex items-center gap-3"><span className={`grid h-4 w-4 place-items-center rounded-full border ${selected ? "border-[#34312d]" : "border-[#bbb6ae]"}`}>{selected ? <span className="h-2 w-2 rounded-full bg-[#34312d]" /> : null}</span>{item.label}</span><span className="text-xs font-normal text-[#aaa59d]">{item.count}</span></Link>;
         })}
       </FilterSection>
 
       <FilterSection title="Thương hiệu" active={Boolean(query.brand)} defaultOpen={Boolean(query.brand)}>
         <div className="max-h-60 overflow-y-auto pr-1">
-          {facets.brands.map((brand) => <button key={brand.slug} type="button" onClick={() => navigate({ brand: query.brand === brand.slug ? undefined : brand.slug })} className={optionClass(query.brand === brand.slug)}><span className="flex items-center gap-3"><span className={`h-3.5 w-3.5 border ${query.brand === brand.slug ? "border-[#34312d] bg-[#34312d] shadow-[inset_0_0_0_3px_#fbfaf7]" : "border-[#bbb6ae]"}`} />{brand.name}</span><span className="text-xs font-normal text-[#aaa59d]">{brand.count}</span></button>)}
+          {facets.brands.map((brand) => <Link key={brand.slug} href={hrefFor({ brand: query.brand === brand.slug ? undefined : brand.slug })} scroll={false} className={optionClass(query.brand === brand.slug)}><span className="flex items-center gap-3"><span className={`h-3.5 w-3.5 border ${query.brand === brand.slug ? "border-[#34312d] bg-[#34312d] shadow-[inset_0_0_0_3px_#fbfaf7]" : "border-[#bbb6ae]"}`} />{brand.name}</span><span className="text-xs font-normal text-[#aaa59d]">{brand.count}</span></Link>)}
         </div>
       </FilterSection>
 
       <FilterSection title="Đối tượng" active={Boolean(query.audience)}>
-        {[{ value: "MEN", label: "Nam" }, { value: "WOMEN", label: "Nữ" }, { value: "UNISEX", label: "Unisex" }].map((item) => <button key={item.value} type="button" onClick={() => navigate({ audience: query.audience === item.value ? undefined : item.value })} className={optionClass(query.audience === item.value)}><span>{item.label}</span>{query.audience === item.value ? <span className="text-xs">✓</span> : null}</button>)}
+        {[{ value: "MEN", label: "Nam" }, { value: "WOMEN", label: "Nữ" }, { value: "UNISEX", label: "Unisex" }].map((item) => <Link key={item.value} href={hrefFor({ audience: query.audience === item.value ? undefined : item.value })} scroll={false} className={optionClass(query.audience === item.value)}><span>{item.label}</span>{query.audience === item.value ? <span className="text-xs">✓</span> : null}</Link>)}
       </FilterSection>
 
       <FilterSection title="Kích thước vỏ" active={Boolean(query.size)}>
-        {facets.sizes.map((item) => { const label = item.value === "SMALL" ? "Dưới 34 mm" : item.value === "MEDIUM" ? "34–38 mm" : "Trên 38 mm"; return <button key={item.value} type="button" disabled={!item.count} onClick={() => navigate({ size: query.size === item.value ? undefined : item.value })} className={`${optionClass(query.size === item.value)} disabled:cursor-not-allowed disabled:opacity-35`}><span>{label}</span><span className="text-xs font-normal text-[#aaa59d]">{item.count}</span></button>; })}
+        {facets.sizes.map((item) => { const label = item.value === "SMALL" ? "Dưới 34 mm" : item.value === "MEDIUM" ? "34–38 mm" : "Trên 38 mm"; return item.count ? <Link key={item.value} href={hrefFor({ size: query.size === item.value ? undefined : item.value })} scroll={false} className={optionClass(query.size === item.value)}><span>{label}</span><span className="text-xs font-normal text-[#aaa59d]">{item.count}</span></Link> : <span key={item.value} className={`${optionClass(false)} cursor-not-allowed opacity-35`}><span>{label}</span><span className="text-xs font-normal text-[#aaa59d]">0</span></span>; })}
       </FilterSection>
 
       <FilterSection title="Khoảng giá" active={query.priceMin !== undefined || query.priceMax !== undefined} defaultOpen>
@@ -90,6 +97,7 @@ export default function CatalogFilters({ query, facets, compact = false }: { que
           <Slider.Thumb aria-label="Giá cao nhất" className="storefront-focus block h-3.5 w-3.5 rounded-full border border-[#37342f] bg-[#fbfaf7] shadow-sm" />
         </Slider.Root>
         <div className="mt-2 flex items-center justify-between text-[11px] tabular-nums text-[#77736c]"><span>{money(range[0])}</span><span>{money(range[1])}</span></div>
+        <Link href={hrefFor({ priceMin: range[0] === facets.priceBounds.min ? undefined : String(range[0]), priceMax: range[1] === facets.priceBounds.max ? undefined : String(range[1]) })} scroll={false} className="storefront-focus mt-4 flex h-9 items-center justify-center border border-[#d7d3cb] text-[10px] uppercase tracking-[0.12em] text-[#57534d] transition hover:border-[#383530] hover:text-[#272522]">Áp dụng khoảng giá</Link>
       </FilterSection>
 
       <label className="block border-t border-[#dedbd4] py-5">
