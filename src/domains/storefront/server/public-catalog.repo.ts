@@ -48,6 +48,8 @@ const publicWatchCoreSelect = {
   brand: { select: { name: true } },
   watch: {
     select: {
+      saleStage: true,
+      stockStage: true,
       audienceSegment: true,
       conditionGrade: true,
       watchPrice: {
@@ -123,15 +125,14 @@ export function publicWatchEligibilityWhere(options?: {
     AND: [
       {
         type: ProductType.WATCH,
-        status: ProductStatus.AVAILABLE,
+        status: { in: [ProductStatus.AVAILABLE, ProductStatus.HOLD, ProductStatus.SOLD] },
         slug: { not: "" },
         productImage: {
           some: storefrontImageWhere(enforceCover),
         },
         watch: {
           is: {
-            saleStage: WatchSaleStage.READY,
-            stockStage: WatchStockStage.IN_STOCK,
+            saleStage: { in: [WatchSaleStage.READY, WatchSaleStage.HOLD, WatchSaleStage.SOLD] },
             serviceStage: {
               in: [WatchServiceStage.NOT_REQUIRED, WatchServiceStage.DONE],
             },
@@ -161,6 +162,23 @@ export function publicWatchEligibilityWhere(options?: {
           { priceVisibility: "HIDE" },
           { watch: { is: { watchPrice: { is: { salePrice: { gt: 0 } } } } } },
         ],
+      },
+    ],
+  };
+}
+
+export function publicWatchOrderableWhere(): Prisma.ProductWhereInput {
+  return {
+    AND: [
+      publicWatchEligibilityWhere(),
+      {
+        status: ProductStatus.AVAILABLE,
+        watch: {
+          is: {
+            saleStage: WatchSaleStage.READY,
+            stockStage: WatchStockStage.IN_STOCK,
+          },
+        },
       },
     ],
   };
@@ -255,7 +273,7 @@ export async function findOrderablePublicWatchIds(db: DB, productIds: string[]) 
   const rows = await dbOrTx(db).product.findMany({
     where: {
       AND: [
-        publicWatchEligibilityWhere(),
+        publicWatchOrderableWhere(),
         { id: { in: productIds }, priceVisibility: "SHOW" },
       ],
     },

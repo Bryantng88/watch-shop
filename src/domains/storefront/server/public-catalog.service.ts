@@ -84,6 +84,7 @@ export function mapPublicWatchCard(row: PublicWatchListRow): PublicWatchCard {
     audience: row.watch.audienceSegment,
     tag: row.tag ?? null,
     condition: row.watch.conditionGrade ?? null,
+    availability: row.watch.saleStage === "SOLD" ? "SOLD" : row.watch.saleStage === "HOLD" ? "HOLD" : "AVAILABLE",
     updatedAt: row.updatedAt.toISOString(),
   };
 }

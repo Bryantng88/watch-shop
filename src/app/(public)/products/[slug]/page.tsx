@@ -59,6 +59,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
         <section className="lg:sticky lg:top-6 lg:self-start">
           <p className="text-[10px] uppercase tracking-[0.2em] text-[#817d76]">{watch.brand ?? "Đồng hồ tuyển chọn"}</p>
+          {watch.availability !== "AVAILABLE" ? <span className="mt-3 inline-flex border border-[#bdb8af] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#55514b]">{watch.availability === "HOLD" ? "Đang được giữ" : "Đã bán"}</span> : null}
           <h1 className="storefront-display mt-3 text-4xl leading-[1.08] sm:text-5xl">{watch.title}</h1>
           <p className="mt-6 text-xl font-semibold tabular-nums">
             {watch.price.mode === "SHOW" ? money(watch.price.amount) : "Liên hệ để biết giá"}
@@ -71,7 +72,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
           {watch.summary ? <p className="mt-7 text-sm leading-7 text-[#66635e] sm:text-base">{watch.summary}</p> : null}
 
-          <AddToRequestButton added={requestItems.some((item) => item.productId === watch.productId)} orderable={watch.price.mode === "SHOW"} item={{ productId: watch.productId, slug: watch.slug, title: watch.title, imageUrl: watch.image.url }} />
+          <AddToRequestButton availability={watch.availability} added={requestItems.some((item) => item.productId === watch.productId)} orderable={watch.availability === "AVAILABLE" && watch.price.mode === "SHOW"} item={{ productId: watch.productId, slug: watch.slug, title: watch.title, imageUrl: watch.image.url }} />
 
           {watch.specs.length ? (
             <div className="mt-10 border-t border-[#dedbd4]">

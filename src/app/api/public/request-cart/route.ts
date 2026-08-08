@@ -10,7 +10,9 @@ export async function POST(request: NextRequest) {
   const slug = String(form.get("slug") ?? "").trim();
   const returnTo = String(form.get("returnTo") ?? "/products").trim();
   const watch = slug ? await getPublicWatchBySlug(slug).catch(() => null) : null;
-  if (!watch) return NextResponse.redirect(new URL("/products", request.url), 303);
+  if (!watch || watch.availability !== "AVAILABLE" || watch.price.mode !== "SHOW") {
+    return NextResponse.redirect(new URL(slug ? `/products/${slug}` : "/products", request.url), 303);
+  }
 
   const current = parseStorefrontCartCookie(request.cookies.get(STOREFRONT_CART_COOKIE)?.value);
   const next = [slug, ...current.filter((item) => item !== slug)].slice(0, 20);

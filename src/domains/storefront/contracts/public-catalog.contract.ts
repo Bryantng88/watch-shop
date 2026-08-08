@@ -74,6 +74,7 @@ export type PublicWatchCard = {
   audience: "MEN" | "WOMEN" | "UNISEX";
   tag: string | null;
   condition: string | null;
+  availability: "AVAILABLE" | "HOLD" | "SOLD";
   updatedAt: string;
 };
 
