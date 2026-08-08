@@ -273,6 +273,10 @@ export default function FlowItemListView({
   const [isActionPending, startActionTransition] = useTransition();
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [purchaseRequestItem, setPurchaseRequestItem] = useState<CoordinationFlowListItemDTO | null>(null);
+  const [showPurchaseRequestCancellation, setShowPurchaseRequestCancellation] = useState(false);
+  const [purchaseRequestOutcome, setPurchaseRequestOutcome] = useState("REJECTED");
+  const [purchaseRequestReason, setPurchaseRequestReason] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [optimisticallyMovedIds, setOptimisticallyMovedIds] = useState<string[]>([]);
   const [reconcileItem, setReconcileItem] = useState<CoordinationFlowListItemDTO | null>(null);
@@ -292,20 +296,11 @@ export default function FlowItemListView({
   async function runPurchaseRequestAction(
     item: CoordinationFlowListItemDTO,
     action: "start" | "complete" | "convert",
+    suppliedBody?: Record<string, unknown>,
   ) {
     const request = item.purchaseRequest;
     if (!request) return;
-    let body: Record<string, unknown> | undefined;
-    if (action === "complete") {
-      const outcome = window.prompt(
-        "Kết quả: REJECTED, CANCELLED, EXPIRED hoặc DUPLICATE",
-        "REJECTED",
-      )?.trim().toUpperCase();
-      if (!outcome) return;
-      const reason = window.prompt("Lý do kết thúc yêu cầu")?.trim();
-      if (!reason) return;
-      body = { outcome, reason };
-    }
+    let body: Record<string, unknown> | undefined = suppliedBody;
     if (action === "convert") {
       const agreedPrices: Record<string, number> = {};
       for (const requestItem of request.items) {
@@ -344,6 +339,9 @@ export default function FlowItemListView({
       if (action === "convert" && result?.id) {
         window.location.href = `/admin/orders/${result.id}`;
       } else {
+        setPurchaseRequestItem(null);
+        setShowPurchaseRequestCancellation(false);
+        setPurchaseRequestReason("");
         await onReloadRequested?.();
       }
     } catch (error) {
@@ -353,6 +351,13 @@ export default function FlowItemListView({
     }
   }
   function openItemPreview(item: CoordinationFlowListItemDTO) {
+    if (item.targetType === "PURCHASE_REQUEST" && item.purchaseRequest) {
+      setActionError(null);
+      setShowPurchaseRequestCancellation(false);
+      setPurchaseRequestReason("");
+      setPurchaseRequestItem(item);
+      return;
+    }
     const seed = previewSeed(item);
     if (seed) previewState.openPreview(seed);
   }
@@ -1185,25 +1190,15 @@ export default function FlowItemListView({
                   >
                     {item.targetType === "PURCHASE_REQUEST" && item.purchaseRequest ? (
                       <div className="flex flex-wrap items-center gap-1.5">
-                        {item.currentWorkflowState === "WAITING" ? (
-                          <button type="button" disabled={pendingActionId === item.id} onClick={() => void runPurchaseRequestAction(item, "start")} className="h-8 rounded-lg bg-violet-600 px-3 text-xs font-semibold text-white disabled:opacity-60">
-                            Tiếp nhận
-                          </button>
-                        ) : null}
-                        {item.currentWorkflowState === "PROCESSING" ? (
-                          <button type="button" disabled={pendingActionId === item.id} onClick={() => void runPurchaseRequestAction(item, "convert")} className="h-8 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white disabled:opacity-60">
-                            Chốt giá & tạo đơn
-                          </button>
-                        ) : null}
-                        {!item.isWorkflowDone ? (
-                          <button type="button" disabled={pendingActionId === item.id} onClick={() => void runPurchaseRequestAction(item, "complete")} className="h-8 rounded-lg border border-rose-200 px-3 text-xs font-semibold text-rose-700 disabled:opacity-60">
-                            Kết thúc
-                          </button>
-                        ) : item.purchaseRequest.orderId ? (
+                        {item.isWorkflowDone && item.purchaseRequest.orderId ? (
                           <Link href={`/admin/orders/${item.purchaseRequest.orderId}`} className="h-8 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700">
                             Mở {item.purchaseRequest.orderRefNo ?? "đơn hàng"}
                           </Link>
-                        ) : <span className="text-xs text-slate-400">Đã kết thúc</span>}
+                        ) : (
+                          <button type="button" onClick={() => openItemPreview(item)} className="h-8 rounded-lg border border-violet-200 bg-violet-50 px-3 text-xs font-semibold text-violet-700 hover:bg-violet-100">
+                            Xem chi tiết
+                          </button>
+                        )}
                       </div>
                     ) : item.targetType === "WATCH" && showPublishChannels && enabledActions.length ? (
                       enabledActions.length === 1 ? (
@@ -1416,6 +1411,99 @@ export default function FlowItemListView({
           void onReloadRequested?.();
         }}
       />
+      {purchaseRequestItem?.purchaseRequest ? (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="purchase-request-title" onMouseDown={(event) => { if (event.target === event.currentTarget && !pendingActionId) setPurchaseRequestItem(null); }}>
+          <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-[0_28px_90px_rgba(15,23,42,0.28)] ring-1 ring-slate-200">
+            <div className="flex items-start justify-between border-b border-violet-100 bg-gradient-to-r from-violet-50 via-white to-white px-6 py-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-600">Yêu cầu mua hàng</p>
+                <h2 id="purchase-request-title" className="mt-1 text-xl font-bold text-slate-950">{purchaseRequestItem.preview.ref}</h2>
+                <p className="mt-1 text-sm text-slate-500">Sale kiểm tra nhu cầu, liên hệ khách và xác thực trước khi chuyển bước.</p>
+              </div>
+              <button type="button" disabled={Boolean(pendingActionId)} onClick={() => setPurchaseRequestItem(null)} className="grid h-9 w-9 place-items-center rounded-full text-slate-500 hover:bg-slate-100 disabled:opacity-50" aria-label="Đóng"><X className="h-5 w-5" /></button>
+            </div>
+
+            <div className="overflow-y-auto px-6 py-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-200 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Người yêu cầu</p>
+                  <p className="mt-3 text-base font-bold text-slate-950">{purchaseRequestItem.purchaseRequest.customerName}</p>
+                  <a href={`tel:${purchaseRequestItem.purchaseRequest.phone}`} className="mt-1 inline-block text-sm font-semibold text-violet-700 hover:underline">{purchaseRequestItem.purchaseRequest.phone}</a>
+                  <p className="mt-2 text-xs text-slate-500">Ưu tiên liên hệ: {purchaseRequestItem.purchaseRequest.contactPreference === "ZALO" ? "Zalo" : "Điện thoại"}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Địa chỉ</p>
+                  <p className="mt-3 text-sm leading-6 text-slate-700">{[
+                    purchaseRequestItem.purchaseRequest.address,
+                    purchaseRequestItem.purchaseRequest.ward,
+                    purchaseRequestItem.purchaseRequest.district,
+                    purchaseRequestItem.purchaseRequest.city,
+                  ].filter(Boolean).join(", ") || "Khách chưa cung cấp"}</p>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-slate-200 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Sản phẩm quan tâm</p>
+                <div className="mt-3 divide-y divide-slate-100">
+                  {purchaseRequestItem.purchaseRequest.items.map((requestItem) => (
+                    <div key={requestItem.id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                      <span className="text-sm font-semibold text-slate-800">{requestItem.title}</span>
+                      <span className="shrink-0 text-sm font-bold tabular-nums text-slate-950">{requestItem.listPrice.toLocaleString("vi-VN")}đ</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-slate-200 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Ghi chú của khách</p>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">{purchaseRequestItem.purchaseRequest.customerNote || "Khách không để lại ghi chú."}</p>
+              </div>
+
+              {purchaseRequestItem.isWorkflowDone ? (
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Kết quả xử lý</p>
+                  <p className="mt-2 text-sm font-bold text-slate-900">{purchaseRequestItem.purchaseRequest.outcome || "COMPLETED"}</p>
+                  <p className="mt-1 text-sm text-slate-600">{purchaseRequestItem.purchaseRequest.completionReason || "Không có ghi chú kết thúc."}</p>
+                </div>
+              ) : null}
+
+              {showPurchaseRequestCancellation ? (
+                <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50/60 p-4">
+                  <label className="block text-sm font-semibold text-slate-800">Kết quả
+                    <select value={purchaseRequestOutcome} onChange={(event) => setPurchaseRequestOutcome(event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-rose-200 bg-white px-3 font-normal">
+                      <option value="REJECTED">Không đạt thỏa thuận</option>
+                      <option value="CANCELLED">Khách hủy/không còn nhu cầu</option>
+                      <option value="DUPLICATE">Yêu cầu trùng</option>
+                      <option value="EXPIRED">Không liên hệ được/hết hạn</option>
+                    </select>
+                  </label>
+                  <label className="mt-3 block text-sm font-semibold text-slate-800">Lý do kết thúc
+                    <textarea value={purchaseRequestReason} onChange={(event) => setPurchaseRequestReason(event.target.value)} rows={3} autoFocus className="mt-2 w-full rounded-xl border border-rose-200 bg-white p-3 font-normal" placeholder="Ghi rõ kết quả liên hệ hoặc lý do hủy..." />
+                  </label>
+                </div>
+              ) : null}
+              {actionError ? <p role="alert" className="mt-4 text-sm font-medium text-rose-700">{actionError}</p> : null}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4">
+              {showPurchaseRequestCancellation ? (
+                <>
+                  <button type="button" disabled={Boolean(pendingActionId)} onClick={() => { setShowPurchaseRequestCancellation(false); setPurchaseRequestReason(""); }} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700">Quay lại</button>
+                  <button type="button" disabled={Boolean(pendingActionId) || !purchaseRequestReason.trim()} onClick={() => void runPurchaseRequestAction(purchaseRequestItem, "complete", { outcome: purchaseRequestOutcome, reason: purchaseRequestReason.trim() })} className="h-10 rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white disabled:opacity-50">{pendingActionId ? "Đang xử lý..." : "Xác nhận hủy"}</button>
+                </>
+              ) : purchaseRequestItem.isWorkflowDone ? (
+                purchaseRequestItem.purchaseRequest.orderId ? <Link href={`/admin/orders/${purchaseRequestItem.purchaseRequest.orderId}`} className="h-10 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white">Mở {purchaseRequestItem.purchaseRequest.orderRefNo ?? "đơn hàng"}</Link> : <button type="button" onClick={() => setPurchaseRequestItem(null)} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700">Đóng</button>
+              ) : (
+                <>
+                  <button type="button" disabled={Boolean(pendingActionId)} onClick={() => setShowPurchaseRequestCancellation(true)} className="h-10 rounded-xl border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-700 disabled:opacity-50">Hủy yêu cầu</button>
+                  {purchaseRequestItem.currentWorkflowState === "WAITING" ? <button type="button" disabled={Boolean(pendingActionId)} onClick={() => void runPurchaseRequestAction(purchaseRequestItem, "start")} className="h-10 rounded-xl bg-violet-600 px-5 text-sm font-semibold text-white disabled:opacity-50">{pendingActionId ? "Đang xử lý..." : "Tiếp nhận & xử lý"}</button> : null}
+                  {purchaseRequestItem.currentWorkflowState === "PROCESSING" ? <button type="button" disabled={Boolean(pendingActionId)} onClick={() => void runPurchaseRequestAction(purchaseRequestItem, "convert")} className="h-10 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white disabled:opacity-50">{pendingActionId ? "Đang xử lý..." : "Chốt giá & tạo đơn nháp"}</button> : null}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
       {pending ? <div className="px-5 py-12 text-center text-sm text-slate-500">Đang tải danh sách item...</div> : null}
       {!pending && !visibleItems.length ? (
         <div className="flex flex-col items-center px-5 py-14 text-center">
