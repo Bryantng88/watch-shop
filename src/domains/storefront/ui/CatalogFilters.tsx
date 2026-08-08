@@ -1,7 +1,6 @@
 "use client";
 
 import * as Slider from "@radix-ui/react-slider";
-import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, RotateCcw, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -12,16 +11,13 @@ import type { PublicCatalogFacets, PublicCatalogQuery } from "../contracts";
 const money = (value: number) => `${Math.round(value).toLocaleString("vi-VN")}đ`;
 
 function FilterSection({ title, active, defaultOpen = false, children }: { title: string; active?: boolean; defaultOpen?: boolean; children: ReactNode }) {
-  const [open, setOpen] = useState(defaultOpen || active);
-  return <section className="border-t border-[#dedbd4] first:border-t-0">
-    <button type="button" onClick={() => setOpen((current) => !current)} aria-expanded={open} className="storefront-focus flex min-h-12 w-full items-center justify-between py-3 text-left text-[11px] uppercase tracking-[0.16em] text-[#57534d]">
+  return <details open={defaultOpen || active} className="group border-t border-[#dedbd4] first:border-t-0">
+    <summary className="storefront-focus flex min-h-12 w-full cursor-pointer list-none items-center justify-between py-3 text-left text-[11px] uppercase tracking-[0.16em] text-[#57534d] [&::-webkit-details-marker]:hidden">
       <span className="flex items-center gap-2">{title}{active ? <span className="h-1.5 w-1.5 rounded-full bg-[#383530]" /> : null}</span>
-      <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
-    </button>
-    <AnimatePresence initial={false}>
-      {open ? <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2, ease: "easeOut" }} className="overflow-hidden"><div className="pb-5">{children}</div></motion.div> : null}
-    </AnimatePresence>
-  </section>;
+      <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-open:rotate-180" />
+    </summary>
+    <div className="pb-5">{children}</div>
+  </details>;
 }
 
 export default function CatalogFilters({ query, facets, compact = false }: { query: PublicCatalogQuery; facets: PublicCatalogFacets; compact?: boolean }) {
