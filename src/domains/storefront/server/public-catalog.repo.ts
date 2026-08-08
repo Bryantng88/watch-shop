@@ -215,6 +215,33 @@ function publicWatchFilterWhere(query: PublicCatalogQuery): Prisma.ProductWhereI
     and.push({ watch: { is: { audienceSegment: query.audience } } });
   }
 
+  if (query.availability) {
+    const saleStage = query.availability === "AVAILABLE"
+      ? WatchSaleStage.READY
+      : query.availability === "HOLD"
+        ? WatchSaleStage.HOLD
+        : WatchSaleStage.SOLD;
+    and.push({ watch: { is: { saleStage } } });
+  }
+
+  if (query.size) {
+    and.push({
+      watch: {
+        is: {
+          watchSpecV2: {
+            is: {
+              caseSizeMM: query.size === "SMALL"
+                ? { lt: 34 }
+                : query.size === "MEDIUM"
+                  ? { gte: 34, lte: 38 }
+                  : { gt: 38 },
+            },
+          },
+        },
+      },
+    });
+  }
+
   if (query.priceMin !== undefined || query.priceMax !== undefined) {
     and.push({
       priceVisibility: "SHOW",
@@ -280,4 +307,21 @@ export async function findOrderablePublicWatchIds(db: DB, productIds: string[]) 
     select: { id: true },
   });
   return rows.map((row) => row.id);
+}
+
+export async function listPublicCatalogFacetRows(db: DB) {
+  return dbOrTx(db).product.findMany({
+    where: publicWatchEligibilityWhere(),
+    select: {
+      priceVisibility: true,
+      brand: { select: { slug: true, name: true } },
+      watch: {
+        select: {
+          saleStage: true,
+          watchPrice: { select: { salePrice: true } },
+          watchSpecV2: { select: { caseSizeMM: true } },
+        },
+      },
+    },
+  });
 }

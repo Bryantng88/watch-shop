@@ -3,6 +3,7 @@ import {
   publicCatalogQuerySchema,
   publicWatchSlugSchema,
   type PublicCatalogPage,
+  type PublicCatalogFacets,
   type PublicCatalogQuery,
   type PublicWatchCard,
   type PublicWatchDetail,
@@ -12,6 +13,7 @@ import {
 } from "../contracts";
 import {
   findPublicWatchRowBySlug,
+  listPublicCatalogFacetRows,
   listPublicWatchRows,
   type PublicWatchDetailRow,
   type PublicWatchListRow,
@@ -157,4 +159,41 @@ export async function getPublicWatchBySlug(slugInput: unknown, options?: { db?: 
   const slug = publicWatchSlugSchema.parse(slugInput);
   const row = await findPublicWatchRowBySlug(options?.db ?? prisma, slug);
   return row ? mapPublicWatchDetail(row) : null;
+}
+
+export async function getPublicCatalogFacets(options?: { db?: DB }): Promise<PublicCatalogFacets> {
+  const rows = await listPublicCatalogFacetRows(options?.db ?? prisma);
+  const brandCounts = new Map<string, { slug: string; name: string; count: number }>();
+  const availabilityCounts = { AVAILABLE: 0, HOLD: 0, SOLD: 0 };
+  const sizeCounts = { SMALL: 0, MEDIUM: 0, LARGE: 0 };
+  const prices: number[] = [];
+
+  for (const row of rows) {
+    if (row.brand) {
+      const current = brandCounts.get(row.brand.slug);
+      brandCounts.set(row.brand.slug, { ...row.brand, count: (current?.count ?? 0) + 1 });
+    }
+    const availability = row.watch?.saleStage === "SOLD" ? "SOLD" : row.watch?.saleStage === "HOLD" ? "HOLD" : "AVAILABLE";
+    availabilityCounts[availability] += 1;
+    const size = row.watch?.watchSpecV2?.caseSizeMM?.toNumber();
+    if (size) sizeCounts[size < 34 ? "SMALL" : size <= 38 ? "MEDIUM" : "LARGE"] += 1;
+    if (row.priceVisibility === "SHOW") {
+      const price = row.watch?.watchPrice?.salePrice?.toNumber();
+      if (price && price > 0) prices.push(price);
+    }
+  }
+
+  const rawMin = prices.length ? Math.min(...prices) : 0;
+  const rawMax = prices.length ? Math.max(...prices) : 100_000_000;
+  const step = 500_000;
+  const min = Math.floor(rawMin / step) * step;
+  return {
+    brands: [...brandCounts.values()].sort((a, b) => a.name.localeCompare(b.name, "vi")),
+    availability: (["AVAILABLE", "HOLD", "SOLD"] as const).map((value) => ({ value, count: availabilityCounts[value] })),
+    sizes: (["SMALL", "MEDIUM", "LARGE"] as const).map((value) => ({ value, count: sizeCounts[value] })),
+    priceBounds: {
+      min,
+      max: Math.max(min + step, Math.ceil(rawMax / step) * step),
+    },
+  };
 }

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { publicCatalogQuerySchema, type PublicCatalogQuery } from "@/domains/storefront/contracts";
-import { listPublicWatches } from "@/domains/storefront/server";
+import { getPublicCatalogFacets, listPublicWatches } from "@/domains/storefront/server";
 import CatalogFilters from "@/domains/storefront/ui/CatalogFilters";
 import PublicWatchCardView from "@/domains/storefront/ui/PublicWatchCard";
 
@@ -39,7 +39,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const parsed = publicCatalogQuerySchema.safeParse(scalarSearchParams(raw));
   const invalidFilters = !parsed.success;
   const query: PublicCatalogQuery = parsed.success ? parsed.data : publicCatalogQuerySchema.parse({});
-  const result = await listPublicWatches(query);
+  const [result, facets] = await Promise.all([listPublicWatches(query), getPublicCatalogFacets()]);
+  const activeFilterCount = [query.brand, query.audience, query.availability, query.size, query.priceMin !== undefined || query.priceMax !== undefined].filter(Boolean).length;
 
   return (
     <div className="mx-auto max-w-[1440px] px-4 pb-10 pt-8 sm:px-6 lg:px-10 lg:pt-12">
@@ -66,13 +67,13 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
 
       <details className="mt-6 border-y border-[#dedbd4] py-3 lg:hidden">
         <summary className="storefront-focus flex min-h-11 cursor-pointer list-none items-center justify-between text-xs uppercase tracking-[0.15em] [&::-webkit-details-marker]:hidden">
-          Bộ lọc và sắp xếp <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+          <span>Bộ lọc và sắp xếp{activeFilterCount ? ` · ${activeFilterCount}` : ""}</span> <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
         </summary>
-        <div className="pb-4 pt-5"><CatalogFilters query={query} compact /></div>
+        <div className="pb-4 pt-5"><CatalogFilters query={query} facets={facets} compact /></div>
       </details>
 
       <div className="mt-8 grid gap-10 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-12">
-        <aside className="hidden lg:block"><CatalogFilters query={query} /></aside>
+        <aside className="hidden lg:block lg:sticky lg:top-6 lg:self-start"><CatalogFilters query={query} facets={facets} /></aside>
         <section aria-label="Danh sách đồng hồ">
           {result.items.length ? (
             <div className="grid grid-cols-2 gap-x-3 gap-y-10 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-6">

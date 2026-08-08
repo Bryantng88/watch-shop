@@ -19,6 +19,8 @@ export const publicCatalogQuerySchema = z
     q: optionalQueryText(120),
     brand: optionalQueryText(80),
     audience: z.enum(["MEN", "WOMEN", "UNISEX"]).optional(),
+    availability: z.enum(["AVAILABLE", "HOLD", "SOLD"]).optional(),
+    size: z.enum(["SMALL", "MEDIUM", "LARGE"]).optional(),
     priceMin: optionalMoney,
     priceMax: optionalMoney,
     sort: z.enum(["NEWEST", "PRICE_ASC", "PRICE_DESC"]).default("NEWEST"),
@@ -45,6 +47,13 @@ export const publicCatalogQuerySchema = z
   });
 
 export type PublicCatalogQuery = z.infer<typeof publicCatalogQuerySchema>;
+
+export type PublicCatalogFacets = {
+  brands: Array<{ slug: string; name: string; count: number }>;
+  availability: Array<{ value: "AVAILABLE" | "HOLD" | "SOLD"; count: number }>;
+  sizes: Array<{ value: "SMALL" | "MEDIUM" | "LARGE"; count: number }>;
+  priceBounds: { min: number; max: number };
+};
 
 export const publicWatchSlugSchema = z
   .string()
