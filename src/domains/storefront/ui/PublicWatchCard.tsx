@@ -32,8 +32,10 @@ export default function PublicWatchCardView({ watch }: { watch: PublicWatchCard 
             className="storefront-card-image object-cover"
           />
           {watch.availability === "HOLD" ? (
-            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-y border-white/35 bg-[#2f2d2a]/65 px-3 py-3 text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-white backdrop-blur-[2px]">
-              Đang giữ · Hold
+            <div className="absolute inset-x-0 top-1/2 flex -translate-y-1/2 items-center gap-4 border-y border-[#3b3731]/10 bg-[#f8f5ee]/80 px-5 py-2.5 text-[#393631] shadow-[0_1px_10px_rgba(35,31,26,0.05)] backdrop-blur-[3px]">
+              <span className="h-px flex-1 bg-[#514c44]/25" aria-hidden="true" />
+              <span className="text-[9px] font-medium uppercase tracking-[0.34em]">Hold</span>
+              <span className="h-px flex-1 bg-[#514c44]/25" aria-hidden="true" />
             </div>
           ) : null}
           {availabilityLabel(watch.availability) ? (
