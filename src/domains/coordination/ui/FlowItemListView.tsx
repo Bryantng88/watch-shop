@@ -340,6 +340,18 @@ export default function FlowItemListView({
       });
       if (action === "convert" && result?.id) {
         window.location.href = `/admin/orders/${result.id}`;
+      } else if (action === "start") {
+        setPurchaseRequestItem(null);
+        setShowPurchaseRequestCancellation(false);
+        setPurchaseRequestReason("");
+        setPurchaseRequestOrderItem({
+          ...item,
+          status: "IN_PROGRESS",
+          currentWorkflowState: "PROCESSING",
+          currentWorkflowStateLabel: "Đang xử lý",
+          flowStageKey: "purchase-request-processing",
+        });
+        await onReloadRequested?.();
       } else {
         setPurchaseRequestItem(null);
         setShowPurchaseRequestCancellation(false);
@@ -357,6 +369,11 @@ export default function FlowItemListView({
       setActionError(null);
       setShowPurchaseRequestCancellation(false);
       setPurchaseRequestReason("");
+      if (item.currentWorkflowState === "PROCESSING") {
+        setPurchaseRequestItem(null);
+        setPurchaseRequestOrderItem(item);
+        return;
+      }
       setPurchaseRequestItem(item);
       return;
     }
@@ -1499,7 +1516,7 @@ export default function FlowItemListView({
                 <>
                   <button type="button" disabled={Boolean(pendingActionId)} onClick={() => setShowPurchaseRequestCancellation(true)} className="h-10 rounded-xl border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-700 disabled:opacity-50">Hủy yêu cầu</button>
                   {purchaseRequestItem.currentWorkflowState === "WAITING" ? <button type="button" disabled={Boolean(pendingActionId)} onClick={() => void runPurchaseRequestAction(purchaseRequestItem, "start")} className="h-10 rounded-xl bg-violet-600 px-5 text-sm font-semibold text-white disabled:opacity-50">{pendingActionId ? "Đang xử lý..." : "Tiếp nhận & xử lý"}</button> : null}
-                  {purchaseRequestItem.currentWorkflowState === "PROCESSING" ? <button type="button" disabled={Boolean(pendingActionId)} onClick={() => setPurchaseRequestOrderItem(purchaseRequestItem)} className="h-10 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white disabled:opacity-50">Lập đơn hàng</button> : null}
+                  {purchaseRequestItem.currentWorkflowState === "PROCESSING" ? <button type="button" disabled={Boolean(pendingActionId)} onClick={() => { setPurchaseRequestItem(null); setPurchaseRequestOrderItem(purchaseRequestItem); }} className="h-10 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white disabled:opacity-50">Lập đơn hàng</button> : null}
                 </>
               )}
             </div>
