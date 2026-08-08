@@ -1527,14 +1527,13 @@ export default function FlowItemListView({
         requestId={purchaseRequestOrderItem?.targetId ?? null}
         reference={purchaseRequestOrderItem?.preview.ref}
         onClose={() => setPurchaseRequestOrderItem(null)}
-        onCompleted={(orderId) => {
+        onCompleted={() => {
           if (!purchaseRequestOrderItem) return;
           setOptimisticallyMovedIds((current) => [...current, purchaseRequestOrderItem.id]);
           onItemsMovedFromStage?.({ itemIds: [purchaseRequestOrderItem.id], fromStageKey: purchaseRequestOrderItem.flowStageKey || activeStage, toStageKey: "purchase-request-completed" });
           setPurchaseRequestOrderItem(null);
           setPurchaseRequestItem(null);
           void onReloadRequested?.();
-          window.location.href = `/admin/orders/${orderId}`;
         }}
       />
       {pending ? <div className="px-5 py-12 text-center text-sm text-slate-500">Đang tải danh sách item...</div> : null}
