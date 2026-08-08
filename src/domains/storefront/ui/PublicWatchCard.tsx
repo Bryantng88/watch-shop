@@ -29,7 +29,7 @@ export default function PublicWatchCardView({ watch }: { watch: PublicWatchCard 
             alt={watch.image.alt}
             fill
             sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 25vw"
-            className="storefront-card-image object-cover"
+            className={`storefront-card-image object-cover ${watch.availability === "HOLD" ? "opacity-80 saturate-[0.82]" : watch.availability === "SOLD" ? "opacity-70 saturate-[0.7]" : ""}`}
           />
           {watch.availability === "HOLD" ? (
             <div className="absolute inset-x-0 top-1/2 flex -translate-y-1/2 items-center gap-4 border-y border-[#3b3731]/10 bg-[#f8f5ee]/80 px-5 py-2.5 text-[#393631] shadow-[0_1px_10px_rgba(35,31,26,0.05)] backdrop-blur-[3px]">
