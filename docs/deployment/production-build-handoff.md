@@ -600,3 +600,102 @@ IMAGE_TAG=payment-scope-20260805-r1 docker compose --env-file .env.production up
 
 Keep `watch-shop:pre-payment-scope-20260805` and the verified pre-migration
 backup until acceptance. Image rollback does not restore retired Permission rows.
+
+## Next release: authorization and security hardening (2026-08-09)
+
+This section records the security work required for the next release. It is a
+release backlog, not evidence that the items have already been deployed.
+
+The policy audit was rerun against the current source after Purchase Request
+operations were added:
+
+```text
+npm run auth:audit-policy: passed
+API routes: 132
+API methods: 154
+Admin pages: 69
+Server action files counted by the current audit: 25
+Exported server actions counted by the current audit: 100
+Failures: []
+```
+
+All current `/api/admin/**` and `/api/media/**` routes remain covered by the
+fail-closed middleware policy. The Purchase Request start, complete, convert,
+activity, item-decision and order-form routes also have route-level permission
+checks. This does not close the following release work.
+
+### Release blockers
+
+1. Remove tracked `.env.zip` from the working tree and repository history using
+   a reviewed history-rewrite procedure. Inventory and rotate every credential
+   that may have appeared in the archive before any wider repository or public
+   exposure. Do not copy the archive into a release bundle or NAS release
+   directory. A normal deletion commit alone does not remove historical secret
+   exposure.
+2. Remove authorization bypass based only on the role name `ADMIN` from
+   middleware, API helpers and page/server-action helpers. Runtime access must
+   be derived from persisted `Role -> Permission` assignments, including for
+   ADMIN. Keep the idempotent catalog migration/audit that grants ADMIN the full
+   permission catalog, and fail closed when that catalog is incomplete.
+
+### Required hardening in the same release
+
+1. Add login abuse protection to `/api/auth/login`: bounded attempts by IP and
+   normalized email, increasing delay or temporary lockout, generic failure
+   responses and an auditable failed-login signal. Retain bcrypt verification
+   and the signed, `HttpOnly`, `SameSite=Lax` cookie.
+2. Fix `scripts/audit-admin-permission-policy.ts` so Server Actions are detected
+   through the TypeScript directive/AST instead of requiring the file to start
+   with the exact bytes `"use server"`. The current audit misses files with a
+   leading comment, including `task-support.actions.ts`; that action is guarded
+   today, but future files must not escape coverage.
+3. Require an inner `requirePermissionApi`/domain authorization check for every
+   admin mutation in addition to middleware. Extend the policy audit to fail
+   when a POST, PUT, PATCH or DELETE route relies on middleware alone, except for
+   an explicitly reviewed allow-list.
+4. Remove write-on-read behavior from Coordination Dashboard GET. A user with
+   only `TASK_VIEW` must not provision a cycle/workspace through
+   `ensureCoordinationCycle`. Provision through a POST command requiring
+   `TASK_MANAGE`, a deployment/job step, or return a not-provisioned read state.
+5. Preserve the reverse-proxy trust boundary for public rate limiting. The app
+   port must not be publicly reachable, and the trusted proxy must replace
+   client-supplied forwarding headers. Add a trusted-proxy check before using
+   `x-forwarded-for`; otherwise use the socket/proxy-provided address.
+
+### Next-release acceptance gates
+
+Run against the release source and the actual target database after backup and
+migration, before replacing the running app:
+
+```sh
+npm run auth:audit-policy
+npm run auth:audit-permissions
+npx tsc --noEmit
+```
+
+Acceptance requires all of the following:
+
+1. `auth:audit-policy` reports no missing route/page/action coverage and counts
+   every Server Action file regardless of comments or quote style.
+2. `auth:audit-permissions` reports `ok: true`, catalog counts matching the
+   release catalog, no missing codes, no role drift, no forbidden role drift and
+   no retired permission codes.
+3. Removing one persisted permission from an ADMIN test role denies the matching
+   API/page; restoring the permission restores access. The role label alone must
+   grant nothing.
+4. Unauthenticated admin mutations return `401`; authenticated users with an
+   adjacent but insufficient permission return `403`; authorized users retain
+   the expected operation.
+5. Repeated invalid login attempts are throttled/locked without revealing
+   whether an email exists, while a valid login succeeds after the bounded
+   protection window.
+6. A `TASK_VIEW`-only user cannot create a Coordination cycle or workspace by
+   issuing GET requests.
+7. `.env.zip` is absent from the worktree, release archive and rewritten Git
+   history, and the credential-rotation checklist is signed off.
+
+The local test database is intentionally role-minimal and currently reports
+missing SALE, SALE_ADMIN and ACCESSORY_MANAGER roles in
+`auth:audit-permissions`. That local result is not a production acceptance
+result. The target staging/production database must independently pass the audit
+with `ok: true`.
