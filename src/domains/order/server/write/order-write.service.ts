@@ -1,4 +1,4 @@
-import { OrderFlowType, OrderSource, OrderStatus, OrderVerificationStatus, PaymentMethod, Prisma, PurchaseRequestOutcome, PurchaseRequestStatus, ReserveType } from "@prisma/client";
+import { OrderFlowType, OrderSource, OrderStatus, OrderVerificationStatus, PaymentMethod, Prisma, PurchaseRequestItemDecision, PurchaseRequestOutcome, PurchaseRequestStatus, ReserveType } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import { genRefNo } from "@/domains/shared/utils/AutoGenRef";
 import { assertCanEditOrderDraftRepo } from "../detail";
@@ -362,11 +362,21 @@ export async function createOrderWithItems(
     if (purchaseRequest && purchaseRequest.status !== PurchaseRequestStatus.PROCESSING) {
       throw new Error("Yêu cầu mua hàng phải ở bước đang xử lý trước khi lập đơn.");
     }
-    if (purchaseRequest?.items.some((item) => item.decision === "PENDING")) {
-      throw new Error("Cần xác định kết quả xử lý cho tất cả Watch trong yêu cầu trước khi lập đơn.");
-    }
-    if (purchaseRequest && !purchaseRequest.items.some((item) => item.decision === "SELECTED")) {
-      throw new Error("Cần chọn ít nhất một Watch để lập đơn hàng.");
+    if (purchaseRequest) {
+      const orderProductIds = new Set(
+        input.items
+          .filter((item) => item.kind === "PRODUCT" && item.productId)
+          .map((item) => item.productId!),
+      );
+      const selectedRequestItems = purchaseRequest.items.filter(
+        (item) =>
+          orderProductIds.has(item.productId) &&
+          item.decision !== PurchaseRequestItemDecision.DECLINED &&
+          item.decision !== PurchaseRequestItemDecision.UNAVAILABLE,
+      );
+      if (!selectedRequestItems.length) {
+        throw new Error("Cần giữ lại ít nhất một Watch từ yêu cầu để lập đơn hàng.");
+      }
     }
     if (purchaseRequest) {
       input.publicRequest = {
@@ -555,6 +565,26 @@ export async function createOrderWithItems(
       resolvedProducts.map((product) => product.productId),
     );
     if (purchaseRequest) {
+      const orderProductItems = new Map(
+        input.items
+          .filter((item) => item.kind === "PRODUCT" && item.productId)
+          .map((item) => [item.productId!, item]),
+      );
+      await Promise.all(purchaseRequest.items.map((requestItem) => {
+        const orderItem = orderProductItems.get(requestItem.productId);
+        if (requestItem.decision === PurchaseRequestItemDecision.DECLINED || requestItem.decision === PurchaseRequestItemDecision.UNAVAILABLE) {
+          return Promise.resolve();
+        }
+        return tx.purchaseRequestItem.update({
+          where: { id: requestItem.id },
+          data: orderItem
+            ? {
+                decision: PurchaseRequestItemDecision.SELECTED,
+                agreedPrice: new Prisma.Decimal(Number(orderItem.unitPriceAgreed ?? orderItem.listPrice)),
+              }
+            : { decision: PurchaseRequestItemDecision.DECLINED },
+        });
+      }));
       await tx.purchaseRequest.update({
         where: { id: purchaseRequest.id },
         data: {

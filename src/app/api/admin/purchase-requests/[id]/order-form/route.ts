@@ -20,7 +20,9 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
       return NextResponse.json({ error: "Cần tiếp nhận yêu cầu trước khi lập đơn hàng." }, { status: 409 });
     }
 
-    const orderItems = purchaseRequest.items.filter((item) => item.decision === "SELECTED");
+    const orderItems = purchaseRequest.items.filter(
+      (item) => item.decision === "PENDING" || item.decision === "SELECTED",
+    );
     if (!orderItems.length) {
       return NextResponse.json({ error: "Cần chọn ít nhất một Watch để lập đơn hàng." }, { status: 409 });
     }
