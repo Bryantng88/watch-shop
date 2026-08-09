@@ -20,9 +20,14 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
       return NextResponse.json({ error: "Cần tiếp nhận yêu cầu trước khi lập đơn hàng." }, { status: 409 });
     }
 
+    const orderItems = purchaseRequest.items.filter((item) => item.decision === "SELECTED");
+    if (!orderItems.length) {
+      return NextResponse.json({ error: "Cần chọn ít nhất một Watch để lập đơn hàng." }, { status: 409 });
+    }
+
     const [services, products] = await Promise.all([
       getServiceCatalogOptions(),
-      Promise.all(purchaseRequest.items.map((item) => getQuickOrderProductForOrderForm(item.productId))),
+      Promise.all(orderItems.map((item) => getQuickOrderProductForOrderForm(item.productId))),
     ]);
     if (products.some((product) => !product)) {
       return NextResponse.json({ error: "Có sản phẩm không còn đủ điều kiện lập đơn hàng." }, { status: 409 });
@@ -41,7 +46,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
         shipWard: purchaseRequest.ward ?? "",
         paymentMethod: "BANK_TRANSFER",
         notes: [purchaseRequest.customerNote, `Tạo từ yêu cầu ${purchaseRequest.reference}`].filter(Boolean).join("\n"),
-        items: purchaseRequest.items.map((item) => {
+        items: orderItems.map((item) => {
           const product = productById.get(item.productId)!;
           return {
             kind: "PRODUCT",
@@ -51,7 +56,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
             sku: product.sku ?? null,
             quantity: 1,
             listPrice: Number(item.listPriceSnapshot),
-            unitPriceAgreed: Number(item.listPriceSnapshot),
+            unitPriceAgreed: Number(item.agreedPrice ?? item.listPriceSnapshot),
             img: product.primaryImageUrl ?? null,
             imageKey: product.imageKey ?? null,
             source: "STANDARD",

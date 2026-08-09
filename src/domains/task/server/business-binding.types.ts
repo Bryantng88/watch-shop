@@ -161,9 +161,13 @@ export type QueueItemDTO = {
     district: string | null;
     ward: string | null;
     customerNote: string | null;
+    assignedUser: { id: string; name: string | null; email: string; avatarUrl: string | null } | null;
+    followUpAt: string | null;
+    processingNote: string | null;
     completionReason: string | null;
     outcome: string | null;
-    items: Array<{ id: string; title: string; listPrice: number }>;
+    items: Array<{ id: string; title: string; listPrice: number; agreedPrice: number | null; decision: string; decisionReason: string | null; availability: string }>;
+    activities: Array<{ id: string; type: string; note: string | null; followUpAt: string | null; createdAt: string; actor: { id: string; name: string | null; email: string; avatarUrl: string | null } | null }>;
     orderId: string | null;
     orderRefNo: string | null;
   } | null;

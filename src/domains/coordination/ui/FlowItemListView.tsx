@@ -279,6 +279,9 @@ export default function FlowItemListView({
   const [showPurchaseRequestCancellation, setShowPurchaseRequestCancellation] = useState(false);
   const [purchaseRequestOutcome, setPurchaseRequestOutcome] = useState("REJECTED");
   const [purchaseRequestReason, setPurchaseRequestReason] = useState("");
+  const [purchaseActivityType, setPurchaseActivityType] = useState("CONTACT_ATTEMPT");
+  const [purchaseActivityNote, setPurchaseActivityNote] = useState("");
+  const [purchaseFollowUpAt, setPurchaseFollowUpAt] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [optimisticallyMovedIds, setOptimisticallyMovedIds] = useState<string[]>([]);
   const [reconcileItem, setReconcileItem] = useState<CoordinationFlowListItemDTO | null>(null);
@@ -344,13 +347,6 @@ export default function FlowItemListView({
         setPurchaseRequestItem(null);
         setShowPurchaseRequestCancellation(false);
         setPurchaseRequestReason("");
-        setPurchaseRequestOrderItem({
-          ...item,
-          status: "IN_PROGRESS",
-          currentWorkflowState: "PROCESSING",
-          currentWorkflowStateLabel: "Đang xử lý",
-          flowStageKey: "purchase-request-processing",
-        });
         await onReloadRequested?.();
       } else {
         setPurchaseRequestItem(null);
@@ -360,6 +356,59 @@ export default function FlowItemListView({
       }
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Không thể xử lý yêu cầu mua hàng.");
+    } finally {
+      setPendingActionId(null);
+    }
+  }
+
+  async function savePurchaseRequestActivity() {
+    if (!purchaseRequestItem?.purchaseRequest) return;
+    setPendingActionId(purchaseRequestItem.id);
+    setActionError(null);
+    try {
+      const response = await fetch(`/api/admin/purchase-requests/${purchaseRequestItem.targetId}/activity`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          type: purchaseActivityType,
+          note: purchaseActivityNote.trim(),
+          followUpAt: purchaseActivityType === "FOLLOW_UP" && purchaseFollowUpAt ? new Date(purchaseFollowUpAt).toISOString() : null,
+        }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.error ?? result?.message ?? "Không thể lưu hoạt động.");
+      setPurchaseActivityNote("");
+      setPurchaseFollowUpAt("");
+      setPurchaseRequestItem(null);
+      await onReloadRequested?.();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Không thể lưu hoạt động.");
+    } finally {
+      setPendingActionId(null);
+    }
+  }
+
+  async function updatePurchaseRequestItemDecision(itemId: string, decision: string) {
+    if (!purchaseRequestItem?.purchaseRequest) return;
+    setPendingActionId(itemId);
+    setActionError(null);
+    try {
+      const response = await fetch(`/api/admin/purchase-requests/${purchaseRequestItem.targetId}/items`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ items: [{ id: itemId, decision }] }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.error ?? result?.message ?? "Không thể cập nhật sản phẩm.");
+      setPurchaseRequestItem((current) => current?.purchaseRequest ? {
+        ...current,
+        purchaseRequest: {
+          ...current.purchaseRequest,
+          items: current.purchaseRequest.items.map((item) => item.id === itemId ? { ...item, decision } : item),
+        },
+      } : current);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Không thể cập nhật sản phẩm.");
     } finally {
       setPendingActionId(null);
     }
@@ -1465,13 +1514,54 @@ export default function FlowItemListView({
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Sản phẩm quan tâm</p>
                 <div className="mt-3 divide-y divide-slate-100">
                   {purchaseRequestItem.purchaseRequest.items.map((requestItem) => (
-                    <div key={requestItem.id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
-                      <span className="text-sm font-semibold text-slate-800">{requestItem.title}</span>
-                      <span className="shrink-0 text-sm font-bold tabular-nums text-slate-950">{requestItem.listPrice.toLocaleString("vi-VN")}đ</span>
+                    <div key={requestItem.id} className="grid gap-3 py-3 first:pt-0 last:pb-0 sm:grid-cols-[1fr_auto] sm:items-center">
+                      <div>
+                        <span className="text-sm font-semibold text-slate-800">{requestItem.title}</span>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                          <span className={cn("rounded-full px-2 py-0.5 font-semibold", requestItem.availability === "READY" || requestItem.availability === "AVAILABLE" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")}>{requestItem.availability}</span>
+                          <span className="text-slate-500">Giá niêm yết {requestItem.listPrice.toLocaleString("vi-VN")}đ</span>
+                        </div>
+                      </div>
+                      {purchaseRequestItem.currentWorkflowState === "PROCESSING" ? (
+                        <select value={requestItem.decision} disabled={pendingActionId === requestItem.id} onChange={(event) => void updatePurchaseRequestItemDecision(requestItem.id, event.target.value)} className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700 disabled:opacity-50">
+                          <option value="PENDING">Chưa quyết định</option>
+                          <option value="SELECTED" disabled={requestItem.availability !== "READY" && requestItem.availability !== "AVAILABLE"}>Đưa vào đơn</option>
+                          <option value="DECLINED">Khách không chọn</option>
+                          <option value="UNAVAILABLE">Không còn hàng</option>
+                        </select>
+                      ) : <span className="text-xs font-semibold text-slate-500">{requestItem.decision}</span>}
                     </div>
                   ))}
                 </div>
               </div>
+
+              {purchaseRequestItem.currentWorkflowState === "PROCESSING" ? (
+                <div className="mt-4 rounded-2xl border border-violet-200 bg-violet-50/40 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">Cập nhật liên hệ</p>
+                    <p className="text-xs text-slate-500">Phụ trách: {purchaseRequestItem.purchaseRequest.assignedUser?.name || purchaseRequestItem.purchaseRequest.assignedUser?.email || "Sale đang xử lý"}</p>
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-[180px_1fr]">
+                    <select value={purchaseActivityType} onChange={(event) => setPurchaseActivityType(event.target.value)} className="h-10 rounded-xl border border-violet-200 bg-white px-3 text-sm">
+                      <option value="CONTACT_ATTEMPT">Đã liên hệ</option>
+                      <option value="NOTE">Ghi chú xử lý</option>
+                      <option value="FOLLOW_UP">Hẹn liên hệ lại</option>
+                    </select>
+                    {purchaseActivityType === "FOLLOW_UP" ? <input type="datetime-local" value={purchaseFollowUpAt} onChange={(event) => setPurchaseFollowUpAt(event.target.value)} className="h-10 rounded-xl border border-violet-200 bg-white px-3 text-sm" /> : null}
+                  </div>
+                  <textarea value={purchaseActivityNote} onChange={(event) => setPurchaseActivityNote(event.target.value)} rows={2} className="mt-3 w-full rounded-xl border border-violet-200 bg-white p-3 text-sm" placeholder="Kết quả trao đổi với khách..." />
+                  <div className="mt-3 flex justify-end"><button type="button" disabled={Boolean(pendingActionId) || (purchaseActivityType === "FOLLOW_UP" ? !purchaseFollowUpAt : !purchaseActivityNote.trim())} onClick={() => void savePurchaseRequestActivity()} className="h-9 rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white disabled:opacity-50">Lưu hoạt động</button></div>
+                </div>
+              ) : null}
+
+              {purchaseRequestItem.purchaseRequest.activities.length ? (
+                <div className="mt-4 rounded-2xl border border-slate-200 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Lịch sử xử lý</p>
+                  <div className="mt-3 space-y-3">
+                    {purchaseRequestItem.purchaseRequest.activities.map((activity) => <div key={activity.id} className="border-l-2 border-violet-200 pl-3 text-sm"><div className="flex flex-wrap justify-between gap-2"><span className="font-semibold text-slate-800">{activity.actor?.name || activity.actor?.email || "Hệ thống"} · {activity.type}</span><span className="text-xs text-slate-400">{new Date(activity.createdAt).toLocaleString("vi-VN")}</span></div>{activity.note ? <p className="mt-1 whitespace-pre-wrap text-slate-600">{activity.note}</p> : null}{activity.followUpAt ? <p className="mt-1 text-xs font-semibold text-violet-700">Hẹn: {new Date(activity.followUpAt).toLocaleString("vi-VN")}</p> : null}</div>)}
+                  </div>
+                </div>
+              ) : null}
 
               <div className="mt-4 rounded-2xl border border-slate-200 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Ghi chú của khách</p>
@@ -1514,9 +1604,9 @@ export default function FlowItemListView({
                 purchaseRequestItem.purchaseRequest.orderId ? <Link href={`/admin/orders/${purchaseRequestItem.purchaseRequest.orderId}`} className="h-10 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white">Mở {purchaseRequestItem.purchaseRequest.orderRefNo ?? "đơn hàng"}</Link> : <button type="button" onClick={() => setPurchaseRequestItem(null)} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700">Đóng</button>
               ) : (
                 <>
-                  <button type="button" disabled={Boolean(pendingActionId)} onClick={() => setShowPurchaseRequestCancellation(true)} className="h-10 rounded-xl border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-700 disabled:opacity-50">Hủy yêu cầu</button>
+                  <button type="button" disabled={Boolean(pendingActionId)} onClick={() => setShowPurchaseRequestCancellation(true)} className="h-10 rounded-xl border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-700 disabled:opacity-50">Kết thúc yêu cầu</button>
                   {purchaseRequestItem.currentWorkflowState === "WAITING" ? <button type="button" disabled={Boolean(pendingActionId)} onClick={() => void runPurchaseRequestAction(purchaseRequestItem, "start")} className="h-10 rounded-xl bg-violet-600 px-5 text-sm font-semibold text-white disabled:opacity-50">{pendingActionId ? "Đang xử lý..." : "Tiếp nhận & xử lý"}</button> : null}
-                  {purchaseRequestItem.currentWorkflowState === "PROCESSING" ? <button type="button" disabled={Boolean(pendingActionId)} onClick={() => { setPurchaseRequestItem(null); setPurchaseRequestOrderItem(purchaseRequestItem); }} className="h-10 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white disabled:opacity-50">Lập đơn hàng</button> : null}
+                  {purchaseRequestItem.currentWorkflowState === "PROCESSING" ? <button type="button" title={purchaseRequestItem.purchaseRequest.items.some((item) => item.decision === "PENDING") ? "Cần xác định kết quả cho tất cả Watch" : undefined} disabled={Boolean(pendingActionId) || !purchaseRequestItem.purchaseRequest.items.some((item) => item.decision === "SELECTED") || purchaseRequestItem.purchaseRequest.items.some((item) => item.decision === "PENDING")} onClick={() => { setPurchaseRequestItem(null); setPurchaseRequestOrderItem(purchaseRequestItem); }} className="h-10 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white disabled:opacity-50">Lập đơn hàng</button> : null}
                 </>
               )}
             </div>

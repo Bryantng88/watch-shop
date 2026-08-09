@@ -3149,7 +3149,16 @@ export async function getCoordinationDashboard(input: {
       ? db.purchaseRequest.findMany({
           where: purchaseRequestWhere,
           include: {
-            items: { orderBy: { createdAt: "asc" } },
+            items: {
+              orderBy: { createdAt: "asc" },
+              include: { product: { select: { status: true, watch: { select: { saleStage: true } } } } },
+            },
+            activities: {
+              orderBy: { createdAt: "desc" },
+              take: 20,
+              include: { actor: { select: { id: true, name: true, email: true, avatarUrl: true } } },
+            },
+            assignedUser: { select: { id: true, name: true, email: true, avatarUrl: true } },
             order: { select: { id: true, refNo: true } },
           },
           orderBy: { updatedAt: "desc" },
@@ -3563,7 +3572,9 @@ export async function getCoordinationDashboard(input: {
                     feedbackCount: 0,
                     discussionCount: 0,
                     activityCount: 0,
-                    lastUpdatedBy: { label: "Hệ thống", avatarUrl: null, isSystem: true },
+                    lastUpdatedBy: row.assignedUser
+                      ? { label: row.assignedUser.name || row.assignedUser.email, avatarUrl: row.assignedUser.avatarUrl, isSystem: false }
+                      : { label: "Hệ thống", avatarUrl: null, isSystem: true },
                     workflowKey: "purchase-request-operation",
                     currentWorkflowState: row.status === "COMPLETED"
                       ? row.outcome === "CONVERTED" ? "CONVERTED" : "CANCELLED"
@@ -3591,12 +3602,27 @@ export async function getCoordinationDashboard(input: {
                       district: row.district,
                       ward: row.ward,
                       customerNote: row.customerNote,
+                      assignedUser: row.assignedUser,
+                      followUpAt: row.followUpAt?.toISOString() ?? null,
+                      processingNote: row.processingNote,
                       completionReason: row.completionReason,
                       outcome: row.outcome,
                       items: row.items.map((item) => ({
                         id: item.id,
                         title: item.titleSnapshot,
                         listPrice: Number(item.listPriceSnapshot),
+                        agreedPrice: item.agreedPrice ? Number(item.agreedPrice) : null,
+                        decision: item.decision,
+                        decisionReason: item.decisionReason,
+                        availability: item.product.watch?.saleStage ?? item.product.status,
+                      })),
+                      activities: row.activities.map((activity) => ({
+                        id: activity.id,
+                        type: activity.type,
+                        note: activity.note,
+                        followUpAt: activity.followUpAt?.toISOString() ?? null,
+                        createdAt: activity.createdAt.toISOString(),
+                        actor: activity.actor ? { id: activity.actor.id, name: activity.actor.name, email: activity.actor.email, avatarUrl: activity.actor.avatarUrl } : null,
                       })),
                       orderId: row.order?.id ?? null,
                       orderRefNo: row.order?.refNo ?? null,

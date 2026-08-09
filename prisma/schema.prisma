@@ -631,7 +631,9 @@ model PurchaseRequest {
   createdAt           DateTime                         @default(now())
   updatedAt           DateTime                         @updatedAt
   items               PurchaseRequestItem[]
+  activities          PurchaseRequestActivity[]
   order               Order?                           @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  assignedUser        User?                            @relation("PurchaseRequestAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
 
   @@unique([channel, externalRequestId], map: "PurchaseRequest_channel_external_key")
   @@index([status, createdAt(sort: Desc)])
@@ -640,18 +642,37 @@ model PurchaseRequest {
 }
 
 model PurchaseRequestItem {
-  id                String          @id @default(dbgenerated("(gen_random_uuid())::text"))
+  id                String                      @id @default(dbgenerated("(gen_random_uuid())::text"))
   purchaseRequestId String
   productId         String
   titleSnapshot     String
-  listPriceSnapshot Decimal         @db.Decimal(12, 2)
-  quantity          Int             @default(1)
-  createdAt         DateTime        @default(now())
-  purchaseRequest   PurchaseRequest @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
-  product           Product         @relation(fields: [productId], references: [id])
+  listPriceSnapshot Decimal                     @db.Decimal(12, 2)
+  quantity          Int                         @default(1)
+  decision          PurchaseRequestItemDecision @default(PENDING)
+  agreedPrice       Decimal?                    @db.Decimal(12, 2)
+  decisionReason    String?
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+  purchaseRequest   PurchaseRequest             @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
+  product           Product                     @relation(fields: [productId], references: [id])
 
   @@unique([purchaseRequestId, productId])
   @@index([productId])
+}
+
+model PurchaseRequestActivity {
+  id                String                      @id @default(dbgenerated("(gen_random_uuid())::text"))
+  purchaseRequestId String
+  type              PurchaseRequestActivityType
+  note              String?
+  actorUserId       String?
+  followUpAt        DateTime?                   @db.Timestamptz(6)
+  createdAt         DateTime                    @default(now())
+  purchaseRequest   PurchaseRequest             @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
+  actor             User?                       @relation("PurchaseRequestActivityActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([purchaseRequestId, createdAt(sort: Desc)])
+  @@index([actorUserId, createdAt(sort: Desc)])
 }
 
 model OrderItem {
@@ -1329,14 +1350,16 @@ model User {
   completedTasks Task[] @relation("TaskCompletedBy")
   cancelledTasks Task[] @relation("TaskCancelledBy")
 
-  raisedWorkCases    WorkCase[]              @relation("WorkCaseRaisedBy")
-  assignedWorkCases  WorkCase[]              @relation("WorkCaseAssignedTo")
-  workCaseActivities WorkCaseActivity[]
-  taskExecution      TaskExecution[]
-  assignedTaskItems  TaskItem[]              @relation("TaskItemAssignedTo")
-  taskItems          TaskItem[]
-  taskItemActivities TaskItemActivity[]      @relation("TaskItemActivityActor")
-  activityReplies    TaskItemActivityReply[] @relation("TaskItemActivityReplyActor")
+  raisedWorkCases           WorkCase[]                @relation("WorkCaseRaisedBy")
+  assignedWorkCases         WorkCase[]                @relation("WorkCaseAssignedTo")
+  workCaseActivities        WorkCaseActivity[]
+  taskExecution             TaskExecution[]
+  assignedTaskItems         TaskItem[]                @relation("TaskItemAssignedTo")
+  taskItems                 TaskItem[]
+  taskItemActivities        TaskItemActivity[]        @relation("TaskItemActivityActor")
+  activityReplies           TaskItemActivityReply[]   @relation("TaskItemActivityReplyActor")
+  assignedPurchaseRequests  PurchaseRequest[]         @relation("PurchaseRequestAssignee")
+  purchaseRequestActivities PurchaseRequestActivity[] @relation("PurchaseRequestActivityActor")
 
   @@index([isActive])
 }
@@ -2962,6 +2985,21 @@ enum PurchaseRequestOutcome {
 enum PurchaseRequestContactPreference {
   PHONE
   ZALO
+}
+
+enum PurchaseRequestItemDecision {
+  PENDING
+  SELECTED
+  DECLINED
+  UNAVAILABLE
+}
+
+enum PurchaseRequestActivityType {
+  ASSIGNED
+  CONTACT_ATTEMPT
+  NOTE
+  FOLLOW_UP
+  STATUS_CHANGED
 }
 
 enum PartType {

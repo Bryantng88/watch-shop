@@ -350,7 +350,7 @@ export async function createOrderWithItems(
 
   const result = await prisma.$transaction(async (tx) => {
     const purchaseRequest = input.purchaseRequestId
-      ? await tx.purchaseRequest.findUnique({ where: { id: input.purchaseRequestId } })
+      ? await tx.purchaseRequest.findUnique({ where: { id: input.purchaseRequestId }, include: { items: true } })
       : null;
     if (input.purchaseRequestId && !purchaseRequest) {
       throw new Error("Không tìm thấy yêu cầu mua hàng.");
@@ -361,6 +361,12 @@ export async function createOrderWithItems(
     }
     if (purchaseRequest && purchaseRequest.status !== PurchaseRequestStatus.PROCESSING) {
       throw new Error("Yêu cầu mua hàng phải ở bước đang xử lý trước khi lập đơn.");
+    }
+    if (purchaseRequest?.items.some((item) => item.decision === "PENDING")) {
+      throw new Error("Cần xác định kết quả xử lý cho tất cả Watch trong yêu cầu trước khi lập đơn.");
+    }
+    if (purchaseRequest && !purchaseRequest.items.some((item) => item.decision === "SELECTED")) {
+      throw new Error("Cần chọn ít nhất một Watch để lập đơn hàng.");
     }
     if (purchaseRequest) {
       input.publicRequest = {
@@ -393,6 +399,9 @@ export async function createOrderWithItems(
               completedAt: new Date(),
               completionReason: "Đã liên kết với đơn hàng được tạo từ yêu cầu mua hàng.",
             },
+          });
+          await tx.purchaseRequestActivity.create({
+            data: { purchaseRequestId: purchaseRequest.id, type: "STATUS_CHANGED", note: "Đã liên kết với đơn hàng được tạo từ yêu cầu mua hàng." },
           });
         }
         return toPlain({ ...replay, idempotentReplay: true, inventoryOutcomes: [], tradeInAcquisitionId: null });
@@ -555,6 +564,9 @@ export async function createOrderWithItems(
           completedAt: new Date(),
           completionReason: "Đã xác minh nhu cầu và lập đơn hàng từ luồng xử lý.",
         },
+      });
+      await tx.purchaseRequestActivity.create({
+        data: { purchaseRequestId: purchaseRequest.id, type: "STATUS_CHANGED", note: `Đã tạo đơn nháp ${refNo} từ yêu cầu mua hàng.` },
       });
     }
     if (shouldPostAfterCreate) {
