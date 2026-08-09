@@ -25,7 +25,7 @@ import type {
 } from "./projection.types";
 
 export const ORDER_LIST_PROJECTION_KEY = "order-list";
-export const ORDER_LIST_PROJECTION_VERSION = 2;
+export const ORDER_LIST_PROJECTION_VERSION = 3;
 const RELATED_EVENTS = [
   "payment.created",
   "payment.status_updated",
@@ -89,6 +89,9 @@ export async function buildOrderListProjectionRow(
       hasShipment: true,
       source: true,
       quickFlowType: true,
+      purchaseRequest: {
+        select: { channel: true, reference: true },
+      },
       createdAt: true,
       updatedAt: true,
       orderItem: {
@@ -183,10 +186,16 @@ export async function buildOrderListProjectionRow(
     sourceLabel:
       order.quickFlowType === "QUICK_ORDER"
         ? "Tạo từ watch"
+        : order.purchaseRequest?.channel === "STOREFRONT"
+          ? "Yêu cầu Storefront"
+          : order.purchaseRequest?.channel === "ZALO"
+            ? "Yêu cầu Zalo"
+            : order.purchaseRequest
+              ? "Yêu cầu mua hàng"
         : order.source === "WEB"
-          ? "Web"
+          ? "Website"
           : order.source === "ADMIN"
-            ? "Nội bộ"
+            ? "Admin tạo trực tiếp"
             : null,
     notes: order.notes,
     itemsCount: order._count.orderItem,

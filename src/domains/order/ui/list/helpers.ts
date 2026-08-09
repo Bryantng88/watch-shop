@@ -129,10 +129,12 @@ export function formatOrderSource(item: OrderListItem) {
   const source = String(item.source ?? "").toUpperCase();
 
   if (item.sourceLabel) return item.sourceLabel;
-  if (source === "WEB") return "Web";
+  if (source === "WEB") return "Website";
   if (source === "WATCH_QUICK_ORDER") return "Tạo từ watch";
+  if (source === "ADMIN") return "Admin tạo trực tiếp";
+  if (source === "POS") return "POS";
 
-  return "Nội bộ";
+  return source || "Không xác định";
 }
 
 export function sourceTone(item: OrderListItem) {

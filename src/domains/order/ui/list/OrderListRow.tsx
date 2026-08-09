@@ -14,6 +14,7 @@ import {
   canCancelOrder,
   canPostOrder,
   formatDateTime,
+  formatOrderSource,
 } from "./helpers";
 
 type Props = {
@@ -131,7 +132,7 @@ export default function OrderListRow({
 
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400">
             <span>{itemsCount} sản phẩm</span>
-            <span>{item.sourceLabel || item.source || "Nội bộ"}</span>
+            <span>{formatOrderSource(item)}</span>
 
             {false ? (
               <span className="inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 ring-1 ring-blue-200">
