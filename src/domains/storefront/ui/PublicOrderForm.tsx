@@ -30,13 +30,27 @@ export default function PublicOrderForm({ initialItems = [] }: { initialItems?: 
       return;
     }
     const form = new FormData(event.currentTarget);
+    const customerName = String(form.get("customerName") ?? "").trim();
+    const phone = String(form.get("phone") ?? "").trim();
+    if (!customerName || phone.length < 8) {
+      setState({
+        kind: "error",
+        message: !customerName
+          ? "Vui lòng nhập họ và tên để đội ngũ có thể liên hệ."
+          : "Vui lòng nhập số điện thoại hợp lệ (ít nhất 8 ký tự).",
+      });
+      const fieldName = !customerName ? "customerName" : "phone";
+      const field = event.currentTarget.elements.namedItem(fieldName);
+      if (field instanceof HTMLElement) field.focus();
+      return;
+    }
     setState({ kind: "submitting" });
     try {
       const response = await fetch("/api/public/orders", {
         method: "POST",
         headers: { "content-type": "application/json", "idempotency-key": requestKey.current ??= idempotencyKey() },
         body: JSON.stringify({
-          customerName: form.get("customerName"), phone: form.get("phone"),
+          customerName, phone,
           contactPreference: form.get("contactPreference"), address: form.get("address") || undefined,
           note: form.get("note") || undefined, website: form.get("website") || undefined,
           items: effectiveItems.map((item) => ({ productId: item.productId, quantity: 1 })),
@@ -70,7 +84,7 @@ export default function PublicOrderForm({ initialItems = [] }: { initialItems?: 
 
   return <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr]">
     <section><h2 className="storefront-display text-2xl">Sản phẩm</h2>{effectiveItems.length ? <ul className="mt-5 divide-y divide-[#dedbd4] border-y border-[#dedbd4]">{effectiveItems.map((item) => <li key={item.productId} className="flex items-center gap-4 py-4"><div className="relative h-20 w-16 shrink-0 overflow-hidden bg-[#efede8]"><Image src={item.imageUrl} alt="" fill sizes="64px" className="object-cover" /></div><div className="min-w-0 flex-1"><Link href={`/products/${item.slug}`} className="font-medium">{item.title}</Link><p className="mt-1 text-xs text-[#77746f]">Số lượng 1</p></div><button type="button" onClick={() => { const remaining = effectiveItems.filter((candidate) => candidate.productId !== item.productId); removeFromCart(item.productId); setDismissedInitialIds((current) => [...current, item.productId]); document.cookie = `watch-shop-storefront-request=${encodeURIComponent(JSON.stringify(remaining.map((candidate) => candidate.slug)))}; Max-Age=${60 * 60 * 24 * 14}; Path=/; SameSite=Lax`; }} className="storefront-focus grid h-11 w-11 place-items-center" aria-label={`Xóa ${item.title}`}><Trash2 className="h-4 w-4" /></button></li>)}</ul> : <p className="mt-5 text-[#77746f]">Chưa có sản phẩm. <Link className="underline" href="/products">Xem bộ sưu tập</Link>.</p>}</section>
-    <form onSubmit={submit} className="space-y-5"><h2 className="storefront-display text-2xl">Thông tin liên hệ</h2><input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
+    <form onSubmit={submit} noValidate className="space-y-5"><h2 className="storefront-display text-2xl">Thông tin liên hệ</h2><input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
       <label className="block text-sm">Họ và tên<input required maxLength={120} name="customerName" className="mt-2 min-h-12 w-full border border-[#cbc7bf] bg-white px-4" /></label>
       <label className="block text-sm">Số điện thoại<input required minLength={8} maxLength={30} name="phone" inputMode="tel" className="mt-2 min-h-12 w-full border border-[#cbc7bf] bg-white px-4" /></label>
       <label className="block text-sm">Ưu tiên liên hệ<select name="contactPreference" className="mt-2 min-h-12 w-full border border-[#cbc7bf] bg-white px-4"><option value="PHONE">Điện thoại</option><option value="ZALO">Zalo</option></select></label>
