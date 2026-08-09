@@ -1,7 +1,7 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 
-import { submitPublicOrder } from "@/domains/storefront/server";
+import { PublicOrderProductsUnavailableError, submitPublicOrder } from "@/domains/storefront/server";
 
 function fingerprint(req: NextRequest) {
   const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
@@ -42,6 +42,13 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const response = publicError(error);
     if (response.code === "ORDER_NOT_ACCEPTED") console.error("Create public order failed", error);
-    return NextResponse.json({ error: { code: response.code } }, { status: response.status });
+    return NextResponse.json({
+      error: {
+        code: response.code,
+        ...(error instanceof PublicOrderProductsUnavailableError
+          ? { unavailableProductIds: error.productIds }
+          : {}),
+      },
+    }, { status: response.status });
   }
 }

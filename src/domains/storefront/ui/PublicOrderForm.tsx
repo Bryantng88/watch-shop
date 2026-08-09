@@ -43,14 +43,26 @@ export default function PublicOrderForm({ initialItems = [] }: { initialItems?: 
         }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload?.error?.code ?? "ORDER_NOT_ACCEPTED");
+      if (!response.ok) {
+        if (payload?.error?.code === "PUBLIC_ORDER_PRODUCT_UNAVAILABLE") {
+          const unavailableIds = Array.isArray(payload.error.unavailableProductIds)
+            ? payload.error.unavailableProductIds.filter((id: unknown): id is string => typeof id === "string")
+            : [];
+          const remaining = effectiveItems.filter((item) => !unavailableIds.includes(item.productId));
+          unavailableIds.forEach(removeFromCart);
+          setDismissedInitialIds((current) => [...new Set([...current, ...unavailableIds])]);
+          document.cookie = `watch-shop-storefront-request=${encodeURIComponent(JSON.stringify(remaining.map((item) => item.slug)))}; Max-Age=${60 * 60 * 24 * 14}; Path=/; SameSite=Lax`;
+          requestKey.current = null;
+        }
+        throw new Error(payload?.error?.code ?? "ORDER_NOT_ACCEPTED");
+      }
       clearCart();
       document.cookie = "watch-shop-storefront-request=; Max-Age=0; Path=/; SameSite=Lax";
       setDismissedInitialIds(initialItems.map((item) => item.productId));
       setState({ kind: "success", reference: payload.reference ?? null });
     } catch (error) {
       const unavailable = error instanceof Error && error.message === "PUBLIC_ORDER_PRODUCT_UNAVAILABLE";
-      setState({ kind: "error", message: unavailable ? "Một sản phẩm vừa không còn khả dụng. Vui lòng kiểm tra lại." : "Chưa thể gửi yêu cầu. Vui lòng thử lại." });
+      setState({ kind: "error", message: unavailable ? "Watch đã được giữ hoặc đã bán nên đã được loại khỏi yêu cầu. Vui lòng kiểm tra lại danh sách rồi gửi lại." : "Chưa thể gửi yêu cầu. Vui lòng thử lại." });
     }
   }
 

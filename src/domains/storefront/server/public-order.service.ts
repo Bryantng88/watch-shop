@@ -13,6 +13,13 @@ import { findOrderablePublicWatchIds } from "./public-catalog.repo";
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1_000;
 const RATE_LIMIT_MAX = 5;
 
+export class PublicOrderProductsUnavailableError extends Error {
+  constructor(readonly productIds: string[]) {
+    super("PUBLIC_ORDER_PRODUCT_UNAVAILABLE");
+    this.name = "PublicOrderProductsUnavailableError";
+  }
+}
+
 function digest(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -50,7 +57,7 @@ export async function submitPublicOrder(
   const productIds = Array.from(new Set(request.items.map((item) => item.productId)));
   const eligibleIds = new Set(await findOrderablePublicWatchIds(prisma, productIds));
   const unavailable = productIds.filter((id) => !eligibleIds.has(id));
-  if (unavailable.length) throw new Error("PUBLIC_ORDER_PRODUCT_UNAVAILABLE");
+  if (unavailable.length) throw new PublicOrderProductsUnavailableError(unavailable);
 
   const now = context.now ?? new Date();
   const fingerprintHash = digest(`${process.env.PUBLIC_ORDER_FINGERPRINT_SECRET ?? "watch-shop"}:${context.fingerprint}`);
