@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, useTransition, type MouseEvent } from "react";
+import { useEffect, useMemo, useState, useTransition, type MouseEvent } from "react";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -268,11 +268,6 @@ export default function FlowItemListView({
   onItemsMovedFromStage,
   onReloadRequested,
 }: Props) {
-  const reloadRequestedRef = useRef(onReloadRequested);
-  reloadRequestedRef.current = onReloadRequested;
-  const isPurchaseRequestFlow = stages.some((stage) =>
-    stage.key.startsWith("purchase-request-"),
-  );
   const previewState = useBusinessEntityPreview();
   const progress = useAppProgress();
   const transitionFeedback = useManualTransitionFeedback();
@@ -451,20 +446,6 @@ export default function FlowItemListView({
   useEffect(() => {
     setActionError(null);
   }, [activeStage]);
-  useEffect(() => {
-    if (!isPurchaseRequestFlow) return;
-    const refresh = () => {
-      if (document.visibilityState === "visible") {
-        void reloadRequestedRef.current?.();
-      }
-    };
-    const intervalId = window.setInterval(refresh, 15_000);
-    window.addEventListener("focus", refresh);
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener("focus", refresh);
-    };
-  }, [isPurchaseRequestFlow]);
   const [reconcileFields, setReconcileFields] = useState({
     reviewedAmount: "",
     method: "BANK_TRANSFER",
