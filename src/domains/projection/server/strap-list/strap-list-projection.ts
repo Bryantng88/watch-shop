@@ -5,7 +5,9 @@ import { deleteProjectionRecords, upsertProjectionRecord } from "../projection-r
 import type { ProjectionBuildContext, ProjectionBuildResult, ProjectionBuilder, ProjectionScope } from "../projection.types";
 
 export const STRAP_LIST_PROJECTION_KEY = "strap-list";
-export const STRAP_LIST_PROJECTION_VERSION = 2;
+// v3 rebuilds rows that were missed when acquisition posting did not emit
+// strap.created events.
+export const STRAP_LIST_PROJECTION_VERSION = 3;
 export const STRAP_LIST_SOURCE_EVENTS = [
   "strap.created",
   "strap.updated",

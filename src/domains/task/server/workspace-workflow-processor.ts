@@ -187,6 +187,21 @@ export async function processManualWorkspaceWorkflowTransition(
     effects.push(effectFromResult({ type: "watch-media-reshoot-requested", result }));
   }
 
+  if (
+    input.transition.workflowKey === "watch-publish" &&
+    input.transition.actionKey === "restore-publish" &&
+    input.transition.toState === "READY_TO_POST"
+  ) {
+    mediaProcessingResult = await completeWatchMediaProcessingFromQueueItem(
+      commonInput,
+      db,
+    );
+    effects.push(effectFromResult({
+      type: "watch-media-ready-for-publish",
+      result: mediaProcessingResult,
+    }));
+  }
+
   if (input.transition.toState === "DONE") {
     if (input.transition.workflowKey === "watch-photography") {
       const result = await completeWatchPhotoshootFromQueueItem(commonInput, db);

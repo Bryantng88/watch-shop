@@ -1,5 +1,7 @@
 export const ACQUISITION_LIST_PROJECTION_KEY = "acquisition-list";
-export const ACQUISITION_LIST_PROJECTION_VERSION = 2;
+// v3 refreshes payment summaries for acquisition rows that were projected
+// before accessory-post payment synchronization was corrected.
+export const ACQUISITION_LIST_PROJECTION_VERSION = 3;
 
 export const ACQUISITION_LIST_PROJECTION_SOURCE_EVENTS = [
   "acquisition.created",

@@ -81,6 +81,7 @@ const ACTION_LABELS: Record<string, string> = {
   "watch.media.asset.attached": "thêm media cho đồng hồ",
   "watch.media.ready_for_publish": "đưa media sang bước đăng bán",
   "watch.publish.assets.downloaded": "tải bộ media đăng bán",
+  "watch.price.updated": "cập nhật giá đồng hồ",
   "watch.bought_back": "thu lại đồng hồ đã bán",
   "strap.created": "tạo dây đồng hồ",
   "strap.intake.requested": "đưa dây vào xử lý",
@@ -184,11 +185,15 @@ export async function listGlobalActivity(input: GlobalActivityQuery) {
   const occurredAt = periodStart(period);
 
   const acquisitionEventWhere: Prisma.BusinessEventLogWhereInput = {
-    targetType: "ACQUISITION",
+    OR: targetType
+      ? [{ targetType }]
+      : [
+          { targetType: "ACQUISITION" },
+          { eventKey: "watch.price.updated" },
+        ],
     eventKey: eventKey || undefined,
     actorUserId: actorUserId || undefined,
     createdAt: occurredAt ? { gte: occurredAt } : undefined,
-    ...(targetType && targetType !== "ACQUISITION" ? { id: "__none__" } : {}),
     ...(query
       ? {
         OR: [

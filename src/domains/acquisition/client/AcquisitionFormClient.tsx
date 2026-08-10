@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
     BookOpen,
@@ -340,6 +340,8 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
         createEmptyWatchLine("MEN"),
     ]);
     const [submitting, setSubmitting] = useState(false);
+    const submitLockRef = useRef(false);
+    const createdAcquisitionIdRef = useRef<string | null>(null);
 
     const totalWatchCost = useMemo(() => {
         return watchLines.reduce((sum, line) => {
@@ -361,6 +363,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
     }, [watchLines]);
 
     function resetForm() {
+        createdAcquisitionIdRef.current = null;
         setVendorId("");
         setCreatedAt(toLocalDateTimeInputValue(new Date()));
         setCurrency("VND");
@@ -426,6 +429,17 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
     }
 
     async function submit() {
+        // React state does not disable the button until the next render. This ref
+        // closes the small window where rapid clicks could send duplicate requests.
+        if (submitLockRef.current) return;
+        if (createdAcquisitionIdRef.current) {
+            notify.warning({
+                title: "Phiếu nhập đã được tạo",
+                message: "Dữ liệu này đã được lưu thành phiếu DRAFT. Vui lòng bấm Làm mới form nếu muốn tạo phiếu mới.",
+            });
+            return;
+        }
+
         if (type === "TRADE_IN" && !tradeInOrder) {
             notify.warning({
                 title: "Thiếu đơn hàng",
@@ -460,6 +474,19 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
             return;
         }
 
+        const totalCost = validLines.reduce(
+            (sum, line) => sum + Number(line.cost === "" ? 0 : line.cost || 0),
+            0,
+        );
+        if (totalCost <= 0) {
+            notify.warning({
+                title: "Chưa có giá nhập",
+                message: "Phiếu nhập có tổng giá trị bằng 0 nên không thể duyệt. Vui lòng nhập giá trước khi tạo phiếu.",
+            });
+            return;
+        }
+
+        submitLockRef.current = true;
         setSubmitting(true);
         progress.show({
             title: "Dang luu phieu nhap",
@@ -483,6 +510,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
             });
             const acquisitionId = String(result?.id ?? result?.data?.id ?? "").trim();
             if (!acquisitionId) throw new Error("Khong nhan duoc id phieu nhap moi.");
+            createdAcquisitionIdRef.current = acquisitionId;
 
             progress.update({
                 title: "Da luu phieu nhap",
@@ -541,6 +569,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
                 message: getErrorMessage(error, "Khong the luu phieu nhap."),
             });
         } finally {
+            submitLockRef.current = false;
             setSubmitting(false);
             progress.hide();
         }

@@ -13,6 +13,7 @@ import {
 import { ensureInitialPaymentForAcquisitionTx, publishPaymentMutations } from "@/domains/payment/server";
 import { restoreBuyBackWatchAfterAcquisitionPostTx } from "../server";
 import { emitWatchBoughtBackEvent, emitWatchCreatedEvent } from "@/domains/watch/server/events";
+import { emitStrapBusinessEvent } from "@/domains/strap/server/events";
 import type { BusinessEventDispatchOptions } from "@/domains/event/server/business-event.service";
 
 type PendingInlineImageAttach = {
@@ -32,6 +33,11 @@ type CreatedWatchEvent = {
     saleStage: "DRAFT";
     audienceSegment: "MEN" | "WOMEN" | "UNISEX";
     mediaPipelineKey: "MEN_STANDARD" | "WOMEN_LITE" | "UNISEX_STANDARD";
+};
+
+type CreatedStrapEvent = {
+    variantId: string;
+    productId: string;
 };
 
 async function resolveVendorIdForPosting(
@@ -94,8 +100,17 @@ export async function postAcquisitionApplication(
         throw new Error("Phiếu nhập chưa có dòng nào");
     }
 
+    const totalCost = items.reduce(
+        (sum, item) => sum + Number(item.unitCost ?? 0) * Number(item.quantity ?? 1),
+        0,
+    );
+    if (totalCost <= 0) {
+        throw new Error("Phiếu nhập có tổng giá trị bằng 0 nên không thể duyệt. Vui lòng cập nhật giá nhập trước khi duyệt.");
+    }
+
     const pendingInlineImages: PendingInlineImageAttach[] = [];
     const createdWatchEvents: CreatedWatchEvent[] = [];
+    const createdStrapEvents: CreatedStrapEvent[] = [];
     const returningTradeInProductIds = isTradeIn
         ? items.map((item) => item.productId).filter((id): id is string => Boolean(id))
         : [];
@@ -130,6 +145,10 @@ export async function postAcquisitionApplication(
                             spec: getStrapSpecFromDescription(item.description) ?? {},
                         });
                         productId = strap.productId;
+                        createdStrapEvents.push({
+                            variantId: strap.variantId,
+                            productId: strap.productId,
+                        });
                         continue;
                     }
                     const draft = await repoAcq.createWatchDraftForAcquisitionItem(tx as any, {
@@ -187,6 +206,10 @@ export async function postAcquisitionApplication(
                 fromStatus: "DRAFT",
                 toStatus: "SENT",
             });
+
+            // Recompute at approval time as well so drafts created before the
+            // quantity-aware total fix still receive the correct payment amount.
+            await repoAcq.updateAcquisitionCost(tx, acqId, totalCost);
 
             const posted = await repoAcq.changeDraftToPost(tx as any, acqId);
 
@@ -246,6 +269,15 @@ export async function postAcquisitionApplication(
             deferConsumers,
         });
     }));
+
+    await Promise.all(createdStrapEvents.map((event) =>
+        emitStrapBusinessEvent(prisma, {
+            eventKey: "strap.created",
+            variantId: event.variantId,
+            productId: event.productId,
+            payload: { acquisitionId: acqId },
+        }, { deferConsumers })
+    ));
 
     await Promise.all((result.restoredWatches ?? []).map((watch) =>
         emitWatchBoughtBackEvent(prisma, {

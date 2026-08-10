@@ -85,8 +85,6 @@ export default function ContentBlock({
         [values.content.bulletSpecs],
     );
     const contentStatus = String(values.contentReviewStatus ?? "DRAFT").toUpperCase();
-    const canCopy = contentStatus === "APPROVED";
-
     const fullPost = useMemo(
         () =>
             buildPostText({
@@ -119,6 +117,12 @@ export default function ContentBlock({
     );
     const isNearMetaLimit = metaEstimatedCount >= META_POST_WARNING_THRESHOLD;
     const isOverMetaLimit = charactersOverLimit > 0;
+    const canCopy = ["APPROVED", "READY", "PUBLISHED"].includes(contentStatus);
+    const copyDisabledReason = !fullPost.trim()
+        ? "Watch chưa có content để copy"
+        : !canCopy
+            ? `Content đang ở trạng thái ${contentStatus}. Hãy duyệt content trước khi copy.`
+            : undefined;
 
     const setContent = (patch: Partial<WatchWorkbenchValues["content"]>) =>
         onChange(updateValues(values, { content: patch }));
@@ -243,13 +247,9 @@ export default function ContentBlock({
                         type="button"
                         onClick={handleCopyPost}
                         disabled={!canCopy || !fullPost.trim() || copying}
-                        title={
-                            !canCopy
-                                ? "Content cần được duyệt trước khi copy"
-                                : isOverMetaLimit
-                                    ? `Nội dung đang vượt giới hạn Meta-safe khoảng ${charactersOverLimit} đơn vị`
-                                    : "Copy nội dung đăng bài"
-                        }
+                        title={copyDisabledReason ?? (isOverMetaLimit
+                            ? `Nội dung đang vượt giới hạn Meta-safe khoảng ${charactersOverLimit} đơn vị`
+                            : "Copy nội dung đăng bài")}
                         className={operationButtonClass({
                             variant: canCopy ? "softViolet" : "secondary",
                             size: "sm",
@@ -257,9 +257,30 @@ export default function ContentBlock({
                         })}
                     >
                         {copying ? <Loader2 className="h-4 w-4 animate-spin" /> : copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                        {copying ? "Đang copy..." : copied ? "Đã copy" : usage.isContentDownloaded ? "Copy lại" : "Copy content"}
+                        {copying
+                            ? "Đang copy..."
+                            : copied
+                                ? "Đã copy"
+                                : !canCopy && fullPost.trim()
+                                    ? "Cần duyệt content"
+                                    : usage.isContentDownloaded
+                                        ? "Copy lại"
+                                        : "Copy content"}
                     </button>
                 </div>
+                {!canCopy && fullPost.trim() ? (
+                    <div className="flex flex-col gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800 sm:flex-row sm:items-center sm:justify-between">
+                        <span>{copyDisabledReason}</span>
+                        <button
+                            type="button"
+                            onClick={onOpenMediaWorkspace}
+                            disabled={openingMediaWorkspace}
+                            className={operationButtonClass({ variant: "softEmerald", size: "xs", className: "shrink-0 disabled:opacity-60" })}
+                        >
+                            {openingMediaWorkspace ? "Đang mở..." : "Mở Media WP để duyệt"}
+                        </button>
+                    </div>
+                ) : null}
                 {isNearMetaLimit ? (
                     <div
                         className={[
