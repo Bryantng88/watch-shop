@@ -93,3 +93,11 @@ export async function listStrapCatalogOptions() {
     orderBy: [{ kind: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
   });
 }
+
+export async function listActiveStrapColors() {
+  return prisma.strapCatalogOption.findMany({
+    where: { kind: "COLOR", isActive: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, code: true, name: true, colorHex: true },
+  });
+}

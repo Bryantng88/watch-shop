@@ -52,11 +52,18 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps 
     const progress = useAppProgress();
 
     const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
+    const [selectedItemsById, setSelectedItemsById] = React.useState<Record<string, (typeof props.items)[number]>>({});
     const [editAcquisitionId, setEditAcquisitionId] = React.useState<string | null>(null);
     const [dashboardCustomizationRequest, setDashboardCustomizationRequest] = React.useState(0);
+    const selectionScopeKey = React.useMemo(() => {
+        const params = new URLSearchParams(sp.toString());
+        params.delete("page");
+        return params.toString();
+    }, [sp]);
     React.useEffect(() => {
         setSelectedIds([]);
-    }, [sp.toString(), props.page]);
+        setSelectedItemsById({});
+    }, [selectionScopeKey]);
 
     const selectableIds = React.useMemo(
         () => props.canManage ? props.items.filter(isSelectable).map((item) => item.id) : [],
@@ -64,13 +71,35 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps 
     );
 
     function toggleOne(id: string, checked: boolean) {
+        if (checked) {
+            const row = props.items.find((item) => item.id === id);
+            if (row) setSelectedItemsById((prev) => ({ ...prev, [id]: row }));
+        } else {
+            setSelectedItemsById((prev) => {
+                const next = { ...prev };
+                delete next[id];
+                return next;
+            });
+        }
         setSelectedIds((prev) =>
             checked ? Array.from(new Set([...prev, id])) : prev.filter((item) => item !== id),
         );
     }
 
     function toggleAll(checked: boolean) {
-        setSelectedIds(checked ? selectableIds : []);
+        setSelectedItemsById((prev) => {
+            const next = { ...prev };
+            for (const row of props.items.filter((item) => selectableIds.includes(item.id))) {
+                if (checked) next[row.id] = row;
+                else delete next[row.id];
+            }
+            return next;
+        });
+        setSelectedIds((prev) =>
+            checked
+                ? Array.from(new Set([...prev, ...selectableIds]))
+                : prev.filter((id) => !selectableIds.includes(id)),
+        );
     }
 
     async function handleBulkPost() {
@@ -82,8 +111,9 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps 
         });
 
         try {
-            const payload = props.items
-                .filter((x) => selectedIds.includes(x.id))
+            const payload = selectedIds
+                .map((id) => selectedItemsById[id])
+                .filter((x): x is (typeof props.items)[number] => Boolean(x))
                 .map((x) => ({ id: x.id, vendor: x.vendorName || "" }));
 
             const res = await fetch("/api/admin/acquisitions/bulk-post", {

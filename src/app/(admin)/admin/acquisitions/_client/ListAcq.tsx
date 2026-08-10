@@ -105,7 +105,7 @@ export default function AcquisitionListClient(props: PageProps) {
     useEffect(() => {
         setSelectedIds([]);
         setShowBulkBar(false);
-    }, [currentView, q, vendorId, type, sort, props.page]);
+    }, [currentView, q, vendorId, type, sort]);
 
     useEffect(() => {
         setShowBulkBar(selectedIds.length > 0);

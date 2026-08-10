@@ -131,7 +131,7 @@ export default function OrderListPageClient({
         setSelectedIds([]);
         setShowBulkBar(false);
         setShowBulkConfirm(false);
-    }, [currentView, page, total]);
+    }, [currentView]);
 
     const gotoPageHref = (p: number) => {
         const next = new URLSearchParams(sp.toString());

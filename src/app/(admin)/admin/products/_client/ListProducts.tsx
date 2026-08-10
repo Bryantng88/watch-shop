@@ -190,6 +190,11 @@ export default function ListProducts(props: ProductListPageProps) {
 
     const [rows, setRows] = useState<ProductRow[]>(props.items ?? []);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const selectionScopeKey = useMemo(() => {
+        const next = new URLSearchParams(sp.toString());
+        next.delete("page");
+        return next.toString();
+    }, [sp]);
     const [bulkSaleOpen, setBulkSaleOpen] = useState(false);
     const [bulkSaleValue, setBulkSaleValue] = useState("");
     const [bulkSaleSaving, setBulkSaleSaving] = useState(false);
@@ -249,7 +254,7 @@ export default function ListProducts(props: ProductListPageProps) {
         setSelectedIds([]);
         setBulkSaleOpen(false);
         setBulkSaleValue("");
-    }, [currentCatalog, currentView, props.page, props.total]);
+    }, [selectionScopeKey]);
 
     function pushParams(mutator: (next: URLSearchParams) => void) {
         const next = new URLSearchParams(sp.toString());
@@ -340,11 +345,12 @@ export default function ListProducts(props: ProductListPageProps) {
     }
 
     function handleToggleAll(checked: boolean) {
-        if (checked) {
-            setSelectedIds(rows.map((item) => item.id));
-            return;
-        }
-        setSelectedIds([]);
+        const pageIds = rows.map((item) => item.id);
+        setSelectedIds((prev) =>
+            checked
+                ? Array.from(new Set([...prev, ...pageIds]))
+                : prev.filter((id) => !pageIds.includes(id)),
+        );
     }
 
     async function handleDelete(id: string) {

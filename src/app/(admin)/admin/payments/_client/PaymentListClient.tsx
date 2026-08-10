@@ -109,7 +109,7 @@ export default function PaymentListClient(props: {
     useEffect(() => {
         setSelectedIds([]);
         setShowBulkBar(false);
-    }, [currentView, q, purpose, direction, method, sort, props.page]);
+    }, [currentView, q, purpose, direction, method, sort]);
 
     useEffect(() => {
         setShowBulkBar(selectedIds.length > 0);

@@ -355,6 +355,11 @@ export default function WatchListClient(props: WatchListClientProps) {
     [sp],
   );
   const urlKey = useMemo(() => paramsKey(urlParams), [urlParams]);
+  const selectionScopeKey = useMemo(() => {
+    const next = new URLSearchParams(urlParams.toString());
+    next.delete("page");
+    return paramsKey(next);
+  }, [urlParams]);
 
   const [params, setParams] = useState(urlParams);
   const [listData, setListData] = useState<WatchListResult>(() =>
@@ -365,6 +370,7 @@ export default function WatchListClient(props: WatchListClientProps) {
   );
   const [isLoading, setIsLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedRowsById, setSelectedRowsById] = useState<Record<string, WatchRow>>({});
   const [photoshootSubmitting, setPhotoshootSubmitting] = useState(false);
   const [mediaReviewSubmitting, setMediaReviewSubmitting] = useState(false);
   const [mediaRowSubmittingId, setMediaRowSubmittingId] = useState<
@@ -388,8 +394,12 @@ export default function WatchListClient(props: WatchListClientProps) {
   useEffect(() => {
     setParams(urlParams);
     setFilters(filterStateFromParams(urlParams));
-    setSelectedIds([]);
   }, [urlKey, urlParams]);
+
+  useEffect(() => {
+    setSelectedIds([]);
+    setSelectedRowsById({});
+  }, [selectionScopeKey]);
 
   useEffect(() => {
     setListData(dataFromProps(props));
@@ -414,8 +424,8 @@ export default function WatchListClient(props: WatchListClientProps) {
 
   const rows = useMemo(() => listData.items ?? [], [listData.items]);
   const selectedRows = useMemo(
-    () => rows.filter((row) => selectedIds.includes(row.id)),
-    [rows, selectedIds],
+    () => selectedIds.map((id) => selectedRowsById[id]).filter((row): row is WatchRow => Boolean(row)),
+    [selectedIds, selectedRowsById],
   );
   const photoshootEligibleRows = useMemo(
     () =>
@@ -461,7 +471,6 @@ export default function WatchListClient(props: WatchListClientProps) {
       requestParams.set("consistency", "source");
     }
 
-    setSelectedIds([]);
     setIsLoading(true);
 
     try {
@@ -650,6 +659,13 @@ export default function WatchListClient(props: WatchListClientProps) {
   }
 
   function onToggleOne(watchId: string, checked: boolean) {
+    setSelectedRowsById((prev) => {
+      const next = { ...prev };
+      const row = displayRows.find((item) => item.id === watchId);
+      if (checked && row) next[watchId] = row;
+      else delete next[watchId];
+      return next;
+    });
     setSelectedIds((prev) =>
       checked
         ? [...new Set([...prev, watchId])]
@@ -658,7 +674,20 @@ export default function WatchListClient(props: WatchListClientProps) {
   }
 
   function onToggleAll(checked: boolean) {
-    setSelectedIds(checked ? displayRows.map((x) => x.id) : []);
+    const pageIds = displayRows.map((row) => row.id);
+    setSelectedRowsById((prev) => {
+      const next = { ...prev };
+      for (const row of displayRows) {
+        if (checked) next[row.id] = row;
+        else delete next[row.id];
+      }
+      return next;
+    });
+    setSelectedIds((prev) =>
+      checked
+        ? Array.from(new Set([...prev, ...pageIds]))
+        : prev.filter((id) => !pageIds.includes(id)),
+    );
   }
 
   async function requestSelectedPhotoshoot() {
