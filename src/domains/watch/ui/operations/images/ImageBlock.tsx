@@ -75,7 +75,12 @@ export default function ImageBlock({
     const gallery = values.media.galleryImages ?? [];
     const previewImage = previewIndex == null ? null : gallery[previewIndex] ?? null;
     const imageStatus = String(values.imageReviewStatus ?? "DRAFT").toUpperCase();
-    const canDownload = imageStatus === "APPROVED";
+    const canDownload = ["APPROVED", "READY", "PUBLISHED"].includes(imageStatus);
+    const downloadDisabledReason = !gallery.length
+        ? "Watch chưa có ảnh gallery để tải"
+        : !canDownload
+            ? `Ảnh đang ở trạng thái ${imageStatus}. Hãy mở Media WP và duyệt ảnh trước khi tải gallery.`
+            : undefined;
     const rows = [
         ["Inline", values.media.inlineImage?.key ?? "-"],
         ["Thumbnail", values.media.inlineImage?.key ?? "-"],
@@ -155,6 +160,7 @@ export default function ImageBlock({
                         type="button"
                         onClick={handleDownloadGallery}
                         disabled={!canDownload || downloading || !gallery.length}
+                        title={downloadDisabledReason ?? "Tải toàn bộ gallery dưới dạng file ZIP"}
                         className={operationButtonClass({
                             variant: canDownload ? "softViolet" : "secondary",
                             size: "sm",
@@ -162,7 +168,13 @@ export default function ImageBlock({
                         })}
                     >
                         {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                        {downloading ? "Đang tải..." : usage.isImageDownloaded ? "Tải lại gallery" : "Tải gallery"}
+                        {downloading
+                            ? "Đang tải..."
+                            : !canDownload && gallery.length
+                                ? "Cần duyệt ảnh"
+                                : usage.isImageDownloaded
+                                    ? "Tải lại gallery"
+                                    : "Tải gallery"}
                     </button>
                     <button type="button" onClick={onSave} disabled={saving} className={operationButtonClass({ variant: "primary", size: "sm", className: "disabled:opacity-70" })}>
                         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
@@ -191,8 +203,22 @@ export default function ImageBlock({
                             </button>
                         </div>
                         {gallery.length ? (
-                            <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4">
-                                {gallery.map((image, index) => (
+                            <>
+                                {!canDownload ? (
+                                    <div className="mx-4 mt-4 flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 sm:flex-row sm:items-center sm:justify-between">
+                                        <span>{downloadDisabledReason}</span>
+                                        <button
+                                            type="button"
+                                            onClick={onOpenMediaWorkspace}
+                                            disabled={openingMediaWorkspace}
+                                            className={operationButtonClass({ variant: "softEmerald", size: "xs", className: "shrink-0 disabled:opacity-60" })}
+                                        >
+                                            {openingMediaWorkspace ? "Đang mở..." : "Mở Media WP để duyệt"}
+                                        </button>
+                                    </div>
+                                ) : null}
+                                <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4">
+                                    {gallery.map((image, index) => (
                                     <div key={`${image.key}:${index}`} className="group overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
                                         <button
                                             type="button"
@@ -216,8 +242,9 @@ export default function ImageBlock({
                                             {image.name ?? image.key}
                                         </div>
                                     </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            </>
                         ) : (
                             <div className="px-4 py-8 text-center text-sm text-slate-500">Chưa có ảnh gallery để xem.</div>
                         )}

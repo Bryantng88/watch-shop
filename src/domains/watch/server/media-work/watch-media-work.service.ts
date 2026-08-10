@@ -1225,11 +1225,16 @@ export async function completeWatchMediaProcessingFromQueueItem(
   if (binding.targetType !== TaskExecutionTargetType.WATCH) {
     return { ok: true, skipped: true, reason: "NOT_WATCH_BINDING" };
   }
-  if (
-    !/workTypeKey:\s*media-processing/i.test(
-      String(binding.taskItem?.note ?? ""),
-    )
-  ) {
+  const runtime = getQueueItemWorkflowState(binding);
+  const runtimeMetadata = asRecord(runtime?.metadata);
+  const isMediaProcessingWorkspace = /workTypeKey:\s*media-processing/i.test(
+    String(binding.taskItem?.note ?? ""),
+  );
+  const isPublishRestore = /workTypeKey:\s*publish/i.test(
+    String(binding.taskItem?.note ?? ""),
+  ) && runtime?.currentState === "READY_TO_POST" &&
+    clean(runtimeMetadata.lastManualActionKey) === "restore-publish";
+  if (!isMediaProcessingWorkspace && !isPublishRestore) {
     return {
       ok: true,
       skipped: true,
@@ -1237,7 +1242,6 @@ export async function completeWatchMediaProcessingFromQueueItem(
     };
   }
 
-  const runtime = getQueueItemWorkflowState(binding);
   if (runtime?.currentState === "RETURNED") {
     return { ok: true, skipped: true, reason: "MEDIA_RETURNED_TO_PHOTOSHOOT" };
   }

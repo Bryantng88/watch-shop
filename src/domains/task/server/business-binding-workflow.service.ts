@@ -287,6 +287,24 @@ function normalizeRuntimeState(runtime: WorkflowRuntimeState): WorkflowRuntimeSt
     };
   }
 
+  if (
+    isPublishWorkflow(runtime.workflowKey) &&
+    runtime.currentState === "RECALLED" &&
+    (clean(metadata.lastManualActionKey) === "restore-publish" ||
+      clean(metadata.lastTriggerValue) === "restore-publish")
+  ) {
+    return {
+      ...runtime,
+      currentState: "READY_TO_POST",
+      completedAt: null,
+      metadata: {
+        ...normalizePublishReadyManualMetadata(metadata),
+        normalizedFromState: "RECALLED",
+        normalizedReason: "legacy_restore_publish_action",
+      } as Prisma.JsonObject,
+    };
+  }
+
   return runtime;
 }
 

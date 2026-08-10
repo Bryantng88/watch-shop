@@ -61,6 +61,7 @@ export function getTimelineTitle(eventKey: string) {
         "watch.image.rejected": "Hình ảnh watch bị trả về",
         "watch.image.approved": "Hình ảnh watch đã được duyệt",
         "watch.media.recalled": "Media đã được thu hồi về xử lý",
+        "watch.price.updated": "Giá Watch đã được cập nhật",
         "shipment.created": "Shipment được tạo",
         "shipment.updated": "Thông tin shipment được cập nhật",
         "shipment.shipped": "Đã bàn giao cho đơn vị vận chuyển",

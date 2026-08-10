@@ -112,7 +112,7 @@ export async function createAcquisitionWithItemApplication(
                 ...item,
                 sourceOrderItemId,
             });
-            total += Number(item.unitCost ?? 0);
+            total += Number(item.unitCost ?? 0) * Number(item.quantity ?? 1);
         }
 
         await repoAcq.updateAcquisitionCost(tx, acq.id, total);
