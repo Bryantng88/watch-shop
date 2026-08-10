@@ -34,6 +34,11 @@ function resolveItemUnitCost(input: CreateOrUpdateAcqItemInput) {
     return Number(input.unitCost ?? input.unitPrice ?? 0);
 }
 
+function resolveItemQuantity(input: CreateOrUpdateAcqItemInput) {
+    const quantity = Math.trunc(Number(input.quantity ?? 1));
+    return Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
+}
+
 function buildItemDescription(input: CreateOrUpdateAcqItemInput) {
     return stringifyAcquisitionItemMeta({
         quickSpec: input.quickSpec,
@@ -56,7 +61,7 @@ export async function createAcqItem(
             acquisitionId: acqId,
             productTitle: resolveItemTitle(item),
             audienceSegment: item.audienceSegment ?? AudienceSegment.MEN,
-            quantity: 1,
+            quantity: resolveItemQuantity(item),
             unitCost: resolveItemUnitCost(item),
             productType: item.productType ?? ProductType.WATCH,
             productId: null,
@@ -92,7 +97,7 @@ export async function updateAcqItem(
         where: { id: item.id },
         data: {
             productTitle: resolveItemTitle(item),
-            quantity: 1,
+            quantity: resolveItemQuantity(item),
             unitCost: resolveItemUnitCost(item),
             ...(shouldRewriteDescription
                 ? { description: buildItemDescription(item) }

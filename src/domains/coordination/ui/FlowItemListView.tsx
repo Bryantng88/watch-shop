@@ -283,6 +283,7 @@ export default function FlowItemListView({
   const [purchaseActivityNote, setPurchaseActivityNote] = useState("");
   const [purchaseFollowUpAt, setPurchaseFollowUpAt] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedItemsById, setSelectedItemsById] = useState<Record<string, CoordinationFlowListItemDTO>>({});
   const [optimisticallyMovedIds, setOptimisticallyMovedIds] = useState<string[]>([]);
   const [reconcileItem, setReconcileItem] = useState<CoordinationFlowListItemDTO | null>(null);
   const [isBulkReconcileOpen, setIsBulkReconcileOpen] = useState(false);
@@ -441,10 +442,16 @@ export default function FlowItemListView({
     setOptimisticallyMovedIds((current) =>
       current.filter((id) => authoritativeIds.has(id)),
     );
-    setSelectedIds((current) => current.filter((id) => authoritativeIds.has(id)));
+    setSelectedItemsById((current) => {
+      const next = { ...current };
+      for (const item of items) next[item.id] = item;
+      return next;
+    });
   }, [items]);
   useEffect(() => {
     setActionError(null);
+    setSelectedIds([]);
+    setSelectedItemsById({});
   }, [activeStage]);
   const [reconcileFields, setReconcileFields] = useState({
     reviewedAmount: "",
@@ -493,11 +500,10 @@ export default function FlowItemListView({
   }, [activeStage, items, optimisticallyMovedIds, paymentFilter, query, stageByKey, statusFilter]);
   const visibleIds = visibleItems.map((item) => item.id);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
-  const selectedItems = items.filter(
-    (item) =>
-      selectedIds.includes(item.id) &&
-      !optimisticallyMovedIds.includes(item.id),
-  );
+  const selectedItems = selectedIds
+    .map((id) => selectedItemsById[id])
+    .filter((item): item is CoordinationFlowListItemDTO => Boolean(item))
+    .filter((item) => !optimisticallyMovedIds.includes(item.id));
   const selectedPaymentItems = selectedItems.filter(
     (item) => item.payment && !["PAID", "COLLECTED", "CANCELED", "CANCELLED"].includes(item.payment.status),
   );
@@ -994,7 +1000,17 @@ export default function FlowItemListView({
                 <ResponsiveSelectionCheckbox
                   aria-label="Chọn tất cả item đang hiển thị"
                   checked={allVisibleSelected}
-                  onCheckedChange={(checked) => setSelectedIds(checked ? Array.from(new Set([...selectedIds, ...visibleIds])) : selectedIds.filter((id) => !visibleIds.includes(id)))}
+                  onCheckedChange={(checked) => {
+                    setSelectedItemsById((current) => {
+                      const next = { ...current };
+                      for (const item of visibleItems) {
+                        if (checked) next[item.id] = item;
+                        else delete next[item.id];
+                      }
+                      return next;
+                    });
+                    setSelectedIds(checked ? Array.from(new Set([...selectedIds, ...visibleIds])) : selectedIds.filter((id) => !visibleIds.includes(id)));
+                  }}
                 />
               </th>
               <th className="px-2 py-3">Item</th>
@@ -1074,7 +1090,15 @@ export default function FlowItemListView({
                     <ResponsiveSelectionCheckbox
                       aria-label={`Chọn ${item.preview.title ?? "item"}`}
                       checked={checked}
-                      onCheckedChange={(nextChecked) => setSelectedIds((current) => nextChecked ? [...current, item.id] : current.filter((id) => id !== item.id))}
+                      onCheckedChange={(nextChecked) => {
+                        setSelectedItemsById((current) => {
+                          const next = { ...current };
+                          if (nextChecked) next[item.id] = item;
+                          else delete next[item.id];
+                          return next;
+                        });
+                        setSelectedIds((current) => nextChecked ? Array.from(new Set([...current, item.id])) : current.filter((id) => id !== item.id));
+                      }}
                     />
                   </td>
                   <td className="px-2 py-3">

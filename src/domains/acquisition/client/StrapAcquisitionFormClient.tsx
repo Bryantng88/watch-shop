@@ -6,6 +6,7 @@ import { Link2, Plus, Save, Trash2, X } from "lucide-react";
 
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { createQuickVendor } from "@/domains/vendor/client/vendor.actions";
+import { createQuickStrapColorAction } from "@/domains/strap/client/strap.actions";
 import type { AcquisitionFormVendor } from "./form/acquisition-form.types";
 
 type Material =
@@ -106,16 +107,19 @@ function titleOf(line: Line) {
 
 export default function StrapAcquisitionFormClient({
   vendors: initialVendors,
+  colorOptions: initialColorOptions,
   embedded = false,
   onCreated,
 }: {
   vendors: AcquisitionFormVendor[];
+  colorOptions: Array<{ id: string; code: string; name: string; colorHex: string | null }>;
   embedded?: boolean;
   onCreated?: () => void;
 }) {
   const router = useRouter();
   const notify = useNotify();
   const [vendors, setVendors] = useState(initialVendors);
+  const [colorOptions, setColorOptions] = useState(initialColorOptions);
   const [vendorId, setVendorId] = useState("");
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<Line[]>([newLine()]);
@@ -124,6 +128,9 @@ export default function StrapAcquisitionFormClient({
   const [vendorName, setVendorName] = useState("");
   const [vendorPhone, setVendorPhone] = useState("");
   const [vendorPending, startVendorTransition] = useTransition();
+  const [addingColorLineId, setAddingColorLineId] = useState<string | null>(null);
+  const [colorName, setColorName] = useState("");
+  const [colorPending, startColorTransition] = useTransition();
   const patchLine = (id: string, patch: Partial<Line>) =>
     setLines((current) =>
       current.map((line) => (line.id === id ? { ...line, ...patch } : line)),
@@ -164,6 +171,30 @@ export default function StrapAcquisitionFormClient({
     });
   }
 
+  function addColor(lineId: string) {
+    const name = colorName.trim();
+    if (!name) return;
+    startColorTransition(async () => {
+      try {
+        const color = await createQuickStrapColorAction({ name });
+        setColorOptions((current) =>
+          [...current.filter((item) => item.id !== color.id), color].sort((a, b) =>
+            a.name.localeCompare(b.name, "vi"),
+          ),
+        );
+        patchLine(lineId, { color: color.name });
+        setColorName("");
+        setAddingColorLineId(null);
+        notify.success({ title: "Đã thêm màu", message: `${color.name} đã được chọn.` });
+      } catch (error) {
+        notify.error({
+          title: "Không thể thêm màu",
+          message: error instanceof Error ? error.message : "Có lỗi xảy ra",
+        });
+      }
+    });
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!vendorId) return notify.error({ title: "Chưa chọn nhà cung cấp" });
@@ -172,7 +203,17 @@ export default function StrapAcquisitionFormClient({
     )
       return notify.error({ title: "Dây chính hãng cần có brand" });
     if (lines.some((line) => !line.color.trim()))
-      return notify.error({ title: "Vui lòng nhập màu dây" });
+      return notify.error({ title: "Vui lòng chọn màu dây" });
+    if (
+      lines.some(
+        (line) =>
+          !Number.isInteger(line.lugWidthMM) ||
+          line.lugWidthMM <= 0 ||
+          !Number.isInteger(line.buckleWidthMM) ||
+          line.buckleWidthMM <= 0,
+      )
+    )
+      return notify.error({ title: "Kích thước hai đầu dây phải lớn hơn 0 mm" });
     setSaving(true);
     try {
       const response = await fetch("/api/admin/acquisitions", {
@@ -507,17 +548,51 @@ export default function StrapAcquisitionFormClient({
                       Loại da và bề mặt không áp dụng cho chất liệu này.
                     </div>
                   )}
-                  <label className="block text-xs font-medium text-slate-600">
-                    Màu sắc <span className="text-rose-500">*</span>
-                    <input
+                  <div className="block text-xs font-medium text-slate-600">
+                    <div className="flex items-center justify-between">
+                      <span>Màu sắc <span className="text-rose-500">*</span></span>
+                      <button
+                        type="button"
+                        onClick={() => setAddingColorLineId(line.id)}
+                        className="inline-flex items-center gap-1 font-semibold text-violet-700"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Thêm màu
+                      </button>
+                    </div>
+                    <select
+                      required
                       className={`${inputClass} mt-1.5`}
                       value={line.color}
-                      onChange={(e) =>
-                        patchLine(line.id, { color: e.target.value })
-                      }
-                      placeholder="VD: Nâu, đen, xanh navy"
-                    />
-                  </label>
+                      onChange={(event) => patchLine(line.id, { color: event.target.value })}
+                    >
+                      <option value="">Chọn màu</option>
+                      {colorOptions.map((color) => (
+                        <option key={color.id} value={color.name}>{color.name}</option>
+                      ))}
+                    </select>
+                    {addingColorLineId === line.id ? (
+                      <div className="mt-2 flex gap-2 rounded-xl border border-violet-100 bg-violet-50/50 p-2">
+                        <input
+                          autoFocus
+                          className="h-9 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none"
+                          value={colorName}
+                          onChange={(event) => setColorName(event.target.value)}
+                          placeholder="Tên màu mới"
+                        />
+                        <button
+                          type="button"
+                          disabled={colorPending || !colorName.trim()}
+                          onClick={() => addColor(line.id)}
+                          className="rounded-lg bg-violet-600 px-3 text-xs font-semibold text-white disabled:opacity-50"
+                        >
+                          Thêm
+                        </button>
+                        <button type="button" onClick={() => setAddingColorLineId(null)} className="px-1 text-slate-400">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="space-y-4 p-5">
                   <div>
@@ -534,6 +609,8 @@ export default function StrapAcquisitionFormClient({
                       <input
                         className="min-w-0 flex-1 px-3 text-center text-sm outline-none"
                         type="number"
+                        required
+                        min={1}
                         value={line.lugWidthMM}
                         onChange={(e) =>
                           patchLine(line.id, {
@@ -545,6 +622,8 @@ export default function StrapAcquisitionFormClient({
                       <input
                         className="min-w-0 flex-1 px-3 text-center text-sm outline-none"
                         type="number"
+                        required
+                        min={1}
                         value={line.buckleWidthMM}
                         onChange={(e) =>
                           patchLine(line.id, {
@@ -559,7 +638,7 @@ export default function StrapAcquisitionFormClient({
                     <label className="flex cursor-pointer items-center justify-between gap-3">
                       <span>
                         <span className="block text-xs font-semibold text-slate-700">
-                          Có kèm khóa
+                          Nhập kèm khóa rời vào kho
                         </span>
                         <span className="mt-0.5 block text-[11px] text-slate-500">
                           Tự thêm {line.quantity} khóa {line.buckleWidthMM} mm

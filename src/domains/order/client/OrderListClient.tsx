@@ -214,7 +214,11 @@ export default function OrderListClient({
   }
 
   function toggleAll(checked: boolean) {
-    setSelectedIds(checked ? selectableIds : []);
+    setSelectedIds((prev) =>
+      checked
+        ? Array.from(new Set([...prev, ...selectableIds]))
+        : prev.filter((id) => !selectableIds.includes(id)),
+    );
   }
 
   async function runOrderAction(input: {

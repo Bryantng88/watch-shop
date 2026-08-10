@@ -132,6 +132,15 @@ function jsonNumber(path: string) {
   return Prisma.raw(`(("dataJson"->'filters'->>'${path}')::numeric)`);
 }
 
+function activeWatchCondition() {
+  return Prisma.sql`EXISTS (
+    SELECT 1
+    FROM "Watch" AS "activeWatch"
+    WHERE "activeWatch"."id" = "ProjectionRecord"."entityId"
+      AND "activeWatch"."duplicateConfirmedAt" IS NULL
+  )`;
+}
+
 function projectionMediaCondition(status: string) {
   switch (status) {
     case "POSTED":
@@ -236,6 +245,7 @@ function projectionQuickFilterCondition(quickFilter: string) {
 function filterConditions(input: NormalizedProjectionInput) {
   const conditions: Prisma.Sql[] = [
     Prisma.sql`"projectionKey" = ${WATCH_LIST_PROJECTION_KEY}`,
+    activeWatchCondition(),
   ];
   const viewStatus = statusForView(input.view);
 
@@ -376,6 +386,7 @@ async function viewCounts(db: DB, input: NormalizedProjectionInput): Promise<Wat
       SELECT "status", COUNT(*)::bigint AS count
       FROM "ProjectionRecord"
       WHERE "projectionKey" = ${WATCH_LIST_PROJECTION_KEY}
+        AND ${activeWatchCondition()}
         AND (${clean(input.q)}::text = '' OR "searchText" ILIKE ${`%${clean(input.q).toLowerCase()}%`})
         AND (${clean(input.sku)}::text = '' OR "searchText" ILIKE ${`%${clean(input.sku).toLowerCase()}%`})
         AND (${clean(input.brandId)}::text = '' OR ${jsonText("brandId")} = ${clean(input.brandId)})

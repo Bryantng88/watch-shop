@@ -17,6 +17,14 @@ function getDb(tx?: DB) {
     return dbOrTx(tx);
 }
 
+function requirePositiveMillimeters(value: unknown, label: string) {
+    const millimeters = Math.trunc(Number(value));
+    if (!Number.isFinite(millimeters) || millimeters <= 0) {
+        throw new Error(`${label} phải lớn hơn 0 mm.`);
+    }
+    return millimeters;
+}
+
 export async function createStrapDraftForAcquisitionItem(tx: DB, input: {
     acquisitionItemId: string;
     vendorId: string | null;
@@ -42,8 +50,8 @@ export async function createStrapDraftForAcquisitionItem(tx: DB, input: {
         updatedAt: new Date(),
         StrapVariantSpec: { create: {
             material: String(input.spec.material ?? "LEATHER") as Strap,
-            lugWidthMM: Number(input.spec.lugWidthMM ?? 0),
-            buckleWidthMM: input.spec.buckleWidthMM == null ? null : Number(input.spec.buckleWidthMM),
+            lugWidthMM: requirePositiveMillimeters(input.spec.lugWidthMM, "Kích thước đầu lug"),
+            buckleWidthMM: requirePositiveMillimeters(input.spec.buckleWidthMM, "Kích thước đầu khóa"),
             color: String(input.spec.color ?? "").trim() || null,
             quickRelease: Boolean(input.spec.quickRelease),
             originType: String(input.spec.originType ?? "AFTERMARKET") as StrapOriginType,

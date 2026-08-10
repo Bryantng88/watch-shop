@@ -117,7 +117,7 @@ export default function ShipmentListClient({
         setShowBulkBar(false);
         setShowBulkConfirm(false);
         setBulkErr(null);
-    }, [currentView, page, total]);
+    }, [currentView]);
 
     const isRowSelectable = (s: ShipmentRow) => s.status === "DRAFT";
 

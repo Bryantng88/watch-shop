@@ -4,11 +4,7 @@ import { Boxes, Link2, PackageCheck, SlidersHorizontal, Wrench } from "lucide-re
 import { PERMISSIONS } from "@/constants/permissions";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { listStraps } from "@/domains/strap/server";
-
-function materialLabel(value: string) {
-  const labels: Record<string, string> = { LEATHER: "Dây da", BRACELET: "Dây thép", RUBBER: "Cao su", NATO: "NATO", CANVASS: "Vải" };
-  return labels[value] ?? value;
-}
+import StrapInventoryTable from "@/domains/strap/client/StrapInventoryTable";
 
 export default async function StrapListPage() {
   await requirePermission(PERMISSIONS.ACCESSORY_VIEW);
@@ -43,27 +39,7 @@ export default async function StrapListPage() {
           })}
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-wrap gap-2 border-b border-slate-100 p-4">
-            <input className="h-10 min-w-[280px] flex-1 rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-violet-300" placeholder="Tìm SKU, kích thước, màu, hãng..." />
-            {['Loại dây', 'Nguồn gốc', 'Kích thước', 'Màu', 'Trạng thái'].map((label) => <button key={label} className="h-10 rounded-xl border border-slate-200 px-4 text-sm text-slate-600">{label}</button>)}
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-3">Dây</th><th className="px-5 py-3">Quy cách</th><th className="px-5 py-3">Nguồn</th><th className="px-5 py-3">Khóa</th><th className="px-5 py-3 text-right">Tồn</th><th className="px-5 py-3">Trạng thái</th></tr></thead>
-              <tbody className="divide-y divide-slate-100">
-                {rows.map((row) => <tr key={row.variantId} className="hover:bg-slate-50/70">
-                  <td className="px-5 py-4"><Link href={`/admin/straps/${row.variantId}`} className="font-semibold text-slate-950 hover:text-violet-700">{row.title}</Link><div className="mt-1 text-xs text-slate-400">{row.sku || "Chưa có SKU"}</div></td>
-                  <td className="px-5 py-4"><div className="font-medium text-slate-800">{row.lugWidthMM}–{row.buckleWidthMM ?? "—"} mm</div><div className="mt-1 text-xs text-slate-500">{materialLabel(row.material)} · {row.color || "Chưa màu"}</div></td>
-                  <td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${row.originType === "OEM" ? "bg-blue-50 text-blue-700" : "bg-violet-50 text-violet-700"}`}>{row.originType === "OEM" ? "Chính hãng" : "Linh kiện"}</span></td>
-                  <td className="px-5 py-4 text-slate-600">{row.claspType || "Chưa khai báo"}</td>
-                  <td className="px-5 py-4 text-right font-semibold">{row.inventoryPolicy === "NON_STOCK" ? "—" : row.stockQty}</td>
-                  <td className="px-5 py-4">{row.attachedWatch ? <Link href={`/admin/watches/${row.attachedWatch.productId}`} className="text-blue-700">Gắn: {row.attachedWatch.title}</Link> : row.lowStock ? <span className="text-amber-700">Sắp hết</span> : <span className="text-emerald-700">Sẵn sàng</span>}</td>
-                </tr>)}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <StrapInventoryTable rows={rows} />
       </div>
     </main>
   );

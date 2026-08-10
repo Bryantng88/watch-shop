@@ -1,23 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link2, ShieldCheck, X } from "lucide-react";
 import type { AcquisitionFormVendor } from "./form/acquisition-form.types";
 import StrapAcquisitionFormClient from "./StrapAcquisitionFormClient";
 import ClaspAcquisitionFormClient from "./ClaspAcquisitionFormClient";
+import { listStrapColorsAction } from "@/domains/strap/client/strap.actions";
 
 type Kind = "strap" | "clasp";
 
 export default function AccessoryAcquisitionEntryClient({
   vendors,
+  strapColors: initialStrapColors = [],
   initialKind = "strap",
   onClose,
 }: {
   vendors: AcquisitionFormVendor[];
+  strapColors?: Array<{ id: string; code: string; name: string; colorHex: string | null }>;
   initialKind?: Kind;
   onClose?: () => void;
 }) {
   const [kind, setKind] = useState<Kind>(initialKind);
+  const [strapColors, setStrapColors] = useState(initialStrapColors);
+  useEffect(() => {
+    if (strapColors.length) return;
+    void listStrapColorsAction().then(setStrapColors);
+  }, [strapColors.length]);
   return (
     <main className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-[1500px] px-6 pt-6">
@@ -63,6 +71,7 @@ export default function AccessoryAcquisitionEntryClient({
       <div className={kind === "strap" ? "" : "hidden"}>
         <StrapAcquisitionFormClient
           vendors={vendors}
+          colorOptions={strapColors}
           embedded
           onCreated={onClose}
         />
