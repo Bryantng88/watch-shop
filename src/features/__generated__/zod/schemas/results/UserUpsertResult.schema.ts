@@ -26,5 +26,7 @@ export const UserUpsertResultSchema = z.object({
   assignedTaskItems: z.array(z.unknown()),
   taskItems: z.array(z.unknown()),
   taskItemActivities: z.array(z.unknown()),
-  activityReplies: z.array(z.unknown())
+  activityReplies: z.array(z.unknown()),
+  assignedPurchaseRequests: z.array(z.unknown()),
+  purchaseRequestActivities: z.array(z.unknown())
 });

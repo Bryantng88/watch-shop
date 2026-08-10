@@ -27,6 +27,7 @@ export { ProjectionRecordInputSchema } from './ProjectionRecord.input';
 export { OrderInputSchema } from './Order.input';
 export { PurchaseRequestInputSchema } from './PurchaseRequest.input';
 export { PurchaseRequestItemInputSchema } from './PurchaseRequestItem.input';
+export { PurchaseRequestActivityInputSchema } from './PurchaseRequestActivity.input';
 export { OrderItemInputSchema } from './OrderItem.input';
 export { IntegrationIngressReceiptInputSchema } from './IntegrationIngressReceipt.input';
 export { PartVariantSpecInputSchema } from './PartVariantSpec.input';

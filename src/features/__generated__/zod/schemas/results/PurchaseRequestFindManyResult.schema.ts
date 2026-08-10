@@ -28,7 +28,9 @@ export const PurchaseRequestFindManyResultSchema = z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   items: z.array(z.unknown()),
-  order: z.unknown().optional()
+  activities: z.array(z.unknown()),
+  order: z.unknown().optional(),
+  assignedUser: z.unknown().optional()
 })),
   pagination: z.object({
   page: z.number().int().min(1),

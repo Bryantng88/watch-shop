@@ -32,7 +32,9 @@ export const PurchaseRequestModelSchema = z.object({
     createdAt: z.date(),
     updatedAt: z.date(),
     items: z.array(z.unknown()),
-    order: z.unknown().nullable()
+    activities: z.array(z.unknown()),
+    order: z.unknown().nullable(),
+    assignedUser: z.unknown().nullable()
 }).strict();
 
 export type PurchaseRequestPureType = z.infer<typeof PurchaseRequestModelSchema>;

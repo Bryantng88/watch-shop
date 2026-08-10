@@ -10,7 +10,9 @@ import { PurchaseRequestContactPreferenceSchema } from '../enums/PurchaseRequest
 import { EnumPurchaseRequestContactPreferenceFieldUpdateOperationsInputObjectSchema as EnumPurchaseRequestContactPreferenceFieldUpdateOperationsInputObjectSchema } from './EnumPurchaseRequestContactPreferenceFieldUpdateOperationsInput.schema';
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { OrderUpdateOneWithoutPurchaseRequestNestedInputObjectSchema as OrderUpdateOneWithoutPurchaseRequestNestedInputObjectSchema } from './OrderUpdateOneWithoutPurchaseRequestNestedInput.schema'
+import { PurchaseRequestActivityUpdateManyWithoutPurchaseRequestNestedInputObjectSchema as PurchaseRequestActivityUpdateManyWithoutPurchaseRequestNestedInputObjectSchema } from './PurchaseRequestActivityUpdateManyWithoutPurchaseRequestNestedInput.schema';
+import { OrderUpdateOneWithoutPurchaseRequestNestedInputObjectSchema as OrderUpdateOneWithoutPurchaseRequestNestedInputObjectSchema } from './OrderUpdateOneWithoutPurchaseRequestNestedInput.schema';
+import { UserUpdateOneWithoutAssignedPurchaseRequestsNestedInputObjectSchema as UserUpdateOneWithoutAssignedPurchaseRequestsNestedInputObjectSchema } from './UserUpdateOneWithoutAssignedPurchaseRequestsNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -32,13 +34,14 @@ const makeSchema = () => z.object({
   customerNote: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   processingNote: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   completionReason: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  assignedUserId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   followUpAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   processingStartedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   completedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  order: z.lazy(() => OrderUpdateOneWithoutPurchaseRequestNestedInputObjectSchema).optional()
+  activities: z.lazy(() => PurchaseRequestActivityUpdateManyWithoutPurchaseRequestNestedInputObjectSchema).optional(),
+  order: z.lazy(() => OrderUpdateOneWithoutPurchaseRequestNestedInputObjectSchema).optional(),
+  assignedUser: z.lazy(() => UserUpdateOneWithoutAssignedPurchaseRequestsNestedInputObjectSchema).optional()
 }).strict();
 export const PurchaseRequestUpdateWithoutItemsInputObjectSchema: z.ZodType<Prisma.PurchaseRequestUpdateWithoutItemsInput> = makeSchema() as unknown as z.ZodType<Prisma.PurchaseRequestUpdateWithoutItemsInput>;
 export const PurchaseRequestUpdateWithoutItemsInputObjectZodSchema = makeSchema();

@@ -27,5 +27,7 @@ export const PurchaseRequestUpdateResultSchema = z.nullable(z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   items: z.array(z.unknown()),
-  order: z.unknown().optional()
+  activities: z.array(z.unknown()),
+  order: z.unknown().optional(),
+  assignedUser: z.unknown().optional()
 }));

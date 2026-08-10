@@ -16,7 +16,9 @@ import { WorkCaseActivityCreateNestedManyWithoutActorInputObjectSchema as WorkCa
 import { TaskExecutionCreateNestedManyWithoutCreatedByUserInputObjectSchema as TaskExecutionCreateNestedManyWithoutCreatedByUserInputObjectSchema } from './TaskExecutionCreateNestedManyWithoutCreatedByUserInput.schema';
 import { TaskItemCreateNestedManyWithoutUserInputObjectSchema as TaskItemCreateNestedManyWithoutUserInputObjectSchema } from './TaskItemCreateNestedManyWithoutUserInput.schema';
 import { TaskItemActivityCreateNestedManyWithoutActorUserInputObjectSchema as TaskItemActivityCreateNestedManyWithoutActorUserInputObjectSchema } from './TaskItemActivityCreateNestedManyWithoutActorUserInput.schema';
-import { TaskItemActivityReplyCreateNestedManyWithoutActorUserInputObjectSchema as TaskItemActivityReplyCreateNestedManyWithoutActorUserInputObjectSchema } from './TaskItemActivityReplyCreateNestedManyWithoutActorUserInput.schema'
+import { TaskItemActivityReplyCreateNestedManyWithoutActorUserInputObjectSchema as TaskItemActivityReplyCreateNestedManyWithoutActorUserInputObjectSchema } from './TaskItemActivityReplyCreateNestedManyWithoutActorUserInput.schema';
+import { PurchaseRequestCreateNestedManyWithoutAssignedUserInputObjectSchema as PurchaseRequestCreateNestedManyWithoutAssignedUserInputObjectSchema } from './PurchaseRequestCreateNestedManyWithoutAssignedUserInput.schema';
+import { PurchaseRequestActivityCreateNestedManyWithoutActorInputObjectSchema as PurchaseRequestActivityCreateNestedManyWithoutActorInputObjectSchema } from './PurchaseRequestActivityCreateNestedManyWithoutActorInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -44,7 +46,9 @@ const makeSchema = () => z.object({
   taskExecution: z.lazy(() => TaskExecutionCreateNestedManyWithoutCreatedByUserInputObjectSchema).optional(),
   taskItems: z.lazy(() => TaskItemCreateNestedManyWithoutUserInputObjectSchema).optional(),
   taskItemActivities: z.lazy(() => TaskItemActivityCreateNestedManyWithoutActorUserInputObjectSchema).optional(),
-  activityReplies: z.lazy(() => TaskItemActivityReplyCreateNestedManyWithoutActorUserInputObjectSchema).optional()
+  activityReplies: z.lazy(() => TaskItemActivityReplyCreateNestedManyWithoutActorUserInputObjectSchema).optional(),
+  assignedPurchaseRequests: z.lazy(() => PurchaseRequestCreateNestedManyWithoutAssignedUserInputObjectSchema).optional(),
+  purchaseRequestActivities: z.lazy(() => PurchaseRequestActivityCreateNestedManyWithoutActorInputObjectSchema).optional()
 }).strict();
 export const UserCreateWithoutAssignedTaskItemsInputObjectSchema: z.ZodType<Prisma.UserCreateWithoutAssignedTaskItemsInput> = makeSchema() as unknown as z.ZodType<Prisma.UserCreateWithoutAssignedTaskItemsInput>;
 export const UserCreateWithoutAssignedTaskItemsInputObjectZodSchema = makeSchema();

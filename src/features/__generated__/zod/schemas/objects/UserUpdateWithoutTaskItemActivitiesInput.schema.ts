@@ -20,7 +20,9 @@ import { WorkCaseActivityUpdateManyWithoutActorNestedInputObjectSchema as WorkCa
 import { TaskExecutionUpdateManyWithoutCreatedByUserNestedInputObjectSchema as TaskExecutionUpdateManyWithoutCreatedByUserNestedInputObjectSchema } from './TaskExecutionUpdateManyWithoutCreatedByUserNestedInput.schema';
 import { TaskItemUpdateManyWithoutAssignedToUserNestedInputObjectSchema as TaskItemUpdateManyWithoutAssignedToUserNestedInputObjectSchema } from './TaskItemUpdateManyWithoutAssignedToUserNestedInput.schema';
 import { TaskItemUpdateManyWithoutUserNestedInputObjectSchema as TaskItemUpdateManyWithoutUserNestedInputObjectSchema } from './TaskItemUpdateManyWithoutUserNestedInput.schema';
-import { TaskItemActivityReplyUpdateManyWithoutActorUserNestedInputObjectSchema as TaskItemActivityReplyUpdateManyWithoutActorUserNestedInputObjectSchema } from './TaskItemActivityReplyUpdateManyWithoutActorUserNestedInput.schema'
+import { TaskItemActivityReplyUpdateManyWithoutActorUserNestedInputObjectSchema as TaskItemActivityReplyUpdateManyWithoutActorUserNestedInputObjectSchema } from './TaskItemActivityReplyUpdateManyWithoutActorUserNestedInput.schema';
+import { PurchaseRequestUpdateManyWithoutAssignedUserNestedInputObjectSchema as PurchaseRequestUpdateManyWithoutAssignedUserNestedInputObjectSchema } from './PurchaseRequestUpdateManyWithoutAssignedUserNestedInput.schema';
+import { PurchaseRequestActivityUpdateManyWithoutActorNestedInputObjectSchema as PurchaseRequestActivityUpdateManyWithoutActorNestedInputObjectSchema } from './PurchaseRequestActivityUpdateManyWithoutActorNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -48,7 +50,9 @@ const makeSchema = () => z.object({
   taskExecution: z.lazy(() => TaskExecutionUpdateManyWithoutCreatedByUserNestedInputObjectSchema).optional(),
   assignedTaskItems: z.lazy(() => TaskItemUpdateManyWithoutAssignedToUserNestedInputObjectSchema).optional(),
   taskItems: z.lazy(() => TaskItemUpdateManyWithoutUserNestedInputObjectSchema).optional(),
-  activityReplies: z.lazy(() => TaskItemActivityReplyUpdateManyWithoutActorUserNestedInputObjectSchema).optional()
+  activityReplies: z.lazy(() => TaskItemActivityReplyUpdateManyWithoutActorUserNestedInputObjectSchema).optional(),
+  assignedPurchaseRequests: z.lazy(() => PurchaseRequestUpdateManyWithoutAssignedUserNestedInputObjectSchema).optional(),
+  purchaseRequestActivities: z.lazy(() => PurchaseRequestActivityUpdateManyWithoutActorNestedInputObjectSchema).optional()
 }).strict();
 export const UserUpdateWithoutTaskItemActivitiesInputObjectSchema: z.ZodType<Prisma.UserUpdateWithoutTaskItemActivitiesInput> = makeSchema() as unknown as z.ZodType<Prisma.UserUpdateWithoutTaskItemActivitiesInput>;
 export const UserUpdateWithoutTaskItemActivitiesInputObjectZodSchema = makeSchema();

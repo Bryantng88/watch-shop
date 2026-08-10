@@ -3,7 +3,8 @@ import type { Prisma } from '@prisma/client';
 import { PurchaseRequestStatusSchema } from '../enums/PurchaseRequestStatus.schema';
 import { PurchaseRequestOutcomeSchema } from '../enums/PurchaseRequestOutcome.schema';
 import { PurchaseRequestContactPreferenceSchema } from '../enums/PurchaseRequestContactPreference.schema';
-import { PurchaseRequestItemUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema as PurchaseRequestItemUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema } from './PurchaseRequestItemUncheckedCreateNestedManyWithoutPurchaseRequestInput.schema'
+import { PurchaseRequestItemUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema as PurchaseRequestItemUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema } from './PurchaseRequestItemUncheckedCreateNestedManyWithoutPurchaseRequestInput.schema';
+import { PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema as PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema } from './PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -31,7 +32,8 @@ const makeSchema = () => z.object({
   completedAt: z.coerce.date().optional().nullable(),
   orderId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  items: z.lazy(() => PurchaseRequestItemUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema)
+  items: z.lazy(() => PurchaseRequestItemUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema),
+  activities: z.lazy(() => PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema)
 }).strict();
 export const PurchaseRequestUncheckedCreateInputObjectSchema: z.ZodType<Prisma.PurchaseRequestUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.PurchaseRequestUncheckedCreateInput>;
 export const PurchaseRequestUncheckedCreateInputObjectZodSchema = makeSchema();

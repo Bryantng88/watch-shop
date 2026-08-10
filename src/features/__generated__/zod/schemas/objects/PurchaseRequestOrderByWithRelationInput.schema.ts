@@ -3,7 +3,9 @@ import type { Prisma } from '@prisma/client';
 import { SortOrderSchema } from '../enums/SortOrder.schema';
 import { SortOrderInputObjectSchema as SortOrderInputObjectSchema } from './SortOrderInput.schema';
 import { PurchaseRequestItemOrderByRelationAggregateInputObjectSchema as PurchaseRequestItemOrderByRelationAggregateInputObjectSchema } from './PurchaseRequestItemOrderByRelationAggregateInput.schema';
-import { OrderOrderByWithRelationInputObjectSchema as OrderOrderByWithRelationInputObjectSchema } from './OrderOrderByWithRelationInput.schema'
+import { PurchaseRequestActivityOrderByRelationAggregateInputObjectSchema as PurchaseRequestActivityOrderByRelationAggregateInputObjectSchema } from './PurchaseRequestActivityOrderByRelationAggregateInput.schema';
+import { OrderOrderByWithRelationInputObjectSchema as OrderOrderByWithRelationInputObjectSchema } from './OrderOrderByWithRelationInput.schema';
+import { UserOrderByWithRelationInputObjectSchema as UserOrderByWithRelationInputObjectSchema } from './UserOrderByWithRelationInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -33,7 +35,9 @@ const makeSchema = () => z.object({
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   items: z.lazy(() => PurchaseRequestItemOrderByRelationAggregateInputObjectSchema).optional(),
-  order: z.lazy(() => OrderOrderByWithRelationInputObjectSchema).optional()
+  activities: z.lazy(() => PurchaseRequestActivityOrderByRelationAggregateInputObjectSchema).optional(),
+  order: z.lazy(() => OrderOrderByWithRelationInputObjectSchema).optional(),
+  assignedUser: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const PurchaseRequestOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.PurchaseRequestOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.PurchaseRequestOrderByWithRelationInput>;
 export const PurchaseRequestOrderByWithRelationInputObjectZodSchema = makeSchema();

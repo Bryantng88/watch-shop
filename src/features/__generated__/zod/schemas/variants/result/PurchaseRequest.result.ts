@@ -32,7 +32,9 @@ export const PurchaseRequestResultSchema = z.object({
     createdAt: z.date(),
     updatedAt: z.date(),
     items: z.array(z.unknown()),
-    order: z.unknown().nullable()
+    activities: z.array(z.unknown()),
+    order: z.unknown().nullable(),
+    assignedUser: z.unknown().nullable()
 }).strict();
 
 export type PurchaseRequestResultType = z.infer<typeof PurchaseRequestResultSchema>;

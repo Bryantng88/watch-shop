@@ -4,7 +4,8 @@ import { SortOrderSchema } from '../enums/SortOrder.schema'
 
 const makeSchema = () => z.object({
   listPriceSnapshot: SortOrderSchema.optional(),
-  quantity: SortOrderSchema.optional()
+  quantity: SortOrderSchema.optional(),
+  agreedPrice: SortOrderSchema.optional()
 }).strict();
 export const PurchaseRequestItemSumOrderByAggregateInputObjectSchema: z.ZodType<Prisma.PurchaseRequestItemSumOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.PurchaseRequestItemSumOrderByAggregateInput>;
 export const PurchaseRequestItemSumOrderByAggregateInputObjectZodSchema = makeSchema();

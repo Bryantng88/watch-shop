@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { PurchaseRequestActivitySelectObjectSchema as PurchaseRequestActivitySelectObjectSchema } from './objects/PurchaseRequestActivitySelect.schema';
+import { PurchaseRequestActivityIncludeObjectSchema as PurchaseRequestActivityIncludeObjectSchema } from './objects/PurchaseRequestActivityInclude.schema';
+import { PurchaseRequestActivityWhereUniqueInputObjectSchema as PurchaseRequestActivityWhereUniqueInputObjectSchema } from './objects/PurchaseRequestActivityWhereUniqueInput.schema';
+import { PurchaseRequestActivityCreateInputObjectSchema as PurchaseRequestActivityCreateInputObjectSchema } from './objects/PurchaseRequestActivityCreateInput.schema';
+import { PurchaseRequestActivityUncheckedCreateInputObjectSchema as PurchaseRequestActivityUncheckedCreateInputObjectSchema } from './objects/PurchaseRequestActivityUncheckedCreateInput.schema';
+import { PurchaseRequestActivityUpdateInputObjectSchema as PurchaseRequestActivityUpdateInputObjectSchema } from './objects/PurchaseRequestActivityUpdateInput.schema';
+import { PurchaseRequestActivityUncheckedUpdateInputObjectSchema as PurchaseRequestActivityUncheckedUpdateInputObjectSchema } from './objects/PurchaseRequestActivityUncheckedUpdateInput.schema';
+
+export const PurchaseRequestActivityUpsertOneSchema: z.ZodType<Prisma.PurchaseRequestActivityUpsertArgs> = z.object({ select: PurchaseRequestActivitySelectObjectSchema.optional(), include: PurchaseRequestActivityIncludeObjectSchema.optional(), where: PurchaseRequestActivityWhereUniqueInputObjectSchema, create: z.union([ PurchaseRequestActivityCreateInputObjectSchema, PurchaseRequestActivityUncheckedCreateInputObjectSchema ]), update: z.union([ PurchaseRequestActivityUpdateInputObjectSchema, PurchaseRequestActivityUncheckedUpdateInputObjectSchema ]) }).strict() as unknown as z.ZodType<Prisma.PurchaseRequestActivityUpsertArgs>;
+
+export const PurchaseRequestActivityUpsertOneZodSchema = z.object({ select: PurchaseRequestActivitySelectObjectSchema.optional(), include: PurchaseRequestActivityIncludeObjectSchema.optional(), where: PurchaseRequestActivityWhereUniqueInputObjectSchema, create: z.union([ PurchaseRequestActivityCreateInputObjectSchema, PurchaseRequestActivityUncheckedCreateInputObjectSchema ]), update: z.union([ PurchaseRequestActivityUpdateInputObjectSchema, PurchaseRequestActivityUncheckedUpdateInputObjectSchema ]) }).strict();

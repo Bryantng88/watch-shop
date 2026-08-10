@@ -36,7 +36,9 @@ export const UserGroupByResultSchema = z.array(z.object({
     assignedTaskItems: z.number(),
     taskItems: z.number(),
     taskItemActivities: z.number(),
-    activityReplies: z.number()
+    activityReplies: z.number(),
+    assignedPurchaseRequests: z.number(),
+    purchaseRequestActivities: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),

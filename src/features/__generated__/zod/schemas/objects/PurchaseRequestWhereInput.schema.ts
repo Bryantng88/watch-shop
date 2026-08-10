@@ -11,8 +11,11 @@ import { PurchaseRequestContactPreferenceSchema } from '../enums/PurchaseRequest
 import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { PurchaseRequestItemListRelationFilterObjectSchema as PurchaseRequestItemListRelationFilterObjectSchema } from './PurchaseRequestItemListRelationFilter.schema';
+import { PurchaseRequestActivityListRelationFilterObjectSchema as PurchaseRequestActivityListRelationFilterObjectSchema } from './PurchaseRequestActivityListRelationFilter.schema';
 import { OrderNullableScalarRelationFilterObjectSchema as OrderNullableScalarRelationFilterObjectSchema } from './OrderNullableScalarRelationFilter.schema';
-import { OrderWhereInputObjectSchema as OrderWhereInputObjectSchema } from './OrderWhereInput.schema'
+import { OrderWhereInputObjectSchema as OrderWhereInputObjectSchema } from './OrderWhereInput.schema';
+import { UserNullableScalarRelationFilterObjectSchema as UserNullableScalarRelationFilterObjectSchema } from './UserNullableScalarRelationFilter.schema';
+import { UserWhereInputObjectSchema as UserWhereInputObjectSchema } from './UserWhereInput.schema'
 
 const purchaserequestwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => PurchaseRequestWhereInputObjectSchema), z.lazy(() => PurchaseRequestWhereInputObjectSchema).array()]).optional(),
@@ -45,7 +48,9 @@ const purchaserequestwhereinputSchema = z.object({
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   items: z.lazy(() => PurchaseRequestItemListRelationFilterObjectSchema).optional(),
-  order: z.union([z.lazy(() => OrderNullableScalarRelationFilterObjectSchema), z.lazy(() => OrderWhereInputObjectSchema)]).optional()
+  activities: z.lazy(() => PurchaseRequestActivityListRelationFilterObjectSchema).optional(),
+  order: z.union([z.lazy(() => OrderNullableScalarRelationFilterObjectSchema), z.lazy(() => OrderWhereInputObjectSchema)]).optional(),
+  assignedUser: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional()
 }).strict();
 export const PurchaseRequestWhereInputObjectSchema: z.ZodType<Prisma.PurchaseRequestWhereInput> = purchaserequestwhereinputSchema as unknown as z.ZodType<Prisma.PurchaseRequestWhereInput>;
 export const PurchaseRequestWhereInputObjectZodSchema = purchaserequestwhereinputSchema;

@@ -16,7 +16,11 @@ export const PurchaseRequestItemFindFirstSelectSchema: z.ZodType<Prisma.Purchase
     titleSnapshot: z.boolean().optional(),
     listPriceSnapshot: z.boolean().optional(),
     quantity: z.boolean().optional(),
+    decision: z.boolean().optional(),
+    agreedPrice: z.boolean().optional(),
+    decisionReason: z.boolean().optional(),
     createdAt: z.boolean().optional(),
+    updatedAt: z.boolean().optional(),
     purchaseRequest: z.boolean().optional(),
     product: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.PurchaseRequestItemSelect>;
@@ -28,7 +32,11 @@ export const PurchaseRequestItemFindFirstSelectZodSchema = z.object({
     titleSnapshot: z.boolean().optional(),
     listPriceSnapshot: z.boolean().optional(),
     quantity: z.boolean().optional(),
+    decision: z.boolean().optional(),
+    agreedPrice: z.boolean().optional(),
+    decisionReason: z.boolean().optional(),
     createdAt: z.boolean().optional(),
+    updatedAt: z.boolean().optional(),
     purchaseRequest: z.boolean().optional(),
     product: z.boolean().optional()
   }).strict();

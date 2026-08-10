@@ -14,7 +14,9 @@ import { WorkCaseActivityOrderByRelationAggregateInputObjectSchema as WorkCaseAc
 import { TaskExecutionOrderByRelationAggregateInputObjectSchema as TaskExecutionOrderByRelationAggregateInputObjectSchema } from './TaskExecutionOrderByRelationAggregateInput.schema';
 import { TaskItemOrderByRelationAggregateInputObjectSchema as TaskItemOrderByRelationAggregateInputObjectSchema } from './TaskItemOrderByRelationAggregateInput.schema';
 import { TaskItemActivityOrderByRelationAggregateInputObjectSchema as TaskItemActivityOrderByRelationAggregateInputObjectSchema } from './TaskItemActivityOrderByRelationAggregateInput.schema';
-import { TaskItemActivityReplyOrderByRelationAggregateInputObjectSchema as TaskItemActivityReplyOrderByRelationAggregateInputObjectSchema } from './TaskItemActivityReplyOrderByRelationAggregateInput.schema'
+import { TaskItemActivityReplyOrderByRelationAggregateInputObjectSchema as TaskItemActivityReplyOrderByRelationAggregateInputObjectSchema } from './TaskItemActivityReplyOrderByRelationAggregateInput.schema';
+import { PurchaseRequestOrderByRelationAggregateInputObjectSchema as PurchaseRequestOrderByRelationAggregateInputObjectSchema } from './PurchaseRequestOrderByRelationAggregateInput.schema';
+import { PurchaseRequestActivityOrderByRelationAggregateInputObjectSchema as PurchaseRequestActivityOrderByRelationAggregateInputObjectSchema } from './PurchaseRequestActivityOrderByRelationAggregateInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -43,7 +45,9 @@ const makeSchema = () => z.object({
   assignedTaskItems: z.lazy(() => TaskItemOrderByRelationAggregateInputObjectSchema).optional(),
   taskItems: z.lazy(() => TaskItemOrderByRelationAggregateInputObjectSchema).optional(),
   taskItemActivities: z.lazy(() => TaskItemActivityOrderByRelationAggregateInputObjectSchema).optional(),
-  activityReplies: z.lazy(() => TaskItemActivityReplyOrderByRelationAggregateInputObjectSchema).optional()
+  activityReplies: z.lazy(() => TaskItemActivityReplyOrderByRelationAggregateInputObjectSchema).optional(),
+  assignedPurchaseRequests: z.lazy(() => PurchaseRequestOrderByRelationAggregateInputObjectSchema).optional(),
+  purchaseRequestActivities: z.lazy(() => PurchaseRequestActivityOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const UserOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.UserOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.UserOrderByWithRelationInput>;
 export const UserOrderByWithRelationInputObjectZodSchema = makeSchema();

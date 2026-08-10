@@ -1,5 +1,6 @@
 import * as z from 'zod';
 
+import { PurchaseRequestItemDecisionSchema } from '../../enums/PurchaseRequestItemDecision.schema';
 // prettier-ignore
 export const PurchaseRequestItemResultSchema = z.object({
     id: z.string(),
@@ -8,7 +9,11 @@ export const PurchaseRequestItemResultSchema = z.object({
     titleSnapshot: z.string(),
     listPriceSnapshot: z.number(),
     quantity: z.number().int(),
+    decision: PurchaseRequestItemDecisionSchema,
+    agreedPrice: z.number().nullable(),
+    decisionReason: z.string().nullable(),
     createdAt: z.date(),
+    updatedAt: z.date(),
     purchaseRequest: z.unknown(),
     product: z.unknown()
 }).strict();

@@ -10,7 +10,11 @@ const makeSchema = () => z.object({
   titleSnapshot: z.boolean().optional(),
   listPriceSnapshot: z.boolean().optional(),
   quantity: z.boolean().optional(),
+  decision: z.boolean().optional(),
+  agreedPrice: z.boolean().optional(),
+  decisionReason: z.boolean().optional(),
   createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
   purchaseRequest: z.union([z.boolean(), z.lazy(() => PurchaseRequestArgsObjectSchema)]).optional(),
   product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional()
 }).strict();

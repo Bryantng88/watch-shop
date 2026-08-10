@@ -17,7 +17,9 @@ import { WorkCaseActivityListRelationFilterObjectSchema as WorkCaseActivityListR
 import { TaskExecutionListRelationFilterObjectSchema as TaskExecutionListRelationFilterObjectSchema } from './TaskExecutionListRelationFilter.schema';
 import { TaskItemListRelationFilterObjectSchema as TaskItemListRelationFilterObjectSchema } from './TaskItemListRelationFilter.schema';
 import { TaskItemActivityListRelationFilterObjectSchema as TaskItemActivityListRelationFilterObjectSchema } from './TaskItemActivityListRelationFilter.schema';
-import { TaskItemActivityReplyListRelationFilterObjectSchema as TaskItemActivityReplyListRelationFilterObjectSchema } from './TaskItemActivityReplyListRelationFilter.schema'
+import { TaskItemActivityReplyListRelationFilterObjectSchema as TaskItemActivityReplyListRelationFilterObjectSchema } from './TaskItemActivityReplyListRelationFilter.schema';
+import { PurchaseRequestListRelationFilterObjectSchema as PurchaseRequestListRelationFilterObjectSchema } from './PurchaseRequestListRelationFilter.schema';
+import { PurchaseRequestActivityListRelationFilterObjectSchema as PurchaseRequestActivityListRelationFilterObjectSchema } from './PurchaseRequestActivityListRelationFilter.schema'
 
 const userwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => UserWhereInputObjectSchema), z.lazy(() => UserWhereInputObjectSchema).array()]).optional(),
@@ -49,7 +51,9 @@ const userwhereinputSchema = z.object({
   assignedTaskItems: z.lazy(() => TaskItemListRelationFilterObjectSchema).optional(),
   taskItems: z.lazy(() => TaskItemListRelationFilterObjectSchema).optional(),
   taskItemActivities: z.lazy(() => TaskItemActivityListRelationFilterObjectSchema).optional(),
-  activityReplies: z.lazy(() => TaskItemActivityReplyListRelationFilterObjectSchema).optional()
+  activityReplies: z.lazy(() => TaskItemActivityReplyListRelationFilterObjectSchema).optional(),
+  assignedPurchaseRequests: z.lazy(() => PurchaseRequestListRelationFilterObjectSchema).optional(),
+  purchaseRequestActivities: z.lazy(() => PurchaseRequestActivityListRelationFilterObjectSchema).optional()
 }).strict();
 export const UserWhereInputObjectSchema: z.ZodType<Prisma.UserWhereInput> = userwhereinputSchema as unknown as z.ZodType<Prisma.UserWhereInput>;
 export const UserWhereInputObjectZodSchema = userwhereinputSchema;

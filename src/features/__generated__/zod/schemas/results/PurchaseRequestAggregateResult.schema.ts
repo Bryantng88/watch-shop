@@ -27,7 +27,9 @@ export const PurchaseRequestAggregateResultSchema = z.object({  _count: z.object
     createdAt: z.number(),
     updatedAt: z.number(),
     items: z.number(),
-    order: z.number()
+    activities: z.number(),
+    order: z.number(),
+    assignedUser: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),

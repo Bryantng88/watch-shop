@@ -13,6 +13,8 @@ import { TaskExecutionFindManySchema as TaskExecutionFindManySchema } from '../f
 import { TaskItemFindManySchema as TaskItemFindManySchema } from '../findManyTaskItem.schema';
 import { TaskItemActivityFindManySchema as TaskItemActivityFindManySchema } from '../findManyTaskItemActivity.schema';
 import { TaskItemActivityReplyFindManySchema as TaskItemActivityReplyFindManySchema } from '../findManyTaskItemActivityReply.schema';
+import { PurchaseRequestFindManySchema as PurchaseRequestFindManySchema } from '../findManyPurchaseRequest.schema';
+import { PurchaseRequestActivityFindManySchema as PurchaseRequestActivityFindManySchema } from '../findManyPurchaseRequestActivity.schema';
 import { UserCountOutputTypeArgsObjectSchema as UserCountOutputTypeArgsObjectSchema } from './UserCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -43,6 +45,8 @@ const makeSchema = () => z.object({
   taskItems: z.union([z.boolean(), z.lazy(() => TaskItemFindManySchema)]).optional(),
   taskItemActivities: z.union([z.boolean(), z.lazy(() => TaskItemActivityFindManySchema)]).optional(),
   activityReplies: z.union([z.boolean(), z.lazy(() => TaskItemActivityReplyFindManySchema)]).optional(),
+  assignedPurchaseRequests: z.union([z.boolean(), z.lazy(() => PurchaseRequestFindManySchema)]).optional(),
+  purchaseRequestActivities: z.union([z.boolean(), z.lazy(() => PurchaseRequestActivityFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => UserCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const UserSelectObjectSchema: z.ZodType<Prisma.UserSelect> = makeSchema() as unknown as z.ZodType<Prisma.UserSelect>;

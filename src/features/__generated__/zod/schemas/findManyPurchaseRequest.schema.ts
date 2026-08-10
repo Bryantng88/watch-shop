@@ -37,7 +37,9 @@ export const PurchaseRequestFindManySelectSchema: z.ZodType<Prisma.PurchaseReque
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     items: z.boolean().optional(),
+    activities: z.boolean().optional(),
     order: z.boolean().optional(),
+    assignedUser: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.PurchaseRequestSelect>;
 
@@ -69,7 +71,9 @@ export const PurchaseRequestFindManySelectZodSchema = z.object({
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     items: z.boolean().optional(),
+    activities: z.boolean().optional(),
     order: z.boolean().optional(),
+    assignedUser: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

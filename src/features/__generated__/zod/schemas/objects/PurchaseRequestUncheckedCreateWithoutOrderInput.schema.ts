@@ -3,7 +3,8 @@ import type { Prisma } from '@prisma/client';
 import { PurchaseRequestStatusSchema } from '../enums/PurchaseRequestStatus.schema';
 import { PurchaseRequestOutcomeSchema } from '../enums/PurchaseRequestOutcome.schema';
 import { PurchaseRequestContactPreferenceSchema } from '../enums/PurchaseRequestContactPreference.schema';
-import { PurchaseRequestItemUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema as PurchaseRequestItemUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema } from './PurchaseRequestItemUncheckedCreateNestedManyWithoutPurchaseRequestInput.schema'
+import { PurchaseRequestItemUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema as PurchaseRequestItemUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema } from './PurchaseRequestItemUncheckedCreateNestedManyWithoutPurchaseRequestInput.schema';
+import { PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema as PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema } from './PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -31,7 +32,8 @@ const makeSchema = () => z.object({
   completedAt: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  items: z.lazy(() => PurchaseRequestItemUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema).optional()
+  items: z.lazy(() => PurchaseRequestItemUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema).optional(),
+  activities: z.lazy(() => PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema).optional()
 }).strict();
 export const PurchaseRequestUncheckedCreateWithoutOrderInputObjectSchema: z.ZodType<Prisma.PurchaseRequestUncheckedCreateWithoutOrderInput> = makeSchema() as unknown as z.ZodType<Prisma.PurchaseRequestUncheckedCreateWithoutOrderInput>;
 export const PurchaseRequestUncheckedCreateWithoutOrderInputObjectZodSchema = makeSchema();

@@ -4,7 +4,8 @@ import type { Prisma } from '@prisma/client';
 
 const makeSchema = () => z.object({
   listPriceSnapshot: z.literal(true).optional(),
-  quantity: z.literal(true).optional()
+  quantity: z.literal(true).optional(),
+  agreedPrice: z.literal(true).optional()
 }).strict();
 export const PurchaseRequestItemSumAggregateInputObjectSchema: z.ZodType<Prisma.PurchaseRequestItemSumAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.PurchaseRequestItemSumAggregateInputType>;
 export const PurchaseRequestItemSumAggregateInputObjectZodSchema = makeSchema();
