@@ -10,7 +10,8 @@ import {
     pickFirstAcquisitionInlineImage,
     type AcquisitionInlineImageInput,
 } from "../server/acquisition-media.service";
-import { ensureInitialPaymentForAcquisitionTx, publishPaymentMutations } from "@/domains/payment/server";
+import { ensureInitialPaymentForAcquisitionTx, recordPaymentMutations } from "@/domains/payment/server";
+import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
 import { restoreBuyBackWatchAfterAcquisitionPostTx } from "../server";
 import { emitWatchBoughtBackEvent, emitWatchCreatedEvent } from "@/domains/watch/server/events";
 import { emitStrapBusinessEvent } from "@/domains/strap/server/events";
@@ -38,6 +39,9 @@ type CreatedWatchEvent = {
 type CreatedStrapEvent = {
     variantId: string;
     productId: string;
+    eventKey: "strap.created" | "strap.received";
+    quantity: number;
+    balanceAfter: number;
 };
 
 async function resolveVendorIdForPosting(
@@ -111,20 +115,26 @@ export async function postAcquisitionApplication(
     const pendingInlineImages: PendingInlineImageAttach[] = [];
     const createdWatchEvents: CreatedWatchEvent[] = [];
     const createdStrapEvents: CreatedStrapEvent[] = [];
+    const projectionDeliveryKeys: string[] = [];
     const returningTradeInProductIds = isTradeIn
         ? items.map((item) => item.productId).filter((id): id is string => Boolean(id))
         : [];
 
-    const result = await prisma.$transaction(
-        async (tx) => {
+    const result = await runBusinessEventTransaction(
+        async (tx, delivery) => {
+            const track = <T extends { projectionDeliveryKey?: string | null }>(event: T) => {
+                delivery.track(event);
+                const key = String(event.projectionDeliveryKey ?? "").trim();
+                if (key) projectionDeliveryKeys.push(key);
+                return event;
+            };
             for (const [index, item] of items.entries()) {
                 let productId = item.productId;
-                const isReturningSoldWatch = Boolean(productId && (isBuyBack || isTradeIn));
                 const audienceSegment = item.audienceSegment ?? acq.audienceSegment;
 
                 if (!productId) {
                     if (item.productType === "WATCH_CLASP") {
-                        const clasp = await repoAcq.createClaspDraftForAcquisitionItem(tx as any, {
+                        const clasp = await repoAcq.createClaspDraftForAcquisitionItem(tx, {
                             acquisitionItemId: item.id,
                             vendorId,
                             title: item.productTitle ?? "Khóa đồng hồ",
@@ -136,7 +146,7 @@ export async function postAcquisitionApplication(
                         continue;
                     }
                     if (item.productType === "WATCH_STRAP") {
-                        const strap = await repoAcq.createStrapDraftForAcquisitionItem(tx as any, {
+                        const strap = await repoAcq.createStrapDraftForAcquisitionItem(tx, {
                             acquisitionItemId: item.id,
                             vendorId,
                             title: item.productTitle ?? "Dây đồng hồ",
@@ -148,10 +158,13 @@ export async function postAcquisitionApplication(
                         createdStrapEvents.push({
                             variantId: strap.variantId,
                             productId: strap.productId,
+                            eventKey: strap.created ? "strap.created" : "strap.received",
+                            quantity: Number(item.quantity ?? 1),
+                            balanceAfter: strap.balanceAfter,
                         });
                         continue;
                     }
-                    const draft = await repoAcq.createWatchDraftForAcquisitionItem(tx as any, {
+                    const draft = await repoAcq.createWatchDraftForAcquisitionItem(tx, {
                         acquisitionItemId: item.id,
                         acquisitionId: acqId,
                         vendorId,
@@ -194,14 +207,14 @@ export async function postAcquisitionApplication(
                     }
                 } else {
                     await repoAcq.syncLinkedProductFromAcquisitionItem(
-                        tx as any,
+                        tx,
                         item.id
                     );
                 }
 
             }
 
-            await repoAcq.updateAcquisitionItemStatus(tx as any, {
+            await repoAcq.updateAcquisitionItemStatus(tx, {
                 acquisitionId: acqId,
                 fromStatus: "DRAFT",
                 toStatus: "SENT",
@@ -211,20 +224,81 @@ export async function postAcquisitionApplication(
             // quantity-aware total fix still receive the correct payment amount.
             await repoAcq.updateAcquisitionCost(tx, acqId, totalCost);
 
-            const posted = await repoAcq.changeDraftToPost(tx as any, acqId);
+            const posted = await repoAcq.changeDraftToPost(tx, acqId);
 
-            const paymentResult = await ensureInitialPaymentForAcquisitionTx(tx as any, acqId);
+            const paymentResult = await ensureInitialPaymentForAcquisitionTx(tx, acqId);
 
             // BUY_BACK: chỉ khi phiếu nhập được POST mới trả watch về kho.
             // SaleStage không bị hard-code; helper sẽ quyết định READY/PROCESSING
             // theo dữ liệu content + gallery hiện có.
-            const restoredWatches = await restoreBuyBackWatchAfterAcquisitionPostTx(tx as any, acqId, {
+            const restoredWatches = await restoreBuyBackWatchAfterAcquisitionPostTx(tx, acqId, {
                 tradeInProductIds: returningTradeInProductIds,
             });
+
+            if (paymentResult.created) {
+                const paymentEvents = await recordPaymentMutations(tx, [
+                    { paymentId: paymentResult.payment.id, eventKey: "payment.created" },
+                ], { skipProjectionKeys: ["acquisition-list"] });
+                paymentEvents.forEach((event) => track(event));
+            }
+
+            track(await repoAcq.emitAcquisitionBusinessEvent(tx, {
+                eventKey: "acquisition.posted",
+                acquisitionId: acqId,
+                payload: { skipProjection: true, totalAmount: totalCost },
+            }));
+
+            for (const event of createdWatchEvents) {
+                track(await emitWatchCreatedEvent(tx, {
+                    watch: {
+                        id: event.watchId,
+                        productId: event.productId,
+                        saleStage: event.saleStage,
+                        audienceSegment: event.audienceSegment,
+                        mediaPipelineKey: event.mediaPipelineKey,
+                    },
+                    acquisitionId: event.acquisitionId,
+                    acquisitionItemId: event.acquisitionItemId,
+                }));
+            }
+
+            for (const event of createdStrapEvents) {
+                track(await emitStrapBusinessEvent(tx, {
+                    eventKey: event.eventKey,
+                    variantId: event.variantId,
+                    productId: event.productId,
+                    payload: {
+                        acquisitionId: acqId,
+                        quantity: event.quantity,
+                        balanceAfter: event.balanceAfter,
+                    },
+                }));
+            }
+
+            for (const watch of restoredWatches ?? []) {
+                track(await emitWatchBoughtBackEvent(tx, {
+                    watch: {
+                        id: watch.watchId,
+                        productId: watch.productId,
+                        saleStage: watch.saleStage,
+                    },
+                    acquisitionId: acqId,
+                    acquisitionType: isTradeIn ? "TRADE_IN" : "BUY_BACK",
+                    unitCost: watch.unitCost,
+                    sourceOrderItemId: watch.sourceOrderItemId,
+                }));
+            }
+
+            track(await repoAcq.emitAcquisitionBusinessEvent(tx, {
+                eventKey: "acquisition.items.updated",
+                acquisitionId: acqId,
+                payload: { source: "POST_FINALIZED", totalAmount: totalCost },
+            }));
 
             return { posted, paymentResult, restoredWatches };
         },
         {
+            deferConsumers,
             maxWait: 5000,
             timeout: 15000,
         }
@@ -234,71 +308,15 @@ export async function postAcquisitionApplication(
         pendingInlineImages.map((pending) => [pending.watchId, pending]),
     );
 
-    if (result.paymentResult.created) {
-        await publishPaymentMutations([
-            { paymentId: result.paymentResult.payment.id, eventKey: "payment.created" },
-        ], {
-            deferConsumers,
-            skipProjectionKeys: ["acquisition-list"],
-        });
-    }
-
-    await repoAcq.emitAcquisitionBusinessEvent(prisma, {
-        eventKey: "acquisition.posted",
-        acquisitionId: acqId,
-        payload: { skipProjection: true },
-        deferConsumers,
-    });
-
     await Promise.all(createdWatchEvents.map(async (event) => {
         const pending = inlineImagesByWatchId.get(event.watchId);
         if (pending) {
             await attachInlineImageToAcquisitionWatchDraft(pending);
         }
-
-        await emitWatchCreatedEvent(prisma, {
-            watch: {
-                id: event.watchId,
-                productId: event.productId,
-                saleStage: event.saleStage,
-                audienceSegment: event.audienceSegment,
-                mediaPipelineKey: event.mediaPipelineKey,
-            },
-            acquisitionId: event.acquisitionId,
-            acquisitionItemId: event.acquisitionItemId,
-            deferConsumers,
-        });
     }));
 
-    await Promise.all(createdStrapEvents.map((event) =>
-        emitStrapBusinessEvent(prisma, {
-            eventKey: "strap.created",
-            variantId: event.variantId,
-            productId: event.productId,
-            payload: { acquisitionId: acqId },
-        }, { deferConsumers })
-    ));
-
-    await Promise.all((result.restoredWatches ?? []).map((watch) =>
-        emitWatchBoughtBackEvent(prisma, {
-            watch: {
-                id: watch.watchId,
-                productId: watch.productId,
-                saleStage: watch.saleStage,
-            },
-            acquisitionId: acqId,
-            acquisitionType: isTradeIn ? "TRADE_IN" : "BUY_BACK",
-            unitCost: watch.unitCost,
-            sourceOrderItemId: watch.sourceOrderItemId,
-            deferConsumers,
-        })
-    ));
-
-    await repoAcq.emitAcquisitionBusinessEvent(prisma, {
-        eventKey: "acquisition.items.updated",
-        acquisitionId: acqId,
-        payload: { source: "POST_FINALIZED" },
-    });
-
-    return result.posted;
+    return {
+        ...result.posted,
+        projectionDeliveryKeys: Array.from(new Set(projectionDeliveryKeys)),
+    };
 }

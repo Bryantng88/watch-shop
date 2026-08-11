@@ -117,6 +117,7 @@ export type TaskItemQueueItem = {
     profile: boolean;
     content: boolean;
     image: boolean;
+    cover: boolean;
     completed: number;
     total: number;
     updatedAt?: string | null;
@@ -518,6 +519,7 @@ function photoshootMediaPreviewTransition(
 
 function mediaOpenTargetTransition(
   queueItem: TaskItemQueueItem,
+  from: "media-workspace" | "publish-workspace" = "media-workspace",
 ): TaskItemQueueTransition {
   return {
     actionKey: "open-watch-media",
@@ -533,7 +535,7 @@ function mediaOpenTargetTransition(
       targetRoute: "watch.edit",
       targetMode: "media",
       focus: "media",
-      from: "media-workspace",
+      from,
       expectedEventKey: "watch.media.asset.attached",
     },
   };
@@ -569,6 +571,7 @@ function openTargetHref(input: {
     params.set("mediaProfileDone", queueItem.mediaWorkProgress.profile ? "1" : "0");
     params.set("mediaContentDone", queueItem.mediaWorkProgress.content ? "1" : "0");
     params.set("mediaImageDone", queueItem.mediaWorkProgress.image ? "1" : "0");
+    params.set("mediaCoverDone", queueItem.mediaWorkProgress.cover ? "1" : "0");
   }
   params.set("workspaceBindingId", queueItem.id);
   if (queueItem.currentWorkflowState) {
@@ -1318,6 +1321,13 @@ export function QueueWorkQueue({
       return [
         transitions.find(isOpenTargetTransition) ?? mediaOpenTargetTransition(queueItem),
       ];
+    }
+
+    if (workspaceWorkTypeKey === "publish" && queueItem.targetType === "WATCH") {
+      const mediaAction = transitions.find(
+        (transition) => transition.actionKey === "open-watch-media",
+      ) ?? mediaOpenTargetTransition(queueItem, "publish-workspace");
+      return [mediaAction, ...transitions.filter((transition) => transition !== mediaAction)];
     }
 
     return transitions;

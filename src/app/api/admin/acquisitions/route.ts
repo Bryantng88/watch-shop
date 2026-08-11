@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 
 import { createAcquisitionWithItemApplication } from "@/domains/acquisition/application";
 import { authorizeAcquisitionScope } from "@/domains/acquisition/server/acquisition-access.service";
@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
 
         const result = await createAcquisitionWithItemApplication(body, {
             actorUserId: auth.user.id ?? null,
+            deferConsumers: (work) => after(work),
         });
         return NextResponse.json(result, { status: 201 });
     } catch (err: unknown) {

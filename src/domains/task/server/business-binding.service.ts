@@ -328,7 +328,8 @@ export function resolveMediaWorkProgressFromMetadata(
   const profile = parts.profile === true;
   const content = parts.content === true;
   const image = parts.image === true;
-  const completed = [profile, content, image].filter(Boolean).length;
+  const cover = parts.cover === true;
+  const completed = [profile, content, image, cover].filter(Boolean).length;
 
   if (!completed && !clean(progress.updatedAt)) return null;
 
@@ -336,8 +337,9 @@ export function resolveMediaWorkProgressFromMetadata(
     profile,
     content,
     image,
+    cover,
     completed,
-    total: 3,
+    total: 4,
     updatedAt: clean(progress.updatedAt) || null,
   };
 }
@@ -469,12 +471,14 @@ function watchPreviewMediaProgress(watch: {
   watchContent?: Parameters<typeof hasWatchContentPreview>[0]["watchContent"];
   product?: Parameters<typeof hasWatchContentPreview>[0]["product"] & {
     productImage?: Array<unknown>;
+    storefrontImageKey?: string | null;
   } | null;
 }): QueueItemDTO["mediaWorkProgress"] {
   const profile = false;
   const content = hasWatchContentPreview(watch);
   const image = (watch.product?.productImage?.length ?? 0) > 0;
-  const completed = [profile, content, image].filter(Boolean).length;
+  const cover = Boolean(clean(watch.product?.storefrontImageKey));
+  const completed = [profile, content, image, cover].filter(Boolean).length;
 
   if (!completed) return null;
 
@@ -482,8 +486,9 @@ function watchPreviewMediaProgress(watch: {
     profile,
     content,
     image,
+    cover,
     completed,
-    total: 3,
+    total: 4,
     updatedAt: null,
   };
 }
@@ -623,6 +628,7 @@ async function buildQueueBusinessPreviewMap(
               title: true,
               sku: true,
               primaryImageUrl: true,
+              storefrontImageKey: true,
               postContent: true,
               status: true,
               productContent: {
@@ -1816,10 +1822,21 @@ export async function listTaskItemQueueItems(
           workflowRuntime?.updatedAt,
           binding.createdAt,
       );
-      const progress =
-        resolveMediaWorkProgressFromMetadata(metadata) ??
-        businessPreview?.mediaWorkProgress ??
-        null;
+      const metadataProgress = resolveMediaWorkProgressFromMetadata(metadata);
+      const previewProgress = businessPreview?.mediaWorkProgress ?? null;
+      const progress = metadataProgress
+        ? {
+            ...metadataProgress,
+            cover: Boolean(previewProgress?.cover),
+            completed: [
+              metadataProgress.profile,
+              metadataProgress.content,
+              metadataProgress.image,
+              Boolean(previewProgress?.cover),
+            ].filter(Boolean).length,
+            total: 4,
+          }
+        : previewProgress;
       const workflowStatus = resolveWorkflowQueueStatus({
         workflowRuntime,
         workflowDefinition,

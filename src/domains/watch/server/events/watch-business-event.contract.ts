@@ -64,6 +64,7 @@ export type WatchMediaPipelineEventPayloadInput = {
       profile: boolean;
       content: boolean;
       image: boolean;
+      cover: boolean;
     };
     completed: string;
     total: number;
@@ -340,6 +341,21 @@ export const WATCH_BUSINESS_EVENT_DEFINITIONS: WatchBusinessEventDefinition[] = 
     targetIdPolicy: "watch.id",
     targetAliasPolicy: "[watch.id, productId]",
     payloadContract: "WatchInlineImageUpdatedPayload",
+    knownConsumers: ["timeline", "projection"],
+    autoBindingScope: null,
+  },
+  {
+    key: "watch.cover.updated",
+    label: "Watch Cover updated",
+    targetType: "WATCH",
+    group: "Watch",
+    status: "ACTIVE",
+    businessMeaning: "The storefront Cover for a Watch was selected, replaced, or returned to its source folder.",
+    producer: "set-watch-cover.application",
+    emitPoint: "setWatchCoverApplication",
+    targetIdPolicy: "watch.id",
+    targetAliasPolicy: "[watch.id, productId]",
+    payloadContract: "WatchCoverUpdatedPayload",
     knownConsumers: ["timeline", "projection"],
     autoBindingScope: null,
   },

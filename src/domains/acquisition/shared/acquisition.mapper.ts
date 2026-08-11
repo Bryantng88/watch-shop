@@ -14,6 +14,8 @@ export function toDraftItem(input: WatchItemInput) {
         aiMeta: input.aiMeta,
         pricing: input.salePrice == null ? undefined : { proposedSalePrice: input.salePrice },
         sourceOrderItemId: input.sourceOrderItemId ?? null,
+        productId: input.productId ?? null,
+        variantId: input.variantId ?? null,
         productType: input.productType,
         strapSpec: input.strapSpec,
         claspSpec: input.claspSpec,

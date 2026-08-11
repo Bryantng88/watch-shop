@@ -20,7 +20,7 @@ function safeFilename(value: string) {
 export class MediaPathPolicy {
   sourceRoot(input: {
     segment: "MEN" | "WOMEN" | "UNISEX";
-    purpose: "inline" | "edit";
+    purpose: "inline" | "edit" | "cover";
   }) {
     return normalizeKey(mediaSourceRoot(input.segment, input.purpose));
   }
@@ -58,7 +58,7 @@ export class MediaPathPolicy {
   }
 
   isSource(key: string) {
-    return /^media\/(men|women|unisex)\/(inline|edit)\//.test(
+    return /^media\/(men|women|unisex)\/(inline|edit|cover)\//.test(
       normalizeKey(key),
     );
   }

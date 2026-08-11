@@ -30,6 +30,13 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
             .map(toPickedMediaItem)
             .filter(Boolean)[0] ?? null;
 
+    const coverImage =
+        images
+            .filter((img: any) => String(img?.role ?? "").toUpperCase() === "COVER")
+            .sort((a: any, b: any) => Number(a?.sortOrder ?? 0) - Number(b?.sortOrder ?? 0))
+            .map(toPickedMediaItem)
+            .filter(Boolean)[0] ?? null;
+
     const galleryImages = images
         .filter((img: any) => String(img?.role ?? "").toUpperCase() === "GALLERY")
         .sort(
@@ -138,6 +145,7 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
 
         media: {
             inlineImage: inlineImage as PickedMediaItem | null,
+            coverImage: coverImage as PickedMediaItem | null,
             poolImages: poolImages as PickedMediaItem[],
             galleryImages,
             imageCount: galleryImages.length,

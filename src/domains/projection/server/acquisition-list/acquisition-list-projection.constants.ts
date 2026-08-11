@@ -1,7 +1,6 @@
 export const ACQUISITION_LIST_PROJECTION_KEY = "acquisition-list";
-// v3 refreshes payment summaries for acquisition rows that were projected
-// before accessory-post payment synchronization was corrected.
-export const ACQUISITION_LIST_PROJECTION_VERSION = 3;
+// v4 refreshes quantity-aware totals and multi-source trade-in rows.
+export const ACQUISITION_LIST_PROJECTION_VERSION = 4;
 
 export const ACQUISITION_LIST_PROJECTION_SOURCE_EVENTS = [
   "acquisition.created",
@@ -16,6 +15,7 @@ export const ACQUISITION_LIST_PROJECTION_SOURCE_EVENTS = [
   "payment.exception_marked",
   "watch.media.photoshoot.completed",
   "watch.inline.image.updated",
+  "watch.cover.updated",
   "watch.media.asset.attached",
   "watch.media.ready_for_publish",
   "watch.media.recalled",

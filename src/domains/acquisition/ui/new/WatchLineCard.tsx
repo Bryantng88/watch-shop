@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Expand, Trash2, X } from "lucide-react";
 import MediaPickerInline from "@/components/media/MediaPickerInline";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
-import type { AcquisitionWatchLine } from "../../client/form/acquisition-form.types";
+import type { AcquisitionPurchasedWatch, AcquisitionWatchLine } from "../../client/form/acquisition-form.types";
 
 type Props = {
     line: AcquisitionWatchLine;
@@ -12,6 +12,8 @@ type Props = {
     onChange: (next: AcquisitionWatchLine) => void;
     onRemove: () => void;
     canRemove?: boolean;
+    tradeIn?: boolean;
+    purchasedWatches?: AcquisitionPurchasedWatch[];
 };
 
 function formatMoneyDisplay(value: string | number | null | undefined) {
@@ -41,6 +43,8 @@ export default function WatchLineCard({
     onChange,
     onRemove,
     canRemove = true,
+    tradeIn = false,
+    purchasedWatches = [],
 }: Props) {
     const notify = useNotify();
     const [previewOpen, setPreviewOpen] = useState(false);
@@ -124,6 +128,54 @@ export default function WatchLineCard({
                         </button>
                     ) : null}
                 </div>
+
+                {tradeIn ? (
+                    <div className="mb-4 grid gap-3 rounded-xl border border-violet-100 bg-violet-50/50 p-3 md:grid-cols-2">
+                        <label className="text-xs font-semibold text-slate-700">
+                            Nguồn đồng hồ
+                            <select
+                                value={line.tradeInSource}
+                                onChange={(event) => {
+                                    const source = event.target.value as AcquisitionWatchLine["tradeInSource"];
+                                    onChange({ ...line, tradeInSource: source, sourceOrderItemId: null });
+                                }}
+                                className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                            >
+                                <option value="EXTERNAL">Đồng hồ ngoài</option>
+                                <option value="CUSTOMER_PURCHASE">Đồng hồ khách đã mua</option>
+                            </select>
+                        </label>
+                        {line.tradeInSource === "CUSTOMER_PURCHASE" ? (
+                            <label className="text-xs font-semibold text-slate-700">
+                                Watch trong lịch sử mua
+                                <select
+                                    required
+                                    value={line.sourceOrderItemId ?? ""}
+                                    onChange={(event) => {
+                                        const selected = purchasedWatches.find((item) => item.sourceOrderItemId === event.target.value);
+                                        onChange({
+                                            ...line,
+                                            sourceOrderItemId: selected?.sourceOrderItemId ?? null,
+                                            quickInput: selected?.title ?? line.quickInput,
+                                            imageKey: selected?.imageKey ?? line.imageKey,
+                                            imageUrl: selected?.imageUrl ?? line.imageUrl,
+                                        });
+                                    }}
+                                    className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                                >
+                                    <option value="">Chọn Watch đã mua</option>
+                                    {purchasedWatches.map((item) => (
+                                        <option key={item.sourceOrderItemId} value={item.sourceOrderItemId}>
+                                            {item.title} · {item.sourceOrderRefNo ?? item.sourceOrderId}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                        ) : (
+                            <div className="self-end pb-2 text-xs text-slate-500">Watch ngoài hệ thống sẽ được tạo mới khi duyệt phiếu.</div>
+                        )}
+                    </div>
+                ) : null}
 
                 <div className="grid grid-cols-1 gap-4 xl:grid-cols-[72px_minmax(210px,1.35fr)_minmax(170px,1fr)_104px_114px] xl:items-start">
                     <div className="space-y-1">

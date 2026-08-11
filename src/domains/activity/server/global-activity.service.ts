@@ -337,7 +337,13 @@ export async function listGlobalActivity(input: GlobalActivityQuery) {
       occurredAt: row.occurredAt.toISOString(),
       targetType: resolvedTargetType,
       targetId: resolvedTargetId,
-      targetHref: targetHref(resolvedTargetType, resolvedTargetId, row.taskItemId),
+      targetHref: row.sourceType === ActivitySourceType.SYSTEM
+        ? `/admin/task-items/${row.taskItemId}`
+        : targetHref(
+            resolvedTargetType,
+            clean(metadata.productId) || resolvedTargetId,
+            row.taskItemId,
+          ),
       taskItemId: row.taskItemId,
       taskItemTitle: row.taskItem.title,
       workspaceTitle: row.taskItem.task.title,
@@ -372,7 +378,11 @@ export async function listGlobalActivity(input: GlobalActivityQuery) {
         occurredAt: row.createdAt.toISOString(),
         targetType: row.targetType,
         targetId: row.targetId,
-        targetHref: targetHref(row.targetType, row.targetId, row.targetId),
+        targetHref: targetHref(
+          row.targetType,
+          clean(metadata.productId) || row.targetId,
+          row.targetId,
+        ),
         taskItemId: row.targetId,
         taskItemTitle: type === "TRADE_IN" ? "Phiếu nhập Trade-in" : "Phiếu nhập",
         workspaceTitle: "Thu mua",

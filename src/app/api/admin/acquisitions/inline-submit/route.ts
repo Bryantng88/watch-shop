@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import type { AcquisitionType } from "@prisma/client";
 
@@ -14,6 +14,8 @@ const WatchLineSchema = z.object({
     salePrice: z.union([z.number().nonnegative(), z.literal("")]).optional(),
     imageKey: z.string().nullable(),
     imageUrl: z.string().nullable(),
+    tradeInSource: z.enum(["EXTERNAL", "CUSTOMER_PURCHASE"]).default("EXTERNAL"),
+    sourceOrderItemId: z.string().nullable().optional(),
 });
 
 const BodySchema = z.object({
@@ -56,6 +58,9 @@ export async function POST(req: NextRequest) {
                     salePrice: line.salePrice === "" || line.salePrice == null
                         ? null
                         : Number(line.salePrice),
+                    sourceOrderItemId: body.type === "TRADE_IN" && line.tradeInSource === "CUSTOMER_PURCHASE"
+                        ? line.sourceOrderItemId ?? null
+                        : null,
                     aiMeta: {
                         images:
                             line.imageKey || line.imageUrl
@@ -65,7 +70,10 @@ export async function POST(req: NextRequest) {
                     },
                 };
             }),
-        }, { actorUserId: auth.id ?? null });
+        }, {
+            actorUserId: auth.id ?? null,
+            deferConsumers: (work) => after(work),
+        });
 
         return NextResponse.json({ success: true, ...result });
     } catch (e: unknown) {

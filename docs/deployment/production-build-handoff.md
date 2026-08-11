@@ -699,3 +699,16 @@ missing SALE, SALE_ADMIN and ACCESSORY_MANAGER roles in
 `auth:audit-permissions`. That local result is not a production acceptance
 result. The target staging/production database must independently pass the audit
 with `ok: true`.
+
+## Pending release handoff: 2026-08-12
+
+The next Media, Acquisition, Trade-in, Strap and Activity-link release has a
+dedicated machine-to-machine and NAS deployment runbook:
+
+```text
+docs/deployment/release-2026-08-12-media-acquisition-handoff.md
+```
+
+Use that document for the release SHA/archive hash, migration, backup, NAS build,
+smoke tests and rollback record. It is preparation documentation, not evidence
+that the release has already been committed or deployed.

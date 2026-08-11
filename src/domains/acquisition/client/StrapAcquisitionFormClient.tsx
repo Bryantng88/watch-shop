@@ -105,6 +105,44 @@ function titleOf(line: Line) {
     .replace(/\s+/g, " ");
 }
 
+function strapIdentity(line: Line) {
+  return [
+    line.material,
+    line.originType,
+    line.brandName.trim().toLocaleUpperCase("vi"),
+    line.leatherType,
+    line.surface,
+    line.lugWidthMM,
+    line.buckleWidthMM,
+    line.color.trim().toLocaleUpperCase("vi"),
+    line.quickRelease ? "1" : "0",
+    line.hasClasp ? line.claspFinish : "NO_CLASP",
+  ].join("|");
+}
+
+function consolidateLines(lines: Line[]) {
+  const byIdentity = new Map<string, Line>();
+  for (const line of lines) {
+    const key = strapIdentity(line);
+    const current = byIdentity.get(key);
+    if (!current) {
+      byIdentity.set(key, { ...line });
+      continue;
+    }
+    const quantity = current.quantity + line.quantity;
+    const unitCost = quantity > 0
+      ? ((current.unitCost * current.quantity) + (line.unitCost * line.quantity)) / quantity
+      : 0;
+    byIdentity.set(key, {
+      ...current,
+      quantity,
+      unitCost,
+      sellPrice: line.sellPrice || current.sellPrice,
+    });
+  }
+  return Array.from(byIdentity.values());
+}
+
 export default function StrapAcquisitionFormClient({
   vendors: initialVendors,
   colorOptions: initialColorOptions,
@@ -216,6 +254,7 @@ export default function StrapAcquisitionFormClient({
       return notify.error({ title: "Kích thước hai đầu dây phải lớn hơn 0 mm" });
     setSaving(true);
     try {
+      const consolidatedLines = consolidateLines(lines);
       const response = await fetch("/api/admin/acquisitions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -225,7 +264,7 @@ export default function StrapAcquisitionFormClient({
           currency: "VND",
           type: "PURCHASE",
           notes,
-          items: lines.flatMap((line) => {
+          items: consolidatedLines.flatMap((line) => {
             const pairKey = `strap-set:${line.id}`;
             const strapItem = {
               title: titleOf(line),

@@ -145,6 +145,7 @@ export async function saveWatchMediaWorkDraftFromWatchAction(input: {
     profile?: boolean | null;
     content?: boolean | null;
     image?: boolean | null;
+    cover?: boolean | null;
   };
   note?: string | null;
 }) {

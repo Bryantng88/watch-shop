@@ -34,6 +34,69 @@ export async function createStrapDraftForAcquisitionItem(tx: DB, input: {
     spec: Record<string, unknown>;
 }) {
     const db = getDb(tx);
+    const quantity = Math.max(1, Math.trunc(input.quantity));
+    const material = String(input.spec.material ?? "LEATHER") as Strap;
+    const lugWidthMM = requirePositiveMillimeters(input.spec.lugWidthMM, "Kích thước đầu lug");
+    const buckleWidthMM = requirePositiveMillimeters(input.spec.buckleWidthMM, "Kích thước đầu khóa");
+    const color = String(input.spec.color ?? "").trim() || null;
+    const quickRelease = Boolean(input.spec.quickRelease);
+    const originType = String(input.spec.originType ?? "AFTERMARKET") as StrapOriginType;
+    const brandName = String(input.spec.brandName ?? "").trim() || null;
+    const leatherType = String(input.spec.leatherType ?? "").trim() || null;
+    const surface = input.spec.surface ? String(input.spec.surface) as StrapSurface : null;
+    const identityKey = [material, lugWidthMM, buckleWidthMM, color?.toLocaleUpperCase("vi") ?? "", originType, brandName?.toLocaleUpperCase("vi") ?? "", leatherType?.toUpperCase() ?? "", surface ?? "", quickRelease ? "1" : "0"].join("|");
+
+    await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${identityKey}, 0))`;
+    const existing = await db.productVariant.findFirst({
+        where: {
+            Product: { type: ProductType.WATCH_STRAP, specStatus: { not: "MERGED" } },
+            StrapVariantSpec: {
+                material,
+                lugWidthMM,
+                buckleWidthMM,
+                color: color ? { equals: color, mode: "insensitive" } : null,
+                quickRelease,
+                originType,
+                brandName: brandName ? { equals: brandName, mode: "insensitive" } : null,
+                leatherType,
+                surface,
+                inventoryPolicy: "STOCKED",
+            },
+        },
+        orderBy: { createdAt: "asc" },
+        select: { id: true, productId: true, stockQty: true, costPrice: true },
+    });
+
+    if (existing) {
+        const balanceAfter = existing.stockQty + quantity;
+        const previousCost = Number(existing.costPrice ?? 0);
+        const weightedCost = ((previousCost * existing.stockQty) + (input.unitCost * quantity)) / balanceAfter;
+        await db.productVariant.update({
+            where: { id: existing.id },
+            data: {
+                stockQty: balanceAfter,
+                costPrice: new Prisma.Decimal(weightedCost),
+                price: new Prisma.Decimal(Number(input.spec.sellPrice ?? 0)),
+                updatedAt: new Date(),
+            },
+        });
+        await db.strapInventoryMovement.create({
+            data: {
+                strapVariantId: existing.id,
+                movementType: "RECEIPT",
+                quantity,
+                balanceAfter,
+                sourceType: "ACQUISITION_ITEM",
+                sourceId: input.acquisitionItemId,
+            },
+        });
+        await db.acquisitionItem.update({
+            where: { id: input.acquisitionItemId },
+            data: { productId: existing.productId, variantId: existing.id },
+        });
+        return { productId: existing.productId, variantId: existing.id, created: false, balanceAfter };
+    }
+
     const product = await db.product.create({ data: {
         type: ProductType.WATCH_STRAP,
         title: input.title,
@@ -44,26 +107,36 @@ export async function createStrapDraftForAcquisitionItem(tx: DB, input: {
     }, select: { id: true } });
     const variant = await db.productVariant.create({ data: {
         productId: product.id,
-        stockQty: Math.max(0, Math.trunc(input.quantity)),
+        stockQty: quantity,
         costPrice: new Prisma.Decimal(input.unitCost),
         price: new Prisma.Decimal(Number(input.spec.sellPrice ?? 0)),
         updatedAt: new Date(),
         StrapVariantSpec: { create: {
-            material: String(input.spec.material ?? "LEATHER") as Strap,
-            lugWidthMM: requirePositiveMillimeters(input.spec.lugWidthMM, "Kích thước đầu lug"),
-            buckleWidthMM: requirePositiveMillimeters(input.spec.buckleWidthMM, "Kích thước đầu khóa"),
-            color: String(input.spec.color ?? "").trim() || null,
-            quickRelease: Boolean(input.spec.quickRelease),
-            originType: String(input.spec.originType ?? "AFTERMARKET") as StrapOriginType,
-            brandName: String(input.spec.brandName ?? "").trim() || null,
-            leatherType: String(input.spec.leatherType ?? "").trim() || null,
-            surface: input.spec.surface ? String(input.spec.surface) as StrapSurface : null,
+            material,
+            lugWidthMM,
+            buckleWidthMM,
+            color,
+            quickRelease,
+            originType,
+            brandName,
+            leatherType,
+            surface,
             inventoryPolicy: "STOCKED",
             updatedAt: new Date(),
         } },
     }, select: { id: true } });
+    await db.strapInventoryMovement.create({
+        data: {
+            strapVariantId: variant.id,
+            movementType: "RECEIPT",
+            quantity,
+            balanceAfter: quantity,
+            sourceType: "ACQUISITION_ITEM",
+            sourceId: input.acquisitionItemId,
+        },
+    });
     await db.acquisitionItem.update({ where: { id: input.acquisitionItemId }, data: { productId: product.id, variantId: variant.id } });
-    return { productId: product.id, variantId: variant.id };
+    return { productId: product.id, variantId: variant.id, created: true, balanceAfter: quantity };
 }
 
 export async function createClaspDraftForAcquisitionItem(tx: DB, input: {

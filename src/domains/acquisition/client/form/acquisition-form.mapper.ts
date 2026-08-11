@@ -22,6 +22,8 @@ export function createEmptyWatchLine(
         salePrice: "",
         imageKey: null,
         imageUrl: null,
+        tradeInSource: "EXTERNAL",
+        sourceOrderItemId: null,
     };
 }
 
@@ -38,6 +40,8 @@ export function createWatchLineFromPreparedImage(
         salePrice: "",
         imageKey: image.key ?? null,
         imageUrl: image.url ?? null,
+        tradeInSource: "EXTERNAL",
+        sourceOrderItemId: null,
     };
 }
 

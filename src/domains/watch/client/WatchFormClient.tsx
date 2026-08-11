@@ -79,12 +79,13 @@ type AfterSaveMode =
   | "submitBoth"
   | "continueContent";
 
-type MediaWorkPart = "profile" | "content" | "image";
+type MediaWorkPart = "profile" | "content" | "image" | "cover";
 
 const MEDIA_WORK_PARTS: Array<{ key: MediaWorkPart; label: string }> = [
   { key: "profile", label: "Thông tin/spec" },
   { key: "content", label: "Content" },
   { key: "image", label: "Hình ảnh" },
+  { key: "cover", label: "Cover storefront" },
 ];
 
 function stableStringify(value: unknown) {
@@ -119,10 +120,10 @@ function hasMediaWorkContent(values: WatchFormValues) {
   );
 }
 
-function missingMediaWorkPartLabels(doneState: Record<MediaWorkPart, boolean>) {
-  return MEDIA_WORK_PARTS.filter((part) => !doneState[part.key]).map(
-    (part) => part.label,
-  );
+function missingRequiredMediaWorkPartLabels(doneState: Record<MediaWorkPart, boolean>) {
+  return MEDIA_WORK_PARTS.filter(
+    (part) => part.key !== "cover" && !doneState[part.key],
+  ).map((part) => part.label);
 }
 
 function MediaWorkDoneButton({
@@ -393,6 +394,10 @@ export default function WatchFormClient({
       searchParams.get("mediaContentDone") === "1",
     image:
       initialMediaWorkDone?.image ?? searchParams.get("mediaImageDone") === "1",
+    cover:
+      Boolean(initialMediaWorkDone?.cover) ||
+      searchParams.get("mediaCoverDone") === "1" ||
+      Boolean(initialValues.media.coverImage),
   });
   const [activeMediaSection, setActiveMediaSection] = useState<
     "basic" | "content" | "image"
@@ -514,6 +519,7 @@ export default function WatchFormClient({
         profile: Boolean(progressResult.parts?.profile),
         content: Boolean(progressResult.parts?.content),
         image: Boolean(progressResult.parts?.image),
+        cover: Boolean(progressResult.parts?.cover),
       });
 
       notify.success({
@@ -868,12 +874,12 @@ export default function WatchFormClient({
           ...buildSubmitValues(),
           saveIntent: "MEDIA_WORKSPACE",
         };
-        const missingWorkParts = missingMediaWorkPartLabels(mediaWorkDone);
+        const missingWorkParts = missingRequiredMediaWorkPartLabels(mediaWorkDone);
 
         if (fromMediaWorkspace && missingWorkParts.length > 0) {
           await dialog.alert({
             title: "Chưa xử lý đủ media package",
-            message: `Bạn cần thao tác đủ 3 phần trước khi gửi về Workspace chờ duyệt: ${missingWorkParts.join(", ")}.`,
+            message: `Bạn cần hoàn tất các phần bắt buộc trước khi gửi về Workspace chờ duyệt: ${missingWorkParts.join(", ")}. Cover có thể bổ sung tại bước Đăng bài.`,
             tone: "warning",
           });
           return;
@@ -1170,15 +1176,27 @@ export default function WatchFormClient({
       return;
     }
 
-    const missingWorkParts = missingMediaWorkPartLabels(mediaWorkDone);
+    const missingWorkParts = missingRequiredMediaWorkPartLabels(mediaWorkDone);
 
     if (missingWorkParts.length > 0) {
       await dialog.alert({
         title: "Chưa xử lý đủ media package",
-        message: `Bạn cần thao tác đủ 3 phần trước khi duyệt: ${missingWorkParts.join(", ")}.`,
+        message: `Chưa thể chuyển sang Đăng bài. Còn thiếu: ${missingWorkParts.join(", ")}. Cover storefront có thể bổ sung tại bước Đăng bài.`,
         tone: "warning",
       });
       return;
+    }
+
+    if (!mediaWorkDone.cover) {
+      const continueWithoutCover = await dialog.confirm({
+        title: "Chưa có Cover storefront",
+        message:
+          "Ba phần bắt buộc đã hoàn tất nên Watch vẫn có thể chuyển sang Đăng bài. Tuy nhiên phải bổ sung Cover trước khi xác nhận đã đăng. Bạn có muốn tiếp tục?",
+        confirmText: "Tiếp tục sang Đăng bài",
+        cancelText: "Ở lại bổ sung Cover",
+        tone: "warning",
+      });
+      if (!continueWithoutCover) return;
     }
 
     setMediaSubmitPending(true);
@@ -1544,6 +1562,27 @@ export default function WatchFormClient({
       />
     ) : null;
 
+  const handleCoverImageChange = (item: WatchFormValues["media"]["coverImage"]) => {
+    updateMedia({ coverImage: item });
+    setMediaWorkDone((current) => ({ ...current, cover: Boolean(item) }));
+
+    if (fromMediaWorkspace && workspaceBindingId) {
+      void saveWatchMediaWorkDraftFromWatchAction({
+        productId: values.productId,
+        bindingId: workspaceBindingId,
+        parts: { cover: Boolean(item) },
+        note: item
+          ? "Cover storefront confirmed from Watch media modal."
+          : "Cover storefront returned from Watch media modal.",
+      }).catch((error: unknown) => {
+        notify.error({
+          title: "Chưa đồng bộ được tiến độ Cover",
+          message: errorMessage(error, "Hãy tải lại Workspace để đồng bộ tiến độ."),
+        });
+      });
+    }
+  };
+
   const mediaImageActions = fromMediaWorkspace ? (
     <div className="flex flex-wrap items-center justify-end gap-2">
       {workspaceBindingId && !isMediaWorkspaceDone ? (
@@ -1717,9 +1756,11 @@ export default function WatchFormClient({
       <WatchImageSection
         watchTitle={values.basic.title}
         inlineImage={inlineImage}
+        coverImage={values.media.coverImage}
+        onCoverImageChange={handleCoverImageChange}
         watchId={values.watchId}
         productId={values.productId}
-        audienceSegment={detail.audienceSegment === "WOMEN" ? "WOMEN" : "MEN"}
+        audienceSegment={detail.audienceSegment === "WOMEN" ? "WOMEN" : detail.audienceSegment === "UNISEX" ? "UNISEX" : "MEN"}
         poolImages={values.media.poolImages || []}
         galleryImages={values.media.galleryImages || []}
         imageReviewStatus={values.imageReviewStatus}
@@ -1929,10 +1970,12 @@ export default function WatchFormClient({
           <WatchImageSection
             watchTitle={values.basic.title}
             inlineImage={inlineImage}
+            coverImage={values.media.coverImage}
+            onCoverImageChange={handleCoverImageChange}
             watchId={values.watchId}
             productId={values.productId}
             audienceSegment={
-              detail.audienceSegment === "WOMEN" ? "WOMEN" : "MEN"
+              detail.audienceSegment === "WOMEN" ? "WOMEN" : detail.audienceSegment === "UNISEX" ? "UNISEX" : "MEN"
             }
             poolImages={values.media.poolImages || []}
             galleryImages={values.media.galleryImages || []}

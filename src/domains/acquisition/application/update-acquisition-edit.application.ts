@@ -1,11 +1,14 @@
 import { Prisma, ProductType } from "@prisma/client";
 
-import { prisma, type DB } from "@/server/db/client";
-import { publishPaymentMutations, syncAcquisitionPaymentDueTx, type PaymentMutation, type Tx } from "@/domains/payment/server";
+import { type DB } from "@/server/db/client";
+import { recordPaymentMutations, syncAcquisitionPaymentDueTx, type PaymentMutation, type Tx } from "@/domains/payment/server";
+import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
+import type { BusinessEventDispatchOptions } from "@/domains/event/server/business-event.service";
 import { emitAcquisitionBusinessEvent } from "../server/acquisition-business-event";
 import {
     getAiMetaFromDescription,
     getPricingFromDescription,
+    parseAcquisitionItemMeta,
     stringifyAcquisitionItemMeta,
 } from "../shared/acquisition-item-metadata";
 import type { WatchItemInput } from "../shared/acquisition.dto";
@@ -27,6 +30,15 @@ function normalizeCost(value: unknown) {
     return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
+function normalizeQuantity(value: unknown, productType: ProductType) {
+    if (productType === ProductType.WATCH) return 1;
+    const quantity = Math.trunc(Number(value ?? 1));
+    if (!Number.isFinite(quantity) || quantity < 1) {
+        throw new Error("Số lượng phải là số nguyên lớn hơn 0.");
+    }
+    return quantity;
+}
+
 function resolveTitle(input: WatchItemInput, fallback = "Untitled watch") {
     return String(input.productTitle ?? input.title ?? "").trim() || fallback;
 }
@@ -45,8 +57,10 @@ function resolveAiMeta(input: WatchItemInput, existing?: ExistingItem | null) {
 
 function buildDescription(input: WatchItemInput, existing?: ExistingItem | null) {
     const existingPricing = getPricingFromDescription(existing?.description ?? null);
+    const current = parseAcquisitionItemMeta(existing?.description ?? null);
     return stringifyAcquisitionItemMeta({
-        quickSpec: input.quickSpec ?? null,
+        ...current,
+        quickSpec: input.quickSpec === undefined ? current.quickSpec : input.quickSpec,
         aiMeta: resolveAiMeta(input, existing),
         pricing: input.salePrice === undefined
             ? existingPricing
@@ -67,6 +81,7 @@ async function findExistingItemsTx(tx: DB, acquisitionId: string) {
             acquisitionId: true,
             productId: true,
             productTitle: true,
+            productType: true,
             quantity: true,
             unitCost: true,
             description: true,
@@ -110,15 +125,16 @@ async function updateDraftItemsTx(
     for (const input of items) {
         const id = cleanId(input.id);
         const cost = normalizeCost(input.unitCost ?? input.unitPrice);
+        const requestedProductType = input.productType ?? ProductType.WATCH;
 
         if (isTmpId(id)) {
             await tx.acquisitionItem.create({
                 data: {
                     acquisitionId,
                     productTitle: resolveTitle(input),
-                    quantity: 1,
+                    quantity: normalizeQuantity(input.quantity, requestedProductType),
                     unitCost: new Prisma.Decimal(cost),
-                    productType: ProductType.WATCH,
+                    productType: requestedProductType,
                     productId: null,
                     variantId: null,
                     description: buildDescription(input),
@@ -134,7 +150,7 @@ async function updateDraftItemsTx(
             where: { id },
             data: {
                 productTitle: resolveTitle(input, current.productTitle),
-                quantity: 1,
+                quantity: normalizeQuantity(input.quantity, current.productType),
                 unitCost: new Prisma.Decimal(cost),
                 description: buildDescription(input, current),
             },
@@ -180,8 +196,20 @@ async function updatePostedItemCostsTx(
     }
 }
 
-export async function updateAcquisitionEditApplication(input: UpdateAcquisitionEditInput) {
-    const result = await prisma.$transaction(async (tx) => {
+export async function updateAcquisitionEditApplication(
+    input: UpdateAcquisitionEditInput,
+    options?: {
+        actorUserId?: string | null;
+        deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
+    },
+) {
+    return runBusinessEventTransaction(async (tx, delivery) => {
+        const projectionDeliveryKeys: string[] = [];
+        const track = <T extends { projectionDeliveryKey?: string | null }>(event: T) => {
+            delivery.track(event);
+            const key = String(event.projectionDeliveryKey ?? "").trim();
+            if (key) projectionDeliveryKeys.push(key);
+        };
         const db = tx as unknown as DB;
         const acquisition = await db.acquisition.findUnique({
             where: { id: input.acquisitionId },
@@ -223,19 +251,28 @@ export async function updateAcquisitionEditApplication(input: UpdateAcquisitionE
             });
         }
 
-        return {
+        const result = {
             ok: true,
             acquisitionId: input.acquisitionId,
             status,
             totalAmount: total,
             paymentMutations,
         };
-    });
-    await publishPaymentMutations(result.paymentMutations);
-    await emitAcquisitionBusinessEvent(prisma, {
-        eventKey: result.status === "DRAFT" ? "acquisition.items.updated" : "acquisition.updated",
-        acquisitionId: result.acquisitionId,
-        payload: { totalAmount: result.totalAmount },
-    });
-    return result;
+
+        const paymentEvents = await recordPaymentMutations(db, paymentMutations, {
+            actorUserId: options?.actorUserId,
+        });
+        paymentEvents.forEach(track);
+        track(await emitAcquisitionBusinessEvent(db, {
+            eventKey: result.status === "DRAFT" ? "acquisition.items.updated" : "acquisition.updated",
+            acquisitionId: result.acquisitionId,
+            actorUserId: options?.actorUserId,
+            payload: { totalAmount: result.totalAmount },
+        }));
+        return {
+            ...result,
+            projectionDeliveryKeys: Array.from(new Set(projectionDeliveryKeys)),
+            reconciliationMode: "ASYNC_DELIVERY" as const,
+        };
+    }, { deferConsumers: options?.deferConsumers });
 }

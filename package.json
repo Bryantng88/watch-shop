@@ -26,6 +26,7 @@
     "technical-issue:smoke-board-projection": "tsx scripts/smoke-technical-issue-board-projection.ts",
     "acquisition:rebuild-list-projection": "tsx scripts/rebuild-acquisition-list-projection.ts",
     "strap:rebuild-list-projection": "tsx scripts/rebuild-strap-list-projection.ts",
+    "strap:merge-duplicate-variants": "tsx scripts/merge-duplicate-strap-variants.ts",
     "projection:rebuild-media-payment": "tsx scripts/rebuild-media-payment-projections.ts",
     "projection:smoke-media-payment": "tsx scripts/smoke-media-payment-projections.ts",
     "projection:rebuild-admin-core": "tsx scripts/rebuild-admin-core-projections.ts",

@@ -28,12 +28,16 @@ export type LegacyMediaClassification =
 const WATCH_MEDIA_SOURCE_PREFIXES = [
   "media/men/inline/",
   "media/men/edit/",
+  "media/men/cover/",
   "media/women/inline/",
   "media/women/edit/",
+  "media/women/cover/",
   "media/unisex/inline/",
   "media/unisex/edit/",
+  "media/unisex/cover/",
   "products/edit/active/",
   "products/inline/active/",
+  "products/cover/active/",
   "products/edit/chosen/watch/",
   "products/inline/chosen/watch/",
 ] as const;

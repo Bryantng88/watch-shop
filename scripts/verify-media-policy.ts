@@ -7,10 +7,14 @@ const menInline = mediaSourceRoot("MEN", "inline");
 const womenInline = mediaSourceRoot("WOMEN", "inline");
 const menEdit = mediaSourceRoot("MEN", "edit");
 const womenEdit = mediaSourceRoot("WOMEN", "edit");
+const menCover = mediaSourceRoot("MEN", "cover");
+const womenCover = mediaSourceRoot("WOMEN", "cover");
 
 assert.notEqual(menInline, womenInline);
 assert.notEqual(menEdit, womenEdit);
+assert.notEqual(menCover, womenCover);
 assert.equal(mediaPathPolicy.isSource(`${womenInline}/sample.jpg`), true);
+assert.equal(mediaPathPolicy.isSource(`${womenCover}/sample.jpg`), true);
 
 const womenPipeline = getMediaPipelineProfile("WOMEN_LITE");
 assert.deepEqual(womenPipeline.stages, ["photography", "publish"]);
@@ -30,7 +34,7 @@ assert.notEqual(
 console.log(
   JSON.stringify(
     {
-  source: { menInline, womenInline, menEdit, womenEdit },
+  source: { menInline, womenInline, menEdit, womenEdit, menCover, womenCover },
       womenPipeline,
       canonical,
       exports: {

@@ -45,6 +45,7 @@ type WatchPhotoshootRow = {
     title: string | null;
     sku: string | null;
     primaryImageUrl: string | null;
+    storefrontImageKey?: string | null;
     postContent?: string | null;
     status: unknown;
     productImage: Array<{ id: string }>;
@@ -90,6 +91,7 @@ function mediaWorkParts(value: unknown) {
     profile: record.profile === true,
     content: record.content === true,
     image: record.image === true,
+    cover: record.cover === true,
   };
 }
 
@@ -97,8 +99,9 @@ function mediaWorkCompletedLabel(parts: {
   profile: boolean;
   content: boolean;
   image: boolean;
+  cover: boolean;
 }) {
-  return `${[parts.profile, parts.content, parts.image].filter(Boolean).length}/3`;
+  return `${[parts.profile, parts.content, parts.image, parts.cover].filter(Boolean).length}/4`;
 }
 
 function uniqueIds(values: string[]) {
@@ -135,12 +138,13 @@ function seedMediaWorkProgressFromWatch(
     profile: false,
     content: hasWatchContent(watch),
     image: hasGalleryImage(watch),
+    cover: Boolean(clean(watch.product.storefrontImageKey)),
   };
 
   return {
     parts,
     completed: mediaWorkCompletedLabel(parts),
-    total: 3,
+    total: 4,
     updatedAt,
     seededFromWatch: true,
   };
@@ -154,7 +158,7 @@ function mediaWorkProgressPayload(
   const completed = mediaWorkCompletedLabel(parts);
 
   if (
-    ![parts.profile, parts.content, parts.image].some(Boolean) &&
+    ![parts.profile, parts.content, parts.image, parts.cover].some(Boolean) &&
     !clean(progress.updatedAt)
   ) {
     return null;
@@ -163,7 +167,7 @@ function mediaWorkProgressPayload(
   return {
     parts,
     completed: clean(progress.completed) || completed,
-    total: 3,
+    total: 4,
     updatedAt: clean(progress.updatedAt) || null,
     seededFromWatch: progress.seededFromWatch === true,
   };
@@ -183,8 +187,9 @@ function mergeMediaWorkProgressSeed(
     profile: currentParts.profile || seededParts.profile,
     content: currentParts.content || seededParts.content,
     image: currentParts.image || seededParts.image,
+    cover: currentParts.cover || seededParts.cover,
   };
-  const hasProgress = parts.profile || parts.content || parts.image;
+  const hasProgress = parts.profile || parts.content || parts.image || parts.cover;
 
   if (!hasProgress && !clean(current.updatedAt)) return metadata;
 
@@ -194,7 +199,7 @@ function mergeMediaWorkProgressSeed(
       ...current,
       parts,
       completed: mediaWorkCompletedLabel(parts),
-      total: 3,
+      total: 4,
       updatedAt: clean(current.updatedAt) || updatedAt,
       seededFromWatch: true,
     },
@@ -343,6 +348,7 @@ export async function requestWatchPhotoshoot(
           title: true,
           sku: true,
           primaryImageUrl: true,
+          storefrontImageKey: true,
           postContent: true,
           status: true,
           productContent: {
@@ -494,6 +500,7 @@ export async function completeWatchPhotoshootFromQueueItem(
           title: true,
           sku: true,
           primaryImageUrl: true,
+          storefrontImageKey: true,
           postContent: true,
           status: true,
           productContent: {
@@ -617,6 +624,7 @@ export async function markWatchMediaAssetAttachedFromQueueItem(
           title: true,
           sku: true,
           primaryImageUrl: true,
+          storefrontImageKey: true,
           postContent: true,
           status: true,
           productContent: {
@@ -749,6 +757,7 @@ export async function markWatchMediaAssetAttachedFromWatch(
           title: true,
           sku: true,
           primaryImageUrl: true,
+          storefrontImageKey: true,
           status: true,
           productImage: {
             where: { role: ImageRole.GALLERY },
@@ -830,6 +839,7 @@ export async function saveWatchMediaWorkDraftFromQueueItem(
       profile?: boolean | null;
       content?: boolean | null;
       image?: boolean | null;
+      cover?: boolean | null;
     };
     note?: string | null;
   },
@@ -890,6 +900,10 @@ export async function saveWatchMediaWorkDraftFromQueueItem(
       typeof input.parts.image === "boolean"
         ? input.parts.image
         : currentParts.image,
+    cover:
+      typeof input.parts.cover === "boolean"
+        ? input.parts.cover
+        : currentParts.cover,
   };
   const updatedAt = new Date().toISOString();
   const completed = mediaWorkCompletedLabel(nextParts);
@@ -899,7 +913,7 @@ export async function saveWatchMediaWorkDraftFromQueueItem(
     mediaWorkProgress: {
       parts: nextParts,
       completed,
-      total: 3,
+      total: 4,
       updatedAt,
       updatedByUserId: input.actorUserId ?? null,
       note: clean(input.note) || null,
@@ -921,7 +935,7 @@ export async function saveWatchMediaWorkDraftFromQueueItem(
         mediaWorkProgress: {
           parts: nextParts,
           completed,
-          total: 3,
+          total: 4,
           updatedAt,
         },
       },
@@ -964,6 +978,7 @@ export async function getWatchMediaWorkProgressFromQueueItem(
     profile: Boolean(progress?.profile),
     content: Boolean(progress?.content),
     image: Boolean(progress?.image),
+    cover: Boolean(progress?.cover),
   };
 }
 
@@ -975,6 +990,7 @@ export async function saveWatchMediaWorkDraftFromWatch(
       profile?: boolean | null;
       content?: boolean | null;
       image?: boolean | null;
+      cover?: boolean | null;
     };
     note?: string | null;
   },
@@ -1085,6 +1101,7 @@ export async function requestWatchMediaReshootFromQueueItem(
           title: true,
           sku: true,
           primaryImageUrl: true,
+          storefrontImageKey: true,
           status: true,
           productImage: {
             where: { role: ImageRole.GALLERY },
@@ -1105,6 +1122,7 @@ export async function requestWatchMediaReshootFromQueueItem(
   const nextParts = {
     ...currentParts,
     image: false,
+    cover: currentParts.cover,
   };
   const completed = mediaWorkCompletedLabel(nextParts);
   const note = clean(input.note) || "Hình ảnh chưa đạt, yêu cầu chụp lại.";
@@ -1125,7 +1143,7 @@ export async function requestWatchMediaReshootFromQueueItem(
       ...currentProgress,
       parts: nextParts,
       completed,
-      total: 3,
+      total: 4,
       updatedAt,
       updatedByUserId: input.actorUserId ?? null,
       note,
@@ -1148,7 +1166,7 @@ export async function requestWatchMediaReshootFromQueueItem(
         mediaWorkProgress: {
           parts: nextParts,
           completed,
-          total: 3,
+          total: 4,
           updatedAt,
         },
       },
@@ -1252,12 +1270,31 @@ export async function completeWatchMediaProcessingFromQueueItem(
       id: true,
       productId: true,
       saleStage: true,
+      watchContent: {
+        select: {
+          titleOverride: true,
+          summary: true,
+          hookText: true,
+          body: true,
+          bulletSpecs: true,
+          hashTags: true,
+        },
+      },
       product: {
         select: {
           title: true,
           sku: true,
           primaryImageUrl: true,
+          storefrontImageKey: true,
+          postContent: true,
           status: true,
+          productContent: {
+            select: {
+              generatedContent: true,
+              specBullets: true,
+              hashtags: true,
+            },
+          },
           productImage: {
             where: { role: ImageRole.GALLERY },
             select: { id: true },
@@ -1269,6 +1306,20 @@ export async function completeWatchMediaProcessingFromQueueItem(
   });
 
   if (!watch) return { ok: false, skipped: true, reason: "WATCH_NOT_FOUND" };
+
+  const requiredProgress = mediaWorkParts(
+    asRecord(asRecord(binding.metadataJson).mediaWorkProgress).parts,
+  );
+  const missingRequiredParts = [
+    !requiredProgress.profile ? "Thông tin/spec" : null,
+    !requiredProgress.content || !hasWatchContent(watch) ? "Content" : null,
+    !requiredProgress.image || !hasGalleryImage(watch) ? "Hình ảnh" : null,
+  ].filter((value): value is string => Boolean(value));
+  if (missingRequiredParts.length) {
+    throw new Error(
+      `Chưa thể chuyển sang Đăng bài. Còn thiếu: ${Array.from(new Set(missingRequiredParts)).join(", ")}. Cover storefront có thể bổ sung tại bước Đăng bài.`,
+    );
+  }
 
   await approveWatchReview(
     {
@@ -1362,6 +1413,7 @@ export async function recallWatchMediaFromPublishQueueItem(
           title: true,
           sku: true,
           primaryImageUrl: true,
+          storefrontImageKey: true,
           status: true,
           productImage: {
             where: { role: ImageRole.GALLERY },
@@ -1478,6 +1530,7 @@ export async function completeWatchPublishFromQueueItem(
           title: true,
           sku: true,
           primaryImageUrl: true,
+          storefrontImageKey: true,
           status: true,
           productImage: {
             where: { role: ImageRole.GALLERY },

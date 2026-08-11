@@ -2,6 +2,7 @@ export type QueueRowProgress = {
   profile: boolean;
   content: boolean;
   image: boolean;
+  cover: boolean;
   completed: number;
   total: number;
   updatedAt?: string | null;
@@ -68,6 +69,7 @@ export function mediaProgressLabel(progress?: QueueRowProgress) {
     progress.profile ? "Thông tin" : null,
     progress.content ? "Content" : null,
     progress.image ? "Hình ảnh" : null,
+    progress.cover ? "Cover" : null,
   ].filter(Boolean);
 
   return `${progress.completed}/${progress.total}${

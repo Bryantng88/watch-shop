@@ -62,6 +62,8 @@ export async function getAcquisitionEditDetail(acquisitionId: string, includeFin
             linkedWatchTitle: item.product?.title ?? null,
             title: item.productTitle ?? item.product?.title ?? "Untitled watch",
             quantity: item.quantity ?? 1,
+            productType: item.productType,
+            sourceOrderItemId: item.sourceOrderItemId ?? null,
             unitCost: includeFinancials ? toNumber(item.unitCost) : null,
             imageKey: image.imageKey,
             imageUrl: image.imageUrl,

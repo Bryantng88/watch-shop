@@ -7,7 +7,7 @@ import type { ProjectionBuildContext, ProjectionBuildResult, ProjectionBuilder, 
 export const STRAP_LIST_PROJECTION_KEY = "strap-list";
 // v3 rebuilds rows that were missed when acquisition posting did not emit
 // strap.created events.
-export const STRAP_LIST_PROJECTION_VERSION = 3;
+export const STRAP_LIST_PROJECTION_VERSION = 4;
 export const STRAP_LIST_SOURCE_EVENTS = [
   "strap.created",
   "strap.updated",
@@ -73,7 +73,7 @@ async function sourceRows(db: DB, variantIds?: string[]) {
       sku: true,
       stockQty: true,
       updatedAt: true,
-      Product: { select: { id: true, title: true, primaryImageUrl: true } },
+      Product: { select: { id: true, title: true, primaryImageUrl: true, status: true, specStatus: true } },
       StrapVariantSpec: true,
       strapInstallations: {
         where: { removedAt: null },
@@ -87,7 +87,7 @@ async function sourceRows(db: DB, variantIds?: string[]) {
 
   return variants.flatMap((variant): StrapListProjectionRow[] => {
     const spec = variant.StrapVariantSpec;
-    if (!spec) return [];
+    if (!spec || variant.Product.status !== "AVAILABLE" || variant.Product.specStatus === "MERGED") return [];
     const active = variant.strapInstallations[0]?.watch;
     const stocked = spec.inventoryPolicy === "STOCKED";
     return [{

@@ -127,6 +127,22 @@ const PUBLISH_WORKFLOW: WorkflowDefinition = {
     },
     {
       fromState: "READY_TO_POST",
+      toState: "READY_TO_POST",
+      triggerType: "MANUAL",
+      triggerValue: "open-watch-media",
+      manualActionLabel: "Xử lý media",
+      condition: null,
+      metadata: {
+        intent: "OPEN_TARGET",
+        presentation: "MODAL",
+        targetRoute: "watch.edit",
+        targetMode: "media",
+        focus: "media",
+        from: "publish-workspace",
+      },
+    },
+    {
+      fromState: "READY_TO_POST",
       toState: "DONE",
       triggerType: "MANUAL",
       triggerValue: "mark-posted",

@@ -10,6 +10,7 @@ import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { Button, FieldLabel, Input, Textarea, moneyPreview } from "@/domains/shared/ui/form/fields";
 import AcquisitionBulkImagePicker from "@/domains/acquisition/ui/new/AcquisitionBulkImagePicker";
 import type { AcquisitionPreparedImage } from "@/domains/acquisition/client/form/acquisition-form.types";
+import { waitForOperationProjectionDeliveries } from "@/domains/coordination/ui/operation-delivery.client";
 
 type EditItem = {
     id: string;
@@ -17,6 +18,9 @@ type EditItem = {
     linkedWatchSku?: string | null;
     linkedWatchTitle?: string | null;
     title: string;
+    quantity: number;
+    productType: "WATCH" | "WATCH_STRAP" | "WATCH_CLASP";
+    sourceOrderItemId?: string | null;
     unitCost: number | "";
     imageKey: string | null;
     imageUrl: string | null;
@@ -71,6 +75,8 @@ function createEmptyItem(): EditItem {
     return {
         id: `tmp-${uid()}`,
         title: "",
+        quantity: 1,
+        productType: "WATCH",
         unitCost: "",
         imageKey: null,
         imageUrl: null,
@@ -94,7 +100,7 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
     const currency = detail?.currency ?? "VND";
 
     const total = useMemo(
-        () => items.reduce((sum, item) => sum + Number(item.unitCost || 0), 0),
+        () => items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unitCost || 0), 0),
         [items],
     );
 
@@ -232,6 +238,8 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
                         id: item.id,
                         title: item.title,
                         productTitle: item.title,
+                        quantity: Number(item.quantity || 1),
+                        productType: item.productType,
                         unitCost: Number(item.unitCost || 0),
                         aiMeta: {
                             aiHint: item.aiHint || null,
@@ -242,6 +250,7 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
             });
 
             const json = await res.json().catch(() => null);
+            if (res.ok) await waitForOperationProjectionDeliveries(json);
             if (!res.ok) throw new Error(json?.error || "Không thể lưu acquisition.");
 
             notify.success({
@@ -367,7 +376,7 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
                                                 ) : null}
                                             </div>
 
-                                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[92px_minmax(0,1fr)_180px] lg:items-start">
+                                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[92px_minmax(0,1fr)_110px_180px] lg:items-start">
                                                 <div>
                                                     <FieldLabel>Ảnh</FieldLabel>
                                                     {draft ? (
@@ -412,6 +421,24 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
                                                                 placeholder="VD: niềng vàng, kính cong..."
                                                             />
                                                         </div>
+                                                    ) : null}
+                                                </div>
+
+                                                <div>
+                                                    <FieldLabel>Số lượng</FieldLabel>
+                                                    <Input
+                                                        type="number"
+                                                        min={1}
+                                                        step={1}
+                                                        value={item.quantity}
+                                                        disabled={posted || submitting || item.productType === "WATCH"}
+                                                        onChange={(event) => updateItem(item.id, {
+                                                            quantity: Math.max(1, Math.trunc(Number(event.target.value) || 1)),
+                                                        })}
+                                                        className="text-right font-semibold tabular-nums"
+                                                    />
+                                                    {item.productType === "WATCH" ? (
+                                                        <div className="mt-1 text-right text-xs text-slate-400">Mỗi Watch là một dòng riêng.</div>
                                                     ) : null}
                                                 </div>
 

@@ -26,7 +26,7 @@ type Props = {
     onChosenChange: (items: PickedMediaItem[]) => void;
     onSelectedChange: (items: PickedMediaItem[]) => void;
     profile?: SharedMediaProfile;
-    audienceSegment?: "MEN" | "WOMEN";
+    audienceSegment?: "MEN" | "WOMEN" | "UNISEX";
     maxFinalSelection?: number;
     title?: string;
     description?: string;

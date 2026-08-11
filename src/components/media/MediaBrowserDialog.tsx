@@ -16,6 +16,7 @@ import {
 export type SharedMediaProfile =
     | "inline"
     | "edit"
+    | "cover"
     | "sold"
     | "technical-inline"
     | "storefront-active"
@@ -58,6 +59,8 @@ type Props = {
     submitLabel?: string;
     contextImage?: ContextImage | null;
     enableRecycle?: boolean;
+    footerLeadingAction?: React.ReactNode;
+    footerHint?: string;
 };
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -68,12 +71,14 @@ function getRootPrefix(
     profile: SharedMediaProfile,
     audienceSegment?: "MEN" | "WOMEN" | "UNISEX",
 ) {
-    if (audienceSegment && (profile === "inline" || profile === "edit")) {
+    if (audienceSegment && (profile === "inline" || profile === "edit" || profile === "cover")) {
         return mediaSourceRoot(audienceSegment, profile);
     }
     switch (profile) {
         case "edit":
             return "products/edit/active";
+        case "cover":
+            return "products/cover/active";
         case "sold":
             return "products/sold";
         case "storefront-active":
@@ -94,6 +99,8 @@ function getLabel(profile: SharedMediaProfile) {
             return "Thư mục: inline/product/technical/active";
         case "edit":
             return "Thư mục: products/edit/active";
+        case "cover":
+            return "Thư mục ảnh Cover";
         case "sold":
             return "Thư mục: products/sold";
         case "storefront-active":
@@ -135,6 +142,8 @@ export default function MediaBrowserDialog({
     onSubmit,
     contextImage,
     enableRecycle = false,
+    footerLeadingAction,
+    footerHint,
     profile = "inline",
     audienceSegment,
     selectedKey,
@@ -712,11 +721,14 @@ export default function MediaBrowserDialog({
                 </div>
 
                 {selectionMode === "multiple" ? (
-                    <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4">
-                        <div className="text-sm text-slate-500">
-                            {browsingRecycle
-                                ? "Ảnh trong Recycle chỉ được đưa trở lại thư viện khi người dùng chọn khôi phục."
-                                : "Có thể chọn nhiều ảnh. Ảnh đã chọn có thể được xác nhận sử dụng hoặc đưa thủ công vào Recycle."}
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-4">
+                        <div className="flex items-center gap-3">
+                            {footerLeadingAction}
+                            <div className="text-sm text-slate-500">
+                                {footerHint ?? (browsingRecycle
+                                    ? "Ảnh trong Recycle chỉ được đưa trở lại thư viện khi người dùng chọn khôi phục."
+                                    : "Có thể chọn nhiều ảnh. Ảnh đã chọn có thể được xác nhận sử dụng hoặc đưa thủ công vào Recycle.")}
+                            </div>
                         </div>
 
                         <div className="flex items-center gap-2">

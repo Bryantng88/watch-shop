@@ -663,6 +663,32 @@ export async function applyEventTriggerToQueueItem(
     };
   }
 
+  if (
+    isPublishWorkflow(runtime.workflowKey) &&
+    manualActionKey(transition) === "mark-posted" &&
+    binding.targetType === "WATCH"
+  ) {
+    const watchWithCover = await db.watch.findUnique({
+      where: { id: binding.targetId },
+      select: {
+        product: {
+          select: {
+            productImage: {
+              where: { role: "COVER", isForStorefront: true },
+              select: { id: true },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+    if (!watchWithCover?.product.productImage.length) {
+      throw new Error(
+        "Chưa thể xác nhận đã đăng: Watch còn thiếu ảnh Cover storefront. Hãy mở Xử lý media để bổ sung Cover.",
+      );
+    }
+  }
+
   const timestamp = nowIso();
   const terminal = workflowDefinition.terminalStates.includes(
     transition.toState,

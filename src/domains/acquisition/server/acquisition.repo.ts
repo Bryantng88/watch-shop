@@ -5,6 +5,7 @@ import type { AcquisitionInlineImageInput } from "./acquisition-media.service";
 export type CreateDraftInput = {
     vendorId?: string | null;
     customerId?: string | null;
+    sourceOrderId?: string | null;
     currency?: string;
     type?: AcquisitionType;
     createdAt?: Date;
@@ -76,6 +77,7 @@ export async function createDraft(tx: DB, input: CreateDraftInput) {
         data: {
             vendorId: input.vendorId,
             customerId: input.customerId ?? null,
+            sourceOrderId: input.sourceOrderId ?? null,
             acquiredAt: input.createdAt ?? new Date(),
             currency: input.currency ?? "VND",
             accquisitionStt: "DRAFT",

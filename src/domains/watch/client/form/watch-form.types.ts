@@ -90,6 +90,7 @@ export type WatchFormValues = {
 
     media: {
         inlineImage: PickedMediaItem | null;
+        coverImage: PickedMediaItem | null;
         poolImages: PickedMediaItem[];
         galleryImages: PickedMediaItem[];
         imageCount: number;

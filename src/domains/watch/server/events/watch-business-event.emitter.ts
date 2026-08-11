@@ -180,6 +180,33 @@ export async function emitWatchInlineImageUpdatedEvent(
   }, options);
 }
 
+export async function emitWatchCoverUpdatedEvent(
+  db: DB,
+  input: {
+    watch: Pick<WatchEventWatchSnapshot, "id" | "productId">;
+    storageKey: string | null;
+    previousStorageKey?: string | null;
+    actorUserId?: string | null;
+    actionId: string;
+  },
+) {
+  return recordBusinessEvent(db, {
+    eventKey: "watch.cover.updated",
+    targetType: "WATCH",
+    targetId: input.watch.id,
+    targetAliasIds: [input.watch.id, input.watch.productId],
+    actorUserId: input.actorUserId ?? null,
+    payload: {
+      watchId: input.watch.id,
+      productId: input.watch.productId,
+      storageKey: input.storageKey,
+      previousStorageKey: input.previousStorageKey ?? null,
+      sourceId: input.actionId,
+      eventInstanceId: input.actionId,
+    },
+  });
+}
+
 export async function emitWatchSpecUpdatedEvent(
   db: DB,
   input: {
@@ -424,7 +451,7 @@ export async function emitWatchBoughtBackEvent(
       acquisitionType: input.acquisitionType,
       unitCost: input.unitCost,
       sourceOrderItemId: input.sourceOrderItemId ?? null,
-      sourceAction: "BUY_BACK",
+      sourceAction: input.acquisitionType === "TRADE_IN" ? "TRADE_IN" : "BUY_BACK",
     },
   }, { deferConsumers: input.deferConsumers });
 }

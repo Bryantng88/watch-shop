@@ -27,6 +27,7 @@ import {
     createEmptyWatchLine,
 } from "./form/acquisition-form.mapper";
 import { submitInlineAcquisition } from "./form/acquisition-form.submit";
+import { waitForOperationProjectionDeliveries } from "@/domains/coordination/ui/operation-delivery.client";
 import type {
     AcquisitionFormVendor,
     AcquisitionPreparedImage,
@@ -419,6 +420,16 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
         if (!res.ok) throw new Error(json?.error || "Khong the duyet phieu nhap.");
 
         progress.update({
+            title: "Dang dong bo du lieu",
+            message: "Phieu da duoc duyet. He thong dang cho projection cap nhat.",
+            steps: [
+                { id: "post", label: "Duyet phieu nhap", status: "done" },
+                { id: "event", label: "Dong bo Watch List projection", status: "running" },
+            ],
+        });
+        await waitForOperationProjectionDeliveries(json?.data ?? json);
+
+        progress.update({
             title: "Da duyet phieu nhap",
             message: "Watch moi da duoc tao va projection da nhan event.",
             steps: [
@@ -446,6 +457,25 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
                 message: "Vui lòng chọn đơn hàng phát sinh trade-in.",
             });
             return;
+        }
+
+        if (type === "TRADE_IN") {
+            const purchasedLines = watchLines.filter((line) => line.tradeInSource === "CUSTOMER_PURCHASE");
+            if (purchasedLines.some((line) => !line.sourceOrderItemId)) {
+                notify.warning({
+                    title: "Chưa chọn Watch đã mua",
+                    message: "Mỗi dòng có nguồn từ lịch sử mua cần chọn đúng Watch của khách.",
+                });
+                return;
+            }
+            const sourceIds = purchasedLines.map((line) => line.sourceOrderItemId!);
+            if (new Set(sourceIds).size !== sourceIds.length) {
+                notify.warning({
+                    title: "Watch bị chọn trùng",
+                    message: "Một Watch đã mua chỉ được dùng cho một dòng trade-in.",
+                });
+                return;
+            }
         }
 
         if (type !== "TRADE_IN" && !vendorId) {
@@ -511,6 +541,8 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
             const acquisitionId = String(result?.id ?? result?.data?.id ?? "").trim();
             if (!acquisitionId) throw new Error("Khong nhan duoc id phieu nhap moi.");
             createdAcquisitionIdRef.current = acquisitionId;
+
+            await waitForOperationProjectionDeliveries(result);
 
             progress.update({
                 title: "Da luu phieu nhap",
@@ -678,7 +710,14 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
                                 <TradeInOrderField
                                     value={tradeInOrder}
                                     disabled={submitting}
-                                    onChange={setTradeInOrder}
+                                    onChange={(order) => {
+                                        setTradeInOrder(order);
+                                        setWatchLines((current) => current.map((line) => ({
+                                            ...line,
+                                            tradeInSource: "EXTERNAL",
+                                            sourceOrderItemId: null,
+                                        })));
+                                    }}
                                 />
                             ) : (
                                 <VendorQuickField
@@ -792,6 +831,8 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
                                     onChange={(next) => updateLine(line.id, next)}
                                     onRemove={() => removeLine(line.id)}
                                     canRemove={watchLines.length > 1}
+                                    tradeIn={type === "TRADE_IN"}
+                                    purchasedWatches={tradeInOrder?.purchasedWatches ?? []}
                                 />
                             ))}
 

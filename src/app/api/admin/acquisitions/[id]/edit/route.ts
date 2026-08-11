@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import { updateAcquisitionEditApplication } from "@/domains/acquisition/application/update-acquisition-edit.application";
 import { getAcquisitionEditDetail } from "@/domains/acquisition/server/acquisition-edit.service";
@@ -53,6 +53,9 @@ export async function PUT(
             acquisitionId: id,
             notes: body?.notes ?? null,
             items: targetItems,
+        }, {
+            actorUserId: access.user.id ?? null,
+            deferConsumers: (work) => after(work),
         });
 
         return NextResponse.json(result);

@@ -4,6 +4,7 @@ import { mediaSourceRoot } from "@/domains/media/core/media-source-path";
 export type MediaProfile =
     | "inline"
     | "edit"
+    | "cover"
     | "sold"
     | "storefront-active"
     | "storefront-chosen";
@@ -11,6 +12,7 @@ export type MediaProfile =
 const PROFILE_ROOTS: Record<MediaProfile, string> = {
     inline: "products/inline/active",
     edit: "products/edit/active",
+    cover: "products/cover/active",
     sold: "products/sold",
     "storefront-active": "products/storefront/active",
     "storefront-chosen": "products/storefront/chosen",
@@ -20,7 +22,7 @@ export function getProfileRoot(
     profile: MediaProfile,
     segment?: "MEN" | "WOMEN" | "UNISEX" | null,
 ) {
-    if (segment && (profile === "inline" || profile === "edit")) {
+    if (segment && (profile === "inline" || profile === "edit" || profile === "cover")) {
         return mediaSourceRoot(segment, profile);
     }
     return PROFILE_ROOTS[profile];

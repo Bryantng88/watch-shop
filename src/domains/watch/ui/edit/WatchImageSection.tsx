@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ImageIcon } from "lucide-react";
+import { Check, ImageIcon, Undo2 } from "lucide-react";
 import { TaskKind } from "@prisma/client";
 import MediaPickerMulti, {
     type PickedMediaItem,
 } from "@/components/media/MediaPickerMulti";
+import MediaBrowserDialog from "@/components/media/MediaBrowserDialog";
+import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 import { SectionCard } from "./shared";
 import SectionReviewActions from "../review/SectionReviewActions";
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
@@ -17,6 +19,7 @@ import TaskQuickCreateModal, {
     type TaskUserOption,
 } from "@/domains/task/ui/quick-create/TaskQuickCreateModal";
 import { TaskSignalIcon } from "@/domains/shared/ui/icons";
+import { waitForOperationProjectionDeliveries } from "@/domains/coordination/ui/operation-delivery.client";
 type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
 type MediaItemWithAliases = PickedMediaItem & {
@@ -42,6 +45,8 @@ type Props = {
         reviewNote?: string | null;
     }) => void;
     inlineImage?: PickedMediaItem | null;
+    coverImage?: PickedMediaItem | null;
+    onCoverImageChange?: (item: PickedMediaItem | null) => void;
     watchTitle?: string | null;
     isFormDirty?: boolean;
     openTaskCount?: number;
@@ -49,7 +54,7 @@ type Props = {
     mediaActions?: React.ReactNode;
     collapsible?: boolean;
     surface?: "card" | "flat";
-    audienceSegment?: "MEN" | "WOMEN";
+    audienceSegment?: "MEN" | "WOMEN" | "UNISEX";
 };
 
 function normalizeStatus(status?: string | null): ReviewStatus {
@@ -97,6 +102,8 @@ export default function WatchImageSection({
     productId,
     watchId,
     inlineImage,
+    coverImage,
+    onCoverImageChange,
     watchTitle,
     imageReviewStatus,
     imageReviewNote,
@@ -114,12 +121,18 @@ export default function WatchImageSection({
     const dialog = useAppDialog();
     const notify = useNotify();
     const [taskModalOpen, setTaskModalOpen] = useState(false);
+    const [coverPickerOpen, setCoverPickerOpen] = useState(false);
+    const [coverPickerVersion, setCoverPickerVersion] = useState(0);
+    const [pendingCoverKey, setPendingCoverKey] = useState<string | null>(null);
+    const [coverPending, setCoverPending] = useState(false);
     const [taskUsers, setTaskUsers] = useState<TaskUserOption[]>([]);
     const [currentUserId, setCurrentUserId] = useState<string>("");
     const [taskContext, setTaskContext] = useState<TaskQuickCreateContext | null>(null);
     const [taskPending, startTaskTransition] = useTransition();
 
     const currentReviewStatus = normalizeStatus(imageReviewStatus);
+    const currentCoverKey = coverImage ? getMediaKey(coverImage) : "";
+    const coverPreviewSrc = resolveMediaPreviewSrc(pendingCoverKey ?? currentCoverKey);
     const locked =
         currentReviewStatus === "APPROVED" ||
         (currentReviewStatus === "SUBMITTED" && !canReviewContent);
@@ -208,6 +221,87 @@ export default function WatchImageSection({
 
         onGalleryImagesChange(items);
         onPoolImagesChange(nextPoolImages);
+    };
+
+    const handleCoverConfirm = async () => {
+        const storageKey = pendingCoverKey?.trim();
+        if (!storageKey || coverPending) return;
+
+        setCoverPending(true);
+        try {
+            const res = await fetch(`/api/admin/watches/${productId}/storefront-image`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ storageKey }),
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok) {
+                notify.error({
+                    title: "Không thể cập nhật Cover",
+                    message: json?.error || "Có lỗi khi chọn ảnh Cover.",
+                });
+                return;
+            }
+            await waitForOperationProjectionDeliveries(json?.data ?? json);
+            const key = String(json?.data?.storageKey ?? storageKey).trim();
+            onCoverImageChange?.({
+                key,
+                fileKey: key,
+                url: `/api/media/sign?key=${encodeURIComponent(key)}`,
+                name: key.split("/").pop() ?? key,
+            });
+            setPendingCoverKey(null);
+            notify.success({ title: "Đã chọn ảnh Cover", message: "Cover đã được lưu và đồng bộ storefront." });
+        } catch (error) {
+            notify.error({
+                title: "Không thể cập nhật Cover",
+                message: error instanceof Error ? error.message : "Có lỗi khi xử lý ảnh Cover.",
+            });
+        } finally {
+            setCoverPending(false);
+        }
+    };
+
+    const handleCoverReturn = async () => {
+        if (!currentCoverKey || coverPending) return;
+        const confirmed = await dialog.confirm({
+            title: "Trả ảnh về kho Cover?",
+            message: "Ảnh sẽ bị gỡ khỏi storefront và được chuyển từ kho objects về đúng thư mục Cover ban đầu.",
+            confirmText: "Trả ảnh",
+            cancelText: "Hủy",
+            tone: "warning",
+        });
+        if (!confirmed) return;
+
+        setCoverPending(true);
+        try {
+            const res = await fetch(`/api/admin/watches/${productId}/storefront-image`, {
+                method: "DELETE",
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok) {
+                notify.error({
+                    title: "Không thể trả ảnh Cover",
+                    message: json?.error || "Có lỗi khi trả ảnh về kho Cover.",
+                });
+                return;
+            }
+            await waitForOperationProjectionDeliveries(json?.data ?? json);
+            setPendingCoverKey(null);
+            onCoverImageChange?.(null);
+            setCoverPickerVersion((version) => version + 1);
+            notify.success({
+                title: "Đã trả ảnh Cover",
+                message: "Ảnh đã được gỡ khỏi storefront và trả về kho Cover ban đầu.",
+            });
+        } catch (error) {
+            notify.error({
+                title: "Không thể trả ảnh Cover",
+                message: error instanceof Error ? error.message : "Có lỗi khi trả ảnh về kho Cover.",
+            });
+        } finally {
+            setCoverPending(false);
+        }
     };
 
     const openImageTaskModal = () => {
@@ -300,6 +394,59 @@ export default function WatchImageSection({
                         />
                     ) : null}
 
+                    <div className={[
+                        "rounded-3xl border border-emerald-200 bg-emerald-50/60 p-4",
+                        "",
+                    ].join(" ")}>
+                        <div className="mb-3">
+                            <div className="text-sm font-semibold text-slate-900">Ảnh Cover storefront</div>
+                            <div className="text-sm text-slate-500">Chọn đúng một ảnh từ kho Cover của phân khúc Watch.</div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setCoverPickerOpen(true)}
+                                disabled={coverPending}
+                                className="h-36 w-36 overflow-hidden rounded-xl border border-emerald-200 bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {coverPreviewSrc ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                        src={coverPreviewSrc}
+                                        alt="Cover storefront"
+                                        className="h-full w-full object-cover"
+                                    />
+                                ) : (
+                                    <span className="text-xs text-slate-500">Chọn ảnh</span>
+                                )}
+                            </button>
+                            <div className="flex flex-col items-start gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setCoverPickerOpen(true)}
+                                    disabled={coverPending}
+                                    className="rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50 disabled:opacity-50"
+                                >
+                                    {currentCoverKey ? "Đổi ảnh Cover" : "Chọn ảnh Cover"}
+                                </button>
+                                {pendingCoverKey ? (
+                                    <span className="text-xs font-medium text-emerald-700">Ảnh mới đang chờ xác nhận</span>
+                                ) : null}
+                                {pendingCoverKey ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => void handleCoverConfirm()}
+                                        disabled={coverPending}
+                                        className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        <Check className="h-3.5 w-3.5" />
+                                        {coverPending ? "Đang xử lý..." : "Xác nhận Cover"}
+                                    </button>
+                                ) : null}
+                            </div>
+                        </div>
+                    </div>
+
                     <div
                         className={[
                             "rounded-3xl border border-blue-200 bg-gradient-to-b from-blue-50/80 to-white p-4",
@@ -336,6 +483,38 @@ export default function WatchImageSection({
                     ) : null}
                 </div>
             </SectionCard>
+
+            <MediaBrowserDialog
+                key={`cover-picker-${coverPickerVersion}`}
+                open={coverPickerOpen}
+                onClose={() => setCoverPickerOpen(false)}
+                profile="cover"
+                audienceSegment={audienceSegment}
+                selectedKeys={pendingCoverKey ? [pendingCoverKey] : []}
+                selectionMode="multiple"
+                maxSelection={1}
+                title="Chọn ảnh Cover storefront"
+                description="Chọn một ảnh từ kho Cover. Ảnh chỉ được xử lý sau khi xác nhận tại màn hình Media."
+                submitLabel="Chọn ảnh này"
+                enableRecycle={false}
+                footerHint="Chọn một ảnh Cover để đưa về màn hình Media trước khi xác nhận."
+                footerLeadingAction={currentCoverKey ? (
+                    <button
+                        type="button"
+                        onClick={() => void handleCoverReturn()}
+                        disabled={coverPending}
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        <Undo2 className="h-4 w-4" />
+                        {coverPending ? "Đang trả ảnh..." : "Trả ảnh hiện tại về kho Cover"}
+                    </button>
+                ) : null}
+                onSubmit={(keys) => {
+                    if (!keys[0]) return;
+                    setPendingCoverKey(keys[0]);
+                    setCoverPickerOpen(false);
+                }}
+            />
 
             <TaskQuickCreateModal
                 open={taskModalOpen}

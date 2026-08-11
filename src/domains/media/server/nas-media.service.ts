@@ -31,6 +31,7 @@ export type NasMediaFolder = {
 
 export function resolveMediaProfile(value?: string | null): MediaProfile {
     if (value === "edit") return "edit";
+    if (value === "cover") return "cover";
     if (value === "sold") return "sold";
     if (value === "storefront-active") return "storefront-active";
     if (value === "storefront-chosen") return "storefront-chosen";

@@ -18,6 +18,8 @@ export type CreateOrUpdateAcqItemInput = {
     audienceSegment?: AudienceSegment;
     sourceOrderItemId?: string | null;
     productType?: ProductType;
+    productId?: string | null;
+    variantId?: string | null;
     strapSpec?: Record<string, unknown> | null;
     claspSpec?: Record<string, unknown> | null;
 };
@@ -64,8 +66,8 @@ export async function createAcqItem(
             quantity: resolveItemQuantity(item),
             unitCost: resolveItemUnitCost(item),
             productType: item.productType ?? ProductType.WATCH,
-            productId: null,
-            variantId: null,
+            productId: item.productId ?? null,
+            variantId: item.variantId ?? null,
             description: buildItemDescription(item),
             sourceOrderItemId: item.sourceOrderItemId ?? null,
         },

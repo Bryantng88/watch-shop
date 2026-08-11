@@ -305,6 +305,7 @@ function buildTitlePreviewValues(
     },
     media: {
       inlineImage: null,
+      coverImage: null,
       poolImages: [],
       galleryImages: [],
       imageCount: 0,

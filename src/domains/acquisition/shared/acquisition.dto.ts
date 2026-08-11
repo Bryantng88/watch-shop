@@ -18,6 +18,8 @@ export type WatchItemInput = {
         aiHint?: string | null;
     };
     sourceOrderItemId?: string | null;
+    productId?: string | null;
+    variantId?: string | null;
     productType?: ProductType;
     strapSpec?: Record<string, unknown> | null;
     claspSpec?: Record<string, unknown> | null;

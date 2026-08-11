@@ -99,6 +99,7 @@ export type QueueItemDTO = {
     profile: boolean;
     content: boolean;
     image: boolean;
+    cover: boolean;
     completed: number;
     total: number;
     updatedAt?: string | null;

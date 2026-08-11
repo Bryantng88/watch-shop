@@ -1,5 +1,5 @@
 export type MediaAudienceSegment = "MEN" | "WOMEN" | "UNISEX";
-export type MediaSourcePurpose = "inline" | "edit";
+export type MediaSourcePurpose = "inline" | "edit" | "cover";
 
 export function mediaSourceRoot(
   segment: MediaAudienceSegment,

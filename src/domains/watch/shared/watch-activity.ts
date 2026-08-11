@@ -2,6 +2,7 @@ export const WATCH_ACTIVITY_LABELS: Record<string, string> = {
   "watch.created": "Đã tạo watch",
   "watch.content.modified": "Đã cập nhật nội dung",
   "watch.inline.image.updated": "Đã cập nhật ảnh đại diện INLINE",
+  "watch.cover.updated": "Đã cập nhật ảnh Cover storefront",
   "watch.content.submitted": "Đã gửi duyệt nội dung",
   "watch.content.approved": "Đã duyệt nội dung",
   "watch.content.rejected": "Đã từ chối nội dung",

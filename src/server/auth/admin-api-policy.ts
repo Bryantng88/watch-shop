@@ -64,7 +64,7 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
     }
 
     if (/^\/api\/admin\/acquisitions(\/|$)/.test(pathname)) {
-        if (/\/trade-in-orders$/.test(pathname)) return anyOf(PERMISSIONS.PRODUCT_CREATE);
+        if (/\/trade-in-orders$/.test(pathname)) return anyOf(PERMISSIONS.WATCH_ACQUISITION_CREATE, PERMISSIONS.ACQUISITION_CREATE_ALL);
         if (/\/payment$/.test(pathname)) {
             return anyOf(read ? PERMISSIONS.ACQUISITION_PAYMENT_VIEW : PERMISSIONS.ACQUISITION_PAYMENT_CREATE, PERMISSIONS.ACQUISITION_PAYMENT_UPDATE, PERMISSIONS.ACQUISITION_PAYMENT_DELETE, read ? PERMISSIONS.PAYMENT_VIEW_ALL : PERMISSIONS.PAYMENT_CREATE_ALL, PERMISSIONS.PAYMENT_UPDATE_ALL, PERMISSIONS.PAYMENT_DELETE_ALL);
         }

@@ -66,7 +66,8 @@ export async function ingestSelectedMedia(input: {
   });
   const isLegacySource =
     sourceKey.startsWith("products/edit/active/") ||
-    sourceKey.startsWith("products/inline/active/");
+    sourceKey.startsWith("products/inline/active/") ||
+    sourceKey.startsWith("products/cover/active/");
   if (referenced || (!mediaPathPolicy.isSource(sourceKey) && !isLegacySource)) {
     return registerExistingMediaObject({ storageKey: sourceKey });
   }

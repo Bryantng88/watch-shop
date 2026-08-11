@@ -13,6 +13,8 @@ export type AcquisitionWatchLine = {
     salePrice: number | "";
     imageKey: string | null;
     imageUrl: string | null;
+    tradeInSource: "EXTERNAL" | "CUSTOMER_PURCHASE";
+    sourceOrderItemId: string | null;
 };
 
 export type AcquisitionFormVendor = {
@@ -29,6 +31,19 @@ export type AcquisitionTradeInOrder = {
     customerName: string;
     customerPhone?: string | null;
     productTitle?: string | null;
+    purchasedWatches: AcquisitionPurchasedWatch[];
+};
+
+export type AcquisitionPurchasedWatch = {
+    sourceOrderItemId: string;
+    sourceOrderId: string;
+    sourceOrderRefNo?: string | null;
+    productId: string;
+    variantId?: string | null;
+    title: string;
+    imageUrl?: string | null;
+    imageKey?: string | null;
+    purchasedAt: string;
 };
 
 export type AcquisitionInlineSubmitPayload = {
