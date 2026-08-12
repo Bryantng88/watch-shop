@@ -18,7 +18,7 @@ export default function ProductGallery({ images, label }: { images: GalleryImage
       {images.length > 1 ? (
         <div className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-6">
           {images.slice(0, 6).map((image, index) => (
-            <button key={image.url} type="button" onClick={() => setSelected(index)} aria-label={`${label} ${index + 1}`} aria-current={selected === index ? "true" : undefined} className={`storefront-focus relative aspect-square overflow-hidden bg-[#efede8] transition ${selected === index ? "ring-1 ring-[#46545e] ring-offset-2 ring-offset-[#fbfaf7]" : "opacity-65 hover:opacity-100"}`}>
+            <button key={image.url} type="button" onClick={() => setSelected(index)} aria-label={`${label} ${index + 1}`} aria-current={selected === index ? "true" : undefined} className={`storefront-focus relative aspect-square overflow-hidden bg-[#efede8] transition ${selected === index ? "ring-1 ring-[#46545e] ring-offset-2 ring-offset-white" : "opacity-65 hover:opacity-100"}`}>
               <Image src={image.url} alt="" fill sizes="(max-width: 640px) 20vw, 10vw" className="object-cover" />
             </button>
           ))}

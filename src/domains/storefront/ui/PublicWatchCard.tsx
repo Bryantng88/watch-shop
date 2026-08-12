@@ -40,7 +40,7 @@ export default function PublicWatchCardView({ watch }: { watch: PublicWatchCard 
             </div>
           ) : null}
           {availabilityLabel(watch.availability) ? (
-            <span className="absolute left-3 top-3 rounded-full bg-[#fbfaf7]/95 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#34322f] shadow-sm">
+            <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#34322f] shadow-sm">
               {availabilityLabel(watch.availability)}
             </span>
           ) : null}

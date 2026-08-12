@@ -33,7 +33,7 @@ export default function PublicHeader() {
   const links = navigation[language];
   const estimatedTotal = items.reduce((total, item) => total + (Number(item.priceAmount) || 0), 0);
   return (
-    <header className="border-b border-[#dedbd4] bg-[#fbfaf7]">
+    <header className="border-b border-[#dedbd4] bg-white">
       <div className="mx-auto flex h-14 max-w-[1440px] items-center justify-between px-4 sm:px-6 lg:px-10">
         <details className="group relative lg:hidden">
           <summary className="storefront-focus grid h-9 w-9 cursor-pointer list-none place-items-center rounded-[3px] border border-[#d7d3cb] [&::-webkit-details-marker]:hidden">
@@ -41,7 +41,7 @@ export default function PublicHeader() {
             <X className="hidden h-5 w-5 group-open:block" aria-hidden="true" />
             <span className="sr-only">Mở menu</span>
           </summary>
-          <nav className="absolute left-0 top-11 z-50 w-[min(82vw,320px)] border border-[#d7d3cb] bg-[#fbfaf7] p-3 shadow-xl">
+          <nav className="absolute left-0 top-11 z-50 w-[min(82vw,320px)] border border-[#d7d3cb] bg-white p-3 shadow-xl">
             {links.map((item) => (
               <Link key={item.href} href={item.href} className="storefront-focus block border-b border-[#e5e1da] px-3 py-3 text-sm uppercase tracking-[0.12em] last:border-0">
                 {item.label}

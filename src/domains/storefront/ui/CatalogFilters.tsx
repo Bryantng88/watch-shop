@@ -72,12 +72,12 @@ export default function CatalogFilters({ query, facets, compact = false }: { que
   const optionClass = (selected: boolean) => `storefront-focus flex min-h-9 w-full items-center justify-between gap-3 py-1.5 text-left text-sm transition ${selected ? "font-medium text-[#272522]" : "text-[#706c65] hover:text-[#272522]"}`;
   const options = (items: Array<{ value: string; label?: string; count: number }>, key: "style" | "size" | "movement" | "caseMaterial" | "strapType", selected?: string) => items.map((item) => (
     <Link key={item.value} href={hrefFor({ [key]: selected === item.value ? undefined : item.value })} scroll={false} className={optionClass(selected === item.value)}>
-      <span className="flex items-center gap-3"><span className={`h-3.5 w-3.5 border ${selected === item.value ? "border-[#34312d] bg-[#34312d] shadow-[inset_0_0_0_3px_#fbfaf7]" : "border-[#bbb6ae]"}`} />{item.label ?? item.value}</span>
+      <span className="flex items-center gap-3"><span className={`h-3.5 w-3.5 border ${selected === item.value ? "border-[#34312d] bg-[#34312d] shadow-[inset_0_0_0_3px_#ffffff]" : "border-[#bbb6ae]"}`} />{item.label ?? item.value}</span>
       <span className="text-xs font-normal text-[#aaa59d]">{item.count}</span>
     </Link>
   ));
 
-  return <div className={compact ? "border border-[#dedbd4] bg-[#fbfaf7] px-4" : ""}>
+  return <div className={compact ? "border border-[#dedbd4] bg-white px-4" : ""}>
     <div className="flex min-h-10 items-center justify-between">
       <span className="text-[11px] uppercase tracking-[0.16em] text-[#57534d]">{locale === "en" ? "Filters" : "Bộ lọc"} {activeCount ? `· ${activeCount}` : ""}</span>
       {activeCount || query.q ? <button type="button" onClick={() => router.push("/products", { scroll: false })} className="storefront-focus flex items-center gap-1.5 text-[10px] uppercase tracking-[0.12em] text-[#817d76] hover:text-black"><RotateCcw className="h-3 w-3" /> {locale === "en" ? "Clear all" : "Xóa tất cả"}</button> : null}
@@ -102,7 +102,7 @@ export default function CatalogFilters({ query, facets, compact = false }: { que
     </section>
 
     <FilterSection title={locale === "en" ? "Brand" : "Thương hiệu"} active={Boolean(query.brand)} defaultOpen>
-      <div className="max-h-60 overflow-y-auto pr-1">{facets.brands.map((brand) => <Link key={brand.slug} href={hrefFor({ brand: query.brand === brand.slug ? undefined : brand.slug })} scroll={false} className={optionClass(query.brand === brand.slug)}><span className="flex items-center gap-3"><span className={`h-3.5 w-3.5 border ${query.brand === brand.slug ? "border-[#34312d] bg-[#34312d] shadow-[inset_0_0_0_3px_#fbfaf7]" : "border-[#bbb6ae]"}`} />{brand.name}</span><span className="text-xs text-[#aaa59d]">{brand.count}</span></Link>)}</div>
+      <div className="max-h-60 overflow-y-auto pr-1">{facets.brands.map((brand) => <Link key={brand.slug} href={hrefFor({ brand: query.brand === brand.slug ? undefined : brand.slug })} scroll={false} className={optionClass(query.brand === brand.slug)}><span className="flex items-center gap-3"><span className={`h-3.5 w-3.5 border ${query.brand === brand.slug ? "border-[#34312d] bg-[#34312d] shadow-[inset_0_0_0_3px_#ffffff]" : "border-[#bbb6ae]"}`} />{brand.name}</span><span className="text-xs text-[#aaa59d]">{brand.count}</span></Link>)}</div>
     </FilterSection>
     <FilterSection title="Style" active={Boolean(query.style)}>{options(facets.styles.map((item) => ({ ...item, label: styleLabels[item.value] })), "style", query.style)}</FilterSection>
     <FilterSection title={locale === "en" ? "Case size" : "Kích thước vỏ"} active={Boolean(query.size)}>{options(facets.sizes.map((item) => ({ ...item, label: item.value === "SMALL" ? (locale === "en" ? "Under 34 mm" : "Dưới 34 mm") : item.value === "MEDIUM" ? "34–38 mm" : (locale === "en" ? "Over 38 mm" : "Trên 38 mm") })), "size", query.size)}</FilterSection>

@@ -30,7 +30,7 @@ export default async function PublicLayout({ children }: { children: React.React
   return (
     <StorefrontLocaleProvider value={{ locale, vndPerUsd: rate.vndPerUsd, rateSource: rate.source }}>
     <StorefrontCartProvider initialItems={initialItems}>
-      <div className="storefront-surface min-h-screen bg-[#fbfaf7] text-[#252525]">
+      <div className="storefront-surface min-h-screen bg-white text-[#252525]">
         <PwaRuntime />
         <PublicHeader />
         <main>{children}</main>
