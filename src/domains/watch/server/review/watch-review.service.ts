@@ -20,7 +20,7 @@ import {
     type WatchReviewTargetType,
 } from "@/domains/watch/server/events";
 import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
-import slugify from "slugify";
+import { buildWatchStorefrontSlug } from "@/domains/watch/shared/storefront-slug";
 type ReviewTargetType = WatchReviewTargetType;
 type ReviewStatus = WatchReviewStatus;
 
@@ -424,14 +424,7 @@ async function finalizeWatchIfFullyApproved(db: DB, productId: string) {
             },
         }));
 
-    const slugBase = slugify(pair.watch.product.title || "watch", {
-        lower: true,
-        strict: true,
-        locale: "vi",
-        trim: true,
-    }).slice(0, 80) || "watch";
-    const slugSuffix = productId.replace(/[^a-zA-Z0-9]/g, "").slice(-8).toLowerCase();
-    const storefrontSlug = `${slugBase}-${slugSuffix || "item"}`;
+    const storefrontSlug = buildWatchStorefrontSlug(pair.watch.product.title, productId);
 
     await db.watch.updateMany({
             where: {

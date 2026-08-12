@@ -48,6 +48,13 @@ type Props = {
     coverImage?: PickedMediaItem | null;
     onCoverImageChange?: (item: PickedMediaItem | null) => void;
     watchTitle?: string | null;
+    storefrontSlug?: string | null;
+    contentReviewStatus?: string | null;
+    productStatus?: string | null;
+    saleStage?: string | null;
+    serviceStage?: string | null;
+    salePrice?: string | null;
+    onStorefrontSlugChange?: (slug: string) => void;
     isFormDirty?: boolean;
     openTaskCount?: number;
     hideReviewActions?: boolean;
@@ -105,6 +112,13 @@ export default function WatchImageSection({
     coverImage,
     onCoverImageChange,
     watchTitle,
+    storefrontSlug,
+    contentReviewStatus,
+    productStatus,
+    saleStage,
+    serviceStage,
+    salePrice,
+    onStorefrontSlugChange,
     imageReviewStatus,
     imageReviewNote,
     canReviewContent = false,
@@ -128,6 +142,17 @@ export default function WatchImageSection({
     const [taskUsers, setTaskUsers] = useState<TaskUserOption[]>([]);
     const [currentUserId, setCurrentUserId] = useState<string>("");
     const [taskContext, setTaskContext] = useState<TaskQuickCreateContext | null>(null);
+    const storefrontChecks = [
+        { label: "Cover storefront", ok: Boolean(getMediaKey(coverImage ?? ({} as PickedMediaItem))) },
+        { label: "Đường dẫn storefront", ok: Boolean(storefrontSlug?.trim()) },
+        { label: "Trạng thái sản phẩm", ok: ["AVAILABLE", "HOLD", "SOLD"].includes(String(productStatus ?? "").toUpperCase()) },
+        { label: "Trạng thái bán", ok: ["READY", "HOLD", "SOLD"].includes(String(saleStage ?? "").toUpperCase()) },
+        { label: "Service hoàn tất/không cần", ok: ["NOT_REQUIRED", "DONE"].includes(String(serviceStage ?? "").toUpperCase()) },
+        { label: "Content đã duyệt", ok: String(contentReviewStatus ?? "").toUpperCase() === "APPROVED" },
+        { label: "Hình ảnh đã duyệt", ok: String(imageReviewStatus ?? "").toUpperCase() === "APPROVED" },
+        { label: "Giá bán hợp lệ", ok: Number(salePrice ?? 0) > 0 },
+    ];
+    const storefrontReady = storefrontChecks.every((item) => item.ok);
     const [taskPending, startTaskTransition] = useTransition();
 
     const currentReviewStatus = normalizeStatus(imageReviewStatus);
@@ -244,6 +269,7 @@ export default function WatchImageSection({
             }
             await waitForOperationProjectionDeliveries(json?.data ?? json);
             const key = String(json?.data?.storageKey ?? storageKey).trim();
+            const nextSlug = String(json?.data?.storefrontSlug ?? "").trim();
             onCoverImageChange?.({
                 key,
                 fileKey: key,
@@ -251,6 +277,7 @@ export default function WatchImageSection({
                 name: key.split("/").pop() ?? key,
             });
             setPendingCoverKey(null);
+            if (nextSlug) onStorefrontSlugChange?.(nextSlug);
             notify.success({ title: "Đã chọn ảnh Cover", message: "Cover đã được lưu và đồng bộ storefront." });
         } catch (error) {
             notify.error({
@@ -444,6 +471,25 @@ export default function WatchImageSection({
                                     </button>
                                 ) : null}
                             </div>
+                        </div>
+                    </div>
+
+                    <div className={`mt-3 rounded-2xl border px-4 py-3 ${storefrontReady ? "border-emerald-200 bg-white" : "border-amber-200 bg-amber-50/60"}`}>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="text-sm font-semibold text-slate-900">Điều kiện hiển thị storefront</div>
+                            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${storefrontReady ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}>
+                                {storefrontReady ? "Đã sẵn sàng" : `Còn thiếu ${storefrontChecks.filter((item) => !item.ok).length}`}
+                            </span>
+                        </div>
+                        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                            {storefrontChecks.map((item) => (
+                                <div key={item.label} className={`flex items-center gap-2 text-xs ${item.ok ? "text-emerald-700" : "font-medium text-amber-800"}`}>
+                                    <span className={`grid h-4 w-4 place-items-center rounded-full border ${item.ok ? "border-emerald-300 bg-emerald-50" : "border-amber-300 bg-white"}`}>
+                                        {item.ok ? <Check className="h-3 w-3" /> : "!"}
+                                    </span>
+                                    {item.label}
+                                </div>
+                            ))}
                         </div>
                     </div>
 

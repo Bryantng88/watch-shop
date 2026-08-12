@@ -11,6 +11,7 @@ import { ingestSelectedMedia } from "@/domains/media/application/media-ingest.se
 import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
 import type { BusinessEventDispatchOptions } from "@/domains/event/server/business-event.service";
 import { emitWatchCoverUpdatedEvent } from "@/domains/watch/server/events";
+import { buildWatchStorefrontSlug } from "@/domains/watch/shared/storefront-slug";
 
 export async function setWatchCoverApplication(input: {
   productId: string;
@@ -38,7 +39,7 @@ export async function setWatchCoverApplication(input: {
         productId: true,
         audienceSegment: true,
         mediaPipelineKey: true,
-        product: { select: { storefrontImageKey: true } },
+        product: { select: { storefrontImageKey: true, slug: true, title: true } },
       },
     });
     if (!watch) throw new Error("Không tìm thấy Watch.");
@@ -81,11 +82,13 @@ export async function setWatchCoverApplication(input: {
         sortOrder: 0,
       },
     });
+    const storefrontSlug = watch.product.slug || buildWatchStorefrontSlug(watch.product.title, productId);
     await tx.product.update({
       where: { id: productId },
       data: {
         storefrontImageKey: mediaObject.storageKey,
         primaryImageUrl: mediaObject.storageKey,
+        ...(watch.product.slug ? {} : { slug: storefrontSlug }),
       },
     });
 
@@ -101,6 +104,7 @@ export async function setWatchCoverApplication(input: {
     return {
       cover,
       storageKey: mediaObject.storageKey,
+      storefrontSlug,
       projectionDeliveryKey: event.projectionDeliveryKey,
       reconciliationMode: "ASYNC_DELIVERY" as const,
     };

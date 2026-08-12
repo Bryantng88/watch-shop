@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import slugify from "slugify";
+import { buildWatchStorefrontSlug } from "../src/domains/watch/shared/storefront-slug";
 
 const databaseUrl = process.env.DATABASE_URL?.trim();
 const apply = process.argv.includes("--apply");
@@ -21,23 +21,11 @@ if (apply && process.env.ALLOW_STOREFRONT_SLUG_BACKFILL !== "1") {
 
 const db = new PrismaClient();
 
-function makeStorefrontSlug(title: string, productId: string) {
-  const base =
-    slugify(title || "watch", {
-      lower: true,
-      strict: true,
-      locale: "vi",
-      trim: true,
-    }).slice(0, 80) || "watch";
-  const suffix = productId.replace(/[^a-zA-Z0-9]/g, "").slice(-8).toLowerCase();
-  return `${base}-${suffix || "item"}`;
-}
-
 async function main() {
   const products = await db.product.findMany({
     where: {
       type: "WATCH",
-      status: "AVAILABLE",
+      status: { in: ["AVAILABLE", "HOLD", "SOLD"] },
       AND: [
         { OR: [{ slug: null }, { slug: "" }] },
         {
@@ -49,8 +37,7 @@ async function main() {
       ],
       watch: {
         is: {
-          saleStage: "READY",
-          stockStage: "IN_STOCK",
+          saleStage: { in: ["READY", "HOLD", "SOLD"] },
           serviceStage: { in: ["NOT_REQUIRED", "DONE"] },
           AND: [
             {
@@ -67,7 +54,7 @@ async function main() {
         },
       },
       productImage: {
-        some: { isForStorefront: true, fileKey: { not: "" } },
+        some: { role: "COVER", isForStorefront: true, fileKey: { not: "" } },
       },
     },
     select: { id: true, title: true },
@@ -76,7 +63,7 @@ async function main() {
 
   const candidates = products.map((product) => ({
     id: product.id,
-    slug: makeStorefrontSlug(product.title, product.id),
+    slug: buildWatchStorefrontSlug(product.title, product.id),
   }));
   const duplicateSlugs = candidates.filter(
     (candidate, index) =>

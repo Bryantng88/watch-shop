@@ -1755,6 +1755,13 @@ export default function WatchFormClient({
     <>
       <WatchImageSection
         watchTitle={values.basic.title}
+        storefrontSlug={values.basic.slug}
+        contentReviewStatus={values.contentReviewStatus}
+        productStatus={values.header.status}
+        saleStage={values.basic.saleState}
+        serviceStage={values.basic.serviceState}
+        salePrice={values.pricing.salePrice}
+        onStorefrontSlugChange={(slug) => setFormValues((prev) => ({ ...prev, basic: { ...prev.basic, slug } }))}
         inlineImage={inlineImage}
         coverImage={values.media.coverImage}
         onCoverImageChange={handleCoverImageChange}
@@ -1969,6 +1976,13 @@ export default function WatchFormClient({
 
           <WatchImageSection
             watchTitle={values.basic.title}
+            storefrontSlug={values.basic.slug}
+            contentReviewStatus={values.contentReviewStatus}
+            productStatus={values.header.status}
+            saleStage={values.basic.saleState}
+            serviceStage={values.basic.serviceState}
+            salePrice={values.pricing.salePrice}
+            onStorefrontSlugChange={(slug) => setFormValues((prev) => ({ ...prev, basic: { ...prev.basic, slug } }))}
             inlineImage={inlineImage}
             coverImage={values.media.coverImage}
             onCoverImageChange={handleCoverImageChange}
