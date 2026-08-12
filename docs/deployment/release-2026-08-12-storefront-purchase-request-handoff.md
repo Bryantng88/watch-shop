@@ -217,6 +217,62 @@ The DB integration suite covers:
 - creating a new PR after the former PR becomes `PROCESSING`;
 - the existing public rate limit and Zalo ingress behavior.
 
+## Staging rollout evidence: 2026-08-12
+
+- application source revision: `5916cbdeaced910aae083c9702a254e025f337a3`;
+- immutable images: `watch-shop:storefront-staging-5916cbde` and
+  `watch-shop-ops:storefront-staging-5916cbde`;
+- source archive: `watch-shop-storefront-5916cbde.tar.gz`;
+- archive SHA-256:
+  `37f48b1ae922337406ff64395fff6395e03942d6a94b0e98511ee50aebc60e90`;
+- pre-migration staging backup:
+  `/share/homes/user/watch-shop-staging-pre-5916cbde.dump`;
+- backup SHA-256:
+  `afafe32704fb1bb325fda471fe9313872c744e8ed8c91034f8cb7053db590522`;
+- active release directory: `/share/WatchShop/staging/release-5916cbde`;
+- both `watch-shop-storefront-staging-app-1` and
+  `watch-shop-storefront-staging-admin-app` are healthy on the immutable image;
+- production remained on `watch-shop:release-b993cf32` and was not changed;
+- all 48 staging migrations are applied and Prisma reports the schema up to
+  date;
+- `STOREFRONT_REQUIRE_COVER_IMAGE=1` is confirmed in the running public app.
+
+The production-clone data had no `COVER` rows: 1,201 storefront images were
+legacy `GALLERY` rows. After the backup, exactly one existing primary storefront
+image was promoted to `COVER` for each of the 45 Watches that already satisfied
+all other storefront business/review gates. No file key or production data was
+changed. The guarded export then returned eligible Watches with a real Cover.
+
+HTTP acceptance through the LAN-only proxies passed:
+
+```text
+200 /products
+200 /products?strapType=BRACELET
+200 /products?strapType=LEATHER
+200 /request
+404 /api/health on the deny-by-default public proxy (expected)
+307 /admin/purchase-requests to authentication (expected)
+```
+
+Purchase-request acceptance created `PR-20260812-258808A2`, replayed its first
+idempotency key without duplication, then added a second Watch using the same
+normalized phone number. Evidence after the merge:
+
+```text
+status=WAITING
+items=2
+activities=2
+purchase_request.created=1
+purchase_request.items_added=1
+ingress receipts=2
+contact preference=INSTAGRAM
+contact handle=@staging_acceptance
+```
+
+Rollback application tag (schema changes are additive):
+`watch-shop:storefront-staging-purchase-ba29b20d-r1`. Restore the checksum-
+verified staging backup only if a database rollback is explicitly required.
+
 ## Reproduce validation on another machine
 
 Prerequisites:
