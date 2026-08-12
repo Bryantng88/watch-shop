@@ -259,7 +259,7 @@ export async function GET(request: NextRequest) {
         title: ticket.lastActivity || ticket.title,
         description: `Workspace ${ticket.title}`,
         occurredAt: ticket.lastActivityAt,
-        href: `/admin/task-items/${ticket.id}`,
+        href: "/admin/coordination/operation",
         kind: "updated" as const,
       }));
     const period = ["WEEK", "MONTH", "YEAR", "ALL"].includes(cashPeriod)

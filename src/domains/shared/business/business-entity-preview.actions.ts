@@ -342,7 +342,7 @@ export async function getBusinessEntityPreviewAction(input: {
             canEdit: canEditActivity,
         });
         const workspaceHref = activity?.taskItemId
-            ? `/admin/task-items/${activity.taskItemId}`
+            ? "/admin/coordination/operation"
             : null;
 
         return {
@@ -589,7 +589,7 @@ export async function getBusinessEntityPreviewAction(input: {
 
         const sr = row.serviceRequest;
         const workspaceHref = sr.TaskExecution?.[0]?.taskItemId
-            ? `/admin/task-items/${sr.TaskExecution[0].taskItemId}`
+            ? "/admin/coordination/operation?context=OPERATION&view=technical-issue-flow"
             : null;
         const technicalWorkspaceItem = row.TaskExecution?.[0]?.taskItem ?? null;
         const movementType = String(

@@ -548,10 +548,9 @@ function openTargetHref(input: {
     currentWorkflowState?: string | null;
     mediaWorkProgress?: TaskItemQueueItem["mediaWorkProgress"];
   };
-  taskItemId: string;
   transition?: { metadata?: unknown } | null;
 }) {
-  const { queueItem, taskItemId, transition } = input;
+  const { queueItem, transition } = input;
   if (!queueItem.href) return null;
   const metadata = objectValue(transition?.metadata);
   const targetRoute = metadataTextValue(metadata, "targetRoute");
@@ -583,7 +582,7 @@ function openTargetHref(input: {
   ) {
     params.set("embedded", "1");
   }
-  params.set("returnTo", `/admin/task-items/${taskItemId}`);
+  params.set("returnTo", "/admin/coordination/media");
 
   const query = params.toString();
   if (!query) return href;
@@ -645,7 +644,7 @@ function QueueProgressCell({ progress }: { progress: QueueRowProgress }) {
     return <span className="text-xs font-medium text-slate-400">-</span>;
   }
 
-  const total = progress.total || 3;
+  const total = 4;
   const completed = Math.max(0, Math.min(progress.completed, total));
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
   const done = completed >= total && total > 0;
@@ -1017,7 +1016,6 @@ function CreateTechnicalIssueModal({
 
 export function OpenTargetAction({
   queueItem,
-  taskItemId,
   transition,
   className,
   iconClassName = "h-3.5 w-3.5",
@@ -1027,7 +1025,6 @@ export function OpenTargetAction({
   onRefreshRequested,
 }: {
   queueItem: TaskItemQueueItem;
-  taskItemId: string;
   transition: TaskItemQueueTransition;
   className: string;
   iconClassName?: string;
@@ -1040,7 +1037,7 @@ export function OpenTargetAction({
   const transitionAppliedRef = useRef(false);
   const router = useRouter();
   const scheduleRefresh = useCoalescedRouterRefresh(router);
-  const href = openTargetHref({ queueItem, taskItemId, transition });
+  const href = openTargetHref({ queueItem, transition });
   const label = openTargetActionLabel(transition, queueItem);
   const modal =
     transitionPresentation(transition) === "MODAL" ||
@@ -2588,7 +2585,6 @@ export function QueueWorkQueue({
                                       <OpenTargetAction
                                         key={transition.actionKey}
                                         queueItem={queueItem}
-                                        taskItemId={taskItemId}
                                         transition={transition}
                                         onTransitionApplied={(outcome) =>
                                           reconcileEmbeddedTransition(queueItem.id, outcome)
@@ -2620,7 +2616,6 @@ export function QueueWorkQueue({
                                 {workspaceWorkTypeKey === "photography" ? (
                                   <OpenTargetAction
                                     queueItem={queueItem}
-                                    taskItemId={taskItemId}
                                     transition={photoshootMediaPreviewTransition(queueItem)}
                                     onTransitionApplied={(outcome) =>
                                       reconcileEmbeddedTransition(queueItem.id, outcome)
@@ -2659,7 +2654,6 @@ export function QueueWorkQueue({
                                               <OpenTargetAction
                                                 key={transition.actionKey}
                                                 queueItem={queueItem}
-                                                taskItemId={taskItemId}
                                                 transition={transition}
                                                 onTransitionApplied={(outcome) =>
                                                   reconcileEmbeddedTransition(queueItem.id, outcome)

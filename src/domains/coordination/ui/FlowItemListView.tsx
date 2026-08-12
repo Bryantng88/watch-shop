@@ -212,7 +212,7 @@ function previewSeed(item: CoordinationFlowListItemDTO): BusinessEntityPreview |
     subtitle: item.preview.ref || item.workspaceTitle || null,
     status: item.currentWorkflowStateLabel || item.preview.status || item.status,
     imageUrl: item.preview.imageUrl,
-    href: item.href || `/admin/task-items/${item.taskItemId}`,
+    href: item.href || "/admin/coordination/operation",
   };
 }
 
@@ -1297,7 +1297,6 @@ export default function FlowItemListView({
                         isOpenTargetTransition(enabledActions[0]) ? (
                           <OpenTargetAction
                             queueItem={item as TaskItemQueueItem}
-                            taskItemId={item.taskItemId}
                             transition={enabledActions[0]}
                             onActivate={previewState.closePreview}
                             onRefreshRequested={onReloadRequested}
@@ -1322,7 +1321,6 @@ export default function FlowItemListView({
                           {isOpenTargetTransition(enabledActions[0]) ? (
                             <OpenTargetAction
                               queueItem={item as TaskItemQueueItem}
-                              taskItemId={item.taskItemId}
                               transition={enabledActions[0]}
                               onActivate={previewState.closePreview}
                               onRefreshRequested={onReloadRequested}
@@ -1356,7 +1354,6 @@ export default function FlowItemListView({
                                   <OpenTargetAction
                                     key={transition.actionKey}
                                     queueItem={item as TaskItemQueueItem}
-                                    taskItemId={item.taskItemId}
                                     transition={transition}
                                     onActivate={previewState.closePreview}
                                     onRefreshRequested={onReloadRequested}
@@ -1433,7 +1430,6 @@ export default function FlowItemListView({
                     ) : primaryAction && isOpenTargetTransition(primaryAction) ? (
                       <OpenTargetAction
                         queueItem={item as TaskItemQueueItem}
-                        taskItemId={item.taskItemId}
                         transition={primaryAction}
                         onActivate={previewState.closePreview}
                         onRefreshRequested={onReloadRequested}

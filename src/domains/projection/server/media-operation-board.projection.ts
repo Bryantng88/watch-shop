@@ -61,6 +61,20 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function normalizeMediaProgressTotal(
+  row: MediaOperationBoardProjection,
+): MediaOperationBoardProjection {
+  if (!row.mediaWorkProgress) return row;
+
+  return {
+    ...row,
+    mediaWorkProgress: {
+      ...row.mediaWorkProgress,
+      total: 4,
+    },
+  };
+}
+
 function workTypeKey(note?: string | null) {
   return clean(String(note ?? "").match(/workTypeKey:\s*([a-z0-9-]+)/i)?.[1]).toLowerCase();
 }
@@ -409,7 +423,7 @@ export async function queryMediaOperationBoardProjection(
   const data: MediaOperationBoardProjection[] = [];
   for (const row of rows) {
     if (row.kind === "TOTAL") totals.set(row.status, Number(row.total));
-    else data.push(row.dataJson as MediaOperationBoardProjection);
+    else data.push(normalizeMediaProgressTotal(row.dataJson as MediaOperationBoardProjection));
   }
   return { rows: data, totals };
 }

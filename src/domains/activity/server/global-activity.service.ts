@@ -152,7 +152,7 @@ function todayStart() {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
-function targetHref(targetType: string, targetId: string, taskItemId: string) {
+function targetHref(targetType: string, targetId: string) {
   if (targetType === "WATCH") return `/admin/watches/${targetId}`;
   if (targetType === "STRAP") return `/admin/straps/${targetId}`;
   if (targetType === "ORDER") return `/admin/orders?search=${encodeURIComponent(targetId)}`;
@@ -168,7 +168,30 @@ function targetHref(targetType: string, targetId: string, taskItemId: string) {
   if (targetType === "TECHNICAL_ISSUE" || targetType === "SERVICE_REQUEST") {
     return `/admin/coordination/operation?context=OPERATION&view=technical-issue-flow&search=${encodeURIComponent(targetId)}`;
   }
-  return `/admin/task-items/${taskItemId}`;
+  return "/admin/coordination/operation";
+}
+
+function systemActivityHref(
+  metadata: Record<string, unknown>,
+  taskItemNote: string | null,
+) {
+  const workTypeKey = (
+    clean(metadata.workTypeKey) ||
+    clean(String(taskItemNote ?? "").match(/workTypeKey:\s*([^\r\n]+)/i)?.[1])
+  ).toLowerCase();
+
+  if (["photography", "media-processing", "publish"].includes(workTypeKey)) {
+    return "/admin/coordination/media";
+  }
+  if (workTypeKey === "payment") {
+    return "/admin/coordination/operation?context=PAYMENT&view=payment-flow";
+  }
+  if (workTypeKey === "service-operation" || workTypeKey === "technical") {
+    return "/admin/coordination/operation?context=OPERATION&view=technical-issue-flow";
+  }
+  if (workTypeKey === "shipment") return "/admin/shipments";
+
+  return "/admin/coordination/operation";
 }
 
 export async function listGlobalActivity(input: GlobalActivityQuery) {
@@ -254,6 +277,7 @@ export async function listGlobalActivity(input: GlobalActivityQuery) {
           select: {
             id: true,
             title: true,
+            note: true,
             task: { select: { id: true, title: true } },
           },
         },
@@ -338,11 +362,10 @@ export async function listGlobalActivity(input: GlobalActivityQuery) {
       targetType: resolvedTargetType,
       targetId: resolvedTargetId,
       targetHref: row.sourceType === ActivitySourceType.SYSTEM
-        ? `/admin/task-items/${row.taskItemId}`
+        ? systemActivityHref(metadata, row.taskItem.note)
         : targetHref(
             resolvedTargetType,
             clean(metadata.productId) || resolvedTargetId,
-            row.taskItemId,
           ),
       taskItemId: row.taskItemId,
       taskItemTitle: row.taskItem.title,
@@ -381,7 +404,6 @@ export async function listGlobalActivity(input: GlobalActivityQuery) {
         targetHref: targetHref(
           row.targetType,
           clean(metadata.productId) || row.targetId,
-          row.targetId,
         ),
         taskItemId: row.targetId,
         taskItemTitle: type === "TRADE_IN" ? "Phiếu nhập Trade-in" : "Phiếu nhập",

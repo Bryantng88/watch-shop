@@ -246,7 +246,7 @@ export default function WorkCaseDetailDrawer({
             </div>
             <div className="mt-3 space-y-2">
               {localItem.tasks.length ? localItem.tasks.map((task) => (
-                <a key={task.id} href={`/admin/tasks?q=${encodeURIComponent(task.title)}`} className="block rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm hover:bg-slate-100">
+                <a key={task.id} href="/admin/coordination/operation" className="block rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm hover:bg-slate-100">
                   <span className="font-semibold text-slate-900">Task:</span> {task.title} · {task.status}
                 </a>
               )) : null}

@@ -251,7 +251,7 @@ export async function getOrCreateServiceOperationWorkspaceForWatch(input: {
         serviceRequestId: existing.id,
         refNo: existing.refNo ?? null,
         taskItemId: existingWorkspace.taskItemId,
-        workspaceHref: `/admin/task-items/${existingWorkspace.taskItemId}`,
+        workspaceHref: "/admin/coordination/operation?context=OPERATION&view=technical-issue-flow",
       };
     }
 
@@ -263,7 +263,7 @@ export async function getOrCreateServiceOperationWorkspaceForWatch(input: {
         serviceRequestId: existing.id,
         refNo: existing.refNo ?? null,
         taskItemId: existingWorkspace.taskItemId,
-        workspaceHref: `/admin/task-items/${existingWorkspace.taskItemId}`,
+        workspaceHref: "/admin/coordination/operation?context=OPERATION&view=technical-issue-flow",
       };
     }
 
@@ -293,7 +293,7 @@ export async function getOrCreateServiceOperationWorkspaceForWatch(input: {
       serviceRequestId: existing.id,
       refNo: existing.refNo ?? null,
       taskItemId,
-      workspaceHref: taskItemId ? `/admin/task-items/${taskItemId}` : null,
+      workspaceHref: taskItemId ? "/admin/coordination/operation?context=OPERATION&view=technical-issue-flow" : null,
     };
   }
 
@@ -328,7 +328,7 @@ export async function getOrCreateServiceOperationWorkspaceForWatch(input: {
     serviceRequestId: request.id,
     refNo: request.refNo ?? null,
     taskItemId,
-    workspaceHref: taskItemId ? `/admin/task-items/${taskItemId}` : null,
+    workspaceHref: taskItemId ? "/admin/coordination/operation?context=OPERATION&view=technical-issue-flow" : null,
   };
 }
 
@@ -379,7 +379,7 @@ export async function watchIntakeWithInitialSuspicion(input: {
         refNo: existing.refNo ?? null,
         taskItemId: existingWorkspace?.taskItemId ?? null,
         workspaceHref: existingWorkspace?.taskItemId
-          ? `/admin/task-items/${existingWorkspace.taskItemId}`
+          ? "/admin/coordination/operation?context=OPERATION&view=technical-issue-flow"
           : null,
       };
     }
@@ -393,7 +393,7 @@ export async function watchIntakeWithInitialSuspicion(input: {
         serviceRequestId: existing.id,
         refNo: existing.refNo ?? null,
         taskItemId: existingWorkspace.taskItemId,
-        workspaceHref: `/admin/task-items/${existingWorkspace.taskItemId}`,
+        workspaceHref: "/admin/coordination/operation?context=OPERATION&view=technical-issue-flow",
       };
     }
 
@@ -406,7 +406,7 @@ export async function watchIntakeWithInitialSuspicion(input: {
         serviceRequestId: existing.id,
         refNo: existing.refNo ?? null,
         taskItemId: existingWorkspace.taskItemId,
-        workspaceHref: `/admin/task-items/${existingWorkspace.taskItemId}`,
+        workspaceHref: "/admin/coordination/operation?context=OPERATION&view=technical-issue-flow",
       };
     }
 
@@ -437,7 +437,7 @@ export async function watchIntakeWithInitialSuspicion(input: {
       serviceRequestId: existing.id,
       refNo: existing.refNo ?? null,
       taskItemId,
-      workspaceHref: taskItemId ? `/admin/task-items/${taskItemId}` : null,
+      workspaceHref: taskItemId ? "/admin/coordination/operation?context=OPERATION&view=technical-issue-flow" : null,
     };
   }
 
@@ -491,7 +491,7 @@ export async function watchIntakeWithInitialSuspicion(input: {
     technicalIssueId: issue.id,
     refNo: request.refNo ?? null,
     taskItemId,
-    workspaceHref: taskItemId ? `/admin/task-items/${taskItemId}` : null,
+    workspaceHref: taskItemId ? "/admin/coordination/operation?context=OPERATION&view=technical-issue-flow" : null,
   };
 }
 

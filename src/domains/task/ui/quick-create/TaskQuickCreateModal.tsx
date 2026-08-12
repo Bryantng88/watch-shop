@@ -176,7 +176,7 @@ export default function TaskQuickCreateModal({
               <button
                 type="button"
                 onClick={() => {
-                  window.location.href = `/admin/tasks?openTaskId=${existingTask.id}`;
+                  window.location.href = "/admin/coordination/operation";
                 }}
                 className="mt-3 rounded-xl bg-amber-600 px-3 py-2 text-xs font-semibold text-white"
               >

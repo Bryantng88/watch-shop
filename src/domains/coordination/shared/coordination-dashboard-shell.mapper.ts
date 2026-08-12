@@ -78,7 +78,7 @@ export function mapCoordinationDashboardShell(
       title: ticket.lastActivity || ticket.title,
       description: `${isTaskItemMode ? "Công việc" : "Workspace"} ${ticket.title}`,
       occurredAt: ticket.lastActivityAt,
-      href: `/admin/task-items/${ticket.id}`,
+      href: "/admin/coordination/operation",
       kind: "updated" as const,
     }));
   const period = input.cashPeriod ?? "WEEK";

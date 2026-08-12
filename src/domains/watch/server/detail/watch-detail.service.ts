@@ -333,7 +333,7 @@ export async function getWatchServiceProjectionDetail(
       issueCount: issues.length,
       activeIssueCount: issues.filter((issue) => !terminalIssueStatuses.has(issue.status)).length,
       workspaceTaskItemId,
-      workspaceHref: workspaceTaskItemId ? `/admin/task-items/${workspaceTaskItemId}` : null,
+      workspaceHref: workspaceTaskItemId ? "/admin/coordination/media" : null,
       updatedAt: row.updatedAt.toISOString(),
       issues,
     };

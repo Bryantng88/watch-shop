@@ -334,7 +334,7 @@ export default function WorkCaseDetailClient({
                                             </div>
 
                                             <Link
-                                                href={`/admin/tasks/${task.id}`}
+                                                href="/admin/coordination/operation"
                                                 className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50"
                                             >
                                                 Mở

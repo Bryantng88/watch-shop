@@ -379,3 +379,128 @@ Accepted by:
 Accepted at:
 Rollback image retained until:
 ```
+
+## Deployment update: 2026-08-12 10:51 Asia/Bangkok
+
+This section supersedes the preparation status at the top of this document.
+
+### Production state
+
+- GitHub `main` and the deployed source revision are
+  `b993cf3245e4f52e9445e27dcc8dc6a3b4380c1e`.
+- Production image: `watch-shop:release-b993cf32`.
+- Production container: `watch-shop-app-1` on NAS port `3000`.
+- Admin URL: `https://admin.vinticwatches.vn` through
+  `watch-shop-admin-internal-proxy` to `127.0.0.1:3000`.
+- `/api/health`: HTTP 200 with `status=ok`.
+- `/api/ready`: HTTP 200 with `database=reachable`.
+- Pre-migration backup:
+  `/backups/watch-shop-20260812T025446Z.dump`.
+- Applied migration:
+  `20260811_acquisition_trade_in_multi_source`.
+- Permission audit passed with catalog `78/78`, no missing codes, role drift,
+  forbidden role drift or retired codes.
+
+The audit initially detected that `SALE` had regained
+`ACCESSORY_ACQUISITION_UPDATE`, `ACCESSORY_ACQUISITION_APPROVE` and
+`ACCESSORY_ACQUISITION_DELETE`. The idempotent SQL in
+`prisma/migrations/20260806_restrict_sale_acquisition_scope/migration.sql`
+was executed once with `prisma db execute`; the audit then passed. Do not
+recreate the app from an older image that expects those forbidden grants.
+
+The actual NAS SSH port is `22253`. Port `22523` in the earlier instructions
+did not accept connections. Uploads use the `user` account and interactive
+`sudo -i`; sudo tickets are not shared with separate automated SSH sessions.
+
+### Local work not committed or deployed
+
+The working tree on the original Windows machine contains a reviewed cleanup
+and two production follow-up fixes. Its base is `b993cf32`; none of these
+changes are on GitHub or production yet.
+
+1. Normalize old `media-operation-board` snapshots to the four-part progress
+   contract when read. This changes legacy `x/3` presentation to `x/4`
+   without mutating production rows or rebuilding projections.
+2. Route Global Activity to current operational surfaces. Media system
+   activity opens `/admin/coordination/media`; Payment, Technical and Shipment
+   use their current surfaces. It no longer falls back to legacy Task Item UI.
+3. Retire the legacy Workspace presentation only, while preserving the
+   Task/TaskItem persistence, workflow runtime, queue and command APIs:
+   - `/admin/tasks`, `/admin/tasks/[id]`, `/admin/task-items` and
+     `/admin/task-items/[id]` are redirect-only compatibility routes;
+   - four legacy Task/TaskItem client pages and the list/detail-only component
+     set were deleted (about 9,500 lines);
+   - remaining user-facing links were redirected to Coordination Media or
+     Operation surfaces;
+   - `/api/admin/task-items/manual-transition` remains intentionally because
+     it is a current runtime command endpoint, not legacy UI.
+
+Local validation for this dirty tree:
+
+```text
+npx tsc --noEmit --pretty false --incremental false: PASS
+targeted ESLint with --max-warnings=0: PASS
+npm run auth:audit-policy: PASS (132 routes, 155 methods, 69 pages,
+  25 Server Action files, 102 actions)
+npm run check:media-boundaries: PASS
+npm run build: PASS (129/129 static pages)
+git diff --check: PASS
+```
+
+There is no schema migration or production data mutation in this pending
+cleanup. Do not rerun the acquisition migration for it.
+
+### Moving the pending cleanup to another Windows machine
+
+The pending cleanup is not on GitHub. A normal clone of `main` will contain
+only the deployed `b993cf32` state. Before leaving the original machine, create
+a patch from the dirty tree:
+
+```powershell
+cd D:\workspace\project\watch-shop\watch-shop
+git diff --binary --full-index HEAD > ..\watch-shop-legacy-ui-cleanup-b993cf32.patch
+Get-FileHash -Algorithm SHA256 ..\watch-shop-legacy-ui-cleanup-b993cf32.patch
+```
+
+Copy that patch to the other machine through a trusted private channel. On the
+other machine:
+
+```powershell
+git clone https://github.com/Bryantng88/watch-shop.git watch-shop
+cd watch-shop
+git checkout main
+git pull --ff-only
+git rev-parse HEAD
+git apply --check C:\path\watch-shop-legacy-ui-cleanup-b993cf32.patch
+git apply C:\path\watch-shop-legacy-ui-cleanup-b993cf32.patch
+npm.cmd ci
+npx.cmd prisma generate
+npx.cmd tsc --noEmit --pretty false --incremental false
+npm.cmd run auth:audit-policy
+npm.cmd run check:media-boundaries
+npm.cmd run build
+git diff --check
+```
+
+The SHA printed before applying the patch must be `b993cf32...`. Stop if it is
+not, or rebase/review the patch rather than forcing it. Review the full diff,
+commit once, push only after explicit approval, and build a new immutable NAS
+image tag from that new commit. This is an app-only rollout: retain the current
+backup and image, build on NAS, recreate only `app`, then verify health/ready,
+that progress shows `/4`, Activity no longer opens the legacy UI, and direct
+legacy URLs redirect to Coordination.
+
+### Local disposable database
+
+Docker Desktop on the original machine currently runs:
+
+```text
+watch-shop-postgres-test  postgres:17-bookworm
+127.0.0.1:5433 -> 5432
+database: watch_shop_storefront_test
+```
+
+`.env.local` points to this loopback disposable database. It is safe for local
+testing and is separate from production. Do not copy `.env.local`; recreate
+equivalent machine-local values and follow
+`docs/testing/storefront-isolated-database.md` on the new machine.

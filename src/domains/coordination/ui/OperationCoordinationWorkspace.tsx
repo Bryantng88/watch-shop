@@ -2624,9 +2624,9 @@ export default function OperationCoordinationWorkspace({
                 key={ticket.id}
                 role="link"
                 tabIndex={0}
-                onClick={() => router.push(`/admin/task-items/${ticket.id}`)}
+                onClick={() => router.push("/admin/coordination/operation")}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") router.push(`/admin/task-items/${ticket.id}`);
+                  if (event.key === "Enter" || event.key === " ") router.push("/admin/coordination/operation");
                 }}
                 className={cn(
                   "grid cursor-pointer gap-4 px-5 py-4 transition hover:bg-slate-50 lg:items-center",

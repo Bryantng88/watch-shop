@@ -44,7 +44,7 @@ const SAMPLE_VALUES: Record<string, string> = {
     taskItemTitle: "Seiko Grand Seiko Quartz Silver",
     activityTitle: "Media work saved 2/3",
     replyBody: "Can bo sung anh mat so ro hon truoc khi dang.",
-    route: "/admin/tasks/items/8154...",
+    route: "/admin/coordination/operation",
     targetType: "TASK_ITEM",
     targetId: "8154...",
 };

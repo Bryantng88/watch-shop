@@ -224,7 +224,7 @@ async function listServiceRequestTechnicalIssueQueueItems(
       mediaAssetAttachedAt: null,
       mediaWorkProgress: null,
       serviceRequestId: input.serviceRequestId,
-      serviceRequestWorkspaceHref: `/admin/task-items/${input.taskItemId}`,
+      serviceRequestWorkspaceHref: "/admin/coordination/operation?context=OPERATION&view=technical-issue-flow",
       updatedAt: (issue.updatedAt ?? issue.openedAt).toISOString(),
     };
   });
@@ -519,13 +519,13 @@ async function resolveTechnicalIssueServiceRequestWorkspaceLinks(
   for (const binding of srWorkspaceBindings) {
     if (!binding.taskItemId || hrefByServiceRequestId.has(binding.targetId)) continue;
     if (!isSrCaseWorkspaceNote(binding.taskItem?.note)) continue;
-    hrefByServiceRequestId.set(binding.targetId, `/admin/task-items/${binding.taskItemId}`);
+    hrefByServiceRequestId.set(binding.targetId, "/admin/coordination/operation?context=OPERATION&view=technical-issue-flow");
   }
 
   for (const binding of issueWorkspaceBindings) {
     if (!binding.taskItemId || hrefByIssueId.has(binding.targetId)) continue;
     if (isSrCaseWorkspaceNote(binding.taskItem?.note)) continue;
-    hrefByIssueId.set(binding.targetId, `/admin/task-items/${binding.taskItemId}`);
+    hrefByIssueId.set(binding.targetId, "/admin/coordination/operation?context=OPERATION&view=technical-issue-flow");
   }
 
   return new Map(

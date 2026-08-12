@@ -191,7 +191,7 @@ async function loadMediaStatesByWatchId(
       workflowState: runtime?.currentState ?? null,
       taskStatus: clean(binding.taskItem?.status) || null,
       taskItemId: binding.taskItem?.id ?? null,
-      workspaceHref: binding.taskItem?.id ? `/admin/task-items/${binding.taskItem.id}` : null,
+      workspaceHref: binding.taskItem?.id ? "/admin/coordination/media" : null,
       updatedAt:
         runtime?.updatedAt ??
         binding.taskItem?.updatedAt?.toISOString() ??
@@ -401,7 +401,7 @@ async function loadServiceStatesByWatchId(
       serviceRequestStatus: clean(request.status) || null,
       technicalIssueStatus: status.technicalIssueStatus,
       taskItemId,
-      workspaceHref: taskItemId ? `/admin/task-items/${taskItemId}` : null,
+      workspaceHref: taskItemId ? "/admin/coordination/media" : null,
       updatedAt: request.updatedAt.toISOString(),
     });
   }
