@@ -295,6 +295,33 @@ Production data preparation used guarded, dry-run-first utilities. It generated
 image to `COVER` for each of the same 46 already-eligible Watches. No media
 object/file key was copied, deleted or renamed.
 
+### Production cover correction: 2026-08-13
+
+The automatic promotion above was intentionally reversed after visual review:
+an existing primary image is not necessarily a curated storefront cover.
+
+- pre-correction backup:
+  `/share/WatchShopBackup/database/watch-shop-20260812T180519Z.dump`;
+- backup SHA-256:
+  `dd74be7852011f782d8e5a6eb28a601932545d955d8a7150357502e89a780a52`;
+- cleanup utility revision: `0024afa9`;
+- immutable cleanup image: `watch-shop-ops:release-0024afa9`;
+- the guarded cleanup matched exactly the 46 rows written in the original
+  `2026-08-12T17:03:00Z`–`17:05:00Z` backfill window;
+- it changed those image roles from `COVER` to `INLINE` and cleared only the
+  matching legacy `Product.storefrontImageKey` pointers;
+- it did not delete ProductImage, MediaObject or storage files;
+- immediate post-apply dry-run returned zero candidates;
+- the public-watch export returned an empty product list, proving that no
+  uncurated legacy image still satisfies the cover gate;
+- public acceptance returned `/products` 200 with `0 sản phẩm`, while `/admin`
+  and `/api/health` remained 404 through the storefront proxy.
+
+Production operators must now select a cover through the Admin watch media
+workflow. A Watch becomes public only after the normal eligibility checks and a
+real `COVER` image are both present. Do not run the automatic cover backfill in
+production again.
+
 LAN acceptance passed with HTTP 200 for health, readiness, products, request,
 Bracelet and Leather filters. A real production Cover was served as
 `image/jpeg`, and `https://admin.vinticwatches.vn/login` remained available.
