@@ -273,6 +273,39 @@ Rollback application tag (schema changes are additive):
 `watch-shop:storefront-staging-purchase-ba29b20d-r1`. Restore the checksum-
 verified staging backup only if a database rollback is explicitly required.
 
+## Production rollout evidence: 2026-08-12
+
+- final production source revision: `83916bc1`;
+- immutable runtime image: `watch-shop:release-83916bc1`;
+- immutable ops image: `watch-shop-ops:release-83916bc1`;
+- source archive: `watch-shop-production-83916bc1.tar.gz`;
+- archive SHA-256:
+  `be165d2a75f9fab73b079ec51edf47317b1f390c033bf8f4c5a619d1f70307e6`;
+- pre-rollout database backup:
+  `/share/WatchShopBackup/database/watch-shop-20260812T165240Z.dump`;
+- backup SHA-256:
+  `c05d9ea782412e75ca771a1788d974d42cb245fd0d755e059205726362349d63`;
+- rollback runtime image: `watch-shop:release-b993cf32`;
+- all 48 migrations are applied and Prisma reports the production schema up to
+  date;
+- `STOREFRONT_REQUIRE_COVER_IMAGE=1` is confirmed in the healthy running app.
+
+Production data preparation used guarded, dry-run-first utilities. It generated
+46 missing stable slugs and promoted exactly one existing primary storefront
+image to `COVER` for each of the same 46 already-eligible Watches. No media
+object/file key was copied, deleted or renamed.
+
+LAN acceptance passed with HTTP 200 for health, readiness, products, request,
+Bracelet and Leather filters. A real production Cover was served as
+`image/jpeg`, and `https://admin.vinticwatches.vn/login` remained available.
+No synthetic purchase request was written to production; event/idempotency and
+merge acceptance was completed against the same runtime revision on staging.
+
+Public activation remains an ingress/DNS gate: `vinticwatches.vn` and
+`www.vinticwatches.vn` did not resolve at rollout time. Do not open a router
+port. Add the chosen customer-facing hostname to the existing Cloudflare Tunnel
+and route it to the production app through a deny-by-default storefront proxy.
+
 ## Reproduce validation on another machine
 
 Prerequisites:
