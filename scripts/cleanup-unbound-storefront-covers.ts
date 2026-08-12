@@ -29,12 +29,18 @@ async function main() {
   const candidates = covers;
 
   if (apply) {
-    await prisma.$transaction(
-      candidates.map((image) => prisma.productImage.update({
-        where: { id: image.id },
-        data: { role: "INLINE" },
-      })),
-    );
+    await prisma.$transaction(async (tx) => {
+      for (const image of candidates) {
+        await tx.productImage.update({
+          where: { id: image.id },
+          data: { role: "INLINE" },
+        });
+        await tx.product.updateMany({
+          where: { id: image.productId, storefrontImageKey: image.fileKey },
+          data: { storefrontImageKey: null },
+        });
+      }
+    });
   }
 
   console.log(JSON.stringify({
