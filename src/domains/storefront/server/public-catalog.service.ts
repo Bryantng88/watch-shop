@@ -164,8 +164,10 @@ export async function getPublicWatchBySlug(slugInput: unknown, options?: { db?: 
 export async function getPublicCatalogFacets(options?: { db?: DB }): Promise<PublicCatalogFacets> {
   const rows = await listPublicCatalogFacetRows(options?.db ?? prisma);
   const brandCounts = new Map<string, { slug: string; name: string; count: number }>();
-  const availabilityCounts = { AVAILABLE: 0, HOLD: 0, SOLD: 0 };
+  const styleCounts = new Map<NonNullable<PublicCatalogQuery["style"]>, number>();
   const sizeCounts = { SMALL: 0, MEDIUM: 0, LARGE: 0 };
+  const movementCounts = new Map<string, number>();
+  const materialCounts = new Map<string, number>();
   const prices: number[] = [];
 
   for (const row of rows) {
@@ -173,10 +175,13 @@ export async function getPublicCatalogFacets(options?: { db?: DB }): Promise<Pub
       const current = brandCounts.get(row.brand.slug);
       brandCounts.set(row.brand.slug, { ...row.brand, count: (current?.count ?? 0) + 1 });
     }
-    const availability = row.watch?.saleStage === "SOLD" ? "SOLD" : row.watch?.saleStage === "HOLD" ? "HOLD" : "AVAILABLE";
-    availabilityCounts[availability] += 1;
+    if (row.watch?.style) styleCounts.set(row.watch.style, (styleCounts.get(row.watch.style) ?? 0) + 1);
     const size = row.watch?.watchSpecV2?.caseSizeMM?.toNumber();
     if (size) sizeCounts[size < 34 ? "SMALL" : size <= 38 ? "MEDIUM" : "LARGE"] += 1;
+    const movement = row.watch?.watchSpecV2?.movementType?.trim();
+    if (movement) movementCounts.set(movement, (movementCounts.get(movement) ?? 0) + 1);
+    const material = row.watch?.watchSpecV2?.primaryCaseMaterial?.trim();
+    if (material) materialCounts.set(material, (materialCounts.get(material) ?? 0) + 1);
     if (row.priceVisibility === "SHOW") {
       const price = row.watch?.watchPrice?.salePrice?.toNumber();
       if (price && price > 0) prices.push(price);
@@ -189,8 +194,10 @@ export async function getPublicCatalogFacets(options?: { db?: DB }): Promise<Pub
   const min = Math.floor(rawMin / step) * step;
   return {
     brands: [...brandCounts.values()].sort((a, b) => a.name.localeCompare(b.name, "vi")),
-    availability: (["AVAILABLE", "HOLD", "SOLD"] as const).map((value) => ({ value, count: availabilityCounts[value] })),
+    styles: [...styleCounts.entries()].map(([value, count]) => ({ value, count })).sort((a, b) => a.value.localeCompare(b.value)),
     sizes: (["SMALL", "MEDIUM", "LARGE"] as const).map((value) => ({ value, count: sizeCounts[value] })),
+    movements: [...movementCounts.entries()].map(([value, count]) => ({ value, count })).sort((a, b) => a.value.localeCompare(b.value, "vi")),
+    caseMaterials: [...materialCounts.entries()].map(([value, count]) => ({ value, count })).sort((a, b) => a.value.localeCompare(b.value, "vi")),
     priceBounds: {
       min,
       max: Math.max(min + step, Math.ceil(rawMax / step) * step),

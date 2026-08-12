@@ -32,7 +32,7 @@ async function main() {
   assert.equal(signedKey, "products/storefront/chosen/watch-1.webp");
 
   const whereJson = JSON.stringify(receivedWhere);
-  for (const required of ["product-1", "image-1", "isForStorefront", "AVAILABLE", "READY", "IN_STOCK"]) {
+  for (const required of ["product-1", "image-1", "isForStorefront", "AVAILABLE", "HOLD", "SOLD", "READY"]) {
     assert.ok(whereJson.includes(required), `public image ownership query is missing ${required}`);
   }
 

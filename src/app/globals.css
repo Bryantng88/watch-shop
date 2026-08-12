@@ -121,6 +121,63 @@ body {
   height: 0;
 }
 
+/* Storefront single-thumb price control. Keep the whole native input interactive. */
+.storefront-price-slider {
+  width: 100%;
+  height: 32px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.storefront-price-slider::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 9999px;
+  background: #dedede;
+}
+
+.storefront-price-slider::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  margin-top: -5.5px;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  border-radius: 9999px;
+  background: #46545e;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
+  cursor: grab;
+}
+
+.storefront-price-slider::-moz-range-track {
+  height: 3px;
+  border: 0;
+  border-radius: 9999px;
+  background: #dedede;
+}
+
+.storefront-price-slider::-moz-range-progress {
+  height: 3px;
+  background: #dedede;
+}
+
+.storefront-price-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 9999px;
+  background: #46545e;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
+  cursor: grab;
+}
+
+.storefront-price-slider:active::-webkit-slider-thumb,
+.storefront-price-slider:active::-moz-range-thumb {
+  cursor: grabbing;
+}
+
 
 
 

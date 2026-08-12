@@ -28,6 +28,7 @@ const makeSchema = () => z.object({
   serialNumber: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   yearText: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   style: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  isCollectible: SortOrderSchema.optional(),
   hasBox: SortOrderSchema.optional(),
   hasPapers: SortOrderSchema.optional(),
   specStatus: SortOrderSchema.optional(),

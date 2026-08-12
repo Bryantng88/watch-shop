@@ -50,6 +50,7 @@ const watchscalarwherewithaggregatesinputSchema = z.object({
   serialNumber: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   yearText: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   style: z.union([z.lazy(() => EnumWatchStyleNullableWithAggregatesFilterObjectSchema), WatchStyleSchema]).optional().nullable(),
+  isCollectible: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
   hasBox: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
   hasPapers: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
   specStatus: z.union([z.lazy(() => EnumWatchSpecStatusWithAggregatesFilterObjectSchema), WatchSpecStatusSchema]).optional(),

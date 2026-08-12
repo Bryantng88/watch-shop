@@ -72,6 +72,7 @@ export type WatchDetailModel = {
 
         gender?: Gender | null;
         style?: WatchStyle | null; // ✅ thêm
+        isCollectible?: boolean;
 
         siteChannel?: WatchSiteChannel | null;
         stockState?: string | null;

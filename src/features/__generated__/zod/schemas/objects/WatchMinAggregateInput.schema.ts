@@ -22,6 +22,7 @@ const makeSchema = () => z.object({
   serialNumber: z.literal(true).optional(),
   yearText: z.literal(true).optional(),
   style: z.literal(true).optional(),
+  isCollectible: z.literal(true).optional(),
   hasBox: z.literal(true).optional(),
   hasPapers: z.literal(true).optional(),
   specStatus: z.literal(true).optional(),

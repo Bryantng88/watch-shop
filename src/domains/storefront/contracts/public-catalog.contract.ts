@@ -18,9 +18,12 @@ export const publicCatalogQuerySchema = z
   .object({
     q: optionalQueryText(120),
     brand: optionalQueryText(80),
-    audience: z.enum(["MEN", "WOMEN", "UNISEX"]).optional(),
-    availability: z.enum(["AVAILABLE", "HOLD", "SOLD"]).optional(),
+    audience: z.enum(["MEN", "WOMEN"]).optional(),
+    collection: z.enum(["COLLECTIBLE"]).optional(),
+    style: z.enum(["MILITARY", "DRESS", "SPORT", "TOOL", "CASUAL", "CLASSIC", "MINIMALIST", "LUXURY", "RETRO", "FUTURISTIC"]).optional(),
     size: z.enum(["SMALL", "MEDIUM", "LARGE"]).optional(),
+    movement: z.enum(["AUTOMATIC", "HAND_WOUND", "QUARTZ", "SOLAR", "KINETIC", "MECHAQUARTZ", "SPRING_DRIVE", "HYBRID"]).optional(),
+    caseMaterial: z.enum(["STAINLESS_STEEL", "TITANIUM", "CERAMIC", "CARBON", "GOLD", "PLATINUM", "SILVER", "BRASS", "OTHER"]).optional(),
     priceMin: optionalMoney,
     priceMax: optionalMoney,
     sort: z.enum(["NEWEST", "PRICE_ASC", "PRICE_DESC"]).default("NEWEST"),
@@ -50,8 +53,10 @@ export type PublicCatalogQuery = z.infer<typeof publicCatalogQuerySchema>;
 
 export type PublicCatalogFacets = {
   brands: Array<{ slug: string; name: string; count: number }>;
-  availability: Array<{ value: "AVAILABLE" | "HOLD" | "SOLD"; count: number }>;
+  styles: Array<{ value: "MILITARY" | "DRESS" | "SPORT" | "TOOL" | "CASUAL" | "CLASSIC" | "MINIMALIST" | "LUXURY" | "RETRO" | "FUTURISTIC"; count: number }>;
   sizes: Array<{ value: "SMALL" | "MEDIUM" | "LARGE"; count: number }>;
+  movements: Array<{ value: string; count: number }>;
+  caseMaterials: Array<{ value: string; count: number }>;
   priceBounds: { min: number; max: number };
 };
 

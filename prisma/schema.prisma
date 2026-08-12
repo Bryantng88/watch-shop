@@ -1431,6 +1431,7 @@ model Watch {
   serialNumber     String?
   yearText         String?
   style            WatchStyle?
+  isCollectible    Boolean          @default(false)
   hasBox           Boolean          @default(false)
   hasPapers        Boolean          @default(false)
 
@@ -1462,6 +1463,7 @@ model Watch {
   @@index([serviceStage])
   @@index([serviceExpectedCompletionAt])
   @@index([siteChannel])
+  @@index([isCollectible, updatedAt])
   @@index([stockStage])
   @@index([specStatus])
   @@index([duplicateConfirmedAt])

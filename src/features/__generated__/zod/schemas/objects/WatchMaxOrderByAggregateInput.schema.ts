@@ -22,6 +22,7 @@ const makeSchema = () => z.object({
   serialNumber: SortOrderSchema.optional(),
   yearText: SortOrderSchema.optional(),
   style: SortOrderSchema.optional(),
+  isCollectible: SortOrderSchema.optional(),
   hasBox: SortOrderSchema.optional(),
   hasPapers: SortOrderSchema.optional(),
   specStatus: SortOrderSchema.optional(),

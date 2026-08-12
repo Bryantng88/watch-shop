@@ -20,6 +20,7 @@ export const WatchFindManyResultSchema = z.object({
   serialNumber: z.string().optional(),
   yearText: z.string().optional(),
   style: z.unknown().optional(),
+  isCollectible: z.boolean(),
   hasBox: z.boolean(),
   hasPapers: z.boolean(),
   specStatus: z.unknown(),

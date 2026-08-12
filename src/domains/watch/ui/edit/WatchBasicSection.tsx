@@ -620,6 +620,14 @@ export default function WatchBasicSection({
               placeholder="Chọn phong cách"
             />
           </div>
+
+          <div className="flex items-end pb-1">
+            <Toggle
+              checked={values.isCollectible}
+              label="Collectible"
+              onChange={(isCollectible) => onChange({ isCollectible })}
+            />
+          </div>
         </FormSection>
 
         <FormSection

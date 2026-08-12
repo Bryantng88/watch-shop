@@ -62,6 +62,7 @@ const watchwhereinputSchema = z.object({
   serialNumber: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   yearText: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   style: z.union([z.lazy(() => EnumWatchStyleNullableFilterObjectSchema), WatchStyleSchema]).optional().nullable(),
+  isCollectible: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   hasBox: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   hasPapers: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   specStatus: z.union([z.lazy(() => EnumWatchSpecStatusFilterObjectSchema), WatchSpecStatusSchema]).optional(),

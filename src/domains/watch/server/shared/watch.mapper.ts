@@ -211,6 +211,7 @@ export function mapWatchDetail(row: any): WatchDetailModel {
             movementType: row.movementType ?? null,
             movementCalibre: row.movementCalibre ?? null,
             style: row.style ?? null,
+            isCollectible: Boolean(row.isCollectible),
             yearText: row.yearText ?? null,
             hasBox: row.hasBox,
             hasPapers: row.hasPapers,

@@ -108,7 +108,7 @@ function main() {
   assertNoForbiddenKeys(publicWatchDetailSelect, "public detail select");
 
   const eligibility = JSON.stringify(publicWatchEligibilityWhere({ requireCoverImage: true }));
-  for (const required of ["AVAILABLE", "READY", "IN_STOCK", "APPROVED", "isForStorefront", "COVER"]) {
+  for (const required of ["AVAILABLE", "HOLD", "SOLD", "READY", "APPROVED", "isForStorefront", "COVER"]) {
     assert.ok(eligibility.includes(required), `eligibility is missing ${required}`);
   }
   assert.equal(eligibility.includes("publishedAt"), false, "storefront must not require channel posting");
@@ -120,7 +120,7 @@ function main() {
     false,
     "cover bypass must retain the rest of the storefront eligibility gate",
   );
-  for (const blocked of ["HOLD", "SOLD", "DRAFT", "PROCESSING"]) {
+  for (const blocked of ["DRAFT", "PROCESSING"]) {
     assert.ok(!eligibility.includes(`\"${blocked}\"`), `eligibility must not include ${blocked}`);
   }
 

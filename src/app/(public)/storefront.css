@@ -8,9 +8,20 @@
 }
 
 .storefront-display {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Times New Roman", Times, serif;
   font-weight: 400;
-  letter-spacing: -0.025em;
+  letter-spacing: 0;
+  font-kerning: normal;
+  font-variant-ligatures: common-ligatures;
+}
+
+@keyframes storefront-banner-enter {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.storefront-banner-slide {
+  animation: storefront-banner-enter 600ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
 .storefront-focus:focus-visible {

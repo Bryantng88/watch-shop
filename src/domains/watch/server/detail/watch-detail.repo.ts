@@ -113,6 +113,7 @@ export async function getAdminWatchMediaEditDetail(db: DB, productId: string) {
       movementType: true,
       movementCalibre: true,
       style: true,
+      isCollectible: true,
       yearText: true,
       hasBox: true,
       hasPapers: true,

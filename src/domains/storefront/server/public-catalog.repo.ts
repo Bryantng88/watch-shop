@@ -49,6 +49,8 @@ const publicWatchCoreSelect = {
   watch: {
     select: {
       saleStage: true,
+      style: true,
+      isCollectible: true,
       stockStage: true,
       audienceSegment: true,
       conditionGrade: true,
@@ -211,17 +213,24 @@ function publicWatchFilterWhere(query: PublicCatalogQuery): Prisma.ProductWhereI
     and.push({ brand: { is: { slug: query.brand } } });
   }
 
+  if (query.style) {
+    and.push({ watch: { is: { style: query.style } } });
+  }
+
   if (query.audience) {
     and.push({ watch: { is: { audienceSegment: query.audience } } });
   }
 
-  if (query.availability) {
-    const saleStage = query.availability === "AVAILABLE"
-      ? WatchSaleStage.READY
-      : query.availability === "HOLD"
-        ? WatchSaleStage.HOLD
-        : WatchSaleStage.SOLD;
-    and.push({ watch: { is: { saleStage } } });
+  if (query.collection === "COLLECTIBLE") {
+    and.push({ watch: { is: { isCollectible: true } } });
+  }
+
+  if (query.movement) {
+    and.push({ watch: { is: { watchSpecV2: { is: { movementType: query.movement } } } } });
+  }
+
+  if (query.caseMaterial) {
+    and.push({ watch: { is: { watchSpecV2: { is: { primaryCaseMaterial: query.caseMaterial } } } } });
   }
 
   if (query.size) {
@@ -265,12 +274,12 @@ function publicWatchFilterWhere(query: PublicCatalogQuery): Prisma.ProductWhereI
 
 function publicWatchOrderBy(sort: PublicCatalogQuery["sort"]): Prisma.ProductOrderByWithRelationInput[] {
   if (sort === "PRICE_ASC") {
-    return [{ watch: { watchPrice: { salePrice: "asc" } } }, { id: "asc" }];
+    return [{ watch: { saleStage: "asc" } }, { watch: { watchPrice: { salePrice: "asc" } } }, { id: "asc" }];
   }
   if (sort === "PRICE_DESC") {
-    return [{ watch: { watchPrice: { salePrice: "desc" } } }, { id: "asc" }];
+    return [{ watch: { saleStage: "asc" } }, { watch: { watchPrice: { salePrice: "desc" } } }, { id: "asc" }];
   }
-  return [{ updatedAt: "desc" }, { id: "desc" }];
+  return [{ watch: { saleStage: "asc" } }, { updatedAt: "desc" }, { id: "desc" }];
 }
 
 export async function listPublicWatchRows(
@@ -318,8 +327,9 @@ export async function listPublicCatalogFacetRows(db: DB) {
       watch: {
         select: {
           saleStage: true,
+          style: true,
           watchPrice: { select: { salePrice: true } },
-          watchSpecV2: { select: { caseSizeMM: true } },
+          watchSpecV2: { select: { caseSizeMM: true, movementType: true, primaryCaseMaterial: true } },
         },
       },
     },

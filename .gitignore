@@ -427,6 +427,9 @@ FodyWeavers.xsd
 .next-dev/
 out/
 
+# Local browser profiles created by storefront UI smoke tests
+.tmp-edge-slider/
+
 # Next.js cache
 .next/cache/
 .vercel/

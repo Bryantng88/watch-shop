@@ -31,6 +31,7 @@ export const WatchModelSchema = z.object({
     serialNumber: z.string().nullable(),
     yearText: z.string().nullable(),
     style: WatchStyleSchema.nullable(),
+    isCollectible: z.boolean(),
     hasBox: z.boolean(),
     hasPapers: z.boolean(),
     specStatus: WatchSpecStatusSchema,

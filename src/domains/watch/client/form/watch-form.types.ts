@@ -38,6 +38,7 @@ export type WatchFormValues = {
         serialNumber: string;
         yearText: string;
         style: string;
+        isCollectible: boolean;
         postTargetIds: string[];
     };
 

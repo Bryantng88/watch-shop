@@ -31,6 +31,7 @@ const makeSchema = () => z.object({
   serialNumber: z.string().optional().nullable(),
   yearText: z.string().optional().nullable(),
   style: WatchStyleSchema.optional().nullable(),
+  isCollectible: z.boolean().optional(),
   hasBox: z.boolean().optional(),
   hasPapers: z.boolean().optional(),
   specStatus: WatchSpecStatusSchema.optional(),

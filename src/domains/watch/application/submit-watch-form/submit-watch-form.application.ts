@@ -549,6 +549,7 @@ export async function submitWatchFormApplication(
             data: {
                 gender: pickEnumOrUndefined(values.basic.gender, WatchFormEnums.Gender),
                 style: pickEnumOrNull(values.basic.style, WatchFormEnums.WatchStyle),
+                isCollectible: Boolean(values.basic.isCollectible),
                 siteChannel: pickEnumOrUndefined(
                     values.basic.siteChannel,
                     WatchFormEnums.WatchSiteChannel,
