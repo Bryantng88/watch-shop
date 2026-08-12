@@ -29,7 +29,8 @@ import { ShipmentListRelationFilterObjectSchema as ShipmentListRelationFilterObj
 import { TaskListRelationFilterObjectSchema as TaskListRelationFilterObjectSchema } from './TaskListRelationFilter.schema';
 import { WorkCaseListRelationFilterObjectSchema as WorkCaseListRelationFilterObjectSchema } from './WorkCaseListRelationFilter.schema';
 import { PurchaseRequestNullableScalarRelationFilterObjectSchema as PurchaseRequestNullableScalarRelationFilterObjectSchema } from './PurchaseRequestNullableScalarRelationFilter.schema';
-import { PurchaseRequestWhereInputObjectSchema as PurchaseRequestWhereInputObjectSchema } from './PurchaseRequestWhereInput.schema'
+import { PurchaseRequestWhereInputObjectSchema as PurchaseRequestWhereInputObjectSchema } from './PurchaseRequestWhereInput.schema';
+import { AcquisitionListRelationFilterObjectSchema as AcquisitionListRelationFilterObjectSchema } from './AcquisitionListRelationFilter.schema'
 
 const orderwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => OrderWhereInputObjectSchema), z.lazy(() => OrderWhereInputObjectSchema).array()]).optional(),
@@ -74,7 +75,8 @@ const orderwhereinputSchema = z.object({
   shipments: z.lazy(() => ShipmentListRelationFilterObjectSchema).optional(),
   task: z.lazy(() => TaskListRelationFilterObjectSchema).optional(),
   workCase: z.lazy(() => WorkCaseListRelationFilterObjectSchema).optional(),
-  purchaseRequest: z.union([z.lazy(() => PurchaseRequestNullableScalarRelationFilterObjectSchema), z.lazy(() => PurchaseRequestWhereInputObjectSchema)]).optional()
+  purchaseRequest: z.union([z.lazy(() => PurchaseRequestNullableScalarRelationFilterObjectSchema), z.lazy(() => PurchaseRequestWhereInputObjectSchema)]).optional(),
+  tradeInAcquisitions: z.lazy(() => AcquisitionListRelationFilterObjectSchema).optional()
 }).strict();
 export const OrderWhereInputObjectSchema: z.ZodType<Prisma.OrderWhereInput> = orderwhereinputSchema as unknown as z.ZodType<Prisma.OrderWhereInput>;
 export const OrderWhereInputObjectZodSchema = orderwhereinputSchema;

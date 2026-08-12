@@ -50,6 +50,7 @@ export const OrderFindManySelectSchema: z.ZodType<Prisma.OrderSelect> = z.object
     task: z.boolean().optional(),
     workCase: z.boolean().optional(),
     purchaseRequest: z.boolean().optional(),
+    tradeInAcquisitions: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.OrderSelect>;
 
@@ -94,6 +95,7 @@ export const OrderFindManySelectZodSchema = z.object({
     task: z.boolean().optional(),
     workCase: z.boolean().optional(),
     purchaseRequest: z.boolean().optional(),
+    tradeInAcquisitions: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

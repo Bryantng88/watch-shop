@@ -48,7 +48,8 @@ export const OrderModelSchema = z.object({
     shipments: z.array(z.unknown()),
     task: z.array(z.unknown()),
     workCase: z.array(z.unknown()),
-    purchaseRequest: z.unknown().nullable()
+    purchaseRequest: z.unknown().nullable(),
+    tradeInAcquisitions: z.array(z.unknown())
 }).strict();
 
 export type OrderPureType = z.infer<typeof OrderModelSchema>;

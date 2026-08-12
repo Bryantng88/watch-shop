@@ -13,7 +13,8 @@ import { OrderItemCreateNestedManyWithoutOrderInputObjectSchema as OrderItemCrea
 import { ShipmentCreateNestedManyWithoutOrderInputObjectSchema as ShipmentCreateNestedManyWithoutOrderInputObjectSchema } from './ShipmentCreateNestedManyWithoutOrderInput.schema';
 import { TaskCreateNestedManyWithoutOrderInputObjectSchema as TaskCreateNestedManyWithoutOrderInputObjectSchema } from './TaskCreateNestedManyWithoutOrderInput.schema';
 import { WorkCaseCreateNestedManyWithoutOrderInputObjectSchema as WorkCaseCreateNestedManyWithoutOrderInputObjectSchema } from './WorkCaseCreateNestedManyWithoutOrderInput.schema';
-import { PurchaseRequestCreateNestedOneWithoutOrderInputObjectSchema as PurchaseRequestCreateNestedOneWithoutOrderInputObjectSchema } from './PurchaseRequestCreateNestedOneWithoutOrderInput.schema'
+import { PurchaseRequestCreateNestedOneWithoutOrderInputObjectSchema as PurchaseRequestCreateNestedOneWithoutOrderInputObjectSchema } from './PurchaseRequestCreateNestedOneWithoutOrderInput.schema';
+import { AcquisitionCreateNestedManyWithoutSourceOrderInputObjectSchema as AcquisitionCreateNestedManyWithoutSourceOrderInputObjectSchema } from './AcquisitionCreateNestedManyWithoutSourceOrderInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -53,7 +54,8 @@ const makeSchema = () => z.object({
   shipments: z.lazy(() => ShipmentCreateNestedManyWithoutOrderInputObjectSchema),
   task: z.lazy(() => TaskCreateNestedManyWithoutOrderInputObjectSchema),
   workCase: z.lazy(() => WorkCaseCreateNestedManyWithoutOrderInputObjectSchema),
-  purchaseRequest: z.lazy(() => PurchaseRequestCreateNestedOneWithoutOrderInputObjectSchema).optional()
+  purchaseRequest: z.lazy(() => PurchaseRequestCreateNestedOneWithoutOrderInputObjectSchema).optional(),
+  tradeInAcquisitions: z.lazy(() => AcquisitionCreateNestedManyWithoutSourceOrderInputObjectSchema)
 }).strict();
 export const OrderCreateInputObjectSchema: z.ZodType<Prisma.OrderCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderCreateInput>;
 export const OrderCreateInputObjectZodSchema = makeSchema();

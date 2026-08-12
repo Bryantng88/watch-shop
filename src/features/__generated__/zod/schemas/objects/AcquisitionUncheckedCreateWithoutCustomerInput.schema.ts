@@ -10,6 +10,7 @@ import { TaskUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema as Tas
 const makeSchema = () => z.object({
   id: z.string().optional(),
   vendorId: z.string().optional().nullable(),
+  sourceOrderId: z.string().optional().nullable(),
   type: AcquisitionTypeSchema.optional(),
   acquiredAt: z.coerce.date(),
   totalAmount: z.number().optional().nullable(),

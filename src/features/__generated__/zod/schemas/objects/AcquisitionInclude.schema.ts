@@ -1,6 +1,7 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { CustomerArgsObjectSchema as CustomerArgsObjectSchema } from './CustomerArgs.schema';
+import { OrderArgsObjectSchema as OrderArgsObjectSchema } from './OrderArgs.schema';
 import { VendorArgsObjectSchema as VendorArgsObjectSchema } from './VendorArgs.schema';
 import { AcquisitionItemFindManySchema as AcquisitionItemFindManySchema } from '../findManyAcquisitionItem.schema';
 import { InvoiceFindManySchema as InvoiceFindManySchema } from '../findManyInvoice.schema';
@@ -9,6 +10,7 @@ import { AcquisitionCountOutputTypeArgsObjectSchema as AcquisitionCountOutputTyp
 
 const makeSchema = () => z.object({
   customer: z.union([z.boolean(), z.lazy(() => CustomerArgsObjectSchema)]).optional(),
+  sourceOrder: z.union([z.boolean(), z.lazy(() => OrderArgsObjectSchema)]).optional(),
   vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional(),
   acquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemFindManySchema)]).optional(),
   Invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),

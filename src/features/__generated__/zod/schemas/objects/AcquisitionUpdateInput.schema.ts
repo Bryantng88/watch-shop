@@ -12,6 +12,7 @@ import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateT
 import { AudienceSegmentSchema } from '../enums/AudienceSegment.schema';
 import { EnumAudienceSegmentFieldUpdateOperationsInputObjectSchema as EnumAudienceSegmentFieldUpdateOperationsInputObjectSchema } from './EnumAudienceSegmentFieldUpdateOperationsInput.schema';
 import { CustomerUpdateOneWithoutAcquisitionNestedInputObjectSchema as CustomerUpdateOneWithoutAcquisitionNestedInputObjectSchema } from './CustomerUpdateOneWithoutAcquisitionNestedInput.schema';
+import { OrderUpdateOneWithoutTradeInAcquisitionsNestedInputObjectSchema as OrderUpdateOneWithoutTradeInAcquisitionsNestedInputObjectSchema } from './OrderUpdateOneWithoutTradeInAcquisitionsNestedInput.schema';
 import { VendorUpdateOneWithoutAcquisitionNestedInputObjectSchema as VendorUpdateOneWithoutAcquisitionNestedInputObjectSchema } from './VendorUpdateOneWithoutAcquisitionNestedInput.schema';
 import { AcquisitionItemUpdateManyWithoutAcquisitionNestedInputObjectSchema as AcquisitionItemUpdateManyWithoutAcquisitionNestedInputObjectSchema } from './AcquisitionItemUpdateManyWithoutAcquisitionNestedInput.schema';
 import { InvoiceUpdateManyWithoutAcquisitionNestedInputObjectSchema as InvoiceUpdateManyWithoutAcquisitionNestedInputObjectSchema } from './InvoiceUpdateManyWithoutAcquisitionNestedInput.schema';
@@ -35,6 +36,7 @@ const makeSchema = () => z.object({
   sentAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   returnedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   customer: z.lazy(() => CustomerUpdateOneWithoutAcquisitionNestedInputObjectSchema).optional(),
+  sourceOrder: z.lazy(() => OrderUpdateOneWithoutTradeInAcquisitionsNestedInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorUpdateOneWithoutAcquisitionNestedInputObjectSchema).optional(),
   acquisitionItem: z.lazy(() => AcquisitionItemUpdateManyWithoutAcquisitionNestedInputObjectSchema).optional(),
   Invoice: z.lazy(() => InvoiceUpdateManyWithoutAcquisitionNestedInputObjectSchema).optional(),

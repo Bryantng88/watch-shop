@@ -7,6 +7,7 @@ import { ShipmentFindManySchema as ShipmentFindManySchema } from '../findManyShi
 import { TaskFindManySchema as TaskFindManySchema } from '../findManyTask.schema';
 import { WorkCaseFindManySchema as WorkCaseFindManySchema } from '../findManyWorkCase.schema';
 import { PurchaseRequestArgsObjectSchema as PurchaseRequestArgsObjectSchema } from './PurchaseRequestArgs.schema';
+import { AcquisitionFindManySchema as AcquisitionFindManySchema } from '../findManyAcquisition.schema';
 import { OrderCountOutputTypeArgsObjectSchema as OrderCountOutputTypeArgsObjectSchema } from './OrderCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -50,6 +51,7 @@ const makeSchema = () => z.object({
   task: z.union([z.boolean(), z.lazy(() => TaskFindManySchema)]).optional(),
   workCase: z.union([z.boolean(), z.lazy(() => WorkCaseFindManySchema)]).optional(),
   purchaseRequest: z.union([z.boolean(), z.lazy(() => PurchaseRequestArgsObjectSchema)]).optional(),
+  tradeInAcquisitions: z.union([z.boolean(), z.lazy(() => AcquisitionFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => OrderCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const OrderSelectObjectSchema: z.ZodType<Prisma.OrderSelect> = makeSchema() as unknown as z.ZodType<Prisma.OrderSelect>;

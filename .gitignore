@@ -10,6 +10,11 @@
 *.userosscache
 *.sln.docstates
 *.env
+*.env.zip
+
+# Release bundles are generated artifacts; create them from a committed SHA.
+watch-shop-*.tar.gz
+watch-shop-*.tar.gz.sha256
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

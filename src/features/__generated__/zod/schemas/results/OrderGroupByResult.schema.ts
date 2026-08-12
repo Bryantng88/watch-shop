@@ -65,7 +65,8 @@ export const OrderGroupByResultSchema = z.array(z.object({
     shipments: z.number(),
     task: z.number(),
     workCase: z.number(),
-    purchaseRequest: z.number()
+    purchaseRequest: z.number(),
+    tradeInAcquisitions: z.number()
   }).optional(),
   _sum: z.object({
     subtotal: z.number().nullable(),

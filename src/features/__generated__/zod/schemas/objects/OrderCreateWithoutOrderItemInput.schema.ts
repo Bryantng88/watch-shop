@@ -12,7 +12,8 @@ import { CustomerCreateNestedOneWithoutOrderInputObjectSchema as CustomerCreateN
 import { ShipmentCreateNestedManyWithoutOrderInputObjectSchema as ShipmentCreateNestedManyWithoutOrderInputObjectSchema } from './ShipmentCreateNestedManyWithoutOrderInput.schema';
 import { TaskCreateNestedManyWithoutOrderInputObjectSchema as TaskCreateNestedManyWithoutOrderInputObjectSchema } from './TaskCreateNestedManyWithoutOrderInput.schema';
 import { WorkCaseCreateNestedManyWithoutOrderInputObjectSchema as WorkCaseCreateNestedManyWithoutOrderInputObjectSchema } from './WorkCaseCreateNestedManyWithoutOrderInput.schema';
-import { PurchaseRequestCreateNestedOneWithoutOrderInputObjectSchema as PurchaseRequestCreateNestedOneWithoutOrderInputObjectSchema } from './PurchaseRequestCreateNestedOneWithoutOrderInput.schema'
+import { PurchaseRequestCreateNestedOneWithoutOrderInputObjectSchema as PurchaseRequestCreateNestedOneWithoutOrderInputObjectSchema } from './PurchaseRequestCreateNestedOneWithoutOrderInput.schema';
+import { AcquisitionCreateNestedManyWithoutSourceOrderInputObjectSchema as AcquisitionCreateNestedManyWithoutSourceOrderInputObjectSchema } from './AcquisitionCreateNestedManyWithoutSourceOrderInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -52,7 +53,8 @@ const makeSchema = () => z.object({
   shipments: z.lazy(() => ShipmentCreateNestedManyWithoutOrderInputObjectSchema).optional(),
   task: z.lazy(() => TaskCreateNestedManyWithoutOrderInputObjectSchema).optional(),
   workCase: z.lazy(() => WorkCaseCreateNestedManyWithoutOrderInputObjectSchema).optional(),
-  purchaseRequest: z.lazy(() => PurchaseRequestCreateNestedOneWithoutOrderInputObjectSchema).optional()
+  purchaseRequest: z.lazy(() => PurchaseRequestCreateNestedOneWithoutOrderInputObjectSchema).optional(),
+  tradeInAcquisitions: z.lazy(() => AcquisitionCreateNestedManyWithoutSourceOrderInputObjectSchema).optional()
 }).strict();
 export const OrderCreateWithoutOrderItemInputObjectSchema: z.ZodType<Prisma.OrderCreateWithoutOrderItemInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderCreateWithoutOrderItemInput>;
 export const OrderCreateWithoutOrderItemInputObjectZodSchema = makeSchema();

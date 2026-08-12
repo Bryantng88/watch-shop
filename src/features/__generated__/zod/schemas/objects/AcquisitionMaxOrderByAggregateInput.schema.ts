@@ -6,6 +6,7 @@ const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
   vendorId: SortOrderSchema.optional(),
   customerId: SortOrderSchema.optional(),
+  sourceOrderId: SortOrderSchema.optional(),
   type: SortOrderSchema.optional(),
   acquiredAt: SortOrderSchema.optional(),
   totalAmount: SortOrderSchema.optional(),

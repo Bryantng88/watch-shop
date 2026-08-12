@@ -25,7 +25,8 @@ import { InvoiceUncheckedUpdateManyWithoutOrderNestedInputObjectSchema as Invoic
 import { OrderItemUncheckedUpdateManyWithoutOrderNestedInputObjectSchema as OrderItemUncheckedUpdateManyWithoutOrderNestedInputObjectSchema } from './OrderItemUncheckedUpdateManyWithoutOrderNestedInput.schema';
 import { ShipmentUncheckedUpdateManyWithoutOrderNestedInputObjectSchema as ShipmentUncheckedUpdateManyWithoutOrderNestedInputObjectSchema } from './ShipmentUncheckedUpdateManyWithoutOrderNestedInput.schema';
 import { WorkCaseUncheckedUpdateManyWithoutOrderNestedInputObjectSchema as WorkCaseUncheckedUpdateManyWithoutOrderNestedInputObjectSchema } from './WorkCaseUncheckedUpdateManyWithoutOrderNestedInput.schema';
-import { PurchaseRequestUncheckedUpdateOneWithoutOrderNestedInputObjectSchema as PurchaseRequestUncheckedUpdateOneWithoutOrderNestedInputObjectSchema } from './PurchaseRequestUncheckedUpdateOneWithoutOrderNestedInput.schema'
+import { PurchaseRequestUncheckedUpdateOneWithoutOrderNestedInputObjectSchema as PurchaseRequestUncheckedUpdateOneWithoutOrderNestedInputObjectSchema } from './PurchaseRequestUncheckedUpdateOneWithoutOrderNestedInput.schema';
+import { AcquisitionUncheckedUpdateManyWithoutSourceOrderNestedInputObjectSchema as AcquisitionUncheckedUpdateManyWithoutSourceOrderNestedInputObjectSchema } from './AcquisitionUncheckedUpdateManyWithoutSourceOrderNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -65,7 +66,8 @@ const makeSchema = () => z.object({
   orderItem: z.lazy(() => OrderItemUncheckedUpdateManyWithoutOrderNestedInputObjectSchema).optional(),
   shipments: z.lazy(() => ShipmentUncheckedUpdateManyWithoutOrderNestedInputObjectSchema).optional(),
   workCase: z.lazy(() => WorkCaseUncheckedUpdateManyWithoutOrderNestedInputObjectSchema).optional(),
-  purchaseRequest: z.lazy(() => PurchaseRequestUncheckedUpdateOneWithoutOrderNestedInputObjectSchema).optional()
+  purchaseRequest: z.lazy(() => PurchaseRequestUncheckedUpdateOneWithoutOrderNestedInputObjectSchema).optional(),
+  tradeInAcquisitions: z.lazy(() => AcquisitionUncheckedUpdateManyWithoutSourceOrderNestedInputObjectSchema).optional()
 }).strict();
 export const OrderUncheckedUpdateWithoutTaskInputObjectSchema: z.ZodType<Prisma.OrderUncheckedUpdateWithoutTaskInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderUncheckedUpdateWithoutTaskInput>;
 export const OrderUncheckedUpdateWithoutTaskInputObjectZodSchema = makeSchema();

@@ -8,7 +8,8 @@ import { OrderItemOrderByRelationAggregateInputObjectSchema as OrderItemOrderByR
 import { ShipmentOrderByRelationAggregateInputObjectSchema as ShipmentOrderByRelationAggregateInputObjectSchema } from './ShipmentOrderByRelationAggregateInput.schema';
 import { TaskOrderByRelationAggregateInputObjectSchema as TaskOrderByRelationAggregateInputObjectSchema } from './TaskOrderByRelationAggregateInput.schema';
 import { WorkCaseOrderByRelationAggregateInputObjectSchema as WorkCaseOrderByRelationAggregateInputObjectSchema } from './WorkCaseOrderByRelationAggregateInput.schema';
-import { PurchaseRequestOrderByWithRelationInputObjectSchema as PurchaseRequestOrderByWithRelationInputObjectSchema } from './PurchaseRequestOrderByWithRelationInput.schema'
+import { PurchaseRequestOrderByWithRelationInputObjectSchema as PurchaseRequestOrderByWithRelationInputObjectSchema } from './PurchaseRequestOrderByWithRelationInput.schema';
+import { AcquisitionOrderByRelationAggregateInputObjectSchema as AcquisitionOrderByRelationAggregateInputObjectSchema } from './AcquisitionOrderByRelationAggregateInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -50,7 +51,8 @@ const makeSchema = () => z.object({
   shipments: z.lazy(() => ShipmentOrderByRelationAggregateInputObjectSchema).optional(),
   task: z.lazy(() => TaskOrderByRelationAggregateInputObjectSchema).optional(),
   workCase: z.lazy(() => WorkCaseOrderByRelationAggregateInputObjectSchema).optional(),
-  purchaseRequest: z.lazy(() => PurchaseRequestOrderByWithRelationInputObjectSchema).optional()
+  purchaseRequest: z.lazy(() => PurchaseRequestOrderByWithRelationInputObjectSchema).optional(),
+  tradeInAcquisitions: z.lazy(() => AcquisitionOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const OrderOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.OrderOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderOrderByWithRelationInput>;
 export const OrderOrderByWithRelationInputObjectZodSchema = makeSchema();

@@ -12,7 +12,8 @@ import { OrderItemUncheckedCreateNestedManyWithoutOrderInputObjectSchema as Orde
 import { ShipmentUncheckedCreateNestedManyWithoutOrderInputObjectSchema as ShipmentUncheckedCreateNestedManyWithoutOrderInputObjectSchema } from './ShipmentUncheckedCreateNestedManyWithoutOrderInput.schema';
 import { TaskUncheckedCreateNestedManyWithoutOrderInputObjectSchema as TaskUncheckedCreateNestedManyWithoutOrderInputObjectSchema } from './TaskUncheckedCreateNestedManyWithoutOrderInput.schema';
 import { WorkCaseUncheckedCreateNestedManyWithoutOrderInputObjectSchema as WorkCaseUncheckedCreateNestedManyWithoutOrderInputObjectSchema } from './WorkCaseUncheckedCreateNestedManyWithoutOrderInput.schema';
-import { PurchaseRequestUncheckedCreateNestedOneWithoutOrderInputObjectSchema as PurchaseRequestUncheckedCreateNestedOneWithoutOrderInputObjectSchema } from './PurchaseRequestUncheckedCreateNestedOneWithoutOrderInput.schema'
+import { PurchaseRequestUncheckedCreateNestedOneWithoutOrderInputObjectSchema as PurchaseRequestUncheckedCreateNestedOneWithoutOrderInputObjectSchema } from './PurchaseRequestUncheckedCreateNestedOneWithoutOrderInput.schema';
+import { AcquisitionUncheckedCreateNestedManyWithoutSourceOrderInputObjectSchema as AcquisitionUncheckedCreateNestedManyWithoutSourceOrderInputObjectSchema } from './AcquisitionUncheckedCreateNestedManyWithoutSourceOrderInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -52,7 +53,8 @@ const makeSchema = () => z.object({
   shipments: z.lazy(() => ShipmentUncheckedCreateNestedManyWithoutOrderInputObjectSchema),
   task: z.lazy(() => TaskUncheckedCreateNestedManyWithoutOrderInputObjectSchema),
   workCase: z.lazy(() => WorkCaseUncheckedCreateNestedManyWithoutOrderInputObjectSchema),
-  purchaseRequest: z.lazy(() => PurchaseRequestUncheckedCreateNestedOneWithoutOrderInputObjectSchema).optional()
+  purchaseRequest: z.lazy(() => PurchaseRequestUncheckedCreateNestedOneWithoutOrderInputObjectSchema).optional(),
+  tradeInAcquisitions: z.lazy(() => AcquisitionUncheckedCreateNestedManyWithoutSourceOrderInputObjectSchema)
 }).strict();
 export const OrderUncheckedCreateInputObjectSchema: z.ZodType<Prisma.OrderUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderUncheckedCreateInput>;
 export const OrderUncheckedCreateInputObjectZodSchema = makeSchema();

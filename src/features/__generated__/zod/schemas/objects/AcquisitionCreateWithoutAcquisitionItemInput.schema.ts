@@ -4,6 +4,7 @@ import { AcquisitionTypeSchema } from '../enums/AcquisitionType.schema';
 import { AcquisitionStatusSchema } from '../enums/AcquisitionStatus.schema';
 import { AudienceSegmentSchema } from '../enums/AudienceSegment.schema';
 import { CustomerCreateNestedOneWithoutAcquisitionInputObjectSchema as CustomerCreateNestedOneWithoutAcquisitionInputObjectSchema } from './CustomerCreateNestedOneWithoutAcquisitionInput.schema';
+import { OrderCreateNestedOneWithoutTradeInAcquisitionsInputObjectSchema as OrderCreateNestedOneWithoutTradeInAcquisitionsInputObjectSchema } from './OrderCreateNestedOneWithoutTradeInAcquisitionsInput.schema';
 import { VendorCreateNestedOneWithoutAcquisitionInputObjectSchema as VendorCreateNestedOneWithoutAcquisitionInputObjectSchema } from './VendorCreateNestedOneWithoutAcquisitionInput.schema';
 import { InvoiceCreateNestedManyWithoutAcquisitionInputObjectSchema as InvoiceCreateNestedManyWithoutAcquisitionInputObjectSchema } from './InvoiceCreateNestedManyWithoutAcquisitionInput.schema';
 import { TaskCreateNestedManyWithoutAcquisitionInputObjectSchema as TaskCreateNestedManyWithoutAcquisitionInputObjectSchema } from './TaskCreateNestedManyWithoutAcquisitionInput.schema'
@@ -26,6 +27,7 @@ const makeSchema = () => z.object({
   sentAt: z.coerce.date().optional().nullable(),
   returnedAt: z.coerce.date().optional().nullable(),
   customer: z.lazy(() => CustomerCreateNestedOneWithoutAcquisitionInputObjectSchema).optional(),
+  sourceOrder: z.lazy(() => OrderCreateNestedOneWithoutTradeInAcquisitionsInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorCreateNestedOneWithoutAcquisitionInputObjectSchema).optional(),
   Invoice: z.lazy(() => InvoiceCreateNestedManyWithoutAcquisitionInputObjectSchema).optional(),
   Task: z.lazy(() => TaskCreateNestedManyWithoutAcquisitionInputObjectSchema).optional()

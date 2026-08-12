@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { AcquisitionTypeSchema } from '../enums/AcquisitionType.schema';
 import { AcquisitionStatusSchema } from '../enums/AcquisitionStatus.schema';
 import { AudienceSegmentSchema } from '../enums/AudienceSegment.schema';
+import { OrderCreateNestedOneWithoutTradeInAcquisitionsInputObjectSchema as OrderCreateNestedOneWithoutTradeInAcquisitionsInputObjectSchema } from './OrderCreateNestedOneWithoutTradeInAcquisitionsInput.schema';
 import { VendorCreateNestedOneWithoutAcquisitionInputObjectSchema as VendorCreateNestedOneWithoutAcquisitionInputObjectSchema } from './VendorCreateNestedOneWithoutAcquisitionInput.schema';
 import { AcquisitionItemCreateNestedManyWithoutAcquisitionInputObjectSchema as AcquisitionItemCreateNestedManyWithoutAcquisitionInputObjectSchema } from './AcquisitionItemCreateNestedManyWithoutAcquisitionInput.schema';
 import { InvoiceCreateNestedManyWithoutAcquisitionInputObjectSchema as InvoiceCreateNestedManyWithoutAcquisitionInputObjectSchema } from './InvoiceCreateNestedManyWithoutAcquisitionInput.schema';
@@ -25,6 +26,7 @@ const makeSchema = () => z.object({
   updatedAt: z.coerce.date().optional(),
   sentAt: z.coerce.date().optional().nullable(),
   returnedAt: z.coerce.date().optional().nullable(),
+  sourceOrder: z.lazy(() => OrderCreateNestedOneWithoutTradeInAcquisitionsInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorCreateNestedOneWithoutAcquisitionInputObjectSchema).optional(),
   acquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutAcquisitionInputObjectSchema).optional(),
   Invoice: z.lazy(() => InvoiceCreateNestedManyWithoutAcquisitionInputObjectSchema).optional(),
