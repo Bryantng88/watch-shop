@@ -1,2 +1,7 @@
 *.sh text eol=lf
 
+# Never nest local snapshots or previous release bundles in `git archive` output.
+*.zip export-ignore
+*.tar.gz export-ignore
+*.tar.gz.sha256 export-ignore
+
