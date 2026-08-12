@@ -9,7 +9,9 @@ if (!databaseUrl) {
 }
 
 const databaseName = new URL(databaseUrl).pathname.replace(/^\//, "");
-if (!databaseName.toLowerCase().includes("staging")) {
+const isStaging = databaseName.toLowerCase().includes("staging");
+const productionAllowed = process.env.ALLOW_PRODUCTION_STOREFRONT_SLUG_BACKFILL === "1";
+if (!isStaging && !productionAllowed) {
   throw new Error(`Refusing non-staging database: ${databaseName || "(unknown)"}`);
 }
 
