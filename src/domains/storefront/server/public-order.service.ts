@@ -12,6 +12,7 @@ import { findOrderablePublicWatchIds } from "./public-catalog.repo";
 
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1_000;
 const RATE_LIMIT_MAX = 5;
+const MAX_REQUEST_ITEMS = 20;
 
 export class PublicOrderProductsUnavailableError extends Error {
   constructor(readonly productIds: string[]) {
@@ -22,6 +23,12 @@ export class PublicOrderProductsUnavailableError extends Error {
 
 function digest(value: string) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function normalizePhone(value: string) {
+  const digits = value.replace(/\D/g, "");
+  if (digits.startsWith("84") && digits.length >= 10) return `0${digits.slice(2)}`;
+  return digits;
 }
 
 function canonicalRequest(request: ReturnType<typeof publicOrderRequestSchema.parse>) {
@@ -51,7 +58,7 @@ export async function submitPublicOrder(
   });
   if (existing) {
     if (existing.requestHash !== requestHash) throw new Error("PUBLIC_ORDER_IDEMPOTENCY_CONFLICT");
-    return { requestId: existing.id, reference: existing.reference, status: "RECEIVED", replayed: true };
+    return { requestId: existing.id, reference: existing.reference, status: "RECEIVED", disposition: "CREATED", addedItemCount: 0, replayed: true };
   }
 
   const productIds = Array.from(new Set(request.items.map((item) => item.productId)));
@@ -73,7 +80,78 @@ export async function submitPublicOrder(
     });
     if (replay) {
       if (replay.requestHash !== requestHash) throw new Error("PUBLIC_ORDER_IDEMPOTENCY_CONFLICT");
-      return { ...replay, replayed: true };
+      return { ...replay, disposition: "CREATED" as const, addedItemCount: 0, replayed: true };
+    }
+
+    const normalizedPhone = normalizePhone(request.phone);
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`purchase-request-phone:${normalizedPhone}`}, 0))`;
+
+    const waitingCandidates = await tx.purchaseRequest.findMany({
+      where: { status: "WAITING", orderId: null },
+      orderBy: { updatedAt: "desc" },
+      take: 100,
+      include: { items: { select: { productId: true } } },
+    });
+    const mergeTarget = waitingCandidates.find(
+      (candidate) => normalizePhone(candidate.phone) === normalizedPhone,
+    );
+
+    if (mergeTarget) {
+      const existingProductIds = new Set(mergeTarget.items.map((item) => item.productId));
+      const addedProductIds = productIds.filter((productId) => !existingProductIds.has(productId));
+      if (mergeTarget.items.length + addedProductIds.length > MAX_REQUEST_ITEMS) {
+        throw new Error("PUBLIC_ORDER_TOO_MANY_ITEMS");
+      }
+
+      if (addedProductIds.length) {
+        const products = await tx.product.findMany({
+          where: { id: { in: addedProductIds } },
+          select: { id: true, title: true, watch: { select: { watchPrice: { select: { salePrice: true } } } } },
+        });
+        const productById = new Map(products.map((product) => [product.id, product]));
+        await tx.purchaseRequestItem.createMany({
+          data: addedProductIds.map((productId) => {
+            const product = productById.get(productId);
+            if (!product) throw new Error("PUBLIC_ORDER_PRODUCT_UNAVAILABLE");
+            return {
+              purchaseRequestId: mergeTarget.id,
+              productId,
+              titleSnapshot: product.title,
+              listPriceSnapshot: product.watch?.watchPrice?.salePrice ?? 0,
+              quantity: 1,
+            };
+          }),
+        });
+        await tx.purchaseRequestActivity.create({
+          data: {
+            purchaseRequestId: mergeTarget.id,
+            type: "NOTE",
+            note: `Khách bổ sung ${addedProductIds.length} Watch từ Storefront: ${products.map((product) => product.title).join(", ")}.`,
+          },
+        });
+      }
+
+      await tx.purchaseRequest.update({
+        where: { id: mergeTarget.id },
+        data: {
+          customerName: request.customerName,
+          contactPreference: request.contactPreference,
+          address: request.address ?? mergeTarget.address,
+          city: request.city ?? mergeTarget.city,
+          district: request.district ?? mergeTarget.district,
+          ward: request.ward ?? mergeTarget.ward,
+          customerNote: request.note ?? mergeTarget.customerNote,
+          updatedAt: now,
+        },
+      });
+      return {
+        id: mergeTarget.id,
+        reference: mergeTarget.reference,
+        requestHash,
+        disposition: "MERGED" as const,
+        addedItemCount: addedProductIds.length,
+        replayed: false,
+      };
     }
 
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`public-rate:${fingerprintHash}`}, 0))`;
@@ -119,8 +197,8 @@ export async function submitPublicOrder(
       },
       select: { id: true, reference: true, requestHash: true },
     });
-    return { ...created, replayed: false };
+    return { ...created, disposition: "CREATED" as const, addedItemCount: productIds.length, replayed: false };
   });
 
-  return { requestId: result.id, reference: result.reference, status: "RECEIVED", replayed: result.replayed };
+  return { requestId: result.id, reference: result.reference, status: "RECEIVED", disposition: result.disposition, addedItemCount: result.addedItemCount, replayed: result.replayed };
 }

@@ -16,6 +16,8 @@ assert.throws(() => publicOrderRequestSchema.parse({ ...valid, items: [{ product
 assert.throws(() => publicOrderRequestSchema.parse({ ...valid, items: [valid.items[0], valid.items[0]] }));
 
 const orderService = readFileSync(resolve("src/domains/storefront/server/public-order.service.ts"), "utf8");
+const orderForm = readFileSync(resolve("src/domains/storefront/ui/PublicOrderForm.tsx"), "utf8");
+const publicOrderRoute = readFileSync(resolve("src/app/api/public/orders/route.ts"), "utf8");
 const requestService = readFileSync(resolve("src/domains/purchase-request/server/purchase-request.service.ts"), "utf8");
 const paymentCore = readFileSync(resolve("src/domains/payment/server/payment.core.ts"), "utf8");
 assert.match(orderService, /findOrderablePublicWatchIds/);
@@ -24,8 +26,12 @@ assert.match(orderService, /purchase-request:/);
 assert.match(orderService, /public-rate:/);
 assert.match(orderService, /PUBLIC_ORDER_IDEMPOTENCY_CONFLICT/);
 assert.match(orderService, /PUBLIC_ORDER_RATE_LIMITED/);
+assert.match(orderForm, /action="\/api\/public\/orders"/);
+assert.match(orderForm, /type="submit"/);
+assert.match(publicOrderRoute, /req\.formData\(\)/);
+assert.match(publicOrderRoute, /NextResponse\.redirect/);
 assert.match(requestService, /convertPurchaseRequestToOrder/);
 assert.match(requestService, /status: "DRAFT"/);
 assert.match(paymentCore, /status: "CANCELED"/);
 
-console.log(JSON.stringify({ ok: true, checks: 12, contract: "purchase-request-ingress" }));
+console.log(JSON.stringify({ ok: true, checks: 16, contract: "purchase-request-ingress" }));

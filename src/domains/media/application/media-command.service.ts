@@ -215,24 +215,29 @@ export async function listSelectedWatchMedia(input: {
   productId: string;
   role?: MediaRole;
 }) {
-  const watch = await watchOwner(input.productId);
-  const bindings = await prisma.mediaBinding.findMany({
-    where: {
-      ownerType: MediaOwnerType.WATCH,
-      ownerId: watch.id,
-      ...(input.role ? { role: input.role } : {}),
-      lifecycle: MediaBindingLifecycle.SELECTED,
-    },
-    include: {
-      mediaObject: {
-        select: {
-          storageKey: true,
-          originalFileName: true,
-        },
-      },
-    },
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  const watch = await prisma.watch.findUnique({
+    where: { productId: input.productId },
+    select: { id: true },
   });
+  const bindings = watch
+    ? await prisma.mediaBinding.findMany({
+        where: {
+          ownerType: MediaOwnerType.WATCH,
+          ownerId: watch.id,
+          ...(input.role ? { role: input.role } : {}),
+          lifecycle: MediaBindingLifecycle.SELECTED,
+        },
+        include: {
+          mediaObject: {
+            select: {
+              storageKey: true,
+              originalFileName: true,
+            },
+          },
+        },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      })
+    : [];
   if (!bindings.length) {
     const legacyPool = await prisma.mediaAsset.findMany({
       where: {

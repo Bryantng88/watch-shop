@@ -48,9 +48,9 @@ async function main() {
   return id;
   }
 
-  function request(productId: string, customerName = "Storefront Integration") {
+  function request(productId: string, customerName = "Storefront Integration", requestPhone = phone) {
   return {
-    customerName, phone, contactPreference: "PHONE" as const,
+    customerName, phone: requestPhone, contactPreference: "PHONE" as const,
     items: [{ productId, quantity: 1 }],
   };
   }
@@ -89,23 +89,49 @@ async function main() {
   ), /PUBLIC_ORDER_IDEMPOTENCY_CONFLICT/);
 
   const concurrentProduct = await seedWatch("concurrent");
+  const concurrentPhone = `08${String(Date.now()).slice(-8)}`;
   const concurrent = await Promise.allSettled([1, 2].map((n) => submitPublicOrder(
-    { request: request(concurrentProduct), idempotencyKey: `${prefix}-concurrent-key-000${n}`, channel: "STOREFRONT" },
+    { request: request(concurrentProduct, "Storefront Integration", concurrentPhone), idempotencyKey: `${prefix}-concurrent-key-000${n}`, channel: "STOREFRONT" },
     { fingerprint: `${prefix}:concurrent:${n}`, runtime: { deferConsumers } },
   )));
   assert.equal(concurrent.filter((result) => result.status === "fulfilled").length, 2);
   const concurrentRequestCount = await prisma.purchaseRequestItem.count({ where: { productId: concurrentProduct } });
-  assert.equal(concurrentRequestCount, 2, "Purchase requests do not reserve inventory before qualification");
+  assert.equal(concurrentRequestCount, 1, "Concurrent submissions from the same phone merge into one waiting request");
+  const concurrentRequestIds = new Set(concurrent.flatMap((result) => result.status === "fulfilled" ? [result.value.requestId] : []));
+  assert.equal(concurrentRequestIds.size, 1, "Concurrent submissions must resolve to the same waiting request");
+
+  const mergeProduct = await seedWatch("merge");
+  const mergeResult = await submitPublicOrder(
+    { request: request(mergeProduct, "Storefront Integration", concurrentPhone), idempotencyKey: `${prefix}-merge-key-0001`, channel: "STOREFRONT" },
+    { fingerprint: `${prefix}:merge`, runtime: { deferConsumers } },
+  );
+  assert.equal(mergeResult.disposition, "MERGED");
+  assert.equal(mergeResult.addedItemCount, 1);
+  assert.equal(mergeResult.requestId, [...concurrentRequestIds][0]);
+  const mergeActivity = await prisma.purchaseRequestActivity.findFirst({
+    where: { purchaseRequestId: mergeResult.requestId, type: "NOTE" },
+    orderBy: { createdAt: "desc" },
+  });
+  assert.match(mergeActivity?.note ?? "", /bổ sung 1 Watch từ Storefront/);
+
+  await prisma.purchaseRequest.update({ where: { id: mergeResult.requestId }, data: { status: "PROCESSING" } });
+  const afterProcessingProduct = await seedWatch("after-processing");
+  const afterProcessing = await submitPublicOrder(
+    { request: request(afterProcessingProduct, "Storefront Integration", concurrentPhone), idempotencyKey: `${prefix}-after-processing-key-0001`, channel: "STOREFRONT" },
+    { fingerprint: `${prefix}:after-processing`, runtime: { deferConsumers } },
+  );
+  assert.notEqual(afterProcessing.requestId, mergeResult.requestId);
+  assert.equal(afterProcessing.disposition, "CREATED");
 
   const rateProducts = await Promise.all(Array.from({ length: 6 }, (_, index) => seedWatch(`rate-${index}`)));
   for (let index = 0; index < 5; index += 1) {
     await submitPublicOrder(
-      { request: request(rateProducts[index]), idempotencyKey: `${prefix}-rate-key-000${index}`, channel: "STOREFRONT" },
+      { request: request(rateProducts[index], "Storefront Integration", `07${String(Date.now() + index).slice(-8)}`), idempotencyKey: `${prefix}-rate-key-000${index}`, channel: "STOREFRONT" },
       { fingerprint: `${prefix}:same-fingerprint`, runtime: { deferConsumers } },
     );
   }
   await assert.rejects(() => submitPublicOrder(
-    { request: request(rateProducts[5]), idempotencyKey: `${prefix}-rate-key-0005`, channel: "STOREFRONT" },
+    { request: request(rateProducts[5], "Storefront Integration", `07${String(Date.now() + 5).slice(-8)}`), idempotencyKey: `${prefix}-rate-key-0005`, channel: "STOREFRONT" },
     { fingerprint: `${prefix}:same-fingerprint`, runtime: { deferConsumers } },
   ), /PUBLIC_ORDER_RATE_LIMITED/);
 
@@ -117,7 +143,7 @@ async function main() {
   assert.equal(zaloReplay.replayed, true);
   await assert.rejects(() => processZaloIngressEvent({ event, keyId: "integration", nonce: `${prefix}-nonce-0003`, requestHash: `${prefix}-changed`, runtime: { deferConsumers } }), /ZALO_EVENT_CONFLICT/);
 
-  console.log(JSON.stringify({ ok: true, database: databaseName, checks: 9, firstRequestId: first.requestId }, null, 2));
+  console.log(JSON.stringify({ ok: true, database: databaseName, checks: 15, firstRequestId: first.requestId }, null, 2));
   } finally {
     await cleanup().catch(() => undefined);
     await prisma.$disconnect();

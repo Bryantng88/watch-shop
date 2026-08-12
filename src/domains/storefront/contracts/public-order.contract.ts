@@ -45,6 +45,8 @@ export type PublicOrderAccepted = {
   requestId: string;
   reference: string;
   status: "RECEIVED";
+  disposition: "CREATED" | "MERGED";
+  addedItemCount: number;
 };
 
 export const publicOrderChannelSchema = z.enum(["STOREFRONT", "ZALO"]);
