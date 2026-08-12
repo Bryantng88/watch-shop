@@ -3,7 +3,8 @@ import type { Prisma } from '@prisma/client';
 import { PurchaseRequestStatusSchema } from '../enums/PurchaseRequestStatus.schema';
 import { PurchaseRequestOutcomeSchema } from '../enums/PurchaseRequestOutcome.schema';
 import { PurchaseRequestContactPreferenceSchema } from '../enums/PurchaseRequestContactPreference.schema';
-import { PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema as PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema } from './PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInput.schema'
+import { PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema as PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema } from './PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInput.schema';
+import { PurchaseRequestIngressReceiptUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema as PurchaseRequestIngressReceiptUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema } from './PurchaseRequestIngressReceiptUncheckedCreateNestedManyWithoutPurchaseRequestInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -17,7 +18,9 @@ const makeSchema = () => z.object({
   fingerprintHash: z.string(),
   customerName: z.string(),
   phone: z.string(),
+  normalizedPhone: z.string(),
   contactPreference: PurchaseRequestContactPreferenceSchema.optional(),
+  contactHandle: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
   city: z.string().optional().nullable(),
   district: z.string().optional().nullable(),
@@ -32,7 +35,8 @@ const makeSchema = () => z.object({
   orderId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  activities: z.lazy(() => PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema).optional()
+  activities: z.lazy(() => PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema).optional(),
+  ingressReceipts: z.lazy(() => PurchaseRequestIngressReceiptUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema).optional()
 }).strict();
 export const PurchaseRequestUncheckedCreateWithoutItemsInputObjectSchema: z.ZodType<Prisma.PurchaseRequestUncheckedCreateWithoutItemsInput> = makeSchema() as unknown as z.ZodType<Prisma.PurchaseRequestUncheckedCreateWithoutItemsInput>;
 export const PurchaseRequestUncheckedCreateWithoutItemsInputObjectZodSchema = makeSchema();

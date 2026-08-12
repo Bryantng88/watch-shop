@@ -1,6 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
 
 import type { BusinessEventDispatchOptions } from "@/domains/event/server/business-event.service";
+import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
+import { emitPurchaseRequestBusinessEvent } from "@/domains/purchase-request/server/events";
 import { prisma } from "@/server/db/client";
 import {
   publicOrderIdempotencyKeySchema,
@@ -31,6 +33,12 @@ function normalizePhone(value: string) {
   return digits;
 }
 
+function requireNormalizedPhone(value: string) {
+  const normalized = normalizePhone(value);
+  if (normalized.length < 8 || normalized.length > 15) throw new Error("PUBLIC_ORDER_PHONE_INVALID");
+  return normalized;
+}
+
 function canonicalRequest(request: ReturnType<typeof publicOrderRequestSchema.parse>) {
   return JSON.stringify({
     ...request,
@@ -52,13 +60,25 @@ export async function submitPublicOrder(
 
   const requestHash = digest(canonicalRequest(request));
   const namespacedKey = `${raw.channel}:${raw.externalRequestId?.trim() || idempotencyKey}`;
-  const existing = await prisma.purchaseRequest.findUnique({
+  const existingReceipt = await prisma.purchaseRequestIngressReceipt.findUnique({
     where: { requestKey: namespacedKey },
-    select: { id: true, reference: true, requestHash: true },
+    select: {
+      requestHash: true,
+      disposition: true,
+      addedItemCount: true,
+      purchaseRequest: { select: { id: true, reference: true } },
+    },
   });
-  if (existing) {
-    if (existing.requestHash !== requestHash) throw new Error("PUBLIC_ORDER_IDEMPOTENCY_CONFLICT");
-    return { requestId: existing.id, reference: existing.reference, status: "RECEIVED", disposition: "CREATED", addedItemCount: 0, replayed: true };
+  if (existingReceipt) {
+    if (existingReceipt.requestHash !== requestHash) throw new Error("PUBLIC_ORDER_IDEMPOTENCY_CONFLICT");
+    return {
+      requestId: existingReceipt.purchaseRequest.id,
+      reference: existingReceipt.purchaseRequest.reference,
+      status: "RECEIVED",
+      disposition: existingReceipt.disposition,
+      addedItemCount: existingReceipt.addedItemCount,
+      replayed: true,
+    };
   }
 
   const productIds = Array.from(new Set(request.items.map((item) => item.productId)));
@@ -67,34 +87,41 @@ export async function submitPublicOrder(
   if (unavailable.length) throw new PublicOrderProductsUnavailableError(unavailable);
 
   const now = context.now ?? new Date();
+  const normalizedPhone = requireNormalizedPhone(request.phone);
   const fingerprintHash = digest(`${process.env.PUBLIC_ORDER_FINGERPRINT_SECRET ?? "watch-shop"}:${context.fingerprint}`);
   const id = randomUUID();
   const datePart = now.toISOString().slice(0, 10).replaceAll("-", "");
   const reference = `PR-${datePart}-${id.slice(0, 8).toUpperCase()}`;
 
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await runBusinessEventTransaction(async (tx, delivery) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`purchase-request:${namespacedKey}`}, 0))`;
-    const replay = await tx.purchaseRequest.findUnique({
+    const replay = await tx.purchaseRequestIngressReceipt.findUnique({
       where: { requestKey: namespacedKey },
-      select: { id: true, reference: true, requestHash: true },
+      select: {
+        requestHash: true,
+        disposition: true,
+        addedItemCount: true,
+        purchaseRequest: { select: { id: true, reference: true } },
+      },
     });
     if (replay) {
       if (replay.requestHash !== requestHash) throw new Error("PUBLIC_ORDER_IDEMPOTENCY_CONFLICT");
-      return { ...replay, disposition: "CREATED" as const, addedItemCount: 0, replayed: true };
+      return {
+        id: replay.purchaseRequest.id,
+        reference: replay.purchaseRequest.reference,
+        disposition: replay.disposition,
+        addedItemCount: replay.addedItemCount,
+        replayed: true,
+      };
     }
 
-    const normalizedPhone = normalizePhone(request.phone);
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`purchase-request-phone:${normalizedPhone}`}, 0))`;
 
-    const waitingCandidates = await tx.purchaseRequest.findMany({
-      where: { status: "WAITING", orderId: null },
+    const mergeTarget = await tx.purchaseRequest.findFirst({
+      where: { normalizedPhone, status: "WAITING", orderId: null },
       orderBy: { updatedAt: "desc" },
-      take: 100,
       include: { items: { select: { productId: true } } },
     });
-    const mergeTarget = waitingCandidates.find(
-      (candidate) => normalizePhone(candidate.phone) === normalizedPhone,
-    );
 
     if (mergeTarget) {
       const existingProductIds = new Set(mergeTarget.items.map((item) => item.productId));
@@ -103,12 +130,14 @@ export async function submitPublicOrder(
         throw new Error("PUBLIC_ORDER_TOO_MANY_ITEMS");
       }
 
+      let addedTitles: string[] = [];
       if (addedProductIds.length) {
         const products = await tx.product.findMany({
           where: { id: { in: addedProductIds } },
           select: { id: true, title: true, watch: { select: { watchPrice: { select: { salePrice: true } } } } },
         });
         const productById = new Map(products.map((product) => [product.id, product]));
+        addedTitles = products.map((product) => product.title);
         await tx.purchaseRequestItem.createMany({
           data: addedProductIds.map((productId) => {
             const product = productById.get(productId);
@@ -126,7 +155,7 @@ export async function submitPublicOrder(
           data: {
             purchaseRequestId: mergeTarget.id,
             type: "NOTE",
-            note: `Khách bổ sung ${addedProductIds.length} Watch từ Storefront: ${products.map((product) => product.title).join(", ")}.`,
+            note: `Khách bổ sung ${addedProductIds.length} Watch từ Storefront: ${addedTitles.join(", ")}.`,
           },
         });
       }
@@ -136,6 +165,7 @@ export async function submitPublicOrder(
         data: {
           customerName: request.customerName,
           contactPreference: request.contactPreference,
+          contactHandle: request.contactHandle ?? null,
           address: request.address ?? mergeTarget.address,
           city: request.city ?? mergeTarget.city,
           district: request.district ?? mergeTarget.district,
@@ -144,6 +174,28 @@ export async function submitPublicOrder(
           updatedAt: now,
         },
       });
+      const receipt = await tx.purchaseRequestIngressReceipt.create({
+        data: {
+          requestKey: namespacedKey,
+          requestHash,
+          purchaseRequestId: mergeTarget.id,
+          disposition: "MERGED",
+          addedItemCount: addedProductIds.length,
+        },
+        select: { id: true },
+      });
+      if (addedProductIds.length) {
+        delivery.track(await emitPurchaseRequestBusinessEvent(tx, {
+          eventKey: "purchase_request.items_added",
+          eventInstanceId: receipt.id,
+          purchaseRequestId: mergeTarget.id,
+          reference: mergeTarget.reference,
+          channel: raw.channel,
+          productIds: addedProductIds,
+          addedItemCount: addedProductIds.length,
+          occurredAt: now,
+        }));
+      }
       return {
         id: mergeTarget.id,
         reference: mergeTarget.reference,
@@ -176,7 +228,9 @@ export async function submitPublicOrder(
         fingerprintHash,
         customerName: request.customerName,
         phone: request.phone,
+        normalizedPhone,
         contactPreference: request.contactPreference,
+        contactHandle: request.contactHandle ?? null,
         address: request.address ?? null,
         city: request.city ?? null,
         district: request.district ?? null,
@@ -194,11 +248,37 @@ export async function submitPublicOrder(
             };
           }),
         },
+        activities: {
+          create: {
+            type: "NOTE",
+            note: `Khách gửi yêu cầu mua ${productIds.length} Watch từ Storefront.`,
+          },
+        },
       },
       select: { id: true, reference: true, requestHash: true },
     });
+    const receipt = await tx.purchaseRequestIngressReceipt.create({
+      data: {
+        requestKey: namespacedKey,
+        requestHash,
+        purchaseRequestId: created.id,
+        disposition: "CREATED",
+        addedItemCount: productIds.length,
+      },
+      select: { id: true },
+    });
+    delivery.track(await emitPurchaseRequestBusinessEvent(tx, {
+      eventKey: "purchase_request.created",
+      eventInstanceId: receipt.id,
+      purchaseRequestId: created.id,
+      reference: created.reference,
+      channel: raw.channel,
+      productIds,
+      addedItemCount: productIds.length,
+      occurredAt: now,
+    }));
     return { ...created, disposition: "CREATED" as const, addedItemCount: productIds.length, replayed: false };
-  });
+  }, context.runtime);
 
   return { requestId: result.id, reference: result.reference, status: "RECEIVED", disposition: result.disposition, addedItemCount: result.addedItemCount, replayed: result.replayed };
 }

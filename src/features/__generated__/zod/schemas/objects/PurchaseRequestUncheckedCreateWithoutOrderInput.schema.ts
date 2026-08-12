@@ -4,7 +4,8 @@ import { PurchaseRequestStatusSchema } from '../enums/PurchaseRequestStatus.sche
 import { PurchaseRequestOutcomeSchema } from '../enums/PurchaseRequestOutcome.schema';
 import { PurchaseRequestContactPreferenceSchema } from '../enums/PurchaseRequestContactPreference.schema';
 import { PurchaseRequestItemUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema as PurchaseRequestItemUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema } from './PurchaseRequestItemUncheckedCreateNestedManyWithoutPurchaseRequestInput.schema';
-import { PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema as PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema } from './PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInput.schema'
+import { PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema as PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema } from './PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInput.schema';
+import { PurchaseRequestIngressReceiptUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema as PurchaseRequestIngressReceiptUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema } from './PurchaseRequestIngressReceiptUncheckedCreateNestedManyWithoutPurchaseRequestInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -18,7 +19,9 @@ const makeSchema = () => z.object({
   fingerprintHash: z.string(),
   customerName: z.string(),
   phone: z.string(),
+  normalizedPhone: z.string(),
   contactPreference: PurchaseRequestContactPreferenceSchema.optional(),
+  contactHandle: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
   city: z.string().optional().nullable(),
   district: z.string().optional().nullable(),
@@ -33,7 +36,8 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   items: z.lazy(() => PurchaseRequestItemUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema).optional(),
-  activities: z.lazy(() => PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema).optional()
+  activities: z.lazy(() => PurchaseRequestActivityUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema).optional(),
+  ingressReceipts: z.lazy(() => PurchaseRequestIngressReceiptUncheckedCreateNestedManyWithoutPurchaseRequestInputObjectSchema).optional()
 }).strict();
 export const PurchaseRequestUncheckedCreateWithoutOrderInputObjectSchema: z.ZodType<Prisma.PurchaseRequestUncheckedCreateWithoutOrderInput> = makeSchema() as unknown as z.ZodType<Prisma.PurchaseRequestUncheckedCreateWithoutOrderInput>;
 export const PurchaseRequestUncheckedCreateWithoutOrderInputObjectZodSchema = makeSchema();

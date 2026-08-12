@@ -11,6 +11,7 @@ import { EnumPurchaseRequestContactPreferenceFieldUpdateOperationsInputObjectSch
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { PurchaseRequestActivityUpdateManyWithoutPurchaseRequestNestedInputObjectSchema as PurchaseRequestActivityUpdateManyWithoutPurchaseRequestNestedInputObjectSchema } from './PurchaseRequestActivityUpdateManyWithoutPurchaseRequestNestedInput.schema';
+import { PurchaseRequestIngressReceiptUpdateManyWithoutPurchaseRequestNestedInputObjectSchema as PurchaseRequestIngressReceiptUpdateManyWithoutPurchaseRequestNestedInputObjectSchema } from './PurchaseRequestIngressReceiptUpdateManyWithoutPurchaseRequestNestedInput.schema';
 import { OrderUpdateOneWithoutPurchaseRequestNestedInputObjectSchema as OrderUpdateOneWithoutPurchaseRequestNestedInputObjectSchema } from './OrderUpdateOneWithoutPurchaseRequestNestedInput.schema';
 import { UserUpdateOneWithoutAssignedPurchaseRequestsNestedInputObjectSchema as UserUpdateOneWithoutAssignedPurchaseRequestsNestedInputObjectSchema } from './UserUpdateOneWithoutAssignedPurchaseRequestsNestedInput.schema'
 
@@ -26,7 +27,9 @@ const makeSchema = () => z.object({
   fingerprintHash: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   customerName: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   phone: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  normalizedPhone: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   contactPreference: z.union([PurchaseRequestContactPreferenceSchema, z.lazy(() => EnumPurchaseRequestContactPreferenceFieldUpdateOperationsInputObjectSchema)]).optional(),
+  contactHandle: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   address: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   city: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   district: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
@@ -40,6 +43,7 @@ const makeSchema = () => z.object({
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   activities: z.lazy(() => PurchaseRequestActivityUpdateManyWithoutPurchaseRequestNestedInputObjectSchema).optional(),
+  ingressReceipts: z.lazy(() => PurchaseRequestIngressReceiptUpdateManyWithoutPurchaseRequestNestedInputObjectSchema).optional(),
   order: z.lazy(() => OrderUpdateOneWithoutPurchaseRequestNestedInputObjectSchema).optional(),
   assignedUser: z.lazy(() => UserUpdateOneWithoutAssignedPurchaseRequestsNestedInputObjectSchema).optional()
 }).strict();

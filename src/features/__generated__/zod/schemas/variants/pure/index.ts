@@ -26,6 +26,7 @@ export { ProjectionEventDeliveryModelSchema } from './ProjectionEventDelivery.pu
 export { ProjectionRecordModelSchema } from './ProjectionRecord.pure';
 export { OrderModelSchema } from './Order.pure';
 export { PurchaseRequestModelSchema } from './PurchaseRequest.pure';
+export { PurchaseRequestIngressReceiptModelSchema } from './PurchaseRequestIngressReceipt.pure';
 export { PurchaseRequestItemModelSchema } from './PurchaseRequestItem.pure';
 export { PurchaseRequestActivityModelSchema } from './PurchaseRequestActivity.pure';
 export { OrderItemModelSchema } from './OrderItem.pure';

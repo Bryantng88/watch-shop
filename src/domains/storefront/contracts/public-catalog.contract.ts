@@ -24,6 +24,7 @@ export const publicCatalogQuerySchema = z
     size: z.enum(["SMALL", "MEDIUM", "LARGE"]).optional(),
     movement: z.enum(["AUTOMATIC", "HAND_WOUND", "QUARTZ", "SOLAR", "KINETIC", "MECHAQUARTZ", "SPRING_DRIVE", "HYBRID"]).optional(),
     caseMaterial: z.enum(["STAINLESS_STEEL", "TITANIUM", "CERAMIC", "CARBON", "GOLD", "PLATINUM", "SILVER", "BRASS", "OTHER"]).optional(),
+    strapType: z.enum(["BRACELET", "LEATHER"]).optional(),
     priceMin: optionalMoney,
     priceMax: optionalMoney,
     sort: z.enum(["NEWEST", "PRICE_ASC", "PRICE_DESC"]).default("NEWEST"),
@@ -57,6 +58,7 @@ export type PublicCatalogFacets = {
   sizes: Array<{ value: "SMALL" | "MEDIUM" | "LARGE"; count: number }>;
   movements: Array<{ value: string; count: number }>;
   caseMaterials: Array<{ value: string; count: number }>;
+  strapTypes: Array<{ value: "BRACELET" | "LEATHER"; count: number }>;
   priceBounds: { min: number; max: number };
 };
 

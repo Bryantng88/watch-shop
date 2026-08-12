@@ -29,5 +29,7 @@ export async function loadStorefrontCartItems(extraSlug?: string | null): Promis
     slug: watch.slug,
     title: watch.title,
     imageUrl: watch.image.url,
+    priceAmount: watch.price.amount ?? 0,
+    currency: watch.price.currency,
   }));
 }

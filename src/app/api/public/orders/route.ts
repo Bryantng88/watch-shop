@@ -18,6 +18,7 @@ function publicError(error: unknown) {
   if (message === "PUBLIC_ORDER_PRODUCT_UNAVAILABLE") return { status: 409, code: message };
   if (message === "PUBLIC_ORDER_TOO_MANY_ITEMS") return { status: 409, code: message };
   if (message === "PUBLIC_ORDER_BOT_REJECTED") return { status: 400, code: "INVALID_REQUEST" };
+  if (message === "PUBLIC_ORDER_PHONE_INVALID") return { status: 400, code: "INVALID_REQUEST" };
   return { status: 400, code: "ORDER_NOT_ACCEPTED" };
 }
 
@@ -38,6 +39,7 @@ export async function POST(req: NextRequest) {
           customerName: form.get("customerName"),
           phone: form.get("phone"),
           contactPreference: form.get("contactPreference"),
+          contactHandle: form.get("contactHandle") || undefined,
           address: form.get("address") || undefined,
           note: form.get("note") || undefined,
           website: form.get("website") || undefined,

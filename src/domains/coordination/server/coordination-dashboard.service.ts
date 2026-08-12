@@ -3597,6 +3597,7 @@ export async function getCoordinationDashboard(input: {
                       customerName: row.customerName,
                       phone: row.phone,
                       contactPreference: row.contactPreference,
+                      contactHandle: row.contactHandle,
                       address: row.address,
                       city: row.city,
                       district: row.district,

@@ -12,6 +12,7 @@ import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchem
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { PurchaseRequestItemListRelationFilterObjectSchema as PurchaseRequestItemListRelationFilterObjectSchema } from './PurchaseRequestItemListRelationFilter.schema';
 import { PurchaseRequestActivityListRelationFilterObjectSchema as PurchaseRequestActivityListRelationFilterObjectSchema } from './PurchaseRequestActivityListRelationFilter.schema';
+import { PurchaseRequestIngressReceiptListRelationFilterObjectSchema as PurchaseRequestIngressReceiptListRelationFilterObjectSchema } from './PurchaseRequestIngressReceiptListRelationFilter.schema';
 import { OrderNullableScalarRelationFilterObjectSchema as OrderNullableScalarRelationFilterObjectSchema } from './OrderNullableScalarRelationFilter.schema';
 import { OrderWhereInputObjectSchema as OrderWhereInputObjectSchema } from './OrderWhereInput.schema';
 import { UserNullableScalarRelationFilterObjectSchema as UserNullableScalarRelationFilterObjectSchema } from './UserNullableScalarRelationFilter.schema';
@@ -32,7 +33,9 @@ const purchaserequestwhereinputSchema = z.object({
   fingerprintHash: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   customerName: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   phone: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
+  normalizedPhone: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   contactPreference: z.union([z.lazy(() => EnumPurchaseRequestContactPreferenceFilterObjectSchema), PurchaseRequestContactPreferenceSchema]).optional(),
+  contactHandle: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   address: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   city: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   district: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
@@ -49,6 +52,7 @@ const purchaserequestwhereinputSchema = z.object({
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   items: z.lazy(() => PurchaseRequestItemListRelationFilterObjectSchema).optional(),
   activities: z.lazy(() => PurchaseRequestActivityListRelationFilterObjectSchema).optional(),
+  ingressReceipts: z.lazy(() => PurchaseRequestIngressReceiptListRelationFilterObjectSchema).optional(),
   order: z.union([z.lazy(() => OrderNullableScalarRelationFilterObjectSchema), z.lazy(() => OrderWhereInputObjectSchema)]).optional(),
   assignedUser: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional()
 }).strict();

@@ -594,7 +594,7 @@ model Order {
   task                  Task[]
   workCase              WorkCase[]
   purchaseRequest       PurchaseRequest?
-  tradeInAcquisitions   Acquisition[]   @relation("TradeInSourceOrder")
+  tradeInAcquisitions   Acquisition[]           @relation("TradeInSourceOrder")
 
   @@unique([publicRequestChannel, publicExternalId], map: "Order_public_channel_external_key")
   @@index([createdAt])
@@ -619,7 +619,9 @@ model PurchaseRequest {
   fingerprintHash     String
   customerName        String
   phone               String
+  normalizedPhone     String
   contactPreference   PurchaseRequestContactPreference @default(PHONE)
+  contactHandle       String?
   address             String?
   city                String?
   district            String?
@@ -636,6 +638,7 @@ model PurchaseRequest {
   updatedAt           DateTime                         @updatedAt
   items               PurchaseRequestItem[]
   activities          PurchaseRequestActivity[]
+  ingressReceipts     PurchaseRequestIngressReceipt[]
   order               Order?                           @relation(fields: [orderId], references: [id], onDelete: SetNull)
   assignedUser        User?                            @relation("PurchaseRequestAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
 
@@ -643,6 +646,20 @@ model PurchaseRequest {
   @@index([status, createdAt(sort: Desc)])
   @@index([fingerprintHash, createdAt])
   @@index([assignedUserId, status])
+  @@index([normalizedPhone, status, updatedAt(sort: Desc)], map: "PurchaseRequest_normalizedPhone_status_updatedAt_idx")
+}
+
+model PurchaseRequestIngressReceipt {
+  id                String                            @id @default(dbgenerated("(gen_random_uuid())::text"))
+  requestKey        String                            @unique
+  requestHash       String
+  purchaseRequestId String
+  disposition       PurchaseRequestIngressDisposition
+  addedItemCount    Int
+  createdAt         DateTime                          @default(now()) @db.Timestamptz(6)
+  purchaseRequest   PurchaseRequest                   @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseRequestId, createdAt(sort: Desc)])
 }
 
 model PurchaseRequestItem {
@@ -1464,6 +1481,7 @@ model Watch {
   @@index([serviceExpectedCompletionAt])
   @@index([siteChannel])
   @@index([isCollectible, updatedAt])
+  @@index([style, updatedAt])
   @@index([stockStage])
   @@index([specStatus])
   @@index([duplicateConfirmedAt])
@@ -1661,6 +1679,8 @@ model WatchSpecV2 {
   @@index([primaryCaseMaterial])
   @@index([secondaryCaseMaterial])
   @@index([movementType])
+  @@index([caseSizeMM])
+  @@index([braceletType])
   @@index([referenceNumber])
 }
 
@@ -2991,6 +3011,13 @@ enum PurchaseRequestOutcome {
 enum PurchaseRequestContactPreference {
   PHONE
   ZALO
+  WHATSAPP
+  INSTAGRAM
+}
+
+enum PurchaseRequestIngressDisposition {
+  CREATED
+  MERGED
 }
 
 enum PurchaseRequestItemDecision {

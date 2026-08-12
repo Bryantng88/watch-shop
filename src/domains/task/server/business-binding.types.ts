@@ -157,6 +157,7 @@ export type QueueItemDTO = {
     customerName: string;
     phone: string;
     contactPreference: string;
+    contactHandle: string | null;
     address: string | null;
     city: string | null;
     district: string | null;

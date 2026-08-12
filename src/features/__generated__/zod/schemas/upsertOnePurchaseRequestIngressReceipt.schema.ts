@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { PurchaseRequestIngressReceiptSelectObjectSchema as PurchaseRequestIngressReceiptSelectObjectSchema } from './objects/PurchaseRequestIngressReceiptSelect.schema';
+import { PurchaseRequestIngressReceiptIncludeObjectSchema as PurchaseRequestIngressReceiptIncludeObjectSchema } from './objects/PurchaseRequestIngressReceiptInclude.schema';
+import { PurchaseRequestIngressReceiptWhereUniqueInputObjectSchema as PurchaseRequestIngressReceiptWhereUniqueInputObjectSchema } from './objects/PurchaseRequestIngressReceiptWhereUniqueInput.schema';
+import { PurchaseRequestIngressReceiptCreateInputObjectSchema as PurchaseRequestIngressReceiptCreateInputObjectSchema } from './objects/PurchaseRequestIngressReceiptCreateInput.schema';
+import { PurchaseRequestIngressReceiptUncheckedCreateInputObjectSchema as PurchaseRequestIngressReceiptUncheckedCreateInputObjectSchema } from './objects/PurchaseRequestIngressReceiptUncheckedCreateInput.schema';
+import { PurchaseRequestIngressReceiptUpdateInputObjectSchema as PurchaseRequestIngressReceiptUpdateInputObjectSchema } from './objects/PurchaseRequestIngressReceiptUpdateInput.schema';
+import { PurchaseRequestIngressReceiptUncheckedUpdateInputObjectSchema as PurchaseRequestIngressReceiptUncheckedUpdateInputObjectSchema } from './objects/PurchaseRequestIngressReceiptUncheckedUpdateInput.schema';
+
+export const PurchaseRequestIngressReceiptUpsertOneSchema: z.ZodType<Prisma.PurchaseRequestIngressReceiptUpsertArgs> = z.object({ select: PurchaseRequestIngressReceiptSelectObjectSchema.optional(), include: PurchaseRequestIngressReceiptIncludeObjectSchema.optional(), where: PurchaseRequestIngressReceiptWhereUniqueInputObjectSchema, create: z.union([ PurchaseRequestIngressReceiptCreateInputObjectSchema, PurchaseRequestIngressReceiptUncheckedCreateInputObjectSchema ]), update: z.union([ PurchaseRequestIngressReceiptUpdateInputObjectSchema, PurchaseRequestIngressReceiptUncheckedUpdateInputObjectSchema ]) }).strict() as unknown as z.ZodType<Prisma.PurchaseRequestIngressReceiptUpsertArgs>;
+
+export const PurchaseRequestIngressReceiptUpsertOneZodSchema = z.object({ select: PurchaseRequestIngressReceiptSelectObjectSchema.optional(), include: PurchaseRequestIngressReceiptIncludeObjectSchema.optional(), where: PurchaseRequestIngressReceiptWhereUniqueInputObjectSchema, create: z.union([ PurchaseRequestIngressReceiptCreateInputObjectSchema, PurchaseRequestIngressReceiptUncheckedCreateInputObjectSchema ]), update: z.union([ PurchaseRequestIngressReceiptUpdateInputObjectSchema, PurchaseRequestIngressReceiptUncheckedUpdateInputObjectSchema ]) }).strict();

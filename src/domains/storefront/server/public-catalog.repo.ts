@@ -233,6 +233,10 @@ function publicWatchFilterWhere(query: PublicCatalogQuery): Prisma.ProductWhereI
     and.push({ watch: { is: { watchSpecV2: { is: { primaryCaseMaterial: query.caseMaterial } } } } });
   }
 
+  if (query.strapType) {
+    and.push({ watch: { is: { watchSpecV2: { is: { braceletType: query.strapType } } } } });
+  }
+
   if (query.size) {
     and.push({
       watch: {
@@ -329,7 +333,7 @@ export async function listPublicCatalogFacetRows(db: DB) {
           saleStage: true,
           style: true,
           watchPrice: { select: { salePrice: true } },
-          watchSpecV2: { select: { caseSizeMM: true, movementType: true, primaryCaseMaterial: true } },
+          watchSpecV2: { select: { caseSizeMM: true, movementType: true, primaryCaseMaterial: true, braceletType: true } },
         },
       },
     },

@@ -2,6 +2,7 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { PurchaseRequestItemFindManySchema as PurchaseRequestItemFindManySchema } from '../findManyPurchaseRequestItem.schema';
 import { PurchaseRequestActivityFindManySchema as PurchaseRequestActivityFindManySchema } from '../findManyPurchaseRequestActivity.schema';
+import { PurchaseRequestIngressReceiptFindManySchema as PurchaseRequestIngressReceiptFindManySchema } from '../findManyPurchaseRequestIngressReceipt.schema';
 import { OrderArgsObjectSchema as OrderArgsObjectSchema } from './OrderArgs.schema';
 import { UserArgsObjectSchema as UserArgsObjectSchema } from './UserArgs.schema';
 import { PurchaseRequestCountOutputTypeArgsObjectSchema as PurchaseRequestCountOutputTypeArgsObjectSchema } from './PurchaseRequestCountOutputTypeArgs.schema'
@@ -18,7 +19,9 @@ const makeSchema = () => z.object({
   fingerprintHash: z.boolean().optional(),
   customerName: z.boolean().optional(),
   phone: z.boolean().optional(),
+  normalizedPhone: z.boolean().optional(),
   contactPreference: z.boolean().optional(),
+  contactHandle: z.boolean().optional(),
   address: z.boolean().optional(),
   city: z.boolean().optional(),
   district: z.boolean().optional(),
@@ -35,6 +38,7 @@ const makeSchema = () => z.object({
   updatedAt: z.boolean().optional(),
   items: z.union([z.boolean(), z.lazy(() => PurchaseRequestItemFindManySchema)]).optional(),
   activities: z.union([z.boolean(), z.lazy(() => PurchaseRequestActivityFindManySchema)]).optional(),
+  ingressReceipts: z.union([z.boolean(), z.lazy(() => PurchaseRequestIngressReceiptFindManySchema)]).optional(),
   order: z.union([z.boolean(), z.lazy(() => OrderArgsObjectSchema)]).optional(),
   assignedUser: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => PurchaseRequestCountOutputTypeArgsObjectSchema)]).optional()

@@ -11,7 +11,9 @@ export const PurchaseRequestDeleteResultSchema = z.nullable(z.object({
   fingerprintHash: z.string(),
   customerName: z.string(),
   phone: z.string(),
+  normalizedPhone: z.string(),
   contactPreference: z.unknown(),
+  contactHandle: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
   district: z.string().optional(),
@@ -28,6 +30,7 @@ export const PurchaseRequestDeleteResultSchema = z.nullable(z.object({
   updatedAt: z.date(),
   items: z.array(z.unknown()),
   activities: z.array(z.unknown()),
+  ingressReceipts: z.array(z.unknown()),
   order: z.unknown().optional(),
   assignedUser: z.unknown().optional()
 }));

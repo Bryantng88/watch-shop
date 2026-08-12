@@ -1,21 +1,77 @@
 # Release handoff: Storefront purchase request and Activity resilience
 
-Status: implemented and committed locally; not pushed or deployed.
+## 2026-08-12 hardening follow-up (supersedes ingress/event notes below)
+
+The release candidate now closes the audit gaps found after the original
+handoff was written:
+
+- every newly created request emits `purchase_request.created` in the same
+  transaction as `PurchaseRequest`, its initial Activity and the durable
+  ingress receipt;
+- every merge that adds Watch items emits `purchase_request.items_added` in
+  the same transaction as the new items and Activity note;
+- both event keys are registered contracts with target type
+  `PURCHASE_REQUEST`, versioned required payloads and timeline delivery;
+- `PurchaseRequestIngressReceipt` records every storefront idempotency key,
+  including keys that merge into an older PR. Replaying a merge returns the
+  original `MERGED` disposition and `addedItemCount` without running the
+  mutation or event again;
+- `PurchaseRequest.normalizedPhone` is persisted and indexed. Merge lookup is
+  now a direct indexed query and no longer scans the latest 100 waiting rows;
+- invalid non-numeric phone values are rejected before merge;
+- a new request receives an initial `PurchaseRequestActivity` instead of
+  opening with an empty Activity history.
+
+Additive migrations:
+
+```text
+20260812_add_purchase_request_contact_channels
+20260812_harden_purchase_request_ingress
+```
+
+Staging and production must set `STOREFRONT_REQUIRE_COVER_IMAGE=1`. Export and
+acceptance tooling now selects only storefront-enabled images with role
+`COVER`; a generic storefront image is not sufficient.
+
+### Storefront catalog/filter source audit
+
+The public catalog intentionally reads canonical business truth, not the Admin
+`watch-list` `ProjectionRecord`:
+
+- Product identity/brand/status and storefront Cover come from `Product`;
+- audience, style, collectible and lifecycle gates come from `Watch`;
+- size, movement, case material and strap type come from `WatchSpecV2`;
+- sale price comes from `WatchPrice`.
+
+This matches the Watch form write path. The Admin Watch List projection is not
+a suitable public catalog source because it is asynchronous and does not carry
+the complete size/material/style/strap facet fields. Indexes were added for
+`Watch.style`, `WatchSpecV2.caseSizeMM` and `WatchSpecV2.braceletType`; the
+existing movement/material/audience/collectible indexes remain authoritative.
+
+### Migration-chain warning
+
+A clean zero-database `prisma migrate deploy` audit currently fails in the
+pre-existing migration `20260701_task_item_activity_v1` because it references
+`TaskItem` before that table exists in the historical chain. Do not edit or
+reorder applied migration history for this storefront release. Staging and
+production must use their established baseline and run `prisma migrate status`
+before applying the two additive migrations above. Repairing clean bootstrap is
+a separate migration-baseline task.
+
+Status: implemented and validated locally; staging rollout pending the immutable
+release revision recorded during this deployment session.
 
 Prepared: 2026-08-12 (Asia/Bangkok)  
-Local release revision: `91b7a7e8edff55c69c84ee40e987a5b0bfaa0fec`  
-Local commit message: `aaa`  
-Remote base revision: `eb95cb32` (`origin/main` at handoff time)
+Current branch base before the hardening commit: `7a95f81b` (`origin/main`).
 
-The local branch is one commit ahead of `origin/main`. Do not deploy from an
-uncommitted directory or identify the release only by the non-descriptive commit
-message. Use the full SHA above, or replace it with a reviewed follow-up commit
-and record that SHA before deployment.
+Do not deploy from an uncommitted directory. Record the full reviewed commit SHA,
+archive checksum and immutable image tag in the rollout evidence below.
 
 Suggested immutable image tag:
 
 ```text
-IMAGE_TAG=release-91b7a7e8
+IMAGE_TAG=storefront-staging-<SHORT_SHA>
 ```
 
 ## Release scope
@@ -110,13 +166,19 @@ scripts/smoke-storefront-order-ingress.ts
 
 ## Database impact
 
-There is no Prisma schema change and no new migration in this release.
+This release has two additive Prisma migrations:
 
-Existing tables used by the change:
+```text
+20260812_add_purchase_request_contact_channels
+20260812_harden_purchase_request_ingress
+```
+
+Existing and added tables used by the change:
 
 - `PurchaseRequest`
 - `PurchaseRequestItem`
 - `PurchaseRequestActivity`
+- `PurchaseRequestIngressReceipt`
 - `Product`, `Watch` and `WatchPrice`
 
 Production must already contain the purchase-request schema introduced by prior
@@ -142,7 +204,7 @@ The following passed on 2026-08-12 against the disposable PostgreSQL 17 database
 ESLint on changed storefront/API/test files: passed
 npx tsc --noEmit --pretty false --incremental false: passed
 npm run storefront:smoke-order: passed (16 checks)
-npm run storefront:test-db: passed (15 checks)
+npm run storefront:test-db: passed (23 checks)
 git diff --check: passed
 ```
 
@@ -260,15 +322,9 @@ adds no migration.
   number and is not used for payment.
 - A converted Order receives its own reference while retaining the source
   PurchaseRequest relationship.
-- The merge lookup currently examines the 100 most recently updated `WAITING`
-  requests and compares normalized phone numbers in application code. On a very
-  large waiting backlog, an older matching request outside that window will not
-  merge and a new PR will be created. This is safe against corrupting another
-  request, but it can create a duplicate consultation. A future schema change
-  should persist and index a normalized phone field if this backlog becomes
-  realistic.
+- Merge lookup uses the persisted, indexed `normalizedPhone` field and only
+  considers requests that are still `WAITING` and have no linked Order.
 - Submitting only Watches already present in the waiting request returns the
   same PR with `addedItemCount = 0`; no additional Activity note is created.
 - The public rate limit remains five newly created requests per fingerprint in
   ten minutes. A valid merge is resolved before this rate-limit count.
-

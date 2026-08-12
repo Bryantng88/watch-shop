@@ -4,6 +4,7 @@ import { SortOrderSchema } from '../enums/SortOrder.schema';
 import { SortOrderInputObjectSchema as SortOrderInputObjectSchema } from './SortOrderInput.schema';
 import { PurchaseRequestItemOrderByRelationAggregateInputObjectSchema as PurchaseRequestItemOrderByRelationAggregateInputObjectSchema } from './PurchaseRequestItemOrderByRelationAggregateInput.schema';
 import { PurchaseRequestActivityOrderByRelationAggregateInputObjectSchema as PurchaseRequestActivityOrderByRelationAggregateInputObjectSchema } from './PurchaseRequestActivityOrderByRelationAggregateInput.schema';
+import { PurchaseRequestIngressReceiptOrderByRelationAggregateInputObjectSchema as PurchaseRequestIngressReceiptOrderByRelationAggregateInputObjectSchema } from './PurchaseRequestIngressReceiptOrderByRelationAggregateInput.schema';
 import { OrderOrderByWithRelationInputObjectSchema as OrderOrderByWithRelationInputObjectSchema } from './OrderOrderByWithRelationInput.schema';
 import { UserOrderByWithRelationInputObjectSchema as UserOrderByWithRelationInputObjectSchema } from './UserOrderByWithRelationInput.schema'
 
@@ -19,7 +20,9 @@ const makeSchema = () => z.object({
   fingerprintHash: SortOrderSchema.optional(),
   customerName: SortOrderSchema.optional(),
   phone: SortOrderSchema.optional(),
+  normalizedPhone: SortOrderSchema.optional(),
   contactPreference: SortOrderSchema.optional(),
+  contactHandle: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   address: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   city: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   district: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
@@ -36,6 +39,7 @@ const makeSchema = () => z.object({
   updatedAt: SortOrderSchema.optional(),
   items: z.lazy(() => PurchaseRequestItemOrderByRelationAggregateInputObjectSchema).optional(),
   activities: z.lazy(() => PurchaseRequestActivityOrderByRelationAggregateInputObjectSchema).optional(),
+  ingressReceipts: z.lazy(() => PurchaseRequestIngressReceiptOrderByRelationAggregateInputObjectSchema).optional(),
   order: z.lazy(() => OrderOrderByWithRelationInputObjectSchema).optional(),
   assignedUser: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional()
 }).strict();

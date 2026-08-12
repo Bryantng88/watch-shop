@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { PurchaseRequestIngressReceiptOrderByWithRelationInputObjectSchema as PurchaseRequestIngressReceiptOrderByWithRelationInputObjectSchema } from './objects/PurchaseRequestIngressReceiptOrderByWithRelationInput.schema';
+import { PurchaseRequestIngressReceiptWhereInputObjectSchema as PurchaseRequestIngressReceiptWhereInputObjectSchema } from './objects/PurchaseRequestIngressReceiptWhereInput.schema';
+import { PurchaseRequestIngressReceiptWhereUniqueInputObjectSchema as PurchaseRequestIngressReceiptWhereUniqueInputObjectSchema } from './objects/PurchaseRequestIngressReceiptWhereUniqueInput.schema';
+import { PurchaseRequestIngressReceiptCountAggregateInputObjectSchema as PurchaseRequestIngressReceiptCountAggregateInputObjectSchema } from './objects/PurchaseRequestIngressReceiptCountAggregateInput.schema';
+
+export const PurchaseRequestIngressReceiptCountSchema: z.ZodType<Prisma.PurchaseRequestIngressReceiptCountArgs> = z.object({ orderBy: z.union([PurchaseRequestIngressReceiptOrderByWithRelationInputObjectSchema, PurchaseRequestIngressReceiptOrderByWithRelationInputObjectSchema.array()]).optional(), where: PurchaseRequestIngressReceiptWhereInputObjectSchema.optional(), cursor: PurchaseRequestIngressReceiptWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), PurchaseRequestIngressReceiptCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.PurchaseRequestIngressReceiptCountArgs>;
+
+export const PurchaseRequestIngressReceiptCountZodSchema = z.object({ orderBy: z.union([PurchaseRequestIngressReceiptOrderByWithRelationInputObjectSchema, PurchaseRequestIngressReceiptOrderByWithRelationInputObjectSchema.array()]).optional(), where: PurchaseRequestIngressReceiptWhereInputObjectSchema.optional(), cursor: PurchaseRequestIngressReceiptWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), PurchaseRequestIngressReceiptCountAggregateInputObjectSchema ]).optional() }).strict();

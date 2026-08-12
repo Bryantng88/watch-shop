@@ -7,7 +7,8 @@ export const publicOrderRequestSchema = z
   .object({
     customerName: z.string().trim().min(1).max(120),
     phone: z.string().trim().min(8).max(30),
-    contactPreference: z.enum(["PHONE", "ZALO"]).default("PHONE"),
+    contactPreference: z.enum(["PHONE", "ZALO", "WHATSAPP", "INSTAGRAM"]).default("PHONE"),
+    contactHandle: optionalText(120),
     address: optionalText(500),
     city: optionalText(120),
     district: optionalText(120),
@@ -29,6 +30,13 @@ export const publicOrderRequestSchema = z
     const productIds = value.items.map((item) => item.productId);
     if (new Set(productIds).size !== productIds.length) {
       context.addIssue({ code: "custom", path: ["items"], message: "Mỗi Watch chỉ được xuất hiện một lần." });
+    }
+    const phoneDigits = value.phone.replace(/\D/g, "");
+    if (phoneDigits.length < 8 || phoneDigits.length > 15) {
+      context.addIssue({ code: "custom", path: ["phone"], message: "Số điện thoại không hợp lệ." });
+    }
+    if (value.contactPreference !== "PHONE" && !value.contactHandle) {
+      context.addIssue({ code: "custom", path: ["contactHandle"], message: "Vui lòng nhập thông tin liên hệ cho kênh đã chọn." });
     }
   });
 

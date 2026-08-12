@@ -69,6 +69,8 @@ export function getTimelineTitle(eventKey: string) {
         "shipment.returning": "Shipment đang được hoàn",
         "shipment.returned": "Đã nhận hàng hoàn",
         "shipment.cancelled": "Shipment đã hủy",
+        "purchase_request.created": "Khách gửi yêu cầu mua hàng",
+        "purchase_request.items_added": "Khách bổ sung Watch vào yêu cầu mua hàng",
     };
 
     return titles[eventKey] ?? eventKey;

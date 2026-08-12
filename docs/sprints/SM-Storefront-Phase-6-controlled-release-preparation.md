@@ -347,9 +347,9 @@ The storefront publish contract was aligned with the actual media workflow:
 - legacy `Product.contentStatus` and `WatchContent.contentStatus` are not
   storefront gates;
 - a stable product slug is generated when both reviews become approved;
-- a `COVER` image is the intended production card-image gate, controlled by
-  `STOREFRONT_REQUIRE_COVER_IMAGE`; staging temporarily sets this to `0` while
-  cover assignment is not yet operational.
+- a storefront-enabled `COVER` image is the mandatory catalog/detail gate in
+  staging and production. Set `STOREFRONT_REQUIRE_COVER_IMAGE=1`; the former
+  temporary staging bypass is retired and must not be restored.
 
 The resulting NAS image is running as:
 

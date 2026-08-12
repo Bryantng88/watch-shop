@@ -20,7 +20,7 @@ async function main() {
           ],
         },
       },
-      productImage: { some: { isForStorefront: true, fileKey: { not: "" } } },
+      productImage: { some: { role: "COVER", isForStorefront: true, fileKey: { not: "" } } },
       AND: [{
         OR: [
           { priceVisibility: "HIDE" },
@@ -43,7 +43,7 @@ async function main() {
       updatedAt: true,
       brand: { select: { id: true, name: true, slug: true, country: true, foundedYear: true } },
       productImage: {
-        where: { isForStorefront: true, fileKey: { not: "" } },
+        where: { role: "COVER", isForStorefront: true, fileKey: { not: "" } },
         orderBy: [{ role: "asc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
         take: 5,
         select: {

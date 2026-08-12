@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-export type StorefrontCartItem = { productId: string; slug: string; title: string; imageUrl: string };
+export type StorefrontCartItem = { productId: string; slug: string; title: string; imageUrl: string; priceAmount: number; currency: "VND" };
 type CartValue = { items: StorefrontCartItem[]; add: (item: StorefrontCartItem) => void; remove: (id: string) => void; clear: () => void };
 const STORAGE_KEY = "watch-shop:storefront-request:v1";
 const CartContext = createContext<CartValue | null>(null);

@@ -83,6 +83,14 @@ async function main() {
   );
   assert.equal(replay.requestId, first.requestId);
   assert.equal(replay.replayed, true);
+  const createdReceipt = await prisma.purchaseRequestIngressReceipt.findUnique({ where: { requestKey: `STOREFRONT:${replayKey}` } });
+  assert.equal(createdReceipt?.purchaseRequestId, first.requestId);
+  const createdEvent = await prisma.businessEventLog.findFirst({
+    where: { eventKey: "purchase_request.created", targetType: "PURCHASE_REQUEST", targetId: first.requestId },
+  });
+  assert.ok(createdEvent, "Created purchase request must emit a durable business event");
+  const initialActivity = await prisma.purchaseRequestActivity.findFirst({ where: { purchaseRequestId: first.requestId, type: "NOTE" } });
+  assert.match(initialActivity?.note ?? "", /Khách gửi yêu cầu mua 1 Watch/);
   await assert.rejects(() => submitPublicOrder(
     { request: request(replayProduct, "Changed body"), idempotencyKey: replayKey, channel: "STOREFRONT" },
     { fingerprint: `${prefix}:replay`, runtime: { deferConsumers } },
@@ -108,11 +116,22 @@ async function main() {
   assert.equal(mergeResult.disposition, "MERGED");
   assert.equal(mergeResult.addedItemCount, 1);
   assert.equal(mergeResult.requestId, [...concurrentRequestIds][0]);
+  const mergeReplay = await submitPublicOrder(
+    { request: request(mergeProduct, "Storefront Integration", concurrentPhone), idempotencyKey: `${prefix}-merge-key-0001`, channel: "STOREFRONT" },
+    { fingerprint: `${prefix}:merge`, runtime: { deferConsumers } },
+  );
+  assert.equal(mergeReplay.replayed, true);
+  assert.equal(mergeReplay.disposition, "MERGED");
+  assert.equal(mergeReplay.addedItemCount, 1);
   const mergeActivity = await prisma.purchaseRequestActivity.findFirst({
     where: { purchaseRequestId: mergeResult.requestId, type: "NOTE" },
     orderBy: { createdAt: "desc" },
   });
   assert.match(mergeActivity?.note ?? "", /bổ sung 1 Watch từ Storefront/);
+  const mergeEvent = await prisma.businessEventLog.findFirst({
+    where: { eventKey: "purchase_request.items_added", targetType: "PURCHASE_REQUEST", targetId: mergeResult.requestId },
+  });
+  assert.ok(mergeEvent, "Merged purchase request must emit an items-added business event");
 
   await prisma.purchaseRequest.update({ where: { id: mergeResult.requestId }, data: { status: "PROCESSING" } });
   const afterProcessingProduct = await seedWatch("after-processing");
@@ -143,7 +162,7 @@ async function main() {
   assert.equal(zaloReplay.replayed, true);
   await assert.rejects(() => processZaloIngressEvent({ event, keyId: "integration", nonce: `${prefix}-nonce-0003`, requestHash: `${prefix}-changed`, runtime: { deferConsumers } }), /ZALO_EVENT_CONFLICT/);
 
-  console.log(JSON.stringify({ ok: true, database: databaseName, checks: 15, firstRequestId: first.requestId }, null, 2));
+  console.log(JSON.stringify({ ok: true, database: databaseName, checks: 23, firstRequestId: first.requestId }, null, 2));
   } finally {
     await cleanup().catch(() => undefined);
     await prisma.$disconnect();

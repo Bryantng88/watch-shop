@@ -40,7 +40,7 @@ export default function CatalogFilters({ query, facets, compact = false }: { que
   const priceInputRef = useRef<HTMLInputElement>(null);
   const priceOutputRef = useRef<HTMLOutputElement>(null);
   const initialPriceMax = query.priceMax ?? facets.priceBounds.max;
-  const activeCount = [query.brand, query.style, query.size, query.movement, query.caseMaterial, query.priceMax !== undefined].filter(Boolean).length;
+  const activeCount = [query.brand, query.style, query.size, query.movement, query.caseMaterial, query.strapType, query.priceMax !== undefined].filter(Boolean).length;
 
   useEffect(() => {
     const input = priceInputRef.current;
@@ -70,7 +70,7 @@ export default function CatalogFilters({ query, facets, compact = false }: { que
   }, [hrefFor, router]);
 
   const optionClass = (selected: boolean) => `storefront-focus flex min-h-9 w-full items-center justify-between gap-3 py-1.5 text-left text-sm transition ${selected ? "font-medium text-[#272522]" : "text-[#706c65] hover:text-[#272522]"}`;
-  const options = (items: Array<{ value: string; label?: string; count: number }>, key: "style" | "size" | "movement" | "caseMaterial", selected?: string) => items.map((item) => (
+  const options = (items: Array<{ value: string; label?: string; count: number }>, key: "style" | "size" | "movement" | "caseMaterial" | "strapType", selected?: string) => items.map((item) => (
     <Link key={item.value} href={hrefFor({ [key]: selected === item.value ? undefined : item.value })} scroll={false} className={optionClass(selected === item.value)}>
       <span className="flex items-center gap-3"><span className={`h-3.5 w-3.5 border ${selected === item.value ? "border-[#34312d] bg-[#34312d] shadow-[inset_0_0_0_3px_#fbfaf7]" : "border-[#bbb6ae]"}`} />{item.label ?? item.value}</span>
       <span className="text-xs font-normal text-[#aaa59d]">{item.count}</span>
@@ -107,6 +107,7 @@ export default function CatalogFilters({ query, facets, compact = false }: { que
     <FilterSection title="Style" active={Boolean(query.style)}>{options(facets.styles.map((item) => ({ ...item, label: styleLabels[item.value] })), "style", query.style)}</FilterSection>
     <FilterSection title={locale === "en" ? "Case size" : "Kích thước vỏ"} active={Boolean(query.size)}>{options(facets.sizes.map((item) => ({ ...item, label: item.value === "SMALL" ? (locale === "en" ? "Under 34 mm" : "Dưới 34 mm") : item.value === "MEDIUM" ? "34–38 mm" : (locale === "en" ? "Over 38 mm" : "Trên 38 mm") })), "size", query.size)}</FilterSection>
     <FilterSection title={locale === "en" ? "Movement" : "Loại máy"} active={Boolean(query.movement)}>{options(facets.movements.map((item) => ({ ...item, label: movementLabels[item.value as NonNullable<PublicCatalogQuery["movement"]>] })), "movement", query.movement)}</FilterSection>
+    <FilterSection title={locale === "en" ? "Strap type" : "Loại dây"} active={Boolean(query.strapType)}>{options(facets.strapTypes.map((item) => ({ ...item, label: item.value === "BRACELET" ? "Bracelet" : (locale === "en" ? "Leather strap" : "Dây da (Leather strap)") })), "strapType", query.strapType)}</FilterSection>
     <FilterSection title={locale === "en" ? "Case material" : "Chất liệu vỏ"} active={Boolean(query.caseMaterial)}>{options(facets.caseMaterials.map((item) => ({ ...item, label: locale === "en" ? item.value.replaceAll("_", " ").toLowerCase().replace(/^./, (letter) => letter.toUpperCase()) : materialLabels[item.value as NonNullable<PublicCatalogQuery["caseMaterial"]>] })), "caseMaterial", query.caseMaterial)}</FilterSection>
   </div>;
 }

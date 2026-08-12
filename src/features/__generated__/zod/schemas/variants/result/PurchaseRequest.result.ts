@@ -16,7 +16,9 @@ export const PurchaseRequestResultSchema = z.object({
     fingerprintHash: z.string(),
     customerName: z.string(),
     phone: z.string(),
+    normalizedPhone: z.string(),
     contactPreference: PurchaseRequestContactPreferenceSchema,
+    contactHandle: z.string().nullable(),
     address: z.string().nullable(),
     city: z.string().nullable(),
     district: z.string().nullable(),
@@ -33,6 +35,7 @@ export const PurchaseRequestResultSchema = z.object({
     updatedAt: z.date(),
     items: z.array(z.unknown()),
     activities: z.array(z.unknown()),
+    ingressReceipts: z.array(z.unknown()),
     order: z.unknown().nullable(),
     assignedUser: z.unknown().nullable()
 }).strict();

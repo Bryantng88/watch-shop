@@ -20,6 +20,7 @@ export type BusinessEventTargetType =
   | "STRAP"
   | "TASK"
   | "TASK_ITEM"
+  | "PURCHASE_REQUEST"
   | "GENERAL";
 
 export type BusinessEventLifecycle = "ACTIVE" | "DRAFT" | "DEPRECATED";

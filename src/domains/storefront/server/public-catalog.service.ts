@@ -168,6 +168,7 @@ export async function getPublicCatalogFacets(options?: { db?: DB }): Promise<Pub
   const sizeCounts = { SMALL: 0, MEDIUM: 0, LARGE: 0 };
   const movementCounts = new Map<string, number>();
   const materialCounts = new Map<string, number>();
+  const strapTypeCounts = { BRACELET: 0, LEATHER: 0 };
   const prices: number[] = [];
 
   for (const row of rows) {
@@ -182,6 +183,8 @@ export async function getPublicCatalogFacets(options?: { db?: DB }): Promise<Pub
     if (movement) movementCounts.set(movement, (movementCounts.get(movement) ?? 0) + 1);
     const material = row.watch?.watchSpecV2?.primaryCaseMaterial?.trim();
     if (material) materialCounts.set(material, (materialCounts.get(material) ?? 0) + 1);
+    const strapType = row.watch?.watchSpecV2?.braceletType;
+    if (strapType === "BRACELET" || strapType === "LEATHER") strapTypeCounts[strapType] += 1;
     if (row.priceVisibility === "SHOW") {
       const price = row.watch?.watchPrice?.salePrice?.toNumber();
       if (price && price > 0) prices.push(price);
@@ -198,6 +201,7 @@ export async function getPublicCatalogFacets(options?: { db?: DB }): Promise<Pub
     sizes: (["SMALL", "MEDIUM", "LARGE"] as const).map((value) => ({ value, count: sizeCounts[value] })),
     movements: [...movementCounts.entries()].map(([value, count]) => ({ value, count })).sort((a, b) => a.value.localeCompare(b.value, "vi")),
     caseMaterials: [...materialCounts.entries()].map(([value, count]) => ({ value, count })).sort((a, b) => a.value.localeCompare(b.value, "vi")),
+    strapTypes: (["BRACELET", "LEATHER"] as const).map((value) => ({ value, count: strapTypeCounts[value] })),
     priceBounds: {
       min,
       max: Math.max(min + step, Math.ceil(rawMax / step) * step),
