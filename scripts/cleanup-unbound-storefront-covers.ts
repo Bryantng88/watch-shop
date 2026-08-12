@@ -2,6 +2,8 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 const apply = process.argv.includes("--apply");
+const backfillStartedAt = new Date("2026-08-12T17:03:00.000Z");
+const backfillEndedAt = new Date("2026-08-12T17:05:00.000Z");
 
 if (apply && process.env.ALLOW_UNBOUND_COVER_CLEANUP !== "1") {
   throw new Error("Set ALLOW_UNBOUND_COVER_CLEANUP=1 to apply changes");
@@ -13,6 +15,7 @@ async function main() {
       role: "COVER",
       isPrimary: true,
       isForStorefront: true,
+      updatedAt: { gte: backfillStartedAt, lte: backfillEndedAt },
     },
     orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
     select: {
@@ -23,9 +26,7 @@ async function main() {
       product: { select: { title: true, storefrontImageKey: true } },
     },
   });
-  const candidates = covers.filter(
-    (image) => image.product.storefrontImageKey !== image.fileKey,
-  );
+  const candidates = covers;
 
   if (apply) {
     await prisma.$transaction(
@@ -39,6 +40,7 @@ async function main() {
   console.log(JSON.stringify({
     ok: true,
     mode: apply ? "apply" : "dry-run",
+    backfillWindow: [backfillStartedAt.toISOString(), backfillEndedAt.toISOString()],
     candidates: candidates.length,
     sample: candidates.slice(0, 10),
   }, null, 2));
