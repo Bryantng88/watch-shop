@@ -17,7 +17,9 @@ export async function POST(request: NextRequest) {
   const current = parseStorefrontCartCookie(request.cookies.get(STOREFRONT_CART_COOKIE)?.value);
   const next = [slug, ...current.filter((item) => item !== slug)].slice(0, 20);
   const safeReturnTo = returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : `/products/${slug}`;
-  const response = NextResponse.redirect(new URL(safeReturnTo, request.url), 303);
+  const response = request.headers.get("accept")?.includes("application/json")
+    ? NextResponse.json({ ok: true, slug, added: !current.includes(slug) })
+    : NextResponse.redirect(new URL(safeReturnTo, request.url), 303);
   response.cookies.set(STOREFRONT_CART_COOKIE, encodeURIComponent(JSON.stringify(next)), {
     httpOnly: false,
     sameSite: "lax",
