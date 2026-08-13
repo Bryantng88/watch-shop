@@ -542,3 +542,33 @@ adds no migration.
   same PR with `addedItemCount = 0`; no additional Activity note is created.
 - The public rate limit remains five newly created requests per fingerprint in
   ten minutes. A valid merge is resolved before this rate-limit count.
+
+## Production media boundary and quick Media release: 2026-08-13
+
+Release `09947d05` was deployed as immutable image
+`watch-shop:release-09947d05`. It contains no schema migration and replaced only
+the `app` service. The previous rollback image is
+`watch-shop:release-a1393512`.
+
+The public image boundary is now explicit:
+
+- catalog cards use the selected `COVER`;
+- product-detail galleries return only `GALLERY` images;
+- `INLINE` is an internal Watch thumbnail and is excluded by the catalog
+  repository, DTO mapper and public image-signing endpoint.
+
+The Watch List action is now `Xử lý nhanh Media`. It first reuses the existing
+Media intake application action and waits for projection delivery. After the
+Watch is present in the Media space, it opens the existing embedded Media UI
+focused on Cover/image processing. It does not alter the Watch lifecycle state.
+Cover updates still use `setWatchCoverApplication` and emit
+`watch.cover.updated`; quick-list updates carry
+`entryPoint: WATCH_LIST_QUICK` for audit tracing.
+
+Production acceptance recorded for this release:
+
+- container `watch-shop-app-1`: `running`, `healthy`;
+- local `/api/health`: HTTP 200;
+- local `/api/ready`: HTTP 200;
+- public `/products` and the verified Watch detail page: HTTP 200;
+- public `/admin` and `/api/health`: HTTP 404 through the storefront proxy.

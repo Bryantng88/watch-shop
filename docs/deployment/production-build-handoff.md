@@ -712,3 +712,36 @@ docs/deployment/release-2026-08-12-media-acquisition-handoff.md
 Use that document for the release SHA/archive hash, migration, backup, NAS build,
 smoke tests and rollback record. It is preparation documentation, not evidence
 that the release has already been committed or deployed.
+
+## Current direct NAS deployment access: 2026-08-13
+
+The deployment workstation can SSH directly to the production NAS with the
+current Ed25519 deployment identity:
+
+```text
+host: 192.168.1.253
+port: 22253
+user: user
+local private-key path: %USERPROFILE%\.ssh\watchshop_nas_ed25519
+key fingerprint: SHA256:7tdvRJaxa72wP2k0SJwPezefqWHWhd2Rfk38Gb1aYRg (ED25519)
+Docker CLI: /share/CACHEDEV1_DATA/.qpkg/container-station/bin/docker
+```
+
+PowerShell example:
+
+```powershell
+ssh -p 22253 `
+  -i "$env:USERPROFILE\.ssh\watchshop_nas_ed25519" `
+  user@192.168.1.253
+```
+
+The NAS currently does not expose the SCP/SFTP subsystem. Transfer a release as
+text-safe Base64 over SSH, verify its SHA-256 after decoding, and stop if the
+checksum differs. The `user` account can run the Container Station Docker CLI;
+`sudo -n` is not available.
+
+Never paste or commit the private-key contents into this repository. The path,
+host identity and commands belong in this runbook; the private key must be moved
+to another workstation through a secure secret-transfer channel and stored with
+restricted filesystem permissions. A public key or fingerprint may be recorded
+here, but it cannot replace the private key required for authentication.
