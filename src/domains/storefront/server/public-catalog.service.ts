@@ -15,9 +15,11 @@ import {
   findPublicWatchRowBySlug,
   listPublicCatalogFacetRows,
   listPublicWatchRows,
+  listRelatedPublicWatchRows,
   type PublicWatchDetailRow,
   type PublicWatchListRow,
 } from "./public-catalog.repo";
+import { rankRelatedWatches, type RelatedWatchSignal } from "./related-watch-score";
 
 type CursorPayload = { version: 1; sort: PublicCatalogQuery["sort"]; productId: string };
 
@@ -168,6 +170,37 @@ export async function getPublicWatchBySlug(slugInput: unknown, options?: { db?: 
   const slug = publicWatchSlugSchema.parse(slugInput);
   const row = await findPublicWatchRowBySlug(options?.db ?? prisma, slug);
   return row ? mapPublicWatchDetail(row) : null;
+}
+
+function relatedSignal(row: PublicWatchListRow): RelatedWatchSignal {
+  return {
+    productId: row.id,
+    siteChannel: row.watch?.siteChannel ?? null,
+    price: decimalAmount(row.watch?.watchPrice?.salePrice),
+    audience: row.watch?.audienceSegment ?? null,
+    style: row.watch?.style ?? null,
+    brandId: row.brand?.id ?? null,
+    caseSizeMm: row.watch?.watchSpecV2?.caseSizeMM?.toNumber() ?? null,
+    movement: row.watch?.watchSpecV2?.movementType ?? null,
+    yearText: row.watch?.yearText ?? null,
+    updatedAt: row.updatedAt,
+  };
+}
+
+export async function listRelatedPublicWatches(
+  selectedProductIds: string[],
+  options?: { db?: DB; limit?: number },
+): Promise<PublicWatchCard[]> {
+  const ids = [...new Set(selectedProductIds.filter(Boolean))].slice(0, 20);
+  if (!ids.length) return [];
+  const rows = await listRelatedPublicWatchRows(options?.db ?? prisma, ids);
+  const selected = rows.selected.filter((row) => row.watch).map(relatedSignal);
+  const candidates = rows.candidates.map((row) => ({ ...relatedSignal(row), row }));
+  return rankRelatedWatches(candidates, selected, Math.min(Math.max(options?.limit ?? 4, 0), 4))
+    .map(({ item, score }) => ({
+      ...mapPublicWatchCard(item.row),
+      relatedScore: Math.round(score * 10) / 10,
+    }));
 }
 
 export async function getPublicCatalogFacets(options?: { db?: DB }): Promise<PublicCatalogFacets> {

@@ -20,6 +20,7 @@
     "shipment:backfill-operation": "tsx scripts/backfill-shipment-operation.ts",
     "shipment:smoke-operation": "tsx scripts/smoke-shipment-operation.ts",
     "shipment:smoke-dashboard": "tsx scripts/smoke-shipment-dashboard.ts",
+    "shipment:seed-carrier-local": "tsx scripts/seed-local-carrier-integration.ts",
     "order:backfill-list-projection": "tsx scripts/backfill-order-list-projection.ts",
     "order:smoke-list-projection": "tsx scripts/smoke-order-list-projection.ts",
     "technical-issue:rebuild-board-projection": "tsx scripts/rebuild-technical-issue-board-projection.ts",

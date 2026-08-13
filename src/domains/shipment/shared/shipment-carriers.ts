@@ -1,6 +1,7 @@
 // src/domains/shipment/shared/shipment-carriers.ts
 
 export const SHIPMENT_CARRIER_OPTIONS = [
+    { value: "MOCK", label: "Mock (local test)" },
     { value: "GHN", label: "GHN" },
     { value: "GHTK", label: "GHTK" },
     { value: "VIETTEL_POST", label: "Viettel Post" },

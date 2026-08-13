@@ -5,12 +5,13 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 import { cookies } from "next/headers";
 
-import { getPublicWatchBySlug } from "@/domains/storefront/server";
+import { getPublicWatchBySlug, listRelatedPublicWatches } from "@/domains/storefront/server";
 import AddToRequestButton from "@/domains/storefront/ui/AddToRequestButton";
 import { loadStorefrontCartItems } from "@/domains/storefront/server/request-cart.service";
 import { getStorefrontUsdRate } from "@/domains/storefront/server/exchange-rate.service";
 import { formatStorefrontMoney } from "@/domains/storefront/shared/locale.utils";
 import ProductGallery from "@/domains/storefront/ui/ProductGallery";
+import RelatedWatchSuggestions from "@/domains/storefront/ui/RelatedWatchSuggestions";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const { slug } = await params;
   const watch = await getWatch(slug);
   if (!watch) notFound();
-  const [requestItems, cookieStore, rate] = await Promise.all([loadStorefrontCartItems(), cookies(), getStorefrontUsdRate()]);
+  const [requestItems, cookieStore, rate, relatedWatches] = await Promise.all([
+    loadStorefrontCartItems(),
+    cookies(),
+    getStorefrontUsdRate(),
+    listRelatedPublicWatches([watch.productId]),
+  ]);
   const locale = cookieStore.get("vintic-locale")?.value === "en" ? "en" : "vi";
 
   return (
@@ -79,6 +85,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           ) : null}
         </section>
       </div>
+      <RelatedWatchSuggestions watches={relatedWatches} selectedProductIds={[watch.productId]} />
     </article>
   );
 }

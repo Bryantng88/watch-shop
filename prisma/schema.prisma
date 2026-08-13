@@ -1086,31 +1086,143 @@ model ServiceRequest {
 }
 
 model Shipment {
-  id               String            @id(map: "shipment_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orderId          String
-  shipPhone        String?
-  shipAddress      String?
-  shipCity         String?
-  shipDistrict     String?
-  shipWard         String?
-  carrier          String?
-  trackingCode     String?
-  shippingAmount   Decimal           @default(0) @db.Decimal(14, 2)
-  currency         String            @default("VND") @db.VarChar(10)
-  shippedAt        DateTime?         @db.Timestamp(6)
-  deliveredAt      DateTime?         @db.Timestamp(6)
-  notes            String?
-  createdAt        DateTime          @default(now()) @db.Timestamp(6)
-  updatedAt        DateTime          @default(now()) @db.Timestamp(6)
-  status           ShipmentStatus    @default(DRAFT)
-  shippingFeePayer ShippingFeePayer? @default(CUSTOMER)
+  id                  String            @id(map: "shipment_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId             String
+  shipPhone           String?
+  shipAddress         String?
+  shipCity            String?
+  shipDistrict        String?
+  shipWard            String?
+  carrier             String?
+  trackingCode        String?
+  shippingAmount      Decimal           @default(0) @db.Decimal(14, 2)
+  currency            String            @default("VND") @db.VarChar(10)
+  shippedAt           DateTime?         @db.Timestamp(6)
+  deliveredAt         DateTime?         @db.Timestamp(6)
+  notes               String?
+  createdAt           DateTime          @default(now()) @db.Timestamp(6)
+  updatedAt           DateTime          @default(now()) @db.Timestamp(6)
+  status              ShipmentStatus    @default(DRAFT)
+  shippingFeePayer    ShippingFeePayer? @default(CUSTOMER)
+  carrierCode         String?
+  carrierEnvironment  String?
+  externalOrderCode   String?
+  carrierStatus       String?
+  carrierStatusText   String?
+  carrierSyncedAt     DateTime?         @db.Timestamptz(6)
+  carrierCreatedAt    DateTime?         @db.Timestamptz(6)
+  estimatedDeliveryAt DateTime?         @db.Timestamptz(6)
 
-  refNo        String?
-  orderRefNo   String?
-  customerName String?
-  order        Order      @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_shipment_order")
-  task         Task[]
-  workCase     WorkCase[]
+  refNo                String?
+  orderRefNo           String?
+  customerName         String?
+  order                Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_shipment_order")
+  task                 Task[]
+  workCase             WorkCase[]
+  packages             ShipmentPackage[]
+  carrierRequests      CarrierRequest[]
+  carrierStatusHistory CarrierStatusHistory[]
+  carrierCharges       CarrierCharge[]
+
+  @@unique([carrierCode, carrierEnvironment, externalOrderCode], map: "Shipment_carrier_external_order_key")
+  @@index([carrierCode, carrierStatus], map: "Shipment_carrier_status_idx")
+  @@index([carrierSyncedAt], map: "Shipment_carrier_synced_at_idx")
+}
+
+model ShipmentPackage {
+  id                 String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  shipmentId         String   @db.Uuid
+  weightGram         Int
+  lengthCm           Int?
+  widthCm            Int?
+  heightCm           Int?
+  itemCount          Int      @default(1)
+  declaredValue      Decimal? @db.Decimal(14, 2)
+  contentDescription String?
+  createdAt          DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime @default(now()) @db.Timestamptz(6)
+  shipment           Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId])
+}
+
+model CarrierRequest {
+  id                String               @id @default(dbgenerated("(gen_random_uuid())::text"))
+  shipmentId        String               @db.Uuid
+  carrierCode       String
+  environment       String
+  operation         String
+  idempotencyKey    String               @unique
+  requestJson       Json
+  responseJson      Json?
+  status            CarrierRequestStatus @default(PENDING)
+  httpStatus        Int?
+  externalOrderCode String?
+  errorCode         String?
+  errorMessage      String?
+  attemptCount      Int                  @default(0)
+  requestedAt       DateTime             @default(now()) @db.Timestamptz(6)
+  completedAt       DateTime?            @db.Timestamptz(6)
+  shipment          Shipment             @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId, requestedAt(sort: Desc)])
+  @@index([status, requestedAt])
+}
+
+model CarrierWebhookDelivery {
+  id                String               @id @default(dbgenerated("(gen_random_uuid())::text"))
+  carrierCode       String
+  environment       String
+  externalEventId   String?
+  externalOrderCode String?
+  payloadHash       String
+  payloadJson       Json
+  signatureValid    Boolean              @default(false)
+  status            CarrierWebhookStatus @default(RECEIVED)
+  receivedAt        DateTime             @default(now()) @db.Timestamptz(6)
+  processedAt       DateTime?            @db.Timestamptz(6)
+  errorMessage      String?
+
+  @@unique([carrierCode, environment, externalEventId], map: "CarrierWebhook_external_event_key")
+  @@unique([carrierCode, environment, payloadHash], map: "CarrierWebhook_payload_hash_key")
+  @@index([status, receivedAt])
+  @@index([externalOrderCode])
+}
+
+model CarrierStatusHistory {
+  id               String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  shipmentId       String   @db.Uuid
+  carrierCode      String
+  externalStatus   String
+  normalizedStatus String
+  description      String?
+  location         String?
+  occurredAt       DateTime @db.Timestamptz(6)
+  payloadJson      Json?
+  createdAt        DateTime @default(now()) @db.Timestamptz(6)
+  shipment         Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@unique([shipmentId, carrierCode, externalStatus, occurredAt], map: "CarrierStatusHistory_event_key")
+  @@index([shipmentId, occurredAt(sort: Desc)])
+}
+
+model CarrierCharge {
+  id               String                  @id @default(dbgenerated("(gen_random_uuid())::text"))
+  shipmentId       String                  @db.Uuid
+  kind             CarrierChargeKind
+  currency         String                  @default("VND") @db.VarChar(10)
+  estimatedAmount  Decimal?                @db.Decimal(14, 2)
+  chargedAmount    Decimal?                @db.Decimal(14, 2)
+  settlementStatus CarrierSettlementStatus @default(ESTIMATED)
+  settlementRef    String?
+  settledAt        DateTime?               @db.Timestamptz(6)
+  metadataJson     Json?
+  createdAt        DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime                @default(now()) @db.Timestamptz(6)
+  shipment         Shipment                @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@unique([shipmentId, kind], map: "CarrierCharge_shipment_kind_key")
+  @@index([settlementStatus, updatedAt])
 }
 
 model StrapVariantSpec {
@@ -3259,6 +3371,37 @@ enum ShipmentStatus {
   CANCELLED
   RETURNED
   RETURNING
+}
+
+enum CarrierRequestStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+}
+
+enum CarrierWebhookStatus {
+  RECEIVED
+  PROCESSED
+  IGNORED
+  FAILED
+}
+
+enum CarrierChargeKind {
+  SHIPPING
+  INSURANCE
+  COD_FEE
+  RETURN_FEE
+  SURCHARGE
+}
+
+enum CarrierSettlementStatus {
+  ESTIMATED
+  ACCRUED
+  PAID
+  DEDUCTED
+  INVOICED
+  CANCELLED
 }
 
 enum Strap {

@@ -1,0 +1,14 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { CarrierChargeOrderByWithRelationInputObjectSchema as CarrierChargeOrderByWithRelationInputObjectSchema } from './objects/CarrierChargeOrderByWithRelationInput.schema';
+import { CarrierChargeWhereInputObjectSchema as CarrierChargeWhereInputObjectSchema } from './objects/CarrierChargeWhereInput.schema';
+import { CarrierChargeWhereUniqueInputObjectSchema as CarrierChargeWhereUniqueInputObjectSchema } from './objects/CarrierChargeWhereUniqueInput.schema';
+import { CarrierChargeCountAggregateInputObjectSchema as CarrierChargeCountAggregateInputObjectSchema } from './objects/CarrierChargeCountAggregateInput.schema';
+import { CarrierChargeMinAggregateInputObjectSchema as CarrierChargeMinAggregateInputObjectSchema } from './objects/CarrierChargeMinAggregateInput.schema';
+import { CarrierChargeMaxAggregateInputObjectSchema as CarrierChargeMaxAggregateInputObjectSchema } from './objects/CarrierChargeMaxAggregateInput.schema';
+import { CarrierChargeAvgAggregateInputObjectSchema as CarrierChargeAvgAggregateInputObjectSchema } from './objects/CarrierChargeAvgAggregateInput.schema';
+import { CarrierChargeSumAggregateInputObjectSchema as CarrierChargeSumAggregateInputObjectSchema } from './objects/CarrierChargeSumAggregateInput.schema';
+
+export const CarrierChargeAggregateSchema: z.ZodType<Prisma.CarrierChargeAggregateArgs> = z.object({ orderBy: z.union([CarrierChargeOrderByWithRelationInputObjectSchema, CarrierChargeOrderByWithRelationInputObjectSchema.array()]).optional(), where: CarrierChargeWhereInputObjectSchema.optional(), cursor: CarrierChargeWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), CarrierChargeCountAggregateInputObjectSchema ]).optional(), _min: CarrierChargeMinAggregateInputObjectSchema.optional(), _max: CarrierChargeMaxAggregateInputObjectSchema.optional(), _avg: CarrierChargeAvgAggregateInputObjectSchema.optional(), _sum: CarrierChargeSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.CarrierChargeAggregateArgs>;
+
+export const CarrierChargeAggregateZodSchema = z.object({ orderBy: z.union([CarrierChargeOrderByWithRelationInputObjectSchema, CarrierChargeOrderByWithRelationInputObjectSchema.array()]).optional(), where: CarrierChargeWhereInputObjectSchema.optional(), cursor: CarrierChargeWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), CarrierChargeCountAggregateInputObjectSchema ]).optional(), _min: CarrierChargeMinAggregateInputObjectSchema.optional(), _max: CarrierChargeMaxAggregateInputObjectSchema.optional(), _avg: CarrierChargeAvgAggregateInputObjectSchema.optional(), _sum: CarrierChargeSumAggregateInputObjectSchema.optional() }).strict();

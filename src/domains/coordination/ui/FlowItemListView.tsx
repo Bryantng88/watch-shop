@@ -44,6 +44,7 @@ import type {
   BusinessEntityType,
 } from "@/domains/shared/business/business-entity.types";
 import PurchaseRequestOrderModal from "@/domains/purchase-request/ui/PurchaseRequestOrderModal";
+import { CarrierDispatchAssistant } from "@/domains/shipment/ui/carrier";
 
 type FlowStage = {
   key: string;
@@ -2171,6 +2172,13 @@ export default function FlowItemListView({
               </button>
             </header>
             <div className="max-h-[65vh] space-y-4 overflow-y-auto px-5 py-4">
+              {operationalAction.action.key === "dispatch_shipment" &&
+              (process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_CARRIER_TEST_UI === "1") ? (
+                <CarrierDispatchAssistant
+                  shipmentId={operationalAction.item.targetId}
+                  onApply={(fields) => setOperationalFields((current) => ({ ...current, ...fields }))}
+                />
+              ) : null}
               {operationalAction.action.fields.map((field) => {
                 const value = operationalFields[field.key] ?? "";
                 const commonClass =

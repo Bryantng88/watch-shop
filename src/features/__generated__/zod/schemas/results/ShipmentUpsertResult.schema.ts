@@ -18,10 +18,22 @@ export const ShipmentUpsertResultSchema = z.object({
   updatedAt: z.date(),
   status: z.unknown(),
   shippingFeePayer: z.unknown().optional(),
+  carrierCode: z.string().optional(),
+  carrierEnvironment: z.string().optional(),
+  externalOrderCode: z.string().optional(),
+  carrierStatus: z.string().optional(),
+  carrierStatusText: z.string().optional(),
+  carrierSyncedAt: z.date().optional(),
+  carrierCreatedAt: z.date().optional(),
+  estimatedDeliveryAt: z.date().optional(),
   refNo: z.string().optional(),
   orderRefNo: z.string().optional(),
   customerName: z.string().optional(),
   order: z.unknown(),
   task: z.array(z.unknown()),
-  workCase: z.array(z.unknown())
+  workCase: z.array(z.unknown()),
+  packages: z.array(z.unknown()),
+  carrierRequests: z.array(z.unknown()),
+  carrierStatusHistory: z.array(z.unknown()),
+  carrierCharges: z.array(z.unknown())
 });

@@ -43,10 +43,12 @@ const publicWatchCoreSelect = {
   priceVisibility: true,
   tag: true,
   updatedAt: true,
-  brand: { select: { name: true } },
+  brand: { select: { id: true, name: true } },
   watch: {
     select: {
       saleStage: true,
+      siteChannel: true,
+      yearText: true,
       style: true,
       isCollectible: true,
       stockStage: true,
@@ -326,6 +328,29 @@ export async function findOrderablePublicWatchIds(db: DB, productIds: string[]) 
     select: { id: true },
   });
   return rows.map((row) => row.id);
+}
+
+export async function listRelatedPublicWatchRows(db: DB, selectedProductIds: string[]) {
+  if (!selectedProductIds.length) return { selected: [], candidates: [] };
+  const client = dbOrTx(db);
+  const [selected, candidates] = await Promise.all([
+    client.product.findMany({
+      where: { id: { in: selectedProductIds }, type: ProductType.WATCH },
+      select: publicWatchListSelect,
+    }),
+    client.product.findMany({
+      where: {
+        AND: [
+          publicWatchOrderableWhere(),
+          { id: { notIn: selectedProductIds }, priceVisibility: "SHOW" },
+        ],
+      },
+      orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+      take: 80,
+      select: publicWatchListSelect,
+    }),
+  ]);
+  return { selected, candidates };
 }
 
 export async function listPublicCatalogFacetRows(db: DB) {

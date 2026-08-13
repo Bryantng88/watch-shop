@@ -3,7 +3,11 @@ import type { Prisma } from '@prisma/client';
 import { ShipmentStatusSchema } from '../enums/ShipmentStatus.schema';
 import { ShippingFeePayerSchema } from '../enums/ShippingFeePayer.schema';
 import { TaskUncheckedCreateNestedManyWithoutShipmentInputObjectSchema as TaskUncheckedCreateNestedManyWithoutShipmentInputObjectSchema } from './TaskUncheckedCreateNestedManyWithoutShipmentInput.schema';
-import { WorkCaseUncheckedCreateNestedManyWithoutShipmentInputObjectSchema as WorkCaseUncheckedCreateNestedManyWithoutShipmentInputObjectSchema } from './WorkCaseUncheckedCreateNestedManyWithoutShipmentInput.schema'
+import { WorkCaseUncheckedCreateNestedManyWithoutShipmentInputObjectSchema as WorkCaseUncheckedCreateNestedManyWithoutShipmentInputObjectSchema } from './WorkCaseUncheckedCreateNestedManyWithoutShipmentInput.schema';
+import { ShipmentPackageUncheckedCreateNestedManyWithoutShipmentInputObjectSchema as ShipmentPackageUncheckedCreateNestedManyWithoutShipmentInputObjectSchema } from './ShipmentPackageUncheckedCreateNestedManyWithoutShipmentInput.schema';
+import { CarrierRequestUncheckedCreateNestedManyWithoutShipmentInputObjectSchema as CarrierRequestUncheckedCreateNestedManyWithoutShipmentInputObjectSchema } from './CarrierRequestUncheckedCreateNestedManyWithoutShipmentInput.schema';
+import { CarrierStatusHistoryUncheckedCreateNestedManyWithoutShipmentInputObjectSchema as CarrierStatusHistoryUncheckedCreateNestedManyWithoutShipmentInputObjectSchema } from './CarrierStatusHistoryUncheckedCreateNestedManyWithoutShipmentInput.schema';
+import { CarrierChargeUncheckedCreateNestedManyWithoutShipmentInputObjectSchema as CarrierChargeUncheckedCreateNestedManyWithoutShipmentInputObjectSchema } from './CarrierChargeUncheckedCreateNestedManyWithoutShipmentInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -24,11 +28,23 @@ const makeSchema = () => z.object({
   updatedAt: z.coerce.date().optional(),
   status: ShipmentStatusSchema.optional(),
   shippingFeePayer: ShippingFeePayerSchema.optional().nullable(),
+  carrierCode: z.string().optional().nullable(),
+  carrierEnvironment: z.string().optional().nullable(),
+  externalOrderCode: z.string().optional().nullable(),
+  carrierStatus: z.string().optional().nullable(),
+  carrierStatusText: z.string().optional().nullable(),
+  carrierSyncedAt: z.coerce.date().optional().nullable(),
+  carrierCreatedAt: z.coerce.date().optional().nullable(),
+  estimatedDeliveryAt: z.coerce.date().optional().nullable(),
   refNo: z.string().optional().nullable(),
   orderRefNo: z.string().optional().nullable(),
   customerName: z.string().optional().nullable(),
   task: z.lazy(() => TaskUncheckedCreateNestedManyWithoutShipmentInputObjectSchema),
-  workCase: z.lazy(() => WorkCaseUncheckedCreateNestedManyWithoutShipmentInputObjectSchema)
+  workCase: z.lazy(() => WorkCaseUncheckedCreateNestedManyWithoutShipmentInputObjectSchema),
+  packages: z.lazy(() => ShipmentPackageUncheckedCreateNestedManyWithoutShipmentInputObjectSchema),
+  carrierRequests: z.lazy(() => CarrierRequestUncheckedCreateNestedManyWithoutShipmentInputObjectSchema),
+  carrierStatusHistory: z.lazy(() => CarrierStatusHistoryUncheckedCreateNestedManyWithoutShipmentInputObjectSchema),
+  carrierCharges: z.lazy(() => CarrierChargeUncheckedCreateNestedManyWithoutShipmentInputObjectSchema)
 }).strict();
 export const ShipmentUncheckedCreateInputObjectSchema: z.ZodType<Prisma.ShipmentUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.ShipmentUncheckedCreateInput>;
 export const ShipmentUncheckedCreateInputObjectZodSchema = makeSchema();

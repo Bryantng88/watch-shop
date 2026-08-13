@@ -13,7 +13,11 @@ import { ShippingFeePayerSchema } from '../enums/ShippingFeePayer.schema';
 import { OrderScalarRelationFilterObjectSchema as OrderScalarRelationFilterObjectSchema } from './OrderScalarRelationFilter.schema';
 import { OrderWhereInputObjectSchema as OrderWhereInputObjectSchema } from './OrderWhereInput.schema';
 import { TaskListRelationFilterObjectSchema as TaskListRelationFilterObjectSchema } from './TaskListRelationFilter.schema';
-import { WorkCaseListRelationFilterObjectSchema as WorkCaseListRelationFilterObjectSchema } from './WorkCaseListRelationFilter.schema'
+import { WorkCaseListRelationFilterObjectSchema as WorkCaseListRelationFilterObjectSchema } from './WorkCaseListRelationFilter.schema';
+import { ShipmentPackageListRelationFilterObjectSchema as ShipmentPackageListRelationFilterObjectSchema } from './ShipmentPackageListRelationFilter.schema';
+import { CarrierRequestListRelationFilterObjectSchema as CarrierRequestListRelationFilterObjectSchema } from './CarrierRequestListRelationFilter.schema';
+import { CarrierStatusHistoryListRelationFilterObjectSchema as CarrierStatusHistoryListRelationFilterObjectSchema } from './CarrierStatusHistoryListRelationFilter.schema';
+import { CarrierChargeListRelationFilterObjectSchema as CarrierChargeListRelationFilterObjectSchema } from './CarrierChargeListRelationFilter.schema'
 
 const shipmentwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => ShipmentWhereInputObjectSchema), z.lazy(() => ShipmentWhereInputObjectSchema).array()]).optional(),
@@ -37,12 +41,24 @@ const shipmentwhereinputSchema = z.object({
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   status: z.union([z.lazy(() => EnumShipmentStatusFilterObjectSchema), ShipmentStatusSchema]).optional(),
   shippingFeePayer: z.union([z.lazy(() => EnumShippingFeePayerNullableFilterObjectSchema), ShippingFeePayerSchema]).optional().nullable(),
+  carrierCode: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  carrierEnvironment: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  externalOrderCode: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  carrierStatus: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  carrierStatusText: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  carrierSyncedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  carrierCreatedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  estimatedDeliveryAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   refNo: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   orderRefNo: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   customerName: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   order: z.union([z.lazy(() => OrderScalarRelationFilterObjectSchema), z.lazy(() => OrderWhereInputObjectSchema)]).optional(),
   task: z.lazy(() => TaskListRelationFilterObjectSchema).optional(),
-  workCase: z.lazy(() => WorkCaseListRelationFilterObjectSchema).optional()
+  workCase: z.lazy(() => WorkCaseListRelationFilterObjectSchema).optional(),
+  packages: z.lazy(() => ShipmentPackageListRelationFilterObjectSchema).optional(),
+  carrierRequests: z.lazy(() => CarrierRequestListRelationFilterObjectSchema).optional(),
+  carrierStatusHistory: z.lazy(() => CarrierStatusHistoryListRelationFilterObjectSchema).optional(),
+  carrierCharges: z.lazy(() => CarrierChargeListRelationFilterObjectSchema).optional()
 }).strict();
 export const ShipmentWhereInputObjectSchema: z.ZodType<Prisma.ShipmentWhereInput> = shipmentwhereinputSchema as unknown as z.ZodType<Prisma.ShipmentWhereInput>;
 export const ShipmentWhereInputObjectZodSchema = shipmentwhereinputSchema;

@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { CarrierStatusHistoryOrderByWithRelationInputObjectSchema as CarrierStatusHistoryOrderByWithRelationInputObjectSchema } from './objects/CarrierStatusHistoryOrderByWithRelationInput.schema';
+import { CarrierStatusHistoryWhereInputObjectSchema as CarrierStatusHistoryWhereInputObjectSchema } from './objects/CarrierStatusHistoryWhereInput.schema';
+import { CarrierStatusHistoryWhereUniqueInputObjectSchema as CarrierStatusHistoryWhereUniqueInputObjectSchema } from './objects/CarrierStatusHistoryWhereUniqueInput.schema';
+import { CarrierStatusHistoryCountAggregateInputObjectSchema as CarrierStatusHistoryCountAggregateInputObjectSchema } from './objects/CarrierStatusHistoryCountAggregateInput.schema';
+
+export const CarrierStatusHistoryCountSchema: z.ZodType<Prisma.CarrierStatusHistoryCountArgs> = z.object({ orderBy: z.union([CarrierStatusHistoryOrderByWithRelationInputObjectSchema, CarrierStatusHistoryOrderByWithRelationInputObjectSchema.array()]).optional(), where: CarrierStatusHistoryWhereInputObjectSchema.optional(), cursor: CarrierStatusHistoryWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), CarrierStatusHistoryCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.CarrierStatusHistoryCountArgs>;
+
+export const CarrierStatusHistoryCountZodSchema = z.object({ orderBy: z.union([CarrierStatusHistoryOrderByWithRelationInputObjectSchema, CarrierStatusHistoryOrderByWithRelationInputObjectSchema.array()]).optional(), where: CarrierStatusHistoryWhereInputObjectSchema.optional(), cursor: CarrierStatusHistoryWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), CarrierStatusHistoryCountAggregateInputObjectSchema ]).optional() }).strict();

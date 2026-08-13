@@ -11,7 +11,11 @@ import { ShippingFeePayerSchema } from '../enums/ShippingFeePayer.schema';
 import { NullableEnumShippingFeePayerFieldUpdateOperationsInputObjectSchema as NullableEnumShippingFeePayerFieldUpdateOperationsInputObjectSchema } from './NullableEnumShippingFeePayerFieldUpdateOperationsInput.schema';
 import { OrderUpdateOneRequiredWithoutShipmentsNestedInputObjectSchema as OrderUpdateOneRequiredWithoutShipmentsNestedInputObjectSchema } from './OrderUpdateOneRequiredWithoutShipmentsNestedInput.schema';
 import { TaskUpdateManyWithoutShipmentNestedInputObjectSchema as TaskUpdateManyWithoutShipmentNestedInputObjectSchema } from './TaskUpdateManyWithoutShipmentNestedInput.schema';
-import { WorkCaseUpdateManyWithoutShipmentNestedInputObjectSchema as WorkCaseUpdateManyWithoutShipmentNestedInputObjectSchema } from './WorkCaseUpdateManyWithoutShipmentNestedInput.schema'
+import { WorkCaseUpdateManyWithoutShipmentNestedInputObjectSchema as WorkCaseUpdateManyWithoutShipmentNestedInputObjectSchema } from './WorkCaseUpdateManyWithoutShipmentNestedInput.schema';
+import { ShipmentPackageUpdateManyWithoutShipmentNestedInputObjectSchema as ShipmentPackageUpdateManyWithoutShipmentNestedInputObjectSchema } from './ShipmentPackageUpdateManyWithoutShipmentNestedInput.schema';
+import { CarrierRequestUpdateManyWithoutShipmentNestedInputObjectSchema as CarrierRequestUpdateManyWithoutShipmentNestedInputObjectSchema } from './CarrierRequestUpdateManyWithoutShipmentNestedInput.schema';
+import { CarrierStatusHistoryUpdateManyWithoutShipmentNestedInputObjectSchema as CarrierStatusHistoryUpdateManyWithoutShipmentNestedInputObjectSchema } from './CarrierStatusHistoryUpdateManyWithoutShipmentNestedInput.schema';
+import { CarrierChargeUpdateManyWithoutShipmentNestedInputObjectSchema as CarrierChargeUpdateManyWithoutShipmentNestedInputObjectSchema } from './CarrierChargeUpdateManyWithoutShipmentNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -31,12 +35,24 @@ const makeSchema = () => z.object({
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   status: z.union([ShipmentStatusSchema, z.lazy(() => EnumShipmentStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
   shippingFeePayer: z.union([ShippingFeePayerSchema, z.lazy(() => NullableEnumShippingFeePayerFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  carrierCode: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  carrierEnvironment: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  externalOrderCode: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  carrierStatus: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  carrierStatusText: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  carrierSyncedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  carrierCreatedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  estimatedDeliveryAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   refNo: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   orderRefNo: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   customerName: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   order: z.lazy(() => OrderUpdateOneRequiredWithoutShipmentsNestedInputObjectSchema).optional(),
   task: z.lazy(() => TaskUpdateManyWithoutShipmentNestedInputObjectSchema).optional(),
-  workCase: z.lazy(() => WorkCaseUpdateManyWithoutShipmentNestedInputObjectSchema).optional()
+  workCase: z.lazy(() => WorkCaseUpdateManyWithoutShipmentNestedInputObjectSchema).optional(),
+  packages: z.lazy(() => ShipmentPackageUpdateManyWithoutShipmentNestedInputObjectSchema).optional(),
+  carrierRequests: z.lazy(() => CarrierRequestUpdateManyWithoutShipmentNestedInputObjectSchema).optional(),
+  carrierStatusHistory: z.lazy(() => CarrierStatusHistoryUpdateManyWithoutShipmentNestedInputObjectSchema).optional(),
+  carrierCharges: z.lazy(() => CarrierChargeUpdateManyWithoutShipmentNestedInputObjectSchema).optional()
 }).strict();
 export const ShipmentUpdateInputObjectSchema: z.ZodType<Prisma.ShipmentUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.ShipmentUpdateInput>;
 export const ShipmentUpdateInputObjectZodSchema = makeSchema();

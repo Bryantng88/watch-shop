@@ -22,12 +22,24 @@ export const ShipmentInputSchema = z.object({
     updatedAt: z.date(),
     status: ShipmentStatusSchema,
     shippingFeePayer: ShippingFeePayerSchema.optional().nullable(),
+    carrierCode: z.string().optional().nullable(),
+    carrierEnvironment: z.string().optional().nullable(),
+    externalOrderCode: z.string().optional().nullable(),
+    carrierStatus: z.string().optional().nullable(),
+    carrierStatusText: z.string().optional().nullable(),
+    carrierSyncedAt: z.date().optional().nullable(),
+    carrierCreatedAt: z.date().optional().nullable(),
+    estimatedDeliveryAt: z.date().optional().nullable(),
     refNo: z.string().optional().nullable(),
     orderRefNo: z.string().optional().nullable(),
     customerName: z.string().optional().nullable(),
     order: z.unknown(),
     task: z.array(z.unknown()),
-    workCase: z.array(z.unknown())
+    workCase: z.array(z.unknown()),
+    packages: z.array(z.unknown()),
+    carrierRequests: z.array(z.unknown()),
+    carrierStatusHistory: z.array(z.unknown()),
+    carrierCharges: z.array(z.unknown())
 }).strict();
 
 export type ShipmentInputType = z.infer<typeof ShipmentInputSchema>;

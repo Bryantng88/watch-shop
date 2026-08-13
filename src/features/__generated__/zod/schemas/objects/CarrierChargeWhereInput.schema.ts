@@ -1,0 +1,36 @@
+import * as z from 'zod';
+import type { Prisma } from '@prisma/client';
+import { StringFilterObjectSchema as StringFilterObjectSchema } from './StringFilter.schema';
+import { UuidFilterObjectSchema as UuidFilterObjectSchema } from './UuidFilter.schema';
+import { EnumCarrierChargeKindFilterObjectSchema as EnumCarrierChargeKindFilterObjectSchema } from './EnumCarrierChargeKindFilter.schema';
+import { CarrierChargeKindSchema } from '../enums/CarrierChargeKind.schema';
+import { DecimalNullableFilterObjectSchema as DecimalNullableFilterObjectSchema } from './DecimalNullableFilter.schema';
+import { EnumCarrierSettlementStatusFilterObjectSchema as EnumCarrierSettlementStatusFilterObjectSchema } from './EnumCarrierSettlementStatusFilter.schema';
+import { CarrierSettlementStatusSchema } from '../enums/CarrierSettlementStatus.schema';
+import { StringNullableFilterObjectSchema as StringNullableFilterObjectSchema } from './StringNullableFilter.schema';
+import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
+import { JsonNullableFilterObjectSchema as JsonNullableFilterObjectSchema } from './JsonNullableFilter.schema';
+import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
+import { ShipmentScalarRelationFilterObjectSchema as ShipmentScalarRelationFilterObjectSchema } from './ShipmentScalarRelationFilter.schema';
+import { ShipmentWhereInputObjectSchema as ShipmentWhereInputObjectSchema } from './ShipmentWhereInput.schema'
+
+const carrierchargewhereinputSchema = z.object({
+  AND: z.union([z.lazy(() => CarrierChargeWhereInputObjectSchema), z.lazy(() => CarrierChargeWhereInputObjectSchema).array()]).optional(),
+  OR: z.lazy(() => CarrierChargeWhereInputObjectSchema).array().optional(),
+  NOT: z.union([z.lazy(() => CarrierChargeWhereInputObjectSchema), z.lazy(() => CarrierChargeWhereInputObjectSchema).array()]).optional(),
+  id: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
+  shipmentId: z.union([z.lazy(() => UuidFilterObjectSchema), z.string()]).optional(),
+  kind: z.union([z.lazy(() => EnumCarrierChargeKindFilterObjectSchema), CarrierChargeKindSchema]).optional(),
+  currency: z.union([z.lazy(() => StringFilterObjectSchema), z.string().max(10)]).optional(),
+  estimatedAmount: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
+  chargedAmount: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
+  settlementStatus: z.union([z.lazy(() => EnumCarrierSettlementStatusFilterObjectSchema), CarrierSettlementStatusSchema]).optional(),
+  settlementRef: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  settledAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  metadataJson: z.lazy(() => JsonNullableFilterObjectSchema).optional(),
+  createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
+  updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
+  shipment: z.union([z.lazy(() => ShipmentScalarRelationFilterObjectSchema), z.lazy(() => ShipmentWhereInputObjectSchema)]).optional()
+}).strict();
+export const CarrierChargeWhereInputObjectSchema: z.ZodType<Prisma.CarrierChargeWhereInput> = carrierchargewhereinputSchema as unknown as z.ZodType<Prisma.CarrierChargeWhereInput>;
+export const CarrierChargeWhereInputObjectZodSchema = carrierchargewhereinputSchema;

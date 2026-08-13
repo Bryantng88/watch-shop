@@ -1,0 +1,14 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { CarrierRequestOrderByWithRelationInputObjectSchema as CarrierRequestOrderByWithRelationInputObjectSchema } from './objects/CarrierRequestOrderByWithRelationInput.schema';
+import { CarrierRequestWhereInputObjectSchema as CarrierRequestWhereInputObjectSchema } from './objects/CarrierRequestWhereInput.schema';
+import { CarrierRequestWhereUniqueInputObjectSchema as CarrierRequestWhereUniqueInputObjectSchema } from './objects/CarrierRequestWhereUniqueInput.schema';
+import { CarrierRequestCountAggregateInputObjectSchema as CarrierRequestCountAggregateInputObjectSchema } from './objects/CarrierRequestCountAggregateInput.schema';
+import { CarrierRequestMinAggregateInputObjectSchema as CarrierRequestMinAggregateInputObjectSchema } from './objects/CarrierRequestMinAggregateInput.schema';
+import { CarrierRequestMaxAggregateInputObjectSchema as CarrierRequestMaxAggregateInputObjectSchema } from './objects/CarrierRequestMaxAggregateInput.schema';
+import { CarrierRequestAvgAggregateInputObjectSchema as CarrierRequestAvgAggregateInputObjectSchema } from './objects/CarrierRequestAvgAggregateInput.schema';
+import { CarrierRequestSumAggregateInputObjectSchema as CarrierRequestSumAggregateInputObjectSchema } from './objects/CarrierRequestSumAggregateInput.schema';
+
+export const CarrierRequestAggregateSchema: z.ZodType<Prisma.CarrierRequestAggregateArgs> = z.object({ orderBy: z.union([CarrierRequestOrderByWithRelationInputObjectSchema, CarrierRequestOrderByWithRelationInputObjectSchema.array()]).optional(), where: CarrierRequestWhereInputObjectSchema.optional(), cursor: CarrierRequestWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), CarrierRequestCountAggregateInputObjectSchema ]).optional(), _min: CarrierRequestMinAggregateInputObjectSchema.optional(), _max: CarrierRequestMaxAggregateInputObjectSchema.optional(), _avg: CarrierRequestAvgAggregateInputObjectSchema.optional(), _sum: CarrierRequestSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.CarrierRequestAggregateArgs>;
+
+export const CarrierRequestAggregateZodSchema = z.object({ orderBy: z.union([CarrierRequestOrderByWithRelationInputObjectSchema, CarrierRequestOrderByWithRelationInputObjectSchema.array()]).optional(), where: CarrierRequestWhereInputObjectSchema.optional(), cursor: CarrierRequestWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), CarrierRequestCountAggregateInputObjectSchema ]).optional(), _min: CarrierRequestMinAggregateInputObjectSchema.optional(), _max: CarrierRequestMaxAggregateInputObjectSchema.optional(), _avg: CarrierRequestAvgAggregateInputObjectSchema.optional(), _sum: CarrierRequestSumAggregateInputObjectSchema.optional() }).strict();

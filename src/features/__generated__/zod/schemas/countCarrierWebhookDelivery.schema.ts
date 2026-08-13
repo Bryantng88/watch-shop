@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { CarrierWebhookDeliveryOrderByWithRelationInputObjectSchema as CarrierWebhookDeliveryOrderByWithRelationInputObjectSchema } from './objects/CarrierWebhookDeliveryOrderByWithRelationInput.schema';
+import { CarrierWebhookDeliveryWhereInputObjectSchema as CarrierWebhookDeliveryWhereInputObjectSchema } from './objects/CarrierWebhookDeliveryWhereInput.schema';
+import { CarrierWebhookDeliveryWhereUniqueInputObjectSchema as CarrierWebhookDeliveryWhereUniqueInputObjectSchema } from './objects/CarrierWebhookDeliveryWhereUniqueInput.schema';
+import { CarrierWebhookDeliveryCountAggregateInputObjectSchema as CarrierWebhookDeliveryCountAggregateInputObjectSchema } from './objects/CarrierWebhookDeliveryCountAggregateInput.schema';
+
+export const CarrierWebhookDeliveryCountSchema: z.ZodType<Prisma.CarrierWebhookDeliveryCountArgs> = z.object({ orderBy: z.union([CarrierWebhookDeliveryOrderByWithRelationInputObjectSchema, CarrierWebhookDeliveryOrderByWithRelationInputObjectSchema.array()]).optional(), where: CarrierWebhookDeliveryWhereInputObjectSchema.optional(), cursor: CarrierWebhookDeliveryWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), CarrierWebhookDeliveryCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.CarrierWebhookDeliveryCountArgs>;
+
+export const CarrierWebhookDeliveryCountZodSchema = z.object({ orderBy: z.union([CarrierWebhookDeliveryOrderByWithRelationInputObjectSchema, CarrierWebhookDeliveryOrderByWithRelationInputObjectSchema.array()]).optional(), where: CarrierWebhookDeliveryWhereInputObjectSchema.optional(), cursor: CarrierWebhookDeliveryWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), CarrierWebhookDeliveryCountAggregateInputObjectSchema ]).optional() }).strict();

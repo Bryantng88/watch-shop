@@ -1,4 +1,5 @@
 export * from "./public-catalog.service";
+export * from "./related-watch-score";
 export * from "./public-media.service";
 export * from "./public-order.service";
 export * from "./zalo-ingress-auth";

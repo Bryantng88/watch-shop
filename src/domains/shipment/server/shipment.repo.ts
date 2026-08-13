@@ -15,6 +15,10 @@ export async function getShipmentByIdRepo(db: DB | Tx, shipmentId: string) {
   return (db as any).shipment.findUnique({
     where: { id: shipmentId },
     include: {
+      packages: { orderBy: { createdAt: "asc" } },
+      carrierCharges: { orderBy: { kind: "asc" } },
+      carrierRequests: { orderBy: { requestedAt: "desc" }, take: 10 },
+      carrierStatusHistory: { orderBy: { occurredAt: "desc" }, take: 30 },
       order: {
         select: {
           id: true,
@@ -45,6 +49,10 @@ export async function getActiveShipmentByOrderIdRepo(db: DB | Tx, orderId: strin
     },
     orderBy: [{ createdAt: "desc" }, { updatedAt: "desc" }],
     include: {
+      packages: { orderBy: { createdAt: "asc" } },
+      carrierCharges: { orderBy: { kind: "asc" } },
+      carrierRequests: { orderBy: { requestedAt: "desc" }, take: 10 },
+      carrierStatusHistory: { orderBy: { occurredAt: "desc" }, take: 30 },
       order: {
         select: {
           id: true,
