@@ -73,6 +73,7 @@ function mapPrice(row: PublicWatchListRow): PublicWatchPrice {
 
 export function mapPublicWatchCard(row: PublicWatchListRow): PublicWatchCard {
   const image = row.productImage.find((item) => item.role === "COVER") ?? row.productImage[0];
+  const hoverImage = row.productImage.find((item) => item.role === "GALLERY") ?? null;
   if (!row.slug || !row.watch || !image) {
     throw new Error("PUBLIC_WATCH_ELIGIBILITY_INVARIANT_VIOLATION");
   }
@@ -82,6 +83,7 @@ export function mapPublicWatchCard(row: PublicWatchListRow): PublicWatchCard {
     title: row.watch.watchContent?.titleOverride?.trim() || row.title,
     brand: row.brand?.name ?? null,
     image: mapImage(row, image),
+    hoverImage: hoverImage ? mapImage(row, hoverImage) : null,
     price: mapPrice(row),
     audience: row.watch.audienceSegment,
     tag: row.tag ?? null,
@@ -121,14 +123,17 @@ function mapPublicSpecs(row: PublicWatchDetailRow): PublicWatchSpec[] {
 export function mapPublicWatchDetail(row: PublicWatchDetailRow): PublicWatchDetail {
   const card = mapPublicWatchCard(row);
   const content = row.watch?.watchContent;
-  const galleryImages = row.productImage.filter((image) => image.role === "GALLERY");
+  const coverImage = row.productImage.find((image) => image.role === "COVER") ?? row.productImage[0];
+  const galleryImages = row.productImage.filter(
+    (image) => image.role === "GALLERY" && image.fileKey !== coverImage?.fileKey,
+  );
   return {
     ...card,
     summary: content?.summary?.trim() || null,
-    // COVER is the catalog/card image. Product detail thumbnails must only
-    // expose the curated gallery; INLINE is an internal Watch thumbnail and
-    // must never leak into the public storefront gallery.
-    gallery: galleryImages.map((image) => mapImage(row, image)),
+    // Keep the catalog cover as the first detail image so the click-through is
+    // visually continuous, then append the curated gallery in its stored order.
+    // INLINE remains an internal Watch thumbnail and must never be exposed.
+    gallery: [card.image, ...galleryImages.map((image) => mapImage(row, image))],
     specs: mapPublicSpecs(row),
     seo: {
       title: content?.seoTitle?.trim() || card.title,

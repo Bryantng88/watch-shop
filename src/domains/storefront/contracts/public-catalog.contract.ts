@@ -86,6 +86,7 @@ export type PublicWatchCard = {
   title: string;
   brand: string | null;
   image: PublicWatchImage;
+  hoverImage: PublicWatchImage | null;
   price: PublicWatchPrice;
   audience: "MEN" | "WOMEN" | "UNISEX";
   tag: string | null;

@@ -36,8 +36,6 @@ function storefrontImageWhere(requireCoverImage: boolean): Prisma.ProductImageWh
   };
 }
 
-const requireCoverImage = storefrontCoverImageRequired();
-
 const publicWatchCoreSelect = {
   id: true,
   slug: true,
@@ -94,10 +92,14 @@ const publicWatchCoreSelect = {
 export const publicWatchListSelect = {
   ...publicWatchCoreSelect,
   productImage: {
-    where: storefrontImageWhere(requireCoverImage),
+    where: {
+      isForStorefront: true,
+      fileKey: { not: "" },
+      role: { in: [ImageRole.COVER, ImageRole.GALLERY] },
+    },
     orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
     select: publicImageSelect,
-    take: 1,
+    take: 2,
   },
 } satisfies Prisma.ProductSelect;
 

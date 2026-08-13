@@ -258,18 +258,34 @@ function ChosenGrid({
 function SelectedStrip({
     items,
     onRemove,
+    onReorder,
     onPreview,
     onPreviewClose,
 }: {
     items: PickedMediaItem[];
     onRemove: (key: string) => void;
+    onReorder: (items: PickedMediaItem[]) => void;
     onPreview: (item: PickedMediaItem) => void;
     onPreviewClose: () => void;
 }) {
+    const [draggedKey, setDraggedKey] = React.useState<string | null>(null);
+
+    const moveItem = React.useCallback((fromIndex: number, toIndex: number) => {
+        if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || toIndex >= items.length) return;
+        const next = [...items];
+        const [moved] = next.splice(fromIndex, 1);
+        if (!moved) return;
+        next.splice(toIndex, 0, moved);
+        onReorder(next);
+    }, [items, onReorder]);
+
     return (
         <div className="space-y-3">
-            <div className="text-sm font-medium text-slate-700">
-                Ảnh sẽ lưu cho watch
+            <div>
+                <div className="text-sm font-medium text-slate-700">Ảnh sẽ lưu cho watch</div>
+                <div className="mt-1 text-xs text-slate-500">
+                    Kéo thả để sắp xếp. Ảnh số 1 sẽ xuất hiện khi khách rê chuột lên card storefront.
+                </div>
             </div>
 
             {items.length === 0 ? (
@@ -278,14 +294,31 @@ function SelectedStrip({
                 </div>
             ) : (
                 <div className="flex flex-wrap gap-3">
-                    {items.map((item) => {
+                    {items.map((item, index) => {
                         const src = getImageSrc(item);
                         const label = getLabel(item);
 
                         return (
                             <div
                                 key={item.key}
-                                className="relative h-24 w-24 cursor-pointer overflow-hidden rounded-2xl border border-blue-200 bg-white"
+                                draggable
+                                onDragStart={(event) => {
+                                    setDraggedKey(item.key);
+                                    event.dataTransfer.effectAllowed = "move";
+                                    event.dataTransfer.setData("text/plain", item.key);
+                                }}
+                                onDragEnd={() => setDraggedKey(null)}
+                                onDragOver={(event) => {
+                                    event.preventDefault();
+                                    event.dataTransfer.dropEffect = "move";
+                                }}
+                                onDrop={(event) => {
+                                    event.preventDefault();
+                                    const sourceKey = draggedKey ?? event.dataTransfer.getData("text/plain");
+                                    moveItem(items.findIndex((candidate) => candidate.key === sourceKey), index);
+                                    setDraggedKey(null);
+                                }}
+                                className={`relative h-28 w-24 cursor-grab overflow-hidden rounded-2xl border bg-white transition active:cursor-grabbing ${draggedKey === item.key ? "scale-95 border-blue-400 opacity-55" : "border-blue-200 hover:border-blue-400"}`}
                                 role="button"
                                 tabIndex={0}
                                 onClick={() => onPreview(item)}
@@ -296,7 +329,7 @@ function SelectedStrip({
                                     }
                                 }}
                             >
-                                <div className="h-full w-full overflow-hidden rounded-2xl">
+                                <div className="h-24 w-full overflow-hidden rounded-2xl">
                                     <img
                                         src={src}
                                         alt={label}
@@ -304,6 +337,12 @@ function SelectedStrip({
                                         decoding="async"
                                         className="h-full w-full object-cover"
                                     />
+                                </div>
+
+                                <div className="absolute inset-x-0 bottom-0 flex h-7 items-center justify-between border-t border-slate-100 bg-white px-2">
+                                    <button type="button" disabled={index === 0} onClick={(event) => { event.stopPropagation(); moveItem(index, index - 1); }} className="text-xs text-slate-500 disabled:opacity-20" aria-label={`Đưa ${label} sang trái`}>←</button>
+                                    <span className="text-[10px] font-semibold text-slate-600">{index + 1}</span>
+                                    <button type="button" disabled={index === items.length - 1} onClick={(event) => { event.stopPropagation(); moveItem(index, index + 1); }} className="text-xs text-slate-500 disabled:opacity-20" aria-label={`Đưa ${label} sang phải`}>→</button>
                                 </div>
 
                                 <button
@@ -516,6 +555,7 @@ export default function MediaPickerMulti({
             <SelectedStrip
                 items={selectedItems}
                 onRemove={handleRemoveSelected}
+                onReorder={onSelectedChange}
                 onPreview={handlePreview}
                 onPreviewClose={handlePreviewClose}
             />

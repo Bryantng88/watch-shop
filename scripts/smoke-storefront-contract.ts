@@ -144,21 +144,26 @@ function main() {
   assert.equal(card.price.mode, "SHOW");
   assert.equal(card.price.amount, 12_500_000);
   assert.equal(card.image.url, "/api/public/catalog/watches/product-1/images/image-1");
+  assert.equal(card.hoverImage?.url, "/api/public/catalog/watches/product-1/images/image-2");
   assertNoForbiddenKeys(card, "public card DTO");
 
   const contactCard = mapPublicWatchCard(fixture("HIDE"));
   assert.deepEqual(contactCard.price, { mode: "CONTACT", amount: null, currency: "VND" });
 
   const detail = mapPublicWatchDetail(fixture());
-  assert.equal(detail.gallery.length, 1);
+  assert.equal(detail.gallery.length, 2);
   assert.equal(
     detail.gallery[0]?.url,
+    "/api/public/catalog/watches/product-1/images/image-1",
+  );
+  assert.equal(
+    detail.gallery[1]?.url,
     "/api/public/catalog/watches/product-1/images/image-2",
   );
   assert.equal(
-    detail.gallery.some((image) => image.url.includes("image-1") || image.url.includes("image-3")),
+    detail.gallery.some((image) => image.url.includes("image-3")),
     false,
-    "public gallery must contain GALLERY images only",
+    "public gallery must contain COVER and GALLERY images only",
   );
   assert.ok(detail.specs.some((item) => item.key === "reference"));
   assertNoForbiddenKeys(detail, "public detail DTO");
