@@ -9,7 +9,11 @@ export const STOREFRONT_CART_COOKIE = "watch-shop-storefront-request";
 export function parseStorefrontCartCookie(value?: string | null) {
   if (!value) return [];
   try {
-    const parsed = JSON.parse(decodeURIComponent(value));
+    let decoded = value;
+    for (let attempt = 0; attempt < 2 && !decoded.trim().startsWith("["); attempt += 1) {
+      decoded = decodeURIComponent(decoded);
+    }
+    const parsed = JSON.parse(decoded);
     return Array.isArray(parsed)
       ? parsed.map((item) => String(item).trim()).filter(Boolean).slice(0, 20)
       : [];

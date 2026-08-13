@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   const response = request.headers.get("accept")?.includes("application/json")
     ? NextResponse.json({ ok: true, slug, added: !current.includes(slug) })
     : NextResponse.redirect(new URL(safeReturnTo, request.url), 303);
-  response.cookies.set(STOREFRONT_CART_COOKIE, encodeURIComponent(JSON.stringify(next)), {
+  response.cookies.set(STOREFRONT_CART_COOKIE, JSON.stringify(next), {
     httpOnly: false,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -36,7 +36,7 @@ export async function DELETE(request: NextRequest) {
   const current = parseStorefrontCartCookie(request.cookies.get(STOREFRONT_CART_COOKIE)?.value);
   const next = current.filter((item) => item !== slug);
   const response = NextResponse.json({ ok: true, removed: current.length !== next.length });
-  response.cookies.set(STOREFRONT_CART_COOKIE, encodeURIComponent(JSON.stringify(next)), {
+  response.cookies.set(STOREFRONT_CART_COOKIE, JSON.stringify(next), {
     httpOnly: false,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
