@@ -572,3 +572,70 @@ Production acceptance recorded for this release:
 - local `/api/ready`: HTTP 200;
 - public `/products` and the verified Watch detail page: HTTP 200;
 - public `/admin` and `/api/health`: HTTP 404 through the storefront proxy.
+
+## Gallery ordering and separate Cover tab release: 2026-08-13
+
+Release `ad99bc30` was deployed as immutable image
+`watch-shop:release-ad99bc30`. It contains no schema migration and replaced only
+the `app` service. The previous production image
+`watch-shop:release-ce6b8f23` is the application rollback target.
+
+This release completes the four-part Media Processing presentation documented
+in `release-2026-08-12-media-acquisition-handoff.md`:
+
+```text
+profile + content + gallery + cover = x/4
+```
+
+- `Cover storefront` is now a fourth, separate Media Processing tab rather than
+  a panel embedded in `Hình ảnh`;
+- `focus=cover` opens the Cover tab directly;
+- the `Hình ảnh` tab remains responsible for gallery selection, ordering and
+  image review;
+- the Cover tab owns Cover selection and storefront-readiness checks;
+- gallery sorting uses a sortable drag overlay: the thumbnail follows the
+  pointer, surrounding cards animate toward their prospective positions, the
+  drop target is highlighted and the dropped image animates into place;
+- left/right ordering buttons remain available as an accessible fallback;
+- the first ordered Gallery image remains the storefront card hover image, and
+  persisted array order continues to map to `ProductImage.sortOrder`.
+
+Immutable release evidence:
+
+```text
+source commit: ad99bc30
+archive: watch-shop-release-ad99bc30.tar.gz
+archive SHA-256: 44c5b59108cd8baf3502f9bef152084a47c16aeabceb2a6ae1e778860f951ea3
+runtime image: watch-shop:release-ad99bc30
+runtime image ID: sha256:481ff4c0072258456915fed9b94343212b2f7d45d7c2f72faa451f67eba4a216
+ops image: watch-shop-ops:release-ad99bc30
+ops image ID: sha256:63a80484f393d6eb1e4dd395dc12189d5545f73ac9fc9df8ca6218d737f24cb7
+release directory: /share/homes/user/watch-shop-releases/release-ad99bc30
+```
+
+Pre-rollout backup and gates:
+
+- database backup:
+  `/share/WatchShopBackup/database/watch-shop-20260813T091158Z.dump`;
+- backup sidecar verification: `sha256sum -c`: `OK`;
+- Prisma found 48 migrations and reported no pending migrations;
+- permission catalog audit: `ok: true`, 78/78 persisted permissions and no
+  missing, role, forbidden-role or retired-code drift;
+- local targeted ESLint, TypeScript with incremental output disabled, production
+  build (129/129 pages) and `git diff --check` passed before packaging.
+
+Post-rollout acceptance:
+
+- `watch-shop-app-1` runs `watch-shop:release-ad99bc30` and is `healthy`;
+- local `/api/health`: `status=ok`;
+- local `/api/ready`: `status=ready`, database reachable;
+- public `/products`: HTTP 200;
+- verified public product-detail route: HTTP 200;
+- public `/admin` and `/api/health`: HTTP 404 through the deny-by-default
+  storefront proxy;
+- startup log: Next.js 15.5.2 ready in 210 ms.
+
+Application rollback is `watch-shop:release-ce6b8f23`. This UI-only release has
+no migration, so an application rollback does not require restoring the database
+backup. Retain the verified backup as deployment evidence and use it only for a
+separately approved database-recovery operation.
