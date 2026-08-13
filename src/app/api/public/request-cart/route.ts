@@ -29,3 +29,19 @@ export async function POST(request: NextRequest) {
   });
   return response;
 }
+
+export async function DELETE(request: NextRequest) {
+  const input = await request.json().catch(() => null);
+  const slug = String(input?.slug ?? "").trim();
+  const current = parseStorefrontCartCookie(request.cookies.get(STOREFRONT_CART_COOKIE)?.value);
+  const next = current.filter((item) => item !== slug);
+  const response = NextResponse.json({ ok: true, removed: current.length !== next.length });
+  response.cookies.set(STOREFRONT_CART_COOKIE, encodeURIComponent(JSON.stringify(next)), {
+    httpOnly: false,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 14,
+  });
+  return response;
+}

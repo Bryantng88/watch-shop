@@ -63,7 +63,7 @@ export default function PublicHeader() {
           <div className="flex h-8 items-center border border-[#dedbd4] p-0.5 text-[9px] font-semibold tracking-[0.08em]">
             {(["VI", "EN"] as const).map((item) => <button key={item} type="button" onClick={() => switchLanguage(item)} aria-pressed={language === item} className={`h-6 px-2 transition ${language === item ? "bg-[#46545e] text-white" : "text-[#77736d] hover:text-[#252525]"}`}>{item}</button>)}
           </div>
-          <div className="group/cart relative">
+          <div className="group/cart relative after:absolute after:left-0 after:top-full after:h-2 after:w-full after:content-['']">
             <Link href="/request" className="storefront-focus relative grid h-9 w-9 place-items-center rounded-[3px] hover:bg-[#efede7]" aria-label={language === "VI" ? "Yêu cầu của bạn" : "Your request"}>
               <ShoppingBag className="h-4 w-4" aria-hidden="true" />
               {items.length ? <span className="absolute right-0 top-0 grid h-4 min-w-4 place-items-center rounded-full bg-[#d84b0b] px-1 text-[8px] font-bold text-white" aria-label={`${items.length} sản phẩm`}>{items.length}</span> : null}
