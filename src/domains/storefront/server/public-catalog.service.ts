@@ -121,10 +121,14 @@ function mapPublicSpecs(row: PublicWatchDetailRow): PublicWatchSpec[] {
 export function mapPublicWatchDetail(row: PublicWatchDetailRow): PublicWatchDetail {
   const card = mapPublicWatchCard(row);
   const content = row.watch?.watchContent;
+  const galleryImages = row.productImage.filter((image) => image.role === "GALLERY");
   return {
     ...card,
     summary: content?.summary?.trim() || null,
-    gallery: row.productImage.map((image) => mapImage(row, image)),
+    // COVER is the catalog/card image. Product detail thumbnails must only
+    // expose the curated gallery; INLINE is an internal Watch thumbnail and
+    // must never leak into the public storefront gallery.
+    gallery: galleryImages.map((image) => mapImage(row, image)),
     specs: mapPublicSpecs(row),
     seo: {
       title: content?.seoTitle?.trim() || card.title,

@@ -17,6 +17,7 @@ export async function PUT(
     const result = await setWatchCoverApplication({
       productId: id,
       storageKey: String(body?.storageKey ?? body?.fileKey ?? "").trim(),
+      entryPoint: body?.entryPoint === "WATCH_LIST_QUICK" ? "WATCH_LIST_QUICK" : null,
       actorUserId: auth.id ?? null,
       deferConsumers: (work) => after(work),
     });

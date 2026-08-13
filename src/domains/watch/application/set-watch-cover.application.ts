@@ -16,6 +16,7 @@ import { buildWatchStorefrontSlug } from "@/domains/watch/shared/storefront-slug
 export async function setWatchCoverApplication(input: {
   productId: string;
   storageKey: string;
+  entryPoint?: "WATCH_LIST_QUICK" | null;
   actorUserId?: string | null;
   deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
 }) {
@@ -98,6 +99,7 @@ export async function setWatchCoverApplication(input: {
       previousStorageKey: watch.product.storefrontImageKey,
       actorUserId: input.actorUserId ?? null,
       actionId,
+      entryPoint: input.entryPoint ?? null,
     });
     delivery.track(event);
 

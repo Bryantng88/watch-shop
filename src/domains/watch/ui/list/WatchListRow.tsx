@@ -482,7 +482,7 @@ export default function WatchListRow({
         },
         onMedia && {
             key: "media-space",
-            label: "Đưa vào Space Media",
+            label: "Xử lý nhanh Media",
             icon: <ImagePlus className="h-4 w-4" />,
             onClick: onMedia,
             disabled: mediaSubmitting,

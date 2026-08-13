@@ -188,6 +188,7 @@ export async function emitWatchCoverUpdatedEvent(
     previousStorageKey?: string | null;
     actorUserId?: string | null;
     actionId: string;
+    entryPoint?: "WATCH_LIST_QUICK" | null;
   },
 ) {
   return recordBusinessEvent(db, {
@@ -203,6 +204,7 @@ export async function emitWatchCoverUpdatedEvent(
       previousStorageKey: input.previousStorageKey ?? null,
       sourceId: input.actionId,
       eventInstanceId: input.actionId,
+      entryPoint: input.entryPoint ?? null,
     },
   });
 }

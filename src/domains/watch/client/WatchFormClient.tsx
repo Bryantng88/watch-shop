@@ -412,12 +412,22 @@ export default function WatchFormClient({
   const pricingRef = useRef<HTMLDivElement | null>(null);
 
   const focus = searchParams.get("focus");
+  const mediaEntryPoint = searchParams.get("entryPoint") === "WATCH_LIST_QUICK"
+    ? "WATCH_LIST_QUICK" as const
+    : null;
   const fromMediaWorkspace = searchParams.get("from") === "media-workspace";
   const fromPhotoshootWorkspace =
     searchParams.get("from") === "photoshoot-workspace";
   const embedded = searchParams.get("embedded") === "1";
   const viewMode = searchParams.get("mode") || "full";
   const isMediaMode = viewMode === "media";
+
+  useEffect(() => {
+    if (!isMediaMode) return;
+    if (focus === "cover" || focus === "image" || focus === "gallery") {
+      setActiveMediaSection("image");
+    }
+  }, [focus, isMediaMode]);
   const returnTo =
     searchParams.get("returnTo") ||
     (isMediaMode
@@ -1768,6 +1778,7 @@ export default function WatchFormClient({
         watchId={values.watchId}
         productId={values.productId}
         audienceSegment={detail.audienceSegment === "WOMEN" ? "WOMEN" : detail.audienceSegment === "UNISEX" ? "UNISEX" : "MEN"}
+        entryPoint={mediaEntryPoint}
         poolImages={values.media.poolImages || []}
         galleryImages={values.media.galleryImages || []}
         imageReviewStatus={values.imageReviewStatus}
@@ -1991,6 +2002,7 @@ export default function WatchFormClient({
             audienceSegment={
               detail.audienceSegment === "WOMEN" ? "WOMEN" : detail.audienceSegment === "UNISEX" ? "UNISEX" : "MEN"
             }
+            entryPoint={mediaEntryPoint}
             poolImages={values.media.poolImages || []}
             galleryImages={values.media.galleryImages || []}
             imageReviewStatus={values.imageReviewStatus}

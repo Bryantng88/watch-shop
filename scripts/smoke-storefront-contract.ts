@@ -70,6 +70,22 @@ function fixture(priceVisibility: "SHOW" | "HIDE" = "SHOW") {
         width: 1200,
         height: 1600,
       },
+      {
+        id: "image-2",
+        fileKey: "products/gallery/omega-detail.jpg",
+        role: "GALLERY",
+        alt: "Omega detail",
+        width: 1200,
+        height: 1600,
+      },
+      {
+        id: "image-3",
+        fileKey: "products/inline/omega-internal.jpg",
+        role: "INLINE",
+        alt: "Internal thumbnail",
+        width: 400,
+        height: 400,
+      },
     ],
     watch: {
       audienceSegment: "MEN",
@@ -135,6 +151,15 @@ function main() {
 
   const detail = mapPublicWatchDetail(fixture());
   assert.equal(detail.gallery.length, 1);
+  assert.equal(
+    detail.gallery[0]?.url,
+    "/api/public/catalog/watches/product-1/images/image-2",
+  );
+  assert.equal(
+    detail.gallery.some((image) => image.url.includes("image-1") || image.url.includes("image-3")),
+    false,
+    "public gallery must contain GALLERY images only",
+  );
   assert.ok(detail.specs.some((item) => item.key === "reference"));
   assertNoForbiddenKeys(detail, "public detail DTO");
 

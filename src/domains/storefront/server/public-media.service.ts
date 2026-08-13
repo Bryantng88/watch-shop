@@ -1,3 +1,5 @@
+import { ImageRole } from "@prisma/client";
+
 import { mediaStorage } from "@/domains/media/storage";
 import { prisma, type DB, dbOrTx } from "@/server/db/client";
 import { normalizeKey } from "@/server/lib/storage-key";
@@ -21,6 +23,7 @@ export async function signPublicWatchImage(
       productId,
       isForStorefront: true,
       fileKey: { not: "" },
+      role: { in: [ImageRole.COVER, ImageRole.GALLERY] },
       product: { is: publicWatchEligibilityWhere() },
     },
     select: { fileKey: true },

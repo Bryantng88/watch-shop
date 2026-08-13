@@ -62,6 +62,7 @@ type Props = {
     collapsible?: boolean;
     surface?: "card" | "flat";
     audienceSegment?: "MEN" | "WOMEN" | "UNISEX";
+    entryPoint?: "WATCH_LIST_QUICK" | null;
 };
 
 function normalizeStatus(status?: string | null): ReviewStatus {
@@ -131,6 +132,7 @@ export default function WatchImageSection({
     collapsible = true,
     surface = "card",
     audienceSegment = "MEN",
+    entryPoint = null,
 }: Props) {
     const dialog = useAppDialog();
     const notify = useNotify();
@@ -257,7 +259,7 @@ export default function WatchImageSection({
             const res = await fetch(`/api/admin/watches/${productId}/storefront-image`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ storageKey }),
+                body: JSON.stringify({ storageKey, entryPoint }),
             });
             const json = await res.json().catch(() => null);
             if (!res.ok) {

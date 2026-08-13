@@ -104,7 +104,11 @@ export const publicWatchListSelect = {
 export const publicWatchDetailSelect = {
   ...publicWatchCoreSelect,
   productImage: {
-    where: { isForStorefront: true, fileKey: { not: "" } },
+    where: {
+      isForStorefront: true,
+      fileKey: { not: "" },
+      role: { in: [ImageRole.COVER, ImageRole.GALLERY] },
+    },
     orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
     select: publicImageSelect,
     take: 24,

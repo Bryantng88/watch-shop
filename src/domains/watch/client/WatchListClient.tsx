@@ -381,6 +381,7 @@ export default function WatchListClient(props: WatchListClientProps) {
   >(null);
   const [inlineRepairRow, setInlineRepairRow] = useState<WatchRow | null>(null);
   const [inlineRepairSubmitting, setInlineRepairSubmitting] = useState(false);
+  const [quickMediaRow, setQuickMediaRow] = useState<WatchRow | null>(null);
   const [dashboardCustomizationRequest, setDashboardCustomizationRequest] =
     useState(0);
 
@@ -948,9 +949,12 @@ export default function WatchListClient(props: WatchListClientProps) {
 
       notify.success({
         title: "Đã đưa vào Space Media",
-        message: `Watch đã được đưa vào Workspace ${targetLabel}.`,
+        message: row.hasImages
+          ? "Watch đã có mặt trong Workspace Xử lý Media. Đang mở màn hình Media."
+          : `Watch đã được đưa vào Workspace ${targetLabel}.`,
       });
       await loadList(new URLSearchParams(params.toString()), { meta: "lite" });
+      if (row.hasImages) setQuickMediaRow(row);
     } catch (error) {
       notify.error({
         title: "Không thể đưa vào Space Media",
@@ -1883,6 +1887,54 @@ export default function WatchListClient(props: WatchListClientProps) {
         onClose={previewState.closePreview}
         onActivityChanged={previewState.refreshPreview}
       />
+      {quickMediaRow ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Xử lý nhanh Media"
+        >
+          <div className="flex h-[92vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
+            <div className="flex h-12 shrink-0 items-center justify-between border-b border-slate-200 px-4">
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-slate-950">
+                  Xử lý nhanh Media
+                </div>
+                <div className="truncate text-xs text-slate-500">
+                  {quickMediaRow.title || quickMediaRow.sku || "Watch"}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={`/admin/watches/${quickMediaRow.productId}/edit?mode=media&focus=cover&entryPoint=WATCH_LIST_QUICK`}
+                  className="inline-flex h-8 items-center rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                >
+                  Full page
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuickMediaRow(null);
+                    void loadList(new URLSearchParams(params.toString()), {
+                      meta: "lite",
+                      consistency: "source",
+                    });
+                  }}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-lg leading-none text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
+                  aria-label="Đóng"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <iframe
+              src={`/admin/watches/${quickMediaRow.productId}/edit?embedded=1&mode=media&focus=cover&entryPoint=WATCH_LIST_QUICK&returnTo=${encodeURIComponent("/admin/watches")}`}
+              title={`Xử lý Media - ${quickMediaRow.title || quickMediaRow.sku || "Watch"}`}
+              className="min-h-0 flex-1 border-0 bg-slate-50"
+            />
+          </div>
+        </div>
+      ) : null}
       <MediaBrowserDialog
         open={Boolean(inlineRepairRow)}
         onClose={() => {
