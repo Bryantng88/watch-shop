@@ -29,6 +29,7 @@ type MediaItemWithAliases = PickedMediaItem & {
 };
 
 type Props = {
+    sectionMode?: "combined" | "gallery" | "cover";
     poolImages: PickedMediaItem[];
     galleryImages: PickedMediaItem[];
     onPoolImagesChange: (items: PickedMediaItem[]) => void;
@@ -102,6 +103,7 @@ function dedupeMediaItems(items: PickedMediaItem[]) {
 }
 
 export default function WatchImageSection({
+    sectionMode = "combined",
     poolImages,
     galleryImages,
     onPoolImagesChange,
@@ -134,6 +136,8 @@ export default function WatchImageSection({
     audienceSegment = "MEN",
     entryPoint = null,
 }: Props) {
+    const showGallery = sectionMode !== "cover";
+    const showCover = sectionMode !== "gallery";
     const dialog = useAppDialog();
     const notify = useNotify();
     const [taskModalOpen, setTaskModalOpen] = useState(false);
@@ -361,12 +365,14 @@ export default function WatchImageSection({
         <>
             <SectionCard
                 icon={<ImageIcon className="h-5 w-5" />}
-                title="Hình ảnh"
-                subtitle="Chỉ quản lý ảnh gallery của watch. Ảnh đại diện dùng role INLINE riêng."
+                title={sectionMode === "cover" ? "Cover storefront" : "Hình ảnh"}
+                subtitle={sectionMode === "cover"
+                    ? "Chọn ảnh đại diện storefront và kiểm tra điều kiện sẵn sàng hiển thị."
+                    : "Chỉ quản lý ảnh gallery của watch. Ảnh đại diện dùng role INLINE riêng."}
                 collapsible={collapsible}
                 surface={surface}
                 actions={
-                    hideReviewActions ? mediaActions :
+                    !showGallery ? null : hideReviewActions ? mediaActions :
                     <div className="flex flex-wrap items-center justify-end gap-2">
                         <TaskSignalIcon
                             title={taskPending ? "Đang tải task..." : "Giao task hình ảnh"}
@@ -395,7 +401,7 @@ export default function WatchImageSection({
                 }
             >
                 <div className="space-y-4">
-                    {locked ? (
+                    {showGallery && locked ? (
                         <GuardNotice
                             tone={currentReviewStatus === "APPROVED" ? "warning" : "locked"}
                             icon={currentReviewStatus === "APPROVED" ? "warning" : "lock"}
@@ -423,7 +429,7 @@ export default function WatchImageSection({
                         />
                     ) : null}
 
-                    <div className={[
+                    {showCover ? <div className={[
                         "rounded-3xl border border-emerald-200 bg-emerald-50/60 p-4",
                         "",
                     ].join(" ")}>
@@ -474,9 +480,9 @@ export default function WatchImageSection({
                                 ) : null}
                             </div>
                         </div>
-                    </div>
+                    </div> : null}
 
-                    <div className={`mt-3 rounded-2xl border px-4 py-3 ${storefrontReady ? "border-emerald-200 bg-white" : "border-amber-200 bg-amber-50/60"}`}>
+                    {showCover ? <div className={`mt-3 rounded-2xl border px-4 py-3 ${storefrontReady ? "border-emerald-200 bg-white" : "border-amber-200 bg-amber-50/60"}`}>
                         <div className="flex flex-wrap items-center justify-between gap-2">
                             <div className="text-sm font-semibold text-slate-900">Điều kiện hiển thị storefront</div>
                             <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${storefrontReady ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}>
@@ -493,9 +499,9 @@ export default function WatchImageSection({
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </div> : null}
 
-                    <div
+                    {showGallery ? <div
                         className={[
                             "rounded-3xl border border-blue-200 bg-gradient-to-b from-blue-50/80 to-white p-4",
                             locked ? "pointer-events-none opacity-60" : "",
@@ -522,9 +528,9 @@ export default function WatchImageSection({
                                 subtitle: "Ảnh đại diện INLINE của watch hiện tại",
                             }}
                         />
-                    </div>
+                    </div> : null}
 
-                    {error ? (
+                    {showGallery && error ? (
                         <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                             {error}
                         </div>
@@ -532,7 +538,7 @@ export default function WatchImageSection({
                 </div>
             </SectionCard>
 
-            <MediaBrowserDialog
+            {showCover ? <MediaBrowserDialog
                 key={`cover-picker-${coverPickerVersion}`}
                 open={coverPickerOpen}
                 onClose={() => setCoverPickerOpen(false)}
@@ -562,7 +568,7 @@ export default function WatchImageSection({
                     setPendingCoverKey(keys[0]);
                     setCoverPickerOpen(false);
                 }}
-            />
+            /> : null}
 
             <TaskQuickCreateModal
                 open={taskModalOpen}

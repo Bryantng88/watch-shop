@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { BookOpen, Camera, ClipboardList } from "lucide-react";
+import { BookOpen, Camera, ClipboardList, Images } from "lucide-react";
 
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import {
@@ -400,7 +400,7 @@ export default function WatchFormClient({
       Boolean(initialValues.media.coverImage),
   });
   const [activeMediaSection, setActiveMediaSection] = useState<
-    "basic" | "content" | "image"
+    "basic" | "content" | "image" | "cover"
   >("basic");
 
   const [afterSaveOpen, setAfterSaveOpen] = useState(false);
@@ -424,7 +424,9 @@ export default function WatchFormClient({
 
   useEffect(() => {
     if (!isMediaMode) return;
-    if (focus === "cover" || focus === "image" || focus === "gallery") {
+    if (focus === "cover") {
+      setActiveMediaSection("cover");
+    } else if (focus === "image" || focus === "gallery") {
       setActiveMediaSection("image");
     }
   }, [focus, isMediaMode]);
@@ -678,7 +680,7 @@ export default function WatchFormClient({
     }));
   };
 
-  const scrollToMediaSection = (target: "basic" | "content" | "image") => {
+  const scrollToMediaSection = (target: "basic" | "content" | "image" | "cover") => {
     setActiveMediaSection(target);
   };
 
@@ -1764,6 +1766,7 @@ export default function WatchFormClient({
   const imageSection = (
     <>
       <WatchImageSection
+        sectionMode={isMediaMode && activeMediaSection === "cover" ? "cover" : isMediaMode ? "gallery" : "combined"}
         watchTitle={values.basic.title}
         storefrontSlug={values.basic.slug}
         contentReviewStatus={values.contentReviewStatus}
@@ -1867,6 +1870,13 @@ export default function WatchFormClient({
                   done: mediaWorkDone.image,
                   icon: Camera,
                 },
+                {
+                  key: "cover" as const,
+                  title: "Cover storefront",
+                  subtitle: "Ảnh đại diện storefront",
+                  done: mediaWorkDone.cover,
+                  icon: Images,
+                },
               ].map((item) => {
                 const Icon = item.icon;
                 const active = activeMediaSection === item.key;
@@ -1895,7 +1905,9 @@ export default function WatchFormClient({
                         ? "1"
                         : item.key === "content"
                           ? "2"
-                          : "3"}
+                          : item.key === "image"
+                            ? "3"
+                            : "4"}
                     </span>
                     <Icon className="h-4 w-4" aria-hidden="true" />
                     <span>{item.title}</span>
@@ -1930,7 +1942,7 @@ export default function WatchFormClient({
             {activeMediaSection === "content" ? (
               <div ref={contentRef}>{contentSection}</div>
             ) : null}
-            {activeMediaSection === "image" ? (
+            {activeMediaSection === "image" || activeMediaSection === "cover" ? (
               <div ref={imageRef}>{imageSection}</div>
             ) : null}
           </div>

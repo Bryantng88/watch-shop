@@ -2,6 +2,23 @@
 /* eslint-disable @next/next/no-img-element */
 
 import * as React from "react";
+import {
+    DndContext,
+    DragOverlay,
+    PointerSensor,
+    closestCenter,
+    useSensor,
+    useSensors,
+    type DragEndEvent,
+    type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+    SortableContext,
+    arrayMove,
+    rectSortingStrategy,
+    useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import MediaBrowserDialog, {
     type SharedMediaProfile,
 } from "./MediaBrowserDialog";
@@ -255,6 +272,60 @@ function ChosenGrid({
     );
 }
 
+function SortableGalleryCard({
+    item,
+    index,
+    itemCount,
+    onRemove,
+    onMove,
+    onPreview,
+    onPreviewClose,
+}: {
+    item: PickedMediaItem;
+    index: number;
+    itemCount: number;
+    onRemove: (key: string) => void;
+    onMove: (fromIndex: number, toIndex: number) => void;
+    onPreview: (item: PickedMediaItem) => void;
+    onPreviewClose: () => void;
+}) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({ id: item.key });
+    const src = getImageSrc(item);
+    const label = getLabel(item);
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={{ transform: CSS.Transform.toString(transform), transition }}
+            className={`relative h-28 w-24 overflow-hidden rounded-2xl border bg-white shadow-sm transition-[border-color,box-shadow,opacity] duration-200 ${isDragging ? "z-10 border-blue-400 opacity-25" : isOver ? "border-blue-500 shadow-[0_0_0_4px_rgba(59,130,246,0.18)]" : "border-blue-200 hover:border-blue-400"}`}
+        >
+            <button
+                type="button"
+                className="block h-24 w-full cursor-grab touch-none overflow-hidden rounded-2xl active:cursor-grabbing"
+                onClick={() => onPreview(item)}
+                aria-label={`Kéo để sắp xếp hoặc xem ${label}`}
+                {...attributes}
+                {...listeners}
+            >
+                <img src={src} alt={label} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+            </button>
+            <div className="absolute inset-x-0 bottom-0 flex h-7 items-center justify-between border-t border-slate-100 bg-white px-2">
+                <button type="button" disabled={index === 0} onClick={() => onMove(index, index - 1)} className="text-xs text-slate-500 disabled:opacity-20" aria-label={`Đưa ${label} sang trái`}>←</button>
+                <span className="text-[10px] font-semibold text-slate-600">{index + 1}</span>
+                <button type="button" disabled={index === itemCount - 1} onClick={() => onMove(index, index + 1)} className="text-xs text-slate-500 disabled:opacity-20" aria-label={`Đưa ${label} sang phải`}>→</button>
+            </div>
+            <button
+                type="button"
+                onClick={() => { onPreviewClose(); onRemove(getItemKey(item)); }}
+                className="absolute right-1 top-1 rounded-full bg-black/80 px-2 py-0.5 text-[11px] text-white"
+                aria-label={`Xóa ${label}`}
+            >
+                X
+            </button>
+        </div>
+    );
+}
+
 function SelectedStrip({
     items,
     onRemove,
@@ -269,6 +340,7 @@ function SelectedStrip({
     onPreviewClose: () => void;
 }) {
     const [draggedKey, setDraggedKey] = React.useState<string | null>(null);
+    const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
     const moveItem = React.useCallback((fromIndex: number, toIndex: number) => {
         if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || toIndex >= items.length) return;
@@ -278,6 +350,21 @@ function SelectedStrip({
         next.splice(toIndex, 0, moved);
         onReorder(next);
     }, [items, onReorder]);
+
+    const handleDragStart = React.useCallback((event: DragStartEvent) => {
+        setDraggedKey(String(event.active.id));
+    }, []);
+
+    const handleDragEnd = React.useCallback((event: DragEndEvent) => {
+        setDraggedKey(null);
+        if (!event.over || event.active.id === event.over.id) return;
+        const fromIndex = items.findIndex((item) => item.key === event.active.id);
+        const toIndex = items.findIndex((item) => item.key === event.over?.id);
+        if (fromIndex < 0 || toIndex < 0) return;
+        onReorder(arrayMove(items, fromIndex, toIndex));
+    }, [items, onReorder]);
+
+    const draggedItem = items.find((item) => item.key === draggedKey) ?? null;
 
     return (
         <div className="space-y-3">
@@ -293,74 +380,22 @@ function SelectedStrip({
                     Chưa có ảnh nào được chọn để lưu.
                 </div>
             ) : (
-                <div className="flex flex-wrap gap-3">
-                    {items.map((item, index) => {
-                        const src = getImageSrc(item);
-                        const label = getLabel(item);
-
-                        return (
-                            <div
-                                key={item.key}
-                                draggable
-                                onDragStart={(event) => {
-                                    setDraggedKey(item.key);
-                                    event.dataTransfer.effectAllowed = "move";
-                                    event.dataTransfer.setData("text/plain", item.key);
-                                }}
-                                onDragEnd={() => setDraggedKey(null)}
-                                onDragOver={(event) => {
-                                    event.preventDefault();
-                                    event.dataTransfer.dropEffect = "move";
-                                }}
-                                onDrop={(event) => {
-                                    event.preventDefault();
-                                    const sourceKey = draggedKey ?? event.dataTransfer.getData("text/plain");
-                                    moveItem(items.findIndex((candidate) => candidate.key === sourceKey), index);
-                                    setDraggedKey(null);
-                                }}
-                                className={`relative h-28 w-24 cursor-grab overflow-hidden rounded-2xl border bg-white transition active:cursor-grabbing ${draggedKey === item.key ? "scale-95 border-blue-400 opacity-55" : "border-blue-200 hover:border-blue-400"}`}
-                                role="button"
-                                tabIndex={0}
-                                onClick={() => onPreview(item)}
-                                onKeyDown={(event) => {
-                                    if (event.key === "Enter" || event.key === " ") {
-                                        event.preventDefault();
-                                        onPreview(item);
-                                    }
-                                }}
-                            >
-                                <div className="h-24 w-full overflow-hidden rounded-2xl">
-                                    <img
-                                        src={src}
-                                        alt={label}
-                                        loading="lazy"
-                                        decoding="async"
-                                        className="h-full w-full object-cover"
-                                    />
-                                </div>
-
-                                <div className="absolute inset-x-0 bottom-0 flex h-7 items-center justify-between border-t border-slate-100 bg-white px-2">
-                                    <button type="button" disabled={index === 0} onClick={(event) => { event.stopPropagation(); moveItem(index, index - 1); }} className="text-xs text-slate-500 disabled:opacity-20" aria-label={`Đưa ${label} sang trái`}>←</button>
-                                    <span className="text-[10px] font-semibold text-slate-600">{index + 1}</span>
-                                    <button type="button" disabled={index === items.length - 1} onClick={(event) => { event.stopPropagation(); moveItem(index, index + 1); }} className="text-xs text-slate-500 disabled:opacity-20" aria-label={`Đưa ${label} sang phải`}>→</button>
-                                </div>
-
-                                <button
-                                    type="button"
-                                    onClick={(event) => {
-                                        event.preventDefault();
-                                        event.stopPropagation();
-                                        onPreviewClose();
-                                        onRemove(getItemKey(item));
-                                    }}
-                                    className="absolute right-1 top-1 rounded-full bg-black/80 px-2 py-0.5 text-[11px] text-white"
-                                >
-                                    X
-                                </button>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragCancel={() => setDraggedKey(null)} onDragEnd={handleDragEnd}>
+                    <SortableContext items={items.map((item) => item.key)} strategy={rectSortingStrategy}>
+                        <div className="flex flex-wrap gap-3">
+                            {items.map((item, index) => (
+                                <SortableGalleryCard key={item.key} item={item} index={index} itemCount={items.length} onRemove={onRemove} onMove={moveItem} onPreview={onPreview} onPreviewClose={onPreviewClose} />
+                            ))}
+                        </div>
+                    </SortableContext>
+                    <DragOverlay dropAnimation={{ duration: 220, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" }}>
+                        {draggedItem ? (
+                            <div className="h-28 w-24 rotate-2 overflow-hidden rounded-2xl border-2 border-blue-500 bg-white shadow-2xl">
+                                <img src={getImageSrc(draggedItem)} alt="" className="h-full w-full object-cover" />
                             </div>
-                        );
-                    })}
-                </div>
+                        ) : null}
+                    </DragOverlay>
+                </DndContext>
             )}
         </div>
     );
