@@ -28,6 +28,13 @@ export function storefrontCoverImageRequired(
   return configured !== "0";
 }
 
+export function localStorefrontCoverBypassEnabled(
+  nodeEnv = process.env.NODE_ENV,
+  configured = process.env.LOCAL_STOREFRONT_COVER_BYPASS,
+) {
+  return nodeEnv === "development" && configured === "1";
+}
+
 function storefrontImageWhere(requireCoverImage: boolean): Prisma.ProductImageWhereInput {
   return {
     isForStorefront: true,
@@ -129,6 +136,15 @@ export function publicWatchEligibilityWhere(options?: {
   requireCoverImage?: boolean;
 }): Prisma.ProductWhereInput {
   const enforceCover = options?.requireCoverImage ?? storefrontCoverImageRequired();
+  if (localStorefrontCoverBypassEnabled()) {
+    return {
+      type: ProductType.WATCH,
+      slug: { not: "" },
+      productImage: {
+        some: storefrontImageWhere(true),
+      },
+    };
+  }
   return {
     AND: [
       {
