@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Check, ImageIcon, Sparkles, Undo2 } from "lucide-react";
+import { useEffect, useState, useTransition } from "react";
+import { Check, ImageIcon, Sparkles, Undo2, X } from "lucide-react";
 import { TaskKind } from "@prisma/client";
 import MediaPickerMulti, {
     type PickedMediaItem,
@@ -142,10 +142,13 @@ export default function WatchImageSection({
     const notify = useNotify();
     const [taskModalOpen, setTaskModalOpen] = useState(false);
     const [coverPickerOpen, setCoverPickerOpen] = useState(false);
+    const [coverPreviewOpen, setCoverPreviewOpen] = useState(false);
     const [coverPickerVersion, setCoverPickerVersion] = useState(0);
     const [pendingCoverKey, setPendingCoverKey] = useState<string | null>(null);
     const [coverPending, setCoverPending] = useState(false);
     const [photoRoomPending, setPhotoRoomPending] = useState(false);
+    const [sharpPending, setSharpPending] = useState(false);
+    const [sharpCutoutKey, setSharpCutoutKey] = useState<string | null>(null);
     const [taskUsers, setTaskUsers] = useState<TaskUserOption[]>([]);
     const [currentUserId, setCurrentUserId] = useState<string>("");
     const [taskContext, setTaskContext] = useState<TaskQuickCreateContext | null>(null);
@@ -168,6 +171,16 @@ export default function WatchImageSection({
     const locked =
         currentReviewStatus === "APPROVED" ||
         (currentReviewStatus === "SUBMITTED" && !canReviewContent);
+
+    useEffect(() => {
+        if (!coverPreviewOpen) return;
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") setCoverPreviewOpen(false);
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [coverPreviewOpen]);
 
     const ensureEditable = async () => {
         if (currentReviewStatus !== "APPROVED") return true;
@@ -318,6 +331,7 @@ export default function WatchImageSection({
 
             const outputKey = String(json?.data?.storageKey ?? "").trim();
             if (!outputKey) throw new Error("PhotoRoom không trả về khóa ảnh kết quả.");
+            setSharpCutoutKey(String(json?.data?.cutoutStorageKey ?? "").trim() || null);
             setPendingCoverKey(outputKey);
             setCoverPickerVersion((version) => version + 1);
             notify.success({
@@ -331,6 +345,45 @@ export default function WatchImageSection({
             });
         } finally {
             setPhotoRoomPending(false);
+        }
+    };
+
+    const handleSharpRecreate = async () => {
+        const selectedKey = (pendingCoverKey || currentCoverKey).trim();
+        const storageKey = sharpCutoutKey || (selectedKey.includes("photoroom-cutout-") ? selectedKey : "");
+        if (!storageKey || coverPending || photoRoomPending || sharpPending) return;
+
+        setSharpPending(true);
+        try {
+            const res = await fetch(`/api/admin/watches/${productId}/storefront-image/sharp`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ storageKey }),
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok) {
+                notify.error({
+                    title: "Sharp xử lý thất bại",
+                    message: json?.error || "Không tạo lại được ảnh bằng Sharp.",
+                });
+                return;
+            }
+
+            const outputKey = String(json?.data?.storageKey ?? "").trim();
+            if (!outputKey) throw new Error("Sharp không trả về khóa ảnh kết quả.");
+            setPendingCoverKey(outputKey);
+            setCoverPickerVersion((version) => version + 1);
+            notify.success({
+                title: "Sharp đã tạo lại ảnh",
+                message: "Không sử dụng quota PhotoRoom. Hãy preview rồi xác nhận Cover nếu đã ổn.",
+            });
+        } catch (error) {
+            notify.error({
+                title: "Sharp xử lý thất bại",
+                message: error instanceof Error ? error.message : "Có lỗi khi tạo lại ảnh bằng Sharp.",
+            });
+        } finally {
+            setSharpPending(false);
         }
     };
 
@@ -479,8 +532,11 @@ export default function WatchImageSection({
                         <div className="flex flex-wrap items-center gap-3">
                             <button
                                 type="button"
-                                onClick={() => setCoverPickerOpen(true)}
-                                disabled={coverPending || photoRoomPending}
+                                onClick={() => coverPreviewSrc
+                                    ? setCoverPreviewOpen(true)
+                                    : setCoverPickerOpen(true)}
+                                disabled={coverPending || photoRoomPending || sharpPending}
+                                aria-label={coverPreviewSrc ? "Xem trước ảnh Cover trên storefront" : "Chọn ảnh Cover"}
                                 className="h-36 w-36 overflow-hidden rounded-xl border border-emerald-200 bg-white disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {coverPreviewSrc ? (
@@ -498,7 +554,7 @@ export default function WatchImageSection({
                                 <button
                                     type="button"
                                     onClick={() => setCoverPickerOpen(true)}
-                                    disabled={coverPending || photoRoomPending}
+                                    disabled={coverPending || photoRoomPending || sharpPending}
                                     className="rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50 disabled:opacity-50"
                                 >
                                     {currentCoverKey ? "Đổi ảnh Cover" : "Chọn ảnh Cover"}
@@ -517,11 +573,23 @@ export default function WatchImageSection({
                                         {photoRoomPending ? "PhotoRoom đang xử lý..." : "Xử lý bằng PhotoRoom"}
                                     </button>
                                 ) : null}
+                                {(pendingCoverKey || currentCoverKey) ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => void handleSharpRecreate()}
+                                        disabled={coverPending || photoRoomPending || sharpPending || !sharpCutoutKey}
+                                        title={sharpCutoutKey ? "Tạo lại shadow từ cutout trong suốt" : "Ảnh cũ chưa có file cutout trong suốt"}
+                                        className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-white px-3 py-1.5 text-xs font-semibold text-sky-700 shadow-sm hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        <Sparkles className="h-3.5 w-3.5" />
+                                        {sharpPending ? "Sharp đang xử lý..." : "Tạo lại bằng Sharp"}
+                                    </button>
+                                ) : null}
                                 {pendingCoverKey ? (
                                     <button
                                         type="button"
                                         onClick={() => void handleCoverConfirm()}
-                                        disabled={coverPending || photoRoomPending}
+                                        disabled={coverPending || photoRoomPending || sharpPending}
                                         className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         <Check className="h-3.5 w-3.5" />
@@ -619,6 +687,40 @@ export default function WatchImageSection({
                     setCoverPickerOpen(false);
                 }}
             /> : null}
+
+            {showCover && coverPreviewOpen && coverPreviewSrc ? (
+                <div
+                    className="fixed inset-0 z-[200] grid place-items-center bg-slate-950/75 p-4 backdrop-blur-sm"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Xem trước ảnh Cover trên storefront"
+                    onMouseDown={(event) => {
+                        if (event.currentTarget === event.target) setCoverPreviewOpen(false);
+                    }}
+                >
+                    <div className="relative flex max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] flex-col items-center gap-3">
+                        <div className="relative h-[min(82vh,960px)] aspect-[3/4] overflow-hidden rounded-xl bg-[#efede8] shadow-2xl ring-1 ring-white/20">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={coverPreviewSrc}
+                                alt={watchTitle ? `Cover storefront của ${watchTitle}` : "Cover storefront"}
+                                className="h-full w-full object-cover"
+                            />
+                        </div>
+                        <div className="rounded-full bg-black/55 px-3 py-1.5 text-xs font-medium text-white">
+                            Preview storefront · khung 3:4 · object-cover
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setCoverPreviewOpen(false)}
+                            className="absolute -right-2 -top-2 grid h-10 w-10 place-items-center rounded-full border border-white/25 bg-slate-950/80 text-white shadow-lg hover:bg-slate-900"
+                            aria-label="Đóng preview Cover"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+                    </div>
+                </div>
+            ) : null}
 
             <TaskQuickCreateModal
                 open={taskModalOpen}
