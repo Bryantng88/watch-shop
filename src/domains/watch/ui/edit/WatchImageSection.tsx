@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, ImageIcon, Undo2 } from "lucide-react";
+import { Check, ImageIcon, Sparkles, Undo2 } from "lucide-react";
 import { TaskKind } from "@prisma/client";
 import MediaPickerMulti, {
     type PickedMediaItem,
@@ -145,6 +145,7 @@ export default function WatchImageSection({
     const [coverPickerVersion, setCoverPickerVersion] = useState(0);
     const [pendingCoverKey, setPendingCoverKey] = useState<string | null>(null);
     const [coverPending, setCoverPending] = useState(false);
+    const [photoRoomPending, setPhotoRoomPending] = useState(false);
     const [taskUsers, setTaskUsers] = useState<TaskUserOption[]>([]);
     const [currentUserId, setCurrentUserId] = useState<string>("");
     const [taskContext, setTaskContext] = useState<TaskQuickCreateContext | null>(null);
@@ -295,6 +296,44 @@ export default function WatchImageSection({
         }
     };
 
+    const handlePhotoRoomProcess = async () => {
+        const storageKey = (pendingCoverKey || currentCoverKey).trim();
+        if (!storageKey || coverPending || photoRoomPending) return;
+
+        setPhotoRoomPending(true);
+        try {
+            const res = await fetch(`/api/admin/watches/${productId}/storefront-image/photoroom`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ storageKey }),
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok) {
+                notify.error({
+                    title: "PhotoRoom xử lý thất bại",
+                    message: json?.error || "Không nhận được ảnh hoàn chỉnh từ PhotoRoom.",
+                });
+                return;
+            }
+
+            const outputKey = String(json?.data?.storageKey ?? "").trim();
+            if (!outputKey) throw new Error("PhotoRoom không trả về khóa ảnh kết quả.");
+            setPendingCoverKey(outputKey);
+            setCoverPickerVersion((version) => version + 1);
+            notify.success({
+                title: "PhotoRoom đã xử lý xong",
+                message: "Hãy kiểm tra ảnh mới, sau đó bấm Xác nhận Cover để đưa lên storefront.",
+            });
+        } catch (error) {
+            notify.error({
+                title: "PhotoRoom xử lý thất bại",
+                message: error instanceof Error ? error.message : "Có lỗi khi gửi ảnh sang PhotoRoom.",
+            });
+        } finally {
+            setPhotoRoomPending(false);
+        }
+    };
+
     const handleCoverReturn = async () => {
         if (!currentCoverKey || coverPending) return;
         const confirmed = await dialog.confirm({
@@ -441,7 +480,7 @@ export default function WatchImageSection({
                             <button
                                 type="button"
                                 onClick={() => setCoverPickerOpen(true)}
-                                disabled={coverPending}
+                                disabled={coverPending || photoRoomPending}
                                 className="h-36 w-36 overflow-hidden rounded-xl border border-emerald-200 bg-white disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {coverPreviewSrc ? (
@@ -459,7 +498,7 @@ export default function WatchImageSection({
                                 <button
                                     type="button"
                                     onClick={() => setCoverPickerOpen(true)}
-                                    disabled={coverPending}
+                                    disabled={coverPending || photoRoomPending}
                                     className="rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50 disabled:opacity-50"
                                 >
                                     {currentCoverKey ? "Đổi ảnh Cover" : "Chọn ảnh Cover"}
@@ -467,11 +506,22 @@ export default function WatchImageSection({
                                 {pendingCoverKey ? (
                                     <span className="text-xs font-medium text-emerald-700">Ảnh mới đang chờ xác nhận</span>
                                 ) : null}
+                                {(pendingCoverKey || currentCoverKey) ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => void handlePhotoRoomProcess()}
+                                        disabled={coverPending || photoRoomPending}
+                                        className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-700 shadow-sm hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        <Sparkles className="h-3.5 w-3.5" />
+                                        {photoRoomPending ? "PhotoRoom đang xử lý..." : "Xử lý bằng PhotoRoom"}
+                                    </button>
+                                ) : null}
                                 {pendingCoverKey ? (
                                     <button
                                         type="button"
                                         onClick={() => void handleCoverConfirm()}
-                                        disabled={coverPending}
+                                        disabled={coverPending || photoRoomPending}
                                         className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         <Check className="h-3.5 w-3.5" />
