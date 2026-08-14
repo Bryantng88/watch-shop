@@ -19,7 +19,7 @@ function parseAdjustment(value: unknown): PhotoRoomAdjustment | null {
   return {
     horizontalAlignment: pick(input.horizontalAlignment, ["left", "center", "right"], DEFAULT_PHOTOROOM_ADJUSTMENT.horizontalAlignment),
     verticalAlignment: pick(input.verticalAlignment, ["top", "center", "bottom"], DEFAULT_PHOTOROOM_ADJUSTMENT.verticalAlignment),
-    subjectSize: pick(input.subjectSize, ["small", "default", "large"], DEFAULT_PHOTOROOM_ADJUSTMENT.subjectSize),
+    subjectSize: pick(input.subjectSize, ["small", "default", "large", "xlarge"], DEFAULT_PHOTOROOM_ADJUSTMENT.subjectSize),
     horizontalOffset: pick(input.horizontalOffset, ["negative", "none", "positive"], DEFAULT_PHOTOROOM_ADJUSTMENT.horizontalOffset),
     verticalOffset: pick(input.verticalOffset, ["negative", "none", "positive"], DEFAULT_PHOTOROOM_ADJUSTMENT.verticalOffset),
     shadowMode: pick(input.shadowMode, ["none", "soft", "hard", "floating"], DEFAULT_PHOTOROOM_ADJUSTMENT.shadowMode),

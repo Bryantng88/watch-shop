@@ -20,7 +20,7 @@ type Props = {
 const labels = {
   horizontalAlignment: { left: "Trái", center: "Giữa", right: "Phải" },
   verticalAlignment: { top: "Trên", center: "Giữa", bottom: "Dưới" },
-  subjectSize: { small: "Nhỏ hơn", default: "Mặc định", large: "Lớn hơn" },
+  subjectSize: { small: "Nhỏ hơn", default: "Mặc định", large: "Lớn hơn", xlarge: "Rất lớn" },
   horizontalOffset: { negative: "Sang trái nhẹ", none: "Không dịch", positive: "Sang phải nhẹ" },
   verticalOffset: { negative: "Lên nhẹ", none: "Không dịch", positive: "Xuống nhẹ" },
   shadowMode: { none: "Không shadow", soft: "Mềm", hard: "Cứng", floating: "Nổi" },

@@ -1,6 +1,6 @@
 export type PhotoRoomHorizontalAlignment = "left" | "center" | "right";
 export type PhotoRoomVerticalAlignment = "top" | "center" | "bottom";
-export type PhotoRoomSubjectSize = "small" | "default" | "large";
+export type PhotoRoomSubjectSize = "small" | "default" | "large" | "xlarge";
 export type PhotoRoomFineOffset = "negative" | "none" | "positive";
 export type PhotoRoomShadowMode = "none" | "soft" | "hard" | "floating";
 export type PhotoRoomBackgroundMode = "white" | "transparent";
