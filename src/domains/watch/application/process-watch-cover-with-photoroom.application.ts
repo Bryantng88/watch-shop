@@ -4,6 +4,10 @@ import sharp from "sharp";
 
 import { mediaPathPolicy } from "@/domains/media/core/media-path.policy";
 import { mediaStorage } from "@/domains/media/storage";
+import {
+  DEFAULT_PHOTOROOM_ADJUSTMENT,
+  type PhotoRoomAdjustment,
+} from "@/domains/watch/shared/photoroom-adjustment";
 import { prisma } from "@/server/db/client";
 import { s3, S3_BUCKET } from "@/server/s3";
 
@@ -16,6 +20,13 @@ const COVER_HEIGHT = 3840;
 
 type PhotoRoomProcessingMode = "basic-sharp" | "plus";
 type SharpShadowProfile = "light" | "legacy";
+
+const PHOTOROOM_PADDING_BY_SIZE = {
+  small: 0.14,
+  default: 0.1,
+  large: 0.06,
+} as const;
+const PHOTOROOM_FINE_OFFSET = 0.06;
 
 type SharpShadowSettings = {
   ambientBlur: number;
@@ -266,11 +277,17 @@ export async function recreateWatchCoverWithSharpApplication(input: {
 export async function processWatchCoverWithPhotoRoomApplication(input: {
   productId: string;
   storageKey: string;
+  adjustment?: PhotoRoomAdjustment | null;
 }) {
   const productId = String(input.productId ?? "").trim();
   const sourceKey = String(input.storageKey ?? "").trim();
   const apiKey = String(process.env.PHOTOROOM_API_KEY ?? "").trim();
   const processingMode = photoRoomProcessingMode();
+  const adjustment = input.adjustment ?? DEFAULT_PHOTOROOM_ADJUSTMENT;
+
+  if (input.adjustment && processingMode !== "plus") {
+    throw new Error("PhotoRoom adjustment requires Image Editing API mode.");
+  }
 
   if (!productId || !sourceKey) throw new Error("Thiếu Watch hoặc ảnh nguồn.");
   if (!apiKey) throw new Error("Production chưa cấu hình PHOTOROOM_API_KEY.");
@@ -309,18 +326,27 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
     form.set("size", "full");
     form.set("crop", "true");
   } else {
+    const padding = PHOTOROOM_PADDING_BY_SIZE[adjustment.subjectSize];
+    const paddingLeft = padding + (adjustment.horizontalOffset === "positive" ? PHOTOROOM_FINE_OFFSET : 0);
+    const paddingRight = padding + (adjustment.horizontalOffset === "negative" ? PHOTOROOM_FINE_OFFSET : 0);
+    const paddingTop = padding + (adjustment.verticalOffset === "positive" ? PHOTOROOM_FINE_OFFSET : 0);
+    const paddingBottom = padding + (adjustment.verticalOffset === "negative" ? PHOTOROOM_FINE_OFFSET : 0);
     form.set("imageFile", sourceBlob, sourceFilename);
     form.set("removeBackground", "true");
-    form.set("background.color", "FFFFFF");
-    form.set("shadow.mode", "ai.soft");
+    if (adjustment.backgroundMode === "white") form.set("background.color", "FFFFFF");
+    if (adjustment.shadowMode !== "none") form.set("shadow.mode", `ai.${adjustment.shadowMode}`);
     form.set("lighting.mode", "ai.preserve-hue-and-saturation");
     form.set("outputSize", `${COVER_WIDTH}x${COVER_HEIGHT}`);
     form.set("scaling", "fit");
-    form.set("padding", "0.06");
+    form.set("padding", String(padding));
+    form.set("paddingLeft", String(paddingLeft));
+    form.set("paddingRight", String(paddingRight));
+    form.set("paddingTop", String(paddingTop));
+    form.set("paddingBottom", String(paddingBottom));
     form.set("margin", "0.04");
     form.set("referenceBox", "subjectBox");
-    form.set("horizontalAlignment", "center");
-    form.set("verticalAlignment", "center");
+    form.set("horizontalAlignment", adjustment.horizontalAlignment);
+    form.set("verticalAlignment", adjustment.verticalAlignment);
     form.set("ignorePaddingAndSnapOnCroppedSides", "false");
     form.set("export.format", "png");
   }
@@ -374,5 +400,11 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
     throw new Error("Không xác minh được ảnh PhotoRoom sau khi lưu vào kho media.");
   }
 
-  return { storageKey: outputKey, sourceStorageKey: sourceKey, cutoutStorageKey: cutoutKey, processingMode };
+  return {
+    storageKey: outputKey,
+    sourceStorageKey: sourceKey,
+    cutoutStorageKey: cutoutKey,
+    processingMode,
+    adjustment: processingMode === "plus" ? adjustment : null,
+  };
 }
