@@ -55,7 +55,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         <Link href="/products">{locale === "en" ? "Home" : "Trang chủ"}</Link> <span className="px-2">/</span> <span className="text-[#474541]">{locale === "en" ? "Watches" : "Đồng hồ"}</span>
       </nav>
 
-      <CatalogBanner />
+      <CatalogBanner galleryImageUrl={result.items.find((watch) => watch.hoverImage)?.hoverImage?.url} />
 
       {invalidFilters ? (
         <div role="alert" className="mt-6 border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
