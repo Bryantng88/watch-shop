@@ -15,6 +15,10 @@ function parseAdjustment(value: unknown): PhotoRoomAdjustment | null {
   const input = value as Record<string, unknown>;
   const pick = <T extends string>(candidate: unknown, allowed: readonly T[], fallback: T): T =>
     allowed.includes(candidate as T) ? candidate as T : fallback;
+  const rawRotation = Number(input.rotationDegrees);
+  const rotationDegrees = Number.isFinite(rawRotation)
+    ? Math.max(-15, Math.min(15, Math.round(rawRotation)))
+    : DEFAULT_PHOTOROOM_ADJUSTMENT.rotationDegrees;
 
   return {
     horizontalAlignment: pick(input.horizontalAlignment, ["left", "center", "right"], DEFAULT_PHOTOROOM_ADJUSTMENT.horizontalAlignment),
@@ -24,6 +28,8 @@ function parseAdjustment(value: unknown): PhotoRoomAdjustment | null {
     verticalOffset: pick(input.verticalOffset, ["negative", "none", "positive"], DEFAULT_PHOTOROOM_ADJUSTMENT.verticalOffset),
     shadowMode: pick(input.shadowMode, ["none", "soft", "hard", "floating"], DEFAULT_PHOTOROOM_ADJUSTMENT.shadowMode),
     backgroundMode: pick(input.backgroundMode, ["white", "transparent"], DEFAULT_PHOTOROOM_ADJUSTMENT.backgroundMode),
+    enhanceMetal: input.enhanceMetal === true,
+    rotationDegrees,
   };
 }
 

@@ -51,6 +51,12 @@ export default function PhotoRoomAdjustmentDialog({
     labels.verticalOffset[value.verticalOffset],
     `Shadow: ${labels.shadowMode[value.shadowMode].toLowerCase()}`,
     `Nền: ${labels.backgroundMode[value.backgroundMode].toLowerCase()}`,
+    value.enhanceMetal ? "Tăng độ bóng kim loại nhẹ" : "Giữ bề mặt kim loại tự nhiên",
+    value.rotationDegrees < 0
+      ? `Xoay trái ${Math.abs(value.rotationDegrees)}°`
+      : value.rotationDegrees > 0
+        ? `Xoay phải ${value.rotationDegrees}°`
+        : "Không xoay vật thể",
     "Giữ khung 2048 × 3840",
   ];
 
@@ -91,6 +97,51 @@ export default function PhotoRoomAdjustmentDialog({
           <label>
             <FieldLabel>Nền</FieldLabel>
             <Select value={value.backgroundMode} onChange={(event) => update("backgroundMode", event.target.value as PhotoRoomAdjustment["backgroundMode"])} options={Object.entries(labels.backgroundMode).map(([value, label]) => ({ value, label }))} />
+          </label>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={value.enhanceMetal}
+            onClick={() => update("enhanceMetal", !value.enhanceMetal)}
+            className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left"
+          >
+            <span>
+              <span className="block text-xs font-semibold text-slate-800">Tăng bóng kim loại</span>
+              <span className="mt-0.5 block text-[11px] text-slate-500">Tăng highlight, nâng nhẹ vùng phản chiếu tối</span>
+            </span>
+            <span className={`relative h-5 w-9 shrink-0 rounded-full transition ${value.enhanceMetal ? "bg-violet-600" : "bg-slate-300"}`}>
+              <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition ${value.enhanceMetal ? "left-[18px]" : "left-0.5"}`} />
+            </span>
+          </button>
+          <label className="sm:col-span-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+            <span className="flex items-center justify-between gap-3">
+              <span>
+                <FieldLabel>Xoay vật thể</FieldLabel>
+                <span className="block text-[11px] text-slate-500">Số âm xoay trái, số dương xoay phải</span>
+              </span>
+              <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                {value.rotationDegrees < 0
+                  ? `Trái ${Math.abs(value.rotationDegrees)}°`
+                  : value.rotationDegrees > 0
+                    ? `Phải ${value.rotationDegrees}°`
+                    : "Không xoay"}
+              </span>
+            </span>
+            <input
+              type="range"
+              min={-15}
+              max={15}
+              step={1}
+              value={value.rotationDegrees ?? 0}
+              onChange={(event) => update("rotationDegrees", Number(event.target.value))}
+              className="mt-3 w-full accent-violet-600"
+              aria-label="Góc xoay vật thể; âm là trái, dương là phải"
+            />
+            <span className="mt-1 flex justify-between text-[10px] font-medium text-slate-400">
+              <span>Trái 15°</span>
+              <span>0°</span>
+              <span>Phải 15°</span>
+            </span>
           </label>
         </div>
 

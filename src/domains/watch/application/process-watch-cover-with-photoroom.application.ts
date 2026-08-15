@@ -306,6 +306,7 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
 
   const prepared = await sharp(source.bytes)
     .rotate()
+    .rotate(adjustment.rotationDegrees, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .resize({
       width: PHOTOROOM_RELIGHT_MAX_DIMENSION,
       height: PHOTOROOM_RELIGHT_MAX_DIMENSION,
@@ -368,9 +369,17 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
   }
 
   const photoRoomBytes = new Uint8Array(await response.arrayBuffer());
-  const resultBytes = processingMode === "basic-sharp"
+  let resultBytes = processingMode === "basic-sharp"
     ? new Uint8Array(await composeBasicStorefrontCover(photoRoomBytes))
     : photoRoomBytes;
+  if (adjustment.enhanceMetal) {
+    resultBytes = new Uint8Array(await sharp(resultBytes)
+      .modulate({ brightness: 1.02, saturation: 1.02 })
+      .linear(1.035, 4)
+      .sharpen({ sigma: 0.4 })
+      .png()
+      .toBuffer());
+  }
   if (!resultBytes.byteLength) throw new Error("PhotoRoom trả về ảnh rỗng.");
 
   const prefix = mediaPathPolicy.sourceRoot({
