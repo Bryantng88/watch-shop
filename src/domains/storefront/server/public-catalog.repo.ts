@@ -149,7 +149,6 @@ export function publicWatchEligibilityWhere(options?: {
     AND: [
       {
         type: ProductType.WATCH,
-        status: { in: [ProductStatus.AVAILABLE, ProductStatus.HOLD, ProductStatus.SOLD] },
         slug: { not: "" },
         productImage: {
           some: storefrontImageWhere(enforceCover),
@@ -165,6 +164,7 @@ export function publicWatchEligibilityWhere(options?: {
             OR: [
               { storefrontVisible: true },
               {
+                status: { in: [ProductStatus.AVAILABLE, ProductStatus.HOLD, ProductStatus.SOLD] },
                 watch: {
                   is: {
                     saleStage: { in: [WatchSaleStage.READY, WatchSaleStage.HOLD, WatchSaleStage.SOLD] },

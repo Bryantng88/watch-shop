@@ -18,7 +18,7 @@ export type PhotoRoomAdjustment = {
 export const DEFAULT_PHOTOROOM_ADJUSTMENT: PhotoRoomAdjustment = {
   horizontalAlignment: "center",
   verticalAlignment: "center",
-  subjectSize: "default",
+  subjectSize: "large",
   horizontalOffset: "none",
   verticalOffset: "none",
   shadowMode: "soft",
