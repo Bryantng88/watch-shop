@@ -526,6 +526,7 @@ export async function submitWatchFormApplication(
             data: {
                 title: textOrUndefined(values.basic.title),
                 slug: textOrUndefined(values.basic.slug),
+                priceVisibility: values.spec.showPrice === false ? "HIDE" : "SHOW",
                 sku: safeSku,
                 brand: values.basic.brandId
                     ? { connect: { id: values.basic.brandId } }

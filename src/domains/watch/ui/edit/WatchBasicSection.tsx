@@ -979,7 +979,21 @@ export default function WatchBasicSection({
           </div>
 
           <div>
-            <FieldLabel>Giá bán</FieldLabel>
+            <div className="flex items-center justify-between gap-3">
+              <FieldLabel>Giá bán</FieldLabel>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={spec.showPrice}
+                onClick={() => onSpecChange({ showPrice: !spec.showPrice })}
+                className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-500"
+              >
+                <span className={`relative h-4 w-7 rounded-full transition ${spec.showPrice ? "bg-emerald-500" : "bg-slate-300"}`}>
+                  <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow-sm transition ${spec.showPrice ? "left-3.5" : "left-0.5"}`} />
+                </span>
+                Hiện giá
+              </button>
+            </div>
             <Input
               inputMode="numeric"
               value={pricing.salePrice}
@@ -989,6 +1003,9 @@ export default function WatchBasicSection({
               placeholder="VD: 18500000"
               disabled={!canEditPrice}
             />
+            {!spec.showPrice ? (
+              <div className="mt-1 text-[11px] text-slate-400">Storefront: Liên hệ</div>
+            ) : null}
           </div>
         </FormSection>
 

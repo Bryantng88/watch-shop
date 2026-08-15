@@ -816,6 +816,7 @@ model Product {
   isStockManaged      Boolean               @default(true)
   maxQtyPerOrder      Int                   @default(1)
   publishedAt         DateTime?
+  storefrontVisible   Boolean?
   vendorId            String?
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt

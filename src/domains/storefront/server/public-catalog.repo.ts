@@ -154,13 +154,17 @@ export function publicWatchEligibilityWhere(options?: {
         productImage: {
           some: storefrontImageWhere(enforceCover),
         },
-        watch: {
-          is: {
-            saleStage: { in: [WatchSaleStage.READY, WatchSaleStage.HOLD, WatchSaleStage.SOLD] },
-            serviceStage: {
-              in: [WatchServiceStage.NOT_REQUIRED, WatchServiceStage.DONE],
-            },
-            AND: [
+        storefrontVisible: { not: false },
+        OR: [
+          { storefrontVisible: true },
+          {
+            watch: {
+              is: {
+                saleStage: { in: [WatchSaleStage.READY, WatchSaleStage.HOLD, WatchSaleStage.SOLD] },
+                serviceStage: {
+                  in: [WatchServiceStage.NOT_REQUIRED, WatchServiceStage.DONE],
+                },
+                AND: [
               {
                 reviewStates: {
                   some: {
@@ -177,9 +181,11 @@ export function publicWatchEligibilityWhere(options?: {
                   },
                 },
               },
-            ],
+                ],
+              },
+            },
           },
-        },
+        ],
       },
       {
         OR: [

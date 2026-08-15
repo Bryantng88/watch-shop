@@ -63,6 +63,8 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
         contentReviewNote,
         imageReviewStatus,
         imageReviewNote,
+        publishedAt: detail?.publishedAt ? String(detail.publishedAt) : null,
+        storefrontVisible: typeof detail?.storefrontVisible === "boolean" ? detail.storefrontVisible : null,
 
         header: {
             sku: s(detail?.sku),
@@ -94,6 +96,7 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
         },
 
         spec: {
+            showPrice: String(detail?.priceVisibility ?? "SHOW").toUpperCase() !== "HIDE",
             specBrand: s(detail?.spec?.brand || detail?.brand?.name),
             model: s(detail?.spec?.model),
             referenceNumber: s(detail?.spec?.referenceNumber),

@@ -52,7 +52,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           {watch.availability !== "AVAILABLE" ? <span className="mt-3 inline-flex border border-[#bdb8af] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#55514b]">{watch.availability === "HOLD" ? (locale === "en" ? "On hold" : "Đang được giữ") : (locale === "en" ? "Sold" : "Đã bán")}</span> : null}
           <h1 className="storefront-display mt-3 text-4xl leading-[1.08] sm:text-5xl">{watch.title}</h1>
           <p className="mt-6 text-xl font-semibold tabular-nums">
-            {watch.price.mode === "SHOW" ? formatStorefrontMoney(watch.price.amount, locale, rate.vndPerUsd) : locale === "en" ? "Price on request" : "Liên hệ để biết giá"}
+            {watch.price.mode === "SHOW" ? formatStorefrontMoney(watch.price.amount, locale, rate.vndPerUsd) : locale === "en" ? "Contact" : "Liên hệ"}
           </p>
 
           <div className="mt-7 flex items-start gap-3 border-y border-[#dedbd4] py-5 text-sm leading-6 text-[#66635e]">

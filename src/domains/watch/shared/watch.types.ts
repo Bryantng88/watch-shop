@@ -166,6 +166,9 @@ export type WatchDetailModel = {
         minPrice?: string | null;
         pricingNote?: string | null;
     } | null;
+    priceVisibility?: "SHOW" | "HIDE" | null;
+    publishedAt?: Date | string | null;
+    storefrontVisible?: boolean | null;
 
     content?: {
         titleOverride?: string | null;

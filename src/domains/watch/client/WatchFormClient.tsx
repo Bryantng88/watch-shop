@@ -1575,7 +1575,17 @@ export default function WatchFormClient({
     ) : null;
 
   const handleCoverImageChange = (item: WatchFormValues["media"]["coverImage"]) => {
-    updateMedia({ coverImage: item });
+    // Cover is persisted by the dedicated storefront-image API before this
+    // callback runs. Keep the saved snapshot in sync so this server-side save
+    // does not incorrectly leave the whole form dirty and lock storefront toggle.
+    setFormValues((prev) => ({
+      ...prev,
+      media: { ...prev.media, coverImage: item },
+    }));
+    setSavedValues((prev) => ({
+      ...prev,
+      media: { ...prev.media, coverImage: item },
+    }));
     setMediaWorkDone((current) => ({ ...current, cover: Boolean(item) }));
 
     if (fromMediaWorkspace && workspaceBindingId) {
@@ -1593,6 +1603,19 @@ export default function WatchFormClient({
         });
       });
     }
+  };
+
+  const handleStorefrontSlugChange = (slug: string) => {
+    // The cover API may generate and persist the storefront slug together with
+    // the Cover. Sync both snapshots for the same reason as the Cover itself.
+    setFormValues((prev) => ({
+      ...prev,
+      basic: { ...prev.basic, slug },
+    }));
+    setSavedValues((prev) => ({
+      ...prev,
+      basic: { ...prev.basic, slug },
+    }));
   };
 
   const mediaImageActions = fromMediaWorkspace ? (
@@ -1774,7 +1797,9 @@ export default function WatchFormClient({
         saleStage={values.basic.saleState}
         serviceStage={values.basic.serviceState}
         salePrice={values.pricing.salePrice}
-        onStorefrontSlugChange={(slug) => setFormValues((prev) => ({ ...prev, basic: { ...prev.basic, slug } }))}
+        showPrice={values.spec.showPrice}
+        storefrontVisible={values.storefrontVisible}
+        onStorefrontSlugChange={handleStorefrontSlugChange}
         inlineImage={inlineImage}
         coverImage={values.media.coverImage}
         onCoverImageChange={handleCoverImageChange}
@@ -2005,7 +2030,9 @@ export default function WatchFormClient({
             saleStage={values.basic.saleState}
             serviceStage={values.basic.serviceState}
             salePrice={values.pricing.salePrice}
-            onStorefrontSlugChange={(slug) => setFormValues((prev) => ({ ...prev, basic: { ...prev.basic, slug } }))}
+            showPrice={values.spec.showPrice}
+            storefrontVisible={values.storefrontVisible}
+            onStorefrontSlugChange={handleStorefrontSlugChange}
             inlineImage={inlineImage}
             coverImage={values.media.coverImage}
             onCoverImageChange={handleCoverImageChange}

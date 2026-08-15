@@ -60,6 +60,8 @@ type Props = {
     saleStage?: string | null;
     serviceStage?: string | null;
     salePrice?: string | null;
+    showPrice?: boolean;
+    storefrontVisible?: boolean | null;
     onStorefrontSlugChange?: (slug: string) => void;
     isFormDirty?: boolean;
     openTaskCount?: number;
@@ -126,6 +128,8 @@ export default function WatchImageSection({
     saleStage,
     serviceStage,
     salePrice,
+    showPrice = true,
+    storefrontVisible,
     onStorefrontSlugChange,
     imageReviewStatus,
     imageReviewNote,
@@ -143,6 +147,15 @@ export default function WatchImageSection({
 }: Props) {
     const showGallery = sectionMode !== "cover";
     const showCover = sectionMode !== "gallery";
+    const initiallyVisibleByStandardFlow =
+        Boolean(getMediaKey(coverImage ?? ({} as PickedMediaItem))) &&
+        Boolean(storefrontSlug?.trim()) &&
+        ["AVAILABLE", "HOLD", "SOLD"].includes(String(productStatus ?? "").toUpperCase()) &&
+        ["READY", "HOLD", "SOLD"].includes(String(saleStage ?? "").toUpperCase()) &&
+        ["NOT_REQUIRED", "DONE"].includes(String(serviceStage ?? "").toUpperCase()) &&
+        String(contentReviewStatus ?? "").toUpperCase() === "APPROVED" &&
+        String(imageReviewStatus ?? "").toUpperCase() === "APPROVED" &&
+        (!showPrice || Number(salePrice ?? 0) > 0);
     const dialog = useAppDialog();
     const notify = useNotify();
     const [taskModalOpen, setTaskModalOpen] = useState(false);
@@ -151,6 +164,10 @@ export default function WatchImageSection({
     const [coverPickerVersion, setCoverPickerVersion] = useState(0);
     const [pendingCoverKey, setPendingCoverKey] = useState<string | null>(null);
     const [coverPending, setCoverPending] = useState(false);
+    const [publishPending, setPublishPending] = useState(false);
+    const [quickPublished, setQuickPublished] = useState(
+        storefrontVisible === true || (storefrontVisible == null && initiallyVisibleByStandardFlow),
+    );
     const [photoRoomPending, setPhotoRoomPending] = useState(false);
     const [photoRoomAdjustmentOpen, setPhotoRoomAdjustmentOpen] = useState(false);
     const [photoRoomSourceKey, setPhotoRoomSourceKey] = useState<string | null>(null);
@@ -317,6 +334,44 @@ export default function WatchImageSection({
             });
         } finally {
             setCoverPending(false);
+        }
+    };
+
+    const handleQuickPublish = async (nextPublished: boolean) => {
+        if (publishPending || isFormDirty) return;
+        const confirmed = await dialog.confirm({
+            title: nextPublished ? "Đưa Watch lên storefront?" : "Ẩn Watch khỏi storefront?",
+            message: nextPublished
+                ? `Watch sẽ hiển thị ngay với title, spec và Cover hiện tại. Giá: ${showPrice ? "hiển thị" : "Liên hệ"}. Content và gallery có thể bổ sung sau.`
+                : "Watch sẽ được ẩn khỏi storefront. Dữ liệu title, spec, content và gallery vẫn được giữ nguyên.",
+            confirmText: nextPublished ? "Đưa lên storefront" : "Ẩn khỏi storefront",
+            cancelText: "Hủy",
+        });
+        if (!confirmed) return;
+
+        setPublishPending(true);
+        try {
+            const res = await fetch(`/api/admin/watches/${productId}/storefront-publish`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ showPrice, published: nextPublished }),
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok) throw new Error(json?.error || "Không thể đưa Watch lên storefront.");
+            setQuickPublished(nextPublished);
+            notify.success({
+                title: nextPublished ? "Đã đưa lên storefront" : "Đã ẩn khỏi storefront",
+                message: nextPublished
+                    ? (showPrice ? "Storefront đang hiển thị giá." : "Storefront đang hiển thị Liên hệ.")
+                    : "Watch không còn hiển thị trên storefront.",
+            });
+        } catch (error) {
+            notify.error({
+                title: "Chưa thể đưa lên storefront",
+                message: error instanceof Error ? error.message : "Có lỗi xảy ra.",
+            });
+        } finally {
+            setPublishPending(false);
         }
     };
 
@@ -656,6 +711,24 @@ export default function WatchImageSection({
                                     {item.label}
                                 </div>
                             ))}
+                        </div>
+                        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-amber-200/70 pt-3">
+                            <button
+                                type="button"
+                                role="switch"
+                                aria-checked={quickPublished}
+                                onClick={() => void handleQuickPublish(!quickPublished)}
+                                disabled={publishPending || isFormDirty || (!quickPublished && !currentCoverKey)}
+                                className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold shadow-sm disabled:cursor-not-allowed disabled:opacity-50 ${quickPublished ? "bg-emerald-600 text-white hover:bg-emerald-700" : "bg-slate-200 text-slate-700 hover:bg-slate-300"}`}
+                            >
+                                <span className={`relative h-5 w-9 rounded-full transition ${quickPublished ? "bg-white/30" : "bg-slate-400"}`}>
+                                    <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition ${quickPublished ? "left-[18px]" : "left-0.5"}`} />
+                                </span>
+                                {publishPending ? "Đang cập nhật..." : quickPublished ? "Đang hiển thị storefront" : "Đang ẩn storefront"}
+                            </button>
+                            <span className="text-xs text-slate-600">
+                                {isFormDirty ? "Hãy lưu title, spec và lựa chọn hiển thị giá trước." : "Không yêu cầu content hoặc đủ gallery; cần title, spec và Cover."}
+                            </span>
                         </div>
                     </div> : null}
 

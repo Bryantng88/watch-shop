@@ -15,6 +15,8 @@ export type WatchFormValues = {
     contentReviewNote?: string | null;
     imageReviewStatus?: string | null;
     imageReviewNote?: string | null;
+    publishedAt?: string | null;
+    storefrontVisible?: boolean | null;
     header: {
         sku: string;
         status: string;
@@ -43,6 +45,7 @@ export type WatchFormValues = {
     };
 
     spec: {
+        showPrice: boolean;
         specBrand: string;
         model: string;
         referenceNumber: string;
