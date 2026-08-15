@@ -154,36 +154,45 @@ export function publicWatchEligibilityWhere(options?: {
         productImage: {
           some: storefrontImageWhere(enforceCover),
         },
-        storefrontVisible: { not: false },
-        OR: [
-          { storefrontVisible: true },
+        AND: [
           {
-            watch: {
-              is: {
-                saleStage: { in: [WatchSaleStage.READY, WatchSaleStage.HOLD, WatchSaleStage.SOLD] },
-                serviceStage: {
-                  in: [WatchServiceStage.NOT_REQUIRED, WatchServiceStage.DONE],
-                },
-                AND: [
+            OR: [
+              { storefrontVisible: null },
+              { storefrontVisible: true },
+            ],
+          },
+          {
+            OR: [
+              { storefrontVisible: true },
               {
-                reviewStates: {
-                  some: {
-                    targetType: WatchReviewTargetType.CONTENT,
-                    status: WatchReviewStatus.APPROVED,
+                watch: {
+                  is: {
+                    saleStage: { in: [WatchSaleStage.READY, WatchSaleStage.HOLD, WatchSaleStage.SOLD] },
+                    serviceStage: {
+                      in: [WatchServiceStage.NOT_REQUIRED, WatchServiceStage.DONE],
+                    },
+                    AND: [
+                      {
+                        reviewStates: {
+                          some: {
+                            targetType: WatchReviewTargetType.CONTENT,
+                            status: WatchReviewStatus.APPROVED,
+                          },
+                        },
+                      },
+                      {
+                        reviewStates: {
+                          some: {
+                            targetType: WatchReviewTargetType.IMAGE,
+                            status: WatchReviewStatus.APPROVED,
+                          },
+                        },
+                      },
+                    ],
                   },
                 },
               },
-              {
-                reviewStates: {
-                  some: {
-                    targetType: WatchReviewTargetType.IMAGE,
-                    status: WatchReviewStatus.APPROVED,
-                  },
-                },
-              },
-                ],
-              },
-            },
+            ],
           },
         ],
       },
