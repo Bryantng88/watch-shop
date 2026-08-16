@@ -8,6 +8,7 @@ import {
   DEFAULT_PHOTOROOM_ADJUSTMENT,
   type PhotoRoomAdjustment,
 } from "@/domains/watch/shared/photoroom-adjustment";
+import { emitWatchCoverPhotoRoomProcessedEvent } from "@/domains/watch/server/events";
 import { prisma } from "@/server/db/client";
 import { s3, S3_BUCKET } from "@/server/s3";
 
@@ -22,12 +23,13 @@ type PhotoRoomProcessingMode = "basic-sharp" | "plus";
 type SharpShadowProfile = "light" | "legacy";
 
 const PHOTOROOM_PADDING_BY_SIZE = {
-  small: 0.14,
-  default: 0.1,
-  large: 0.06,
+  small: 0.1,
+  default: 0.06,
+  large: 0.02,
   xlarge: 0,
 } as const;
 const PHOTOROOM_FINE_OFFSET = 0.06;
+const PHOTOROOM_XLARGE_ZOOM = 1.1;
 
 type SharpShadowSettings = {
   ambientBlur: number;
@@ -279,12 +281,16 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
   productId: string;
   storageKey: string;
   adjustment?: PhotoRoomAdjustment | null;
+  actorUserId?: string | null;
+  processingKind?: "INITIAL" | "REPROCESS";
+  deferConsumers?: (work: () => Promise<void>) => void;
 }) {
   const productId = String(input.productId ?? "").trim();
   const sourceKey = String(input.storageKey ?? "").trim();
   const apiKey = String(process.env.PHOTOROOM_API_KEY ?? "").trim();
   const processingMode = photoRoomProcessingMode();
   const adjustment = input.adjustment ?? DEFAULT_PHOTOROOM_ADJUSTMENT;
+  const actionId = randomUUID();
 
   if (input.adjustment && processingMode !== "plus") {
     throw new Error("PhotoRoom adjustment requires Image Editing API mode.");
@@ -295,7 +301,7 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
 
   const watch = await prisma.watch.findUnique({
     where: { productId },
-    select: { audienceSegment: true },
+    select: { id: true, productId: true, audienceSegment: true },
   });
   if (!watch) throw new Error("Không tìm thấy Watch.");
 
@@ -372,6 +378,28 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
   let resultBytes = processingMode === "basic-sharp"
     ? new Uint8Array(await composeBasicStorefrontCover(photoRoomBytes))
     : photoRoomBytes;
+  if (processingMode === "plus" && adjustment.subjectSize === "xlarge") {
+    const zoomedWidth = Math.round(COVER_WIDTH * PHOTOROOM_XLARGE_ZOOM);
+    const zoomedHeight = Math.round(COVER_HEIGHT * PHOTOROOM_XLARGE_ZOOM);
+    const overflowX = zoomedWidth - COVER_WIDTH;
+    const overflowY = zoomedHeight - COVER_HEIGHT;
+    const left = adjustment.horizontalAlignment === "left"
+      ? 0
+      : adjustment.horizontalAlignment === "right"
+        ? overflowX
+        : Math.round(overflowX / 2);
+    const top = adjustment.verticalAlignment === "top"
+      ? 0
+      : adjustment.verticalAlignment === "bottom"
+        ? overflowY
+        : Math.round(overflowY / 2);
+
+    resultBytes = new Uint8Array(await sharp(resultBytes)
+      .resize(zoomedWidth, zoomedHeight, { fit: "fill" })
+      .extract({ left, top, width: COVER_WIDTH, height: COVER_HEIGHT })
+      .png()
+      .toBuffer());
+  }
   if (adjustment.enhanceMetal) {
     resultBytes = new Uint8Array(await sharp(resultBytes)
       .modulate({ brightness: 1.02, saturation: 1.02 })
@@ -409,6 +437,18 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
   if (!stored || stored.sizeBytes !== resultBytes.byteLength) {
     throw new Error("Không xác minh được ảnh PhotoRoom sau khi lưu vào kho media.");
   }
+
+  await emitWatchCoverPhotoRoomProcessedEvent(prisma, {
+    watch: { id: watch.id, productId: watch.productId },
+    actorUserId: input.actorUserId ?? null,
+    actionId,
+    sourceStorageKey: sourceKey,
+    outputStorageKey: outputKey,
+    cutoutStorageKey: cutoutKey,
+    processingMode,
+    processingKind: input.processingKind ?? "INITIAL",
+    adjustment: processingMode === "plus" ? { ...adjustment } : null,
+  }, { deferConsumers: input.deferConsumers });
 
   return {
     storageKey: outputKey,

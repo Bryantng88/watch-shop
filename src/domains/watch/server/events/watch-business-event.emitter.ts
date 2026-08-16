@@ -209,6 +209,109 @@ export async function emitWatchCoverUpdatedEvent(
   });
 }
 
+export async function emitWatchCoverPhotoRoomProcessedEvent(
+  db: DB,
+  input: {
+    watch: Pick<WatchEventWatchSnapshot, "id" | "productId">;
+    actorUserId?: string | null;
+    actionId: string;
+    sourceStorageKey: string;
+    outputStorageKey: string;
+    cutoutStorageKey?: string | null;
+    processingMode: string;
+    processingKind: "INITIAL" | "REPROCESS";
+    adjustment?: Record<string, unknown> | null;
+  },
+  options?: BusinessEventDispatchOptions,
+) {
+  return recordBusinessEvent(db, {
+    eventKey: "watch.cover.photoroom.processed",
+    targetType: "WATCH",
+    targetId: input.watch.id,
+    targetAliasIds: [input.watch.id, input.watch.productId],
+    actorUserId: input.actorUserId ?? null,
+    payload: {
+      watchId: input.watch.id,
+      productId: input.watch.productId,
+      sourceStorageKey: input.sourceStorageKey,
+      outputStorageKey: input.outputStorageKey,
+      cutoutStorageKey: input.cutoutStorageKey ?? null,
+      processingMode: input.processingMode,
+      processingKind: input.processingKind,
+      adjustment: input.adjustment ?? null,
+      note: input.processingKind === "REPROCESS"
+        ? "Xử lý lại Cover bằng PhotoRoom với thiết lập điều chỉnh."
+        : "Tạo preview Cover lần đầu bằng PhotoRoom.",
+      sourceId: input.actionId,
+      eventInstanceId: input.actionId,
+    },
+  }, options);
+}
+
+export async function emitWatchStorefrontVisibilityChangedEvent(
+  db: DB,
+  input: {
+    watch: Pick<WatchEventWatchSnapshot, "id" | "productId">;
+    actorUserId?: string | null;
+    actionId: string;
+    before: boolean | null;
+    after: boolean;
+    publishedAt?: Date | null;
+    source: "QUICK_PUBLISH";
+  },
+  options?: BusinessEventDispatchOptions,
+) {
+  return recordBusinessEvent(db, {
+    eventKey: "watch.storefront.visibility.changed",
+    targetType: "WATCH",
+    targetId: input.watch.id,
+    targetAliasIds: [input.watch.id, input.watch.productId],
+    actorUserId: input.actorUserId ?? null,
+    payload: {
+      watchId: input.watch.id,
+      productId: input.watch.productId,
+      before: input.before,
+      after: input.after,
+      publishedAt: input.publishedAt?.toISOString() ?? null,
+      source: input.source,
+      note: input.after ? "Đã bật hiển thị Watch trên storefront." : "Đã ẩn Watch khỏi storefront.",
+      sourceId: input.actionId,
+      eventInstanceId: input.actionId,
+    },
+  }, options);
+}
+
+export async function emitWatchStorefrontPriceVisibilityChangedEvent(
+  db: DB,
+  input: {
+    watch: Pick<WatchEventWatchSnapshot, "id" | "productId">;
+    actorUserId?: string | null;
+    actionId: string;
+    before: string | null;
+    after: "SHOW" | "HIDE";
+    source: "WATCH_FORM" | "QUICK_PUBLISH";
+  },
+  options?: BusinessEventDispatchOptions,
+) {
+  return recordBusinessEvent(db, {
+    eventKey: "watch.storefront.price_visibility.changed",
+    targetType: "WATCH",
+    targetId: input.watch.id,
+    targetAliasIds: [input.watch.id, input.watch.productId],
+    actorUserId: input.actorUserId ?? null,
+    payload: {
+      watchId: input.watch.id,
+      productId: input.watch.productId,
+      before: input.before,
+      after: input.after,
+      source: input.source,
+      note: input.after === "SHOW" ? "Storefront hiển thị giá bán." : "Storefront hiển thị Liên hệ.",
+      sourceId: input.actionId,
+      eventInstanceId: input.actionId,
+    },
+  }, options);
+}
+
 export async function emitWatchSpecUpdatedEvent(
   db: DB,
   input: {

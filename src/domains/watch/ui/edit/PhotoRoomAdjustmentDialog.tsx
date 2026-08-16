@@ -65,7 +65,7 @@ export default function PhotoRoomAdjustmentDialog({
       open={open}
       onClose={pending ? () => undefined : onClose}
       title="Điều chỉnh bằng PhotoRoom"
-      description="PhotoRoom sẽ xử lý lại từ ảnh nguồn đang giữ; với ảnh cũ chưa có lịch sử nguồn, Cover hiện tại sẽ được dùng làm đầu vào. Mỗi lần tạo dùng một API call."
+      description="Chọn bố cục trước khi gửi ảnh nguồn sang PhotoRoom. Với ảnh đã xử lý, hệ thống vẫn dùng lại ảnh nguồn nếu còn lưu; mỗi lần tạo preview dùng một API call."
       maxWidthClass="max-w-3xl"
     >
       <div className="grid gap-5 md:grid-cols-2">

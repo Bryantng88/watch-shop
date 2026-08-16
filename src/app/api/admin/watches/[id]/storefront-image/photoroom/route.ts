@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 
 import { PERMISSIONS } from "@/constants/permissions";
 import { processWatchCoverWithPhotoRoomApplication } from "@/domains/watch/application";
@@ -48,6 +48,9 @@ export async function POST(
       productId: id,
       storageKey: String(body?.storageKey ?? "").trim(),
       adjustment: parseAdjustment(body?.adjustment),
+      actorUserId: auth.id,
+      processingKind: body?.processingKind === "REPROCESS" ? "REPROCESS" : "INITIAL",
+      deferConsumers: (work) => after(work),
     });
     return NextResponse.json({ ok: true, data: result });
   } catch (error: unknown) {

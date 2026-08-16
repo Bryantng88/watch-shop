@@ -3,6 +3,7 @@ import { attachIngestedWatchMedia } from "@/domains/media/application";
 import { notifyUsersByRole } from "@/app/(admin)/admin/notifications/notification.service";
 
 import { MediaRole, WatchSpecStatus } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 import type { WatchFormValues } from "../../client/form/watch-form.types";
 import {
     ensureWatchInlineImageFromFirstGalleryRepo,
@@ -34,6 +35,7 @@ import {
     emitWatchMediaAssetAttachedEvent,
     emitWatchPriceUpdatedEvent,
     emitWatchSpecUpdatedEvent,
+    emitWatchStorefrontPriceVisibilityChangedEvent,
 } from "../../server/events";
 
 type SubmitWatchFormContext = {
@@ -471,6 +473,7 @@ export async function submitWatchFormApplication(
     const contentChanged = !sameJson(beforeContent, afterContent);
     const specChanged = !sameJson(beforeSpec, afterSpec);
     const imagesChanged = !sameJson(beforeImageKeys, afterImageKeysBeforeMove);
+    const nextPriceVisibility = values.spec.showPrice === false ? "HIDE" : "SHOW";
 
     const contentReviewStatus = String(
         current.reviewStates.find((item: any) => item.targetType === "CONTENT")
@@ -526,7 +529,7 @@ export async function submitWatchFormApplication(
             data: {
                 title: textOrUndefined(values.basic.title),
                 slug: textOrUndefined(values.basic.slug),
-                priceVisibility: values.spec.showPrice === false ? "HIDE" : "SHOW",
+                priceVisibility: nextPriceVisibility,
                 sku: safeSku,
                 brand: values.basic.brandId
                     ? { connect: { id: values.basic.brandId } }
@@ -539,6 +542,17 @@ export async function submitWatchFormApplication(
                     : { disconnect: true },
             },
         });
+
+        if (current.product.priceVisibility !== nextPriceVisibility) {
+            await emitWatchStorefrontPriceVisibilityChangedEvent(tx, {
+                watch: { id: current.id, productId },
+                actorUserId: context.userId ?? null,
+                actionId: randomUUID(),
+                before: current.product.priceVisibility,
+                after: nextPriceVisibility,
+                source: "WATCH_FORM",
+            }, { deferConsumers: context.deferConsumers });
+        }
 
         await syncProductPostTargets(tx, {
             productId,

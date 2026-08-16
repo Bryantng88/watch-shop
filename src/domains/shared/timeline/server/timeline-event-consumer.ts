@@ -62,6 +62,10 @@ export function getTimelineTitle(eventKey: string) {
         "watch.image.approved": "Hình ảnh watch đã được duyệt",
         "watch.media.recalled": "Media đã được thu hồi về xử lý",
         "watch.price.updated": "Giá Watch đã được cập nhật",
+        "watch.cover.updated": "Cover storefront đã được cập nhật",
+        "watch.cover.photoroom.processed": "Cover đã được xử lý bằng PhotoRoom",
+        "watch.storefront.visibility.changed": "Trạng thái hiển thị storefront đã thay đổi",
+        "watch.storefront.price_visibility.changed": "Cách hiển thị giá storefront đã thay đổi",
         "shipment.created": "Shipment được tạo",
         "shipment.updated": "Thông tin shipment được cập nhật",
         "shipment.shipped": "Đã bàn giao cho đơn vị vận chuyển",
@@ -160,6 +164,10 @@ export async function projectBusinessEventToTaskItemTimeline(
     const metadata = asRecord(event.metadataJson);
     const businessEventLogId = clean(event.id);
     const eventKey = clean(event.eventKey);
+    const eventInstanceId = clean(metadata.eventInstanceId);
+    const timelineSourceId = eventInstanceId
+        ? `${businessEventLogId}:${eventInstanceId}`
+        : businessEventLogId;
 
     if (!businessEventLogId) {
         return {
@@ -191,7 +199,7 @@ export async function projectBusinessEventToTaskItemTimeline(
                     containerType: TimelineContainerType.TASK_ITEM,
                     containerId: taskItemId,
                     sourceType: TimelineSourceType.BUSINESS_EVENT,
-                    sourceId: businessEventLogId,
+                    sourceId: timelineSourceId,
                     occurredAt: toDate(event.createdAt),
                     actorUserId: event.actorUserId ?? null,
                     title: getTimelineTitle(eventKey) || null,
@@ -294,6 +302,10 @@ export async function projectBusinessEventToTaskItemActivity(
     const metadata = asRecord(event.metadataJson);
     const businessEventLogId = clean(event.id);
     const eventKey = clean(event.eventKey);
+    const eventInstanceId = clean(metadata.eventInstanceId);
+    const activitySourceId = eventInstanceId
+        ? `${businessEventLogId}:${eventInstanceId}`
+        : businessEventLogId;
 
     if (!businessEventLogId) {
         return {
@@ -329,7 +341,7 @@ export async function projectBusinessEventToTaskItemActivity(
             await createBusinessEventActivityLoose(
                 {
                     taskItemId,
-                    sourceId: businessEventLogId,
+                    sourceId: activitySourceId,
                     title,
                     body,
                     actorUserId: event.actorUserId ?? null,

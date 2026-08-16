@@ -388,7 +388,11 @@ export default function WatchImageSection({
             const res = await fetch(`/api/admin/watches/${productId}/storefront-image/photoroom`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ storageKey, adjustment: adjustment ?? null }),
+                body: JSON.stringify({
+                    storageKey,
+                    adjustment: adjustment ?? null,
+                    processingKind: hasPhotoRoomResult ? "REPROCESS" : "INITIAL",
+                }),
             });
             const json = await res.json().catch(() => null);
             if (!res.ok) {
@@ -649,12 +653,12 @@ export default function WatchImageSection({
                                 {!hasPhotoRoomResult && (pendingCoverKey || currentCoverKey) ? (
                                     <button
                                         type="button"
-                                        onClick={() => void handlePhotoRoomProcess()}
+                                        onClick={() => setPhotoRoomAdjustmentOpen(true)}
                                         disabled={coverPending || photoRoomPending}
                                         className="order-1 inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         <Sparkles className="h-3.5 w-3.5" />
-                                        {photoRoomPending ? "PhotoRoom đang xử lý..." : "Xử lý bằng PhotoRoom"}
+                                        {photoRoomPending ? "PhotoRoom đang xử lý..." : "Thiết lập & xử lý PhotoRoom"}
                                     </button>
                                 ) : null}
                                 {hasPhotoRoomResult && (pendingCoverKey || currentCoverKey) ? (
@@ -799,6 +803,7 @@ export default function WatchImageSection({
                     setPendingCoverKey(keys[0]);
                     setPhotoRoomSourceKey(null);
                     setHasPhotoRoomResult(false);
+                    setPhotoRoomAdjustment(DEFAULT_PHOTOROOM_ADJUSTMENT);
                     setSharpCutoutKey(null);
                     setCoverPickerOpen(false);
                 }}
