@@ -15,6 +15,7 @@ const makeSchema = () => z.object({
   isStockManaged: SortOrderSchema.optional(),
   maxQtyPerOrder: SortOrderSchema.optional(),
   publishedAt: SortOrderSchema.optional(),
+  storefrontVisible: SortOrderSchema.optional(),
   vendorId: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),

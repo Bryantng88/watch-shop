@@ -21,6 +21,7 @@ const makeSchema = () => z.object({
   isStockManaged: SortOrderSchema.optional(),
   maxQtyPerOrder: SortOrderSchema.optional(),
   publishedAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  storefrontVisible: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   vendorId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),

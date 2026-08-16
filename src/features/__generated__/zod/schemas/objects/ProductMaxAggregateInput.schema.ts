@@ -15,6 +15,7 @@ const makeSchema = () => z.object({
   isStockManaged: z.literal(true).optional(),
   maxQtyPerOrder: z.literal(true).optional(),
   publishedAt: z.literal(true).optional(),
+  storefrontVisible: z.literal(true).optional(),
   vendorId: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),

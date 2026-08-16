@@ -13,6 +13,7 @@ export const ProductFindManyResultSchema = z.object({
   isStockManaged: z.boolean(),
   maxQtyPerOrder: z.number().int(),
   publishedAt: z.date().optional(),
+  storefrontVisible: z.boolean().optional(),
   vendorId: z.string().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),

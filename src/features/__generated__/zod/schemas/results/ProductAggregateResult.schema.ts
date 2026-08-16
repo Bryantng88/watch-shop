@@ -12,6 +12,7 @@ export const ProductAggregateResultSchema = z.object({  _count: z.object({
     isStockManaged: z.number(),
     maxQtyPerOrder: z.number(),
     publishedAt: z.number(),
+    storefrontVisible: z.number(),
     vendorId: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),

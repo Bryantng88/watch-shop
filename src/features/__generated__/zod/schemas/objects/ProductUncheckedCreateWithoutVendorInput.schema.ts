@@ -33,6 +33,7 @@ const makeSchema = () => z.object({
   isStockManaged: z.boolean().optional(),
   maxQtyPerOrder: z.number().int().optional(),
   publishedAt: z.coerce.date().optional().nullable(),
+  storefrontVisible: z.boolean().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   tag: TagSchema.optional(),

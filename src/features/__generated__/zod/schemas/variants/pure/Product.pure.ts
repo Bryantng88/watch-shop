@@ -19,6 +19,7 @@ export const ProductModelSchema = z.object({
     isStockManaged: z.boolean(),
     maxQtyPerOrder: z.number().int(),
     publishedAt: z.date().nullable(),
+    storefrontVisible: z.boolean().nullable(),
     vendorId: z.string().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),

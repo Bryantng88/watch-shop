@@ -19,6 +19,7 @@ export const ProductInputSchema = z.object({
     isStockManaged: z.boolean(),
     maxQtyPerOrder: z.number().int(),
     publishedAt: z.date().optional().nullable(),
+    storefrontVisible: z.boolean().optional().nullable(),
     vendorId: z.string().optional().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),

@@ -32,6 +32,7 @@ const makeSchema = () => z.object({
   isStockManaged: z.boolean().optional(),
   maxQtyPerOrder: z.boolean().optional(),
   publishedAt: z.boolean().optional(),
+  storefrontVisible: z.boolean().optional(),
   vendorId: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
