@@ -25,14 +25,11 @@ const COVER_HEIGHT = 3840;
 type PhotoRoomProcessingMode = "basic-sharp" | "plus";
 type SharpShadowProfile = "light" | "legacy";
 
-const PHOTOROOM_PADDING_BY_SIZE = {
-  small: 0.1,
-  default: 0.06,
-  large: 0.02,
-  xlarge: 0,
-} as const;
 const PHOTOROOM_FINE_OFFSET = 0.06;
-const PHOTOROOM_XLARGE_ZOOM = 1.1;
+
+function normalizedZoom(adjustment: PhotoRoomAdjustment) {
+  return Math.max(40, Math.min(200, adjustment.zoomPercent ?? 100));
+}
 
 type SharpShadowSettings = {
   ambientBlur: number;
@@ -191,7 +188,7 @@ async function composeAdjustedStorefrontCover(
   adjustment: PhotoRoomAdjustment,
   rotationDelta: number,
 ) {
-  const sizeScale = { small: 0.8, default: 0.88, large: 0.96, xlarge: 1 }[adjustment.subjectSize];
+  const sizeScale = normalizedZoom(adjustment) / 100;
   const rotated = await sharp(cutoutBytes)
     .rotate(rotationDelta, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 } })
@@ -206,8 +203,36 @@ async function composeAdjustedStorefrontCover(
     })
     .png()
     .toBuffer({ resolveWithObject: true });
-  const subjectWidth = resized.info.width;
-  const subjectHeight = resized.info.height;
+  const rawWidth = resized.info.width;
+  const rawHeight = resized.info.height;
+  const overflowX = Math.max(0, rawWidth - COVER_WIDTH);
+  const overflowY = Math.max(0, rawHeight - COVER_HEIGHT);
+  const fineOffsetX = adjustment.horizontalOffset === "negative"
+    ? Math.round(COVER_WIDTH * PHOTOROOM_FINE_OFFSET)
+    : adjustment.horizontalOffset === "positive"
+      ? -Math.round(COVER_WIDTH * PHOTOROOM_FINE_OFFSET)
+      : 0;
+  const fineOffsetY = adjustment.verticalOffset === "negative"
+    ? Math.round(COVER_HEIGHT * PHOTOROOM_FINE_OFFSET)
+    : adjustment.verticalOffset === "positive"
+      ? -Math.round(COVER_HEIGHT * PHOTOROOM_FINE_OFFSET)
+      : 0;
+  const cropLeft = Math.max(0, Math.min(overflowX,
+    (adjustment.horizontalAlignment === "left" ? 0 : adjustment.horizontalAlignment === "right" ? overflowX : Math.round(overflowX / 2)) + fineOffsetX,
+  ));
+  const cropTop = Math.max(0, Math.min(overflowY,
+    (adjustment.verticalAlignment === "top" ? 0 : adjustment.verticalAlignment === "bottom" ? overflowY : Math.round(overflowY / 2)) + fineOffsetY,
+  ));
+  const subject = overflowX || overflowY
+    ? await sharp(resized.data).extract({
+      left: cropLeft,
+      top: cropTop,
+      width: Math.min(rawWidth, COVER_WIDTH),
+      height: Math.min(rawHeight, COVER_HEIGHT),
+    }).png().toBuffer({ resolveWithObject: true })
+    : resized;
+  const subjectWidth = subject.info.width;
+  const subjectHeight = subject.info.height;
   const availableX = Math.max(0, COVER_WIDTH - subjectWidth);
   const availableY = Math.max(0, COVER_HEIGHT - subjectHeight);
   const alignedLeft = adjustment.horizontalAlignment === "left"
@@ -241,7 +266,7 @@ async function composeAdjustedStorefrontCover(
         ? { r: 255, g: 255, b: 255, alpha: 0 }
         : { r: 255, g: 255, b: 255, alpha: 1 },
     },
-  }).composite([{ input: resized.data, left, top }])
+  }).composite([{ input: subject.data, left, top }])
     .png({ compressionLevel: 9 })
     .toBuffer();
 }
@@ -363,7 +388,8 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
     form.set("size", "full");
     form.set("crop", "true");
   } else {
-    const padding = PHOTOROOM_PADDING_BY_SIZE[adjustment.subjectSize];
+    const zoomPercent = normalizedZoom(adjustment);
+    const padding = Math.max(0, (1 - zoomPercent / 100) / 2);
     const paddingLeft = padding + (adjustment.horizontalOffset === "positive" ? PHOTOROOM_FINE_OFFSET : 0);
     const paddingRight = padding + (adjustment.horizontalOffset === "negative" ? PHOTOROOM_FINE_OFFSET : 0);
     const paddingTop = padding + (adjustment.verticalOffset === "positive" ? PHOTOROOM_FINE_OFFSET : 0);
@@ -380,7 +406,7 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
     form.set("paddingRight", String(paddingRight));
     form.set("paddingTop", String(paddingTop));
     form.set("paddingBottom", String(paddingBottom));
-    form.set("margin", adjustment.subjectSize === "xlarge" ? "0" : "0.04");
+    form.set("margin", "0");
     form.set("referenceBox", "subjectBox");
     form.set("horizontalAlignment", adjustment.horizontalAlignment);
     form.set("verticalAlignment", adjustment.verticalAlignment);
@@ -407,9 +433,10 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
   let resultBytes = processingMode === "basic-sharp"
     ? new Uint8Array(await composeBasicStorefrontCover(photoRoomBytes))
     : photoRoomBytes;
-  if (processingMode === "plus" && adjustment.subjectSize === "xlarge") {
-    const zoomedWidth = Math.round(COVER_WIDTH * PHOTOROOM_XLARGE_ZOOM);
-    const zoomedHeight = Math.round(COVER_HEIGHT * PHOTOROOM_XLARGE_ZOOM);
+  if (processingMode === "plus" && normalizedZoom(adjustment) > 100) {
+    const zoomFactor = normalizedZoom(adjustment) / 100;
+    const zoomedWidth = Math.round(COVER_WIDTH * zoomFactor);
+    const zoomedHeight = Math.round(COVER_HEIGHT * zoomFactor);
     const overflowX = zoomedWidth - COVER_WIDTH;
     const overflowY = zoomedHeight - COVER_HEIGHT;
     const left = adjustment.horizontalAlignment === "left"

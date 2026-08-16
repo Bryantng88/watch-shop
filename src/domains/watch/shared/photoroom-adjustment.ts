@@ -10,6 +10,7 @@ export type PhotoRoomAdjustment = {
   horizontalAlignment: PhotoRoomHorizontalAlignment;
   verticalAlignment: PhotoRoomVerticalAlignment;
   subjectSize: PhotoRoomSubjectSize;
+  zoomPercent: number;
   horizontalOffset: PhotoRoomFineOffset;
   verticalOffset: PhotoRoomFineOffset;
   shadowMode: PhotoRoomShadowMode;
@@ -23,6 +24,7 @@ export const DEFAULT_PHOTOROOM_ADJUSTMENT: PhotoRoomAdjustment = {
   horizontalAlignment: "center",
   verticalAlignment: "center",
   subjectSize: "large",
+  zoomPercent: 100,
   horizontalOffset: "none",
   verticalOffset: "none",
   shadowMode: "soft",

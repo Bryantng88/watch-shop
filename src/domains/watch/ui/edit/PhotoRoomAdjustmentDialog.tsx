@@ -65,7 +65,8 @@ export default function PhotoRoomAdjustmentDialog({
     : totalRotationDegrees > 0
       ? `Phải ${totalRotationDegrees}°`
       : "Không xoay";
-  const previewScale = { small: 0.8, default: 0.88, large: 0.96, xlarge: 1.08 }[value.subjectSize];
+  const zoomPercent = Math.max(40, Math.min(200, value.zoomPercent ?? 100));
+  const previewScale = zoomPercent / 100;
   const previewTranslateX = (value.horizontalAlignment === "left" ? -8 : value.horizontalAlignment === "right" ? 8 : 0)
     + (value.horizontalOffset === "negative" ? -5 : value.horizontalOffset === "positive" ? 5 : 0);
   const previewTranslateY = (value.verticalAlignment === "top" ? -8 : value.verticalAlignment === "bottom" ? 8 : 0)
@@ -84,7 +85,7 @@ export default function PhotoRoomAdjustmentDialog({
   const commands = [
     `Căn ${labels.horizontalAlignment[value.horizontalAlignment].toLowerCase()} theo chiều ngang`,
     `Căn ${labels.verticalAlignment[value.verticalAlignment].toLowerCase()} theo chiều dọc`,
-    `Kích thước chủ thể: ${labels.subjectSize[value.subjectSize].toLowerCase()}`,
+    `Thu phóng chủ thể: ${zoomPercent}%`,
     labels.horizontalOffset[value.horizontalOffset],
     labels.verticalOffset[value.verticalOffset],
     `Shadow: ${labels.shadowMode[value.shadowMode].toLowerCase()}`,
@@ -112,10 +113,55 @@ export default function PhotoRoomAdjustmentDialog({
             <FieldLabel>Căn dọc</FieldLabel>
             <Select value={value.verticalAlignment} onChange={(event) => update("verticalAlignment", event.target.value as PhotoRoomAdjustment["verticalAlignment"])} options={Object.entries(labels.verticalAlignment).map(([value, label]) => ({ value, label }))} />
           </label>
-          <label>
-            <FieldLabel>Kích thước đồng hồ</FieldLabel>
-            <Select value={value.subjectSize} onChange={(event) => update("subjectSize", event.target.value as PhotoRoomAdjustment["subjectSize"])} options={Object.entries(labels.subjectSize).map(([value, label]) => ({ value, label }))} />
-          </label>
+          <div className="sm:col-span-2 rounded-xl border border-slate-200 bg-white px-3 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <span>
+                <FieldLabel>Thu phóng đồng hồ</FieldLabel>
+                <span className="block text-[11px] text-slate-500">40%–200% · preview cập nhật ngay, không tốn quota</span>
+              </span>
+              <span className="min-w-16 rounded-lg bg-violet-50 px-2.5 py-1 text-center text-sm font-bold tabular-nums text-violet-700">
+                {zoomPercent}%
+              </span>
+            </div>
+            <div className="mt-3 grid grid-cols-[36px_1fr_36px] items-center gap-2">
+              <button
+                type="button"
+                onClick={() => update("zoomPercent", Math.max(40, zoomPercent - 5))}
+                disabled={zoomPercent <= 40}
+                className="h-9 rounded-lg border border-slate-200 text-lg font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                aria-label="Thu nhỏ 5%"
+              >−</button>
+              <input
+                type="range"
+                min={40}
+                max={200}
+                step={5}
+                value={zoomPercent}
+                onChange={(event) => update("zoomPercent", Number(event.target.value))}
+                className="w-full accent-violet-600"
+                aria-label="Mức thu phóng đồng hồ"
+              />
+              <button
+                type="button"
+                onClick={() => update("zoomPercent", Math.min(200, zoomPercent + 5))}
+                disabled={zoomPercent >= 200}
+                className="h-9 rounded-lg border border-slate-200 text-lg font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                aria-label="Phóng lớn 5%"
+              >+</button>
+            </div>
+            <div className="mt-2 flex items-center justify-between gap-3 text-[10px] font-medium text-slate-400">
+              <span>40% · Toàn cảnh</span>
+              <button
+                type="button"
+                onClick={() => update("zoomPercent", 100)}
+                className="rounded-md px-2 py-1 font-semibold text-violet-700 hover:bg-violet-50"
+              >Vừa khung · 100%</button>
+              <span>200% · Cận cảnh</span>
+            </div>
+            {zoomPercent > 100 ? (
+              <p className="mt-2 text-[11px] font-medium text-amber-600">Cận cảnh có thể cắt một phần dây hoặc vỏ; kiểm tra preview bên phải trước khi tạo.</p>
+            ) : null}
+          </div>
           <label>
             <FieldLabel>Dịch ngang tinh chỉnh</FieldLabel>
             <Select value={value.horizontalOffset} onChange={(event) => update("horizontalOffset", event.target.value as PhotoRoomAdjustment["horizontalOffset"])} options={Object.entries(labels.horizontalOffset).map(([value, label]) => ({ value, label }))} />
