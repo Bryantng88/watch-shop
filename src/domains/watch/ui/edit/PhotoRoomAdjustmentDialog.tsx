@@ -6,6 +6,7 @@ import { Sparkles } from "lucide-react";
 import {
   DEFAULT_PHOTOROOM_ADJUSTMENT,
   type PhotoRoomAdjustment,
+  type PhotoRoomOrientationDegrees,
 } from "@/domains/watch/shared/photoroom-adjustment";
 import { Dialog, DialogFooter, FieldLabel, Select } from "./shared";
 
@@ -43,6 +44,13 @@ export default function PhotoRoomAdjustmentDialog({
   const update = <K extends keyof PhotoRoomAdjustment>(key: K, next: PhotoRoomAdjustment[K]) =>
     setValue((current) => ({ ...current, [key]: next }));
 
+  const totalRotationDegrees = (value.orientationDegrees ?? 0) + value.rotationDegrees;
+  const rotationLabel = totalRotationDegrees < 0
+    ? `Trái ${Math.abs(totalRotationDegrees)}°`
+    : totalRotationDegrees > 0
+      ? `Phải ${totalRotationDegrees}°`
+      : "Không xoay";
+
   const commands = [
     `Căn ${labels.horizontalAlignment[value.horizontalAlignment].toLowerCase()} theo chiều ngang`,
     `Căn ${labels.verticalAlignment[value.verticalAlignment].toLowerCase()} theo chiều dọc`,
@@ -52,11 +60,7 @@ export default function PhotoRoomAdjustmentDialog({
     `Shadow: ${labels.shadowMode[value.shadowMode].toLowerCase()}`,
     `Nền: ${labels.backgroundMode[value.backgroundMode].toLowerCase()}`,
     value.enhanceMetal ? "Tăng độ bóng kim loại nhẹ" : "Giữ bề mặt kim loại tự nhiên",
-    value.rotationDegrees < 0
-      ? `Xoay trái ${Math.abs(value.rotationDegrees)}°`
-      : value.rotationDegrees > 0
-        ? `Xoay phải ${value.rotationDegrees}°`
-        : "Không xoay vật thể",
+    totalRotationDegrees === 0 ? "Không xoay vật thể" : `Xoay vật thể ${rotationLabel.toLowerCase()}`,
     "Giữ khung 2048 × 3840",
   ];
 
@@ -117,16 +121,30 @@ export default function PhotoRoomAdjustmentDialog({
             <span className="flex items-center justify-between gap-3">
               <span>
                 <FieldLabel>Xoay vật thể</FieldLabel>
-                <span className="block text-[11px] text-slate-500">Số âm xoay trái, số dương xoay phải</span>
+                <span className="block text-[11px] text-slate-500">Chọn hướng ảnh trước, sau đó tinh chỉnh nhẹ nếu cần</span>
               </span>
               <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
-                {value.rotationDegrees < 0
-                  ? `Trái ${Math.abs(value.rotationDegrees)}°`
-                  : value.rotationDegrees > 0
-                    ? `Phải ${value.rotationDegrees}°`
-                    : "Không xoay"}
+                {rotationLabel}
               </span>
             </span>
+            <span className="mt-3 grid grid-cols-4 gap-1.5">
+              {([
+                [-90, "Trái 90°"],
+                [0, "Giữ nguyên"],
+                [90, "Phải 90°"],
+                [180, "Lật 180°"],
+              ] as const).map(([degrees, label]) => (
+                <button
+                  key={degrees}
+                  type="button"
+                  onClick={() => update("orientationDegrees", degrees as PhotoRoomOrientationDegrees)}
+                  className={`rounded-lg border px-2 py-2 text-[11px] font-semibold transition ${value.orientationDegrees === degrees ? "border-violet-500 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </span>
+            <span className="mt-3 block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Tinh chỉnh</span>
             <input
               type="range"
               min={-15}
@@ -135,7 +153,7 @@ export default function PhotoRoomAdjustmentDialog({
               value={value.rotationDegrees ?? 0}
               onChange={(event) => update("rotationDegrees", Number(event.target.value))}
               className="mt-3 w-full accent-violet-600"
-              aria-label="Góc xoay vật thể; âm là trái, dương là phải"
+              aria-label="Tinh chỉnh góc xoay; âm là trái, dương là phải"
             />
             <span className="mt-1 flex justify-between text-[10px] font-medium text-slate-400">
               <span>Trái 15°</span>

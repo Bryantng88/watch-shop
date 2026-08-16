@@ -19,6 +19,10 @@ function parseAdjustment(value: unknown): PhotoRoomAdjustment | null {
   const rotationDegrees = Number.isFinite(rawRotation)
     ? Math.max(-15, Math.min(15, Math.round(rawRotation)))
     : DEFAULT_PHOTOROOM_ADJUSTMENT.rotationDegrees;
+  const rawOrientation = Number(input.orientationDegrees);
+  const orientationDegrees = [-90, 0, 90, 180].includes(rawOrientation)
+    ? rawOrientation as PhotoRoomAdjustment["orientationDegrees"]
+    : DEFAULT_PHOTOROOM_ADJUSTMENT.orientationDegrees;
 
   return {
     horizontalAlignment: pick(input.horizontalAlignment, ["left", "center", "right"], DEFAULT_PHOTOROOM_ADJUSTMENT.horizontalAlignment),
@@ -29,6 +33,7 @@ function parseAdjustment(value: unknown): PhotoRoomAdjustment | null {
     shadowMode: pick(input.shadowMode, ["none", "soft", "hard", "floating"], DEFAULT_PHOTOROOM_ADJUSTMENT.shadowMode),
     backgroundMode: pick(input.backgroundMode, ["white", "transparent"], DEFAULT_PHOTOROOM_ADJUSTMENT.backgroundMode),
     enhanceMetal: input.enhanceMetal === true,
+    orientationDegrees,
     rotationDegrees,
   };
 }

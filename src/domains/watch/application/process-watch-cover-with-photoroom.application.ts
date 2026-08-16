@@ -290,6 +290,7 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
   const apiKey = String(process.env.PHOTOROOM_API_KEY ?? "").trim();
   const processingMode = photoRoomProcessingMode();
   const adjustment = input.adjustment ?? DEFAULT_PHOTOROOM_ADJUSTMENT;
+  const totalRotationDegrees = adjustment.orientationDegrees + adjustment.rotationDegrees;
   const actionId = randomUUID();
 
   if (input.adjustment && processingMode !== "plus") {
@@ -312,7 +313,7 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
 
   const prepared = await sharp(source.bytes)
     .rotate()
-    .rotate(adjustment.rotationDegrees, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .rotate(totalRotationDegrees, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .resize({
       width: PHOTOROOM_RELIGHT_MAX_DIMENSION,
       height: PHOTOROOM_RELIGHT_MAX_DIMENSION,

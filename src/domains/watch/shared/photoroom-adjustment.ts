@@ -4,6 +4,7 @@ export type PhotoRoomSubjectSize = "small" | "default" | "large" | "xlarge";
 export type PhotoRoomFineOffset = "negative" | "none" | "positive";
 export type PhotoRoomShadowMode = "none" | "soft" | "hard" | "floating";
 export type PhotoRoomBackgroundMode = "white" | "transparent";
+export type PhotoRoomOrientationDegrees = -90 | 0 | 90 | 180;
 
 export type PhotoRoomAdjustment = {
   horizontalAlignment: PhotoRoomHorizontalAlignment;
@@ -14,6 +15,7 @@ export type PhotoRoomAdjustment = {
   shadowMode: PhotoRoomShadowMode;
   backgroundMode: PhotoRoomBackgroundMode;
   enhanceMetal: boolean;
+  orientationDegrees: PhotoRoomOrientationDegrees;
   rotationDegrees: number;
 };
 
@@ -26,5 +28,6 @@ export const DEFAULT_PHOTOROOM_ADJUSTMENT: PhotoRoomAdjustment = {
   shadowMode: "soft",
   backgroundMode: "white",
   enhanceMetal: false,
+  orientationDegrees: 0,
   rotationDegrees: 0,
 };
