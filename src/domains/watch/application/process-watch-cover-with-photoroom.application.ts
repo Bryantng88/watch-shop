@@ -25,7 +25,7 @@ const PHOTOROOM_PADDING_BY_SIZE = {
   small: 0.14,
   default: 0.1,
   large: 0.06,
-  xlarge: 0.02,
+  xlarge: 0,
 } as const;
 const PHOTOROOM_FINE_OFFSET = 0.06;
 
@@ -345,7 +345,7 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
     form.set("paddingRight", String(paddingRight));
     form.set("paddingTop", String(paddingTop));
     form.set("paddingBottom", String(paddingBottom));
-    form.set("margin", "0.04");
+    form.set("margin", adjustment.subjectSize === "xlarge" ? "0" : "0.04");
     form.set("referenceBox", "subjectBox");
     form.set("horizontalAlignment", adjustment.horizontalAlignment);
     form.set("verticalAlignment", adjustment.verticalAlignment);

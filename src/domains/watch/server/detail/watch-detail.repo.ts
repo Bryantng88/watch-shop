@@ -132,6 +132,9 @@ export async function getAdminWatchMediaEditDetail(db: DB, productId: string) {
           sku: true,
           primaryImageUrl: true,
           storefrontImageKey: true,
+          storefrontVisible: true,
+          publishedAt: true,
+          priceVisibility: true,
           seoTitle: true,
           seoDescription: true,
           brand: {
