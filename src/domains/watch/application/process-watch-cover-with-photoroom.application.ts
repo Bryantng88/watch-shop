@@ -8,7 +8,10 @@ import {
   DEFAULT_PHOTOROOM_ADJUSTMENT,
   type PhotoRoomAdjustment,
 } from "@/domains/watch/shared/photoroom-adjustment";
-import { emitWatchCoverPhotoRoomProcessedEvent } from "@/domains/watch/server/events";
+import {
+  emitWatchCoverLocalProcessedEvent,
+  emitWatchCoverPhotoRoomProcessedEvent,
+} from "@/domains/watch/server/events";
 import { prisma } from "@/server/db/client";
 import { s3, S3_BUCKET } from "@/server/s3";
 
@@ -115,7 +118,7 @@ async function createSoftShadow(input: Buffer, options: {
     .toBuffer();
 }
 
-async function extractSubjectFromWhiteBackground(input: Uint8Array) {
+async function extractSubjectFromWhiteBackground(input: Uint8Array, requireExistingTransparency = true) {
   const image = await sharp(input)
     .rotate()
     .ensureAlpha()
@@ -130,7 +133,7 @@ async function extractSubjectFromWhiteBackground(input: Uint8Array) {
       break;
     }
   }
-  if (!hasTransparentPixel) {
+  if (requireExistingTransparency && !hasTransparentPixel) {
     throw new Error("Ảnh này đã có nền và shadow. Hãy dùng file cutout PNG trong suốt để tránh chồng bóng.");
   }
   const queue = new Uint32Array(width * height);
@@ -241,9 +244,117 @@ export async function composeBasicStorefrontCover(cutoutBytes: Uint8Array) {
     .toBuffer();
 }
 
+async function composeAdjustedStorefrontCover(
+  cutoutBytes: Uint8Array,
+  adjustment: PhotoRoomAdjustment,
+  rotationDelta: number,
+) {
+  const sizeScale = { small: 0.8, default: 0.88, large: 0.96, xlarge: 1 }[adjustment.subjectSize];
+  const rotated = await sharp(cutoutBytes)
+    .rotate(rotationDelta, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toBuffer();
+  const resized = await sharp(rotated)
+    .resize({
+      width: Math.floor(COVER_WIDTH * sizeScale),
+      height: Math.floor(COVER_HEIGHT * sizeScale),
+      fit: "inside",
+      withoutEnlargement: false,
+    })
+    .png()
+    .toBuffer({ resolveWithObject: true });
+  const subjectWidth = resized.info.width;
+  const subjectHeight = resized.info.height;
+  const availableX = Math.max(0, COVER_WIDTH - subjectWidth);
+  const availableY = Math.max(0, COVER_HEIGHT - subjectHeight);
+  const alignedLeft = adjustment.horizontalAlignment === "left"
+    ? 0
+    : adjustment.horizontalAlignment === "right"
+      ? availableX
+      : Math.round(availableX / 2);
+  const alignedTop = adjustment.verticalAlignment === "top"
+    ? 0
+    : adjustment.verticalAlignment === "bottom"
+      ? availableY
+      : Math.round(availableY / 2);
+  const offsetX = adjustment.horizontalOffset === "negative"
+    ? -Math.round(COVER_WIDTH * PHOTOROOM_FINE_OFFSET)
+    : adjustment.horizontalOffset === "positive"
+      ? Math.round(COVER_WIDTH * PHOTOROOM_FINE_OFFSET)
+      : 0;
+  const offsetY = adjustment.verticalOffset === "negative"
+    ? -Math.round(COVER_HEIGHT * PHOTOROOM_FINE_OFFSET)
+    : adjustment.verticalOffset === "positive"
+      ? Math.round(COVER_HEIGHT * PHOTOROOM_FINE_OFFSET)
+      : 0;
+  const left = Math.max(0, Math.min(availableX, alignedLeft + offsetX));
+  const top = Math.max(0, Math.min(availableY, alignedTop + offsetY));
+  const shadowSettings = adjustment.shadowMode === "hard"
+    ? { blur: 12, opacity: 0.18, offsetX: 18, offsetY: 24 }
+    : adjustment.shadowMode === "floating"
+      ? { blur: 42, opacity: 0.13, offsetX: 48, offsetY: 54 }
+      : { blur: 30, opacity: 0.09, offsetX: 28, offsetY: 30 };
+  const shadowPadding = 128;
+  const shadow = adjustment.shadowMode === "none"
+    ? null
+    : await createSoftShadow(resized.data, {
+      width: subjectWidth,
+      height: subjectHeight,
+      padding: shadowPadding,
+      blur: shadowSettings.blur,
+      opacity: shadowSettings.opacity,
+      color: { r: 35, g: 39, b: 42 },
+    });
+  const shadowDesiredLeft = left - shadowPadding + shadowSettings.offsetX;
+  const shadowDesiredTop = top - shadowPadding + shadowSettings.offsetY;
+  const shadowSourceLeft = Math.max(0, -shadowDesiredLeft);
+  const shadowSourceTop = Math.max(0, -shadowDesiredTop);
+  const shadowTargetLeft = Math.max(0, shadowDesiredLeft);
+  const shadowTargetTop = Math.max(0, shadowDesiredTop);
+  const shadowWidth = Math.min(
+    subjectWidth + shadowPadding * 2 - shadowSourceLeft,
+    COVER_WIDTH - shadowTargetLeft,
+  );
+  const shadowHeight = Math.min(
+    subjectHeight + shadowPadding * 2 - shadowSourceTop,
+    COVER_HEIGHT - shadowTargetTop,
+  );
+  const clippedShadow = shadow && shadowWidth > 0 && shadowHeight > 0
+    ? await sharp(shadow).extract({
+      left: shadowSourceLeft,
+      top: shadowSourceTop,
+      width: shadowWidth,
+      height: shadowHeight,
+    }).png().toBuffer()
+    : null;
+
+  return sharp({
+    create: {
+      width: COVER_WIDTH,
+      height: COVER_HEIGHT,
+      channels: 4,
+      background: adjustment.backgroundMode === "transparent"
+        ? { r: 255, g: 255, b: 255, alpha: 0 }
+        : { r: 255, g: 255, b: 255, alpha: 1 },
+    },
+  }).composite([
+    ...(clippedShadow ? [{
+      input: clippedShadow,
+      left: shadowTargetLeft,
+      top: shadowTargetTop,
+    }] : []),
+    { input: resized.data, left, top },
+  ]).png({ compressionLevel: 9 }).toBuffer();
+}
+
 export async function recreateWatchCoverWithSharpApplication(input: {
   productId: string;
   storageKey: string;
+  adjustment?: PhotoRoomAdjustment | null;
+  baseAdjustment?: PhotoRoomAdjustment | null;
+  actorUserId?: string | null;
+  deferConsumers?: (work: () => Promise<void>) => void;
 }) {
   const productId = String(input.productId ?? "").trim();
   const sourceKey = String(input.storageKey ?? "").trim();
@@ -251,13 +362,21 @@ export async function recreateWatchCoverWithSharpApplication(input: {
 
   const watch = await prisma.watch.findUnique({
     where: { productId },
-    select: { audienceSegment: true },
+    select: { id: true, productId: true, audienceSegment: true },
   });
   if (!watch) throw new Error("Không tìm thấy Watch.");
 
   const source = await mediaStorage.read(sourceKey);
   const cutout = await extractSubjectFromWhiteBackground(source.bytes);
-  const resultBytes = new Uint8Array(await composeBasicStorefrontCover(cutout));
+  const adjustment = input.adjustment ?? DEFAULT_PHOTOROOM_ADJUSTMENT;
+  const baseAdjustment = input.baseAdjustment ?? DEFAULT_PHOTOROOM_ADJUSTMENT;
+  const baseRotation = baseAdjustment.orientationDegrees + baseAdjustment.rotationDegrees;
+  const nextRotation = adjustment.orientationDegrees + adjustment.rotationDegrees;
+  const resultBytes = new Uint8Array(await composeAdjustedStorefrontCover(
+    cutout,
+    { ...adjustment, shadowMode: "none" },
+    nextRotation - baseRotation,
+  ));
   const prefix = mediaPathPolicy.sourceRoot({
     segment: watch.audienceSegment,
     purpose: "cover",
@@ -274,6 +393,14 @@ export async function recreateWatchCoverWithSharpApplication(input: {
   if (!stored || stored.sizeBytes !== resultBytes.byteLength) {
     throw new Error("Không xác minh được ảnh Sharp sau khi lưu vào kho media.");
   }
+  await emitWatchCoverLocalProcessedEvent(prisma, {
+    watch: { id: watch.id, productId: watch.productId },
+    actorUserId: input.actorUserId ?? null,
+    actionId: randomUUID(),
+    sourceStorageKey: sourceKey,
+    outputStorageKey: outputKey,
+    adjustment: { ...adjustment },
+  }, { deferConsumers: input.deferConsumers });
   return { storageKey: outputKey, sourceStorageKey: sourceKey, processingMode: "sharp" };
 }
 
@@ -415,17 +542,16 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
     segment: watch.audienceSegment,
     purpose: "cover",
   });
-  const cutoutKey = processingMode === "basic-sharp"
-    ? `${prefix}/photoroom-cutout-${productId}-${randomUUID()}.png`
-    : null;
-  if (cutoutKey) {
-    await s3.send(new PutObjectCommand({
-      Bucket: S3_BUCKET,
-      Key: cutoutKey,
-      Body: photoRoomBytes,
-      ContentType: "image/png",
-    }));
-  }
+  const cutoutBytes = processingMode === "basic-sharp"
+    ? photoRoomBytes
+    : new Uint8Array(await extractSubjectFromWhiteBackground(resultBytes, false));
+  const cutoutKey = `${prefix}/photoroom-cutout-${productId}-${randomUUID()}.png`;
+  await s3.send(new PutObjectCommand({
+    Bucket: S3_BUCKET,
+    Key: cutoutKey,
+    Body: cutoutBytes,
+    ContentType: "image/png",
+  }));
   const outputKey = `${prefix}/photoroom-${processingMode}-${productId}-${randomUUID()}.png`;
   await s3.send(new PutObjectCommand({
     Bucket: S3_BUCKET,

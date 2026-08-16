@@ -64,6 +64,7 @@ export function getTimelineTitle(eventKey: string) {
         "watch.price.updated": "Giá Watch đã được cập nhật",
         "watch.cover.updated": "Cover storefront đã được cập nhật",
         "watch.cover.photoroom.processed": "Cover đã được xử lý bằng PhotoRoom",
+        "watch.cover.local.processed": "Cover đã được dựng lại local không tốn quota",
         "watch.storefront.visibility.changed": "Trạng thái hiển thị storefront đã thay đổi",
         "watch.storefront.price_visibility.changed": "Cách hiển thị giá storefront đã thay đổi",
         "shipment.created": "Shipment được tạo",

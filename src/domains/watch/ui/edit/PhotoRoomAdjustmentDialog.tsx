@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
+import Image from "next/image";
 
 import {
   DEFAULT_PHOTOROOM_ADJUSTMENT,
@@ -13,9 +14,16 @@ import { Dialog, DialogFooter, FieldLabel, Select } from "./shared";
 type Props = {
   open: boolean;
   pending: boolean;
+  localPending?: boolean;
+  previewSrc?: string | null;
+  canProcessLocally?: boolean;
+  localBaseEnhanceMetal?: boolean;
+  localBaseShadowMode?: PhotoRoomAdjustment["shadowMode"];
+  localDisabledReason?: string | null;
   initialValue?: PhotoRoomAdjustment | null;
   onClose: () => void;
   onSubmit: (value: PhotoRoomAdjustment) => void;
+  onSubmitLocal?: (value: PhotoRoomAdjustment) => void;
 };
 
 const labels = {
@@ -31,9 +39,16 @@ const labels = {
 export default function PhotoRoomAdjustmentDialog({
   open,
   pending,
+  localPending = false,
+  previewSrc,
+  canProcessLocally = false,
+  localBaseEnhanceMetal,
+  localBaseShadowMode,
+  localDisabledReason,
   initialValue,
   onClose,
   onSubmit,
+  onSubmitLocal,
 }: Props) {
   const [value, setValue] = useState<PhotoRoomAdjustment>(initialValue ?? DEFAULT_PHOTOROOM_ADJUSTMENT);
 
@@ -50,6 +65,21 @@ export default function PhotoRoomAdjustmentDialog({
     : totalRotationDegrees > 0
       ? `Phải ${totalRotationDegrees}°`
       : "Không xoay";
+  const previewScale = { small: 0.8, default: 0.88, large: 0.96, xlarge: 1.08 }[value.subjectSize];
+  const previewTranslateX = (value.horizontalAlignment === "left" ? -8 : value.horizontalAlignment === "right" ? 8 : 0)
+    + (value.horizontalOffset === "negative" ? -5 : value.horizontalOffset === "positive" ? 5 : 0);
+  const previewTranslateY = (value.verticalAlignment === "top" ? -8 : value.verticalAlignment === "bottom" ? 8 : 0)
+    + (value.verticalOffset === "negative" ? -5 : value.verticalOffset === "positive" ? 5 : 0);
+  const previewShadow = value.shadowMode === "none"
+    ? "none"
+    : value.shadowMode === "hard"
+      ? "drop-shadow(7px 9px 5px rgba(30,34,36,.28))"
+      : value.shadowMode === "floating"
+        ? "drop-shadow(14px 18px 15px rgba(30,34,36,.2))"
+        : "drop-shadow(8px 10px 10px rgba(30,34,36,.16))";
+  const localAvailable = canProcessLocally
+    && value.enhanceMetal === localBaseEnhanceMetal
+    && value.shadowMode === localBaseShadowMode;
 
   const commands = [
     `Căn ${labels.horizontalAlignment[value.horizontalAlignment].toLowerCase()} theo chiều ngang`,
@@ -69,10 +99,10 @@ export default function PhotoRoomAdjustmentDialog({
       open={open}
       onClose={pending ? () => undefined : onClose}
       title="Điều chỉnh bằng PhotoRoom"
-      description="Chọn bố cục trước khi gửi ảnh nguồn sang PhotoRoom. Với ảnh đã xử lý, hệ thống vẫn dùng lại ảnh nguồn nếu còn lưu; mỗi lần tạo preview dùng một API call."
-      maxWidthClass="max-w-3xl"
+      description="Xem mô phỏng trước khi tạo. Bố cục có thể dựng local không tốn quota sau lần PhotoRoom đầu; thay đổi AI shadow hoặc làm bóng mới cần gọi PhotoRoom."
+      maxWidthClass="max-w-5xl"
     >
-      <div className="grid gap-5 md:grid-cols-2">
+      <div className="grid gap-5 lg:grid-cols-[1.15fr_.85fr]">
         <div className="grid gap-4 sm:grid-cols-2">
           <label>
             <FieldLabel>Căn ngang</FieldLabel>
@@ -163,7 +193,34 @@ export default function PhotoRoomAdjustmentDialog({
           </label>
         </div>
 
-        <div className="rounded-2xl border border-violet-200 bg-violet-50/60 p-4">
+        <div className="space-y-3">
+          <div className="rounded-2xl border border-slate-200 bg-slate-100 p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-slate-900">Mô phỏng storefront</span>
+              <span className="text-[10px] font-medium text-slate-500">Không tốn quota</span>
+            </div>
+            <div
+              className={`relative mx-auto aspect-[8/15] w-full max-w-[230px] overflow-hidden rounded-xl border border-slate-200 ${value.backgroundMode === "transparent" ? "bg-[linear-gradient(45deg,#e5e7eb_25%,transparent_25%),linear-gradient(-45deg,#e5e7eb_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#e5e7eb_75%),linear-gradient(-45deg,transparent_75%,#e5e7eb_75%)] bg-[length:16px_16px] bg-[position:0_0,0_8px,8px_-8px,-8px_0px]" : "bg-white"}`}
+            >
+              {previewSrc ? (
+                <Image
+                  src={previewSrc}
+                  alt="Mô phỏng bố cục Cover"
+                  fill
+                  unoptimized
+                  className="object-contain transition-transform duration-200"
+                  style={{
+                    transform: `translate(${previewTranslateX}%, ${previewTranslateY}%) rotate(${totalRotationDegrees}deg) scale(${previewScale})`,
+                    filter: `${previewShadow}${value.enhanceMetal ? " brightness(1.04) contrast(1.04)" : ""}`,
+                  }}
+                />
+              ) : (
+                <span className="absolute inset-0 grid place-items-center px-4 text-center text-xs text-slate-400">Chọn Cover để xem mô phỏng</span>
+              )}
+            </div>
+            <p className="mt-2 text-[11px] leading-4 text-slate-500">Mô phỏng chính xác bố cục; AI shadow và độ bóng có thể chênh nhẹ so với PhotoRoom.</p>
+          </div>
+          <div className="rounded-2xl border border-violet-200 bg-violet-50/60 p-4">
           <div className="text-sm font-semibold text-violet-950">Lệnh sẽ gửi</div>
           <ol className="mt-3 space-y-2 text-sm text-violet-900">
             {commands.map((command, index) => (
@@ -173,14 +230,30 @@ export default function PhotoRoomAdjustmentDialog({
               </li>
             ))}
           </ol>
+          </div>
         </div>
       </div>
 
       <DialogFooter>
         <button type="button" onClick={onClose} disabled={pending} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">Hủy</button>
+        {onSubmitLocal ? (
+          <button
+            type="button"
+            onClick={() => onSubmitLocal(value)}
+            disabled={pending || localPending || !localAvailable}
+            title={!canProcessLocally
+              ? localDisabledReason ?? "Cần tạo ít nhất một preview PhotoRoom trong phiên này"
+              : !localAvailable
+                ? "Thay đổi AI shadow hoặc làm bóng kim loại cần dùng PhotoRoom"
+                : "Dựng lại bố cục bằng Sharp, không gọi PhotoRoom"}
+            className="rounded-xl border border-violet-200 bg-white px-4 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {localPending ? "Đang xử lý local..." : "Dựng bố cục local · không quota"}
+          </button>
+        ) : null}
         <button type="button" onClick={() => onSubmit(value)} disabled={pending} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50">
           <Sparkles className="h-4 w-4" />
-          {pending ? "PhotoRoom đang xử lý..." : "Tạo preview mới"}
+          {pending ? "PhotoRoom đang xử lý..." : "Tạo bằng AI PhotoRoom"}
         </button>
       </DialogFooter>
     </Dialog>

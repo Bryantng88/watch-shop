@@ -20,6 +20,7 @@ export {
   emitWatchInlineImageUpdatedEvent,
   emitWatchCoverUpdatedEvent,
   emitWatchCoverPhotoRoomProcessedEvent,
+  emitWatchCoverLocalProcessedEvent,
   emitWatchStorefrontVisibilityChangedEvent,
   emitWatchStorefrontPriceVisibilityChangedEvent,
   emitWatchMediaAssetAttachedEvent,

@@ -177,6 +177,8 @@ export default function WatchImageSection({
     const [photoRoomAdjustment, setPhotoRoomAdjustment] = useState<PhotoRoomAdjustment>(DEFAULT_PHOTOROOM_ADJUSTMENT);
     const [sharpPending, setSharpPending] = useState(false);
     const [sharpCutoutKey, setSharpCutoutKey] = useState<string | null>(null);
+    const [localLayoutBaseKey, setLocalLayoutBaseKey] = useState<string | null>(null);
+    const [localLayoutBaseAdjustment, setLocalLayoutBaseAdjustment] = useState<PhotoRoomAdjustment | null>(null);
     const [taskUsers, setTaskUsers] = useState<TaskUserOption[]>([]);
     const [currentUserId, setCurrentUserId] = useState<string>("");
     const [taskContext, setTaskContext] = useState<TaskQuickCreateContext | null>(null);
@@ -407,10 +409,13 @@ export default function WatchImageSection({
             if (!outputKey) throw new Error("PhotoRoom không trả về khóa ảnh kết quả.");
             setPhotoRoomSourceKey(String(json?.data?.sourceStorageKey ?? storageKey).trim());
             setHasPhotoRoomResult(true);
-            setSharpCutoutKey(String(json?.data?.cutoutStorageKey ?? "").trim() || null);
+            const cutoutStorageKey = String(json?.data?.cutoutStorageKey ?? "").trim();
+            setSharpCutoutKey(cutoutStorageKey || null);
             setPendingCoverKey(outputKey);
             if (adjustment) {
                 setPhotoRoomAdjustment(adjustment);
+                setLocalLayoutBaseKey(cutoutStorageKey || outputKey);
+                setLocalLayoutBaseAdjustment(adjustment);
                 setPhotoRoomAdjustmentOpen(false);
             }
             setCoverPickerVersion((version) => version + 1);
@@ -425,6 +430,41 @@ export default function WatchImageSection({
             });
         } finally {
             setPhotoRoomPending(false);
+        }
+    };
+
+    const handleLocalAdjustment = async (adjustment: PhotoRoomAdjustment) => {
+        if (!localLayoutBaseKey || !localLayoutBaseAdjustment || sharpPending || photoRoomPending) return;
+        setSharpPending(true);
+        try {
+            const res = await fetch(`/api/admin/watches/${productId}/storefront-image/sharp`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    storageKey: localLayoutBaseKey,
+                    adjustment,
+                    baseAdjustment: localLayoutBaseAdjustment,
+                }),
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok) throw new Error(json?.error || "Không dựng lại được bố cục local.");
+            const outputKey = String(json?.data?.storageKey ?? "").trim();
+            if (!outputKey) throw new Error("Sharp không trả về khóa ảnh kết quả.");
+            setPendingCoverKey(outputKey);
+            setPhotoRoomAdjustment(adjustment);
+            setPhotoRoomAdjustmentOpen(false);
+            setCoverPickerVersion((version) => version + 1);
+            notify.success({
+                title: "Đã dựng preview local",
+                message: "Kích thước, xoay, vị trí và nền được dựng bằng Sharp, không sử dụng quota PhotoRoom.",
+            });
+        } catch (error) {
+            notify.error({
+                title: "Xử lý local thất bại",
+                message: error instanceof Error ? error.message : "Có lỗi khi dựng lại bố cục local.",
+            });
+        } finally {
+            setSharpPending(false);
         }
     };
 
@@ -805,6 +845,8 @@ export default function WatchImageSection({
                     setHasPhotoRoomResult(false);
                     setPhotoRoomAdjustment(DEFAULT_PHOTOROOM_ADJUSTMENT);
                     setSharpCutoutKey(null);
+                    setLocalLayoutBaseKey(null);
+                    setLocalLayoutBaseAdjustment(null);
                     setCoverPickerOpen(false);
                 }}
             /> : null}
@@ -812,9 +854,16 @@ export default function WatchImageSection({
             {showCover ? <PhotoRoomAdjustmentDialog
                 open={photoRoomAdjustmentOpen}
                 pending={photoRoomPending}
+                localPending={sharpPending}
+                previewSrc={resolveMediaPreviewSrc(localLayoutBaseKey ?? pendingCoverKey ?? currentCoverKey)}
+                canProcessLocally={Boolean(localLayoutBaseKey && localLayoutBaseAdjustment)}
+                localBaseEnhanceMetal={localLayoutBaseAdjustment?.enhanceMetal}
+                localBaseShadowMode={localLayoutBaseAdjustment?.shadowMode}
+                localDisabledReason="Cần tạo ít nhất một preview PhotoRoom trong phiên này"
                 initialValue={photoRoomAdjustment}
                 onClose={() => setPhotoRoomAdjustmentOpen(false)}
                 onSubmit={(value) => void handlePhotoRoomProcess(value)}
+                onSubmitLocal={(value) => void handleLocalAdjustment(value)}
             /> : null}
 
             {showCover && coverPreviewOpen && coverPreviewSrc ? (

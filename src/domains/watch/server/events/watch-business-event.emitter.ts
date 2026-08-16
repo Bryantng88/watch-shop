@@ -248,6 +248,38 @@ export async function emitWatchCoverPhotoRoomProcessedEvent(
   }, options);
 }
 
+export async function emitWatchCoverLocalProcessedEvent(
+  db: DB,
+  input: {
+    watch: Pick<WatchEventWatchSnapshot, "id" | "productId">;
+    actorUserId?: string | null;
+    actionId: string;
+    sourceStorageKey: string;
+    outputStorageKey: string;
+    adjustment: Record<string, unknown>;
+  },
+  options?: BusinessEventDispatchOptions,
+) {
+  return recordBusinessEvent(db, {
+    eventKey: "watch.cover.local.processed",
+    targetType: "WATCH",
+    targetId: input.watch.id,
+    targetAliasIds: [input.watch.id, input.watch.productId],
+    actorUserId: input.actorUserId ?? null,
+    payload: {
+      watchId: input.watch.id,
+      productId: input.watch.productId,
+      sourceStorageKey: input.sourceStorageKey,
+      outputStorageKey: input.outputStorageKey,
+      adjustment: input.adjustment,
+      processingMode: "sharp-local",
+      note: "Dựng lại bố cục Cover bằng Sharp, không sử dụng quota PhotoRoom.",
+      sourceId: input.actionId,
+      eventInstanceId: input.actionId,
+    },
+  }, options);
+}
+
 export async function emitWatchStorefrontVisibilityChangedEvent(
   db: DB,
   input: {
