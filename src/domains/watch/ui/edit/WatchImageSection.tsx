@@ -414,8 +414,8 @@ export default function WatchImageSection({
             setPendingCoverKey(outputKey);
             if (adjustment) {
                 setPhotoRoomAdjustment(adjustment);
-                setLocalLayoutBaseKey(cutoutStorageKey || outputKey);
-                setLocalLayoutBaseAdjustment(adjustment);
+                setLocalLayoutBaseKey(cutoutStorageKey || null);
+                setLocalLayoutBaseAdjustment(cutoutStorageKey ? adjustment : null);
                 setPhotoRoomAdjustmentOpen(false);
             }
             setCoverPickerVersion((version) => version + 1);

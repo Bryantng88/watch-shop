@@ -118,64 +118,6 @@ async function createSoftShadow(input: Buffer, options: {
     .toBuffer();
 }
 
-async function extractSubjectFromWhiteBackground(input: Uint8Array, requireExistingTransparency = true) {
-  const image = await sharp(input)
-    .rotate()
-    .ensureAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  const { width, height, channels } = image.info;
-  const pixels = image.data;
-  let hasTransparentPixel = false;
-  for (let offset = 3; offset < pixels.length; offset += channels) {
-    if (pixels[offset] < 250) {
-      hasTransparentPixel = true;
-      break;
-    }
-  }
-  if (requireExistingTransparency && !hasTransparentPixel) {
-    throw new Error("Ảnh này đã có nền và shadow. Hãy dùng file cutout PNG trong suốt để tránh chồng bóng.");
-  }
-  const queue = new Uint32Array(width * height);
-  let head = 0;
-  let tail = 0;
-
-  const enqueueBackground = (pixelIndex: number) => {
-    const offset = pixelIndex * channels;
-    if (pixels[offset + 3] === 0) return;
-    const r = pixels[offset];
-    const g = pixels[offset + 1];
-    const b = pixels[offset + 2];
-    const minimum = Math.min(r, g, b);
-    const maximum = Math.max(r, g, b);
-    const isLightNeutralBackground = minimum >= 205 && maximum - minimum <= 32;
-    if (!isLightNeutralBackground) return;
-    pixels[offset + 3] = 0;
-    queue[tail++] = pixelIndex;
-  };
-
-  for (let x = 0; x < width; x += 1) {
-    enqueueBackground(x);
-    enqueueBackground((height - 1) * width + x);
-  }
-  for (let y = 1; y < height - 1; y += 1) {
-    enqueueBackground(y * width);
-    enqueueBackground(y * width + width - 1);
-  }
-
-  while (head < tail) {
-    const index = queue[head++];
-    const x = index % width;
-    const y = Math.floor(index / width);
-    if (x > 0) enqueueBackground(index - 1);
-    if (x + 1 < width) enqueueBackground(index + 1);
-    if (y > 0) enqueueBackground(index - width);
-    if (y + 1 < height) enqueueBackground(index + width);
-  }
-
-  return sharp(pixels, { raw: image.info }).png().toBuffer();
-}
-
 export async function composeBasicStorefrontCover(cutoutBytes: Uint8Array) {
   const shadow = SHARP_SHADOW_PROFILES[sharpShadowProfile()];
   const trimmed = await sharp(cutoutBytes)
@@ -290,45 +232,6 @@ async function composeAdjustedStorefrontCover(
       : 0;
   const left = Math.max(0, Math.min(availableX, alignedLeft + offsetX));
   const top = Math.max(0, Math.min(availableY, alignedTop + offsetY));
-  const shadowSettings = adjustment.shadowMode === "hard"
-    ? { blur: 12, opacity: 0.18, offsetX: 18, offsetY: 24 }
-    : adjustment.shadowMode === "floating"
-      ? { blur: 42, opacity: 0.13, offsetX: 48, offsetY: 54 }
-      : { blur: 30, opacity: 0.09, offsetX: 28, offsetY: 30 };
-  const shadowPadding = 128;
-  const shadow = adjustment.shadowMode === "none"
-    ? null
-    : await createSoftShadow(resized.data, {
-      width: subjectWidth,
-      height: subjectHeight,
-      padding: shadowPadding,
-      blur: shadowSettings.blur,
-      opacity: shadowSettings.opacity,
-      color: { r: 35, g: 39, b: 42 },
-    });
-  const shadowDesiredLeft = left - shadowPadding + shadowSettings.offsetX;
-  const shadowDesiredTop = top - shadowPadding + shadowSettings.offsetY;
-  const shadowSourceLeft = Math.max(0, -shadowDesiredLeft);
-  const shadowSourceTop = Math.max(0, -shadowDesiredTop);
-  const shadowTargetLeft = Math.max(0, shadowDesiredLeft);
-  const shadowTargetTop = Math.max(0, shadowDesiredTop);
-  const shadowWidth = Math.min(
-    subjectWidth + shadowPadding * 2 - shadowSourceLeft,
-    COVER_WIDTH - shadowTargetLeft,
-  );
-  const shadowHeight = Math.min(
-    subjectHeight + shadowPadding * 2 - shadowSourceTop,
-    COVER_HEIGHT - shadowTargetTop,
-  );
-  const clippedShadow = shadow && shadowWidth > 0 && shadowHeight > 0
-    ? await sharp(shadow).extract({
-      left: shadowSourceLeft,
-      top: shadowSourceTop,
-      width: shadowWidth,
-      height: shadowHeight,
-    }).png().toBuffer()
-    : null;
-
   return sharp({
     create: {
       width: COVER_WIDTH,
@@ -338,14 +241,9 @@ async function composeAdjustedStorefrontCover(
         ? { r: 255, g: 255, b: 255, alpha: 0 }
         : { r: 255, g: 255, b: 255, alpha: 1 },
     },
-  }).composite([
-    ...(clippedShadow ? [{
-      input: clippedShadow,
-      left: shadowTargetLeft,
-      top: shadowTargetTop,
-    }] : []),
-    { input: resized.data, left, top },
-  ]).png({ compressionLevel: 9 }).toBuffer();
+  }).composite([{ input: resized.data, left, top }])
+    .png({ compressionLevel: 9 })
+    .toBuffer();
 }
 
 export async function recreateWatchCoverWithSharpApplication(input: {
@@ -359,6 +257,9 @@ export async function recreateWatchCoverWithSharpApplication(input: {
   const productId = String(input.productId ?? "").trim();
   const sourceKey = String(input.storageKey ?? "").trim();
   if (!productId || !sourceKey) throw new Error("Thiếu Watch hoặc ảnh nguồn.");
+  if (!sourceKey.includes("photoroom-cutout-")) {
+    throw new Error("Xử lý local chỉ nhận cutout PNG trong suốt đã được PhotoRoom tạo sẵn.");
+  }
 
   const watch = await prisma.watch.findUnique({
     where: { productId },
@@ -367,7 +268,7 @@ export async function recreateWatchCoverWithSharpApplication(input: {
   if (!watch) throw new Error("Không tìm thấy Watch.");
 
   const source = await mediaStorage.read(sourceKey);
-  const cutout = await extractSubjectFromWhiteBackground(source.bytes);
+  const cutout = source.bytes;
   const adjustment = input.adjustment ?? DEFAULT_PHOTOROOM_ADJUSTMENT;
   const baseAdjustment = input.baseAdjustment ?? DEFAULT_PHOTOROOM_ADJUSTMENT;
   const baseRotation = baseAdjustment.orientationDegrees + baseAdjustment.rotationDegrees;
@@ -542,16 +443,17 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
     segment: watch.audienceSegment,
     purpose: "cover",
   });
-  const cutoutBytes = processingMode === "basic-sharp"
-    ? photoRoomBytes
-    : new Uint8Array(await extractSubjectFromWhiteBackground(resultBytes, false));
-  const cutoutKey = `${prefix}/photoroom-cutout-${productId}-${randomUUID()}.png`;
-  await s3.send(new PutObjectCommand({
-    Bucket: S3_BUCKET,
-    Key: cutoutKey,
-    Body: cutoutBytes,
-    ContentType: "image/png",
-  }));
+  const cutoutKey = processingMode === "basic-sharp"
+    ? `${prefix}/photoroom-cutout-${productId}-${randomUUID()}.png`
+    : null;
+  if (cutoutKey) {
+    await s3.send(new PutObjectCommand({
+      Bucket: S3_BUCKET,
+      Key: cutoutKey,
+      Body: photoRoomBytes,
+      ContentType: "image/png",
+    }));
+  }
   const outputKey = `${prefix}/photoroom-${processingMode}-${productId}-${randomUUID()}.png`;
   await s3.send(new PutObjectCommand({
     Bucket: S3_BUCKET,
