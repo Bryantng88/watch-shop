@@ -108,7 +108,14 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps 
         progress.show({
             title: "Đang duyệt phiếu",
             message: `Đang xử lý ${selectedIds.length} phiếu nhập đã chọn.`,
+            percent: 10,
+            steps: selectedIds.map((id) => ({
+                id,
+                label: selectedItemsById[id]?.refNo || id,
+                status: "running" as const,
+            })),
         });
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
         try {
             const payload = selectedIds

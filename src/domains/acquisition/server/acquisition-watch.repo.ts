@@ -228,35 +228,25 @@ export async function createWatchDraftForAcquisitionItem(
             stockStage: "IN_STOCK",
             saleStage: "DRAFT",
             serviceStage: "NOT_REQUIRED",
+            watchPrice: {
+                create: {
+                    costPrice: new Prisma.Decimal(unitCost),
+                    landedCost: new Prisma.Decimal(unitCost),
+                    salePrice: input.salePrice == null
+                        ? undefined
+                        : new Prisma.Decimal(input.salePrice),
+                },
+            },
+            watchContent: {
+                create: {
+                    bulletSpecs: [],
+                },
+            },
         },
         select: {
             id: true,
             productId: true,
         },
-    });
-
-    await db.watchPrice.upsert({
-        where: { watchId: watch.id },
-        create: {
-            watchId: watch.id,
-            costPrice: new Prisma.Decimal(unitCost),
-            landedCost: new Prisma.Decimal(unitCost),
-            salePrice: input.salePrice == null ? undefined : new Prisma.Decimal(input.salePrice),
-        },
-        update: {
-            costPrice: new Prisma.Decimal(unitCost),
-            landedCost: new Prisma.Decimal(unitCost),
-            salePrice: input.salePrice == null ? undefined : new Prisma.Decimal(input.salePrice),
-        },
-    });
-
-    await db.watchContent.upsert({
-        where: { watchId: watch.id },
-        create: {
-            watchId: watch.id,
-            bulletSpecs: [],
-        },
-        update: {},
     });
 
     await db.acquisitionItem.update({
