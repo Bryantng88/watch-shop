@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { StorefrontHeroImageOrderByWithRelationInputObjectSchema as StorefrontHeroImageOrderByWithRelationInputObjectSchema } from './objects/StorefrontHeroImageOrderByWithRelationInput.schema';
+import { StorefrontHeroImageWhereInputObjectSchema as StorefrontHeroImageWhereInputObjectSchema } from './objects/StorefrontHeroImageWhereInput.schema';
+import { StorefrontHeroImageWhereUniqueInputObjectSchema as StorefrontHeroImageWhereUniqueInputObjectSchema } from './objects/StorefrontHeroImageWhereUniqueInput.schema';
+import { StorefrontHeroImageCountAggregateInputObjectSchema as StorefrontHeroImageCountAggregateInputObjectSchema } from './objects/StorefrontHeroImageCountAggregateInput.schema';
+
+export const StorefrontHeroImageCountSchema: z.ZodType<Prisma.StorefrontHeroImageCountArgs> = z.object({ orderBy: z.union([StorefrontHeroImageOrderByWithRelationInputObjectSchema, StorefrontHeroImageOrderByWithRelationInputObjectSchema.array()]).optional(), where: StorefrontHeroImageWhereInputObjectSchema.optional(), cursor: StorefrontHeroImageWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), StorefrontHeroImageCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.StorefrontHeroImageCountArgs>;
+
+export const StorefrontHeroImageCountZodSchema = z.object({ orderBy: z.union([StorefrontHeroImageOrderByWithRelationInputObjectSchema, StorefrontHeroImageOrderByWithRelationInputObjectSchema.array()]).optional(), where: StorefrontHeroImageWhereInputObjectSchema.optional(), cursor: StorefrontHeroImageWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), StorefrontHeroImageCountAggregateInputObjectSchema ]).optional() }).strict();

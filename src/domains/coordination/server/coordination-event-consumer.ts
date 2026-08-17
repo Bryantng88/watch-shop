@@ -56,6 +56,7 @@ export type CoordinationConsumerSkipReason =
   | "NO_ACTIVE_SCOPE_ITEM"
   | "NO_BLUEPRINT_EVENT_BINDING"
   | "NO_EXISTING_WORKSPACE_ITEM"
+  | "MEDIA_STAGE_REGRESSION_REQUIRES_EXPLICIT_ACTION"
   | "DUPLICATE_BLUEPRINT_EVENT_BINDING";
 
 export type CoordinationEventConsumerInput = CoordinationBusinessEvent & {
@@ -413,6 +414,73 @@ function isMediaFlowStageRoute(input: {
       workTypeKey === "publish"
     )
   );
+}
+
+const MEDIA_STAGE_RANK: Record<string, number> = {
+  photography: 1,
+  "media processing": 2,
+  publish: 3,
+};
+
+const EXPLICIT_MEDIA_REGRESSION_EVENTS = new Set([
+  "watch.media.photoshoot.requested",
+  "watch.media.recalled",
+  "watch.content.rejected",
+  "watch.content.unapproved",
+  "watch.image.rejected",
+  "watch.image.unapproved",
+]);
+
+function mediaStageRank(value: unknown) {
+  return MEDIA_STAGE_RANK[normalizeMatchKey(value)] ?? 0;
+}
+
+/**
+ * Routine media edits (including storefront Cover maintenance) may emit asset
+ * or review progress events after a Watch has reached Publish/Done. Those
+ * events are informative only: moving the shared binding backwards would make
+ * merely opening/saving Media WP look like a production recall. A backward
+ * move is allowed only for an explicit reject/unapprove/recall/reshoot event.
+ */
+async function shouldKeepCurrentMediaStage(input: {
+  db: DB;
+  taskId: string;
+  targetType: string;
+  targetId: string;
+  targetWorkTypeKey: string;
+  eventKey: string;
+}) {
+  if (normalizeTargetType(input.targetType) !== "WATCH") return false;
+  if (EXPLICIT_MEDIA_REGRESSION_EVENTS.has(normalizeEventKey(input.eventKey))) {
+    return false;
+  }
+
+  const targetRank = mediaStageRank(input.targetWorkTypeKey);
+  if (!targetRank) return false;
+  if (targetRank >= MEDIA_STAGE_RANK.publish) return false;
+
+  const current = await dbOrTx(input.db).taskExecution.findFirst({
+    where: {
+      taskId: input.taskId,
+      targetType: TaskExecutionTargetType.WATCH,
+      targetId: input.targetId,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+      taskItemId: { not: null },
+    },
+    orderBy: { createdAt: "desc" },
+    select: {
+      metadataJson: true,
+      taskItem: { select: { note: true } },
+    },
+  });
+  if (!current) return false;
+
+  const metadata = asRecord(current.metadataJson);
+  const currentWorkTypeKey =
+    clean(metadata.workTypeKey) ||
+    clean(String(current.taskItem?.note ?? "").match(/workTypeKey:\s*([^\r\n]+)/i)?.[1]);
+
+  return mediaStageRank(currentWorkTypeKey) > targetRank;
 }
 
 function workspaceKindFromNote(note: string | null | undefined) {
@@ -1489,6 +1557,20 @@ export async function consumeBusinessEventForCoordination(
     eventBinding: workTicketResolution.eventBinding,
     ...extractQueueSeedMetadata(input.metadataJson),
   } satisfies Prisma.InputJsonObject;
+
+  if (
+    isMediaFlowStageRoute({ route, targetType }) &&
+    await shouldKeepCurrentMediaStage({
+      db,
+      taskId: task.id,
+      targetType,
+      targetId: canonicalTargetId,
+      targetWorkTypeKey: route.workTypeKey,
+      eventKey,
+    })
+  ) {
+    return skipped("MEDIA_STAGE_REGRESSION_REQUIRES_EXPLICIT_ACTION", route, resolvedScope);
+  }
 
   if (
     workTicketResolution.eventBinding.mode !== "PROGRESS" &&

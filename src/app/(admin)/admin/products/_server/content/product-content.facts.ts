@@ -107,8 +107,8 @@ const MATERIAL_MAP: Record<string, string> = {
 const MOVEMENT_MAP: Record<string, string> = {
     AUTOMATIC: "Automatic",
     QUARTZ: "Máy pin",
-    MANUAL_WIND: "Lên dây tay",
-    HAND_WIND: "Lên dây tay",
+    MANUAL_WIND: "Manual Winding",
+    HAND_WIND: "Manual Winding",
     KINETIC: "Kinetic",
     ECO_DRIVE: "Eco-Drive",
 };

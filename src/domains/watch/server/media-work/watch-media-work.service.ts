@@ -1031,6 +1031,63 @@ export async function getActiveWatchMediaWorkspace(
   };
 }
 
+export async function getWatchMediaWorkspaceContext(
+  productIdInput: string,
+  db: DB = prisma,
+) {
+  const productId = clean(productIdInput);
+  if (!productId) return null;
+
+  const watch = await db.watch.findUnique({
+    where: { productId },
+    select: { id: true },
+  });
+  if (!watch) return null;
+
+  const bindings = await db.taskExecution.findMany({
+    where: {
+      targetType: TaskExecutionTargetType.WATCH,
+      targetId: watch.id,
+      actionType: { not: "CANCELLED" },
+      taskItemId: { not: null },
+    },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      metadataJson: true,
+      taskItem: { select: { note: true } },
+    },
+  });
+  const binding = bindings.find((item) =>
+    /workTypeKey:\s*(media-processing|publish)/i.test(
+      String(item.taskItem?.note ?? ""),
+    ),
+  );
+  if (!binding) return null;
+
+  const progress = resolveMediaWorkProgressFromMetadata(
+    asRecord(binding.metadataJson),
+  );
+  const runtime = getQueueItemWorkflowState({
+    metadataJson: binding.metadataJson,
+  });
+  const workTypeKey = /workTypeKey:\s*([a-z0-9-]+)/i.exec(
+    String(binding.taskItem?.note ?? ""),
+  )?.[1]?.toLowerCase() ?? null;
+
+  return {
+    bindingId: binding.id,
+    workTypeKey,
+    workflowState: runtime?.currentState ?? null,
+    parts: {
+      profile: Boolean(progress?.profile),
+      content: Boolean(progress?.content),
+      image: Boolean(progress?.image),
+      cover: Boolean(progress?.cover),
+    },
+  };
+}
+
 export async function saveWatchMediaWorkDraftFromWatch(
   input: {
     productId: string;

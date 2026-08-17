@@ -78,6 +78,7 @@ export { technicalAssessmentsResultSchema } from './technicalAssessments.result'
 export { technicalPartCatalogResultSchema } from './technicalPartCatalog.result';
 export { AcquisitionSpecJobLogResultSchema } from './AcquisitionSpecJobLog.result';
 export { MediaAssetResultSchema } from './MediaAsset.result';
+export { StorefrontHeroImageResultSchema } from './StorefrontHeroImage.result';
 export { MediaObjectResultSchema } from './MediaObject.result';
 export { MediaBindingResultSchema } from './MediaBinding.result';
 export { MediaOperationResultSchema } from './MediaOperation.result';

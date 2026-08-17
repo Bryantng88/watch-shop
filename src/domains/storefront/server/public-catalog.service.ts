@@ -1,4 +1,5 @@
 import { prisma, type DB } from "@/server/db/client";
+import { normalizeWatchTitleTerminology } from "@/domains/watch/shared/watch-title-sku.helpers";
 import {
   publicCatalogQuerySchema,
   publicWatchSlugSchema,
@@ -84,7 +85,7 @@ export function mapPublicWatchCard(row: PublicWatchListRow): PublicWatchCard {
   return {
     productId: row.id,
     slug: row.slug,
-    title: row.watch.watchContent?.titleOverride?.trim() || row.title,
+    title: normalizeWatchTitleTerminology(row.watch.watchContent?.titleOverride?.trim() || row.title),
     brand: row.brand?.name ?? null,
     image: mapImage(row, image),
     hoverImage: hoverImage ? mapImage(row, hoverImage) : null,
@@ -140,7 +141,7 @@ export function mapPublicWatchDetail(row: PublicWatchDetailRow): PublicWatchDeta
     gallery: [card.image, ...galleryImages.map((image) => mapImage(row, image))],
     specs: mapPublicSpecs(row),
     seo: {
-      title: content?.seoTitle?.trim() || card.title,
+      title: normalizeWatchTitleTerminology(content?.seoTitle?.trim() || card.title),
       description: content?.seoDescription?.trim() || content?.summary?.trim() || null,
     },
   };

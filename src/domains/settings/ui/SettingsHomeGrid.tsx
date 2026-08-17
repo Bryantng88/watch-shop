@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ComponentType } from "react";
-import { ArrowRight, Settings } from "lucide-react";
+import { ArrowRight, ImageIcon, Settings } from "lucide-react";
 
 type SettingsCard = {
   title: string;
@@ -12,7 +12,15 @@ type SettingsCard = {
   badge?: string;
 };
 
-const SETTINGS_CARDS: SettingsCard[] = [];
+const SETTINGS_CARDS: SettingsCard[] = [
+  {
+    title: "Hero storefront",
+    description: "Quản lý thư viện và chọn ảnh hero đang hiển thị trên trang đồng hồ.",
+    href: "/admin/settings/storefront-hero",
+    icon: ImageIcon,
+    badge: "Storefront",
+  },
+];
 
 export default function SettingsHomeGrid() {
   return (

@@ -78,6 +78,7 @@ export { technicalAssessmentsInputSchema } from './technicalAssessments.input';
 export { technicalPartCatalogInputSchema } from './technicalPartCatalog.input';
 export { AcquisitionSpecJobLogInputSchema } from './AcquisitionSpecJobLog.input';
 export { MediaAssetInputSchema } from './MediaAsset.input';
+export { StorefrontHeroImageInputSchema } from './StorefrontHeroImage.input';
 export { MediaObjectInputSchema } from './MediaObject.input';
 export { MediaBindingInputSchema } from './MediaBinding.input';
 export { MediaOperationInputSchema } from './MediaOperation.input';

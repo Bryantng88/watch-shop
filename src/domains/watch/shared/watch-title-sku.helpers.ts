@@ -11,6 +11,16 @@ function cleanText(value?: string | null) {
   return text || null;
 }
 
+export function normalizeWatchTitleTerminology(value?: string | null) {
+  return String(value ?? "")
+    .replace(/lên dây tay/giu, "Manual Winding")
+    .replace(/hand[- ]wound/giu, "Manual Winding")
+    .replace(/manual winding/giu, "Manual Winding")
+    .replace(/automatic/giu, "Automatic")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function normalizeMovementLabel(value?: string | null) {
   const text = cleanText(value)?.toUpperCase();
 
@@ -18,7 +28,7 @@ function normalizeMovementLabel(value?: string | null) {
     case "AUTOMATIC":
       return "Automatic";
     case "HAND_WOUND":
-      return "Hand-wound";
+      return "Manual Winding";
     case "QUARTZ":
       return "Quartz";
     case "SOLAR":
@@ -59,11 +69,11 @@ export function buildWatchTitleFromForm(
   const nickname = cleanText(values.spec.nickname);
   const movement = normalizeMovementLabel(values.basic.movementType);
 
-  return [yearText, brandName, model, reference, nickname, movement]
+  return normalizeWatchTitleTerminology([yearText, brandName, model, reference, nickname, movement]
     .filter(Boolean)
     .join(" ")
     .replace(/\s+/g, " ")
-    .trim();
+    .trim());
 }
 
 export function buildWatchSkuPrefix(brandName?: string | null) {

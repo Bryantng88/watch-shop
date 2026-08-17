@@ -58,6 +58,11 @@ type Props = {
   canEditPrice?: boolean;
   canReviewContent?: boolean;
   initialMediaWorkDone?: Record<MediaWorkPart, boolean> | null;
+  initialMediaWorkspaceContext?: {
+    bindingId: string;
+    workTypeKey: string | null;
+    workflowState: string | null;
+  } | null;
   postTargets?: Array<{
     id: string;
     name: string;
@@ -358,6 +363,7 @@ export default function WatchFormClient({
   canEditPrice = false,
   canReviewContent = false,
   initialMediaWorkDone = null,
+  initialMediaWorkspaceContext = null,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -387,13 +393,17 @@ export default function WatchFormClient({
     Record<MediaWorkPart, boolean>
   >({
     profile:
-      initialMediaWorkDone?.profile ??
-      searchParams.get("mediaProfileDone") === "1",
+      Boolean(initialMediaWorkDone?.profile) ||
+      searchParams.get("mediaProfileDone") === "1" ||
+      String(initialValues.specStatus).toUpperCase() === "READY",
     content:
-      initialMediaWorkDone?.content ??
-      searchParams.get("mediaContentDone") === "1",
+      Boolean(initialMediaWorkDone?.content) ||
+      searchParams.get("mediaContentDone") === "1" ||
+      String(initialValues.contentReviewStatus).toUpperCase() === "APPROVED",
     image:
-      initialMediaWorkDone?.image ?? searchParams.get("mediaImageDone") === "1",
+      Boolean(initialMediaWorkDone?.image) ||
+      searchParams.get("mediaImageDone") === "1" ||
+      String(initialValues.imageReviewStatus).toUpperCase() === "APPROVED",
     cover:
       Boolean(initialMediaWorkDone?.cover) ||
       searchParams.get("mediaCoverDone") === "1" ||
@@ -435,9 +445,18 @@ export default function WatchFormClient({
     (isMediaMode
       ? `/admin/watches/${initialValues.productId}`
       : "/admin/watches");
-  const workspaceBindingId = searchParams.get("workspaceBindingId") || "";
-  const initialWorkspaceState = searchParams.get("workspaceState") || "";
+  const workspaceBindingId =
+    searchParams.get("workspaceBindingId") ||
+    initialMediaWorkspaceContext?.bindingId ||
+    "";
+  const initialWorkspaceState =
+    searchParams.get("workspaceState") ||
+    initialMediaWorkspaceContext?.workflowState ||
+    "";
   const [workspaceState, setWorkspaceState] = useState(initialWorkspaceState);
+  const isMediaProgressContext =
+    fromMediaWorkspace ||
+    initialMediaWorkspaceContext?.workTypeKey === "media-processing";
   const isMediaWorkspaceDone = workspaceState === "DONE";
   const isMediaWorkspaceReturned = workspaceState === "RETURNED";
   const canApproveMediaWorkspace =
@@ -495,7 +514,7 @@ export default function WatchFormClient({
   }, [initialValues.productId, isMediaMode, notify]);
 
   const saveMediaWorkspacePart = async (part: MediaWorkPart) => {
-    if (!isMediaMode || !fromMediaWorkspace || mediaSubmitPending) return;
+    if (!isMediaMode || !isMediaProgressContext || mediaSubmitPending) return;
 
     const nextDone = true;
     const submitValues: WatchFormValues = {
@@ -706,11 +725,27 @@ export default function WatchFormClient({
     next: ReviewStatusChange,
   ) => {
     setFormValues((prev) => patchReviewState(prev, target, next));
+    const done = next.status === "APPROVED";
+    setMediaWorkDone((current) => ({ ...current, [target]: done }));
 
     setSavedValues((prev) => {
       const nextSaved = patchReviewState(prev, target, next);
       return nextSaved;
     });
+
+    if (isMediaProgressContext && workspaceBindingId) {
+      void saveWatchMediaWorkDraftFromWatchAction({
+        productId: valuesRef.current.productId || initialValues.productId,
+        bindingId: workspaceBindingId,
+        parts: { [target]: done },
+        note: `${target} review status synchronized from Watch media modal: ${next.status}.`,
+      }).catch((error: unknown) => {
+        notify.error({
+          title: "Chưa đồng bộ được tiến độ Media",
+          message: errorMessage(error, "Hãy tải lại modal để đồng bộ trạng thái mới nhất."),
+        });
+      });
+    }
   };
 
   const submitReviewTarget = async (target: "content" | "image") => {
@@ -1561,7 +1596,7 @@ export default function WatchFormClient({
   };
 
   const mediaDoneAction = (part: MediaWorkPart) =>
-    fromMediaWorkspace ? (
+    isMediaProgressContext ? (
       <MediaWorkDoneButton
         label={
           MEDIA_WORK_PARTS.find((item) => item.key === part)?.label ?? part
@@ -1578,7 +1613,7 @@ export default function WatchFormClient({
     updateMedia({ coverImage: item });
     setMediaWorkDone((current) => ({ ...current, cover: Boolean(item) }));
 
-    if (fromMediaWorkspace && workspaceBindingId) {
+    if (isMediaProgressContext && workspaceBindingId) {
       void saveWatchMediaWorkDraftFromWatchAction({
         productId: values.productId,
         bindingId: workspaceBindingId,
@@ -1717,7 +1752,11 @@ export default function WatchFormClient({
         </>
       )}
     </>
-  ) : null;
+  ) : (
+    <span className="inline-flex h-9 items-center rounded-xl bg-sky-50 px-3 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
+      Bảo trì media · không đổi stage
+    </span>
+  );
 
   const basicSection = (
     <WatchBasicSection
@@ -1876,7 +1915,7 @@ export default function WatchFormClient({
                   key: "cover" as const,
                   title: "Cover storefront",
                   subtitle: "Ảnh đại diện storefront",
-                  done: mediaWorkDone.cover,
+                  done: mediaWorkDone.cover || Boolean(values.media.coverImage),
                   icon: Images,
                 },
               ].map((item) => {
