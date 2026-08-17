@@ -1,6 +1,7 @@
 export const ACQUISITION_LIST_PROJECTION_KEY = "acquisition-list";
-// v4 refreshes quantity-aware totals and multi-source trade-in rows.
-export const ACQUISITION_LIST_PROJECTION_VERSION = 4;
+// v5 rebuilds stale financial aggregates using the source-item fallback and
+// refreshes rows that were persisted before quantity-aware totals were fixed.
+export const ACQUISITION_LIST_PROJECTION_VERSION = 5;
 
 export const ACQUISITION_LIST_PROJECTION_SOURCE_EVENTS = [
   "acquisition.created",
