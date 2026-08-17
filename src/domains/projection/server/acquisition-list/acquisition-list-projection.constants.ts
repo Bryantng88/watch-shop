@@ -1,7 +1,7 @@
 export const ACQUISITION_LIST_PROJECTION_KEY = "acquisition-list";
-// v5 rebuilds stale financial aggregates using the source-item fallback and
-// refreshes rows that were persisted before quantity-aware totals were fixed.
-export const ACQUISITION_LIST_PROJECTION_VERSION = 5;
+// v6 persists financial fields during rebuild; previous versions invoked the
+// source reader without includeFinancials and therefore cached null totals.
+export const ACQUISITION_LIST_PROJECTION_VERSION = 6;
 
 export const ACQUISITION_LIST_PROJECTION_SOURCE_EVENTS = [
   "acquisition.created",
