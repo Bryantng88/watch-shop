@@ -5,7 +5,10 @@ import {
     getWatchEditDetail,
     getWatchMediaEditDetail,
 } from "@/domains/watch/server/detail/watch-detail.service";
-import { getWatchMediaWorkProgressFromQueueItem } from "@/domains/watch/server";
+import {
+    getWatchMediaWorkProgressFromQueueItem,
+    getWatchMediaWorkspaceContext,
+} from "@/domains/watch/server";
 import {
     listWatchEditOptions,
     listWatchMediaEditOptions,
@@ -138,7 +141,7 @@ export default async function WatchEditPage({
         requirePermission(PERMISSIONS.PRODUCT_UPDATE),
     );
 
-    const [detail, options, mediaWorkDone] = isEmbeddedMediaMode
+    const [detail, options, mediaWorkspaceContext] = isEmbeddedMediaMode
         ? await Promise.all([
             perfStep("watch-edit-page", "getWatchMediaEditDetail", () =>
                 getWatchMediaEditDetail(id),
@@ -146,11 +149,18 @@ export default async function WatchEditPage({
             perfStep("watch-edit-page", "listWatchMediaEditOptions", () =>
                 listWatchMediaEditOptions(),
             ),
-            workspaceBindingId
-                ? perfStep("watch-edit-page", "getMediaWorkProgress", () =>
-                    getWatchMediaWorkProgressFromQueueItem(workspaceBindingId),
-                )
-                : Promise.resolve(null),
+            perfStep("watch-edit-page", "getMediaWorkspaceContext", async () => {
+                if (workspaceBindingId) {
+                    const parts = await getWatchMediaWorkProgressFromQueueItem(workspaceBindingId);
+                    return {
+                        bindingId: workspaceBindingId,
+                        workTypeKey: query.from === "publish-workspace" ? "publish" : "media-processing",
+                        workflowState: typeof query.workspaceState === "string" ? query.workspaceState : null,
+                        parts,
+                    };
+                }
+                return getWatchMediaWorkspaceContext(id);
+            }),
         ])
         : await Promise.all([
             perfStep("watch-edit-page", "getWatchEditDetail", () =>
@@ -198,7 +208,8 @@ export default async function WatchEditPage({
                 canViewCost={canViewCost(user)}
                 canEditPrice={canEditPrice(user)}
                 canReviewContent={canApproveProduct(user)}
-                initialMediaWorkDone={mediaWorkDone}
+                initialMediaWorkDone={mediaWorkspaceContext?.parts ?? null}
+                initialMediaWorkspaceContext={mediaWorkspaceContext}
             />
         </div>
     );

@@ -73,6 +73,7 @@ export { technicalAssessmentsModelSchema } from './technicalAssessments.pure';
 export { technicalPartCatalogModelSchema } from './technicalPartCatalog.pure';
 export { AcquisitionSpecJobLogModelSchema } from './AcquisitionSpecJobLog.pure';
 export { MediaAssetModelSchema } from './MediaAsset.pure';
+export { StorefrontHeroImageModelSchema } from './StorefrontHeroImage.pure';
 export { MediaObjectModelSchema } from './MediaObject.pure';
 export { MediaBindingModelSchema } from './MediaBinding.pure';
 export { MediaOperationModelSchema } from './MediaOperation.pure';

@@ -23,6 +23,7 @@ export type EventTriggerTransitionSkipReason =
   | "NO_WORKFLOW_RUNTIME"
   | "WORKFLOW_DEFINITION_MISSING"
   | "ALREADY_APPLIED"
+  | "TERMINAL_WORKFLOW_REQUIRES_EXPLICIT_RECALL"
   | "NO_MATCHING_TRANSITION";
 
 export type ApplyEventTriggerToQueueItemInput = {
@@ -586,6 +587,18 @@ export async function applyEventTriggerToQueueItem(
   }
 
   if (isPublishWorkflow(runtime.workflowKey)) {
+    // A completed Publish item is terminal. Review/media maintenance may still
+    // emit content/image events, but those events must never silently reopen a
+    // watch that was explicitly marked as posted. Reopening is a manual
+    // `recall-media` transition and is handled separately below.
+    if (runtime.currentState === "DONE") {
+      return {
+        applied: false,
+        bindingId,
+        reason: "TERMINAL_WORKFLOW_REQUIRES_EXPLICIT_RECALL",
+      };
+    }
+
     const publishEvents = new Set([
       "watch.media.ready_for_publish",
       "watch.publish.assets.downloaded",

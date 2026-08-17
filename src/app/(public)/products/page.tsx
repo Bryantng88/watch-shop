@@ -4,7 +4,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 
 import { publicCatalogQuerySchema, type PublicCatalogQuery } from "@/domains/storefront/contracts";
-import { getPublicCatalogFacets, listPublicWatches } from "@/domains/storefront/server";
+import { getActiveStorefrontHero, getPublicCatalogFacets, listPublicWatches } from "@/domains/storefront/server";
 import CatalogFilters from "@/domains/storefront/ui/CatalogFilters";
 import CatalogBanner from "@/domains/storefront/ui/CatalogBanner";
 import CatalogSearch from "@/domains/storefront/ui/CatalogSearch";
@@ -34,7 +34,16 @@ function nextPageHref(raw: RawSearchParams, cursor: string) {
     if (key !== "cursor" && value !== "") params.set(key, String(value));
   }
   params.set("cursor", cursor);
-  return `/products?${params.toString()}`;
+  return `/products?${params.toString()}#catalog`;
+}
+
+function initialPageHref(raw: RawSearchParams) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(scalarSearchParams(raw))) {
+    if (key !== "cursor" && value !== "") params.set(key, String(value));
+  }
+  const query = params.toString();
+  return `${query ? `/products?${query}` : "/products"}#catalog`;
 }
 
 export default async function ProductsPage({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
@@ -46,8 +55,9 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const query: PublicCatalogQuery = parsedQuery.audience || parsedQuery.collection
     ? parsedQuery
     : { ...parsedQuery, audience: "MEN" };
-  const [result, facets] = await Promise.all([listPublicWatches(query), getPublicCatalogFacets()]);
+  const [result, facets, hero] = await Promise.all([listPublicWatches(query), getPublicCatalogFacets(), getActiveStorefrontHero()]);
   const activeFilterCount = [query.brand, query.audience, query.collection, query.style, query.size, query.movement, query.caseMaterial, query.priceMax !== undefined].filter(Boolean).length;
+  const isExpandedPage = typeof raw.cursor === "string" && Boolean(raw.cursor.trim());
 
   return (
     <div className="mx-auto max-w-[1440px] px-4 pb-10 pt-8 sm:px-6 lg:px-10 lg:pt-12">
@@ -55,7 +65,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         <Link href="/products">{locale === "en" ? "Home" : "Trang chủ"}</Link> <span className="px-2">/</span> <span className="text-[#474541]">{locale === "en" ? "Watches" : "Đồng hồ"}</span>
       </nav>
 
-      <CatalogBanner />
+      <CatalogBanner hero={hero} />
 
       {invalidFilters ? (
         <div role="alert" className="mt-6 border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -91,11 +101,18 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
             </div>
           )}
 
-          {result.pageInfo.nextCursor ? (
-            <div className="mt-14 flex justify-center">
-              <Link href={nextPageHref(raw, result.pageInfo.nextCursor)} className="storefront-focus grid min-h-12 place-items-center border border-[#3d3b38] px-8 text-xs uppercase tracking-[0.15em] hover:bg-[#30302e] hover:text-white">
-                Xem thêm đồng hồ
-              </Link>
+          {result.pageInfo.nextCursor || isExpandedPage ? (
+            <div className="mt-14 flex flex-wrap justify-center gap-3">
+              {isExpandedPage ? (
+                <Link href={initialPageHref(raw)} scroll={false} className="storefront-focus grid min-h-12 place-items-center border border-[#aaa59d] px-8 text-xs uppercase tracking-[0.15em] text-[#55514b] hover:border-[#3d3b38] hover:text-black">
+                  {locale === "en" ? "Collapse list" : "Thu gọn danh sách"}
+                </Link>
+              ) : null}
+              {result.pageInfo.nextCursor ? (
+                <Link href={nextPageHref(raw, result.pageInfo.nextCursor)} className="storefront-focus grid min-h-12 place-items-center border border-[#3d3b38] px-8 text-xs uppercase tracking-[0.15em] hover:bg-[#30302e] hover:text-white">
+                  {locale === "en" ? "View more watches" : "Xem thêm đồng hồ"}
+                </Link>
+              ) : null}
             </div>
           ) : null}
         </section>

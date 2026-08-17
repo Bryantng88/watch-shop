@@ -25,14 +25,46 @@ const slides = [
   },
 ];
 
-export default function CatalogBanner() {
+type HeroImage = {
+  url: string;
+  altText: string | null;
+  width: number;
+  height: number;
+  focalX: number;
+  focalY: number;
+  overlayOpacity: number;
+} | null;
+
+export default function CatalogBanner({ hero }: { hero?: HeroImage }) {
   const [active, setActive] = useState(0);
   const { locale } = useStorefrontLocale();
 
   useEffect(() => {
+    if (hero) return;
     const timer = window.setInterval(() => setActive((current) => (current + 1) % slides.length), 5500);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [hero]);
+
+  if (hero) {
+    return (
+      <section className="relative mt-6 min-h-[300px] overflow-hidden rounded-[5px] border border-[#252525] bg-[#111] sm:min-h-[360px] lg:min-h-[420px]" aria-label={hero.altText || "Giới thiệu bộ sưu tập đồng hồ"}>
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-cover transition-transform duration-700"
+          style={{ backgroundImage: `url("${hero.url}")`, backgroundPosition: `${hero.focalX}% ${hero.focalY}%` }}
+        />
+        <div aria-hidden="true" className="absolute inset-0 bg-black" style={{ opacity: hero.overlayOpacity / 100 }} />
+        <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent" />
+        <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/15" />
+        <div className="relative flex min-h-[300px] max-w-2xl flex-col justify-end px-6 py-8 text-white sm:min-h-[360px] sm:px-10 sm:py-10 lg:min-h-[420px] lg:px-14 lg:py-12">
+          <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-white/75">{locale === "en" ? "Curated with feeling" : "Tuyển chọn bằng cảm xúc"}</p>
+          <h1 className="storefront-display mt-3 text-3xl leading-[1.05] drop-shadow-sm sm:text-4xl lg:text-5xl">{locale === "en" ? "Find the watch that feels like yours" : "Nơi bạn thấy chiếc đồng hồ dành cho mình"}</h1>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-white/80 sm:text-base">{locale === "en" ? "Vintage and pre-owned watches, selected for character and presented with honest details." : "Những chiếc đồng hồ vintage và pre-owned được chọn bởi cá tính, câu chuyện và vẻ đẹp vượt thời gian."}</p>
+          <Link href="/request" className="storefront-focus mt-6 inline-flex min-h-11 w-fit items-center border border-white/70 bg-black/20 px-6 text-[10px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur-sm transition hover:bg-white hover:text-black">{locale === "en" ? "Discover now" : "Khám phá ngay"}</Link>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="relative mt-6 min-h-[142px] overflow-hidden rounded-[5px] border border-[#d9dcdd] bg-[#f0f2f3] px-7 py-6 sm:px-8 lg:min-h-[148px] lg:px-9" aria-label="Giới thiệu bộ sưu tập">

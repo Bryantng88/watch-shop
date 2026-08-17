@@ -14,7 +14,7 @@ const styleLabels: Record<NonNullable<PublicCatalogQuery["style"]>, string> = {
   CLASSIC: "Classic", MINIMALIST: "Minimalist", LUXURY: "Luxury", RETRO: "Retro", FUTURISTIC: "Futuristic",
 };
 const movementLabels: Record<NonNullable<PublicCatalogQuery["movement"]>, string> = {
-  AUTOMATIC: "Automatic", HAND_WOUND: "Hand-wound", QUARTZ: "Quartz", SOLAR: "Solar",
+  AUTOMATIC: "Automatic", HAND_WOUND: "Manual Winding", QUARTZ: "Quartz", SOLAR: "Solar",
   KINETIC: "Kinetic", MECHAQUARTZ: "Mechaquartz", SPRING_DRIVE: "Spring Drive", HYBRID: "Hybrid",
 };
 const materialLabels: Record<NonNullable<PublicCatalogQuery["caseMaterial"]>, string> = {

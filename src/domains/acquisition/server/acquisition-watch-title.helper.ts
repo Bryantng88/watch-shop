@@ -9,7 +9,7 @@ function normalizeMovementLabel(value?: string | null) {
         case "AUTOMATIC":
             return "Automatic";
         case "HAND_WOUND":
-            return "Hand-wound";
+            return "Manual Winding";
         case "QUARTZ":
             return "Quartz";
         case "SOLAR":

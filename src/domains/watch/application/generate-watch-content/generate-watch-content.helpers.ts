@@ -81,8 +81,8 @@ export function getSiteChannelHookPhrase(value?: string | null) {
 
 function movementLabel(value?: string | null) {
   const map: Record<string, string> = {
-    AUTOMATIC: "automatic",
-    HAND_WOUND: "lên dây tay",
+    AUTOMATIC: "Automatic",
+    HAND_WOUND: "Manual Winding",
     QUARTZ: "quartz",
     SOLAR: "solar",
     KINETIC: "kinetic",

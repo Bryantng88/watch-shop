@@ -1,0 +1,66 @@
+import * as z from 'zod';
+export const StorefrontHeroImageAggregateResultSchema = z.object({  _count: z.object({
+    id: z.number(),
+    storageKey: z.number(),
+    derivativeKey: z.number(),
+    originalFileName: z.number(),
+    altText: z.number(),
+    mimeType: z.number(),
+    sizeBytes: z.number(),
+    width: z.number(),
+    height: z.number(),
+    focalX: z.number(),
+    focalY: z.number(),
+    overlayOpacity: z.number(),
+    isActive: z.number(),
+    createdAt: z.number(),
+    updatedAt: z.number()
+  }).optional(),
+  _sum: z.object({
+    sizeBytes: z.number().nullable(),
+    width: z.number().nullable(),
+    height: z.number().nullable(),
+    focalX: z.number().nullable(),
+    focalY: z.number().nullable(),
+    overlayOpacity: z.number().nullable()
+  }).nullable().optional(),
+  _avg: z.object({
+    sizeBytes: z.number().nullable(),
+    width: z.number().nullable(),
+    height: z.number().nullable(),
+    focalX: z.number().nullable(),
+    focalY: z.number().nullable(),
+    overlayOpacity: z.number().nullable()
+  }).nullable().optional(),
+  _min: z.object({
+    id: z.string().nullable(),
+    storageKey: z.string().nullable(),
+    derivativeKey: z.string().nullable(),
+    originalFileName: z.string().nullable(),
+    altText: z.string().nullable(),
+    mimeType: z.string().nullable(),
+    sizeBytes: z.number().int().nullable(),
+    width: z.number().int().nullable(),
+    height: z.number().int().nullable(),
+    focalX: z.number().int().nullable(),
+    focalY: z.number().int().nullable(),
+    overlayOpacity: z.number().int().nullable(),
+    createdAt: z.date().nullable(),
+    updatedAt: z.date().nullable()
+  }).nullable().optional(),
+  _max: z.object({
+    id: z.string().nullable(),
+    storageKey: z.string().nullable(),
+    derivativeKey: z.string().nullable(),
+    originalFileName: z.string().nullable(),
+    altText: z.string().nullable(),
+    mimeType: z.string().nullable(),
+    sizeBytes: z.number().int().nullable(),
+    width: z.number().int().nullable(),
+    height: z.number().int().nullable(),
+    focalX: z.number().int().nullable(),
+    focalY: z.number().int().nullable(),
+    overlayOpacity: z.number().int().nullable(),
+    createdAt: z.date().nullable(),
+    updatedAt: z.date().nullable()
+  }).nullable().optional()});

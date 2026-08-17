@@ -1887,6 +1887,26 @@ model MediaAsset {
   @@index([isMissing, parentPrefix])
 }
 
+model StorefrontHeroImage {
+  id               String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  storageKey       String   @unique
+  derivativeKey    String?
+  originalFileName String
+  altText          String?
+  mimeType         String
+  sizeBytes        Int
+  width            Int
+  height           Int
+  focalX           Int      @default(50)
+  focalY           Int      @default(50)
+  overlayOpacity   Int      @default(55)
+  isActive         Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([isActive, updatedAt])
+}
+
 /// Canonical identity for one physical media object. Unlike legacy MediaAsset,
 /// this identity does not change when a file is selected, attached, or published.
 model MediaObject {
