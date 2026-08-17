@@ -254,12 +254,15 @@ function publicWatchFilterWhere(query: PublicCatalogQuery): Prisma.ProductWhereI
     and.push({ watch: { is: { style: query.style } } });
   }
 
-  if (query.audience) {
+  if (query.audience && query.audience !== "ALL") {
     and.push({ watch: { is: { audienceSegment: query.audience } } });
   }
 
   if (query.collection === "COLLECTIBLE") {
     and.push({ watch: { is: { isCollectible: true } } });
+  }
+  if (query.collection === "STANDARD") {
+    and.push({ watch: { is: { isCollectible: false } } });
   }
 
   if (query.movement) {
