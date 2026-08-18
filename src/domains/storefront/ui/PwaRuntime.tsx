@@ -21,7 +21,10 @@ export default function PwaRuntime() {
   const online = useOnlineStatus();
   useEffect(() => {
     if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => undefined);
+      navigator.serviceWorker
+        .register("/sw.js", { scope: "/", updateViaCache: "none" })
+        .then((registration) => registration.update())
+        .catch(() => undefined);
     }
   }, []);
   if (online) return null;

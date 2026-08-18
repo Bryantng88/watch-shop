@@ -1,6 +1,6 @@
-const CACHE_NAME = "watch-shop-shell-v1";
+const CACHE_NAME = "watch-shop-shell-v2";
 const OFFLINE_URL = "/offline";
-const PRECACHE = [OFFLINE_URL, "/storefront-icon.svg", "/storefront-maskable.svg"];
+const PRECACHE = [OFFLINE_URL, "/vintic-v.svg", "/storefront-maskable.svg"];
 const isPublicDocument = (pathname) => pathname === "/" || pathname === "/request" || pathname === "/offline" || pathname.startsWith("/products");
 
 self.addEventListener("install", (event) => {

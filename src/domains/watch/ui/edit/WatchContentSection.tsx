@@ -216,19 +216,21 @@ export default function WatchContentSection({
             collapsible={collapsible}
             surface={surface}
             actions={
-                hideReviewActions ? completionAction :
-                <SectionReviewActions
-                    productId={productId}
-                    target="content"
-                    status={contentReviewStatus}
-                    reviewNote={contentReviewNote}
-                    canReviewContent={canReviewContent}
-                    onBeforeSubmit={() => onBeforeSubmitReview?.("content") ?? Promise.resolve(true)} isFormDirty={isFormDirty}
-                    onStatusChange={(next) => {
-                        onReviewStatusChange?.(next);
-                    }}
-                    watchId={watchId || watchValues.watchId}
-                />
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                    {hideReviewActions ? completionAction : null}
+                    <SectionReviewActions
+                        productId={productId}
+                        target="content"
+                        status={contentReviewStatus}
+                        reviewNote={contentReviewNote}
+                        canReviewContent={canReviewContent}
+                        onBeforeSubmit={() => onBeforeSubmitReview?.("content") ?? Promise.resolve(true)} isFormDirty={isFormDirty}
+                        onStatusChange={(next) => {
+                            onReviewStatusChange?.(next);
+                        }}
+                        watchId={watchId || watchValues.watchId}
+                    />
+                </div>
             }
         >
             <div className="space-y-5">

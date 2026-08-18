@@ -464,8 +464,9 @@ export default function WatchImageSection({
                 collapsible={collapsible}
                 surface={surface}
                 actions={
-                    !showGallery ? null : hideReviewActions ? mediaActions :
+                    !showGallery ? null :
                     <div className="flex flex-wrap items-center justify-end gap-2">
+                        {hideReviewActions ? mediaActions : null}
                         <TaskSignalIcon
                             title={taskPending ? "Đang tải task..." : "Giao task hình ảnh"}
                             onClick={openImageTaskModal}
