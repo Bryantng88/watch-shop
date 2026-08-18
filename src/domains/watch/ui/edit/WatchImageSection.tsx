@@ -20,6 +20,11 @@ import TaskQuickCreateModal, {
 } from "@/domains/task/ui/quick-create/TaskQuickCreateModal";
 import { TaskSignalIcon } from "@/domains/shared/ui/icons";
 import { waitForOperationProjectionDeliveries } from "@/domains/coordination/ui/operation-delivery.client";
+import {
+    DEFAULT_PHOTOROOM_ADJUSTMENT,
+    type PhotoRoomAdjustment,
+} from "@/domains/watch/shared/photoroom-adjustment";
+import PhotoRoomAdjustmentDialog from "./PhotoRoomAdjustmentDialog";
 type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
 type MediaItemWithAliases = PickedMediaItem & {
@@ -55,6 +60,8 @@ type Props = {
     saleStage?: string | null;
     serviceStage?: string | null;
     salePrice?: string | null;
+    showPrice?: boolean;
+    storefrontVisible?: boolean | null;
     onStorefrontSlugChange?: (slug: string) => void;
     isFormDirty?: boolean;
     openTaskCount?: number;
@@ -121,6 +128,8 @@ export default function WatchImageSection({
     saleStage,
     serviceStage,
     salePrice,
+    showPrice = true,
+    storefrontVisible,
     onStorefrontSlugChange,
     imageReviewStatus,
     imageReviewNote,
@@ -138,6 +147,15 @@ export default function WatchImageSection({
 }: Props) {
     const showGallery = sectionMode !== "cover";
     const showCover = sectionMode !== "gallery";
+    const initiallyVisibleByStandardFlow =
+        Boolean(getMediaKey(coverImage ?? ({} as PickedMediaItem))) &&
+        Boolean(storefrontSlug?.trim()) &&
+        ["AVAILABLE", "HOLD", "SOLD"].includes(String(productStatus ?? "").toUpperCase()) &&
+        ["READY", "HOLD", "SOLD"].includes(String(saleStage ?? "").toUpperCase()) &&
+        ["NOT_REQUIRED", "DONE"].includes(String(serviceStage ?? "").toUpperCase()) &&
+        String(contentReviewStatus ?? "").toUpperCase() === "APPROVED" &&
+        String(imageReviewStatus ?? "").toUpperCase() === "APPROVED" &&
+        (!showPrice || Number(salePrice ?? 0) > 0);
     const dialog = useAppDialog();
     const notify = useNotify();
     const [taskModalOpen, setTaskModalOpen] = useState(false);
@@ -146,9 +164,21 @@ export default function WatchImageSection({
     const [coverPickerVersion, setCoverPickerVersion] = useState(0);
     const [pendingCoverKey, setPendingCoverKey] = useState<string | null>(null);
     const [coverPending, setCoverPending] = useState(false);
+    const [publishPending, setPublishPending] = useState(false);
+    const [quickPublished, setQuickPublished] = useState(
+        storefrontVisible === true || (storefrontVisible == null && initiallyVisibleByStandardFlow),
+    );
     const [photoRoomPending, setPhotoRoomPending] = useState(false);
+    const [photoRoomAdjustmentOpen, setPhotoRoomAdjustmentOpen] = useState(false);
+    const [photoRoomSourceKey, setPhotoRoomSourceKey] = useState<string | null>(null);
+    const [hasPhotoRoomResult, setHasPhotoRoomResult] = useState(() =>
+        getMediaKey(coverImage ?? ({} as PickedMediaItem)).includes("photoroom-"),
+    );
+    const [photoRoomAdjustment, setPhotoRoomAdjustment] = useState<PhotoRoomAdjustment>(DEFAULT_PHOTOROOM_ADJUSTMENT);
     const [sharpPending, setSharpPending] = useState(false);
     const [sharpCutoutKey, setSharpCutoutKey] = useState<string | null>(null);
+    const [localLayoutBaseKey, setLocalLayoutBaseKey] = useState<string | null>(null);
+    const [localLayoutBaseAdjustment, setLocalLayoutBaseAdjustment] = useState<PhotoRoomAdjustment | null>(null);
     const [taskUsers, setTaskUsers] = useState<TaskUserOption[]>([]);
     const [currentUserId, setCurrentUserId] = useState<string>("");
     const [taskContext, setTaskContext] = useState<TaskQuickCreateContext | null>(null);
@@ -309,8 +339,50 @@ export default function WatchImageSection({
         }
     };
 
-    const handlePhotoRoomProcess = async () => {
-        const storageKey = (pendingCoverKey || currentCoverKey).trim();
+    const handleQuickPublish = async (nextPublished: boolean) => {
+        if (publishPending || isFormDirty) return;
+        const confirmed = await dialog.confirm({
+            title: nextPublished ? "Đưa Watch lên storefront?" : "Ẩn Watch khỏi storefront?",
+            message: nextPublished
+                ? `Watch sẽ hiển thị ngay với title, spec và Cover hiện tại. Giá: ${showPrice ? "hiển thị" : "Liên hệ"}. Content và gallery có thể bổ sung sau.`
+                : "Watch sẽ được ẩn khỏi storefront. Dữ liệu title, spec, content và gallery vẫn được giữ nguyên.",
+            confirmText: nextPublished ? "Đưa lên storefront" : "Ẩn khỏi storefront",
+            cancelText: "Hủy",
+        });
+        if (!confirmed) return;
+
+        setPublishPending(true);
+        try {
+            const res = await fetch(`/api/admin/watches/${productId}/storefront-publish`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ showPrice, published: nextPublished }),
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok) throw new Error(json?.error || "Không thể đưa Watch lên storefront.");
+            setQuickPublished(nextPublished);
+            notify.success({
+                title: nextPublished ? "Đã đưa lên storefront" : "Đã ẩn khỏi storefront",
+                message: nextPublished
+                    ? (showPrice ? "Storefront đang hiển thị giá." : "Storefront đang hiển thị Liên hệ.")
+                    : "Watch không còn hiển thị trên storefront.",
+            });
+        } catch (error) {
+            notify.error({
+                title: "Chưa thể đưa lên storefront",
+                message: error instanceof Error ? error.message : "Có lỗi xảy ra.",
+            });
+        } finally {
+            setPublishPending(false);
+        }
+    };
+
+    const handlePhotoRoomProcess = async (adjustment?: PhotoRoomAdjustment) => {
+        const storageKey = (
+            adjustment
+                ? photoRoomSourceKey || pendingCoverKey || currentCoverKey
+                : pendingCoverKey || currentCoverKey
+        ).trim();
         if (!storageKey || coverPending || photoRoomPending) return;
 
         setPhotoRoomPending(true);
@@ -318,7 +390,11 @@ export default function WatchImageSection({
             const res = await fetch(`/api/admin/watches/${productId}/storefront-image/photoroom`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ storageKey }),
+                body: JSON.stringify({
+                    storageKey,
+                    adjustment: adjustment ?? null,
+                    processingKind: hasPhotoRoomResult ? "REPROCESS" : "INITIAL",
+                }),
             });
             const json = await res.json().catch(() => null);
             if (!res.ok) {
@@ -331,8 +407,17 @@ export default function WatchImageSection({
 
             const outputKey = String(json?.data?.storageKey ?? "").trim();
             if (!outputKey) throw new Error("PhotoRoom không trả về khóa ảnh kết quả.");
-            setSharpCutoutKey(String(json?.data?.cutoutStorageKey ?? "").trim() || null);
+            setPhotoRoomSourceKey(String(json?.data?.sourceStorageKey ?? storageKey).trim());
+            setHasPhotoRoomResult(true);
+            const cutoutStorageKey = String(json?.data?.cutoutStorageKey ?? "").trim();
+            setSharpCutoutKey(cutoutStorageKey || null);
             setPendingCoverKey(outputKey);
+            if (adjustment) {
+                setPhotoRoomAdjustment(adjustment);
+                setLocalLayoutBaseKey(cutoutStorageKey || null);
+                setLocalLayoutBaseAdjustment(cutoutStorageKey ? adjustment : null);
+                setPhotoRoomAdjustmentOpen(false);
+            }
             setCoverPickerVersion((version) => version + 1);
             notify.success({
                 title: "PhotoRoom đã xử lý xong",
@@ -345,6 +430,41 @@ export default function WatchImageSection({
             });
         } finally {
             setPhotoRoomPending(false);
+        }
+    };
+
+    const handleLocalAdjustment = async (adjustment: PhotoRoomAdjustment) => {
+        if (!localLayoutBaseKey || !localLayoutBaseAdjustment || sharpPending || photoRoomPending) return;
+        setSharpPending(true);
+        try {
+            const res = await fetch(`/api/admin/watches/${productId}/storefront-image/sharp`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    storageKey: localLayoutBaseKey,
+                    adjustment,
+                    baseAdjustment: localLayoutBaseAdjustment,
+                }),
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok) throw new Error(json?.error || "Không dựng lại được bố cục local.");
+            const outputKey = String(json?.data?.storageKey ?? "").trim();
+            if (!outputKey) throw new Error("Sharp không trả về khóa ảnh kết quả.");
+            setPendingCoverKey(outputKey);
+            setPhotoRoomAdjustment(adjustment);
+            setPhotoRoomAdjustmentOpen(false);
+            setCoverPickerVersion((version) => version + 1);
+            notify.success({
+                title: "Đã dựng preview local",
+                message: "Kích thước, xoay, vị trí và nền được dựng bằng Sharp, không sử dụng quota PhotoRoom.",
+            });
+        } catch (error) {
+            notify.error({
+                title: "Xử lý local thất bại",
+                message: error instanceof Error ? error.message : "Có lỗi khi dựng lại bố cục local.",
+            });
+        } finally {
+            setSharpPending(false);
         }
     };
 
@@ -523,14 +643,14 @@ export default function WatchImageSection({
                     ) : null}
 
                     {showCover ? <div className={[
-                        "rounded-3xl border border-emerald-200 bg-emerald-50/60 p-4",
+                        "rounded-3xl border border-slate-200 bg-white p-4 shadow-sm",
                         "",
                     ].join(" ")}>
-                        <div className="mb-3">
+                        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
                             <div className="text-sm font-semibold text-slate-900">Ảnh Cover storefront</div>
                             <div className="text-sm text-slate-500">Chọn đúng một ảnh từ kho Cover của phân khúc Watch.</div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-3">
+                        <div className="grid gap-4 md:grid-cols-[168px_minmax(0,1fr)] md:items-stretch">
                             <button
                                 type="button"
                                 onClick={() => coverPreviewSrc
@@ -538,7 +658,7 @@ export default function WatchImageSection({
                                     : setCoverPickerOpen(true)}
                                 disabled={coverPending || photoRoomPending || sharpPending}
                                 aria-label={coverPreviewSrc ? "Xem trước ảnh Cover trên storefront" : "Chọn ảnh Cover"}
-                                className="h-36 w-36 overflow-hidden rounded-xl border border-emerald-200 bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                                className="aspect-[3/4] w-full max-w-[168px] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {coverPreviewSrc ? (
                                     // eslint-disable-next-line @next/next/no-img-element
@@ -551,36 +671,55 @@ export default function WatchImageSection({
                                     <span className="text-xs text-slate-500">Chọn ảnh</span>
                                 )}
                             </button>
-                            <div className="flex flex-col items-start gap-2">
+                            <div className="flex min-w-0 flex-wrap content-start items-center gap-2 rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                                <div className="mb-1 basis-full">
+                                    <div className="text-sm font-semibold text-slate-900">
+                                        {pendingCoverKey ? "Preview đang chờ xác nhận" : hasPhotoRoomResult ? "Cover đã qua PhotoRoom" : "Cover hiện tại"}
+                                    </div>
+                                    <div className="mt-0.5 text-xs text-slate-500">
+                                        {pendingCoverKey ? "Kiểm tra preview trước khi xác nhận đưa lên storefront." : "Bạn có thể đổi ảnh hoặc tiếp tục xử lý trước khi xác nhận bản mới."}
+                                    </div>
+                                </div>
                                 <button
                                     type="button"
                                     onClick={() => setCoverPickerOpen(true)}
                                     disabled={coverPending || photoRoomPending || sharpPending}
-                                    className="rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50 disabled:opacity-50"
+                                    className="order-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
                                 >
                                     {currentCoverKey ? "Đổi ảnh Cover" : "Chọn ảnh Cover"}
                                 </button>
                                 {pendingCoverKey ? (
                                     <span className="text-xs font-medium text-emerald-700">Ảnh mới đang chờ xác nhận</span>
                                 ) : null}
-                                {(pendingCoverKey || currentCoverKey) ? (
+                                {!hasPhotoRoomResult && (pendingCoverKey || currentCoverKey) ? (
                                     <button
                                         type="button"
-                                        onClick={() => void handlePhotoRoomProcess()}
+                                        onClick={() => setPhotoRoomAdjustmentOpen(true)}
                                         disabled={coverPending || photoRoomPending}
-                                        className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-700 shadow-sm hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="order-1 inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         <Sparkles className="h-3.5 w-3.5" />
-                                        {photoRoomPending ? "PhotoRoom đang xử lý..." : "Xử lý bằng PhotoRoom"}
+                                        {photoRoomPending ? "PhotoRoom đang xử lý..." : "Thiết lập & xử lý PhotoRoom"}
                                     </button>
                                 ) : null}
-                                {(pendingCoverKey || currentCoverKey) ? (
+                                {hasPhotoRoomResult && (pendingCoverKey || currentCoverKey) ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => setPhotoRoomAdjustmentOpen(true)}
+                                        disabled={coverPending || photoRoomPending || sharpPending}
+                                        className="order-1 inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        <Sparkles className="h-3.5 w-3.5" />
+                                        Xử lý lại / điều chỉnh PhotoRoom
+                                    </button>
+                                ) : null}
+                                {sharpCutoutKey && (pendingCoverKey || currentCoverKey) ? (
                                     <button
                                         type="button"
                                         onClick={() => void handleSharpRecreate()}
                                         disabled={coverPending || photoRoomPending || sharpPending || !sharpCutoutKey}
                                         title={sharpCutoutKey ? "Tạo lại shadow từ cutout trong suốt" : "Ảnh cũ chưa có file cutout trong suốt"}
-                                        className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-white px-3 py-1.5 text-xs font-semibold text-sky-700 shadow-sm hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="order-4 inline-flex items-center gap-1.5 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-semibold text-sky-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         <Sparkles className="h-3.5 w-3.5" />
                                         {sharpPending ? "Sharp đang xử lý..." : "Tạo lại bằng Sharp"}
@@ -591,7 +730,7 @@ export default function WatchImageSection({
                                         type="button"
                                         onClick={() => void handleCoverConfirm()}
                                         disabled={coverPending || photoRoomPending || sharpPending}
-                                        className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="order-2 inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         <Check className="h-3.5 w-3.5" />
                                         {coverPending ? "Đang xử lý..." : "Xác nhận Cover"}
@@ -617,6 +756,24 @@ export default function WatchImageSection({
                                     {item.label}
                                 </div>
                             ))}
+                        </div>
+                        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-amber-200/70 pt-3">
+                            <button
+                                type="button"
+                                role="switch"
+                                aria-checked={quickPublished}
+                                onClick={() => void handleQuickPublish(!quickPublished)}
+                                disabled={publishPending || isFormDirty || (!quickPublished && !currentCoverKey)}
+                                className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold shadow-sm disabled:cursor-not-allowed disabled:opacity-50 ${quickPublished ? "bg-emerald-600 text-white hover:bg-emerald-700" : "bg-slate-200 text-slate-700 hover:bg-slate-300"}`}
+                            >
+                                <span className={`relative h-5 w-9 rounded-full transition ${quickPublished ? "bg-white/30" : "bg-slate-400"}`}>
+                                    <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition ${quickPublished ? "left-[18px]" : "left-0.5"}`} />
+                                </span>
+                                {publishPending ? "Đang cập nhật..." : quickPublished ? "Đang hiển thị storefront" : "Đang ẩn storefront"}
+                            </button>
+                            <span className="text-xs text-slate-600">
+                                {isFormDirty ? "Hãy lưu title, spec và lựa chọn hiển thị giá trước." : "Không yêu cầu content hoặc đủ gallery; cần title, spec và Cover."}
+                            </span>
                         </div>
                     </div> : null}
 
@@ -685,8 +842,29 @@ export default function WatchImageSection({
                 onSubmit={(keys) => {
                     if (!keys[0]) return;
                     setPendingCoverKey(keys[0]);
+                    setPhotoRoomSourceKey(null);
+                    setHasPhotoRoomResult(false);
+                    setPhotoRoomAdjustment(DEFAULT_PHOTOROOM_ADJUSTMENT);
+                    setSharpCutoutKey(null);
+                    setLocalLayoutBaseKey(null);
+                    setLocalLayoutBaseAdjustment(null);
                     setCoverPickerOpen(false);
                 }}
+            /> : null}
+
+            {showCover ? <PhotoRoomAdjustmentDialog
+                open={photoRoomAdjustmentOpen}
+                pending={photoRoomPending}
+                localPending={sharpPending}
+                previewSrc={resolveMediaPreviewSrc(localLayoutBaseKey ?? pendingCoverKey ?? currentCoverKey)}
+                canProcessLocally={Boolean(localLayoutBaseKey && localLayoutBaseAdjustment)}
+                localBaseEnhanceMetal={localLayoutBaseAdjustment?.enhanceMetal}
+                localBaseShadowMode={localLayoutBaseAdjustment?.shadowMode}
+                localDisabledReason="Cần tạo ít nhất một preview PhotoRoom trong phiên này"
+                initialValue={photoRoomAdjustment}
+                onClose={() => setPhotoRoomAdjustmentOpen(false)}
+                onSubmit={(value) => void handlePhotoRoomProcess(value)}
+                onSubmitLocal={(value) => void handleLocalAdjustment(value)}
             /> : null}
 
             {showCover && coverPreviewOpen && coverPreviewSrc ? (
