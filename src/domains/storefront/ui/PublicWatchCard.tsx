@@ -15,7 +15,7 @@ function tagLabel(tag: string | null) {
 }
 
 function availabilityLabel(availability: PublicWatchCard["availability"]) {
-  if (availability === "SOLD") return "Đã bán";
+  if (availability === "SOLD") return "Out of stock";
   return null;
 }
 

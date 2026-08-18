@@ -45,6 +45,7 @@ const publicWatchCoreSelect = {
   id: true,
   slug: true,
   title: true,
+  status: true,
   priceVisibility: true,
   tag: true,
   updatedAt: true,
@@ -265,9 +266,11 @@ function publicWatchFilterWhere(query: PublicCatalogQuery): Prisma.ProductWhereI
 
   if (query.priceMin !== undefined || query.priceMax !== undefined) {
     and.push({
+      status: { notIn: [ProductStatus.HOLD, ProductStatus.SOLD] },
       priceVisibility: "SHOW",
       watch: {
         is: {
+          saleStage: { notIn: [WatchSaleStage.HOLD, WatchSaleStage.SOLD] },
           watchPrice: {
             is: {
               salePrice: {
@@ -357,6 +360,7 @@ export async function listPublicCatalogFacetRows(db: DB) {
   return dbOrTx(db).product.findMany({
     where: publicWatchEligibilityWhere(),
     select: {
+      status: true,
       priceVisibility: true,
       brand: { select: { slug: true, name: true } },
       watch: {

@@ -174,6 +174,8 @@ export function mapWatchDetail(row: any): WatchDetailModel {
         sku: row.product.sku ?? null,
         primaryImageUrl: buildMediaUrl(row.product.primaryImageUrl),
         storefrontImageKey: row.product.storefrontImageKey ?? null,
+        priceVisibility: row.product.priceVisibility ?? "SHOW",
+        publishedAt: row.product.publishedAt ?? null,
         seoTitle: row.product.seoTitle ?? null,
         seoDescription: row.product.seoDescription ?? null,
 

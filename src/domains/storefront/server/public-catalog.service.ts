@@ -63,7 +63,9 @@ function decimalAmount(value: { toNumber(): number } | null | undefined) {
 }
 
 function mapPrice(row: PublicWatchListRow): PublicWatchPrice {
-  if (row.priceVisibility === "HIDE") {
+  const productStatus = String(row.status ?? "").toUpperCase();
+  const saleStage = String(row.watch?.saleStage ?? "").toUpperCase();
+  if (row.priceVisibility === "HIDE" || productStatus === "HOLD" || productStatus === "SOLD" || saleStage === "HOLD" || saleStage === "SOLD") {
     return { mode: "CONTACT", amount: null, currency: "VND" };
   }
   const amount = decimalAmount(row.watch?.watchPrice?.salePrice);
@@ -90,7 +92,7 @@ export function mapPublicWatchCard(row: PublicWatchListRow): PublicWatchCard {
     audience: row.watch.audienceSegment,
     tag: row.tag ?? null,
     condition: row.watch.conditionGrade ?? null,
-    availability: row.watch.saleStage === "SOLD" ? "SOLD" : row.watch.saleStage === "HOLD" ? "HOLD" : "AVAILABLE",
+    availability: row.watch.saleStage === "SOLD" || row.status === "SOLD" ? "SOLD" : row.watch.saleStage === "HOLD" || row.status === "HOLD" ? "HOLD" : "AVAILABLE",
     updatedAt: row.updatedAt.toISOString(),
   };
 }
@@ -227,7 +229,7 @@ export async function getPublicCatalogFacets(options?: { db?: DB }): Promise<Pub
     if (material) materialCounts.set(material, (materialCounts.get(material) ?? 0) + 1);
     const strapType = row.watch?.watchSpecV2?.braceletType;
     if (strapType === "BRACELET" || strapType === "LEATHER") strapTypeCounts[strapType] += 1;
-    if (row.priceVisibility === "SHOW") {
+    if (row.priceVisibility === "SHOW" && row.status !== "HOLD" && row.status !== "SOLD" && row.watch?.saleStage !== "HOLD" && row.watch?.saleStage !== "SOLD") {
       const price = row.watch?.watchPrice?.salePrice?.toNumber();
       if (price && price > 0) prices.push(price);
     }

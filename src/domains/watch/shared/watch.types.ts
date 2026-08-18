@@ -58,6 +58,8 @@ export type WatchDetailModel = {
     sku?: string | null;
     primaryImageUrl?: string | null;
     storefrontImageKey?: string | null;
+    priceVisibility?: "SHOW" | "HIDE" | string;
+    publishedAt?: Date | string | null;
 
     seoTitle?: string | null;
     seoDescription?: string | null;

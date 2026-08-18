@@ -1774,6 +1774,8 @@ export default function WatchFormClient({
         saleStage={values.basic.saleState}
         serviceStage={values.basic.serviceState}
         salePrice={values.pricing.salePrice}
+        showPrice={detail?.priceVisibility !== "HIDE"}
+        storefrontVisible={Boolean(detail?.publishedAt)}
         onStorefrontSlugChange={(slug) => setFormValues((prev) => ({ ...prev, basic: { ...prev.basic, slug } }))}
         inlineImage={inlineImage}
         coverImage={values.media.coverImage}
@@ -2005,6 +2007,8 @@ export default function WatchFormClient({
             saleStage={values.basic.saleState}
             serviceStage={values.basic.serviceState}
             salePrice={values.pricing.salePrice}
+            showPrice={detail?.priceVisibility !== "HIDE"}
+            storefrontVisible={Boolean(detail?.publishedAt)}
             onStorefrontSlugChange={(slug) => setFormValues((prev) => ({ ...prev, basic: { ...prev.basic, slug } }))}
             inlineImage={inlineImage}
             coverImage={values.media.coverImage}

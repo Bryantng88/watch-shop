@@ -147,6 +147,11 @@ export default function WatchImageSection({
 }: Props) {
     const showGallery = sectionMode !== "cover";
     const showCover = sectionMode !== "gallery";
+    const saleStatus = String(saleStage ?? "").toUpperCase();
+    const productSaleStatus = String(productStatus ?? "").toUpperCase();
+    const priceMayBeShown = !["HOLD", "SOLD"].includes(saleStatus) && !["HOLD", "SOLD"].includes(productSaleStatus);
+    const [quickShowPrice, setQuickShowPrice] = useState(showPrice && priceMayBeShown);
+    const effectiveShowPrice = quickShowPrice && priceMayBeShown;
     const initiallyVisibleByStandardFlow =
         Boolean(getMediaKey(coverImage ?? ({} as PickedMediaItem))) &&
         Boolean(storefrontSlug?.trim()) &&
@@ -155,7 +160,7 @@ export default function WatchImageSection({
         ["NOT_REQUIRED", "DONE"].includes(String(serviceStage ?? "").toUpperCase()) &&
         String(contentReviewStatus ?? "").toUpperCase() === "APPROVED" &&
         String(imageReviewStatus ?? "").toUpperCase() === "APPROVED" &&
-        (!showPrice || Number(salePrice ?? 0) > 0);
+        (!effectiveShowPrice || Number(salePrice ?? 0) > 0);
     const dialog = useAppDialog();
     const notify = useNotify();
     const [taskModalOpen, setTaskModalOpen] = useState(false);
@@ -190,7 +195,7 @@ export default function WatchImageSection({
         { label: "Service hoàn tất/không cần", ok: ["NOT_REQUIRED", "DONE"].includes(String(serviceStage ?? "").toUpperCase()) },
         { label: "Content đã duyệt", ok: String(contentReviewStatus ?? "").toUpperCase() === "APPROVED" },
         { label: "Hình ảnh đã duyệt", ok: String(imageReviewStatus ?? "").toUpperCase() === "APPROVED" },
-        { label: "Giá bán hợp lệ", ok: Number(salePrice ?? 0) > 0 },
+        { label: effectiveShowPrice ? "Giá bán hợp lệ" : "Giá hiển thị Liên hệ", ok: !effectiveShowPrice || Number(salePrice ?? 0) > 0 },
     ];
     const storefrontReady = storefrontChecks.every((item) => item.ok);
     const [taskPending, startTaskTransition] = useTransition();
@@ -345,7 +350,7 @@ export default function WatchImageSection({
         const confirmed = await dialog.confirm({
             title: nextPublished ? "Đưa Watch lên storefront?" : "Ẩn Watch khỏi storefront?",
             message: nextPublished
-                ? `Watch sẽ hiển thị ngay với title, spec và Cover hiện tại. Giá: ${showPrice ? "hiển thị" : "Liên hệ"}. Content và gallery có thể bổ sung sau.`
+                ? `Watch sẽ hiển thị ngay với title, spec và Cover hiện tại. Giá: ${effectiveShowPrice ? "hiển thị" : "Liên hệ"}. Content và gallery có thể bổ sung sau.`
                 : "Watch sẽ được ẩn khỏi storefront. Dữ liệu title, spec, content và gallery vẫn được giữ nguyên.",
             confirmText: nextPublished ? "Đưa lên storefront" : "Ẩn khỏi storefront",
             cancelText: "Hủy",
@@ -357,7 +362,7 @@ export default function WatchImageSection({
             const res = await fetch(`/api/admin/watches/${productId}/storefront-publish`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ showPrice, published: nextPublished }),
+                body: JSON.stringify({ showPrice: effectiveShowPrice, published: nextPublished }),
             });
             const json = await res.json().catch(() => null);
             if (!res.ok) throw new Error(json?.error || "Không thể đưa Watch lên storefront.");
@@ -365,12 +370,38 @@ export default function WatchImageSection({
             notify.success({
                 title: nextPublished ? "Đã đưa lên storefront" : "Đã ẩn khỏi storefront",
                 message: nextPublished
-                    ? (showPrice ? "Storefront đang hiển thị giá." : "Storefront đang hiển thị Liên hệ.")
+                    ? (effectiveShowPrice ? "Storefront đang hiển thị giá." : "Storefront đang hiển thị Liên hệ.")
                     : "Watch không còn hiển thị trên storefront.",
             });
         } catch (error) {
             notify.error({
                 title: "Chưa thể đưa lên storefront",
+                message: error instanceof Error ? error.message : "Có lỗi xảy ra.",
+            });
+        } finally {
+            setPublishPending(false);
+        }
+    };
+
+    const handlePriceVisibilityChange = async (nextShowPrice: boolean) => {
+        if (publishPending || !priceMayBeShown) return;
+        setPublishPending(true);
+        try {
+            const res = await fetch(`/api/admin/watches/${productId}/storefront-publish`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ visibilityOnly: true, showPrice: nextShowPrice }),
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok) throw new Error(json?.error || "Không thể cập nhật cách hiển thị giá.");
+            setQuickShowPrice(nextShowPrice);
+            notify.success({
+                title: "Đã cập nhật hiển thị giá",
+                message: nextShowPrice ? "Storefront sẽ hiển thị giá bán." : "Storefront sẽ hiển thị Liên hệ.",
+            });
+        } catch (error) {
+            notify.error({
+                title: "Chưa thể cập nhật hiển thị giá",
                 message: error instanceof Error ? error.message : "Có lỗi xảy ra.",
             });
         } finally {
@@ -759,6 +790,20 @@ export default function WatchImageSection({
                             ))}
                         </div>
                         <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-amber-200/70 pt-3">
+                            <button
+                                type="button"
+                                role="switch"
+                                aria-checked={effectiveShowPrice}
+                                onClick={() => void handlePriceVisibilityChange(!effectiveShowPrice)}
+                                disabled={publishPending || !priceMayBeShown}
+                                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                                title={priceMayBeShown ? "Chọn hiện giá hoặc hiển thị Liên hệ trên storefront" : "Watch HOLD/SOLD luôn ẩn giá"}
+                            >
+                                <span className={`relative h-5 w-9 rounded-full transition ${effectiveShowPrice ? "bg-emerald-500" : "bg-slate-400"}`}>
+                                    <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition ${effectiveShowPrice ? "left-[18px]" : "left-0.5"}`} />
+                                </span>
+                                {priceMayBeShown ? (effectiveShowPrice ? "Hiển thị giá bán" : "Không hiển thị giá") : "HOLD/SOLD: Liên hệ"}
+                            </button>
                             <button
                                 type="button"
                                 role="switch"

@@ -16,10 +16,24 @@ export async function POST(
     const body = await req.json().catch(() => ({}));
     const published = body?.published !== false;
 
+    if (body?.visibilityOnly === true && typeof body?.showPrice === "boolean") {
+      const product = await prisma.product.update({
+        where: { id },
+        data: { priceVisibility: body.showPrice ? "SHOW" : "HIDE" },
+        select: { publishedAt: true, priceVisibility: true, slug: true },
+      });
+      return NextResponse.json({ ok: true, data: product });
+    }
+
     if (!published) {
       const product = await prisma.product.update({
         where: { id },
-        data: { publishedAt: null },
+        data: {
+          publishedAt: null,
+          ...(typeof body?.showPrice === "boolean"
+            ? { priceVisibility: body.showPrice ? "SHOW" : "HIDE" }
+            : {}),
+        },
         select: { publishedAt: true, priceVisibility: true, slug: true },
       });
       return NextResponse.json({ ok: true, data: product });
