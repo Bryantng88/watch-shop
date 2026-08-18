@@ -15,6 +15,7 @@ type Filters = {
     saleStage: string;
     opsStage: string;
     mediaStatus: string;
+    storefrontStatus: string;
     serviceStatus: string;
     saleStatus: string;
     priceStatus: string;
@@ -63,6 +64,16 @@ const advancedFields: FilterBarField[] = [
             { label: "Đã đăng", value: "POSTED" },
             { label: "Cần xử lý lại", value: "NEEDS_REWORK" },
             { label: "Chưa vào luồng Media", value: "NO_IMAGE" },
+        ],
+    },
+    {
+        key: "storefrontStatus",
+        label: "Storefront",
+        type: "select",
+        options: [
+            { label: "Tất cả", value: "" },
+            { label: "Đã lên storefront", value: "PUBLISHED" },
+            { label: "Chưa lên storefront", value: "HIDDEN" },
         ],
     },
     {

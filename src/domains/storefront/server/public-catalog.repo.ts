@@ -302,13 +302,21 @@ export async function listPublicWatchRows(
   query: PublicCatalogQuery,
   cursorProductId: string | null,
 ) {
-  return dbOrTx(db).product.findMany({
-    where: publicWatchFilterWhere(query),
-    orderBy: publicWatchOrderBy(query.sort),
-    ...(cursorProductId ? { cursor: { id: cursorProductId }, skip: 1 } : {}),
-    take: query.limit + 1,
-    select: publicWatchListSelect,
-  });
+  const client = dbOrTx(db);
+  const where = publicWatchFilterWhere(query);
+  const [rows, totalItems] = await Promise.all([
+    client.product.findMany({
+      where,
+      orderBy: publicWatchOrderBy(query.sort),
+      ...(cursorProductId
+        ? { cursor: { id: cursorProductId }, skip: 1 }
+        : { skip: (query.page - 1) * query.limit }),
+      take: query.limit + 1,
+      select: publicWatchListSelect,
+    }),
+    client.product.count({ where }),
+  ]);
+  return { rows, totalItems };
 }
 
 export async function findPublicWatchRowBySlug(db: DB, slug: string) {

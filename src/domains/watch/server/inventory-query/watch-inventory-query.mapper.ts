@@ -124,6 +124,7 @@ export function toWatchInventoryQueryInput(
     opsStage: input.opsStage,
     operation: {
       mediaStatuses: cleanArray(input.mediaStatus),
+      storefrontStatuses: cleanArray(input.storefrontStatus),
       serviceStatuses: cleanArray(input.serviceStatus),
       saleStatuses: cleanArray(input.saleStatus),
     },
@@ -156,6 +157,7 @@ export function toWatchListFilters(
     saleStage: input.saleStage,
     opsStage: input.opsStage,
     mediaStatus: input.operation?.mediaStatuses?.[0] ?? "",
+    storefrontStatus: input.operation?.storefrontStatuses?.[0] ?? "",
     serviceStatus: input.operation?.serviceStatuses?.[0] ?? "",
     saleStatus: input.operation?.saleStatuses?.[0] ?? "",
     priceStatus: price?.status ?? "",

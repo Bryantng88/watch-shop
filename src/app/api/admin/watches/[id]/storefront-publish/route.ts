@@ -1,8 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 
 import { PERMISSIONS } from "@/constants/permissions";
 import { prisma } from "@/server/db/client";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
+import { rebuildWatchListProjectionRows } from "@/domains/projection/server/watch-list";
+
+async function updateProductAndProjection(productId: string, data: Prisma.ProductUpdateInput) {
+  return prisma.$transaction(async (tx) => {
+    const product = await tx.product.update({
+      where: { id: productId },
+      data,
+      select: { publishedAt: true, priceVisibility: true, slug: true },
+    });
+    await rebuildWatchListProjectionRows(tx, { productIds: [productId], limit: 1 });
+    return product;
+  }, { timeout: 15_000 });
+}
 
 export async function POST(
   req: NextRequest,
@@ -17,24 +31,18 @@ export async function POST(
     const published = body?.published !== false;
 
     if (body?.visibilityOnly === true && typeof body?.showPrice === "boolean") {
-      const product = await prisma.product.update({
-        where: { id },
-        data: { priceVisibility: body.showPrice ? "SHOW" : "HIDE" },
-        select: { publishedAt: true, priceVisibility: true, slug: true },
+      const product = await updateProductAndProjection(id, {
+        priceVisibility: body.showPrice ? "SHOW" : "HIDE",
       });
       return NextResponse.json({ ok: true, data: product });
     }
 
     if (!published) {
-      const product = await prisma.product.update({
-        where: { id },
-        data: {
-          publishedAt: null,
-          ...(typeof body?.showPrice === "boolean"
-            ? { priceVisibility: body.showPrice ? "SHOW" : "HIDE" }
-            : {}),
-        },
-        select: { publishedAt: true, priceVisibility: true, slug: true },
+      const product = await updateProductAndProjection(id, {
+        publishedAt: null,
+        ...(typeof body?.showPrice === "boolean"
+          ? { priceVisibility: body.showPrice ? "SHOW" : "HIDE" }
+          : {}),
       });
       return NextResponse.json({ ok: true, data: product });
     }
@@ -77,13 +85,9 @@ export async function POST(
     ].some((value) => value != null && String(value).trim() !== "");
     if (!hasSpec) throw new Error("Cần có ít nhất một thông tin spec trước khi đăng.");
 
-    const product = await prisma.product.update({
-      where: { id },
-      data: {
-        publishedAt: new Date(),
-        priceVisibility: body?.showPrice === false ? "HIDE" : "SHOW",
-      },
-      select: { publishedAt: true, priceVisibility: true, slug: true },
+    const product = await updateProductAndProjection(id, {
+      publishedAt: new Date(),
+      priceVisibility: body?.showPrice === false ? "HIDE" : "SHOW",
     });
 
     return NextResponse.json({ ok: true, data: product });

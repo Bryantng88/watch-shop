@@ -347,6 +347,7 @@ export default function WatchListRow({
             status: product.isPosted ? "POSTED" : "NO_IMAGE",
             href: null,
         };
+    const storefrontLabel = product.v2Row?.storefrontStatusLabel ?? (product.storefrontPublished ? "Đã lên storefront" : "Chưa lên storefront");
     const service = product.v2Row
         ? {
             label: product.v2Row.serviceStatusLabel,
@@ -558,7 +559,7 @@ export default function WatchListRow({
                             {product.brandName ? <span>{product.brandName}</span> : null}
                         </div>
                         <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px] text-slate-500 xl:hidden">
-                            <span className="truncate">Media: {media.label}</span>
+                            <span className="truncate">Media: {media.label} · {storefrontLabel}</span>
                             <span aria-hidden="true">·</span>
                             <span className="truncate">Service: {service.label}</span>
                         </div>
@@ -572,6 +573,7 @@ export default function WatchListRow({
                     label={media.label}
                     status={media.status}
                     tone={media.tone}
+                    detail={storefrontLabel}
                     onClick={onPreview ? () => { onPreview(mediaPreview); /*
                         onPreview({
                             type: "WATCH",

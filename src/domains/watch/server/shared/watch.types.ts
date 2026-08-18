@@ -35,6 +35,7 @@ export type WatchListComputedItem = {
   isContentDownloaded?: boolean;
   isImageDownloaded?: boolean;
   isPosted?: boolean;
+  storefrontPublished?: boolean;
   isReadyToPublish?: boolean;
   publishMissing?: string[];
 

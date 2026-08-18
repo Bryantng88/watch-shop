@@ -210,6 +210,7 @@ function mapV2Row(
     mediaStatus: media.status,
     mediaStatusLabel: media.label,
     mediaWorkspaceHref: mediaWorkspaceHrefForStatus(source, media.status),
+    ...storefrontProjectionStatus(source.product.publishedAt),
     serviceStatus: service.status,
     serviceStatusLabel: service.label,
     serviceExpectedWorkingDays: source.serviceExpectedWorkingDays ?? null,
@@ -222,6 +223,12 @@ function mapV2Row(
     lastAction: source.__lastAction ?? null,
     updatedAt: isoDate(row.updatedAt),
   };
+}
+
+export function storefrontProjectionStatus(publishedAt: Date | string | null | undefined) {
+  return publishedAt
+    ? { storefrontStatus: "PUBLISHED" as const, storefrontStatusLabel: "Đã lên storefront" }
+    : { storefrontStatus: "HIDDEN" as const, storefrontStatusLabel: "Chưa lên storefront" };
 }
 
 function searchText(input: WatchListProjectionData) {
@@ -281,6 +288,7 @@ export function mapWatchListSourceRowToProjectionData(
       contentStatus: cleanNullable(row.contentStatus),
       specStatus: cleanNullable(row.specStatus),
       mediaStatus: v2Row.mediaStatus,
+      storefrontStatus: v2Row.storefrontStatus,
       serviceStatus: v2Row.serviceStatus,
       saleStatus: v2Row.saleStatus,
       salePrice: numberNullable(row.salePrice),

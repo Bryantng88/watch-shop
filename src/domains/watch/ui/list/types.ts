@@ -75,6 +75,7 @@ export type WatchRow = {
     isContentDownloaded?: boolean;
     isImageDownloaded?: boolean;
     isPosted?: boolean;
+    storefrontPublished?: boolean;
     lastUpdatedBy?: {
         id: string;
         name?: string | null;
@@ -130,6 +131,8 @@ export type WatchRow = {
         mediaStatus: string;
         mediaStatusLabel: string;
         mediaWorkspaceHref?: string | null;
+        storefrontStatus: "PUBLISHED" | "HIDDEN";
+        storefrontStatusLabel: string;
         serviceStatus: string;
         serviceStatusLabel: string;
         serviceExpectedWorkingDays?: number | null;
@@ -175,6 +178,7 @@ export type WatchListFilters = {
     saleStage?: string;
     opsStage?: string;
     mediaStatus?: string;
+    storefrontStatus?: string;
     serviceStatus?: string;
     saleStatus?: string;
     priceStatus?: string;

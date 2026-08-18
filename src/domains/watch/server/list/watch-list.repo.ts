@@ -149,6 +149,7 @@ const WATCH_LIST_ROW_SELECT = {
       title: true,
       sku: true,
       slug: true,
+      publishedAt: true,
       brand: { select: { id: true, name: true } },
       vendor: { select: { id: true, name: true } },
       postTargets: {

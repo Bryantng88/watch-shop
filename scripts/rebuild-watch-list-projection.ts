@@ -1,11 +1,8 @@
-import { prisma } from "@/server/db/client";
-import { rebuildProjection } from "@/domains/projection/server/projection.runner";
+import { rebuildWatchListProjectionRows } from "../src/domains/projection/server/watch-list";
+import { prisma } from "../src/server/db/client";
 
 async function main() {
-  const result = await rebuildProjection(prisma, {
-    projectionKey: "watch-list",
-  });
-
+  const result = await rebuildWatchListProjectionRows(prisma);
   console.log(JSON.stringify(result, null, 2));
 }
 

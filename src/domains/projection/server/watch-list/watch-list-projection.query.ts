@@ -12,6 +12,7 @@ import type {
 } from "@/domains/watch/ui/list/types";
 import {
   WATCH_LIST_PROJECTION_KEY,
+  WATCH_LIST_PROJECTION_VERSION,
 } from "./watch-list-projection.constants";
 import {
   asWatchListProjectionData,
@@ -245,6 +246,7 @@ function projectionQuickFilterCondition(quickFilter: string) {
 function filterConditions(input: NormalizedProjectionInput) {
   const conditions: Prisma.Sql[] = [
     Prisma.sql`"projectionKey" = ${WATCH_LIST_PROJECTION_KEY}`,
+    Prisma.sql`"projectionVersion" = ${WATCH_LIST_PROJECTION_VERSION}`,
     activeWatchCondition(),
   ];
   const viewStatus = statusForView(input.view);
@@ -253,12 +255,16 @@ function filterConditions(input: NormalizedProjectionInput) {
   if (clean(input.saleStage)) conditions.push(Prisma.sql`"status" = ${clean(input.saleStage).toUpperCase()}`);
   if (clean(input.opsStage)) conditions.push(Prisma.sql`${jsonText("serviceStage")} = ${clean(input.opsStage).toUpperCase()}`);
   const mediaCondition = projectionMediaCondition(clean(input.mediaStatus).toUpperCase());
+  const storefrontStatus = clean(input.storefrontStatus).toUpperCase();
   const serviceCondition = projectionServiceCondition(clean(input.serviceStatus).toUpperCase());
   const saleCondition = projectionSaleCondition(clean(input.saleStatus).toUpperCase());
   const priceCondition = projectionPriceCondition(clean(input.priceStatus).toUpperCase());
   const priceRangeCondition = projectionPriceRangeCondition(input);
   const quickFilterCondition = projectionQuickFilterCondition(clean(input.quickFilter));
   if (mediaCondition) conditions.push(mediaCondition);
+  if (storefrontStatus === "PUBLISHED" || storefrontStatus === "HIDDEN") {
+    conditions.push(Prisma.sql`${jsonText("storefrontStatus")} = ${storefrontStatus}`);
+  }
   if (serviceCondition) conditions.push(serviceCondition);
   if (saleCondition) conditions.push(saleCondition);
   if (priceCondition) conditions.push(priceCondition);
@@ -386,11 +392,13 @@ async function viewCounts(db: DB, input: NormalizedProjectionInput): Promise<Wat
       SELECT "status", COUNT(*)::bigint AS count
       FROM "ProjectionRecord"
       WHERE "projectionKey" = ${WATCH_LIST_PROJECTION_KEY}
+        AND "projectionVersion" = ${WATCH_LIST_PROJECTION_VERSION}
         AND ${activeWatchCondition()}
         AND (${clean(input.q)}::text = '' OR "searchText" ILIKE ${`%${clean(input.q).toLowerCase()}%`})
         AND (${clean(input.sku)}::text = '' OR "searchText" ILIKE ${`%${clean(input.sku).toLowerCase()}%`})
         AND (${clean(input.brandId)}::text = '' OR ${jsonText("brandId")} = ${clean(input.brandId)})
         AND (${clean(input.vendorId)}::text = '' OR ${jsonText("vendorId")} = ${clean(input.vendorId)})
+        AND (${clean(input.storefrontStatus)}::text = '' OR ${jsonText("storefrontStatus")} = ${clean(input.storefrontStatus).toUpperCase()})
         AND COALESCE(${jsonText("audienceSegment")}, 'MEN') = ${clean(input.audienceSegment || "MEN").toUpperCase()}
       GROUP BY "status"
     `,

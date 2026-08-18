@@ -432,6 +432,14 @@ export function buildWatchListBaseWhere(
         and.push(buildOperationalMediaWhere(String(input.mediaStatus).toUpperCase()));
     }
 
+    if (input.storefrontStatus === "PUBLISHED") {
+        and.push({ product: { is: { publishedAt: { not: null } } } });
+    }
+
+    if (input.storefrontStatus === "HIDDEN") {
+        and.push({ product: { is: { publishedAt: null } } });
+    }
+
     if (input.serviceStatus) {
         and.push(buildOperationalServiceWhere(String(input.serviceStatus).toUpperCase()));
     }

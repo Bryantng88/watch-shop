@@ -1,5 +1,5 @@
 export const WATCH_LIST_PROJECTION_KEY = "watch-list";
-export const WATCH_LIST_PROJECTION_VERSION = 2;
+export const WATCH_LIST_PROJECTION_VERSION = 3;
 
 export const WATCH_LIST_PROJECTION_SOURCE_EVENTS = [
   "watch.created",

@@ -94,6 +94,7 @@ function buildInitialWatchListInput(searchParams: SearchParams) {
         saleStage: "",
         opsStage: "",
         mediaStatus: firstValue(searchParams.mediaStatus),
+        storefrontStatus: firstValue(searchParams.storefrontStatus),
         serviceStatus: firstValue(searchParams.serviceStatus),
         saleStatus: firstValue(searchParams.saleStatus),
         priceStatus: firstValue(searchParams.priceStatus),

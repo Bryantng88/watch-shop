@@ -28,13 +28,14 @@ export type WatchInventoryPriceFilter = {
 
 export type WatchInventoryOperationFilter = {
   mediaStatuses?: string[];
+  storefrontStatuses?: string[];
   serviceStatuses?: string[];
   saleStatuses?: string[];
 };
 
 export type WatchInventoryQueryInput = Omit<
   WatchListFilters,
-  "brandId" | "vendorId" | "mediaStatus" | "serviceStatus" | "saleStatus" | "priceStatus" | "pricePreset" | "priceMin" | "priceMax" | "quickFilter"
+  "brandId" | "vendorId" | "mediaStatus" | "storefrontStatus" | "serviceStatus" | "saleStatus" | "priceStatus" | "pricePreset" | "priceMin" | "priceMax" | "quickFilter"
 > & {
   text?: string;
   brandIds?: string[];

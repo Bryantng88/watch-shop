@@ -153,7 +153,7 @@ export async function listPublicWatches(
 ): Promise<PublicCatalogPage> {
   const query = publicCatalogQuerySchema.parse(input);
   const cursorProductId = decodeCursor(query.cursor, query.sort);
-  const rows = await listPublicWatchRows(options?.db ?? prisma, query, cursorProductId);
+  const { rows, totalItems } = await listPublicWatchRows(options?.db ?? prisma, query, cursorProductId);
   const hasNextPage = rows.length > query.limit;
   const pageRows = hasNextPage ? rows.slice(0, query.limit) : rows;
   const last = pageRows.at(-1);
@@ -165,6 +165,9 @@ export async function listPublicWatches(
         : null,
       hasNextPage,
       limit: query.limit,
+      page: query.page,
+      totalItems,
+      totalPages: Math.max(1, Math.ceil(totalItems / query.limit)),
     },
   };
 }

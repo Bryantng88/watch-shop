@@ -2,6 +2,7 @@ import "dotenv/config";
 import { Prisma } from "@prisma/client";
 
 import { prisma } from "../src/server/db/client";
+import { WATCH_LIST_PROJECTION_VERSION } from "../src/domains/projection/server/watch-list";
 
 type StatusCount = {
   status: string | null;
@@ -15,7 +16,7 @@ async function main() {
       COUNT(*) AS "count"
     FROM "ProjectionRecord"
     WHERE "projectionKey" = 'watch-list'
-      AND "projectionVersion" = 2
+      AND "projectionVersion" = ${WATCH_LIST_PROJECTION_VERSION}
     GROUP BY "dataJson"->'filters'->>'mediaStatus'
     ORDER BY COUNT(*) DESC
   `);

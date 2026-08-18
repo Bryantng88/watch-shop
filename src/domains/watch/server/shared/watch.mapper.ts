@@ -108,6 +108,7 @@ export function mapAdminWatchListItem(row: any): WatchListComputedItem {
         isContentDownloaded: Boolean(row?.isContentDownloaded),
         isImageDownloaded: Boolean(row?.isImageDownloaded),
         isPosted: Boolean(row?.isContentDownloaded && row?.isImageDownloaded),
+        storefrontPublished: Boolean(row?.product?.publishedAt),
 
         images,
         imagesCount,

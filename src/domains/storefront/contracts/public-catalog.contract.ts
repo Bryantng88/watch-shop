@@ -28,6 +28,7 @@ export const publicCatalogQuerySchema = z
     priceMin: optionalMoney,
     priceMax: optionalMoney,
     sort: z.enum(["NEWEST", "PRICE_ASC", "PRICE_DESC"]).default("NEWEST"),
+    page: z.coerce.number().int().min(1).default(1),
     cursor: optionalQueryText(200),
     limit: z.coerce
       .number()
@@ -119,5 +120,8 @@ export type PublicCatalogPage = {
     nextCursor: string | null;
     hasNextPage: boolean;
     limit: number;
+    page: number;
+    totalItems: number;
+    totalPages: number;
   };
 };

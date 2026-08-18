@@ -31,6 +31,7 @@
     "projection:rebuild-media-payment": "tsx scripts/rebuild-media-payment-projections.ts",
     "projection:smoke-media-payment": "tsx scripts/smoke-media-payment-projections.ts",
     "projection:rebuild-admin-core": "tsx scripts/rebuild-admin-core-projections.ts",
+    "projection:rebuild-watch-list": "tsx scripts/rebuild-watch-list-projection.ts",
     "projection:smoke-admin-core": "tsx scripts/smoke-admin-core-projections.ts",
     "projection:rebuild-all": "tsx scripts/rebuild-all-projections.ts",
     "projection:smoke-runtime": "tsx scripts/smoke-projection-runtime.ts",

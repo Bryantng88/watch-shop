@@ -28,22 +28,18 @@ function scalarSearchParams(raw: RawSearchParams) {
   );
 }
 
-function nextPageHref(raw: RawSearchParams, cursor: string) {
+function pageHref(raw: RawSearchParams, page: number) {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(scalarSearchParams(raw))) {
-    if (key !== "cursor" && value !== "") params.set(key, String(value));
+    if (key !== "cursor" && key !== "page" && value !== "") params.set(key, String(value));
   }
-  params.set("cursor", cursor);
+  if (page > 1) params.set("page", String(page));
   return `/products?${params.toString()}#catalog`;
 }
 
-function initialPageHref(raw: RawSearchParams) {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(scalarSearchParams(raw))) {
-    if (key !== "cursor" && value !== "") params.set(key, String(value));
-  }
-  const query = params.toString();
-  return `${query ? `/products?${query}` : "/products"}#catalog`;
+function visiblePages(current: number, total: number) {
+  const pages = new Set([1, total, current - 1, current, current + 1]);
+  return [...pages].filter((page) => page >= 1 && page <= total).sort((a, b) => a - b);
 }
 
 export default async function ProductsPage({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
@@ -57,7 +53,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
     : { ...parsedQuery, audience: "MEN", collection: "STANDARD" };
   const [result, facets, hero] = await Promise.all([listPublicWatches(query), getPublicCatalogFacets(), getActiveStorefrontHero()]);
   const activeFilterCount = [query.brand, query.audience, query.collection, query.style, query.size, query.movement, query.caseMaterial, query.priceMax !== undefined].filter(Boolean).length;
-  const isExpandedPage = typeof raw.cursor === "string" && Boolean(raw.cursor.trim());
+  const currentPage = Math.min(query.page, result.pageInfo.totalPages);
 
   return (
     <div className="mx-auto max-w-[1440px] px-4 pb-10 pt-8 sm:px-6 lg:px-10 lg:pt-12">
@@ -87,7 +83,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         <aside className="hidden lg:block lg:sticky lg:top-6 lg:self-start"><CatalogFilters query={query} facets={facets} /></aside>
         <section id="catalog" aria-label="Danh sách đồng hồ">
           <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-[#625f59]">{locale === "en" ? `${result.items.length} products` : `Hiển thị ${result.items.length} sản phẩm`}</p>
+            <p className="text-sm text-[#625f59]">{locale === "en" ? `${result.pageInfo.totalItems} products` : `${result.pageInfo.totalItems} sản phẩm`}</p>
             <CatalogSearch initialValue={query.q} sort={query.sort} />
           </div>
           {result.items.length ? (
@@ -104,19 +100,17 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
             </div>
           )}
 
-          {result.pageInfo.nextCursor || isExpandedPage ? (
-            <div className="mt-14 flex flex-wrap justify-center gap-3">
-              {isExpandedPage ? (
-                <Link href={initialPageHref(raw)} scroll={false} className="storefront-focus grid min-h-12 place-items-center border border-[#aaa59d] px-8 text-xs uppercase tracking-[0.15em] text-[#55514b] hover:border-[#3d3b38] hover:text-black">
-                  {locale === "en" ? "Collapse list" : "Thu gọn danh sách"}
-                </Link>
-              ) : null}
-              {result.pageInfo.nextCursor ? (
-                <Link href={nextPageHref(raw, result.pageInfo.nextCursor)} className="storefront-focus grid min-h-12 place-items-center border border-[#3d3b38] px-8 text-xs uppercase tracking-[0.15em] hover:bg-[#30302e] hover:text-white">
-                  {locale === "en" ? "View more watches" : "Xem thêm đồng hồ"}
-                </Link>
-              ) : null}
-            </div>
+          {result.pageInfo.totalPages > 1 ? (
+            <nav aria-label={locale === "en" ? "Catalog pagination" : "Phân trang đồng hồ"} className="mt-14 flex flex-wrap items-center justify-center gap-2">
+              {currentPage > 1 ? <Link href={pageHref(raw, currentPage - 1)} className="storefront-focus grid min-h-11 place-items-center border border-[#aaa59d] px-5 text-xs uppercase tracking-[0.12em] hover:border-[#3d3b38]">{locale === "en" ? "Previous" : "Trang trước"}</Link> : null}
+              {visiblePages(currentPage, result.pageInfo.totalPages).map((page, index, pages) => (
+                <span key={page} className="contents">
+                  {index > 0 && page - pages[index - 1] > 1 ? <span className="px-1 text-[#8a867f]">…</span> : null}
+                  <Link href={pageHref(raw, page)} aria-current={page === currentPage ? "page" : undefined} className={`storefront-focus grid h-11 min-w-11 place-items-center border px-3 text-xs ${page === currentPage ? "border-[#30302e] bg-[#30302e] text-white" : "border-[#d2cec6] hover:border-[#3d3b38]"}`}>{page}</Link>
+                </span>
+              ))}
+              {currentPage < result.pageInfo.totalPages ? <Link href={pageHref(raw, currentPage + 1)} className="storefront-focus grid min-h-11 place-items-center border border-[#3d3b38] px-5 text-xs uppercase tracking-[0.12em] hover:bg-[#30302e] hover:text-white">{locale === "en" ? "Next" : "Trang sau"}</Link> : null}
+            </nav>
           ) : null}
         </section>
       </div>

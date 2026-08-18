@@ -67,6 +67,7 @@ function buildWatchListInput(req: NextRequest) {
         saleStage: "",
         opsStage: "",
         mediaStatus: firstValue(params, "mediaStatus"),
+        storefrontStatus: firstValue(params, "storefrontStatus"),
         serviceStatus: firstValue(params, "serviceStatus"),
         saleStatus: firstValue(params, "saleStatus"),
         priceStatus: firstValue(params, "priceStatus"),

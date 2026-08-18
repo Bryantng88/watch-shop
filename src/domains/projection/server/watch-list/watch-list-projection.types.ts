@@ -22,6 +22,8 @@ export type WatchListSaleStatus =
   | "SOLD"
   | "CONSIGNED";
 
+export type WatchListStorefrontStatus = "PUBLISHED" | "HIDDEN";
+
 export type WatchListProjectionRow = {
   watchId: string;
   productId: string;
@@ -34,6 +36,8 @@ export type WatchListProjectionRow = {
   mediaStatus: WatchListMediaStatus;
   mediaStatusLabel: string;
   mediaWorkspaceHref: string | null;
+  storefrontStatus: WatchListStorefrontStatus;
+  storefrontStatusLabel: string;
   serviceStatus: WatchListServiceStatus;
   serviceStatusLabel: string;
   serviceExpectedWorkingDays: number | null;
@@ -104,6 +108,7 @@ export type WatchListProjectionData = {
     contentStatus: string | null;
     specStatus: string | null;
     mediaStatus?: WatchListMediaStatus | null;
+    storefrontStatus?: WatchListStorefrontStatus | null;
     serviceStatus?: WatchListServiceStatus | null;
     saleStatus?: WatchListSaleStatus | null;
     salePrice: number | null;
@@ -134,6 +139,7 @@ export type WatchListProjectionSourceRow = {
     title: string | null;
     sku: string | null;
     slug: string | null;
+    publishedAt: Date | null;
     brandId: string | null;
     vendorId: string | null;
     brand: { id: string; name: string | null } | null;

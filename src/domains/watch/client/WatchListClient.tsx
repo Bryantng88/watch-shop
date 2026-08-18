@@ -92,6 +92,7 @@ type WatchFilterFormState = {
   saleStage: string;
   opsStage: string;
   mediaStatus: string;
+  storefrontStatus: string;
   serviceStatus: string;
   saleStatus: string;
   priceStatus: string;
@@ -164,6 +165,7 @@ function filterStateFromParams(params: URLSearchParams): WatchFilterFormState {
     saleStage: params.get("saleStage") ?? "",
     opsStage: params.get("opsStage") ?? "",
     mediaStatus: params.get("mediaStatus") ?? "",
+    storefrontStatus: params.get("storefrontStatus") ?? "",
     serviceStatus: params.get("serviceStatus") ?? "",
     saleStatus: params.get("saleStatus") ?? "",
     priceStatus: params.get("priceStatus") ?? "",
@@ -185,6 +187,7 @@ function emptyFilterState(): WatchFilterFormState {
     saleStage: "",
     opsStage: "",
     mediaStatus: "",
+    storefrontStatus: "",
     serviceStatus: "",
     saleStatus: "",
     priceStatus: "",
@@ -533,6 +536,7 @@ export default function WatchListClient(props: WatchListClientProps) {
         setParam(next, "vendorId", filters.vendorId);
         setParam(next, "hasImages", filters.hasImages);
         setParam(next, "mediaStatus", filters.mediaStatus);
+        setParam(next, "storefrontStatus", filters.storefrontStatus);
         setParam(next, "serviceStatus", filters.serviceStatus);
         setParam(next, "saleStatus", filters.saleStatus);
         setParam(next, "priceStatus", filters.priceStatus);
@@ -568,6 +572,7 @@ export default function WatchListClient(props: WatchListClientProps) {
           "saleStage",
           "opsStage",
           "mediaStatus",
+          "storefrontStatus",
           "serviceStatus",
           "saleStatus",
           "priceStatus",
