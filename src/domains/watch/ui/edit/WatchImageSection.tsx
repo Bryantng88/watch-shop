@@ -338,6 +338,13 @@ export default function WatchImageSection({
                 url: `/api/media/sign?key=${encodeURIComponent(key)}`,
                 name: key.split("/").pop() ?? key,
             });
+            // Confirming a source-folder image ingests it into canonical storage and
+            // deletes the old key. Keep every reusable Sharp reference on the
+            // canonical key returned by the API so preview/reprocessing never reads
+            // the consumed source object.
+            setLocalLayoutBaseKey((current) => current === storageKey ? key : current);
+            setSharpCutoutKey((current) => current === storageKey ? key : current);
+            setPhotoRoomSourceKey((current) => current === storageKey ? key : current);
             setPendingCoverKey(null);
             if (nextSlug) onStorefrontSlugChange?.(nextSlug);
             notify.success({ title: "Đã chọn ảnh Cover", message: "Cover đã được lưu và đồng bộ storefront." });
