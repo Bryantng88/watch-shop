@@ -1,4 +1,3 @@
-import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 
@@ -9,7 +8,6 @@ import {
   type PhotoRoomAdjustment,
 } from "@/domains/watch/shared/photoroom-adjustment";
 import { prisma } from "@/server/db/client";
-import { s3, S3_BUCKET } from "@/server/s3";
 
 const PHOTOROOM_EDIT_URL = "https://image-api.photoroom.com/v2/edit";
 const PHOTOROOM_REMOVE_BACKGROUND_URL = "https://sdk.photoroom.com/v1/segment";
@@ -304,12 +302,7 @@ export async function recreateWatchCoverWithSharpApplication(input: {
     purpose: "cover",
   });
   const outputKey = `${prefix}/sharp-light-${productId}-${randomUUID()}.png`;
-  await s3.send(new PutObjectCommand({
-    Bucket: S3_BUCKET,
-    Key: outputKey,
-    Body: resultBytes,
-    ContentType: "image/png",
-  }));
+  await mediaStorage.write({ key: outputKey, bytes: resultBytes, contentType: "image/png" });
 
   const stored = await mediaStorage.stat(outputKey);
   if (!stored || stored.sizeBytes !== resultBytes.byteLength) {
@@ -461,20 +454,10 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
     ? `${prefix}/photoroom-cutout-${productId}-${randomUUID()}.png`
     : null;
   if (cutoutKey) {
-    await s3.send(new PutObjectCommand({
-      Bucket: S3_BUCKET,
-      Key: cutoutKey,
-      Body: photoRoomBytes,
-      ContentType: "image/png",
-    }));
+    await mediaStorage.write({ key: cutoutKey, bytes: photoRoomBytes, contentType: "image/png" });
   }
   const outputKey = `${prefix}/photoroom-${processingMode}-${productId}-${randomUUID()}.png`;
-  await s3.send(new PutObjectCommand({
-    Bucket: S3_BUCKET,
-    Key: outputKey,
-    Body: resultBytes,
-    ContentType: "image/png",
-  }));
+  await mediaStorage.write({ key: outputKey, bytes: resultBytes, contentType: "image/png" });
 
   const stored = await mediaStorage.stat(outputKey);
   if (!stored || stored.sizeBytes !== resultBytes.byteLength) {

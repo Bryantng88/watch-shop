@@ -4,6 +4,7 @@ import {
   GetObjectCommand,
   HeadObjectCommand,
   ListObjectsV2Command,
+  PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { normalizeKey } from "@/server/lib/storage-key";
@@ -12,6 +13,7 @@ import type {
   MediaStorage,
   MoveStoredMediaInput,
   StoredMediaMetadata,
+  WriteStoredMediaInput,
 } from "./media-storage.port";
 
 function copySource(key: string) {
@@ -64,6 +66,24 @@ export class S3MediaStorage implements MediaStorage {
       contentType: result.ContentType ?? null,
       bytes: await result.Body.transformToByteArray(),
     };
+  }
+
+  async write(input: WriteStoredMediaInput) {
+    const key = normalizeKey(input.key);
+    if (!key) throw new Error("Media key is required.");
+    await s3.send(new PutObjectCommand({
+      Bucket: S3_BUCKET,
+      Key: key,
+      Body: input.bytes,
+      ContentType: input.contentType,
+      CacheControl: input.cacheControl,
+    }));
+    const metadata = await this.stat(key);
+    if (!metadata) throw new Error(`Media write could not be verified: ${key}`);
+    if (metadata.sizeBytes !== null && metadata.sizeBytes !== input.bytes.byteLength) {
+      throw new Error(`Media write size mismatch: ${key}`);
+    }
+    return metadata;
   }
 
   async copy(sourceKey: string, destinationKey: string) {

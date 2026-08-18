@@ -34,10 +34,18 @@ export type MoveStoredMediaResult = {
   metadata: StoredMediaMetadata;
 };
 
+export type WriteStoredMediaInput = {
+  key: string;
+  bytes: Uint8Array;
+  contentType?: string;
+  cacheControl?: string;
+};
+
 export interface MediaStorage {
   exists(key: string): Promise<boolean>;
   stat(key: string): Promise<StoredMediaMetadata | null>;
   read(key: string): Promise<StoredMediaContent>;
+  write(input: WriteStoredMediaInput): Promise<StoredMediaMetadata>;
   copy(sourceKey: string, destinationKey: string): Promise<StoredMediaMetadata>;
   move(input: MoveStoredMediaInput): Promise<MoveStoredMediaResult>;
   delete(key: string): Promise<void>;

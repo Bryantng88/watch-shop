@@ -1,4 +1,3 @@
-import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
@@ -8,7 +7,6 @@ import { mediaStorage } from "@/domains/media/storage";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 import { prisma } from "@/server/db/client";
 import { normalizeKey } from "@/server/lib/storage-key";
-import { s3, S3_BUCKET } from "@/server/s3";
 
 export const maxDuration = 60;
 
@@ -99,13 +97,12 @@ export async function POST(req: NextRequest) {
         .toBuffer({ resolveWithObject: true });
       const fingerprint = createHash("sha256").update(`${storageKey}:${metadata.etag ?? metadata.sizeBytes ?? "source"}`).digest("hex").slice(0, 24);
       derivativeKey = `${DERIVATIVE_ROOT}${fingerprint}.webp`;
-      await s3.send(new PutObjectCommand({
-        Bucket: S3_BUCKET,
-        Key: derivativeKey,
-        Body: output.data,
-        ContentType: "image/webp",
-        CacheControl: "public, max-age=31536000, immutable",
-      }));
+      await mediaStorage.write({
+        key: derivativeKey,
+        bytes: output.data,
+        contentType: "image/webp",
+        cacheControl: "public, max-age=31536000, immutable",
+      });
       width = output.info.width;
       height = output.info.height;
     }

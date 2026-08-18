@@ -156,10 +156,7 @@ export default function WatchImageSection({
         Boolean(getMediaKey(coverImage ?? ({} as PickedMediaItem))) &&
         Boolean(storefrontSlug?.trim()) &&
         ["AVAILABLE", "HOLD", "SOLD"].includes(String(productStatus ?? "").toUpperCase()) &&
-        ["READY", "HOLD", "SOLD"].includes(String(saleStage ?? "").toUpperCase()) &&
         ["NOT_REQUIRED", "DONE"].includes(String(serviceStage ?? "").toUpperCase()) &&
-        String(contentReviewStatus ?? "").toUpperCase() === "APPROVED" &&
-        String(imageReviewStatus ?? "").toUpperCase() === "APPROVED" &&
         (!effectiveShowPrice || Number(salePrice ?? 0) > 0);
     const dialog = useAppDialog();
     const notify = useNotify();
