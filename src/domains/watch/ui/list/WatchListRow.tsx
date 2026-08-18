@@ -347,7 +347,10 @@ export default function WatchListRow({
             status: product.isPosted ? "POSTED" : "NO_IMAGE",
             href: null,
         };
-    const storefrontLabel = product.v2Row?.storefrontStatusLabel ?? (product.storefrontPublished ? "Đã lên storefront" : "Chưa lên storefront");
+    const storefrontPublished = product.v2Row
+        ? product.v2Row.storefrontStatus === "PUBLISHED"
+        : Boolean(product.storefrontPublished);
+    const storefrontLabel = storefrontPublished ? "Đang hiển thị storefront" : "Đang ẩn storefront";
     const service = product.v2Row
         ? {
             label: product.v2Row.serviceStatusLabel,
@@ -568,13 +571,13 @@ export default function WatchListRow({
             </td>
 
             <td className="hidden px-2 py-3 align-middle xl:table-cell">
-                <WatchStatusSignal
-                    kind="media"
-                    label={media.label}
-                    status={media.status}
-                    tone={media.tone}
-                    detail={storefrontLabel}
-                    onClick={onPreview ? () => { onPreview(mediaPreview); /*
+                <div>
+                    <WatchStatusSignal
+                        kind="media"
+                        label={media.label}
+                        status={media.status}
+                        tone={media.tone}
+                        onClick={onPreview ? () => { onPreview(mediaPreview); /*
                         onPreview({
                             type: "WATCH",
                             id: product.id,
@@ -607,7 +610,11 @@ export default function WatchListRow({
                             ],
                             actions: media.href ? [{ label: "Mở workspace media", href: media.href }] : undefined,
                         */ } : null}
-                />
+                    />
+                    <div className={`mt-1 pl-10 text-[11px] font-semibold leading-4 ${storefrontPublished ? "text-emerald-600" : "text-slate-400"}`}>
+                        {storefrontLabel}
+                    </div>
+                </div>
             </td>
 
             <td className="hidden px-2 py-3 align-middle xl:table-cell">

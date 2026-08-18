@@ -71,9 +71,9 @@ const advancedFields: FilterBarField[] = [
         label: "Storefront",
         type: "select",
         options: [
-            { label: "Tất cả", value: "" },
-            { label: "Đã lên storefront", value: "PUBLISHED" },
-            { label: "Chưa lên storefront", value: "HIDDEN" },
+            { label: "Storefront: Tất cả", value: "" },
+            { label: "Storefront: Đang hiển thị", value: "PUBLISHED" },
+            { label: "Storefront: Đang ẩn", value: "HIDDEN" },
         ],
     },
     {
