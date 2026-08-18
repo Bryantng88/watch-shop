@@ -6,6 +6,7 @@ import {
     listWatchMediaEditOptions,
     getWatchServiceProjectionDetail,
     getWatchTradeHistoryDetail,
+    getActiveWatchMediaWorkspace,
 } from "@/domains/watch/server";
 import WatchWorkbenchClient from "@/domains/watch/client/workbench/WatchWorkbenchClient";
 
@@ -136,12 +137,13 @@ export default async function WatchDetailPage({
     const user = await requirePermission(PERMISSIONS.PRODUCT_VIEW);
     const { id } = await params;
 
-    const [detail, serviceProjection, tradeHistory, editOptions] =
+    const [detail, serviceProjection, tradeHistory, editOptions, mediaWorkspace] =
         await Promise.all([
             getWatchEditDetail(id),
             getWatchServiceProjectionDetail(id),
             getWatchTradeHistoryDetail(id),
             listWatchMediaEditOptions(),
+            getActiveWatchMediaWorkspace(id),
         ]);
 
     if (!detail) notFound();
@@ -164,6 +166,7 @@ export default async function WatchDetailPage({
                 canEditPrice: mayEditPrice,
             }}
             postTargets={serialize(editOptions.postTargets ?? [])}
+            mediaWorkspace={serialize(mediaWorkspace)}
         />
     );
 }

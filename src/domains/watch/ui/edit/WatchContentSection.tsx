@@ -86,15 +86,16 @@ export default function WatchContentSection({
         useState<WatchContentGenerationResult | null>(null);
 
     const currentReviewStatus = normalizeStatus(contentReviewStatus);
-    const locked =
+    const locked = !hideReviewActions && (
         currentReviewStatus === "APPROVED" ||
-        (currentReviewStatus === "SUBMITTED" && !canReviewContent);
+        (currentReviewStatus === "SUBMITTED" && !canReviewContent));
 
     const bulletSpecs = Array.isArray(values.bulletSpecs)
         ? values.bulletSpecs
         : [];
 
     const handleBeforeOpen = async () => {
+        if (hideReviewActions) return true;
         if (currentReviewStatus !== "APPROVED") return true;
 
         if (!canReviewContent) {
@@ -218,7 +219,7 @@ export default function WatchContentSection({
             actions={
                 <div className="flex flex-wrap items-center justify-end gap-2">
                     {hideReviewActions ? completionAction : null}
-                    <SectionReviewActions
+                    {!hideReviewActions ? <SectionReviewActions
                         productId={productId}
                         target="content"
                         status={contentReviewStatus}
@@ -229,7 +230,7 @@ export default function WatchContentSection({
                             onReviewStatusChange?.(next);
                         }}
                         watchId={watchId || watchValues.watchId}
-                    />
+                    /> : null}
                 </div>
             }
         >

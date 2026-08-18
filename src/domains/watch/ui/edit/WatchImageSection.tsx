@@ -198,9 +198,9 @@ export default function WatchImageSection({
     const currentReviewStatus = normalizeStatus(imageReviewStatus);
     const currentCoverKey = coverImage ? getMediaKey(coverImage) : "";
     const coverPreviewSrc = resolveMediaPreviewSrc(pendingCoverKey ?? currentCoverKey);
-    const locked =
+    const locked = !hideReviewActions && (
         currentReviewStatus === "APPROVED" ||
-        (currentReviewStatus === "SUBMITTED" && !canReviewContent);
+        (currentReviewStatus === "SUBMITTED" && !canReviewContent));
 
     useEffect(() => {
         if (!coverPreviewOpen) return;
@@ -213,6 +213,7 @@ export default function WatchImageSection({
     }, [coverPreviewOpen]);
 
     const ensureEditable = async () => {
+        if (hideReviewActions) return true;
         if (currentReviewStatus !== "APPROVED") return true;
 
         if (!canReviewContent) {
@@ -587,17 +588,17 @@ export default function WatchImageSection({
                     !showGallery ? null :
                     <div className="flex flex-wrap items-center justify-end gap-2">
                         {hideReviewActions ? mediaActions : null}
-                        <TaskSignalIcon
+                        {!hideReviewActions ? <TaskSignalIcon
                             title={taskPending ? "Đang tải task..." : "Giao task hình ảnh"}
                             onClick={openImageTaskModal}
                             disabled={taskPending}
-                        />
-                        {openTaskCount ? (
+                        /> : null}
+                        {!hideReviewActions && openTaskCount ? (
                             <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-100">
                                 {openTaskCount} task
                             </span>
                         ) : null}
-                        <SectionReviewActions
+                        {!hideReviewActions ? <SectionReviewActions
                             productId={productId}
                             target="image"
                             status={imageReviewStatus}
@@ -609,7 +610,7 @@ export default function WatchImageSection({
                             onStatusChange={(next) => {
                                 onReviewStatusChange?.(next);
                             }}
-                        />
+                        /> : null}
                     </div>
                 }
             >

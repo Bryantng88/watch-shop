@@ -14,6 +14,10 @@ export type WatchWorkbenchProps = {
         name: string;
         platform?: string | null;
     }>;
+    mediaWorkspace?: {
+        bindingId: string;
+        state: string;
+    } | null;
 };
 
 export type WatchWorkbenchSection =

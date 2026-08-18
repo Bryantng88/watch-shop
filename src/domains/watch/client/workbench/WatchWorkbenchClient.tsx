@@ -57,6 +57,7 @@ export default function WatchWorkbenchClient({
     projection,
     permissions,
     postTargets,
+    mediaWorkspace,
 }: WatchWorkbenchProps) {
     const { detail, service: serviceProjection, tradeHistory } = projection;
     const router = useRouter();
@@ -171,7 +172,17 @@ export default function WatchWorkbenchClient({
 
     const title = titleForWatch(detail, values);
     const watchDetailHref = `/admin/watches/${values.productId}`;
-    const mediaWorkspaceHref = `/admin/watches/${values.productId}/edit?embedded=1&mode=media&returnTo=${encodeURIComponent(watchDetailHref)}`;
+    const mediaWorkspaceParams = new URLSearchParams({
+        embedded: "1",
+        mode: "media",
+        returnTo: watchDetailHref,
+        ...(mediaWorkspace ? {
+            from: "media-workspace",
+            workspaceBindingId: mediaWorkspace.bindingId,
+            workspaceState: mediaWorkspace.state,
+        } : {}),
+    });
+    const mediaWorkspaceHref = `/admin/watches/${values.productId}/edit?${mediaWorkspaceParams.toString()}`;
     const openMediaWorkspace = async () => {
         if (mediaWorkspaceOpening) return;
 

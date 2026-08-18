@@ -5,6 +5,7 @@ export {
   markWatchMediaAssetAttachedFromQueueItem,
   markWatchMediaAssetAttachedFromWatch,
   getWatchMediaWorkProgressFromQueueItem,
+  getActiveWatchMediaWorkspace,
   recallWatchMediaFromPublishQueueItem,
   requestWatchPhotoshoot,
   requestWatchMediaReshootFromQueueItem,

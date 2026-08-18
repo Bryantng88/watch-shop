@@ -982,6 +982,55 @@ export async function getWatchMediaWorkProgressFromQueueItem(
   };
 }
 
+export async function getActiveWatchMediaWorkspace(
+  productIdInput: string,
+  db: DB = prisma,
+) {
+  const productId = clean(productIdInput);
+  if (!productId) return null;
+
+  const watch = await db.watch.findUnique({
+    where: { productId },
+    select: { id: true },
+  });
+  if (!watch) return null;
+
+  const binding = await db.taskExecution.findFirst({
+    where: {
+      targetType: TaskExecutionTargetType.WATCH,
+      targetId: watch.id,
+      taskItem: {
+        status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] },
+        note: {
+          contains: "workTypeKey: media-processing",
+          mode: "insensitive",
+        },
+      },
+    },
+    select: { id: true, metadataJson: true },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!binding) return null;
+
+  const runtime = getQueueItemWorkflowState(binding);
+  const supportedStates = new Set(["NEW", "REVIEW", "RETURNED", "DONE"]);
+  const currentState = clean(runtime?.currentState).toUpperCase();
+  const state = supportedStates.has(currentState) ? currentState : "REVIEW";
+
+  if (runtime && state !== currentState) {
+    await updateQueueItemWorkflowState(db, binding.id, state, {
+      ...asRecord(runtime.metadata),
+      normalizedFromLegacyState: currentState,
+      normalizedAt: new Date().toISOString(),
+    } as Prisma.JsonObject);
+  }
+
+  return {
+    bindingId: binding.id,
+    state,
+  };
+}
+
 export async function saveWatchMediaWorkDraftFromWatch(
   input: {
     productId: string;
