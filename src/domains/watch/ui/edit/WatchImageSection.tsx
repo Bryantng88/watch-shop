@@ -199,6 +199,15 @@ export default function WatchImageSection({
 
     const currentReviewStatus = normalizeStatus(imageReviewStatus);
     const currentCoverKey = coverImage ? getMediaKey(coverImage) : "";
+    const selectedCoverKey = (pendingCoverKey || currentCoverKey).trim();
+    const reusableSharpKey = localLayoutBaseKey || (
+        selectedCoverKey.includes("photoroom-") || selectedCoverKey.includes("sharp-light-")
+            ? selectedCoverKey
+            : null
+    );
+    const reusableSharpBaseAdjustment = localLayoutBaseAdjustment || (
+        reusableSharpKey ? DEFAULT_PHOTOROOM_ADJUSTMENT : null
+    );
     const coverPreviewSrc = resolveMediaPreviewSrc(pendingCoverKey ?? currentCoverKey);
     const locked = !hideReviewActions && (
         currentReviewStatus === "APPROVED" ||
@@ -439,12 +448,12 @@ export default function WatchImageSection({
             setPhotoRoomSourceKey(String(json?.data?.sourceStorageKey ?? storageKey).trim());
             setHasPhotoRoomResult(true);
             const cutoutStorageKey = String(json?.data?.cutoutStorageKey ?? "").trim();
-            setSharpCutoutKey(cutoutStorageKey || null);
+            setSharpCutoutKey(cutoutStorageKey || outputKey);
             setPendingCoverKey(outputKey);
             if (adjustment) {
                 setPhotoRoomAdjustment(adjustment);
-                setLocalLayoutBaseKey(cutoutStorageKey || null);
-                setLocalLayoutBaseAdjustment(cutoutStorageKey ? adjustment : null);
+                setLocalLayoutBaseKey(cutoutStorageKey || outputKey);
+                setLocalLayoutBaseAdjustment(adjustment);
                 setPhotoRoomAdjustmentOpen(false);
             }
             setCoverPickerVersion((version) => version + 1);
@@ -463,16 +472,16 @@ export default function WatchImageSection({
     };
 
     const handleLocalAdjustment = async (adjustment: PhotoRoomAdjustment) => {
-        if (!localLayoutBaseKey || !localLayoutBaseAdjustment || sharpPending || photoRoomPending) return;
+        if (!reusableSharpKey || !reusableSharpBaseAdjustment || sharpPending || photoRoomPending) return;
         setSharpPending(true);
         try {
             const res = await fetch(`/api/admin/watches/${productId}/storefront-image/sharp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    storageKey: localLayoutBaseKey,
+                    storageKey: reusableSharpKey,
                     adjustment,
-                    baseAdjustment: localLayoutBaseAdjustment,
+                    baseAdjustment: reusableSharpBaseAdjustment,
                 }),
             });
             const json = await res.json().catch(() => null);
@@ -900,10 +909,10 @@ export default function WatchImageSection({
                 pending={photoRoomPending}
                 localPending={sharpPending}
                 previewSrc={resolveMediaPreviewSrc(localLayoutBaseKey ?? pendingCoverKey ?? currentCoverKey)}
-                canProcessLocally={Boolean(localLayoutBaseKey && localLayoutBaseAdjustment)}
-                localBaseEnhanceMetal={localLayoutBaseAdjustment?.enhanceMetal}
-                localBaseShadowMode={localLayoutBaseAdjustment?.shadowMode}
-                localDisabledReason="Cần tạo ít nhất một preview PhotoRoom trong phiên này"
+                canProcessLocally={Boolean(reusableSharpKey && reusableSharpBaseAdjustment)}
+                localBaseEnhanceMetal={reusableSharpBaseAdjustment?.enhanceMetal}
+                localBaseShadowMode={reusableSharpBaseAdjustment?.shadowMode}
+                localDisabledReason="Cần tạo Cover sạch bằng PhotoRoom một lần trước khi dùng Sharp"
                 initialValue={photoRoomAdjustment}
                 onClose={() => setPhotoRoomAdjustmentOpen(false)}
                 onSubmit={(value) => void handlePhotoRoomProcess(value)}

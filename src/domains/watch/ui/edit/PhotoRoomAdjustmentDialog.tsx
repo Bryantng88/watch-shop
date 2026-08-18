@@ -99,8 +99,8 @@ export default function PhotoRoomAdjustmentDialog({
     <Dialog
       open={open}
       onClose={pending ? () => undefined : onClose}
-      title="Điều chỉnh bằng PhotoRoom"
-      description="Xem mô phỏng trước khi tạo. Bố cục có thể dựng local không tốn quota sau lần PhotoRoom đầu; thay đổi AI shadow hoặc làm bóng mới cần gọi PhotoRoom."
+      title="Điều chỉnh Cover"
+      description="Xoay, zoom và căn bố cục bằng Sharp không tốn quota sau lần PhotoRoom đầu; thay đổi AI shadow hoặc làm bóng mới cần gọi PhotoRoom."
       maxWidthClass="max-w-5xl"
     >
       <div className="grid gap-5 lg:grid-cols-[1.15fr_.85fr]">
@@ -291,10 +291,10 @@ export default function PhotoRoomAdjustmentDialog({
               ? localDisabledReason ?? "Cần tạo ít nhất một preview PhotoRoom trong phiên này"
               : !localAvailable
                 ? "Thay đổi AI shadow hoặc làm bóng kim loại cần dùng PhotoRoom"
-                : "Dựng lại bố cục bằng Sharp, không gọi PhotoRoom"}
+                : "Xử lý xoay, zoom và bố cục bằng Sharp, không gọi PhotoRoom"}
             className="rounded-xl border border-violet-200 bg-white px-4 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {localPending ? "Đang xử lý local..." : "Dựng bố cục local · không quota"}
+            {localPending ? "Sharp đang xử lý..." : "Xử lý bằng Sharp · không quota"}
           </button>
         ) : null}
         <button type="button" onClick={() => onSubmit(value)} disabled={pending} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50">

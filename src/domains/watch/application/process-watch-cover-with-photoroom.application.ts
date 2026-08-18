@@ -181,17 +181,27 @@ async function composeAdjustedStorefrontCover(
   cutoutBytes: Uint8Array,
   adjustment: PhotoRoomAdjustment,
   rotationDelta: number,
+  sourceHasTransparentBackground = true,
+  baseZoomPercent = 100,
 ) {
-  const sizeScale = normalizedZoom(adjustment) / 100;
-  const rotated = await sharp(cutoutBytes)
+  const sizeScale = sourceHasTransparentBackground
+    ? normalizedZoom(adjustment) / 100
+    : normalizedZoom(adjustment) / Math.max(40, baseZoomPercent);
+  const subjectSource = sourceHasTransparentBackground
+    ? sharp(cutoutBytes)
+    : sharp(cutoutBytes).trim({
+      background: { r: 255, g: 255, b: 255, alpha: 1 },
+      threshold: 12,
+    });
+  const rotated = await subjectSource
     .rotate(rotationDelta, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .png()
-    .toBuffer();
-  const resized = await sharp(rotated)
+    .toBuffer({ resolveWithObject: true });
+  const resized = await sharp(rotated.data)
     .resize({
-      width: Math.floor(COVER_WIDTH * sizeScale),
-      height: Math.floor(COVER_HEIGHT * sizeScale),
+      width: Math.max(1, Math.floor((sourceHasTransparentBackground ? COVER_WIDTH : rotated.info.width) * sizeScale)),
+      height: Math.max(1, Math.floor((sourceHasTransparentBackground ? COVER_HEIGHT : rotated.info.height) * sizeScale)),
       fit: "inside",
       withoutEnlargement: false,
     })
@@ -276,8 +286,10 @@ export async function recreateWatchCoverWithSharpApplication(input: {
   const productId = String(input.productId ?? "").trim();
   const sourceKey = String(input.storageKey ?? "").trim();
   if (!productId || !sourceKey) throw new Error("Thiếu Watch hoặc ảnh nguồn.");
-  if (!sourceKey.includes("photoroom-cutout-")) {
-    throw new Error("Xử lý local chỉ nhận cutout PNG trong suốt đã được PhotoRoom tạo sẵn.");
+  const isTransparentCutout = sourceKey.includes("photoroom-cutout-");
+  const isReusableResult = sourceKey.includes("photoroom-") || sourceKey.includes("sharp-light-");
+  if (!isReusableResult) {
+    throw new Error("Sharp chỉ xử lý Cover đã qua PhotoRoom/Sharp; ảnh gốc cần PhotoRoom tạo nền sạch lần đầu.");
   }
 
   const watch = await prisma.watch.findUnique({
@@ -296,6 +308,8 @@ export async function recreateWatchCoverWithSharpApplication(input: {
     cutout,
     { ...adjustment, shadowMode: "none" },
     nextRotation - baseRotation,
+    isTransparentCutout,
+    normalizedZoom(baseAdjustment),
   ));
   const prefix = mediaPathPolicy.sourceRoot({
     segment: watch.audienceSegment,
