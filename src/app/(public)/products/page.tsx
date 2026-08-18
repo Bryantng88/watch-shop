@@ -45,7 +45,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const parsedQuery: PublicCatalogQuery = parsed.success ? parsed.data : publicCatalogQuerySchema.parse({});
   const query: PublicCatalogQuery = parsedQuery.audience || parsedQuery.collection
     ? parsedQuery
-    : { ...parsedQuery, audience: "MEN" };
+    : { ...parsedQuery, audience: "MEN", collection: "STANDARD" };
   const [result, facets] = await Promise.all([listPublicWatches(query), getPublicCatalogFacets()]);
   const activeFilterCount = [query.brand, query.audience, query.collection, query.style, query.size, query.movement, query.caseMaterial, query.priceMax !== undefined].filter(Boolean).length;
 

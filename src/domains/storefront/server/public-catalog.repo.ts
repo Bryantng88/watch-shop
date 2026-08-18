@@ -3,8 +3,6 @@ import {
   ProductStatus,
   ProductType,
   WatchSaleStage,
-  WatchReviewStatus,
-  WatchReviewTargetType,
   WatchServiceStage,
   WatchStockStage,
   type Prisma,
@@ -151,6 +149,7 @@ export function publicWatchEligibilityWhere(options?: {
     AND: [
       {
         type: ProductType.WATCH,
+        title: { not: "" },
         status: { in: [ProductStatus.AVAILABLE, ProductStatus.HOLD, ProductStatus.SOLD] },
         slug: { not: "" },
         productImage: {
@@ -158,28 +157,10 @@ export function publicWatchEligibilityWhere(options?: {
         },
         watch: {
           is: {
-            saleStage: { in: [WatchSaleStage.READY, WatchSaleStage.HOLD, WatchSaleStage.SOLD] },
             serviceStage: {
               in: [WatchServiceStage.NOT_REQUIRED, WatchServiceStage.DONE],
             },
-            AND: [
-              {
-                reviewStates: {
-                  some: {
-                    targetType: WatchReviewTargetType.CONTENT,
-                    status: WatchReviewStatus.APPROVED,
-                  },
-                },
-              },
-              {
-                reviewStates: {
-                  some: {
-                    targetType: WatchReviewTargetType.IMAGE,
-                    status: WatchReviewStatus.APPROVED,
-                  },
-                },
-              },
-            ],
+            watchSpecV2: { isNot: null },
           },
         },
       },
@@ -241,12 +222,12 @@ function publicWatchFilterWhere(query: PublicCatalogQuery): Prisma.ProductWhereI
     and.push({ watch: { is: { style: query.style } } });
   }
 
-  if (query.audience) {
+  if (query.audience && query.audience !== "ALL") {
     and.push({ watch: { is: { audienceSegment: query.audience } } });
   }
 
-  if (query.collection === "COLLECTIBLE") {
-    and.push({ watch: { is: { isCollectible: true } } });
+  if (query.collection) {
+    and.push({ watch: { is: { isCollectible: query.collection === "COLLECTIBLE" } } });
   }
 
   if (query.movement) {

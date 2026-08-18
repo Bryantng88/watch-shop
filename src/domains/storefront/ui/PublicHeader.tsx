@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, Search, ShoppingBag, X } from "lucide-react";
+import { ChevronDown, Menu, Search, ShoppingBag, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,17 +9,60 @@ import { useStorefrontLocale } from "./StorefrontLocale";
 import { formatStorefrontMoney } from "../shared/locale.utils";
 
 const navigation = {
-  VI: [
-    { href: "/products", label: "Đồng hồ Nam" },
-    { href: "/products?audience=WOMEN", label: "Đồng hồ Nữ" },
-    { href: "/products?collection=COLLECTIBLE", label: "Collectibles" },
-  ],
-  EN: [
-    { href: "/products", label: "Men's Watches" },
-    { href: "/products?audience=WOMEN", label: "Women's Watches" },
-    { href: "/products?collection=COLLECTIBLE", label: "Collectibles" },
-  ],
+  VI: {
+    men: { label: "Nam", links: [
+      { href: "/products?audience=MEN&collection=STANDARD", label: "Đồng hồ phổ thông" },
+      { href: "/products?audience=MEN&collection=COLLECTIBLE", label: "Đồng hồ sưu tầm" },
+      { href: "/products?audience=ALL", label: "Tất cả" },
+    ] },
+    women: { label: "Nữ", links: [
+      { href: "/women/jewelry", label: "Trang sức" },
+      { href: "/products?audience=WOMEN", label: "Đồng hồ" },
+    ] },
+    service: { href: "/services", label: "Dịch vụ" },
+    consign: { href: "/consign", label: "Ký gửi đồng hồ" },
+  },
+  EN: {
+    men: { label: "For Men", links: [
+      { href: "/products?audience=MEN&collection=STANDARD", label: "Everyday Vintage" },
+      { href: "/products?audience=MEN&collection=COLLECTIBLE", label: "Collectible Vintage" },
+      { href: "/products?audience=ALL", label: "View All" },
+    ] },
+    women: { label: "For Women", links: [
+      { href: "/women/jewelry", label: "Jewelry" },
+      { href: "/products?audience=WOMEN", label: "Watches" },
+    ] },
+    service: { href: "/services", label: "Service" },
+    consign: { href: "/consign", label: "Consign Your Watch" },
+  },
 } as const;
+
+type MenuGroup = {
+  readonly label: string;
+  readonly links: readonly { readonly href: string; readonly label: string }[];
+};
+
+function MobileMenuGroup({ group }: { group: MenuGroup }) {
+  return (
+    <div className="border-b border-[#e5e1da] py-2">
+      <p className="px-3 pb-1 pt-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#8a867f]">{group.label}</p>
+      {group.links.map((item) => <Link key={item.href} href={item.href} className="storefront-focus block px-3 py-2.5 text-sm">{item.label}</Link>)}
+    </div>
+  );
+}
+
+function DesktopMenuGroup({ group }: { group: MenuGroup }) {
+  return (
+    <div className="group/menu relative flex h-9 items-center">
+      <button type="button" className="storefront-focus flex h-full items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white/90 hover:text-white">
+        {group.label}<ChevronDown className="h-3 w-3 stroke-[1.5] transition-transform group-hover/menu:rotate-180" aria-hidden="true" />
+      </button>
+      <div className="invisible absolute left-1/2 top-full z-50 min-w-52 -translate-x-1/2 translate-y-1 border border-[#dedbd4] bg-white py-2 opacity-0 shadow-[0_16px_32px_-18px_rgba(0,0,0,0.45)] transition group-hover/menu:visible group-hover/menu:translate-y-0 group-hover/menu:opacity-100 group-focus-within/menu:visible group-focus-within/menu:translate-y-0 group-focus-within/menu:opacity-100">
+        {group.links.map((item) => <Link key={item.href} href={item.href} className="storefront-focus block whitespace-nowrap px-5 py-2.5 text-xs text-[#353432] hover:bg-[#f4f2ed]">{item.label}</Link>)}
+      </div>
+    </div>
+  );
+}
 
 export default function PublicHeader() {
   const { items, remove } = useStorefrontCart();
@@ -30,7 +73,7 @@ export default function PublicHeader() {
     document.cookie = `vintic-locale=${next === "EN" ? "en" : "vi"}; Max-Age=31536000; Path=/; SameSite=Lax`;
     router.refresh();
   };
-  const links = navigation[language];
+  const menu = navigation[language];
   const estimatedTotal = items.reduce((total, item) => total + (Number(item.priceAmount) || 0), 0);
   return (
     <header className="border-b border-[#dedbd4] bg-white">
@@ -42,11 +85,9 @@ export default function PublicHeader() {
             <span className="sr-only">Mở menu</span>
           </summary>
           <nav className="absolute left-0 top-11 z-50 w-[min(82vw,320px)] border border-[#d7d3cb] bg-white p-3 shadow-xl">
-            {links.map((item) => (
-              <Link key={item.href} href={item.href} className="storefront-focus block border-b border-[#e5e1da] px-3 py-3 text-sm uppercase tracking-[0.12em] last:border-0">
-                {item.label}
-              </Link>
-            ))}
+            <MobileMenuGroup group={menu.men} />
+            <MobileMenuGroup group={menu.women} />
+            {[menu.service, menu.consign].map((item) => <Link key={item.href} href={item.href} className="storefront-focus block border-b border-[#e5e1da] px-3 py-3 text-sm last:border-0">{item.label}</Link>)}
           </nav>
         </details>
 
@@ -73,7 +114,9 @@ export default function PublicHeader() {
         </div>
       </div>
       <nav className="hidden bg-[#46545e] lg:flex lg:h-9 lg:items-center lg:justify-center lg:gap-10" aria-label="Điều hướng chính">
-        {links.map((item) => <Link key={item.href} href={item.href} className="storefront-focus py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-white/90 hover:text-white">{item.label}</Link>)}
+        <DesktopMenuGroup group={menu.men} />
+        <DesktopMenuGroup group={menu.women} />
+        {[menu.service, menu.consign].map((item) => <Link key={item.href} href={item.href} className="storefront-focus py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-white/90 hover:text-white">{item.label}</Link>)}
       </nav>
     </header>
   );

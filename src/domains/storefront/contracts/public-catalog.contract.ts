@@ -18,8 +18,8 @@ export const publicCatalogQuerySchema = z
   .object({
     q: optionalQueryText(120),
     brand: optionalQueryText(80),
-    audience: z.enum(["MEN", "WOMEN"]).optional(),
-    collection: z.enum(["COLLECTIBLE"]).optional(),
+    audience: z.enum(["ALL", "MEN", "WOMEN"]).optional(),
+    collection: z.enum(["STANDARD", "COLLECTIBLE"]).optional(),
     style: z.enum(["MILITARY", "DRESS", "SPORT", "TOOL", "CASUAL", "CLASSIC", "MINIMALIST", "LUXURY", "RETRO", "FUTURISTIC"]).optional(),
     size: z.enum(["SMALL", "MEDIUM", "LARGE"]).optional(),
     movement: z.enum(["AUTOMATIC", "HAND_WOUND", "QUARTZ", "SOLAR", "KINETIC", "MECHAQUARTZ", "SPRING_DRIVE", "HYBRID"]).optional(),
