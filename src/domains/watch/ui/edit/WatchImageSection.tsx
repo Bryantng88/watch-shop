@@ -919,6 +919,10 @@ export default function WatchImageSection({
                 canProcessLocally={Boolean(reusableSharpKey && reusableSharpBaseAdjustment)}
                 localBaseEnhanceMetal={reusableSharpBaseAdjustment?.enhanceMetal}
                 localBaseShadowMode={reusableSharpBaseAdjustment?.shadowMode}
+                localBaseAdjustment={reusableSharpBaseAdjustment}
+                previewIsTransparentCutout={Boolean(localLayoutBaseKey?.includes("photoroom-cutout-"))}
+                productId={productId}
+                localPreviewStorageKey={reusableSharpKey}
                 localDisabledReason="Cần tạo Cover sạch bằng PhotoRoom một lần trước khi dùng Sharp"
                 initialValue={photoRoomAdjustment}
                 onClose={() => setPhotoRoomAdjustmentOpen(false)}

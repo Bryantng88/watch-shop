@@ -19,7 +19,6 @@ const COVER_HEIGHT = 3840;
 type PhotoRoomProcessingMode = "basic-sharp" | "plus";
 type SharpShadowProfile = "light" | "legacy";
 
-const PHOTOROOM_FINE_OFFSET = 0.06;
 
 function normalizedZoom(adjustment: PhotoRoomAdjustment) {
   return Math.max(40, Math.min(200, adjustment.zoomPercent ?? 100));
@@ -211,21 +210,13 @@ async function composeAdjustedStorefrontCover(
   const rawHeight = resized.info.height;
   const overflowX = Math.max(0, rawWidth - COVER_WIDTH);
   const overflowY = Math.max(0, rawHeight - COVER_HEIGHT);
-  const fineOffsetX = adjustment.horizontalOffset === "negative"
-    ? Math.round(COVER_WIDTH * PHOTOROOM_FINE_OFFSET)
-    : adjustment.horizontalOffset === "positive"
-      ? -Math.round(COVER_WIDTH * PHOTOROOM_FINE_OFFSET)
-      : 0;
-  const fineOffsetY = adjustment.verticalOffset === "negative"
-    ? Math.round(COVER_HEIGHT * PHOTOROOM_FINE_OFFSET)
-    : adjustment.verticalOffset === "positive"
-      ? -Math.round(COVER_HEIGHT * PHOTOROOM_FINE_OFFSET)
-      : 0;
+  const offsetX = Math.round(COVER_WIDTH * adjustment.horizontalOffsetPercent / 100);
+  const offsetY = Math.round(COVER_HEIGHT * adjustment.verticalOffsetPercent / 100);
   const cropLeft = Math.max(0, Math.min(overflowX,
-    (adjustment.horizontalAlignment === "left" ? 0 : adjustment.horizontalAlignment === "right" ? overflowX : Math.round(overflowX / 2)) + fineOffsetX,
+    (adjustment.horizontalAlignment === "left" ? 0 : adjustment.horizontalAlignment === "right" ? overflowX : Math.round(overflowX / 2)) - offsetX,
   ));
   const cropTop = Math.max(0, Math.min(overflowY,
-    (adjustment.verticalAlignment === "top" ? 0 : adjustment.verticalAlignment === "bottom" ? overflowY : Math.round(overflowY / 2)) + fineOffsetY,
+    (adjustment.verticalAlignment === "top" ? 0 : adjustment.verticalAlignment === "bottom" ? overflowY : Math.round(overflowY / 2)) - offsetY,
   ));
   const subject = overflowX || overflowY
     ? await sharp(resized.data).extract({
@@ -249,16 +240,6 @@ async function composeAdjustedStorefrontCover(
     : adjustment.verticalAlignment === "bottom"
       ? availableY
       : Math.round(availableY / 2);
-  const offsetX = adjustment.horizontalOffset === "negative"
-    ? -Math.round(COVER_WIDTH * PHOTOROOM_FINE_OFFSET)
-    : adjustment.horizontalOffset === "positive"
-      ? Math.round(COVER_WIDTH * PHOTOROOM_FINE_OFFSET)
-      : 0;
-  const offsetY = adjustment.verticalOffset === "negative"
-    ? -Math.round(COVER_HEIGHT * PHOTOROOM_FINE_OFFSET)
-    : adjustment.verticalOffset === "positive"
-      ? Math.round(COVER_HEIGHT * PHOTOROOM_FINE_OFFSET)
-      : 0;
   const left = Math.max(0, Math.min(availableX, alignedLeft + offsetX));
   const top = Math.max(0, Math.min(availableY, alignedTop + offsetY));
   return sharp({
@@ -325,6 +306,41 @@ export async function recreateWatchCoverWithSharpApplication(input: {
   return { storageKey: outputKey, sourceStorageKey: sourceKey, processingMode: "sharp" };
 }
 
+export async function previewWatchCoverWithSharpApplication(input: {
+  productId: string;
+  storageKey: string;
+  adjustment?: PhotoRoomAdjustment | null;
+  baseAdjustment?: PhotoRoomAdjustment | null;
+}) {
+  const productId = String(input.productId ?? "").trim();
+  const sourceKey = String(input.storageKey ?? "").trim();
+  if (!productId || !sourceKey) throw new Error("Thiếu Watch hoặc ảnh nguồn.");
+  const isTransparentCutout = sourceKey.includes("photoroom-cutout-");
+  if (!sourceKey.includes("photoroom-") && !sourceKey.includes("sharp-light-")) {
+    throw new Error("Preview Sharp chỉ hỗ trợ Cover đã qua PhotoRoom/Sharp.");
+  }
+  const watchExists = await prisma.watch.findFirst({
+    where: { productId },
+    select: { id: true },
+  });
+  if (!watchExists) throw new Error("Không tìm thấy Watch.");
+  const source = await mediaStorage.read(sourceKey);
+  const adjustment = input.adjustment ?? DEFAULT_PHOTOROOM_ADJUSTMENT;
+  const baseAdjustment = input.baseAdjustment ?? DEFAULT_PHOTOROOM_ADJUSTMENT;
+  const result = await composeAdjustedStorefrontCover(
+    source.bytes,
+    { ...adjustment, shadowMode: "none" },
+    adjustment.orientationDegrees + adjustment.rotationDegrees
+      - baseAdjustment.orientationDegrees - baseAdjustment.rotationDegrees,
+    isTransparentCutout,
+    normalizedZoom(baseAdjustment),
+  );
+  return sharp(result)
+    .resize({ width: 320, height: 600, fit: "fill" })
+    .png({ compressionLevel: 7 })
+    .toBuffer();
+}
+
 export async function processWatchCoverWithPhotoRoomApplication(input: {
   productId: string;
   storageKey: string;
@@ -384,10 +400,12 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
   } else {
     const zoomPercent = normalizedZoom(adjustment);
     const padding = Math.max(0, (1 - zoomPercent / 100) / 2);
-    const paddingLeft = padding + (adjustment.horizontalOffset === "positive" ? PHOTOROOM_FINE_OFFSET : 0);
-    const paddingRight = padding + (adjustment.horizontalOffset === "negative" ? PHOTOROOM_FINE_OFFSET : 0);
-    const paddingTop = padding + (adjustment.verticalOffset === "positive" ? PHOTOROOM_FINE_OFFSET : 0);
-    const paddingBottom = padding + (adjustment.verticalOffset === "negative" ? PHOTOROOM_FINE_OFFSET : 0);
+    const horizontalOffset = adjustment.horizontalOffsetPercent / 100;
+    const verticalOffset = adjustment.verticalOffsetPercent / 100;
+    const paddingLeft = padding + Math.max(0, horizontalOffset);
+    const paddingRight = padding + Math.max(0, -horizontalOffset);
+    const paddingTop = padding + Math.max(0, verticalOffset);
+    const paddingBottom = padding + Math.max(0, -verticalOffset);
     form.set("imageFile", sourceBlob, sourceFilename);
     form.set("removeBackground", "true");
     if (adjustment.backgroundMode === "white") form.set("background.color", "FFFFFF");

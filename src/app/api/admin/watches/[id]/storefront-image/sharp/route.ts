@@ -18,6 +18,11 @@ function parseAdjustment(value: unknown): PhotoRoomAdjustment | null {
   const orientation = Number(input.orientationDegrees);
   const rotation = Number(input.rotationDegrees);
   const rawZoom = Number(input.zoomPercent);
+  const offsetPercent = (numeric: unknown, legacy: unknown) => {
+    const parsed = Number(numeric);
+    if (Number.isFinite(parsed)) return Math.max(-20, Math.min(20, Math.round(parsed)));
+    return legacy === "negative" ? -6 : legacy === "positive" ? 6 : 0;
+  };
   return {
     horizontalAlignment: pick(input.horizontalAlignment, ["left", "center", "right"], DEFAULT_PHOTOROOM_ADJUSTMENT.horizontalAlignment),
     verticalAlignment: pick(input.verticalAlignment, ["top", "center", "bottom"], DEFAULT_PHOTOROOM_ADJUSTMENT.verticalAlignment),
@@ -25,8 +30,8 @@ function parseAdjustment(value: unknown): PhotoRoomAdjustment | null {
     zoomPercent: Number.isFinite(rawZoom)
       ? Math.max(40, Math.min(200, Math.round(rawZoom)))
       : DEFAULT_PHOTOROOM_ADJUSTMENT.zoomPercent,
-    horizontalOffset: pick(input.horizontalOffset, ["negative", "none", "positive"], DEFAULT_PHOTOROOM_ADJUSTMENT.horizontalOffset),
-    verticalOffset: pick(input.verticalOffset, ["negative", "none", "positive"], DEFAULT_PHOTOROOM_ADJUSTMENT.verticalOffset),
+    horizontalOffsetPercent: offsetPercent(input.horizontalOffsetPercent, input.horizontalOffset),
+    verticalOffsetPercent: offsetPercent(input.verticalOffsetPercent, input.verticalOffset),
     shadowMode: pick(input.shadowMode, ["none", "soft", "hard", "floating"], DEFAULT_PHOTOROOM_ADJUSTMENT.shadowMode),
     backgroundMode: pick(input.backgroundMode, ["white", "transparent"], DEFAULT_PHOTOROOM_ADJUSTMENT.backgroundMode),
     enhanceMetal: input.enhanceMetal === true,
