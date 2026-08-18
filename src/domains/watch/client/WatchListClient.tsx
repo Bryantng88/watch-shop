@@ -1129,6 +1129,7 @@ export default function WatchListClient(props: WatchListClientProps) {
     progress.show({
       title: "Đang đưa vào Space Media",
       message: `0/${selectedRows.length} watch hoàn tất`,
+      percent: 0,
       steps,
       cancellable: true,
       cancelLabel: "Dừng batch",
@@ -1150,6 +1151,7 @@ export default function WatchListClient(props: WatchListClientProps) {
       };
       progress.update({
         message: `${index}/${selectedRows.length} watch hoàn tất`,
+        percent: Math.round((index / selectedRows.length) * 100),
         steps: [...steps],
       });
 
@@ -1175,6 +1177,7 @@ export default function WatchListClient(props: WatchListClientProps) {
                 };
                 progress.update({
                   message: `${index}/${selectedRows.length} watch hoàn tất`,
+                  percent: Math.round((index / selectedRows.length) * 100),
                   steps: [...steps],
                 });
               },
@@ -1236,6 +1239,7 @@ export default function WatchListClient(props: WatchListClientProps) {
       if (cancelled) break;
       progress.update({
         message: `${index + 1}/${selectedRows.length} watch hoàn tất`,
+        percent: Math.round(((index + 1) / selectedRows.length) * 100),
         steps: [...steps],
       });
     }

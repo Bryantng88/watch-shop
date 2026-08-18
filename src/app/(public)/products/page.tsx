@@ -11,7 +11,7 @@ import CatalogSearch from "@/domains/storefront/ui/CatalogSearch";
 import PublicWatchCardView from "@/domains/storefront/ui/PublicWatchCard";
 
 export const metadata: Metadata = {
-  title: "Đồng hồ tuyển chọn",
+  title: "Vintic Watch Shop",
   description: "Khám phá đồng hồ vintage và pre-owned đang sẵn sàng tư vấn.",
 };
 
