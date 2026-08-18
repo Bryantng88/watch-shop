@@ -4,6 +4,10 @@ export const s3 = new S3Client({
     endpoint: process.env.S3_ENDPOINT!,          // https://<myqnapcloud>:8010
     region: process.env.S3_REGION || "us-east-1",
     forcePathStyle: true,
+    // QNAP's S3-compatible endpoint rejects the optional flexible checksum
+    // that recent AWS SDK versions add to PutObject requests by default.
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED",
     credentials: {
         accessKeyId: process.env.S3_ACCESS_KEY!,   // nhớ giữ prefix storage-space
         secretAccessKey: process.env.S3_SECRET_KEY!,
