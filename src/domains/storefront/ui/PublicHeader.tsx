@@ -53,7 +53,13 @@ function MobileMenuGroup({ group }: { group: MenuGroup }) {
 
 function DesktopMenuGroup({ group }: { group: MenuGroup }) {
   return (
-    <div className="group/menu relative flex h-9 items-center">
+    <div
+      className="group/menu relative flex h-9 items-center"
+      onMouseLeave={(event) => {
+        const focused = document.activeElement;
+        if (focused instanceof HTMLElement && event.currentTarget.contains(focused)) focused.blur();
+      }}
+    >
       <button type="button" className="storefront-focus flex h-full items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white/90 hover:text-white">
         {group.label}<ChevronDown className="h-3 w-3 stroke-[1.5] transition-transform group-hover/menu:rotate-180" aria-hidden="true" />
       </button>
