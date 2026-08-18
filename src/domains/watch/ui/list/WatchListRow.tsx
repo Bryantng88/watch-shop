@@ -133,6 +133,7 @@ function WatchStatusSignal({
     status,
     tone,
     detail: detailOverride,
+    detailClassName,
 }: {
     kind: "media" | "service";
     label: string;
@@ -140,6 +141,7 @@ function WatchStatusSignal({
     status?: string | null;
     tone: BadgeTone;
     detail?: string | null;
+    detailClassName?: string;
 }) {
     const normalized = upper(status);
     const icon: VisualStatusIcon = kind === "media"
@@ -162,7 +164,15 @@ function WatchStatusSignal({
                 : normalized === "WAITING" || normalized === "PENDING" ? "Chờ tiếp nhận"
                     : normalized === "ISSUE" ? "Cần kiểm tra"
                         : "Đã kiểm tra");
-    return <VisualStatusSignal label={label} detail={detail} tone={tone} icon={icon} onClick={onClick ?? undefined} singleLine />;
+    return <VisualStatusSignal
+        label={label}
+        detail={detail}
+        detailClassName={detailClassName}
+        tone={tone}
+        icon={icon}
+        onClick={onClick ?? undefined}
+        singleLine={!detailOverride}
+    />;
 }
 
 function SaleStatusBadge({
@@ -571,13 +581,14 @@ export default function WatchListRow({
             </td>
 
             <td className="hidden px-2 py-3 align-middle xl:table-cell">
-                <div>
-                    <WatchStatusSignal
-                        kind="media"
-                        label={media.label}
-                        status={media.status}
-                        tone={media.tone}
-                        onClick={onPreview ? () => { onPreview(mediaPreview); /*
+                <WatchStatusSignal
+                    kind="media"
+                    label={media.label}
+                    status={media.status}
+                    tone={media.tone}
+                    detail={storefrontLabel}
+                    detailClassName={storefrontPublished ? "text-emerald-600" : "text-slate-400"}
+                    onClick={onPreview ? () => { onPreview(mediaPreview); /*
                         onPreview({
                             type: "WATCH",
                             id: product.id,
@@ -609,12 +620,8 @@ export default function WatchListRow({
                                 },
                             ],
                             actions: media.href ? [{ label: "Mở workspace media", href: media.href }] : undefined,
-                        */ } : null}
-                    />
-                    <div className={`mt-1 pl-10 text-[11px] font-semibold leading-4 ${storefrontPublished ? "text-emerald-600" : "text-slate-400"}`}>
-                        {storefrontLabel}
-                    </div>
-                </div>
+                    */ } : null}
+                />
             </td>
 
             <td className="hidden px-2 py-3 align-middle xl:table-cell">

@@ -60,6 +60,7 @@ type Props = {
     onClick?: MouseEventHandler<HTMLButtonElement>;
     title?: string;
     className?: string;
+    detailClassName?: string;
     singleLine?: boolean;
     iconOnly?: boolean;
 };
@@ -72,6 +73,7 @@ export function VisualStatusSignal({
     onClick,
     title,
     className,
+    detailClassName,
     singleLine = false,
     iconOnly = false,
 }: Props) {
@@ -84,7 +86,7 @@ export function VisualStatusSignal({
             </span>
             <span className={cn("min-w-0 text-left", iconOnly && "sr-only")}>
                 <span className="block truncate text-[13px] font-semibold leading-5 text-slate-800">{label}</span>
-                {!singleLine && detail ? <span className={cn("mt-0.5 block truncate text-[11px] font-medium leading-4", styles.detail)}>{detail}</span> : null}
+                {!singleLine && detail ? <span className={cn("block truncate text-[11px] font-medium leading-4", styles.detail, detailClassName)}>{detail}</span> : null}
             </span>
         </>
     );
