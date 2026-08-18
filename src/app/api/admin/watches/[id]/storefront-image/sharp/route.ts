@@ -17,10 +17,14 @@ function parseAdjustment(value: unknown): PhotoRoomAdjustment | null {
     allowed.includes(candidate as T) ? candidate as T : fallback;
   const orientation = Number(input.orientationDegrees);
   const rotation = Number(input.rotationDegrees);
+  const rawZoom = Number(input.zoomPercent);
   return {
     horizontalAlignment: pick(input.horizontalAlignment, ["left", "center", "right"], DEFAULT_PHOTOROOM_ADJUSTMENT.horizontalAlignment),
     verticalAlignment: pick(input.verticalAlignment, ["top", "center", "bottom"], DEFAULT_PHOTOROOM_ADJUSTMENT.verticalAlignment),
     subjectSize: pick(input.subjectSize, ["small", "default", "large", "xlarge"], DEFAULT_PHOTOROOM_ADJUSTMENT.subjectSize),
+    zoomPercent: Number.isFinite(rawZoom)
+      ? Math.max(40, Math.min(200, Math.round(rawZoom)))
+      : DEFAULT_PHOTOROOM_ADJUSTMENT.zoomPercent,
     horizontalOffset: pick(input.horizontalOffset, ["negative", "none", "positive"], DEFAULT_PHOTOROOM_ADJUSTMENT.horizontalOffset),
     verticalOffset: pick(input.verticalOffset, ["negative", "none", "positive"], DEFAULT_PHOTOROOM_ADJUSTMENT.verticalOffset),
     shadowMode: pick(input.shadowMode, ["none", "soft", "hard", "floating"], DEFAULT_PHOTOROOM_ADJUSTMENT.shadowMode),
