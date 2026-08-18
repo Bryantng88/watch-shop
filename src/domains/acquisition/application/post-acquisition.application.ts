@@ -119,6 +119,10 @@ export async function postAcquisitionApplication(
     const returningTradeInProductIds = isTradeIn
         ? items.map((item) => item.productId).filter((id): id is string => Boolean(id))
         : [];
+    const transactionTimeoutMs = Math.min(
+        300_000,
+        Math.max(60_000, items.length * 4_000),
+    );
 
     const result = await runBusinessEventTransaction(
         async (tx, delivery) => {
@@ -299,8 +303,8 @@ export async function postAcquisitionApplication(
         },
         {
             deferConsumers,
-            maxWait: 5000,
-            timeout: 15000,
+            maxWait: 10_000,
+            timeout: transactionTimeoutMs,
         }
     );
 

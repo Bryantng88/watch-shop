@@ -2,7 +2,10 @@ import { Prisma } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
 import type { AcquisitionListFilters } from "@/domains/acquisition/shared/search-params";
 import type { AcquisitionListProjectionResult, AcquisitionListProjectionRow } from "@/domains/acquisition/shared/acquisition-list.projection";
-import { ACQUISITION_LIST_PROJECTION_KEY } from "./acquisition-list-projection.constants";
+import {
+  ACQUISITION_LIST_PROJECTION_KEY,
+  ACQUISITION_LIST_PROJECTION_VERSION,
+} from "./acquisition-list-projection.constants";
 
 type ProjectionJsonRow = { dataJson: AcquisitionListProjectionRow };
 type CountRow = { count: bigint | number };
@@ -30,6 +33,7 @@ function statusCondition(input: AcquisitionListFilters) {
 function conditions(input: AcquisitionListFilters) {
   const result: Prisma.Sql[] = [
     Prisma.sql`"projectionKey" = ${ACQUISITION_LIST_PROJECTION_KEY}`,
+    Prisma.sql`"projectionVersion" = ${ACQUISITION_LIST_PROJECTION_VERSION}`,
   ];
   const status = statusCondition(input);
   if (status) result.push(status);
@@ -78,6 +82,7 @@ export async function queryAcquisitionListProjection(db: DB, input: AcquisitionL
     client.$queryRaw<CountRow[]>(Prisma.sql`
       SELECT COUNT(*) AS "count" FROM "ProjectionRecord"
       WHERE "projectionKey" = ${ACQUISITION_LIST_PROJECTION_KEY}
+        AND "projectionVersion" = ${ACQUISITION_LIST_PROJECTION_VERSION}
     `),
   ]);
 

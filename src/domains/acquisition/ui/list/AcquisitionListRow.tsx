@@ -110,13 +110,31 @@ export default function AcquisitionListRow({
 
         progress.show({
             title: "Đang duyệt phiếu",
-            message: item.refNo || "Vui lòng chờ trong giây lát",
+            message: `${item.refNo || "Phiếu nhập"} · ${item.itemCount} sản phẩm`,
+            percent: 10,
+            steps: [
+                { id: "validate", label: "Kiểm tra phiếu", status: "done" },
+                { id: "inventory", label: `Tạo và liên kết ${item.itemCount} sản phẩm`, status: "running" },
+                { id: "payment", label: "Cập nhật tồn kho và payment", status: "pending" },
+                { id: "finish", label: "Hoàn tất phiếu", status: "pending" },
+            ],
         });
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
         try {
             const result = await postAcquisitions([item.id]);
 
             if (result.kind === "success") {
+                progress.update({
+                    message: "Đã hoàn tất duyệt phiếu",
+                    percent: 100,
+                    steps: [
+                        { id: "validate", label: "Kiểm tra phiếu", status: "done" },
+                        { id: "inventory", label: `Tạo và liên kết ${item.itemCount} sản phẩm`, status: "done" },
+                        { id: "payment", label: "Cập nhật tồn kho và payment", status: "done" },
+                        { id: "finish", label: "Hoàn tất phiếu", status: "done" },
+                    ],
+                });
                 notify.success({
                     title: "Thành công",
                     message: "Duyệt phiếu thành công",

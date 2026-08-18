@@ -1,6 +1,7 @@
 export const ACQUISITION_LIST_PROJECTION_KEY = "acquisition-list";
-// v4 refreshes quantity-aware totals and multi-source trade-in rows.
-export const ACQUISITION_LIST_PROJECTION_VERSION = 4;
+// v6 persists financial fields during rebuild; previous versions invoked the
+// source reader without includeFinancials and therefore cached null totals.
+export const ACQUISITION_LIST_PROJECTION_VERSION = 6;
 
 export const ACQUISITION_LIST_PROJECTION_SOURCE_EVENTS = [
   "acquisition.created",

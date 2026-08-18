@@ -30,14 +30,12 @@ export default function PublicWatchCardView({ watch }: { watch: PublicWatchCard 
             alt={watch.image.alt}
             fill
             sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 25vw"
-            className={`storefront-card-image storefront-card-cover-image object-cover ${watch.availability === "HOLD" ? "opacity-80 saturate-[0.82]" : watch.availability === "SOLD" ? "opacity-70 saturate-[0.7]" : ""}`}
+            className={`storefront-card-image storefront-card-cover-image object-cover ${watch.availability === "SOLD" ? "opacity-70 saturate-[0.7]" : ""}`}
           />
-          {watch.hoverImage ? <Image src={watch.hoverImage.url} alt="" fill sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 25vw" className={`storefront-card-hover-image object-cover ${watch.availability === "HOLD" ? "saturate-[0.82]" : watch.availability === "SOLD" ? "saturate-[0.7]" : ""}`} /> : null}
+          {watch.hoverImage ? <Image src={watch.hoverImage.url} alt="" fill sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 25vw" className={`storefront-card-hover-image object-cover ${watch.availability === "SOLD" ? "saturate-[0.7]" : ""}`} /> : null}
           {watch.availability === "HOLD" ? (
-            <div className="absolute inset-x-0 top-1/2 flex -translate-y-1/2 items-center gap-4 border-y border-[#3b3731]/10 bg-[#f8f5ee]/80 px-5 py-2.5 text-[#393631] shadow-[0_1px_10px_rgba(35,31,26,0.05)] backdrop-blur-[3px]">
-              <span className="h-px flex-1 bg-[#514c44]/25" aria-hidden="true" />
+            <div className="absolute inset-x-0 top-1/2 flex -translate-y-1/2 items-center justify-center bg-[#f8f5ee]/65 px-5 py-2.5 text-[#393631] shadow-[0_1px_8px_rgba(35,31,26,0.04)]">
               <span className="text-[9px] font-medium uppercase tracking-[0.34em]">Hold</span>
-              <span className="h-px flex-1 bg-[#514c44]/25" aria-hidden="true" />
             </div>
           ) : null}
           {availabilityLabel(watch.availability) ? (
@@ -55,7 +53,7 @@ export default function PublicWatchCardView({ watch }: { watch: PublicWatchCard 
           <p className="text-[10px] uppercase tracking-[0.16em] text-[#858079]">{watch.brand ?? "Tuyển chọn"}</p>
           <h2 className="mt-2 line-clamp-2 min-h-10 text-sm font-normal leading-5 text-[#4f4c48] sm:text-[15px]">{watch.title}</h2>
           <p className="mt-2 text-sm font-semibold tabular-nums text-[#31302e]">
-            {watch.price.mode === "SHOW" ? formatStorefrontMoney(watch.price.amount, locale, vndPerUsd) : locale === "en" ? "Price on request" : "Liên hệ để biết giá"}
+            {watch.price.mode === "SHOW" ? formatStorefrontMoney(watch.price.amount, locale, vndPerUsd) : locale === "en" ? "Contact" : "Liên hệ"}
           </p>
         </div>
       </Link>

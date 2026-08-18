@@ -95,7 +95,13 @@ export async function rebuildAcquisitionListProjectionRows(
 
   for (;;) {
     const source = await listAdminAcquisitionsFromSource(
-      { view: "all", page, pageSize, sort: "updatedDesc" },
+      {
+        view: "all",
+        page,
+        pageSize,
+        sort: "updatedDesc",
+        includeFinancials: true,
+      },
       ids,
     );
     if (scoped) {
