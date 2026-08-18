@@ -12,7 +12,7 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#252525",
     orientation: "portrait-primary",
     icons: [
-      { src: "/storefront-icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+      { src: "/vintic-v.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
       { src: "/storefront-maskable.svg", sizes: "any", type: "image/svg+xml", purpose: "maskable" },
     ],
   };

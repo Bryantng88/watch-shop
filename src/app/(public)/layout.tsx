@@ -13,7 +13,7 @@ import { StorefrontLocaleProvider } from "@/domains/storefront/ui/StorefrontLoca
 export const metadata: Metadata = {
   applicationName: "Vintic",
   manifest: "/manifest.webmanifest",
-  icons: { icon: "/storefront-icon.svg", apple: "/storefront-icon.svg" },
+  icons: { icon: "/vintic-v.svg", apple: "/vintic-v.svg" },
   title: {
     default: "Vintic — Đồng hồ tuyển chọn",
     template: "%s | Vintic",
