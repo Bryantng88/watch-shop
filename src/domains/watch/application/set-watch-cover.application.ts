@@ -8,10 +8,12 @@ import { randomUUID } from "node:crypto";
 
 import { bindMedia } from "@/domains/media/application/media-binding.service";
 import { ingestSelectedMedia } from "@/domains/media/application/media-ingest.service";
+import { cleanupRemovedWatchMedia } from "@/domains/media/application/watch-media-processing.service";
 import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
 import type { BusinessEventDispatchOptions } from "@/domains/event/server/business-event.service";
 import { emitWatchCoverUpdatedEvent } from "@/domains/watch/server/events";
 import { buildWatchStorefrontSlug } from "@/domains/watch/shared/storefront-slug";
+import { prisma } from "@/server/db/client";
 
 export async function setWatchCoverApplication(input: {
   productId: string;
@@ -31,7 +33,7 @@ export async function setWatchCoverApplication(input: {
   const mediaObject = await ingestSelectedMedia({ storageKey: sourceKey });
   const actionId = randomUUID();
 
-  return runBusinessEventTransaction(async (tx, delivery) => {
+  const result = await runBusinessEventTransaction(async (tx, delivery) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`watch-cover:${productId}`}, 0))`;
     const watch = await tx.watch.findUnique({
       where: { productId },
@@ -111,4 +113,29 @@ export async function setWatchCoverApplication(input: {
       reconciliationMode: "ASYNC_DELIVERY" as const,
     };
   }, { deferConsumers: input.deferConsumers });
+
+  // Storage cleanup must happen after domain truth commits. A failed cleanup is
+  // safely retryable and never makes ProductImage point at a missing object.
+  const watch = await prisma.watch.findUnique({
+    where: { productId },
+    select: { id: true },
+  });
+  if (watch) {
+    try {
+      await cleanupRemovedWatchMedia({
+        watchId: watch.id,
+        roles: [MediaRole.COVER, MediaRole.THUMBNAIL],
+      });
+    } catch (error) {
+      // The DELETE journal remains FAILED/retryable. Cover selection already
+      // committed successfully, so cleanup failure must not report a false
+      // save failure to the operator.
+      console.error("[media-core] deferred Cover cleanup failed", {
+        productId,
+        watchId: watch.id,
+        error,
+      });
+    }
+  }
+  return result;
 }

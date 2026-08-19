@@ -14,6 +14,9 @@ import { executeMediaMove } from "./media-operation.service";
 export async function registerExistingMediaObject(input: {
   storageKey: string;
   originalFileName?: string | null;
+  sourceMediaObjectId?: string | null;
+  derivativeVariant?: string | null;
+  derivativeRecipeHash?: string | null;
 }) {
   const storageKey = normalizeKey(input.storageKey);
   const metadata = await mediaStorage.stat(storageKey);
@@ -30,6 +33,9 @@ export async function registerExistingMediaObject(input: {
       etag: metadata.etag,
       availability: MediaObjectAvailability.AVAILABLE,
       verifiedAt: new Date(),
+      sourceMediaObjectId: input.sourceMediaObjectId ?? null,
+      derivativeVariant: input.derivativeVariant ?? null,
+      derivativeRecipeHash: input.derivativeRecipeHash ?? null,
     },
     update: {
       mimeType: metadata.contentType,
@@ -38,6 +44,9 @@ export async function registerExistingMediaObject(input: {
       availability: MediaObjectAvailability.AVAILABLE,
       verifiedAt: new Date(),
       missingAt: null,
+      ...(input.sourceMediaObjectId ? { sourceMediaObjectId: input.sourceMediaObjectId } : {}),
+      ...(input.derivativeVariant ? { derivativeVariant: input.derivativeVariant } : {}),
+      ...(input.derivativeRecipeHash ? { derivativeRecipeHash: input.derivativeRecipeHash } : {}),
     },
   });
 }

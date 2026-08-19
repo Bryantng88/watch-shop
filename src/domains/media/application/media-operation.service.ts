@@ -127,3 +127,59 @@ export async function executeMediaMove(
     throw error;
   }
 }
+
+export async function executeMediaDelete(input: {
+  idempotencyKey: string;
+  mediaObjectId: string;
+  storageKey: string;
+  requestedByUserId?: string | null;
+}, storage: MediaStorage = mediaStorage) {
+  const storageKey = normalizeKey(input.storageKey);
+  if (!input.idempotencyKey.trim()) throw new Error("Media delete idempotencyKey is required.");
+  if (!storageKey) throw new Error("Media delete storage key is required.");
+  const operation = await prisma.mediaOperation.upsert({
+    where: { idempotencyKey: input.idempotencyKey },
+    create: {
+      idempotencyKey: input.idempotencyKey,
+      mediaObjectId: input.mediaObjectId,
+      type: MediaOperationType.DELETE,
+      status: MediaOperationStatus.PENDING,
+      sourceKey: storageKey,
+      requestedByUserId: input.requestedByUserId ?? null,
+    },
+    update: {},
+  });
+  if (operation.status === MediaOperationStatus.SUCCEEDED) return operation;
+  if (operation.sourceKey !== storageKey || operation.mediaObjectId !== input.mediaObjectId) {
+    throw new Error(`Idempotency key ${input.idempotencyKey} was already used for another delete.`);
+  }
+  await prisma.mediaOperation.update({
+    where: { id: operation.id },
+    data: {
+      status: MediaOperationStatus.RUNNING,
+      attempts: { increment: 1 },
+      startedAt: new Date(),
+      lastError: null,
+    },
+  });
+  try {
+    if (await storage.stat(storageKey)) await storage.delete(storageKey);
+    return await prisma.mediaOperation.update({
+      where: { id: operation.id },
+      data: {
+        status: MediaOperationStatus.SUCCEEDED,
+        completedAt: new Date(),
+        lastError: null,
+      },
+    });
+  } catch (error) {
+    await prisma.mediaOperation.update({
+      where: { id: operation.id },
+      data: {
+        status: MediaOperationStatus.FAILED,
+        lastError: error instanceof Error ? error.message : "Unknown media storage error",
+      },
+    });
+    throw error;
+  }
+}

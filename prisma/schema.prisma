@@ -2034,11 +2034,18 @@ model MediaObject {
   missingAt        DateTime?
   createdAt        DateTime                @default(now())
   updatedAt        DateTime                @updatedAt
+  sourceMediaObjectId String?
+  derivativeVariant   String?
+  derivativeRecipeHash String?
   bindings         MediaBinding[]
   operations       MediaOperation[]
+  sourceMediaObject MediaObject?           @relation("MediaObjectDerivatives", fields: [sourceMediaObjectId], references: [id], onDelete: Restrict)
+  derivatives       MediaObject[]           @relation("MediaObjectDerivatives")
 
   @@index([availability, updatedAt])
   @@index([checksum])
+  @@index([sourceMediaObjectId, availability])
+  @@unique([sourceMediaObjectId, derivativeVariant, derivativeRecipeHash])
 }
 
 /// Business usage of a media object. Segment, role, and lifecycle belong here,

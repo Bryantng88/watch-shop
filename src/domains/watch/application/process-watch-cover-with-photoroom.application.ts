@@ -271,8 +271,12 @@ export async function recreateWatchCoverWithSharpApplication(input: {
   const productId = String(input.productId ?? "").trim();
   const sourceKey = String(input.storageKey ?? "").trim();
   if (!productId || !sourceKey) throw new Error("Thiếu Watch hoặc ảnh nguồn.");
-  const isTransparentCutout = sourceKey.includes("photoroom-cutout-");
-  const isReusableResult = sourceKey.includes("photoroom-") || sourceKey.includes("sharp-light-");
+  const isTransparentCutout = sourceKey.includes("photoroom-cutout-") || sourceKey.includes("cover-cutout-");
+  const isReusableResult =
+    sourceKey.includes("photoroom-") ||
+    sourceKey.includes("sharp-light-") ||
+    sourceKey.includes("cover-edit-") ||
+    sourceKey.includes("cover-sharp-");
   if (!isReusableResult) {
     throw new Error("Sharp chỉ xử lý Cover đã qua PhotoRoom/Sharp; ảnh gốc cần PhotoRoom tạo nền sạch lần đầu.");
   }
@@ -295,7 +299,19 @@ export async function recreateWatchCoverWithSharpApplication(input: {
   const [output] = await storeWatchMediaDerivatives({
     watch,
     sourceMediaObjectId: mediaObject.id,
-    outputs: [{ variant: "sharp-light", bytes: resultBytes, contentType: "image/png", role: MediaRole.COVER }],
+    outputs: [{
+      variant: "cover-sharp",
+      bytes: resultBytes,
+      contentType: "image/png",
+      role: MediaRole.COVER,
+      recipe: {
+        processor: "sharp-cover",
+        version: 1,
+        sourceStorageKey: mediaObject.storageKey,
+        adjustment,
+        baseAdjustment,
+      },
+    }],
   });
   return { storageKey: output.key, sourceStorageKey: mediaObject.storageKey, processingMode: "sharp" };
 }
@@ -309,8 +325,13 @@ export async function previewWatchCoverWithSharpApplication(input: {
   const productId = String(input.productId ?? "").trim();
   const sourceKey = String(input.storageKey ?? "").trim();
   if (!productId || !sourceKey) throw new Error("Thiếu Watch hoặc ảnh nguồn.");
-  const isTransparentCutout = sourceKey.includes("photoroom-cutout-");
-  if (!sourceKey.includes("photoroom-") && !sourceKey.includes("sharp-light-")) {
+  const isTransparentCutout = sourceKey.includes("photoroom-cutout-") || sourceKey.includes("cover-cutout-");
+  if (
+    !sourceKey.includes("photoroom-") &&
+    !sourceKey.includes("sharp-light-") &&
+    !sourceKey.includes("cover-edit-") &&
+    !sourceKey.includes("cover-sharp-")
+  ) {
     throw new Error("Preview Sharp chỉ hỗ trợ Cover đã qua PhotoRoom/Sharp.");
   }
   const watchExists = await prisma.watch.findFirst({
@@ -477,9 +498,31 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
     sourceMediaObjectId: mediaObject.id,
     outputs: [
       ...(processingMode === "basic-sharp"
-        ? [{ variant: "photoroom-cutout", bytes: photoRoomBytes, contentType: "image/png", role: MediaRole.THUMBNAIL }]
+        ? [{
+            variant: "cover-cutout",
+            bytes: photoRoomBytes,
+            contentType: "image/png",
+            role: MediaRole.THUMBNAIL,
+            recipe: {
+              processor: "photoroom-segment",
+              version: 1,
+              sourceStorageKey: mediaObject.storageKey,
+              totalRotationDegrees,
+            },
+          }]
         : []),
-      { variant: `photoroom-${processingMode}`, bytes: resultBytes, contentType: "image/png", role: MediaRole.COVER },
+      {
+        variant: "cover-edit",
+        bytes: resultBytes,
+        contentType: "image/png",
+        role: MediaRole.COVER,
+        recipe: {
+          processor: `photoroom-${processingMode}`,
+          version: 1,
+          sourceStorageKey: mediaObject.storageKey,
+          adjustment,
+        },
+      },
     ],
   });
   const cutoutKey = outputs.find((item) => item.role === MediaRole.THUMBNAIL)?.key ?? null;
