@@ -11,7 +11,7 @@ import type {
 } from "./projection.types";
 
 export const PAYMENT_LIST_PROJECTION_KEY = "payment-list";
-export const PAYMENT_LIST_PROJECTION_VERSION = 2;
+export const PAYMENT_LIST_PROJECTION_VERSION = 3;
 const PAYMENT_LIST_EVENTS = [
   "payment.created",
   "payment.status_updated",
@@ -41,6 +41,13 @@ export type PaymentListProjectionRow = {
   vendor_id: string | null;
   acquisition_id: string | null;
   shipment_id: string | null;
+  payee_user_id: string | null;
+  payeeName: string | null;
+  payeeLabel: string | null;
+  expense_category_id: string | null;
+  expenseCategoryCode: string | null;
+  expenseCategoryName: string | null;
+  financeChannel: string | null;
 };
 
 export type PaymentListProjectionInput = {
@@ -117,11 +124,22 @@ export async function buildPaymentListProjectionRow(db: DB, paymentId: string) {
       vendor_id: true,
       acquisition_id: true,
       shipment_id: true,
+      payee_user_id: true,
+      payeeName: true,
+      expense_category_id: true,
+      financeChannel: true,
+      payeeUser: { select: { name: true, email: true } },
+      expenseCategory: { select: { code: true, name: true } },
     },
   });
   if (!payment) return null;
+  const { payeeUser, expenseCategory, ...paymentRow } = payment;
   const data: PaymentListProjectionRow = {
-    ...payment,
+    ...paymentRow,
+    payeeLabel: payeeUser?.name || payeeUser?.email || payment.payeeName || null,
+    expenseCategoryCode: expenseCategory?.code ?? null,
+    expenseCategoryName: expenseCategory?.name ?? null,
+    financeChannel: payment.financeChannel ? String(payment.financeChannel) : null,
     method: String(payment.method),
     amount: Number(payment.amount),
     direction: String(payment.direction),
@@ -150,6 +168,9 @@ export async function buildPaymentListProjectionRow(db: DB, paymentId: string) {
       data.vendor_id,
       data.acquisition_id,
       data.shipment_id,
+      data.payeeLabel,
+      data.expenseCategoryCode,
+      data.expenseCategoryName,
     ].filter(Boolean).join(" ").toLowerCase(),
     sortAt: payment.updatedAt,
     sourceUpdatedAt: payment.updatedAt,

@@ -205,6 +205,9 @@ export type CoordinationDashboardDTO = {
     net: number;
     transactionCount: number;
   }> | null;
+  paymentCapabilities: {
+    canCreateStandaloneExpense: boolean;
+  };
   spaceSharing: {
     users: CoordinationUserSummaryDTO[];
     sharedUsers: CoordinationUserSummaryDTO[];

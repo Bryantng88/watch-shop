@@ -4138,6 +4138,9 @@ export async function getCoordinationDashboard(input: {
       { key: "overdue", label: "Overdue", value: reportValues.overdue },
     ],
     paymentCashFlow,
+    paymentCapabilities: {
+      canCreateStandaloneExpense: authPermissions(input.auth).includes("PAYMENT_CREATE_ALL"),
+    },
     spaceSharing: {
       users: allUsers,
       sharedUsers,

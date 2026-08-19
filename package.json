@@ -25,6 +25,8 @@
     "order:smoke-list-projection": "tsx scripts/smoke-order-list-projection.ts",
     "technical-issue:rebuild-board-projection": "tsx scripts/rebuild-technical-issue-board-projection.ts",
     "audit:order-watch-consistency": "tsx scripts/audit-order-watch-consistency.ts",
+    "audit:finance-report": "tsx scripts/audit-finance-report-projection.ts",
+    "projection:rebuild-finance-report": "tsx scripts/rebuild-all-projections.ts finance-report",
     "repair:order-watch-consistency": "tsx scripts/repair-order-watch-consistency.ts",
     "technical-issue:smoke-board-projection": "tsx scripts/smoke-technical-issue-board-projection.ts",
     "acquisition:rebuild-list-projection": "tsx scripts/rebuild-acquisition-list-projection.ts",

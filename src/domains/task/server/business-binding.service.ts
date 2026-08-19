@@ -1403,6 +1403,8 @@ async function buildPaymentQueuePreviewMapFromProjections(
     service_request_id: string | null;
     technical_issue_id: string | null;
     shipment_id: string | null;
+    payeeLabel?: string | null;
+    expenseCategoryName?: string | null;
   }>,
 ) {
   const map = new Map<string, QueueBusinessPreview>();
@@ -1468,7 +1470,7 @@ async function buildPaymentQueuePreviewMapFromProjections(
       null;
     const isIncome = clean(payment.direction).toUpperCase() === "IN";
     const technicalWorkLabel = clean(issue?.summary);
-    const title = payment.acquisition_id
+    const ownerTitle = payment.acquisition_id
       ? isIncome ? "Thu tiền thu mua" : "Thanh toán thu mua"
       : payment.order_id
         ? isIncome ? "Thu tiền đơn hàng" : "Thanh toán đơn hàng"
@@ -1477,6 +1479,11 @@ async function buildPaymentQueuePreviewMapFromProjections(
           : clean(payment.type).toUpperCase() === "SHIPMENT"
             ? isIncome ? "Thu tiền vận chuyển" : "Chi phí vận chuyển"
             : isIncome ? "Thu tiền" : "Thanh toán";
+    const title = clean(payment.purpose) === "SALARY"
+      ? `Trả lương${clean(payment.payeeLabel) ? `: ${clean(payment.payeeLabel)}` : ""}`
+      : clean(payment.purpose) === "OPERATING_EXPENSE"
+        ? `Chi phí ${clean(payment.expenseCategoryName).toLowerCase() || "vận hành"}`
+        : ownerTitle;
     const ownerRef =
       clean(order?.refNo) ||
       clean(acquisition?.refNo) ||
@@ -1487,6 +1494,7 @@ async function buildPaymentQueuePreviewMapFromProjections(
       clean(order?.customerName) ||
       clean(acquisition?.vendorName) ||
       clean(issue?.vendorName) ||
+      clean(payment.payeeLabel) ||
       null;
     const contact = clean(order?.shipPhone) || null;
     const normalizedRelatedItems = relatedItems.slice(0, 4).map((item) => ({
@@ -1528,7 +1536,7 @@ async function buildPaymentQueuePreviewMapFromProjections(
                 ? "ACQUISITION"
                 : payment.shipment_id
                   ? "SHIPMENT"
-                  : "UNKNOWN",
+                  : clean(payment.purpose) === "SALARY" ? "SALARY" : "OPERATING_EXPENSE",
         ownerRef,
         counterparty,
         contact,

@@ -69,6 +69,7 @@ import {
 import { useManualTransitionFeedback } from "@/domains/task/ui/task-work/use-manual-transition-feedback";
 import { manualTransitionOutcomeMovesOutOfCurrentStage } from "@/domains/task/ui/task-work/manual-transition-feedback";
 import { repairVietnameseMojibake } from "@/domains/shared/text/vietnamese-mojibake";
+import StandaloneExpensePaymentModal from "@/domains/payment/ui/StandaloneExpensePaymentModal";
 import {
   AsyncBusinessListDashboard,
   DashboardCustomizeButton,
@@ -749,6 +750,7 @@ export default function OperationCoordinationWorkspace({
       : "LIST",
   );
   const [isTechnicalIntakeOpen, setIsTechnicalIntakeOpen] = useState(false);
+  const [isExpensePaymentOpen, setIsExpensePaymentOpen] = useState(false);
   const [focusedTechnicalIssueId, setFocusedTechnicalIssueId] = useState<string | null>(null);
   const [dashboardCustomizationRequest, setDashboardCustomizationRequest] = useState(0);
   const [filterQuery, setFilterQuery] = useState(() => searchParams.get("flowQuery") ?? "");
@@ -1881,11 +1883,26 @@ export default function OperationCoordinationWorkspace({
         <span className="font-medium text-slate-600">Vận hành</span>
       }
       actions={
-        <DashboardCustomizeButton
-          onClick={() => setDashboardCustomizationRequest((request) => request + 1)}
-        />
+        <div className="flex items-center gap-2">
+          {isPaymentCollectionFlow && data.paymentCapabilities.canCreateStandaloneExpense ? (
+            <button type="button" onClick={() => setIsExpensePaymentOpen(true)} className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-bold text-white hover:bg-slate-800">
+              <Plus className="h-4 w-4" /> Tạo khoản chi
+            </button>
+          ) : null}
+          <DashboardCustomizeButton
+            onClick={() => setDashboardCustomizationRequest((request) => request + 1)}
+          />
+        </div>
       }
     >
+        <StandaloneExpensePaymentModal
+          open={isExpensePaymentOpen}
+          onClose={() => setIsExpensePaymentOpen(false)}
+          onCreated={async () => {
+            await loadFlowItems(activeFlowListStage, 1, true);
+            router.refresh();
+          }}
+        />
         <AsyncBusinessListDashboard
           endpoint={dashboardEndpoint}
           preferInitialData

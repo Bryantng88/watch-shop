@@ -69,6 +69,16 @@ export function resolvePaymentOwner(payment: any): {
   throw new Error("Payment chưa có owner.");
 }
 
+function resolvePaymentOwnerOrStandalone(payment: any) {
+  const hasBusinessOwner = Boolean(
+    payment.shipment_id || payment.order_id || payment.acquisition_id ||
+    payment.technical_issue_id || payment.service_request_id,
+  );
+  return hasBusinessOwner
+    ? resolvePaymentOwner(payment)
+    : { ownerType: "EXPENSE" as const, ownerId: payment.id as string };
+}
+
 export function paymentScopeWhere(ownerType: PaymentOwnerType, ownerId: string) {
   const base = ownerWhere(ownerType, ownerId);
 
@@ -644,7 +654,7 @@ export async function completePayment(input: {
       throw new Error("Không thể hoàn tất payment đã hủy.");
     }
 
-    const owner = resolvePaymentOwner(payment);
+    const owner = resolvePaymentOwnerOrStandalone(payment);
     const updatedPayment = await tx.payment.update({
       where: { id: payment.id },
       data: {
@@ -657,13 +667,12 @@ export async function completePayment(input: {
       },
     });
 
-    const summary = await recomputePaymentOwnerRollupTx(tx, owner.ownerType, owner.ownerId);
-    await syncPaymentOwnerBusinessStateTx(
-      tx,
-      owner.ownerType,
-      owner.ownerId,
-      summary,
-    );
+    const summary = owner.ownerType === "EXPENSE"
+      ? null
+      : await recomputePaymentOwnerRollupTx(tx, owner.ownerType, owner.ownerId);
+    if (owner.ownerType !== "EXPENSE") {
+      await syncPaymentOwnerBusinessStateTx(tx, owner.ownerType, owner.ownerId, summary!);
+    }
     const commandResult = toPlain({
       paymentId: payment.id,
       ownerType: owner.ownerType,
@@ -753,19 +762,18 @@ export async function cancelPayment(input: {
     if (status === "PAID") throw new Error("Không thể hủy payment đã hoàn tất. Cần xử lý refund/điều chỉnh riêng.");
     if (status === "CANCELED" || status === "CANCELLED") throw new Error("Payment này đã bị hủy.");
 
-    const owner = resolvePaymentOwner(payment);
+    const owner = resolvePaymentOwnerOrStandalone(payment);
     await tx.payment.update({
       where: { id: payment.id },
       data: { status: "CANCELED" as any, note: input.note ?? "Payment bị hủy.", updatedAt: new Date() },
     });
 
-    const summary = await recomputePaymentOwnerRollupTx(tx, owner.ownerType, owner.ownerId);
-    await syncPaymentOwnerBusinessStateTx(
-      tx,
-      owner.ownerType,
-      owner.ownerId,
-      summary,
-    );
+    const summary = owner.ownerType === "EXPENSE"
+      ? null
+      : await recomputePaymentOwnerRollupTx(tx, owner.ownerType, owner.ownerId);
+    if (owner.ownerType !== "EXPENSE") {
+      await syncPaymentOwnerBusinessStateTx(tx, owner.ownerType, owner.ownerId, summary!);
+    }
     const commandResult = toPlain({
       paymentId: payment.id,
       ownerType: owner.ownerType,

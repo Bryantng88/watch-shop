@@ -17,6 +17,7 @@ import {
     Link2,
     PanelLeftClose,
     PanelLeftOpen,
+    BarChart3,
 } from "lucide-react";
 
 import ActiveLink from "./AdminActiveLink";
@@ -41,6 +42,7 @@ type NavItem = {
     exact?: boolean;
     permission?: string;
     permissionsAny?: string[];
+    permissionsAll?: string[];
 };
 
 type NavGroup = {
@@ -103,6 +105,13 @@ const NAV: NavEntry[] = [
                 icon: Workflow,
                 permission: PERMISSIONS.TASK_VIEW,
             },
+            {
+                type: "item",
+                href: "/admin/reports/finance",
+                label: "Báo cáo tài chính",
+                icon: BarChart3,
+                permissionsAll: [PERMISSIONS.REPORT_VIEW, PERMISSIONS.PRODUCT_COST_VIEW, PERMISSIONS.PAYMENT_VIEW_ALL],
+            },
         ],
     },
     {
@@ -147,6 +156,9 @@ function canAccess(user: Props["user"], item: NavItem) {
     if (user.roles?.includes("ADMIN")) return true;
     if (item.permissionsAny?.length) {
         return item.permissionsAny.some((permission) => user.permissions.includes(permission));
+    }
+    if (item.permissionsAll?.length) {
+        return item.permissionsAll.every((permission) => user.permissions.includes(permission));
     }
     return !item.permission || user.permissions.includes(item.permission);
 }

@@ -98,6 +98,9 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
     }
 
     if (/^\/api\/admin\/payments(\/|$)/.test(pathname)) {
+        if (pathname === "/api/admin/payments/expenses" && normalizedMethod === "POST") {
+            return anyOf(PERMISSIONS.PAYMENT_CREATE_ALL);
+        }
         return anyOf(
             ...(read
                 ? [PERMISSIONS.PAYMENT_VIEW_ALL, PERMISSIONS.ORDER_PAYMENT_VIEW, PERMISSIONS.ACQUISITION_PAYMENT_VIEW, PERMISSIONS.SERVICE_PAYMENT_VIEW, PERMISSIONS.SHIPMENT_PAYMENT_VIEW]
@@ -215,6 +218,12 @@ export function getAdminPagePolicy(pathname: string): AdminAccessPolicy | null {
     if (/^\/admin\/users(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.USER_VIEW, PERMISSIONS.USER_MANAGE);
     if (/^\/admin\/settings(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.TASK_VIEW);
     if (/^\/admin\/customers(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.CUSTOMER_VIEW);
+    if (pathname === "/admin/reports/finance") {
+        return {
+            anyOf: [PERMISSIONS.REPORT_VIEW],
+            allOf: [PERMISSIONS.PRODUCT_COST_VIEW, PERMISSIONS.PAYMENT_VIEW_ALL],
+        };
+    }
     if (/^\/admin\/reports(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.REPORT_VIEW);
     if (/^\/admin\/ui-tests?(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.USER_MANAGE);
 
