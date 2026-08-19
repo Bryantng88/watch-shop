@@ -27,6 +27,7 @@ import {
     type PhotoRoomAdjustment,
 } from "@/domains/watch/shared/photoroom-adjustment";
 import PhotoRoomAdjustmentDialog from "./PhotoRoomAdjustmentDialog";
+import GalleryPhotoRoomDialog from "./GalleryPhotoRoomDialog";
 type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
 type MediaItemWithAliases = PickedMediaItem & {
@@ -164,6 +165,7 @@ export default function WatchImageSection({
     const notify = useNotify();
     const [taskModalOpen, setTaskModalOpen] = useState(false);
     const [coverPickerOpen, setCoverPickerOpen] = useState(false);
+    const [galleryPhotoRoomOpen, setGalleryPhotoRoomOpen] = useState(false);
     const [coverPreviewOpen, setCoverPreviewOpen] = useState(false);
     const [coverPickerVersion, setCoverPickerVersion] = useState(0);
     const [pendingCoverKey, setPendingCoverKey] = useState<string | null>(null);
@@ -840,6 +842,21 @@ export default function WatchImageSection({
                             locked ? "pointer-events-none opacity-60" : "",
                         ].join(" ")}
                     >
+                        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-100 bg-violet-50/70 px-4 py-3">
+                            <div>
+                                <div className="text-sm font-semibold text-slate-900">PhotoRoom cho Gallery</div>
+                                <div className="mt-0.5 text-xs text-slate-500">Chọn nhiều ảnh, xem preview trước/sau rồi mới áp dụng. Ảnh gốc vẫn được giữ trong Media Core.</div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setGalleryPhotoRoomOpen(true)}
+                                disabled={locked || galleryImages.length === 0}
+                                className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                                <Sparkles className="h-4 w-4" />
+                                Xử lý Gallery bằng PhotoRoom
+                            </button>
+                        </div>
                         <MediaPickerMulti
                             chosenValue={poolImages}
                             selectedValue={galleryImages}
@@ -906,6 +923,22 @@ export default function WatchImageSection({
                     setLocalLayoutBaseKey(null);
                     setLocalLayoutBaseAdjustment(null);
                     setCoverPickerOpen(false);
+                }}
+            /> : null}
+
+            {showGallery ? <GalleryPhotoRoomDialog
+                open={galleryPhotoRoomOpen}
+                productId={productId}
+                images={galleryImages}
+                onClose={() => setGalleryPhotoRoomOpen(false)}
+                onApply={(replacements) => {
+                    const replace = (items: PickedMediaItem[]) => items.map((item) => replacements.get(getMediaKey(item)) ?? item);
+                    onGalleryImagesChange(replace(galleryImages));
+                    onPoolImagesChange(replace(poolImages));
+                    notify.success({
+                        title: "Đã áp dụng preview PhotoRoom",
+                        message: "Hãy kiểm tra thứ tự Gallery và lưu Watch để xác nhận thay đổi.",
+                    });
                 }}
             /> : null}
 

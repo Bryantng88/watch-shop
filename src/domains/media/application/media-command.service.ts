@@ -197,7 +197,12 @@ export async function releaseWatchMediaNotIn(input: {
       ownerType: MediaOwnerType.WATCH,
       ownerId: watch.id,
       role: input.role,
-      lifecycle: MediaBindingLifecycle.SELECTED,
+      // A Gallery item can move through DRAFT -> SELECTED -> ATTACHED (and
+      // later approval/publish states). When the saved Gallery no longer
+      // contains it, every still-active binding must be retired; limiting
+      // this reconciliation to SELECTED leaves replaced ATTACHED files
+      // orphaned in the watch's active Media Core view.
+      lifecycle: { not: MediaBindingLifecycle.REMOVED },
     },
     include: { mediaObject: { select: { storageKey: true } } },
   });
