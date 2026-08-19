@@ -61,6 +61,8 @@ type Props = {
     enableRecycle?: boolean;
     footerLeadingAction?: React.ReactNode;
     footerHint?: string;
+    initialLocation?: "library" | "recycle";
+    presentation?: "dialog" | "page";
 };
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -154,6 +156,8 @@ export default function MediaBrowserDialog({
     title = "Chọn ảnh từ thư viện",
     description,
     submitLabel = "Xác nhận ảnh đã chọn",
+    initialLocation = "library",
+    presentation = "dialog",
 }: Props) {
     const [loading, setLoading] = React.useState(false);
     const [items, setItems] = React.useState<SharedMediaItem[]>([]);
@@ -192,12 +196,13 @@ export default function MediaBrowserDialog({
     }, [open, selectedKeys]);
 
     React.useEffect(() => {
-        setPrefix(getRootPrefix(profile, audienceSegment));
+        const root = getRootPrefix(profile, audienceSegment);
+        setPrefix(initialLocation === "recycle" ? `${root}/recycle` : root);
         setItems([]);
         setFolders([]);
         setError(null);
         resetPagination();
-    }, [audienceSegment, profile, resetPagination]);
+    }, [audienceSegment, initialLocation, profile, resetPagination]);
 
     React.useEffect(() => {
         if (!open) return;
@@ -206,6 +211,12 @@ export default function MediaBrowserDialog({
 
         async function resolveInitialPrefix() {
             const fallbackRoot = getRootPrefix(profile, audienceSegment);
+
+            if (initialLocation === "recycle") {
+                setPrefix(`${fallbackRoot}/recycle`);
+                resetPagination();
+                return;
+            }
 
             if (profile !== "edit" || audienceSegment) {
                 setPrefix(fallbackRoot);
@@ -236,7 +247,7 @@ export default function MediaBrowserDialog({
         return () => {
             cancelled = true;
         };
-    }, [audienceSegment, open, profile, resetPagination]);
+    }, [audienceSegment, initialLocation, open, profile, resetPagination]);
 
     const helpText =
         description ??
@@ -441,8 +452,8 @@ export default function MediaBrowserDialog({
     const initialLoading = loading && items.length === 0 && folders.length === 0;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
-            <div className="flex max-h-[88vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className={presentation === "page" ? "min-h-0 w-full" : "fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"}>
+            <div className={presentation === "page" ? "flex min-h-[calc(100vh-8rem)] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" : "flex max-h-[88vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"}>
                 <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
                     <div>
                         <div className="text-base font-semibold text-slate-900">
@@ -476,13 +487,13 @@ export default function MediaBrowserDialog({
                             Tải lại
                         </button>
 
-                        <button
+                        {presentation === "dialog" ? <button
                             type="button"
                             onClick={onClose}
                             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
                         >
                             Đóng
-                        </button>
+                        </button> : null}
                     </div>
                 </div>
 

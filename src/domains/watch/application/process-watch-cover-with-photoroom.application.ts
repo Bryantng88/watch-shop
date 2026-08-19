@@ -1,7 +1,11 @@
-import { randomUUID } from "node:crypto";
+import { MediaRole } from "@prisma/client";
 import sharp from "sharp";
 
-import { mediaPathPolicy } from "@/domains/media/core/media-path.policy";
+import {
+  prepareWatchMediaSource,
+  getWatchMediaOwner,
+  storeWatchMediaDerivatives,
+} from "@/domains/media/application";
 import { mediaStorage } from "@/domains/media/storage";
 import {
   DEFAULT_PHOTOROOM_ADJUSTMENT,
@@ -273,12 +277,7 @@ export async function recreateWatchCoverWithSharpApplication(input: {
     throw new Error("Sharp chỉ xử lý Cover đã qua PhotoRoom/Sharp; ảnh gốc cần PhotoRoom tạo nền sạch lần đầu.");
   }
 
-  const watch = await prisma.watch.findUnique({
-    where: { productId },
-    select: { id: true, productId: true, audienceSegment: true },
-  });
-  if (!watch) throw new Error("Không tìm thấy Watch.");
-
+  await getWatchMediaOwner(productId);
   const source = await mediaStorage.read(sourceKey);
   const cutout = source.bytes;
   const adjustment = input.adjustment ?? DEFAULT_PHOTOROOM_ADJUSTMENT;
@@ -292,18 +291,13 @@ export async function recreateWatchCoverWithSharpApplication(input: {
     isTransparentCutout,
     normalizedZoom(baseAdjustment),
   ));
-  const prefix = mediaPathPolicy.sourceRoot({
-    segment: watch.audienceSegment,
-    purpose: "cover",
+  const { watch, mediaObject } = await prepareWatchMediaSource({ productId, storageKey: sourceKey });
+  const [output] = await storeWatchMediaDerivatives({
+    watch,
+    sourceMediaObjectId: mediaObject.id,
+    outputs: [{ variant: "sharp-light", bytes: resultBytes, contentType: "image/png", role: MediaRole.COVER }],
   });
-  const outputKey = `${prefix}/sharp-light-${productId}-${randomUUID()}.png`;
-  await mediaStorage.write({ key: outputKey, bytes: resultBytes, contentType: "image/png" });
-
-  const stored = await mediaStorage.stat(outputKey);
-  if (!stored || stored.sizeBytes !== resultBytes.byteLength) {
-    throw new Error("Không xác minh được ảnh Sharp sau khi lưu vào kho media.");
-  }
-  return { storageKey: outputKey, sourceStorageKey: sourceKey, processingMode: "sharp" };
+  return { storageKey: output.key, sourceStorageKey: mediaObject.storageKey, processingMode: "sharp" };
 }
 
 export async function previewWatchCoverWithSharpApplication(input: {
@@ -363,12 +357,7 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
   if (!productId || !sourceKey) throw new Error("Thiếu Watch hoặc ảnh nguồn.");
   if (!apiKey) throw new Error("Production chưa cấu hình PHOTOROOM_API_KEY.");
 
-  const watch = await prisma.watch.findUnique({
-    where: { productId },
-    select: { id: true, productId: true, audienceSegment: true },
-  });
-  if (!watch) throw new Error("Không tìm thấy Watch.");
-
+  await getWatchMediaOwner(productId);
   const source = await mediaStorage.read(sourceKey);
   if (source.bytes.byteLength > MAX_SOURCE_BYTES) {
     throw new Error("Ảnh nguồn vượt quá giới hạn 30 MB của PhotoRoom.");
@@ -478,27 +467,28 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
   }
   if (!resultBytes.byteLength) throw new Error("PhotoRoom trả về ảnh rỗng.");
 
-  const prefix = mediaPathPolicy.sourceRoot({
-    segment: watch.audienceSegment,
-    purpose: "cover",
-  });
-  const cutoutKey = processingMode === "basic-sharp"
-    ? `${prefix}/photoroom-cutout-${productId}-${randomUUID()}.png`
-    : null;
-  if (cutoutKey) {
-    await mediaStorage.write({ key: cutoutKey, bytes: photoRoomBytes, contentType: "image/png" });
-  }
-  const outputKey = `${prefix}/photoroom-${processingMode}-${productId}-${randomUUID()}.png`;
-  await mediaStorage.write({ key: outputKey, bytes: resultBytes, contentType: "image/png" });
+  // Commit storage only after the external transformation succeeded. This keeps
+  // the source retryable on PhotoRoom failure, while a successful run consumes
+  // the cover inbox into the canonical MediaObject workspace.
+  const { watch, mediaObject } = await prepareWatchMediaSource({ productId, storageKey: sourceKey });
 
-  const stored = await mediaStorage.stat(outputKey);
-  if (!stored || stored.sizeBytes !== resultBytes.byteLength) {
-    throw new Error("Không xác minh được ảnh PhotoRoom sau khi lưu vào kho media.");
-  }
+  const outputs = await storeWatchMediaDerivatives({
+    watch,
+    sourceMediaObjectId: mediaObject.id,
+    outputs: [
+      ...(processingMode === "basic-sharp"
+        ? [{ variant: "photoroom-cutout", bytes: photoRoomBytes, contentType: "image/png", role: MediaRole.THUMBNAIL }]
+        : []),
+      { variant: `photoroom-${processingMode}`, bytes: resultBytes, contentType: "image/png", role: MediaRole.COVER },
+    ],
+  });
+  const cutoutKey = outputs.find((item) => item.role === MediaRole.THUMBNAIL)?.key ?? null;
+  const outputKey = outputs.find((item) => item.role === MediaRole.COVER)?.key;
+  if (!outputKey) throw new Error("Không tạo được derivative Cover từ PhotoRoom.");
 
   return {
     storageKey: outputKey,
-    sourceStorageKey: sourceKey,
+    sourceStorageKey: mediaObject.storageKey,
     cutoutStorageKey: cutoutKey,
     processingMode,
     adjustment: processingMode === "plus" ? adjustment : null,
