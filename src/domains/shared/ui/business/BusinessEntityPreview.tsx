@@ -19,6 +19,7 @@ import type {
 } from "@/domains/shared/business/business-entity.types";
 import { businessEntityTargetType } from "@/domains/shared/business/business-entity.types";
 import {
+    correctDoneTechnicalIssueCostAction,
     updateTechnicalIssuePreviewAction,
 } from "@/domains/shared/business/business-entity-preview.actions";
 import { ActivityViewModelFeed } from "@/domains/task/ui/task-work/activity/ActivityFeed";
@@ -283,6 +284,60 @@ function TechnicalIssueEditPanel({ preview }: { preview: BusinessEntityPreview }
                     </div>
                 </div>
             ) : null}
+        </section>
+    );
+}
+
+function DoneTechnicalIssueCostPanel({
+    preview,
+    onSaved,
+}: {
+    preview: BusinessEntityPreview;
+    onSaved?: () => void;
+}) {
+    const correction = preview.costCorrection;
+    const [actualCost, setActualCost] = useState(correction?.actualCost ?? "");
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        setActualCost(correction?.actualCost ?? "");
+        setError(null);
+    }, [correction?.actualCost, preview.id]);
+
+    if (!correction) return null;
+
+    async function save() {
+        if (actualCost.trim() === "" || Number(actualCost) < 0) {
+            setError("Vui lòng nhập chi phí thực tế hợp lệ.");
+            return;
+        }
+        setSaving(true);
+        setError(null);
+        try {
+            await correctDoneTechnicalIssueCostAction({ id: preview.id, actualCost });
+            onSaved?.();
+        } catch (saveError) {
+            setError(saveError instanceof Error ? saveError.message : "Không thể bổ sung chi phí.");
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    return (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50/60 p-3">
+            <div className="text-sm font-semibold text-slate-950">
+                {correction.missing ? "TI Done chưa có chi phí" : "Điều chỉnh chi phí thực tế"}
+            </div>
+            <div className="mt-1 text-xs text-slate-600">Chỉ cập nhật chi phí; nội dung và kết quả TI vẫn được khóa.</div>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <input type="number" min={0} step={1000} value={actualCost} onChange={(event) => setActualCost(event.target.value)} className="h-10 flex-1 rounded-xl border border-amber-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-amber-100" placeholder="Chi phí thực tế" />
+                <button type="button" disabled={saving || actualCost.trim() === ""} onClick={() => void save()} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 text-sm font-semibold text-white disabled:opacity-50">
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    Lưu chi phí
+                </button>
+            </div>
+            {error ? <div className="mt-2 text-xs font-medium text-rose-700">{error}</div> : null}
         </section>
     );
 }
@@ -723,6 +778,7 @@ export function BusinessEntityPreviewModal({
                             </section>
 
                             <TechnicalIssueEditPanel preview={preview} />
+                            <DoneTechnicalIssueCostPanel preview={preview} onSaved={() => onActivityChanged?.()} />
 
                             {preview.notes?.length ? (
                                 <div className="space-y-3">

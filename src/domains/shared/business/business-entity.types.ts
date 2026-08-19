@@ -69,6 +69,7 @@ export type BusinessEntityPreview = {
     activity?: BusinessEntityPreviewActivity;
     sections?: BusinessEntityPreviewSection[];
     actions?: BusinessEntityPreviewAction[];
+    costCorrection?: { actualCost: string; missing: boolean };
     edit?: {
         kind: "TECHNICAL_ISSUE";
         values: {

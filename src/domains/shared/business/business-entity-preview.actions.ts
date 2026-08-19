@@ -21,6 +21,7 @@ import {
 } from "@/domains/service/server";
 import { perfStep } from "@/lib/server-perf";
 import { resolveProductDisplayImage } from "@/domains/shared/media/server/display-image";
+import { ensureTechnicalIssuePaymentTx } from "@/domains/payment/server/service-issue-payment.service";
 
 type ProductPreviewImageSource = {
     primaryImageUrl?: string | null;
@@ -588,9 +589,6 @@ export async function getBusinessEntityPreviewAction(input: {
         if (!row) return null;
 
         const sr = row.serviceRequest;
-        const workspaceHref = sr.TaskExecution?.[0]?.taskItemId
-            ? "/admin/coordination/operation?context=OPERATION&view=technical-issue-flow"
-            : null;
         const technicalWorkspaceItem = row.TaskExecution?.[0]?.taskItem ?? null;
         const movementType = String(
             sr.product?.watch?.movementType ??
@@ -667,7 +665,7 @@ export async function getBusinessEntityPreviewAction(input: {
                 {
                     label: "SR",
                     value: sr.refNo || "-",
-                    href: workspaceHref ?? `/admin/services/${sr.id}`,
+                    href: `/admin/services/${sr.id}`,
                 },
                 { label: "Trạng thái SR", value: sr.status || "-" },
                 { label: "Ưu tiên", value: row.priority || "NORMAL" },
@@ -676,6 +674,7 @@ export async function getBusinessEntityPreviewAction(input: {
                 { label: "Kỹ thuật", value: row.user?.name || "-" },
                 { label: "Vendor", value: row.vendor?.name || row.vendorNameSnap || "-" },
                 { label: "Chi phí dự kiến", value: row.estimatedCost?.toString() || "-" },
+                { label: "Chi phí thực tế", value: row.actualCost?.toString() || "-" },
                 { label: "Ghi chú kỹ thuật", value: row.note || "-" },
                 ...(String(row.area ?? "").toUpperCase() === "MOVEMENT"
                     ? [
@@ -709,6 +708,9 @@ export async function getBusinessEntityPreviewAction(input: {
                     ]
                     : []),
             ],
+            costCorrection: String(row.executionStatus).toUpperCase() === "DONE"
+                ? { actualCost: row.actualCost?.toString() ?? "", missing: row.actualCost == null }
+                : undefined,
             activity,
             sections: [
                 {
@@ -846,6 +848,38 @@ export async function updateTechnicalIssuePreviewAction(input: {
             deferConsumers: (work) => after(work),
         });
     }
+
+    return { ok: true };
+}
+
+export async function correctDoneTechnicalIssueCostAction(input: {
+    id: string;
+    actualCost: string | number;
+}) {
+    const auth = await requirePermission("SERVICE_UPDATE");
+    const actualCost = Number(input.actualCost);
+    if (!Number.isFinite(actualCost) || actualCost < 0) {
+        throw new Error("Vui lòng nhập chi phí thực tế hợp lệ. Chi phí có thể bằng 0.");
+    }
+
+    await prisma.$transaction(async (tx) => {
+        const issue = await tx.technicalIssue.findUnique({
+            where: { id: input.id },
+            select: { executionStatus: true },
+        });
+        if (!issue) throw new Error("Không tìm thấy TI.");
+        if (String(issue.executionStatus).toUpperCase() !== "DONE") {
+            throw new Error("Chỉ bổ sung chi phí hậu kiểm cho TI đã Done.");
+        }
+
+        await updateTechnicalIssue({
+            id: input.id,
+            actorId: getAuthUserId(auth),
+            actualCost,
+            deferConsumers: (work) => after(work),
+        }, tx);
+        await ensureTechnicalIssuePaymentTx(tx, input.id);
+    });
 
     return { ok: true };
 }
