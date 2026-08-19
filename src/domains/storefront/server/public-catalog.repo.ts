@@ -151,10 +151,8 @@ export function publicWatchEligibilityWhere(options?: {
       {
         type: ProductType.WATCH,
         title: { not: "" },
-        OR: [
-          { status: { in: [ProductStatus.AVAILABLE, ProductStatus.HOLD, ProductStatus.SOLD] } },
-          { publishedAt: { not: null } },
-        ],
+        publishedAt: { not: null },
+        status: { in: [ProductStatus.AVAILABLE, ProductStatus.HOLD, ProductStatus.SOLD] },
         slug: { not: "" },
         productImage: {
           some: storefrontImageWhere(enforceCover),
