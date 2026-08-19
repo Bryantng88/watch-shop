@@ -14,11 +14,6 @@ function tagLabel(tag: string | null) {
   return tag;
 }
 
-function availabilityLabel(availability: PublicWatchCard["availability"]) {
-  if (availability === "SOLD") return "Out of stock";
-  return null;
-}
-
 export default function PublicWatchCardView({ watch }: { watch: PublicWatchCard }) {
   const { locale, vndPerUsd } = useStorefrontLocale();
   return (
@@ -30,18 +25,15 @@ export default function PublicWatchCardView({ watch }: { watch: PublicWatchCard 
             alt={watch.image.alt}
             fill
             sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 25vw"
-            className={`storefront-card-image storefront-card-cover-image object-cover ${watch.availability === "SOLD" ? "opacity-70 saturate-[0.7]" : ""}`}
+            className="storefront-card-image storefront-card-cover-image object-cover"
           />
-          {watch.hoverImage ? <Image src={watch.hoverImage.url} alt="" fill sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 25vw" className={`storefront-card-hover-image object-cover ${watch.availability === "SOLD" ? "saturate-[0.7]" : ""}`} /> : null}
-          {watch.availability === "HOLD" ? (
+          {watch.hoverImage ? <Image src={watch.hoverImage.url} alt="" fill sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 25vw" className="storefront-card-hover-image object-cover" /> : null}
+          {watch.availability !== "AVAILABLE" ? (
             <div className="absolute inset-x-0 top-1/2 flex -translate-y-1/2 items-center justify-center bg-[#f8f5ee]/65 px-5 py-2.5 text-[#393631] shadow-[0_1px_8px_rgba(35,31,26,0.04)]">
-              <span className="text-[9px] font-medium uppercase tracking-[0.34em]">Hold</span>
+              <span className={`text-[9px] uppercase tracking-[0.34em] ${watch.availability === "SOLD" ? "font-semibold" : "font-medium"}`}>
+                {watch.availability === "SOLD" ? "Out of stock" : "Hold"}
+              </span>
             </div>
-          ) : null}
-          {availabilityLabel(watch.availability) ? (
-            <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#34322f] shadow-sm">
-              {availabilityLabel(watch.availability)}
-            </span>
           ) : null}
           {tagLabel(watch.tag) ? (
             <span className="absolute bottom-3 right-3 rounded-full bg-[#3f4d58] px-3 py-1 text-[9px] uppercase tracking-[0.12em] text-white">
