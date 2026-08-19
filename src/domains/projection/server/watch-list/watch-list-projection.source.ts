@@ -496,10 +496,15 @@ export async function resolveWatchIdsForProjectionTarget(
     const payment = await dbOrTx(db).payment.findUnique({
       where: { id: targetId },
       select: {
+        order_id: true,
         service_request_id: true,
         technical_issue_id: true,
       },
     });
+
+    if (payment?.order_id) {
+      return resolveWatchIdsForOrder(db, payment.order_id);
+    }
 
     if (payment?.service_request_id) {
       return resolveWatchIdsForServiceRequest(db, payment.service_request_id);
@@ -515,22 +520,28 @@ export async function resolveWatchIdsForProjectionTarget(
   }
 
   if (targetType === "ORDER") {
-    const rows = await dbOrTx(db).orderItem.findMany({
-      where: { orderId: targetId, productId: { not: null } },
-      select: {
-        product: {
-          select: {
-            watch: { select: { id: true } },
-          },
-        },
-      },
+    return resolveWatchIdsForOrder(db, targetId);
+  }
+
+  if (targetType === "SHIPMENT") {
+    const shipment = await dbOrTx(db).shipment.findUnique({
+      where: { id: targetId },
+      select: { orderId: true },
     });
-    return Array.from(
-      new Set(rows.map((row) => row.product?.watch?.id).filter(Boolean)),
-    ) as string[];
+    return resolveWatchIdsForOrder(db, shipment?.orderId);
   }
 
   return [];
+}
+
+async function resolveWatchIdsForOrder(db: DB, orderId?: string | null) {
+  const id = clean(orderId);
+  if (!id) return [];
+  const rows = await dbOrTx(db).orderItem.findMany({
+    where: { orderId: id, productId: { not: null } },
+    select: { product: { select: { watch: { select: { id: true } } } } },
+  });
+  return Array.from(new Set(rows.map((row) => row.product?.watch?.id).filter(Boolean))) as string[];
 }
 
 async function resolveWatchIdsForServiceRequest(

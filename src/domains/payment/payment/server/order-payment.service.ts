@@ -177,6 +177,7 @@ export async function recomputeOrderPaymentRollupTx(tx: Tx, orderId: string) {
   await reconcileOrderSettlementTx(tx, orderId, {
     totalDue: summary.totalDue,
     paidTotal: summary.paidTotal,
+    collectedTotal: summary.collectedTotal,
     depositPaid: summary.depositRequired > 0 ? summary.depositPaid : 0,
   });
   return getOrderPaymentSummaryTx(tx, orderId);

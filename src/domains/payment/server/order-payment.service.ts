@@ -160,6 +160,7 @@ export async function markOrderShipmentDeliveredAndCollectCod(input: {
     await reconcileOrderSettlementTx(tx, order.id, {
       totalDue: nextSummary.totalDue,
       paidTotal: nextSummary.paidTotal,
+      collectedTotal: nextSummary.collectedTotal,
       depositPaid: nextSummary.paidTotal + nextSummary.collectedTotal,
     });
     return toPlain({ orderId: order.id, summary: nextSummary });

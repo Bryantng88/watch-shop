@@ -344,6 +344,7 @@ async function syncPaymentOwnerBusinessStateTx(
   await reconcileOrderSettlementTx(tx, ownerId, {
     totalDue: summary.totalDue,
     paidTotal: summary.paidTotal,
+    collectedTotal: summary.collectedTotal,
     depositPaid: summary.paidTotal + summary.collectedTotal,
   });
 }

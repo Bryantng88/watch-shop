@@ -31,4 +31,12 @@ export const WATCH_LIST_PROJECTION_SOURCE_EVENTS = [
   "order.posted",
   "order.cancelled",
   "order.completed",
+  "payment.created",
+  "payment.status_updated",
+  "payment.paid",
+  "shipment.shipped",
+  "shipment.delivered",
+  "shipment.returning",
+  "shipment.returned",
+  "shipment.cancelled",
 ] as const;

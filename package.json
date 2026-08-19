@@ -24,6 +24,8 @@
     "order:backfill-list-projection": "tsx scripts/backfill-order-list-projection.ts",
     "order:smoke-list-projection": "tsx scripts/smoke-order-list-projection.ts",
     "technical-issue:rebuild-board-projection": "tsx scripts/rebuild-technical-issue-board-projection.ts",
+    "audit:order-watch-consistency": "tsx scripts/audit-order-watch-consistency.ts",
+    "repair:order-watch-consistency": "tsx scripts/repair-order-watch-consistency.ts",
     "technical-issue:smoke-board-projection": "tsx scripts/smoke-technical-issue-board-projection.ts",
     "acquisition:rebuild-list-projection": "tsx scripts/rebuild-acquisition-list-projection.ts",
     "strap:rebuild-list-projection": "tsx scripts/rebuild-strap-list-projection.ts",
