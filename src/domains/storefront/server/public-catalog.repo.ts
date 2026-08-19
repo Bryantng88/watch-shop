@@ -161,9 +161,14 @@ export function publicWatchEligibilityWhere(options?: {
         },
         watch: {
           is: {
-            serviceStage: {
-              in: [WatchServiceStage.NOT_REQUIRED, WatchServiceStage.DONE],
-            },
+            OR: [
+              {
+                serviceStage: {
+                  in: [WatchServiceStage.NOT_REQUIRED, WatchServiceStage.DONE],
+                },
+              },
+              { saleStage: WatchSaleStage.SOLD },
+            ],
             watchSpecV2: { isNot: null },
           },
         },
