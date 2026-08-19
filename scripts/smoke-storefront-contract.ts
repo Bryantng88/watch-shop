@@ -124,10 +124,10 @@ function main() {
   assertNoForbiddenKeys(publicWatchDetailSelect, "public detail select");
 
   const eligibility = JSON.stringify(publicWatchEligibilityWhere({ requireCoverImage: true }));
-  for (const required of ["AVAILABLE", "HOLD", "SOLD", "NOT_REQUIRED", "DONE", "isForStorefront", "COVER", "publishedAt"]) {
+  for (const required of ["AVAILABLE", "HOLD", "SOLD", "READY", "APPROVED", "isForStorefront", "COVER"]) {
     assert.ok(eligibility.includes(required), `eligibility is missing ${required}`);
   }
-  assert.equal(eligibility.includes("publishedAt"), true, "storefront must require explicit publication");
+  assert.equal(eligibility.includes("publishedAt"), false, "storefront must not require channel posting");
   assert.equal(eligibility.includes("contentStatus"), false, "approved review pair is the media readiness source of truth");
   assert.equal(storefrontCoverImageRequired(undefined), true, "cover gate must fail closed");
   assert.equal(storefrontCoverImageRequired("0"), false, "staging bypass must be explicit");

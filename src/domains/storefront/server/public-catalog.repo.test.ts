@@ -10,14 +10,13 @@ test("fast storefront eligibility does not require content or gallery approval",
   assert.equal(where.includes("CONTENT"), false);
   assert.equal(where.includes("IMAGE"), false);
   assert.equal(where.includes("saleStage"), false);
-  assert.match(where, /"publishedAt":\{"not":null\}/);
   assert.match(where, /"title":\{"not":""\}/);
   assert.match(where, /"watchSpecV2":\{"isNot":null\}/);
   assert.match(where, /"role":"COVER"/);
   assert.match(where, /"isForStorefront":true/);
 });
 
-test("public watches require both explicit publication and a public product status", () => {
+test("quick-published watches can bypass a stale product status", () => {
   const where = JSON.stringify(publicWatchEligibilityWhere({ requireCoverImage: true }));
 
   assert.match(where, /"publishedAt":\{"not":null\}/);
