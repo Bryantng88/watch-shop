@@ -11,7 +11,7 @@ import { formatStorefrontMoney } from "../shared/locale.utils";
 const navigation = {
   VI: {
     men: { label: "Nam", links: [
-      { href: "/products?audience=MEN&collection=STANDARD", label: "Đồng hồ phổ thông" },
+      { href: "/products?audience=MEN&collection=STANDARD", label: "Đồng hồ tuyển chọn" },
       { href: "/products?audience=MEN&collection=COLLECTIBLE", label: "Đồng hồ sưu tầm" },
       { href: "/products?audience=ALL", label: "Tất cả" },
     ] },
@@ -20,11 +20,11 @@ const navigation = {
       { href: "/products?audience=WOMEN", label: "Đồng hồ" },
     ] },
     service: { href: "/services", label: "Dịch vụ" },
-    consign: { href: "/consign", label: "Ký gửi đồng hồ" },
+    consign: { href: "/consign", label: "Bán đồng hồ của bạn" },
   },
   EN: {
     men: { label: "For Men", links: [
-      { href: "/products?audience=MEN&collection=STANDARD", label: "Everyday Vintage" },
+      { href: "/products?audience=MEN&collection=STANDARD", label: "Curated Watches" },
       { href: "/products?audience=MEN&collection=COLLECTIBLE", label: "Collectible Vintage" },
       { href: "/products?audience=ALL", label: "View All" },
     ] },
@@ -33,7 +33,7 @@ const navigation = {
       { href: "/products?audience=WOMEN", label: "Watches" },
     ] },
     service: { href: "/services", label: "Service" },
-    consign: { href: "/consign", label: "Consign Your Watch" },
+    consign: { href: "/consign", label: "Sell Your Watch" },
   },
 } as const;
 
