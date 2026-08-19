@@ -13,8 +13,8 @@ import { processEventWorkspaceWorkflowTransition } from "@/domains/task/server/w
 import { createBusinessEventActivity } from "@/domains/task/server/activity/task-item-activity.service";
 import {
   getWorkTypeKeyFromTicketNote,
-  resolveCurrentCoordinationCycle,
 } from "./coordination-cycle.service";
+import { ensureOperationSpace } from "./operation-space.service";
 import {
   parseWorkspaceDefinitionSnapshot,
 } from "@/domains/blueprint/shared/workspace-capabilities";
@@ -208,16 +208,13 @@ async function findActiveCoordinationTask(
   const context = coordinationTypeToContext(route.coordinationType);
   if (!context) return { task: null, context: null, unsupported: true };
 
-  const cycle = await resolveCurrentCoordinationCycle(db, {
+  const operationSpace = await ensureOperationSpace(db, {
     context: "OPERATION",
-    createIfMissing: true,
   });
-
-  if (!cycle) return { task: null, context, unsupported: false };
 
   const task = await dbOrTx(db).task.findFirst({
     where: {
-      id: cycle.task.id,
+      id: operationSpace.task.id,
       status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] },
     },
     select: {
@@ -444,7 +441,6 @@ function mediaStageRank(value: unknown) {
  */
 async function shouldKeepCurrentMediaStage(input: {
   db: DB;
-  taskId: string;
   targetType: string;
   targetId: string;
   targetWorkTypeKey: string;
@@ -459,28 +455,29 @@ async function shouldKeepCurrentMediaStage(input: {
   if (!targetRank) return false;
   if (targetRank >= MEDIA_STAGE_RANK.publish) return false;
 
-  const current = await dbOrTx(input.db).taskExecution.findFirst({
+  const activeBindings = await dbOrTx(input.db).taskExecution.findMany({
     where: {
-      taskId: input.taskId,
       targetType: TaskExecutionTargetType.WATCH,
       targetId: input.targetId,
       actionType: { not: TaskExecutionActionType.CANCELLED },
       taskItemId: { not: null },
     },
-    orderBy: { createdAt: "desc" },
+    // Media workflow ownership follows the Watch, not the weekly Task. Looking
+    // only inside the current Task lets a routine gallery/Cover save create a
+    // fresh Media Processing intake after the Watch reached Publish in an
+    // earlier cycle.
     select: {
       metadataJson: true,
       taskItem: { select: { note: true } },
     },
   });
-  if (!current) return false;
-
-  const metadata = asRecord(current.metadataJson);
-  const currentWorkTypeKey =
-    clean(metadata.workTypeKey) ||
-    clean(String(current.taskItem?.note ?? "").match(/workTypeKey:\s*([^\r\n]+)/i)?.[1]);
-
-  return mediaStageRank(currentWorkTypeKey) > targetRank;
+  return activeBindings.some((binding) => {
+    const metadata = asRecord(binding.metadataJson);
+    const currentWorkTypeKey =
+      clean(metadata.workTypeKey) ||
+      clean(String(binding.taskItem?.note ?? "").match(/workTypeKey:\s*([^\r\n]+)/i)?.[1]);
+    return mediaStageRank(currentWorkTypeKey) > targetRank;
+  });
 }
 
 function workspaceKindFromNote(note: string | null | undefined) {
@@ -1562,7 +1559,6 @@ export async function consumeBusinessEventForCoordination(
     isMediaFlowStageRoute({ route, targetType }) &&
     await shouldKeepCurrentMediaStage({
       db,
-      taskId: task.id,
       targetType,
       targetId: canonicalTargetId,
       targetWorkTypeKey: route.workTypeKey,

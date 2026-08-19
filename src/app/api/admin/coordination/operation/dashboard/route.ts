@@ -5,7 +5,7 @@ import {
   getCoordinationDashboard,
   getCoordinationFlowPage,
 } from "@/domains/coordination/server/coordination-dashboard.service";
-import { resolveCoordinationCycle } from "@/domains/coordination/server/coordination-cycle.service";
+import { resolveOperationSpace } from "@/domains/coordination/server/operation-space.service";
 import type { CoordinationContext } from "@/domains/coordination/server/coordination-cycle.types";
 import type { BusinessListDashboardData } from "@/domains/shared/ui/business-list";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
@@ -162,12 +162,8 @@ export async function GET(request: NextRequest) {
       modeKey === "technical-issue-flow" ||
       modeKey === "media-production-flow"
     )) {
-      const parsedDate = date ? new Date(date) : undefined;
-      const cycle = await resolveCoordinationCycle(prisma, {
+      const cycle = await resolveOperationSpace(prisma, {
         context,
-        date: parsedDate && !Number.isNaN(parsedDate.getTime())
-          ? parsedDate
-          : undefined,
       });
       if (!cycle) {
         return NextResponse.json(

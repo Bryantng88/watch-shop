@@ -8,11 +8,8 @@ import {
   TaskStatus,
 } from "@prisma/client";
 import { prisma, type DB } from "@/server/db/client";
-import {
-  ensureCoordinationCycle,
-  getWeekRange,
-  resolveCoordinationCycle,
-} from "./coordination-cycle.service";
+import { getWeekRange } from "./coordination-cycle.service";
+import { ensureOperationSpace, resolveOperationSpace } from "./operation-space.service";
 import {
   listWorkTypes,
   normalizeWorkTypeKey,
@@ -2860,8 +2857,9 @@ export async function getCoordinationDashboard(input: {
     flowSort !== "UPDATED_DESC"
   );
   const selectedDate = parseDateInput(input?.date);
+  const reportRange = getWeekRange(selectedDate);
   const trustedCycleTaskId = String(input.cycleTaskId ?? "").trim();
-  const resolvedCycle = trustedCycleTaskId
+  const resolvedSpace = trustedCycleTaskId
     ? {
         task: {
           id: trustedCycleTaskId,
@@ -2869,20 +2867,18 @@ export async function getCoordinationDashboard(input: {
           description: `Coordination Space ${input.context}`,
           source: "SYSTEM",
           kind: "COORDINATION",
-          periodType: "WEEK",
-          periodKey: getWeekRange(selectedDate).periodKey,
+          periodType: null,
+          periodKey: null,
           status: "IN_PROGRESS",
         },
-        referenceRange: getWeekRange(selectedDate),
         context: input.context,
         created: false,
         workTickets: [],
         workTicketsCreated: 0,
       }
-    : await dashboardStep("resolveCycle", async () => {
-        const resolved = await resolveCoordinationCycle(db, {
+    : await dashboardStep("resolveOperationSpace", async () => {
+        const resolved = await resolveOperationSpace(db, {
           context: input.context,
-          date: selectedDate,
         });
         return resolved
           ? {
@@ -2893,10 +2889,9 @@ export async function getCoordinationDashboard(input: {
             }
           : null;
       });
-  const cycle = resolvedCycle ?? await dashboardStep("ensureCycleFallback", () =>
-    ensureCoordinationCycle(db, {
+  const cycle = resolvedSpace ?? await dashboardStep("ensureOperationSpaceFallback", () =>
+    ensureOperationSpace(db, {
       context: input.context,
-      date: selectedDate,
       provisionWorkTickets: false,
     }),
   );
@@ -4116,12 +4111,12 @@ export async function getCoordinationDashboard(input: {
     spacesLabel: SPACE_LABELS[input.context].spacesLabel,
     title: cycle.task.title,
     timeRange: {
-      label: cycle.referenceRange.weekLabel,
-      periodKey: cycle.referenceRange.periodKey,
-      startDate: formatDateInput(cycle.referenceRange.startDate),
-      endDate: formatDateInput(cycle.referenceRange.endDate),
-      weekNumber: cycle.referenceRange.weekNumber,
-      year: cycle.referenceRange.year,
+      label: reportRange.weekLabel,
+      periodKey: reportRange.periodKey,
+      startDate: formatDateInput(reportRange.startDate),
+      endDate: formatDateInput(reportRange.endDate),
+      weekNumber: reportRange.weekNumber,
+      year: reportRange.year,
     },
     cycle: {
       id: cycle.task.id,
@@ -4130,7 +4125,7 @@ export async function getCoordinationDashboard(input: {
     },
     viewConfig,
     filters: {
-      selectedDate: formatDateInput(cycle.referenceRange.startDate),
+      selectedDate: formatDateInput(reportRange.startDate),
       currentPeriodKey: currentWeek.periodKey,
       weekOptions: buildWeekOptions(selectedDate),
     },

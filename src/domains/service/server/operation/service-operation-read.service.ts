@@ -9,7 +9,7 @@ import {
 
 import { prisma } from "@/server/db/client";
 import { getPaymentOwnerSummaryProjections } from "@/domains/projection/server/payment-owner-summary.projection";
-import { resolveCurrentCoordinationCycle } from "@/domains/coordination/server/coordination-cycle.service";
+import { resolveOperationSpace } from "@/domains/coordination/server/operation-space.service";
 import {
   getTechnicalIssueOperationStage,
   isTechnicalIssueCanceled,
@@ -551,9 +551,8 @@ export async function listServiceOperationTiStageItems(input: ServiceOperationTi
 }
 
 export async function listServiceOperationTechnicalWorkspaces() {
-  const cycle = await resolveCurrentCoordinationCycle(prisma, {
+  const cycle = await resolveOperationSpace(prisma, {
     context: "TECHNICAL",
-    createIfMissing: false,
   });
 
   if (!cycle?.task.id) return TECHNICAL_WORKSPACES;

@@ -9,7 +9,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma, withDbTransaction } from "@/server/db/client";
-import { ensureCoordinationCycle } from "@/domains/coordination/server/coordination-cycle.service";
+import { ensureOperationSpace } from "@/domains/coordination/server/operation-space.service";
 import { createTaskItemRepo } from "@/domains/task/server/core/task-item.repo";
 import { ensureTaskItemReferenceBinding } from "@/domains/task/server/business-binding.service";
 import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
@@ -62,7 +62,7 @@ export async function createAdHocWorkAction(input: {
     if (requestedAssigneeId && !assignedUser) {
       throw new Error("Người xử lý không tồn tại hoặc đã ngừng hoạt động.");
     }
-    const operationSpace = await ensureCoordinationCycle(tx, {
+    const operationSpace = await ensureOperationSpace(tx, {
       context: "OPERATION",
       provisionWorkTickets: false,
     });

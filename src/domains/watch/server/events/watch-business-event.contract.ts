@@ -92,16 +92,16 @@ export const WATCH_MEDIA_QUEUE_PROJECTION_CONSUMERS = [
 ] as const;
 
 export const WATCH_REVIEW_AUTO_BINDING_SCOPE =
-  "current active media weekly workspace / media-processing item";
+  "stable operation space / media-processing item";
 
 export const WATCH_PHOTOSHOOT_AUTO_BINDING_SCOPE =
-  "current active media weekly workspace / photoshoot item";
+  "stable operation space / photoshoot item";
 
 export const WATCH_MEDIA_PROCESSING_AUTO_BINDING_SCOPE =
-  "current active media weekly workspace / media-processing item";
+  "stable operation space / media-processing item";
 
 export const WATCH_PUBLISH_AUTO_BINDING_SCOPE =
-  "current active media weekly workspace / publish item";
+  "stable operation space / publish item";
 
 export const WATCH_BUSINESS_EVENT_DEFINITIONS: WatchBusinessEventDefinition[] = [
   {

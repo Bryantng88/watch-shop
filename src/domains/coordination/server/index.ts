@@ -44,6 +44,10 @@ export {
 } from "./coordination-cycle.service";
 export { getWatchPeriodComparison } from "./coordination-period-read.service";
 export { assertCoordinationCycleScope } from "./coordination-cycle-scope.service";
+export {
+  ensureOperationSpace,
+  resolveOperationSpace,
+} from "./operation-space.service";
 
 export type {
   WorkTypeDefinition as CoordinationWorkTypeDefinition,

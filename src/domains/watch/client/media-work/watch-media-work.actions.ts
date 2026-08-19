@@ -5,7 +5,7 @@ import { after } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { routeWatchesToMedia } from "@/domains/media/pipeline";
 import { listSelectedWatchMedia } from "@/domains/media/application";
-import { ensureCoordinationCycle } from "@/domains/coordination/server";
+import { ensureOperationSpace } from "@/domains/coordination/server";
 import {
   markWatchMediaAssetAttachedFromQueueItem,
   markWatchMediaAssetAttachedFromWatch,
@@ -27,9 +27,8 @@ export async function requestWatchPhotoshootAction(input: {
 }) {
   const user = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
 
-  await ensureCoordinationCycle(prisma, {
+  await ensureOperationSpace(prisma, {
     context: "MEDIA",
-    date: new Date(),
   });
 
   const result = await routeWatchesToMedia(
