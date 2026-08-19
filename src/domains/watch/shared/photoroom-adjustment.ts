@@ -32,3 +32,20 @@ export const DEFAULT_PHOTOROOM_ADJUSTMENT: PhotoRoomAdjustment = {
   orientationDegrees: 0,
   rotationDegrees: 0,
 };
+
+const REUSABLE_SHARP_VARIANTS = [
+  "photoroom-",
+  "sharp-light-",
+  "cover-edit-",
+  "cover-sharp-",
+] as const;
+
+export function isReusableSharpCoverKey(storageKey: string | null | undefined) {
+  const normalized = String(storageKey ?? "").trim().toLowerCase();
+  return Boolean(normalized) && REUSABLE_SHARP_VARIANTS.some((variant) => normalized.includes(variant));
+}
+
+export function isTransparentSharpCoverKey(storageKey: string | null | undefined) {
+  const normalized = String(storageKey ?? "").trim().toLowerCase();
+  return normalized.includes("photoroom-cutout-") || normalized.includes("cover-cutout-");
+}

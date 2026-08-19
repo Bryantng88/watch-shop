@@ -22,6 +22,8 @@ import { TaskSignalIcon } from "@/domains/shared/ui/icons";
 import { waitForOperationProjectionDeliveries } from "@/domains/coordination/ui/operation-delivery.client";
 import {
     DEFAULT_PHOTOROOM_ADJUSTMENT,
+    isReusableSharpCoverKey,
+    isTransparentSharpCoverKey,
     type PhotoRoomAdjustment,
 } from "@/domains/watch/shared/photoroom-adjustment";
 import PhotoRoomAdjustmentDialog from "./PhotoRoomAdjustmentDialog";
@@ -174,7 +176,7 @@ export default function WatchImageSection({
     const [photoRoomAdjustmentOpen, setPhotoRoomAdjustmentOpen] = useState(false);
     const [photoRoomSourceKey, setPhotoRoomSourceKey] = useState<string | null>(null);
     const [hasPhotoRoomResult, setHasPhotoRoomResult] = useState(() =>
-        getMediaKey(coverImage ?? ({} as PickedMediaItem)).includes("photoroom-"),
+        isReusableSharpCoverKey(getMediaKey(coverImage ?? ({} as PickedMediaItem))),
     );
     const [photoRoomAdjustment, setPhotoRoomAdjustment] = useState<PhotoRoomAdjustment>(DEFAULT_PHOTOROOM_ADJUSTMENT);
     const [sharpPending, setSharpPending] = useState(false);
@@ -200,11 +202,7 @@ export default function WatchImageSection({
     const currentReviewStatus = normalizeStatus(imageReviewStatus);
     const currentCoverKey = coverImage ? getMediaKey(coverImage) : "";
     const selectedCoverKey = (pendingCoverKey || currentCoverKey).trim();
-    const reusableSharpKey = localLayoutBaseKey || (
-        selectedCoverKey.includes("photoroom-") || selectedCoverKey.includes("sharp-light-")
-            ? selectedCoverKey
-            : null
-    );
+    const reusableSharpKey = localLayoutBaseKey || (isReusableSharpCoverKey(selectedCoverKey) ? selectedCoverKey : null);
     const reusableSharpBaseAdjustment = localLayoutBaseAdjustment || (
         reusableSharpKey ? DEFAULT_PHOTOROOM_ADJUSTMENT : null
     );
@@ -515,7 +513,7 @@ export default function WatchImageSection({
 
     const handleSharpRecreate = async () => {
         const selectedKey = (pendingCoverKey || currentCoverKey).trim();
-        const storageKey = sharpCutoutKey || (selectedKey.includes("photoroom-cutout-") ? selectedKey : "");
+        const storageKey = sharpCutoutKey || (isTransparentSharpCoverKey(selectedKey) ? selectedKey : "");
         if (!storageKey || coverPending || photoRoomPending || sharpPending) return;
 
         setSharpPending(true);
@@ -920,7 +918,7 @@ export default function WatchImageSection({
                 localBaseEnhanceMetal={reusableSharpBaseAdjustment?.enhanceMetal}
                 localBaseShadowMode={reusableSharpBaseAdjustment?.shadowMode}
                 localBaseAdjustment={reusableSharpBaseAdjustment}
-                previewIsTransparentCutout={Boolean(localLayoutBaseKey?.includes("photoroom-cutout-"))}
+                previewIsTransparentCutout={isTransparentSharpCoverKey(localLayoutBaseKey)}
                 productId={productId}
                 localPreviewStorageKey={reusableSharpKey}
                 localDisabledReason="Cần tạo Cover sạch bằng PhotoRoom một lần trước khi dùng Sharp"

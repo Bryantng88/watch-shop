@@ -9,6 +9,8 @@ import {
 import { mediaStorage } from "@/domains/media/storage";
 import {
   DEFAULT_PHOTOROOM_ADJUSTMENT,
+  isReusableSharpCoverKey,
+  isTransparentSharpCoverKey,
   type PhotoRoomAdjustment,
 } from "@/domains/watch/shared/photoroom-adjustment";
 import { prisma } from "@/server/db/client";
@@ -271,12 +273,8 @@ export async function recreateWatchCoverWithSharpApplication(input: {
   const productId = String(input.productId ?? "").trim();
   const sourceKey = String(input.storageKey ?? "").trim();
   if (!productId || !sourceKey) throw new Error("Thiếu Watch hoặc ảnh nguồn.");
-  const isTransparentCutout = sourceKey.includes("photoroom-cutout-") || sourceKey.includes("cover-cutout-");
-  const isReusableResult =
-    sourceKey.includes("photoroom-") ||
-    sourceKey.includes("sharp-light-") ||
-    sourceKey.includes("cover-edit-") ||
-    sourceKey.includes("cover-sharp-");
+  const isTransparentCutout = isTransparentSharpCoverKey(sourceKey);
+  const isReusableResult = isReusableSharpCoverKey(sourceKey);
   if (!isReusableResult) {
     throw new Error("Sharp chỉ xử lý Cover đã qua PhotoRoom/Sharp; ảnh gốc cần PhotoRoom tạo nền sạch lần đầu.");
   }
@@ -325,13 +323,8 @@ export async function previewWatchCoverWithSharpApplication(input: {
   const productId = String(input.productId ?? "").trim();
   const sourceKey = String(input.storageKey ?? "").trim();
   if (!productId || !sourceKey) throw new Error("Thiếu Watch hoặc ảnh nguồn.");
-  const isTransparentCutout = sourceKey.includes("photoroom-cutout-") || sourceKey.includes("cover-cutout-");
-  if (
-    !sourceKey.includes("photoroom-") &&
-    !sourceKey.includes("sharp-light-") &&
-    !sourceKey.includes("cover-edit-") &&
-    !sourceKey.includes("cover-sharp-")
-  ) {
+  const isTransparentCutout = isTransparentSharpCoverKey(sourceKey);
+  if (!isReusableSharpCoverKey(sourceKey)) {
     throw new Error("Preview Sharp chỉ hỗ trợ Cover đã qua PhotoRoom/Sharp.");
   }
   const watchExists = await prisma.watch.findFirst({
