@@ -43,6 +43,7 @@ function parseAdjustment(value: unknown): PhotoRoomAdjustment | null {
     shadowMode: pick(input.shadowMode, ["none", "soft", "hard", "floating"], DEFAULT_PHOTOROOM_ADJUSTMENT.shadowMode),
     backgroundMode: pick(input.backgroundMode, ["white", "transparent"], DEFAULT_PHOTOROOM_ADJUSTMENT.backgroundMode),
     enhanceMetal: input.enhanceMetal === true,
+    flipHorizontal: input.flipHorizontal === true,
     orientationDegrees,
     rotationDegrees,
   };

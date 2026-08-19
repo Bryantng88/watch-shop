@@ -186,6 +186,7 @@ async function composeAdjustedStorefrontCover(
   cutoutBytes: Uint8Array,
   adjustment: PhotoRoomAdjustment,
   rotationDelta: number,
+  flipHorizontalDelta = false,
   sourceHasTransparentBackground = true,
   baseZoomPercent = 100,
 ) {
@@ -198,7 +199,8 @@ async function composeAdjustedStorefrontCover(
       background: { r: 255, g: 255, b: 255, alpha: 1 },
       threshold: 12,
     });
-  const rotated = await subjectSource
+  const orientedSource = flipHorizontalDelta ? subjectSource.flop() : subjectSource;
+  const rotated = await orientedSource
     .rotate(rotationDelta, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .png()
@@ -290,6 +292,7 @@ export async function recreateWatchCoverWithSharpApplication(input: {
     cutout,
     { ...adjustment, shadowMode: "none" },
     nextRotation - baseRotation,
+    adjustment.flipHorizontal !== baseAdjustment.flipHorizontal,
     isTransparentCutout,
     normalizedZoom(baseAdjustment),
   ));
@@ -340,6 +343,7 @@ export async function previewWatchCoverWithSharpApplication(input: {
     { ...adjustment, shadowMode: "none" },
     adjustment.orientationDegrees + adjustment.rotationDegrees
       - baseAdjustment.orientationDegrees - baseAdjustment.rotationDegrees,
+    adjustment.flipHorizontal !== baseAdjustment.flipHorizontal,
     isTransparentCutout,
     normalizedZoom(baseAdjustment),
   );
@@ -377,8 +381,9 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
     throw new Error("Ảnh nguồn vượt quá giới hạn 30 MB của PhotoRoom.");
   }
 
-  const prepared = await sharp(source.bytes)
-    .rotate()
+  let preparedSource = sharp(source.bytes).rotate();
+  if (adjustment.flipHorizontal) preparedSource = preparedSource.flop();
+  const prepared = await preparedSource
     .rotate(totalRotationDegrees, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .resize({
       width: PHOTOROOM_RELIGHT_MAX_DIMENSION,

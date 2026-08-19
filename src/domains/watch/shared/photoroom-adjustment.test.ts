@@ -2,9 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  DEFAULT_PHOTOROOM_ADJUSTMENT,
   isReusableSharpCoverKey,
   isTransparentSharpCoverKey,
 } from "./photoroom-adjustment";
+
+test("horizontal mirroring is opt-in for existing covers", () => {
+  assert.equal(DEFAULT_PHOTOROOM_ADJUSTMENT.flipHorizontal, false);
+});
 
 test("saved PhotoRoom and Sharp cover derivatives remain reusable after reload", () => {
   assert.equal(isReusableSharpCoverKey("media/objects/root/derivatives/cover-edit-a1.png"), true);

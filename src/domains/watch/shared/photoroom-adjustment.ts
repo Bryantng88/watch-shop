@@ -15,6 +15,7 @@ export type PhotoRoomAdjustment = {
   shadowMode: PhotoRoomShadowMode;
   backgroundMode: PhotoRoomBackgroundMode;
   enhanceMetal: boolean;
+  flipHorizontal: boolean;
   orientationDegrees: PhotoRoomOrientationDegrees;
   rotationDegrees: number;
 };
@@ -29,6 +30,7 @@ export const DEFAULT_PHOTOROOM_ADJUSTMENT: PhotoRoomAdjustment = {
   shadowMode: "soft",
   backgroundMode: "white",
   enhanceMetal: false,
+  flipHorizontal: false,
   orientationDegrees: 0,
   rotationDegrees: 0,
 };

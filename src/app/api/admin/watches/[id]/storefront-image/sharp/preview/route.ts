@@ -35,6 +35,7 @@ function parseAdjustment(value: unknown): PhotoRoomAdjustment | null {
     shadowMode: pick(input.shadowMode, ["none", "soft", "hard", "floating"], DEFAULT_PHOTOROOM_ADJUSTMENT.shadowMode),
     backgroundMode: pick(input.backgroundMode, ["white", "transparent"], DEFAULT_PHOTOROOM_ADJUSTMENT.backgroundMode),
     enhanceMetal: input.enhanceMetal === true,
+    flipHorizontal: input.flipHorizontal === true,
     orientationDegrees: [-90, 0, 90, 180].includes(orientation) ? orientation as PhotoRoomAdjustment["orientationDegrees"] : 0,
     rotationDegrees: number(input.rotationDegrees, -15, 15, 0),
   };

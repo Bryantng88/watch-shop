@@ -153,6 +153,7 @@ export default function PhotoRoomAdjustmentDialog({
   const previewRotation = previewIsTransparentCutout
     ? totalRotationDegrees
     : totalRotationDegrees - (previewBase.orientationDegrees + previewBase.rotationDegrees);
+  const previewFlipX = value.flipHorizontal !== previewBase.flipHorizontal ? -1 : 1;
   const previewShadow = value.shadowMode === "none"
     ? "none"
     : value.shadowMode === "hard"
@@ -173,6 +174,7 @@ export default function PhotoRoomAdjustmentDialog({
     `Shadow: ${labels.shadowMode[value.shadowMode].toLowerCase()}`,
     `Nền: ${labels.backgroundMode[value.backgroundMode].toLowerCase()}`,
     value.enhanceMetal ? "Tăng độ bóng kim loại nhẹ" : "Giữ bề mặt kim loại tự nhiên",
+    value.flipHorizontal ? "Lật hướng ảnh trái ↔ phải" : "Giữ nguyên hướng ảnh",
     totalRotationDegrees === 0 ? "Không xoay vật thể" : `Xoay vật thể ${rotationLabel.toLowerCase()}`,
     "Giữ khung 2048 × 3840",
   ];
@@ -312,6 +314,14 @@ export default function PhotoRoomAdjustmentDialog({
               <span>0°</span>
               <span>Phải 15°</span>
             </span>
+            <button
+              type="button"
+              onClick={() => update("flipHorizontal", !value.flipHorizontal)}
+              aria-pressed={value.flipHorizontal}
+              className={`mt-3 w-full rounded-lg border px-3 py-2 text-[11px] font-semibold transition ${value.flipHorizontal ? "border-violet-500 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+            >
+              {value.flipHorizontal ? "Đang lật hướng trái ↔ phải" : "Lật hướng trái ↔ phải"}
+            </button>
           </label>
         </div>
 
@@ -332,7 +342,7 @@ export default function PhotoRoomAdjustmentDialog({
                   unoptimized
                   className="object-contain transition-transform duration-200"
                   style={exactPreviewSrc ? undefined : {
-                    transform: `translate(${previewTranslateX}%, ${previewTranslateY}%) rotate(${previewRotation}deg) scale(${previewScale})`,
+                    transform: `translate(${previewTranslateX}%, ${previewTranslateY}%) rotate(${previewRotation}deg) scale(${previewFlipX * previewScale}, ${previewScale})`,
                     filter: previewIsTransparentCutout ? `${previewShadow}${value.enhanceMetal ? " brightness(1.04) contrast(1.04)" : ""}` : "none",
                   }}
                 />
