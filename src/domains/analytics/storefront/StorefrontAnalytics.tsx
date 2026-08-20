@@ -53,13 +53,16 @@ export function getStorefrontAnalyticsContext(): StorefrontAnalyticsContext | nu
   return { anonymousId, sessionId: session.id, ...session.attribution };
 }
 
-export function trackStorefrontEvent(eventName: StorefrontAnalyticsEventName, productId?: string) {
+export async function trackStorefrontEvent(eventName: StorefrontAnalyticsEventName, productId?: string) {
   const context = getStorefrontAnalyticsContext();
-  if (!context) return;
+  if (!context) return false;
   const body = JSON.stringify({ events: [{ eventId: uuid(), eventName, occurredAt: new Date().toISOString(), productId, path: `${location.pathname}${location.search}`, referrer: document.referrer || undefined, context }] });
-  const blob = new Blob([body], { type: "application/json" });
-  if (navigator.sendBeacon?.("/api/analytics/events", blob)) return;
-  void fetch("/api/analytics/events", { method: "POST", headers: { "content-type": "application/json" }, body, keepalive: true }).catch(() => undefined);
+  try {
+    const response = await fetch("/api/analytics/events", { method: "POST", headers: { "content-type": "application/json" }, body, keepalive: true });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 export function StorefrontAnalyticsRuntime() {
@@ -67,13 +70,17 @@ export function StorefrontAnalyticsRuntime() {
     const context = getStorefrontAnalyticsContext();
     if (!context) return;
     const marker = `vintic.analytics.started.${context.sessionId}`;
-    if (!sessionStorage.getItem(marker)) { sessionStorage.setItem(marker, "1"); trackStorefrontEvent("session_started"); }
+    if (!sessionStorage.getItem(marker)) {
+      void trackStorefrontEvent("session_started").then((accepted) => {
+        if (accepted) sessionStorage.setItem(marker, "1");
+      });
+    }
   }, []);
   return null;
 }
 
 export function StorefrontAnalyticsSignal({ eventName, productId }: { eventName: StorefrontAnalyticsEventName; productId?: string }) {
   const pathname = usePathname();
-  useEffect(() => { trackStorefrontEvent(eventName, productId); }, [eventName, pathname, productId]);
+  useEffect(() => { void trackStorefrontEvent(eventName, productId); }, [eventName, pathname, productId]);
   return null;
 }
