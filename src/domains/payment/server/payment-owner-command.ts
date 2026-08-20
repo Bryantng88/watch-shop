@@ -102,12 +102,13 @@ export async function replaceShipmentExpenseTx(tx: Tx, input: { shipmentId: stri
 export async function setOrderCodCollectedTx(tx: Tx, input: { orderId: string; amountIfMissing: number; currency?: string | null; note?: string | null; collected: boolean }) {
   const rows = await tx.payment.findMany({ where: { order_id: input.orderId, type: PaymentType.ORDER, direction: PaymentDirection.IN, method: PaymentMethod.COD, status: input.collected ? PaymentStatus.UNPAID : PaymentStatus.COLLECTED }, select: { id: true } });
   const mutations: PaymentMutation[] = [];
+  const settlementAt = new Date();
   for (const row of rows) {
-    await tx.payment.update({ where: { id: row.id }, data: { status: input.collected ? PaymentStatus.COLLECTED : PaymentStatus.UNPAID, note: input.note ?? null, updatedAt: new Date() } });
-    mutations.push({ paymentId: row.id, eventKey: "payment.status_updated" });
+    await tx.payment.update({ where: { id: row.id }, data: { status: input.collected ? PaymentStatus.COLLECTED : PaymentStatus.UNPAID, paidAt: input.collected ? settlementAt : null, note: input.note ?? null, updatedAt: settlementAt } });
+    mutations.push({ paymentId: row.id, eventKey: input.collected ? "payment.paid" : "payment.status_updated" });
   }
   if (input.collected && rows.length === 0 && input.amountIfMissing > 0) {
-    const created = await tx.payment.create({ data: { refNo: await buildPaymentRef(tx), order_id: input.orderId, type: PaymentType.ORDER, direction: PaymentDirection.IN, purpose: PaymentPurpose.ORDER_REMAIN, method: PaymentMethod.COD, amount: money(input.amountIfMissing), currency: input.currency ?? "VND", status: PaymentStatus.COLLECTED, note: input.note ?? null } });
+    const created = await tx.payment.create({ data: { refNo: await buildPaymentRef(tx), order_id: input.orderId, type: PaymentType.ORDER, direction: PaymentDirection.IN, purpose: PaymentPurpose.ORDER_REMAIN, method: PaymentMethod.COD, amount: money(input.amountIfMissing), currency: input.currency ?? "VND", status: PaymentStatus.COLLECTED, paidAt: settlementAt, note: input.note ?? null } });
     mutations.push({ paymentId: created.id, eventKey: "payment.created" });
   }
   return mutations;

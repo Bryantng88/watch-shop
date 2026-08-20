@@ -27,13 +27,14 @@ export async function POST(req: NextRequest) {
       reference: body.reference,
       note: body.note,
       markPaidNow: body.markPaidNow,
+      effectiveAt: body.effectiveAt,
       actorUserId: access.user.id,
       financeChannel: body.financeChannel,
     });
     return NextResponse.json({ payment }, { status: 201 });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Không thể tạo khoản chi." },
+      { error: error instanceof Error ? error.message : "Không thể tạo khoản thu/chi." },
       { status: 400 },
     );
   }

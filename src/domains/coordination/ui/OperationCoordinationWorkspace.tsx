@@ -1886,7 +1886,7 @@ export default function OperationCoordinationWorkspace({
         <div className="flex items-center gap-2">
           {isPaymentCollectionFlow && data.paymentCapabilities.canCreateStandaloneExpense ? (
             <button type="button" onClick={() => setIsExpensePaymentOpen(true)} className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-bold text-white hover:bg-slate-800">
-              <Plus className="h-4 w-4" /> Tạo khoản chi
+              <Plus className="h-4 w-4" /> Thêm khoản thu / chi
             </button>
           ) : null}
           <DashboardCustomizeButton

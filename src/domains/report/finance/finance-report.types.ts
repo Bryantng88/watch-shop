@@ -24,9 +24,15 @@ export type FinanceReportPeriod = {
   startAt: string;
   endAt: string;
   revenue: number;
+  otherIncome: number;
   collected: number;
   cost: number;
   profit: number;
+  openingBalance: number;
+  cashIn: number;
+  cashOut: number;
+  netCashFlow: number;
+  closingBalance: number;
   transactionCount: number;
   revenueBreakdown: Array<{
     key: string;
@@ -75,12 +81,13 @@ export type FinanceChannelReport = {
 };
 
 export type FinanceReportProjectionData = {
-  formulaVersion: 1;
+  formulaVersion: 2;
   generatedAt: string;
   channels: FinanceChannelReport[];
   quality: {
     unallocatedOrderItemCount: number;
     unallocatedPaymentCount: number;
     recognitionDateFallbackCount: number;
+    settlementDateFallbackCount: number;
   };
 };

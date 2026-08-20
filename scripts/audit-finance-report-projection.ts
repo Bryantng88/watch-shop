@@ -21,11 +21,25 @@ async function main() {
       mismatches.push(`${allPeriod.key}:period-missing`);
       continue;
     }
-    for (const metric of ["revenue", "collected", "cost", "profit"] as const) {
+    for (const metric of [
+      "revenue",
+      "otherIncome",
+      "collected",
+      "cost",
+      "profit",
+      "openingBalance",
+      "cashIn",
+      "cashOut",
+      "netCashFlow",
+      "closingBalance",
+    ] as const) {
       if (!near(allPeriod[metric], menPeriod[metric] + womenPeriod[metric])) {
         mismatches.push(`${allPeriod.key}:${metric}`);
       }
     }
+  }
+  if (data.quality.settlementDateFallbackCount > 0) {
+    mismatches.push(`settlement-date-fallback:${data.quality.settlementDateFallbackCount}`);
   }
 
   const output = {
@@ -38,8 +52,14 @@ async function main() {
       key: period.key,
       revenue: period.revenue,
       collected: period.collected,
+      otherIncome: period.otherIncome,
       cost: period.cost,
       profit: period.profit,
+      openingBalance: period.openingBalance,
+      cashIn: period.cashIn,
+      cashOut: period.cashOut,
+      netCashFlow: period.netCashFlow,
+      closingBalance: period.closingBalance,
       transactionCount: period.transactionCount,
     })),
     pending: {

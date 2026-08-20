@@ -7,6 +7,15 @@ import type {
 
 const CHANNELS: FinanceChannel[] = ["MEN", "WOMEN"];
 
+export type CashLedgerEntry = {
+  direction: "IN" | "OUT";
+  purpose: string;
+  status: string;
+  amount: number;
+  paidAt: Date | null;
+  updatedAt: Date;
+};
+
 function roundMoney(value: number) {
   return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 }
@@ -85,4 +94,26 @@ export function allocateAmountByChannel(
     allocated += value;
     return { channel: item.channel, amount: value };
   });
+}
+
+export function summarizeCashLedger(entries: CashLedgerEntry[], startAt: Date, endAt: Date) {
+  const settled = entries.filter((item) => ["PAID", "COLLECTED"].includes(item.status));
+  const effectiveDate = (item: CashLedgerEntry) => item.paidAt ?? item.updatedAt;
+  const latestOpeningBalance = settled
+    .filter((item) => item.purpose === "OPENING_BALANCE" && effectiveDate(item) <= endAt)
+    .sort((left, right) => effectiveDate(right).getTime() - effectiveDate(left).getTime())[0] ?? null;
+  const ledgerStart = latestOpeningBalance ? effectiveDate(latestOpeningBalance) : null;
+  const movements = settled.filter((item) => item.purpose !== "OPENING_BALANCE");
+  const afterLedgerStart = (item: CashLedgerEntry) => !ledgerStart || effectiveDate(item) > ledgerStart;
+  const inPeriod = movements.filter((item) =>
+    effectiveDate(item) >= startAt && effectiveDate(item) <= endAt && afterLedgerStart(item),
+  );
+  const beforePeriod = movements.filter((item) => effectiveDate(item) < startAt && afterLedgerStart(item));
+  const openingBalance = (latestOpeningBalance?.amount ?? 0) + beforePeriod.reduce(
+    (sum, item) => sum + (item.direction === "IN" ? item.amount : -item.amount),
+    0,
+  );
+  const cashIn = inPeriod.filter((item) => item.direction === "IN").reduce((sum, item) => sum + item.amount, 0);
+  const cashOut = inPeriod.filter((item) => item.direction === "OUT").reduce((sum, item) => sum + item.amount, 0);
+  return { openingBalance, cashIn, cashOut, netCashFlow: cashIn - cashOut, closingBalance: openingBalance + cashIn - cashOut };
 }

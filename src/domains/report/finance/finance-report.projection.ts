@@ -4,6 +4,7 @@ import {
   allocateAmountByChannel,
   allocateOrderContributions,
   channelWeightsFromContributions,
+  summarizeCashLedger,
 } from "./finance-report.calculator";
 import type {
   FinanceChannel,
@@ -49,6 +50,7 @@ type PaymentAllocation = {
   amount: number;
   createdAt: Date;
   paidAt: Date | null;
+  updatedAt: Date;
   code: string;
   label: string;
   href: string;
@@ -79,6 +81,8 @@ function endOfDay(date: Date) {
 
 function paymentCategory(input: { direction: "IN" | "OUT"; purpose: string; method: string; expenseCategoryName?: string | null }) {
   if (input.direction === "IN") {
+    if (input.purpose === "OPENING_BALANCE") return { key: "OPENING_BALANCE", label: "Số dư đầu kỳ", owner: "Finance" };
+    if (input.purpose === "OTHER_INCOME") return { key: "OTHER_INCOME", label: "Thu nhập khác", owner: "Payment" };
     if (input.method === "COD") return { key: "COD", label: "COD chờ xác nhận", owner: "Shipment" };
     if (["SERVICE_REQUEST", "SERVICE_FEE"].includes(input.purpose)) {
       return { key: "SERVICE_IN", label: "Thu dịch vụ", owner: "Service" };
@@ -127,12 +131,25 @@ function periodSummary(input: {
 }): FinanceReportPeriod {
   const inPeriod = (date: Date) => date >= input.startAt && date <= input.endAt;
   const contributions = input.contributions.filter((item) => inPeriod(item.recognizedAt));
-  const paid = input.payments.filter((item) =>
-    item.paidAt && inPeriod(item.paidAt) && ["PAID", "COLLECTED"].includes(item.status),
+  const settled = input.payments.filter((item) => ["PAID", "COLLECTED"].includes(item.status));
+  const effectiveDate = (item: PaymentAllocation) => item.paidAt ?? item.updatedAt;
+  const latestOpeningBalance = settled
+    .filter((item) => item.purpose === "OPENING_BALANCE" && effectiveDate(item) <= input.endAt)
+    .sort((left, right) => effectiveDate(right).getTime() - effectiveDate(left).getTime())[0] ?? null;
+  const ledgerStart = latestOpeningBalance ? effectiveDate(latestOpeningBalance) : null;
+  const cashMovements = settled.filter((item) => item.purpose !== "OPENING_BALANCE");
+  const paid = cashMovements.filter((item) =>
+    inPeriod(effectiveDate(item)) && (!ledgerStart || effectiveDate(item) > ledgerStart),
   );
   const revenue = contributions.reduce((sum, item) => sum + item.revenue, 0);
+  const otherIncome = paid
+    .filter((item) => item.direction === "IN" && item.purpose === "OTHER_INCOME")
+    .reduce((sum, item) => sum + item.amount, 0);
   const cogs = contributions.reduce((sum, item) => sum + item.cost, 0);
-  const collected = paid.filter((item) => item.direction === "IN").reduce((sum, item) => sum + item.amount, 0);
+  const collected = paid
+    .filter((item) => item.direction === "IN" && item.purpose !== "OPENING_BALANCE")
+    .reduce((sum, item) => sum + item.amount, 0);
+  const cashLedger = summarizeCashLedger(input.payments, input.startAt, input.endAt);
   const operatingOut = paid
     .filter((item) => item.direction === "OUT" && !item.purpose.startsWith("ACQUISITION_"))
     .reduce((sum, item) => sum + item.amount, 0);
@@ -183,9 +200,11 @@ function periodSummary(input: {
     startAt: input.startAt.toISOString(),
     endAt: input.endAt.toISOString(),
     revenue,
+    otherIncome,
     collected,
     cost,
-    profit: revenue - cost,
+    profit: revenue + otherIncome - cost,
+    ...cashLedger,
     transactionCount: new Set(contributions.map((item) => item.transactionId)).size,
     revenueBreakdown: [...revenueGroups.values()].map((item) => ({ ...item, count: item.count.size })).sort((left, right) => right.amount - left.amount),
     costBreakdown: [...costGroups.values()].filter((item) => item.amount > 0).sort((left, right) => right.amount - left.amount),
@@ -329,7 +348,7 @@ export async function buildFinanceReportProjectionData(db: DB): Promise<FinanceR
   }
 
   const payments = await client.payment.findMany({
-    where: { OR: [{ createdAt: { gte: sixMonthsAgo } }, { status: "UNPAID" }] },
+    where: { OR: [{ status: { in: ["PAID", "COLLECTED", "UNPAID"] } }, { createdAt: { gte: sixMonthsAgo } }] },
     select: {
       id: true,
       refNo: true,
@@ -340,6 +359,7 @@ export async function buildFinanceReportProjectionData(db: DB): Promise<FinanceR
       method: true,
       createdAt: true,
       paidAt: true,
+      updatedAt: true,
       order_id: true,
       service_request_id: true,
       acquisition_id: true,
@@ -408,6 +428,7 @@ export async function buildFinanceReportProjectionData(db: DB): Promise<FinanceR
 
   const paymentAllocations: PaymentAllocation[] = [];
   let unallocatedPaymentCount = 0;
+  let settlementDateFallbackCount = 0;
   for (const payment of payments) {
     const direction = payment.direction === "OUT" ? "OUT" : payment.direction === "IN" ? "IN" : null;
     if (!direction) {
@@ -432,8 +453,9 @@ export async function buildFinanceReportProjectionData(db: DB): Promise<FinanceR
           : standaloneWeights;
     if (!weights.length) {
       unallocatedPaymentCount += 1;
-      continue;
+      weights.push({ channel: "MEN", weight: 0.5 }, { channel: "WOMEN", weight: 0.5 });
     }
+    if (["PAID", "COLLECTED"].includes(payment.status) && !payment.paidAt) settlementDateFallbackCount += 1;
     for (const allocation of allocateAmountByChannel(number(payment.amount), weights)) {
       const ownerHref = orderId
         ? `/admin/orders/${orderId}`
@@ -452,8 +474,9 @@ export async function buildFinanceReportProjectionData(db: DB): Promise<FinanceR
         amount: allocation.amount,
         createdAt: payment.createdAt,
         paidAt: payment.paidAt,
+        updatedAt: payment.updatedAt,
         code: payment.refNo ?? payment.id,
-        label: paymentCategory({ direction, purpose: payment.purpose, method: payment.method }).label,
+        label: paymentCategory({ direction, purpose: payment.purpose, method: payment.method, expenseCategoryName: payment.expenseCategory?.name }).label,
         href: ownerHref,
         expenseCategoryName: payment.expenseCategory?.name ?? null,
       });
@@ -505,10 +528,10 @@ export async function buildFinanceReportProjectionData(db: DB): Promise<FinanceR
   };
 
   return {
-    formulaVersion: 1,
+    formulaVersion: 2,
     generatedAt: now.toISOString(),
     channels: [allReport, ...channelReports],
-    quality: { unallocatedOrderItemCount, unallocatedPaymentCount, recognitionDateFallbackCount },
+    quality: { unallocatedOrderItemCount, unallocatedPaymentCount, recognitionDateFallbackCount, settlementDateFallbackCount },
   };
 }
 

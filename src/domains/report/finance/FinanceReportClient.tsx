@@ -40,17 +40,29 @@ const periods = {
   month: {
     label: "Tháng này",
     revenue: 428_600_000,
+    otherIncome: 0,
     collected: 396_200_000,
     cost: 302_900_000,
     profit: 125_700_000,
+    openingBalance: 0,
+    cashIn: 396_200_000,
+    cashOut: 302_900_000,
+    netCashFlow: 93_300_000,
+    closingBalance: 93_300_000,
     previousRevenue: 382_700_000,
   },
   quarter: {
     label: "Quý này",
     revenue: 1_184_300_000,
+    otherIncome: 0,
     collected: 1_092_800_000,
     cost: 841_600_000,
     profit: 342_700_000,
+    openingBalance: 0,
+    cashIn: 1_092_800_000,
+    cashOut: 841_600_000,
+    netCashFlow: 251_200_000,
+    closingBalance: 251_200_000,
     previousRevenue: 1_096_400_000,
   },
 } as const;
@@ -147,9 +159,15 @@ export function FinanceReportClient({ initialProjection }: { initialProjection?:
     return {
       ...source,
       revenue: Math.round(source.revenue * factor),
+      otherIncome: Math.round(source.otherIncome * factor),
       collected: Math.round(source.collected * factor * channelAdjustment),
       cost: Math.round(source.cost * factor * (channelKey === "women" ? 0.94 : 1.04)),
       profit: Math.round(source.profit * factor * (channelKey === "women" ? 1.17 : 0.88)),
+      openingBalance: Math.round(source.openingBalance * factor),
+      cashIn: Math.round(source.cashIn * factor),
+      cashOut: Math.round(source.cashOut * factor),
+      netCashFlow: Math.round(source.netCashFlow * factor),
+      closingBalance: Math.round(source.closingBalance * factor),
       previousRevenue: Math.round(source.previousRevenue * factor * (channelKey === "women" ? 0.93 : 1.05)),
     };
   }, [channel.factor, channelKey, periodKey, projectionChannel]);
@@ -357,11 +375,12 @@ export function FinanceReportClient({ initialProjection }: { initialProjection?:
         </div>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <MetricCard label="Doanh thu ghi nhận" value={money(period.revenue)} note="Từ Order và Service" delta={initialProjection && period.previousRevenue <= 0 ? "—" : `${revenueDelta.toFixed(1)}%`} tone="blue" icon={TrendingUp} onClick={() => setDetail("revenue")} />
         <MetricCard label="Tiền đã thực thu" value={money(period.collected)} note={`${(period.revenue > 0 ? (period.collected / period.revenue) * 100 : 0).toFixed(1)}% doanh thu`} delta={initialProjection ? "—" : "8,4%"} tone="emerald" icon={Banknote} onClick={() => setDetail("collected")} />
         <MetricCard label="Tổng chi phí" value={money(period.cost)} note="Giá vốn và phí vận hành" delta={initialProjection ? "—" : "5,9%"} tone="slate" icon={ReceiptText} onClick={() => setDetail("cost")} />
         <MetricCard label="Lợi nhuận gộp" value={money(period.profit)} note={`Biên lợi nhuận ${margin.toFixed(1)}%`} delta={initialProjection ? "—" : "14,2%"} tone="violet" icon={CircleDollarSign} onClick={() => setDetail("profit")} />
+        <MetricCard label="Số dư cuối kỳ" value={money(period.closingBalance)} note={`Đầu kỳ ${money(period.openingBalance)} · Dòng tiền ròng ${money(period.netCashFlow)}`} delta="—" tone="emerald" icon={Landmark} onClick={() => {}} />
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]">
@@ -624,7 +643,7 @@ export function FinanceReportClient({ initialProjection }: { initialProjection?:
       </section>
 
       <footer className="flex flex-wrap items-center justify-between gap-3 pb-4 text-[11px] text-slate-400">
-        <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> {initialProjection ? `Projection lúc ${new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit" }).format(new Date(initialProjection.generatedAt))}` : "Dữ liệu minh hoạ"} · Công thức Finance v1</span>
+        <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> {initialProjection ? `Projection lúc ${new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit" }).format(new Date(initialProjection.generatedAt))}` : "Dữ liệu minh hoạ"} · Công thức Finance v2</span>
         <span>Kỳ báo cáo: {period.label} · Kênh: {channel.label}</span>
       </footer>
 

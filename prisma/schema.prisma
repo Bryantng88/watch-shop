@@ -3238,6 +3238,8 @@ enum PaymentPurpose {
   SHIPMENT_RETURN_COST
   SALARY
   OPERATING_EXPENSE
+  OTHER_INCOME
+  OPENING_BALANCE
 }
 
 enum PaymentStatus {
