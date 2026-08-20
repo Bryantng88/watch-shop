@@ -1,6 +1,7 @@
 import { prisma } from "@/server/db/client";
 import { queryFinanceReportProjection } from "@/domains/report/finance/finance-report.projection";
 import type { SalesReportData } from "./sales-report.types";
+import { normalizeAnalyticsSource } from "@/domains/analytics/storefront/storefront-analytics.shared";
 
 const ratio = (value: number, total: number) => total > 0 ? Math.round((value / total) * 10_000) / 100 : 0;
 
@@ -33,11 +34,11 @@ export async function getSalesReport(access: SalesReportAccess): Promise<SalesRe
       }).then((products) => products.map((product) => ({ ...product, landedCost: null })));
   const [events, requests, inventory, financeProjection] = await Promise.all([
     prisma.storefrontAnalyticsEvent.findMany({
-      where: { occurredAt: { gte: from, lte: to }, deviceType: { not: "bot" } },
+      where: { occurredAt: { gte: from, lte: to }, isInternal: false, deviceType: { not: "bot" } },
       select: { eventName: true, anonymousIdHash: true, sessionIdHash: true, productId: true, source: true },
     }),
     prisma.purchaseRequest.findMany({
-      where: { channel: "STOREFRONT", OR: [{ createdAt: { gte: from, lte: to } }, { convertedAt: { gte: from, lte: to } }] },
+      where: { channel: "STOREFRONT", analyticsIsInternal: false, OR: [{ createdAt: { gte: from, lte: to } }, { convertedAt: { gte: from, lte: to } }] },
       select: { orderId: true, createdAt: true, convertedAt: true, analyticsSessionIdHash: true, analyticsSource: true, items: { select: { productId: true } } },
     }),
     inventoryPromise,
@@ -58,13 +59,13 @@ export async function getSalesReport(access: SalesReportAccess): Promise<SalesRe
 
   const sourceRows = new Map<string, { sessions: Set<string>; requests: number }>();
   for (const event of events) {
-    const source = event.source || "direct";
+    const source = normalizeAnalyticsSource(event.source);
     const row = sourceRows.get(source) ?? { sessions: new Set<string>(), requests: 0 };
     row.sessions.add(event.sessionIdHash);
     sourceRows.set(source, row);
   }
   for (const request of createdRequests) {
-    const source = request.analyticsSource || "unknown";
+    const source = normalizeAnalyticsSource(request.analyticsSource || "unknown");
     const row = sourceRows.get(source) ?? { sessions: new Set<string>(), requests: 0 };
     row.requests += 1;
     sourceRows.set(source, row);

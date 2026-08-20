@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Boxes, ChartNoAxesCombined, Eye, MousePointerClick, PackageCheck, ShoppingBag, Users } from "lucide-react";
 import type { SalesReportData } from "./sales-report.types";
 
@@ -15,11 +17,25 @@ function Metric({ label, value, note, icon: Icon }: { label: string; value: stri
   </article>;
 }
 
-export default function SalesReportClient({ data }: { data: SalesReportData }) {
+export default function SalesReportClient({ data, internalDevice }: { data: SalesReportData; internalDevice: boolean }) {
+  const router = useRouter();
+  const [savingInternal, setSavingInternal] = useState(false);
+  async function toggleInternalDevice() {
+    setSavingInternal(true);
+    try {
+      const response = await fetch("/api/admin/analytics/internal-device", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ enabled: !internalDevice }) });
+      if (response.ok) router.refresh();
+    } finally {
+      setSavingInternal(false);
+    }
+  }
   return <main className="w-full space-y-4 px-4 py-5 lg:px-6">
     <header className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-4">
       <div><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Báo cáo / Bán hàng</p><h1 className="mt-2 text-2xl font-bold text-slate-950">Hiệu quả bán hàng</h1><p className="mt-1 text-sm text-slate-500">Traffic → yêu cầu mua → đơn hàng, đặt cạnh tồn kho và kết quả tài chính.</p></div>
-      <span className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600">Tháng hiện tại · {data.period.days} ngày</span>
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={toggleInternalDevice} disabled={savingInternal} className={`rounded-lg border px-3 py-2 text-xs font-semibold transition disabled:opacity-50 ${internalDevice ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>{savingInternal ? "Đang lưu…" : internalDevice ? "Thiết bị nội bộ · đang bật" : "Đánh dấu thiết bị nội bộ"}</button>
+        <span className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600">Tháng hiện tại · {data.period.days} ngày</span>
+      </div>
     </header>
 
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">

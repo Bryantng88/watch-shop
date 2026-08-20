@@ -53,6 +53,7 @@ export async function submitPublicOrder(
   raw: SubmitPublicOrderCommand,
   context: {
     fingerprint: string;
+    analyticsInternal?: boolean;
     runtime?: BusinessEventDispatchOptions;
     now?: Date;
   },
@@ -266,6 +267,7 @@ export async function submitPublicOrder(
         ward: request.ward ?? null,
         customerNote: request.note ?? null,
         ...attribution,
+        analyticsIsInternal: context.analyticsInternal === true,
         items: {
           create: request.items.map((item) => {
             const product = productById.get(item.productId);
@@ -311,6 +313,7 @@ export async function submitPublicOrder(
           medium: attribution.analyticsMedium,
           campaign: attribution.analyticsCampaign,
           metadataJson: { disposition: "CREATED", addedItemCount: productIds.length },
+          isInternal: context.analyticsInternal === true,
         },
       });
     }

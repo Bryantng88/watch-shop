@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 
 import { prisma } from "@/server/db/client";
 import { storefrontAnalyticsBatchSchema, type StorefrontAnalyticsContext } from "./storefront-analytics.contract";
+import { normalizeAnalyticsSource, STOREFRONT_INTERNAL_COOKIE } from "./storefront-analytics.shared";
 
 const analyticsSalt = () => {
   const configured = process.env.STOREFRONT_ANALYTICS_SALT ?? process.env.PUBLIC_ORDER_FINGERPRINT_SECRET;
@@ -18,12 +19,10 @@ function referrerHost(value?: string) {
   try { return new URL(value).hostname.slice(0, 255) || null; } catch { return null; }
 }
 
-function deviceType(userAgent: string | null) {
+function visitorType(userAgent: string | null) {
   const value = String(userAgent ?? "").toLowerCase();
   if (/bot|crawler|spider|headless/.test(value)) return "bot";
-  if (/ipad|tablet/.test(value)) return "tablet";
-  if (/mobile|iphone|android/.test(value)) return "mobile";
-  return "desktop";
+  return "human";
 }
 
 export function analyticsAttribution(context?: StorefrontAnalyticsContext | null) {
@@ -31,7 +30,7 @@ export function analyticsAttribution(context?: StorefrontAnalyticsContext | null
   return {
     analyticsAnonymousIdHash: hashId(context.anonymousId),
     analyticsSessionIdHash: hashId(context.sessionId),
-    analyticsSource: clean(context.source),
+    analyticsSource: normalizeAnalyticsSource(context.source),
     analyticsMedium: clean(context.medium),
     analyticsCampaign: clean(context.campaign),
     analyticsLandingPath: clean(context.landingPath),
@@ -46,12 +45,13 @@ export async function ingestStorefrontAnalytics(raw: unknown, request: NextReque
     ? await prisma.product.findMany({ where: { id: { in: productIds } }, select: { id: true } })
     : [];
   const validProductIds = new Set(validProducts.map((item) => item.id));
-  const device = deviceType(request.headers.get("user-agent"));
+  const device = visitorType(request.headers.get("user-agent"));
   const address = request.headers.get("cf-connecting-ip")
     ?? request.headers.get("x-real-ip")
     ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
     ?? "unknown";
   const requestFingerprintHash = hashId(`${address}|${request.headers.get("user-agent") ?? "unknown"}`);
+  const isInternal = request.cookies.get(STOREFRONT_INTERNAL_COOKIE)?.value === "1";
   const events = batch.events
     .filter((event) => !event.productId || validProductIds.has(event.productId))
     .map((event) => {
@@ -65,12 +65,13 @@ export async function ingestStorefrontAnalytics(raw: unknown, request: NextReque
         sessionIdHash: hashId(event.context.sessionId),
         productId: event.productId ?? null,
         path: event.path,
-        source: clean(event.context.source),
+        source: normalizeAnalyticsSource(event.context.source),
         medium: clean(event.context.medium),
         campaign: clean(event.context.campaign),
         referrerHost: referrerHost(event.referrer),
         deviceType: device,
         requestFingerprintHash,
+        isInternal,
       };
     });
   if (events.length) {

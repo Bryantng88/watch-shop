@@ -3,6 +3,7 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 
 import { PublicOrderProductsUnavailableError, submitPublicOrder } from "@/domains/storefront/server";
+import { STOREFRONT_INTERNAL_COOKIE } from "@/domains/analytics/storefront/storefront-analytics.shared";
 
 function fingerprint(req: NextRequest) {
   const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
       : await req.json();
     const result = await submitPublicOrder(
       { request, idempotencyKey, channel: "STOREFRONT" },
-      { fingerprint: fingerprint(req), runtime: { deferConsumers: (work) => after(work) } },
+      { fingerprint: fingerprint(req), analyticsInternal: req.cookies.get(STOREFRONT_INTERNAL_COOKIE)?.value === "1", runtime: { deferConsumers: (work) => after(work) } },
     );
     console.info("[storefront-purchase-request] accepted", {
       requestId: result.requestId,
