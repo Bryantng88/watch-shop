@@ -50,6 +50,7 @@ export async function POST(
     const watch = await prisma.watch.findUnique({
       where: { productId: id },
       select: {
+        audienceSegment: true,
         watchSpecV2: true,
         product: {
           select: {
@@ -57,9 +58,8 @@ export async function POST(
             slug: true,
             storefrontImageKey: true,
             productImage: {
-              where: { role: "COVER", isForStorefront: true },
-              select: { id: true },
-              take: 1,
+              where: { role: { in: ["COVER", "GALLERY"] }, isForStorefront: true },
+              select: { role: true },
             },
           },
         },
@@ -69,7 +69,11 @@ export async function POST(
     if (!watch) throw new Error("Không tìm thấy Watch.");
     if (!watch.product.title.trim()) throw new Error("Cần có title trước khi đưa lên storefront.");
     if (!watch.product.slug?.trim()) throw new Error("Cần có đường dẫn storefront trước khi đăng.");
-    if (!watch.product.storefrontImageKey && watch.product.productImage.length === 0) {
+    const hasCover = Boolean(watch.product.storefrontImageKey)
+      || watch.product.productImage.some((image) => image.role === "COVER");
+    const hasWomenGalleryFallback = watch.audienceSegment === "WOMEN"
+      && watch.product.productImage.some((image) => image.role === "GALLERY");
+    if (!hasCover && !hasWomenGalleryFallback) {
       throw new Error("Cần xác nhận Cover trước khi đưa lên storefront.");
     }
 

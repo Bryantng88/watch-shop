@@ -41,6 +41,33 @@ function storefrontImageWhere(requireCoverImage: boolean): Prisma.ProductImageWh
   };
 }
 
+function storefrontProductImageEligibilityWhere(
+  requireCoverImage: boolean,
+): Prisma.ProductWhereInput {
+  if (!requireCoverImage) {
+    return { productImage: { some: storefrontImageWhere(false) } };
+  }
+
+  return {
+    OR: [
+      { productImage: { some: storefrontImageWhere(true) } },
+      {
+        AND: [
+          { watch: { is: { audienceSegment: "WOMEN" } } },
+          {
+            productImage: {
+              some: {
+                ...storefrontImageWhere(false),
+                role: ImageRole.GALLERY,
+              },
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
+
 const publicWatchCoreSelect = {
   id: true,
   slug: true,
@@ -156,9 +183,6 @@ export function publicWatchEligibilityWhere(options?: {
           { publishedAt: { not: null } },
         ],
         slug: { not: "" },
-        productImage: {
-          some: storefrontImageWhere(enforceCover),
-        },
         watch: {
           is: {
             OR: [
@@ -173,6 +197,7 @@ export function publicWatchEligibilityWhere(options?: {
           },
         },
       },
+      storefrontProductImageEligibilityWhere(enforceCover),
       {
         OR: [
           { priceVisibility: "HIDE" },
