@@ -48,15 +48,11 @@ export default function ImageBlock({
     detail,
     onSave,
     saving = false,
-    onOpenMediaWorkspace,
-    openingMediaWorkspace = false,
 }: {
     values: WatchWorkbenchValues;
     detail?: UsageDetail;
     onSave: () => void;
     saving?: boolean;
-    onOpenMediaWorkspace: () => void;
-    openingMediaWorkspace?: boolean;
 }) {
     const progress = useAppProgress();
     const notify = useNotify();
@@ -192,29 +188,14 @@ export default function ImageBlock({
                                     {usage.isContentDownloaded ? "Content da copy" : "Content chua copy"} - {usage.isImageDownloaded ? "Anh da tai" : "Anh chua tai"}
                                 </div>
                             </div>
-                            <button
-                                type="button"
-                                onClick={onOpenMediaWorkspace}
-                                disabled={openingMediaWorkspace}
-                                className={operationButtonClass({ variant: "softEmerald", size: "xs", className: "disabled:opacity-60" })}
-                            >
-                                {openingMediaWorkspace ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                                {openingMediaWorkspace ? "Đang mở..." : "Mở Media WP"}
-                            </button>
+                            <span className="text-[11px] font-semibold text-violet-700">Xử lý tại action bar</span>
                         </div>
                         {gallery.length ? (
                             <>
                                 {!canDownload ? (
                                     <div className="mx-4 mt-4 flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 sm:flex-row sm:items-center sm:justify-between">
                                         <span>{downloadDisabledReason}</span>
-                                        <button
-                                            type="button"
-                                            onClick={onOpenMediaWorkspace}
-                                            disabled={openingMediaWorkspace}
-                                            className={operationButtonClass({ variant: "softEmerald", size: "xs", className: "shrink-0 disabled:opacity-60" })}
-                                        >
-                                            {openingMediaWorkspace ? "Đang mở..." : "Mở Media WP để duyệt"}
-                                        </button>
+                                        <span className="shrink-0 font-semibold">Duyệt tại nút Xử lý Media trên action bar.</span>
                                     </div>
                                 ) : null}
                                 <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -251,24 +232,14 @@ export default function ImageBlock({
                     </div>
 
                     <div className="overflow-hidden rounded-lg border border-slate-200/80">
-                        <div className="grid grid-cols-[150px_minmax(0,1fr)_100px] gap-3 bg-slate-50/80 px-3 py-2.5 text-[11px] font-semibold uppercase text-slate-400">
+                        <div className="grid grid-cols-[150px_minmax(0,1fr)] gap-3 bg-slate-50/80 px-3 py-2.5 text-[11px] font-semibold uppercase text-slate-400">
                             <div>Loai</div>
                             <div>Duong dan media</div>
-                            <div>Action</div>
                         </div>
                         {rows.map(([label, key]) => (
-                            <div key={label} className="grid min-h-[44px] grid-cols-[150px_minmax(0,1fr)_100px] items-center gap-3 border-t border-slate-100 px-3 py-2 text-sm">
+                            <div key={label} className="grid min-h-[44px] grid-cols-[150px_minmax(0,1fr)] items-center gap-3 border-t border-slate-100 px-3 py-2 text-sm">
                                 <div className="font-medium text-slate-700">{label}</div>
                                 <div className="truncate text-xs text-slate-500">{key}</div>
-                                <button
-                                    type="button"
-                                    onClick={onOpenMediaWorkspace}
-                                    disabled={openingMediaWorkspace}
-                                    className={operationButtonClass({ variant: "subtle", size: "xs", className: "disabled:opacity-60" })}
-                                >
-                                    {openingMediaWorkspace ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                                    {openingMediaWorkspace ? "Đang mở" : "Mở WP"}
-                                </button>
                             </div>
                         ))}
                     </div>

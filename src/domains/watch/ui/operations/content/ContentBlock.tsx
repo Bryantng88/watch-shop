@@ -56,16 +56,12 @@ export default function ContentBlock({
     onChange,
     onSave,
     saving = false,
-    onOpenMediaWorkspace,
-    openingMediaWorkspace = false,
 }: {
     values: WatchWorkbenchValues;
     detail?: UsageDetail;
     onChange: (next: WatchWorkbenchValues) => void;
     onSave: () => void;
     saving?: boolean;
-    onOpenMediaWorkspace: () => void;
-    openingMediaWorkspace?: boolean;
 }) {
     const progress = useAppProgress();
     const notify = useNotify();
@@ -271,14 +267,7 @@ export default function ContentBlock({
                 {!canCopy && fullPost.trim() ? (
                     <div className="flex flex-col gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800 sm:flex-row sm:items-center sm:justify-between">
                         <span>{copyDisabledReason}</span>
-                        <button
-                            type="button"
-                            onClick={onOpenMediaWorkspace}
-                            disabled={openingMediaWorkspace}
-                            className={operationButtonClass({ variant: "softEmerald", size: "xs", className: "shrink-0 disabled:opacity-60" })}
-                        >
-                            {openingMediaWorkspace ? "Đang mở..." : "Mở Media WP để duyệt"}
-                        </button>
+                        <span className="shrink-0 font-semibold">Duyệt tại nút Xử lý Media trên action bar.</span>
                     </div>
                 ) : null}
                 {isNearMetaLimit ? (
@@ -325,14 +314,7 @@ export default function ContentBlock({
 
             <div className="mt-3 flex flex-col gap-2 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-700 md:flex-row md:items-center md:justify-between">
                 <span>Copy content ở đây sẽ phát event publish downloaded cho Workspace Đăng bài; sửa draft vẫn lưu bằng Watch Workbench.</span>
-                <button
-                    type="button"
-                    onClick={onOpenMediaWorkspace}
-                    disabled={openingMediaWorkspace}
-                    className={operationButtonClass({ variant: "softEmerald", size: "xs" })}
-                >
-                    {openingMediaWorkspace ? "Đang mở..." : "Mở Media WP"}
-                </button>
+                <span className="shrink-0 font-semibold">Media được xử lý tập trung trên action bar.</span>
             </div>
         </OperationShell>
     );

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -18,13 +19,13 @@ import {
   Info,
   Landmark,
   MoreHorizontal,
-  PackageCheck,
   Pencil,
   ReceiptText,
   ShieldCheck,
   Sparkles,
   Truck,
   Wrench,
+  X,
 } from "lucide-react";
 
 import { mapWatchDetailToFormValues } from "@/domains/watch/client/form/watch-form.mapper";
@@ -33,6 +34,7 @@ import {
   normalizeDate,
 } from "@/domains/watch/client/workbench/workbench-utils";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
+import WatchPublishAssetActions from "./WatchPublishAssetActions";
 
 type RecordValue = Record<string, unknown>;
 
@@ -109,12 +111,20 @@ export default function WatchDetailUiProposal({
   service,
   tradeHistory,
   canViewFinancials,
+  live = false,
+  canEditPrice = false,
+  mediaWorkspace,
 }: {
   detail: RecordValue;
   service: unknown;
   tradeHistory: RecordValue;
   canViewFinancials: boolean;
+  live?: boolean;
+  canEditPrice?: boolean;
+  mediaWorkspace?: RecordValue;
 }) {
+  void canEditPrice;
+  const [mediaOpen, setMediaOpen] = useState(false);
   const values = mapWatchDetailToFormValues(detail);
   const brand = record(detail.brand);
   const vendor = record(detail.vendor);
@@ -132,6 +142,12 @@ export default function WatchDetailUiProposal({
     text(detail.title, "") ||
     [text(brand.name, ""), values.spec.model].filter(Boolean).join(" ") ||
     "Watch";
+  const detailHref = `/admin/watches/${values.productId}`;
+  const editHref = `${detailHref}/edit?returnTo=${encodeURIComponent(detailHref)}`;
+  const workspace = record(mediaWorkspace);
+  const mediaQuery = new URLSearchParams({ embedded: "1", mode: "media", returnTo: detailHref });
+  if (workspace.id) mediaQuery.set("workspaceId", String(workspace.id));
+  const mediaHref = `${detailHref}/edit?${mediaQuery.toString()}`;
 
   const summary = record(tradeHistory.costSummary);
   const acquisitionCost = number(summary.acquisitionAmount);
@@ -177,7 +193,7 @@ export default function WatchDetailUiProposal({
   return (
     <main className="min-h-screen bg-slate-50 pb-20 text-slate-900">
       <div className="mx-auto w-full max-w-[1500px] px-4 py-5 lg:px-8">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3">
+        {!live && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3">
           <div className="flex items-center gap-2 text-sm text-violet-900">
             <Sparkles className="h-4 w-4 text-violet-600" />
             <span className="font-bold">UI proposal</span>
@@ -186,7 +202,7 @@ export default function WatchDetailUiProposal({
           <Link href={`/admin/watches/${values.productId}`} className="inline-flex items-center gap-1.5 text-xs font-bold text-violet-700 hover:text-violet-900">
             <ArrowLeft className="h-4 w-4" /> Quay lại giao diện hiện tại
           </Link>
-        </div>
+        </div>}
 
         <div className="mb-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs text-slate-500">
@@ -247,15 +263,30 @@ export default function WatchDetailUiProposal({
           </div>
         </section>
 
+        {live && (
+          <div className="sticky top-2 z-30 mt-4 flex flex-wrap items-center justify-end gap-2 rounded-xl border border-slate-200 bg-white/95 p-2 shadow-lg backdrop-blur">
+            <button type="button" onClick={() => setMediaOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 px-3 text-xs font-bold text-violet-700"><Camera className="h-4 w-4" /> Xử lý Media</button>
+            <Link href="/admin/services/operation" className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-700"><Wrench className="h-4 w-4" /> Service</Link>
+            <Link href={`/admin/orders?q=${encodeURIComponent(values.header.sku || values.productId)}`} className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-700"><ReceiptText className="h-4 w-4" /> Order</Link>
+            <Link href={`/admin/acquisitions?q=${encodeURIComponent(values.header.sku || values.productId)}`} className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-700"><ArrowLeftRight className="h-4 w-4" /> Phiếu nhập / Buy Back</Link>
+            <Link href={editHref} className="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-950 px-4 text-xs font-bold text-white"><Pencil className="h-4 w-4" /> Chỉnh sửa</Link>
+          </div>
+        )}
+
         <nav className="mt-4 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-          {["Tổng quan", "Nội dung & hình ảnh", "Service", "Lịch sử"].map((label, index) => (
-            <button key={label} className={`shrink-0 rounded-lg px-4 py-2 text-xs font-bold ${index === 0 ? "bg-violet-600 text-white shadow-sm shadow-violet-200" : "text-slate-500 hover:bg-violet-50 hover:text-violet-700"}`}>{label}</button>
+          {[
+            ["Tổng quan", "#overview"],
+            ["Nội dung & hình ảnh", "#content-media"],
+            ["Service", "#service-history"],
+            ["Lịch sử", "#trade-history"],
+          ].map(([label, href], index) => (
+            <a href={href} key={label} className={`shrink-0 rounded-lg px-4 py-2 text-xs font-bold ${index === 0 ? "bg-violet-600 text-white shadow-sm shadow-violet-200" : "text-slate-500 hover:bg-violet-50 hover:text-violet-700"}`}>{label}</a>
           ))}
         </nav>
 
         <div className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
           <div className="space-y-4">
-            <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            <section id="overview" className="scroll-mt-24 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
               <div className="relative flex flex-wrap items-center justify-between gap-3 overflow-hidden border-b border-violet-100 bg-gradient-to-r from-white via-violet-50/35 to-violet-50/80 px-5 py-4">
                 <span className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-violet-500 to-indigo-500" />
                 <div>
@@ -303,22 +334,56 @@ export default function WatchDetailUiProposal({
               </div>
             </section>
 
-            <section>
-              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                <div className="flex items-center justify-between">
-                  <h2 className="flex items-center gap-2 text-sm font-bold"><PackageCheck className="h-4 w-4 text-blue-600" /> Thông tin bán hàng</h2>
-                  <ChevronRight className="h-4 w-4 text-slate-300" />
+            <section id="content-media" className="scroll-mt-24">
+              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+                  <div>
+                    <h2 className="flex items-center gap-2 text-sm font-bold"><FileText className="h-4 w-4 text-violet-600" /> Nội dung & hình ảnh</h2>
+                    <p className="mt-1 text-xs text-slate-400">Nội dung bán hàng và gallery đang gắn với Watch.</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <WatchPublishAssetActions detail={detail} />
+                    <button type="button" onClick={() => setMediaOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 px-3 text-xs font-bold text-violet-700"><Camera className="h-4 w-4" /> Xử lý Media</button>
+                  </div>
                 </div>
-                <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
-                  <div className="rounded-lg bg-slate-50 p-3"><span className="text-slate-400">Box</span><div className="mt-1 font-bold">{values.media.hasBox ? "Có" : "Không"}</div></div>
-                  <div className="rounded-lg bg-slate-50 p-3"><span className="text-slate-400">Papers</span><div className="mt-1 font-bold">{values.media.hasPapers ? "Có" : "Không"}</div></div>
+                <div className="grid gap-6 p-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+                  <div className="min-w-0">
+                    <h3 className="text-lg font-bold text-slate-950">{values.content.titleOverride || title}</h3>
+                    {values.content.hookText && <p className="mt-2 text-sm font-semibold text-violet-700">{values.content.hookText}</p>}
+                    <div className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-600">
+                      {values.content.body || "Watch chưa có nội dung bán hàng."}
+                    </div>
+                    {values.content.bulletSpecs.length > 0 && (
+                      <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+                        {values.content.bulletSpecs.map((item, index) => <li key={`${item}-${index}`} className="flex gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700"><CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />{item}</li>)}
+                      </ul>
+                    )}
+                    {values.content.hashTags && <p className="mt-4 text-xs font-semibold text-blue-600">{values.content.hashTags}</p>}
+                    <div className="mt-5 grid grid-cols-2 gap-3 text-xs">
+                      <div className="rounded-lg bg-slate-50 p-3"><span className="text-slate-400">Box</span><div className="mt-1 font-bold">{values.media.hasBox ? "Có" : "Không"}</div></div>
+                      <div className="rounded-lg bg-slate-50 p-3"><span className="text-slate-400">Papers</span><div className="mt-1 font-bold">{values.media.hasPapers ? "Có" : "Không"}</div></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="mb-3 flex items-center justify-between"><h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Gallery</h3><span className="text-xs text-slate-400">{values.media.galleryImages.length} ảnh</span></div>
+                    {values.media.galleryImages.length ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {values.media.galleryImages.map((item, index) => {
+                          const rawSrc = item.url || "";
+                          const src = resolveMediaPreviewSrc(rawSrc) ?? rawSrc;
+                          if (!src) return null;
+                          return <div key={`${rawSrc}-${index}`} className={`relative overflow-hidden rounded-lg bg-slate-100 ${index === 0 ? "col-span-2 aspect-[4/3]" : "aspect-square"}`}><Image src={src} alt={`${title} ${index + 1}`} fill sizes="280px" unoptimized className="object-cover" />{index === 0 && <span className="absolute left-2 top-2 rounded bg-slate-950/75 px-2 py-1 text-[9px] font-bold text-white">Cover</span>}</div>;
+                        })}
+                      </div>
+                    ) : <div className="grid aspect-[4/3] place-items-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-xs text-slate-400"><ImageIcon className="mb-2 h-6 w-6" />Chưa có ảnh gallery</div>}
+                  </div>
                 </div>
               </div>
             </section>
           </div>
 
           <aside className="space-y-4 xl:sticky xl:top-[76px]">
-            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            <section id="service-history" className="scroll-mt-24 rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
               <div className="flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-sm font-bold"><Wrench className="h-4 w-4 text-emerald-600" /> Service</h2>
                 <ChevronRight className="h-4 w-4 text-slate-300" />
@@ -335,7 +400,7 @@ export default function WatchDetailUiProposal({
               </Link>
             </section>
 
-            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            <section id="trade-history" className="scroll-mt-24 rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
               <div className="flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-sm font-bold"><ArrowLeftRight className="h-4 w-4 text-indigo-600" /> Lịch sử mua bán</h2>
                 <button className="text-[10px] font-bold text-indigo-700">Xem tất cả</button>
@@ -405,6 +470,17 @@ export default function WatchDetailUiProposal({
           </aside>
         </div>
       </div>
+      {mediaOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 p-3 sm:p-4" role="dialog" aria-modal="true" aria-label={`Xử lý Media - ${title}`}>
+          <div className="flex h-[94vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
+            <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4">
+              <div className="min-w-0"><div className="truncate text-sm font-bold text-slate-950">Xử lý Media</div><div className="truncate text-xs text-slate-500">{title}</div></div>
+              <button type="button" onClick={() => setMediaOpen(false)} aria-label="Đóng Media" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900"><X className="h-4 w-4" /></button>
+            </div>
+            <iframe src={mediaHref} title={`Xử lý Media - ${title}`} className="min-h-0 flex-1 border-0 bg-slate-50" />
+          </div>
+        </div>
+      )}
     </main>
   );
 }

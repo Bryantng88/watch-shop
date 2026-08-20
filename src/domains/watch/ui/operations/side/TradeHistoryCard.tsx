@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { ArrowLeftRight } from "lucide-react";
 import { maskMoney, normalizeDate } from "@/domains/watch/client/workbench/workbench-utils";
 import { operationButtonClass } from "../shared/OperationShell";
@@ -28,15 +29,17 @@ export default function TradeHistoryCard({
         ...acquisitions.slice(0, 2).map((item) => ({
             title: "Nhập hàng",
             meta: `${normalizeDate(item.updatedAt || item.createdAt)} · Payment: ${maskMoney(canViewSensitivePrice, item.amount as string | number | null | undefined)} · ${stringValue(item.vendorName) || "Vendor"}`,
+            href: `/admin/acquisitions?focus=${encodeURIComponent(stringValue(item.id))}`,
         })),
         ...orders.slice(0, 1).map((item) => ({
             title: "Bán hàng",
             meta: `${normalizeDate(item.updatedAt || item.createdAt)} · ${maskMoney(canViewSensitivePrice, item.amount as string | number | null | undefined)} · ${stringValue(item.customerName) || "Customer"}`,
+            href: `/admin/orders?q=${encodeURIComponent(stringValue(item.refNo) || stringValue(item.id))}`,
         })),
     ];
 
     if (!events.length) {
-        events.push({ title: "Chưa bán", meta: "Watch đang ở trạng thái in stock." });
+        events.push({ title: "Chưa bán", meta: "Watch đang ở trạng thái in stock.", href: "/admin/orders" });
     }
 
     return (
@@ -45,18 +48,18 @@ export default function TradeHistoryCard({
             <div className="p-4">
                 <div className="space-y-4">
                     {events.map((item, index) => (
-                        <div key={`${item.title}-${index}`} className="grid grid-cols-[26px_minmax(0,1fr)] gap-3">
+                        <Link href={item.href} key={`${item.title}-${index}`} className="grid grid-cols-[26px_minmax(0,1fr)] gap-3 rounded-lg p-1 transition hover:bg-violet-50">
                             <div className="grid h-6 w-6 place-items-center rounded-full bg-indigo-50 text-xs font-semibold text-indigo-600 ring-1 ring-indigo-100">{index + 1}</div>
                             <div>
                                 <div className="text-sm font-semibold text-slate-950">{item.title}</div>
                                 <div className="mt-1 text-xs leading-5 text-slate-500">{item.meta}</div>
                             </div>
-                        </div>
+                        </Link>
                     ))}
                 </div>
-                <button className={operationButtonClass({ variant: "secondary", size: "sm", className: "mt-4 w-full text-xs" })}>
+                <Link href="/admin/orders" className={operationButtonClass({ variant: "secondary", size: "sm", className: "mt-4 w-full text-xs" })}>
                     Xem toàn bộ
-                </button>
+                </Link>
             </div>
         </aside>
     );

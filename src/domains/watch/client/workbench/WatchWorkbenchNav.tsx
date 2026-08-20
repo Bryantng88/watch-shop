@@ -1,6 +1,7 @@
 "use client";
 
-import { Loader2, Save } from "lucide-react";
+import Link from "next/link";
+import { Camera, Loader2, ReceiptText, Save, ShoppingBag, Wrench } from "lucide-react";
 import { operationButtonClass } from "@/domains/watch/ui/operations/shared/OperationShell";
 import { cx } from "./workbench-utils";
 import type { WatchWorkbenchSection } from "./types";
@@ -18,11 +19,17 @@ export default function WatchWorkbenchNav({
     saving,
     dirty,
     onSave,
+    onOpenMediaWorkspace,
+    openingMediaWorkspace,
+    watchSku,
 }: {
     activeSection: WatchWorkbenchSection;
     saving?: boolean;
     dirty?: boolean;
     onSave: () => void;
+    onOpenMediaWorkspace: () => void;
+    openingMediaWorkspace?: boolean;
+    watchSku?: string | null;
 }) {
     return (
         <nav className="sticky top-0 z-30 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white/95 p-1.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] backdrop-blur xl:flex-row xl:items-center xl:justify-between">
@@ -44,6 +51,13 @@ export default function WatchWorkbenchNav({
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
+                <button type="button" onClick={onOpenMediaWorkspace} disabled={openingMediaWorkspace} className={operationButtonClass({ variant: "primary", size: "sm", className: "text-xs disabled:opacity-60" })}>
+                    {openingMediaWorkspace ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                    Xử lý Media
+                </button>
+                <a href="#service" className={operationButtonClass({ variant: "softBlue", size: "sm", className: "text-xs" })}><Wrench className="h-4 w-4" /> Service</a>
+                <Link href={`/admin/orders?q=${encodeURIComponent(watchSku ?? "")}`} className={operationButtonClass({ variant: "softEmerald", size: "sm", className: "text-xs" })}><ShoppingBag className="h-4 w-4" /> Order</Link>
+                <Link href={`/admin/acquisitions?q=${encodeURIComponent(watchSku ?? "")}`} className={operationButtonClass({ variant: "secondary", size: "sm", className: "text-xs" })}><ReceiptText className="h-4 w-4" /> Phiếu nhập</Link>
                 <button
                     type="button"
                     onClick={onSave}

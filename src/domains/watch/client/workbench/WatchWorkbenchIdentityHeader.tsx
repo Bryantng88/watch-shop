@@ -3,12 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  Camera,
   ChevronRight,
   Loader2,
   Pencil,
   Save,
-  Wrench,
   X,
 } from "lucide-react";
 
@@ -53,15 +51,11 @@ function statusLabel(value: string) {
 export default function WatchWorkbenchIdentityHeader({
   detail,
   values,
-  onOpenMediaWorkspace,
   onSaveTitle,
-  openingMediaWorkspace = false,
 }: {
   detail: Record<string, unknown>;
   values: WatchWorkbenchValues;
-  onOpenMediaWorkspace: () => void;
   onSaveTitle: (title: string) => Promise<string>;
-  openingMediaWorkspace?: boolean;
 }) {
   const title = titleForWatch(detail, values);
   const [editing, setEditing] = useState(false);
@@ -120,9 +114,6 @@ export default function WatchWorkbenchIdentityHeader({
           <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
           <span className="truncate font-semibold text-slate-800">{title}</span>
         </nav>
-        <Link href="/admin/services/operation" className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 transition hover:border-violet-200 hover:text-violet-700">
-          <Wrench className="h-4 w-4" /> Mở Service Board
-        </Link>
       </div>
 
       <section className="grid overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)] md:grid-cols-[260px_minmax(0,1fr)]">
@@ -134,10 +125,6 @@ export default function WatchWorkbenchIdentityHeader({
             <div className="grid h-full min-h-[250px] place-items-center text-sm font-medium text-slate-400">Chưa có ảnh</div>
           )}
           <div className="absolute bottom-3 left-3 flex items-center gap-2">
-            <button type="button" onClick={onOpenMediaWorkspace} disabled={openingMediaWorkspace} className="inline-flex h-8 items-center gap-2 rounded-lg bg-slate-950/90 px-3 text-[11px] font-bold text-white backdrop-blur disabled:opacity-70">
-              {openingMediaWorkspace ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
-              {openingMediaWorkspace ? "Đang mở..." : "Xem gallery"}
-            </button>
             <span className="rounded-lg bg-slate-950/75 px-2.5 py-2 text-[10px] font-bold text-white backdrop-blur">{imageCount} ảnh</span>
           </div>
         </div>

@@ -65,6 +65,21 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps 
         setSelectedItemsById({});
     }, [selectionScopeKey]);
 
+    React.useEffect(() => {
+        const focusId = sp.get("focus")?.trim();
+        if (focusId) setEditAcquisitionId(focusId);
+    }, [sp]);
+
+    function closeEditAcquisition() {
+        setEditAcquisitionId(null);
+        if (!sp.has("focus")) return;
+
+        const next = new URLSearchParams(sp.toString());
+        next.delete("focus");
+        const query = next.toString();
+        router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    }
+
     const selectableIds = React.useMemo(
         () => props.canManage ? props.items.filter(isSelectable).map((item) => item.id) : [],
         [props.canManage, props.items],
@@ -243,7 +258,7 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps 
                 <AcquisitionEditModal
                     open={!!editAcquisitionId}
                     acquisitionId={editAcquisitionId}
-                    onClose={() => setEditAcquisitionId(null)}
+                    onClose={closeEditAcquisition}
                     onUpdated={() => router.refresh()}
                 />
             ) : null}

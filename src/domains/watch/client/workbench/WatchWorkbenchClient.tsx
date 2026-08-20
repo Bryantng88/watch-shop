@@ -224,9 +224,7 @@ export default function WatchWorkbenchClient({
             <WatchWorkbenchIdentityHeader
                 detail={detail}
                 values={values}
-                onOpenMediaWorkspace={openMediaWorkspace}
                 onSaveTitle={saveTitle}
-                openingMediaWorkspace={mediaWorkspaceOpening}
             />
 
             <WatchWorkbenchNav
@@ -234,6 +232,9 @@ export default function WatchWorkbenchClient({
                 saving={saving}
                 dirty={dirty}
                 onSave={save}
+                onOpenMediaWorkspace={openMediaWorkspace}
+                openingMediaWorkspace={mediaWorkspaceOpening}
+                watchSku={values.header.sku}
             />
 
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_390px]">
@@ -259,16 +260,12 @@ export default function WatchWorkbenchClient({
                         onChange={setValues}
                         onSave={save}
                         saving={saving}
-                        onOpenMediaWorkspace={openMediaWorkspace}
-                        openingMediaWorkspace={mediaWorkspaceOpening}
                     />
                     <ImageBlock
                         values={values}
                         detail={detail}
                         onSave={save}
                         saving={saving}
-                        onOpenMediaWorkspace={openMediaWorkspace}
-                        openingMediaWorkspace={mediaWorkspaceOpening}
                     />
                 </div>
 

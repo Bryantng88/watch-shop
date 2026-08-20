@@ -130,6 +130,9 @@ export default async function WatchesPage({
     const isAdmin = hasRole(user, "ADMIN");
     const canViewCost =
         isAdmin || hasPermission(user, PERMISSIONS.PRODUCT_COST_VIEW);
+    const canApproveAcquisition = isAdmin
+        || hasPermission(user, PERMISSIONS.WATCH_ACQUISITION_APPROVE)
+        || hasPermission(user, PERMISSIONS.ACQUISITION_APPROVE_ALL);
 
     const input = buildInitialWatchListInput(resolvedSearchParams);
 
@@ -146,6 +149,7 @@ export default async function WatchesPage({
             initialResult={serialize(initialResult)}
             vendors={serialize(vendors)}
             canViewCost={canViewCost}
+            canApproveAcquisition={canApproveAcquisition}
         />
     );
 }

@@ -3,12 +3,11 @@ import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
 import {
     getWatchEditDetail,
-    listWatchMediaEditOptions,
     getWatchServiceProjectionDetail,
     getWatchTradeHistoryDetail,
     getActiveWatchMediaWorkspace,
 } from "@/domains/watch/server";
-import WatchWorkbenchClient from "@/domains/watch/client/workbench/WatchWorkbenchClient";
+import WatchDetailUiProposal from "@/domains/watch/ui/proposal/WatchDetailUiProposal";
 
 type AuthUser = {
     roles?: any[] | null;
@@ -137,12 +136,11 @@ export default async function WatchDetailPage({
     const user = await requirePermission(PERMISSIONS.PRODUCT_VIEW);
     const { id } = await params;
 
-    const [detail, serviceProjection, tradeHistory, editOptions, mediaWorkspace] =
+    const [detail, serviceProjection, tradeHistory, mediaWorkspace] =
         await Promise.all([
             getWatchEditDetail(id),
             getWatchServiceProjectionDetail(id),
             getWatchTradeHistoryDetail(id),
-            listWatchMediaEditOptions(),
             getActiveWatchMediaWorkspace(id),
         ]);
 
@@ -155,17 +153,13 @@ export default async function WatchDetailPage({
         : scrubTradeFinancials(tradeHistory);
 
     return (
-        <WatchWorkbenchClient
-            projection={{
-                detail: serialize(safeDetail),
-                service: serialize(serviceProjection),
-                tradeHistory: serialize(safeTradeHistory),
-            }}
-            permissions={{
-                canViewSensitivePrice: mayViewCost,
-                canEditPrice: mayEditPrice,
-            }}
-            postTargets={serialize(editOptions.postTargets ?? [])}
+        <WatchDetailUiProposal
+            detail={serialize(safeDetail)}
+            service={serialize(serviceProjection)}
+            tradeHistory={serialize(safeTradeHistory)}
+            canViewFinancials={mayViewCost}
+            live
+            canEditPrice={mayEditPrice}
             mediaWorkspace={serialize(mediaWorkspace)}
         />
     );

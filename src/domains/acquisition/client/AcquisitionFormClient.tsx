@@ -17,7 +17,6 @@ import {
     WalletCards,
     X,
 } from "lucide-react";
-import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { createQuickVendor } from "@/domains/vendor/client/vendor.actions";
@@ -35,9 +34,11 @@ import type {
     AcquisitionWatchLine,
 } from "./form/acquisition-form.types";
 import WatchLineCard from "../ui/new/WatchLineCard";
+import AcquisitionCreatedDialog from "../ui/navigation/AcquisitionCreatedDialog";
 
 type Props = {
     vendors: AcquisitionFormVendor[];
+    canApprove: boolean;
 };
 
 const FIELD_CLASS =
@@ -321,9 +322,8 @@ function TradeInOrderField({
     );
 }
 
-export default function AcquisitionFormClient({ vendors: initialVendors }: Props) {
+export default function AcquisitionFormClient({ vendors: initialVendors, canApprove }: Props) {
     const notify = useNotify();
-    const dialog = useAppDialog();
     const progress = useAppProgress();
     const router = useRouter();
 
@@ -343,6 +343,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
     const [submitting, setSubmitting] = useState(false);
     const submitLockRef = useRef(false);
     const createdAcquisitionIdRef = useRef<string | null>(null);
+    const [createdAcquisition, setCreatedAcquisition] = useState<{ id: string; type: string; audienceSegment: "MEN" | "WOMEN" } | null>(null);
 
     const totalWatchCost = useMemo(() => {
         return watchLines.reduce((sum, line) => {
@@ -554,47 +555,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
             });
             progress.hide();
 
-            const shouldPost = await dialog.confirm({
-                title: "Duyet phieu nay luon?",
-                message:
-                    "Phieu vua duoc luu o trang thai DRAFT. Hay duyet ngay de tao Watch, hoac tao phieu moi de form duoc reset va tranh luu trung.",
-                confirmText: "Duyet phieu nay",
-                cancelText: "Tao phieu moi",
-                tone: "success",
-            });
-
-            if (shouldPost) {
-                await postCreatedAcquisition(acquisitionId);
-                progress.hide();
-
-                const goToWatchList = await dialog.confirm({
-                    title: "Da duyet phieu nhap",
-                    message:
-                        "Watch moi da duoc tao. Ban muon qua danh sach Watch de kiem tra, hay tao mot phieu nhap moi?",
-                    confirmText: "Qua danh sach Watch",
-                    cancelText: "Tao phieu moi",
-                    tone: "success",
-                });
-
-                if (goToWatchList) {
-                    router.push(`/admin/watches?segment=${audienceSegment}`);
-                    router.refresh();
-                    return;
-                }
-
-                resetForm();
-                notify.success({
-                    title: "San sang tao phieu moi",
-                    message: "Form da duoc lam moi.",
-                });
-                return;
-            }
-
-            resetForm();
-            notify.success({
-                title: "San sang tao phieu moi",
-                message: "Form da duoc lam moi de khong tao trung phieu draft cu.",
-            });
+            setCreatedAcquisition({ id: acquisitionId, type, audienceSegment });
         } catch (error) {
             notify.error({
                 title: "Luu phieu nhap that bai",
@@ -914,6 +875,41 @@ export default function AcquisitionFormClient({ vendors: initialVendors }: Props
                     </div>
                 </div>
             </div>
+
+            <AcquisitionCreatedDialog
+                open={Boolean(createdAcquisition)}
+                canApprove={canApprove}
+                title={createdAcquisition?.type === "TRADE_IN" ? "Đã tạo phiếu Trade-in" : "Đã tạo phiếu nhập"}
+                message="Phiếu đang ở trạng thái DRAFT. Bạn có thể tạo phiếu mới, mở phiếu vừa tạo hoặc duyệt ngay."
+                stayLabel="Tạo phiếu mới"
+                onStay={() => {
+                    setCreatedAcquisition(null);
+                    resetForm();
+                    notify.success({ title: "Sẵn sàng tạo phiếu mới", message: "Form đã được làm mới." });
+                }}
+                onOpen={() => {
+                    if (!createdAcquisition) return;
+                    router.push(`/admin/acquisitions?focus=${encodeURIComponent(createdAcquisition.id)}`);
+                }}
+                onApprove={async () => {
+                    if (!createdAcquisition) return;
+                    try {
+                        await postCreatedAcquisition(createdAcquisition.id);
+                        progress.hide();
+                        const segment = createdAcquisition.audienceSegment;
+                        setCreatedAcquisition(null);
+                        resetForm();
+                        notify.success({ title: "Đã duyệt phiếu nhập", message: "Watch đã được tạo và đồng bộ vào danh sách." });
+                        router.push(`/admin/watches?segment=${segment}`);
+                        router.refresh();
+                    } catch (error) {
+                        progress.hide();
+                        const message = getErrorMessage(error, "Không thể duyệt phiếu nhập.");
+                        notify.error({ title: "Duyệt phiếu thất bại", message });
+                        throw error;
+                    }
+                }}
+            />
         </div>
     );
 }

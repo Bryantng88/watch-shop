@@ -23,6 +23,7 @@ import { WatchListToolbar } from "../ui/list";
 import WatchListFilters from "../ui/list/WatchListFilters";
 import WatchListTable from "../ui/list/WatchListTable";
 import BuyBackWatchModal from "../ui/buy-back/BuyBackWatchModal";
+import AcquisitionCreatedDialog from "@/domains/acquisition/ui/navigation/AcquisitionCreatedDialog";
 import { buildWatchWorkCaseSource } from "@/domains/work-case/utils/work-case-source";
 import type {
   WatchListPageProps,
@@ -80,6 +81,7 @@ type WatchListClientProps = Partial<WatchListPageProps> & {
   vendors?: { id: string; name: string }[];
   brands?: { id: string; name: string }[];
   canViewCost: boolean;
+  canApproveAcquisition: boolean;
 };
 
 type WatchFilterFormState = {
@@ -341,6 +343,7 @@ export default function WatchListClient(props: WatchListClientProps) {
     string | null
   >(null);
   const [buyBackRow, setBuyBackRow] = React.useState<WatchRow | null>(null);
+  const [createdBuyBackAcquisitionId, setCreatedBuyBackAcquisitionId] = React.useState<string | null>(null);
   const [quickOrderRow, setQuickOrderRow] = React.useState<WatchRow | null>(
     null,
   );
@@ -1596,10 +1599,7 @@ export default function WatchListClient(props: WatchListClientProps) {
       setBuyBackRow(null);
 
       if (acquisitionId) {
-        navigateWithProgress(
-          `/admin/acquisitions/${acquisitionId}`,
-          "Đang mở phiếu mua lại",
-        );
+        setCreatedBuyBackAcquisitionId(String(acquisitionId));
       } else {
         void loadList(new URLSearchParams(params.toString()), {
           meta: "full",
@@ -1776,6 +1776,35 @@ export default function WatchListClient(props: WatchListClientProps) {
           onSubmit={submitBuyBack}
         />
       ) : null}
+
+      <AcquisitionCreatedDialog
+        open={Boolean(createdBuyBackAcquisitionId)}
+        canApprove={props.canApproveAcquisition}
+        title="Đã tạo phiếu mua lại"
+        message="Phiếu BUY_BACK đang ở trạng thái DRAFT. Bạn muốn tiếp tục ở Watch, mở phiếu nhập hay duyệt ngay?"
+        stayLabel="Tiếp tục ở Watch"
+        onStay={async () => {
+          setCreatedBuyBackAcquisitionId(null);
+          await loadList(new URLSearchParams(params.toString()), { meta: "full", withTotal: true, consistency: "source" });
+        }}
+        onOpen={() => {
+          if (!createdBuyBackAcquisitionId) return;
+          navigateWithProgress(`/admin/acquisitions?focus=${encodeURIComponent(createdBuyBackAcquisitionId)}`, "Đang mở phiếu mua lại");
+        }}
+        onApprove={async () => {
+          if (!createdBuyBackAcquisitionId) return;
+          const res = await fetch(`/api/admin/acquisitions/${encodeURIComponent(createdBuyBackAcquisitionId)}/post`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vendorName: "" }) });
+          const json = await res.json().catch(() => null);
+          if (!res.ok || !json?.ok) {
+            const message = json?.error || "Không thể duyệt phiếu mua lại.";
+            notify.error({ title: "Duyệt phiếu thất bại", message });
+            throw new Error(message);
+          }
+          setCreatedBuyBackAcquisitionId(null);
+          notify.success({ title: "Đã duyệt phiếu mua lại", message: "Watch đã được cập nhật theo phiếu BUY_BACK." });
+          await loadList(new URLSearchParams(params.toString()), { meta: "full", withTotal: true, consistency: "source" });
+        }}
+      />
 
       <QuickOrderFromWatchModal
         productId={quickOrderRow?.productId ?? null}
