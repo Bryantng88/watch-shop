@@ -25,8 +25,23 @@ import type { FinanceReportProjectionData } from "@/domains/report/finance/finan
 
 const money = (value: number) => `${new Intl.NumberFormat("vi-VN").format(value)} ₫`;
 
+function marginChartPoints(values: Array<{ margin: number }>) {
+  if (values.length === 0) return [];
+
+  const margins = values.map((item) => item.margin);
+  const minimum = Math.min(...margins);
+  const maximum = Math.max(...margins);
+  const range = Math.max(maximum - minimum, 1);
+  const step = values.length === 1 ? 0 : 480 / (values.length - 1);
+
+  return values.map((item, index) => ({
+    x: 10 + index * step,
+    y: 40 - ((item.margin - minimum) / range) * 32,
+  }));
+}
+
 function smoothMarginPath(values: Array<{ margin: number }>) {
-  const points = values.map((item, index) => ({ x: 10 + index * 96, y: 40 - (item.margin - 20) * 3.5 }));
+  const points = marginChartPoints(values);
   if (points.length === 0) return "";
 
   return points.slice(1).reduce((path, point, index) => {
@@ -311,7 +326,7 @@ export function FinanceReportClient({ initialProjection }: { initialProjection?:
     : detailRows.map((row) => ({ ...row, id: row.code, href: "#" }));
 
   return (
-    <main className="mx-auto w-full max-w-[1480px] space-y-4 px-4 py-5 lg:px-6">
+    <main className="w-full space-y-4 px-4 py-5 lg:px-6">
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5">
         <p className="text-xs text-violet-800">
           {initialProjection
@@ -419,8 +434,8 @@ export function FinanceReportClient({ initialProjection }: { initialProjection?:
               <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-amber-700">Biên lợi nhuận</p>
               <p className="mt-1 text-[10px] text-slate-500">Xu hướng 6 tháng</p>
             </div>
-            <div className="h-12 min-w-0">
-              <svg className="h-full w-full overflow-visible" viewBox="0 0 500 48" preserveAspectRatio="none" aria-label="Xu hướng biên lợi nhuận">
+            <div className="h-12 min-w-0 overflow-hidden">
+              <svg className="block h-full w-full" viewBox="0 0 500 48" preserveAspectRatio="none" aria-label="Xu hướng biên lợi nhuận">
                 <defs>
                   <linearGradient id="margin-area" x1="0" x2="0" y1="0" y2="1">
                     <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.22" />
@@ -429,7 +444,7 @@ export function FinanceReportClient({ initialProjection }: { initialProjection?:
                 </defs>
                 <path d={`${smoothMarginPath(channelTrend)} L 490 48 L 10 48 Z`} fill="url(#margin-area)" />
                 <path d={smoothMarginPath(channelTrend)} fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-                <circle cx="490" cy={40 - (channelTrend[channelTrend.length - 1].margin - 20) * 3.5} r="3.5" fill="white" stroke="#d97706" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                <circle cx={marginChartPoints(channelTrend).at(-1)?.x ?? 490} cy={marginChartPoints(channelTrend).at(-1)?.y ?? 24} r="3.5" fill="white" stroke="#d97706" strokeWidth="2" vectorEffect="non-scaling-stroke" />
               </svg>
             </div>
             <div className="text-right">

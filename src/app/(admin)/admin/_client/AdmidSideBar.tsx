@@ -18,6 +18,7 @@ import {
     PanelLeftClose,
     PanelLeftOpen,
     BarChart3,
+    ChartNoAxesCombined,
 } from "lucide-react";
 
 import ActiveLink from "./AdminActiveLink";
@@ -105,12 +106,26 @@ const NAV: NavEntry[] = [
                 icon: Workflow,
                 permission: PERMISSIONS.TASK_VIEW,
             },
+        ],
+    },
+    {
+        type: "group",
+        label: "Báo cáo",
+        defaultOpen: true,
+        children: [
             {
                 type: "item",
                 href: "/admin/reports/finance",
-                label: "Báo cáo tài chính",
+                label: "Tài chính",
                 icon: BarChart3,
                 permissionsAll: [PERMISSIONS.REPORT_VIEW, PERMISSIONS.PRODUCT_COST_VIEW, PERMISSIONS.PAYMENT_VIEW_ALL],
+            },
+            {
+                type: "item",
+                href: "/admin/reports/sales",
+                label: "Bán hàng & truy cập",
+                icon: ChartNoAxesCombined,
+                permission: PERMISSIONS.REPORT_VIEW,
             },
         ],
     },

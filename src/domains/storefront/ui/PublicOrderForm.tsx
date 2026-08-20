@@ -7,6 +7,7 @@ import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useStorefrontCart, type StorefrontCartItem } from "./StorefrontCart";
 import { useOnlineStatus } from "./PwaRuntime";
 import { useStorefrontLocale } from "./StorefrontLocale";
+import { getStorefrontAnalyticsContext } from "@/domains/analytics/storefront/StorefrontAnalytics";
 
 type State = { kind: "idle" | "submitting" } | { kind: "success"; reference: string | null; disposition: "CREATED" | "MERGED"; addedItemCount: number } | { kind: "error"; message: string };
 const idempotencyKey = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -68,6 +69,7 @@ export default function PublicOrderForm({ initialItems = [], initialRequestKey, 
           contactPreference: form.get("contactPreference"), contactHandle: form.get("contactHandle") || undefined, address: form.get("address") || undefined,
           note: form.get("note") || undefined, website: form.get("website") || undefined,
           items: effectiveItems.map((item) => ({ productId: item.productId, quantity: 1 })),
+          analytics: getStorefrontAnalyticsContext() ?? undefined,
         }),
       });
       const payload = await response.json();

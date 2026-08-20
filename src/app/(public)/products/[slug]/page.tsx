@@ -12,6 +12,7 @@ import { getStorefrontUsdRate } from "@/domains/storefront/server/exchange-rate.
 import { formatStorefrontMoney } from "@/domains/storefront/shared/locale.utils";
 import ProductGallery from "@/domains/storefront/ui/ProductGallery";
 import RelatedWatchSuggestions from "@/domains/storefront/ui/RelatedWatchSuggestions";
+import { StorefrontAnalyticsSignal } from "@/domains/analytics/storefront/StorefrontAnalytics";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   return (
     <article className="mx-auto max-w-[1440px] px-4 pb-8 pt-6 sm:px-6 lg:px-10 lg:pt-10">
+      <StorefrontAnalyticsSignal eventName="product_viewed" productId={watch.productId} />
       <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-[10px] uppercase tracking-[0.15em] text-[#89857e]">
         <Link href="/products" className="storefront-focus inline-flex min-h-11 items-center gap-2"><ArrowLeft className="h-3.5 w-3.5" /> {locale === "en" ? "Collection" : "Bộ sưu tập"}</Link>
         <span>/</span><span className="truncate text-[#4d4a46]">{watch.title}</span>

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { storefrontAnalyticsContextSchema } from "@/domains/analytics/storefront/storefront-analytics.contract";
 
 const optionalText = (maxLength: number) =>
   z.string().trim().min(1).max(maxLength).optional();
@@ -24,6 +25,7 @@ export const publicOrderRequestSchema = z
       .min(1)
       .max(20),
     website: z.string().max(0).optional(),
+    analytics: storefrontAnalyticsContextSchema.optional(),
   })
   .strict()
   .superRefine((value, context) => {

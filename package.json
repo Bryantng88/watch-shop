@@ -56,6 +56,7 @@
     "storefront:accept-public-host": "tsx scripts/accept-storefront-public-host.ts",
     "storefront:verify": "npm run storefront:smoke-contract && npm run storefront:smoke-surface && npm run storefront:smoke-order && npm run storefront:smoke-zalo && npm run storefront:smoke-pwa && npm run storefront:audit-legacy",
     "storefront:test-db": "tsx scripts/integration-storefront-order-db.ts",
+    "storefront:prune-analytics": "tsx scripts/prune-storefront-analytics.ts",
     "storefront:seed-acceptance": "tsx scripts/seed-storefront-acceptance.ts",
     "storefront:import-staging-subset": "tsx scripts/import-staging-storefront-subset.ts",
     "local:seed-admin": "tsx scripts/seed-local-admin.ts",

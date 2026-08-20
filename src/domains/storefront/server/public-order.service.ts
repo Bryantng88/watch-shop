@@ -11,6 +11,7 @@ import {
   type SubmitPublicOrderCommand,
 } from "../contracts";
 import { findOrderablePublicWatchIds } from "./public-catalog.repo";
+import { analyticsAttribution } from "@/domains/analytics/storefront/storefront-analytics.server";
 
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1_000;
 const RATE_LIMIT_MAX = 5;
@@ -40,8 +41,10 @@ function requireNormalizedPhone(value: string) {
 }
 
 function canonicalRequest(request: ReturnType<typeof publicOrderRequestSchema.parse>) {
+  const { analytics: _analytics, ...businessRequest } = request;
+  void _analytics;
   return JSON.stringify({
-    ...request,
+    ...businessRequest,
     items: [...request.items].sort((a, b) => a.productId.localeCompare(b.productId)),
   });
 }
@@ -92,6 +95,7 @@ export async function submitPublicOrder(
   const id = randomUUID();
   const datePart = now.toISOString().slice(0, 10).replaceAll("-", "");
   const reference = `PR-${datePart}-${id.slice(0, 8).toUpperCase()}`;
+  const attribution = analyticsAttribution(request.analytics);
 
   const result = await runBusinessEventTransaction(async (tx, delivery) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`purchase-request:${namespacedKey}`}, 0))`;
@@ -171,6 +175,14 @@ export async function submitPublicOrder(
           district: request.district ?? mergeTarget.district,
           ward: request.ward ?? mergeTarget.ward,
           customerNote: request.note ?? mergeTarget.customerNote,
+          ...(attribution ? {
+            analyticsAnonymousIdHash: mergeTarget.analyticsAnonymousIdHash ?? attribution.analyticsAnonymousIdHash,
+            analyticsSessionIdHash: mergeTarget.analyticsSessionIdHash ?? attribution.analyticsSessionIdHash,
+            analyticsSource: mergeTarget.analyticsSource ?? attribution.analyticsSource,
+            analyticsMedium: mergeTarget.analyticsMedium ?? attribution.analyticsMedium,
+            analyticsCampaign: mergeTarget.analyticsCampaign ?? attribution.analyticsCampaign,
+            analyticsLandingPath: mergeTarget.analyticsLandingPath ?? attribution.analyticsLandingPath,
+          } : {}),
           updatedAt: now,
         },
       });
@@ -236,6 +248,7 @@ export async function submitPublicOrder(
         district: request.district ?? null,
         ward: request.ward ?? null,
         customerNote: request.note ?? null,
+        ...attribution,
         items: {
           create: request.items.map((item) => {
             const product = productById.get(item.productId);
@@ -267,6 +280,22 @@ export async function submitPublicOrder(
       },
       select: { id: true },
     });
+    if (attribution) {
+      await tx.storefrontAnalyticsEvent.create({
+        data: {
+          eventId: `purchase-request:${created.id}:created`,
+          eventName: "purchase_request_created",
+          occurredAt: now,
+          anonymousIdHash: attribution.analyticsAnonymousIdHash,
+          sessionIdHash: attribution.analyticsSessionIdHash,
+          purchaseRequestId: created.id,
+          path: attribution.analyticsLandingPath ?? "/request",
+          source: attribution.analyticsSource,
+          medium: attribution.analyticsMedium,
+          campaign: attribution.analyticsCampaign,
+        },
+      });
+    }
     delivery.track(await emitPurchaseRequestBusinessEvent(tx, {
       eventKey: "purchase_request.created",
       eventInstanceId: receipt.id,

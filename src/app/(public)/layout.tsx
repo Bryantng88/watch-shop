@@ -9,6 +9,7 @@ import "./storefront.css";
 import { loadStorefrontCartItems } from "@/domains/storefront/server/request-cart.service";
 import { getStorefrontUsdRate } from "@/domains/storefront/server/exchange-rate.service";
 import { StorefrontLocaleProvider } from "@/domains/storefront/ui/StorefrontLocale";
+import { StorefrontAnalyticsRuntime } from "@/domains/analytics/storefront/StorefrontAnalytics";
 
 export const metadata: Metadata = {
   applicationName: "Vintic",
@@ -32,6 +33,7 @@ export default async function PublicLayout({ children }: { children: React.React
     <StorefrontCartProvider initialItems={initialItems}>
       <div className="storefront-surface min-h-screen bg-white text-[#252525]">
         <PwaRuntime />
+        <StorefrontAnalyticsRuntime />
         <PublicHeader />
         <main>{children}</main>
         <PublicFooter />
