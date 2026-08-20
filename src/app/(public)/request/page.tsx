@@ -20,7 +20,7 @@ export default async function RequestPage({ searchParams }: { searchParams?: Pro
   const relatedWatches = await listRelatedPublicWatches(selectedProductIds);
 
   return <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
-    <StorefrontAnalyticsSignal eventName="request_started" />
+    <StorefrontAnalyticsSignal eventName="request_page_viewed" />
     <div className="mx-auto max-w-2xl text-center">
       <p className="text-[10px] font-medium uppercase tracking-[0.24em] text-[#807a72]">{locale === "en" ? "Watch consultation" : "Tư vấn mua đồng hồ"}</p>
       <h1 className="storefront-display mt-4 text-4xl leading-[1.08] sm:text-5xl lg:text-[56px]">{locale === "en" ? "A personal watch consultation" : "Tư vấn dành riêng cho bạn"}</h1>

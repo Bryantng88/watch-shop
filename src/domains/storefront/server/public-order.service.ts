@@ -196,6 +196,23 @@ export async function submitPublicOrder(
         },
         select: { id: true },
       });
+      if (attribution) {
+        await tx.storefrontAnalyticsEvent.create({
+          data: {
+            eventId: `purchase-request:${receipt.id}:submitted`,
+            eventName: "request_submitted",
+            occurredAt: now,
+            anonymousIdHash: attribution.analyticsAnonymousIdHash,
+            sessionIdHash: attribution.analyticsSessionIdHash,
+            purchaseRequestId: mergeTarget.id,
+            path: "/request",
+            source: attribution.analyticsSource,
+            medium: attribution.analyticsMedium,
+            campaign: attribution.analyticsCampaign,
+            metadataJson: { disposition: "MERGED", addedItemCount: addedProductIds.length },
+          },
+        });
+      }
       if (addedProductIds.length) {
         delivery.track(await emitPurchaseRequestBusinessEvent(tx, {
           eventKey: "purchase_request.items_added",
@@ -283,8 +300,8 @@ export async function submitPublicOrder(
     if (attribution) {
       await tx.storefrontAnalyticsEvent.create({
         data: {
-          eventId: `purchase-request:${created.id}:created`,
-          eventName: "purchase_request_created",
+          eventId: `purchase-request:${receipt.id}:submitted`,
+          eventName: "request_submitted",
           occurredAt: now,
           anonymousIdHash: attribution.analyticsAnonymousIdHash,
           sessionIdHash: attribution.analyticsSessionIdHash,
@@ -293,6 +310,7 @@ export async function submitPublicOrder(
           source: attribution.analyticsSource,
           medium: attribution.analyticsMedium,
           campaign: attribution.analyticsCampaign,
+          metadataJson: { disposition: "CREATED", addedItemCount: productIds.length },
         },
       });
     }

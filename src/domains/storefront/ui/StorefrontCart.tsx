@@ -4,10 +4,11 @@ import { Check, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { trackStorefrontEvent } from "@/domains/analytics/storefront/StorefrontAnalytics";
 
 export type StorefrontCartItem = { productId: string; slug: string; title: string; imageUrl: string; priceAmount: number; currency: "VND" };
 type CartToast = { item: StorefrontCartItem; duplicate: boolean };
-type CartValue = { items: StorefrontCartItem[]; add: (item: StorefrontCartItem) => boolean; remove: (id: string) => void; clear: () => void };
+type CartValue = { items: StorefrontCartItem[]; add: (item: StorefrontCartItem, track?: boolean) => boolean; remove: (id: string) => void; clear: () => void };
 const STORAGE_KEY = "watch-shop:storefront-request:v1";
 const CartContext = createContext<CartValue | null>(null);
 
@@ -23,14 +24,16 @@ export function StorefrontCartProvider({ children, initialItems = [] }: { childr
   }, []);
   useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }, [items]);
 
-  const add = useCallback((item: StorefrontCartItem) => {
+  const add = useCallback((item: StorefrontCartItem, track = true) => {
     const duplicate = items.some((current) => current.productId === item.productId);
     if (!duplicate) setItems((current) => [...current, item].slice(0, 20));
+    if (!duplicate && track) trackStorefrontEvent("cart_item_added", item.productId);
     setToast({ item, duplicate });
     return !duplicate;
   }, [items]);
   const remove = useCallback((id: string) => {
     const removedSlug = items.find((item) => item.productId === id)?.slug ?? "";
+    if (removedSlug) trackStorefrontEvent("cart_item_removed", id);
     setItems((current) => current.filter((item) => item.productId !== id));
     setToast(null);
     if (removedSlug) void fetch("/api/public/request-cart", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: removedSlug }) });

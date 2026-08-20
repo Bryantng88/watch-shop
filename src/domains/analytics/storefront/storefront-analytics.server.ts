@@ -4,8 +4,13 @@ import type { NextRequest } from "next/server";
 import { prisma } from "@/server/db/client";
 import { storefrontAnalyticsBatchSchema, type StorefrontAnalyticsContext } from "./storefront-analytics.contract";
 
-const analyticsSalt = process.env.STOREFRONT_ANALYTICS_SALT ?? process.env.PUBLIC_ORDER_FINGERPRINT_SECRET ?? "watch-shop";
-const hashId = (value: string) => createHash("sha256").update(`${analyticsSalt}:${value}`).digest("hex");
+const analyticsSalt = () => {
+  const configured = process.env.STOREFRONT_ANALYTICS_SALT ?? process.env.PUBLIC_ORDER_FINGERPRINT_SECRET;
+  if (configured) return configured;
+  if (process.env.NODE_ENV === "production") throw new Error("STOREFRONT_ANALYTICS_SALT_REQUIRED");
+  return "watch-shop-local";
+};
+const hashId = (value: string) => createHash("sha256").update(`${analyticsSalt()}:${value}`).digest("hex");
 const clean = (value: unknown) => String(value ?? "").trim() || null;
 
 function referrerHost(value?: string) {
@@ -42,6 +47,11 @@ export async function ingestStorefrontAnalytics(raw: unknown, request: NextReque
     : [];
   const validProductIds = new Set(validProducts.map((item) => item.id));
   const device = deviceType(request.headers.get("user-agent"));
+  const address = request.headers.get("cf-connecting-ip")
+    ?? request.headers.get("x-real-ip")
+    ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    ?? "unknown";
+  const requestFingerprintHash = hashId(`${address}|${request.headers.get("user-agent") ?? "unknown"}`);
   const events = batch.events
     .filter((event) => !event.productId || validProductIds.has(event.productId))
     .map((event) => {
@@ -60,8 +70,18 @@ export async function ingestStorefrontAnalytics(raw: unknown, request: NextReque
         campaign: clean(event.context.campaign),
         referrerHost: referrerHost(event.referrer),
         deviceType: device,
+        requestFingerprintHash,
       };
     });
-  if (events.length) await prisma.storefrontAnalyticsEvent.createMany({ data: events, skipDuplicates: true });
+  if (events.length) {
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`analytics-rate:${requestFingerprintHash}`}, 0))`;
+      const recentCount = await tx.storefrontAnalyticsEvent.count({
+        where: { requestFingerprintHash, createdAt: { gte: new Date(now.getTime() - 60_000) } },
+      });
+      if (recentCount + events.length > 120) throw new Error("STOREFRONT_ANALYTICS_RATE_LIMITED");
+      await tx.storefrontAnalyticsEvent.createMany({ data: events, skipDuplicates: true });
+    });
+  }
   return { accepted: events.length };
 }

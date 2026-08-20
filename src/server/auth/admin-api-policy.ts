@@ -220,11 +220,14 @@ export function getAdminPagePolicy(pathname: string): AdminAccessPolicy | null {
     if (/^\/admin\/customers(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.CUSTOMER_VIEW);
     if (pathname === "/admin/reports/finance") {
         return {
-            anyOf: [PERMISSIONS.REPORT_VIEW],
+            anyOf: [PERMISSIONS.REPORT_FINANCE_VIEW],
             allOf: [PERMISSIONS.PRODUCT_COST_VIEW, PERMISSIONS.PAYMENT_VIEW_ALL],
         };
     }
-    if (/^\/admin\/reports(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.REPORT_VIEW);
+    if (pathname === "/admin/reports/sales") return anyOf(PERMISSIONS.REPORT_SALES_VIEW);
+    if (/^\/admin\/reports(\/|$)/.test(pathname)) {
+        return anyOf(PERMISSIONS.REPORT_SALES_VIEW, PERMISSIONS.REPORT_FINANCE_VIEW);
+    }
     if (/^\/admin\/ui-tests?(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.USER_MANAGE);
 
     return null;

@@ -170,7 +170,10 @@ const cases: Array<[string, boolean]> = [
   ["no payment scope produces fail-closed query", JSON.stringify(paymentBusinessWhere([])).includes("__no_authorized_payment__")],
   ["acquisition payment API rejects order payment view", !allowed(getAdminApiPolicy("/api/admin/acquisitions/sample/payment", "GET"), PERMISSIONS.ORDER_PAYMENT_VIEW)],
   ["acquisition payment API accepts acquisition payment view", allowed(getAdminApiPolicy("/api/admin/acquisitions/sample/payment", "GET"), PERMISSIONS.ACQUISITION_PAYMENT_VIEW)],
-  ["reports page accepts REPORT_VIEW", allowed(getAdminPagePolicy("/admin/reports"), PERMISSIONS.REPORT_VIEW)],
+  ["sales report accepts REPORT_SALES_VIEW", allowed(getAdminPagePolicy("/admin/reports/sales"), PERMISSIONS.REPORT_SALES_VIEW)],
+  ["sales report rejects REPORT_FINANCE_VIEW", !allowed(getAdminPagePolicy("/admin/reports/sales"), PERMISSIONS.REPORT_FINANCE_VIEW)],
+  ["finance report requires finance, cost and payment permissions", allowed(getAdminPagePolicy("/admin/reports/finance"), PERMISSIONS.REPORT_FINANCE_VIEW, PERMISSIONS.PRODUCT_COST_VIEW, PERMISSIONS.PAYMENT_VIEW_ALL)],
+  ["finance report rejects sales-only access", !allowed(getAdminPagePolicy("/admin/reports/finance"), PERMISSIONS.REPORT_SALES_VIEW)],
 ];
 
 for (const [label, passed] of cases) {

@@ -4,6 +4,10 @@ export const storefrontAnalyticsEventNameSchema = z.enum([
   "session_started",
   "product_viewed",
   "request_started",
+  "request_page_viewed",
+  "request_form_started",
+  "cart_item_added",
+  "cart_item_removed",
 ]);
 
 export const storefrontAnalyticsContextSchema = z.object({

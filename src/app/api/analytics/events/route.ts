@@ -5,12 +5,13 @@ import { ingestStorefrontAnalytics } from "@/domains/analytics/storefront/storef
 
 export async function POST(request: NextRequest) {
   try {
-    const length = Number(request.headers.get("content-length") ?? 0);
-    if (length > 24_000) return new NextResponse(null, { status: 413 });
-    const result = await ingestStorefrontAnalytics(await request.json(), request);
+    const body = await request.text();
+    if (Buffer.byteLength(body, "utf8") > 24_000) return new NextResponse(null, { status: 413 });
+    const result = await ingestStorefrontAnalytics(JSON.parse(body), request);
     return NextResponse.json(result, { status: 202 });
   } catch (error) {
-    if (!(error instanceof ZodError)) console.error("[storefront-analytics] ingest failed", error);
-    return new NextResponse(null, { status: error instanceof ZodError ? 400 : 202 });
+    if (!(error instanceof ZodError) && !(error instanceof SyntaxError) && !(error instanceof Error && error.message === "STOREFRONT_ANALYTICS_RATE_LIMITED")) console.error("[storefront-analytics] ingest failed", error);
+    if (error instanceof Error && error.message === "STOREFRONT_ANALYTICS_RATE_LIMITED") return new NextResponse(null, { status: 429 });
+    return new NextResponse(null, { status: error instanceof ZodError || error instanceof SyntaxError ? 400 : 202 });
   }
 }

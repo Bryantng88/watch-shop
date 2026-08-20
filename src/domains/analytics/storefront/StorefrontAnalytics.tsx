@@ -5,11 +5,11 @@ import { usePathname } from "next/navigation";
 
 import type { StorefrontAnalyticsContext, StorefrontAnalyticsEventName } from "./storefront-analytics.contract";
 
-const CONTEXT_KEY = "vintic.analytics.context.v1";
-const SESSION_KEY = "vintic.analytics.session.v1";
+const ANONYMOUS_KEY = "vintic.analytics.anonymous.v2";
+const SESSION_KEY = "vintic.analytics.session.v2";
 const SESSION_MS = 30 * 60 * 1_000;
 
-type StoredSession = { id: string; touchedAt: number };
+type StoredSession = { id: string; touchedAt: number; attribution: Omit<StorefrontAnalyticsContext, "anonymousId" | "sessionId"> };
 
 function uuid() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
@@ -37,15 +37,20 @@ function sourceFromLocation() {
 export function getStorefrontAnalyticsContext(): StorefrontAnalyticsContext | null {
   if (typeof window === "undefined") return null;
   const now = Date.now();
-  const existing = safeJson<StorefrontAnalyticsContext>(localStorage.getItem(CONTEXT_KEY));
   const storedSession = safeJson<StoredSession>(sessionStorage.getItem(SESSION_KEY));
-  const session = storedSession && now - storedSession.touchedAt < SESSION_MS ? storedSession : { id: uuid(), touchedAt: now };
+  const query = new URLSearchParams(location.search);
+  let hasExternalReferrer = false;
+  try { hasExternalReferrer = Boolean(document.referrer && new URL(document.referrer).hostname !== location.hostname); } catch { /* ignore */ }
+  const hasFreshAttribution = query.has("utm_source") || query.has("utm_medium") || query.has("utm_campaign") || hasExternalReferrer;
+  const session = storedSession && now - storedSession.touchedAt < SESSION_MS
+    ? storedSession
+    : { id: uuid(), touchedAt: now, attribution: { ...sourceFromLocation(), landingPath: `${location.pathname}${location.search}` } };
+  if (hasFreshAttribution) session.attribution = { ...sourceFromLocation(), landingPath: `${location.pathname}${location.search}` };
   session.touchedAt = now;
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-  const attribution = existing ?? { anonymousId: uuid(), sessionId: session.id, ...sourceFromLocation(), landingPath: `${location.pathname}${location.search}` };
-  const context = { ...attribution, sessionId: session.id };
-  localStorage.setItem(CONTEXT_KEY, JSON.stringify(context));
-  return context;
+  const anonymousId = localStorage.getItem(ANONYMOUS_KEY) || uuid();
+  localStorage.setItem(ANONYMOUS_KEY, anonymousId);
+  return { anonymousId, sessionId: session.id, ...session.attribution };
 }
 
 export function trackStorefrontEvent(eventName: StorefrontAnalyticsEventName, productId?: string) {

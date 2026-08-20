@@ -407,6 +407,7 @@ export async function createOrderWithItems(
               status: PurchaseRequestStatus.COMPLETED,
               outcome: PurchaseRequestOutcome.CONVERTED,
               completedAt: new Date(),
+              convertedAt: new Date(),
               completionReason: "Đã liên kết với đơn hàng được tạo từ yêu cầu mua hàng.",
             },
           });
@@ -592,6 +593,7 @@ export async function createOrderWithItems(
           status: PurchaseRequestStatus.COMPLETED,
           outcome: PurchaseRequestOutcome.CONVERTED,
           completedAt: new Date(),
+          convertedAt: new Date(),
           completionReason: "Đã xác minh nhu cầu và lập đơn hàng từ luồng xử lý.",
         },
       });

@@ -3,7 +3,7 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUserPermissions } from "@/server/auth/requirePermission";
 
 const REQUIRED_FINANCE_REPORT_PERMISSIONS = [
-  PERMISSIONS.REPORT_VIEW,
+  PERMISSIONS.REPORT_FINANCE_VIEW,
   PERMISSIONS.PRODUCT_COST_VIEW,
   PERMISSIONS.PAYMENT_VIEW_ALL,
 ] as const;
