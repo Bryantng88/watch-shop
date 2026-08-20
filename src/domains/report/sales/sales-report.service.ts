@@ -34,31 +34,36 @@ export async function getSalesReport(access: SalesReportAccess): Promise<SalesRe
       }).then((products) => products.map((product) => ({ ...product, landedCost: null })));
   const [events, requests, inventory, financeProjection] = await Promise.all([
     prisma.storefrontAnalyticsEvent.findMany({
-      where: { occurredAt: { gte: from, lte: to }, isInternal: false, deviceType: { not: "bot" } },
-      select: { eventName: true, anonymousIdHash: true, sessionIdHash: true, productId: true, source: true },
+      where: { occurredAt: { gte: from, lte: to }, deviceType: { not: "bot" } },
+      select: { eventName: true, anonymousIdHash: true, sessionIdHash: true, productId: true, source: true, isInternal: true },
     }),
     prisma.purchaseRequest.findMany({
-      where: { channel: "STOREFRONT", analyticsIsInternal: false, OR: [{ createdAt: { gte: from, lte: to } }, { convertedAt: { gte: from, lte: to } }] },
-      select: { orderId: true, createdAt: true, convertedAt: true, analyticsSessionIdHash: true, analyticsSource: true, items: { select: { productId: true } } },
+      where: { channel: "STOREFRONT", OR: [{ createdAt: { gte: from, lte: to } }, { convertedAt: { gte: from, lte: to } }] },
+      select: { orderId: true, createdAt: true, convertedAt: true, analyticsSessionIdHash: true, analyticsSource: true, analyticsIsInternal: true, items: { select: { productId: true } } },
     }),
     inventoryPromise,
     access.canViewFinance ? queryFinanceReportProjection(prisma) : Promise.resolve(null),
   ]);
 
-  const sessions = new Set(events.map((event) => event.sessionIdHash));
-  const visitors = new Set(events.map((event) => event.anonymousIdHash));
-  const viewEvents = events.filter((event) => event.eventName === "product_viewed");
-  const requestPageViews = events.filter((event) => event.eventName === "request_page_viewed" || event.eventName === "request_started").length;
-  const formStarts = events.filter((event) => event.eventName === "request_form_started").length;
-  const cartAdds = events.filter((event) => event.eventName === "cart_item_added").length;
-  const createdRequests = requests.filter((request) => request.createdAt >= from && request.createdAt <= to);
+  const internalEvents = events.filter((event) => event.isInternal);
+  const publicEvents = events.filter((event) => !event.isInternal);
+  const internalRequests = requests.filter((request) => request.analyticsIsInternal);
+  const publicRequests = requests.filter((request) => !request.analyticsIsInternal);
+
+  const sessions = new Set(publicEvents.map((event) => event.sessionIdHash));
+  const visitors = new Set(publicEvents.map((event) => event.anonymousIdHash));
+  const viewEvents = publicEvents.filter((event) => event.eventName === "product_viewed");
+  const requestPageViews = publicEvents.filter((event) => event.eventName === "request_page_viewed" || event.eventName === "request_started").length;
+  const formStarts = publicEvents.filter((event) => event.eventName === "request_form_started").length;
+  const cartAdds = publicEvents.filter((event) => event.eventName === "cart_item_added").length;
+  const createdRequests = publicRequests.filter((request) => request.createdAt >= from && request.createdAt <= to);
   const attributedRequests = createdRequests.filter((request) => request.analyticsSessionIdHash).length;
-  const convertedOrders = requests.filter((request) => request.orderId && request.convertedAt && request.convertedAt >= from && request.convertedAt <= to).length;
+  const convertedOrders = publicRequests.filter((request) => request.orderId && request.convertedAt && request.convertedAt >= from && request.convertedAt <= to).length;
   const convertedCreatedRequests = createdRequests.filter((request) => request.orderId).length;
   const requestSessions = new Set(createdRequests.flatMap((request) => request.analyticsSessionIdHash ? [request.analyticsSessionIdHash] : []));
 
   const sourceRows = new Map<string, { sessions: Set<string>; requests: number }>();
-  for (const event of events) {
+  for (const event of publicEvents) {
     const source = normalizeAnalyticsSource(event.source);
     const row = sourceRows.get(source) ?? { sessions: new Set<string>(), requests: 0 };
     row.sessions.add(event.sessionIdHash);
@@ -87,6 +92,12 @@ export async function getSalesReport(access: SalesReportAccess): Promise<SalesRe
     generatedAt: to.toISOString(),
     period: { from: from.toISOString(), to: to.toISOString(), days },
     traffic: { sessions: sessions.size, visitors: visitors.size, productViews: viewEvents.length, requestPageViews, formStarts, cartAdds },
+    internalTraffic: {
+      sessions: new Set(internalEvents.map((event) => event.sessionIdHash)).size,
+      visitors: new Set(internalEvents.map((event) => event.anonymousIdHash)).size,
+      events: internalEvents.length,
+      purchaseRequests: internalRequests.filter((request) => request.createdAt >= from && request.createdAt <= to).length,
+    },
     funnel: { purchaseRequests: createdRequests.length, attributedRequests, convertedOrders, sessionToRequestRate: ratio(requestSessions.size, sessions.size), requestToOrderRate: ratio(convertedCreatedRequests, createdRequests.length) },
     inventory: {
       total: inventory.length,

@@ -38,6 +38,18 @@ export default function SalesReportClient({ data, internalDevice }: { data: Sale
       </div>
     </header>
 
+    <section className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-4 ${internalDevice ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-white"}`}>
+      <div>
+        <p className={`text-sm font-bold ${internalDevice ? "text-emerald-800" : "text-slate-800"}`}>Thiết bị này: {internalDevice ? "Nội bộ" : "Khách / chưa đánh dấu"}</p>
+        <p className="mt-1 text-xs text-slate-500">
+          Tháng này đã loại {number(data.internalTraffic.sessions)} phiên · {number(data.internalTraffic.visitors)} người xem · {number(data.internalTraffic.events)} sự kiện nội bộ khỏi báo cáo.
+        </p>
+      </div>
+      <button type="button" onClick={toggleInternalDevice} disabled={savingInternal} className={`rounded-lg border px-3 py-2 text-xs font-semibold transition disabled:opacity-50 ${internalDevice ? "border-emerald-300 bg-white text-emerald-700 hover:bg-emerald-100" : "border-slate-300 bg-slate-950 text-white hover:bg-slate-800"}`}>
+        {savingInternal ? "Đang lưu…" : internalDevice ? "Bỏ đánh dấu nội bộ" : "Đánh dấu thiết bị nội bộ"}
+      </button>
+    </section>
+
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
       <Metric label="Phiên truy cập" value={number(data.traffic.sessions)} note={`${number(data.traffic.visitors)} người xem`} icon={Users} />
       <Metric label="Lượt xem sản phẩm" value={number(data.traffic.productViews)} note={`${number(data.traffic.requestPageViews)} lần mở yêu cầu`} icon={Eye} />
