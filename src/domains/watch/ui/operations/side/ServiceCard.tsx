@@ -18,11 +18,15 @@ export default function ServiceCard({
     productId,
     title,
     sku,
+    onPreview,
+    onIssuePreview,
 }: {
     projection: WatchServiceProjection;
     productId?: string | null;
     title?: string | null;
     sku?: string | null;
+    onPreview?: (request: WatchServiceProjection["requests"][number]) => void;
+    onIssuePreview?: (issue: WatchServiceProjection["requests"][number]["issues"][number]) => void;
 }) {
     const router = useRouter();
     const progress = useAppProgress();
@@ -202,10 +206,13 @@ export default function ServiceCard({
                         {rows.map((item) => (
                             <div key={item.id} className="border-t border-slate-100">
                                 <div className="grid min-h-[44px] grid-cols-[minmax(0,1fr)_88px] items-center gap-2 bg-slate-50/40 px-3 py-2 text-xs">
-                                    {item.workspaceHref ? (
+                                    {onPreview || item.workspaceHref ? (
                                         <button
                                             type="button"
-                                            onClick={() => router.push(item.workspaceHref!)}
+                                            onClick={() => {
+                                                if (onPreview) onPreview(item);
+                                                else if (item.workspaceHref) router.push(item.workspaceHref);
+                                            }}
                                             className="truncate text-left text-slate-600 hover:text-violet-700"
                                         >
                                             {item.refNo}
@@ -223,9 +230,15 @@ export default function ServiceCard({
                                         className="grid grid-cols-[minmax(0,1fr)_88px] items-start gap-2 border-t border-dashed border-slate-100 px-3 py-2.5 text-xs"
                                     >
                                         <div className="min-w-0 pl-2">
-                                            <div className="line-clamp-2 font-medium leading-5 text-slate-800">
-                                                {issue.summary}
-                                            </div>
+                                            {onIssuePreview ? (
+                                                <button type="button" onClick={() => onIssuePreview(issue)} className="line-clamp-2 text-left font-medium leading-5 text-slate-800 hover:text-violet-700">
+                                                    {issue.summary}
+                                                </button>
+                                            ) : (
+                                                <div className="line-clamp-2 font-medium leading-5 text-slate-800">
+                                                    {issue.summary}
+                                                </div>
+                                            )}
                                             <div className="mt-1 text-[10px] text-slate-400">
                                                 TI · {issue.isConfirmed ? "Đã xác nhận" : "Chưa xác nhận"}
                                             </div>

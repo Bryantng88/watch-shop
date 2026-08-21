@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
 import WatchFormClient from "@/domains/watch/client/WatchFormClient";
 import {
@@ -132,10 +132,6 @@ export default async function WatchEditPage({
         typeof query.workspaceBindingId === "string"
             ? query.workspaceBindingId.trim()
             : "";
-
-    if (!isEmbeddedMediaMode) {
-        redirect(`/admin/watches/${id}`);
-    }
 
     const user = await perfStep("watch-edit-page", "requirePermission", () =>
         requirePermission(PERMISSIONS.PRODUCT_UPDATE),

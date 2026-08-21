@@ -6,8 +6,8 @@ import {
   PaymentType,
 } from "@prisma/client";
 
-import { processBusinessEventOperation } from "@/domains/event/delivery";
 import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
+import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
 import { prisma } from "@/server/db/client";
 import { buildPaymentRef, money, toPlain } from "./payment.utils";
 import { normalizePaymentMethod } from "./payment.core";
@@ -65,7 +65,7 @@ export async function createStandaloneExpensePayment(input: CreateStandaloneExpe
     throw new Error("Vui lòng chọn kênh tài chính Nam, Nữ hoặc Dùng chung.");
   }
 
-  const result = await prisma.$transaction(async (tx) => {
+  return runBusinessEventTransaction(async (tx, delivery) => {
     let payeeUser: { id: string; name: string | null; email: string } | null = null;
     let category: { id: string; code: string; name: string } | null = null;
     if (kind === "SALARY") {
@@ -121,7 +121,7 @@ export async function createStandaloneExpensePayment(input: CreateStandaloneExpe
         financeChannel: financeChannel as "MEN" | "WOMEN" | "UNISEX",
       },
     });
-    const event = await recordBusinessEvent(tx, {
+    delivery.track(await recordBusinessEvent(tx, {
       eventKey: "payment.created",
       targetType: "PAYMENT",
       targetId: payment.id,
@@ -140,9 +140,7 @@ export async function createStandaloneExpensePayment(input: CreateStandaloneExpe
         financeChannel,
         sourceId: `${payment.id}:payment.created`,
       },
-    });
-    return { payment: toPlain(payment), projectionDeliveryKey: event.projectionDeliveryKey };
+    }));
+    return toPlain(payment);
   });
-  await processBusinessEventOperation(result.projectionDeliveryKey);
-  return result.payment;
 }

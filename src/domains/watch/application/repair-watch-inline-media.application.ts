@@ -6,8 +6,7 @@ import {
 } from "@prisma/client";
 
 import { ingestExistingMediaForWatch, attachIngestedWatchMedia } from "@/domains/media/application";
-import { processBusinessEventOperation } from "@/domains/event/delivery";
-import { prisma } from "@/server/db/client";
+import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
 import { replaceWatchImagesRepo } from "@/domains/watch/server/media/watch-media.repo";
 import { emitWatchInlineImageUpdatedEvent } from "@/domains/watch/server/events";
 
@@ -25,7 +24,7 @@ export async function repairWatchInlineMedia(input: {
     storageKey: input.storageKey,
   });
 
-  const event = await prisma.$transaction(async (tx) => {
+  const event = await runBusinessEventTransaction(async (tx, delivery) => {
     const watch = await tx.watch.findUnique({
       where: { productId: input.productId },
       select: {
@@ -74,7 +73,7 @@ export async function repairWatchInlineMedia(input: {
       }],
     }, tx);
 
-    return emitWatchInlineImageUpdatedEvent(tx, {
+    return delivery.track(await emitWatchInlineImageUpdatedEvent(tx, {
       watch: {
         id: watch.id,
         productId: watch.productId,
@@ -82,10 +81,8 @@ export async function repairWatchInlineMedia(input: {
       storageKey: selected.fileKey,
       actorUserId: input.actorUserId,
       sourceId: `watch-inline-repair:${watch.id}:${Date.now()}`,
-    });
+    }));
   });
-
-  await processBusinessEventOperation(event.projectionDeliveryKey);
 
   return {
     ok: true as const,

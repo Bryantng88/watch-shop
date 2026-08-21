@@ -84,8 +84,9 @@ export type ApplyManualTriggerToQueueItemResult =
   | {
     applied: false;
     bindingId: string;
-      reason: ManualTriggerTransitionSkipReason;
-    };
+    reason: ManualTriggerTransitionSkipReason;
+    toState?: string | null;
+  };
 
 export type ResolveManualTriggerToQueueItemResult = ApplyManualTriggerToQueueItemResult;
 
@@ -821,6 +822,7 @@ export async function applyManualTriggerToQueueItem(
       applied: false,
       bindingId,
       reason: "WORKFLOW_DEFINITION_MISSING",
+      toState: runtime.currentState,
     };
   }
 
@@ -840,11 +842,11 @@ export async function applyManualTriggerToQueueItem(
   });
 
   if (!transition) {
-    return { applied: false, bindingId, reason: "NO_MATCHING_TRANSITION" };
+    return { applied: false, bindingId, reason: "NO_MATCHING_TRANSITION", toState: runtime.currentState };
   }
 
   if (runtime.currentState === transition.toState) {
-    return { applied: false, bindingId, reason: "ALREADY_IN_STATE" };
+    return { applied: false, bindingId, reason: "ALREADY_IN_STATE", toState: runtime.currentState };
   }
 
   const timestamp = nowIso();
@@ -959,6 +961,7 @@ export async function resolveManualTriggerToQueueItem(
       applied: false,
       bindingId,
       reason: "WORKFLOW_DEFINITION_MISSING",
+      toState: runtime.currentState,
     };
   }
 
@@ -978,11 +981,11 @@ export async function resolveManualTriggerToQueueItem(
   });
 
   if (!transition) {
-    return { applied: false, bindingId, reason: "NO_MATCHING_TRANSITION" };
+    return { applied: false, bindingId, reason: "NO_MATCHING_TRANSITION", toState: runtime.currentState };
   }
 
   if (runtime.currentState === transition.toState) {
-    return { applied: false, bindingId, reason: "ALREADY_IN_STATE" };
+    return { applied: false, bindingId, reason: "ALREADY_IN_STATE", toState: runtime.currentState };
   }
 
   const terminal = workflowDefinition.terminalStates.includes(

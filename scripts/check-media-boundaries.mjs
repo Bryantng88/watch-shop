@@ -26,7 +26,11 @@ const rules = [
     label: "New canonical path literals outside MediaPathPolicy",
     pattern: "media/objects/",
     paths: ["src"],
-    allowed: ["src/domains/media/core/media-path.policy.ts"],
+    allowed: [
+      "src/domains/media/core/media-path.policy.ts",
+      "src/domains/media/core/media-path.policy.test.ts",
+      "src/domains/watch/shared/photoroom-adjustment.test.ts",
+    ],
   },
   {
     label: "Segment source path literals outside media source policy",

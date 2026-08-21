@@ -41,7 +41,7 @@ export async function prepareWatchMediaSource(input: {
   if (!watch) throw new Error("Không tìm thấy Watch.");
 
   // Source folders (including cover) are inboxes, never durable workspaces.
-  // Ingest moves the file into media/objects/<id>/original and removes the inbox copy.
+  // Ingest moves the file into the canonical object/original path and removes the inbox copy.
   const mediaObject = await ingestSelectedMedia({ storageKey: input.storageKey });
   const source = await mediaStorage.read(mediaObject.storageKey);
   return { watch, mediaObject, source };

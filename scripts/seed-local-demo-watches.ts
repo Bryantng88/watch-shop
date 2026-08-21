@@ -11,7 +11,7 @@ if (!/(test|local|storefront)/i.test(parsed.pathname)) {
 }
 
 const fixtures = [
-  { id: "local-demo-watch-rolex-datejust", slug: "local-elgin-ufo-automatic", sku: "LOCAL-LGN-001", title: "Elgin U.F.O Automatic", audience: "UNISEX", status: "AVAILABLE", saleStage: "READY", stockStage: "IN_STOCK", style: "CLASSIC", price: 4_900_000, cost: 3_200_000, model: "U.F.O", ref: "", size: 36, year: "1970s" },
+  { id: "local-demo-watch-rolex-datejust", slug: "local-elgin-ufo-automatic", sku: "LOCAL-LGN-001", title: "Elgin U.F.O Automatic", audience: "MEN", status: "AVAILABLE", saleStage: "READY", stockStage: "IN_STOCK", style: "CLASSIC", price: 4_900_000, cost: 3_200_000, model: "U.F.O", ref: "", size: 36, year: "1970s" },
   { id: "local-demo-watch-cartier-panthere", slug: "local-cartier-panthere", sku: "LOCAL-CTP-002", title: "Cartier Panthère Small", audience: "WOMEN", status: "AVAILABLE", saleStage: "READY", stockStage: "IN_STOCK", style: "DRESS", price: 138_000_000, cost: 108_000_000, model: "Panthère Small", ref: "WSPN0013", size: 27, year: "2021" },
   { id: "local-demo-watch-tudor-black-bay", slug: "local-tudor-black-bay-58", sku: "LOCAL-TBB58-003", title: "Tudor Black Bay 58", audience: "MEN", status: "AVAILABLE", saleStage: "READY", stockStage: "IN_STOCK", style: "SPORT", price: 108_000_000, cost: 84_000_000, model: "Black Bay 58", ref: "79030N", size: 39, year: "2020" },
   { id: "local-demo-watch-omega-sold", slug: "local-omega-constellation-sold", sku: "LOCAL-OMG-004", title: "Omega Constellation Vintage", audience: "UNISEX", status: "SOLD", saleStage: "SOLD", stockStage: "OUT_OF_STOCK", style: "CLASSIC", price: 86_000_000, cost: 61_000_000, model: "Constellation", ref: "168.005", size: 34, year: "1972" },
@@ -61,15 +61,43 @@ async function main() {
     });
 
     if (item.id === "local-demo-watch-rolex-datejust" && product.watch) {
+      await prisma.watch.update({
+        where: { id: product.watch.id },
+        data: { audienceSegment: "MEN", mediaPipelineKey: "MEN_STANDARD" },
+      });
       await prisma.watchSpecV2.update({
         where: { watchId: product.watch.id },
         data: {
-          brand: "Elgin", model: "U.F.O", referenceNumber: null,
+          brand: "Elgin", model: "U.F.O", referenceNumber: "UFO-360", nickname: "Green TV Dial",
           caseShape: "SQUARE", caseSizeMM: 36, lugToLugMM: 36,
-          primaryCaseMaterial: "STAINLESS_STEEL", dialColor: "green",
+          lugWidthMM: 20, thicknessMM: 11.5,
+          materialProfile: "SINGLE_MATERIAL",
+          primaryCaseMaterial: "STAINLESS_STEEL",
+          secondaryCaseMaterial: null,
+          goldTreatment: null,
+          goldColors: [],
+          goldKarat: null,
+          materialNote: "Stainless-steel tonneau/TV case with integrated bracelet",
+          dialColor: "Green",
           dialFinish: "Sunburst", crystal: "MINERAL", movementType: "AUTOMATIC",
-          braceletType: "BRACELET", bookletIncluded: false, cardIncluded: false,
-          boxIncluded: false,
+          calibre: "Elgin signed automatic", powerReserve: "Approximately 40 hours",
+          waterResistance: "Vintage watch — not pressure tested",
+          braceletType: "BRACELET", strapMaterialText: "Integrated stainless-steel bracelet",
+          buckleType: "Folding clasp",
+          bookletIncluded: true, cardIncluded: true, boxIncluded: true,
+          strapSetType: "BRAND_ORIGINAL", strapComponentSource: "KEEP_CURRENT",
+          featuresJson: {
+            complications: ["Day", "Date"],
+            dialMarkers: "Applied baton indexes",
+            secondsDisplay: "Central seconds",
+            vintage: true,
+          },
+          rawSpecJson: {
+            testFixture: "full-spec",
+            condition: "Excellent",
+            productionPeriod: "1970s",
+            notes: "Demo data for validating the complete specification UI",
+          },
         },
       });
       await prisma.watchContent.upsert({

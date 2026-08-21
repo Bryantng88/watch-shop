@@ -28,12 +28,22 @@ const ACQUISITION_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = [
     "recent-activity",
 ];
 
-function getBulkPostErrorMessage(data: any) {
+type BulkPostFailure = {
+    id?: string | null;
+    error?: string | null;
+};
+
+type BulkPostErrorPayload = {
+    failed?: BulkPostFailure[] | null;
+    error?: string | null;
+};
+
+function getBulkPostErrorMessage(data: BulkPostErrorPayload | null) {
     if (!data) return "Có lỗi khi duyệt phiếu!";
 
     if (Array.isArray(data?.failed) && data.failed.length > 0) {
         return data.failed
-            .map((item: any) => `${item?.id || "unknown"}: ${item?.error || "Lỗi không xác định"}`)
+            .map((item) => `${item?.id || "unknown"}: ${item?.error || "Lỗi không xác định"}`)
             .join("\n");
     }
 

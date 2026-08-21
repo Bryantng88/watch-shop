@@ -218,7 +218,12 @@ function normalizeResult(result: WatchListResult): WatchListResult {
   };
 }
 
-function dataFromProps(props: WatchListClientProps): WatchListResult {
+type WatchListDataProps = Pick<
+  WatchListClientProps,
+  "initialResult" | "items" | "total" | "page" | "pageSize" | "totalPages" | "counts" | "summary"
+>;
+
+function dataFromProps(props: WatchListDataProps): WatchListResult {
   if (props.initialResult) {
     return normalizeResult(props.initialResult);
   }
@@ -409,7 +414,16 @@ export default function WatchListClient(props: WatchListClientProps) {
   }, [selectionScopeKey]);
 
   useEffect(() => {
-    setListData(dataFromProps(props));
+    setListData(dataFromProps({
+      initialResult: props.initialResult,
+      items: props.items,
+      total: props.total,
+      page: props.page,
+      pageSize: props.pageSize,
+      totalPages: props.totalPages,
+      counts: props.counts,
+      summary: props.summary,
+    }));
   }, [
     props.initialResult,
     props.items,

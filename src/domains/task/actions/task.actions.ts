@@ -1503,7 +1503,7 @@ export async function applyQueueItemManualTransitionsAction(input: {
         bindingId: item.bindingId,
         ok: Boolean(result.result.applied),
         reason: result.result.applied ? undefined : result.result.reason,
-        toState: result.result.applied ? result.result.toState : null,
+        toState: result.result.toState ?? null,
         serviceActionResult: result.serviceActionResult,
         projectionDeliveryKeys,
         reconciliationMode: projectionDeliveryKeys.length

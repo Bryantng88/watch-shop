@@ -6,24 +6,18 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ArrowLeftRight,
-  ArrowUpRight,
   BadgeDollarSign,
-  Box,
   Camera,
   CheckCircle2,
   ChevronRight,
   CircleDollarSign,
   FileText,
-  History,
   ImageIcon,
   Info,
   Landmark,
-  MoreHorizontal,
   Pencil,
   ReceiptText,
-  ShieldCheck,
   Sparkles,
-  Truck,
   Wrench,
   X,
 } from "lucide-react";
@@ -34,6 +28,12 @@ import {
   normalizeDate,
 } from "@/domains/watch/client/workbench/workbench-utils";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
+import type { BusinessEntityPreview } from "@/domains/shared/business/business-entity.types";
+import {
+  BusinessEntityPreviewModal,
+  useBusinessEntityPreview,
+} from "@/domains/shared/ui/business/BusinessEntityPreview";
+import ServiceCard from "@/domains/watch/ui/operations/side/ServiceCard";
 import WatchPublishAssetActions from "./WatchPublishAssetActions";
 
 type RecordValue = Record<string, unknown>;
@@ -74,38 +74,6 @@ function money(value: unknown, canView = true) {
   return canView ? `${moneyText(value, "0")} ₫` : "••••••";
 }
 
-function Metric({
-  label,
-  value,
-  note,
-  tone = "slate",
-}: {
-  label: string;
-  value: string;
-  note: string;
-  tone?: "slate" | "emerald" | "violet" | "rose";
-}) {
-  const valueTone = {
-    slate: "text-slate-950",
-    emerald: "text-emerald-700",
-    violet: "text-violet-700",
-    rose: "text-rose-600",
-  }[tone];
-  const surfaceTone = {
-    slate: "border-slate-200 bg-slate-50/80",
-    emerald: "border-emerald-100 bg-gradient-to-br from-emerald-50 to-white",
-    violet: "border-violet-100 bg-gradient-to-br from-violet-50 via-violet-50/60 to-white",
-    rose: "border-rose-100 bg-gradient-to-br from-rose-50 to-white",
-  }[tone];
-  return (
-    <div className={`min-w-0 rounded-lg border px-4 py-4 ${surfaceTone}`}>
-      <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">{label}</div>
-      <div className={`mt-2 truncate text-xl font-bold tracking-[-0.03em] ${valueTone}`}>{value}</div>
-      <div className="mt-1 text-[11px] text-slate-400">{note}</div>
-    </div>
-  );
-}
-
 export default function WatchDetailUiProposal({
   detail,
   service,
@@ -123,8 +91,8 @@ export default function WatchDetailUiProposal({
   canEditPrice?: boolean;
   mediaWorkspace?: RecordValue;
 }) {
-  void canEditPrice;
   const [mediaOpen, setMediaOpen] = useState(false);
+  const previewState = useBusinessEntityPreview();
   const values = mapWatchDetailToFormValues(detail);
   const brand = record(detail.brand);
   const vendor = record(detail.vendor);
@@ -146,7 +114,11 @@ export default function WatchDetailUiProposal({
   const editHref = `${detailHref}/edit?returnTo=${encodeURIComponent(detailHref)}`;
   const workspace = record(mediaWorkspace);
   const mediaQuery = new URLSearchParams({ embedded: "1", mode: "media", returnTo: detailHref });
-  if (workspace.id) mediaQuery.set("workspaceId", String(workspace.id));
+  if (workspace.bindingId) {
+    mediaQuery.set("from", "media-workspace");
+    mediaQuery.set("workspaceBindingId", String(workspace.bindingId));
+  }
+  if (workspace.state) mediaQuery.set("workspaceState", String(workspace.state));
   const mediaHref = `${detailHref}/edit?${mediaQuery.toString()}`;
 
   const summary = record(tradeHistory.costSummary);
@@ -159,29 +131,38 @@ export default function WatchDetailUiProposal({
   const profit = salePrice - landedCost;
   const margin = salePrice > 0 ? profit / salePrice * 100 : 0;
   const costRows = [
-    { label: "Giá nhập", note: "Từ phiếu nhập gần nhất", amount: acquisitionCost, icon: Landmark, tone: "bg-blue-50 text-blue-700" },
-    { label: "Service", note: `${rows(tradeHistory.serviceFees).length} hạng mục kỹ thuật`, amount: serviceCost, icon: Wrench, tone: "bg-amber-50 text-amber-700" },
-    { label: "Vận chuyển", note: `${rows(tradeHistory.shipmentFees).length} shipment liên quan`, amount: shipmentCost, icon: Truck, tone: "bg-cyan-50 text-cyan-700" },
-    { label: "Chi phí khác", note: "Payment OUT khác", amount: otherCost, icon: ReceiptText, tone: "bg-slate-100 text-slate-600" },
+    { label: "Giá nhập", note: "Từ phiếu nhập gần nhất", amount: acquisitionCost },
+    { label: "Service", note: `${rows(tradeHistory.serviceFees).length} hạng mục kỹ thuật`, amount: serviceCost },
+    { label: "Vận chuyển", note: `${rows(tradeHistory.shipmentFees).length} shipment liên quan`, amount: shipmentCost },
+    { label: "Chi phí khác", note: "Payment OUT khác", amount: otherCost },
   ];
 
   const contentReady = Boolean(values.content.titleOverride || values.content.body);
   const imageReady = ["APPROVED", "READY", "PUBLISHED"].includes(String(values.imageReviewStatus ?? "").toUpperCase());
   const attention = [
-    ...(!imageReady ? [{ label: "Gallery đang chờ duyệt", href: "#media", icon: ImageIcon }] : []),
-    ...(!contentReady ? [{ label: "Chưa có nội dung bán hàng", href: "#content", icon: FileText }] : []),
+    ...(!imageReady ? [{ label: "Gallery đang chờ duyệt", href: "#content-media", icon: ImageIcon }] : []),
+    ...(!contentReady ? [{ label: "Chưa có nội dung bán hàng", href: "#content-media", icon: FileText }] : []),
   ];
   const serviceRecord = record(service);
-  const activeIssues = number(serviceRecord.activeTechnicalIssueCount ?? serviceRecord.activeCount);
+  const serviceRequests = rows(serviceRecord.requests);
+  const latestServiceRequest = serviceRequests[0] ?? null;
+  const acquisitions = rows(tradeHistory.acquisitions);
+  const orders = rows(tradeHistory.orders);
+  const latestAcquisition = acquisitions[0] ?? null;
+  const latestOrder = orders[0] ?? null;
   const transactionEvents = [
-    ...rows(tradeHistory.acquisitions).slice(0, 2).map((item) => ({
+    ...acquisitions.slice(0, 2).map((item) => ({
+      id: text(item.id, ""),
+      type: "ACQUISITION" as const,
       label: "Nhập hàng",
       party: text(item.vendorName, "Vendor"),
       amount: item.amount,
       occurredAt: item.updatedAt || item.createdAt,
       tone: "bg-rose-50 text-rose-700",
     })),
-    ...rows(tradeHistory.orders).slice(0, 2).map((item) => ({
+    ...orders.slice(0, 2).map((item) => ({
+      id: text(item.id, ""),
+      type: "ORDER" as const,
       label: "Bán hàng",
       party: text(item.customerName, "Khách hàng"),
       amount: item.amount,
@@ -189,6 +170,24 @@ export default function WatchDetailUiProposal({
       tone: "bg-emerald-50 text-emerald-700",
     })),
   ];
+
+  function openRelatedPreview(
+    type: BusinessEntityPreview["type"],
+    item: RecordValue | null,
+    label: string,
+  ) {
+    const id = text(item?.id, "");
+    if (!id) return;
+    const refNo = text(item?.refNo, "");
+    previewState.openPreview({
+      type,
+      id,
+      refNo: refNo || null,
+      title: refNo ? `${label} ${refNo}` : label,
+      subtitle: title,
+      status: text(item?.status, "") || null,
+    });
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 pb-20 text-slate-900">
@@ -204,15 +203,12 @@ export default function WatchDetailUiProposal({
           </Link>
         </div>}
 
-        <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="mb-4 flex items-center gap-3">
           <div className="flex items-center gap-2 text-xs text-slate-500">
             <Link href="/admin/watches" className="hover:text-violet-700">Danh sách Watch</Link>
             <ChevronRight className="h-3.5 w-3.5" />
             <span className="font-semibold text-slate-800">{title}</span>
           </div>
-          <button className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm">
-            <MoreHorizontal className="h-4 w-4" /> Thao tác
-          </button>
         </div>
 
         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
@@ -241,9 +237,9 @@ export default function WatchDetailUiProposal({
                     {[text(brand.name, ""), values.spec.model, values.spec.referenceNumber].filter(Boolean).join(" · ") || "Chưa đủ thông tin nhận diện"}
                   </p>
                 </div>
-                <button className="inline-flex h-10 items-center gap-2 rounded-lg bg-slate-950 px-4 text-xs font-bold text-white transition hover:bg-slate-800">
+                <Link href={editHref} className="inline-flex h-10 items-center gap-2 rounded-lg bg-slate-950 px-4 text-xs font-bold text-white transition hover:bg-slate-800">
                   <Pencil className="h-4 w-4" /> Chỉnh thông tin
-                </button>
+                </Link>
               </div>
 
               <div className="mt-auto grid grid-cols-2 gap-x-4 border-t border-slate-100 pt-5 sm:grid-cols-4">
@@ -263,72 +259,86 @@ export default function WatchDetailUiProposal({
           </div>
         </section>
 
-        {live && (
-          <div className="sticky top-2 z-30 mt-4 flex flex-wrap items-center justify-end gap-2 rounded-xl border border-slate-200 bg-white/95 p-2 shadow-lg backdrop-blur">
-            <button type="button" onClick={() => setMediaOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 px-3 text-xs font-bold text-violet-700"><Camera className="h-4 w-4" /> Xử lý Media</button>
-            <Link href="/admin/services/operation" className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-700"><Wrench className="h-4 w-4" /> Service</Link>
-            <Link href={`/admin/orders?q=${encodeURIComponent(values.header.sku || values.productId)}`} className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-700"><ReceiptText className="h-4 w-4" /> Order</Link>
-            <Link href={`/admin/acquisitions?q=${encodeURIComponent(values.header.sku || values.productId)}`} className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-700"><ArrowLeftRight className="h-4 w-4" /> Phiếu nhập / Buy Back</Link>
-            <Link href={editHref} className="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-950 px-4 text-xs font-bold text-white"><Pencil className="h-4 w-4" /> Chỉnh sửa</Link>
-          </div>
-        )}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+          <nav className="flex min-w-0 gap-1 overflow-x-auto">
+            {[
+              ["Tổng quan", "#overview"],
+              ["Nội dung & hình ảnh", "#content-media"],
+              ["Service", "#service"],
+              ["Lịch sử", "#trade-history"],
+            ].map(([label, href]) => (
+              <a href={href} key={label} className="shrink-0 rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-violet-700">{label}</a>
+            ))}
+          </nav>
 
-        <nav className="mt-4 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-          {[
-            ["Tổng quan", "#overview"],
-            ["Nội dung & hình ảnh", "#content-media"],
-            ["Service", "#service-history"],
-            ["Lịch sử", "#trade-history"],
-          ].map(([label, href], index) => (
-            <a href={href} key={label} className={`shrink-0 rounded-lg px-4 py-2 text-xs font-bold ${index === 0 ? "bg-violet-600 text-white shadow-sm shadow-violet-200" : "text-slate-500 hover:bg-violet-50 hover:text-violet-700"}`}>{label}</a>
-          ))}
-        </nav>
+          {live && (
+            <div className="flex flex-wrap items-center justify-end gap-1.5">
+              <button type="button" onClick={() => setMediaOpen(true)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-violet-200 px-2.5 text-xs font-semibold text-violet-700"><Camera className="h-3.5 w-3.5" /> Xử lý Media</button>
+              <button type="button" disabled={!latestServiceRequest} title={latestServiceRequest ? "Xem nhanh Service Request gần nhất" : "Watch chưa có Service Request"} onClick={() => openRelatedPreview("SERVICE", latestServiceRequest, "Service Request")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"><Wrench className="h-3.5 w-3.5" /> Service</button>
+              <button type="button" disabled={!latestOrder} title={latestOrder ? "Xem nhanh Order gần nhất" : "Watch chưa có Order"} onClick={() => openRelatedPreview("ORDER", latestOrder, "Order")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"><ReceiptText className="h-3.5 w-3.5" /> Order</button>
+              <button type="button" disabled={!latestAcquisition} title={latestAcquisition ? "Xem nhanh phiếu nhập gần nhất" : "Watch chưa có phiếu nhập"} onClick={() => openRelatedPreview("ACQUISITION", latestAcquisition, "Phiếu nhập / Buy Back")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"><ArrowLeftRight className="h-3.5 w-3.5" /> Phiếu nhập / Buy Back</button>
+            </div>
+          )}
+        </div>
 
         <div className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
           <div className="space-y-4">
             <section id="overview" className="scroll-mt-24 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-              <div className="relative flex flex-wrap items-center justify-between gap-3 overflow-hidden border-b border-violet-100 bg-gradient-to-r from-white via-violet-50/35 to-violet-50/80 px-5 py-4">
-                <span className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-violet-500 to-indigo-500" />
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
                 <div>
-                  <h2 className="flex items-center gap-2 text-base font-bold text-slate-950">
-                    <CircleDollarSign className="h-5 w-5 text-violet-600" /> Giá & lợi nhuận
+                  <h2 className="flex items-center gap-2 text-sm font-bold">
+                    <CircleDollarSign className="h-4 w-4 text-violet-600" /> Giá & lợi nhuận
                   </h2>
                   <p className="mt-1 text-xs text-slate-400">Một nguồn thông tin tài chính duy nhất cho Watch.</p>
                 </div>
-                <button className="inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 px-3 text-xs font-bold text-violet-700">
-                  <Pencil className="h-3.5 w-3.5" /> Chỉnh giá bán
-                </button>
+                {canEditPrice ? (
+                  <Link href={`${editHref}#pricing`} className="inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 px-3 text-xs font-bold text-violet-700">
+                    <Pencil className="h-3.5 w-3.5" /> Chỉnh giá bán
+                  </Link>
+                ) : null}
               </div>
 
-              <div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-4">
-                <Metric label="Giá bán" value={money(salePrice)} note="Giá đang áp dụng" tone="violet" />
-                <Metric label="Tổng giá vốn" value={money(landedCost, canViewFinancials)} note="Từ cost ledger" />
-                <Metric label="Lợi nhuận dự kiến" value={money(profit, canViewFinancials)} note="Giá bán − giá vốn" tone={profit >= 0 ? "emerald" : "rose"} />
-                <Metric label="Biên lợi nhuận" value={canViewFinancials ? `${margin.toFixed(1)}%` : "••••"} note="Theo giá bán hiện tại" tone={margin >= 20 ? "emerald" : "slate"} />
-              </div>
+              <div className="grid gap-6 p-5 lg:grid-cols-[minmax(0,0.8fr)_minmax(420px,1.2fr)] lg:gap-0">
+                <div className="lg:border-r lg:border-slate-200 lg:pr-6">
+                  <div className="rounded-xl border border-violet-100 bg-violet-50/60 p-4 shadow-[0_2px_8px_rgba(109,40,217,0.06)]">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-violet-500">Giá bán hiện tại</div>
+                    <div className="mt-1 text-2xl font-bold tracking-[-0.03em] text-slate-950">{money(salePrice)}</div>
+                    <p className="mt-1 text-[11px] text-slate-500">Giá đang áp dụng cho Watch</p>
+                  </div>
 
-              <div className="border-t border-slate-100 px-5 py-5">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-xs font-bold uppercase tracking-[0.08em] text-slate-500">Cấu thành giá vốn</h3>
-                  <span className="text-[10px] text-slate-400">Đọc từ projection</span>
-                </div>
-                <div className="overflow-hidden rounded-lg border border-slate-200">
-                  {costRows.map(({ label, note, amount, icon: Icon, tone }) => (
-                    <div key={label} className="grid grid-cols-[minmax(0,1fr)_130px_28px] items-center gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0 hover:bg-slate-50/70">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${tone}`}><Icon className="h-4 w-4" /></span>
-                        <div className="min-w-0">
-                          <div className="text-sm font-bold text-slate-800">{label}</div>
-                          <div className="mt-0.5 truncate text-[11px] text-slate-400">{note}</div>
-                        </div>
+                  <dl className="mt-3 divide-y divide-slate-100 border-y border-slate-200">
+                    {[
+                      ["Tổng giá vốn", money(landedCost, canViewFinancials)],
+                      ["Lợi nhuận dự kiến", money(profit, canViewFinancials)],
+                      ["Biên lợi nhuận", canViewFinancials ? `${margin.toFixed(1)}%` : "••••"],
+                    ].map(([label, value]) => (
+                      <div key={label} className="flex items-center justify-between gap-4 py-2.5 text-sm">
+                        <dt className="text-slate-500">{label}</dt>
+                        <dd className="font-semibold text-slate-900">{value}</dd>
                       </div>
-                      <div className="text-right text-sm font-bold text-rose-600">{money(amount, canViewFinancials)}</div>
-                      <ArrowUpRight className="h-4 w-4 text-slate-300" />
+                    ))}
+                  </dl>
+                </div>
+
+                <div className="lg:pl-6">
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-xs font-bold uppercase tracking-[0.08em] text-slate-500">Cấu thành giá vốn</h3>
+                    <span className="text-[10px] text-slate-400">Đọc từ projection</span>
+                  </div>
+                  <div className="divide-y divide-slate-100 border-y border-slate-200">
+                    {costRows.map(({ label, note, amount }) => (
+                      <div key={label} className="flex items-center justify-between gap-4 py-2.5">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium text-slate-800">{label}</div>
+                          <div className="truncate text-[11px] text-slate-400">{note}</div>
+                        </div>
+                        <div className="shrink-0 text-sm font-semibold text-slate-800">{money(amount, canViewFinancials)}</div>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between gap-4 bg-slate-50 px-3 py-2.5">
+                      <span className="text-xs font-bold text-slate-600">Tổng giá vốn</span>
+                      <span className="text-sm font-bold text-slate-900">{money(landedCost, canViewFinancials)}</span>
                     </div>
-                  ))}
-                  <div className="flex items-center justify-between border-t border-slate-200 bg-slate-950 px-4 py-3 text-white">
-                    <span className="text-xs font-bold text-slate-300">Tổng giá vốn</span>
-                    <span className="text-sm font-bold">{money(landedCost, canViewFinancials)}</span>
                   </div>
                 </div>
               </div>
@@ -355,7 +365,7 @@ export default function WatchDetailUiProposal({
                     </div>
                     {values.content.bulletSpecs.length > 0 && (
                       <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-                        {values.content.bulletSpecs.map((item, index) => <li key={`${item}-${index}`} className="flex gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700"><CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />{item}</li>)}
+                        {values.content.bulletSpecs.map((item, index) => <li key={`${item}-${index}`} className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700">{item}</li>)}
                       </ul>
                     )}
                     {values.content.hashTags && <p className="mt-4 text-xs font-semibold text-blue-600">{values.content.hashTags}</p>}
@@ -383,31 +393,22 @@ export default function WatchDetailUiProposal({
           </div>
 
           <aside className="space-y-4 xl:sticky xl:top-[76px]">
-            <section id="service-history" className="scroll-mt-24 rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-              <div className="flex items-center justify-between">
-                <h2 className="flex items-center gap-2 text-sm font-bold"><Wrench className="h-4 w-4 text-emerald-600" /> Service</h2>
-                <ChevronRight className="h-4 w-4 text-slate-300" />
-              </div>
-              <div className={`mt-4 flex items-center gap-3 rounded-lg p-3 ${activeIssues ? "bg-amber-50" : "bg-emerald-50"}`}>
-                <ShieldCheck className={`h-5 w-5 shrink-0 ${activeIssues ? "text-amber-600" : "text-emerald-600"}`} />
-                <div>
-                  <div className={`text-xs font-bold ${activeIssues ? "text-amber-900" : "text-emerald-900"}`}>{activeIssues ? `${activeIssues} TI đang xử lý` : "Không có TI đang xử lý"}</div>
-                  <div className={`mt-0.5 text-[10px] ${activeIssues ? "text-amber-700" : "text-emerald-700"}`}>Xem chi tiết trong Service Board</div>
-                </div>
-              </div>
-              <Link href="/admin/services/operation" className={`mt-3 inline-flex h-9 w-full items-center justify-center rounded-lg border text-xs font-bold ${activeIssues ? "border-amber-200 text-amber-700 hover:bg-amber-50" : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"}`}>
-                Mở Service Board
-              </Link>
-            </section>
+            <ServiceCard
+              projection={service as Parameters<typeof ServiceCard>[0]["projection"]}
+              productId={values.productId}
+              title={title}
+              sku={values.header.sku}
+              onPreview={(request) => openRelatedPreview("SERVICE", request, "Service Request")}
+              onIssuePreview={(issue) => openRelatedPreview("TECHNICAL_ISSUE", issue, "Technical Issue")}
+            />
 
             <section id="trade-history" className="scroll-mt-24 rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
               <div className="flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-sm font-bold"><ArrowLeftRight className="h-4 w-4 text-indigo-600" /> Lịch sử mua bán</h2>
-                <button className="text-[10px] font-bold text-indigo-700">Xem tất cả</button>
               </div>
               <div className="mt-4 space-y-3">
                 {transactionEvents.length ? transactionEvents.map((event, index) => (
-                  <div key={`${event.label}-${index}`} className="flex items-start gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+                  <button type="button" onClick={() => openRelatedPreview(event.type, { id: event.id }, event.label)} key={`${event.type}-${event.id || index}`} disabled={!event.id} className="flex w-full items-start gap-3 border-b border-slate-100 pb-3 text-left transition last:border-0 last:pb-0 hover:opacity-75 disabled:cursor-default disabled:opacity-100">
                     <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${event.tone}`}>
                       {event.label === "Nhập hàng" ? <Landmark className="h-4 w-4" /> : <BadgeDollarSign className="h-4 w-4" />}
                     </span>
@@ -418,7 +419,7 @@ export default function WatchDetailUiProposal({
                       </div>
                       <div className="mt-1 truncate text-[10px] text-slate-400">{normalizeDate(event.occurredAt)} · {event.party}</div>
                     </div>
-                  </div>
+                  </button>
                 )) : (
                   <div className="rounded-lg bg-slate-50 p-3 text-xs text-slate-500">Watch chưa có giao dịch mua bán.</div>
                 )}
@@ -444,32 +445,17 @@ export default function WatchDetailUiProposal({
               <div className="mt-3 flex items-start gap-2 text-[10px] leading-4 text-slate-400"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Checklist chỉ hiện vấn đề cần hành động, không lặp lại toàn bộ tiến độ.</div>
             </section>
 
-            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-              <div className="flex items-center justify-between">
-                <h2 className="flex items-center gap-2 text-sm font-bold"><History className="h-4 w-4 text-violet-600" /> Hoạt động gần đây</h2>
-                <Link href="/admin/activity" className="text-[10px] font-bold text-violet-700">Xem tất cả</Link>
-              </div>
-              <div className="mt-4 space-y-4">
-                {[
-                  ["Giá bán được cập nhật", "Hôm nay · 19:04"],
-                  ["Technical Issue hoàn tất", "Hôm nay · 16:14"],
-                  ["Payment được ghi nhận", "Hôm nay · 12:51"],
-                ].map(([label, time], index) => (
-                  <div key={label} className="flex gap-3">
-                    <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${index ? "bg-slate-300" : "bg-violet-500"}`} />
-                    <div><div className="text-xs font-semibold text-slate-700">{label}</div><div className="mt-1 text-[10px] text-slate-400">{time}</div></div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="rounded-xl border border-dashed border-slate-300 bg-slate-50/60 p-4 text-xs text-slate-500">
-              <div className="flex items-center gap-2 font-bold text-slate-700"><Box className="h-4 w-4" /> Diagnostics đã được ẩn</div>
-              <p className="mt-2 leading-5">Projection feed và contract kỹ thuật sẽ nằm trong menu quản trị, không chiếm không gian vận hành chính.</p>
-            </section>
           </aside>
         </div>
       </div>
+      <BusinessEntityPreviewModal
+        open={previewState.open}
+        preview={previewState.preview}
+        loading={previewState.loading}
+        error={previewState.error}
+        onClose={previewState.closePreview}
+        onActivityChanged={previewState.refreshPreview}
+      />
       {mediaOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 p-3 sm:p-4" role="dialog" aria-modal="true" aria-label={`Xử lý Media - ${title}`}>
           <div className="flex h-[94vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
