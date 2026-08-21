@@ -65,6 +65,8 @@ type Props = {
     presentation?: "dialog" | "page";
 };
 
+const EMPTY_KEYS: string[] = [];
+
 function cx(...classes: Array<string | false | null | undefined>) {
     return classes.filter(Boolean).join(" ");
 }
@@ -149,8 +151,8 @@ export default function MediaBrowserDialog({
     profile = "inline",
     audienceSegment,
     selectedKey,
-    selectedKeys = [],
-    disabledKeys = [],
+    selectedKeys = EMPTY_KEYS,
+    disabledKeys = EMPTY_KEYS,
     selectionMode = "single",
     maxSelection = 9999,
     title = "Chọn ảnh từ thư viện",
