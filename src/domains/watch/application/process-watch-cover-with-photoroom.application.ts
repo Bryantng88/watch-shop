@@ -181,7 +181,7 @@ export async function composeBasicStorefrontCover(cutoutBytes: Uint8Array) {
     .toBuffer();
 }
 
-async function composeAdjustedStorefrontCover(
+export async function composeAdjustedStorefrontCover(
   cutoutBytes: Uint8Array,
   adjustment: PhotoRoomAdjustment,
   rotationDelta: number,
@@ -192,12 +192,16 @@ async function composeAdjustedStorefrontCover(
   const sizeScale = sourceHasTransparentBackground
     ? normalizedZoom(adjustment) / 100
     : normalizedZoom(adjustment) / Math.max(40, baseZoomPercent);
-  const subjectSource = sourceHasTransparentBackground
-    ? sharp(cutoutBytes)
-    : sharp(cutoutBytes).trim({
+  // Materialize opaque-background extraction before applying the transform
+  // pipeline. Keeping both trims in one Sharp pipeline can leave the original
+  // white canvas intact, so a 100% layout merely preserves a tiny subject.
+  const subjectBytes = sourceHasTransparentBackground
+    ? Buffer.from(cutoutBytes)
+    : await sharp(cutoutBytes).trim({
       background: { r: 255, g: 255, b: 255, alpha: 1 },
       threshold: 12,
-    });
+    }).png().toBuffer();
+  const subjectSource = sharp(subjectBytes);
   const orientedSource = flipHorizontalDelta ? subjectSource.flop() : subjectSource;
   const rotated = await orientedSource
     .rotate(rotationDelta, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
@@ -206,8 +210,13 @@ async function composeAdjustedStorefrontCover(
     .toBuffer({ resolveWithObject: true });
   const resized = await sharp(rotated.data)
     .resize({
-      width: Math.max(1, Math.floor((sourceHasTransparentBackground ? COVER_WIDTH : rotated.info.width) * sizeScale)),
-      height: Math.max(1, Math.floor((sourceHasTransparentBackground ? COVER_HEIGHT : rotated.info.height) * sizeScale)),
+      // `zoomPercent: 100` is the public layout contract for "fit subject in
+      // frame". Opaque PhotoRoom/Sharp results are trimmed to their subject
+      // above, so they must use the cover box as the sizing basis too. Using
+      // their old pixel bounds here preserved the whitespace of the previous
+      // canvas and made the Watch appear tiny when reopening Sharp.
+      width: Math.max(1, Math.floor(COVER_WIDTH * sizeScale)),
+      height: Math.max(1, Math.floor(COVER_HEIGHT * sizeScale)),
       fit: "inside",
       withoutEnlargement: false,
     })

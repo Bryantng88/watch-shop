@@ -929,7 +929,7 @@ export default function WatchImageSection({
                 localBaseEnhanceMetal={reusableSharpBaseAdjustment?.enhanceMetal}
                 localBaseShadowMode={reusableSharpBaseAdjustment?.shadowMode}
                 localBaseAdjustment={reusableSharpBaseAdjustment}
-                previewIsTransparentCutout={isTransparentSharpCoverKey(localLayoutBaseKey)}
+                previewIsTransparentCutout={isTransparentSharpCoverKey(reusableSharpKey)}
                 productId={productId}
                 localPreviewStorageKey={reusableSharpKey}
                 localDisabledReason="Cần tạo Cover sạch bằng PhotoRoom một lần trước khi dùng Sharp"

@@ -16,6 +16,7 @@ import {
   replaceShipmentExpenseTx,
   setOrderCodCollectedTx,
 } from "@/domains/payment/server";
+import { reconcileOrderSettlementTx } from "@/domains/order/server/order-completion.service";
 import { syncWatchInventoryFromOrderId } from "@/domains/order/server/order-watch-sync.service";
 import type {
   CompleteShipmentInput,
@@ -286,11 +287,22 @@ export async function markShipmentDelivered(input: CompleteShipmentInput) {
       await tx.order.update({ where: { id: shipment.orderId }, data: { status: OrderStatus.SHIPPED, updatedAt: new Date() } });
     }
     const summary = await recomputeOrderPaymentRollupTx(tx, shipment.orderId);
-    await syncWatchInventoryFromOrderId(tx, shipment.orderId);
+    const settlement = await reconcileOrderSettlementTx(tx, shipment.orderId, {
+      totalDue: summary.totalDue,
+      paidTotal: summary.paidTotal,
+      collectedTotal: summary.collectedTotal,
+      depositPaid: summary.paidTotal + summary.collectedTotal,
+    });
+    // The completion gate owns the SOLD transition. Orders that are not yet
+    // settled still need the regular HOLD inventory reconciliation.
+    if (!settlement.completed) {
+      await syncWatchInventoryFromOrderId(tx, shipment.orderId);
+    }
     const commandResult = toPlain({
       shipment: updated,
       isCod,
       summary,
+      settlement,
       paymentMutations,
       shipmentMutation: {
         eventKey: "shipment.delivered",
