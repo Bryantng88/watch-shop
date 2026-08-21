@@ -541,23 +541,47 @@ export default function MediaBrowserDialog({
                             Về root
                         </button>
                         {enableRecycle ? (
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setInternalSelectedKeys([]);
-                                    handleOpenFolder(
-                                        browsingRecycle ? rootPrefix : recyclePrefix
-                                    );
-                                }}
-                                className="inline-flex items-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 hover:bg-amber-100"
-                            >
-                                {browsingRecycle ? (
-                                    <RefreshCw className="mr-1 h-4 w-4" />
-                                ) : (
-                                    <Trash2 className="mr-1 h-4 w-4" />
-                                )}
-                                {browsingRecycle ? "Về thư viện" : "Xem Recycle"}
-                            </button>
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setInternalSelectedKeys([]);
+                                        handleOpenFolder(
+                                            browsingRecycle ? rootPrefix : recyclePrefix
+                                        );
+                                    }}
+                                    className="inline-flex items-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 hover:bg-amber-100"
+                                >
+                                    {browsingRecycle ? (
+                                        <RefreshCw className="mr-1 h-4 w-4" />
+                                    ) : (
+                                        <Trash2 className="mr-1 h-4 w-4" />
+                                    )}
+                                    {browsingRecycle ? "Về thư viện" : "Xem Recycle"}
+                                </button>
+                                {presentation === "page" ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRecycleAction(browsingRecycle ? "RESTORE" : "RECYCLE")}
+                                        disabled={internalSelectedKeys.length === 0 || recyclePending}
+                                        className={cx(
+                                            "inline-flex items-center rounded-xl border px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50",
+                                            browsingRecycle
+                                                ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                                : "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100",
+                                        )}
+                                    >
+                                        {recyclePending ? (
+                                            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                                        ) : browsingRecycle ? (
+                                            <RotateCcw className="mr-1 h-4 w-4" />
+                                        ) : (
+                                            <Trash2 className="mr-1 h-4 w-4" />
+                                        )}
+                                        {browsingRecycle ? "Khôi phục ảnh đã chọn" : "Đưa vào Recycle"}
+                                    </button>
+                                ) : null}
+                            </>
                         ) : null}
                     </div>
                 </div>
