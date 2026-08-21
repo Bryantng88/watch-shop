@@ -13,6 +13,7 @@ import { Dialog, DialogFooter, FieldLabel, Select } from "./shared";
 
 type Props = {
   open: boolean;
+  mode?: "photoroom" | "sharp";
   pending: boolean;
   localPending?: boolean;
   previewSrc?: string | null;
@@ -72,6 +73,7 @@ function PositionControl({
 
 export default function PhotoRoomAdjustmentDialog({
   open,
+  mode = "photoroom",
   pending,
   localPending = false,
   previewSrc,
@@ -161,9 +163,12 @@ export default function PhotoRoomAdjustmentDialog({
       : value.shadowMode === "floating"
         ? "drop-shadow(14px 18px 15px rgba(30,34,36,.2))"
         : "drop-shadow(8px 10px 10px rgba(30,34,36,.16))";
-  const localAvailable = canProcessLocally
-    && value.enhanceMetal === localBaseEnhanceMetal
-    && value.shadowMode === localBaseShadowMode;
+  const localAvailable = canProcessLocally && (
+    mode === "sharp" || (
+      value.enhanceMetal === localBaseEnhanceMetal
+      && value.shadowMode === localBaseShadowMode
+    )
+  );
 
   const commands = [
     `Căn ${labels.horizontalAlignment[value.horizontalAlignment].toLowerCase()} theo chiều ngang`,
@@ -171,9 +176,11 @@ export default function PhotoRoomAdjustmentDialog({
     `Thu phóng chủ thể: ${zoomPercent}%`,
     `Dịch ngang: ${value.horizontalOffsetPercent > 0 ? "+" : ""}${value.horizontalOffsetPercent}%`,
     `Dịch dọc: ${value.verticalOffsetPercent > 0 ? "+" : ""}${value.verticalOffsetPercent}%`,
-    `Shadow: ${labels.shadowMode[value.shadowMode].toLowerCase()}`,
-    `Nền: ${labels.backgroundMode[value.backgroundMode].toLowerCase()}`,
-    value.enhanceMetal ? "Tăng độ bóng kim loại nhẹ" : "Giữ bề mặt kim loại tự nhiên",
+    ...(mode === "photoroom" ? [
+      `Shadow: ${labels.shadowMode[value.shadowMode].toLowerCase()}`,
+      `Nền: ${labels.backgroundMode[value.backgroundMode].toLowerCase()}`,
+      value.enhanceMetal ? "Tăng độ bóng kim loại nhẹ" : "Giữ bề mặt kim loại tự nhiên",
+    ] : []),
     value.flipHorizontal ? "Lật hướng ảnh trái ↔ phải" : "Giữ nguyên hướng ảnh",
     totalRotationDegrees === 0 ? "Không xoay vật thể" : `Xoay vật thể ${rotationLabel.toLowerCase()}`,
     "Giữ khung 2048 × 3840",
@@ -183,8 +190,10 @@ export default function PhotoRoomAdjustmentDialog({
     <Dialog
       open={open}
       onClose={pending ? () => undefined : onClose}
-      title="Điều chỉnh Cover"
-      description="Xoay, zoom và căn bố cục bằng Sharp không tốn quota sau lần PhotoRoom đầu; thay đổi AI shadow hoặc làm bóng mới cần gọi PhotoRoom."
+      title={mode === "sharp" ? "Điều chỉnh Cover bằng Sharp" : "Điều chỉnh Cover bằng PhotoRoom"}
+      description={mode === "sharp"
+        ? "Chỉ xử lý zoom, căn vị trí, xoay và lật bằng Sharp; không gọi AI và không tốn quota PhotoRoom."
+        : "PhotoRoom dùng cho tách nền, AI shadow và tăng bóng kim loại."}
       maxWidthClass="max-w-5xl"
     >
       <div className="grid gap-5 lg:grid-cols-[1.15fr_.85fr]">
@@ -248,6 +257,7 @@ export default function PhotoRoomAdjustmentDialog({
           </div>
           <PositionControl label="Vị trí ngang" value={value.horizontalOffsetPercent} negativeLabel="Trái" positiveLabel="Phải" onChange={(next) => update("horizontalOffsetPercent", next)} />
           <PositionControl label="Vị trí dọc" value={value.verticalOffsetPercent} negativeLabel="Lên" positiveLabel="Xuống" onChange={(next) => update("verticalOffsetPercent", next)} />
+          {mode === "photoroom" ? <>
           <label>
             <FieldLabel>Shadow</FieldLabel>
             <Select value={value.shadowMode} onChange={(event) => update("shadowMode", event.target.value as PhotoRoomAdjustment["shadowMode"])} options={Object.entries(labels.shadowMode).map(([value, label]) => ({ value, label }))} />
@@ -271,6 +281,7 @@ export default function PhotoRoomAdjustmentDialog({
               <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition ${value.enhanceMetal ? "left-[18px]" : "left-0.5"}`} />
             </span>
           </button>
+          </> : null}
           <label className="sm:col-span-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5">
             <span className="flex items-center justify-between gap-3">
               <span>
@@ -369,7 +380,7 @@ export default function PhotoRoomAdjustmentDialog({
 
       <DialogFooter>
         <button type="button" onClick={onClose} disabled={pending} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">Hủy</button>
-        {onSubmitLocal ? (
+        {mode === "sharp" && onSubmitLocal ? (
           <button
             type="button"
             onClick={() => onSubmitLocal(value)}
@@ -384,10 +395,10 @@ export default function PhotoRoomAdjustmentDialog({
             {localPending ? "Sharp đang xử lý..." : "Xử lý bằng Sharp · không quota"}
           </button>
         ) : null}
-        <button type="button" onClick={() => onSubmit(value)} disabled={pending} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50">
+        {mode === "photoroom" ? <button type="button" onClick={() => onSubmit(value)} disabled={pending} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50">
           <Sparkles className="h-4 w-4" />
           {pending ? "PhotoRoom đang xử lý..." : "Tạo bằng AI PhotoRoom"}
-        </button>
+        </button> : null}
       </DialogFooter>
     </Dialog>
   );

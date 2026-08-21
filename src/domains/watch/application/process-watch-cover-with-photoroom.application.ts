@@ -9,7 +9,6 @@ import {
 import { mediaStorage } from "@/domains/media/storage";
 import {
   DEFAULT_PHOTOROOM_ADJUSTMENT,
-  isReusableSharpCoverKey,
   isTransparentSharpCoverKey,
   type PhotoRoomAdjustment,
 } from "@/domains/watch/shared/photoroom-adjustment";
@@ -276,10 +275,6 @@ export async function recreateWatchCoverWithSharpApplication(input: {
   const sourceKey = String(input.storageKey ?? "").trim();
   if (!productId || !sourceKey) throw new Error("Thiếu Watch hoặc ảnh nguồn.");
   const isTransparentCutout = isTransparentSharpCoverKey(sourceKey);
-  const isReusableResult = isReusableSharpCoverKey(sourceKey);
-  if (!isReusableResult) {
-    throw new Error("Sharp chỉ xử lý Cover đã qua PhotoRoom/Sharp; ảnh gốc cần PhotoRoom tạo nền sạch lần đầu.");
-  }
 
   await getWatchMediaOwner(productId);
   const source = await mediaStorage.read(sourceKey);
@@ -327,9 +322,6 @@ export async function previewWatchCoverWithSharpApplication(input: {
   const sourceKey = String(input.storageKey ?? "").trim();
   if (!productId || !sourceKey) throw new Error("Thiếu Watch hoặc ảnh nguồn.");
   const isTransparentCutout = isTransparentSharpCoverKey(sourceKey);
-  if (!isReusableSharpCoverKey(sourceKey)) {
-    throw new Error("Preview Sharp chỉ hỗ trợ Cover đã qua PhotoRoom/Sharp.");
-  }
   const watchExists = await prisma.watch.findFirst({
     where: { productId },
     select: { id: true },

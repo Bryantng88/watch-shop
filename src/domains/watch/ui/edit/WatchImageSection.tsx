@@ -176,13 +176,14 @@ export default function WatchImageSection({
     );
     const [photoRoomPending, setPhotoRoomPending] = useState(false);
     const [photoRoomAdjustmentOpen, setPhotoRoomAdjustmentOpen] = useState(false);
+    const [adjustmentDialogMode, setAdjustmentDialogMode] = useState<"photoroom" | "sharp">("photoroom");
     const [photoRoomSourceKey, setPhotoRoomSourceKey] = useState<string | null>(null);
     const [hasPhotoRoomResult, setHasPhotoRoomResult] = useState(() =>
         isReusableSharpCoverKey(getMediaKey(coverImage ?? ({} as PickedMediaItem))),
     );
     const [photoRoomAdjustment, setPhotoRoomAdjustment] = useState<PhotoRoomAdjustment>(DEFAULT_PHOTOROOM_ADJUSTMENT);
     const [sharpPending, setSharpPending] = useState(false);
-    const [sharpCutoutKey, setSharpCutoutKey] = useState<string | null>(null);
+    const [, setSharpCutoutKey] = useState<string | null>(null);
     const [localLayoutBaseKey, setLocalLayoutBaseKey] = useState<string | null>(null);
     const [localLayoutBaseAdjustment, setLocalLayoutBaseAdjustment] = useState<PhotoRoomAdjustment | null>(null);
     const [taskUsers, setTaskUsers] = useState<TaskUserOption[]>([]);
@@ -204,9 +205,19 @@ export default function WatchImageSection({
     const currentReviewStatus = normalizeStatus(imageReviewStatus);
     const currentCoverKey = coverImage ? getMediaKey(coverImage) : "";
     const selectedCoverKey = (pendingCoverKey || currentCoverKey).trim();
-    const reusableSharpKey = localLayoutBaseKey || (isReusableSharpCoverKey(selectedCoverKey) ? selectedCoverKey : null);
+    // Canva-prepared covers are valid geometry sources even without a
+    // PhotoRoom derivative marker. Sharp trims their white canvas and only
+    // applies zoom/alignment/rotation; it does not remove the background.
+    const reusableSharpKey = localLayoutBaseKey || selectedCoverKey || null;
     const reusableSharpBaseAdjustment = localLayoutBaseAdjustment || (
-        reusableSharpKey ? DEFAULT_PHOTOROOM_ADJUSTMENT : null
+        reusableSharpKey
+            ? {
+                ...DEFAULT_PHOTOROOM_ADJUSTMENT,
+                shadowMode: isReusableSharpCoverKey(reusableSharpKey)
+                    ? DEFAULT_PHOTOROOM_ADJUSTMENT.shadowMode
+                    : "none" as const,
+            }
+            : null
     );
     const coverPreviewSrc = resolveMediaPreviewSrc(pendingCoverKey ?? currentCoverKey);
     const locked = !hideReviewActions && (
@@ -513,45 +524,6 @@ export default function WatchImageSection({
         }
     };
 
-    const handleSharpRecreate = async () => {
-        const selectedKey = (pendingCoverKey || currentCoverKey).trim();
-        const storageKey = sharpCutoutKey || (isTransparentSharpCoverKey(selectedKey) ? selectedKey : "");
-        if (!storageKey || coverPending || photoRoomPending || sharpPending) return;
-
-        setSharpPending(true);
-        try {
-            const res = await fetch(`/api/admin/watches/${productId}/storefront-image/sharp`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ storageKey }),
-            });
-            const json = await res.json().catch(() => null);
-            if (!res.ok) {
-                notify.error({
-                    title: "Sharp xử lý thất bại",
-                    message: json?.error || "Không tạo lại được ảnh bằng Sharp.",
-                });
-                return;
-            }
-
-            const outputKey = String(json?.data?.storageKey ?? "").trim();
-            if (!outputKey) throw new Error("Sharp không trả về khóa ảnh kết quả.");
-            setPendingCoverKey(outputKey);
-            setCoverPickerVersion((version) => version + 1);
-            notify.success({
-                title: "Sharp đã tạo lại ảnh",
-                message: "Không sử dụng quota PhotoRoom. Hãy preview rồi xác nhận Cover nếu đã ổn.",
-            });
-        } catch (error) {
-            notify.error({
-                title: "Sharp xử lý thất bại",
-                message: error instanceof Error ? error.message : "Có lỗi khi tạo lại ảnh bằng Sharp.",
-            });
-        } finally {
-            setSharpPending(false);
-        }
-    };
-
     const handleCoverReturn = async () => {
         if (!currentCoverKey || coverPending) return;
         const confirmed = await dialog.confirm({
@@ -736,38 +708,37 @@ export default function WatchImageSection({
                                 {pendingCoverKey ? (
                                     <span className="text-xs font-medium text-emerald-700">Ảnh mới đang chờ xác nhận</span>
                                 ) : null}
-                                {!hasPhotoRoomResult && (pendingCoverKey || currentCoverKey) ? (
+                                {(pendingCoverKey || currentCoverKey) ? (
                                     <button
                                         type="button"
-                                        onClick={() => setPhotoRoomAdjustmentOpen(true)}
+                                        onClick={() => {
+                                            setAdjustmentDialogMode("photoroom");
+                                            setPhotoRoomAdjustmentOpen(true);
+                                        }}
                                         disabled={coverPending || photoRoomPending}
                                         className="order-1 inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         <Sparkles className="h-3.5 w-3.5" />
-                                        {photoRoomPending ? "PhotoRoom đang xử lý..." : "Thiết lập & xử lý PhotoRoom"}
+                                        {photoRoomPending ? "PhotoRoom đang xử lý..." : "Xử lý PhotoRoom"}
                                     </button>
                                 ) : null}
-                                {hasPhotoRoomResult && (pendingCoverKey || currentCoverKey) ? (
+                                {(pendingCoverKey || currentCoverKey) ? (
                                     <button
                                         type="button"
-                                        onClick={() => setPhotoRoomAdjustmentOpen(true)}
+                                        onClick={() => {
+                                            setAdjustmentDialogMode("sharp");
+                                            setPhotoRoomAdjustment((current) => ({
+                                                ...current,
+                                                shadowMode: "none",
+                                                enhanceMetal: false,
+                                            }));
+                                            setPhotoRoomAdjustmentOpen(true);
+                                        }}
                                         disabled={coverPending || photoRoomPending || sharpPending}
-                                        className="order-1 inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="order-1 inline-flex items-center gap-1.5 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-semibold text-sky-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         <Sparkles className="h-3.5 w-3.5" />
-                                        Xử lý lại / điều chỉnh PhotoRoom
-                                    </button>
-                                ) : null}
-                                {sharpCutoutKey && (pendingCoverKey || currentCoverKey) ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => void handleSharpRecreate()}
-                                        disabled={coverPending || photoRoomPending || sharpPending || !sharpCutoutKey}
-                                        title={sharpCutoutKey ? "Tạo lại shadow từ cutout trong suốt" : "Ảnh cũ chưa có file cutout trong suốt"}
-                                        className="order-4 inline-flex items-center gap-1.5 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-semibold text-sky-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                        <Sparkles className="h-3.5 w-3.5" />
-                                        {sharpPending ? "Sharp đang xử lý..." : "Tạo lại bằng Sharp"}
+                                        {sharpPending ? "Sharp đang xử lý..." : "Căn chỉnh bằng Sharp"}
                                     </button>
                                 ) : null}
                                 {pendingCoverKey ? (
@@ -944,6 +915,7 @@ export default function WatchImageSection({
 
             {showCover ? <PhotoRoomAdjustmentDialog
                 open={photoRoomAdjustmentOpen}
+                mode={adjustmentDialogMode}
                 pending={photoRoomPending}
                 localPending={sharpPending}
                 previewSrc={resolveMediaPreviewSrc(localLayoutBaseKey ?? pendingCoverKey ?? currentCoverKey)}
