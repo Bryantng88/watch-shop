@@ -508,6 +508,12 @@ export default function WatchImageSection({
             if (!outputKey) throw new Error("Sharp không trả về khóa ảnh kết quả.");
             setPendingCoverKey(outputKey);
             setPhotoRoomAdjustment(adjustment);
+            // Keep the rendered Sharp result and its exact recipe paired as
+            // the next editing baseline. Without this, a later 115% request
+            // is applied to an already-zoomed image while being compared with
+            // the default 100%, causing cumulative jumps in subject size.
+            setLocalLayoutBaseKey(outputKey);
+            setLocalLayoutBaseAdjustment(adjustment);
             setPhotoRoomAdjustmentOpen(false);
             setCoverPickerVersion((version) => version + 1);
             notify.success({
