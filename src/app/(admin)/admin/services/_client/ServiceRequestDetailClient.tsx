@@ -247,7 +247,7 @@ export default function ServiceRequestDetailClient({ detail }: { detail: any }) 
                 priority={sr.priority || detail?.serviceRequest?.priority || null}
                 onEditSpec={
                     sr.productId
-                        ? () => router.push(`/admin/watches/${sr.productId}/edit`)
+                        ? () => router.push(`/admin/watches/${sr.productId}`)
                         : undefined
                 }
                 onOpenIssueBoard={

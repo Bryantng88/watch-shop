@@ -31,7 +31,6 @@ import WatchEditHeader from "../ui/edit/WatchEditHeader";
 import WatchBasicSection from "../ui/edit/WatchBasicSection";
 import WatchSpecModal from "../ui/edit/WatchSpecModal";
 import WatchContentSection from "../ui/edit/WatchContentSection";
-import WatchPricingSidebar from "../ui/edit/WatchPricingSidebar";
 import WatchImageSection from "../ui/edit/WatchImageSection";
 import WatchMediaSidebar from "../ui/edit/WatchMediaSidebar";
 import WatchStateSection from "../ui/edit/WatchStateSection";
@@ -419,7 +418,6 @@ export default function WatchFormClient({
   const basicRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const imageRef = useRef<HTMLDivElement | null>(null);
-  const pricingRef = useRef<HTMLDivElement | null>(null);
 
   const focus = searchParams.get("focus");
   const mediaEntryPoint = searchParams.get("entryPoint") === "WATCH_LIST_QUICK"
@@ -571,22 +569,6 @@ export default function WatchFormClient({
   useEffect(() => {
     valuesRef.current = values;
   }, [values]);
-
-  useEffect(() => {
-    if (focus !== "pricing") return;
-
-    window.setTimeout(() => {
-      pricingRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-
-      notify.info({
-        title: "Đang xem thay đổi giá",
-        message: "Pricing block đã được focus từ thông báo.",
-      });
-    }, 250);
-  }, [focus, notify]);
 
   const unsavedChangesMessage =
     "Bạn có thay đổi chưa lưu. Thoát khỏi trang này sẽ mất các chỉnh sửa hiện tại. Bạn vẫn muốn thoát?";
@@ -2107,25 +2089,6 @@ export default function WatchFormClient({
               }));
             }}
           />
-
-          <div
-            ref={pricingRef}
-            className={
-              focus === "pricing"
-                ? "rounded-[32px] ring-2 ring-amber-300 ring-offset-4 ring-offset-slate-50"
-                : ""
-            }
-          >
-            <WatchPricingSidebar
-              values={values.pricing}
-              canViewCost={canViewCost}
-              canEditPrice={canEditPrice}
-              notificationDiff={
-                focus === "pricing" ? searchParams.get("notificationId") : null
-              }
-              onChange={updatePricing}
-            />
-          </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="flex items-start justify-between gap-3">

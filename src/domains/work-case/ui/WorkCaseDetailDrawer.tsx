@@ -178,7 +178,7 @@ export default function WorkCaseDetailDrawer({
               <div className="min-w-0 py-1">
                 <div className="line-clamp-2 text-sm font-semibold text-slate-950">{title}</div>
                 <div className="mt-1 text-xs text-slate-500">SKU: {sku}</div>
-                <a href={`/admin/watches/${localItem.watch.productId}/edit`} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:text-blue-800">
+                <a href={`/admin/watches/${localItem.watch.productId}`} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:text-blue-800">
                   Mở watch <ExternalLink className="h-3.5 w-3.5" />
                 </a>
               </div>

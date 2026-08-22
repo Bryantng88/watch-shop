@@ -43,7 +43,7 @@ function buildRecentItems(input: Awaited<ReturnType<typeof getDashboardOverviewR
     type: "WATCH",
     title: row.product?.title || row.product?.sku || row.productId,
     subtitle: `Watch · ${row.saleStage || "-"}`,
-    href: `/admin/watches/${row.productId}/edit`,
+    href: `/admin/watches/${row.productId}`,
     updatedAt: iso(row.updatedAt),
   }));
 
