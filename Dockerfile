@@ -30,6 +30,11 @@ RUN groupadd --system --gid 1001 nodejs \
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Next's standalone tracer retains the crc32c package metadata but can omit its
+# dynamically resolved CommonJS build. S3-backed admin routes need that build at
+# runtime, so copy the complete package into the otherwise-minimal image.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@aws-crypto/crc32c ./node_modules/@aws-crypto/crc32c
+RUN node -e "require('@aws-crypto/crc32c')"
 
 USER nextjs
 EXPOSE 3000
