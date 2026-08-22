@@ -93,6 +93,7 @@ export type PublicWatchCard = {
   tag: string | null;
   condition: string | null;
   availability: "AVAILABLE" | "HOLD" | "SOLD";
+  orderable: boolean;
   updatedAt: string;
   /** Development diagnostic populated for related-watch results. */
   relatedScore?: number;

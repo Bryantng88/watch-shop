@@ -94,6 +94,10 @@ export function mapPublicWatchCard(row: PublicWatchListRow): PublicWatchCard {
     tag: row.tag ?? null,
     condition: row.watch.conditionGrade ?? null,
     availability: row.watch.saleStage === "SOLD" || row.status === "SOLD" ? "SOLD" : row.watch.saleStage === "HOLD" || row.status === "HOLD" ? "HOLD" : "AVAILABLE",
+    orderable:
+      row.status === "AVAILABLE" &&
+      (row.watch.saleStage === "PROCESSING" || row.watch.saleStage === "READY") &&
+      row.watch.stockStage === "IN_STOCK",
     updatedAt: row.updatedAt.toISOString(),
   };
 }

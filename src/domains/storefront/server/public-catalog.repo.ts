@@ -216,7 +216,9 @@ export function publicWatchOrderableWhere(): Prisma.ProductWhereInput {
         status: ProductStatus.AVAILABLE,
         watch: {
           is: {
-            saleStage: WatchSaleStage.READY,
+            saleStage: {
+              in: [WatchSaleStage.PROCESSING, WatchSaleStage.READY],
+            },
             stockStage: WatchStockStage.IN_STOCK,
           },
         },

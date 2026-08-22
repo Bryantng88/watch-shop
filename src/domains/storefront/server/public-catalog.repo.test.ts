@@ -49,6 +49,6 @@ test("contact-price watches remain eligible for a purchase request", () => {
   assert.equal(where.includes('"priceVisibility":"SHOW"'), false);
   assert.match(where, /"priceVisibility":"HIDE"/);
   assert.match(where, /"status":"AVAILABLE"/);
-  assert.match(where, /"saleStage":"READY"/);
+  assert.match(where, /"saleStage":\{"in":\["PROCESSING","READY"\]\}/);
   assert.match(where, /"stockStage":"IN_STOCK"/);
 });

@@ -57,6 +57,7 @@ function fixture(priceVisibility: "SHOW" | "HIDE" = "SHOW") {
     id: "product-1",
     slug: "omega-seamaster-1",
     title: "Omega Seamaster",
+    status: "AVAILABLE",
     priceVisibility,
     tag: "VINTAGE",
     updatedAt: new Date("2026-08-05T00:00:00.000Z"),
@@ -88,6 +89,8 @@ function fixture(priceVisibility: "SHOW" | "HIDE" = "SHOW") {
       },
     ],
     watch: {
+      saleStage: "READY",
+      stockStage: "IN_STOCK",
       audienceSegment: "MEN",
       conditionGrade: "A",
       watchPrice: { salePrice: new Prisma.Decimal(12_500_000) },
@@ -124,10 +127,10 @@ function main() {
   assertNoForbiddenKeys(publicWatchDetailSelect, "public detail select");
 
   const eligibility = JSON.stringify(publicWatchEligibilityWhere({ requireCoverImage: true }));
-  for (const required of ["AVAILABLE", "HOLD", "SOLD", "READY", "APPROVED", "isForStorefront", "COVER"]) {
+  for (const required of ["AVAILABLE", "HOLD", "SOLD", "isForStorefront", "COVER"]) {
     assert.ok(eligibility.includes(required), `eligibility is missing ${required}`);
   }
-  assert.equal(eligibility.includes("publishedAt"), false, "storefront must not require channel posting");
+  assert.equal(eligibility.includes("publishedAt"), true, "quick-published watches may bypass stale product status");
   assert.equal(eligibility.includes("contentStatus"), false, "approved review pair is the media readiness source of truth");
   assert.equal(storefrontCoverImageRequired(undefined), true, "cover gate must fail closed");
   assert.equal(storefrontCoverImageRequired("0"), false, "staging bypass must be explicit");
@@ -136,11 +139,10 @@ function main() {
     false,
     "cover bypass must retain the rest of the storefront eligibility gate",
   );
-  for (const blocked of ["DRAFT", "PROCESSING"]) {
-    assert.ok(!eligibility.includes(`\"${blocked}\"`), `eligibility must not include ${blocked}`);
-  }
+  assert.equal(eligibility.includes("PROCESSING"), false, "eligibility must not explicitly require processing");
 
   const card = mapPublicWatchCard(fixture());
+  assert.equal(card.orderable, true);
   assert.equal(card.price.mode, "SHOW");
   assert.equal(card.price.amount, 12_500_000);
   assert.equal(card.image.url, "/api/public/catalog/watches/product-1/images/image-1");
@@ -149,6 +151,14 @@ function main() {
 
   const contactCard = mapPublicWatchCard(fixture("HIDE"));
   assert.deepEqual(contactCard.price, { mode: "CONTACT", amount: null, currency: "VND" });
+  assert.equal(contactCard.orderable, true, "contact-price watches may be requested when sale-ready");
+
+  const processingCard = mapPublicWatchCard({
+    ...fixture("HIDE"),
+    watch: { ...fixture("HIDE").watch, saleStage: "PROCESSING" },
+  } as PublicWatchDetailRow);
+  assert.equal(processingCard.availability, "AVAILABLE");
+  assert.equal(processingCard.orderable, true, "available processing watches may enter a purchase request");
 
   const detail = mapPublicWatchDetail(fixture());
   assert.equal(detail.gallery.length, 2);
