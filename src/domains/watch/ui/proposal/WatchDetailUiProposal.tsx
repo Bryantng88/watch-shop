@@ -26,7 +26,10 @@ import { mapWatchDetailToFormValues } from "@/domains/watch/client/form/watch-fo
 import {
   moneyText,
   normalizeDate,
+  onlyMoney,
 } from "@/domains/watch/client/workbench/workbench-utils";
+import { saveWatchWorkbenchPricingAction } from "@/domains/watch/client/workbench/watch-workbench.actions";
+import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 import type { BusinessEntityPreview } from "@/domains/shared/business/business-entity.types";
 import {
@@ -92,8 +95,12 @@ export default function WatchDetailUiProposal({
   mediaWorkspace?: RecordValue;
 }) {
   const [mediaOpen, setMediaOpen] = useState(false);
+  const [pricingOpen, setPricingOpen] = useState(false);
+  const [savingPrice, setSavingPrice] = useState(false);
   const previewState = useBusinessEntityPreview();
+  const notify = useNotify();
   const values = mapWatchDetailToFormValues(detail);
+  const [salePriceValue, setSalePriceValue] = useState(values.pricing.salePrice);
   const brand = record(detail.brand);
   const vendor = record(detail.vendor);
   const images = rows(detail.images);
@@ -127,7 +134,7 @@ export default function WatchDetailUiProposal({
   const shipmentCost = number(summary.shipmentAmount);
   const otherCost = number(summary.otherAmount);
   const landedCost = number(summary.landedCost);
-  const salePrice = number(values.pricing.salePrice || values.pricing.listPrice);
+  const salePrice = number(salePriceValue || values.pricing.listPrice);
   const profit = salePrice - landedCost;
   const margin = salePrice > 0 ? profit / salePrice * 100 : 0;
   const costRows = [
@@ -187,6 +194,33 @@ export default function WatchDetailUiProposal({
       subtitle: title,
       status: text(item?.status, "") || null,
     });
+  }
+
+  async function saveSalePrice() {
+    if (savingPrice) return;
+    setSavingPrice(true);
+    try {
+      const result = await saveWatchWorkbenchPricingAction({
+        productId: values.productId,
+        pricing: { ...values.pricing, salePrice: salePriceValue },
+        title,
+        sku: values.header.sku,
+      });
+      notify.success({
+        title: result.changedFields.length ? "Đã cập nhật giá bán" : "Giá bán không đổi",
+        message: result.changedFields.length
+          ? "Giá mới đã được lưu và đồng bộ projection."
+          : "Không có thay đổi mới cần lưu.",
+      });
+      setPricingOpen(false);
+    } catch (error) {
+      notify.error({
+        title: "Không cập nhật được giá bán",
+        message: error instanceof Error ? error.message : "Có lỗi khi lưu giá bán.",
+      });
+    } finally {
+      setSavingPrice(false);
+    }
   }
 
   return (
@@ -292,9 +326,9 @@ export default function WatchDetailUiProposal({
                   <p className="mt-1 text-xs text-slate-400">Một nguồn thông tin tài chính duy nhất cho Watch.</p>
                 </div>
                 {canEditPrice ? (
-                  <Link href={`${editHref}#pricing`} className="inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 px-3 text-xs font-bold text-violet-700">
+                  <button type="button" onClick={() => setPricingOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 px-3 text-xs font-bold text-violet-700">
                     <Pencil className="h-3.5 w-3.5" /> Chỉnh giá bán
-                  </Link>
+                  </button>
                 ) : null}
               </div>
 
@@ -456,6 +490,28 @@ export default function WatchDetailUiProposal({
         onClose={previewState.closePreview}
         onActivityChanged={previewState.refreshPreview}
       />
+      {pricingOpen && (
+        <div className="fixed inset-0 z-[110] grid place-items-center bg-slate-950/55 p-4" role="dialog" aria-modal="true" aria-label="Chỉnh giá bán">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl ring-1 ring-slate-900/10">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-slate-950">Chỉnh giá bán</h2>
+                <p className="mt-1 text-xs text-slate-500">{title}</p>
+              </div>
+              <button type="button" onClick={() => setPricingOpen(false)} disabled={savingPrice} aria-label="Đóng" className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"><X className="h-4 w-4" /></button>
+            </div>
+            <label className="mt-5 block text-[10px] font-bold uppercase tracking-wide text-slate-500" htmlFor="watch-sale-price">Giá bán</label>
+            <div className="mt-2 flex h-12 items-center rounded-xl border border-slate-300 bg-white px-3 focus-within:border-violet-500 focus-within:ring-4 focus-within:ring-violet-50">
+              <input id="watch-sale-price" autoFocus inputMode="numeric" value={salePriceValue} disabled={savingPrice} onChange={(event) => setSalePriceValue(onlyMoney(event.target.value))} className="min-w-0 flex-1 bg-transparent text-lg font-bold text-slate-950 outline-none" />
+              <span className="text-sm font-semibold text-slate-500">đ</span>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={() => setPricingOpen(false)} disabled={savingPrice} className="h-10 rounded-lg border border-slate-200 px-4 text-xs font-semibold text-slate-600">Hủy</button>
+              <button type="button" onClick={() => void saveSalePrice()} disabled={savingPrice} className="h-10 rounded-lg bg-slate-950 px-5 text-xs font-bold text-white disabled:opacity-60">{savingPrice ? "Đang lưu..." : "Lưu giá bán"}</button>
+            </div>
+          </div>
+        </div>
+      )}
       {mediaOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 p-3 sm:p-4" role="dialog" aria-modal="true" aria-label={`Xử lý Media - ${title}`}>
           <div className="flex h-[94vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
