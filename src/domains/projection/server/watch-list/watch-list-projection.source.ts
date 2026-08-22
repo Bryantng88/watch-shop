@@ -2,6 +2,7 @@ import { ImageRole, Prisma, TaskExecutionActionType, TaskExecutionTargetType } f
 import { dbOrTx, type DB } from "@/server/db/client";
 import { getQueueItemWorkflowState } from "@/domains/task/server/business-binding-workflow.service";
 import { watchActivityLabel } from "@/domains/watch/shared/watch-activity";
+import { findStorefrontEligibleProductIds } from "@/domains/storefront/server/public-catalog.repo";
 import type {
   WatchListProjectionLastAction,
   WatchListProjectionMediaState,
@@ -439,7 +440,7 @@ export async function loadWatchListProjectionSourceRows(
     take: limit,
   });
 
-  const [mediaStatesByWatchId, serviceStatesByWatchId, lastActionsByWatchId] = await Promise.all([
+  const [mediaStatesByWatchId, serviceStatesByWatchId, lastActionsByWatchId, storefrontProductIds] = await Promise.all([
     loadMediaStatesByWatchId(
       db,
       rows.map((row) => row.id),
@@ -449,13 +450,17 @@ export async function loadWatchListProjectionSourceRows(
       rows.map((row) => ({ id: row.id, productId: row.productId })),
     ),
     loadLastActionsByWatchId(db, rows.map((row) => row.id)),
+    findStorefrontEligibleProductIds(db, rows.map((row) => row.productId)),
   ]);
+
+  const storefrontProductIdSet = new Set(storefrontProductIds);
 
   return rows.map((row) => ({
     ...row,
     __mediaState: mediaStatesByWatchId.get(row.id) ?? [],
     __serviceState: serviceStatesByWatchId.get(row.id) ?? null,
     __lastAction: lastActionsByWatchId.get(row.id) ?? null,
+    __storefrontEligible: storefrontProductIdSet.has(row.productId),
   })) as WatchListProjectionSourceRow[];
 }
 

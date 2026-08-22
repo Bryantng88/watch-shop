@@ -20,7 +20,7 @@ export default function OrderStatusPanel({ data }: { data: OrderDetailData }) {
           <DetailText label="Cập nhật" value={fmtDate(data.updatedAt)} />
         </div>
 
-        <div className="rounded-3xl bg-slate-50 p-4 text-sm leading-6 text-slate-600 ring-1 ring-slate-200/70">
+        <div className="rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600 ring-1 ring-slate-200/70">
           {effect === "HOLD"
             ? "Order này đang giữ watch và sẽ chặn quick order khác cho cùng sản phẩm."
             : effect === "SOLD"

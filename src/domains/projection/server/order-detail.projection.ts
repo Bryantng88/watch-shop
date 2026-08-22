@@ -24,11 +24,14 @@ export async function buildOrderDetailProjectionRow(db: DB, orderId: string) {
   const subtotal = toNumberPrice(row.subtotal);
   const shippingAmount = toNumberPrice(row.shippingAmount);
   const depositPaid = toNumberPrice(row.depositPaid);
+  const depositRequired = toNumberPrice(row.depositRequired);
   const data = toPlain({
     ...row,
     currency: "VND",
     subtotal,
     shippingAmount,
+    depositPaid,
+    depositRequired,
     totalAmount: subtotal,
     remainingAmount: Math.max(0, subtotal - depositPaid),
     items: row.orderItem.map((item) => ({

@@ -194,6 +194,7 @@ export type WatchListProjectionSourceRow = {
   __mediaState?: WatchListProjectionMediaState[];
   __serviceState?: WatchListProjectionServiceState | null;
   __lastAction?: WatchListProjectionLastAction | null;
+  __storefrontEligible?: boolean;
 };
 
 export type WatchListProjectionListResult = WatchListResult & {

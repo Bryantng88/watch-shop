@@ -36,11 +36,12 @@ test("sold watches remain visible even when their service stage is not complete"
   );
 });
 
-test("quick-published watches can bypass a stale product status", () => {
+test("storefront requires explicit publication and a sellable product status", () => {
   const where = JSON.stringify(publicWatchEligibilityWhere({ requireCoverImage: true }));
 
   assert.match(where, /"publishedAt":\{"not":null\}/);
   assert.match(where, /"status":\{"in":\["AVAILABLE","HOLD","SOLD"\]\}/);
+  assert.doesNotMatch(where, /"OR":\[\{"status":/);
 });
 
 test("contact-price watches remain eligible for a purchase request", () => {

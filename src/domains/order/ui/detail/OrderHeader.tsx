@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarClock, CreditCard, PackageCheck, Pencil, UserRound } from "lucide-react";
+import { CalendarClock, ChevronRight, CreditCard, PackageCheck, Pencil, UserRound } from "lucide-react";
 import OrderStatusBadge from "@/domains/order/ui/OrderStatusBadge";
 import {
   fmtDate,
@@ -19,76 +19,57 @@ export default function OrderHeader({ data }: { data: OrderDetailData }) {
   const remaining = Math.max(total - paid, 0);
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0 flex-1">
-          <Link
-            href="/admin/orders"
-            className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-          >
-            ← Danh sách đơn hàng
-          </Link>
+    <>
+      <nav className="flex items-center gap-2 text-xs text-slate-500" aria-label="Breadcrumb">
+        <Link href="/admin/orders" className="hover:text-violet-700">Danh sách Order</Link>
+        <ChevronRight className="h-3.5 w-3.5" />
+        <span className="font-semibold text-slate-800">{orderDisplayCode(data)}</span>
+      </nav>
 
-          <div className="mt-5 flex items-start gap-4">
-            <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100">
-              <PackageCheck className="h-8 w-8 text-slate-400" />
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-start lg:justify-between lg:p-7">
+          <div className="flex min-w-0 gap-4">
+            <div className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-400">
+              <PackageCheck className="h-7 w-7" />
             </div>
-
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="truncate text-3xl font-semibold tracking-tight text-slate-950">
-                  {orderDisplayCode(data)}
-                </h1>
+                <span className="rounded-md bg-violet-50 px-2 py-1 text-[10px] font-bold text-violet-700">{data.source || "ORDER"}</span>
                 <OrderStatusBadge status={data.status} />
                 <InventoryEffectBadge status={data.status} />
               </div>
-
-              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
-                <span className="inline-flex items-center gap-1.5">
-                  <UserRound className="h-4 w-4" />
-                  <span className="font-medium text-slate-700">{data.customerName || "Khách chưa đặt tên"}</span>
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <CalendarClock className="h-4 w-4" />
-                  Updated: <span className="font-medium text-slate-700">{fmtDate(data.updatedAt)}</span>
-                </span>
-                <span>
-                  ID: <span className="font-mono text-xs font-medium text-slate-700">{data.id}</span>
-                </span>
-              </div>
-
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200/70">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">Tổng đơn</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-950">{fmtMoney(total, currency)}</div>
-                </div>
-                <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200/70">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">Đã nhận</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-950">{fmtMoney(paid, currency)}</div>
-                </div>
-                <div className="rounded-2xl bg-slate-950 px-4 py-3 text-white">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-white/55">Còn phải thu</div>
-                  <div className="mt-1 text-sm font-semibold">{fmtMoney(remaining, currency)}</div>
-                </div>
+              <h1 className="mt-3 truncate text-3xl font-bold tracking-[-0.04em] text-slate-950">{orderDisplayCode(data)}</h1>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+                <span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5" />{data.customerName || "Khách chưa đặt tên"}</span>
+                <span className="inline-flex items-center gap-1.5"><CalendarClock className="h-3.5 w-3.5" />{fmtDate(data.updatedAt)}</span>
+                <span className="font-mono text-[10px]">{data.id}</span>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <Link
-            href={`/admin/orders/${data.id}/edit`}
-            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-          >
-            <Pencil className="mr-2 h-4 w-4" />
-            Chỉnh sửa
-          </Link>
-          <div className="inline-flex items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white">
-            <CreditCard className="mr-2 h-4 w-4" />
-            {data.paymentMethod || "Payment"}
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Link href={`/admin/orders/${data.id}/edit`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-4 text-xs font-bold text-slate-700 hover:bg-slate-50">
+              <Pencil className="h-4 w-4" /> Chỉnh thông tin
+            </Link>
+            <span className="inline-flex h-10 items-center gap-2 rounded-lg bg-slate-950 px-4 text-xs font-bold text-white">
+              <CreditCard className="h-4 w-4" /> {data.paymentMethod || "Payment"}
+            </span>
           </div>
         </div>
-      </div>
-    </div>
+
+        <div className="grid border-t border-slate-100 sm:grid-cols-3">
+          {[
+            ["Tổng đơn", fmtMoney(total, currency), "text-slate-950"],
+            ["Đã nhận", fmtMoney(paid, currency), "text-emerald-700"],
+            ["Còn phải thu", fmtMoney(remaining, currency), remaining > 0 ? "text-amber-700" : "text-emerald-700"],
+          ].map(([label, value, tone], index) => (
+            <div key={label} className={`px-5 py-4 ${index ? "border-t border-slate-100 sm:border-l sm:border-t-0" : ""}`}>
+              <div className="text-[9px] font-bold uppercase tracking-[0.1em] text-slate-400">{label}</div>
+              <div className={`mt-1 text-lg font-bold tracking-[-0.02em] ${tone}`}>{value}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
   );
 }

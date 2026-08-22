@@ -178,10 +178,8 @@ export function publicWatchEligibilityWhere(options?: {
       {
         type: ProductType.WATCH,
         title: { not: "" },
-        OR: [
-          { status: { in: [ProductStatus.AVAILABLE, ProductStatus.HOLD, ProductStatus.SOLD] } },
-          { publishedAt: { not: null } },
-        ],
+        status: { in: [ProductStatus.AVAILABLE, ProductStatus.HOLD, ProductStatus.SOLD] },
+        publishedAt: { not: null },
         slug: { not: "" },
         watch: {
           is: {
@@ -358,6 +356,16 @@ export async function findPublicWatchRowBySlug(db: DB, slug: string) {
     },
     select: publicWatchDetailSelect,
   });
+}
+
+export async function findStorefrontEligibleProductIds(db: DB, productIds: string[]) {
+  const ids = [...new Set(productIds.map((id) => id.trim()).filter(Boolean))];
+  if (!ids.length) return [];
+  const rows = await dbOrTx(db).product.findMany({
+    where: { AND: [publicWatchEligibilityWhere(), { id: { in: ids } }] },
+    select: { id: true },
+  });
+  return rows.map((row) => row.id);
 }
 
 export async function findOrderablePublicWatchIds(db: DB, productIds: string[]) {

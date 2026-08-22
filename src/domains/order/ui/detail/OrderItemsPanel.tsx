@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { ImageIcon, PackageCheck } from "lucide-react";
 import {
   buildMediaUrl,
@@ -21,7 +22,7 @@ export default function OrderItemsPanel({ data }: { data: OrderDetailData }) {
       subtitle={`${items.length} dòng trong đơn`}
     >
       {items.length ? (
-        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
           <div className="grid grid-cols-[minmax(0,1fr)_110px_140px] gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">
             <div>Sản phẩm</div>
             <div className="text-right">Số lượng</div>
@@ -40,9 +41,9 @@ export default function OrderItemsPanel({ data }: { data: OrderDetailData }) {
                   className="grid grid-cols-[minmax(0,1fr)_110px_140px] items-center gap-3 px-4 py-3 transition hover:bg-slate-50/70"
                 >
                   <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
                       {imageSrc ? (
-                        <img src={imageSrc} alt={item.title} className="h-full w-full object-cover" />
+                        <Image src={imageSrc} alt={item.title} width={56} height={56} unoptimized className="h-full w-full object-cover" />
                       ) : (
                         <ImageIcon className="h-5 w-5 text-slate-400" />
                       )}
@@ -72,7 +73,7 @@ export default function OrderItemsPanel({ data }: { data: OrderDetailData }) {
                       </div>
 
                       {item.customerItemNote ? (
-                        <div className="mt-2 line-clamp-2 rounded-xl bg-slate-50 px-3 py-1.5 text-xs leading-5 text-slate-600 ring-1 ring-slate-200/70">
+                        <div className="mt-2 line-clamp-2 rounded-lg bg-slate-50 px-3 py-1.5 text-xs leading-5 text-slate-600 ring-1 ring-slate-200/70">
                           {item.customerItemNote}
                         </div>
                       ) : null}

@@ -5,14 +5,25 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { prisma } from "@/server/db/client";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 import { rebuildWatchListProjectionRows } from "@/domains/projection/server/watch-list";
+import { findStorefrontEligibleProductIds } from "@/domains/storefront/server/public-catalog.repo";
 
-async function updateProductAndProjection(productId: string, data: Prisma.ProductUpdateInput) {
+async function updateProductAndProjection(
+  productId: string,
+  data: Prisma.ProductUpdateInput,
+  options: { requireEligible?: boolean } = {},
+) {
   return prisma.$transaction(async (tx) => {
     const product = await tx.product.update({
       where: { id: productId },
       data,
       select: { publishedAt: true, priceVisibility: true, slug: true },
     });
+    if (options.requireEligible) {
+      const eligibleIds = await findStorefrontEligibleProductIds(tx, [productId]);
+      if (!eligibleIds.includes(productId)) {
+        throw new Error("Watch chưa đạt đầy đủ điều kiện hiển thị storefront.");
+      }
+    }
     await rebuildWatchListProjectionRows(tx, { productIds: [productId], limit: 1 });
     return product;
   }, { timeout: 15_000 });
@@ -92,7 +103,7 @@ export async function POST(
     const product = await updateProductAndProjection(id, {
       publishedAt: new Date(),
       priceVisibility: body?.showPrice === false ? "HIDE" : "SHOW",
-    });
+    }, { requireEligible: true });
 
     return NextResponse.json({ ok: true, data: product });
   } catch (error) {

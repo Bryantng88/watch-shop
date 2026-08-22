@@ -2,12 +2,9 @@
 
 import { useState } from "react";
 
-import GuardNotice from "@/domains/shared/feedback/GuardNotice";
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
-import OrderInventoryNotice from "@/domains/order/shared/OrderInventoryNotice";
-import { getOrderInventoryEffect } from "@/domains/order/shared/order-status";
 import {
   OrderCustomerPanel,
   OrderFinancialPanel,
@@ -28,9 +25,6 @@ export default function OrderDetailClient({ data }: { data: OrderDetailData }) {
   const dialog = useAppDialog();
   const progress = useAppProgress();
   const [busyAction, setBusyAction] = useState<ActionName | null>(null);
-
-  const effect = getOrderInventoryEffect(data.status);
-  const firstProductTitle = data.items?.find((item) => item.title)?.title ?? null;
 
   async function runAction(action: ActionName) {
     const config = {
@@ -78,8 +72,8 @@ export default function OrderDetailClient({ data }: { data: OrderDetailData }) {
 
       notify.success({ title: "Thành công", message: config.success });
       window.location.reload();
-    } catch (error: any) {
-      notify.error({ title: "Không thể xử lý", message: error?.message || "Thao tác thất bại" });
+    } catch (error: unknown) {
+      notify.error({ title: "Không thể xử lý", message: error instanceof Error ? error.message : "Thao tác thất bại" });
     } finally {
       progress.hide();
       setBusyAction(null);
@@ -87,34 +81,25 @@ export default function OrderDetailClient({ data }: { data: OrderDetailData }) {
   }
 
   return (
-    <div className={ADMIN_DETAIL_CONTENT_CLASS}>
+    <main className="min-h-screen bg-slate-50 pb-16 text-slate-900">
+    <div className={`${ADMIN_DETAIL_CONTENT_CLASS} max-w-[1500px] space-y-4`}>
       <OrderHeader data={data} />
 
-      <OrderInventoryNotice status={data.status} productTitle={firstProductTitle} compact />
-
-      {effect === "SOLD" ? (
-        <GuardNotice
-          title="Watch trong đơn này đang được khóa SOLD"
-          message="Mọi thay đổi liên quan sản phẩm nên đi qua Order để tránh lệch tồn kho giữa Product/Watch và đơn hàng."
-          tone="danger"
-          icon="lock"
-        />
-      ) : null}
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-        <div className="space-y-6 xl:col-span-8">
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="space-y-4">
           <OrderItemsPanel data={data} />
           <OrderCustomerPanel data={data} />
           <OrderTimelinePanel data={data} />
           <OrderNotesPanel data={data} />
         </div>
 
-        <aside className="space-y-6 xl:sticky xl:top-4 xl:col-span-4 xl:self-start">
+        <aside className="space-y-4 xl:sticky xl:top-[76px] xl:self-start">
           <OrderOpsPanel data={data} busyAction={busyAction} onAction={runAction} />
           <OrderFinancialPanel data={data} />
           <OrderStatusPanel data={data} />
         </aside>
       </div>
     </div>
+    </main>
   );
 }
