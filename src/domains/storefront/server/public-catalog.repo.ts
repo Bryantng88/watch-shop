@@ -178,7 +178,16 @@ export function publicWatchEligibilityWhere(options?: {
       {
         type: ProductType.WATCH,
         title: { not: "" },
-        status: { in: [ProductStatus.AVAILABLE, ProductStatus.HOLD, ProductStatus.SOLD] },
+        // Product.status can lag behind the canonical Watch service stage on
+        // legacy rows. The service-stage gate below remains authoritative for
+        // public readiness, so IN_SERVICE must not hide a watch that is already
+        // NOT_REQUIRED/DONE and explicitly published.
+        status: { in: [
+          ProductStatus.AVAILABLE,
+          ProductStatus.IN_SERVICE,
+          ProductStatus.HOLD,
+          ProductStatus.SOLD,
+        ] },
         publishedAt: { not: null },
         slug: { not: "" },
         watch: {

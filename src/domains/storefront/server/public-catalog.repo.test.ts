@@ -40,7 +40,7 @@ test("storefront requires explicit publication and a sellable product status", (
   const where = JSON.stringify(publicWatchEligibilityWhere({ requireCoverImage: true }));
 
   assert.match(where, /"publishedAt":\{"not":null\}/);
-  assert.match(where, /"status":\{"in":\["AVAILABLE","HOLD","SOLD"\]\}/);
+  assert.match(where, /"status":\{"in":\["AVAILABLE","IN_SERVICE","HOLD","SOLD"\]\}/);
   assert.doesNotMatch(where, /"OR":\[\{"status":/);
 });
 

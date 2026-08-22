@@ -17,14 +17,52 @@ function legacyVisibleWithoutPublicationWhere(): Prisma.ProductWhereInput {
 
 async function main() {
   const apply = process.argv.includes("--apply");
+  const canonicalEligibility = publicWatchEligibilityWhere();
   const candidates = await prisma.product.findMany({
     where: legacyVisibleWithoutPublicationWhere(),
     orderBy: { updatedAt: "asc" },
     select: { id: true, title: true, slug: true, updatedAt: true },
   });
 
+  const publishedButIneligible = await prisma.product.findMany({
+    where: {
+      AND: [
+        { type: "WATCH", publishedAt: { not: null } },
+        { NOT: canonicalEligibility },
+      ],
+    },
+    orderBy: { updatedAt: "asc" },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      status: true,
+      publishedAt: true,
+      priceVisibility: true,
+      storefrontImageKey: true,
+      watch: {
+        select: {
+          audienceSegment: true,
+          serviceStage: true,
+          watchSpecV2: { select: { id: true } },
+          watchPrice: { select: { salePrice: true } },
+        },
+      },
+      productImage: {
+        where: { isForStorefront: true },
+        select: { role: true },
+      },
+    },
+  });
+
   if (!apply || candidates.length === 0) {
-    console.log(JSON.stringify({ apply, count: candidates.length, candidates }, null, 2));
+    console.log(JSON.stringify({
+      apply,
+      legacyWithoutPublicationCount: candidates.length,
+      candidates,
+      publishedButIneligibleCount: publishedButIneligible.length,
+      publishedButIneligible,
+    }, null, 2));
     return;
   }
 
