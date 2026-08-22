@@ -338,13 +338,17 @@ export default function PublicOrderForm({
                 {en ? "Estimated total" : "Tổng giá tham khảo"}
               </p>
               <p className="mt-1 text-[10px] leading-4 text-[#8b969c]">
-                {en
-                  ? "Price and availability will be reconfirmed"
-                  : "Giá và tình trạng sẽ được xác nhận lại"}
+                {hasContactPrice && estimatedTotal > 0
+                  ? en
+                    ? "Excludes items marked Contact"
+                    : "Chưa bao gồm sản phẩm ghi Liên hệ"
+                  : en
+                    ? "Price and availability will be reconfirmed"
+                    : "Giá và tình trạng sẽ được xác nhận lại"}
               </p>
             </div>
             <strong className="shrink-0 text-lg font-bold tabular-nums text-[#26343b]">
-              {hasContactPrice
+              {hasContactPrice && estimatedTotal === 0
                 ? en
                   ? "Contact"
                   : "Liên hệ"
