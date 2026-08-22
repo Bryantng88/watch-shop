@@ -28,12 +28,13 @@ export async function loadStorefrontCartItems(extraSlug?: string | null): Promis
   const extra = String(extraSlug ?? "").trim();
   if (extra && !slugs.includes(extra)) slugs.unshift(extra);
   const watches = await Promise.all(slugs.slice(0, 20).map((slug) => getPublicWatchBySlug(slug).catch(() => null)));
-  return watches.filter((watch): watch is NonNullable<typeof watch> => watch !== null && watch.availability === "AVAILABLE" && watch.price.mode === "SHOW").map((watch) => ({
+  return watches.filter((watch): watch is NonNullable<typeof watch> => watch !== null && watch.availability === "AVAILABLE").map((watch) => ({
     productId: watch.productId,
     slug: watch.slug,
     title: watch.title,
     imageUrl: watch.image.url,
     priceAmount: watch.price.amount ?? 0,
+    priceMode: watch.price.mode,
     currency: watch.price.currency,
   }));
 }

@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   const slug = String(form.get("slug") ?? "").trim();
   const returnTo = String(form.get("returnTo") ?? "/products").trim();
   const watch = slug ? await getPublicWatchBySlug(slug).catch(() => null) : null;
-  if (!watch || watch.availability !== "AVAILABLE" || watch.price.mode !== "SHOW") {
+  if (!watch || watch.availability !== "AVAILABLE") {
     return NextResponse.redirect(new URL(slug ? `/products/${slug}` : "/products", request.url), 303);
   }
 

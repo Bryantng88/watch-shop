@@ -187,6 +187,37 @@ async function enrichNotificationEvent(
             )}`;
     }
 
+    if (
+        event.targetType === "PURCHASE_REQUEST" &&
+        ["purchase_request.created", "purchase_request.items_added"].includes(event.eventKey)
+    ) {
+        const request = await client.purchaseRequest.findUnique({
+            where: { id: event.targetId },
+            select: {
+                reference: true,
+                customerName: true,
+                phone: true,
+                contactPreference: true,
+                contactHandle: true,
+                customerNote: true,
+                items: {
+                    orderBy: { createdAt: "asc" },
+                    select: { titleSnapshot: true },
+                },
+            },
+        });
+        enriched.reference = clean(request?.reference) || clean(enriched.reference) || "Chưa có mã";
+        enriched.customerName = clean(request?.customerName) || "Chưa cung cấp";
+        enriched.phone = clean(request?.phone) || "Chưa cung cấp";
+        enriched.contactPreference = clean(request?.contactPreference) || "PHONE";
+        enriched.contactHandle = clean(request?.contactHandle) || clean(request?.phone) || "Chưa cung cấp";
+        enriched.customerNote = clean(request?.customerNote) || "Không có";
+        enriched.watchTitles = request?.items
+            .map((item) => clean(item.titleSnapshot))
+            .filter(Boolean)
+            .join(", ") || "Chưa có Watch";
+    }
+
     return { ...event, metadataJson: enriched as Prisma.JsonObject };
 }
 

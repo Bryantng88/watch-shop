@@ -6,7 +6,7 @@ import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { trackStorefrontEvent } from "@/domains/analytics/storefront/StorefrontAnalytics";
 
-export type StorefrontCartItem = { productId: string; slug: string; title: string; imageUrl: string; priceAmount: number; currency: "VND" };
+export type StorefrontCartItem = { productId: string; slug: string; title: string; imageUrl: string; priceAmount: number; priceMode: "SHOW" | "CONTACT"; currency: "VND" };
 type CartToast = { item: StorefrontCartItem; duplicate: boolean };
 type CartValue = { items: StorefrontCartItem[]; add: (item: StorefrontCartItem, track?: boolean) => boolean; remove: (id: string) => void; clear: () => void };
 const STORAGE_KEY = "watch-shop:storefront-request:v1";
@@ -19,7 +19,18 @@ export function StorefrontCartProvider({ children, initialItems = [] }: { childr
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
-      if (Array.isArray(stored)) setItems((current) => [...current, ...stored.filter((storedItem) => !current.some((item) => item.productId === storedItem?.productId))].slice(0, 20));
+      if (Array.isArray(stored)) {
+        const normalized = stored.map((storedItem) => ({
+          ...storedItem,
+          priceMode: storedItem?.priceMode === "CONTACT" || !(Number(storedItem?.priceAmount) > 0)
+            ? "CONTACT"
+            : "SHOW",
+        }));
+        setItems((current) => [
+          ...current,
+          ...normalized.filter((storedItem) => !current.some((item) => item.productId === storedItem?.productId)),
+        ].slice(0, 20));
+      }
     } catch { localStorage.removeItem(STORAGE_KEY); }
   }, []);
   useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }, [items]);

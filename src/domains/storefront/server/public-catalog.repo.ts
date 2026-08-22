@@ -363,7 +363,7 @@ export async function findOrderablePublicWatchIds(db: DB, productIds: string[]) 
     where: {
       AND: [
         publicWatchOrderableWhere(),
-        { id: { in: productIds }, priceVisibility: "SHOW" },
+        { id: { in: productIds } },
       ],
     },
     select: { id: true },

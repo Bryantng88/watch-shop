@@ -15,7 +15,7 @@ export const PURCHASE_REQUEST_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] 
     producer: "storefront",
     emitPoint: "submitPublicOrder create transaction",
     targetIdPolicy: "PurchaseRequest.id",
-    knownConsumers: ["timeline"],
+    knownConsumers: ["timeline", "notification"],
     payload: {
       name: "PurchaseRequestCreatedV1",
       version: 1,
@@ -30,7 +30,7 @@ export const PURCHASE_REQUEST_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] 
     producer: "storefront",
     emitPoint: "submitPublicOrder merge transaction",
     targetIdPolicy: "PurchaseRequest.id",
-    knownConsumers: ["timeline"],
+    knownConsumers: ["timeline", "notification"],
     payload: {
       name: "PurchaseRequestItemsAddedV1",
       version: 1,

@@ -23,6 +23,8 @@ const orderService = readFileSync(resolve("src/domains/storefront/server/public-
 const orderForm = readFileSync(resolve("src/domains/storefront/ui/PublicOrderForm.tsx"), "utf8");
 const publicOrderRoute = readFileSync(resolve("src/app/api/public/orders/route.ts"), "utf8");
 const requestService = readFileSync(resolve("src/domains/purchase-request/server/purchase-request.service.ts"), "utf8");
+const purchaseRequestContract = readFileSync(resolve("src/domains/purchase-request/server/events/purchase-request-business-event.contract.ts"), "utf8");
+const notificationConsumer = readFileSync(resolve("src/domains/notification/server/notification-event-consumer.ts"), "utf8");
 const paymentCore = readFileSync(resolve("src/domains/payment/server/payment.core.ts"), "utf8");
 assert.match(orderService, /findOrderablePublicWatchIds/);
 assert.match(orderService, /purchaseRequest\.create/);
@@ -35,6 +37,9 @@ assert.match(orderService, /normalizedPhone/);
 assert.match(orderService, /runBusinessEventTransaction/);
 assert.match(orderService, /purchase_request\.created/);
 assert.match(orderService, /purchase_request\.items_added/);
+assert.match(purchaseRequestContract, /knownConsumers: \["timeline", "notification"\]/);
+assert.match(notificationConsumer, /event\.targetType === "PURCHASE_REQUEST"/);
+assert.match(notificationConsumer, /watchTitles/);
 assert.match(orderForm, /action="\/api\/public\/orders"/);
 assert.match(orderForm, /type="submit"/);
 assert.match(publicOrderRoute, /req\.formData\(\)/);

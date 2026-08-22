@@ -70,7 +70,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
           {watch.summary ? <p className="mt-7 text-sm leading-7 text-[#66635e] sm:text-base">{watch.summary}</p> : null}
 
-          <AddToRequestButton locale={locale} availability={watch.availability} added={requestItems.some((item) => item.productId === watch.productId)} orderable={watch.availability === "AVAILABLE" && watch.price.mode === "SHOW"} item={{ productId: watch.productId, slug: watch.slug, title: watch.title, imageUrl: watch.image.url, priceAmount: watch.price.amount ?? 0, currency: "VND" }} />
+          <AddToRequestButton locale={locale} availability={watch.availability} added={requestItems.some((item) => item.productId === watch.productId)} orderable={watch.availability === "AVAILABLE"} item={{ productId: watch.productId, slug: watch.slug, title: watch.title, imageUrl: watch.image.url, priceAmount: watch.price.amount ?? 0, priceMode: watch.price.mode, currency: "VND" }} />
 
           {watch.specs.length ? (
             <div className="mt-10 border-t border-[#dedbd4]">

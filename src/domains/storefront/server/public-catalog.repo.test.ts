@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { publicWatchEligibilityWhere } from "./public-catalog.repo";
+import { publicWatchEligibilityWhere, publicWatchOrderableWhere } from "./public-catalog.repo";
 
 test("fast storefront eligibility does not require content or gallery approval", () => {
   const where = JSON.stringify(publicWatchEligibilityWhere({ requireCoverImage: true }));
@@ -41,4 +41,14 @@ test("quick-published watches can bypass a stale product status", () => {
 
   assert.match(where, /"publishedAt":\{"not":null\}/);
   assert.match(where, /"status":\{"in":\["AVAILABLE","HOLD","SOLD"\]\}/);
+});
+
+test("contact-price watches remain eligible for a purchase request", () => {
+  const where = JSON.stringify(publicWatchOrderableWhere());
+
+  assert.equal(where.includes('"priceVisibility":"SHOW"'), false);
+  assert.match(where, /"priceVisibility":"HIDE"/);
+  assert.match(where, /"status":"AVAILABLE"/);
+  assert.match(where, /"saleStage":"READY"/);
+  assert.match(where, /"stockStage":"IN_STOCK"/);
 });
