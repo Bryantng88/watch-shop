@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import type { PublicWatchCard } from "../contracts";
 import { useStorefrontLocale } from "./StorefrontLocale";
-import { formatStorefrontMoney } from "../shared/locale.utils";
+import { formatStorefrontWatchMoney } from "../shared/locale.utils";
 
 function tagLabel(tag: string | null) {
   if (tag === "PRE_OWNED") return "Pre-owned";
@@ -45,7 +45,7 @@ export default function PublicWatchCardView({ watch }: { watch: PublicWatchCard 
           <p className="text-[10px] uppercase tracking-[0.16em] text-[#858079]">{watch.brand ?? "Tuyển chọn"}</p>
           <h2 className="mt-2 line-clamp-2 min-h-10 text-sm font-normal leading-5 text-[#4f4c48] sm:text-[15px]">{watch.title}</h2>
           <p className="mt-2 text-sm font-semibold tabular-nums text-[#31302e]">
-            {watch.price.mode === "SHOW" ? formatStorefrontMoney(watch.price.amount, locale, vndPerUsd) : locale === "en" ? "Contact" : "Liên hệ"}
+            {watch.price.mode === "SHOW" ? formatStorefrontWatchMoney(watch.price.amount, locale, vndPerUsd, watch.isCollectible) : locale === "en" ? "Contact" : "Liên hệ"}
           </p>
         </div>
       </Link>

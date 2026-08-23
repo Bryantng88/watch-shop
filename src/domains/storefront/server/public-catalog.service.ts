@@ -90,6 +90,7 @@ export function mapPublicWatchCard(row: PublicWatchListRow): PublicWatchCard {
     image: mapImage(row, image),
     hoverImage: hoverImage ? mapImage(row, hoverImage) : null,
     price: mapPrice(row),
+    isCollectible: row.watch.isCollectible,
     audience: row.watch.audienceSegment,
     tag: row.tag ?? null,
     condition: row.watch.conditionGrade ?? null,

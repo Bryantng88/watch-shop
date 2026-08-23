@@ -9,7 +9,7 @@ import { getPublicWatchBySlug, listRelatedPublicWatches } from "@/domains/storef
 import AddToRequestButton from "@/domains/storefront/ui/AddToRequestButton";
 import { loadStorefrontCartItems } from "@/domains/storefront/server/request-cart.service";
 import { getStorefrontUsdRate } from "@/domains/storefront/server/exchange-rate.service";
-import { formatStorefrontMoney } from "@/domains/storefront/shared/locale.utils";
+import { formatStorefrontWatchMoney } from "@/domains/storefront/shared/locale.utils";
 import ProductGallery from "@/domains/storefront/ui/ProductGallery";
 import RelatedWatchSuggestions from "@/domains/storefront/ui/RelatedWatchSuggestions";
 import { StorefrontAnalyticsSignal } from "@/domains/analytics/storefront/StorefrontAnalytics";
@@ -60,7 +60,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           {watch.availability !== "AVAILABLE" ? <span className="mt-3 inline-flex border border-[#bdb8af] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#55514b]">{watch.availability === "HOLD" ? (locale === "en" ? "On hold" : "Đang được giữ") : (locale === "en" ? "Out of stock" : "Hết hàng")}</span> : null}
           <h1 className="storefront-display mt-3 text-4xl leading-[1.08] sm:text-5xl">{watch.title}</h1>
           <p className="mt-6 text-xl font-semibold tabular-nums">
-            {watch.price.mode === "SHOW" ? formatStorefrontMoney(watch.price.amount, locale, rate.vndPerUsd) : locale === "en" ? "Contact" : "Liên hệ"}
+            {watch.price.mode === "SHOW" ? formatStorefrontWatchMoney(watch.price.amount, locale, rate.vndPerUsd, watch.isCollectible) : locale === "en" ? "Contact" : "Liên hệ"}
           </p>
 
           <div className="mt-7 flex items-start gap-3 border-y border-[#dedbd4] py-5 text-sm leading-6 text-[#66635e]">
@@ -70,7 +70,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
           {watch.summary ? <p className="mt-7 text-sm leading-7 text-[#66635e] sm:text-base">{watch.summary}</p> : null}
 
-          <AddToRequestButton locale={locale} availability={watch.availability} added={requestItems.some((item) => item.productId === watch.productId)} orderable={watch.orderable} item={{ productId: watch.productId, slug: watch.slug, title: watch.title, imageUrl: watch.image.url, priceAmount: watch.price.amount ?? 0, priceMode: watch.price.mode, currency: "VND" }} />
+          <AddToRequestButton locale={locale} availability={watch.availability} added={requestItems.some((item) => item.productId === watch.productId)} orderable={watch.orderable} item={{ productId: watch.productId, slug: watch.slug, title: watch.title, imageUrl: watch.image.url, priceAmount: watch.price.amount ?? 0, priceMode: watch.price.mode, currency: "VND", isCollectible: watch.isCollectible }} />
 
           {watch.specs.length ? (
             <div className="mt-10 border-t border-[#dedbd4]">

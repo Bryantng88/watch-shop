@@ -7,6 +7,7 @@ import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useStorefrontCart, type StorefrontCartItem } from "./StorefrontCart";
 import { useOnlineStatus } from "./PwaRuntime";
 import { useStorefrontLocale } from "./StorefrontLocale";
+import { formatStorefrontWatchMoney } from "../shared/locale.utils";
 import {
   getStorefrontAnalyticsContext,
   trackStorefrontEvent,
@@ -82,7 +83,7 @@ export default function PublicOrderForm({
   );
   const requestKey = useRef<string | null>(initialRequestKey);
   const online = useOnlineStatus();
-  const { locale } = useStorefrontLocale();
+  const { locale, vndPerUsd } = useStorefrontLocale();
   const en = locale === "en";
   const [contactPreference, setContactPreference] = useState("PHONE");
   const formStarted = useRef(false);
@@ -93,12 +94,8 @@ export default function PublicOrderForm({
   const hasContactPrice = effectiveItems.some(
     (item) => item.priceMode === "CONTACT",
   );
-  const money = (amount: number) =>
-    new Intl.NumberFormat(en ? "en-US" : "vi-VN", {
-      style: "currency",
-      currency: "VND",
-      maximumFractionDigits: 0,
-    }).format(amount);
+  const money = (amount: number, isCollectible = false) =>
+    formatStorefrontWatchMoney(amount, locale, vndPerUsd, isCollectible);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -316,7 +313,7 @@ export default function PublicOrderForm({
                       ? en
                         ? "Contact"
                         : "Liên hệ"
-                      : money(Number(item.priceAmount) || 0)}
+                      : money(Number(item.priceAmount) || 0, item.isCollectible)}
                   </strong>
                 </li>
               ))}

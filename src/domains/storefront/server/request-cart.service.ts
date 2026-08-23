@@ -36,5 +36,6 @@ export async function loadStorefrontCartItems(extraSlug?: string | null): Promis
     priceAmount: watch.price.amount ?? 0,
     priceMode: watch.price.mode,
     currency: watch.price.currency,
+    isCollectible: watch.isCollectible,
   }));
 }

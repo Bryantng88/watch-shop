@@ -6,7 +6,7 @@ import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { trackStorefrontEvent } from "@/domains/analytics/storefront/StorefrontAnalytics";
 
-export type StorefrontCartItem = { productId: string; slug: string; title: string; imageUrl: string; priceAmount: number; priceMode: "SHOW" | "CONTACT"; currency: "VND" };
+export type StorefrontCartItem = { productId: string; slug: string; title: string; imageUrl: string; priceAmount: number; priceMode: "SHOW" | "CONTACT"; currency: "VND"; isCollectible: boolean };
 type CartToast = { item: StorefrontCartItem; duplicate: boolean };
 type CartValue = { items: StorefrontCartItem[]; add: (item: StorefrontCartItem, track?: boolean) => boolean; remove: (id: string) => void; clear: () => void };
 const STORAGE_KEY = "watch-shop:storefront-request:v1";
@@ -22,6 +22,7 @@ export function StorefrontCartProvider({ children, initialItems = [] }: { childr
       if (Array.isArray(stored)) {
         const normalized = stored.map((storedItem) => ({
           ...storedItem,
+          isCollectible: storedItem?.isCollectible === true,
           priceMode: storedItem?.priceMode === "CONTACT" || !(Number(storedItem?.priceAmount) > 0)
             ? "CONTACT"
             : "SHOW",

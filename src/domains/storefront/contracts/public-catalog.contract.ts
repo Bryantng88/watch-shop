@@ -89,6 +89,7 @@ export type PublicWatchCard = {
   image: PublicWatchImage;
   hoverImage: PublicWatchImage | null;
   price: PublicWatchPrice;
+  isCollectible: boolean;
   audience: "MEN" | "WOMEN" | "UNISEX";
   tag: string | null;
   condition: string | null;
