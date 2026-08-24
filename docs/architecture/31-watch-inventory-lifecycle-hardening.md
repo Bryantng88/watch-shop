@@ -128,6 +128,12 @@ affect the current Watch state.
 This compatibility rule must be isolated and deleted after backfill. Do not
 spread timestamp comparisons into Order and Acquisition services.
 
+Implemented compatibility release behavior: `order-watch-sync.service.ts`
+isolates this timestamp boundary in its reconciliation query. For each Watch it
+uses the latest posted `BUY_BACK`/`TRADE_IN` acquisition item and ignores earlier
+Order items. Products without such a boundary retain their complete Order
+history. This is deliberately a removable adapter, not the final identity model.
+
 The eventual reconciliation query is:
 
 ```text

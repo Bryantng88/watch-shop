@@ -38,9 +38,51 @@ async function resolveEffectByProductId(tx: Tx, productIds: string[]) {
 
   if (!ids.length) return map;
 
-  const rows = await tx.orderItem.findMany({
+  // Compatibility boundary until explicit WatchInventoryCycle identity is deployed.
+  // A posted buy-back/trade-in starts a new physical inventory lifecycle, so orders
+  // from before that boundary are immutable history and cannot affect current stock.
+  const acquisitionRows = await tx.acquisitionItem.findMany({
     where: {
       productId: { in: ids },
+      acquisition: {
+        type: { in: ["BUY_BACK", "TRADE_IN"] },
+        accquisitionStt: "POSTED",
+      },
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    select: {
+      id: true,
+      productId: true,
+      createdAt: true,
+      acquisition: {
+        select: {
+          acquiredAt: true,
+          sentAt: true,
+          updatedAt: true,
+        },
+      },
+    },
+  });
+
+  const boundaryByProductId = new Map<string, Date>();
+  for (const row of acquisitionRows) {
+    if (!row.productId || boundaryByProductId.has(row.productId)) continue;
+    boundaryByProductId.set(
+      row.productId,
+      row.acquisition.sentAt ?? row.acquisition.updatedAt ?? row.acquisition.acquiredAt ?? row.createdAt,
+    );
+  }
+
+  const lifecycleWhere = ids.map((productId) => {
+    const boundary = boundaryByProductId.get(productId);
+    return boundary
+      ? { productId, createdAt: { gte: boundary } }
+      : { productId };
+  });
+
+  const rows = await tx.orderItem.findMany({
+    where: {
+      OR: lifecycleWhere,
       order: {
         status: {
           not: OrderStatus.CANCELLED,
