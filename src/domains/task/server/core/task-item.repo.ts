@@ -168,6 +168,47 @@ export async function setTaskItemDoneRepo(
   });
 }
 
+export async function setTaskItemStatusRepo(
+  db: DB,
+  input: { itemId: string; status: TaskStatus },
+) {
+  const client = dbOrTx(db);
+  const now = new Date();
+  const lifecycleData = input.status === TaskStatus.DONE
+    ? {
+        isDone: true,
+        completedAt: now,
+        cancelledAt: null,
+      }
+    : input.status === TaskStatus.IN_PROGRESS
+      ? {
+          isDone: false,
+          startedAt: now,
+          completedAt: null,
+          cancelledAt: null,
+        }
+      : input.status === TaskStatus.CANCELLED
+        ? {
+            isDone: false,
+            completedAt: null,
+            cancelledAt: now,
+          }
+        : {
+            isDone: false,
+            startedAt: null,
+            completedAt: null,
+            cancelledAt: null,
+          };
+
+  return client.taskItem.update({
+    where: { id: input.itemId },
+    data: {
+      status: input.status,
+      ...lifecycleData,
+    },
+  });
+}
+
 export async function deleteTaskItemRepo(db: DB, itemId: string) {
   const client = dbOrTx(db);
 

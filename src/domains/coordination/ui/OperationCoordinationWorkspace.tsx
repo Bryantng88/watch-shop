@@ -50,7 +50,7 @@ import {
 } from "@/domains/coordination/actions/coordination.actions";
 import {
   applyQueueItemManualTransitionAction,
-  changeTaskItemDoneAction,
+  changeTaskItemStatusAction,
   createTaskItemAction,
   submitOperationalBlueprintActionAction,
 } from "@/domains/task/actions/task.actions";
@@ -94,6 +94,7 @@ import type { CoordinationDashboardDTO } from "../server/coordination-dashboard.
 import { isCoreWorkspaceBlueprint } from "@/domains/task/shared/workspace-flow-policy";
 import WatchSearchPicker, { type WatchSearchResult } from "@/domains/watch/ui/search/WatchSearchPicker";
 import FlowItemListView from "./FlowItemListView";
+import { useAdHocWorkCreate } from "@/domains/task/ui/ad-hoc-work/AdHocWorkRowAction";
 
 type Props = {
   data: CoordinationDashboardDTO;
@@ -105,6 +106,7 @@ type TechnicalIssuePriorityFilter = "ALL" | "URGENT" | "NORMAL";
 type TechnicalIssueCommentFilter = "ALL" | "COMMENTED" | "MENTIONED_ME" | "UNREAD_MENTION";
 type TechnicalBoardFieldValue = string | boolean | string[];
 type TechnicalBoardAdditionalIssue = { summary: string; note: string };
+type AdHocTaskItemStage = "TODO" | "IN_PROGRESS" | "DONE";
 
 const SPACE_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = ["overview", "value-trend", "status-breakdown", "recent-activity"];
 const TECHNICAL_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = [...SPACE_DASHBOARD_WIDGETS, "technical-daily-performance"];
@@ -302,6 +304,12 @@ function normalizeStageKey(value: string | null | undefined) {
     .trim()
     .toLowerCase()
     .replace(/[_\s]+/g, "-");
+}
+
+function adHocTaskItemStage(status: string | null | undefined): AdHocTaskItemStage {
+  if (status === "DONE") return "DONE";
+  if (status === "IN_PROGRESS") return "IN_PROGRESS";
+  return "TODO";
 }
 
 function stageVisual(stageKey: string | null | undefined) {
@@ -803,7 +811,7 @@ export default function OperationCoordinationWorkspace({
   const [boardRefreshedAt, setBoardRefreshedAt] = useState<Date | null>(null);
   const [workspacePage, setWorkspacePage] = useState(1);
   const [workspacePageSize, setWorkspacePageSize] = useState(10);
-  const [adHocStatusOverrides, setAdHocStatusOverrides] = useState<Record<string, "OPEN" | "DONE">>({});
+  const [adHocStatusOverrides, setAdHocStatusOverrides] = useState<Record<string, AdHocTaskItemStage>>({});
   const [updatingAdHocItemId, setUpdatingAdHocItemId] = useState<string | null>(null);
   const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -813,6 +821,12 @@ export default function OperationCoordinationWorkspace({
   const inFlightFlowRequestKey = useRef<string | null>(null);
   const lastFlowFilterRequestKey = useRef<string | null>(null);
   const technicalBoardLoadAttempted = useRef(false);
+  const adHocWorkCreate = useAdHocWorkCreate({
+    onCreated: async () => {
+      setWorkspacePage(1);
+      router.refresh();
+    },
+  });
 
   useEffect(() => {
     if (
@@ -935,7 +949,12 @@ export default function OperationCoordinationWorkspace({
       ) ?? null
     : null;
   const isTaskItemListMode = activeViewMode?.rowModel === "TASK_ITEM";
-  const activeTaskItemStage = filterWorkStatus === "DONE" ? "DONE" : "OPEN";
+  const activeTaskItemStage: AdHocTaskItemStage =
+    filterWorkStatus === "DONE"
+      ? "DONE"
+      : filterWorkStatus === "IN_PROGRESS"
+        ? "IN_PROGRESS"
+        : "TODO";
   const orderedFlowStages = useMemo(
     () => {
       const stages =
@@ -1671,7 +1690,7 @@ export default function OperationCoordinationWorkspace({
     const query = filterQuery.trim().toLocaleLowerCase("vi");
     return activeDisplayedWorkTickets.filter((ticket) => {
       const openItems = ticket.queueSummary.ready + ticket.queueSummary.review + ticket.queueSummary.feedback;
-      const taskItemStage = adHocStatusOverrides[ticket.id] ?? (ticket.status === "DONE" ? "DONE" : "OPEN");
+      const taskItemStage = adHocStatusOverrides[ticket.id] ?? adHocTaskItemStage(ticket.status);
       if (isTaskItemListMode && taskItemStage !== activeTaskItemStage) return false;
       const searchable = [ticket.title, ticket.creator.label, ticket.lastActivity, ticket.identityPreview?.title, ticket.identityPreview?.ref]
         .filter(Boolean)
@@ -1690,18 +1709,18 @@ export default function OperationCoordinationWorkspace({
     });
   }, [activeDisplayedWorkTickets, activeTaskItemStage, adHocStatusOverrides, filterCreator, filterPayment, filterQuery, filterWorkStatus, isTaskItemListMode]);
   const taskItemStageCounts = useMemo(() => {
-    const counts = { OPEN: 0, DONE: 0 };
+    const counts: Record<AdHocTaskItemStage, number> = { TODO: 0, IN_PROGRESS: 0, DONE: 0 };
     activeDisplayedWorkTickets.forEach((ticket) => {
-      const stage = adHocStatusOverrides[ticket.id] ?? (ticket.status === "DONE" ? "DONE" : "OPEN");
+      const stage = adHocStatusOverrides[ticket.id] ?? adHocTaskItemStage(ticket.status);
       counts[stage] += 1;
     });
     return counts;
   }, [activeDisplayedWorkTickets, adHocStatusOverrides]);
-  const updateAdHocItemStage = useCallback(async (itemId: string, nextStage: "OPEN" | "DONE") => {
+  const updateAdHocItemStage = useCallback(async (itemId: string, nextStage: AdHocTaskItemStage) => {
     setUpdatingAdHocItemId(itemId);
-    progress.show({ message: nextStage === "DONE" ? "Đang hoàn tất công việc..." : "Đang mở lại công việc...", percent: 20 });
+    progress.show({ message: "Đang cập nhật trạng thái công việc...", percent: 20 });
     try {
-      await changeTaskItemDoneAction(itemId, nextStage === "DONE");
+      await changeTaskItemStatusAction(itemId, nextStage);
       setAdHocStatusOverrides((current) => ({ ...current, [itemId]: nextStage }));
       progress.update({ message: "Đã cập nhật trạng thái. Đang đồng bộ danh sách...", percent: 90 });
       router.refresh();
@@ -1903,6 +1922,7 @@ export default function OperationCoordinationWorkspace({
             router.refresh();
           }}
         />
+        {adHocWorkCreate.modal}
         <AsyncBusinessListDashboard
           endpoint={dashboardEndpoint}
           preferInitialData
@@ -1998,6 +2018,16 @@ export default function OperationCoordinationWorkspace({
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+                    {isTaskItemListMode ? (
+                      <button
+                        type="button"
+                        onClick={adHocWorkCreate.open}
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-violet-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>Tạo việc</span>
+                      </button>
+                    ) : null}
                     <SpaceSharingEditor
                       taskId={data.cycle.id}
                       context={data.context}
@@ -2736,12 +2766,23 @@ export default function OperationCoordinationWorkspace({
                       disabled={updatingAdHocItemId === ticket.id}
                       onClick={(event) => {
                         event.stopPropagation();
-                        void updateAdHocItemStage(ticket.id, activeTaskItemStage === "DONE" ? "OPEN" : "DONE");
+                        void updateAdHocItemStage(
+                          ticket.id,
+                          activeTaskItemStage === "TODO"
+                            ? "IN_PROGRESS"
+                            : activeTaskItemStage === "IN_PROGRESS"
+                              ? "DONE"
+                              : "TODO",
+                        );
                       }}
                       className="inline-flex h-8 items-center whitespace-nowrap rounded-lg border border-violet-200 bg-white px-3 text-xs font-semibold text-violet-700 transition hover:bg-violet-50 disabled:opacity-50"
                     >
                       {updatingAdHocItemId === ticket.id ? <LoaderCircle className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
-                      {activeTaskItemStage === "DONE" ? "Mở lại" : "Hoàn tất"}
+                      {activeTaskItemStage === "TODO"
+                        ? "Bắt đầu"
+                        : activeTaskItemStage === "IN_PROGRESS"
+                          ? "Hoàn tất"
+                          : "Mở lại"}
                     </button>
                   </div>
                 ) : null}

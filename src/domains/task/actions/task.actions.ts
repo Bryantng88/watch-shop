@@ -30,6 +30,7 @@ import {
   createTaskItemRepo,
   deleteTaskItemRepo,
   setTaskItemDoneRepo,
+  setTaskItemStatusRepo,
   syncTaskStatusFromChecklistRepo,
   updateTaskItemRepo,
   createTaskItemChecklistRepo,
@@ -734,7 +735,23 @@ export async function changeTaskItemStatusAction(
   itemId: string,
   status: TaskStatus,
 ) {
-  return updateTaskItemAction(itemId, { status });
+  await getTaskAuth();
+
+  const cleanItemId = String(itemId || "").trim();
+  if (!cleanItemId) throw new Error("Missing task item id");
+
+  const item = await setTaskItemStatusRepo(prisma, {
+    itemId: cleanItemId,
+    status,
+  });
+  await syncTaskStatusFromChecklistRepo(prisma, item.taskId);
+
+  revalidatePath("/admin/tasks");
+  revalidatePath(`/admin/tasks/${item.taskId}`);
+  revalidatePath("/admin/task-items");
+  revalidatePath("/admin/coordination/operation");
+
+  return { ok: true, item };
 }
 
 export async function changeTaskItemDoneAction(

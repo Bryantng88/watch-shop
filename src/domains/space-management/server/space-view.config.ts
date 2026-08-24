@@ -506,13 +506,14 @@ function unifiedOperationSpaceViewConfig(): SpaceViewConfig {
       {
         key: "ad-hoc-work",
         label: "Việc phát sinh",
-        description: "Danh sách công việc ngoài luồng nghiệp vụ cốt lõi: Chưa làm và Đã xong.",
+        description: "Danh sách công việc tự do: Chưa làm, Đang làm và Đã xong.",
         rowModel: "TASK_ITEM",
         primaryTarget: "taskItem",
         allowedWorkspaceKinds: ["STANDALONE_WORKSPACE"],
         workTypeKeys: ["ad-hoc-work"],
         taskItemStages: [
-          { key: "OPEN", label: "Chưa làm" },
+          { key: "TODO", label: "Chưa làm" },
+          { key: "IN_PROGRESS", label: "Đang làm" },
           { key: "DONE", label: "Đã xong" },
         ],
         columns: WORKSPACE_COLUMNS,

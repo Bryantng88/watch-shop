@@ -117,7 +117,7 @@ export async function createAdHocWorkAction(input: {
       bindingId = binding.binding.id;
     }
 
-    await recordBusinessEvent(tx, {
+    if (input.target) await recordBusinessEvent(tx, {
       eventKey: "task.item.created",
       targetType: "TASK_ITEM",
       targetId: item.id,

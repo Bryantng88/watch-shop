@@ -46,7 +46,7 @@ export type SpaceViewModeConfig = {
   allowedWorkspaceKinds?: WorkspaceKind[];
   workTypeKeys?: string[];
   taskItemStages?: Array<{
-    key: "OPEN" | "DONE";
+    key: "TODO" | "IN_PROGRESS" | "DONE";
     label: string;
   }>;
   columns: SpaceViewColumnConfig[];

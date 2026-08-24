@@ -38,7 +38,9 @@ function UserAvatar({ user }: { user?: AssigneeOption | null }) {
 
 export function useAdHocWorkRowAction<T>(
   getTarget: (row: T) => AdHocWorkTarget,
-): { action: RowAction<T>; modal: ReactNode } {
+  options?: { onCreated?: () => void | Promise<void> },
+): { action: RowAction<T>; modal: ReactNode; openFreeWork: () => void } {
+  const [isOpen, setIsOpen] = useState(false);
   const [target, setTarget] = useState<AdHocWorkTarget | null>(null);
   const [request, setRequest] = useState("");
   const [detail, setDetail] = useState("");
@@ -56,7 +58,7 @@ export function useAdHocWorkRowAction<T>(
   );
 
   useEffect(() => {
-    if (!target || users.length) return;
+    if (!isOpen || users.length) return;
     let active = true;
     setUsersLoading(true);
     void listAdHocWorkAssigneesAction()
@@ -79,10 +81,11 @@ export function useAdHocWorkRowAction<T>(
     return () => {
       active = false;
     };
-  }, [notify, target, users.length]);
+  }, [isOpen, notify, users.length]);
 
   function close() {
     if (pending) return;
+    setIsOpen(false);
     setTarget(null);
     setRequest("");
     setDetail("");
@@ -91,11 +94,11 @@ export function useAdHocWorkRowAction<T>(
   }
 
   async function submit() {
-    if (!target || !request.trim() || pending) return;
+    if (!request.trim() || pending) return;
     setPending(true);
     progress.show({
       title: "Đang tạo việc phát sinh",
-      message: target.title,
+      message: target?.title ?? "Việc tự do",
     });
     try {
       await createAdHocWorkAction({
@@ -104,6 +107,7 @@ export function useAdHocWorkRowAction<T>(
         assignedToUserId: assigneeId || null,
         target,
       });
+      await options?.onCreated?.();
       notify.success({
         title: "Đã tạo việc phát sinh",
         message: "Công việc đã được đưa vào Space Vận hành.",
@@ -117,6 +121,7 @@ export function useAdHocWorkRowAction<T>(
     } finally {
       progress.hide();
       setPending(false);
+      setIsOpen(false);
       setTarget(null);
       setRequest("");
       setDetail("");
@@ -125,7 +130,7 @@ export function useAdHocWorkRowAction<T>(
     }
   }
 
-  const modal = target && typeof document !== "undefined"
+  const modal = isOpen && typeof document !== "undefined"
     ? createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 p-4" onMouseDown={(event) => {
           if (event.target === event.currentTarget) close();
@@ -134,7 +139,11 @@ export function useAdHocWorkRowAction<T>(
             <div className="flex items-start justify-between border-b border-slate-100 px-5 py-4">
               <div>
                 <h2 className="text-base font-semibold text-slate-950">Tạo việc phát sinh</h2>
-                <p className="mt-1 text-sm text-slate-500">{target.title}{target.ref ? ` · ${target.ref}` : ""}</p>
+                <p className="mt-1 text-sm text-slate-500">
+                  {target
+                    ? <>{target.title}{target.ref ? ` · ${target.ref}` : ""}</>
+                    : "Việc tự do · Không gắn đối tượng nghiệp vụ"}
+                </p>
               </div>
               <button type="button" onClick={close} className="rounded-full p-2 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
             </div>
@@ -198,9 +207,28 @@ export function useAdHocWorkRowAction<T>(
       key: "create-ad-hoc-work",
       label: "Tạo việc phát sinh",
       icon: <ClipboardPlus className="h-4 w-4" />,
-      onClick: (row) => setTarget(getTarget(row)),
+      onClick: (row) => {
+        setTarget(getTarget(row));
+        setIsOpen(true);
+      },
       separatorBefore: true,
     },
     modal,
+    openFreeWork: () => {
+      setTarget(null);
+      setIsOpen(true);
+    },
   };
+}
+
+export function useAdHocWorkCreate(options?: {
+  onCreated?: () => void | Promise<void>;
+}) {
+  const { modal, openFreeWork } = useAdHocWorkRowAction<never>(
+    () => {
+      throw new Error("Free work does not have a business target.");
+    },
+    options,
+  );
+  return { modal, open: openFreeWork };
 }
