@@ -32,6 +32,31 @@ export class MediaPathPolicy {
     );
   }
 
+  /** Canonical workspace for media owned by an editorial/social post. */
+  postOriginal(input: {
+    postId: string;
+    mediaObjectId?: string;
+    filename: string;
+  }) {
+    const mediaObjectId = input.mediaObjectId || randomUUID();
+    return normalizeKey(
+      `media/posts/${safeFilename(input.postId)}/objects/${mediaObjectId}/original/${safeFilename(input.filename)}`,
+    );
+  }
+
+  postDerivative(input: {
+    postId: string;
+    mediaObjectId: string;
+    variant: string;
+    extension: string;
+  }) {
+    const variant = safeFilename(input.variant).replace(/\.[^.]+$/, "");
+    const extension = input.extension.replace(/^\./, "").toLowerCase();
+    return normalizeKey(
+      `media/posts/${safeFilename(input.postId)}/objects/${input.mediaObjectId}/derivatives/${variant}.${extension}`,
+    );
+  }
+
   derivative(input: {
     mediaObjectId: string;
     variant: string;
@@ -54,7 +79,11 @@ export class MediaPathPolicy {
   }
 
   isCanonical(key: string) {
-    return /^media\/objects\/[^/]+\/(original|derivatives)\//.test(normalizeKey(key));
+    const normalized = normalizeKey(key);
+    return (
+      /^media\/objects\/[^/]+\/(original|derivatives)\//.test(normalized) ||
+      /^media\/posts\/[^/]+\/objects\/[^/]+\/(original|derivatives)\//.test(normalized)
+    );
   }
 
   isSource(key: string) {

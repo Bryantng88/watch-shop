@@ -1,4 +1,6 @@
 import type { DB } from "@/server/db/client";
+import { TaskExecutionTargetType } from "@prisma/client";
+import { completeMediaPostMediaProcessingFromQueueItem, completeMediaPostPhotographyFromQueueItem, completeMediaPostPublishFromQueueItem } from "@/domains/media-post/server";
 import {
   completeWatchMediaProcessingFromQueueItem,
   completeWatchPhotoshootFromQueueItem,
@@ -15,6 +17,9 @@ import { applyEventTriggerToQueueItem } from "./business-binding-workflow.servic
 
 type ProcessorEffectType =
   | "watch-photoshoot-completed"
+  | "media-post-photography-completed"
+  | "media-post-ready-for-publish"
+  | "media-post-published"
   | "watch-media-reshoot-requested"
   | "watch-media-ready-for-publish"
   | "watch-media-recalled"
@@ -40,7 +45,7 @@ export type WorkspaceWorkflowProcessorResult = {
   affectedProductIds: string[];
   mediaProcessingResult?: Awaited<
     ReturnType<typeof completeWatchMediaProcessingFromQueueItem>
-  > | null;
+  > | Awaited<ReturnType<typeof completeMediaPostMediaProcessingFromQueueItem>> | null;
 };
 
 type ManualProcessorInput = {
@@ -204,28 +209,45 @@ export async function processManualWorkspaceWorkflowTransition(
 
   if (input.transition.toState === "DONE") {
     if (input.transition.workflowKey === "watch-photography") {
-      const result = await completeWatchPhotoshootFromQueueItem(commonInput, db);
+      const binding = await db.taskExecution.findUnique({
+        where: { id: input.bindingId },
+        select: { targetType: true },
+      });
+      const isMediaPost = binding?.targetType === TaskExecutionTargetType.MEDIA_POST;
+      const result = isMediaPost
+        ? await completeMediaPostPhotographyFromQueueItem(commonInput, db)
+        : await completeWatchPhotoshootFromQueueItem(commonInput, db);
       effects.push(
-        effectFromResult({ type: "watch-photoshoot-completed", result }),
+        effectFromResult({
+          type: isMediaPost
+            ? "media-post-photography-completed"
+            : "watch-photoshoot-completed",
+          result,
+        }),
       );
     }
 
     if (input.transition.workflowKey === "watch-media-processing") {
-      mediaProcessingResult = await completeWatchMediaProcessingFromQueueItem(
-        commonInput,
-        db,
-      );
+      const binding = await db.taskExecution.findUnique({ where: { id: input.bindingId }, select: { targetType: true } });
+      const isMediaPost = binding?.targetType === TaskExecutionTargetType.MEDIA_POST;
+      mediaProcessingResult = isMediaPost
+        ? await completeMediaPostMediaProcessingFromQueueItem(commonInput, db)
+        : await completeWatchMediaProcessingFromQueueItem(commonInput, db);
       effects.push(
         effectFromResult({
-          type: "watch-media-ready-for-publish",
+          type: isMediaPost ? "media-post-ready-for-publish" : "watch-media-ready-for-publish",
           result: mediaProcessingResult,
         }),
       );
     }
 
     if (input.transition.workflowKey === "watch-publish") {
-      const result = await completeWatchPublishFromQueueItem(commonInput, db);
-      effects.push(effectFromResult({ type: "watch-posted", result }));
+      const binding = await db.taskExecution.findUnique({ where: { id: input.bindingId }, select: { targetType: true } });
+      const isMediaPost = binding?.targetType === TaskExecutionTargetType.MEDIA_POST;
+      const result = isMediaPost
+        ? await completeMediaPostPublishFromQueueItem(commonInput, db)
+        : await completeWatchPublishFromQueueItem(commonInput, db);
+      effects.push(effectFromResult({ type: isMediaPost ? "media-post-published" : "watch-posted", result }));
     }
   }
 

@@ -2,6 +2,7 @@ import { OrderStatus, Prisma } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
 import type { OrderDraftInput, OrderItemInput } from "../shared";
 import { normalizeReserveType } from "../../shared/order-reserve-type";
+import { ensureCurrentInventoryCycles } from "@/domains/watch/server/inventory-lifecycle";
 
 export async function findCustomerByIdRepo(db: DB, id: string) {
   return dbOrTx(db).customer.findUnique({ where: { id } });
@@ -77,9 +78,17 @@ export async function getActiveOrderLocksForProductsRepo(
 
   if (!productIds.length) return [];
 
-  return dbOrTx(db).orderItem.findMany({
+  const client = dbOrTx(db);
+  const cycles = await ensureCurrentInventoryCycles(client as Prisma.TransactionClient, productIds);
+  const scopedProducts = productIds.filter((productId) => cycles.has(productId));
+  if (!scopedProducts.length) return [];
+
+  return client.orderItem.findMany({
     where: {
-      productId: { in: productIds },
+      OR: scopedProducts.map((productId) => ({
+        productId,
+        inventoryCycleId: cycles.get(productId),
+      })),
       ...(input.excludeOrderId ? { orderId: { not: input.excludeOrderId } } : {}),
       order: {
         status: {
@@ -122,6 +131,7 @@ async function buildOrderItemInventorySnapshots(client: ReturnType<typeof dbOrTx
   const cleanIds = Array.from(new Set(productIds.map((id) => String(id ?? "").trim()).filter(Boolean)));
   if (!cleanIds.length) return new Map<string, any>();
 
+  const inventoryCycleByProductId = await ensureCurrentInventoryCycles(client as Prisma.TransactionClient, cleanIds);
   const rows = await client.product.findMany({
     where: { id: { in: cleanIds } },
     select: {
@@ -145,6 +155,7 @@ async function buildOrderItemInventorySnapshots(client: ReturnType<typeof dbOrTx
         previousSaleStage: row.watch?.saleStage ?? null,
         previousStockStage: row.watch?.stockStage ?? null,
         previousServiceStage: row.watch?.serviceStage ?? null,
+        inventoryCycleId: inventoryCycleByProductId.get(row.id) ?? null,
       },
     ]),
   );
@@ -186,6 +197,7 @@ export async function createOrderItemsRepo(db: DB, orderId: string, items: Order
       previousSaleStage: snapshot?.previousSaleStage ?? null,
       previousStockStage: snapshot?.previousStockStage ?? null,
       previousServiceStage: snapshot?.previousServiceStage ?? null,
+      inventoryCycleId: snapshot?.inventoryCycleId ?? null,
     } as any;
   });
 

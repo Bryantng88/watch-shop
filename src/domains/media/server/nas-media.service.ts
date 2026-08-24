@@ -35,6 +35,7 @@ export function resolveMediaProfile(value?: string | null): MediaProfile {
     if (value === "sold") return "sold";
     if (value === "storefront-active") return "storefront-active";
     if (value === "storefront-chosen") return "storefront-chosen";
+    if (value === "media-post") return "media-post";
 
     return "inline";
 }

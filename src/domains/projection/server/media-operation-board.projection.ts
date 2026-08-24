@@ -26,7 +26,7 @@ import type {
 } from "./projection.types";
 
 export const MEDIA_OPERATION_BOARD_PROJECTION_KEY = "media-operation-board";
-export const MEDIA_OPERATION_BOARD_PROJECTION_VERSION = 10;
+export const MEDIA_OPERATION_BOARD_PROJECTION_VERSION = 11;
 const MEDIA_OPERATION_BOARD_EVENTS = [
   "watch.created",
   "watch.media.photoshoot.requested",
@@ -44,6 +44,11 @@ const MEDIA_OPERATION_BOARD_EVENTS = [
   "watch.publish.assets.downloaded",
   "watch.saleStage.posted",
   "watch.sold",
+  "media.post.created",
+  "media.post.photography.completed",
+  "media.post.asset.selected",
+  "media.post.ready_for_publish",
+  "media.post.published",
   "task.item.activity.commented",
 ] as const;
 
@@ -270,6 +275,7 @@ export async function buildMediaOperationBoardRow(
   const bindingMetadata = asRecord(binding.metadataJson);
   const data: MediaOperationBoardProjection = {
     id: watch.id,
+    targetType: "WATCH",
     productId: watch.productId,
     bindingId: binding.id,
     workspaceTaskItemId: binding.taskItemId,
@@ -312,6 +318,131 @@ export async function buildMediaOperationBoardRow(
   return data;
 }
 
+export async function buildMediaPostOperationBoardRow(
+  db: DB,
+  input: { mediaPostId: string },
+) {
+  const client = dbOrTx(db);
+  const bindings = await client.taskExecution.findMany({
+    where: {
+      targetType: TaskExecutionTargetType.MEDIA_POST,
+      targetId: input.mediaPostId,
+      actionType: { not: TaskExecutionActionType.CANCELLED },
+      taskItemId: { not: null },
+    },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      taskId: true,
+      taskItemId: true,
+      metadataJson: true,
+      createdAt: true,
+      createdByUser: { select: { name: true, email: true, avatarUrl: true } },
+      taskItem: { select: { note: true } },
+    },
+  });
+  const binding = bindings
+    .filter((row) => mediaStage(row.taskItem?.note, row.metadataJson))
+    .sort((left, right) => mediaBindingRank(right) - mediaBindingRank(left))[0];
+  const entityId = `MEDIA_POST:${input.mediaPostId}`;
+  if (!binding?.taskItemId) {
+    await deleteProjectionRecords(db, {
+      projectionKey: MEDIA_OPERATION_BOARD_PROJECTION_KEY,
+      projectionVersion: MEDIA_OPERATION_BOARD_PROJECTION_VERSION,
+      rowKeys: [entityId],
+    });
+    return null;
+  }
+  const post = await client.mediaPost.findUnique({
+    where: { id: input.mediaPostId },
+    include: {
+      targets: { include: { postTarget: true } },
+    },
+  });
+  if (!post) return null;
+  const rawStage = mediaStage(binding.taskItem?.note, binding.metadataJson);
+  if (!rawStage) return null;
+  const stage: MediaOperationBoardStage =
+    post.status === "PUBLISHED" || post.status === "CANCELLED" ? "DONE" : rawStage;
+  const runtime = getQueueItemWorkflowState({ metadataJson: binding.metadataJson });
+  const workflowDefinition = resolveBindingWorkflowDefinition(binding.metadataJson);
+  const manualTransitions = listAvailableManualTransitionsForQueueItem({
+    workflowDefinition,
+    currentState: runtime?.currentState ?? null,
+  }).map((transition) => {
+    const metadata = asRecord(transition.metadata);
+    if (String(metadata.intent ?? "").toUpperCase() !== "OPEN_TARGET") return transition;
+    return {
+      ...transition,
+      metadata: {
+        ...metadata,
+        targetRoute: "media-post.detail",
+        targetMode: "media",
+        focus: "media",
+        from: "media-workspace",
+        expectedEventKey: "media.post.asset.selected",
+      },
+    };
+  });
+  const firstMedia = await client.mediaBinding.findFirst({
+    where: {
+      ownerType: "MEDIA_POST",
+      ownerId: post.id,
+      lifecycle: { not: "REMOVED" },
+    },
+    include: { mediaObject: { select: { storageKey: true } } },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  });
+  const actor = userLabel(binding.createdByUser);
+  const data: MediaOperationBoardProjection = {
+    id: post.id,
+    targetType: "MEDIA_POST",
+    productId: null,
+    bindingId: binding.id,
+    workspaceTaskItemId: binding.taskItemId,
+    title: post.title,
+    sku: post.refNo,
+    imageUrl: firstMedia
+      ? `/api/media/sign?key=${encodeURIComponent(firstMedia.mediaObject.storageKey)}`
+      : null,
+    stage,
+    workflowKey: runtime?.workflowKey ?? null,
+    workflowState: stage === "DONE" ? "DONE" : runtime?.currentState ?? null,
+    reshootNote: null,
+    mediaWorkProgress: resolveMediaWorkProgressFromMetadata(asRecord(binding.metadataJson)),
+    postTargets: post.targets.map(({ postTarget }) => ({
+      id: postTarget.id,
+      name: postTarget.name,
+      platform: postTarget.platform,
+    })),
+    manualTransitions,
+    commentCount: 0,
+    mentionedMeCount: 0,
+    unreadMentionCount: 0,
+    updatedAt: post.updatedAt.toISOString(),
+    lastUpdatedBy: {
+      label: actor === "-" ? "Hệ thống" : actor,
+      avatarUrl: binding.createdByUser?.avatarUrl ?? null,
+      isSystem: actor === "-",
+    },
+    workspaceId: binding.taskId,
+  };
+  await upsertProjectionRecord(db, {
+    projectionKey: MEDIA_OPERATION_BOARD_PROJECTION_KEY,
+    projectionVersion: MEDIA_OPERATION_BOARD_PROJECTION_VERSION,
+    rowKey: entityId,
+    workspaceId: binding.taskId,
+    entityType: "MEDIA_POST",
+    entityId,
+    status: stage,
+    searchText: `${post.refNo} ${post.title}`.toLowerCase(),
+    sortAt: post.updatedAt,
+    sourceUpdatedAt: post.updatedAt,
+    dataJson: data,
+  });
+  return data;
+}
+
 async function watchIdFromComment(db: DB, eventId: string) {
   const activity = await dbOrTx(db).taskItemActivity.findFirst({
     where: { OR: [{ id: eventId }, { replies: { some: { id: eventId } } }] },
@@ -327,6 +458,12 @@ async function buildFromEvent(
   db: DB,
   context: ProjectionBuildContext & { sourceEvent: BusinessEventDispatchContext },
 ) {
+  const sourceTargetType = clean(context.sourceEvent.targetType).toUpperCase();
+  if (sourceTargetType === "MEDIA_POST") {
+    const mediaPostId = clean(context.sourceEvent.targetId);
+    const applied = mediaPostId && await buildMediaPostOperationBoardRow(db, { mediaPostId }) ? 1 : 0;
+    return result(context, { targetType: "MEDIA_POST", targetId: mediaPostId }, applied, applied ? undefined : "NO_MEDIA_POST_BOARD_BINDING");
+  }
   const watchId = context.sourceEvent.eventKey === "task.item.activity.commented"
     ? await watchIdFromComment(db, context.sourceEvent.targetId)
     : clean(context.sourceEvent.targetId);
@@ -346,19 +483,21 @@ async function rebuild(
   }
   const rows = await client.taskExecution.findMany({
     where: {
-      targetType: TaskExecutionTargetType.WATCH,
+      targetType: { in: [TaskExecutionTargetType.WATCH, TaskExecutionTargetType.MEDIA_POST] },
       actionType: { not: TaskExecutionActionType.CANCELLED },
       ...(targetId ? { targetId } : {}),
     },
-    distinct: ["targetId"],
-    select: { targetId: true },
+    distinct: ["targetType", "targetId"],
+    select: { targetId: true, targetType: true },
     take: context.scope.limit ? Math.max(1, Math.min(10000, context.scope.limit)) : undefined,
   });
   let applied = 0;
   for (let index = 0; index < rows.length; index += 8) {
     const built = await Promise.all(
       rows.slice(index, index + 8).map((row) =>
-        buildMediaOperationBoardRow(db, { watchId: row.targetId }),
+        row.targetType === TaskExecutionTargetType.MEDIA_POST
+          ? buildMediaPostOperationBoardRow(db, { mediaPostId: row.targetId })
+          : buildMediaOperationBoardRow(db, { watchId: row.targetId }),
       ),
     );
     applied += built.filter(Boolean).length;
@@ -433,7 +572,7 @@ export const mediaOperationBoardProjectionBuilder: ProjectionBuilder = {
   version: MEDIA_OPERATION_BOARD_PROJECTION_VERSION,
   description: "Media Operation four-stage board cards, counters and pagination read model.",
   sourceEvents: [...MEDIA_OPERATION_BOARD_EVENTS],
-  targetTypes: ["WATCH", "TASK_ITEM"],
+  targetTypes: ["WATCH", "MEDIA_POST", "TASK_ITEM"],
   buildFromEvent,
   rebuild,
 };

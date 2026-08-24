@@ -1,7 +1,8 @@
-import { AcquisitionStatus, OrderStatus, AcquisitionType, Prisma, ProductStatus, WatchSaleStage, WatchStockStage } from "@prisma/client";
+import { AcquisitionStatus, OrderStatus, AcquisitionType, Prisma, ProductStatus, WatchSaleStage } from "@prisma/client";
 
 import { prisma, type DB, dbOrTx } from "@/server/db/client";
 import { emitAcquisitionBusinessEvent } from "./acquisition-business-event";
+import { transitionWatchInventoryTx } from "@/domains/watch/server/inventory-lifecycle";
 
 function money(value: unknown) {
     const amount = Number(value ?? 0);
@@ -412,21 +413,11 @@ export async function restoreBuyBackWatchAfterAcquisitionPostTx(
             watchId: watch.id,
         });
 
-        await db.product.update({
-            where: { id: productId },
-            data: {
-                status: ProductStatus.AVAILABLE,
-            },
-        });
-
-        await db.watch.update({
-            where: { id: watch.id },
-            data: {
-                saleStage: nextSaleStage,
-                stockStage: WatchStockStage.IN_STOCK,
-                serviceStage: "NOT_REQUIRED" as any,
-                updatedAt: new Date(),
-            },
+        await transitionWatchInventoryTx(db as Prisma.TransactionClient, {
+            productId,
+            next: "AVAILABLE",
+            saleStageOverride: nextSaleStage,
+            serviceStageOverride: "NOT_REQUIRED",
         });
 
         const sourceItem = acquisition.acquisitionItem.find((item) => item.productId === productId);

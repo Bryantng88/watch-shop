@@ -17,7 +17,12 @@ export const MEDIA_ROLES = [
 ] as const;
 export type MediaRole = (typeof MEDIA_ROLES)[number];
 
-export type MediaOwnerType = "WATCH" | "ACQUISITION" | "PRODUCT" | "LISTING";
+export type MediaOwnerType =
+  | "WATCH"
+  | "MEDIA_POST"
+  | "ACQUISITION"
+  | "PRODUCT"
+  | "LISTING";
 export type MediaBindingLifecycle =
   | "DRAFT"
   | "SELECTED"

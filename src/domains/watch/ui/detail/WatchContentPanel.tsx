@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Check, Copy, FileText, Lock } from "lucide-react";
 import { Button } from "@/domains/shared/ui/form/fields";
 import { SectionCard, SectionEmpty } from "./shared";
-import { buildPostText } from "@/domains/watch/application/generate-watch-content";
+import { buildPostText, buildStorefrontProductUrl } from "@/domains/watch/application/generate-watch-content";
 import ReviewStatusBadge from "../review/ReviewStatusBadge";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import GuardNotice from "@/domains/shared/feedback/GuardNotice";
@@ -32,6 +32,26 @@ type Props = {
   detail: any;
   canReviewContent?: boolean;
 };
+
+function LinkifiedPostText({ text }: { text: string }) {
+  return (
+    <div className="whitespace-pre-wrap">
+      {text.split(/(https?:\/\/[^\s]+)/g).map((part, index) =>
+        /^https?:\/\//.test(part) ? (
+          <a
+            key={`${part}:${index}`}
+            href={part}
+            target="_blank"
+            rel="noreferrer"
+            className="text-blue-600 underline underline-offset-2 hover:text-blue-700"
+          >
+            {part}
+          </a>
+        ) : <span key={index}>{part}</span>,
+      )}
+    </div>
+  );
+}
 
 export default function WatchContentPanel({ detail }: Props) {
   const [copied, setCopied] = useState(false);
@@ -63,9 +83,10 @@ export default function WatchContentPanel({ detail }: Props) {
         body: content?.body,
         bulletSpecs,
         hookText: content?.hookText,
+        productUrl: buildStorefrontProductUrl(detail?.slug ?? detail?.basic?.slug),
         hashTags: content?.hashTags,
       }),
-    [content, detail?.title, bulletSpecs]
+    [content, detail?.basic?.slug, detail?.slug, detail?.title, bulletSpecs]
   );
   const [postTitle, ...postRest] = fullPost.split("\n\n");
   const notify = useNotify();
@@ -178,7 +199,7 @@ export default function WatchContentPanel({ detail }: Props) {
             >
               <div className="space-y-5 text-sm leading-7 text-slate-900">
                 <div className="font-bold uppercase">{postTitle}</div>
-                <div className="whitespace-pre-wrap">{postRest.join("\n\n")}</div>
+                <LinkifiedPostText text={postRest.join("\n\n")} />
               </div>
             </div>
           </>

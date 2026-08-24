@@ -57,6 +57,71 @@ export function listCoordinationRoutes() {
 
 registerCoordinationRoutes([
   {
+    eventKey: "media.post.created",
+    targetType: "MEDIA_POST",
+    coordinationType: "media",
+    workTypeKey: "photography",
+    enabled: true,
+    metadata: {
+      note: "Intake an independent Media Post into Photography.",
+      scopeType: "CURRENT_ACTIVE_SPACE",
+      scopeContext: "MEDIA",
+      bindingMode: "INTAKE",
+    },
+  },
+  {
+    eventKey: "media.post.photography.completed",
+    targetType: "MEDIA_POST",
+    coordinationType: "media",
+    workTypeKey: "media-processing",
+    enabled: true,
+    metadata: {
+      note: "Move a completed Media Post photoshoot into Media Processing.",
+      scopeType: "CURRENT_ACTIVE_SPACE",
+      scopeContext: "MEDIA",
+      bindingMode: "INTAKE",
+    },
+  },
+  {
+    eventKey: "media.post.asset.selected",
+    targetType: "MEDIA_POST",
+    coordinationType: "media",
+    workTypeKey: "media-processing",
+    enabled: false,
+    metadata: {
+      note: "Asset selection is a draft-progress signal only; stage movement requires explicit approval.",
+      scopeType: "CURRENT_ACTIVE_SPACE",
+      scopeContext: "MEDIA",
+      bindingMode: "INTAKE",
+    },
+  },
+  {
+    eventKey: "media.post.ready_for_publish",
+    targetType: "MEDIA_POST",
+    coordinationType: "media",
+    workTypeKey: "publish",
+    enabled: true,
+    metadata: {
+      note: "Move a ready Media Post into Publish.",
+      scopeType: "CURRENT_ACTIVE_SPACE",
+      scopeContext: "MEDIA",
+      bindingMode: "INTAKE",
+    },
+  },
+  {
+    eventKey: "media.post.published",
+    targetType: "MEDIA_POST",
+    coordinationType: "media",
+    workTypeKey: "publish",
+    enabled: true,
+    metadata: {
+      note: "Progress a published Media Post to completion.",
+      scopeType: "CURRENT_ACTIVE_SPACE",
+      scopeContext: "MEDIA",
+      bindingMode: "PROGRESS",
+    },
+  },
+  {
     eventKey: "strap.intake.requested",
     targetType: "STRAP",
     coordinationType: "operation",

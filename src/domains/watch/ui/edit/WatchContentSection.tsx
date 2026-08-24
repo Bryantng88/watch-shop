@@ -12,6 +12,7 @@ import {
     Textarea,
 } from "./shared";
 import {
+    buildStorefrontProductUrl,
     generateWatchContent,
     type WatchContentGenerationResult,
 } from "@/domains/watch/application/generate-watch-content";
@@ -206,6 +207,7 @@ export default function WatchContentSection({
             bulletSpecs: [...bulletSpecs, ""],
         });
     };
+    const storefrontProductUrl = buildStorefrontProductUrl(watchValues.basic.slug);
 
     return (
         <SectionCard
@@ -348,6 +350,16 @@ export default function WatchContentSection({
                         onChange={(e) => onChange({ hookText: e.target.value })}
                         placeholder="Hook"
                     />
+                    {storefrontProductUrl ? (
+                        <a
+                            href={storefrontProductUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-2 inline-flex text-sm font-medium text-blue-600 underline underline-offset-2 hover:text-blue-700"
+                        >
+                            {storefrontProductUrl}
+                        </a>
+                    ) : null}
                 </div>
 
                 <div>

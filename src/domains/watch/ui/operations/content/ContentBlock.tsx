@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Check, Copy, FileText, Loader2, Sparkles } from "lucide-react";
-import { buildPostText } from "@/domains/watch/application/generate-watch-content";
+import { buildPostText, buildStorefrontProductUrl } from "@/domains/watch/application/generate-watch-content";
 import type { WatchWorkbenchValues } from "@/domains/watch/client/workbench/types";
 import { updateValues } from "@/domains/watch/client/workbench/workbench-utils";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
@@ -81,6 +81,7 @@ export default function ContentBlock({
         [values.content.bulletSpecs],
     );
     const contentStatus = String(values.contentReviewStatus ?? "DRAFT").toUpperCase();
+    const storefrontProductUrl = buildStorefrontProductUrl(values.basic.slug);
     const fullPost = useMemo(
         () =>
             buildPostText({
@@ -88,11 +89,13 @@ export default function ContentBlock({
                 body: values.content.body,
                 bulletSpecs,
                 hookText: values.content.hookText,
+                productUrl: buildStorefrontProductUrl(values.basic.slug),
                 hashTags: values.content.hashTags,
             }),
         [
             bulletSpecs,
             values.basic.title,
+            values.basic.slug,
             values.content.body,
             values.content.hashTags,
             values.content.hookText,
@@ -183,6 +186,11 @@ export default function ContentBlock({
                     </Field>
                     <Field label="Mô tả (VI)">
                         <textarea className={textareaClass} value={values.content.hookText} onChange={(event) => setContent({ hookText: event.target.value })} />
+                        {storefrontProductUrl ? (
+                            <a href={storefrontProductUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-xs font-semibold text-blue-600 underline underline-offset-2 hover:text-blue-700">
+                                {storefrontProductUrl}
+                            </a>
+                        ) : null}
                     </Field>
                     <Field label="Domain context">
                         <input className={inputClass} value={values.content.hashTags} onChange={(event) => setContent({ hashTags: event.target.value })} placeholder="retro, LED, dress, diver..." />

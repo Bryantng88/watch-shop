@@ -1,6 +1,63 @@
 # Watch Inventory Lifecycle Hardening
 
-Status: design and implementation handoff (2026-08-24).
+Status: additive local implementation completed; production migration/cutover pending (2026-08-24).
+
+## Implemented Architecture Decision
+
+The local implementation follows the existing command/transaction architecture instead of
+introducing a second orchestration layer:
+
+- `postAcquisitionApplication()` opens a cycle after the acquisition becomes `POSTED`, in the
+  same database transaction. This is the correct boundary because a DRAFT acquisition does not
+  yet own inventory.
+- `createOrderItemsRepo()` attaches each Watch item to `Watch.currentInventoryCycleId` while the
+  existing per-product advisory lock is held. Historical order rows therefore cannot participate
+  in a later cycle.
+- `order-watch-sync.service.ts` resolves effects only from order items in the current cycle.
+- `watch-inventory-transition.service.ts` atomically maps `AVAILABLE`, `HOLD`, and `SOLD` to the
+  persisted Product/Watch triple. Order and Acquisition lifecycle paths no longer write these
+  fields independently.
+- `WatchServiceStage` remains orthogonal. Service workflows may temporarily use service-specific
+  Product statuses, but they must not open/close an inventory cycle.
+
+The schema is additive and nullable for rolling deployment. The migration backfills cycles from
+posted Acquisition items, assigns historical Order items by the cycle open at their creation time,
+and creates a legacy cycle for Watches without a posted Acquisition. A partial unique index permits
+only one open cycle per product; triggers reject Order/Acquisition links whose product differs from
+the cycle product. Application advisory locks serialize cycle opening before those constraints run.
+
+Why explicit identity rather than the timestamp compatibility repair: timestamps remain useful for
+the one-time backfill, but they are not a stable ownership contract when data is imported, corrected,
+or replayed. Persisting `inventoryCycleId` makes reconciliation deterministic and makes invalid
+cross-cycle writes observable at the database boundary.
+
+## Operational Artifacts
+
+- Migration: `prisma/migrations/20260824150000_add_watch_inventory_cycles/migration.sql`
+- Cycle orchestration: `src/domains/watch/server/inventory-lifecycle/`
+- Read-only audit: `npm run audit:watch-inventory-lifecycle`
+- Focused unit tests cover canonical triple mapping, idempotency, missing-cycle rejection, and
+  cycle-scoped order locking. Database-backed production-shaped tests remain a rollout gate.
+
+## Adjacent State Writers Reviewed
+
+The review found other code that can update overlapping status fields:
+
+- Watch review/media readiness promotes `DRAFT/PROCESSING` to `READY`. This is readiness inside the
+  same inventory cycle, so it must never create a cycle and must preserve `HOLD`/`SOLD` guards.
+- Service start/completion uses `Product.status` for `IN_SERVICE/AVAILABLE` while service state is
+  orthogonal. This pre-existing overlap can make the Product/Watch triple appear divergent during
+  service. It should be migrated separately to a derived availability projection; changing it in
+  the inventory migration would alter service semantics and is intentionally out of scope.
+- Consignment uses `CONSIGNED_TO`, also outside the three-state sales cycle. A future lifecycle
+  extension should model consignment as ownership/availability metadata rather than treating it as
+  an Order effect.
+- Variant quantity reservation is a separate inventory model for non-unique goods and must not reuse
+  Watch cycles. The reusable principle is explicit ownership identity plus idempotent transition,
+  not the Watch-specific table itself.
+
+These paths are included in the audit rationale so later work does not solve divergence by adding
+more timestamp inference or independent field writes.
 
 ## Purpose
 

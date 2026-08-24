@@ -13,6 +13,7 @@ import { SHIPMENT_BUSINESS_EVENT_CONTRACTS } from "@/domains/shipment/server/eve
 import { ORDER_BUSINESS_EVENT_CONTRACTS } from "@/domains/order/server/events/order-business-event.contract";
 import { STRAP_BUSINESS_EVENT_CONTRACTS } from "@/domains/strap/server/events/strap-business-event.contract";
 import { PURCHASE_REQUEST_BUSINESS_EVENT_CONTRACTS } from "@/domains/purchase-request/server/events/purchase-request-business-event.contract";
+import { MEDIA_POST_BUSINESS_EVENT_CONTRACTS } from "@/domains/media-post/server/events/media-post-business-event.contract";
 
 const WATCH_BUSINESS_EVENT_CONTRACTS = WATCH_BUSINESS_EVENT_DEFINITIONS.map(
   definitionToBusinessEventContract,
@@ -24,6 +25,7 @@ export const BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
   ...ORDER_BUSINESS_EVENT_CONTRACTS,
   ...STRAP_BUSINESS_EVENT_CONTRACTS,
   ...PURCHASE_REQUEST_BUSINESS_EVENT_CONTRACTS,
+  ...MEDIA_POST_BUSINESS_EVENT_CONTRACTS,
   ...LEGACY_BUSINESS_EVENT_CONTRACTS,
 ];
 

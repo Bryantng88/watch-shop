@@ -368,7 +368,10 @@ function operationalPermission(targetType?: string | null) {
   if (normalized === TaskExecutionTargetType.PAYMENT) return null;
   if (normalized === TaskExecutionTargetType.SHIPMENT) return PERMISSIONS.SHIPMENT_UPDATE;
   if (normalized === TaskExecutionTargetType.ORDER) return PERMISSIONS.ORDER_UPDATE;
-  if (normalized === TaskExecutionTargetType.WATCH) return PERMISSIONS.PRODUCT_UPDATE;
+  if (
+    normalized === TaskExecutionTargetType.WATCH ||
+    normalized === TaskExecutionTargetType.MEDIA_POST
+  ) return PERMISSIONS.PRODUCT_UPDATE;
   if (
     normalized === TaskExecutionTargetType.SERVICE_REQUEST ||
     normalized === TaskExecutionTargetType.TECHNICAL_ISSUE

@@ -48,6 +48,10 @@ export type SpaceViewModeConfig = {
   taskItemStages?: Array<{
     key: "TODO" | "IN_PROGRESS" | "DONE";
     label: string;
+    transition: {
+      nextStageKey: "TODO" | "IN_PROGRESS" | "DONE";
+      actionLabel: string;
+    };
   }>;
   columns: SpaceViewColumnConfig[];
 };
@@ -58,6 +62,8 @@ export type SpaceViewFlowStageConfig = {
   workspaceKey: string;
   sortOrder: number;
   itemTargetType: string;
+  /** All target types accepted by this stage. `itemTargetType` remains the legacy default. */
+  itemTargetTypes?: string[];
   evidenceEvents: string[];
 };
 
@@ -68,6 +74,8 @@ export type SpaceViewCoreFlowConfig = {
   rowModel: Extract<SpaceViewRowModel, "FLOW_STAGE_WORKSPACE">;
   primaryTarget: Extract<SpaceViewPrimaryTarget, "workspace">;
   itemTargetType: string;
+  /** All target types accepted by this flow. `itemTargetType` remains the legacy default. */
+  itemTargetTypes?: string[];
   stages: SpaceViewFlowStageConfig[];
 };
 

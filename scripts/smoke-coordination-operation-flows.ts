@@ -98,6 +98,11 @@ async function main() {
         auth,
       });
       const mismatchedActors = await actorMismatches(flowPage.items);
+      const declaredTargetTypes = new Set(
+        (flow?.itemTargetTypes ?? [flow?.itemTargetType])
+          .filter(Boolean)
+          .map((value) => String(value).toUpperCase()),
+      );
       results.push({
         modeKey: mode.key,
         stage,
@@ -117,6 +122,9 @@ async function main() {
             return itemStage !== requested;
           })
           .map((item) => item.id),
+        unexpectedTargetTypes: flowPage.items
+          .filter((item) => !declaredTargetTypes.has(String(item.targetType).toUpperCase()))
+          .map((item) => ({ id: item.id, targetType: item.targetType })),
         mismatchedActors,
       });
     }
@@ -128,6 +136,7 @@ async function main() {
     return (
       result.duplicateIds !== 0 ||
       result.wrongStageItems.length !== 0 ||
+      result.unexpectedTargetTypes.length !== 0 ||
       result.mismatchedActors.length !== 0 ||
       requestedStageCount !== result.total
     );

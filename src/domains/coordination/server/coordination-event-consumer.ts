@@ -404,7 +404,7 @@ function isMediaFlowStageRoute(input: {
 }) {
   const workTypeKey = normalizeMatchKey(input.route.workTypeKey);
   return (
-    normalizeTargetType(input.targetType) === "WATCH" &&
+    ["WATCH", "MEDIA_POST"].includes(normalizeTargetType(input.targetType)) &&
     (
       workTypeKey === "photography" ||
       workTypeKey === "media processing" ||
@@ -426,6 +426,7 @@ const EXPLICIT_MEDIA_REGRESSION_EVENTS = new Set([
   "watch.content.unapproved",
   "watch.image.rejected",
   "watch.image.unapproved",
+  "media.post.created",
 ]);
 
 function mediaStageRank(value: unknown) {

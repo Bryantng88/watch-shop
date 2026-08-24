@@ -10,6 +10,10 @@ import {
   ORDER_ACTIVE_HOLD_STATUSES,
   ORDER_ACTIVE_SOLD_STATUSES,
 } from "../shared/order-status";
+import {
+  ensureCurrentInventoryCycles,
+  transitionWatchInventoryTx,
+} from "@/domains/watch/server/inventory-lifecycle";
 
 type Tx = Prisma.TransactionClient;
 
@@ -38,51 +42,12 @@ async function resolveEffectByProductId(tx: Tx, productIds: string[]) {
 
   if (!ids.length) return map;
 
-  // Compatibility boundary until explicit WatchInventoryCycle identity is deployed.
-  // A posted buy-back/trade-in starts a new physical inventory lifecycle, so orders
-  // from before that boundary are immutable history and cannot affect current stock.
-  const acquisitionRows = await tx.acquisitionItem.findMany({
-    where: {
-      productId: { in: ids },
-      acquisition: {
-        type: { in: ["BUY_BACK", "TRADE_IN"] },
-        accquisitionStt: "POSTED",
-      },
-    },
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    select: {
-      id: true,
-      productId: true,
-      createdAt: true,
-      acquisition: {
-        select: {
-          acquiredAt: true,
-          sentAt: true,
-          updatedAt: true,
-        },
-      },
-    },
-  });
-
-  const boundaryByProductId = new Map<string, Date>();
-  for (const row of acquisitionRows) {
-    if (!row.productId || boundaryByProductId.has(row.productId)) continue;
-    boundaryByProductId.set(
-      row.productId,
-      row.acquisition.sentAt ?? row.acquisition.updatedAt ?? row.acquisition.acquiredAt ?? row.createdAt,
-    );
-  }
-
-  const lifecycleWhere = ids.map((productId) => {
-    const boundary = boundaryByProductId.get(productId);
-    return boundary
-      ? { productId, createdAt: { gte: boundary } }
-      : { productId };
-  });
-
+  const currentCycles = await ensureCurrentInventoryCycles(tx, ids);
+  const cycleIds = Array.from(currentCycles.values());
   const rows = await tx.orderItem.findMany({
     where: {
-      OR: lifecycleWhere,
+      productId: { in: ids },
+      inventoryCycleId: { in: cycleIds },
       order: {
         status: {
           not: OrderStatus.CANCELLED,
@@ -140,16 +105,16 @@ async function getSnapshotFromOrderItem(
       previousSaleStage: true,
       previousStockStage: true,
       previousServiceStage: true,
-    } as any,
-  } as any);
+    },
+  });
 
   if (!row) return null;
 
   return {
-    productStatus: (row as any).previousProductStatus ?? null,
-    saleStage: (row as any).previousSaleStage ?? null,
-    stockStage: (row as any).previousStockStage ?? null,
-    serviceStage: (row as any).previousServiceStage ?? null,
+    productStatus: row.previousProductStatus ?? null,
+    saleStage: row.previousSaleStage ?? null,
+    stockStage: row.previousStockStage ?? null,
+    serviceStage: row.previousServiceStage ?? null,
   };
 }
 
@@ -178,36 +143,12 @@ async function applyInventoryEffect(
   if (!current?.watch) return;
 
   if (effect === "SOLD") {
-    await tx.product.update({
-      where: { id: productId },
-      data: { status: ProductStatus.SOLD },
-    });
-
-    await tx.watch.update({
-      where: { productId },
-      data: {
-        saleStage: WatchSaleStage.SOLD,
-        stockStage: WatchStockStage.OUT_OF_STOCK,
-      },
-    });
-
+    await transitionWatchInventoryTx(tx, { productId, next: "SOLD" });
     return;
   }
 
   if (effect === "HOLD") {
-    await tx.product.update({
-      where: { id: productId },
-      data: { status: ProductStatus.HOLD },
-    });
-
-    await tx.watch.update({
-      where: { productId },
-      data: {
-        saleStage: WatchSaleStage.HOLD,
-        stockStage: WatchStockStage.RESERVED,
-      },
-    });
-
+    await transitionWatchInventoryTx(tx, { productId, next: "HOLD" });
     return;
   }
 
@@ -216,22 +157,11 @@ async function applyInventoryEffect(
     productId,
   });
 
-  await tx.product.update({
-    where: { id: productId },
-    data: {
-      status: snapshot?.productStatus ?? ProductStatus.AVAILABLE,
-    },
-  });
-
-  await tx.watch.update({
-    where: { productId },
-    data: {
-      saleStage: snapshot?.saleStage ?? WatchSaleStage.READY,
-      stockStage: snapshot?.stockStage ?? WatchStockStage.IN_STOCK,
-      ...(snapshot?.serviceStage
-        ? { serviceStage: snapshot.serviceStage as any }
-        : {}),
-    },
+  await transitionWatchInventoryTx(tx, {
+    productId,
+    next: "AVAILABLE",
+    saleStageOverride: snapshot?.saleStage ?? WatchSaleStage.READY,
+    serviceStageOverride: snapshot?.serviceStage ?? null,
   });
 }
 

@@ -330,6 +330,10 @@ export function resolveMediaWorkProgressFromMetadata(
   const image = parts.image === true;
   const cover = parts.cover === true;
   const completed = [profile, content, image, cover].filter(Boolean).length;
+  const configuredTotal = Number(progress.total);
+  const total = Number.isInteger(configuredTotal) && configuredTotal > 0
+    ? configuredTotal
+    : 4;
 
   if (!completed && !clean(progress.updatedAt)) return null;
 
@@ -339,7 +343,7 @@ export function resolveMediaWorkProgressFromMetadata(
     image,
     cover,
     completed,
-    total: 4,
+    total,
     updatedAt: clean(progress.updatedAt) || null,
   };
 }
@@ -1832,7 +1836,7 @@ export async function listTaskItemQueueItems(
       );
       const metadataProgress = resolveMediaWorkProgressFromMetadata(metadata);
       const previewProgress = businessPreview?.mediaWorkProgress ?? null;
-      const progress = metadataProgress
+      const progress = metadataProgress && binding.targetType === TaskExecutionTargetType.WATCH
         ? {
             ...metadataProgress,
             cover: Boolean(previewProgress?.cover),
@@ -1844,7 +1848,7 @@ export async function listTaskItemQueueItems(
             ].filter(Boolean).length,
             total: 4,
           }
-        : previewProgress;
+        : metadataProgress ?? previewProgress;
       const workflowStatus = resolveWorkflowQueueStatus({
         workflowRuntime,
         workflowDefinition,

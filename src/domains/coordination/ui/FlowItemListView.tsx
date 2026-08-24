@@ -439,10 +439,9 @@ export default function FlowItemListView({
     openItemPreview(item);
   }
   useEffect(() => {
-    const authoritativeIds = new Set(items.map((item) => item.id));
-    setOptimisticallyMovedIds((current) =>
-      current.filter((id) => authoritativeIds.has(id)),
-    );
+    // A new server page is authoritative. Optimistic hiding only bridges the
+    // command-to-query gap and must never survive reconciliation.
+    setOptimisticallyMovedIds([]);
     setSelectedItemsById((current) => {
       const next = { ...current };
       for (const item of items) next[item.id] = item;
@@ -453,6 +452,7 @@ export default function FlowItemListView({
     setActionError(null);
     setSelectedIds([]);
     setSelectedItemsById({});
+    setOptimisticallyMovedIds([]);
   }, [activeStage]);
   const [reconcileFields, setReconcileFields] = useState({
     reviewedAmount: "",

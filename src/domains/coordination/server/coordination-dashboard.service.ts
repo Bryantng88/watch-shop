@@ -1703,6 +1703,7 @@ async function loadMediaBoardLive(input: {
     const bindingMetadata = asRecord(binding.metadataJson);
     return {
       id: watch.id,
+      targetType: "WATCH",
       productId: watch.productId,
       bindingId: binding.id,
       workspaceTaskItemId: binding.taskItemId!,
@@ -2919,7 +2920,8 @@ export async function getCoordinationDashboard(input: {
     ? await dashboardStep("loadTaskItemsProjection", () =>
       queryCoordinationWorkspaceSummary(db, cycle.task.id))
     : [];
-  if (needsTaskItems && rawTaskItems.length === 0) {
+  const taskItemModeReadsSource = earlyMode?.rowModel === "TASK_ITEM";
+  if (needsTaskItems && (rawTaskItems.length === 0 || taskItemModeReadsSource)) {
     rawTaskItems = await dashboardStep("loadTaskItemsSource", () => db.taskItem.findMany({
     where: {
       taskId: cycle.task.id,
@@ -2967,7 +2969,7 @@ export async function getCoordinationDashboard(input: {
       { createdAt: "asc" },
     ],
       }));
-    await dashboardStep("seedTaskItemsProjection", async () => {
+    if (!taskItemModeReadsSource) await dashboardStep("seedTaskItemsProjection", async () => {
       for (let index = 0; index < rawTaskItems.length; index += 20) {
         await Promise.all(
           rawTaskItems.slice(index, index + 20).map((item) =>
@@ -3397,7 +3399,9 @@ export async function getCoordinationDashboard(input: {
                 board.items.map((item): CoordinationFlowListItemDTO => ({
                   id: item.bindingId,
                   taskItemId: item.workspaceTaskItemId,
-                  targetType: TaskExecutionTargetType.WATCH,
+                  targetType: item.targetType === "MEDIA_POST"
+                    ? TaskExecutionTargetType.MEDIA_POST
+                    : TaskExecutionTargetType.WATCH,
                   targetId: item.id,
                   source: "AUTO",
                   status: item.stage === "DONE" ? "DONE" : "IN_PROGRESS",
@@ -3423,7 +3427,9 @@ export async function getCoordinationDashboard(input: {
                   mediaWorkProgress: item.mediaWorkProgress,
                   technicalIssue: null,
                   payment: null,
-                  href: `/admin/watches/${item.productId}`,
+                  href: item.targetType === "MEDIA_POST"
+                    ? `/admin/media-posts/${item.id}`
+                    : `/admin/watches/${item.productId}`,
                   updatedAt: item.updatedAt ?? "",
                   workspaceTitle:
                     item.stage === "PHOTOGRAPHY"

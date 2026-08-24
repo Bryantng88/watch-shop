@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { signMediaUrl } from "@/domains/media/server";
+import { mediaStorage } from "@/domains/media/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -18,24 +19,48 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        const result = await signMediaUrl({ key });
-
         if (asJson) {
+            const result = await signMediaUrl({ key });
             return NextResponse.json(result);
         }
 
-        return NextResponse.redirect(result.url, {
-            status: 302,
+        const media = await mediaStorage.read(key);
+        return new NextResponse(Buffer.from(media.bytes), {
+            status: 200,
             headers: {
-                "Cache-Control": "private, no-store, max-age=0",
+                "Content-Type": media.contentType || "application/octet-stream",
+                "Content-Length": String(media.bytes.byteLength),
+                "Content-Disposition": "inline",
+                "Cache-Control": "private, max-age=300, must-revalidate",
+                ...(media.etag ? { ETag: `"${media.etag}"` } : {}),
             },
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         return NextResponse.json(
             {
-                error: error?.message || "Không thể sign media.",
+                error: error instanceof Error ? error.message : "Không thể sign media.",
             },
             { status: 500 }
         );
+    }
+}
+
+export async function HEAD(req: NextRequest) {
+    try {
+        const key = String(req.nextUrl.searchParams.get("key") || "").trim();
+        if (!key) return new NextResponse(null, { status: 400 });
+        const media = await mediaStorage.stat(key);
+        if (!media) return new NextResponse(null, { status: 404 });
+        return new NextResponse(null, {
+            status: 200,
+            headers: {
+                "Content-Type": media.contentType || "application/octet-stream",
+                ...(media.sizeBytes == null ? {} : { "Content-Length": String(media.sizeBytes) }),
+                "Cache-Control": "private, max-age=300, must-revalidate",
+                ...(media.etag ? { ETag: `"${media.etag}"` } : {}),
+            },
+        });
+    } catch {
+        return new NextResponse(null, { status: 500 });
     }
 }

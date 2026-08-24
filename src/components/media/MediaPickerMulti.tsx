@@ -47,7 +47,10 @@ type Props = {
     maxFinalSelection?: number;
     title?: string;
     description?: string;
+    selectedTitle?: string;
+    selectedDescription?: string;
     contextImage?: ContextImage | null;
+    browserPresentation?: "dialog" | "inline";
 };
 
 type PreviewState = {
@@ -332,12 +335,16 @@ function SelectedStrip({
     onReorder,
     onPreview,
     onPreviewClose,
+    title = "Ảnh sẽ lưu cho watch",
+    description = "Kéo thả để sắp xếp. Ảnh số 1 sẽ xuất hiện khi khách rê chuột lên card storefront.",
 }: {
     items: PickedMediaItem[];
     onRemove: (key: string) => void;
     onReorder: (items: PickedMediaItem[]) => void;
     onPreview: (item: PickedMediaItem) => void;
     onPreviewClose: () => void;
+    title?: string;
+    description?: string;
 }) {
     const [draggedKey, setDraggedKey] = React.useState<string | null>(null);
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
@@ -369,10 +376,8 @@ function SelectedStrip({
     return (
         <div className="space-y-3">
             <div>
-                <div className="text-sm font-medium text-slate-700">Ảnh sẽ lưu cho watch</div>
-                <div className="mt-1 text-xs text-slate-500">
-                    Kéo thả để sắp xếp. Ảnh số 1 sẽ xuất hiện khi khách rê chuột lên card storefront.
-                </div>
+                <div className="text-sm font-medium text-slate-700">{title}</div>
+                <div className="mt-1 text-xs text-slate-500">{description}</div>
             </div>
 
             {items.length === 0 ? (
@@ -411,7 +416,10 @@ export default function MediaPickerMulti({
     maxFinalSelection,
     title,
     description,
+    selectedTitle,
+    selectedDescription,
     contextImage,
+    browserPresentation = "dialog",
 }: Props) {
     const [open, setOpen] = React.useState(false);
     const [preview, setPreview] = React.useState<PreviewState>(null);
@@ -577,6 +585,26 @@ export default function MediaPickerMulti({
                 </div>
             </div>
 
+            {browserPresentation === "inline" ? (
+                <MediaBrowserDialog
+                    open={open}
+                    onClose={() => setOpen(false)}
+                    profile={profile}
+                    audienceSegment={audienceSegment}
+                    selectionMode="multiple"
+                    selectedKeys={chosenItems.map((item) => item.key)}
+                    disabledKeys={[
+                        ...chosenItems.map((item) => item.key),
+                        ...selectedItems.map((item) => item.key),
+                    ]}
+                    onSubmit={handleDialogSubmit}
+                    submitLabel="Xác nhận ảnh đã chọn"
+                    contextImage={contextImage}
+                    enableRecycle={false}
+                    presentation="inline"
+                />
+            ) : null}
+
             <ChosenGrid
                 items={chosenItems}
                 selectedItems={selectedItems}
@@ -593,9 +621,11 @@ export default function MediaPickerMulti({
                 onReorder={onSelectedChange}
                 onPreview={handlePreview}
                 onPreviewClose={handlePreviewClose}
+                title={selectedTitle}
+                description={selectedDescription}
             />
 
-            <MediaBrowserDialog
+            {browserPresentation === "dialog" ? <MediaBrowserDialog
                 open={open}
                 onClose={() => setOpen(false)}
                 profile={profile}
@@ -610,7 +640,8 @@ export default function MediaPickerMulti({
                 submitLabel="Xác nhận ảnh đã chọn"
                 contextImage={contextImage}
                 enableRecycle={false}
-            />
+                presentation={browserPresentation}
+            /> : null}
         </div>
     );
 }

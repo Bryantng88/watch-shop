@@ -6,6 +6,15 @@ export type WatchContentGenerationWarning = {
   message: string;
 };
 
+const STOREFRONT_ORIGIN = "https://vinticwatches.vn";
+
+export function buildStorefrontProductUrl(slug?: string | null) {
+  const normalized = clean(slug).replace(/^\/+|\/+$/g, "");
+  return normalized
+    ? `${STOREFRONT_ORIGIN}/products/${encodeURIComponent(normalized)}`
+    : "";
+}
+
 function clean(value?: string | number | null) {
   return String(value ?? "").trim();
 }
@@ -154,33 +163,6 @@ export function strapSetLabel(type?: string | null, source?: string | null) {
   return `${origin}.`;
 }
 
-function getWatchAdjective(values: WatchFormValues) {
-  const style = normalizeEnum(values.basic.style);
-
-  if (style === "DRESS") return "thanh lịch";
-  if (style === "CLASSIC") return "cổ điển";
-  if (style === "MINIMALIST") return "tối giản";
-  if (style === "SPORT") return "năng động";
-  if (style === "LUXURY") return "sang trọng";
-  if (style === "RETRO") return "retro";
-
-  return "dễ đeo";
-}
-
-function buildHeroName(values: WatchFormValues) {
-  const brand = clean(values.spec.specBrand);
-  const model = clean(values.spec.model);
-  const nickname = clean(values.spec.nickname);
-  const reference = clean(values.spec.referenceNumber);
-  const title = clean(values.basic.title);
-
-  return (
-    [brand, model || nickname || reference].filter(Boolean).join(" ") ||
-    title ||
-    "chiếc đồng hồ này"
-  );
-}
-
 export function buildTitleDescriptor(values: WatchFormValues) {
   const style = normalizeEnum(values.basic.style);
   const movement = normalizeEnum(values.basic.movementType);
@@ -235,15 +217,11 @@ export function buildPostTitle(values: WatchFormValues) {
 */
 
 export function buildHookText(values: WatchFormValues) {
-  const priceLabel = getPriceHookLabel(values.pricing.salePrice);
-  const channelPhrase = getSiteChannelHookPhrase(values.basic.siteChannel);
-  const heroName = buildHeroName(values);
-  const adjective = getWatchAdjective(values);
-
-  const pricePart = priceLabel ? `Tiệm có giá chỉ ${priceLabel}` : "Tiệm có";
-  const channelPart = channelPhrase ? ` ${channelPhrase}` : "";
-
-  return `${pricePart}${channelPart} cho chiếc ${heroName} ${adjective} này. Anh em vui lòng inbox để lấy giá tốt nhất.`;
+  const productUrl = buildStorefrontProductUrl(values.basic.slug);
+  return [
+    `Xem chi tiết tại : ${productUrl}`,
+    "Anh em có thể liên hệ trực tiếp qua instagram hoặc gửi yêu cầu qua link trên.",
+  ].join("\n\n");
 }
 
 export function buildWatchBulletSpecs(values: WatchFormValues) {
@@ -329,6 +307,7 @@ export function buildPostText(input: {
   bulletSpecs?: string[];
   hookText?: string | null;
   hashTags?: string | null;
+  productUrl?: string | null;
 }) {
   const titleText = clean(input.title);
   const bodyText = buildBodyText(input.body);
@@ -345,6 +324,9 @@ export function buildPostText(input: {
     bodyText,
     specText ? `Thông số nổi bật:\n${specText}` : "",
     clean(input.hookText),
+    clean(input.productUrl) && !clean(input.hookText).includes(clean(input.productUrl))
+      ? clean(input.productUrl)
+      : "",
     clean(input.hashTags),
     WATCH_POST_FOOTER,
   ]

@@ -110,6 +110,19 @@ const WATCH_MEDIA_PIPELINE_BINDINGS: Array<{
   },
 ];
 
+const MEDIA_POST_PIPELINE_BINDINGS: Array<{
+  eventKey: string;
+  workTypeKey: string;
+  mode: WorkspaceEventBindingMode;
+  status?: WorkspaceEventBindingStatus;
+}> = [
+  { eventKey: "media.post.created", workTypeKey: "photography", mode: "INTAKE" },
+  { eventKey: "media.post.photography.completed", workTypeKey: "media-processing", mode: "INTAKE" },
+  { eventKey: "media.post.asset.selected", workTypeKey: "media-processing", mode: "INTAKE" },
+  { eventKey: "media.post.ready_for_publish", workTypeKey: "publish", mode: "INTAKE" },
+  { eventKey: "media.post.published", workTypeKey: "publish", mode: "PROGRESS" },
+];
+
 const SERVICE_OPERATION_BINDINGS: Array<{
   eventKey: string;
   targetType: "SERVICE_REQUEST" | "TECHNICAL_ISSUE" | "PAYMENT";
@@ -254,11 +267,13 @@ export function eventBindingsForWorkType(input: {
     return [];
   }
 
-  return WATCH_MEDIA_PIPELINE_BINDINGS
-    .filter((binding) => binding.workTypeKey === input.workTypeKey)
+  return [
+    ...WATCH_MEDIA_PIPELINE_BINDINGS.map((binding) => ({ ...binding, targetType: "WATCH" })),
+    ...MEDIA_POST_PIPELINE_BINDINGS.map((binding) => ({ ...binding, targetType: "MEDIA_POST" })),
+  ].filter((binding) => binding.workTypeKey === input.workTypeKey)
     .map((binding) => ({
       eventKey: binding.eventKey,
-      targetType: "WATCH",
+      targetType: binding.targetType,
       consumer: "coordination",
       scopeType: "CURRENT_ACTIVE_SPACE",
       scopeContext: "MEDIA",

@@ -58,6 +58,7 @@ export async function registerExistingMediaObject(input: {
  */
 export async function ingestSelectedMedia(input: {
   storageKey: string;
+  destination?: { ownerType: "MEDIA_POST"; ownerId: string };
 }) {
   const sourceKey = normalizeKey(input.storageKey);
   if (!sourceKey) throw new Error("Media source key is required.");
@@ -85,10 +86,14 @@ export async function ingestSelectedMedia(input: {
     .update(sourceKey)
     .digest("hex")
     .slice(0, 32);
-  const destinationKey = mediaPathPolicy.canonicalOriginal({
-    mediaObjectId: stableObjectId,
-    filename: sourceKey.split("/").pop() ?? "media",
-  });
+  const filename = sourceKey.split("/").pop() ?? "media";
+  const destinationKey = input.destination?.ownerType === "MEDIA_POST"
+    ? mediaPathPolicy.postOriginal({
+        postId: input.destination.ownerId,
+        mediaObjectId: stableObjectId,
+        filename,
+      })
+    : mediaPathPolicy.canonicalOriginal({ mediaObjectId: stableObjectId, filename });
   await executeMediaMove({
     idempotencyKey: `media-ingest:${sourceKey}`,
     sourceKey,

@@ -81,6 +81,7 @@ const MEDIA_PRODUCTION_FLOW = {
   rowModel: "FLOW_STAGE_WORKSPACE",
   primaryTarget: "workspace",
   itemTargetType: "WATCH",
+  itemTargetTypes: ["WATCH", "MEDIA_POST"],
   stages: [
     {
       key: "photography",
@@ -88,7 +89,8 @@ const MEDIA_PRODUCTION_FLOW = {
       workspaceKey: "photography",
       sortOrder: 10,
       itemTargetType: "WATCH",
-      evidenceEvents: ["watch.media.photoshoot.requested"],
+      itemTargetTypes: ["WATCH", "MEDIA_POST"],
+      evidenceEvents: ["watch.media.photoshoot.requested", "media.post.created"],
     },
     {
       key: "media-processing",
@@ -96,13 +98,16 @@ const MEDIA_PRODUCTION_FLOW = {
       workspaceKey: "media-processing",
       sortOrder: 20,
       itemTargetType: "WATCH",
+      itemTargetTypes: ["WATCH", "MEDIA_POST"],
       evidenceEvents: [
         "watch.media.photoshoot.completed",
+        "media.post.photography.completed",
         "watch.media.asset.attached",
         "watch.content.submitted",
         "watch.content.approved",
         "watch.image.submitted",
         "watch.image.approved",
+        "media.post.asset.selected",
       ],
     },
     {
@@ -111,9 +116,12 @@ const MEDIA_PRODUCTION_FLOW = {
       workspaceKey: "publish",
       sortOrder: 30,
       itemTargetType: "WATCH",
+      itemTargetTypes: ["WATCH", "MEDIA_POST"],
       evidenceEvents: [
         "watch.media.ready_for_publish",
         "watch.publish.assets.downloaded",
+        "media.post.ready_for_publish",
+        "media.post.published",
       ],
     },
   ],
@@ -512,9 +520,9 @@ function unifiedOperationSpaceViewConfig(): SpaceViewConfig {
         allowedWorkspaceKinds: ["STANDALONE_WORKSPACE"],
         workTypeKeys: ["ad-hoc-work"],
         taskItemStages: [
-          { key: "TODO", label: "Chưa làm" },
-          { key: "IN_PROGRESS", label: "Đang làm" },
-          { key: "DONE", label: "Đã xong" },
+          { key: "TODO", label: "Chưa làm", transition: { nextStageKey: "IN_PROGRESS", actionLabel: "Bắt đầu" } },
+          { key: "IN_PROGRESS", label: "Đang làm", transition: { nextStageKey: "DONE", actionLabel: "Hoàn tất" } },
+          { key: "DONE", label: "Đã xong", transition: { nextStageKey: "TODO", actionLabel: "Mở lại" } },
         ],
         columns: WORKSPACE_COLUMNS,
       },

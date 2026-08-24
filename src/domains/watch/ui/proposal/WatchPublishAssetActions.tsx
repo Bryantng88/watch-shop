@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Check, Copy, Download, Loader2 } from "lucide-react";
 
-import { buildPostText } from "@/domains/watch/application/generate-watch-content";
+import { buildPostText, buildStorefrontProductUrl } from "@/domains/watch/application/generate-watch-content";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 
@@ -45,8 +45,9 @@ export default function WatchPublishAssetActions({ detail }: { detail: Detail })
     body: content.body,
     bulletSpecs: Array.isArray(content.bulletSpecs) ? content.bulletSpecs : [],
     hookText: content.hookText,
+    productUrl: buildStorefrontProductUrl(detail.slug ?? detail.basic?.slug),
     hashTags: content.hashTags,
-  }), [content, detail.title]);
+  }), [content, detail.basic?.slug, detail.slug, detail.title]);
 
   async function copyContent() {
     if (!canCopy || !postText.trim() || copying) return;

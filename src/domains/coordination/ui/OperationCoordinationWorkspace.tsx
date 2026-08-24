@@ -95,6 +95,7 @@ import { isCoreWorkspaceBlueprint } from "@/domains/task/shared/workspace-flow-p
 import WatchSearchPicker, { type WatchSearchResult } from "@/domains/watch/ui/search/WatchSearchPicker";
 import FlowItemListView from "./FlowItemListView";
 import { useAdHocWorkCreate } from "@/domains/task/ui/ad-hoc-work/AdHocWorkRowAction";
+import { createMediaPostAction } from "@/domains/media-post/actions";
 
 type Props = {
   data: CoordinationDashboardDTO;
@@ -759,6 +760,10 @@ export default function OperationCoordinationWorkspace({
   );
   const [isTechnicalIntakeOpen, setIsTechnicalIntakeOpen] = useState(false);
   const [isExpensePaymentOpen, setIsExpensePaymentOpen] = useState(false);
+  const [isMediaPostCreateOpen, setIsMediaPostCreateOpen] = useState(false);
+  const [mediaPostTitle, setMediaPostTitle] = useState("");
+  const [mediaPostBrief, setMediaPostBrief] = useState("");
+  const [isMediaPostCreating, setIsMediaPostCreating] = useState(false);
   const [focusedTechnicalIssueId, setFocusedTechnicalIssueId] = useState<string | null>(null);
   const [dashboardCustomizationRequest, setDashboardCustomizationRequest] = useState(0);
   const [filterQuery, setFilterQuery] = useState(() => searchParams.get("flowQuery") ?? "");
@@ -766,6 +771,10 @@ export default function OperationCoordinationWorkspace({
   const [filterWorkStatus, setFilterWorkStatus] = useState(
     () => searchParams.get("flowStatus") ?? "ALL",
   );
+  const [activeTaskItemStage, setActiveTaskItemStage] = useState<AdHocTaskItemStage>(() => {
+    const requested = searchParams.get("taskItemStage");
+    return requested === "IN_PROGRESS" || requested === "DONE" ? requested : "TODO";
+  });
   const [filterPayment, setFilterPayment] = useState(
     () => searchParams.get("flowPaymentStatus") ?? "ALL",
   );
@@ -797,6 +806,7 @@ export default function OperationCoordinationWorkspace({
   const [asyncFlowStageCounts, setAsyncFlowStageCounts] = useState(
     data.flowStageCounts,
   );
+  const [asyncWorkTickets, setAsyncWorkTickets] = useState(data.workTickets);
   const [flowItemsStageKey, setFlowItemsStageKey] = useState(
     () => searchParams.get("flowStage") ?? "",
   );
@@ -811,7 +821,6 @@ export default function OperationCoordinationWorkspace({
   const [boardRefreshedAt, setBoardRefreshedAt] = useState<Date | null>(null);
   const [workspacePage, setWorkspacePage] = useState(1);
   const [workspacePageSize, setWorkspacePageSize] = useState(10);
-  const [adHocStatusOverrides, setAdHocStatusOverrides] = useState<Record<string, AdHocTaskItemStage>>({});
   const [updatingAdHocItemId, setUpdatingAdHocItemId] = useState<string | null>(null);
   const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -827,6 +836,9 @@ export default function OperationCoordinationWorkspace({
       router.refresh();
     },
   });
+  useEffect(() => {
+    setAsyncWorkTickets(data.workTickets);
+  }, [data.workTickets]);
 
   useEffect(() => {
     if (
@@ -949,12 +961,9 @@ export default function OperationCoordinationWorkspace({
       ) ?? null
     : null;
   const isTaskItemListMode = activeViewMode?.rowModel === "TASK_ITEM";
-  const activeTaskItemStage: AdHocTaskItemStage =
-    filterWorkStatus === "DONE"
-      ? "DONE"
-      : filterWorkStatus === "IN_PROGRESS"
-        ? "IN_PROGRESS"
-        : "TODO";
+  const activeTaskItemStageContract = activeViewMode?.taskItemStages?.find(
+    (stage) => stage.key === activeTaskItemStage,
+  ) ?? null;
   const orderedFlowStages = useMemo(
     () => {
       const stages =
@@ -969,7 +978,8 @@ export default function OperationCoordinationWorkspace({
           workspaceKey: "done",
           sortOrder: 40,
           itemTargetType: "WATCH",
-          evidenceEvents: ["watch.publish.assets.downloaded"],
+          itemTargetTypes: ["WATCH", "MEDIA_POST"],
+          evidenceEvents: ["watch.publish.assets.downloaded", "media.post.published"],
         });
       }
       return stages;
@@ -1062,7 +1072,8 @@ export default function OperationCoordinationWorkspace({
         flowItemsModeKey === activeViewModeKey &&
         activeFlowListStage &&
         normalizeStageKey(flowItemsStageKey) ===
-          normalizeStageKey(activeFlowListStage)
+          normalizeStageKey(activeFlowListStage) &&
+        !counts.has(activeFlowListStage)
       ) {
         counts.set(activeFlowListStage, asyncFlowPagination.total);
       }
@@ -1615,9 +1626,9 @@ export default function OperationCoordinationWorkspace({
       const allowedWorkTypes = new Set(
         (activeViewMode?.workTypeKeys ?? []).map(normalizeStageKey),
       );
-      if (!allowedKinds.length && !allowedWorkTypes.size) return data.workTickets;
+      if (!allowedKinds.length && !allowedWorkTypes.size) return asyncWorkTickets;
 
-      return data.workTickets.filter((ticket) => {
+      return asyncWorkTickets.filter((ticket) => {
         if (
           allowedWorkTypes.size &&
           !allowedWorkTypes.has(normalizeStageKey(ticket.blueprint?.key))
@@ -1642,7 +1653,7 @@ export default function OperationCoordinationWorkspace({
       ]),
     );
 
-    return data.workTickets
+    return asyncWorkTickets
       .filter((ticket) => {
         if (
           ticket.blueprint?.workspaceKind &&
@@ -1668,7 +1679,7 @@ export default function OperationCoordinationWorkspace({
         if (leftOrder !== rightOrder) return leftOrder - rightOrder;
         return left.title.localeCompare(right.title);
       });
-  }, [activeCoreFlow, activeViewMode, data.workTickets, flowStageKeys]);
+  }, [activeCoreFlow, activeViewMode, asyncWorkTickets, flowStageKeys]);
   const activeDisplayedWorkTickets = displayedWorkTickets;
   const filterFacets = useMemo(() => {
     const creators = new Map<string, number>();
@@ -1690,7 +1701,7 @@ export default function OperationCoordinationWorkspace({
     const query = filterQuery.trim().toLocaleLowerCase("vi");
     return activeDisplayedWorkTickets.filter((ticket) => {
       const openItems = ticket.queueSummary.ready + ticket.queueSummary.review + ticket.queueSummary.feedback;
-      const taskItemStage = adHocStatusOverrides[ticket.id] ?? adHocTaskItemStage(ticket.status);
+      const taskItemStage = adHocTaskItemStage(ticket.status);
       if (isTaskItemListMode && taskItemStage !== activeTaskItemStage) return false;
       const searchable = [ticket.title, ticket.creator.label, ticket.lastActivity, ticket.identityPreview?.title, ticket.identityPreview?.ref]
         .filter(Boolean)
@@ -1698,30 +1709,38 @@ export default function OperationCoordinationWorkspace({
         .toLocaleLowerCase("vi");
       if (query && !searchable.includes(query)) return false;
       if (filterCreator !== "ALL" && ticket.creator.label !== filterCreator) return false;
-      if (filterWorkStatus === "OPEN" && openItems <= 0) return false;
-      if (filterWorkStatus === "DONE" && (openItems > 0 || ticket.queueSummary.done <= 0)) return false;
-      if (filterWorkStatus === "FEEDBACK" && ticket.queueSummary.feedback <= 0) return false;
+      if (!isTaskItemListMode && filterWorkStatus === "OPEN" && openItems <= 0) return false;
+      if (!isTaskItemListMode && filterWorkStatus === "DONE" && (openItems > 0 || ticket.queueSummary.done <= 0)) return false;
+      if (!isTaskItemListMode && filterWorkStatus === "FEEDBACK" && ticket.queueSummary.feedback <= 0) return false;
       const paymentStatus = ticket.paymentSummary?.status ?? "NONE";
       if (filterPayment === "UNPAID" && !["UNPAID", "PARTIAL"].includes(paymentStatus)) return false;
       if (filterPayment === "PAID" && paymentStatus !== "PAID") return false;
       if (filterPayment === "NONE" && paymentStatus !== "NONE") return false;
       return true;
     });
-  }, [activeDisplayedWorkTickets, activeTaskItemStage, adHocStatusOverrides, filterCreator, filterPayment, filterQuery, filterWorkStatus, isTaskItemListMode]);
+  }, [activeDisplayedWorkTickets, activeTaskItemStage, filterCreator, filterPayment, filterQuery, filterWorkStatus, isTaskItemListMode]);
   const taskItemStageCounts = useMemo(() => {
     const counts: Record<AdHocTaskItemStage, number> = { TODO: 0, IN_PROGRESS: 0, DONE: 0 };
     activeDisplayedWorkTickets.forEach((ticket) => {
-      const stage = adHocStatusOverrides[ticket.id] ?? adHocTaskItemStage(ticket.status);
+      const stage = adHocTaskItemStage(ticket.status);
       counts[stage] += 1;
     });
     return counts;
-  }, [activeDisplayedWorkTickets, adHocStatusOverrides]);
+  }, [activeDisplayedWorkTickets]);
   const updateAdHocItemStage = useCallback(async (itemId: string, nextStage: AdHocTaskItemStage) => {
     setUpdatingAdHocItemId(itemId);
     progress.show({ message: "Đang cập nhật trạng thái công việc...", percent: 20 });
     try {
-      await changeTaskItemStatusAction(itemId, nextStage);
-      setAdHocStatusOverrides((current) => ({ ...current, [itemId]: nextStage }));
+      const result = await changeTaskItemStatusAction(itemId, nextStage);
+      setAsyncWorkTickets((current) => current.map((ticket) =>
+        ticket.id === itemId
+          ? { ...ticket, status: result.item.status, updatedAt: new Date(result.item.updatedAt).toISOString() }
+          : ticket
+      ));
+      setActiveTaskItemStage(nextStage);
+      const params = new URLSearchParams(window.location.search);
+      params.set("taskItemStage", nextStage);
+      window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
       progress.update({ message: "Đã cập nhật trạng thái. Đang đồng bộ danh sách...", percent: 90 });
       router.refresh();
       window.setTimeout(() => progress.hide(), 700);
@@ -1732,6 +1751,12 @@ export default function OperationCoordinationWorkspace({
       setUpdatingAdHocItemId(null);
     }
   }, [progress, router]);
+  const changeTaskItemStage = useCallback((nextStage: AdHocTaskItemStage) => {
+    setActiveTaskItemStage(nextStage);
+    const params = new URLSearchParams(window.location.search);
+    params.set("taskItemStage", nextStage);
+    window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+  }, []);
   const workspacePageCount = Math.max(1, Math.ceil(filteredWorkTickets.length / workspacePageSize));
   const safeWorkspacePage = Math.min(workspacePage, workspacePageCount);
   const workspacePageStart = (safeWorkspacePage - 1) * workspacePageSize;
@@ -2044,6 +2069,16 @@ export default function OperationCoordinationWorkspace({
                         <span>Tiếp nhận kỹ thuật</span>
                       </button>
                     ) : null}
+                    {isMediaFlowMode ? (
+                      <button
+                        type="button"
+                        onClick={() => setIsMediaPostCreateOpen((value) => !value)}
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-violet-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>Tạo Media Post</span>
+                      </button>
+                    ) : null}
                     <button
                         type="button"
                         disabled={!data.blueprints.length || !data.viewConfig.createWorkspace.enabled}
@@ -2108,6 +2143,59 @@ export default function OperationCoordinationWorkspace({
                     Hủy
                   </button>
                 </form>
+                {isMediaFlowMode && isMediaPostCreateOpen ? (
+                  <form
+                    className="mt-4 grid min-w-0 gap-2 border-t border-sky-100 pt-4 md:grid-cols-[minmax(220px,1fr)_minmax(280px,1.5fr)_auto_auto]"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      if (!mediaPostTitle.trim() || isMediaPostCreating) return;
+                      setIsMediaPostCreating(true);
+                      setError(null);
+                      void createMediaPostAction({ title: mediaPostTitle, brief: mediaPostBrief })
+                        .then(async (result) => {
+                          setMediaPostTitle("");
+                          setMediaPostBrief("");
+                          setIsMediaPostCreateOpen(false);
+                          const stageKey = result.coordination.stageKey;
+                          if (normalizeStageKey(stageKey) === normalizeStageKey(activeFlowListStage)) {
+                            await loadFlowItems(stageKey, 1, true);
+                          } else {
+                            changeFlowListStage(stageKey);
+                          }
+                        })
+                        .catch((createError) => setError(createError instanceof Error ? createError.message : "Không thể tạo Media Post."))
+                        .finally(() => setIsMediaPostCreating(false));
+                    }}
+                  >
+                    <input
+                      value={mediaPostTitle}
+                      onChange={(event) => setMediaPostTitle(event.target.value)}
+                      placeholder="Tiêu đề Media Post"
+                      className="h-9 min-w-0 rounded-md border border-sky-100 bg-white px-3 text-sm outline-none focus:border-violet-300"
+                      required
+                    />
+                    <input
+                      value={mediaPostBrief}
+                      onChange={(event) => setMediaPostBrief(event.target.value)}
+                      placeholder="Brief / yêu cầu nội dung (không bắt buộc)"
+                      className="h-9 min-w-0 rounded-md border border-sky-100 bg-white px-3 text-sm outline-none focus:border-violet-300"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isMediaPostCreating || !mediaPostTitle.trim()}
+                      className="h-9 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white disabled:opacity-50"
+                    >
+                      {isMediaPostCreating ? "Đang tạo..." : "Tạo ngay"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsMediaPostCreateOpen(false)}
+                      className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600"
+                    >
+                      Hủy
+                    </button>
+                  </form>
+                ) : null}
                 {error ? <p className="mt-3 text-sm font-medium text-red-600">{error}</p> : null}
               </div>
             ) : null}
@@ -2132,7 +2220,7 @@ export default function OperationCoordinationWorkspace({
                   { value: "LIST", label: "List", icon: <List className="h-4 w-4" /> },
                 ]}
                 selectFilters={[
-                  {
+                  ...(isTaskItemListMode ? [] : [{
                     key: "work-status",
                     label: "Trạng thái công việc",
                     value: filterWorkStatus,
@@ -2143,7 +2231,7 @@ export default function OperationCoordinationWorkspace({
                       { label: isPaymentCollectionFlow ? "Đã hoàn tất" : `Đã hoàn tất (${filterFacets.done})`, value: "DONE" },
                     ],
                     onChange: setFilterWorkStatus,
-                  },
+                  }]),
                   ...(workTicketView === "LIST" &&
                     normalizeStageKey(activeFlowListStage).includes("done") &&
                     (isMediaFlowMode || activeViewMode?.key === "technical-issue-flow")
@@ -2186,7 +2274,7 @@ export default function OperationCoordinationWorkspace({
                     label: "Trao đổi",
                     value: technicalIssueCommentFilter,
                     options: [
-                      { label: `Tất cả Watch (${mediaBoardCommentSummary.total})`, value: "ALL" },
+                      { label: `Tất cả media (${mediaBoardCommentSummary.total})`, value: "ALL" },
                       { label: `Có comment (${mediaBoardCommentSummary.commented})`, value: "COMMENTED" },
                       { label: `Nhắc đến tôi (${mediaBoardCommentSummary.mentionedMe})`, value: "MENTIONED_ME" },
                       { label: `Chưa đọc (${mediaBoardCommentSummary.unreadMentionedMe})`, value: "UNREAD_MENTION" },
@@ -2288,7 +2376,7 @@ export default function OperationCoordinationWorkspace({
                         {index > 0 ? <ChevronRight className="mx-1.5 h-4 w-4 shrink-0 text-violet-300" strokeWidth={1.5} /> : null}
                         <button
                           type="button"
-                          onClick={() => setFilterWorkStatus(stage.key)}
+                          onClick={() => changeTaskItemStage(stage.key)}
                           aria-current={isActive ? "step" : undefined}
                           className={cn(
                             "group flex min-w-0 flex-1 items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-all duration-200",
@@ -2597,6 +2685,7 @@ export default function OperationCoordinationWorkspace({
                 fromStageKey: input.fromStage,
                 toStageKey: input.toStage,
               })}
+              onReloadRequested={() => refreshBoard("media")}
             />
           ) : (
             <>
@@ -2768,21 +2857,13 @@ export default function OperationCoordinationWorkspace({
                         event.stopPropagation();
                         void updateAdHocItemStage(
                           ticket.id,
-                          activeTaskItemStage === "TODO"
-                            ? "IN_PROGRESS"
-                            : activeTaskItemStage === "IN_PROGRESS"
-                              ? "DONE"
-                              : "TODO",
+                          activeTaskItemStageContract?.transition.nextStageKey ?? "TODO",
                         );
                       }}
                       className="inline-flex h-8 items-center whitespace-nowrap rounded-lg border border-violet-200 bg-white px-3 text-xs font-semibold text-violet-700 transition hover:bg-violet-50 disabled:opacity-50"
                     >
                       {updatingAdHocItemId === ticket.id ? <LoaderCircle className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
-                      {activeTaskItemStage === "TODO"
-                        ? "Bắt đầu"
-                        : activeTaskItemStage === "IN_PROGRESS"
-                          ? "Hoàn tất"
-                          : "Mở lại"}
+                      {activeTaskItemStageContract?.transition.actionLabel ?? "Cập nhật"}
                     </button>
                   </div>
                 ) : null}
@@ -3128,6 +3209,7 @@ function MediaProductionBoardView({
   onStageMoved,
   doneRange,
   onDoneRangeChange,
+  onReloadRequested,
 }: {
   items: MediaBoardItem[];
   columnPagination: NonNullable<CoordinationDashboardDTO["mediaBoard"]>["columnPagination"];
@@ -3141,12 +3223,18 @@ function MediaProductionBoardView({
   }) => void;
   doneRange: "14D" | "30D" | "ALL";
   onDoneRangeChange: (value: "14D" | "30D" | "ALL") => void;
+  onReloadRequested: () => void;
 }) {
+  const mediaBoardRouter = useRouter();
   const transitionFeedback = useManualTransitionFeedback();
   const previewState = useBusinessEntityPreview();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createTitle, setCreateTitle] = useState("");
+  const [createBrief, setCreateBrief] = useState("");
+  const [creatingPost, setCreatingPost] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const columns: Array<{ key: MediaBoardStage; label: string; hint: string }> = [
     { key: "PHOTOGRAPHY", label: "Chụp ảnh", hint: "Watch đang chờ hoặc thực hiện chụp ảnh." },
@@ -3221,6 +3309,60 @@ function MediaProductionBoardView({
 
   return (
     <div className="min-w-0 max-w-full border-t border-slate-200 bg-slate-50/80 px-3 py-4 sm:px-4">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-bold text-slate-900">Media Production</div>
+          <div className="text-xs text-slate-500">Quản lý Watch và bài post độc lập trên cùng một luồng.</div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setCreateOpen((value) => !value)}
+          className="inline-flex h-9 items-center gap-2 rounded-xl bg-violet-600 px-3 text-sm font-semibold text-white shadow-sm hover:bg-violet-700"
+        >
+          <Plus className="h-4 w-4" /> Tạo bài post
+        </button>
+      </div>
+      {createOpen ? (
+        <form
+          className="mb-4 grid gap-3 rounded-2xl border border-violet-100 bg-white p-4 shadow-sm md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!createTitle.trim() || creatingPost) return;
+            setCreatingPost(true);
+            setError(null);
+            void createMediaPostAction({ title: createTitle, brief: createBrief })
+              .then(() => {
+                setCreateTitle("");
+                setCreateBrief("");
+                setCreateOpen(false);
+                onReloadRequested();
+              })
+              .catch((createError) => setError(createError instanceof Error ? createError.message : "Không thể tạo bài post."))
+              .finally(() => setCreatingPost(false));
+          }}
+        >
+          <input
+            value={createTitle}
+            onChange={(event) => setCreateTitle(event.target.value)}
+            placeholder="Tiêu đề bài post"
+            className="h-10 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-violet-400"
+            required
+          />
+          <input
+            value={createBrief}
+            onChange={(event) => setCreateBrief(event.target.value)}
+            placeholder="Brief / yêu cầu nội dung (không bắt buộc)"
+            className="h-10 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-violet-400"
+          />
+          <button
+            type="submit"
+            disabled={creatingPost || !createTitle.trim()}
+            className="h-10 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:opacity-50"
+          >
+            {creatingPost ? "Đang tạo..." : "Tạo ngay"}
+          </button>
+        </form>
+      ) : null}
       {error ? <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">{error}</div> : null}
       <div className="max-w-full overflow-x-auto overscroll-x-contain pb-2">
         <DndContext
@@ -3246,13 +3388,19 @@ function MediaProductionBoardView({
                 pendingId={pendingId}
                 doneRange={doneRange}
                 onDoneRangeChange={onDoneRangeChange}
-                onPreview={(item) => previewState.openPreview({
-                  type: "WATCH",
-                  id: item.id,
-                  title: item.title,
-                  subtitle: item.sku ? `SKU: ${item.sku}` : null,
-                  imageUrl: item.imageUrl,
-                })}
+                onPreview={(item) => {
+                  if (item.targetType === "MEDIA_POST") {
+                    mediaBoardRouter.push(`/admin/media-posts/${item.id}`);
+                    return;
+                  }
+                  previewState.openPreview({
+                    type: "WATCH",
+                    id: item.id,
+                    title: item.title,
+                    subtitle: item.sku ? `SKU: ${item.sku}` : null,
+                    imageUrl: item.imageUrl,
+                  });
+                }}
               />
             ))}
           </div>

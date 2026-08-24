@@ -130,7 +130,8 @@ export type CoordinationFlowListItemDTO = QueueItemDTO & {
 
 export type CoordinationMediaBoardItemDTO = {
   id: string;
-  productId: string;
+  targetType: "WATCH" | "MEDIA_POST";
+  productId: string | null;
   bindingId: string;
   workspaceTaskItemId: string;
   title: string;

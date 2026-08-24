@@ -28,6 +28,9 @@ async function main() {
   });
 
   for (const item of fixtures) {
+    const isCollectible =
+      item.id === "local-demo-watch-rolex-datejust" ||
+      item.id === "local-demo-watch-omega-sold";
     const product = await prisma.product.upsert({
       where: { id: item.id },
       update: { title: item.title, slug: item.slug, sku: item.sku, status: item.status, brandId: brand.id },
@@ -48,6 +51,7 @@ async function main() {
             stockStage: item.stockStage,
             serviceStage: "NOT_REQUIRED",
             siteChannel: "LUXURY",
+            isCollectible,
             style: item.style,
             yearText: item.year,
             conditionGrade: "Excellent",
@@ -59,6 +63,16 @@ async function main() {
       },
       include: { watch: { select: { id: true } } },
     });
+
+    if (product.watch) {
+      await prisma.watch.update({
+        where: { id: product.watch.id },
+        data: {
+          siteChannel: "LUXURY",
+          isCollectible,
+        },
+      });
+    }
 
     if (item.id === "local-demo-watch-rolex-datejust" && product.watch) {
       await prisma.watch.update({

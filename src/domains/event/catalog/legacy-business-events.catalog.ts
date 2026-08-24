@@ -172,6 +172,18 @@ export const LEGACY_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
     knownConsumers: ["projection"],
   }),
   defineBusinessEventContract({
+    key: "task.item.status.changed",
+    label: "Task item status changed",
+    targetType: "TASK_ITEM",
+    group: "Task",
+    knownConsumers: ["timeline", "projection"],
+    payload: {
+      name: "TaskItemStatusChangedPayload",
+      version: 1,
+      required: ["taskId", "taskItemId", "previousStatus", "status"],
+    },
+  }),
+  defineBusinessEventContract({
     key: "task.item.activity.commented",
     label: "Task activity commented",
     targetType: "TASK_ITEM",

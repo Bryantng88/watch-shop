@@ -19,6 +19,7 @@ export const COORDINATION_WORKSPACE_SUMMARY_PROJECTION_VERSION = 1;
 const SOURCE_EVENTS = [
   "task.item.created",
   "task.item.moved",
+  "task.item.status.changed",
   "task.item.activity.commented",
 ] as const;
 

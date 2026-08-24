@@ -8,6 +8,7 @@ export * from "./media";
 export * from "./content";
 export * from "./pricing";
 export * from "./inventory-query";
+export * from "./inventory-lifecycle";
 export * from "./review";
 export * from "./bridge";
 export * from "./media-work";

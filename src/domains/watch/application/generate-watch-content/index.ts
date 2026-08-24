@@ -1,2 +1,2 @@
 export * from "./generate-watch-content.application";
-export { buildPostText } from "./generate-watch-content.helpers";
+export { buildPostText, buildStorefrontProductUrl } from "./generate-watch-content.helpers";

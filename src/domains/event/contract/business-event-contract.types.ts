@@ -10,6 +10,7 @@ export type BusinessEventConsumerKey = typeof BUSINESS_EVENT_CONSUMERS[number];
 
 export type BusinessEventTargetType =
   | "WATCH"
+  | "MEDIA_POST"
   | "ORDER"
   | "SHIPMENT"
   | "PAYMENT"

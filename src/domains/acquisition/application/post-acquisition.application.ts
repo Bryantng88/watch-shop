@@ -16,6 +16,7 @@ import { restoreBuyBackWatchAfterAcquisitionPostTx } from "../server";
 import { emitWatchBoughtBackEvent, emitWatchCreatedEvent } from "@/domains/watch/server/events";
 import { emitStrapBusinessEvent } from "@/domains/strap/server/events";
 import type { BusinessEventDispatchOptions } from "@/domains/event/server/business-event.service";
+import { openInventoryCyclesForPostedAcquisition } from "@/domains/watch/server/inventory-lifecycle";
 
 type PendingInlineImageAttach = {
     acquisitionId: string;
@@ -229,6 +230,11 @@ export async function postAcquisitionApplication(
             await repoAcq.updateAcquisitionCost(tx, acqId, totalCost);
 
             const posted = await repoAcq.changeDraftToPost(tx, acqId);
+
+            // The posted acquisition is the durable boundary for a new physical-inventory cycle.
+            await openInventoryCyclesForPostedAcquisition(tx, acqId, {
+                eligibleTradeInProductIds: returningTradeInProductIds,
+            });
 
             const paymentResult = await ensureInitialPaymentForAcquisitionTx(tx, acqId);
 

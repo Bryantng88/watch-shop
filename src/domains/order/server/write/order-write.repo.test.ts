@@ -7,6 +7,9 @@ import { getActiveOrderLocksForProductsRepo } from "./order-write.repo";
 test("terminal orders do not lock a bought-back watch", async () => {
   let query: Record<string, unknown> | null = null;
   const db = {
+    watch: {
+      findMany: async () => [{ productId: "product-1", currentInventoryCycleId: "cycle-1", createdAt: new Date() }],
+    },
     orderItem: {
       findMany: async (input: Record<string, unknown>) => {
         query = input;
@@ -22,4 +25,5 @@ test("terminal orders do not lock a bought-back watch", async () => {
     where: { order: { status: { notIn: string[] } } };
   }).where.order.status.notIn;
   assert.deepEqual(statuses, ["CANCELLED", "COMPLETED", "RETURNED"]);
+  assert.deepEqual((query as any).where.OR, [{ productId: "product-1", inventoryCycleId: "cycle-1" }]);
 });

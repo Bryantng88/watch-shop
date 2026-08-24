@@ -20,7 +20,8 @@ export type SharedMediaProfile =
     | "sold"
     | "technical-inline"
     | "storefront-active"
-    | "storefront-chosen";
+    | "storefront-chosen"
+    | "media-post";
 
 export type SharedMediaItem = {
     key: string;
@@ -62,7 +63,7 @@ type Props = {
     footerLeadingAction?: React.ReactNode;
     footerHint?: string;
     initialLocation?: "library" | "recycle";
-    presentation?: "dialog" | "page";
+    presentation?: "dialog" | "page" | "inline";
 };
 
 const EMPTY_KEYS: string[] = [];
@@ -91,6 +92,8 @@ function getRootPrefix(
             return "products/storefront/chosen";
         case "technical-inline":
             return "inline/product/technical/active";
+        case "media-post":
+            return "media/posts";
         case "inline":
         default:
             return "products/inline/active";
@@ -101,6 +104,8 @@ function getLabel(profile: SharedMediaProfile) {
     switch (profile) {
         case "technical-inline":
             return "Thư mục: inline/product/technical/active";
+        case "media-post":
+            return "Thư mục: media/posts";
         case "edit":
             return "Thư mục: products/edit/active";
         case "cover":
@@ -454,8 +459,8 @@ export default function MediaBrowserDialog({
     const initialLoading = loading && items.length === 0 && folders.length === 0;
 
     return (
-        <div className={presentation === "page" ? "min-h-0 w-full" : "fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"}>
-            <div className={presentation === "page" ? "flex min-h-[calc(100vh-8rem)] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" : "flex max-h-[88vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"}>
+        <div className={presentation === "page" || presentation === "inline" ? "min-h-0 w-full" : "fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"}>
+            <div className={presentation === "page" ? "flex min-h-[calc(100vh-8rem)] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" : presentation === "inline" ? "flex max-h-[72vh] w-full flex-col overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-sm" : "flex max-h-[88vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"}>
                 <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
                     <div>
                         <div className="text-base font-semibold text-slate-900">
@@ -489,7 +494,7 @@ export default function MediaBrowserDialog({
                             Tải lại
                         </button>
 
-                        {presentation === "dialog" ? <button
+                        {presentation !== "page" ? <button
                             type="button"
                             onClick={onClose}
                             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"

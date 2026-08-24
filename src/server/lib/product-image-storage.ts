@@ -7,7 +7,8 @@ export type MediaProfile =
     | "cover"
     | "sold"
     | "storefront-active"
-    | "storefront-chosen";
+    | "storefront-chosen"
+    | "media-post";
 
 const PROFILE_ROOTS: Record<MediaProfile, string> = {
     inline: "products/inline/active",
@@ -16,6 +17,7 @@ const PROFILE_ROOTS: Record<MediaProfile, string> = {
     sold: "products/sold",
     "storefront-active": "products/storefront/active",
     "storefront-chosen": "products/storefront/chosen",
+    "media-post": "media/posts",
 };
 
 export function getProfileRoot(
