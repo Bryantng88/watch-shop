@@ -1,4 +1,5 @@
 import { prisma } from "@/server/db/client";
+import { mediaStorage } from "@/domains/media/storage";
 import { markWatchPostUsage } from "./watch-post-usage.service";
 import { getWatchDownloadGallerySnapshotRepo } from "./watch-download-gallery.repo";
 
@@ -123,39 +124,19 @@ function getReviewStatus(
     ).toUpperCase();
 }
 
-async function downloadImage(input: {
-    origin: string;
-    fileKey: string;
-    cookie?: string | null;
-}) {
-    const url = new URL("/api/media/sign", input.origin);
-    url.searchParams.set("key", input.fileKey);
-
-    const res = await fetch(url.toString(), {
-        method: "GET",
-        cache: "no-store",
-        redirect: "follow",
-        headers: input.cookie ? { cookie: input.cookie } : undefined,
-    });
-
-    if (!res.ok) {
-        throw new Error(`Không tải được ảnh: ${input.fileKey}`);
-    }
-
-    const contentType = res.headers.get("content-type") ?? "";
-    const buffer = Buffer.from(await res.arrayBuffer());
+async function downloadImage(fileKey: string) {
+    const stored = await mediaStorage.read(fileKey);
+    const buffer = Buffer.from(stored.bytes);
 
     if (!buffer.length) {
-        throw new Error(`Ảnh rỗng: ${input.fileKey}`);
+        throw new Error(`Ảnh rỗng: ${fileKey}`);
     }
 
-    return { buffer, contentType };
+    return { buffer, contentType: stored.contentType ?? "" };
 }
 
 export async function buildWatchGalleryZip(input: {
     productId: string;
-    origin: string;
-    cookie?: string | null;
 }) {
     const snapshot = await getWatchDownloadGallerySnapshotRepo(
         prisma,
@@ -186,11 +167,7 @@ export async function buildWatchGalleryZip(input: {
     for (let index = 0; index < usableImages.length; index += 1) {
         const image = usableImages[index];
         const fileKey = String(image.fileKey);
-        const downloaded = await downloadImage({
-            origin: input.origin,
-            fileKey,
-            cookie: input.cookie,
-        });
+        const downloaded = await downloadImage(fileKey);
 
         const ext =
             extensionFromContentType(downloaded.contentType) ||

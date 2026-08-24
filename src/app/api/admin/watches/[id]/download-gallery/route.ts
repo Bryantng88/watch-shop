@@ -9,7 +9,7 @@ type RouteParams = {
   params: Promise<{ id?: string; productId?: string }>;
 };
 
-export async function GET(req: Request, ctx: RouteParams) {
+export async function GET(_req: Request, ctx: RouteParams) {
   try {
     const params = await ctx.params;
     const productId = String(params.productId ?? params.id ?? "").trim();
@@ -21,11 +21,7 @@ export async function GET(req: Request, ctx: RouteParams) {
       );
     }
 
-    const { buffer, filename, usage } = await buildWatchGalleryZip({
-      productId,
-      origin: new URL(req.url).origin,
-      cookie: req.headers.get("cookie"),
-    });
+    const { buffer, filename, usage } = await buildWatchGalleryZip({ productId });
 
     return new NextResponse(buffer, {
       status: 200,
