@@ -157,12 +157,22 @@ export default function WatchDetailUiProposal({
   const orders = rows(tradeHistory.orders);
   const latestAcquisition = acquisitions[0] ?? null;
   const latestOrder = orders[0] ?? null;
+  const quickOrderHref = `/admin/orders/new?${new URLSearchParams({
+    mode: "quick",
+    productId: values.productId,
+    returnTo: detailHref,
+  }).toString()}`;
+  const acquisitionCreateHref = "/admin/acquisitions/watches/new";
   const transactionEvents = [
     ...acquisitions.slice(0, 2).map((item) => ({
       id: text(item.id, ""),
       type: "ACQUISITION" as const,
-      label: "Nhập hàng",
-      party: text(item.vendorName, "Vendor"),
+      label: text(item.acquisitionType, "").toUpperCase() === "BUY_BACK"
+        ? "Buy back"
+        : text(item.acquisitionType, "").toUpperCase() === "TRADE_IN"
+          ? "Trade-in"
+          : "Nhập hàng",
+      party: text(item.customerName, text(item.vendorName, "Vendor")),
       amount: item.amount,
       occurredAt: item.updatedAt || item.createdAt,
       tone: "bg-rose-50 text-rose-700",
@@ -183,16 +193,54 @@ export default function WatchDetailUiProposal({
     item: RecordValue | null,
     label: string,
   ) {
-    const id = text(item?.id, "");
-    if (!id) return;
+    const id = text(item?.id, "") || values.productId;
     const refNo = text(item?.refNo, "");
+    const exists = Boolean(item?.id);
+    const actions = type === "SERVICE"
+      ? exists
+        ? [
+            { label: "Xử lý Service", href: `/admin/services/${id}` },
+            { label: "Mở Service board", href: "/admin/services/operation" },
+            { label: "Tạo Service mới", command: "CREATE_SERVICE" as const },
+          ]
+        : [
+            { label: "Tạo Service", command: "CREATE_SERVICE" as const },
+            { label: "Mở Service board", href: "/admin/services/operation" },
+          ]
+      : type === "ORDER"
+        ? exists
+          ? [
+              { label: "Xử lý đơn hàng", href: `/admin/orders/${id}` },
+              { label: "Tạo Order mới", href: quickOrderHref },
+            ]
+          : [{ label: "Tạo Order từ Watch", href: quickOrderHref }]
+        : exists
+          ? [
+              { label: "Mở danh sách phiếu nhập", href: "/admin/acquisitions" },
+              { label: "Tạo Buy Back / Trade-in", href: acquisitionCreateHref },
+            ]
+          : [{ label: "Tạo Buy Back / Trade-in", href: acquisitionCreateHref }];
     previewState.openPreview({
       type,
       id,
       refNo: refNo || null,
-      title: refNo ? `${label} ${refNo}` : label,
+      title: exists ? (refNo ? `${label} ${refNo}` : label) : `Chưa có ${label}`,
       subtitle: title,
-      status: text(item?.status, "") || null,
+      status: exists ? text(item?.status, "") || null : "CHƯA TẠO",
+      imageUrl: imageSrc,
+      facts: exists
+        ? [
+            { label: "Mã", value: refNo || text(item?.id, "—") },
+            { label: "Trạng thái", value: text(item?.status) },
+            { label: "Giá trị", value: item?.amount != null ? money(item.amount, canViewFinancials) : "—" },
+            { label: "Cập nhật", value: normalizeDate(item?.updatedAt || item?.createdAt) },
+          ]
+        : [
+            { label: "Watch", value: values.header.sku || values.productId },
+            { label: "Trạng thái", value: "Chưa có hồ sơ" },
+            { label: "Giá bán", value: money(salePrice, canViewFinancials) },
+          ],
+      actions,
     });
   }
 
@@ -308,9 +356,9 @@ export default function WatchDetailUiProposal({
           {live && (
             <div className="flex flex-wrap items-center justify-end gap-1.5">
               <button type="button" onClick={() => setMediaOpen(true)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-violet-200 px-2.5 text-xs font-semibold text-violet-700"><Camera className="h-3.5 w-3.5" /> Xử lý Media</button>
-              <button type="button" disabled={!latestServiceRequest} title={latestServiceRequest ? "Xem nhanh Service Request gần nhất" : "Watch chưa có Service Request"} onClick={() => openRelatedPreview("SERVICE", latestServiceRequest, "Service Request")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"><Wrench className="h-3.5 w-3.5" /> Service</button>
-              <button type="button" disabled={!latestOrder} title={latestOrder ? "Xem nhanh Order gần nhất" : "Watch chưa có Order"} onClick={() => openRelatedPreview("ORDER", latestOrder, "Order")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"><ReceiptText className="h-3.5 w-3.5" /> Order</button>
-              <button type="button" disabled={!latestAcquisition} title={latestAcquisition ? "Xem nhanh phiếu nhập gần nhất" : "Watch chưa có phiếu nhập"} onClick={() => openRelatedPreview("ACQUISITION", latestAcquisition, "Phiếu nhập / Buy Back")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"><ArrowLeftRight className="h-3.5 w-3.5" /> Phiếu nhập / Buy Back</button>
+              <button type="button" title={latestServiceRequest ? "Xem Service Request gần nhất và thao tác" : "Tạo Service cho Watch"} onClick={() => openRelatedPreview("SERVICE", latestServiceRequest, "Service Request")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-700"><Wrench className="h-3.5 w-3.5" /> Service</button>
+              <button type="button" title={latestOrder ? "Xem và xử lý Order gần nhất" : "Tạo Order từ Watch"} onClick={() => openRelatedPreview("ORDER", latestOrder, "Order")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-700"><ReceiptText className="h-3.5 w-3.5" /> Order</button>
+              <button type="button" title={latestAcquisition ? "Xem phiếu nhập và thao tác" : "Tạo Buy Back / Trade-in"} onClick={() => openRelatedPreview("ACQUISITION", latestAcquisition, "Phiếu nhập / Buy Back")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-700"><ArrowLeftRight className="h-3.5 w-3.5" /> Phiếu nhập / Buy Back</button>
             </div>
           )}
         </div>
@@ -444,7 +492,7 @@ export default function WatchDetailUiProposal({
                 {transactionEvents.length ? transactionEvents.map((event, index) => (
                   <button type="button" onClick={() => openRelatedPreview(event.type, { id: event.id }, event.label)} key={`${event.type}-${event.id || index}`} disabled={!event.id} className="flex w-full items-start gap-3 border-b border-slate-100 pb-3 text-left transition last:border-0 last:pb-0 hover:opacity-75 disabled:cursor-default disabled:opacity-100">
                     <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${event.tone}`}>
-                      {event.label === "Nhập hàng" ? <Landmark className="h-4 w-4" /> : <BadgeDollarSign className="h-4 w-4" />}
+                      {event.type === "ACQUISITION" ? <Landmark className="h-4 w-4" /> : <BadgeDollarSign className="h-4 w-4" />}
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
@@ -489,6 +537,12 @@ export default function WatchDetailUiProposal({
         error={previewState.error}
         onClose={previewState.closePreview}
         onActivityChanged={previewState.refreshPreview}
+        onAction={(action) => {
+          if (action.command === "CREATE_SERVICE") {
+            previewState.closePreview();
+            window.dispatchEvent(new Event("watch:create-service"));
+          }
+        }}
       />
       {pricingOpen && (
         <div className="fixed inset-0 z-[110] grid place-items-center bg-slate-950/55 p-4" role="dialog" aria-modal="true" aria-label="Chỉnh giá bán">

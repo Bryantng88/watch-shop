@@ -19,7 +19,8 @@ export type BusinessEntityFact = {
 
 export type BusinessEntityPreviewAction = {
     label: string;
-    href: string;
+    href?: string;
+    command?: "CREATE_SERVICE";
 };
 
 export type BusinessEntityPreviewItem = {

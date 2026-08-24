@@ -259,7 +259,15 @@ export async function getBusinessEntityPreviewAction(input: {
                 { label: "Khách", value: row.customerName || "-" },
                 { label: "SĐT", value: row.shipPhone || "-" },
                 { label: "Payment", value: row.paymentStatus || "-" },
+                { label: "Tổng tiền", value: `${Number(row.subtotal).toLocaleString("vi-VN")} ₫` },
+                { label: "Giao hàng", value: row.hasShipment ? "Có giao hàng" : "Nhận tại cửa hàng" },
                 { label: "Số sản phẩm", value: row.orderItem?.length ?? 0 },
+                { label: "Tạo lúc", value: row.createdAt.toLocaleString("vi-VN") },
+                { label: "Cập nhật", value: row.updatedAt.toLocaleString("vi-VN") },
+            ],
+            actions: [
+                { label: "Xử lý đơn hàng", href: `/admin/orders/${row.id}` },
+                { label: "Danh sách Order", href: "/admin/orders" },
             ],
         };
     }
@@ -361,13 +369,16 @@ export async function getBusinessEntityPreviewAction(input: {
                 row.primaryImageUrlSnapshot,
             ),
             activity,
-            href: workspaceHref ?? `/admin/service/${row.id}`,
+            href: workspaceHref ?? `/admin/services/${row.id}`,
             facts: [
                 { label: "Status", value: row.status || "-" },
                 { label: "Priority", value: row.priority || "-" },
                 { label: "Khách", value: row.customer?.name || "-" },
                 { label: "Kỹ thuật", value: row.user?.name || row.technicianNameSnap || "-" },
                 { label: "Vendor", value: row.vendor?.name || row.vendorNameSnap || "-" },
+                { label: "Hẹn xử lý", value: row.appointmentAt?.toLocaleString("vi-VN") || "-" },
+                { label: "Tạo lúc", value: row.createdAt.toLocaleString("vi-VN") },
+                { label: "Cập nhật", value: row.updatedAt.toLocaleString("vi-VN") },
             ],
             sections: row.technicalIssue.length
                 ? [
@@ -495,6 +506,8 @@ export async function getBusinessEntityPreviewAction(input: {
             activity,
             facts: [
                 { label: "Loại", value: row.type },
+                { label: "Trạng thái", value: row.accquisitionStt },
+                { label: "Thanh toán", value: row.payoutStatus || "-" },
                 { label: "Vendor", value: row.vendor?.name || "-" },
                 { label: "Khách", value: row.customer?.name || "-" },
                 { label: "Số item", value: row._count.acquisitionItem },
@@ -504,10 +517,16 @@ export async function getBusinessEntityPreviewAction(input: {
                         ? `${Number(row.totalAmount).toLocaleString("vi-VN")} ${row.currency || "VND"}`
                         : "-",
                 },
+                { label: "Ngày nhập", value: row.acquiredAt.toLocaleString("vi-VN") },
+                { label: "Cập nhật", value: row.updatedAt.toLocaleString("vi-VN") },
             ],
             notes: row.notes
                 ? [{ label: "Ghi chú", body: row.notes, tone: "neutral" }]
                 : undefined,
+            actions: [
+                { label: "Mở danh sách phiếu nhập", href: "/admin/acquisitions" },
+                { label: "Tạo Buy Back / Trade-in", href: "/admin/acquisitions/watches/new" },
+            ],
         };
     }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Loader2, Wrench, X } from "lucide-react";
@@ -39,6 +39,15 @@ export default function ServiceCard({
     const rows = projection.requests;
     const cleanProductId = String(productId ?? "").trim();
     const watchLabel = title || sku || cleanProductId || "watch";
+
+    useEffect(() => {
+        const openCreate = () => {
+            setError(null);
+            setIntakeOpen(true);
+        };
+        window.addEventListener("watch:create-service", openCreate);
+        return () => window.removeEventListener("watch:create-service", openCreate);
+    }, []);
 
     function openServiceBoard() {
         router.push("/admin/services/operation");

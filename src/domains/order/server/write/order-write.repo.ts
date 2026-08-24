@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { OrderStatus, Prisma } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
 import type { OrderDraftInput, OrderItemInput } from "../shared";
 import { normalizeReserveType } from "../../shared/order-reserve-type";
@@ -83,7 +83,9 @@ export async function getActiveOrderLocksForProductsRepo(
       ...(input.excludeOrderId ? { orderId: { not: input.excludeOrderId } } : {}),
       order: {
         status: {
-          not: "CANCELLED" as any,
+          // Historical sales must not keep a returned/bought-back Watch locked.
+          // Terminal orders are history; only an in-flight order owns the lock.
+          notIn: [OrderStatus.CANCELLED, OrderStatus.COMPLETED, OrderStatus.RETURNED],
         },
       },
     },

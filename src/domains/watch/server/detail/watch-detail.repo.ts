@@ -249,6 +249,12 @@ export async function getWatchTradeHistory(db: DB, productId: string) {
                 name: true,
               },
             },
+            customer: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
@@ -290,6 +296,8 @@ export async function getWatchTradeHistory(db: DB, productId: string) {
       amount: item.unitCost ?? null,
       vendor: item.acquisition?.vendor ?? null,
       vendorName: item.acquisition?.vendor?.name ?? null,
+      customer: item.acquisition?.customer ?? null,
+      customerName: item.acquisition?.customer?.name ?? null,
       createdAt: item.acquisition?.createdAt ?? item.createdAt,
       updatedAt: item.acquisition?.updatedAt ?? item.updatedAt,
     })),
