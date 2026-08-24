@@ -16,6 +16,11 @@ services:
       PORT: 3000
     ports:
       - "${APP_BIND_ADDRESS:-0.0.0.0}:${APP_PORT:-3000}:3000"
+    # Keep NAS-backed S3 reachable from this container when the ISP router
+    # does not provide NAT loopback. The hostname stays unchanged so TLS and
+    # S3 request signing continue to use the configured public endpoint.
+    extra_hosts:
+      - "longnd.myqnapcloud.com:${NAS_HOST_IP:-192.168.1.253}"
     restart: unless-stopped
     init: true
     stop_grace_period: 30s
