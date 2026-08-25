@@ -4,7 +4,7 @@ import path from "node:path";
 const root = process.cwd();
 const domainsRoot = path.join(root, "src", "domains");
 const allowedRelativePaths = new Set([
-  path.normalize("order/server/order-watch-sync.service.ts"),
+  path.normalize("watch/server/inventory-lifecycle/watch-inventory-transition.service.ts"),
   // These are Prisma where-clause builders, not state writers.
   path.normalize("watch/server/list/watch-list.query.ts"),
 ]);
@@ -41,7 +41,7 @@ if (violations.length) {
   console.error(
     [
       "HOLD ownership violation.",
-      "Only Order inventory sync may write Watch/Product HOLD:",
+      "Only the Watch inventory transition service may write Watch/Product HOLD:",
       ...violations.map((file) => `- ${file}`),
     ].join("\n"),
   );

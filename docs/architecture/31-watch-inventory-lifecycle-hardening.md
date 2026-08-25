@@ -15,8 +15,8 @@ introducing a second orchestration layer:
   in a later cycle.
 - `order-watch-sync.service.ts` resolves effects only from order items in the current cycle.
 - `watch-inventory-transition.service.ts` atomically maps `AVAILABLE`, `HOLD`, and `SOLD` to the
-  persisted Product/Watch triple. Order and Acquisition lifecycle paths no longer write these
-  fields independently.
+  persisted Product/Watch inventory fields. When an available Watch still has an active service
+  stage, `Product.status=IN_SERVICE` is preserved as an operational overlay.
 - `WatchServiceStage` remains orthogonal. Service workflows may temporarily use service-specific
   Product statuses, but they must not open/close an inventory cycle.
 
@@ -103,8 +103,9 @@ These are business invariants, not UI conventions:
 - posting a buy-back/trade-in restores the Watch in a new cycle, not by erasing
   the previous sale;
 - repeating reconciliation is idempotent and produces the same result;
-- `Product.status`, `Watch.saleStage`, and `Watch.stockStage` must describe one
-  atomic state transition and must not diverge.
+- `Watch.saleStage` and `Watch.stockStage` must describe one atomic inventory
+  transition. `Product.status=IN_SERVICE` may overlay an available inventory pair
+  while service remains active.
 
 ## Target Model
 
@@ -169,7 +170,7 @@ Map canonical state to persisted fields in one function:
 
 | Canonical state | Product.status | Watch.saleStage | Watch.stockStage |
 | --- | --- | --- | --- |
-| AVAILABLE | AVAILABLE | READY or PROCESSING by readiness policy | IN_STOCK |
+| AVAILABLE | AVAILABLE, or IN_SERVICE while service is active | READY or PROCESSING by readiness policy | IN_STOCK |
 | HOLD | HOLD | HOLD | RESERVED |
 | SOLD | SOLD | SOLD | OUT_OF_STOCK |
 

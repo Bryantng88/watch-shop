@@ -3,6 +3,7 @@ import {
   Prisma,
   ProductStatus,
   WatchSaleStage,
+  WatchServiceStage,
   WatchStockStage,
 } from "@prisma/client";
 
@@ -23,7 +24,7 @@ type Snapshot = {
   productStatus?: ProductStatus | null;
   saleStage?: WatchSaleStage | null;
   stockStage?: WatchStockStage | null;
-  serviceStage?: string | null;
+  serviceStage?: WatchServiceStage | null;
 };
 
 function uniqueClean(values: Array<string | null | undefined>) {

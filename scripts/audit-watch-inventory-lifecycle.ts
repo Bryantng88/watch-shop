@@ -1,6 +1,7 @@
 import { prisma } from "@/server/db/client";
+import { auditWatchInventoryState } from "@/domains/watch/server/inventory-lifecycle/watch-inventory-audit";
 
-type Finding = { code: string; productId: string; detail: string };
+type Finding = { severity: "ERROR" | "WARNING"; code: string; productId: string; detail: string };
 
 async function main() {
   const findings: Finding[] = [];
@@ -10,6 +11,7 @@ async function main() {
       currentInventoryCycleId: true,
       saleStage: true,
       stockStage: true,
+      serviceStage: true,
       product: { select: { status: true } },
       currentInventoryCycle: { select: { productId: true, closedAt: true } },
     },
@@ -17,22 +19,19 @@ async function main() {
 
   for (const watch of watches) {
     if (!watch.currentInventoryCycleId || !watch.currentInventoryCycle) {
-      findings.push({ code: "MISSING_CURRENT_CYCLE", productId: watch.productId, detail: "Watch has no current cycle" });
+      findings.push({ severity: "ERROR", code: "MISSING_CURRENT_CYCLE", productId: watch.productId, detail: "Watch has no current cycle" });
       continue;
     }
     if (watch.currentInventoryCycle.productId !== watch.productId || watch.currentInventoryCycle.closedAt) {
-      findings.push({ code: "INVALID_CURRENT_CYCLE", productId: watch.productId, detail: "Current cycle is closed or belongs to another product" });
+      findings.push({ severity: "ERROR", code: "INVALID_CURRENT_CYCLE", productId: watch.productId, detail: "Current cycle is closed or belongs to another product" });
     }
-    const triple = `${watch.product.status}/${watch.saleStage}/${watch.stockStage}`;
-    const valid = new Set([
-      "AVAILABLE/READY/IN_STOCK",
-      "AVAILABLE/PROCESSING/IN_STOCK",
-      "HOLD/HOLD/RESERVED",
-      "SOLD/SOLD/OUT_OF_STOCK",
-    ]);
-    if (!["DRAFT", "PROCESSING"].includes(String(watch.saleStage)) && !valid.has(triple)) {
-      findings.push({ code: "DIVERGENT_STATE_TRIPLE", productId: watch.productId, detail: triple });
-    }
+    const stateFinding = auditWatchInventoryState({
+      productStatus: String(watch.product.status),
+      saleStage: String(watch.saleStage),
+      stockStage: String(watch.stockStage),
+      serviceStage: String(watch.serviceStage),
+    });
+    if (stateFinding) findings.push({ ...stateFinding, productId: watch.productId });
   }
 
   const duplicateLocks = await prisma.$queryRaw<Array<{ productId: string; inventoryCycleId: string; lockCount: bigint }>>`
@@ -44,11 +43,18 @@ async function main() {
     HAVING COUNT(DISTINCT oi."orderId") > 1
   `;
   for (const row of duplicateLocks) {
-    findings.push({ code: "MULTIPLE_ACTIVE_ORDERS", productId: row.productId, detail: `${row.lockCount} active orders in ${row.inventoryCycleId}` });
+    findings.push({ severity: "ERROR", code: "MULTIPLE_ACTIVE_ORDERS", productId: row.productId, detail: `${row.lockCount} active orders in ${row.inventoryCycleId}` });
   }
 
-  console.log(JSON.stringify({ checkedWatches: watches.length, findingCount: findings.length, findings }, null, 2));
-  if (findings.length) process.exitCode = 2;
+  const errors = findings.filter((finding) => finding.severity === "ERROR");
+  const warnings = findings.filter((finding) => finding.severity === "WARNING");
+  console.log(JSON.stringify({
+    checkedWatches: watches.length,
+    errorCount: errors.length,
+    warningCount: warnings.length,
+    findings,
+  }, null, 2));
+  if (errors.length) process.exitCode = 2;
 }
 
 main().finally(() => prisma.$disconnect());

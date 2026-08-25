@@ -1,4 +1,10 @@
-import { Prisma, ProductStatus, WatchSaleStage, WatchStockStage } from "@prisma/client";
+import {
+  Prisma,
+  ProductStatus,
+  WatchSaleStage,
+  WatchServiceStage,
+  WatchStockStage,
+} from "@prisma/client";
 
 type Tx = Prisma.TransactionClient;
 export type WatchInventoryCanonicalState = "AVAILABLE" | "HOLD" | "SOLD";
@@ -21,6 +27,22 @@ const CANONICAL_PATCH = {
   },
 } as const;
 
+function productStatusForTransition(input: {
+  next: WatchInventoryCanonicalState;
+  currentServiceStage: WatchServiceStage;
+  serviceStageOverride?: WatchServiceStage | null;
+}) {
+  const serviceStage = input.serviceStageOverride ?? input.currentServiceStage;
+  const hasActiveService = serviceStage === WatchServiceStage.PENDING ||
+    serviceStage === WatchServiceStage.IN_SERVICE;
+
+  if (input.next === "AVAILABLE" && hasActiveService) {
+    return ProductStatus.IN_SERVICE;
+  }
+
+  return CANONICAL_PATCH[input.next].productStatus;
+}
+
 /** The only writer for the three sales-inventory fields used by lifecycle flows. */
 export async function transitionWatchInventoryTx(
   tx: Tx,
@@ -28,7 +50,7 @@ export async function transitionWatchInventoryTx(
     productId: string;
     next: WatchInventoryCanonicalState;
     saleStageOverride?: WatchSaleStage;
-    serviceStageOverride?: string | null;
+    serviceStageOverride?: WatchServiceStage | null;
   },
 ) {
   const current = await tx.watch.findUnique({
@@ -49,18 +71,23 @@ export async function transitionWatchInventoryTx(
 
   const patch = CANONICAL_PATCH[input.next];
   const saleStage = input.saleStageOverride ?? patch.saleStage;
-  const unchanged = current.product.status === patch.productStatus &&
+  const productStatus = productStatusForTransition({
+    next: input.next,
+    currentServiceStage: current.serviceStage,
+    serviceStageOverride: input.serviceStageOverride,
+  });
+  const unchanged = current.product.status === productStatus &&
     current.saleStage === saleStage && current.stockStage === patch.stockStage &&
     (input.serviceStageOverride == null || String(current.serviceStage) === input.serviceStageOverride);
   if (unchanged) return { changed: false, currentInventoryCycleId: current.currentInventoryCycleId };
 
-  await tx.product.update({ where: { id: input.productId }, data: { status: patch.productStatus } });
+  await tx.product.update({ where: { id: input.productId }, data: { status: productStatus } });
   await tx.watch.update({
     where: { productId: input.productId },
     data: {
       saleStage,
       stockStage: patch.stockStage,
-      ...(input.serviceStageOverride ? { serviceStage: input.serviceStageOverride as never } : {}),
+      ...(input.serviceStageOverride ? { serviceStage: input.serviceStageOverride } : {}),
     },
   });
   return { changed: true, currentInventoryCycleId: current.currentInventoryCycleId };

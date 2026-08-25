@@ -51,3 +51,55 @@ test("transition refuses a Watch without lifecycle identity", async () => {
   } as unknown as Prisma.TransactionClient;
   await assert.rejects(() => transitionWatchInventoryTx(tx, { productId: "product-1", next: "HOLD" }), /no current inventory cycle/);
 });
+
+test("AVAILABLE preserves the IN_SERVICE overlay while service remains active", async () => {
+  const writes: Array<{ target: string; data: Record<string, unknown> }> = [];
+  const tx = {
+    watch: {
+      findUnique: async () => ({
+        productId: "product-1", currentInventoryCycleId: "cycle-1",
+        saleStage: "HOLD", stockStage: "RESERVED", serviceStage: "IN_SERVICE",
+        product: { status: "HOLD" },
+      }),
+      update: async ({ data }: { data: Record<string, unknown> }) => { writes.push({ target: "watch", data }); },
+    },
+    product: {
+      update: async ({ data }: { data: Record<string, unknown> }) => { writes.push({ target: "product", data }); },
+    },
+  } as unknown as Prisma.TransactionClient;
+
+  await transitionWatchInventoryTx(tx, { productId: "product-1", next: "AVAILABLE" });
+
+  assert.deepEqual(writes, [
+    { target: "product", data: { status: "IN_SERVICE" } },
+    { target: "watch", data: { saleStage: "READY", stockStage: "IN_STOCK" } },
+  ]);
+});
+
+test("AVAILABLE clears the service overlay when the workflow marks service done", async () => {
+  const writes: Array<{ target: string; data: Record<string, unknown> }> = [];
+  const tx = {
+    watch: {
+      findUnique: async () => ({
+        productId: "product-1", currentInventoryCycleId: "cycle-1",
+        saleStage: "READY", stockStage: "IN_STOCK", serviceStage: "IN_SERVICE",
+        product: { status: "IN_SERVICE" },
+      }),
+      update: async ({ data }: { data: Record<string, unknown> }) => { writes.push({ target: "watch", data }); },
+    },
+    product: {
+      update: async ({ data }: { data: Record<string, unknown> }) => { writes.push({ target: "product", data }); },
+    },
+  } as unknown as Prisma.TransactionClient;
+
+  await transitionWatchInventoryTx(tx, {
+    productId: "product-1",
+    next: "AVAILABLE",
+    serviceStageOverride: "DONE",
+  });
+
+  assert.deepEqual(writes, [
+    { target: "product", data: { status: "AVAILABLE" } },
+    { target: "watch", data: { saleStage: "READY", stockStage: "IN_STOCK", serviceStage: "DONE" } },
+  ]);
+});

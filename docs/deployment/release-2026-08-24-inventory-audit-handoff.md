@@ -18,7 +18,13 @@ records automatically or bypass the audit merely to finish the deployment.
 
 ### Watch inventory lifecycle
 
-`scripts/audit-watch-inventory-lifecycle.ts` reported 21
+Follow-up code review changed the audit contract: storefront publication is independent of
+sellability, and `Product.status=IN_SERVICE` is a non-blocking operational overlay when the
+Watch inventory pair is otherwise valid. The audit now reports these rows as warnings and exits
+non-zero only for lifecycle/cycle errors, invalid sale/stock pairs, or multiple active orders.
+The production audit must be rerun with this revision before deployment resumes.
+
+The earlier version of `scripts/audit-watch-inventory-lifecycle.ts` reported 21
 `DIVERGENT_STATE_TRIPLE` findings:
 
 - 20 watches: `Product.status=IN_SERVICE`, `Watch.saleStatus=READY`,
@@ -26,9 +32,10 @@ records automatically or bypass the audit merely to finish the deployment.
 - 1 watch: `Product.status=IN_SERVICE`, `Watch.saleStatus=READY`,
   `Watch.stockStatus=RESERVED`.
 
-No watch was changed on 2026-08-24. These values are ambiguous: either the watch
-is genuinely in service, or service has finished and it is ready for sale. The
-reserved watch additionally needs its active order/reservation checked.
+No watch was changed on 2026-08-24. Under the revised contract, the 20
+`READY/IN_STOCK` rows are warnings and do not block storefront publication or deployment.
+The `READY/RESERVED` row remains a blocking invalid inventory pair and needs its active
+order/reservation checked.
 
 Before applying any repair:
 
@@ -57,7 +64,7 @@ then re-run the permission audit.
 ## Resume checklist
 
 1. Confirm and repair the permission drift.
-2. Investigate and explicitly approve the 21-watch repair plan.
+2. Investigate and repair any remaining audit errors; service-overlay warnings are informational.
 3. Re-run both production audits.
 4. Only when the release gates pass, recreate the app container.
 5. Verify compose status, application logs, `/api/health`, and `/api/ready`.
