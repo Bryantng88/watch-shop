@@ -27,6 +27,7 @@ import {
   useAppProgress,
   type AppProgressStep,
 } from "@/domains/shared/feedback/AppProgressProvider";
+import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { repairVietnameseMojibake } from "@/domains/shared/text/vietnamese-mojibake";
 import { requiresTechnicalIssueVendorChangeNote } from "@/domains/service/shared/technical-issue-vendor-policy";
 import { targetLabel } from "@/domains/task/ui/execution/execution-ui.utils";
@@ -1034,8 +1035,11 @@ export function OpenTargetAction({
   onRefreshRequested?: () => void | Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
+  const [targetDirty, setTargetDirty] = useState(false);
   const transitionAppliedRef = useRef(false);
+  const targetFrameRef = useRef<HTMLIFrameElement | null>(null);
   const router = useRouter();
+  const dialog = useAppDialog();
   const scheduleRefresh = useCoalescedRouterRefresh(router);
   const href = openTargetHref({ queueItem, transition });
   const label = openTargetActionLabel(transition, queueItem);
@@ -1048,10 +1052,15 @@ export function OpenTargetAction({
 
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
+      if (event.source !== targetFrameRef.current?.contentWindow) return;
       if (isWorkspaceTransitionOutcome(event.data)) {
         if (event.data.bindingId !== queueItem.id) return;
         transitionAppliedRef.current = true;
         onTransitionApplied?.(event.data);
+        return;
+      }
+      if (event.data?.type === "workspace-target-modal-dirty") {
+        setTargetDirty(event.data.dirty === true);
         return;
       }
       if (
@@ -1062,6 +1071,7 @@ export function OpenTargetAction({
       }
 
       if (event.data?.type === "workspace-target-modal-close") {
+        setTargetDirty(false);
         setOpen(false);
       }
       if (!transitionAppliedRef.current) {
@@ -1075,6 +1085,27 @@ export function OpenTargetAction({
   }, [onRefreshRequested, onTransitionApplied, open, queueItem.id, scheduleRefresh]);
 
   if (!href) return null;
+
+  const confirmTargetLeave = async () => {
+    if (!targetDirty) return true;
+    return dialog.confirm({
+      title: "Bạn có thay đổi chưa lưu",
+      message: "Bạn có thay đổi chưa lưu. Đóng cửa sổ này sẽ mất các chỉnh sửa hiện tại. Bạn vẫn muốn thoát?",
+      confirmText: "Thoát khỏi cửa sổ",
+      cancelText: "Ở lại chỉnh tiếp",
+      tone: "warning",
+    });
+  };
+
+  const closeTargetModal = async () => {
+    if (!(await confirmTargetLeave())) return;
+    setTargetDirty(false);
+    setOpen(false);
+    if (!transitionAppliedRef.current) {
+      if (onRefreshRequested) await onRefreshRequested();
+      else scheduleRefresh();
+    }
+  };
 
   if (!modal) {
     return (
@@ -1092,6 +1123,7 @@ export function OpenTargetAction({
         onClick={() => {
           onActivate?.();
           transitionAppliedRef.current = false;
+          setTargetDirty(false);
           setOpen(true);
         }}
         className={className}
@@ -1117,6 +1149,13 @@ export function OpenTargetAction({
               <div className="flex items-center gap-2">
                 <Link
                   href={href}
+                  onClick={(event) => {
+                    if (!targetDirty) return;
+                    event.preventDefault();
+                    void confirmTargetLeave().then((accepted) => {
+                      if (accepted) router.push(href);
+                    });
+                  }}
                   className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
@@ -1124,13 +1163,7 @@ export function OpenTargetAction({
                 </Link>
                 <button
                   type="button"
-                  onClick={() => {
-                    setOpen(false);
-                    if (!transitionAppliedRef.current) {
-                      if (onRefreshRequested) void onRefreshRequested();
-                      else scheduleRefresh();
-                    }
-                  }}
+                  onClick={() => void closeTargetModal()}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
                   aria-label="Close modal"
                 >
@@ -1139,6 +1172,7 @@ export function OpenTargetAction({
               </div>
             </div>
             <iframe
+              ref={targetFrameRef}
               src={href}
               title={label}
               className="min-h-0 flex-1 border-0 bg-slate-50"

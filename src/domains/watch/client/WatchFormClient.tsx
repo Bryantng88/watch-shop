@@ -600,6 +600,14 @@ export default function WatchFormClient({
     },
   });
 
+  useEffect(() => {
+    if (window.parent === window) return;
+    window.parent.postMessage(
+      { type: "workspace-target-modal-dirty", dirty: isDirty },
+      window.location.origin,
+    );
+  }, [isDirty]);
+
   const handleBack = async () => {
     if (!(await confirmLeaveIfDirty())) return;
 
