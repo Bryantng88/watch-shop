@@ -58,8 +58,10 @@ The permission audit also found role `SALE` drift:
 - Unexpected: `ORDER_PAYMENT_VIEW`, `ORDER_PAYMENT_CREATE`,
   `ORDER_PAYMENT_UPDATE`, `ORDER_PAYMENT_DELETE`.
 
-Confirm the intended production permission policy before mutating role grants,
-then re-run the permission audit.
+The owner confirmed on 2026-08-25 that `SALE` must retain the four scoped
+`ORDER_PAYMENT_*` permissions. The release policy and additive migration now
+preserve those grants and add the missing `REPORT_SALES_VIEW`; broader payment
+scopes remain forbidden. Re-run the permission audit after migration.
 
 ## Resume checklist
 

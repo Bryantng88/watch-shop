@@ -12,6 +12,10 @@ const expectedRolePermissions: Record<string, readonly string[]> = {
     PERMISSIONS.ACCESSORY_ACQUISITION_VIEW,
     PERMISSIONS.ACCESSORY_ACQUISITION_CREATE,
     PERMISSIONS.REPORT_SALES_VIEW,
+    PERMISSIONS.ORDER_PAYMENT_VIEW,
+    PERMISSIONS.ORDER_PAYMENT_CREATE,
+    PERMISSIONS.ORDER_PAYMENT_UPDATE,
+    PERMISSIONS.ORDER_PAYMENT_DELETE,
   ],
   ACCESSORY_MANAGER: [
     PERMISSIONS.ACCESSORY_VIEW,
@@ -107,8 +111,7 @@ async function main() {
   const forbiddenRoleDrift = (saleRole?.permissions ?? [])
     .map((permission) => permission.code)
     .filter((code) =>
-      (code.includes("ACQUISITION") && !saleAcquisitionAllowlist.has(code))
-      || code.includes("PAYMENT"),
+      code.includes("ACQUISITION") && !saleAcquisitionAllowlist.has(code),
     )
     .map((code) => ({ role: "SALE", forbidden: code }));
   const result = {

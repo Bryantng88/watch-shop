@@ -43,6 +43,14 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
         return publicToAuthenticatedUser();
     }
 
+    if (pathname === "/api/admin/analytics/internal-device" && normalizedMethod === "POST") {
+        return anyOf(PERMISSIONS.REPORT_SALES_VIEW);
+    }
+
+    if (pathname === "/api/admin/settings/storefront-hero") {
+        return anyOf(PERMISSIONS.PRODUCT_UPDATE);
+    }
+
     if (/^\/api\/admin\/users\/technicians(\/|$)/.test(pathname)) {
         return anyOf(PERMISSIONS.SERVICE_VIEW, PERMISSIONS.TASK_VIEW, PERMISSIONS.USER_VIEW, PERMISSIONS.USER_MANAGE);
     }
@@ -208,6 +216,7 @@ export function getAdminPagePolicy(pathname: string): AdminAccessPolicy | null {
     if (/^\/admin\/shipments(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.SHIPMENT_VIEW);
     if (/^\/admin\/(services|catalogs\/technical)(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.SERVICE_VIEW);
     if (/^\/admin\/media(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.MEDIA_VIEW);
+    if (/^\/admin\/media-posts\/[^/]+$/.test(pathname)) return anyOf(PERMISSIONS.MEDIA_VIEW);
     if (/^\/admin\/straps(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.ACCESSORY_VIEW);
     if (/^\/admin\/(tasks|task-items|work-cases|workflows|coordination)(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.TASK_VIEW);
     if (/^\/admin\/activity(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.ACTIVITY_READ);
@@ -216,6 +225,7 @@ export function getAdminPagePolicy(pathname: string): AdminAccessPolicy | null {
     if (pathname === "/admin/users/new") return anyOf(PERMISSIONS.USER_CREATE, PERMISSIONS.USER_MANAGE);
     if (pathname === "/admin/users/roles") return anyOf(PERMISSIONS.USER_MANAGE);
     if (/^\/admin\/users(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.USER_VIEW, PERMISSIONS.USER_MANAGE);
+    if (pathname === "/admin/settings/storefront-hero") return anyOf(PERMISSIONS.PRODUCT_UPDATE);
     if (/^\/admin\/settings(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.TASK_VIEW);
     if (/^\/admin\/customers(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.CUSTOMER_VIEW);
     if (pathname === "/admin/reports/finance") {
