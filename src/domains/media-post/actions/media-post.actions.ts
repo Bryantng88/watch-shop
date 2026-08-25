@@ -6,7 +6,6 @@ import { createMediaPost, removeMediaFromPost, reorderMediaPostAssets, saveMedia
 import { requirePermission } from "@/server/auth/requirePermission";
 
 export async function createMediaPostAction(input: {
-  title: string;
   brief?: string | null;
   caption?: string | null;
   scheduledAt?: string | null;

@@ -97,8 +97,35 @@ function newRefNo() {
   return `POST-${day}-${randomUUID().slice(0, 8).toUpperCase()}`;
 }
 
+const MEDIA_POST_TIME_ZONE = "Asia/Bangkok";
+
+function mediaPostDay(now: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: MEDIA_POST_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  const year = value("year");
+  const month = value("month");
+  const day = value("day");
+  const start = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), -7));
+  return {
+    key: `${year}${month}${day}`,
+    label: `${day}/${month}/${year}`,
+    start,
+    end: new Date(start.getTime() + 24 * 60 * 60 * 1000),
+  };
+}
+
+export function mediaPostAutoTitle(sequence: number, now = new Date()) {
+  const day = mediaPostDay(now);
+  return `post_${String(Math.max(1, sequence)).padStart(2, "0")} ngày ${day.label}`;
+}
+
 export async function createMediaPost(input: {
-  title: string;
   brief?: string | null;
   caption?: string | null;
   contentJson?: Prisma.InputJsonValue | null;
@@ -109,14 +136,20 @@ export async function createMediaPost(input: {
   postTargetIds?: string[];
   watchIds?: string[];
 }) {
-  const title = input.title.trim();
-  if (!title) throw new Error("Tiêu đề bài post là bắt buộc.");
+  const createdAt = new Date();
+  const postDay = mediaPostDay(createdAt);
 
   return runBusinessEventTransaction(async (tx, delivery) => {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`media-post-title:${postDay.key}`}))`;
+    const postsCreatedToday = await tx.mediaPost.count({
+      where: { createdAt: { gte: postDay.start, lt: postDay.end } },
+    });
+    const title = mediaPostAutoTitle(postsCreatedToday + 1, createdAt);
     const post = await tx.mediaPost.create({
       data: {
         refNo: newRefNo(),
         title,
+        createdAt,
         brief: input.brief?.trim() || null,
         caption: input.caption?.trim() || null,
         contentJson: input.contentJson ?? undefined,

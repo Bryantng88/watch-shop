@@ -761,7 +761,6 @@ export default function OperationCoordinationWorkspace({
   const [isTechnicalIntakeOpen, setIsTechnicalIntakeOpen] = useState(false);
   const [isExpensePaymentOpen, setIsExpensePaymentOpen] = useState(false);
   const [isMediaPostCreateOpen, setIsMediaPostCreateOpen] = useState(false);
-  const [mediaPostTitle, setMediaPostTitle] = useState("");
   const [mediaPostBrief, setMediaPostBrief] = useState("");
   const [isMediaPostCreating, setIsMediaPostCreating] = useState(false);
   const [focusedTechnicalIssueId, setFocusedTechnicalIssueId] = useState<string | null>(null);
@@ -2159,15 +2158,14 @@ export default function OperationCoordinationWorkspace({
                 </form>
                 {isMediaFlowMode && isMediaPostCreateOpen ? (
                   <form
-                    className="mt-4 grid min-w-0 gap-2 border-t border-sky-100 pt-4 md:grid-cols-[minmax(220px,1fr)_minmax(280px,1.5fr)_auto_auto]"
+                    className="mt-4 grid min-w-0 gap-2 border-t border-sky-100 pt-4 md:grid-cols-[minmax(280px,1fr)_auto_auto]"
                     onSubmit={(event) => {
                       event.preventDefault();
-                      if (!mediaPostTitle.trim() || isMediaPostCreating) return;
+                      if (isMediaPostCreating) return;
                       setIsMediaPostCreating(true);
                       setError(null);
-                      void createMediaPostAction({ title: mediaPostTitle, brief: mediaPostBrief })
+                      void createMediaPostAction({ brief: mediaPostBrief })
                         .then(async (result) => {
-                          setMediaPostTitle("");
                           setMediaPostBrief("");
                           setIsMediaPostCreateOpen(false);
                           const stageKey = result.coordination.stageKey;
@@ -2182,13 +2180,6 @@ export default function OperationCoordinationWorkspace({
                     }}
                   >
                     <input
-                      value={mediaPostTitle}
-                      onChange={(event) => setMediaPostTitle(event.target.value)}
-                      placeholder="Tiêu đề Media Post"
-                      className="h-9 min-w-0 rounded-md border border-sky-100 bg-white px-3 text-sm outline-none focus:border-violet-300"
-                      required
-                    />
-                    <input
                       value={mediaPostBrief}
                       onChange={(event) => setMediaPostBrief(event.target.value)}
                       placeholder="Brief / yêu cầu nội dung (không bắt buộc)"
@@ -2196,7 +2187,7 @@ export default function OperationCoordinationWorkspace({
                     />
                     <button
                       type="submit"
-                      disabled={isMediaPostCreating || !mediaPostTitle.trim()}
+                      disabled={isMediaPostCreating}
                       className="h-9 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white disabled:opacity-50"
                     >
                       {isMediaPostCreating ? "Đang tạo..." : "Tạo ngay"}
@@ -3246,7 +3237,6 @@ function MediaProductionBoardView({
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [createTitle, setCreateTitle] = useState("");
   const [createBrief, setCreateBrief] = useState("");
   const [creatingPost, setCreatingPost] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
@@ -3338,15 +3328,14 @@ function MediaProductionBoardView({
       </div>
       {createOpen ? (
         <form
-          className="mb-4 grid gap-3 rounded-2xl border border-violet-100 bg-white p-4 shadow-sm md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto]"
+          className="mb-4 grid gap-3 rounded-2xl border border-violet-100 bg-white p-4 shadow-sm md:grid-cols-[minmax(0,1fr)_auto]"
           onSubmit={(event) => {
             event.preventDefault();
-            if (!createTitle.trim() || creatingPost) return;
+            if (creatingPost) return;
             setCreatingPost(true);
             setError(null);
-            void createMediaPostAction({ title: createTitle, brief: createBrief })
+            void createMediaPostAction({ brief: createBrief })
               .then(() => {
-                setCreateTitle("");
                 setCreateBrief("");
                 setCreateOpen(false);
                 onReloadRequested();
@@ -3356,13 +3345,6 @@ function MediaProductionBoardView({
           }}
         >
           <input
-            value={createTitle}
-            onChange={(event) => setCreateTitle(event.target.value)}
-            placeholder="Tiêu đề bài post"
-            className="h-10 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-violet-400"
-            required
-          />
-          <input
             value={createBrief}
             onChange={(event) => setCreateBrief(event.target.value)}
             placeholder="Brief / yêu cầu nội dung (không bắt buộc)"
@@ -3370,7 +3352,7 @@ function MediaProductionBoardView({
           />
           <button
             type="submit"
-            disabled={creatingPost || !createTitle.trim()}
+            disabled={creatingPost}
             className="h-10 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:opacity-50"
           >
             {creatingPost ? "Đang tạo..." : "Tạo ngay"}
