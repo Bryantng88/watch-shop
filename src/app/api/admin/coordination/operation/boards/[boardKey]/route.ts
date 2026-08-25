@@ -4,6 +4,7 @@ import {
   getCoordinationBoard,
   type CoordinationBoardKey,
 } from "@/domains/coordination/server/coordination-dashboard.service";
+import type { CoordinationContext } from "@/domains/coordination/server";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 import { prisma } from "@/server/db/client";
 
@@ -13,6 +14,14 @@ export const revalidate = 0;
 const BOARD_KEYS = new Set<CoordinationBoardKey>([
   "technical-issue",
   "media-operation",
+]);
+const CONTEXTS = new Set<CoordinationContext>([
+  "OPERATION",
+  "SALES",
+  "TECHNICAL",
+  "MEDIA",
+  "PAYMENT",
+  "GENERAL",
 ]);
 
 function doneRetentionDays(value: string | null) {
@@ -37,8 +46,13 @@ export async function GET(
   }
 
   try {
+    const requestedContext = request.nextUrl.searchParams.get("context") ?? "OPERATION";
+    const coordinationContext = CONTEXTS.has(requestedContext as CoordinationContext)
+      ? requestedContext as CoordinationContext
+      : "OPERATION";
     const board = await getCoordinationBoard({
       db: prisma,
+      context: coordinationContext,
       boardKey,
       taskId: request.nextUrl.searchParams.get("taskId") ?? "",
       auth,

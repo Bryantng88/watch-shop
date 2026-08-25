@@ -176,6 +176,7 @@ export async function GET(request: NextRequest) {
         : "media-operation";
       const board = await getCoordinationBoard({
         db: prisma,
+        context,
         boardKey,
         taskId: cycle.task.id,
         auth,

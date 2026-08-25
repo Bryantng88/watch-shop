@@ -1377,8 +1377,14 @@ export default function OperationCoordinationWorkspace({
     setError(null);
     setIsBoardRefreshing(true);
     try {
+      const params = new URLSearchParams({
+        context: data.context,
+        taskId: data.cycle.id,
+        pageSize: String(kind === "technical" ? 10 : 20),
+        doneRange,
+      });
       const response = await fetch(
-        `/api/admin/coordination/operation/boards/${kind === "technical" ? "technical-issue" : "media-operation"}?taskId=${encodeURIComponent(data.cycle.id)}&pageSize=${kind === "technical" ? 10 : 20}&doneRange=${doneRange}`,
+        `/api/admin/coordination/operation/boards/${kind === "technical" ? "technical-issue" : "media-operation"}?${params.toString()}`,
         { cache: "no-store" },
       );
       const result = await response.json().catch(() => null);
@@ -1395,7 +1401,7 @@ export default function OperationCoordinationWorkspace({
     } finally {
       setIsBoardRefreshing(false);
     }
-  }, [data.cycle.id, doneRange, handleDashboardResult, isBoardRefreshing]);
+  }, [data.context, data.cycle.id, doneRange, handleDashboardResult, isBoardRefreshing]);
   const refreshActiveData = useCallback(async () => {
     if (isBoardRefreshing) return;
     if (!activeCoreFlow?.key) {
@@ -1465,8 +1471,16 @@ export default function OperationCoordinationWorkspace({
     try {
       const pageSize = kind === "technical" ? 10 : 20;
       const boardKey = kind === "technical" ? "technical-issue" : "media-operation";
+      const params = new URLSearchParams({
+        context: data.context,
+        taskId: data.cycle.id,
+        stage,
+        page: String(page),
+        pageSize: String(pageSize),
+        doneRange,
+      });
       const response = await fetch(
-        `/api/admin/coordination/operation/boards/${boardKey}?taskId=${encodeURIComponent(data.cycle.id)}&stage=${encodeURIComponent(stage)}&page=${page}&pageSize=${pageSize}&doneRange=${doneRange}`,
+        `/api/admin/coordination/operation/boards/${boardKey}?${params.toString()}`,
         { cache: "no-store" },
       );
       const result = await response.json().catch(() => null);
@@ -1516,7 +1530,7 @@ export default function OperationCoordinationWorkspace({
     } finally {
       setLoadingBoardColumn(null);
     }
-  }, [data.cycle.id, doneRange, loadingBoardColumn]);
+  }, [data.context, data.cycle.id, doneRange, loadingBoardColumn]);
   const changeDoneRange = useCallback(async (value: "14D" | "30D" | "ALL") => {
     setDoneRange(value);
     const params = new URLSearchParams(searchParams.toString());

@@ -2385,6 +2385,7 @@ export type CoordinationBoardKey = "technical-issue" | "media-operation";
 
 export async function getCoordinationBoard(input: {
   db?: DB;
+  context?: CoordinationContext;
   boardKey: CoordinationBoardKey;
   taskId: string;
   auth?: unknown;
@@ -2399,7 +2400,7 @@ export async function getCoordinationBoard(input: {
   await dashboardStep("boardCycleScope", () =>
     assertCoordinationCycleScope({
       db,
-      context: "OPERATION",
+      context: input.context ?? "OPERATION",
       taskId,
     }));
 
