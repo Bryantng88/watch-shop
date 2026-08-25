@@ -51,3 +51,8 @@ export function isTransparentSharpCoverKey(storageKey: string | null | undefined
   const normalized = String(storageKey ?? "").trim().toLowerCase();
   return normalized.includes("photoroom-cutout-") || normalized.includes("cover-cutout-");
 }
+
+export function isRenderedSharpCoverKey(storageKey: string | null | undefined) {
+  const normalized = String(storageKey ?? "").trim().toLowerCase();
+  return normalized.includes("cover-sharp-");
+}

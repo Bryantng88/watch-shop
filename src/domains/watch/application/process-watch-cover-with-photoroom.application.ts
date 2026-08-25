@@ -9,6 +9,7 @@ import {
 import { mediaStorage } from "@/domains/media/storage";
 import {
   DEFAULT_PHOTOROOM_ADJUSTMENT,
+  isRenderedSharpCoverKey,
   isTransparentSharpCoverKey,
   type PhotoRoomAdjustment,
 } from "@/domains/watch/shared/photoroom-adjustment";
@@ -283,7 +284,11 @@ export async function recreateWatchCoverWithSharpApplication(input: {
   const productId = String(input.productId ?? "").trim();
   const sourceKey = String(input.storageKey ?? "").trim();
   if (!productId || !sourceKey) throw new Error("Thiếu Watch hoặc ảnh nguồn.");
-  const isTransparentCutout = isTransparentSharpCoverKey(sourceKey);
+  // A previously rendered Sharp cover is a complete 2048x3840 editing canvas.
+  // Treat it as geometry-ready so reopening the editor at 100% preserves the
+  // exact current composition instead of trimming the watch and fitting it again.
+  const isTransparentCutout = isTransparentSharpCoverKey(sourceKey)
+    || isRenderedSharpCoverKey(sourceKey);
 
   await getWatchMediaOwner(productId);
   const source = await mediaStorage.read(sourceKey);
@@ -330,7 +335,8 @@ export async function previewWatchCoverWithSharpApplication(input: {
   const productId = String(input.productId ?? "").trim();
   const sourceKey = String(input.storageKey ?? "").trim();
   if (!productId || !sourceKey) throw new Error("Thiếu Watch hoặc ảnh nguồn.");
-  const isTransparentCutout = isTransparentSharpCoverKey(sourceKey);
+  const isTransparentCutout = isTransparentSharpCoverKey(sourceKey)
+    || isRenderedSharpCoverKey(sourceKey);
   const watchExists = await prisma.watch.findFirst({
     where: { productId },
     select: { id: true },

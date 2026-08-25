@@ -507,13 +507,12 @@ export default function WatchImageSection({
             const outputKey = String(json?.data?.storageKey ?? "").trim();
             if (!outputKey) throw new Error("Sharp không trả về khóa ảnh kết quả.");
             setPendingCoverKey(outputKey);
-            setPhotoRoomAdjustment(adjustment);
-            // Keep the rendered Sharp result and its exact recipe paired as
-            // the next editing baseline. Without this, a later 115% request
-            // is applied to an already-zoomed image while being compared with
-            // the default 100%, causing cumulative jumps in subject size.
+            // The rendered cover becomes a fresh editing canvas. Its current
+            // composition is the neutral 100%/0/0/0 baseline for the next
+            // Sharp pass; previous adjustment values must not leak forward.
             setLocalLayoutBaseKey(outputKey);
-            setLocalLayoutBaseAdjustment(adjustment);
+            setLocalLayoutBaseAdjustment(DEFAULT_PHOTOROOM_ADJUSTMENT);
+            setPhotoRoomAdjustment(DEFAULT_PHOTOROOM_ADJUSTMENT);
             setPhotoRoomAdjustmentOpen(false);
             setCoverPickerVersion((version) => version + 1);
             notify.success({
