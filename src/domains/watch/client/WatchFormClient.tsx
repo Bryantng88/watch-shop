@@ -824,6 +824,14 @@ export default function WatchFormClient({
 
       const next: WatchFormValues = {
         ...prev,
+        basic: {
+          ...prev.basic,
+          slug: result?.storefrontSlug || prev.basic.slug,
+        },
+        content: {
+          ...prev.content,
+          hookText: result?.hookText ?? prev.content.hookText,
+        },
         contentReviewStatus:
           (result?.contentReviewStatus as ReviewStatus | undefined) ??
           prev.contentReviewStatus,

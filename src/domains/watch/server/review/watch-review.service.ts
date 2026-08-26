@@ -20,7 +20,7 @@ import {
     type WatchReviewTargetType,
 } from "@/domains/watch/server/events";
 import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
-import { buildWatchStorefrontSlug } from "@/domains/watch/shared/storefront-slug";
+import { resolveWatchStorefrontSlug } from "@/domains/watch/shared/storefront-slug";
 type ReviewTargetType = WatchReviewTargetType;
 type ReviewStatus = WatchReviewStatus;
 
@@ -260,6 +260,7 @@ async function getReviewPair(db: DB, productId: string) {
                 select: {
                     title: true,
                     slug: true,
+                    publishedAt: true,
                 },
             },
             reviewStates: {
@@ -424,7 +425,12 @@ async function finalizeWatchIfFullyApproved(db: DB, productId: string) {
             },
         }));
 
-    const storefrontSlug = buildWatchStorefrontSlug(pair.watch.product.title, productId);
+    const storefrontSlug = resolveWatchStorefrontSlug({
+        title: pair.watch.product.title,
+        productId,
+        currentSlug: pair.watch.product.slug,
+        publishedAt: pair.watch.product.publishedAt,
+    });
 
     await db.watch.updateMany({
             where: {
@@ -443,7 +449,7 @@ async function finalizeWatchIfFullyApproved(db: DB, productId: string) {
             where: { id: productId },
             data: {
                 status: ProductStatus.AVAILABLE,
-                ...(pair.watch.product.slug ? {} : { slug: storefrontSlug }),
+                slug: storefrontSlug,
                 updatedAt: new Date(),
             },
         });

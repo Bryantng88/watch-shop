@@ -10,3 +10,21 @@ export function buildWatchStorefrontSlug(title: string | null | undefined, produ
   const slugSuffix = productId.replace(/[^a-zA-Z0-9]/g, "").slice(-8).toLowerCase();
   return `${slugBase}-${slugSuffix || "item"}`;
 }
+
+export function resolveWatchStorefrontSlug(input: {
+  title: string | null | undefined;
+  productId: string;
+  currentSlug?: string | null;
+  publishedAt?: Date | string | null;
+}) {
+  const currentSlug = String(input.currentSlug ?? "").trim();
+  if (input.publishedAt && currentSlug) return currentSlug;
+  return buildWatchStorefrontSlug(input.title, input.productId);
+}
+
+export function syncStorefrontProductUrl(text: string | null | undefined, slug: string) {
+  const value = String(text ?? "");
+  if (!value) return value;
+  const url = `https://vinticwatches.vn/products/${encodeURIComponent(slug)}`;
+  return value.replace(/https:\/\/vinticwatches\.vn\/products\/[^\s]+/g, url);
+}

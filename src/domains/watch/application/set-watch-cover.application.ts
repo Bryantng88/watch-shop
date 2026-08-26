@@ -12,7 +12,7 @@ import { cleanupRemovedWatchMedia } from "@/domains/media/application/watch-medi
 import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
 import type { BusinessEventDispatchOptions } from "@/domains/event/server/business-event.service";
 import { emitWatchCoverUpdatedEvent } from "@/domains/watch/server/events";
-import { buildWatchStorefrontSlug } from "@/domains/watch/shared/storefront-slug";
+import { resolveWatchStorefrontSlug } from "@/domains/watch/shared/storefront-slug";
 import { prisma } from "@/server/db/client";
 
 export async function setWatchCoverApplication(input: {
@@ -42,7 +42,7 @@ export async function setWatchCoverApplication(input: {
         productId: true,
         audienceSegment: true,
         mediaPipelineKey: true,
-        product: { select: { storefrontImageKey: true, slug: true, title: true } },
+        product: { select: { storefrontImageKey: true, slug: true, title: true, publishedAt: true } },
       },
     });
     if (!watch) throw new Error("Không tìm thấy Watch.");
@@ -85,13 +85,18 @@ export async function setWatchCoverApplication(input: {
         sortOrder: 0,
       },
     });
-    const storefrontSlug = watch.product.slug || buildWatchStorefrontSlug(watch.product.title, productId);
+    const storefrontSlug = resolveWatchStorefrontSlug({
+      title: watch.product.title,
+      productId,
+      currentSlug: watch.product.slug,
+      publishedAt: watch.product.publishedAt,
+    });
     await tx.product.update({
       where: { id: productId },
       data: {
         storefrontImageKey: mediaObject.storageKey,
         primaryImageUrl: mediaObject.storageKey,
-        ...(watch.product.slug ? {} : { slug: storefrontSlug }),
+        slug: storefrontSlug,
       },
     });
 

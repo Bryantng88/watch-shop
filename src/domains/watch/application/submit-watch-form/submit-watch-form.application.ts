@@ -35,6 +35,10 @@ import {
     emitWatchPriceUpdatedEvent,
     emitWatchSpecUpdatedEvent,
 } from "../../server/events";
+import {
+    resolveWatchStorefrontSlug,
+    syncStorefrontProductUrl,
+} from "../../shared/storefront-slug";
 
 type SubmitWatchFormContext = {
     userId?: string | null;
@@ -60,6 +64,8 @@ type SubmitWatchFormResult = {
     askContinueContent: boolean;
     contentReviewStatus?: "DRAFT";
     imageReviewStatus?: "DRAFT";
+    storefrontSlug: string;
+    hookText: string;
 
 };
 
@@ -416,6 +422,15 @@ export async function submitWatchFormApplication(
         throw new Error("Không tìm thấy watch.");
     }
 
+    const nextTitle = textOrUndefined(values.basic.title) ?? current.product.title;
+    const storefrontSlug = resolveWatchStorefrontSlug({
+        title: nextTitle,
+        productId,
+        currentSlug: current.product.slug,
+        publishedAt: current.product.publishedAt,
+    });
+    const nextHookText = syncStorefrontProductUrl(values.content.hookText, storefrontSlug);
+
     const beforeContent = buildContentSnapshot({
         titleOverride: current.watchContent?.titleOverride,
         hookText: current.watchContent?.hookText,
@@ -442,7 +457,7 @@ export async function submitWatchFormApplication(
     const afterContent =
         saveIntent === "SUBMIT_IMAGE"
             ? beforeContent
-            : buildContentSnapshot(values.content);
+            : buildContentSnapshot({ ...values.content, hookText: nextHookText });
     const afterSpec = buildSpecSnapshot({
         brand: values.spec.specBrand || undefined,
         model: values.spec.model,
@@ -524,8 +539,8 @@ export async function submitWatchFormApplication(
         await tx.product.update({
             where: { id: productId },
             data: {
-                title: textOrUndefined(values.basic.title),
-                slug: textOrUndefined(values.basic.slug),
+                title: nextTitle,
+                slug: storefrontSlug,
                 sku: safeSku,
                 brand: values.basic.brandId
                     ? { connect: { id: values.basic.brandId } }
@@ -637,14 +652,14 @@ export async function submitWatchFormApplication(
                 watchId: current.id,
                 contentStatus: "DRAFT",
                 titleOverride: values.content.titleOverride || null,
-                hookText: values.content.hookText || null,
+                hookText: nextHookText || null,
                 body: values.content.body || null,
                 bulletSpecs: values.content.bulletSpecs ?? [],
                 hashTags: values.content.hashTags || null,
             } as any,
             update: {
                 titleOverride: values.content.titleOverride || null,
-                hookText: values.content.hookText || null,
+                hookText: nextHookText || null,
                 body: values.content.body || null,
                 bulletSpecs: values.content.bulletSpecs ?? [],
                 hashTags: values.content.hashTags || null,
@@ -857,5 +872,7 @@ export async function submitWatchFormApplication(
             !context.canReviewContent && imagesChanged && !hasContentData,
         contentReviewStatus: contentChanged ? "DRAFT" : undefined,
         imageReviewStatus: imagesChanged ? "DRAFT" : undefined,
+        storefrontSlug,
+        hookText: nextHookText,
     };
 }
