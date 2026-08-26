@@ -24,7 +24,7 @@ test("draft watch slug follows the latest title", () => {
   );
 });
 
-test("published watch keeps its existing storefront slug", () => {
+test("published watch slug also follows the latest approved title", () => {
   assert.equal(
     resolveWatchStorefrontSlug({
       title: "A completely new title",
@@ -32,7 +32,7 @@ test("published watch keeps its existing storefront slug", () => {
       currentSlug: "stable-published-url-345678",
       publishedAt: new Date("2026-08-26T00:00:00.000Z"),
     }),
-    "stable-published-url-345678",
+    buildWatchStorefrontSlug("A completely new title", productId),
   );
 });
 

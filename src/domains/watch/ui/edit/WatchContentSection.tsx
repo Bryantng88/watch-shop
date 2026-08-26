@@ -19,6 +19,7 @@ import {
 import SectionReviewActions from "../review/SectionReviewActions";
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
+import { buildWatchStorefrontSlug } from "@/domains/watch/shared/storefront-slug";
 
 type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
@@ -35,6 +36,7 @@ type Props = {
     contentReviewNote?: string | null;
     canReviewContent?: boolean;
     onChange: (patch: Partial<WatchFormValues["content"]>) => void;
+    onStorefrontSlugChange?: (slug: string) => void;
     onOpenSpecModal: () => void;
     onReviewStatusChange?: (next: ReviewStatusChange) => void;
     onBeforeSubmitReview?: (target: "content" | "image") => Promise<boolean>;
@@ -69,6 +71,7 @@ export default function WatchContentSection({
     contentReviewNote,
     canReviewContent = false,
     onChange,
+    onStorefrontSlugChange,
     onOpenSpecModal,
     onReviewStatusChange,
     onBeforeSubmitReview,
@@ -167,9 +170,17 @@ export default function WatchContentSection({
     };
 
     const handleGenerateHook = () => {
-        const result = buildGeneration();
+        const title = values.titleOverride?.trim() || watchValues.basic.title;
+        const slug = buildWatchStorefrontSlug(title, productId);
+        const nextWatchValues: WatchFormValues = {
+            ...watchValues,
+            basic: { ...watchValues.basic, slug },
+        };
+        const result = generateWatchContent(nextWatchValues);
         if (!result) return;
 
+        setGeneration(result);
+        onStorefrontSlugChange?.(slug);
         onChange({
             hookText: result.hookText,
         });

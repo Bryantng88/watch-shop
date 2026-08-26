@@ -17,8 +17,6 @@ export function resolveWatchStorefrontSlug(input: {
   currentSlug?: string | null;
   publishedAt?: Date | string | null;
 }) {
-  const currentSlug = String(input.currentSlug ?? "").trim();
-  if (input.publishedAt && currentSlug) return currentSlug;
   return buildWatchStorefrontSlug(input.title, input.productId);
 }
 

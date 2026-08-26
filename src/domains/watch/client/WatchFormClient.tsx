@@ -1788,6 +1788,7 @@ export default function WatchFormClient({
       canReviewContent={canReviewContent}
       isFormDirty={isDirty}
       onChange={updateContent}
+      onStorefrontSlugChange={(slug) => updateBasic({ slug })}
       onOpenSpecModal={() => setSpecModalOpen(true)}
       onBeforeSubmitReview={saveBeforeReview}
       onReviewStatusChange={(next) => handleReviewStatusChange("content", next)}
