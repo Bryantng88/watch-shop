@@ -366,6 +366,7 @@ export async function updateMediaPostContent(input: {
   caption?: string | null;
   body?: string | null;
   hashtags?: string | null;
+  postTargetIds?: string[];
 }) {
   const title = input.title.trim();
   if (!title) throw new Error("Tiêu đề bài post là bắt buộc.");
@@ -380,6 +381,12 @@ export async function updateMediaPostContent(input: {
         body: input.body?.trim() || null,
         hashtags: input.hashtags?.trim() || null,
       },
+      targets: input.postTargetIds
+        ? {
+            deleteMany: {},
+            create: [...new Set(input.postTargetIds)].map((postTargetId) => ({ postTargetId })),
+          }
+        : undefined,
     },
   });
 }

@@ -765,7 +765,7 @@ export function QueueItemThumbnail({ item }: { item: TaskItemQueueItem }) {
   const src = resolveQueuePreviewSrc(imageUrls[0]);
   const label = queueItemTitle(item);
 
-  if (!src && item.targetType === "MEDIA_POST") {
+  if (item.targetType === "MEDIA_POST") {
     return <MediaPostItemIcon />;
   }
 

@@ -61,6 +61,20 @@ function defaultZaloTemplatesForEvent(eventKey: string) {
         };
     }
 
+    if (eventKey === "media.post.ready_for_publish") {
+        return {
+            titleTemplate: "📣 {{actorName}} vừa duyệt xong Media Post:",
+            messageTemplate: "Bài: {{mediaPostTitle}}\nMã: {{mediaPostRef}}\nKênh đăng: {{publishChannels}}\nBrief: {{brief}}\nMở xử lý: {{route}}",
+        };
+    }
+
+    if (eventKey === "media.post.published") {
+        return {
+            titleTemplate: "✅ {{actorName}} vừa xác nhận đã đăng Media Post:",
+            messageTemplate: "Bài: {{mediaPostTitle}}\nMã: {{mediaPostRef}}\nKênh đăng: {{publishChannels}}\nMở chi tiết: {{route}}",
+        };
+    }
+
     if (eventKey === "technical_issue.created") {
         return {
             titleTemplate: "👤 {{actorName}} (User) vừa đưa 1 Watch vào Kiểm tra TI",

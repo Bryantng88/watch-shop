@@ -17,7 +17,7 @@ export const MEDIA_POST_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] =
       targetType: "MEDIA_POST",
       group: "Media Post",
       producer: "MediaPost",
-      knownConsumers: ["coordination", "workflow", "timeline", "projection"],
+      knownConsumers: ["coordination", "workflow", "timeline", "projection", "notification"],
       payload: {
         name: "MediaPostBusinessEventPayload",
         version: 1,

@@ -68,6 +68,7 @@ export async function updateMediaPostContentAction(input: {
   caption?: string | null;
   body?: string | null;
   hashtags?: string | null;
+  postTargetIds?: string[];
 }) {
   const auth = await requirePermission("PRODUCT_UPDATE");
   const post = await updateMediaPostContent(input);

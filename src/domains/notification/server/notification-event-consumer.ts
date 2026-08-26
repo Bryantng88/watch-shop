@@ -95,6 +95,31 @@ async function enrichNotificationEvent(
     }
 
     if (
+        event.targetType === "MEDIA_POST" &&
+        ["media.post.ready_for_publish", "media.post.published"].includes(event.eventKey)
+    ) {
+        const post = await client.mediaPost.findUnique({
+            where: { id: event.targetId },
+            select: {
+                refNo: true,
+                title: true,
+                brief: true,
+                targets: {
+                    select: { postTarget: { select: { name: true, platform: true } } },
+                },
+            },
+        });
+        enriched.mediaPostTitle = clean(post?.title) || clean(enriched.title) || "Media Post";
+        enriched.mediaPostRef = clean(post?.refNo) || clean(enriched.refNo) || event.targetId;
+        enriched.brief = clean(post?.brief) || "Không có brief";
+        enriched.publishChannels = post?.targets
+            .map(({ postTarget }) => clean(postTarget.name) || clean(postTarget.platform))
+            .filter(Boolean)
+            .join(", ") || "Chưa chọn";
+        enriched.route = `/admin/media-posts/${encodeURIComponent(event.targetId)}`;
+    }
+
+    if (
         event.targetType === "TECHNICAL_ISSUE" &&
         ["technical_issue.created", "technical_issue.completed"].includes(event.eventKey)
     ) {

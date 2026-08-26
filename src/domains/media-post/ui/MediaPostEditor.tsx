@@ -21,7 +21,10 @@ type ContentValue = {
   caption: string;
   body: string;
   hashtags: string;
+  postTargetIds: string[];
 };
+
+type PostTargetOption = { id: string; name: string; platform: string | null };
 
 const fieldClass = "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-violet-300 focus:ring-4 focus:ring-violet-50";
 
@@ -32,6 +35,7 @@ export default function MediaPostEditor({
   bindingId,
   publishBindingId,
   initialProgress,
+  postTargets,
 }: {
   mediaPostId: string;
   initialAssets: PickedMediaItem[];
@@ -39,6 +43,7 @@ export default function MediaPostEditor({
   bindingId: string | null;
   publishBindingId: string | null;
   initialProgress: { content: boolean; image: boolean };
+  postTargets: PostTargetOption[];
 }) {
   const router = useRouter();
   const [content, setContent] = useState(initialContent);
@@ -57,6 +62,16 @@ export default function MediaPostEditor({
 
   function change(field: keyof ContentValue, value: string) {
     setContent((current) => ({ ...current, [field]: value }));
+    setContentSaved(false);
+  }
+
+  function togglePostTarget(id: string) {
+    setContent((current) => ({
+      ...current,
+      postTargetIds: current.postTargetIds.includes(id)
+        ? current.postTargetIds.filter((targetId) => targetId !== id)
+        : [...current.postTargetIds, id],
+    }));
     setContentSaved(false);
   }
 
@@ -185,6 +200,28 @@ export default function MediaPostEditor({
         <div className="grid gap-4 lg:grid-cols-2">
           <label className="space-y-1.5 lg:col-span-2"><span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Title</span><input className={fieldClass} value={content.title} onChange={(event) => change("title", event.target.value)} /></label>
           <label className="space-y-1.5 lg:col-span-2"><span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Hook</span><textarea rows={3} className={fieldClass} value={content.hook} onChange={(event) => change("hook", event.target.value)} placeholder="Hook mở đầu và link sản phẩm liên quan" /></label>
+          <div className="space-y-2 lg:col-span-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Kênh đăng bài</span>
+            <div className="flex flex-wrap gap-2">
+              {postTargets.map((target) => {
+                const selected = content.postTargetIds.includes(target.id);
+                return (
+                  <button
+                    key={target.id}
+                    type="button"
+                    onClick={() => togglePostTarget(target.id)}
+                    className={selected
+                      ? "rounded-full bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white ring-1 ring-violet-600"
+                      : "rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 transition hover:ring-violet-300"}
+                    aria-pressed={selected}
+                  >
+                    {target.name}{target.platform && target.platform !== target.name ? ` · ${target.platform}` : ""}
+                  </button>
+                );
+              })}
+              {!postTargets.length ? <span className="text-sm text-slate-400">Chưa có kênh đăng đang hoạt động.</span> : null}
+            </div>
+          </div>
           <label className="space-y-1.5"><span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Brief</span><textarea rows={4} className={fieldClass} value={content.brief} onChange={(event) => change("brief", event.target.value)} placeholder="Mục tiêu và yêu cầu của bài post" /></label>
           <label className="space-y-1.5"><span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Caption</span><textarea rows={4} className={fieldClass} value={content.caption} onChange={(event) => change("caption", event.target.value)} placeholder="Đoạn mở đầu hiển thị trên social" /></label>
           <label className="space-y-1.5 lg:col-span-2"><span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Body</span><textarea rows={8} className={fieldClass} value={content.body} onChange={(event) => change("body", event.target.value)} placeholder="Nội dung đầy đủ của bài post" /></label>

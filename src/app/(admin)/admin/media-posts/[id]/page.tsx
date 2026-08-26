@@ -8,13 +8,18 @@ import { prisma } from "@/server/db/client";
 export default async function MediaPostPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ embedded?: string }> }) {
   await requirePermission("MEDIA_VIEW");
   const { id } = await params;
-  const [post, assets, workContext] = await Promise.all([
+  const [post, assets, workContext, postTargets] = await Promise.all([
     prisma.mediaPost.findUnique({
       where: { id },
       include: { targets: { include: { postTarget: true } }, watches: true },
     }),
     listMediaPostAssets(id),
     getMediaPostMediaWorkContext(id),
+    prisma.postTarget.findMany({
+      where: { isActive: true },
+      orderBy: [{ name: "asc" }, { platform: "asc" }],
+      select: { id: true, name: true, platform: true },
+    }),
   ]);
   if (!post) notFound();
   const { embedded } = await searchParams;
@@ -35,7 +40,8 @@ export default async function MediaPostPage({ params, searchParams }: { params: 
       </section>
       <MediaPostEditor
         mediaPostId={post.id}
-        initialContent={{ title: post.title, hook: String(content.hook ?? ""), brief: post.brief ?? "", caption: post.caption ?? "", body: String(content.body ?? ""), hashtags: String(content.hashtags ?? "") }}
+        initialContent={{ title: post.title, hook: String(content.hook ?? ""), brief: post.brief ?? "", caption: post.caption ?? "", body: String(content.body ?? ""), hashtags: String(content.hashtags ?? ""), postTargetIds: post.targets.map((target) => target.postTargetId) }}
+        postTargets={postTargets}
         initialAssets={assets.map(({ mediaObject }) => ({
           key: mediaObject.storageKey,
           name: mediaObject.originalFileName,
