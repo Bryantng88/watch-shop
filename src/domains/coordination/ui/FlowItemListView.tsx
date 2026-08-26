@@ -45,6 +45,7 @@ import type {
 } from "@/domains/shared/business/business-entity.types";
 import PurchaseRequestOrderModal from "@/domains/purchase-request/ui/PurchaseRequestOrderModal";
 import { CarrierDispatchAssistant } from "@/domains/shipment/ui/carrier";
+import { PostTargetChip } from "@/domains/shared/ui/post-target/PostTargetChip";
 
 type FlowStage = {
   key: string;
@@ -1185,7 +1186,7 @@ export default function FlowItemListView({
                   {showPublishChannels ? (
                     <td className="px-4 py-3">
                       {item.preview.postTargets?.length ? (
-                        <span
+                        <div
                           title={item.preview.postTargets
                             .map((target) =>
                               target.platform
@@ -1193,10 +1194,13 @@ export default function FlowItemListView({
                                 : target.name,
                             )
                             .join(", ")}
-                          className="block max-w-52 truncate text-xs font-medium text-slate-600"
+                          className="flex max-w-52 flex-wrap gap-1"
                         >
-                          {item.preview.postTargets.map((target) => target.name).join(", ")}
-                        </span>
+                          {Array.from(new Map(item.preview.postTargets.map((target) => [target.name.toLowerCase(), target])).values()).slice(0, 3).map((target) => (
+                            <PostTargetChip key={`${target.id}:${target.name}`} className="max-w-24 px-2 py-0.5 text-[10px]">{target.name}</PostTargetChip>
+                          ))}
+                          {new Set(item.preview.postTargets.map((target) => target.name.toLowerCase())).size > 3 ? <span className="text-[10px] font-semibold text-slate-500">+{new Set(item.preview.postTargets.map((target) => target.name.toLowerCase())).size - 3}</span> : null}
+                        </div>
                       ) : (
                         <span className="text-xs text-slate-400">Chưa chọn kênh</span>
                       )}

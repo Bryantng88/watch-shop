@@ -3,7 +3,7 @@
 import { Loader2, Settings2, Sparkles } from "lucide-react";
 import type { WatchWorkbenchValues } from "@/domains/watch/client/workbench/types";
 import { updateValues } from "@/domains/watch/client/workbench/workbench-utils";
-import { PostTargetMultiSelect } from "@/domains/watch/ui/edit/WatchBasicSection";
+import { PostTargetMultiSelect } from "@/domains/shared/ui/post-target/PostTargetMultiSelect";
 import { Field, inputClass, OperationShell, operationButtonClass, textareaClass } from "../shared/OperationShell";
 
 const MOVEMENT_OPTIONS = ["QUARTZ", "AUTOMATIC", "MANUAL", "MECA_QUARTZ"];

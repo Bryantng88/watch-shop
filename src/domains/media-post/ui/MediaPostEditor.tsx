@@ -13,6 +13,7 @@ import {
 } from "@/domains/media-post/actions";
 import { applyQueueItemManualTransitionAction } from "@/domains/task/actions/task.actions";
 import { notifyParentOfWorkspaceTransition } from "@/domains/shared/ui/transitions/workspace-transition-outcome";
+import { PostTargetMultiSelect } from "@/domains/shared/ui/post-target/PostTargetMultiSelect";
 
 type ContentValue = {
   title: string;
@@ -62,16 +63,6 @@ export default function MediaPostEditor({
 
   function change(field: keyof ContentValue, value: string) {
     setContent((current) => ({ ...current, [field]: value }));
-    setContentSaved(false);
-  }
-
-  function togglePostTarget(id: string) {
-    setContent((current) => ({
-      ...current,
-      postTargetIds: current.postTargetIds.includes(id)
-        ? current.postTargetIds.filter((targetId) => targetId !== id)
-        : [...current.postTargetIds, id],
-    }));
     setContentSaved(false);
   }
 
@@ -202,25 +193,14 @@ export default function MediaPostEditor({
           <label className="space-y-1.5 lg:col-span-2"><span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Hook</span><textarea rows={3} className={fieldClass} value={content.hook} onChange={(event) => change("hook", event.target.value)} placeholder="Hook mở đầu và link sản phẩm liên quan" /></label>
           <div className="space-y-2 lg:col-span-2">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Kênh đăng bài</span>
-            <div className="flex flex-wrap gap-2">
-              {postTargets.map((target) => {
-                const selected = content.postTargetIds.includes(target.id);
-                return (
-                  <button
-                    key={target.id}
-                    type="button"
-                    onClick={() => togglePostTarget(target.id)}
-                    className={selected
-                      ? "rounded-full bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white ring-1 ring-violet-600"
-                      : "rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 transition hover:ring-violet-300"}
-                    aria-pressed={selected}
-                  >
-                    {target.name}{target.platform && target.platform !== target.name ? ` · ${target.platform}` : ""}
-                  </button>
-                );
-              })}
-              {!postTargets.length ? <span className="text-sm text-slate-400">Chưa có kênh đăng đang hoạt động.</span> : null}
-            </div>
+            <PostTargetMultiSelect
+              value={content.postTargetIds}
+              options={postTargets}
+              onChange={(postTargetIds) => {
+                setContent((current) => ({ ...current, postTargetIds }));
+                setContentSaved(false);
+              }}
+            />
           </div>
           <label className="space-y-1.5"><span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Brief</span><textarea rows={4} className={fieldClass} value={content.brief} onChange={(event) => change("brief", event.target.value)} placeholder="Mục tiêu và yêu cầu của bài post" /></label>
           <label className="space-y-1.5"><span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Caption</span><textarea rows={4} className={fieldClass} value={content.caption} onChange={(event) => change("caption", event.target.value)} placeholder="Đoạn mở đầu hiển thị trên social" /></label>
