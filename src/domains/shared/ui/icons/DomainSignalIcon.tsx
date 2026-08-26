@@ -21,7 +21,6 @@ import {
     WalletMinimal,
     Watch,
     Wrench,
-    Check,
     DollarSign,
     PackageX,
     ClipboardList,
@@ -81,6 +80,24 @@ export function DomainSignalIcon({
 
 export function DomainSignalGroup({ children }: { children: ReactNode }) {
     return <div className="mt-2 flex flex-wrap items-center gap-1.5">{children}</div>;
+}
+
+export function MediaPostItemIcon({ className }: { className?: string }) {
+    return (
+        <span
+            title="Media Post"
+            aria-label="Media Post"
+            className={cn(
+                "relative inline-flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-violet-50 text-violet-600 ring-1 ring-violet-200",
+                className,
+            )}
+        >
+            <ImageIcon className="h-5 w-5 stroke-[1.9]" aria-hidden="true" />
+            <span className="absolute bottom-1 right-1 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-violet-600 text-white ring-2 ring-violet-50">
+                <Send className="h-2 w-2 stroke-[2.4]" aria-hidden="true" />
+            </span>
+        </span>
+    );
 }
 
 export function DoneSignalIcon({

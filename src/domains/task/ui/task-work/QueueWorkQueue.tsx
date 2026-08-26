@@ -55,6 +55,7 @@ import {
 } from "@/domains/shared/ui/transitions/workspace-transition-outcome";
 import { useCoalescedRouterRefresh } from "@/domains/shared/ui/transitions/use-coalesced-router-refresh";
 import { waitForOperationProjectionDeliveries } from "@/domains/coordination/ui/operation-delivery.client";
+import { MediaPostItemIcon } from "@/domains/shared/ui/icons/DomainSignalIcon";
 
 export type UserSummary = {
   id: string;
@@ -763,6 +764,10 @@ export function QueueItemThumbnail({ item }: { item: TaskItemQueueItem }) {
       : [];
   const src = resolveQueuePreviewSrc(imageUrls[0]);
   const label = queueItemTitle(item);
+
+  if (!src && item.targetType === "MEDIA_POST") {
+    return <MediaPostItemIcon />;
+  }
 
   if ((item.targetType === "ORDER" && imageUrls.length > 1) || (item.targetType === "PAYMENT" && (item.payment?.itemCount ?? imageUrls.length) > 1)) {
     return (
