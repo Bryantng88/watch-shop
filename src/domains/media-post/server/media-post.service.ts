@@ -140,7 +140,12 @@ export async function createMediaPost(input: {
   const postDay = mediaPostDay(createdAt);
 
   return runBusinessEventTransaction(async (tx, delivery) => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`media-post-title:${postDay.key}`}))`;
+    await tx.$queryRaw<Array<{ locked: number }>>`
+      SELECT 1::int AS locked
+      FROM (
+        SELECT pg_advisory_xact_lock(hashtext(${`media-post-title:${postDay.key}`})::bigint)
+      ) AS advisory_lock
+    `;
     const postsCreatedToday = await tx.mediaPost.count({
       where: { createdAt: { gte: postDay.start, lt: postDay.end } },
     });
