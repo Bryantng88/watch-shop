@@ -71,7 +71,7 @@ export async function updateMediaPostContentAction(input: {
   postTargetIds?: string[];
 }) {
   const auth = await requirePermission("PRODUCT_UPDATE");
-  const post = await updateMediaPostContent(input);
+  const post = await updateMediaPostContent({ ...input, actorUserId: auth.userId });
   const contentDone = Boolean(input.title.trim() && (input.hook?.trim() || input.caption?.trim() || input.body?.trim()));
   const progress = await saveMediaPostWorkProgress({ mediaPostId: input.mediaPostId, parts: { content: contentDone }, actorUserId: auth.userId });
   revalidatePath(`/admin/media-posts/${input.mediaPostId}`);

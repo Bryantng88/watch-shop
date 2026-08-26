@@ -3,6 +3,7 @@ import type { BusinessEventContract } from "@/domains/event/contract/business-ev
 
 export const MEDIA_POST_BUSINESS_EVENT_KEYS = [
   "media.post.created",
+  "media.post.content.updated",
   "media.post.photography.completed",
   "media.post.asset.selected",
   "media.post.ready_for_publish",

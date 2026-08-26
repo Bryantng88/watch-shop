@@ -367,27 +367,42 @@ export async function updateMediaPostContent(input: {
   body?: string | null;
   hashtags?: string | null;
   postTargetIds?: string[];
+  actorUserId?: string | null;
 }) {
   const title = input.title.trim();
   if (!title) throw new Error("Tiêu đề bài post là bắt buộc.");
-  return prisma.mediaPost.update({
-    where: { id: input.mediaPostId },
-    data: {
-      title,
-      brief: input.brief?.trim() || null,
-      caption: input.caption?.trim() || null,
-      contentJson: {
-        hook: input.hook?.trim() || null,
-        body: input.body?.trim() || null,
-        hashtags: input.hashtags?.trim() || null,
+  return runBusinessEventTransaction(async (tx, delivery) => {
+    const post = await tx.mediaPost.update({
+      where: { id: input.mediaPostId },
+      data: {
+        title,
+        brief: input.brief?.trim() || null,
+        caption: input.caption?.trim() || null,
+        contentJson: {
+          hook: input.hook?.trim() || null,
+          body: input.body?.trim() || null,
+          hashtags: input.hashtags?.trim() || null,
+        },
+        targets: input.postTargetIds
+          ? {
+              deleteMany: {},
+              create: [...new Set(input.postTargetIds)].map((postTargetId) => ({ postTargetId })),
+            }
+          : undefined,
       },
-      targets: input.postTargetIds
-        ? {
-            deleteMany: {},
-            create: [...new Set(input.postTargetIds)].map((postTargetId) => ({ postTargetId })),
-          }
-        : undefined,
-    },
+    });
+    await delivery.emit({
+      eventKey: "media.post.content.updated",
+      targetType: "MEDIA_POST",
+      targetId: post.id,
+      actorUserId: input.actorUserId ?? null,
+      payload: {
+        refNo: post.refNo,
+        title: post.title,
+        targetIds: input.postTargetIds ? [...new Set(input.postTargetIds)] : undefined,
+      },
+    });
+    return post;
   });
 }
 

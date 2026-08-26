@@ -45,6 +45,7 @@ const MEDIA_OPERATION_BOARD_EVENTS = [
   "watch.saleStage.posted",
   "watch.sold",
   "media.post.created",
+  "media.post.content.updated",
   "media.post.photography.completed",
   "media.post.asset.selected",
   "media.post.ready_for_publish",
