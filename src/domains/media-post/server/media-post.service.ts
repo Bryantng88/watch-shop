@@ -28,7 +28,7 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function hasPostContent(post: { title: string; caption: string | null; contentJson: unknown }) {
   const content = asRecord(post.contentJson);
-  return Boolean(post.title.trim() && (post.caption?.trim() || String(content.body ?? "").trim()));
+  return Boolean(post.title.trim() && (String(content.hook ?? "").trim() || post.caption?.trim() || String(content.body ?? "").trim()));
 }
 
 export async function getMediaPostMediaWorkContext(mediaPostId: string, db: DB = prisma) {
@@ -361,6 +361,7 @@ export async function listMediaPostAssets(mediaPostId: string) {
 export async function updateMediaPostContent(input: {
   mediaPostId: string;
   title: string;
+  hook?: string | null;
   brief?: string | null;
   caption?: string | null;
   body?: string | null;
@@ -375,6 +376,7 @@ export async function updateMediaPostContent(input: {
       brief: input.brief?.trim() || null,
       caption: input.caption?.trim() || null,
       contentJson: {
+        hook: input.hook?.trim() || null,
         body: input.body?.trim() || null,
         hashtags: input.hashtags?.trim() || null,
       },

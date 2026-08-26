@@ -63,6 +63,7 @@ export async function selectMediaForPostAction(input: {
 export async function updateMediaPostContentAction(input: {
   mediaPostId: string;
   title: string;
+  hook?: string | null;
   brief?: string | null;
   caption?: string | null;
   body?: string | null;
@@ -70,7 +71,7 @@ export async function updateMediaPostContentAction(input: {
 }) {
   const auth = await requirePermission("PRODUCT_UPDATE");
   const post = await updateMediaPostContent(input);
-  const contentDone = Boolean(input.title.trim() && (input.caption?.trim() || input.body?.trim()));
+  const contentDone = Boolean(input.title.trim() && (input.hook?.trim() || input.caption?.trim() || input.body?.trim()));
   const progress = await saveMediaPostWorkProgress({ mediaPostId: input.mediaPostId, parts: { content: contentDone }, actorUserId: auth.userId });
   revalidatePath(`/admin/media-posts/${input.mediaPostId}`);
   revalidatePath("/admin/coordination/media");

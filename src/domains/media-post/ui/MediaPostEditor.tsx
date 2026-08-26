@@ -16,6 +16,7 @@ import { notifyParentOfWorkspaceTransition } from "@/domains/shared/ui/transitio
 
 type ContentValue = {
   title: string;
+  hook: string;
   brief: string;
   caption: string;
   body: string;
@@ -66,7 +67,7 @@ export default function MediaPostEditor({
     try {
       await updateMediaPostContentAction({ mediaPostId, ...content });
       setContentSaved(true);
-      setWorkProgress((current) => ({ ...current, content: Boolean(content.title.trim() && (content.caption.trim() || content.body.trim())) }));
+      setWorkProgress((current) => ({ ...current, content: Boolean(content.title.trim() && (content.hook.trim() || content.caption.trim() || content.body.trim())) }));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Không thể lưu nội dung.");
     } finally {
@@ -183,6 +184,7 @@ export default function MediaPostEditor({
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
           <label className="space-y-1.5 lg:col-span-2"><span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Title</span><input className={fieldClass} value={content.title} onChange={(event) => change("title", event.target.value)} /></label>
+          <label className="space-y-1.5 lg:col-span-2"><span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Hook</span><textarea rows={3} className={fieldClass} value={content.hook} onChange={(event) => change("hook", event.target.value)} placeholder="Hook mở đầu và link sản phẩm liên quan" /></label>
           <label className="space-y-1.5"><span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Brief</span><textarea rows={4} className={fieldClass} value={content.brief} onChange={(event) => change("brief", event.target.value)} placeholder="Mục tiêu và yêu cầu của bài post" /></label>
           <label className="space-y-1.5"><span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Caption</span><textarea rows={4} className={fieldClass} value={content.caption} onChange={(event) => change("caption", event.target.value)} placeholder="Đoạn mở đầu hiển thị trên social" /></label>
           <label className="space-y-1.5 lg:col-span-2"><span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Body</span><textarea rows={8} className={fieldClass} value={content.body} onChange={(event) => change("body", event.target.value)} placeholder="Nội dung đầy đủ của bài post" /></label>

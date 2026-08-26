@@ -35,7 +35,7 @@ export default async function MediaPostPage({ params, searchParams }: { params: 
       </section>
       <MediaPostEditor
         mediaPostId={post.id}
-        initialContent={{ title: post.title, brief: post.brief ?? "", caption: post.caption ?? "", body: String(content.body ?? ""), hashtags: String(content.hashtags ?? "") }}
+        initialContent={{ title: post.title, hook: String(content.hook ?? ""), brief: post.brief ?? "", caption: post.caption ?? "", body: String(content.body ?? ""), hashtags: String(content.hashtags ?? "") }}
         initialAssets={assets.map(({ mediaObject }) => ({
           key: mediaObject.storageKey,
           name: mediaObject.originalFileName,
@@ -44,7 +44,7 @@ export default async function MediaPostPage({ params, searchParams }: { params: 
         bindingId={workContext.bindingId}
         publishBindingId={workContext.publishBindingId}
         initialProgress={{
-          content: workContext.content || Boolean(post.title.trim() && (post.caption?.trim() || String(content.body ?? "").trim())),
+          content: workContext.content || Boolean(post.title.trim() && (String(content.hook ?? "").trim() || post.caption?.trim() || String(content.body ?? "").trim())),
           image: workContext.image || assets.length > 0,
         }}
       />
