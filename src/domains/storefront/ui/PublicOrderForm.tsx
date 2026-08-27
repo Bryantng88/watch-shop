@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle2, ExternalLink, Facebook, Instagram, MessageCircle, ShieldCheck, Trash2 } from "lucide-react";
+import { CheckCircle2, MessageCircle, ShieldCheck, Trash2 } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useStorefrontCart, type StorefrontCartItem } from "./StorefrontCart";
 import { useOnlineStatus } from "./PwaRuntime";
@@ -30,23 +30,38 @@ const storefrontContactChannels = [
   {
     label: "Zalo",
     href: process.env.NEXT_PUBLIC_STOREFRONT_ZALO_URL,
-    icon: MessageCircle,
   },
   {
     label: "Instagram",
     href:
       process.env.NEXT_PUBLIC_STOREFRONT_INSTAGRAM_URL ??
       "https://www.instagram.com/vinticwatch/",
-    icon: Instagram,
   },
   {
     label: "Facebook",
     href:
       process.env.NEXT_PUBLIC_STOREFRONT_FACEBOOK_URL ??
       "https://www.facebook.com/profile.php?id=61585747980904",
-    icon: Facebook,
   },
 ];
+
+function ContactBrandLogo({ brand }: { brand: string }) {
+  if (brand === "Instagram") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 fill-current">
+        <path d="M7.75 2h8.5A5.76 5.76 0 0 1 22 7.75v8.5A5.76 5.76 0 0 1 16.25 22h-8.5A5.76 5.76 0 0 1 2 16.25v-8.5A5.76 5.76 0 0 1 7.75 2Zm-.2 2A3.55 3.55 0 0 0 4 7.55v8.9A3.55 3.55 0 0 0 7.55 20h8.9A3.55 3.55 0 0 0 20 16.45v-8.9A3.55 3.55 0 0 0 16.45 4h-8.9ZM17 5.5a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5ZM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" />
+      </svg>
+    );
+  }
+  if (brand === "Facebook") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 fill-current">
+        <path d="M13.7 22v-9h3l.45-3.5H13.7V7.26c0-1.01.28-1.7 1.74-1.7h1.86V2.43a25 25 0 0 0-2.71-.14c-2.68 0-4.52 1.64-4.52 4.65V9.5H7.04V13h3.03v9h3.63Z" />
+      </svg>
+    );
+  }
+  return <MessageCircle className="h-5 w-5" aria-hidden="true" />;
+}
 
 export default function PublicOrderForm({
   initialItems = [],
@@ -274,7 +289,8 @@ export default function PublicOrderForm({
     "mt-2 min-h-[50px] w-full rounded-md border border-[#d9e0e3] bg-[#f7f9fa] px-4 text-[15px] text-[#302d29] outline-none transition duration-200 placeholder:text-[#9ca6ab] hover:border-[#c3cdd2] hover:bg-white focus:border-[#46545e] focus:bg-white focus:ring-4 focus:ring-[#46545e]/10";
   return (
     <div className="relative grid items-start gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-12 xl:gap-16">
-      <section className="order-2 overflow-hidden rounded-lg border border-[#cfd6da] bg-white shadow-[0_16px_44px_-38px_rgba(50,67,77,0.38)] lg:sticky lg:top-24">
+      <div className="order-2 lg:sticky lg:top-24">
+      <section className="overflow-hidden rounded-lg border border-[#cfd6da] bg-white shadow-[0_16px_44px_-38px_rgba(50,67,77,0.38)]">
         <header className="flex items-center justify-between px-5 pb-3 pt-5 sm:px-6">
           <div>
             <p className="text-[9px] font-medium uppercase tracking-[0.2em] text-[#829099]">
@@ -413,6 +429,29 @@ export default function PublicOrderForm({
           </div>
         </footer>
       </section>
+      <div className="mt-5 border-t border-[#d8dddf] px-1 pt-4" aria-label={en ? "Contact Vintic" : "Liên hệ Vintic"}>
+        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#718089]">
+          {en ? "Contact us via:" : "Liên hệ chúng tôi qua:"}
+        </p>
+        <div className="mt-3 flex justify-start gap-2.5">
+          {storefrontContactChannels.filter((channel) => Boolean(channel.href)).map((channel) => {
+            return (
+              <a
+                key={channel.label}
+                href={channel.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={channel.label}
+                title={channel.label}
+                className={`storefront-focus grid h-9 w-9 place-items-center rounded-full text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${channel.label === "Instagram" ? "bg-gradient-to-br from-[#833ab4] via-[#e1306c] to-[#fcb045]" : channel.label === "Facebook" ? "bg-[#1877f2]" : "bg-[#0068ff]"}`}
+              >
+                <ContactBrandLogo brand={channel.label} />
+              </a>
+            );
+          })}
+        </div>
+      </div>
+      </div>
       <form
         id="purchase-request-form"
         action="/api/public/orders"
@@ -578,32 +617,6 @@ export default function PublicOrderForm({
               ? "Your details remain private. Review your selection and submit from the card beside this form."
               : "Thông tin của bạn được bảo mật. Kiểm tra danh sách và gửi yêu cầu tại thẻ bên cạnh."}
           </p>
-          <div className="rounded-lg border border-[#d8dddf] bg-[#f7f9fa] px-5 py-5">
-            <p className="text-[9px] font-medium uppercase tracking-[0.2em] text-[#687983]">
-              {en ? "Contact Vintic directly" : "Liên hệ trực tiếp với Vintic"}
-            </p>
-            <p className="mt-2 text-xs leading-5 text-[#738088]">
-              {en ? "Choose the channel that is most convenient for you." : "Chọn kênh thuận tiện nhất để trò chuyện cùng chúng tôi."}
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {storefrontContactChannels.filter((channel) => Boolean(channel.href)).map((channel) => {
-                const Icon = channel.icon;
-                return (
-                  <a
-                    key={channel.label}
-                    href={channel.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="storefront-focus inline-flex min-h-10 items-center gap-2 rounded-md border border-[#cfd6da] bg-white px-4 text-[11px] font-medium text-[#35434b] transition hover:border-[#46545e] hover:bg-[#eef2f4]"
-                  >
-                    <Icon className="h-4 w-4" />
-                    {channel.label}
-                    <ExternalLink className="h-3 w-3 text-[#829099]" />
-                  </a>
-                );
-              })}
-            </div>
-          </div>
         </div>
       </form>
     </div>
