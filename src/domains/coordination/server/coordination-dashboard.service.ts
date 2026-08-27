@@ -3598,6 +3598,10 @@ export async function getCoordinationDashboard(input: {
                     purchaseRequest: {
                       customerName: row.customerName,
                       customerEmail: row.customerEmail,
+                      emailVerificationStatus: row.emailVerificationStatus,
+                      emailVerificationSentAt: row.emailVerificationSentAt?.toISOString() ?? null,
+                      emailVerifiedAt: row.emailVerifiedAt?.toISOString() ?? null,
+                      emailDeliveryFailedAt: row.emailDeliveryFailedAt?.toISOString() ?? null,
                       phone: row.phone,
                       contactPreference: row.contactPreference,
                       contactHandle: row.contactHandle,

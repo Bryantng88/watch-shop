@@ -156,6 +156,10 @@ export type QueueItemDTO = {
   purchaseRequest?: {
     customerName: string;
     customerEmail: string | null;
+    emailVerificationStatus: string;
+    emailVerificationSentAt: string | null;
+    emailVerifiedAt: string | null;
+    emailDeliveryFailedAt: string | null;
     phone: string;
     contactPreference: string;
     contactHandle: string | null;

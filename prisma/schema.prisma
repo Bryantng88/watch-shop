@@ -623,6 +623,12 @@ model PurchaseRequest {
   fingerprintHash          String
   customerName             String
   customerEmail            String?
+  emailVerificationStatus  String                           @default("PENDING")
+  emailVerificationTokenHash String?                        @unique
+  emailVerificationExpiresAt DateTime?                      @db.Timestamptz(6)
+  emailVerificationSentAt DateTime?                         @db.Timestamptz(6)
+  emailVerifiedAt          DateTime?                        @db.Timestamptz(6)
+  emailDeliveryFailedAt    DateTime?                        @db.Timestamptz(6)
   phone                    String
   normalizedPhone          String
   contactPreference        PurchaseRequestContactPreference @default(PHONE)
@@ -663,6 +669,7 @@ model PurchaseRequest {
   @@index([normalizedPhone, status, updatedAt(sort: Desc)], map: "PurchaseRequest_normalizedPhone_status_updatedAt_idx")
   @@index([analyticsSource, createdAt(sort: Desc)])
   @@index([analyticsIsInternal, createdAt(sort: Desc)])
+  @@index([emailVerificationStatus, createdAt(sort: Desc)])
 }
 
 model StorefrontAnalyticsEvent {

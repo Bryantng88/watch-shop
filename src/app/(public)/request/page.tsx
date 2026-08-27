@@ -9,7 +9,7 @@ import { StorefrontAnalyticsSignal } from "@/domains/analytics/storefront/Storef
 
 export const metadata = { title: "Yêu cầu tư vấn" };
 
-type RequestSearchParams = { product?: string; reference?: string; disposition?: string; added?: string; error?: string };
+type RequestSearchParams = { product?: string; reference?: string; disposition?: string; added?: string; error?: string; emailVerification?: string };
 
 export default async function RequestPage({ searchParams }: { searchParams?: Promise<RequestSearchParams> }) {
   const query = await searchParams;
@@ -26,6 +26,13 @@ export default async function RequestPage({ searchParams }: { searchParams?: Pro
       <h1 className="storefront-display mt-4 text-4xl leading-[1.08] sm:text-5xl lg:text-[56px]">{locale === "en" ? "A personal watch consultation" : "Tư vấn dành riêng cho bạn"}</h1>
       <p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-[#706b64]">{locale === "en" ? "Share your selection and contact details. Our team will personally reconfirm price, condition and availability." : "Gửi lựa chọn và thông tin liên hệ. Đội ngũ sẽ trực tiếp kiểm tra lại giá, tình trạng và khả năng cung cấp."}</p>
     </div>
+    {query?.emailVerification ? (
+      <div className={`mx-auto mt-8 max-w-2xl rounded-lg border px-5 py-4 text-center text-sm ${query.emailVerification === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
+        {query.emailVerification === "success"
+          ? (locale === "en" ? "Your email has been verified successfully." : "Email của bạn đã được xác minh thành công.")
+          : (locale === "en" ? "This verification link is invalid or has expired." : "Liên kết xác minh không hợp lệ hoặc đã hết hạn.")}
+      </div>
+    ) : null}
     <div className="mt-12 lg:mt-16"><PublicOrderForm initialItems={initialItems} initialRequestKey={randomUUID()} submittedReference={query?.reference?.trim()} submittedDisposition={query?.disposition === "MERGED" ? "MERGED" : "CREATED"} submittedAddedItemCount={Math.max(0, Number(query?.added) || 0)} initialError={query?.error?.trim()} /></div>
     <RelatedWatchSuggestions watches={relatedWatches} selectedProductIds={selectedProductIds} />
   </div>;

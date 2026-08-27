@@ -3,5 +3,6 @@ export * from "./related-watch-score";
 export * from "./storefront-hero.service";
 export * from "./public-media.service";
 export * from "./public-order.service";
+export * from "./purchase-request-email-verification.service";
 export * from "./zalo-ingress-auth";
 export * from "./zalo-ingress.service";

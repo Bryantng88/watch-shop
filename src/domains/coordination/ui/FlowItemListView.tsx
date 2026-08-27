@@ -391,6 +391,37 @@ export default function FlowItemListView({
     }
   }
 
+  async function resendPurchaseRequestEmailVerification() {
+    if (!purchaseRequestItem?.purchaseRequest) return;
+    setPendingActionId(purchaseRequestItem.id);
+    setActionError(null);
+    try {
+      const response = await fetch(`/api/admin/purchase-requests/${purchaseRequestItem.targetId}/resend-email-verification`, { method: "POST" });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        const message = result?.error === "EMAIL_VERIFICATION_RESEND_TOO_SOON"
+          ? "Vui lòng chờ 60 giây trước khi gửi lại."
+          : result?.error === "STOREFRONT_EMAIL_NOT_CONFIGURED"
+            ? "Chưa cấu hình dịch vụ gửi email."
+            : "Không thể gửi lại email xác minh.";
+        throw new Error(message);
+      }
+      setPurchaseRequestItem((current) => current?.purchaseRequest ? {
+        ...current,
+        purchaseRequest: {
+          ...current.purchaseRequest,
+          emailVerificationStatus: result?.status ?? "PENDING",
+          emailVerificationSentAt: new Date().toISOString(),
+          emailDeliveryFailedAt: null,
+        },
+      } : current);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Không thể gửi lại email xác minh.");
+    } finally {
+      setPendingActionId(null);
+    }
+  }
+
   async function updatePurchaseRequestItemDecision(itemId: string, decision: string) {
     if (!purchaseRequestItem?.purchaseRequest) return;
     setPendingActionId(itemId);
@@ -1521,7 +1552,22 @@ export default function FlowItemListView({
                 <div className="rounded-2xl border border-slate-200 p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Người yêu cầu</p>
                   <p className="mt-3 text-base font-bold text-slate-950">{purchaseRequestItem.purchaseRequest.customerName}</p>
-                  {purchaseRequestItem.purchaseRequest.customerEmail ? <a href={`mailto:${purchaseRequestItem.purchaseRequest.customerEmail}`} className="mt-1 block text-sm font-semibold text-violet-700 hover:underline">{purchaseRequestItem.purchaseRequest.customerEmail}</a> : null}
+                  {purchaseRequestItem.purchaseRequest.customerEmail ? (
+                    <div className="mt-1">
+                      <a href={`mailto:${purchaseRequestItem.purchaseRequest.customerEmail}`} className="text-sm font-semibold text-violet-700 hover:underline">{purchaseRequestItem.purchaseRequest.customerEmail}</a>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${purchaseRequestItem.purchaseRequest.emailVerificationStatus === "VERIFIED" ? "bg-emerald-100 text-emerald-700" : purchaseRequestItem.purchaseRequest.emailVerificationStatus === "DELIVERY_FAILED" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"}`}>
+                          {purchaseRequestItem.purchaseRequest.emailVerificationStatus === "VERIFIED" ? "Đã xác minh" : purchaseRequestItem.purchaseRequest.emailVerificationStatus === "DELIVERY_FAILED" ? "Gửi thất bại" : "Chưa xác minh"}
+                        </span>
+                        {purchaseRequestItem.purchaseRequest.emailVerificationStatus !== "VERIFIED" ? (
+                          <button type="button" disabled={pendingActionId === purchaseRequestItem.id} onClick={() => void resendPurchaseRequestEmailVerification()} className="text-[11px] font-semibold text-violet-700 hover:underline disabled:opacity-50">
+                            Gửi lại email xác minh
+                          </button>
+                        ) : null}
+                      </div>
+                      {purchaseRequestItem.purchaseRequest.emailVerificationStatus !== "VERIFIED" ? <p className="mt-1 text-[11px] text-amber-700">Nên ưu tiên điện thoại hoặc kênh liên hệ khác cho đến khi email được xác minh.</p> : null}
+                    </div>
+                  ) : null}
                   <a href={`tel:${purchaseRequestItem.purchaseRequest.phone}`} className="mt-1 inline-block text-sm font-semibold text-violet-700 hover:underline">{purchaseRequestItem.purchaseRequest.phone}</a>
                   <p className="mt-2 text-xs text-slate-500">Ưu tiên liên hệ: {{ PHONE: "Điện thoại", ZALO: "Zalo", WHATSAPP: "WhatsApp", INSTAGRAM: "Instagram" }[purchaseRequestItem.purchaseRequest.contactPreference] ?? purchaseRequestItem.purchaseRequest.contactPreference}</p>
                   {purchaseRequestItem.purchaseRequest.contactHandle ? <p className="mt-1 text-sm font-semibold text-slate-700">{purchaseRequestItem.purchaseRequest.contactPreference === "INSTAGRAM" ? <a href={`https://instagram.com/${purchaseRequestItem.purchaseRequest.contactHandle.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="text-violet-700 hover:underline">{purchaseRequestItem.purchaseRequest.contactHandle}</a> : purchaseRequestItem.purchaseRequest.contactPreference === "WHATSAPP" ? <a href={`https://wa.me/${purchaseRequestItem.purchaseRequest.contactHandle.replace(/\D/g, "").replace(/^0/, "84")}`} target="_blank" rel="noreferrer" className="text-emerald-700 hover:underline">{purchaseRequestItem.purchaseRequest.contactHandle}</a> : <a href={`tel:${purchaseRequestItem.purchaseRequest.contactHandle}`} className="text-violet-700 hover:underline">{purchaseRequestItem.purchaseRequest.contactHandle}</a>}</p> : null}

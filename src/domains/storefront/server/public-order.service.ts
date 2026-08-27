@@ -170,6 +170,14 @@ export async function submitPublicOrder(
         data: {
           customerName: request.customerName,
           customerEmail: request.customerEmail,
+          ...(mergeTarget.customerEmail?.toLowerCase() !== request.customerEmail.toLowerCase() ? {
+            emailVerificationStatus: "PENDING",
+            emailVerificationTokenHash: null,
+            emailVerificationExpiresAt: null,
+            emailVerificationSentAt: null,
+            emailVerifiedAt: null,
+            emailDeliveryFailedAt: null,
+          } : {}),
           contactPreference: request.contactPreference,
           contactHandle: request.contactHandle ?? null,
           address: request.address ?? mergeTarget.address,
