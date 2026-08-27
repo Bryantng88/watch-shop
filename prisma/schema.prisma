@@ -623,12 +623,15 @@ model PurchaseRequest {
   fingerprintHash          String
   customerName             String
   customerEmail            String?
-  emailVerificationStatus  String                           @default("PENDING")
+  emailVerificationStatus  String                           @default("NOT_SENT")
   emailVerificationTokenHash String?                        @unique
   emailVerificationExpiresAt DateTime?                      @db.Timestamptz(6)
   emailVerificationSentAt DateTime?                         @db.Timestamptz(6)
   emailVerifiedAt          DateTime?                        @db.Timestamptz(6)
   emailDeliveryFailedAt    DateTime?                        @db.Timestamptz(6)
+  emailVerificationAttemptedAt DateTime?                    @db.Timestamptz(6)
+  emailVerificationSendCount Int                            @default(0)
+  emailVerificationWindowStartedAt DateTime?                @db.Timestamptz(6)
   phone                    String
   normalizedPhone          String
   contactPreference        PurchaseRequestContactPreference @default(PHONE)

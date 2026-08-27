@@ -7,15 +7,19 @@ export function emitPurchaseRequestBusinessEvent(db: DB, input: {
   eventInstanceId: string;
   purchaseRequestId: string;
   reference: string;
-  channel: string;
-  productIds: string[];
-  addedItemCount: number;
+  channel?: string;
+  productIds?: string[];
+  addedItemCount?: number;
   occurredAt: Date;
+  actorUserId?: string | null;
+  customerEmail?: string;
+  failureCode?: string;
 }) {
   return recordBusinessEvent(db, {
     eventKey: input.eventKey,
     targetType: "PURCHASE_REQUEST",
     targetId: input.purchaseRequestId,
+    actorUserId: input.actorUserId,
     payload: {
       eventInstanceId: input.eventInstanceId,
       purchaseRequestId: input.purchaseRequestId,
@@ -25,6 +29,9 @@ export function emitPurchaseRequestBusinessEvent(db: DB, input: {
       addedItemCount: input.addedItemCount,
       occurredAt: input.occurredAt.toISOString(),
       source: "STOREFRONT_PURCHASE_REQUEST",
+      actorUserId: input.actorUserId ?? null,
+      customerEmail: input.customerEmail,
+      failureCode: input.failureCode,
     },
   });
 }

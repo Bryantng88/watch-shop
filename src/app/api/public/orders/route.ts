@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { after, NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 
-import { PublicOrderProductsUnavailableError, sendPurchaseRequestVerificationEmail, submitPublicOrder } from "@/domains/storefront/server";
+import { PublicOrderProductsUnavailableError, submitPublicOrder } from "@/domains/storefront/server";
 import { STOREFRONT_INTERNAL_COOKIE } from "@/domains/analytics/storefront/storefront-analytics.shared";
 
 function fingerprint(req: NextRequest) {
@@ -52,15 +52,6 @@ export async function POST(req: NextRequest) {
       { request, idempotencyKey, channel: "STOREFRONT" },
       { fingerprint: fingerprint(req), analyticsInternal: req.cookies.get(STOREFRONT_INTERNAL_COOKIE)?.value === "1", runtime: { deferConsumers: (work) => after(work) } },
     );
-    if (!result.replayed) {
-      after(async () => {
-        try {
-          await sendPurchaseRequestVerificationEmail(result.requestId, { fallbackOrigin: req.url });
-        } catch (error) {
-          console.error("[storefront-purchase-request] verification email failed", { requestId: result.requestId, error });
-        }
-      });
-    }
     console.info("[storefront-purchase-request] accepted", {
       requestId: result.requestId,
       reference: result.reference,

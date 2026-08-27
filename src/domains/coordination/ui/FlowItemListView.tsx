@@ -391,18 +391,20 @@ export default function FlowItemListView({
     }
   }
 
-  async function resendPurchaseRequestEmailVerification() {
+  async function sendPurchaseRequestEmailVerification() {
     if (!purchaseRequestItem?.purchaseRequest) return;
     setPendingActionId(purchaseRequestItem.id);
     setActionError(null);
     try {
-      const response = await fetch(`/api/admin/purchase-requests/${purchaseRequestItem.targetId}/resend-email-verification`, { method: "POST" });
+      const response = await fetch(`/api/admin/purchase-requests/${purchaseRequestItem.targetId}/send-email-verification`, { method: "POST" });
       const result = await response.json().catch(() => null);
       if (!response.ok) {
         const message = result?.error === "EMAIL_VERIFICATION_RESEND_TOO_SOON"
           ? "Vui lòng chờ 60 giây trước khi gửi lại."
           : result?.error === "STOREFRONT_EMAIL_NOT_CONFIGURED"
             ? "Chưa cấu hình dịch vụ gửi email."
+            : result?.error === "EMAIL_VERIFICATION_DAILY_LIMIT_REACHED"
+              ? "Đã đạt giới hạn 5 lần gửi trong 24 giờ."
             : "Không thể gửi lại email xác minh.";
         throw new Error(message);
       }
@@ -452,11 +454,6 @@ export default function FlowItemListView({
       setActionError(null);
       setShowPurchaseRequestCancellation(false);
       setPurchaseRequestReason("");
-      if (item.currentWorkflowState === "PROCESSING") {
-        setPurchaseRequestItem(null);
-        setPurchaseRequestOrderItem(item);
-        return;
-      }
       setPurchaseRequestItem(item);
       return;
     }
@@ -1560,8 +1557,8 @@ export default function FlowItemListView({
                           {purchaseRequestItem.purchaseRequest.emailVerificationStatus === "VERIFIED" ? "Đã xác minh" : purchaseRequestItem.purchaseRequest.emailVerificationStatus === "DELIVERY_FAILED" ? "Gửi thất bại" : "Chưa xác minh"}
                         </span>
                         {purchaseRequestItem.purchaseRequest.emailVerificationStatus !== "VERIFIED" ? (
-                          <button type="button" disabled={pendingActionId === purchaseRequestItem.id} onClick={() => void resendPurchaseRequestEmailVerification()} className="text-[11px] font-semibold text-violet-700 hover:underline disabled:opacity-50">
-                            Gửi lại email xác minh
+                          <button type="button" disabled={pendingActionId === purchaseRequestItem.id || purchaseRequestItem.purchaseRequest.emailVerificationStatus === "SENDING"} onClick={() => void sendPurchaseRequestEmailVerification()} className="text-[11px] font-semibold text-violet-700 hover:underline disabled:opacity-50">
+                            {purchaseRequestItem.purchaseRequest.emailVerificationStatus === "NOT_SENT" ? "Gửi email xác minh" : purchaseRequestItem.purchaseRequest.emailVerificationStatus === "SENDING" ? "Đang gửi..." : "Gửi lại email xác minh"}
                           </button>
                         ) : null}
                       </div>

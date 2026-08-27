@@ -214,7 +214,7 @@ async function enrichNotificationEvent(
 
     if (
         event.targetType === "PURCHASE_REQUEST" &&
-        ["purchase_request.created", "purchase_request.items_added"].includes(event.eventKey)
+        ["purchase_request.created", "purchase_request.items_added", "purchase_request.email_verified"].includes(event.eventKey)
     ) {
         const request = await client.purchaseRequest.findUnique({
             where: { id: event.targetId },
