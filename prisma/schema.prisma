@@ -622,6 +622,7 @@ model PurchaseRequest {
   requestHash              String
   fingerprintHash          String
   customerName             String
+  customerEmail            String?
   phone                    String
   normalizedPhone          String
   contactPreference        PurchaseRequestContactPreference @default(PHONE)

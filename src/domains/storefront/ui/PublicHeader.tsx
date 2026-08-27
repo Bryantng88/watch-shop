@@ -13,6 +13,7 @@ const navigation = {
     men: { label: "Nam", links: [
       { href: "/products?audience=MEN&collection=STANDARD", label: "Đồng hồ tuyển chọn" },
       { href: "/products?audience=MEN&collection=COLLECTIBLE", label: "Đồng hồ sưu tầm" },
+      { href: "/products?audience=ALL&brand=seiko", label: "Seiko +" },
       { href: "/products?audience=ALL", label: "Tất cả" },
     ] },
     women: { label: "Nữ", links: [
@@ -26,6 +27,7 @@ const navigation = {
     men: { label: "For Men", links: [
       { href: "/products?audience=MEN&collection=STANDARD", label: "Curated Watches" },
       { href: "/products?audience=MEN&collection=COLLECTIBLE", label: "Collectible Vintage" },
+      { href: "/products?audience=ALL&brand=seiko", label: "Seiko +" },
       { href: "/products?audience=ALL", label: "View All" },
     ] },
     women: { label: "For Women", links: [

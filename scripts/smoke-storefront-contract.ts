@@ -186,6 +186,7 @@ function main() {
 
   const acceptedOrder = publicOrderRequestSchema.parse({
     customerName: "Khách hàng",
+    customerEmail: "khachhang@example.com",
     phone: "0900000000",
     items: [{ productId: "product-1", quantity: 1 }],
   });

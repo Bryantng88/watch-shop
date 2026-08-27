@@ -7,6 +7,7 @@ const optionalText = (maxLength: number) =>
 export const publicOrderRequestSchema = z
   .object({
     customerName: z.string().trim().min(1).max(120),
+    customerEmail: z.string().trim().email().max(254),
     phone: z.string().trim().min(8).max(30),
     contactPreference: z.enum(["PHONE", "ZALO", "WHATSAPP", "INSTAGRAM"]).default("PHONE"),
     contactHandle: optionalText(120),

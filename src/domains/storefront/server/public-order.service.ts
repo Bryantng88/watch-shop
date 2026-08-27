@@ -169,6 +169,7 @@ export async function submitPublicOrder(
         where: { id: mergeTarget.id },
         data: {
           customerName: request.customerName,
+          customerEmail: request.customerEmail,
           contactPreference: request.contactPreference,
           contactHandle: request.contactHandle ?? null,
           address: request.address ?? mergeTarget.address,
@@ -257,6 +258,7 @@ export async function submitPublicOrder(
         requestHash,
         fingerprintHash,
         customerName: request.customerName,
+        customerEmail: request.customerEmail,
         phone: request.phone,
         normalizedPhone,
         contactPreference: request.contactPreference,

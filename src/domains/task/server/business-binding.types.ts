@@ -155,6 +155,7 @@ export type QueueItemDTO = {
   } | null;
   purchaseRequest?: {
     customerName: string;
+    customerEmail: string | null;
     phone: string;
     contactPreference: string;
     contactHandle: string | null;

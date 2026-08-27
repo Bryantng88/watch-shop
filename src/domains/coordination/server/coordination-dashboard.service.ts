@@ -3597,6 +3597,7 @@ export async function getCoordinationDashboard(input: {
                     payment: null,
                     purchaseRequest: {
                       customerName: row.customerName,
+                      customerEmail: row.customerEmail,
                       phone: row.phone,
                       contactPreference: row.contactPreference,
                       contactHandle: row.contactHandle,

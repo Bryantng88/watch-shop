@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
     const request = form
       ? {
           customerName: form.get("customerName"),
+          customerEmail: form.get("customerEmail"),
           phone: form.get("phone"),
           contactPreference: form.get("contactPreference"),
           contactHandle: form.get("contactHandle") || undefined,

@@ -6,6 +6,7 @@ import { publicOrderRequestSchema } from "../src/domains/storefront/contracts";
 
 const valid = publicOrderRequestSchema.parse({
   customerName: "Storefront smoke",
+  customerEmail: "storefront-smoke@example.com",
   phone: "0900000000",
   contactPreference: "ZALO",
   contactHandle: "0900000000",

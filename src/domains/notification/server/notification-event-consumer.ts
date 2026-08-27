@@ -221,6 +221,7 @@ async function enrichNotificationEvent(
             select: {
                 reference: true,
                 customerName: true,
+                customerEmail: true,
                 phone: true,
                 contactPreference: true,
                 contactHandle: true,
@@ -233,6 +234,7 @@ async function enrichNotificationEvent(
         });
         enriched.reference = clean(request?.reference) || clean(enriched.reference) || "Chưa có mã";
         enriched.customerName = clean(request?.customerName) || "Chưa cung cấp";
+        enriched.customerEmail = clean(request?.customerEmail) || "Chưa cung cấp";
         enriched.phone = clean(request?.phone) || "Chưa cung cấp";
         enriched.contactPreference = clean(request?.contactPreference) || "PHONE";
         enriched.contactHandle = clean(request?.contactHandle) || clean(request?.phone) || "Chưa cung cấp";

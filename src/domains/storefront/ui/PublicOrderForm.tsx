@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle2, ShieldCheck, Trash2 } from "lucide-react";
+import { CheckCircle2, ExternalLink, Facebook, Instagram, MessageCircle, ShieldCheck, Trash2 } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useStorefrontCart, type StorefrontCartItem } from "./StorefrontCart";
 import { useOnlineStatus } from "./PwaRuntime";
@@ -25,6 +25,28 @@ type State =
 const idempotencyKey = () =>
   globalThis.crypto?.randomUUID?.() ??
   `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+const storefrontContactChannels = [
+  {
+    label: "Zalo",
+    href: process.env.NEXT_PUBLIC_STOREFRONT_ZALO_URL,
+    icon: MessageCircle,
+  },
+  {
+    label: "Instagram",
+    href:
+      process.env.NEXT_PUBLIC_STOREFRONT_INSTAGRAM_URL ??
+      "https://www.instagram.com/vinticwatch/",
+    icon: Instagram,
+  },
+  {
+    label: "Facebook",
+    href:
+      process.env.NEXT_PUBLIC_STOREFRONT_FACEBOOK_URL ??
+      "https://www.facebook.com/profile.php?id=61585747980904",
+    icon: Facebook,
+  },
+];
 
 export default function PublicOrderForm({
   initialItems = [],
@@ -110,11 +132,13 @@ export default function PublicOrderForm({
     }
     const form = new FormData(event.currentTarget);
     const customerName = String(form.get("customerName") ?? "").trim();
+    const customerEmail = String(form.get("customerEmail") ?? "").trim();
     const phone = String(form.get("phone") ?? "").trim();
     const phoneDigits = phone.replace(/\D/g, "");
     const contactHandle = String(form.get("contactHandle") ?? "").trim();
     if (
       !customerName ||
+      !/^\S+@\S+\.\S+$/.test(customerEmail) ||
       phoneDigits.length < 8 ||
       phoneDigits.length > 15 ||
       (contactPreference !== "PHONE" && !contactHandle)
@@ -123,12 +147,18 @@ export default function PublicOrderForm({
         kind: "error",
         message: !customerName
           ? "Vui lòng nhập họ và tên để đội ngũ có thể liên hệ."
+          : !/^\S+@\S+\.\S+$/.test(customerEmail)
+            ? en
+              ? "Please enter a valid email address."
+              : "Vui lòng nhập địa chỉ email hợp lệ."
           : phoneDigits.length < 8 || phoneDigits.length > 15
             ? "Vui lòng nhập số điện thoại hợp lệ."
             : "Vui lòng nhập thông tin của kênh liên hệ đã chọn.",
       });
       const fieldName = !customerName
         ? "customerName"
+        : !/^\S+@\S+\.\S+$/.test(customerEmail)
+          ? "customerEmail"
         : phoneDigits.length < 8 || phoneDigits.length > 15
           ? "phone"
           : "contactHandle";
@@ -146,6 +176,7 @@ export default function PublicOrderForm({
         },
         body: JSON.stringify({
           customerName,
+          customerEmail,
           phone,
           contactPreference: form.get("contactPreference"),
           contactHandle: form.get("contactHandle") || undefined,
@@ -458,6 +489,18 @@ export default function PublicOrderForm({
               />
             </label>
           </div>
+          <label className="block text-[10px] uppercase tracking-[0.14em] text-[#69645d]">
+            Email
+            <input
+              required
+              type="email"
+              maxLength={254}
+              name="customerEmail"
+              autoComplete="email"
+              inputMode="email"
+              className={fieldClass}
+            />
+          </label>
           <div className="grid gap-7 sm:grid-cols-2">
             <label className="block text-[10px] uppercase tracking-[0.14em] text-[#69645d]">
               {en ? "Preferred contact" : "Ưu tiên liên hệ"}
@@ -535,6 +578,32 @@ export default function PublicOrderForm({
               ? "Your details remain private. Review your selection and submit from the card beside this form."
               : "Thông tin của bạn được bảo mật. Kiểm tra danh sách và gửi yêu cầu tại thẻ bên cạnh."}
           </p>
+          <div className="rounded-lg border border-[#d8dddf] bg-[#f7f9fa] px-5 py-5">
+            <p className="text-[9px] font-medium uppercase tracking-[0.2em] text-[#687983]">
+              {en ? "Contact Vintic directly" : "Liên hệ trực tiếp với Vintic"}
+            </p>
+            <p className="mt-2 text-xs leading-5 text-[#738088]">
+              {en ? "Choose the channel that is most convenient for you." : "Chọn kênh thuận tiện nhất để trò chuyện cùng chúng tôi."}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {storefrontContactChannels.filter((channel) => Boolean(channel.href)).map((channel) => {
+                const Icon = channel.icon;
+                return (
+                  <a
+                    key={channel.label}
+                    href={channel.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="storefront-focus inline-flex min-h-10 items-center gap-2 rounded-md border border-[#cfd6da] bg-white px-4 text-[11px] font-medium text-[#35434b] transition hover:border-[#46545e] hover:bg-[#eef2f4]"
+                  >
+                    <Icon className="h-4 w-4" />
+                    {channel.label}
+                    <ExternalLink className="h-3 w-3 text-[#829099]" />
+                  </a>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </form>
     </div>
