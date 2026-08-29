@@ -6,6 +6,7 @@ import {
   WatchStockStage,
 } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
+import { buildWatchStorefrontSlug } from "../../shared/storefront-slug";
 
 type Tx = Prisma.TransactionClient;
 
@@ -258,6 +259,7 @@ export async function updateProductTitleSkuRepo(
 
     data: {
       title: input.title,
+      slug: buildWatchStorefrontSlug(input.title, input.productId),
 
       ...(input.sku
         ? { sku: input.sku }

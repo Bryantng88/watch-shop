@@ -14,12 +14,14 @@ import {
 } from "../contracts";
 import {
   findPublicWatchRowBySlug,
+  findPublicWatchRowByProductIdSuffix,
   listPublicCatalogFacetRows,
   listPublicWatchRows,
   listRelatedPublicWatchRows,
   type PublicWatchDetailRow,
   type PublicWatchListRow,
 } from "./public-catalog.repo";
+import { buildWatchStorefrontSlug } from "@/domains/watch/shared/storefront-slug";
 import { rankRelatedWatches, type RelatedWatchSignal } from "./related-watch-score";
 
 type CursorPayload = { version: 1; sort: PublicCatalogQuery["sort"]; productId: string };
@@ -179,8 +181,18 @@ export async function listPublicWatches(
 
 export async function getPublicWatchBySlug(slugInput: unknown, options?: { db?: DB }) {
   const slug = publicWatchSlugSchema.parse(slugInput);
-  const row = await findPublicWatchRowBySlug(options?.db ?? prisma, slug);
-  return row ? mapPublicWatchDetail(row) : null;
+  const db = options?.db ?? prisma;
+  const suffix = slug.match(/-([a-z0-9]{8})$/i)?.[1] ?? "";
+  const row =
+    await findPublicWatchRowBySlug(db, slug) ??
+    await findPublicWatchRowByProductIdSuffix(db, suffix);
+  if (!row) return null;
+
+  const detail = mapPublicWatchDetail(row);
+  return {
+    ...detail,
+    slug: buildWatchStorefrontSlug(detail.title, detail.productId),
+  };
 }
 
 function relatedSignal(row: PublicWatchListRow): RelatedWatchSignal {

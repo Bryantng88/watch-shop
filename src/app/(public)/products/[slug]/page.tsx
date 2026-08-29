@@ -1,7 +1,7 @@
 import { ArrowLeft, Check } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { cache } from "react";
 import { cookies } from "next/headers";
 
@@ -36,6 +36,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const { slug } = await params;
   const watch = await getWatch(slug);
   if (!watch) notFound();
+  if (slug !== watch.slug) permanentRedirect(`/products/${watch.slug}`);
   const [requestItems, cookieStore, rate, relatedWatches] = await Promise.all([
     loadStorefrontCartItems(),
     cookies(),

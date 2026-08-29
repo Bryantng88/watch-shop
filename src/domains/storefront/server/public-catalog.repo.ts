@@ -367,6 +367,21 @@ export async function findPublicWatchRowBySlug(db: DB, slug: string) {
   });
 }
 
+export async function findPublicWatchRowByProductIdSuffix(db: DB, suffix: string) {
+  const normalized = suffix.trim().toLowerCase();
+  if (!/^[a-z0-9]{8}$/.test(normalized)) return null;
+
+  return dbOrTx(db).product.findFirst({
+    where: {
+      AND: [
+        publicWatchEligibilityWhere(),
+        { id: { endsWith: normalized, mode: "insensitive" } },
+      ],
+    },
+    select: publicWatchDetailSelect,
+  });
+}
+
 export async function findStorefrontEligibleProductIds(db: DB, productIds: string[]) {
   const ids = [...new Set(productIds.map((id) => id.trim()).filter(Boolean))];
   if (!ids.length) return [];
