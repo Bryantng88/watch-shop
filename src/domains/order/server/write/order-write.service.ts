@@ -560,11 +560,15 @@ export async function createOrderWithItems(
         fromSaleStage: product.previousWatchSaleStage,
         toSaleStage: "HOLD" as const,
       }));
-    // Business mới: chỉ cần order được tạo, kể cả DRAFT, watch phải HOLD ngay.
-    await syncWatchInventoryFromOrders(
-      tx,
-      resolvedProducts.map((product) => product.productId),
-    );
+    // A persisted DRAFT must HOLD its watches immediately. The create-and-post
+    // path is reconciled by postOneOrderTx below in the same transaction, so
+    // avoid running the identical inventory-cycle reconciliation twice.
+    if (!shouldPostAfterCreate) {
+      await syncWatchInventoryFromOrders(
+        tx,
+        resolvedProducts.map((product) => product.productId),
+      );
+    }
     if (purchaseRequest) {
       const orderProductItems = new Map(
         input.items
