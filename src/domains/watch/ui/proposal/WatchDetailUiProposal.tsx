@@ -18,7 +18,6 @@ import {
   Landmark,
   Loader2,
   Pencil,
-  Plus,
   ReceiptText,
   Sparkles,
   Wrench,
@@ -343,6 +342,17 @@ export default function WatchDetailUiProposal({
               <span className="absolute bottom-3 left-3 rounded-lg bg-slate-950/85 px-2.5 py-1.5 text-[10px] font-bold text-white backdrop-blur">
                 {Math.max(values.media.galleryImages.length, images.length)} ảnh
               </span>
+              {canEditMedia && (
+                <button
+                  type="button"
+                  onClick={() => setInlinePickerOpen(true)}
+                  disabled={savingInline}
+                  className="absolute bottom-3 right-3 inline-flex h-9 items-center gap-1.5 rounded-lg bg-white/95 px-3 text-xs font-bold text-violet-700 shadow-lg ring-1 ring-violet-200 backdrop-blur hover:bg-white disabled:opacity-60"
+                >
+                  {savingInline ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+                  {values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"}
+                </button>
+              )}
             </div>
 
             <div className="flex min-w-0 flex-col p-5 lg:p-7">
@@ -497,11 +507,8 @@ export default function WatchDetailUiProposal({
                   </div>
                   <div>
                     <div className="mb-3 flex items-center justify-between gap-2">
-                      <div><h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Gallery</h3><span className="text-[10px] text-slate-400">Ảnh INLINE dùng cho đại diện Watch</span></div>
-                      {canEditMedia && <button type="button" onClick={() => setInlinePickerOpen(true)} disabled={savingInline} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-violet-200 bg-white px-2.5 text-xs font-bold text-violet-700 hover:bg-violet-50 disabled:opacity-60">
-                        {savingInline ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                        {values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"}
-                      </button>}
+                      <div><h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Gallery</h3><span className="text-[10px] text-slate-400">Ảnh bán hàng của Watch</span></div>
+                      <span className="text-xs text-slate-400">{values.media.galleryImages.length} ảnh</span>
                     </div>
                     {values.media.galleryImages.length ? (
                       <div className="grid grid-cols-2 gap-2">

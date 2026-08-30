@@ -10,6 +10,7 @@ import {
   type DragStartEvent,
   PointerSensor,
   closestCorners,
+  pointerWithin,
   useDraggable,
   useDroppable,
   useSensor,
@@ -3600,7 +3601,7 @@ function TechnicalIssueBoardView({
   const [isPriorityPending, startPriorityTransition] = useTransition();
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
+      activationConstraint: { distance: 1 },
     }),
   );
   useEffect(() => {
@@ -3715,6 +3716,11 @@ function TechnicalIssueBoardView({
     setMoveValues(defaultTechnicalBoardMoveValues(item, action));
     setAdditionalIssues([]);
     setMoveError(null);
+  }
+
+  function handleDragCancel() {
+    setActiveId(null);
+    setOverStage(null);
   }
 
   function submitMove() {
@@ -3924,10 +3930,11 @@ function TechnicalIssueBoardView({
       <div className="max-w-full overflow-x-auto overscroll-x-contain pb-2">
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCorners}
+          collisionDetection={pointerWithin}
           onDragStart={handleDragStart}
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
         >
           <div className="grid w-full min-w-[960px] grid-cols-4 gap-3">
             {columns.map((column) => {
@@ -4421,7 +4428,7 @@ function DraggableTechnicalIssueBoardCard({
       style={style}
       data-technical-issue-id={item.id}
       className={cn(
-        "min-w-0 max-w-full rounded-xl transition-shadow",
+        "min-w-0 max-w-full rounded-xl transition-shadow [contain:layout_paint]",
         focused && "ring-4 ring-violet-300 ring-offset-2",
       )}
     >
