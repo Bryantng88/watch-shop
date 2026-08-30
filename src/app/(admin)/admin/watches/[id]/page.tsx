@@ -58,6 +58,11 @@ function canEditPrice(user: AuthUser) {
     );
 }
 
+function canEditMedia(user: AuthUser) {
+    const permissions = normalizeAuthValues(user?.permissions);
+    return hasAdmin(user) || permissions.includes(PERMISSIONS.PRODUCT_UPDATE);
+}
+
 function serialize<T>(obj: T): T {
     return JSON.parse(
         JSON.stringify(obj, (_key, value) => {
@@ -168,6 +173,7 @@ export default async function WatchDetailPage({
             canViewFinancials={mayViewCost}
             live
             canEditPrice={mayEditPrice}
+            canEditMedia={canEditMedia(user)}
             mediaWorkspace={serialize(mediaWorkspace ?? {})}
         />
     );

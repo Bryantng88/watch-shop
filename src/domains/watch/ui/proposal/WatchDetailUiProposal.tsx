@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowLeftRight,
@@ -15,7 +16,9 @@ import {
   ImageIcon,
   Info,
   Landmark,
+  Loader2,
   Pencil,
+  Plus,
   ReceiptText,
   Sparkles,
   Wrench,
@@ -38,6 +41,8 @@ import {
 } from "@/domains/shared/ui/business/BusinessEntityPreview";
 import ServiceCard from "@/domains/watch/ui/operations/side/ServiceCard";
 import WatchPublishAssetActions from "./WatchPublishAssetActions";
+import MediaBrowserDialog from "@/components/media/MediaBrowserDialog";
+import { setWatchInlineImageAction } from "./watch-inline-image.actions";
 
 type RecordValue = Record<string, unknown>;
 
@@ -84,6 +89,7 @@ export default function WatchDetailUiProposal({
   canViewFinancials,
   live = false,
   canEditPrice = false,
+  canEditMedia = false,
   mediaWorkspace,
 }: {
   detail: RecordValue;
@@ -92,14 +98,23 @@ export default function WatchDetailUiProposal({
   canViewFinancials: boolean;
   live?: boolean;
   canEditPrice?: boolean;
+  canEditMedia?: boolean;
   mediaWorkspace?: RecordValue;
 }) {
   const [mediaOpen, setMediaOpen] = useState(false);
+  const [inlinePickerOpen, setInlinePickerOpen] = useState(false);
+  const [savingInline, setSavingInline] = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [savingPrice, setSavingPrice] = useState(false);
   const previewState = useBusinessEntityPreview();
   const notify = useNotify();
+  const router = useRouter();
   const values = mapWatchDetailToFormValues(detail);
+  const audienceSegment = text(detail.audienceSegment, "MEN").toUpperCase() === "WOMEN"
+    ? "WOMEN" as const
+    : text(detail.audienceSegment, "MEN").toUpperCase() === "UNISEX"
+      ? "UNISEX" as const
+      : "MEN" as const;
   const [salePriceValue, setSalePriceValue] = useState(values.pricing.salePrice);
   const brand = record(detail.brand);
   const vendor = record(detail.vendor);
@@ -268,6 +283,30 @@ export default function WatchDetailUiProposal({
       });
     } finally {
       setSavingPrice(false);
+    }
+  }
+
+  async function saveInlineImage(storageKey: string) {
+    if (!storageKey || savingInline) return;
+    setSavingInline(true);
+    try {
+      await setWatchInlineImageAction({
+        productId: values.productId,
+        storageKey,
+      });
+      setInlinePickerOpen(false);
+      notify.success({
+        title: "Đã cập nhật ảnh đại diện",
+        message: "Ảnh INLINE đã được gắn trực tiếp với Watch.",
+      });
+      router.refresh();
+    } catch (error) {
+      notify.error({
+        title: "Không thêm được ảnh INLINE",
+        message: error instanceof Error ? error.message : "Có lỗi khi lưu ảnh.",
+      });
+    } finally {
+      setSavingInline(false);
     }
   }
 
@@ -457,7 +496,13 @@ export default function WatchDetailUiProposal({
                     </div>
                   </div>
                   <div>
-                    <div className="mb-3 flex items-center justify-between"><h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Gallery</h3><span className="text-xs text-slate-400">{values.media.galleryImages.length} ảnh</span></div>
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <div><h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Gallery</h3><span className="text-[10px] text-slate-400">Ảnh INLINE dùng cho đại diện Watch</span></div>
+                      {canEditMedia && <button type="button" onClick={() => setInlinePickerOpen(true)} disabled={savingInline} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-violet-200 bg-white px-2.5 text-xs font-bold text-violet-700 hover:bg-violet-50 disabled:opacity-60">
+                        {savingInline ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                        {values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"}
+                      </button>}
+                    </div>
                     {values.media.galleryImages.length ? (
                       <div className="grid grid-cols-2 gap-2">
                         {values.media.galleryImages.map((item, index) => {
@@ -577,6 +622,26 @@ export default function WatchDetailUiProposal({
           </div>
         </div>
       )}
+      {canEditMedia && <MediaBrowserDialog
+        open={inlinePickerOpen}
+        onClose={() => {
+          if (!savingInline) setInlinePickerOpen(false);
+        }}
+        profile="inline"
+        audienceSegment={audienceSegment}
+        selectedKey={values.media.inlineImage?.key ?? null}
+        selectedKeys={values.media.inlineImage?.key ? [values.media.inlineImage.key] : []}
+        selectionMode="multiple"
+        maxSelection={1}
+        title="Chọn ảnh INLINE cho Watch"
+        description="Ảnh INLINE được dùng làm ảnh đại diện ở trang chi tiết và danh sách Watch. Gallery không bị thay đổi."
+        submitLabel={savingInline ? "Đang lưu..." : "Gắn ảnh INLINE"}
+        enableRecycle={false}
+        onSelect={(key) => void saveInlineImage(key)}
+        onSubmit={(keys) => {
+          if (keys[0]) void saveInlineImage(keys[0]);
+        }}
+      />}
     </main>
   );
 }

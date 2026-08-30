@@ -413,7 +413,23 @@ export async function runServiceOperationBlueprintAction(
         vendorId: optionalField(fields, "vendorId"),
         actorUserId: input.actorUserId,
         deferConsumers: input.deferConsumers,
-      });
+      }, db);
+
+      const shouldConfirmImmediately = fields.confirmImmediately === true;
+      const confirmedResult = shouldConfirmImmediately
+        ? await confirmTechnicalIssue({
+            id: result.id,
+            actorId: input.actorUserId ?? null,
+            actorName: input.actorName ?? null,
+            summary: requiredField(fields, "summary"),
+            note: optionalField(fields, "note"),
+            technicalArea: requiredField(fields, "technicalArea"),
+            actionMode: actionModeField(fields, true),
+            vendorId: optionalField(fields, "vendorId"),
+            estimatedCost: moneyField(fields, "estimatedCost", false) ?? undefined,
+            deferConsumers: input.deferConsumers,
+          }, db)
+        : result;
 
       return {
         ok: true,
@@ -423,9 +439,11 @@ export async function runServiceOperationBlueprintAction(
           await latestTechnicalIssueProjectionDeliveryKey(
             db,
             result.id,
-            "technical_issue.created",
+            shouldConfirmImmediately
+              ? "technical_issue.confirmed"
+              : "technical_issue.created",
           ),
-        result,
+        result: confirmedResult,
       };
     }
 

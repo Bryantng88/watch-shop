@@ -106,7 +106,11 @@ type Props = {
 type TechnicalIssuePriorityFilter = "ALL" | "URGENT" | "NORMAL";
 type TechnicalIssueCommentFilter = "ALL" | "COMMENTED" | "MENTIONED_ME" | "UNREAD_MENTION";
 type TechnicalBoardFieldValue = string | boolean | string[];
-type TechnicalBoardAdditionalIssue = { summary: string; note: string };
+type TechnicalBoardAdditionalIssue = {
+  summary: string;
+  note: string;
+  technicalArea: string;
+};
 type AdHocTaskItemStage = "TODO" | "IN_PROGRESS" | "DONE";
 
 const SPACE_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = ["overview", "value-trend", "status-breakdown", "recent-activity"];
@@ -3663,6 +3667,12 @@ function TechnicalIssueBoardView({
     setActiveId(String(event.active.id));
   }
 
+  function handleDragOver(event: { over: { id: string | number } | null }) {
+    const nextStage = technicalBoardStageValue(event.over?.id);
+    if (!nextStage) return;
+    setOverStage((current) => current === nextStage ? current : nextStage);
+  }
+
   function handleDragEnd(event: DragEndEvent) {
     const issueId = String(event.active.id);
     const droppedStage = technicalBoardStageValue(event.over?.id);
@@ -3738,10 +3748,18 @@ function TechnicalIssueBoardView({
     const normalizedAdditionalIssues = additionalIssues.map((issue) => ({
       summary: issue.summary.trim(),
       note: issue.note.trim(),
+      technicalArea: issue.technicalArea.trim(),
     }));
     const incompleteAdditionalIssueIndex = normalizedAdditionalIssues.findIndex((issue) => !issue.summary);
     if (incompleteAdditionalIssueIndex >= 0) {
       setMoveError(`Vui lòng mô tả Technical Issue bổ sung số ${incompleteAdditionalIssueIndex + 1}.`);
+      return;
+    }
+    const missingAdditionalIssueAreaIndex = normalizedAdditionalIssues.findIndex(
+      (issue) => !issue.technicalArea,
+    );
+    if (missingAdditionalIssueAreaIndex >= 0) {
+      setMoveError(`Vui lòng chọn Nhóm kỹ thuật cho Technical Issue bổ sung số ${missingAdditionalIssueAreaIndex + 1}.`);
       return;
     }
     if (normalizedAdditionalIssues.length > 0 && !item.srCaseTaskItemId) {
@@ -3783,7 +3801,14 @@ function TechnicalIssueBoardView({
             deliveryResults.push(await submitOperationalBlueprintActionAction({
               taskItemId: item.srCaseTaskItemId,
               actionKey: "create_technical_issue",
-              fields: additionalIssue,
+              fields: {
+                ...additionalIssue,
+                actionMode: assigneeMode,
+                vendorId: assigneeMode === "VENDOR"
+                  ? String(moveValues.vendorId ?? "")
+                  : null,
+                confirmImmediately: true,
+              },
             }));
           }
           moveProgressSteps = moveProgressSteps.map((step) => step.id === "additional" ? { ...step, status: "done" } : step);
@@ -3901,7 +3926,7 @@ function TechnicalIssueBoardView({
           sensors={sensors}
           collisionDetection={closestCorners}
           onDragStart={handleDragStart}
-          onDragOver={(event) => setOverStage(technicalBoardStageValue(event.over?.id))}
+          onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
           <div className="grid w-full min-w-[960px] grid-cols-4 gap-3">
@@ -3934,7 +3959,7 @@ function TechnicalIssueBoardView({
               );
             })}
           </div>
-          <DragOverlay dropAnimation={{ duration: 160, easing: "ease-out" }}>
+          <DragOverlay dropAnimation={null}>
             {activeItem ? (
               <div className="w-[260px]">
                 <TechnicalIssueBoardCard item={activeItem} dragging />
@@ -4383,12 +4408,11 @@ function DraggableTechnicalIssueBoardCard({
   focused: boolean;
   onPreview: (item: TechnicalIssueBoardItem) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: item.id,
   });
   const style = {
-    opacity: isDragging ? 0 : 1,
-    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.25 : 1,
   };
 
   return (
@@ -4397,7 +4421,7 @@ function DraggableTechnicalIssueBoardCard({
       style={style}
       data-technical-issue-id={item.id}
       className={cn(
-        "min-w-0 max-w-full rounded-xl transition",
+        "min-w-0 max-w-full rounded-xl transition-shadow",
         focused && "ring-4 ring-violet-300 ring-offset-2",
       )}
     >
@@ -4440,7 +4464,7 @@ function TechnicalIssueBoardCard({
       className={cn(
         "relative w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_10px_rgba(15,23,42,0.08)] transition hover:border-violet-200 hover:shadow-[0_7px_16px_rgba(15,23,42,0.12)]",
         isUrgent && "border-rose-200 ring-1 ring-rose-100",
-        dragging && "rotate-[1.5deg] shadow-xl ring-2 ring-violet-200",
+        dragging && "shadow-xl ring-2 ring-violet-200",
       )}
     >
       <button
@@ -4720,13 +4744,22 @@ function TechnicalIssueBoardMoveModal({
                 <div>
                   <div className="text-sm font-semibold text-slate-900">Tách thêm Technical Issue</div>
                   <div className="mt-1 text-xs leading-5 text-slate-600">
-                    Mỗi TI mới thuộc cùng SR Case và được đưa vào Inspect để xử lý độc lập.
+                    Mỗi TI mới phải có Nhóm kỹ thuật và được đưa thẳng vào Chờ xử lý.
                   </div>
                 </div>
                 <button
                   type="button"
                   disabled={pending}
-                  onClick={() => onAdditionalIssuesChange([...additionalIssues, { summary: "", note: "" }])}
+                  onClick={() => onAdditionalIssuesChange([
+                    ...additionalIssues,
+                    {
+                      summary: "",
+                      note: "",
+                      technicalArea: typeof values.technicalArea === "string"
+                        ? values.technicalArea
+                        : request.item.area ?? "GENERAL",
+                    },
+                  ])}
                   className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-violet-200 bg-white px-3 text-xs font-semibold text-violet-700 transition hover:bg-violet-100 disabled:opacity-60"
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -4758,6 +4791,22 @@ function TechnicalIssueBoardMoveModal({
                           className="h-10 rounded-lg border border-violet-200 px-3 text-sm text-slate-800 outline-none focus:border-violet-400"
                           autoFocus={index === additionalIssues.length - 1}
                         />
+                        <select
+                          value={issue.technicalArea}
+                          onChange={(event) => onAdditionalIssuesChange(additionalIssues.map((candidate, issueIndex) => issueIndex === index ? { ...candidate, technicalArea: event.target.value } : candidate))}
+                          disabled={pending}
+                          className="h-10 rounded-lg border border-violet-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-violet-400"
+                          aria-label={`Nhóm kỹ thuật cho TI bổ sung ${index + 1}`}
+                        >
+                          <option value="">Chọn Nhóm kỹ thuật *</option>
+                          <option value="GENERAL">Tổng quát</option>
+                          <option value="MOVEMENT">Máy</option>
+                          <option value="CASE">Vỏ</option>
+                          <option value="CRYSTAL">Kính</option>
+                          <option value="BRACELET">Dây</option>
+                          <option value="CROWN">Núm</option>
+                          <option value="HANDS_MARKERS">Kim / cọc số</option>
+                        </select>
                         <textarea
                           value={issue.note}
                           onChange={(event) => onAdditionalIssuesChange(additionalIssues.map((candidate, issueIndex) => issueIndex === index ? { ...candidate, note: event.target.value } : candidate))}
