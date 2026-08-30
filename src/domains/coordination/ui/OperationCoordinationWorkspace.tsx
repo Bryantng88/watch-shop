@@ -6,11 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
-  type DragEndEvent,
-  type DragStartEvent,
   PointerSensor,
   closestCorners,
-  pointerWithin,
   useDraggable,
   useDroppable,
   useSensor,
@@ -3588,7 +3585,6 @@ function TechnicalIssueBoardView({
 }) {
   const progress = useAppProgress();
   const previewState = useBusinessEntityPreview();
-  const [activeId, setActiveId] = useState<string | null>(null);
   const [overStage, setOverStage] = useState<TechnicalIssueBoardStage | null>(null);
   const [moveRequest, setMoveRequest] = useState<TechnicalIssueBoardMoveRequest | null>(null);
   const [moveValues, setMoveValues] = useState<Record<string, TechnicalBoardFieldValue>>({});
@@ -3599,11 +3595,6 @@ function TechnicalIssueBoardView({
   const [isMovePending, startMoveTransition] = useTransition();
   const [isCostApprovalPending, startCostApprovalTransition] = useTransition();
   const [isPriorityPending, startPriorityTransition] = useTransition();
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 1 },
-    }),
-  );
   useEffect(() => {
     setBoardItems(items);
   }, [items]);
@@ -3632,7 +3623,6 @@ function TechnicalIssueBoardView({
           : filtered,
     );
   }, [boardItems, commentFilter, priorityFilter]);
-  const activeItem = activeId ? visibleItems.find((item) => item.id === activeId) ?? null : null;
   useEffect(() => {
     if (!focusedIssueId || !visibleItems.some((item) => item.id === focusedIssueId)) return;
 
@@ -3664,24 +3654,14 @@ function TechnicalIssueBoardView({
     });
   }
 
-  function handleDragStart(event: DragStartEvent) {
-    setActiveId(String(event.active.id));
-  }
-
-  function handleDragOver(event: { over: { id: string | number } | null }) {
-    const nextStage = technicalBoardStageValue(event.over?.id);
-    if (!nextStage) return;
-    setOverStage((current) => current === nextStage ? current : nextStage);
-  }
-
-  function handleDragEnd(event: DragEndEvent) {
-    const issueId = String(event.active.id);
-    const droppedStage = technicalBoardStageValue(event.over?.id);
+  function requestTechnicalIssueMove(
+    issueId: string,
+    droppedStage: TechnicalIssueBoardStage,
+  ) {
     const item = visibleItems.find((candidate) => candidate.id === issueId) ?? null;
-    setActiveId(null);
     setOverStage(null);
 
-    if (!item || !droppedStage || item.stage === droppedStage) return;
+    if (!item || item.stage === droppedStage) return;
 
     const requiresClassificationBeforeProcessing =
       item.stage === "INSPECT" && droppedStage === "PROCESSING";
@@ -3716,11 +3696,6 @@ function TechnicalIssueBoardView({
     setMoveValues(defaultTechnicalBoardMoveValues(item, action));
     setAdditionalIssues([]);
     setMoveError(null);
-  }
-
-  function handleDragCancel() {
-    setActiveId(null);
-    setOverStage(null);
   }
 
   function submitMove() {
@@ -3928,14 +3903,6 @@ function TechnicalIssueBoardView({
   return (
     <div className="min-w-0 max-w-full border-t border-slate-200 bg-slate-50/80 px-3 py-4 sm:px-4">
       <div className="max-w-full overflow-x-auto overscroll-x-contain pb-2">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={pointerWithin}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDragEnd={handleDragEnd}
-          onDragCancel={handleDragCancel}
-        >
           <div className="grid w-full min-w-[960px] grid-cols-4 gap-3">
             {columns.map((column) => {
               const columnItems = visibleItems.filter((item) => item.stage === column.key);
@@ -3962,18 +3929,13 @@ function TechnicalIssueBoardView({
                     status: item.executionStatus,
                     imageUrl: item.serviceRequest.imageUrl,
                   })}
+                  onDragEnter={(stage) => setOverStage((current) => current === stage ? current : stage)}
+                  onDragEnd={() => setOverStage(null)}
+                  onDrop={requestTechnicalIssueMove}
                 />
               );
             })}
           </div>
-          <DragOverlay dropAnimation={null}>
-            {activeItem ? (
-              <div className="w-[260px]">
-                <TechnicalIssueBoardCard item={activeItem} dragging />
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
         </div>
       <TechnicalIssueBoardMoveModal
         request={moveRequest}
@@ -4041,14 +4003,6 @@ type TechnicalIssueBoardMoveRequest = {
   action: OperationalBlueprintAction | null;
   unavailableReason: string | null;
 };
-
-function technicalBoardStageValue(value: unknown): TechnicalIssueBoardStage | null {
-  const stage = String(value ?? "").toUpperCase();
-  if (stage === "INSPECT" || stage === "READY" || stage === "PROCESSING" || stage === "DONE") {
-    return stage;
-  }
-  return null;
-}
 
 function technicalBoardActionForMove(input: {
   from: TechnicalIssueBoardStage;
@@ -4316,6 +4270,9 @@ function TechnicalIssueBoardColumn({
   onPreview,
   doneRange,
   onDoneRangeChange,
+  onDragEnter,
+  onDragEnd,
+  onDrop,
 }: {
   column: { key: TechnicalIssueBoardStage; label: string; hint: string };
   items: TechnicalIssueBoardItem[];
@@ -4329,11 +4286,26 @@ function TechnicalIssueBoardColumn({
   onPreview: (item: TechnicalIssueBoardItem) => void;
   doneRange: "14D" | "30D" | "ALL";
   onDoneRangeChange: (value: "14D" | "30D" | "ALL") => void;
+  onDragEnter: (stage: TechnicalIssueBoardStage) => void;
+  onDragEnd: () => void;
+  onDrop: (issueId: string, stage: TechnicalIssueBoardStage) => void;
 }) {
-  const { setNodeRef } = useDroppable({ id: column.key });
   return (
     <div
-      ref={setNodeRef}
+      onDragEnter={() => onDragEnter(column.key)}
+      onDragOver={(event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) onDragEnd();
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        const issueId = event.dataTransfer.getData("application/x-technical-issue-id");
+        onDragEnd();
+        if (issueId) onDrop(issueId, column.key);
+      }}
       className={cn(
         "flex min-h-[480px] min-w-0 flex-col rounded-xl border border-slate-300/80 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.07)] transition",
         isOver && "border-violet-300 ring-2 ring-violet-100",
@@ -4380,6 +4352,7 @@ function TechnicalIssueBoardColumn({
             priorityPending={priorityPendingIssueId === item.id}
             focused={focusedIssueId === item.id}
             onPreview={onPreview}
+            onDragEnd={onDragEnd}
           />
         ))}
         {!items.length ? (
@@ -4408,24 +4381,29 @@ function DraggableTechnicalIssueBoardCard({
   priorityPending,
   focused,
   onPreview,
+  onDragEnd,
 }: {
   item: TechnicalIssueBoardItem;
   onTogglePriority: (item: TechnicalIssueBoardItem) => void;
   priorityPending: boolean;
   focused: boolean;
   onPreview: (item: TechnicalIssueBoardItem) => void;
+  onDragEnd: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: item.id,
-  });
-  const style = {
-    opacity: isDragging ? 0.25 : 1,
-  };
-
   return (
     <div
-      ref={setNodeRef}
-      style={style}
+      draggable
+      onDragStart={(event) => {
+        const target = event.target as Element;
+        if (!target.closest("[data-ti-drag-handle]")) {
+          event.preventDefault();
+          return;
+        }
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("application/x-technical-issue-id", item.id);
+        event.dataTransfer.setData("text/plain", item.id);
+      }}
+      onDragEnd={onDragEnd}
       data-technical-issue-id={item.id}
       className={cn(
         "min-w-0 max-w-full rounded-xl transition-shadow [contain:layout_paint]",
@@ -4434,8 +4412,7 @@ function DraggableTechnicalIssueBoardCard({
     >
       <TechnicalIssueBoardCard
         item={item}
-        dragging={isDragging}
-        dragHandleProps={{ ...attributes, ...listeners }}
+        dragHandleProps={{ "data-ti-drag-handle": true }}
         onTogglePriority={onTogglePriority}
         priorityPending={priorityPending}
         onPreview={onPreview}
