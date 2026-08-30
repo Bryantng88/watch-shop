@@ -613,6 +613,12 @@ export async function createOrderWithItems(
       inventoryOutcomes,
       tradeInAcquisitionId,
     });
+  }, {
+    // Creating and immediately posting an order performs inventory, payment,
+    // shipment and service writes. The default 5s interactive-transaction
+    // timeout can expire on a cold connection before the final payment write.
+    maxWait: 10_000,
+    timeout: 20_000,
   });
   if ("idempotentReplay" in result && result.idempotentReplay) return result;
   await publishOrderMutation({
