@@ -4394,11 +4394,6 @@ function DraggableTechnicalIssueBoardCard({
     <div
       draggable
       onDragStart={(event) => {
-        const target = event.target as Element;
-        if (!target.closest("[data-ti-drag-handle]")) {
-          event.preventDefault();
-          return;
-        }
         event.dataTransfer.effectAllowed = "move";
         event.dataTransfer.setData("application/x-technical-issue-id", item.id);
         event.dataTransfer.setData("text/plain", item.id);
