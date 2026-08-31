@@ -873,6 +873,13 @@ export default function WatchFormClient({
           message: result?.message || "Thông tin watch đã được cập nhật.",
         });
 
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage(
+            { type: "workspace-target-modal-refresh" },
+            window.location.origin,
+          );
+        }
+
         if (result?.askContinueContent) {
           setAfterSaveMode("continueContent");
         } else if (!canReviewContent && result?.askSubmitReview) {
