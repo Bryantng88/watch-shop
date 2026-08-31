@@ -1409,6 +1409,34 @@ async function loadMediaBoardFromProjection(input: {
   });
   const total = stages.reduce((sum, stage) => sum + (projection.totals.get(stage) ?? 0), 0);
   if (!total) return null;
+  const projectedWatchIds = projection.rows
+    .filter((row) => row.targetType === "WATCH")
+    .map((row) => row.id);
+  const watchesWithCurrentPostTargets = projectedWatchIds.length
+    ? await input.db.watch.findMany({
+        where: { id: { in: projectedWatchIds } },
+        select: {
+          id: true,
+          product: {
+            select: {
+              postTargets: {
+                select: {
+                  postTarget: {
+                    select: { id: true, name: true, platform: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      })
+    : [];
+  const currentPostTargetsByWatchId = new Map(
+    watchesWithCurrentPostTargets.map((watch) => [
+      watch.id,
+      mapProductPostTargets(watch.product),
+    ]),
+  );
   const taskItemIds = projection.rows.map((row) => row.workspaceTaskItemId).filter(Boolean);
   const activities = input.viewerUserId && taskItemIds.length
     ? await input.db.taskItemActivity.findMany({
@@ -1481,6 +1509,9 @@ async function loadMediaBoardFromProjection(input: {
   }
   const items: CoordinationMediaBoardItemDTO[] = projection.rows.map((row) => ({
     ...row,
+    postTargets: row.targetType === "WATCH"
+      ? currentPostTargetsByWatchId.get(row.id) ?? []
+      : row.postTargets,
     mentionedMeCount: mentions.get(row.id) ?? 0,
     unreadMentionCount: unread.get(row.id) ?? 0,
   }));
