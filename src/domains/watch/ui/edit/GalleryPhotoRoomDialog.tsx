@@ -7,12 +7,16 @@ import type { PickedMediaItem } from "@/components/media/MediaPickerMulti";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 
 type Preset = {
-  backgroundBlur: number;
-  metalEnhance: number;
-  shadowOpacity: number;
-  highlight: number;
   brightness: number;
   saturation: number;
+  contrast: number;
+  metalEnhance: number;
+  sharpen: number;
+  zoom: number;
+  rotation: number;
+  cropAspect: "original" | "square" | "portrait" | "landscape";
+  cropOffsetX: number;
+  cropOffsetY: number;
 };
 type Result = { storageKey: string; sourceStorageKey: string; cached?: boolean };
 type ItemState = { status: "idle" | "processing" | "done" | "error"; result?: Result; error?: string };
@@ -33,7 +37,18 @@ export default function GalleryPhotoRoomDialog({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [unavailable, setUnavailable] = useState<Set<string>>(new Set());
   const [states, setStates] = useState<Record<string, ItemState>>({});
-  const [preset, setPreset] = useState<Preset>({ backgroundBlur: 6, metalEnhance: 6, shadowOpacity: 6, highlight: 4, brightness: 0, saturation: 100 });
+  const [preset, setPreset] = useState<Preset>({
+    brightness: 0,
+    saturation: 100,
+    contrast: 0,
+    metalEnhance: 6,
+    sharpen: 6,
+    zoom: 100,
+    rotation: 0,
+    cropAspect: "original",
+    cropOffsetX: 0,
+    cropOffsetY: 0,
+  });
   const [running, setRunning] = useState(false);
   const keys = useMemo(() => images.map((item) => item.key).filter(Boolean), [images]);
 
@@ -51,13 +66,13 @@ export default function GalleryPhotoRoomDialog({
   const processOne = async (key: string) => {
     setStates((current) => ({ ...current, [key]: { status: "processing" } }));
     try {
-      const response = await fetch(`/api/admin/watches/${productId}/gallery/photoroom`, {
+      const response = await fetch(`/api/admin/watches/${productId}/gallery/sharp`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ storageKey: key, preset }),
       });
       const json = await response.json().catch(() => ({}));
-      if (!response.ok || !json?.data?.storageKey) throw new Error(json?.error || "PhotoRoom không trả về ảnh Gallery.");
+      if (!response.ok || !json?.data?.storageKey) throw new Error(json?.error || "Sharp không trả về ảnh Gallery.");
       setStates((current) => ({ ...current, [key]: { status: "done", result: json.data } }));
     } catch (error) {
       setStates((current) => ({
@@ -78,9 +93,8 @@ export default function GalleryPhotoRoomDialog({
         await processOne(key);
       }
     };
-    // PhotoRoom + Sharp can use a large amount of memory for high-resolution
-    // gallery files. Run one item at a time so the local/dev server cannot be
-    // killed by two simultaneous image pipelines.
+    // High-resolution Sharp pipelines can use a large amount of memory. Run
+    // one item at a time so two images cannot exhaust the app container.
     await worker();
     setRunning(false);
   };
@@ -92,7 +106,7 @@ export default function GalleryPhotoRoomDialog({
       replacements.set(sourceKey, {
         key: state.result.storageKey,
         url: resolveMediaPreviewSrc(state.result.storageKey) || null,
-        name: `PhotoRoom - ${sourceKey.split("/").pop() || "gallery.png"}`,
+        name: `Sharp - ${sourceKey.split("/").pop() || "gallery.jpg"}`,
       });
     }
     onApply(replacements);
@@ -104,21 +118,38 @@ export default function GalleryPhotoRoomDialog({
       <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
           <div>
-            <h2 className="text-lg font-semibold text-slate-950">Xử lý PhotoRoom cho Gallery</h2>
+            <h2 className="text-lg font-semibold text-slate-950">Xử lý Sharp cho Gallery</h2>
             <p className="mt-1 text-sm text-slate-500">Ảnh gốc được giữ trong Media Core. Kết quả chỉ thay vào Gallery sau khi bạn bấm Áp dụng.</p>
           </div>
           <button type="button" onClick={onClose} disabled={running} className="rounded-full bg-slate-100 p-2 text-slate-500 disabled:opacity-40"><X className="h-5 w-5" /></button>
         </div>
 
         <div className="grid min-h-0 flex-1 gap-5 overflow-hidden p-6 lg:grid-cols-[260px_minmax(0,1fr)]">
-          <aside className="space-y-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <aside className="min-h-0 space-y-5 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <label className="block rounded-xl border border-slate-200 bg-white px-3 py-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tỉ lệ crop</span>
+              <select
+                value={preset.cropAspect}
+                onChange={(event) => setPreset((current) => ({ ...current, cropAspect: event.target.value as Preset["cropAspect"] }))}
+                disabled={running}
+                className="mt-3 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-700"
+              >
+                <option value="original">Giữ tỉ lệ ảnh</option>
+                <option value="square">Vuông · 1:1</option>
+                <option value="portrait">Dọc · 4:5</option>
+                <option value="landscape">Ngang · 5:4</option>
+              </select>
+            </label>
             {([
-              { key: "backgroundBlur", label: "Làm mờ nền", min: 0, max: 24, suffix: "px" },
-              { key: "metalEnhance", label: "Bóng kim loại", min: 0, max: 20, suffix: "%" },
-              { key: "shadowOpacity", label: "Shadow", min: 0, max: 20, suffix: "%" },
-              { key: "highlight", label: "Highlight", min: -10, max: 20, suffix: "%" },
+              { key: "zoom", label: "Zoom", min: 100, max: 250, suffix: "%" },
+              { key: "rotation", label: "Xoay", min: -180, max: 180, suffix: "°" },
+              { key: "cropOffsetX", label: "Căn crop ngang", min: -100, max: 100, suffix: "" },
+              { key: "cropOffsetY", label: "Căn crop dọc", min: -100, max: 100, suffix: "" },
               { key: "brightness", label: "Độ sáng toàn ảnh", min: -20, max: 40, suffix: "%" },
               { key: "saturation", label: "Saturation", min: 70, max: 130, suffix: "%" },
+              { key: "contrast", label: "Tương phản", min: -20, max: 30, suffix: "%" },
+              { key: "metalEnhance", label: "Chi tiết kim loại", min: 0, max: 20, suffix: "%" },
+              { key: "sharpen", label: "Độ nét", min: 0, max: 20, suffix: "%" },
             ] as Array<{ key: keyof Preset; label: string; min: number; max: number; suffix: string }>).map((control) => (
               <label key={control.key} className="block rounded-xl border border-slate-200 bg-white px-3 py-3">
                 <span className="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -137,7 +168,7 @@ export default function GalleryPhotoRoomDialog({
                 />
               </label>
             ))}
-            <div className="rounded-xl bg-violet-50 px-3 py-3 text-xs leading-5 text-violet-700">Xử lý lần lượt từng ảnh để ổn định bộ nhớ, quota và dễ retry.</div>
+            <div className="rounded-xl bg-violet-50 px-3 py-3 text-xs leading-5 text-violet-700">Xử lý lần lượt từng ảnh bằng Sharp trên máy chủ, không gọi PhotoRoom và không dùng quota ngoài.</div>
           </aside>
 
           <div className="min-h-0 overflow-y-auto pr-1">
@@ -183,7 +214,7 @@ export default function GalleryPhotoRoomDialog({
           <span className="text-sm text-slate-500">{running ? "Đang xử lý…" : completed ? `${completed} ảnh sẵn sàng áp dụng` : "Chưa tạo preview"}</span>
           <div className="flex gap-2">
             <button type="button" onClick={onClose} disabled={running} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-40">Đóng</button>
-            <button type="button" onClick={() => void run()} disabled={running || selected.size === 0} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"><Sparkles className="h-4 w-4" />{running ? "Đang xử lý" : "Tạo preview PhotoRoom"}</button>
+            <button type="button" onClick={() => void run()} disabled={running || selected.size === 0} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"><Sparkles className="h-4 w-4" />{running ? "Đang xử lý" : "Tạo preview Sharp"}</button>
             <button type="button" onClick={apply} disabled={running || completed === 0} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">Áp dụng vào Gallery</button>
           </div>
         </div>

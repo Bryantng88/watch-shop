@@ -820,8 +820,8 @@ export default function WatchImageSection({
                     >
                         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-100 bg-violet-50/70 px-4 py-3">
                             <div>
-                                <div className="text-sm font-semibold text-slate-900">PhotoRoom cho Gallery</div>
-                                <div className="mt-0.5 text-xs text-slate-500">Chọn nhiều ảnh, xem preview trước/sau rồi mới áp dụng. Ảnh gốc vẫn được giữ trong Media Core.</div>
+                                <div className="text-sm font-semibold text-slate-900">Sharp cho Gallery</div>
+                                <div className="mt-0.5 text-xs text-slate-500">Chọn nhiều ảnh, chỉnh sáng, màu, tương phản và độ nét rồi xem preview trước khi áp dụng. Ảnh gốc vẫn được giữ trong Media Core.</div>
                             </div>
                             <button
                                 type="button"
@@ -830,7 +830,7 @@ export default function WatchImageSection({
                                 className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
                             >
                                 <Sparkles className="h-4 w-4" />
-                                Xử lý Gallery bằng PhotoRoom
+                                Xử lý Gallery bằng Sharp
                             </button>
                         </div>
                         <MediaPickerMulti
@@ -912,7 +912,7 @@ export default function WatchImageSection({
                     onGalleryImagesChange(replace(galleryImages));
                     onPoolImagesChange(replace(poolImages));
                     notify.success({
-                        title: "Đã áp dụng preview PhotoRoom",
+                        title: "Đã áp dụng preview Sharp",
                         message: "Hãy kiểm tra thứ tự Gallery và lưu Watch để xác nhận thay đổi.",
                     });
                 }}
