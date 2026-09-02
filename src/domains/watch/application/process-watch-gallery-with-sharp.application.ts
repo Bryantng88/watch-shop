@@ -115,8 +115,15 @@ export async function processWatchGalleryWithSharpApplication(input: {
   const recipeHash = mediaRecipeHash(recipe);
   const knownSource = await prisma.mediaObject.findUnique({
     where: { storageKey },
-    select: { id: true, sourceMediaObjectId: true },
+    select: {
+      id: true,
+      sourceMediaObjectId: true,
+      sourceMediaObject: { select: { storageKey: true } },
+    },
   });
+  // Always process from the Media Core source. The supplied key can already
+  // be a derivative, and processing that again would accumulate zoom/crop.
+  const sourceStorageKey = knownSource?.sourceMediaObject?.storageKey ?? storageKey;
   if (knownSource) {
     const sourceId = knownSource.sourceMediaObjectId ?? knownSource.id;
     const existing = await prisma.mediaObject.findFirst({
@@ -128,14 +135,14 @@ export async function processWatchGalleryWithSharpApplication(input: {
       select: { storageKey: true },
     });
     if (existing && await mediaStorage.stat(existing.storageKey)) {
-      return { storageKey: existing.storageKey, sourceStorageKey: storageKey, cached: true, preset };
+      return { storageKey: existing.storageKey, sourceStorageKey, cached: true, preset };
     }
   }
 
-  const source = await mediaStorage.read(storageKey);
+  const source = await mediaStorage.read(sourceStorageKey);
   if (source.bytes.byteLength > MAX_SOURCE_BYTES) throw new Error("Ảnh nguồn vượt quá giới hạn xử lý 30 MB.");
   const result = new Uint8Array(await processGalleryImageWithSharp(source.bytes, preset));
-  const preparedSource = await prepareWatchMediaSource({ productId, storageKey });
+  const preparedSource = await prepareWatchMediaSource({ productId, storageKey: sourceStorageKey });
   const outputs = await storeWatchMediaDerivatives({
     watch: preparedSource.watch,
     sourceMediaObjectId: preparedSource.mediaObject.id,

@@ -21,6 +21,19 @@ type Preset = {
 type Result = { storageKey: string; sourceStorageKey: string; cached?: boolean };
 type ItemState = { status: "idle" | "processing" | "done" | "error"; result?: Result; error?: string };
 
+const DEFAULT_PRESET: Preset = {
+  brightness: 0,
+  saturation: 100,
+  contrast: 0,
+  metalEnhance: 6,
+  sharpen: 6,
+  zoom: 100,
+  rotation: 0,
+  cropAspect: "original",
+  cropOffsetX: 0,
+  cropOffsetY: 0,
+};
+
 export default function GalleryPhotoRoomDialog({
   open,
   productId,
@@ -37,18 +50,7 @@ export default function GalleryPhotoRoomDialog({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [unavailable, setUnavailable] = useState<Set<string>>(new Set());
   const [states, setStates] = useState<Record<string, ItemState>>({});
-  const [preset, setPreset] = useState<Preset>({
-    brightness: 0,
-    saturation: 100,
-    contrast: 0,
-    metalEnhance: 6,
-    sharpen: 6,
-    zoom: 100,
-    rotation: 0,
-    cropAspect: "original",
-    cropOffsetX: 0,
-    cropOffsetY: 0,
-  });
+  const [preset, setPreset] = useState<Preset>(DEFAULT_PRESET);
   const [running, setRunning] = useState(false);
   const keys = useMemo(() => images.map((item) => item.key).filter(Boolean), [images]);
 
@@ -62,6 +64,17 @@ export default function GalleryPhotoRoomDialog({
 
   if (!open) return null;
   const completed = Object.values(states).filter((state) => state.status === "done").length;
+
+  const updatePreset = (next: Preset | ((current: Preset) => Preset)) => {
+    setPreset(next);
+    // A preview is valid only for the exact preset which created it.
+    setStates({});
+  };
+
+  const resetPreset = () => {
+    setPreset(DEFAULT_PRESET);
+    setStates({});
+  };
 
   const processOne = async (key: string) => {
     setStates((current) => ({ ...current, [key]: { status: "processing" } }));
@@ -130,7 +143,7 @@ export default function GalleryPhotoRoomDialog({
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tỉ lệ crop</span>
               <select
                 value={preset.cropAspect}
-                onChange={(event) => setPreset((current) => ({ ...current, cropAspect: event.target.value as Preset["cropAspect"] }))}
+                onChange={(event) => updatePreset((current) => ({ ...current, cropAspect: event.target.value as Preset["cropAspect"] }))}
                 disabled={running}
                 className="mt-3 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-700"
               >
@@ -162,12 +175,21 @@ export default function GalleryPhotoRoomDialog({
                   max={control.max}
                   step="1"
                   value={preset[control.key]}
-                  onChange={(event) => setPreset((current) => ({ ...current, [control.key]: Number(event.target.value) }))}
+                  onChange={(event) => updatePreset((current) => ({ ...current, [control.key]: Number(event.target.value) }))}
                   disabled={running}
                   className="mt-3 w-full accent-violet-600"
                 />
               </label>
             ))}
+            <button
+              type="button"
+              onClick={resetPreset}
+              disabled={running}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-violet-200 bg-white px-3 py-2.5 text-sm font-semibold text-violet-700 disabled:opacity-40"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Đặt lại thông số
+            </button>
             <div className="rounded-xl bg-violet-50 px-3 py-3 text-xs leading-5 text-violet-700">Xử lý lần lượt từng ảnh bằng Sharp trên máy chủ, không gọi PhotoRoom và không dùng quota ngoài.</div>
           </aside>
 
