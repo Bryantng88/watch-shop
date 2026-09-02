@@ -54,7 +54,8 @@ export async function registerExistingMediaObject(input: {
 /**
  * Consumes a file from a segment source folder exactly once. The canonical object key
  * is stable for the source key, so retries cannot create duplicate files.
- * Existing product media is registered in place to avoid breaking legacy refs.
+ * Canonical product media is registered in place. Source inbox files are always
+ * consumed, even when discovery has already registered a MediaObject for them.
  */
 export async function ingestSelectedMedia(input: {
   storageKey: string;
@@ -66,23 +67,19 @@ export async function ingestSelectedMedia(input: {
   const existingObject = await prisma.mediaObject.findUnique({
     where: { storageKey: sourceKey },
   });
-  if (existingObject || mediaPathPolicy.isCanonical(sourceKey)) {
+  if (mediaPathPolicy.isCanonical(sourceKey)) {
     return registerExistingMediaObject({ storageKey: sourceKey });
   }
 
-  const referenced = await prisma.productImage.findFirst({
-    where: { fileKey: sourceKey },
-    select: { id: true },
-  });
   const isLegacySource =
     sourceKey.startsWith("products/edit/active/") ||
     sourceKey.startsWith("products/inline/active/") ||
     sourceKey.startsWith("products/cover/active/");
-  if (referenced || (!mediaPathPolicy.isSource(sourceKey) && !isLegacySource)) {
+  if (!mediaPathPolicy.isSource(sourceKey) && !isLegacySource) {
     return registerExistingMediaObject({ storageKey: sourceKey });
   }
 
-  const stableObjectId = createHash("sha256")
+  const stableObjectId = existingObject?.id ?? createHash("sha256")
     .update(sourceKey)
     .digest("hex")
     .slice(0, 32);
@@ -96,9 +93,14 @@ export async function ingestSelectedMedia(input: {
     : mediaPathPolicy.canonicalOriginal({ mediaObjectId: stableObjectId, filename });
   await executeMediaMove({
     idempotencyKey: `media-ingest:${sourceKey}`,
+    mediaObjectId: existingObject?.id ?? null,
     sourceKey,
     destinationKey,
     deleteSource: true,
+  });
+  await prisma.productImage.updateMany({
+    where: { fileKey: sourceKey },
+    data: { fileKey: destinationKey },
   });
   return registerExistingMediaObject({ storageKey: destinationKey });
 }
