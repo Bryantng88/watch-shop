@@ -16,6 +16,7 @@
     "media:verify": "tsx scripts/verify-media-core.ts",
     "media:verify-segments": "tsx scripts/verify-segment-dashboards.ts",
     "media:verify-policy": "tsx scripts/verify-media-policy.ts",
+    "media:reconcile-architecture-drift": "tsx scripts/reconcile-media-architecture-drift.ts",
     "media:verify-empty-women": "tsx scripts/verify-empty-women-lists.ts",
     "shipment:backfill-operation": "tsx scripts/backfill-shipment-operation.ts",
     "shipment:smoke-operation": "tsx scripts/smoke-shipment-operation.ts",

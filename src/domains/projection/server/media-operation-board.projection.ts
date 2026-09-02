@@ -33,6 +33,7 @@ const MEDIA_OPERATION_BOARD_EVENTS = [
   "watch.media.photoshoot.completed",
   "watch.media.asset.attached",
   "watch.content.modified",
+  "watch.post.targets.updated",
   "watch.content.submitted",
   "watch.content.approved",
   "watch.content.rejected",

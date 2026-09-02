@@ -1,5 +1,5 @@
 import { prisma, type DB } from "@/server/db/client";
-import { attachIngestedWatchMedia } from "@/domains/media/application";
+import { attachIngestedWatchMedia, cleanupRemovedWatchMedia } from "@/domains/media/application";
 import { notifyUsersByRole } from "@/app/(admin)/admin/notifications/notification.service";
 
 import { MediaRole, WatchSpecStatus } from "@prisma/client";
@@ -32,6 +32,7 @@ import {
 import {
     emitWatchContentModifiedEvent,
     emitWatchMediaAssetAttachedEvent,
+    emitWatchPostTargetsUpdatedEvent,
     emitWatchPriceUpdatedEvent,
     emitWatchSpecUpdatedEvent,
 } from "../../server/events";
@@ -359,6 +360,7 @@ async function syncProductPostTargets(
             },
         });
     }
+    return { changed: toDelete.length > 0 || toCreate.length > 0, postTargetIds: nextIds };
 }
 
 async function assertMediaWorkspaceAssetsAvailable(input: {
@@ -554,7 +556,7 @@ export async function submitWatchFormApplication(
             },
         });
 
-        await syncProductPostTargets(tx, {
+        const postTargetsResult = await syncProductPostTargets(tx, {
             productId,
             postTargetIds: values.basic.postTargetIds ?? [],
         });
@@ -691,6 +693,13 @@ export async function submitWatchFormApplication(
                 after: afterSpec,
             }, { deferConsumers: context.deferConsumers });
         }
+        if (postTargetsResult.changed) {
+            await emitWatchPostTargetsUpdatedEvent(tx, {
+                watch: { id: current.id, productId },
+                actorUserId: context.userId ?? null,
+                postTargetIds: postTargetsResult.postTargetIds,
+            }, { deferConsumers: context.deferConsumers });
+        }
     });
 
     const galleryOriginalKeys = new Set(
@@ -796,6 +805,13 @@ export async function submitWatchFormApplication(
                 hasGalleryImages,
             }),
         );
+    }
+    if (imagesChanged) {
+        try {
+            await cleanupRemovedWatchMedia({ watchId: current.id, roles: [MediaRole.GALLERY] });
+        } catch (error) {
+            console.error("[media-core] deferred Gallery cleanup failed", { productId, error });
+        }
     }
 
     const pricingResult = context.canEditPrice

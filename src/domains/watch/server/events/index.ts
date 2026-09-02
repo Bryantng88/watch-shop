@@ -18,6 +18,7 @@ export {
   emitWatchCreatedEvent,
   emitWatchContentModifiedEvent,
   emitWatchInlineImageUpdatedEvent,
+  emitWatchPostTargetsUpdatedEvent,
   emitWatchCoverUpdatedEvent,
   emitWatchMediaAssetAttachedEvent,
   emitWatchMediaRecalledEvent,

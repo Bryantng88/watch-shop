@@ -89,9 +89,9 @@ export async function setWatchInlineImageApplication(input: {
     });
     await tx.product.update({
       where: { id: productId },
-      data: {
+      data: hasCover ? {} : {
         primaryImageUrl: mediaObject.storageKey,
-        ...(hasCover ? {} : { storefrontImageKey: mediaObject.storageKey }),
+        storefrontImageKey: mediaObject.storageKey,
       },
     });
 

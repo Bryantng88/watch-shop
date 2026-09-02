@@ -180,6 +180,29 @@ export async function emitWatchInlineImageUpdatedEvent(
   }, options);
 }
 
+export async function emitWatchPostTargetsUpdatedEvent(
+  db: DB,
+  input: {
+    watch: Pick<WatchEventWatchSnapshot, "id" | "productId">;
+    actorUserId?: string | null;
+    postTargetIds: string[];
+  },
+  options?: BusinessEventDispatchOptions,
+) {
+  return recordBusinessEvent(db, {
+    eventKey: "watch.post.targets.updated",
+    targetType: "WATCH",
+    targetId: input.watch.id,
+    targetAliasIds: [input.watch.id, input.watch.productId],
+    actorUserId: input.actorUserId ?? null,
+    payload: {
+      watchId: input.watch.id,
+      productId: input.watch.productId,
+      postTargetIds: input.postTargetIds,
+    },
+  }, options);
+}
+
 export async function emitWatchCoverUpdatedEvent(
   db: DB,
   input: {

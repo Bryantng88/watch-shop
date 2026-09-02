@@ -102,5 +102,13 @@ export async function ingestSelectedMedia(input: {
     where: { fileKey: sourceKey },
     data: { fileKey: destinationKey },
   });
+  await prisma.product.updateMany({
+    where: { primaryImageUrl: sourceKey },
+    data: { primaryImageUrl: destinationKey },
+  });
+  await prisma.product.updateMany({
+    where: { storefrontImageKey: sourceKey },
+    data: { storefrontImageKey: destinationKey },
+  });
   return registerExistingMediaObject({ storageKey: destinationKey });
 }
