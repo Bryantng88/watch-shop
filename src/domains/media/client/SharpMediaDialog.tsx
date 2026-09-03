@@ -34,18 +34,24 @@ const DEFAULT_PRESET: Preset = {
   cropOffsetY: 0,
 };
 
-export default function GalleryPhotoRoomDialog({
+export default function SharpMediaDialog({
   open,
-  productId,
+  processUrl,
   images,
   onClose,
   onApply,
+  title = "Xử lý Sharp cho Gallery",
+  description = "Ảnh gốc được giữ trong Media Core. Kết quả chỉ thay vào Gallery sau khi bạn bấm Áp dụng.",
+  applyLabel = "Áp dụng vào Gallery",
 }: {
   open: boolean;
-  productId: string;
+  processUrl: string;
   images: PickedMediaItem[];
   onClose: () => void;
   onApply: (replacements: Map<string, PickedMediaItem>) => void;
+  title?: string;
+  description?: string;
+  applyLabel?: string;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [unavailable, setUnavailable] = useState<Set<string>>(new Set());
@@ -79,7 +85,7 @@ export default function GalleryPhotoRoomDialog({
   const processOne = async (key: string) => {
     setStates((current) => ({ ...current, [key]: { status: "processing" } }));
     try {
-      const response = await fetch(`/api/admin/watches/${productId}/gallery/sharp`, {
+      const response = await fetch(processUrl, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ storageKey: key, preset }),
@@ -131,8 +137,8 @@ export default function GalleryPhotoRoomDialog({
       <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
           <div>
-            <h2 className="text-lg font-semibold text-slate-950">Xử lý Sharp cho Gallery</h2>
-            <p className="mt-1 text-sm text-slate-500">Ảnh gốc được giữ trong Media Core. Kết quả chỉ thay vào Gallery sau khi bạn bấm Áp dụng.</p>
+            <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
+            <p className="mt-1 text-sm text-slate-500">{description}</p>
           </div>
           <button type="button" onClick={onClose} disabled={running} className="rounded-full bg-slate-100 p-2 text-slate-500 disabled:opacity-40"><X className="h-5 w-5" /></button>
         </div>
@@ -237,7 +243,7 @@ export default function GalleryPhotoRoomDialog({
           <div className="flex gap-2">
             <button type="button" onClick={onClose} disabled={running} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-40">Đóng</button>
             <button type="button" onClick={() => void run()} disabled={running || selected.size === 0} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"><Sparkles className="h-4 w-4" />{running ? "Đang xử lý" : "Tạo preview Sharp"}</button>
-            <button type="button" onClick={apply} disabled={running || completed === 0} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">Áp dụng vào Gallery</button>
+            <button type="button" onClick={apply} disabled={running || completed === 0} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">{applyLabel}</button>
           </div>
         </div>
       </div>

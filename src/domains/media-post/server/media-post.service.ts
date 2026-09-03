@@ -294,7 +294,11 @@ export async function completeMediaPostMediaProcessingFromQueueItem(
   });
   if (!post) return { ok: false, skipped: true, reason: "MEDIA_POST_NOT_FOUND" };
   const assetCount = await db.mediaBinding.count({
-    where: { ownerType: MediaOwnerType.MEDIA_POST, ownerId: post.id, lifecycle: { not: MediaBindingLifecycle.REMOVED } },
+    where: {
+      ownerType: MediaOwnerType.MEDIA_POST,
+      ownerId: post.id,
+      lifecycle: { in: [MediaBindingLifecycle.SELECTED, MediaBindingLifecycle.ATTACHED, MediaBindingLifecycle.APPROVED, MediaBindingLifecycle.PUBLISHED] },
+    },
   });
   const missing = [
     !hasPostContent(post) ? "Content" : null,
@@ -351,7 +355,7 @@ export async function listMediaPostAssets(mediaPostId: string) {
     where: {
       ownerType: MediaOwnerType.MEDIA_POST,
       ownerId: mediaPostId,
-      lifecycle: { not: MediaBindingLifecycle.REMOVED },
+      lifecycle: { in: [MediaBindingLifecycle.SELECTED, MediaBindingLifecycle.ATTACHED, MediaBindingLifecycle.APPROVED, MediaBindingLifecycle.PUBLISHED] },
     },
     include: { mediaObject: true },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],

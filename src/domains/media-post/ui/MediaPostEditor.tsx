@@ -2,9 +2,10 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, Check, ImageIcon, LoaderCircle, Save } from "lucide-react";
+import { BookOpen, Check, ImageIcon, LoaderCircle, Save, Sparkles } from "lucide-react";
 import MediaPickerMulti, { type PickedMediaItem } from "@/components/media/MediaPickerMulti";
 import SectionCard from "@/components/_shared/SectionCard";
+import SharpMediaDialog from "@/domains/media/client/SharpMediaDialog";
 import {
   removeMediaFromPostAction,
   reorderMediaPostAssetsAction,
@@ -55,6 +56,7 @@ export default function MediaPostEditor({
   const [mediaSaving, setMediaSaving] = useState(false);
   const [mediaDirty, setMediaDirty] = useState(false);
   const [mediaSaved, setMediaSaved] = useState(false);
+  const [sharpOpen, setSharpOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [workProgress, setWorkProgress] = useState(initialProgress);
   const [approving, setApproving] = useState(false);
@@ -215,6 +217,21 @@ export default function MediaPostEditor({
         right={<div className="flex items-center gap-3"><div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500"><ImageIcon className="h-4 w-4 text-violet-600" />{selected.length} ảnh đã chọn</div><button type="button" onClick={() => void saveMedia()} disabled={mediaSaving || !mediaDirty} className="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-950 px-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50">{mediaSaving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : mediaSaved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}{mediaSaving ? "Đang lưu" : mediaSaved ? "Đã lưu" : "Lưu hình ảnh"}</button></div>}
         contentClassName="p-5"
       >
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet-100 bg-violet-50/60 px-4 py-3">
+          <div>
+            <div className="text-sm font-semibold text-slate-900">Sharp cho media bài post</div>
+            <p className="mt-0.5 text-xs text-slate-500">Crop, zoom và cân chỉnh ảnh đã chọn trước khi lưu vào bộ media của bài post.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSharpOpen(true)}
+            disabled={chosen.length === 0 || mediaSaving}
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-violet-600 px-3.5 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            <Sparkles className="h-4 w-4" />
+            Xử lý ảnh bằng Sharp
+          </button>
+        </div>
         <MediaPickerMulti
           chosenValue={chosen}
           selectedValue={selected}
@@ -230,6 +247,23 @@ export default function MediaPostEditor({
           browserPresentation="dialog"
         />
       </SectionCard>
+      <SharpMediaDialog
+        open={sharpOpen}
+        processUrl={`/api/admin/media-posts/${mediaPostId}/images/sharp`}
+        images={chosen}
+        title="Xử lý Sharp cho Media Post"
+        description="Ảnh gốc được giữ trong Media Core. Preview chỉ thay vào bộ ảnh của bài post sau khi bạn bấm Áp dụng."
+        applyLabel="Áp dụng vào Media Post"
+        onClose={() => setSharpOpen(false)}
+        onApply={(replacements) => {
+          const replace = (items: PickedMediaItem[]) => items.map((item) => replacements.get(item.key) ?? item);
+          setChosen((current) => replace(current));
+          setSelected((current) => replace(current));
+          setMediaDirty(true);
+          setMediaSaved(false);
+          setMessage("Đã áp dụng preview Sharp. Bấm Lưu hình ảnh để xác nhận vào Media Post.");
+        }}
+      />
     </div>
   );
 }

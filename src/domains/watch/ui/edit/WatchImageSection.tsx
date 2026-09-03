@@ -27,7 +27,7 @@ import {
     type PhotoRoomAdjustment,
 } from "@/domains/watch/shared/photoroom-adjustment";
 import PhotoRoomAdjustmentDialog from "./PhotoRoomAdjustmentDialog";
-import GalleryPhotoRoomDialog from "./GalleryPhotoRoomDialog";
+import SharpMediaDialog from "@/domains/media/client/SharpMediaDialog";
 type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
 type MediaItemWithAliases = PickedMediaItem & {
@@ -902,9 +902,9 @@ export default function WatchImageSection({
                 }}
             /> : null}
 
-            {showGallery ? <GalleryPhotoRoomDialog
+            {showGallery ? <SharpMediaDialog
                 open={galleryPhotoRoomOpen}
-                productId={productId}
+                processUrl={`/api/admin/watches/${productId}/gallery/sharp`}
                 images={galleryImages}
                 onClose={() => setGalleryPhotoRoomOpen(false)}
                 onApply={(replacements) => {
