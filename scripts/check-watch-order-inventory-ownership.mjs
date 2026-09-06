@@ -4,6 +4,7 @@ import path from "node:path";
 const root = process.cwd();
 const domainsRoot = path.join(root, "src", "domains");
 const allowedRelativePaths = new Set([
+  // Canonical Product/Watch inventory transition used by the Order sync.
   path.normalize("watch/server/inventory-lifecycle/watch-inventory-transition.service.ts"),
   // These are Prisma where-clause builders, not state writers.
   path.normalize("watch/server/list/watch-list.query.ts"),
