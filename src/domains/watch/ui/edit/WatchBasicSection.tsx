@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, Sparkles } from "lucide-react";
 import { buildWatchTitleFromForm } from "../../shared/watch-title-sku.helpers";
 import type { WatchFormValues } from "../../client/form/watch-form.types";
 import {
@@ -23,6 +23,7 @@ import {
   listAvailableStrapsAction,
 } from "@/domains/strap/client/strap.actions";
 import type { StrapListProjectionRow } from "@/domains/projection/server/strap-list";
+import { suggestWatchSpecWithOpenAIAction } from "../../client/form/watch-ai-spec.actions";
 
 export type SimpleOption = {
   id: string;
@@ -36,6 +37,7 @@ type Props = {
   values: WatchFormValues["basic"];
   spec: WatchFormValues["spec"];
   pricing: WatchFormValues["pricing"];
+  media: WatchFormValues["media"];
   categories: SimpleOption[];
   postTargets: SimpleOption[];
   onChange: (patch: Partial<WatchFormValues["basic"]>) => void;
@@ -245,6 +247,7 @@ export default function WatchBasicSection({
   values,
   spec,
   pricing,
+  media,
   brands,
   categories,
   postTargets,
@@ -296,6 +299,60 @@ export default function WatchBasicSection({
   const [loadingStraps, setLoadingStraps] = useState(false);
   const [installingStrap, setInstallingStrap] = useState(false);
   const [strapMessage, setStrapMessage] = useState("");
+  const [aiPending, setAiPending] = useState(false);
+  const [aiMessage, setAiMessage] = useState("");
+
+  async function fillMissingSpecsWithAI() {
+    setAiPending(true);
+    setAiMessage("");
+    try {
+      const imageKeys = [
+        media.inlineImage?.key,
+        ...media.poolImages.map((item) => item.key),
+        ...media.galleryImages.map((item) => item.key),
+      ].filter((key): key is string => Boolean(key));
+      const suggestion = await suggestWatchSpecWithOpenAIAction({
+        current: { basic: values, spec },
+        brandName,
+        imageKeys,
+      });
+      const basicPatch: Partial<WatchFormValues["basic"]> = {};
+      const specPatch: Partial<WatchFormValues["spec"]> = {};
+      let filled = 0;
+      const fillBasic = (key: "yearText" | "movementType" | "style") => {
+        const next = suggestion[key];
+        if (!values[key] && next) { basicPatch[key] = next; filled += 1; }
+      };
+      const specKeys = [
+        "model", "referenceNumber", "nickname", "caseShape", "caseSizeMM",
+        "lugToLugMM", "thicknessMM", "crystal", "dialColor", "calibre",
+        "materialProfile", "primaryCaseMaterial", "secondaryCaseMaterial",
+        "goldTreatment", "goldKarat", "braceletType", "strapMaterialText",
+        "waterResistance", "powerReserve", "dialFinish", "buckleType", "materialNote",
+      ] as const;
+      fillBasic("yearText");
+      fillBasic("movementType");
+      fillBasic("style");
+      for (const key of specKeys) {
+        const next = suggestion[key];
+        if (!spec[key] && next) { specPatch[key] = next; filled += 1; }
+      }
+      if (!spec.goldColors.length && suggestion.goldColors.length) {
+        specPatch.goldColors = suggestion.goldColors;
+        filled += 1;
+      }
+      if (Object.keys(basicPatch).length) onChange(basicPatch);
+      if (Object.keys(specPatch).length) onSpecChange(specPatch);
+      const reviewNote = suggestion.confidenceNotes.length
+        ? ` Cần kiểm tra: ${suggestion.confidenceNotes.join("; ")}`
+        : "";
+      setAiMessage(`AI đã điền ${filled} trường còn trống. Hãy review trước khi xác nhận.${reviewNote}`);
+    } catch (error) {
+      setAiMessage(error instanceof Error ? error.message : "Không thể tạo bản nháp thông số bằng AI.");
+    } finally {
+      setAiPending(false);
+    }
+  }
 
   useEffect(() => {
     if (spec.strapComponentSource !== "FROM_STOCK") return;
@@ -397,15 +454,30 @@ export default function WatchBasicSection({
               ) : null}
             </div>
 
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onChange({ title: generatedTitle })}
-              className="shrink-0"
-            >
-              Apply title
-            </Button>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={fillMissingSpecsWithAI}
+                disabled={aiPending}
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                {aiPending ? "AI đang đọc ảnh..." : "AI điền thông số"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onChange({ title: generatedTitle })}
+              >
+                Apply title
+              </Button>
+            </div>
           </div>
+          {aiMessage ? (
+            <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+              {aiMessage}
+            </div>
+          ) : null}
         </div>
 
         <FormSection

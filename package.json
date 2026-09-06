@@ -62,6 +62,7 @@
     "storefront:seed-acceptance": "tsx scripts/seed-storefront-acceptance.ts",
     "storefront:import-staging-subset": "tsx scripts/import-staging-storefront-subset.ts",
     "local:seed-admin": "tsx scripts/seed-local-admin.ts",
+    "local:seed-watch-ai-media": "tsx scripts/seed-local-watch-ai-media.ts",
     "storefront:seed-acceptance-media": "tsx scripts/seed-storefront-acceptance-media.ts",
     "gen": "prisma generate && node scripts/trim-zod.js"
   },

@@ -1769,6 +1769,7 @@ export default function WatchFormClient({
       values={values.basic}
       spec={values.spec}
       pricing={values.pricing}
+      media={values.media}
       brands={brandOptions}
       categories={categories}
       postTargets={postTargets}
@@ -1853,7 +1854,11 @@ export default function WatchFormClient({
           });
         }}
         onMediaImagesChange={({ galleryImages, poolImages }) => {
-          updateMedia({ galleryImages: [...galleryImages], poolImages: [...poolImages], imageCount: galleryImages.length });
+          updateMedia({
+            galleryImages: [...galleryImages],
+            poolImages: [...poolImages],
+            imageCount: galleryImages.length,
+          });
         }}
         onReviewStatusChange={(next) => handleReviewStatusChange("image", next)}
         error={mediaError}
@@ -2089,7 +2094,11 @@ export default function WatchFormClient({
               });
             }}
             onMediaImagesChange={({ galleryImages, poolImages }) => {
-              updateMedia({ galleryImages: [...galleryImages], poolImages: [...poolImages], imageCount: galleryImages.length });
+              updateMedia({
+                galleryImages: [...galleryImages],
+                poolImages: [...poolImages],
+                imageCount: galleryImages.length,
+              });
             }}
             onReviewStatusChange={(next) =>
               handleReviewStatusChange("image", next)
