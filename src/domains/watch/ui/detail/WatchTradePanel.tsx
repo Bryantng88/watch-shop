@@ -96,12 +96,6 @@ function buildTimeline(tradeHistory: any): TimelineRow[] {
   });
 }
 
-function dotClass(tone: TimelineRow["tone"]) {
-  if (tone === "sell") return "bg-emerald-500";
-  if (tone === "buyback") return "bg-orange-500";
-  return "bg-blue-500";
-}
-
 export default function WatchTradePanel({
   tradeHistory,
   canViewTradeFinancials = false,

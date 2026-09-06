@@ -3,8 +3,6 @@
 import { useRouter } from "next/navigation";
 import {
     CheckCircle2,
-    Clock3,
-    FileText,
     Loader2,
     Send,
     Undo2,
@@ -48,15 +46,6 @@ function normalizeStatus(status?: string | null): ReviewStatus {
     return "DRAFT";
 }
 
-function statusIcon(status?: string | null) {
-    const current = normalizeStatus(status);
-
-    if (current === "SUBMITTED") return Clock3;
-    if (current === "APPROVED") return CheckCircle2;
-    if (current === "REJECTED") return XCircle;
-    return FileText;
-}
-
 function targetLabel(target: ReviewTarget) {
     return target === "content" ? "nội dung" : "hình ảnh";
 }
@@ -85,8 +74,6 @@ export default function SectionReviewActions({
     const [rejectError, setRejectError] = useState<string | null>(null);
 
     const currentStatus = normalizeStatus(status);
-    const StatusIcon = statusIcon(currentStatus);
-
     const isAdmin = Boolean(canReviewContent);
 
     const canSubmit = !isAdmin && ["DRAFT", "REJECTED"].includes(currentStatus);
@@ -327,59 +314,6 @@ export default function SectionReviewActions({
         setRejectNote("");
         setRejectError(null);
         setRejectOpen(true);
-    }
-
-    async function submitReject() {
-        const label = targetLabel(target);
-
-        const ok = await dialog.confirm({
-            title: `Trả về ${label}?`,
-            message: `Hạng mục ${label} sẽ được chuyển sang trạng thái cần chỉnh.`,
-            confirmText: "Trả về",
-            cancelText: "Hủy",
-            tone: "danger",
-        });
-
-        if (!ok) return;
-
-        try {
-            setPending("reject");
-            progress.show({
-                title: `Đang trả về ${label}`,
-                message: "Hệ thống đang cập nhật trạng thái review.",
-            });
-
-            const rejectNote = reviewNote || "Cần chỉnh lại trước khi duyệt.";
-
-            await callReviewApi("reject", rejectNote);
-
-            onStatusChange?.({
-                status: "REJECTED",
-                reviewNote: rejectNote,
-            });
-
-            notify.warning({
-                title: "Đã trả về",
-                message:
-                    target === "content"
-                        ? "Đã trả về nội dung."
-                        : "Đã trả về hình ảnh.",
-            });
-
-            router.refresh();
-        } catch (error) {
-            await dialog.alert({
-                title: "Không thể trả về",
-                message:
-                    error instanceof Error
-                        ? error.message
-                        : "Không thể cập nhật duyệt.",
-                tone: "danger",
-            });
-        } finally {
-            progress.hide();
-            setPending(null);
-        }
     }
 
     async function confirmRejectWithNote() {

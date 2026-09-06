@@ -281,24 +281,6 @@ function buildPriceRangeWhere(input: WatchListFilters): Prisma.WatchWhereInput {
     };
 }
 
-function reviewWorkflowWhere(): Prisma.WatchWhereInput {
-    return {
-        reviewStates: {
-            some: {
-                status: {
-                    in: ["SUBMITTED", "APPROVED", "REJECTED"] as any,
-                },
-            },
-        },
-    };
-}
-
-function noReviewWorkflowWhere(): Prisma.WatchWhereInput {
-    return {
-        NOT: reviewWorkflowWhere(),
-    };
-}
-
 function reviewSubmittedOnlyWhere(): Prisma.WatchWhereInput {
     return {
         AND: [

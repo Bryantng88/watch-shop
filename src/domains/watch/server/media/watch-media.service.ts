@@ -1,12 +1,7 @@
 import { prisma } from "@/server/db/client";
-import type {
-  ReplaceWatchImagesInput,
-  ReorderWatchImagesInput,
-  SetWatchStorefrontImageInput,
-} from "../shared";
+import type { SetWatchStorefrontImageInput } from "../shared";
 import {
   getWatchImagesRepo,
-  reorderWatchImagesRepo,
   setWatchStorefrontImageRepo,
   replaceWatchGalleryImagesRepo,
   ensureWatchInlineImageFromFirstGalleryRepo,
@@ -22,12 +17,6 @@ export async function replaceWatchGalleryImages(input: {
   }>;
 }) {
   return replaceWatchGalleryImagesRepo(prisma, input);
-}
-
-async function reorderWatchImages(
-  input: ReorderWatchImagesInput
-) {
-  return reorderWatchImagesRepo(prisma as any, input);
 }
 
 export async function setWatchStorefrontImage(

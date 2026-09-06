@@ -2,7 +2,6 @@
 
 import { Wrench } from "lucide-react";
 import {
-  DetailField,
   SectionCard,
   SectionEmpty,
   StatusBadge,

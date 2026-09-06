@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download, ImageIcon, Loader2, Lock } from "lucide-react";
+import { Download, ImageIcon, Loader2 } from "lucide-react";
 
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";

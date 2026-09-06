@@ -1,6 +1,9 @@
 import { prisma } from "@/server/db/client";
 import { perfStep } from "@/lib/server-perf";
 import {
+  MediaBindingLifecycle,
+  MediaOwnerType,
+  MediaRole,
   TaskExecutionActionType,
   TaskExecutionTargetType,
   TaskStatus,
@@ -225,8 +228,47 @@ export async function getWatchMediaEditDetail(productId: string) {
     throw new Error("KhÃ´ng tÃ¬m tháº¥y watch Ä‘á»ƒ edit media");
   }
 
+  // ProductImage is the Watch form's write model, while durable ownership of
+  // an ingested file lives in Media Core. Recover attached Gallery bindings
+  // when the legacy projection is missing so moved images remain editable.
+  const existingImageKeys = new Set(
+    row.product.productImage.map((image) => image.fileKey),
+  );
+  const hasGalleryProjection = row.product.productImage.some(
+    (image) => String(image.role).toUpperCase() === "GALLERY",
+  );
+  const recoveredGallery = hasGalleryProjection
+    ? []
+    : await prisma.mediaBinding.findMany({
+        where: {
+          ownerType: MediaOwnerType.WATCH,
+          ownerId: row.id,
+          role: MediaRole.GALLERY,
+          lifecycle: MediaBindingLifecycle.ATTACHED,
+        },
+        include: {
+          mediaObject: { select: { storageKey: true } },
+        },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      });
+  const recoveredProductImages = recoveredGallery
+    .filter((binding) => !existingImageKeys.has(binding.mediaObject.storageKey))
+    .map((binding) => ({
+      id: `media-binding:${binding.id}`,
+      fileKey: binding.mediaObject.storageKey,
+      role: "GALLERY" as const,
+      isForAdmin: true,
+      isForStorefront: true,
+      sortOrder: binding.sortOrder,
+      alt: null,
+    }));
+
   const mapped = mapWatchDetail({
     ...row,
+    product: {
+      ...row.product,
+      productImage: [...row.product.productImage, ...recoveredProductImages],
+    },
     stockState: row.stockStage,
     saleState: row.saleStage,
     serviceState: row.serviceStage,

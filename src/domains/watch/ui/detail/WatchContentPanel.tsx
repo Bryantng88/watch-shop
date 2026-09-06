@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, Copy, FileText, Lock } from "lucide-react";
+import { Check, Copy, FileText } from "lucide-react";
 import { Button } from "@/domains/shared/ui/form/fields";
 import { SectionCard, SectionEmpty } from "./shared";
 import { buildPostText, buildStorefrontProductUrl } from "@/domains/watch/application/generate-watch-content";

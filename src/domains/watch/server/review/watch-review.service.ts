@@ -312,46 +312,6 @@ async function notifyReviewRejected(db: DB, input: {
     });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function notifyFullyApprovedIfReady(db: DB, productId: string) {
-    const pair = await getReviewPair(db, productId);
-    if (!pair?.content || !pair?.image) return;
-
-    if (
-        pair.content.status !== "APPROVED" ||
-        pair.image.status !== "APPROVED"
-    ) {
-        return;
-    }
-
-    const userIds = Array.from(
-        new Set(
-            [pair.content.submittedById, pair.image.submittedById].filter(
-                (userId): userId is string => Boolean(userId),
-            ),
-        ),
-    );
-
-    if (!userIds.length) return;
-
-    const notifications: Prisma.NotificationCreateManyInput[] = userIds.map((userId) => ({
-            userId,
-            type: "WATCH_REVIEW_APPROVED",
-            title: "Watch đã được duyệt hoàn toàn",
-            message: `${pair.watch.product.title || "Watch"} đã được duyệt cả content và hình ảnh.`,
-            priority: "NORMAL",
-            metadata: {
-                route: `/admin/watches/${productId}`,
-                productId,
-            },
-        }));
-
-    await db.notification.createMany({
-        data: notifications,
-        skipDuplicates: false,
-    });
-}
-
 export async function submitWatchReview(
     input: ReviewInput,
     db: DB = prisma,

@@ -12,6 +12,7 @@ import WatchServicePanel from "../ui/detail/WatchServicePanel";
 import WatchTradePanel from "../ui/detail/WatchTradePanel";
 import WatchStrapPanel from "../ui/detail/WatchStrapPanel";
 import { ADMIN_DETAIL_CONTENT_CLASS } from "@/domains/shared/ui/layout/admin-content";
+import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 
 type Props = {
     detail: any;
@@ -26,24 +27,6 @@ function normalizeRole(value: any) {
     return String(value ?? "").toUpperCase();
 }
 
-function buildMediaUrl(value: any) {
-    const raw = String(value ?? "").trim();
-    if (!raw) return null;
-
-    if (
-        raw.startsWith("http://") ||
-        raw.startsWith("https://") ||
-        raw.startsWith("blob:") ||
-        raw.startsWith("data:") ||
-        raw.startsWith("/api/media/sign")
-    ) {
-        return raw;
-    }
-
-    const key = raw.replace(/^\/+/, "");
-    return `/api/media/sign?key=${encodeURIComponent(key)}`;
-}
-
 function normalizeImage(image: any) {
     if (!image) return null;
 
@@ -56,7 +39,7 @@ function normalizeImage(image: any) {
         image.path ??
         null;
 
-    const src = buildMediaUrl(raw);
+    const src = resolveMediaPreviewSrc(raw);
 
     return {
         ...image,

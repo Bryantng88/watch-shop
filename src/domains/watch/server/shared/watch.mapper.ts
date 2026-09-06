@@ -1,30 +1,16 @@
 import { Prisma } from "@prisma/client";
 import type { WatchListComputedItem } from "./watch.types";
 import { WatchDetailModel } from "../../shared/watch.types";
+import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 
 function decimalToString(value: Prisma.Decimal | null | undefined) {
     if (value == null) return null;
     return value.toString();
 }
 
-function buildMediaUrl(fileKey?: string | null) {
-    const key = String(fileKey ?? "").trim();
-    if (!key) return null;
-
-    if (
-        key.startsWith("http://") ||
-        key.startsWith("https://") ||
-        key.startsWith("/")
-    ) {
-        return key;
-    }
-
-    return `/api/media/sign?key=${encodeURIComponent(key)}`;
-}
-
 function mapProductImage(img: any) {
     const fileKey = img?.fileKey ?? null;
-    const url = buildMediaUrl(fileKey);
+    const url = resolveMediaPreviewSrc(fileKey);
 
     return {
         id: img.id,
@@ -173,7 +159,7 @@ export function mapWatchDetail(row: any): WatchDetailModel {
         slug: row.product.slug ?? null,
         status: row.product.status,
         sku: row.product.sku ?? null,
-        primaryImageUrl: buildMediaUrl(row.product.primaryImageUrl),
+        primaryImageUrl: resolveMediaPreviewSrc(row.product.primaryImageUrl),
         storefrontImageKey: row.product.storefrontImageKey ?? null,
         priceVisibility: row.product.priceVisibility ?? "SHOW",
         publishedAt: row.product.publishedAt ?? null,

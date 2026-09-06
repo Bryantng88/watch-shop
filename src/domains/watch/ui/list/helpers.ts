@@ -1,16 +1,13 @@
 import { isWatchServiceReady } from "../../shared/watch-status";
 import type { WatchListCounts, WatchRow } from "./types";
+import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 
 export function formatMoney(value?: number | null) {
     if (value == null || Number.isNaN(value)) return "-";
     return new Intl.NumberFormat("vi-VN").format(value);
 }
 
-export function buildMediaUrl(fileKey?: string | null) {
-    if (!fileKey) return null;
-    if (/^(https?:)?\/\//i.test(fileKey) || fileKey.startsWith("/")) return fileKey;
-    return `/api/media/sign?key=${encodeURIComponent(fileKey)}`;
-}
+export const buildMediaUrl = resolveMediaPreviewSrc;
 
 function pickImages(row: any) {
     if (Array.isArray(row?.product?.productImage))
