@@ -230,7 +230,10 @@ export async function listSelectedWatchMedia(input: {
           ownerType: MediaOwnerType.WATCH,
           ownerId: watch.id,
           ...(input.role ? { role: input.role } : {}),
-          lifecycle: MediaBindingLifecycle.SELECTED,
+          OR: [
+            { lifecycle: MediaBindingLifecycle.SELECTED },
+            { lifecycle: MediaBindingLifecycle.DRAFT, role: input.role ?? MediaRole.GALLERY },
+          ],
         },
         include: {
           mediaObject: {

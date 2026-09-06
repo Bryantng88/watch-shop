@@ -54,6 +54,7 @@ export async function bindMedia(input: BindMediaInput, db: DB = prisma) {
     },
     update: {
       mediaObjectId: input.mediaObjectId,
+      sortOrder: input.sortOrder ?? 0,
       audienceSegment: input.audienceSegment,
       pipelineKey: input.pipelineKey ?? null,
       lifecycle: input.lifecycle ?? MediaBindingLifecycle.ATTACHED,

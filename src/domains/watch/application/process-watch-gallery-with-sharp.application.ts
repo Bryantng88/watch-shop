@@ -1,4 +1,4 @@
-import { MediaRole } from "@prisma/client";
+import { MediaBindingLifecycle, MediaOwnerType, MediaRole } from "@prisma/client";
 
 import {
   mediaRecipeHash,
@@ -80,4 +80,33 @@ export async function processWatchGalleryWithSharpApplication(input: {
     cached: false,
     preset,
   };
+}
+
+export async function applyWatchGallerySharpApplication(input: { productId: string; storageKeys: string[] }) {
+  const productId = String(input.productId ?? "").trim();
+  const storageKeys = Array.from(new Set(input.storageKeys.map((key) => String(key ?? "").trim()).filter(Boolean)));
+  if (!productId || !storageKeys.length) throw new Error("Thiếu ảnh Sharp cần áp dụng.");
+  return prisma.$transaction(async (tx) => {
+    const watch = await tx.watch.findUnique({ where: { productId }, select: { id: true } });
+    if (!watch) throw new Error("Không tìm thấy Watch.");
+    const bindings = await tx.mediaBinding.findMany({
+      where: {
+        ownerType: MediaOwnerType.WATCH,
+        ownerId: watch.id,
+        role: MediaRole.GALLERY,
+        lifecycle: { in: [MediaBindingLifecycle.DRAFT, MediaBindingLifecycle.SELECTED, MediaBindingLifecycle.ATTACHED] },
+        mediaObject: { storageKey: { in: storageKeys } },
+      },
+      include: { mediaObject: { select: { storageKey: true } } },
+    });
+    const byKey = new Map(bindings.map((binding) => [binding.mediaObject.storageKey, binding]));
+    if (storageKeys.some((key) => !byKey.has(key))) throw new Error("Có ảnh Sharp không thuộc Watch hoặc không còn khả dụng.");
+    for (let index = 0; index < storageKeys.length; index += 1) {
+      await tx.mediaBinding.update({
+        where: { id: byKey.get(storageKeys[index])!.id },
+        data: { lifecycle: MediaBindingLifecycle.SELECTED, sortOrder: index },
+      });
+    }
+    return { storageKeys };
+  });
 }

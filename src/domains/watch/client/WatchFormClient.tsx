@@ -1852,6 +1852,9 @@ export default function WatchFormClient({
             imageCount: items.length,
           });
         }}
+        onMediaImagesChange={({ galleryImages, poolImages }) => {
+          updateMedia({ galleryImages: [...galleryImages], poolImages: [...poolImages], imageCount: galleryImages.length });
+        }}
         onReviewStatusChange={(next) => handleReviewStatusChange("image", next)}
         error={mediaError}
       />
@@ -2084,6 +2087,9 @@ export default function WatchFormClient({
                 galleryImages: [...items],
                 imageCount: items.length,
               });
+            }}
+            onMediaImagesChange={({ galleryImages, poolImages }) => {
+              updateMedia({ galleryImages: [...galleryImages], poolImages: [...poolImages], imageCount: galleryImages.length });
             }}
             onReviewStatusChange={(next) =>
               handleReviewStatusChange("image", next)

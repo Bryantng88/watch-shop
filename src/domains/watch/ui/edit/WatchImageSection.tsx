@@ -42,6 +42,7 @@ type Props = {
     galleryImages: PickedMediaItem[];
     onPoolImagesChange: (items: PickedMediaItem[]) => void;
     onGalleryImagesChange: (items: PickedMediaItem[]) => void;
+    onMediaImagesChange?: (input: { poolImages: PickedMediaItem[]; galleryImages: PickedMediaItem[] }) => void;
     error?: string | null;
     productId: string;
     watchId: string;
@@ -118,6 +119,7 @@ export default function WatchImageSection({
     galleryImages,
     onPoolImagesChange,
     onGalleryImagesChange,
+    onMediaImagesChange,
     error,
     productId,
     watchId,
@@ -907,10 +909,25 @@ export default function WatchImageSection({
                 processUrl={`/api/admin/watches/${productId}/gallery/sharp`}
                 images={galleryImages}
                 onClose={() => setGalleryPhotoRoomOpen(false)}
+                onBeforeApply={async (replacements) => {
+                    const storageKeys = Array.from(replacements.values()).map((item) => item.key);
+                    const response = await fetch(`/api/admin/watches/${productId}/gallery/sharp`, {
+                        method: "PUT",
+                        headers: { "content-type": "application/json" },
+                        body: JSON.stringify({ storageKeys }),
+                    });
+                    const json = await response.json().catch(() => ({}));
+                    if (!response.ok) throw new Error(json?.error || "Không thể áp dụng ảnh Sharp.");
+                }}
                 onApply={(replacements) => {
                     const replace = (items: PickedMediaItem[]) => items.map((item) => replacements.get(getMediaKey(item)) ?? item);
-                    onGalleryImagesChange(replace(galleryImages));
-                    onPoolImagesChange(replace(poolImages));
+                    const nextGalleryImages = replace(galleryImages);
+                    const nextPoolImages = replace(poolImages);
+                    if (onMediaImagesChange) onMediaImagesChange({ galleryImages: nextGalleryImages, poolImages: nextPoolImages });
+                    else {
+                        onGalleryImagesChange(nextGalleryImages);
+                        onPoolImagesChange(nextPoolImages);
+                    }
                     notify.success({
                         title: "Đã áp dụng preview Sharp",
                         message: "Hãy kiểm tra thứ tự Gallery và lưu Watch để xác nhận thay đổi.",
