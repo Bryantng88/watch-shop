@@ -16,8 +16,6 @@ const ACTIVE_EDIT_ROOT = "products/edit/active";
 const EDIT_CHOSEN_ROOT = "products/edit/chosen";
 const INLINE_CHOSEN_ROOT = "products/inline/chosen";
 
-const ORGANIZED_CHOSEN_RE =
-    /^products\/(edit|inline)\/chosen\/watch\/[^/]+\/(gallery|inline|cover|thumb)\//;
 
 function nameFromKey(key: string) {
     const normalized = normalizeKey(key);
@@ -89,20 +87,6 @@ function roleFolderFromRole(role?: string | null) {
     return "gallery";
 }
 
-function isFlatChosenImage(key: string) {
-    const normalized = normalizeKey(key);
-    const parentPrefix = parentPrefixFromKey(normalized);
-
-    const isFlatEditChosen = parentPrefix === EDIT_CHOSEN_ROOT;
-    const isFlatInlineChosen = parentPrefix === INLINE_CHOSEN_ROOT;
-
-    return (
-        (isFlatEditChosen || isFlatInlineChosen) &&
-        IMAGE_EXT_RE.test(normalized) &&
-        !ORGANIZED_CHOSEN_RE.test(normalized)
-    );
-}
-
 async function listAllRootActiveFiles() {
     const files: NasMediaFile[] = [];
     let continuationToken: string | undefined;
@@ -127,36 +111,6 @@ async function listAllRootActiveFiles() {
 
         continuationToken = result.nextCursor ?? undefined;
     } while (continuationToken);
-
-    return files;
-}
-
-async function listAllFlatChosenFiles() {
-    const files: NasMediaFile[] = [];
-    const roots = [EDIT_CHOSEN_ROOT, INLINE_CHOSEN_ROOT];
-
-    for (const root of roots) {
-        let continuationToken: string | undefined;
-
-        do {
-            const result = await mediaStorage.list({
-                prefix: `${root}/`,
-                delimiter: "/",
-                maxKeys: 1000,
-                cursor: continuationToken,
-            });
-
-            for (const item of result.items) {
-                const file = toNasFile(item);
-                if (!file) continue;
-                if (!isFlatChosenImage(file.key)) continue;
-
-                files.push(file);
-            }
-
-            continuationToken = result.nextCursor ?? undefined;
-        } while (continuationToken);
-    }
 
     return files;
 }

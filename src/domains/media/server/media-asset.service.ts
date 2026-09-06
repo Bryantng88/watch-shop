@@ -15,7 +15,6 @@ import {
   toPickedMediaAsset,
 } from "./media-asset.utils";
 import {
-  listMediaAssetsRepo,
   listWatchChosenMediaAssetsRepo,
   markMediaAssetArchivedRepo,
   markMissingMediaAssetsNotInKeysRepo,
@@ -164,10 +163,7 @@ export async function moveMediaAssetToWatchChosen(input: {
   sortOrder?: number | null;
 }) {
   const key = normalizeKey(input.key);
-  const fileName = key.split("/").pop() ?? key;
-
   const targetPrefix = `products/edit/chosen/watch/${input.productId}/gallery`;
-  const targetKey = `${targetPrefix}/${fileName}`;
 
   if (key.startsWith(`${targetPrefix}/`)) {
     const asset = await upsertMediaAssetRepo(prisma as any, {

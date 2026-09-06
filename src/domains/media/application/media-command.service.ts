@@ -23,6 +23,26 @@ function fileName(key: string) {
   return key.split("/").pop() ?? key;
 }
 
+export function watchMediaPoolBindingWhere(input: {
+  watchId: string;
+  role?: MediaRole;
+}) {
+  return {
+    ownerType: MediaOwnerType.WATCH,
+    ownerId: input.watchId,
+    ...(input.role ? { role: input.role } : {}),
+    OR: [
+      { lifecycle: MediaBindingLifecycle.SELECTED },
+      {
+        // Processing previews are durable drafts. Keep Gallery drafts visible
+        // after reopening the modal so they can still be selected and saved.
+        lifecycle: MediaBindingLifecycle.DRAFT,
+        role: input.role ?? MediaRole.GALLERY,
+      },
+    ],
+  };
+}
+
 async function watchOwner(productId: string, db: DB = prisma) {
   const watch = await db.watch.findUnique({
     where: { productId },
@@ -226,15 +246,7 @@ export async function listSelectedWatchMedia(input: {
   });
   const bindings = watch
     ? await prisma.mediaBinding.findMany({
-        where: {
-          ownerType: MediaOwnerType.WATCH,
-          ownerId: watch.id,
-          ...(input.role ? { role: input.role } : {}),
-          OR: [
-            { lifecycle: MediaBindingLifecycle.SELECTED },
-            { lifecycle: MediaBindingLifecycle.DRAFT, role: input.role ?? MediaRole.GALLERY },
-          ],
-        },
+        where: watchMediaPoolBindingWhere({ watchId: watch.id, role: input.role }),
         include: {
           mediaObject: {
             select: {

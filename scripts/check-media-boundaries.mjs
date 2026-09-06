@@ -30,6 +30,7 @@ const rules = [
       "src/domains/media/core/media-path.policy.ts",
       "src/domains/media/core/media-path.policy.test.ts",
       "src/domains/watch/shared/photoroom-adjustment.test.ts",
+      "src/lib/media-profile.test.ts",
     ],
   },
   {

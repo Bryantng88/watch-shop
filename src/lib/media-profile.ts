@@ -20,7 +20,13 @@ export function getMediaProfileRoot(profile: MediaProfile) {
 }
 
 export function resolveMediaPreviewSrc(value?: string | null) {
-    if (!value) return null;
-    if (value.startsWith("http") || value.startsWith("/") || value.startsWith("data:") || value.startsWith("blob:")) return value;
-    return `/api/media/sign?key=${encodeURIComponent(value)}`;
+    const normalized = String(value ?? "").trim();
+    if (!normalized) return null;
+    if (
+        /^(https?:)?\/\//i.test(normalized) ||
+        normalized.startsWith("/") ||
+        normalized.startsWith("data:") ||
+        normalized.startsWith("blob:")
+    ) return normalized;
+    return `/api/media/sign?key=${encodeURIComponent(normalized.replace(/^\/+/, ""))}`;
 }
