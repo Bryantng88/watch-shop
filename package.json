@@ -64,7 +64,7 @@
     "local:seed-admin": "tsx scripts/seed-local-admin.ts",
     "local:seed-watch-ai-media": "tsx scripts/seed-local-watch-ai-media.ts",
     "storefront:seed-acceptance-media": "tsx scripts/seed-storefront-acceptance-media.ts",
-    "gen": "prisma generate && node scripts/trim-zod.js"
+    "gen": "prisma generate"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
