@@ -30,4 +30,8 @@ const inventory = candidates.filter(existsSync).map((candidate) => {
 
 const activePublicLegacyImports = inventory.flatMap((item) => item.importers.filter((path) => path.startsWith("src/app/(public)/") || path.startsWith("src/domains/storefront/")));
 assert.deepEqual(activePublicLegacyImports, [], "New storefront must not import legacy candidates");
-console.log(JSON.stringify({ ok: true, deletionAuthorized: false, inventory }, null, 2));
+console.log(JSON.stringify({
+  ok: true,
+  legacyCandidatesPresent: inventory.length,
+  inventory,
+}, null, 2));
