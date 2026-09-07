@@ -309,10 +309,12 @@ export default function WatchBasicSection({
   const [strapMessage, setStrapMessage] = useState("");
   const [aiPending, setAiPending] = useState(false);
   const [aiMessage, setAiMessage] = useState("");
+  const [suggestedBrandName, setSuggestedBrandName] = useState("");
 
   async function fillMissingSpecsWithAI() {
     setAiPending(true);
     setAiMessage("");
+    setSuggestedBrandName("");
     try {
       const imageKeys = [
         media.inlineImage?.key,
@@ -335,7 +337,10 @@ export default function WatchBasicSection({
         );
         if (matchedBrand) {
           basicPatch.brandId = matchedBrand.id;
+          setSuggestedBrandName("");
           filled += 1;
+        } else {
+          setSuggestedBrandName(suggestion.brandName.trim());
         }
       }
       const fillBasic = (key: "yearText" | "movementType" | "style") => {
@@ -508,8 +513,13 @@ export default function WatchBasicSection({
             <WatchBrandField
               value={values.brandId}
               brands={brands}
+              suggestedName={suggestedBrandName}
               onBrandsChange={onBrandsChange}
-              onChange={(brandId) => onChange({ brandId })}
+              onChange={(brandId) => {
+                setSuggestedBrandName("");
+                onChange({ brandId });
+              }}
+              onSuggestionHandled={() => setSuggestedBrandName("")}
             />
           </div>
 

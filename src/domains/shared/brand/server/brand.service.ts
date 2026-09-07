@@ -41,15 +41,23 @@ export async function createBrandQuick(input: CreateBrandInput) {
     const existing = await findBrandByNameInsensitive(name);
 
     if (existing) {
-        throw new Error(`Brand "${existing.name}" đã tồn tại.`);
+        return {
+            ...existing,
+            created: false,
+        };
     }
 
     const slug = await buildUniqueSlug(name);
 
-    return createBrandRecord({
+    const created = await createBrandRecord({
         name,
         slug,
     });
+
+    return {
+        ...created,
+        created: true,
+    };
 }
 
 export async function getActiveBrandOptions() {

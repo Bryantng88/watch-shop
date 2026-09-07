@@ -18,8 +18,10 @@ type BrandOption = {
 type Props = {
     value: string;
     brands: BrandOption[];
+    suggestedName?: string;
     onBrandsChange: (brands: BrandOption[]) => void;
     onChange: (brandId: string) => void;
+    onSuggestionHandled?: () => void;
 };
 
 function mergeBrands(current: BrandOption[], incoming: BrandOption[]) {
@@ -42,8 +44,10 @@ function errorMessage(error: unknown, fallback: string) {
 export default function WatchBrandField({
     value,
     brands,
+    suggestedName = "",
     onBrandsChange,
     onChange,
+    onSuggestionHandled,
 }: Props) {
     const notify = useNotify();
     const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -108,8 +112,8 @@ export default function WatchBrandField({
         setOpen(false);
     };
 
-    const handleCreate = () => {
-        const cleanName = name.trim();
+    const handleCreate = (suggestedBrandName?: string) => {
+        const cleanName = (suggestedBrandName ?? name).trim();
         if (!cleanName) return;
 
         startCreateTransition(async () => {
@@ -122,9 +126,12 @@ export default function WatchBrandField({
                 setCreating(false);
                 setQuery("");
                 setOpen(false);
+                onSuggestionHandled?.();
                 notify.success({
-                    title: "Đã tạo brand",
-                    message: `Brand ${brand.name} đã được chọn cho watch này.`,
+                    title: brand.created ? "Đã tạo brand" : "Đã tìm thấy brand",
+                    message: brand.created
+                        ? `Brand ${brand.name} đã được tạo và chọn cho watch này.`
+                        : `Brand ${brand.name} đã tồn tại và được chọn cho watch này.`,
                 });
             } catch (error) {
                 notify.error({
@@ -165,6 +172,30 @@ export default function WatchBrandField({
                 </span>
                 <Search className="h-4 w-4 shrink-0 text-slate-400" />
             </button>
+
+            {!value && suggestedName.trim() ? (
+                <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+                    <div className="text-xs font-medium text-amber-700">
+                        AI nhận diện Brand
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-sm font-semibold text-slate-900">
+                            {suggestedName.trim()}
+                        </span>
+                        <Button
+                            type="button"
+                            disabled={createPending}
+                            onClick={() => handleCreate(suggestedName)}
+                        >
+                            <Plus className="mr-1.5 h-4 w-4" />
+                            Chọn / tạo Brand
+                        </Button>
+                    </div>
+                    <div className="mt-1 text-xs text-amber-700/80">
+                        Hệ thống sẽ chọn Brand có sẵn nếu trùng tên, chỉ tạo mới khi chưa tồn tại.
+                    </div>
+                </div>
+            ) : null}
 
             {open ? (
                 <div className="absolute left-0 right-0 z-30 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
@@ -225,7 +256,7 @@ export default function WatchBrandField({
                         <Button
                             type="button"
                             disabled={createPending || !name.trim()}
-                            onClick={handleCreate}
+                            onClick={() => handleCreate()}
                         >
                             {createPending ? "Đang thêm" : "Thêm"}
                         </Button>

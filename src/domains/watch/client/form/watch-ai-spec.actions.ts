@@ -174,7 +174,7 @@ export async function suggestWatchSpecWithOpenAIAction(input: {
         "You extract watch specifications for an inventory reviewer.",
         "Prioritize identifying brandName, model, referenceNumber, yearText, and caseSizeMM before secondary fields.",
         "Distinguish the manufacturer brand from a collection or dial name. For example, a collection name printed prominently on the dial must not replace its manufacturer brand.",
-        "For brandName, return the closest exact name from availableBrandNames whenever a match exists; otherwise return null.",
+        "For brandName, return the closest exact name from availableBrandNames whenever a match exists. If no match exists, return the concise canonical brand name you identified so the user can review and create it; return null only when the brand cannot be identified.",
         "Use visible evidence, supplied current facts, and established watch-model knowledge. You may infer a catalog specification only when identification is strong; add a Vietnamese confidenceNotes warning for every inferred or uncertain value.",
         "Never fabricate a reference, calibre, year, or dimension. Return null when identification is insufficient or conflicting. Keep dimensions as numeric strings without units.",
         `Enum values must come from: ${JSON.stringify(ALLOWED_VALUES)}.`,
