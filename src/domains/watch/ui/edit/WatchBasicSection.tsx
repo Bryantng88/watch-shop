@@ -310,11 +310,13 @@ export default function WatchBasicSection({
   const [aiPending, setAiPending] = useState(false);
   const [aiMessage, setAiMessage] = useState("");
   const [suggestedBrandName, setSuggestedBrandName] = useState("");
+  const [aiSources, setAiSources] = useState<Array<{ title: string; url: string }>>([]);
 
   async function fillMissingSpecsWithAI() {
     setAiPending(true);
     setAiMessage("");
     setSuggestedBrandName("");
+    setAiSources([]);
     try {
       const imageKeys = [
         media.inlineImage?.key,
@@ -367,6 +369,7 @@ export default function WatchBasicSection({
       }
       if (Object.keys(basicPatch).length) onChange(basicPatch);
       if (Object.keys(specPatch).length) onSpecChange(specPatch);
+      setAiSources(suggestion.researchSources);
       const reviewNote = suggestion.confidenceNotes.length
         ? ` Cần kiểm tra: ${suggestion.confidenceNotes.join("; ")}`
         : "";
@@ -499,7 +502,23 @@ export default function WatchBasicSection({
           </div>
           {aiMessage ? (
             <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-800">
-              {aiMessage}
+              <div>{aiMessage}</div>
+              {aiSources.length ? (
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                  <span className="font-semibold">Nguồn đối chiếu:</span>
+                  {aiSources.map((source) => (
+                    <a
+                      key={source.url}
+                      href={source.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="max-w-64 truncate underline underline-offset-2"
+                    >
+                      {source.title}
+                    </a>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>

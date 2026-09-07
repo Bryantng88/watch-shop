@@ -116,8 +116,16 @@ async function imageDataUrl(key: string) {
 
 type OpenAIResponsePayload = {
   output_text?: unknown;
-  output?: Array<{ content?: Array<{ type?: unknown; text?: unknown }> }>;
+  output?: Array<{
+    content?: Array<{ type?: unknown; text?: unknown }>;
+    action?: { sources?: Array<{ title?: unknown; url?: unknown }> };
+  }>;
   error?: { message?: unknown };
+};
+
+export type AiWatchSpecResearchSource = {
+  title: string;
+  url: string;
 };
 
 function extractOutputText(response: OpenAIResponsePayload | null) {
@@ -130,6 +138,20 @@ function extractOutputText(response: OpenAIResponsePayload | null) {
     }
   }
   return "";
+}
+
+function extractResearchSources(response: OpenAIResponsePayload | null) {
+  const byUrl = new Map<string, AiWatchSpecResearchSource>();
+  for (const item of response?.output ?? []) {
+    for (const source of item.action?.sources ?? []) {
+      if (typeof source.url !== "string" || !source.url.startsWith("http")) continue;
+      const title = typeof source.title === "string" && source.title.trim()
+        ? source.title.trim()
+        : new URL(source.url).hostname;
+      byUrl.set(source.url, { title, url: source.url });
+    }
+  }
+  return Array.from(byUrl.values()).slice(0, 5);
 }
 
 export async function suggestWatchSpecWithOpenAIAction(input: {
@@ -170,12 +192,17 @@ export async function suggestWatchSpecWithOpenAIAction(input: {
     body: JSON.stringify({
       model,
       store: false,
+      tools: [{ type: "web_search" }],
+      tool_choice: "required",
+      include: ["web_search_call.action.sources"],
       instructions: [
         "You extract watch specifications for an inventory reviewer.",
+        "First inspect every supplied image for logos, dial text, case-back markings, reference fragments, calibre markings, and distinctive design features. Then search the web using those clues before producing the final JSON.",
+        "Cross-check candidate identity and catalog specifications against at least two independent sources when possible. Prefer manufacturer, catalog, auction archive, and established watch database sources.",
         "Prioritize identifying brandName, model, referenceNumber, yearText, and caseSizeMM before secondary fields.",
         "Distinguish the manufacturer brand from a collection or dial name. For example, a collection name printed prominently on the dial must not replace its manufacturer brand.",
         "For brandName, return the closest exact name from availableBrandNames whenever a match exists. If no match exists, return the concise canonical brand name you identified so the user can review and create it; return null only when the brand cannot be identified.",
-        "Use visible evidence, supplied current facts, and established watch-model knowledge. You may infer a catalog specification only when identification is strong; add a Vietnamese confidenceNotes warning for every inferred or uncertain value.",
+        "Use visible evidence, supplied current facts, and web research. You may use a catalog specification only when the matched reference or model variant is strong; add a Vietnamese confidenceNotes warning for every inferred, approximate, or conflicting value.",
         "Never fabricate a reference, calibre, year, or dimension. Return null when identification is insufficient or conflicting. Keep dimensions as numeric strings without units.",
         `Enum values must come from: ${JSON.stringify(ALLOWED_VALUES)}.`,
         "confidenceNotes must be short Vietnamese warnings for every uncertain or inferred value.",
@@ -210,5 +237,8 @@ export async function suggestWatchSpecWithOpenAIAction(input: {
 
   const outputText = extractOutputText(payload);
   if (!outputText) throw new Error("OpenAI không trả về bản nháp thông số.");
-  return aiSpecSchema.parse(JSON.parse(outputText));
+  return {
+    ...aiSpecSchema.parse(JSON.parse(outputText)),
+    researchSources: extractResearchSources(payload),
+  };
 }
