@@ -1622,6 +1622,7 @@ async function loadMediaBoardLive(input: {
             sku: true,
             primaryImageUrl: true,
             postTargets: {
+              orderBy: { createdAt: "asc" },
               select: {
                 postTarget: {
                   select: { id: true, name: true, platform: true },

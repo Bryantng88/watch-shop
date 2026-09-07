@@ -26,7 +26,7 @@ import type {
 } from "./projection.types";
 
 export const MEDIA_OPERATION_BOARD_PROJECTION_KEY = "media-operation-board";
-export const MEDIA_OPERATION_BOARD_PROJECTION_VERSION = 11;
+export const MEDIA_OPERATION_BOARD_PROJECTION_VERSION = 12;
 const MEDIA_OPERATION_BOARD_EVENTS = [
   "watch.created",
   "watch.media.photoshoot.requested",
@@ -208,6 +208,7 @@ export async function buildMediaOperationBoardRow(
             sku: true,
             primaryImageUrl: true,
             postTargets: {
+              orderBy: { createdAt: "asc" },
               select: {
                 postTarget: {
                   select: { id: true, name: true, platform: true },
