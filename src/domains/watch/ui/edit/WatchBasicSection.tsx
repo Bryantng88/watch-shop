@@ -204,6 +204,14 @@ function getBrandName(brandId: string, brands: SimpleOption[]) {
   return brands.find((brand) => brand.id === brandId)?.name ?? "";
 }
 
+function normalizeBrandName(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "")
+    .toLowerCase();
+}
+
 function FormSection({
   index,
   title,
@@ -314,11 +322,22 @@ export default function WatchBasicSection({
       const suggestion = await suggestWatchSpecWithOpenAIAction({
         current: { basic: values, spec },
         brandName,
+        availableBrandNames: brands.map((brand) => brand.name),
         imageKeys,
       });
       const basicPatch: Partial<WatchFormValues["basic"]> = {};
       const specPatch: Partial<WatchFormValues["spec"]> = {};
       let filled = 0;
+      if (!values.brandId && suggestion.brandName) {
+        const suggestedBrand = normalizeBrandName(suggestion.brandName);
+        const matchedBrand = brands.find(
+          (brand) => normalizeBrandName(brand.name) === suggestedBrand,
+        );
+        if (matchedBrand) {
+          basicPatch.brandId = matchedBrand.id;
+          filled += 1;
+        }
+      }
       const fillBasic = (key: "yearText" | "movementType" | "style") => {
         const next = suggestion[key];
         if (!values[key] && next) { basicPatch[key] = next; filled += 1; }

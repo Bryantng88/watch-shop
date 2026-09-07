@@ -12,6 +12,7 @@ import type { WatchFormValues } from "./watch-form.types";
 const nullableString = z.string().nullable();
 
 const aiSpecSchema = z.object({
+  brandName: nullableString,
   model: nullableString,
   referenceNumber: nullableString,
   nickname: nullableString,
@@ -47,6 +48,7 @@ const jsonSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
+    brandName: { type: ["string", "null"] },
     model: { type: ["string", "null"] },
     referenceNumber: { type: ["string", "null"] },
     nickname: { type: ["string", "null"] },
@@ -76,7 +78,7 @@ const jsonSchema = {
     confidenceNotes: { type: "array", items: { type: "string" } },
   },
   required: [
-    "model", "referenceNumber", "nickname", "yearText", "movementType",
+    "brandName", "model", "referenceNumber", "nickname", "yearText", "movementType",
     "style", "caseShape", "caseSizeMM", "lugToLugMM", "thicknessMM",
     "crystal", "dialColor", "calibre", "materialProfile",
     "primaryCaseMaterial", "secondaryCaseMaterial", "goldTreatment",
@@ -133,12 +135,13 @@ function extractOutputText(response: OpenAIResponsePayload | null) {
 export async function suggestWatchSpecWithOpenAIAction(input: {
   current: Pick<WatchFormValues, "basic" | "spec">;
   brandName: string;
+  availableBrandNames: string[];
   imageKeys: string[];
 }) {
   await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
 
   const apiKey = String(process.env.OPENAI_API_KEY ?? "").trim();
-  const model = String(process.env.OPENAI_PRODUCT_CONTENT_MODEL ?? "gpt-4o-mini").trim();
+  const model = String(process.env.OPENAI_PRODUCT_CONTENT_MODEL ?? "").trim() || "gpt-4o-mini";
   if (!apiKey) throw new Error("OpenAI chưa được cấu hình (thiếu OPENAI_API_KEY).");
 
   const keys = cleanKeys(input.imageKeys);
@@ -147,6 +150,10 @@ export async function suggestWatchSpecWithOpenAIAction(input: {
   const images = await Promise.all(keys.map(imageDataUrl));
   const currentFacts = {
     brandName: input.brandName,
+    availableBrandNames: input.availableBrandNames
+      .map((name) => String(name).trim())
+      .filter(Boolean)
+      .slice(0, 200),
     title: input.current.basic.title,
     yearText: input.current.basic.yearText,
     movementType: input.current.basic.movementType,
@@ -165,8 +172,11 @@ export async function suggestWatchSpecWithOpenAIAction(input: {
       store: false,
       instructions: [
         "You extract watch specifications for an inventory reviewer.",
-        "Use only visible evidence and the supplied current facts. Never invent a reference, calibre, year, dimensions, material, crystal, water resistance, or power reserve.",
-        "Return null when evidence is insufficient. Keep dimensions as numeric strings without units.",
+        "Prioritize identifying brandName, model, referenceNumber, yearText, and caseSizeMM before secondary fields.",
+        "Distinguish the manufacturer brand from a collection or dial name. For example, a collection name printed prominently on the dial must not replace its manufacturer brand.",
+        "For brandName, return the closest exact name from availableBrandNames whenever a match exists; otherwise return null.",
+        "Use visible evidence, supplied current facts, and established watch-model knowledge. You may infer a catalog specification only when identification is strong; add a Vietnamese confidenceNotes warning for every inferred or uncertain value.",
+        "Never fabricate a reference, calibre, year, or dimension. Return null when identification is insufficient or conflicting. Keep dimensions as numeric strings without units.",
         `Enum values must come from: ${JSON.stringify(ALLOWED_VALUES)}.`,
         "confidenceNotes must be short Vietnamese warnings for every uncertain or inferred value.",
       ].join(" "),
