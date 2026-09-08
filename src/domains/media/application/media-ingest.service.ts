@@ -5,6 +5,7 @@ import { S3_BUCKET } from "@/server/s3";
 import { normalizeKey } from "@/server/lib/storage-key";
 import { mediaStorage } from "../storage";
 import { mediaPathPolicy } from "../core/media-path.policy";
+import { isLegacyWatchMediaSource } from "../core/media-source-path";
 import { executeMediaMove } from "./media-operation.service";
 
 /**
@@ -71,10 +72,7 @@ export async function ingestSelectedMedia(input: {
     return registerExistingMediaObject({ storageKey: sourceKey });
   }
 
-  const isLegacySource =
-    sourceKey.startsWith("products/edit/active/") ||
-    sourceKey.startsWith("products/inline/active/") ||
-    sourceKey.startsWith("products/cover/active/");
+  const isLegacySource = isLegacyWatchMediaSource(sourceKey);
   if (!mediaPathPolicy.isSource(sourceKey) && !isLegacySource) {
     return registerExistingMediaObject({ storageKey: sourceKey });
   }
