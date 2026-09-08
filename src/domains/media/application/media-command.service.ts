@@ -30,16 +30,10 @@ export function watchMediaPoolBindingWhere(input: {
   return {
     ownerType: MediaOwnerType.WATCH,
     ownerId: input.watchId,
-    ...(input.role ? { role: input.role } : {}),
-    OR: [
-      { lifecycle: MediaBindingLifecycle.SELECTED },
-      {
-        // Processing previews are durable drafts. Keep Gallery drafts visible
-        // after reopening the modal so they can still be selected and saved.
-        lifecycle: MediaBindingLifecycle.DRAFT,
-        role: input.role ?? MediaRole.GALLERY,
-      },
-    ],
+    // A watch pool is role-specific and durable until an explicit disposition.
+    // Gallery selection changes lifecycle, but never removes pool membership.
+    role: input.role ?? MediaRole.GALLERY,
+    lifecycle: { not: MediaBindingLifecycle.REMOVED },
   };
 }
 
@@ -203,37 +197,6 @@ export async function attachIngestedWatchMedia(
   }
 
   return results;
-}
-
-export async function releaseWatchMediaNotIn(input: {
-  productId: string;
-  role: MediaRole;
-  keepStorageKeys: string[];
-}, db: DB = prisma) {
-  const watch = await watchOwner(input.productId, db);
-  const keep = new Set(input.keepStorageKeys.map(normalizeKey).filter(Boolean));
-  const bindings = await db.mediaBinding.findMany({
-    where: {
-      ownerType: MediaOwnerType.WATCH,
-      ownerId: watch.id,
-      role: input.role,
-      // A Gallery item can move through DRAFT -> SELECTED -> ATTACHED (and
-      // later approval/publish states). When the saved Gallery no longer
-      // contains it, every still-active binding must be retired; limiting
-      // this reconciliation to SELECTED leaves replaced ATTACHED files
-      // orphaned in the watch's active Media Core view.
-      lifecycle: { not: MediaBindingLifecycle.REMOVED },
-    },
-    include: { mediaObject: { select: { storageKey: true } } },
-  });
-  const removed = bindings.filter((binding) => !keep.has(binding.mediaObject.storageKey));
-  if (removed.length) {
-    await db.mediaBinding.updateMany({
-      where: { id: { in: removed.map((binding) => binding.id) } },
-      data: { lifecycle: MediaBindingLifecycle.REMOVED },
-    });
-  }
-  return removed.map((binding) => binding.mediaObject.storageKey);
 }
 
 export async function listSelectedWatchMedia(input: {

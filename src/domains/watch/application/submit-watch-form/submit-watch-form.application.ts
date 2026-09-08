@@ -1,5 +1,5 @@
 import { prisma, type DB } from "@/server/db/client";
-import { attachIngestedWatchMedia, cleanupRemovedWatchMedia } from "@/domains/media/application";
+import { attachIngestedWatchMedia } from "@/domains/media/application";
 import { notifyUsersByRole } from "@/app/(admin)/admin/notifications/notification.service";
 
 import { MediaRole, WatchSpecStatus } from "@prisma/client";
@@ -11,7 +11,7 @@ import {
 import {
     selectWatchGalleryImages,
     selectWatchPoolImages,
-    releaseRemovedWatchPoolImagesToActive,
+    mergeWatchMediaPoolItems,
 } from "../../server/media";
 import { updateWatchPricingWithDiff } from "../../server/pricing";
 import {
@@ -702,13 +702,12 @@ export async function submitWatchFormApplication(
         }
     });
 
-    const galleryOriginalKeys = new Set(
-        requestedGalleryImages.map(mediaKey).filter(Boolean),
+    // The chosen pool is durable. Gallery selection is an overlay on that
+    // pool, not a transfer that consumes or deletes the source originals.
+    const remainingPoolImages = mergeWatchMediaPoolItems(
+        requestedPoolImages,
+        requestedGalleryImages,
     );
-    const remainingPoolImages = requestedPoolImages.filter((item) => {
-        const key = mediaKey(item);
-        return key && !galleryOriginalKeys.has(key);
-    });
 
     if (isMediaWorkspaceSave && imagesChanged) {
         await assertMediaWorkspaceAssetsAvailable({
@@ -767,10 +766,6 @@ export async function submitWatchFormApplication(
                     sortOrder: image.sortOrder,
                 })),
             }, tx);
-            await releaseRemovedWatchPoolImagesToActive({
-                productId,
-                keepItems: [...normalizedPoolImages, ...normalizedGalleryImages],
-            }, tx);
             await ensureWatchInlineImageFromFirstGalleryRepo(tx, {
                 productId,
             });
@@ -805,13 +800,6 @@ export async function submitWatchFormApplication(
                 hasGalleryImages,
             }),
         );
-    }
-    if (imagesChanged) {
-        try {
-            await cleanupRemovedWatchMedia({ watchId: current.id, roles: [MediaRole.GALLERY] });
-        } catch (error) {
-            console.error("[media-core] deferred Gallery cleanup failed", { productId, error });
-        }
     }
 
     const pricingResult = context.canEditPrice

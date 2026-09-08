@@ -1,9 +1,6 @@
-import { MediaRole } from "@prisma/client";
 import {
     ingestExistingMediaForWatch,
-    releaseWatchMediaNotIn,
 } from "@/domains/media/application";
-import { prisma, type DB } from "@/server/db/client";
 
 import {
     dedupeMediaItems,
@@ -11,6 +8,13 @@ import {
     mediaKey,
     type WatchFormMediaItem,
 } from "../shared/watch-form-value";
+
+export function mergeWatchMediaPoolItems(
+    poolItems: WatchFormMediaItem[],
+    galleryItems: WatchFormMediaItem[],
+) {
+    return dedupeMediaItems([...poolItems, ...galleryItems]);
+}
 
 export async function selectWatchPoolImages(
     items: WatchFormMediaItem[],
@@ -37,7 +41,6 @@ export async function selectWatchPoolImages(
 
     return result;
 }
-
 export async function selectWatchGalleryImages(
     items: WatchFormMediaItem[],
 ) {
@@ -63,19 +66,4 @@ export async function selectWatchGalleryImages(
     }
 
     return result;
-}
-
-export async function releaseRemovedWatchPoolImagesToActive(input: {
-    productId: string;
-    keepItems: WatchFormMediaItem[];
-}, db: DB = prisma) {
-    const keepStorageKeys = dedupeMediaItems(input.keepItems)
-        .map(mediaKey)
-        .filter(Boolean);
-
-    return releaseWatchMediaNotIn({
-        productId: input.productId,
-        role: MediaRole.GALLERY,
-        keepStorageKeys,
-    }, db);
 }

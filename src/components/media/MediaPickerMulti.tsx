@@ -51,6 +51,8 @@ type Props = {
     selectedDescription?: string;
     contextImage?: ContextImage | null;
     browserPresentation?: "dialog" | "inline";
+    onRecycleChosen?: (keys: string[]) => Promise<string[]>;
+    onDeleteChosen?: (keys: string[]) => Promise<string[]>;
 };
 
 type PreviewState = {
@@ -168,6 +170,9 @@ function ChosenGrid({
     maxFinalSelection,
     onPreview,
     onPreviewClose,
+    managementSelectedKeys,
+    onToggleManagement,
+    managementEnabled,
 }: {
     items: PickedMediaItem[];
     selectedItems: PickedMediaItem[];
@@ -176,6 +181,9 @@ function ChosenGrid({
     maxFinalSelection?: number;
     onPreview: (item: PickedMediaItem) => void;
     onPreviewClose: () => void;
+    managementSelectedKeys: Set<string>;
+    onToggleManagement: (key: string) => void;
+    managementEnabled: boolean;
 }) {
     const selectedKeySet = new Set(selectedItems.map((item) => item.key));
 
@@ -195,6 +203,7 @@ function ChosenGrid({
                         {items.map((item) => {
                             const src = getImageSrc(item);
                             const active = selectedKeySet.has(item.key);
+                            const managementSelected = managementSelectedKeys.has(item.key);
                             const label = getLabel(item);
 
                             return (
@@ -207,6 +216,16 @@ function ChosenGrid({
                                             : "border-slate-200",
                                     ].join(" ")}
                                 >
+                                    {managementEnabled && !active ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => onToggleManagement(item.key)}
+                                            className={`absolute left-2 top-2 z-10 grid h-6 w-6 place-items-center rounded-md border text-xs font-bold ${managementSelected ? "border-rose-500 bg-rose-500 text-white" : "border-white bg-black/55 text-white"}`}
+                                            aria-label={managementSelected ? `Bỏ chọn quản lý ${label}` : `Chọn quản lý ${label}`}
+                                        >
+                                            {managementSelected ? "✓" : ""}
+                                        </button>
+                                    ) : null}
                                     <button
                                         type="button"
                                         onClick={() => onPreview(item)}
@@ -251,7 +270,7 @@ function ChosenGrid({
                                                 {active ? "Đã chọn" : "Chọn"}
                                             </button>
 
-                                            <button
+                                            {!managementEnabled ? <button
                                                 type="button"
                                                 onClick={(event) => {
                                                     event.preventDefault();
@@ -262,7 +281,7 @@ function ChosenGrid({
                                                 className="rounded-full bg-black px-2 py-1 text-[11px] text-white"
                                             >
                                                 X
-                                            </button>
+                                            </button> : null}
                                         </div>
                                     </div>
                                 </div>
@@ -420,9 +439,13 @@ export default function MediaPickerMulti({
     selectedDescription,
     contextImage,
     browserPresentation = "dialog",
+    onRecycleChosen,
+    onDeleteChosen,
 }: Props) {
     const [open, setOpen] = React.useState(false);
     const [preview, setPreview] = React.useState<PreviewState>(null);
+    const [managementSelectedKeys, setManagementSelectedKeys] = React.useState<Set<string>>(new Set());
+    const [managementPending, setManagementPending] = React.useState(false);
     const chosenItems = React.useMemo(
         () => normalizeItems(chosenValue),
         [chosenValue]
@@ -541,6 +564,48 @@ export default function MediaPickerMulti({
         },
         [onSelectedChange, selectedItems],
     );
+    const managementEnabled = Boolean(onRecycleChosen || onDeleteChosen);
+    const manageableKeySet = React.useMemo(() => {
+        const activeKeys = new Set(selectedItems.map((item) => item.key));
+        return new Set(chosenItems.map((item) => item.key).filter((key) => !activeKeys.has(key)));
+    }, [chosenItems, selectedItems]);
+    React.useEffect(() => {
+        setManagementSelectedKeys((current) => {
+            const next = new Set(Array.from(current).filter((key) => manageableKeySet.has(key)));
+            return next.size === current.size ? current : next;
+        });
+    }, [manageableKeySet]);
+    const handleToggleManagement = React.useCallback((key: string) => {
+        if (!manageableKeySet.has(key)) return;
+        setManagementSelectedKeys((current) => {
+            const next = new Set(current);
+            if (next.has(key)) next.delete(key);
+            else next.add(key);
+            return next;
+        });
+    }, [manageableKeySet]);
+    const handleDisposition = React.useCallback(async (
+        disposition: "RECYCLE" | "DELETE",
+    ) => {
+        const keys = Array.from(managementSelectedKeys).filter((key) => manageableKeySet.has(key));
+        if (!keys.length || managementPending) return;
+        if (disposition === "DELETE" && !window.confirm(`Xóa vật lý ${keys.length} ảnh? Thao tác này không thể hoàn tác.`)) return;
+        const handler = disposition === "RECYCLE" ? onRecycleChosen : onDeleteChosen;
+        if (!handler) return;
+        setManagementPending(true);
+        try {
+            const succeededKeys = await handler(keys);
+            const succeeded = new Set(succeededKeys);
+            onChosenChange(chosenItems.filter((item) => !succeeded.has(item.key)));
+            setManagementSelectedKeys((current) => new Set(
+                Array.from(current).filter((key) => !succeeded.has(key)),
+            ));
+        } catch (error) {
+            window.alert(error instanceof Error ? error.message : "Không thể xử lý ảnh trong kho tạm.");
+        } finally {
+            setManagementPending(false);
+        }
+    }, [chosenItems, manageableKeySet, managementPending, managementSelectedKeys, onChosenChange, onDeleteChosen, onRecycleChosen]);
     return (
         <div className="space-y-4">
             <ImagePreviewDialog
@@ -585,6 +650,23 @@ export default function MediaPickerMulti({
                 </div>
             </div>
 
+            {managementEnabled ? (
+                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <span className="text-xs font-medium text-slate-600">Đã chọn quản lý: {managementSelectedKeys.size}</span>
+                    {onRecycleChosen ? (
+                        <button type="button" disabled={!managementSelectedKeys.size || managementPending} onClick={() => void handleDisposition("RECYCLE")} className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 disabled:opacity-40">
+                            Đưa vào Recycle
+                        </button>
+                    ) : null}
+                    {onDeleteChosen ? (
+                        <button type="button" disabled={!managementSelectedKeys.size || managementPending} onClick={() => void handleDisposition("DELETE")} className="rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 disabled:opacity-40">
+                            Xóa vật lý
+                        </button>
+                    ) : null}
+                    <span className="text-[11px] text-slate-500">Ảnh đang dùng cho watch không thể chọn ở đây.</span>
+                </div>
+            ) : null}
+
             {browserPresentation === "inline" ? (
                 <MediaBrowserDialog
                     open={open}
@@ -613,6 +695,9 @@ export default function MediaPickerMulti({
                 maxFinalSelection={maxFinalSelection}
                 onPreview={handlePreview}
                 onPreviewClose={handlePreviewClose}
+                managementSelectedKeys={managementSelectedKeys}
+                onToggleManagement={handleToggleManagement}
+                managementEnabled={managementEnabled}
             />
 
             <SelectedStrip

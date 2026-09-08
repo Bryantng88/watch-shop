@@ -101,18 +101,6 @@ function getMediaKey(item: PickedMediaItem) {
     ).trim();
 }
 
-function dedupeMediaItems(items: PickedMediaItem[]) {
-    const map = new Map<string, PickedMediaItem>();
-
-    for (const item of items) {
-        const key = getMediaKey(item);
-        if (!key) continue;
-        map.set(key, item);
-    }
-
-    return Array.from(map.values());
-}
-
 export default function WatchImageSection({
     sectionMode = "combined",
     poolImages,
@@ -304,23 +292,48 @@ export default function WatchImageSection({
         const ok = await ensureEditable();
         if (!ok) return;
 
-        const nextGalleryKeys = new Set(items.map(getMediaKey).filter(Boolean));
-
-        const removedFromGallery = galleryImages.filter((item) => {
-            const key = getMediaKey(item);
-            return key && !nextGalleryKeys.has(key);
-        });
-
-        const nextPoolImages = dedupeMediaItems([
-            ...poolImages.filter((item) => {
-                const key = getMediaKey(item);
-                return key && !nextGalleryKeys.has(key);
-            }),
-            ...removedFromGallery,
-        ]);
-
         onGalleryImagesChange(items);
-        onPoolImagesChange(nextPoolImages);
+    };
+
+    const disposePoolImages = async (
+        storageKeys: string[],
+        disposition: "RECYCLE" | "DELETE",
+    ) => {
+        const editable = await ensureEditable();
+        if (!editable) return [];
+        const response = await fetch(`/api/admin/watches/${productId}/media-pool/dispose`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                disposition,
+                storageKeys,
+                commandId: crypto.randomUUID(),
+            }),
+        });
+        const payload = await response.json().catch(() => null) as {
+            error?: string;
+            succeededKeys?: string[];
+            failed?: number;
+        } | null;
+        if (!response.ok) {
+            throw new Error(payload?.error || "Không thể xử lý ảnh kho tạm.");
+        }
+        const succeededKeys = Array.isArray(payload?.succeededKeys)
+            ? payload.succeededKeys
+            : [];
+        const failed = Number(payload?.failed ?? 0);
+        if (failed) {
+            notify.warning({
+                title: "Một số ảnh chưa được xử lý",
+                message: `${succeededKeys.length} ảnh thành công, ${failed} ảnh đang được sử dụng hoặc không còn hợp lệ.`,
+            });
+        } else {
+            notify.success({
+                title: disposition === "RECYCLE" ? "Đã đưa ảnh vào Recycle" : "Đã xóa vật lý ảnh",
+                message: `Đã xử lý ${succeededKeys.length} ảnh trong kho tạm.`,
+            });
+        }
+        return succeededKeys;
     };
 
     const handleCoverConfirm = async () => {
@@ -840,6 +853,8 @@ export default function WatchImageSection({
                             selectedValue={galleryImages}
                             onChosenChange={handlePoolImagesChange}
                             onSelectedChange={handleGalleryImagesChange}
+                            onRecycleChosen={(keys) => disposePoolImages(keys, "RECYCLE")}
+                            onDeleteChosen={(keys) => disposePoolImages(keys, "DELETE")}
 
                             maxFinalSelection={10}
                             profile="edit"
