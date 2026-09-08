@@ -21,3 +21,4 @@ test("Watch media pool limits active recovery to the requested role", () => {
   assert.equal(where.role, MediaRole.COVER);
   assert.deepEqual(where.lifecycle, { not: MediaBindingLifecycle.REMOVED });
 });
+

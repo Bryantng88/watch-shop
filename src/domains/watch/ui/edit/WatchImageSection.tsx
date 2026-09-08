@@ -855,6 +855,7 @@ export default function WatchImageSection({
                             onSelectedChange={handleGalleryImagesChange}
                             onRecycleChosen={(keys) => disposePoolImages(keys, "RECYCLE")}
                             onDeleteChosen={(keys) => disposePoolImages(keys, "DELETE")}
+                            hideSelectedFromChosen
 
                             maxFinalSelection={10}
                             profile="edit"

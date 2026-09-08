@@ -53,6 +53,7 @@ type Props = {
     browserPresentation?: "dialog" | "inline";
     onRecycleChosen?: (keys: string[]) => Promise<string[]>;
     onDeleteChosen?: (keys: string[]) => Promise<string[]>;
+    hideSelectedFromChosen?: boolean;
 };
 
 type PreviewState = {
@@ -441,6 +442,7 @@ export default function MediaPickerMulti({
     browserPresentation = "dialog",
     onRecycleChosen,
     onDeleteChosen,
+    hideSelectedFromChosen = false,
 }: Props) {
     const [open, setOpen] = React.useState(false);
     const [preview, setPreview] = React.useState<PreviewState>(null);
@@ -459,6 +461,12 @@ export default function MediaPickerMulti({
     const selectedKeySet = React.useMemo(
         () => new Set(selectedItems.map((item) => item.key)),
         [selectedItems]
+    );
+    const visibleChosenItems = React.useMemo(
+        () => hideSelectedFromChosen
+            ? chosenItems.filter((item) => !selectedKeySet.has(item.key))
+            : chosenItems,
+        [chosenItems, hideSelectedFromChosen, selectedKeySet],
     );
 
     const handlePreview = React.useCallback((item: PickedMediaItem) => {
@@ -639,7 +647,7 @@ export default function MediaPickerMulti({
                 </button>
 
                 <div className="inline-flex items-center rounded-2xl bg-slate-100 px-3 py-2 text-sm text-slate-600">
-                    Chosen: {chosenItems.length}
+                    Chosen: {visibleChosenItems.length}
                 </div>
 
                 <div className="inline-flex items-center rounded-2xl bg-blue-50 px-3 py-2 text-sm text-blue-700">
@@ -688,7 +696,7 @@ export default function MediaPickerMulti({
             ) : null}
 
             <ChosenGrid
-                items={chosenItems}
+                items={visibleChosenItems}
                 selectedItems={selectedItems}
                 onToggleSelect={handleToggleSelect}
                 onRemoveChosen={handleRemoveChosen}
