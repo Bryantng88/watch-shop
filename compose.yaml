@@ -32,6 +32,10 @@ services:
       target: ops
     env_file:
       - ${APP_ENV_FILE:-.env.production}
+    # Operational media commands need the same NAS-local S3 route as the app.
+    # Without this mapping, QNAP NAT loopback can leave S3 requests hanging.
+    extra_hosts:
+      - "longnd.myqnapcloud.com:${NAS_HOST_IP:-192.168.1.253}"
     profiles:
       - tools
     restart: "no"
