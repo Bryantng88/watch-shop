@@ -40,7 +40,6 @@
     "node_modules",
     "component for chatGPT",
     "src/features/__generated__",
-    "src/app/(admin)/admin/services/_server",
     "src/app/(admin)/admin/products",
     "src/app/(admin)/admin/acquisitions/_client",
     "src/app/(admin)/admin/acquisitions/_server",
