@@ -116,7 +116,6 @@ export default function WatchImageSection({
     onCoverImageChange,
     watchTitle,
     storefrontSlug,
-    contentReviewStatus,
     productStatus,
     saleStage,
     serviceStage,
@@ -145,11 +144,14 @@ export default function WatchImageSection({
     const priceMayBeShown = !["HOLD", "SOLD"].includes(saleStatus) && !["HOLD", "SOLD"].includes(productSaleStatus);
     const [quickShowPrice, setQuickShowPrice] = useState(showPrice && priceMayBeShown);
     const effectiveShowPrice = quickShowPrice && priceMayBeShown;
+    const serviceEligible =
+        ["NOT_REQUIRED", "DONE"].includes(String(serviceStage ?? "").toUpperCase()) ||
+        String(saleStage ?? "").toUpperCase() === "SOLD";
     const initiallyVisibleByStandardFlow =
         Boolean(getMediaKey(coverImage ?? ({} as PickedMediaItem))) &&
         Boolean(storefrontSlug?.trim()) &&
-        ["AVAILABLE", "HOLD", "SOLD"].includes(String(productStatus ?? "").toUpperCase()) &&
-        ["NOT_REQUIRED", "DONE"].includes(String(serviceStage ?? "").toUpperCase()) &&
+        ["AVAILABLE", "IN_SERVICE", "HOLD", "SOLD"].includes(String(productStatus ?? "").toUpperCase()) &&
+        serviceEligible &&
         (!effectiveShowPrice || Number(salePrice ?? 0) > 0);
     const dialog = useAppDialog();
     const notify = useNotify();
@@ -180,13 +182,11 @@ export default function WatchImageSection({
     const [currentUserId, setCurrentUserId] = useState<string>("");
     const [taskContext, setTaskContext] = useState<TaskQuickCreateContext | null>(null);
     const storefrontChecks = [
+        { label: "Title sản phẩm", ok: Boolean(watchTitle?.trim()) },
         { label: "Cover storefront", ok: Boolean(getMediaKey(coverImage ?? ({} as PickedMediaItem))) },
         { label: "Đường dẫn storefront", ok: Boolean(storefrontSlug?.trim()) },
-        { label: "Trạng thái sản phẩm", ok: ["AVAILABLE", "HOLD", "SOLD"].includes(String(productStatus ?? "").toUpperCase()) },
-        { label: "Trạng thái bán", ok: ["READY", "HOLD", "SOLD"].includes(String(saleStage ?? "").toUpperCase()) },
-        { label: "Service hoàn tất/không cần", ok: ["NOT_REQUIRED", "DONE"].includes(String(serviceStage ?? "").toUpperCase()) },
-        { label: "Content đã duyệt", ok: String(contentReviewStatus ?? "").toUpperCase() === "APPROVED" },
-        { label: "Hình ảnh đã duyệt", ok: String(imageReviewStatus ?? "").toUpperCase() === "APPROVED" },
+        { label: "Trạng thái sản phẩm", ok: ["AVAILABLE", "IN_SERVICE", "HOLD", "SOLD"].includes(String(productStatus ?? "").toUpperCase()) },
+        { label: "Service hoàn tất/không cần", ok: serviceEligible },
         { label: effectiveShowPrice ? "Giá bán hợp lệ" : "Giá hiển thị Liên hệ", ok: !effectiveShowPrice || Number(salePrice ?? 0) > 0 },
     ];
     const storefrontReady = storefrontChecks.every((item) => item.ok);
