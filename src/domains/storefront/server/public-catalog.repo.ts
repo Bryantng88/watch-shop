@@ -178,10 +178,8 @@ export function publicWatchEligibilityWhere(options?: {
       {
         type: ProductType.WATCH,
         title: { not: "" },
-        // Product.status can lag behind the canonical Watch service stage on
-        // legacy rows. The service-stage gate below remains authoritative for
-        // public readiness, so IN_SERVICE must not hide a watch that is already
-        // NOT_REQUIRED/DONE and explicitly published.
+        // Service progress does not gate catalog visibility. IN_SERVICE remains
+        // visible so customers can discover a published watch while work runs.
         status: { in: [
           ProductStatus.AVAILABLE,
           ProductStatus.IN_SERVICE,
@@ -192,14 +190,6 @@ export function publicWatchEligibilityWhere(options?: {
         slug: { not: "" },
         watch: {
           is: {
-            OR: [
-              {
-                serviceStage: {
-                  in: [WatchServiceStage.NOT_REQUIRED, WatchServiceStage.DONE],
-                },
-              },
-              { saleStage: WatchSaleStage.SOLD },
-            ],
             watchSpecV2: { isNot: null },
           },
         },
@@ -225,6 +215,9 @@ export function publicWatchOrderableWhere(): Prisma.ProductWhereInput {
           is: {
             saleStage: {
               in: [WatchSaleStage.PROCESSING, WatchSaleStage.READY],
+            },
+            serviceStage: {
+              in: [WatchServiceStage.NOT_REQUIRED, WatchServiceStage.DONE],
             },
             stockStage: WatchStockStage.IN_STOCK,
           },

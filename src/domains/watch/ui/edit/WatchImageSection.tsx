@@ -118,7 +118,6 @@ export default function WatchImageSection({
     storefrontSlug,
     productStatus,
     saleStage,
-    serviceStage,
     salePrice,
     showPrice = true,
     storefrontVisible,
@@ -144,14 +143,10 @@ export default function WatchImageSection({
     const priceMayBeShown = !["HOLD", "SOLD"].includes(saleStatus) && !["HOLD", "SOLD"].includes(productSaleStatus);
     const [quickShowPrice, setQuickShowPrice] = useState(showPrice && priceMayBeShown);
     const effectiveShowPrice = quickShowPrice && priceMayBeShown;
-    const serviceEligible =
-        ["NOT_REQUIRED", "DONE"].includes(String(serviceStage ?? "").toUpperCase()) ||
-        String(saleStage ?? "").toUpperCase() === "SOLD";
     const initiallyVisibleByStandardFlow =
         Boolean(getMediaKey(coverImage ?? ({} as PickedMediaItem))) &&
         Boolean(storefrontSlug?.trim()) &&
         ["AVAILABLE", "IN_SERVICE", "HOLD", "SOLD"].includes(String(productStatus ?? "").toUpperCase()) &&
-        serviceEligible &&
         (!effectiveShowPrice || Number(salePrice ?? 0) > 0);
     const dialog = useAppDialog();
     const notify = useNotify();
@@ -186,7 +181,6 @@ export default function WatchImageSection({
         { label: "Cover storefront", ok: Boolean(getMediaKey(coverImage ?? ({} as PickedMediaItem))) },
         { label: "Đường dẫn storefront", ok: Boolean(storefrontSlug?.trim()) },
         { label: "Trạng thái sản phẩm", ok: ["AVAILABLE", "IN_SERVICE", "HOLD", "SOLD"].includes(String(productStatus ?? "").toUpperCase()) },
-        { label: "Service hoàn tất/không cần", ok: serviceEligible },
         { label: effectiveShowPrice ? "Giá bán hợp lệ" : "Giá hiển thị Liên hệ", ok: !effectiveShowPrice || Number(salePrice ?? 0) > 0 },
     ];
     const storefrontReady = storefrontChecks.every((item) => item.ok);

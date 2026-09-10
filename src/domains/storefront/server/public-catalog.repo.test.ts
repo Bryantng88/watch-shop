@@ -27,13 +27,10 @@ test("only women watches may use a storefront gallery image without a cover", ()
   );
 });
 
-test("sold watches remain visible even when their service stage is not complete", () => {
+test("storefront visibility does not depend on service progress", () => {
   const where = JSON.stringify(publicWatchEligibilityWhere({ requireCoverImage: true }));
 
-  assert.match(
-    where,
-    /"OR":\[\{"serviceStage":\{"in":\["NOT_REQUIRED","DONE"\]\}\},\{"saleStage":"SOLD"\}\]/,
-  );
+  assert.equal(where.includes("serviceStage"), false);
 });
 
 test("storefront requires explicit publication and a sellable product status", () => {
@@ -51,5 +48,6 @@ test("contact-price watches remain eligible for a purchase request", () => {
   assert.match(where, /"priceVisibility":"HIDE"/);
   assert.match(where, /"status":"AVAILABLE"/);
   assert.match(where, /"saleStage":\{"in":\["PROCESSING","READY"\]\}/);
+  assert.match(where, /"serviceStage":\{"in":\["NOT_REQUIRED","DONE"\]\}/);
   assert.match(where, /"stockStage":"IN_STOCK"/);
 });

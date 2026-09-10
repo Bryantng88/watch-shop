@@ -62,8 +62,6 @@ export async function POST(
       where: { productId: id },
       select: {
         audienceSegment: true,
-        serviceStage: true,
-        saleStage: true,
         watchSpecV2: true,
         watchPrice: { select: { salePrice: true } },
         product: {
@@ -105,11 +103,6 @@ export async function POST(
     if (!hasSpec) throw new Error("Cần có ít nhất một thông tin spec trước khi đăng.");
     if (!["AVAILABLE", "IN_SERVICE", "HOLD", "SOLD"].includes(watch.product.status)) {
       throw new Error("Trạng thái sản phẩm chưa đủ điều kiện hiển thị storefront.");
-    }
-    const serviceEligible = ["NOT_REQUIRED", "DONE"].includes(watch.serviceStage)
-      || watch.saleStage === "SOLD";
-    if (!serviceEligible) {
-      throw new Error("Cần hoàn tất Service hoặc đánh dấu Không cần service trước khi đưa lên storefront.");
     }
     if (body?.showPrice !== false && Number(watch.watchPrice?.salePrice ?? 0) <= 0) {
       throw new Error("Cần có giá bán hợp lệ hoặc chọn không hiển thị giá trước khi đưa lên storefront.");
