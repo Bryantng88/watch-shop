@@ -7,11 +7,14 @@ import {
 
 import { prisma } from "@/server/db/client";
 import { mediaStorage } from "@/domains/media/storage";
+import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
+import { mediaPathPolicy } from "@/domains/media/core/media-path.policy";
 import { getProfileRoot } from "@/server/lib/product-image-storage";
 import { normalizeKey } from "@/server/lib/storage-key";
+import { bindMedia } from "./media-binding.service";
 import { executeMediaDelete, executeMediaMove } from "./media-operation.service";
 
-export type WatchPoolDisposition = "RETURN_TO_NAS" | "RECYCLE" | "DELETE";
+export type WatchPoolDisposition = "MOVE_TO_POST" | "RETURN_TO_NAS" | "RECYCLE" | "DELETE";
 
 export function watchPoolDispositionBlockReason(input: {
   productReferenceCount: number;
@@ -53,17 +56,33 @@ export function watchPoolReturnCandidate(input: {
   return normalizeKey(`${root}/returned/${fileNameFromKey(input.currentStorageKey)}`);
 }
 
+export function watchPoolPostCandidate(input: {
+  mediaPostId: string;
+  mediaObjectId: string;
+  currentStorageKey: string;
+}) {
+  return mediaPathPolicy.postOriginal({
+    postId: input.mediaPostId,
+    mediaObjectId: input.mediaObjectId,
+    filename: fileNameFromKey(input.currentStorageKey),
+  });
+}
+
 export async function disposeWatchPoolMedia(input: {
   productId: string;
   storageKeys: string[];
   disposition: WatchPoolDisposition;
   commandId: string;
+  destinationMediaPostId?: string | null;
   requestedByUserId?: string | null;
 }) {
   const keys = [...new Set(input.storageKeys.map(normalizeKey).filter(Boolean))];
   if (!keys.length) throw new Error("Chưa chọn ảnh trong kho tạm.");
   if (keys.length > 100) throw new Error("Chỉ xử lý tối đa 100 ảnh mỗi lần.");
   if (!input.commandId.trim()) throw new Error("Thiếu commandId.");
+  if (input.disposition === "MOVE_TO_POST" && !input.destinationMediaPostId?.trim()) {
+    throw new Error("Thiếu Media Post đích.");
+  }
 
   const watch = await prisma.watch.findUnique({
     where: { productId: input.productId },
@@ -126,7 +145,39 @@ export async function disposeWatchPoolMedia(input: {
         continue;
       }
 
-      if (input.disposition === "DELETE") {
+      if (input.disposition === "MOVE_TO_POST") {
+        const mediaPostId = input.destinationMediaPostId!.trim();
+        const destinationKey = watchPoolPostCandidate({
+          mediaPostId,
+          mediaObjectId: binding.mediaObjectId,
+          currentStorageKey: storageKey,
+        });
+        await executeMediaMove({
+          idempotencyKey: `watch-pool-post:${input.commandId}:${binding.mediaObjectId}`,
+          mediaObjectId: binding.mediaObjectId,
+          sourceKey: storageKey,
+          destinationKey,
+          deleteSource: true,
+          requestedByUserId: input.requestedByUserId ?? null,
+        });
+        await bindMedia({
+          mediaObjectId: binding.mediaObjectId,
+          ownerType: MediaOwnerType.MEDIA_POST,
+          ownerId: mediaPostId,
+          role: MediaRole.SOCIAL,
+          sortOrder: results.filter((item) => item.ok).length,
+          audienceSegment: watch.audienceSegment,
+          pipelineKey: null,
+          lifecycle: MediaBindingLifecycle.SELECTED,
+        });
+        await recordBusinessEvent(prisma, {
+          eventKey: "media.post.asset.selected",
+          targetType: "MEDIA_POST",
+          targetId: mediaPostId,
+          actorUserId: input.requestedByUserId ?? null,
+          payload: { storageKey: destinationKey, role: MediaRole.SOCIAL, sourceWatchId: watch.id },
+        });
+      } else if (input.disposition === "DELETE") {
         await executeMediaDelete({
         idempotencyKey: `watch-pool-delete:${input.commandId}:${binding.mediaObjectId}`,
         mediaObjectId: binding.mediaObjectId,

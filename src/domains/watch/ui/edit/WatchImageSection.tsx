@@ -291,7 +291,7 @@ export default function WatchImageSection({
 
     const disposePoolImages = async (
         storageKeys: string[],
-        disposition: "RETURN_TO_NAS" | "RECYCLE" | "DELETE",
+        disposition: "MOVE_TO_POST" | "RETURN_TO_NAS" | "RECYCLE" | "DELETE",
     ) => {
         const editable = await ensureEditable();
         if (!editable) return [];
@@ -308,6 +308,8 @@ export default function WatchImageSection({
             error?: string;
             succeededKeys?: string[];
             failed?: number;
+            postId?: string | null;
+            postRefNo?: string | null;
         } | null;
         if (!response.ok) {
             throw new Error(payload?.error || "Không thể xử lý ảnh kho tạm.");
@@ -323,12 +325,16 @@ export default function WatchImageSection({
             });
         } else {
             notify.success({
-                title: disposition === "RETURN_TO_NAS"
+                title: disposition === "MOVE_TO_POST"
+                    ? "Đã đưa ảnh qua Post"
+                    : disposition === "RETURN_TO_NAS"
                     ? "Đã trả ảnh về NAS"
                     : disposition === "RECYCLE"
                         ? "Đã đưa ảnh vào Recycle"
                         : "Đã xóa vật lý ảnh",
-                message: `Đã xử lý ${succeededKeys.length} ảnh trong kho tạm.`,
+                message: disposition === "MOVE_TO_POST" && payload?.postRefNo
+                    ? `Đã chuyển ${succeededKeys.length} ảnh vào ${payload.postRefNo}.`
+                    : `Đã xử lý ${succeededKeys.length} ảnh trong kho tạm.`,
             });
         }
         return succeededKeys;
@@ -852,6 +858,7 @@ export default function WatchImageSection({
                             onChosenChange={handlePoolImagesChange}
                             onSelectedChange={handleGalleryImagesChange}
                             onReturnChosen={(keys) => disposePoolImages(keys, "RETURN_TO_NAS")}
+                            onMoveToPost={(keys) => disposePoolImages(keys, "MOVE_TO_POST")}
                             onRecycleChosen={(keys) => disposePoolImages(keys, "RECYCLE")}
                             onDeleteChosen={(keys) => disposePoolImages(keys, "DELETE")}
 

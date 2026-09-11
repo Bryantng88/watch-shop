@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   watchPoolDispositionBlockReason,
+  watchPoolPostCandidate,
   watchPoolReturnCandidate,
 } from "./watch-media-disposition.service";
 
@@ -46,4 +47,12 @@ test("Watch pool return uses a visible returned folder for legacy or unsafe orig
     originalSourceKey: "products/edit/active/DSCF0001.JPG",
     currentStorageKey: "media/objects/id/original/DSCF0001.JPG",
   }), "media/source/WOMEN/edit/returned/DSCF0001.JPG");
+});
+
+test("Watch pool post transfer targets the isolated Media Post workspace", () => {
+  assert.equal(watchPoolPostCandidate({
+    mediaPostId: "post-001",
+    mediaObjectId: "object-001",
+    currentStorageKey: "media/objects/object-001/original/DSCF0001.JPG",
+  }), "media/posts/post-001/objects/object-001/original/DSCF0001.JPG");
 });
