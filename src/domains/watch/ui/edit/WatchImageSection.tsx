@@ -861,7 +861,7 @@ export default function WatchImageSection({
                             onMoveToPost={(keys) => disposePoolImages(keys, "MOVE_TO_POST")}
                             onRecycleChosen={(keys) => disposePoolImages(keys, "RECYCLE")}
                             onDeleteChosen={(keys) => disposePoolImages(keys, "DELETE")}
-
+                            hideSelectedFromChosen
                             maxFinalSelection={10}
                             profile="edit"
                             audienceSegment={audienceSegment}
