@@ -7,6 +7,7 @@ import {
   PaymentType,
   ShipmentStatus,
   ShippingFeePayer,
+  type Prisma,
 } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 
@@ -47,6 +48,16 @@ const SHIPMENT_STATUS_RETURNING = "RETURNING" as ShipmentStatus;
 const SHIPMENT_STATUS_RETURNED = "RETURNED" as ShipmentStatus;
 const ORDER_STATUS_RETURNING = "RETURNING" as OrderStatus;
 const ORDER_STATUS_RETURNED = "RETURNED" as OrderStatus;
+const SHIPMENT_TRANSACTION_OPTIONS = {
+  maxWait: 10_000,
+  timeout: 30_000,
+} as const;
+
+function runShipmentTransaction<T>(
+  work: (tx: Prisma.TransactionClient) => Promise<T>,
+) {
+  return prisma.$transaction(work, SHIPMENT_TRANSACTION_OPTIONS);
+}
 
 function assertEditable(status: ShipmentStatus | string) {
   const editableStatuses: ShipmentStatus[] = [
@@ -133,7 +144,7 @@ export async function getShipmentContextByOrderId(orderId: string) {
 }
 
 export async function updateShipment(input: { shipmentId: string; data: UpdateShipmentInput }) {
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await runShipmentTransaction(async (tx) => {
     const shipment = await requireShipmentTx(tx, input.shipmentId);
     assertEditable(shipment.status);
     const updated = await updateShipmentRepo(tx, input.shipmentId, input.data);
@@ -160,7 +171,7 @@ export async function updateShipment(input: { shipmentId: string; data: UpdateSh
 }
 
 export async function createShipmentFeeAndShip(input: CreateShipmentFeeInput) {
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await runShipmentTransaction(async (tx) => {
     const shipment = await requireShipmentTx(tx, input.shipmentId);
 
     if (
@@ -264,7 +275,7 @@ export async function createShipmentFeeAndShip(input: CreateShipmentFeeInput) {
 }
 
 export async function markShipmentDelivered(input: CompleteShipmentInput) {
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await runShipmentTransaction(async (tx) => {
     const shipment = await requireShipmentTx(tx, input.shipmentId);
     if (shipment.status !== ShipmentStatus.SHIPPED) {
       throw new Error(`Chỉ được xác nhận đã giao khi shipment SHIPPED. Hiện tại: ${shipment.status}.`);
@@ -345,7 +356,7 @@ export async function markShipmentDelivered(input: CompleteShipmentInput) {
 
 
 export async function markShipmentReturned(input: CompleteShipmentInput) {
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await runShipmentTransaction(async (tx) => {
     const shipment = await requireShipmentTx(tx, input.shipmentId);
     const returnableStatuses: ShipmentStatus[] = [
       ShipmentStatus.SHIPPED,
@@ -406,7 +417,7 @@ export async function markShipmentReturned(input: CompleteShipmentInput) {
 }
 
 export async function receiveShipmentReturn(input: ReceiveShipmentReturnInput) {
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await runShipmentTransaction(async (tx) => {
     const shipment = await requireShipmentTx(tx, input.shipmentId);
     if (shipment.status !== SHIPMENT_STATUS_RETURNING) {
       throw new Error(`Chỉ được nhận hàng hoàn khi shipment đang RETURNING. Hiện tại: ${shipment.status}.`);
@@ -487,7 +498,7 @@ export async function createShipmentReturnFee(input: ReceiveShipmentReturnInput)
 }
 
 export async function createManualShipment(input: CreateManualShipmentInput) {
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await runShipmentTransaction(async (tx) => {
     const shipment = await createManualShipmentRepo(tx, input);
     await tx.order.update({
       where: { id: input.orderId },
