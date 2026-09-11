@@ -54,6 +54,7 @@ type Props = {
     onRecycleChosen?: (keys: string[]) => Promise<string[]>;
     onDeleteChosen?: (keys: string[]) => Promise<string[]>;
     hideSelectedFromChosen?: boolean;
+    onReturnChosen?: (keys: string[]) => Promise<string[]>;
 };
 
 type PreviewState = {
@@ -443,6 +444,7 @@ export default function MediaPickerMulti({
     onRecycleChosen,
     onDeleteChosen,
     hideSelectedFromChosen = false,
+    onReturnChosen,
 }: Props) {
     const [open, setOpen] = React.useState(false);
     const [preview, setPreview] = React.useState<PreviewState>(null);
@@ -572,7 +574,7 @@ export default function MediaPickerMulti({
         },
         [onSelectedChange, selectedItems],
     );
-    const managementEnabled = Boolean(onRecycleChosen || onDeleteChosen);
+    const managementEnabled = Boolean(onReturnChosen || onRecycleChosen || onDeleteChosen);
     const manageableKeySet = React.useMemo(() => {
         const activeKeys = new Set(selectedItems.map((item) => item.key));
         return new Set(chosenItems.map((item) => item.key).filter((key) => !activeKeys.has(key)));
@@ -593,12 +595,16 @@ export default function MediaPickerMulti({
         });
     }, [manageableKeySet]);
     const handleDisposition = React.useCallback(async (
-        disposition: "RECYCLE" | "DELETE",
+        disposition: "RETURN_TO_NAS" | "RECYCLE" | "DELETE",
     ) => {
         const keys = Array.from(managementSelectedKeys).filter((key) => manageableKeySet.has(key));
         if (!keys.length || managementPending) return;
         if (disposition === "DELETE" && !window.confirm(`Xóa vật lý ${keys.length} ảnh? Thao tác này không thể hoàn tác.`)) return;
-        const handler = disposition === "RECYCLE" ? onRecycleChosen : onDeleteChosen;
+        const handler = disposition === "RETURN_TO_NAS"
+            ? onReturnChosen
+            : disposition === "RECYCLE"
+                ? onRecycleChosen
+                : onDeleteChosen;
         if (!handler) return;
         setManagementPending(true);
         try {
@@ -613,7 +619,7 @@ export default function MediaPickerMulti({
         } finally {
             setManagementPending(false);
         }
-    }, [chosenItems, manageableKeySet, managementPending, managementSelectedKeys, onChosenChange, onDeleteChosen, onRecycleChosen]);
+    }, [chosenItems, manageableKeySet, managementPending, managementSelectedKeys, onChosenChange, onDeleteChosen, onRecycleChosen, onReturnChosen]);
     return (
         <div className="space-y-4">
             <ImagePreviewDialog
@@ -661,6 +667,11 @@ export default function MediaPickerMulti({
             {managementEnabled ? (
                 <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
                     <span className="text-xs font-medium text-slate-600">Đã chọn quản lý: {managementSelectedKeys.size}</span>
+                    {onReturnChosen ? (
+                        <button type="button" disabled={!managementSelectedKeys.size || managementPending} onClick={() => void handleDisposition("RETURN_TO_NAS")} className="rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 disabled:opacity-40">
+                            Trả về NAS
+                        </button>
+                    ) : null}
                     {onRecycleChosen ? (
                         <button type="button" disabled={!managementSelectedKeys.size || managementPending} onClick={() => void handleDisposition("RECYCLE")} className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 disabled:opacity-40">
                             Đưa vào Recycle

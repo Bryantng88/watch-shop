@@ -6,11 +6,12 @@ import {
 } from "@prisma/client";
 
 import { prisma } from "@/server/db/client";
+import { mediaStorage } from "@/domains/media/storage";
 import { getProfileRoot } from "@/server/lib/product-image-storage";
 import { normalizeKey } from "@/server/lib/storage-key";
 import { executeMediaDelete, executeMediaMove } from "./media-operation.service";
 
-export type WatchPoolDisposition = "RECYCLE" | "DELETE";
+export type WatchPoolDisposition = "RETURN_TO_NAS" | "RECYCLE" | "DELETE";
 
 export function watchPoolDispositionBlockReason(input: {
   productReferenceCount: number;
@@ -25,6 +26,31 @@ export function watchPoolDispositionBlockReason(input: {
 
 function fileNameFromKey(storageKey: string) {
   return storageKey.split("/").pop() || "image";
+}
+
+function withReturnSuffix(storageKey: string, mediaObjectId: string) {
+  const dot = storageKey.lastIndexOf(".");
+  const suffix = `-returned-${mediaObjectId.slice(0, 8)}`;
+  return dot > storageKey.lastIndexOf("/")
+    ? `${storageKey.slice(0, dot)}${suffix}${storageKey.slice(dot)}`
+    : `${storageKey}${suffix}`;
+}
+
+export function watchPoolReturnCandidate(input: {
+  editRoot: string;
+  originalSourceKey?: string | null;
+  currentStorageKey: string;
+}) {
+  const root = normalizeKey(input.editRoot);
+  const original = normalizeKey(input.originalSourceKey ?? "");
+  if (
+    original.startsWith(`${root}/`) &&
+    original !== `${root}/recycle` &&
+    !original.startsWith(`${root}/recycle/`)
+  ) {
+    return original;
+  }
+  return normalizeKey(`${root}/returned/${fileNameFromKey(input.currentStorageKey)}`);
 }
 
 export async function disposeWatchPoolMedia(input: {
@@ -67,8 +93,9 @@ export async function disposeWatchPoolMedia(input: {
       continue;
     }
 
-    const [productReferenceCount, otherActiveBindingCount, derivativeCount] =
-      await Promise.all([
+    try {
+      const [productReferenceCount, otherActiveBindingCount, derivativeCount] =
+        await Promise.all([
         prisma.productImage.count({ where: { fileKey: storageKey } }),
         prisma.mediaBinding.count({
           where: {
@@ -83,57 +110,100 @@ export async function disposeWatchPoolMedia(input: {
             availability: { not: MediaObjectAvailability.DELETED },
           },
         }),
-      ]);
+        ]);
 
-    const blockedReason = watchPoolDispositionBlockReason({
-      productReferenceCount,
-      otherActiveBindingCount,
-      derivativeCount,
-    });
-    if (blockedReason) {
-      results.push({
-        storageKey,
-        ok: false as const,
-        error: `${blockedReason} Hãy bỏ khỏi nơi đang dùng trước.`,
+      const blockedReason = watchPoolDispositionBlockReason({
+        productReferenceCount,
+        otherActiveBindingCount,
+        derivativeCount,
       });
-      continue;
-    }
+      if (blockedReason) {
+        results.push({
+          storageKey,
+          ok: false as const,
+          error: `${blockedReason} Hãy bỏ khỏi nơi đang dùng trước.`,
+        });
+        continue;
+      }
 
-    if (input.disposition === "DELETE") {
-      await executeMediaDelete({
+      if (input.disposition === "DELETE") {
+        await executeMediaDelete({
         idempotencyKey: `watch-pool-delete:${input.commandId}:${binding.mediaObjectId}`,
         mediaObjectId: binding.mediaObjectId,
         storageKey,
         requestedByUserId: input.requestedByUserId ?? null,
-      });
-    } else {
-      const editRoot = normalizeKey(getProfileRoot("edit", watch.audienceSegment));
-      const destinationKey = normalizeKey(
-        `${editRoot}/recycle/${binding.mediaObjectId}-${fileNameFromKey(storageKey)}`,
-      );
-      await executeMediaMove({
+        });
+      } else if (input.disposition === "RECYCLE") {
+        const editRoot = normalizeKey(getProfileRoot("edit", watch.audienceSegment));
+        const destinationKey = normalizeKey(
+          `${editRoot}/recycle/${binding.mediaObjectId}-${fileNameFromKey(storageKey)}`,
+        );
+        await executeMediaMove({
         idempotencyKey: `watch-pool-recycle:${input.commandId}:${binding.mediaObjectId}`,
         mediaObjectId: binding.mediaObjectId,
         sourceKey: storageKey,
         destinationKey,
         deleteSource: true,
         requestedByUserId: input.requestedByUserId ?? null,
-      });
-    }
+        });
+      } else {
+        const editRoot = normalizeKey(getProfileRoot("edit", watch.audienceSegment));
+        const ingestOperation = await prisma.mediaOperation.findFirst({
+        where: {
+          OR: [
+            { mediaObjectId: binding.mediaObjectId },
+            { destinationKey: storageKey },
+          ],
+          idempotencyKey: { startsWith: "media-ingest:" },
+          status: "SUCCEEDED",
+          sourceKey: { not: null },
+        },
+        orderBy: [{ completedAt: "desc" }, { createdAt: "desc" }],
+        select: { sourceKey: true },
+        });
+        const preferredKey = watchPoolReturnCandidate({
+          editRoot,
+          originalSourceKey: ingestOperation?.sourceKey,
+          currentStorageKey: storageKey,
+        });
+        const destinationKey = await mediaStorage.stat(preferredKey)
+          ? withReturnSuffix(preferredKey, binding.mediaObjectId)
+          : preferredKey;
+        if (await mediaStorage.stat(destinationKey)) {
+          throw new Error(`NAS đã có file tại vị trí trả về: ${destinationKey}`);
+        }
+        await executeMediaMove({
+        idempotencyKey: `watch-pool-return:${input.commandId}:${binding.mediaObjectId}`,
+        mediaObjectId: binding.mediaObjectId,
+        sourceKey: storageKey,
+        destinationKey,
+        deleteSource: true,
+        requestedByUserId: input.requestedByUserId ?? null,
+        });
+      }
 
-    await prisma.$transaction([
-      prisma.mediaBinding.update({
+      await prisma.$transaction([
+        prisma.mediaBinding.update({
         where: { id: binding.id },
         data: { lifecycle: MediaBindingLifecycle.REMOVED },
-      }),
-      prisma.mediaObject.update({
+        }),
+        prisma.mediaObject.update({
         where: { id: binding.mediaObjectId },
         data: input.disposition === "DELETE"
           ? { availability: MediaObjectAvailability.DELETED, missingAt: new Date() }
-          : { availability: MediaObjectAvailability.QUARANTINED, missingAt: null },
-      }),
-    ]);
-    results.push({ storageKey, ok: true as const });
+          : input.disposition === "RECYCLE"
+            ? { availability: MediaObjectAvailability.QUARANTINED, missingAt: null }
+            : { availability: MediaObjectAvailability.AVAILABLE, missingAt: null },
+        }),
+      ]);
+      results.push({ storageKey, ok: true as const });
+    } catch (error) {
+      results.push({
+        storageKey,
+        ok: false as const,
+        error: error instanceof Error ? error.message : "Không thể xử lý ảnh kho tạm.",
+      });
+    }
   }
 
   return {

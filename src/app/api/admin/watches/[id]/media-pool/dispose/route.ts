@@ -6,7 +6,7 @@ import { disposeWatchPoolMedia } from "@/domains/media/application";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 
 const BodySchema = z.object({
-  disposition: z.enum(["RECYCLE", "DELETE"]),
+  disposition: z.enum(["RETURN_TO_NAS", "RECYCLE", "DELETE"]),
   storageKeys: z.array(z.string().min(1)).min(1).max(100),
   commandId: z.string().min(1),
 });

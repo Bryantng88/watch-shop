@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { watchPoolDispositionBlockReason } from "./watch-media-disposition.service";
+import {
+  watchPoolDispositionBlockReason,
+  watchPoolReturnCandidate,
+} from "./watch-media-disposition.service";
 
 test("Watch pool disposition allows only completely unreferenced media", () => {
   assert.equal(watchPoolDispositionBlockReason({
@@ -27,4 +30,20 @@ test("Watch pool disposition blocks every downstream reference type", () => {
     otherActiveBindingCount: 0,
     derivativeCount: 1,
   }) ?? "", /bản xử lý/);
+});
+
+test("Watch pool return restores the original source path inside the current edit root", () => {
+  assert.equal(watchPoolReturnCandidate({
+    editRoot: "media/source/MEN/edit",
+    originalSourceKey: "media/source/MEN/edit/session/DSCF0001.JPG",
+    currentStorageKey: "media/objects/id/original/DSCF0001.JPG",
+  }), "media/source/MEN/edit/session/DSCF0001.JPG");
+});
+
+test("Watch pool return uses a visible returned folder for legacy or unsafe origins", () => {
+  assert.equal(watchPoolReturnCandidate({
+    editRoot: "media/source/WOMEN/edit",
+    originalSourceKey: "products/edit/active/DSCF0001.JPG",
+    currentStorageKey: "media/objects/id/original/DSCF0001.JPG",
+  }), "media/source/WOMEN/edit/returned/DSCF0001.JPG");
 });

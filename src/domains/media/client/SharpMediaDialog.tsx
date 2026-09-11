@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, Loader2, RotateCcw, Sparkles, X } from "lucide-react";
+import { Check, Loader2, RotateCcw, Sparkles, X, ZoomIn, ZoomOut } from "lucide-react";
 
 import type { PickedMediaItem } from "@/components/media/MediaPickerMulti";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
@@ -61,6 +61,8 @@ export default function SharpMediaDialog({
   const [preset, setPreset] = useState<Preset>(DEFAULT_PRESET);
   const [running, setRunning] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [largePreview, setLargePreview] = useState<{ src: string; name: string } | null>(null);
+  const [previewZoom, setPreviewZoom] = useState(100);
   const keys = useMemo(() => images.map((item) => item.key).filter(Boolean), [images]);
 
   useEffect(() => {
@@ -69,7 +71,18 @@ export default function SharpMediaDialog({
     setUnavailable(new Set());
     setStates({});
     setRunning(false);
+    setLargePreview(null);
+    setPreviewZoom(100);
   }, [open, keys]);
+
+  useEffect(() => {
+    if (!largePreview) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setLargePreview(null);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [largePreview]);
 
   if (!open) return null;
   const completed = Object.values(states).filter((state) => state.status === "done").length;
@@ -145,6 +158,25 @@ export default function SharpMediaDialog({
 
   return (
     <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-slate-950/60 p-4">
+      {largePreview ? (
+        <div className="fixed inset-0 z-[100010] flex flex-col bg-slate-950/95" role="dialog" aria-modal="true" aria-label={`Xem lớn ${largePreview.name}`}>
+          <div className="flex items-center justify-between gap-4 border-b border-white/10 px-4 py-3 text-white">
+            <div className="min-w-0 truncate text-sm font-semibold">{largePreview.name}</div>
+            <div className="flex shrink-0 items-center gap-2">
+              <button type="button" onClick={() => setPreviewZoom((value) => Math.max(50, value - 25))} className="rounded-lg bg-white/10 p-2 hover:bg-white/20" aria-label="Thu nhỏ"><ZoomOut className="h-5 w-5" /></button>
+              <button type="button" onClick={() => setPreviewZoom(100)} className="min-w-16 rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20">{previewZoom}%</button>
+              <button type="button" onClick={() => setPreviewZoom((value) => Math.min(400, value + 25))} className="rounded-lg bg-white/10 p-2 hover:bg-white/20" aria-label="Phóng lớn"><ZoomIn className="h-5 w-5" /></button>
+              <button type="button" onClick={() => setLargePreview(null)} className="ml-2 rounded-lg bg-white/10 p-2 hover:bg-white/20" aria-label="Đóng xem lớn"><X className="h-5 w-5" /></button>
+            </div>
+          </div>
+          <div className="min-h-0 flex-1 overflow-auto p-4">
+            <div className="flex min-h-full min-w-full items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={largePreview.src} alt={largePreview.name} style={{ width: `${previewZoom}%`, maxWidth: "none" }} className="h-auto object-contain" />
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
           <div>
@@ -222,7 +254,7 @@ export default function SharpMediaDialog({
                 const src = resolveMediaPreviewSrc(resultKey || item.key) || undefined;
                 const active = selected.has(item.key);
                 return (
-                  <div key={item.key} className={`overflow-hidden rounded-2xl border bg-white ${active ? "border-violet-400 ring-2 ring-violet-100" : "border-slate-200"}`}>
+                  <div key={item.key} className={`relative overflow-hidden rounded-2xl border bg-white ${active ? "border-violet-400 ring-2 ring-violet-100" : "border-slate-200"}`}>
                     <button type="button" disabled={running} onClick={() => setSelected((current) => { const next = new Set(current); if (next.has(item.key)) next.delete(item.key); else next.add(item.key); return next; })} className="relative block aspect-square w-full overflow-hidden bg-slate-100">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
@@ -237,6 +269,19 @@ export default function SharpMediaDialog({
                       <span className={`absolute left-2 top-2 grid h-6 w-6 place-items-center rounded-full ${active ? "bg-violet-600 text-white" : "bg-white/90 text-slate-400"}`}>{active ? <Check className="h-4 w-4" /> : null}</span>
                       {state.status === "processing" ? <span className="absolute inset-0 grid place-items-center bg-slate-950/45 text-white"><Loader2 className="h-7 w-7 animate-spin" /></span> : null}
                     </button>
+                    {src ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewZoom(100);
+                          setLargePreview({ src, name: item.name || "Gallery" });
+                        }}
+                        className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-slate-950/65 text-white shadow-sm hover:bg-slate-950"
+                        aria-label={`Xem lớn ${item.name || "Gallery"}`}
+                      >
+                        <ZoomIn className="h-4 w-4" />
+                      </button>
+                    ) : null}
                     <div className="min-h-14 px-3 py-2 text-xs">
                       {state.status === "done" ? <span className="font-semibold text-emerald-700">Đã có preview{state.result?.cached ? " · dùng cache" : ""}</span> : null}
                       {state.status === "error" ? <div><div className="line-clamp-2 text-red-600">{state.error}</div><button type="button" onClick={() => void processOne(item.key)} disabled={running} className="mt-1 inline-flex items-center gap-1 font-semibold text-violet-700"><RotateCcw className="h-3 w-3" /> Thử lại</button></div> : null}
