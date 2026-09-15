@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { mergeWatchMediaPoolItems } from "./watch-form-media.service";
+import { mergeWatchMediaPoolItems, watchMediaSelectionChanges } from "./watch-form-media.service";
 
 test("Gallery selection remains visible in the durable chosen pool", () => {
   const chosen = [
@@ -21,4 +21,19 @@ test("Gallery selection remains visible in the durable chosen pool", () => {
       "media/objects/c/original/c.jpg",
     ],
   );
+});
+
+test("Adding only to the pool is persisted even when Gallery is unchanged", () => {
+  const changes = watchMediaSelectionChanges({
+    beforePool: [],
+    beforeGallery: [],
+    requestedPool: [{ key: "media/source/MEN/edit/new-watch.jpg" }],
+    requestedGallery: [],
+  });
+
+  assert.equal(changes.poolChanged, true);
+  assert.equal(changes.galleryChanged, false);
+  assert.deepEqual(changes.pool.map((item) => item.key), [
+    "media/source/MEN/edit/new-watch.jpg",
+  ]);
 });

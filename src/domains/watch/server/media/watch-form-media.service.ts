@@ -1,13 +1,34 @@
 import {
     ingestExistingMediaForWatch,
+    selectExistingMediaForWatch,
 } from "@/domains/media/application";
+import { MediaRole } from "@prisma/client";
 
 import {
     dedupeMediaItems,
     fileNameFromKey,
     mediaKey,
+    normalizeImageKeys,
+    sameJson,
     type WatchFormMediaItem,
 } from "../shared/watch-form-value";
+
+export function watchMediaSelectionChanges(input: {
+    beforePool: WatchFormMediaItem[];
+    beforeGallery: WatchFormMediaItem[];
+    requestedPool: WatchFormMediaItem[];
+    requestedGallery: WatchFormMediaItem[];
+}) {
+    const pool = mergeWatchMediaPoolItems(input.requestedPool, input.requestedGallery);
+    return {
+        pool,
+        poolChanged: !sameJson(normalizeImageKeys(input.beforePool), normalizeImageKeys(pool)),
+        galleryChanged: !sameJson(
+            normalizeImageKeys(input.beforeGallery),
+            normalizeImageKeys(input.requestedGallery),
+        ),
+    };
+}
 
 export function mergeWatchMediaPoolItems(
     poolItems: WatchFormMediaItem[],
@@ -18,6 +39,7 @@ export function mergeWatchMediaPoolItems(
 
 export async function selectWatchPoolImages(
     items: WatchFormMediaItem[],
+    productId: string,
 ) {
     const normalized = dedupeMediaItems(items);
     const result: WatchFormMediaItem[] = [];
@@ -26,8 +48,11 @@ export async function selectWatchPoolImages(
         const key = mediaKey(item);
         if (!key) continue;
 
-        const selected = await ingestExistingMediaForWatch({
+        const selected = await selectExistingMediaForWatch({
             storageKey: key,
+            productId,
+            role: MediaRole.GALLERY,
+            sortOrder: result.length,
         });
 
         result.push({

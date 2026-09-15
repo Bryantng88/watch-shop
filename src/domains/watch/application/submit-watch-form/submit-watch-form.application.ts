@@ -1,5 +1,5 @@
 import { prisma, type DB } from "@/server/db/client";
-import { attachIngestedWatchMedia } from "@/domains/media/application";
+import { attachIngestedWatchMedia, listSelectedWatchMedia } from "@/domains/media/application";
 import { notifyUsersByRole } from "@/app/(admin)/admin/notifications/notification.service";
 
 import { MediaRole, WatchSpecStatus } from "@prisma/client";
@@ -11,7 +11,7 @@ import {
 import {
     selectWatchGalleryImages,
     selectWatchPoolImages,
-    mergeWatchMediaPoolItems,
+    watchMediaSelectionChanges,
 } from "../../server/media";
 import { updateWatchPricingWithDiff } from "../../server/pricing";
 import {
@@ -475,19 +475,29 @@ export async function submitWatchFormApplication(
     const beforeImageKeys = normalizeImageKeys(
         current.product.productImage.map((x: any) => ({ key: x.fileKey })),
     );
+    const beforePoolKeys = normalizeImageKeys(
+        await listSelectedWatchMedia({ productId }),
+    );
 
     const requestedPoolImages = dedupeMediaItems(values.media.poolImages ?? []);
     const requestedGalleryImages = dedupeMediaItems(
         values.media.galleryImages ?? [],
     );
-    const afterImageKeysBeforeMove =
-        saveIntent === "SUBMIT_CONTENT"
-            ? beforeImageKeys
-            : normalizeImageKeys(requestedGalleryImages);
-
+    const mediaChanges = watchMediaSelectionChanges({
+        beforePool: beforePoolKeys.map((key) => ({ key })),
+        beforeGallery: beforeImageKeys.map((key) => ({ key })),
+        requestedPool: requestedPoolImages,
+        requestedGallery: requestedGalleryImages,
+    });
+    // The chosen pool is durable. Gallery selection is an overlay on that
+    // pool, not a transfer that consumes or deletes the source originals.
+    const remainingPoolImages = mediaChanges.pool;
     const contentChanged = !sameJson(beforeContent, afterContent);
     const specChanged = !sameJson(beforeSpec, afterSpec);
-    const imagesChanged = !sameJson(beforeImageKeys, afterImageKeysBeforeMove);
+    const imagesChanged = saveIntent === "SUBMIT_CONTENT"
+        ? false
+        : mediaChanges.galleryChanged;
+    const poolChanged = mediaChanges.poolChanged;
 
     const contentReviewStatus = String(
         current.reviewStates.find((item: any) => item.targetType === "CONTENT")
@@ -702,14 +712,7 @@ export async function submitWatchFormApplication(
         }
     });
 
-    // The chosen pool is durable. Gallery selection is an overlay on that
-    // pool, not a transfer that consumes or deletes the source originals.
-    const remainingPoolImages = mergeWatchMediaPoolItems(
-        requestedPoolImages,
-        requestedGalleryImages,
-    );
-
-    if (isMediaWorkspaceSave && imagesChanged) {
+    if (isMediaWorkspaceSave && (imagesChanged || poolChanged)) {
         await assertMediaWorkspaceAssetsAvailable({
             productId,
             keys: [...remainingPoolImages, ...requestedGalleryImages]
@@ -721,16 +724,17 @@ export async function submitWatchFormApplication(
     let normalizedGalleryImages = requestedGalleryImages;
     let normalizedPoolImages = remainingPoolImages;
 
-    if (imagesChanged) {
-        // NAS/media reconciliation is comparatively expensive. Only run it when
-        // gallery keys actually changed; content/progress-only saves must not
-        // move and re-attach every existing image again.
+    if (imagesChanged || poolChanged) {
+        // NAS/media reconciliation is comparatively expensive. Run it whenever
+        // either durable pool membership or the Gallery overlay changes;
+        // content/progress-only saves must not reprocess existing media.
         normalizedGalleryImages = await selectWatchGalleryImages(
             requestedGalleryImages,
         );
 
         normalizedPoolImages = await selectWatchPoolImages(
             remainingPoolImages,
+            productId,
         );
 
         const galleryImageInputs = normalizedGalleryImages
