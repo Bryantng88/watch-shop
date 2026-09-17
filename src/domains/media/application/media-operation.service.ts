@@ -12,6 +12,13 @@ type ExecuteMoveInput = {
   requestedByUserId?: string | null;
 };
 
+export function shouldReplaySucceededMove(input: {
+  sourceExists: boolean;
+  destinationExists: boolean;
+}) {
+  return input.sourceExists && !input.destinationExists;
+}
+
 /**
  * Runs one verified, retryable storage move. All callers must supply a stable
  * idempotency key derived from the business command, never a random request id.
@@ -39,9 +46,22 @@ export async function executeMediaMove(
     update: {},
   });
 
-  if (operation.status === MediaOperationStatus.SUCCEEDED) return operation;
   if (operation.sourceKey !== sourceKey || operation.destinationKey !== destinationKey) {
     throw new Error(`Idempotency key ${input.idempotencyKey} was already used for another move.`);
+  }
+
+  if (operation.status === MediaOperationStatus.SUCCEEDED) {
+    const [destinationExists, sourceExists] = await Promise.all([
+      storage.stat(destinationKey),
+      storage.stat(sourceKey),
+    ]);
+    if (!shouldReplaySucceededMove({
+      sourceExists: Boolean(sourceExists),
+      destinationExists: Boolean(destinationExists),
+    })) {
+      if (destinationExists) return operation;
+      throw new Error(`Neither media source nor destination exists: ${sourceKey}`);
+    }
   }
 
   await prisma.mediaOperation.update({

@@ -8,6 +8,11 @@ import { mediaPathPolicy } from "../core/media-path.policy";
 import { isLegacyWatchMediaSource } from "../core/media-source-path";
 import { executeMediaMove } from "./media-operation.service";
 
+export function canonicalMediaObjectIdFromKey(storageKey: string) {
+  const match = normalizeKey(storageKey).match(/^media\/objects\/([^/]+)\/original\//);
+  return match?.[1] ?? null;
+}
+
 /**
  * Registers an existing NAS object without moving it. This is the safe bridge
  * from legacy MediaAsset into the canonical model.
@@ -62,14 +67,30 @@ export async function ingestSelectedMedia(input: {
   storageKey: string;
   destination?: { ownerType: "MEDIA_POST"; ownerId: string };
 }) {
-  const sourceKey = normalizeKey(input.storageKey);
+  let sourceKey = normalizeKey(input.storageKey);
   if (!sourceKey) throw new Error("Media source key is required.");
 
-  const existingObject = await prisma.mediaObject.findUnique({
+  let existingObject = await prisma.mediaObject.findUnique({
     where: { storageKey: sourceKey },
   });
   if (mediaPathPolicy.isCanonical(sourceKey)) {
-    return registerExistingMediaObject({ storageKey: sourceKey });
+    if (await mediaStorage.stat(sourceKey)) {
+      return registerExistingMediaObject({ storageKey: sourceKey });
+    }
+
+    // A form opened before "Return to NAS" can still hold the former canonical
+    // key. Resolve the embedded MediaObject id to its current physical key and
+    // ingest from there instead of failing the whole Gallery save.
+    const staleObjectId = canonicalMediaObjectIdFromKey(sourceKey);
+    const relocatedObject = staleObjectId
+      ? await prisma.mediaObject.findUnique({ where: { id: staleObjectId } })
+      : null;
+    const relocatedKey = normalizeKey(relocatedObject?.storageKey ?? "");
+    if (!relocatedKey || relocatedKey === sourceKey || !(await mediaStorage.stat(relocatedKey))) {
+      throw new Error(`Media object does not exist on NAS: ${sourceKey}`);
+    }
+    sourceKey = relocatedKey;
+    existingObject = relocatedObject;
   }
 
   const isLegacySource = isLegacyWatchMediaSource(sourceKey);
@@ -82,15 +103,30 @@ export async function ingestSelectedMedia(input: {
     .digest("hex")
     .slice(0, 32);
   const filename = sourceKey.split("/").pop() ?? "media";
-  const destinationKey = input.destination?.ownerType === "MEDIA_POST"
+  const plannedDestinationKey = input.destination?.ownerType === "MEDIA_POST"
     ? mediaPathPolicy.postOriginal({
         postId: input.destination.ownerId,
         mediaObjectId: stableObjectId,
         filename,
       })
     : mediaPathPolicy.canonicalOriginal({ mediaObjectId: stableObjectId, filename });
+  const idempotencyKey = input.destination?.ownerType === "MEDIA_POST"
+    ? `media-ingest:post:${input.destination.ownerId}:${sourceKey}`
+    : `media-ingest:${sourceKey}`;
+  const previousIngest = !input.destination
+    ? await prisma.mediaOperation.findUnique({
+        where: { idempotencyKey },
+        select: { destinationKey: true },
+      })
+    : null;
+  // Re-selecting an image after "Return to NAS" is a replay of the original
+  // ingest lifecycle. Reuse its canonical destination even if MediaObject.id
+  // was assigned later and differs from the original stable path segment.
+  const destinationKey = normalizeKey(
+    previousIngest?.destinationKey ?? plannedDestinationKey,
+  );
   await executeMediaMove({
-    idempotencyKey: `media-ingest:${sourceKey}`,
+    idempotencyKey,
     mediaObjectId: existingObject?.id ?? null,
     sourceKey,
     destinationKey,
