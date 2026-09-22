@@ -13,6 +13,16 @@ export function canonicalMediaObjectIdFromKey(storageKey: string) {
   return match?.[1] ?? null;
 }
 
+export function mediaSourceVersionToken(input: {
+  sizeBytes: number | null;
+  etag: string | null;
+}) {
+  return createHash("sha256")
+    .update(`${input.sizeBytes ?? "unknown"}:${input.etag ?? "no-etag"}`)
+    .digest("hex")
+    .slice(0, 20);
+}
+
 /**
  * Registers an existing NAS object without moving it. This is the safe bridge
  * from legacy MediaAsset into the canonical model.
@@ -98,8 +108,11 @@ export async function ingestSelectedMedia(input: {
     return registerExistingMediaObject({ storageKey: sourceKey });
   }
 
+  const sourceMetadata = await mediaStorage.stat(sourceKey);
+  if (!sourceMetadata) throw new Error(`Media object does not exist on NAS: ${sourceKey}`);
+  const sourceVersion = mediaSourceVersionToken(sourceMetadata);
   const stableObjectId = existingObject?.id ?? createHash("sha256")
-    .update(sourceKey)
+    .update(`${sourceKey}:${sourceVersion}`)
     .digest("hex")
     .slice(0, 32);
   const filename = sourceKey.split("/").pop() ?? "media";
@@ -111,19 +124,28 @@ export async function ingestSelectedMedia(input: {
       })
     : mediaPathPolicy.canonicalOriginal({ mediaObjectId: stableObjectId, filename });
   const idempotencyKey = input.destination?.ownerType === "MEDIA_POST"
-    ? `media-ingest:post:${input.destination.ownerId}:${sourceKey}`
-    : `media-ingest:${sourceKey}`;
-  const previousIngest = !input.destination
+    ? `media-ingest:post:${input.destination.ownerId}:${sourceKey}:${sourceVersion}`
+    : `media-ingest:${sourceKey}:${sourceVersion}`;
+  const currentIngest = await prisma.mediaOperation.findUnique({
+    where: { idempotencyKey },
+    select: { destinationKey: true },
+  });
+  const legacyIngest = !currentIngest && existingObject && !input.destination
     ? await prisma.mediaOperation.findUnique({
-        where: { idempotencyKey },
+        where: { idempotencyKey: `media-ingest:${sourceKey}` },
         select: { destinationKey: true },
       })
+    : null;
+  const legacyDestinationKey = normalizeKey(legacyIngest?.destinationKey ?? "");
+  const reusableLegacyDestination = legacyDestinationKey &&
+    !(await mediaStorage.stat(legacyDestinationKey))
+    ? legacyDestinationKey
     : null;
   // Re-selecting an image after "Return to NAS" is a replay of the original
   // ingest lifecycle. Reuse its canonical destination even if MediaObject.id
   // was assigned later and differs from the original stable path segment.
   const destinationKey = normalizeKey(
-    previousIngest?.destinationKey ?? plannedDestinationKey,
+    currentIngest?.destinationKey ?? reusableLegacyDestination ?? plannedDestinationKey,
   );
   await executeMediaMove({
     idempotencyKey,
