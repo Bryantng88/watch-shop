@@ -104,11 +104,15 @@ export async function executeMediaMove(
           sourceDeleted: Boolean(sourceExists && input.deleteSource !== false),
           metadata: destinationExists,
         }
-      : await storage.move({
+        : await storage.move({
           sourceKey,
           destinationKey,
           deleteSource: input.deleteSource !== false,
         });
+
+    if (input.deleteSource !== false && await storage.stat(sourceKey)) {
+      throw new Error(`Media move source still exists after delete: ${sourceKey}`);
+    }
 
     return await prisma.$transaction(async (tx) => {
       if (input.mediaObjectId) {
@@ -184,6 +188,9 @@ export async function executeMediaDelete(input: {
   });
   try {
     if (await storage.stat(storageKey)) await storage.delete(storageKey);
+    if (await storage.stat(storageKey)) {
+      throw new Error(`Media source still exists after delete: ${storageKey}`);
+    }
     return await prisma.mediaOperation.update({
       where: { id: operation.id },
       data: {

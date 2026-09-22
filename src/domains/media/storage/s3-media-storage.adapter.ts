@@ -15,6 +15,7 @@ import type {
   StoredMediaMetadata,
   WriteStoredMediaInput,
 } from "./media-storage.port";
+import { deleteStoredObjectWithVerification } from "./verified-delete";
 
 function copySource(key: string) {
   return `${S3_BUCKET}/${encodeURIComponent(normalizeKey(key)).replace(/%2F/g, "/")}`;
@@ -146,7 +147,13 @@ export class S3MediaStorage implements MediaStorage {
   async delete(key: string) {
     const normalized = normalizeKey(key);
     if (!normalized) return;
-    await s3.send(new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: normalized }));
+    await deleteStoredObjectWithVerification({
+      key: normalized,
+      deleteOnce: async () => {
+        await s3.send(new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: normalized }));
+      },
+      sourceExists: async () => Boolean(await this.stat(normalized)),
+    });
   }
 
   async sign(key: string, expiresInSeconds = 600) {
