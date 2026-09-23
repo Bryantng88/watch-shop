@@ -13,6 +13,33 @@ import {
     type WatchFormMediaItem,
 } from "../shared/watch-form-value";
 
+const MEDIA_SELECTION_CONCURRENCY = 6;
+
+async function mapWithConcurrency<T, R>(
+    items: T[],
+    worker: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+    const results = new Array<R>(items.length);
+    let nextIndex = 0;
+
+    async function runWorker() {
+        while (nextIndex < items.length) {
+            const index = nextIndex;
+            nextIndex += 1;
+            results[index] = await worker(items[index], index);
+        }
+    }
+
+    await Promise.all(
+        Array.from(
+            { length: Math.min(MEDIA_SELECTION_CONCURRENCY, items.length) },
+            () => runWorker(),
+        ),
+    );
+
+    return results;
+}
+
 export function watchMediaSelectionChanges(input: {
     beforePool: WatchFormMediaItem[];
     beforeGallery: WatchFormMediaItem[];
@@ -42,53 +69,48 @@ export async function selectWatchPoolImages(
     productId: string,
 ) {
     const normalized = dedupeMediaItems(items);
-    const result: WatchFormMediaItem[] = [];
-
-    for (const item of normalized) {
+    const selectedItems = await mapWithConcurrency<WatchFormMediaItem, WatchFormMediaItem | null>(normalized, async (item, index) => {
         const key = mediaKey(item);
-        if (!key) continue;
+        if (!key) return null;
 
         const selected = await selectExistingMediaForWatch({
             storageKey: key,
             productId,
             role: MediaRole.GALLERY,
-            sortOrder: result.length,
+            sortOrder: index,
         });
 
-        result.push({
+        return {
             ...item,
             key: selected.key,
             fileKey: selected.fileKey,
             url: selected.url ?? item.url ?? null,
             name: selected.name ?? item.name ?? fileNameFromKey(selected.key),
-        });
-    }
+        };
+    });
 
-    return result;
+    return selectedItems.filter((item): item is WatchFormMediaItem => item !== null);
 }
 export async function selectWatchGalleryImages(
     items: WatchFormMediaItem[],
 ) {
     const normalized = dedupeMediaItems(items);
-    const result: WatchFormMediaItem[] = [];
-
-    for (let index = 0; index < normalized.length; index += 1) {
-        const item = normalized[index];
+    const selectedItems = await mapWithConcurrency<WatchFormMediaItem, WatchFormMediaItem | null>(normalized, async (item) => {
         const key = mediaKey(item);
-        if (!key) continue;
+        if (!key) return null;
 
         const selected = await ingestExistingMediaForWatch({
             storageKey: key,
         });
 
-        result.push({
+        return {
             ...item,
             key: selected.key,
             fileKey: selected.fileKey,
             url: selected.url ?? item.url ?? null,
             name: selected.name ?? item.name ?? fileNameFromKey(selected.key),
-        });
-    }
+        };
+    });
 
-    return result;
+    return selectedItems.filter((item): item is WatchFormMediaItem => item !== null);
 }

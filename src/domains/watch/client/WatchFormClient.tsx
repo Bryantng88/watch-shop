@@ -623,10 +623,27 @@ export default function WatchFormClient({
 
   const buildSubmitValues = (): WatchFormValues => {
     const current = valuesRef.current;
+    const compactMediaItem = (item: WatchFormValues["media"]["poolImages"][number]) => ({
+      key: item.key,
+      name: item.name,
+      role: item.role,
+      sortOrder: item.sortOrder,
+    });
 
     return {
       ...current,
       productId: current.productId || initialValues.productId,
+      media: {
+        ...current.media,
+        inlineImage: current.media.inlineImage
+          ? compactMediaItem(current.media.inlineImage)
+          : null,
+        coverImage: current.media.coverImage
+          ? compactMediaItem(current.media.coverImage)
+          : null,
+        poolImages: current.media.poolImages.map(compactMediaItem),
+        galleryImages: current.media.galleryImages.map(compactMediaItem),
+      },
     };
   };
 
