@@ -23,6 +23,28 @@ export function mediaSourceVersionToken(input: {
     .slice(0, 20);
 }
 
+async function recoverCompletedIngest(input: {
+  sourceKey: string;
+  destination?: { ownerType: "MEDIA_POST"; ownerId: string };
+}) {
+  const idempotencyPrefix = input.destination?.ownerType === "MEDIA_POST"
+    ? `media-ingest:post:${input.destination.ownerId}:${input.sourceKey}`
+    : `media-ingest:${input.sourceKey}`;
+  const operation = await prisma.mediaOperation.findFirst({
+    where: {
+      sourceKey: input.sourceKey,
+      status: "SUCCEEDED",
+      idempotencyKey: { startsWith: idempotencyPrefix },
+      destinationKey: { not: null },
+    },
+    orderBy: [{ completedAt: "desc" }, { createdAt: "desc" }],
+    select: { destinationKey: true },
+  });
+  const destinationKey = normalizeKey(operation?.destinationKey ?? "");
+  if (!destinationKey || !(await mediaStorage.stat(destinationKey))) return null;
+  return registerExistingMediaObject({ storageKey: destinationKey });
+}
+
 /**
  * Registers an existing NAS object without moving it. This is the safe bridge
  * from legacy MediaAsset into the canonical model.
@@ -109,7 +131,17 @@ export async function ingestSelectedMedia(input: {
   }
 
   const sourceMetadata = await mediaStorage.stat(sourceKey);
-  if (!sourceMetadata) throw new Error(`Media object does not exist on NAS: ${sourceKey}`);
+  if (!sourceMetadata) {
+    // A previous request may have completed the physical move and then lost its
+    // database transaction. Recover from the durable move journal so a retry
+    // attaches the canonical object instead of treating the source as lost.
+    const recovered = await recoverCompletedIngest({
+      sourceKey,
+      destination: input.destination,
+    });
+    if (recovered) return recovered;
+    throw new Error(`Media object does not exist on NAS: ${sourceKey}`);
+  }
   const sourceVersion = mediaSourceVersionToken(sourceMetadata);
   const stableObjectId = existingObject?.id ?? createHash("sha256")
     .update(`${sourceKey}:${sourceVersion}`)

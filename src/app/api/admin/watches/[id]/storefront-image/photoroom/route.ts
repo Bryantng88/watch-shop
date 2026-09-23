@@ -56,8 +56,8 @@ export async function POST(
   const auth = await requirePermissionApi(PERMISSIONS.PRODUCT_UPDATE);
   if (auth instanceof Response) return auth;
 
+  const { id } = await params;
   try {
-    const { id } = await params;
     const body = await req.json().catch(() => ({}));
 
     const result = await processWatchCoverWithPhotoRoomApplication({
@@ -71,6 +71,11 @@ export async function POST(
     return NextResponse.json({ ok: true, data: result });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Không thể xử lý ảnh bằng PhotoRoom.";
+    console.error("[watch-photoroom] request failed", {
+      productId: id,
+      message,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    });
     const status = message.includes("PHOTOROOM_API_KEY") ? 503 : 502;
     return NextResponse.json({ error: message }, { status });
   }

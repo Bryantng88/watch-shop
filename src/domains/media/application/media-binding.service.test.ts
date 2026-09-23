@@ -27,15 +27,15 @@ const input: BindMediaInput = {
   lifecycle: MediaBindingLifecycle.ATTACHED,
 };
 
-test("segment conflicts exclude active bindings owned by the same owner", () => {
+test("watch media conflicts with every other active watch owner", () => {
   assert.deepEqual(conflictingMediaBindingWhere(input), {
     mediaObjectId: "media-1",
-    audienceSegment: { not: AudienceSegment.MEN },
     lifecycle: { not: MediaBindingLifecycle.REMOVED },
     NOT: {
       ownerType: MediaOwnerType.WATCH,
       ownerId: "watch-1",
     },
+    ownerType: MediaOwnerType.WATCH,
   });
 });
 
@@ -43,6 +43,10 @@ test("binding media realigns all active bindings for its owner before upsert", a
   const calls: string[] = [];
   const db = {
     mediaBinding: {
+      findUnique: async () => {
+        calls.push("findUnique");
+        return null;
+      },
       findFirst: async () => {
         calls.push("findFirst");
         return null;
@@ -67,18 +71,19 @@ test("binding media realigns all active bindings for its owner before upsert", a
 
   await bindMedia(input, db as never);
 
-  assert.deepEqual(calls, ["findFirst", "updateMany", "upsert"]);
+  assert.deepEqual(calls, ["findUnique", "findFirst", "updateMany", "upsert"]);
 });
 
-test("binding media still rejects a conflicting owner in another segment", async () => {
+test("binding media rejects another watch owner even in the same segment", async () => {
   let wrote = false;
   const db = {
     mediaBinding: {
+      findUnique: async () => null,
       findFirst: async () => ({
         id: "binding-2",
         ownerType: MediaOwnerType.WATCH,
         ownerId: "watch-2",
-        audienceSegment: AudienceSegment.UNISEX,
+        audienceSegment: AudienceSegment.MEN,
       }),
       updateMany: async () => {
         wrote = true;
@@ -91,7 +96,25 @@ test("binding media still rejects a conflicting owner in another segment", async
 
   await assert.rejects(
     () => bindMedia(input, db as never),
-    /another WATCH owner in segment UNISEX/,
+    /another WATCH owner \(watch-2\) in segment MEN/,
   );
   assert.equal(wrote, false);
+});
+
+test("an existing owner can update its lifecycle while historical drift is repaired", async () => {
+  let conflictChecked = false;
+  const db = {
+    mediaBinding: {
+      findUnique: async () => ({ id: "binding-1" }),
+      findFirst: async () => {
+        conflictChecked = true;
+        return { id: "binding-2" };
+      },
+      updateMany: async () => ({ count: 1 }),
+      upsert: async () => ({ id: "binding-1" }),
+    },
+  };
+
+  await bindMedia(input, db as never);
+  assert.equal(conflictChecked, false);
 });

@@ -1,6 +1,8 @@
 import {
   AudienceSegment,
   MediaObjectAvailability,
+  MediaBindingLifecycle,
+  MediaOwnerType,
   MediaPipelineKey,
 } from "@prisma/client";
 import { mediaStorage } from "../src/domains/media/storage";
@@ -18,6 +20,7 @@ async function main() {
       select: { id: true, audienceSegment: true, mediaPipelineKey: true },
     }),
     prisma.mediaBinding.findMany({
+      where: { lifecycle: { not: MediaBindingLifecycle.REMOVED } },
       include: {
         mediaObject: { select: { storageKey: true, availability: true } },
       },
@@ -53,6 +56,17 @@ async function main() {
   const crossSegmentObjects = Array.from(segmentsByObject.values()).filter(
     (segments) => segments.size > 1,
   ).length;
+  const watchOwnersByObject = new Map<string, Set<string>>();
+  bindings
+    .filter((binding) => binding.ownerType === MediaOwnerType.WATCH)
+    .forEach((binding) => {
+      const owners = watchOwnersByObject.get(binding.mediaObjectId) ?? new Set();
+      owners.add(binding.ownerId);
+      watchOwnersByObject.set(binding.mediaObjectId, owners);
+    });
+  const crossWatchOwnerObjects = Array.from(watchOwnersByObject.values()).filter(
+    (owners) => owners.size > 1,
+  ).length;
   const storageSample = bindings.slice(0, 25);
   const missingSample = (
     await Promise.all(
@@ -71,6 +85,7 @@ async function main() {
     pipelineMismatches: pipelineMismatches.length,
     bindingSegmentMismatches: segmentMismatches.length,
     crossSegmentObjects,
+    crossWatchOwnerObjects,
     storageSample: storageSample.length,
     missingInStorageSample: missingSample.length,
   };
@@ -80,6 +95,7 @@ async function main() {
     pipelineMismatches.length ||
     segmentMismatches.length ||
     crossSegmentObjects ||
+    crossWatchOwnerObjects ||
     unavailableCount ||
     missingSample.length
   ) {

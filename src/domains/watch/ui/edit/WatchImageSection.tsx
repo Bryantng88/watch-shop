@@ -163,6 +163,7 @@ export default function WatchImageSection({
     );
     const [photoRoomPending, setPhotoRoomPending] = useState(false);
     const [photoRoomAdjustmentOpen, setPhotoRoomAdjustmentOpen] = useState(false);
+    const [photoRoomError, setPhotoRoomError] = useState<string | null>(null);
     const [adjustmentDialogMode, setAdjustmentDialogMode] = useState<"photoroom" | "sharp">("photoroom");
     const [photoRoomSourceKey, setPhotoRoomSourceKey] = useState<string | null>(null);
     const [hasPhotoRoomResult, setHasPhotoRoomResult] = useState(() =>
@@ -461,6 +462,7 @@ export default function WatchImageSection({
         if (!storageKey || coverPending || photoRoomPending) return;
 
         setPhotoRoomPending(true);
+        setPhotoRoomError(null);
         try {
             const res = await fetch(`/api/admin/watches/${productId}/storefront-image/photoroom`, {
                 method: "POST",
@@ -473,9 +475,11 @@ export default function WatchImageSection({
             });
             const json = await res.json().catch(() => null);
             if (!res.ok) {
+                const message = json?.error || "Không nhận được ảnh hoàn chỉnh từ PhotoRoom.";
+                setPhotoRoomError(message);
                 notify.error({
                     title: "PhotoRoom xử lý thất bại",
-                    message: json?.error || "Không nhận được ảnh hoàn chỉnh từ PhotoRoom.",
+                    message,
                 });
                 return;
             }
@@ -499,9 +503,11 @@ export default function WatchImageSection({
                 message: "Hãy kiểm tra ảnh mới, sau đó bấm Xác nhận Cover để đưa lên storefront.",
             });
         } catch (error) {
+            const message = error instanceof Error ? error.message : "Có lỗi khi gửi ảnh sang PhotoRoom.";
+            setPhotoRoomError(message);
             notify.error({
                 title: "PhotoRoom xử lý thất bại",
-                message: error instanceof Error ? error.message : "Có lỗi khi gửi ảnh sang PhotoRoom.",
+                message,
             });
         } finally {
             setPhotoRoomPending(false);
@@ -960,6 +966,7 @@ export default function WatchImageSection({
                 open={photoRoomAdjustmentOpen}
                 mode={adjustmentDialogMode}
                 pending={photoRoomPending}
+                error={photoRoomError}
                 localPending={sharpPending}
                 previewSrc={resolveMediaPreviewSrc(localLayoutBaseKey ?? pendingCoverKey ?? currentCoverKey)}
                 canProcessLocally={Boolean(reusableSharpKey && reusableSharpBaseAdjustment)}
@@ -971,7 +978,10 @@ export default function WatchImageSection({
                 localPreviewStorageKey={reusableSharpKey}
                 localDisabledReason="Cần tạo Cover sạch bằng PhotoRoom một lần trước khi dùng Sharp"
                 initialValue={photoRoomAdjustment}
-                onClose={() => setPhotoRoomAdjustmentOpen(false)}
+                onClose={() => {
+                    setPhotoRoomError(null);
+                    setPhotoRoomAdjustmentOpen(false);
+                }}
                 onSubmit={(value) => void handlePhotoRoomProcess(value)}
                 onSubmitLocal={(value) => void handleLocalAdjustment(value)}
             /> : null}

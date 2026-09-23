@@ -21,12 +21,14 @@ export type BindMediaInput = {
 export function conflictingMediaBindingWhere(input: BindMediaInput) {
   return {
     mediaObjectId: input.mediaObjectId,
-    audienceSegment: { not: input.audienceSegment },
     lifecycle: { not: MediaBindingLifecycle.REMOVED },
     NOT: {
       ownerType: input.ownerType,
       ownerId: input.ownerId,
     },
+    ...(input.ownerType === MediaOwnerType.WATCH
+      ? { ownerType: MediaOwnerType.WATCH }
+      : { audienceSegment: { not: input.audienceSegment } }),
   };
 }
 
@@ -39,13 +41,27 @@ export function activeMediaBindingsForOwnerWhere(input: BindMediaInput) {
 }
 
 export async function bindMedia(input: BindMediaInput, db: DB = prisma) {
-  const conflictingBinding = await db.mediaBinding.findFirst({
-    where: conflictingMediaBindingWhere(input),
-    select: { id: true, ownerType: true, ownerId: true, audienceSegment: true },
+  const ownerBindingKey = {
+    mediaObjectId: input.mediaObjectId,
+    ownerType: input.ownerType,
+    ownerId: input.ownerId,
+    role: input.role,
+  };
+  // Historical drift is repaired separately. Existing owners may still update
+  // their own lifecycle, but a new Watch owner can never join a shared object.
+  const existingOwnerBinding = await db.mediaBinding.findUnique({
+    where: { mediaObjectId_ownerType_ownerId_role: ownerBindingKey },
+    select: { id: true },
   });
+  const conflictingBinding = existingOwnerBinding
+    ? null
+    : await db.mediaBinding.findFirst({
+        where: conflictingMediaBindingWhere(input),
+        select: { id: true, ownerType: true, ownerId: true, audienceSegment: true },
+      });
   if (conflictingBinding) {
     throw new Error(
-      `Media object is already managed by another ${conflictingBinding.ownerType} owner in segment ${conflictingBinding.audienceSegment}.`,
+      `Media object is already managed by another ${conflictingBinding.ownerType} owner (${conflictingBinding.ownerId}) in segment ${conflictingBinding.audienceSegment}.`,
     );
   }
 
@@ -64,10 +80,7 @@ export async function bindMedia(input: BindMediaInput, db: DB = prisma) {
   return db.mediaBinding.upsert({
     where: {
       mediaObjectId_ownerType_ownerId_role: {
-        mediaObjectId: input.mediaObjectId,
-        ownerType: input.ownerType,
-        ownerId: input.ownerId,
-        role: input.role,
+        ...ownerBindingKey,
       },
     },
     create: {

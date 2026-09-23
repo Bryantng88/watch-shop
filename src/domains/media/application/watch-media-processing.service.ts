@@ -30,6 +30,91 @@ export function mediaRecipeHash(recipe: unknown) {
     .slice(0, 20);
 }
 
+type WatchMediaOwner = {
+  id: string;
+  audienceSegment: "MEN" | "WOMEN" | "UNISEX";
+  mediaPipelineKey?: Parameters<typeof bindMedia>[0]["pipelineKey"];
+};
+
+type WatchMediaDerivativeSpec = {
+  variant: string;
+  contentType: string;
+  role: MediaRole;
+  recipe: unknown;
+};
+
+async function resolveRootMediaObjectId(sourceMediaObjectId: string) {
+  const source = await prisma.mediaObject.findUnique({
+    where: { id: sourceMediaObjectId },
+    select: { id: true, sourceMediaObjectId: true },
+  });
+  if (!source) throw new Error("Source MediaObject not found.");
+  let rootId = source.id;
+  let parentId = source.sourceMediaObjectId;
+  const visited = new Set([rootId]);
+  while (parentId && !visited.has(parentId)) {
+    visited.add(parentId);
+    const parent = await prisma.mediaObject.findUnique({
+      where: { id: parentId },
+      select: { id: true, sourceMediaObjectId: true },
+    });
+    if (!parent) break;
+    rootId = parent.id;
+    parentId = parent.sourceMediaObjectId;
+  }
+  return rootId;
+}
+
+async function bindPreparedDerivatives(input: {
+  watch: WatchMediaOwner;
+  created: Array<WatchMediaDerivativeSpec & {
+    key: string;
+    mediaObjectId: string;
+    recipeHash: string;
+  }>;
+}) {
+  for (const item of input.created) {
+    await bindMedia({
+      mediaObjectId: item.mediaObjectId,
+      ownerType: MediaOwnerType.WATCH,
+      ownerId: input.watch.id,
+      role: item.role,
+      audienceSegment: input.watch.audienceSegment,
+      pipelineKey: input.watch.mediaPipelineKey ?? null,
+      lifecycle: MediaBindingLifecycle.DRAFT,
+    });
+  }
+}
+
+export async function reuseWatchMediaDerivatives(input: {
+  watch: WatchMediaOwner;
+  sourceMediaObjectId: string;
+  outputs: WatchMediaDerivativeSpec[];
+}) {
+  const rootId = await resolveRootMediaObjectId(input.sourceMediaObjectId);
+  const reusable = [];
+  for (const output of input.outputs) {
+    const recipeHash = mediaRecipeHash(output.recipe);
+    const existing = await prisma.mediaObject.findFirst({
+      where: {
+        sourceMediaObjectId: rootId,
+        derivativeVariant: output.variant,
+        derivativeRecipeHash: recipeHash,
+        availability: { not: MediaObjectAvailability.DELETED },
+      },
+    });
+    if (!existing || !(await mediaStorage.stat(existing.storageKey))) return [];
+    reusable.push({
+      ...output,
+      key: existing.storageKey,
+      mediaObjectId: existing.id,
+      recipeHash,
+    });
+  }
+  await bindPreparedDerivatives({ watch: input.watch, created: reusable });
+  return reusable;
+}
+
 export async function prepareWatchMediaSource(input: {
   productId: string;
   storageKey: string;
@@ -57,11 +142,7 @@ export async function getWatchMediaOwner(productId: string) {
 }
 
 export async function storeWatchMediaDerivatives(input: {
-  watch: {
-    id: string;
-    audienceSegment: "MEN" | "WOMEN" | "UNISEX";
-    mediaPipelineKey?: Parameters<typeof bindMedia>[0]["pipelineKey"];
-  };
+  watch: WatchMediaOwner;
   sourceMediaObjectId: string;
   outputs: Array<{
     variant: string;
@@ -71,24 +152,7 @@ export async function storeWatchMediaDerivatives(input: {
     recipe: unknown;
   }>;
 }) {
-  const source = await prisma.mediaObject.findUnique({
-    where: { id: input.sourceMediaObjectId },
-    select: { id: true, sourceMediaObjectId: true },
-  });
-  if (!source) throw new Error("Source MediaObject not found.");
-  let rootId = source.id;
-  let parentId = source.sourceMediaObjectId;
-  const visited = new Set([rootId]);
-  while (parentId && !visited.has(parentId)) {
-    visited.add(parentId);
-    const parent = await prisma.mediaObject.findUnique({
-      where: { id: parentId },
-      select: { id: true, sourceMediaObjectId: true },
-    });
-    if (!parent) break;
-    rootId = parent.id;
-    parentId = parent.sourceMediaObjectId;
-  }
+  const rootId = await resolveRootMediaObjectId(input.sourceMediaObjectId);
 
   const created = [];
   for (const output of input.outputs) {
@@ -114,17 +178,12 @@ export async function storeWatchMediaDerivatives(input: {
       derivativeVariant: output.variant,
       derivativeRecipeHash: recipeHash,
     });
-    await bindMedia({
-      mediaObjectId: mediaObject.id,
-      ownerType: MediaOwnerType.WATCH,
-      ownerId: input.watch.id,
-      role: output.role,
-      audienceSegment: input.watch.audienceSegment,
-      pipelineKey: input.watch.mediaPipelineKey ?? null,
-      lifecycle: MediaBindingLifecycle.DRAFT,
-    });
     created.push({ ...output, key: mediaObject.storageKey, mediaObjectId: mediaObject.id, recipeHash });
   }
+  // Persist every deterministic output before creating bindings. If binding or
+  // a later database write fails, the next request can reuse these outputs and
+  // never spend PhotoRoom quota a second time.
+  await bindPreparedDerivatives({ watch: input.watch, created });
 
   const keepIds = new Set([rootId, input.sourceMediaObjectId, ...created.map((item) => item.mediaObjectId)]);
   const staleBindings = await prisma.mediaBinding.findMany({

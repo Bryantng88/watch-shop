@@ -4,6 +4,7 @@ import sharp from "sharp";
 import {
   prepareWatchMediaSource,
   getWatchMediaOwner,
+  reuseWatchMediaDerivatives,
   storeWatchMediaDerivatives,
 } from "@/domains/media/application";
 import { mediaStorage } from "@/domains/media/storage";
@@ -388,6 +389,46 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
     throw new Error("Ảnh nguồn vượt quá giới hạn 30 MB của PhotoRoom.");
   }
 
+  // Canonicalize the source before spending external quota. The ingest journal
+  // makes stale source keys retryable if a previous request moved the file but
+  // failed before it could return the canonical key to the browser.
+  const { watch, mediaObject } = await prepareWatchMediaSource({ productId, storageKey: sourceKey });
+  const cutoutRecipe = {
+    processor: "photoroom-segment",
+    version: 1,
+    sourceStorageKey: mediaObject.storageKey,
+    totalRotationDegrees,
+  };
+  const coverRecipe = {
+    processor: `photoroom-${processingMode}`,
+    version: 1,
+    sourceStorageKey: mediaObject.storageKey,
+    adjustment,
+  };
+  const expectedOutputs = [
+    ...(processingMode === "basic-sharp"
+      ? [{ variant: "cover-cutout", contentType: "image/png", role: MediaRole.THUMBNAIL, recipe: cutoutRecipe }]
+      : []),
+    { variant: "cover-edit", contentType: "image/png", role: MediaRole.COVER, recipe: coverRecipe },
+  ];
+  const reusable = await reuseWatchMediaDerivatives({
+    watch,
+    sourceMediaObjectId: mediaObject.id,
+    outputs: expectedOutputs,
+  });
+  if (reusable.length === expectedOutputs.length) {
+    const reusedCover = reusable.find((item) => item.role === MediaRole.COVER);
+    if (!reusedCover) throw new Error("Không tìm được derivative Cover đã lưu.");
+    return {
+      storageKey: reusedCover.key,
+      sourceStorageKey: mediaObject.storageKey,
+      cutoutStorageKey: reusable.find((item) => item.role === MediaRole.THUMBNAIL)?.key ?? null,
+      processingMode,
+      adjustment: processingMode === "plus" ? adjustment : null,
+      reused: true,
+    };
+  }
+
   let preparedSource = sharp(source.bytes).rotate();
   if (adjustment.flipHorizontal) preparedSource = preparedSource.flop();
   const prepared = await preparedSource
@@ -493,11 +534,6 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
   }
   if (!resultBytes.byteLength) throw new Error("PhotoRoom trả về ảnh rỗng.");
 
-  // Commit storage only after the external transformation succeeded. This keeps
-  // the source retryable on PhotoRoom failure, while a successful run consumes
-  // the cover inbox into the canonical MediaObject workspace.
-  const { watch, mediaObject } = await prepareWatchMediaSource({ productId, storageKey: sourceKey });
-
   const outputs = await storeWatchMediaDerivatives({
     watch,
     sourceMediaObjectId: mediaObject.id,
@@ -508,12 +544,7 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
             bytes: photoRoomBytes,
             contentType: "image/png",
             role: MediaRole.THUMBNAIL,
-            recipe: {
-              processor: "photoroom-segment",
-              version: 1,
-              sourceStorageKey: mediaObject.storageKey,
-              totalRotationDegrees,
-            },
+            recipe: cutoutRecipe,
           }]
         : []),
       {
@@ -521,12 +552,7 @@ export async function processWatchCoverWithPhotoRoomApplication(input: {
         bytes: resultBytes,
         contentType: "image/png",
         role: MediaRole.COVER,
-        recipe: {
-          processor: `photoroom-${processingMode}`,
-          version: 1,
-          sourceStorageKey: mediaObject.storageKey,
-          adjustment,
-        },
+        recipe: coverRecipe,
       },
     ],
   });

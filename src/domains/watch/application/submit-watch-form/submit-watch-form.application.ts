@@ -710,7 +710,7 @@ export async function submitWatchFormApplication(
                 postTargetIds: postTargetsResult.postTargetIds,
             }, { deferConsumers: context.deferConsumers });
         }
-    });
+    }, { maxWait: 10_000, timeout: 60_000 });
 
     if (isMediaWorkspaceSave && (imagesChanged || poolChanged)) {
         await assertMediaWorkspaceAssetsAvailable({
@@ -791,7 +791,7 @@ export async function submitWatchFormApplication(
                 sourceId: productId,
                 note: "Watch Workbench image save.",
             }, { deferConsumers: context.deferConsumers });
-        });
+        }, { maxWait: 10_000, timeout: 60_000 });
     }
     const hasContentData = hasContentSnapshotData(afterContent);
     const hasGalleryImages = normalizedGalleryImages.length > 0;
@@ -835,7 +835,7 @@ export async function submitWatchFormApplication(
             }
 
             return result;
-        })
+        }, { maxWait: 10_000, timeout: 60_000 })
         : null;
 
     if (pricingResult && pricingResult.changedFields.length > 0) {

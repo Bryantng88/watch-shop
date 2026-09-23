@@ -15,6 +15,7 @@ type Props = {
   open: boolean;
   mode?: "photoroom" | "sharp";
   pending: boolean;
+  error?: string | null;
   localPending?: boolean;
   previewSrc?: string | null;
   canProcessLocally?: boolean;
@@ -75,6 +76,7 @@ export default function PhotoRoomAdjustmentDialog({
   open,
   mode = "photoroom",
   pending,
+  error,
   localPending = false,
   previewSrc,
   canProcessLocally = false,
@@ -377,6 +379,12 @@ export default function PhotoRoomAdjustmentDialog({
           </div>
         </div>
       </div>
+
+      {error ? (
+        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+          {error}
+        </div>
+      ) : null}
 
       <DialogFooter>
         <button type="button" onClick={onClose} disabled={pending} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">Hủy</button>
