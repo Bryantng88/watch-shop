@@ -69,9 +69,16 @@ export async function selectWatchPoolImages(
     productId: string,
 ) {
     const normalized = dedupeMediaItems(items);
-    const selectedItems = await mapWithConcurrency<WatchFormMediaItem, WatchFormMediaItem | null>(normalized, async (item, index) => {
+    const selectedItems: WatchFormMediaItem[] = [];
+
+    // selectExistingMediaForWatch persists a binding for the same Watch owner.
+    // Keep those mutations ordered: running them concurrently makes each
+    // transaction contend for the same owner bindings and can deadlock. The
+    // storage-only gallery ingest below remains concurrency-limited.
+    for (let index = 0; index < normalized.length; index += 1) {
+        const item = normalized[index];
         const key = mediaKey(item);
-        if (!key) return null;
+        if (!key) continue;
 
         const selected = await selectExistingMediaForWatch({
             storageKey: key,
@@ -80,16 +87,16 @@ export async function selectWatchPoolImages(
             sortOrder: index,
         });
 
-        return {
+        selectedItems.push({
             ...item,
             key: selected.key,
             fileKey: selected.fileKey,
             url: selected.url ?? item.url ?? null,
             name: selected.name ?? item.name ?? fileNameFromKey(selected.key),
-        };
-    });
+        });
+    }
 
-    return selectedItems.filter((item): item is WatchFormMediaItem => item !== null);
+    return selectedItems;
 }
 export async function selectWatchGalleryImages(
     items: WatchFormMediaItem[],

@@ -51,6 +51,13 @@ test("binding media realigns all active bindings for its owner before upsert", a
         calls.push("findFirst");
         return null;
       },
+      findMany: async () => {
+        calls.push("findMany");
+        return [{
+          audienceSegment: AudienceSegment.WOMEN,
+          pipelineKey: MediaPipelineKey.WOMEN_LITE,
+        }];
+      },
       updateMany: async (args: unknown) => {
         calls.push("updateMany");
         assert.deepEqual(args, {
@@ -71,7 +78,29 @@ test("binding media realigns all active bindings for its owner before upsert", a
 
   await bindMedia(input, db as never);
 
-  assert.deepEqual(calls, ["findUnique", "findFirst", "updateMany", "upsert"]);
+  assert.deepEqual(calls, ["findUnique", "findFirst", "findMany", "updateMany", "upsert"]);
+});
+
+test("binding media skips the broad owner update when metadata is already aligned", async () => {
+  let updateManyCalled = false;
+  const db = {
+    mediaBinding: {
+      findUnique: async () => ({ id: "binding-1" }),
+      findFirst: async () => null,
+      findMany: async () => [{
+        audienceSegment: AudienceSegment.MEN,
+        pipelineKey: MediaPipelineKey.MEN_STANDARD,
+      }],
+      updateMany: async () => {
+        updateManyCalled = true;
+        return { count: 1 };
+      },
+      upsert: async () => ({ id: "binding-1" }),
+    },
+  };
+
+  await bindMedia(input, db as never);
+  assert.equal(updateManyCalled, false);
 });
 
 test("binding media rejects another watch owner even in the same segment", async () => {
@@ -85,6 +114,7 @@ test("binding media rejects another watch owner even in the same segment", async
         ownerId: "watch-2",
         audienceSegment: AudienceSegment.MEN,
       }),
+      findMany: async () => [],
       updateMany: async () => {
         wrote = true;
       },
@@ -110,6 +140,7 @@ test("an existing owner can update its lifecycle while historical drift is repai
         conflictChecked = true;
         return { id: "binding-2" };
       },
+      findMany: async () => [],
       updateMany: async () => ({ count: 1 }),
       upsert: async () => ({ id: "binding-1" }),
     },

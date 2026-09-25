@@ -65,17 +65,30 @@ export async function bindMedia(input: BindMediaInput, db: DB = prisma) {
     );
   }
 
-  // Segment and pipeline are owner metadata, not storage identity. A Watch or
-  // Acquisition can change segment after its media was first attached. Keep
-  // every active binding for that owner aligned before upserting the requested
-  // role; otherwise an old binding can reject its own owner on the next save.
-  await db.mediaBinding.updateMany({
+  // Segment and pipeline are owner metadata, not storage identity. Only issue
+  // the broad owner update when drift actually exists. Besides avoiding an
+  // unnecessary write for every image, this prevents concurrent image work
+  // from repeatedly locking the same binding set.
+  const activeOwnerBindings = await db.mediaBinding.findMany({
     where: activeMediaBindingsForOwnerWhere(input),
-    data: {
-      audienceSegment: input.audienceSegment,
-      pipelineKey: input.pipelineKey ?? null,
-    },
+    select: { audienceSegment: true, pipelineKey: true },
   });
+  const expectedPipelineKey = input.pipelineKey ?? null;
+  const ownerMetadataDrifted = activeOwnerBindings.some(
+    (binding) =>
+      binding.audienceSegment !== input.audienceSegment ||
+      binding.pipelineKey !== expectedPipelineKey,
+  );
+
+  if (ownerMetadataDrifted) {
+    await db.mediaBinding.updateMany({
+      where: activeMediaBindingsForOwnerWhere(input),
+      data: {
+        audienceSegment: input.audienceSegment,
+        pipelineKey: expectedPipelineKey,
+      },
+    });
+  }
 
   return db.mediaBinding.upsert({
     where: {
