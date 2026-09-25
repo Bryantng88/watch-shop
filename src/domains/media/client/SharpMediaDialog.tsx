@@ -59,6 +59,8 @@ export default function SharpMediaDialog({
   const [unavailable, setUnavailable] = useState<Set<string>>(new Set());
   const [states, setStates] = useState<Record<string, ItemState>>({});
   const [preset, setPreset] = useState<Preset>(DEFAULT_PRESET);
+  const [presetsByKey, setPresetsByKey] = useState<Record<string, Preset>>({});
+  const [activeKey, setActiveKey] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [applying, setApplying] = useState(false);
   const [largePreview, setLargePreview] = useState<{ src: string; name: string } | null>(null);
@@ -70,6 +72,9 @@ export default function SharpMediaDialog({
     setSelected(new Set(keys));
     setUnavailable(new Set());
     setStates({});
+    setPresetsByKey({});
+    setActiveKey(keys[0] ?? null);
+    setPreset(DEFAULT_PRESET);
     setRunning(false);
     setLargePreview(null);
     setPreviewZoom(100);
@@ -88,14 +93,30 @@ export default function SharpMediaDialog({
   const completed = Object.values(states).filter((state) => state.status === "done").length;
 
   const updatePreset = (next: Preset | ((current: Preset) => Preset)) => {
-    setPreset(next);
-    // A preview is valid only for the exact preset which created it.
-    setStates({});
+    const value = typeof next === "function" ? next(preset) : next;
+    setPreset(value);
+    if (!activeKey) return;
+    setPresetsByKey((presets) => ({ ...presets, [activeKey]: value }));
+    // Only this image's preview becomes stale. Other completed previews
+    // must survive while the operator tunes images one by one.
+    setStates((items) => {
+      if (!items[activeKey]) return items;
+      const copy = { ...items };
+      delete copy[activeKey];
+      return copy;
+    });
   };
 
   const resetPreset = () => {
     setPreset(DEFAULT_PRESET);
-    setStates({});
+    if (!activeKey) return;
+    setPresetsByKey((presets) => ({ ...presets, [activeKey]: DEFAULT_PRESET }));
+    setStates((items) => {
+      if (!items[activeKey]) return items;
+      const copy = { ...items };
+      delete copy[activeKey];
+      return copy;
+    });
   };
 
   const processOne = async (key: string) => {
@@ -104,7 +125,7 @@ export default function SharpMediaDialog({
       const response = await fetch(processUrl, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ storageKey: key, preset }),
+        body: JSON.stringify({ storageKey: key, preset: presetsByKey[key] ?? (key === activeKey ? preset : DEFAULT_PRESET) }),
       });
       const json = await response.json().catch(() => ({}));
       if (!response.ok || !json?.data?.storageKey) throw new Error(json?.error || "Sharp không trả về ảnh Gallery.");
@@ -255,12 +276,26 @@ export default function SharpMediaDialog({
                 const active = selected.has(item.key);
                 return (
                   <div key={item.key} className={`relative overflow-hidden rounded-2xl border bg-white ${active ? "border-violet-400 ring-2 ring-violet-100" : "border-slate-200"}`}>
-                    <button type="button" disabled={running} onClick={() => setSelected((current) => { const next = new Set(current); if (next.has(item.key)) next.delete(item.key); else next.add(item.key); return next; })} className="relative block aspect-square w-full overflow-hidden bg-slate-100">
+                    <button type="button" disabled={running} onClick={() => {
+                      setActiveKey(item.key);
+                      setPreset(presetsByKey[item.key] ?? DEFAULT_PRESET);
+                      setSelected((current) => { const next = new Set(current); if (next.has(item.key)) next.delete(item.key); else next.add(item.key); return next; });
+                    }} className="relative block aspect-square w-full overflow-hidden bg-slate-100">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={src}
                         alt={item.name || "Gallery"}
                         onError={() => {
+                          if (resultKey) {
+                            setStates((current) => ({
+                              ...current,
+                              [item.key]: {
+                                status: "error",
+                                error: "Preview Sharp không còn khả dụng. Hãy tạo preview lại.",
+                              },
+                            }));
+                            return;
+                          }
                           setUnavailable((current) => new Set(current).add(item.key));
                           setSelected((current) => { const next = new Set(current); next.delete(item.key); return next; });
                         }}
