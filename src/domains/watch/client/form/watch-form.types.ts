@@ -25,6 +25,7 @@ export type WatchFormValues = {
         title: string;
         slug: string;
         brandId: string;
+        brandName?: string;
         vendorId: string;
         categoryId: string;
         gender: string;
