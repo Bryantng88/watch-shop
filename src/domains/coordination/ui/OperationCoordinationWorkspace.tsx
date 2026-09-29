@@ -94,6 +94,7 @@ import WatchSearchPicker, { type WatchSearchResult } from "@/domains/watch/ui/se
 import FlowItemListView from "./FlowItemListView";
 import { useAdHocWorkCreate } from "@/domains/task/ui/ad-hoc-work/AdHocWorkRowAction";
 import { createMediaPostAction } from "@/domains/media-post/actions";
+import MediaPostCreateForm from "@/domains/media-post/ui/MediaPostCreateForm";
 
 type Props = {
   data: CoordinationDashboardDTO;
@@ -763,8 +764,6 @@ export default function OperationCoordinationWorkspace({
   const [isTechnicalIntakeOpen, setIsTechnicalIntakeOpen] = useState(false);
   const [isExpensePaymentOpen, setIsExpensePaymentOpen] = useState(false);
   const [isMediaPostCreateOpen, setIsMediaPostCreateOpen] = useState(false);
-  const [mediaPostBrief, setMediaPostBrief] = useState("");
-  const [isMediaPostCreating, setIsMediaPostCreating] = useState(false);
   const [focusedTechnicalIssueId, setFocusedTechnicalIssueId] = useState<string | null>(null);
   const [dashboardCustomizationRequest, setDashboardCustomizationRequest] = useState(0);
   const [filterQuery, setFilterQuery] = useState(() => searchParams.get("flowQuery") ?? "");
@@ -2159,49 +2158,21 @@ export default function OperationCoordinationWorkspace({
                   </button>
                 </form>
                 {isMediaFlowMode && isMediaPostCreateOpen ? (
-                  <form
-                    className="mt-4 grid min-w-0 gap-2 border-t border-sky-100 pt-4 md:grid-cols-[minmax(280px,1fr)_auto_auto]"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      if (isMediaPostCreating) return;
-                      setIsMediaPostCreating(true);
-                      setError(null);
-                      void createMediaPostAction({ brief: mediaPostBrief })
-                        .then(async (result) => {
-                          setMediaPostBrief("");
-                          setIsMediaPostCreateOpen(false);
-                          const stageKey = result.coordination.stageKey;
-                          if (normalizeStageKey(stageKey) === normalizeStageKey(activeFlowListStage)) {
-                            await loadFlowItems(stageKey, 1, true);
-                          } else {
-                            changeFlowListStage(stageKey);
-                          }
-                        })
-                        .catch((createError) => setError(createError instanceof Error ? createError.message : "Không thể tạo Media Post."))
-                        .finally(() => setIsMediaPostCreating(false));
+                  <MediaPostCreateForm
+                    onCancel={() => setIsMediaPostCreateOpen(false)}
+                    onCreated={async (result) => {
+                      setIsMediaPostCreateOpen(false);
+                      if (result.media.errors.length) {
+                        setError(`Đã tạo bài nhưng ${result.media.errors.length} ảnh chưa sao chép được. Mở bài post để kiểm tra.`);
+                      }
+                      const stageKey = result.coordination.stageKey;
+                      if (normalizeStageKey(stageKey) === normalizeStageKey(activeFlowListStage)) {
+                        await loadFlowItems(stageKey, 1, true);
+                      } else {
+                        changeFlowListStage(stageKey);
+                      }
                     }}
-                  >
-                    <input
-                      value={mediaPostBrief}
-                      onChange={(event) => setMediaPostBrief(event.target.value)}
-                      placeholder="Brief / yêu cầu nội dung (không bắt buộc)"
-                      className="h-9 min-w-0 rounded-md border border-sky-100 bg-white px-3 text-sm outline-none focus:border-violet-300"
-                    />
-                    <button
-                      type="submit"
-                      disabled={isMediaPostCreating}
-                      className="h-9 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white disabled:opacity-50"
-                    >
-                      {isMediaPostCreating ? "Đang tạo..." : "Tạo ngay"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsMediaPostCreateOpen(false)}
-                      className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600"
-                    >
-                      Hủy
-                    </button>
-                  </form>
+                  />
                 ) : null}
                 {error ? <p className="mt-3 text-sm font-medium text-red-600">{error}</p> : null}
               </div>
