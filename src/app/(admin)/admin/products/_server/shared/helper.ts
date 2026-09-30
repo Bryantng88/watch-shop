@@ -251,6 +251,8 @@ function mapCaseMaterialLabel(value: unknown) {
             return "Thép demi";
         case "TITANIUM":
             return "Titanium";
+        case "TUNGSTEN":
+            return "Tungsten";
         case "SILVER":
             return "Bạc";
         case "BRONZE":

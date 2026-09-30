@@ -23,7 +23,7 @@ export const publicCatalogQuerySchema = z
     style: z.enum(["MILITARY", "DRESS", "SPORT", "TOOL", "CASUAL", "CLASSIC", "MINIMALIST", "LUXURY", "RETRO", "FUTURISTIC"]).optional(),
     size: z.enum(["SMALL", "MEDIUM", "LARGE"]).optional(),
     movement: z.enum(["AUTOMATIC", "HAND_WOUND", "QUARTZ", "SOLAR", "KINETIC", "MECHAQUARTZ", "SPRING_DRIVE", "HYBRID"]).optional(),
-    caseMaterial: z.enum(["STAINLESS_STEEL", "TITANIUM", "CERAMIC", "CARBON", "GOLD", "PLATINUM", "SILVER", "BRASS", "OTHER"]).optional(),
+    caseMaterial: z.enum(["STAINLESS_STEEL", "TITANIUM", "TUNGSTEN", "CERAMIC", "CARBON", "GOLD", "PLATINUM", "SILVER", "BRASS", "OTHER"]).optional(),
     strapType: z.enum(["BRACELET", "LEATHER"]).optional(),
     priceMin: optionalMoney,
     priceMax: optionalMoney,

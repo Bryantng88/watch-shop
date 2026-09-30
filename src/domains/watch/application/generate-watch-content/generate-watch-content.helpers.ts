@@ -107,6 +107,7 @@ function materialLabel(value?: string | null) {
   const map: Record<string, string> = {
     STAINLESS_STEEL: "thép không gỉ",
     TITANIUM: "titanium",
+    TUNGSTEN: "tungsten",
     CERAMIC: "ceramic",
     CARBON: "carbon",
     GOLD: "vàng",

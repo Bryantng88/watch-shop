@@ -29,6 +29,7 @@ const MATERIAL_PROFILE_OPTIONS = [
 const MATERIAL_OPTIONS = [
     "STAINLESS_STEEL",
     "TITANIUM",
+    "TUNGSTEN",
     "CERAMIC",
     "CARBON",
     "GOLD",

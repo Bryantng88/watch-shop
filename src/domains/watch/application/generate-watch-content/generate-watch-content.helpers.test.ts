@@ -6,6 +6,7 @@ import {
   buildHookText,
   buildPostText,
   buildPostTitle,
+  buildWatchBulletSpecs,
 } from "./generate-watch-content.helpers";
 
 test("generated hook contains one clickable storefront URL and the fixed contact copy", () => {
@@ -18,6 +19,18 @@ test("generated hook contains one clickable storefront URL and the fixed contact
     `Xem chi tiết tại : ${url}\n\nAnh em có thể liên hệ trực tiếp qua instagram hoặc gửi yêu cầu qua link trên.`,
   );
   assert.equal((buildPostText({ title: "Seiko", hookText: hook, productUrl: url }).match(/https:\/\//g) ?? []).length, 1);
+});
+
+test("generated specs preserve tungsten as the watch case material", () => {
+  const values = {
+    basic: {},
+    spec: {
+      materialProfile: "SINGLE_MATERIAL",
+      primaryCaseMaterial: "TUNGSTEN",
+    },
+  } as WatchFormValues;
+
+  assert.ok(buildWatchBulletSpecs(values).includes("Chất liệu vỏ tungsten."));
 });
 
 test("generated title and hashtags use the product brand when spec brand is empty", () => {
