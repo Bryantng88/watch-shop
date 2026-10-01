@@ -6,13 +6,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import AcquisitionEditModal from "@/domains/acquisition/ui/edit/AcquisitionEditModal";
-import BusinessListDashboard from "@/domains/shared/ui/business-list/BusinessListDashboard";
 import BusinessListShell from "@/domains/shared/ui/business-list/BusinessListShell";
-import {
-    BusinessListPageHeader,
-    DashboardCustomizeButton,
-} from "@/domains/shared/ui/business-list";
-import type { BusinessListDashboardWidgetKey } from "@/domains/shared/ui/business-list";
+import { BusinessListPageHeader } from "@/domains/shared/ui/business-list";
 import { PackagePlus } from "lucide-react";
 
 import type { AcquisitionListClientProps } from "../ui/list";
@@ -20,13 +15,6 @@ import {
     AcquisitionListToolbar,
     AcquisitionListTable,
 } from "../ui/list";
-
-const ACQUISITION_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = [
-    "overview",
-    "value-trend",
-    "status-breakdown",
-    "recent-activity",
-];
 
 type BulkPostFailure = {
     id?: string | null;
@@ -64,7 +52,6 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps 
     const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
     const [selectedItemsById, setSelectedItemsById] = React.useState<Record<string, (typeof props.items)[number]>>({});
     const [editAcquisitionId, setEditAcquisitionId] = React.useState<string | null>(null);
-    const [dashboardCustomizationRequest, setDashboardCustomizationRequest] = React.useState(0);
     const selectionScopeKey = React.useMemo(() => {
         const params = new URLSearchParams(sp.toString());
         params.delete("page");
@@ -200,20 +187,8 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps 
                     title="Phiếu nhập"
                     icon={<PackagePlus className="h-5 w-5" />}
                     meta={<span>Quản lý nhập kho · Duyệt phiếu và thanh toán đầu vào</span>}
-                    actions={
-                        <DashboardCustomizeButton
-                            onClick={() => setDashboardCustomizationRequest((request) => request + 1)}
-                        />
-                    }
                 />
             }
-            dashboard={<BusinessListDashboard
-                data={props.dashboardData}
-                widgets={ACQUISITION_DASHBOARD_WIDGETS}
-                storageKey="admin-dashboard:acquisition-list"
-                customizationRequest={dashboardCustomizationRequest}
-                showCustomizationTrigger={false}
-            />}
             filters={
                 <AcquisitionListToolbar
                     vendors={props.vendors}

@@ -4,8 +4,6 @@ import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
 import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
 import { getSpaceViewConfig } from "@/domains/space-management/server/space-view.config";
-import { loadTechnicalDailyPerformance } from "@/domains/coordination/server/coordination-dashboard-metrics.service";
-import { mapCoordinationDashboardShell } from "@/domains/coordination/shared/coordination-dashboard-shell.mapper";
 
 type PageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -33,8 +31,7 @@ export default async function OperationCoordinationPage(props: PageProps) {
     effectiveModeKey !== "technical-issue-flow" &&
     effectiveModeKey !== "media-production-flow";
 
-  const [data, technicalDailyPerformance] = await Promise.all([
-    perfStep(
+  const data = await perfStep(
       "coordination-operation-page",
       "getCoordinationDashboard",
       () => getCoordinationDashboard({
@@ -59,22 +56,13 @@ export default async function OperationCoordinationPage(props: PageProps) {
         includeFlowItems: serverIncludesFlowItems,
         auth,
       }),
-    ),
-    effectiveModeKey === "technical-issue-flow"
-      ? loadTechnicalDailyPerformance(prisma)
-      : Promise.resolve(undefined),
-  ]);
-  const initialDashboard = mapCoordinationDashboardShell(data, {
-    modeKey: effectiveModeKey,
-    technicalDailyPerformance,
-  });
+    );
 
   perfLog("coordination-operation-page", "totalBeforeRender", totalStartedAt);
 
   return (
     <OperationCoordinationWorkspace
       data={data}
-      initialDashboard={initialDashboard}
       serverIncludesFlowItems={serverIncludesFlowItems}
     />
   );

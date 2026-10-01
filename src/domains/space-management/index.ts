@@ -3,7 +3,6 @@ export type {
   ItemSummaryDTO,
   ItemViewModel,
   SpaceContext,
-  SpaceDashboardDTO,
   SpaceReportMetricDTO,
   WorkspaceSummaryDTO,
   WorkspaceTemplateDefinition,

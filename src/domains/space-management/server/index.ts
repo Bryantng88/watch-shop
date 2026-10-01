@@ -3,7 +3,6 @@ export type {
   ItemSummaryDTO,
   ItemViewModel,
   SpaceContext,
-  SpaceDashboardDTO,
   SpaceViewColumnConfig,
   SpaceViewConfig,
   SpaceViewModeConfig,
@@ -15,11 +14,6 @@ export type {
 export {
   getSpaceViewConfig,
 } from "./space-view.config";
-
-export {
-  getCoordinationDashboard as getSpaceDashboard,
-  getOperationCoordinationDashboard as getOperationsSpaceDashboard,
-} from "@/domains/coordination/server/coordination-dashboard.service";
 
 export {
   getWorkTypeDefinition as getWorkspaceTemplateDefinition,

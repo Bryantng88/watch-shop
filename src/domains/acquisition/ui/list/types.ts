@@ -2,7 +2,6 @@ import type {
     AcquisitionListProjectionItem,
     AcquisitionListProjectionRow,
 } from "@/domains/acquisition/shared/acquisition-list.projection";
-import type { BusinessListDashboardData } from "@/domains/shared/ui/business-list";
 
 export type AcquisitionListView = "all" | "draft" | "posted" | "canceled";
 
@@ -21,7 +20,6 @@ export type AcquisitionListClientProps = {
     pageSize: number;
     totalPages: number;
     vendors: AcquisitionVendorOption[];
-    dashboardData: BusinessListDashboardData;
     selectedIds?: string[];
     onSelectedIdsChange?: React.Dispatch<React.SetStateAction<string[]>>;
 };

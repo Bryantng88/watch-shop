@@ -960,7 +960,7 @@ export default function FlowItemListView({
         percent: failed.length ? 90 : 95,
         message: failed.length
           ? `Hoàn tất ${succeeded.length}/${selectedPaymentItems.length}; ${failed.length} khoản cần kiểm tra lại.`
-          : "Đã đối soát xong, đang đồng bộ dashboard.",
+          : "Đã đối soát xong, đang đồng bộ danh sách.",
       });
       setPendingActionId(null);
       window.setTimeout(() => progress.hide(), failed.length ? 1800 : 900);

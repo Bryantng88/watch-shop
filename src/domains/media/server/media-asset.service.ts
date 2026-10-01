@@ -306,62 +306,6 @@ export async function reconcileMediaAssets(input: ReconcileMediaAssetsInput = {}
 }
 
 
-export async function getMediaAssetDashboard() {
-  const [
-    totalAssets,
-    activeCount,
-    chosenCount,
-    attachedCount,
-    missingCount,
-  ] = await Promise.all([
-    prisma.mediaAsset.count(),
-
-    prisma.mediaAsset.count({
-      where: {
-        status: "ACTIVE",
-        isMissing: false,
-      },
-    }),
-
-    prisma.mediaAsset.count({
-      where: {
-        OR: [
-          { status: "CHOSEN" },
-          { parentPrefix: { contains: "/chosen" } },
-        ],
-        isMissing: false,
-      },
-    }),
-
-    prisma.mediaAsset.count({
-      where: {
-        OR: [
-          { status: "ATTACHED" },
-          { productId: { not: null } },
-        ],
-        isMissing: false,
-      },
-    }),
-
-    prisma.mediaAsset.count({
-      where: {
-        OR: [
-          { status: "MISSING" },
-          { isMissing: true },
-        ],
-      },
-    }),
-  ]);
-
-  return {
-    totalAssets,
-    activeCount,
-    chosenCount,
-    assignedCount: attachedCount,
-    missingCount,
-  };
-}
-
 export async function listMediaAssets(input: {
   page?: number;
   pageSize?: number;

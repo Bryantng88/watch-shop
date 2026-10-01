@@ -1,5 +1,11 @@
 # Admin Dashboard Widget Registry
 
+> Superseded on 2026-10-01 by
+> `docs/architecture/34-report-only-dashboard-surfaces.md`. The registry,
+> embedded list/workspace widgets, customization controls, and browser-local
+> widget preferences described below have been removed. This document is kept
+> only as historical context and must not be used as an implementation guide.
+
 ## Purpose
 
 Admin list and workspace pages may display up to four dashboard widgets. Pages

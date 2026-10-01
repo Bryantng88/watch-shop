@@ -75,7 +75,7 @@ function formatRelativeTime(input: string) {
 }
 
 export default function AdminTopbar({
-    title = "Dashboard",
+    title = "Admin",
     user,
 }: AdminTopbarProps) {
     const [loading, setLoading] = useState(false);

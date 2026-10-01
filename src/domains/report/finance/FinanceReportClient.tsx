@@ -333,8 +333,8 @@ export function FinanceReportClient({ initialProjection }: { initialProjection?:
             ? <><b>Finance Report v{initialProjection.formulaVersion}:</b> Dữ liệu thật từ projection local.</>
             : <><b>UI test:</b> Báo cáo tài chính — dữ liệu minh hoạ, chưa tác động dữ liệu thật.</>}
         </p>
-        <Link href="/admin/dashboard" className="text-xs font-semibold text-violet-700 hover:text-violet-950">
-          Quay lại Dashboard
+        <Link href="/admin/reports/overview" className="text-xs font-semibold text-violet-700 hover:text-violet-950">
+          Quay lại báo cáo tổng quan
         </Link>
       </section>
 

@@ -4,7 +4,6 @@ import type {
   QueueSummaryDTO,
 } from "@/domains/task/server/business-binding.types";
 import type {
-  CoordinationDashboardDTO,
   CoordinationReportMetricDTO,
   CoordinationWorkTicketSummaryDTO,
 } from "@/domains/coordination/server/coordination-dashboard.types";
@@ -21,7 +20,6 @@ import type {
 export type SpaceContext = WorkTypeCoordinationContext;
 export type WorkspaceTemplateDefinition = WorkTypeDefinition;
 
-export type SpaceDashboardDTO = CoordinationDashboardDTO;
 export type SpaceReportMetricDTO = CoordinationReportMetricDTO;
 export type WorkspaceSummaryDTO = CoordinationWorkTicketSummaryDTO;
 export type SpaceViewColumnConfig = BaseSpaceViewColumnConfig;

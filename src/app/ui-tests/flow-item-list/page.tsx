@@ -102,7 +102,7 @@ export default function FlowItemListPrototypePage() {
             <p className="mt-1 text-sm text-slate-500">Thử nghiệm List mới theo business item thay vì Workspace.</p>
           </div>
           <button className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-semibold shadow-sm">
-            <SlidersHorizontal className="h-4 w-4" /> Tùy chỉnh dashboard
+            <SlidersHorizontal className="h-4 w-4" /> Tùy chỉnh hiển thị
           </button>
         </div>
 

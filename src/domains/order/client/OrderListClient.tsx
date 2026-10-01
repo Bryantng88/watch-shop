@@ -19,13 +19,9 @@ import {
   OrderListFilters,
   OrderListTable,
 } from "../ui/list";
-import BusinessListDashboard from "@/domains/shared/ui/business-list/BusinessListDashboard";
 import {
   BusinessListPageHeader,
   BusinessListShell,
-  DashboardCustomizeButton,
-  type BusinessListDashboardData,
-  type BusinessListDashboardWidgetKey,
 } from "@/domains/shared/ui/business-list";
 import type {
   OrderListCounts,
@@ -44,13 +40,6 @@ import {
 } from "../ui/list/helpers";
 
 type Props = OrderListPageProps;
-
-const ORDER_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = [
-  "overview",
-  "value-trend",
-  "status-breakdown",
-  "recent-activity",
-];
 
 function firstRaw(value: string | string[] | undefined, fallback = ""): string {
   if (Array.isArray(value)) return String(value[0] ?? fallback);
@@ -94,7 +83,6 @@ function toPaymentManageOrder(order: OrderListItem | null) {
 export default function OrderListClient({
   items,
   total,
-  totalValue,
   page,
   pageSize,
   totalPages,
@@ -114,7 +102,6 @@ export default function OrderListClient({
   const [paymentManageOrder, setPaymentManageOrder] = useState<OrderListItem | null>(null);
   const [shipmentManageOrder, setShipmentManageOrder] = useState<OrderListItem | null>(null);
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
-  const [dashboardCustomizationRequest, setDashboardCustomizationRequest] = useState(0);
 
   const paymentManageOrderForModal = useMemo(
     () => toPaymentManageOrder(paymentManageOrder),
@@ -127,45 +114,6 @@ export default function OrderListClient({
   );
 
   const selectableIds = useMemo(() => items.filter(isOrderSelectable).map((item) => item.id), [items]);
-  const visibleOrderValues = useMemo(() => items.map((item) => toNumber(item.totalAmount)), [items]);
-  const dashboardData = useMemo<BusinessListDashboardData>(() => ({
-    periodLabel: "Toàn bộ dữ liệu",
-    metrics: [
-      { key: "all", label: "Tổng đơn", value: countsByView.all ?? total, tone: "violet" },
-      { key: "processing", label: "Đang xử lý", value: countsByView.processing ?? 0, tone: "blue" },
-      { key: "completed", label: "Hoàn tất", value: countsByView.completed ?? 0, tone: "emerald" },
-      { key: "cancelled", label: "Đã hủy", value: countsByView.cancelled ?? 0, tone: "rose" },
-    ],
-    inventoryValue: {
-      label: "Giá trị đơn hàng",
-      value: totalValue,
-      currency: "VND",
-      helper: `${total} đơn khớp bộ lọc`,
-      trend: [...visibleOrderValues].reverse(),
-    },
-    breakdown: {
-      label: "Trạng thái đơn hàng",
-      total: countsByView.all ?? total,
-      items: [
-        { key: "processing", label: "Đang xử lý", value: countsByView.processing ?? 0, tone: "blue" },
-        { key: "completed", label: "Hoàn tất", value: countsByView.completed ?? 0, tone: "emerald" },
-        { key: "returned", label: "Đã hoàn", value: countsByView.returned ?? 0, tone: "amber" },
-        { key: "cancelled", label: "Đã hủy", value: countsByView.cancelled ?? 0, tone: "rose" },
-      ],
-    },
-    activities: {
-      label: "Đơn cập nhật gần đây",
-      items: items.slice(0, 4).map((item) => ({
-        id: item.id,
-        title: item.refNo || item.id,
-        description: [item.customerName, item.status].filter(Boolean).join(" · "),
-        occurredAt: item.updatedAt ? String(item.updatedAt) : null,
-        href: `/admin/orders/${item.id}`,
-        kind: "updated",
-      })),
-    },
-  }), [countsByView, items, total, totalValue, visibleOrderValues]);
-
   function navigateWithLoading(patch: Record<string, string | null | undefined>) {
     progress.show({ title: "Đang tải đơn hàng", message: "Hệ thống đang cập nhật danh sách." });
     router.push(buildHref(pathname, sp, patch));
@@ -539,9 +487,6 @@ export default function OrderListClient({
           meta={<span>Quản lý bán hàng · Thanh toán · Giao nhận</span>}
           actions={
             <div className="flex items-center gap-2">
-              <DashboardCustomizeButton
-                onClick={() => setDashboardCustomizationRequest((request) => request + 1)}
-              />
               <Link
                 href="/admin/orders/new"
                 className="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white transition hover:bg-slate-800"
@@ -551,15 +496,6 @@ export default function OrderListClient({
               </Link>
             </div>
           }
-        />
-      }
-      dashboard={
-        <BusinessListDashboard
-          data={dashboardData}
-          widgets={ORDER_DASHBOARD_WIDGETS}
-          storageKey="admin-dashboard:order-list:v2"
-          customizationRequest={dashboardCustomizationRequest}
-          showCustomizationTrigger={false}
         />
       }
       filters={

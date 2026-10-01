@@ -4204,17 +4204,6 @@ export async function getCoordinationDashboard(input: {
   };
 }
 
-export async function getOperationCoordinationDashboard(input?: {
-  db?: DB;
-  date?: string | null;
-  auth?: unknown;
-}): Promise<CoordinationDashboardDTO> {
-  return getCoordinationDashboard({
-    ...input,
-    context: "OPERATION",
-  });
-}
-
 export async function getCoordinationFlowPage(input: {
   db?: DB;
   context: CoordinationContext;

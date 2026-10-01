@@ -4,8 +4,6 @@ export * from "./acquisition-item.repo";
 export * from "./acquisition-watch.repo";
 export * from "./acquisition-media.service";
 export * from "./list"
-export * from "./dashboard/acquisition-list-dashboard.service";
-
 export * from "./acquisition-brand-resolver";
 export * from "./acquisition-spec-mapper";
 export * from "./acquisition-watch-spec-status.helper";

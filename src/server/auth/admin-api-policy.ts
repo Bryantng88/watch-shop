@@ -235,6 +235,7 @@ export function getAdminPagePolicy(pathname: string): AdminAccessPolicy | null {
         };
     }
     if (pathname === "/admin/reports/sales") return anyOf(PERMISSIONS.REPORT_SALES_VIEW);
+    if (pathname === "/admin/reports/overview") return anyOf(PERMISSIONS.DASHBOARD_VIEW);
     if (/^\/admin\/reports(\/|$)/.test(pathname)) {
         return anyOf(PERMISSIONS.REPORT_SALES_VIEW, PERMISSIONS.REPORT_FINANCE_VIEW);
     }

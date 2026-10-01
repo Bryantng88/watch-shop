@@ -168,12 +168,12 @@ Current handoff:
   `FLOW_STAGE_WORKSPACE` Space: item bindings represent the current active stage
   only. Moving to the next stage moves the active binding out of the previous
   stage, while activity and timeline rows preserve the historical events.
-- Media dashboard now normalizes legacy duplicate stage bindings on load:
+- Media board read now normalizes legacy duplicate stage bindings on load:
   completed or returned/recalled item states clear stale stage links when the
   next/previous stage binding exists. Final-stage `DONE` remains in the final
   workspace because there is no later stage to own the item. Workflow status
   remains meaningful inside the current stage, but it is not the source of truth
-  for stage ownership. Media dashboard load also restores orphaned Publish
+  for stage ownership. Media board load also restores orphaned Publish
   `DONE` bindings that were previously detached by the old cleanup rule.
 - Media Processing item projection/read fallback is active-stage only: `DONE`
   media-processing items are excluded after ownership moves to Publish.
@@ -925,19 +925,12 @@ Older M1 context remains available in:
   and the screen uses the shared Watch-style business list shell. See
   `docs/architecture/20-acquisition-list-projection.md`. Order and Space/WP are
   explicitly out of scope.
-- Admin dashboard registry foundation is active across Watch List, Acquisition
-  List, and Technical Space. Widget metadata now declares stable key, label,
-  scope, size, and renderer; the four initial shared renderers are independent
-  components resolved through the business-list registry. See
-  `docs/architecture/21-admin-dashboard-widget-registry.md`.
-- Dashboard customization UI is active for the same three consumers. Each page
-  has an isolated browser-local preference key; users may select up to four
-  widgets, reorder them, save, or restore the code-owned default. No Prisma or
-  account-level preference storage is introduced.
-- Watch List now proves the domain catalog extension with eight available
-  widgets: four shared widgets plus Media, Service, readiness, and unsold-aging
-  breakdowns. The picker only exposes the catalog declared by its consumer, so
-  Watch-only widgets do not leak into Acquisition List or Technical Space.
+- Embedded dashboards were retired from Watch, Acquisition, Order, Media Asset,
+  and Coordination/Space work surfaces on 2026-10-01. Operational screens now
+  own only their header, filters, commands, list/board, and pagination. Summary
+  analytics live under `Báo cáo > Tổng quan`; see
+  `docs/architecture/34-report-only-dashboard-surfaces.md`. The former widget
+  registry document is historical only.
 - Watch Detail now uses a server-composed `WatchDetailProjection`. Its typed
   Service projection includes Service Requests, Technical Issues, real active
   counts, and TaskItem workspace targets; the Service card no longer consumes
@@ -953,9 +946,7 @@ Older M1 context remains available in:
   `src/domains/shared/ui/space/SpaceFilterBar.tsx`. The core primitive owns the
   week, date, search, select-filter, and view-switch layout; domain-specific
   filters remain extension content. Technical Space is the first consumer with
-  working owner, work-status, and payment filters. Its dashboard customization
-  trigger is owned by the Space header so the widget grid no longer reserves a
-  separate control row. Workspace List now paginates client-side at 10/20/50
+  working owner, work-status, and payment filters. Workspace List now paginates client-side at 10/20/50
   rows, reports the visible range, and shows facet counts in owner, work-status,
   and payment filters. Other Space screens can migrate incrementally without
   changing their query contracts.

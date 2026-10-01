@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { ImageRole, MediaAssetStatus } from "@prisma/client";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 import { PERMISSIONS } from "@/constants/permissions";
-import { getMediaAssetDashboard, listMediaAssets } from "@/domains/media/server";
+import { listMediaAssets } from "@/domains/media/server";
 
 export const dynamic = "force-dynamic";
 
@@ -29,11 +29,6 @@ export async function GET(req: NextRequest) {
   if (auth instanceof Response) return auth;
 
   try {
-    if (req.nextUrl.searchParams.get("dashboard") === "1") {
-      const dashboard = await getMediaAssetDashboard();
-      return NextResponse.json(dashboard);
-    }
-
     const page = Number(req.nextUrl.searchParams.get("page") ?? 1);
     const pageSize = Number(req.nextUrl.searchParams.get("pageSize") ?? 48);
 

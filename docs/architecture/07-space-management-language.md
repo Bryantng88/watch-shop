@@ -56,7 +56,8 @@ Repositories may still query:
 New application-layer imports should prefer:
 
 - `src/domains/space-management`
-- `getOperationsSpaceDashboard()`
+- Legacy name removed: operational Space reads use the Workspace shell and the
+  dedicated Board/Flow Query Gateways.
 - `getSpaceDetail()`
 - `getWorkspaceDetail()`
 - `listWorkspaceItems()`

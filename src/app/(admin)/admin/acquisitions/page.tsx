@@ -1,8 +1,5 @@
 //import { getAdminAcquisitionList } from "./_server/core/acquisition.service";
-import {
-    getAcquisitionListDashboard,
-    getAcquisitionListProjection,
-} from "@/domains/acquisition/server";
+import { getAcquisitionListProjection } from "@/domains/acquisition/server";
 //import AcquisitionListClient from "./_client/ListAcq";
 import AcquisitionListClient from "@/domains/acquisition/client/AcquisitionListClient";
 import { getCurrentUserPermissions } from "@/server/auth/requirePermission";
@@ -57,14 +54,9 @@ export default async function AcquisitionListPage({
         && (permissions.includes(PERMISSIONS.ACQUISITION_PAYMENT_VIEW)
             || permissions.includes(PERMISSIONS.PAYMENT_VIEW_ALL));
 
-    const [result, vendors, dashboardData] = await Promise.all([
+    const [result, vendors] = await Promise.all([
         getAcquisitionListProjection(input),
         getListVendors(),
-        getAcquisitionListDashboard(
-            input.audienceSegment === "UNISEX" ? undefined : input.audienceSegment,
-            input.productScope,
-            input.includeFinancials,
-        ),
     ]);
 
     const vendorOptions = (vendors ?? []).map((vendor) => ({
@@ -76,7 +68,6 @@ export default async function AcquisitionListPage({
         <AcquisitionListClient
             {...serialize(result)}
             vendors={serialize(vendorOptions)}
-            dashboardData={serialize(dashboardData)}
             strapOnly={listScope === "ACCESSORY_ONLY"}
             canManage={permissions.includes(PERMISSIONS.PRODUCT_COST_VIEW)
                 && (permissions.includes(PERMISSIONS.ACQUISITION_PAYMENT_UPDATE)

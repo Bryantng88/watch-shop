@@ -72,7 +72,6 @@ export {
   getCoordinationBoard,
   getCoordinationDashboard,
   getCoordinationFlowPage,
-  getOperationCoordinationDashboard,
 } from "./coordination-dashboard.service";
 export type { CoordinationBoardKey } from "./coordination-dashboard.service";
 

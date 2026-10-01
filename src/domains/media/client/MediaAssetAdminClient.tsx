@@ -42,19 +42,6 @@ type AssetResponse = {
   pageCount: number;
 };
 
-type MediaDashboard = {
-  totalAssets?: number;
-  chosenCount?: number;
-  assignedCount?: number;
-  missingCount?: number;
-  stats?: {
-    totalAssets?: number;
-    chosenCount?: number;
-    assignedCount?: number;
-    missingCount?: number;
-  };
-};
-
 type ReconciliationSummary = {
   totalLegacyAssets: number;
   totalManifestRecords: number;
@@ -105,17 +92,6 @@ function statusClass(status?: string | null) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
-}
-
-function normalizeDashboard(input: unknown): Required<MediaDashboard>["stats"] {
-  const source = isRecord(input) && isRecord(input.stats) ? input.stats : isRecord(input) ? input : {};
-
-  return {
-    totalAssets: Number(source.totalAssets ?? 0),
-    chosenCount: Number(source.chosenCount ?? 0),
-    assignedCount: Number(source.assignedCount ?? 0),
-    missingCount: Number(source.missingCount ?? 0),
-  };
 }
 
 function normalizeAssets(input: unknown, fallbackPage: number): AssetResponse {
@@ -201,7 +177,6 @@ export default function MediaAssetAdminClient() {
   const notify = useNotify();
   const progress = useAppProgress();
 
-  const [dashboard, setDashboard] = React.useState<MediaDashboard | null>(null);
   const [reconciliation, setReconciliation] = React.useState<ReconciliationSummary | null>(null);
   const [manifestCursor, setManifestCursor] = React.useState<string | null>(null);
   const [assets, setAssets] = React.useState<AssetResponse>({
@@ -224,8 +199,7 @@ export default function MediaAssetAdminClient() {
     setLoading(true);
 
     try {
-      const [dashboardRes, assetsRes, reconciliationRes] = await Promise.all([
-        fetch("/api/media/assets/dashboard", { cache: "no-store" }),
+      const [assetsRes, reconciliationRes] = await Promise.all([
         fetch(
           buildAssetsUrl({
             page,
@@ -240,21 +214,12 @@ export default function MediaAssetAdminClient() {
         fetch("/api/admin/media/reconciliation/manifest", { cache: "no-store" }),
       ]);
 
-      const dashboardJson = await dashboardRes.json().catch(() => ({}));
       const assetsJson = await assetsRes.json().catch(() => ({}));
       const reconciliationJson = await reconciliationRes.json().catch(() => ({}));
-
-      if (!dashboardRes.ok) {
-        throw new Error(dashboardJson?.error || "Không tải được media dashboard");
-      }
 
       if (!assetsRes.ok) {
         throw new Error(assetsJson?.error || "Không tải được media assets");
       }
-
-      setDashboard({
-        stats: normalizeDashboard(dashboardJson),
-      });
 
       setAssets(normalizeAssets(assetsJson, page));
       if (reconciliationRes.ok) {
@@ -263,10 +228,6 @@ export default function MediaAssetAdminClient() {
         setManifestCursor((current) => current ?? summary?.resumeCursor ?? null);
       }
     } catch (error) {
-      setDashboard({
-        stats: normalizeDashboard({}),
-      });
-
       setAssets((prev) => ({
         ...prev,
         items: [],
@@ -506,7 +467,6 @@ export default function MediaAssetAdminClient() {
     }
   }
 
-  const stats = normalizeDashboard(dashboard);
   const items = assets.items ?? [];
 
   return (
@@ -602,33 +562,6 @@ export default function MediaAssetAdminClient() {
               </details>
             </div>
           </div>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-4">
-          <StatCard
-            icon={<Database className="h-5 w-5" />}
-            label="Total assets"
-            value={stats.totalAssets ?? 0}
-            hint="Tổng asset đã index"
-          />
-          <StatCard
-            icon={<ImageIcon className="h-5 w-5" />}
-            label="Chosen"
-            value={stats.chosenCount ?? 0}
-            hint="Pool ảnh đang chọn"
-          />
-          <StatCard
-            icon={<Database className="h-5 w-5" />}
-            label="Assigned"
-            value={stats.assignedCount ?? 0}
-            hint="Đang gắn product/watch"
-          />
-          <StatCard
-            icon={<AlertTriangle className="h-5 w-5" />}
-            label="Missing"
-            value={stats.missingCount ?? 0}
-            hint="DB có nhưng NAS thiếu"
-          />
         </div>
 
         <div className="grid gap-4 md:grid-cols-4">

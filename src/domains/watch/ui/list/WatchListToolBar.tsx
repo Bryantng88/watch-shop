@@ -4,7 +4,6 @@ import { useState } from "react";
 import { ArchiveRestore, Camera, ChevronDown, Images, Watch as WatchIcon } from "lucide-react";
 import {
     BusinessListPageHeader,
-    DashboardCustomizeButton,
 } from "@/domains/shared/ui/business-list";
 
 type Props = {
@@ -17,7 +16,6 @@ type Props = {
     submittingMediaReview?: boolean;
     onRequestPhotoshoot?: () => void;
     onRequestMediaReview?: () => void;
-    onCustomizeDashboard?: () => void;
     showSelectionActions?: boolean;
     duplicateView?: boolean;
     onToggleDuplicateView?: () => void;
@@ -33,7 +31,6 @@ export default function WatchListToolbar({
     submittingMediaReview = false,
     onRequestPhotoshoot,
     onRequestMediaReview,
-    onCustomizeDashboard,
     showSelectionActions = true,
     duplicateView = false,
     onToggleDuplicateView,
@@ -97,8 +94,6 @@ export default function WatchListToolbar({
                     <ArchiveRestore className="h-4 w-4" />
                     {duplicateView ? "Về danh sách Watch" : "Watch trùng"}
                 </button>
-                <DashboardCustomizeButton onClick={onCustomizeDashboard} />
-
                 {showSelectionActions && selectedCount > 0 ? <div className="relative">
                     <button
                         type="button"

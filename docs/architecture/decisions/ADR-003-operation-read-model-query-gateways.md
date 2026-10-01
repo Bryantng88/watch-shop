@@ -26,14 +26,13 @@ Owner:
 
 - `src/app/(admin)/admin/coordination/operation/page.tsx`
 - `getCoordinationDashboard`
-- `mapCoordinationDashboardShell`
 
 Responsibilities:
 
 - authorize the viewer;
 - resolve or ensure the active Coordination cycle;
 - load the workspace shell needed by the initial screen;
-- return an already-authorized dashboard snapshot;
+- return an already-authorized Workspace shell;
 - omit board and flow rows that have their own query gateway.
 
 The page bootstrap must not load a board or flow page that the client will load
@@ -173,8 +172,8 @@ Rules:
 - response sequence/id checks prevent an old response from replacing new
   state;
 - server shell data never overwrites an asynchronously loaded flow slice;
-- changing a view does not refetch the generic dashboard merely because the
-  endpoint string changed;
+- changing a view does not fetch a generic dashboard; it requests only the
+  board or flow slice owned by the selected mode;
 - changing a flow mode updates native history and client query state; it must
   not use App Router navigation to rerun Server Page Bootstrap;
 - board column pagination and flow table pagination remain separate.
@@ -266,9 +265,10 @@ Compatibility adapters may remain during rolling deployment, but they must:
 - be marked as compatibility code;
 - be removable without changing the client DTO.
 
-The current dashboard route remains the compatibility and widget endpoint.
-New Operation flow code must use `/flows/:flowKey`; new board code must use
-`/boards/:boardKey`.
+The legacy dashboard route is compatibility-only. Requests carrying the old
+flow or board flags delegate to their canonical gateways; a bare widget request
+returns `410 Gone`. It is not a widget endpoint. New Operation flow code must
+use `/flows/:flowKey`; new board code must use `/boards/:boardKey`.
 
 ## Verification
 
@@ -301,9 +301,9 @@ Positive:
 
 Trade-offs:
 
-- the existing dashboard service remains a composition implementation behind
-  the new Flow Gateway until its internal loaders are split into smaller query
-  services;
+- the historically named coordination dashboard service remains a composition
+  implementation for the Workspace shell and gateway loaders until a separate
+  naming migration splits it into smaller query services;
 - explicit repair jobs must be monitored because populated projections are no
   longer silently repaired by user traffic;
 - source/projection comparison becomes a required operational check.

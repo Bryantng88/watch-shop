@@ -34,5 +34,7 @@ must not load the full acquisition set and filter it in memory.
 - No Prisma schema change.
 - No Order changes.
 - No Space or Workspace binding in this phase.
-- Dashboard data remains a separate Acquisition read query and shares only the
-  Admin dashboard widget UI primitives.
+- The Acquisition screen owns only its projection list query and vendor filter
+  options. It must not start a separate dashboard/KPI query. Cross-domain
+  metrics belong to the report surface described in
+  `docs/architecture/34-report-only-dashboard-surfaces.md`.

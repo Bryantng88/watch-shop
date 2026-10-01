@@ -68,15 +68,8 @@ import { useManualTransitionFeedback } from "@/domains/task/ui/task-work/use-man
 import { manualTransitionOutcomeMovesOutOfCurrentStage } from "@/domains/task/ui/task-work/manual-transition-feedback";
 import { repairVietnameseMojibake } from "@/domains/shared/text/vietnamese-mojibake";
 import StandaloneExpensePaymentModal from "@/domains/payment/ui/StandaloneExpensePaymentModal";
-import {
-  AsyncBusinessListDashboard,
-  DashboardCustomizeButton,
-} from "@/domains/shared/ui/business-list";
 import { SoftIconBadge } from "@/domains/shared/ui/icons";
 import { waitForOperationProjectionDeliveries } from "./operation-delivery.client";
-import type { BusinessListDashboardWidgetKey } from "@/domains/shared/ui/business-list";
-import type { BusinessListDashboardData } from "@/domains/shared/ui/business-list";
-import { mapCoordinationDashboardShell } from "@/domains/coordination/shared/coordination-dashboard-shell.mapper";
 import {
   SpaceViewFooterTip,
   SpaceViewPage,
@@ -94,11 +87,9 @@ import WatchSearchPicker, { type WatchSearchResult } from "@/domains/watch/ui/se
 import FlowItemListView from "./FlowItemListView";
 import { useAdHocWorkCreate } from "@/domains/task/ui/ad-hoc-work/AdHocWorkRowAction";
 import { createMediaPostAction } from "@/domains/media-post/actions";
-import MediaPostCreateForm from "@/domains/media-post/ui/MediaPostCreateForm";
 
 type Props = {
   data: CoordinationDashboardDTO;
-  initialDashboard?: BusinessListDashboardData | null;
   serverIncludesFlowItems?: boolean;
 };
 
@@ -112,11 +103,7 @@ type TechnicalBoardAdditionalIssue = {
 };
 type AdHocTaskItemStage = "TODO" | "IN_PROGRESS" | "DONE";
 
-const SPACE_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = ["overview", "value-trend", "status-breakdown", "recent-activity"];
-const TECHNICAL_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = [...SPACE_DASHBOARD_WIDGETS, "technical-daily-performance"];
-const PAYMENT_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = ["overview", "cash-flow", "status-breakdown", "recent-activity"];
-
-function coordinationDashboardResponseSource(result: unknown) {
+function coordinationReadResponseSource(result: unknown) {
   if (!result || typeof result !== "object" || Array.isArray(result)) return null;
   const root = result as Record<string, unknown>;
   const nested =
@@ -733,7 +720,6 @@ function SpaceSharingEditor({
 
 export default function OperationCoordinationWorkspace({
   data,
-  initialDashboard,
   serverIncludesFlowItems = true,
 }: Props) {
   const router = useRouter();
@@ -749,7 +735,6 @@ export default function OperationCoordinationWorkspace({
       ? requestedView as string
       : data.viewConfig.defaultModeKey;
   });
-  const initialViewModeKey = useRef(activeViewModeKey);
   const initialTitle = data.blueprints[0]?.workspaceDefinition.defaultName ?? "";
   const [title, setTitle] = useState(initialTitle);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
@@ -764,8 +749,9 @@ export default function OperationCoordinationWorkspace({
   const [isTechnicalIntakeOpen, setIsTechnicalIntakeOpen] = useState(false);
   const [isExpensePaymentOpen, setIsExpensePaymentOpen] = useState(false);
   const [isMediaPostCreateOpen, setIsMediaPostCreateOpen] = useState(false);
+  const [mediaPostBrief, setMediaPostBrief] = useState("");
+  const [isMediaPostCreating, setIsMediaPostCreating] = useState(false);
   const [focusedTechnicalIssueId, setFocusedTechnicalIssueId] = useState<string | null>(null);
-  const [dashboardCustomizationRequest, setDashboardCustomizationRequest] = useState(0);
   const [filterQuery, setFilterQuery] = useState(() => searchParams.get("flowQuery") ?? "");
   const [filterCreator, setFilterCreator] = useState("ALL");
   const [filterWorkStatus, setFilterWorkStatus] = useState(
@@ -890,7 +876,7 @@ export default function OperationCoordinationWorkspace({
       setAsyncFlowPagination(data.flowItemsPagination);
       setAsyncFlowStageCounts(data.flowStageCounts);
     } else {
-      // The page returned only a dashboard shell. Keep the visible rows while
+      // The page returned only the Workspace shell. Keep the visible rows while
       // marking the dedicated flow payload stale so the flow endpoint reloads
       // it without flashing an authoritative-looking empty list.
       setFlowItemsModeKey("");
@@ -928,7 +914,6 @@ export default function OperationCoordinationWorkspace({
           : "LIST");
       const params = new URLSearchParams(searchParams.toString());
       params.set("context", data.context);
-      params.set("dashboardVersion", "2");
       params.set("view", nextModeKey);
       params.delete("flowStage");
       params.delete("flowPage");
@@ -1143,28 +1128,6 @@ export default function OperationCoordinationWorkspace({
     : asyncFlowItems.length;
   const isPaymentCollectionFlow =
     activeCoreFlow?.key === "payment-collection-core-flow";
-  const dashboardEndpoint = useMemo(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    [
-      "includeFlowItems",
-      "flowStage",
-      "flowPage",
-      "flowPageSize",
-      "flowQuery",
-      "flowStatus",
-      "flowPaymentStatus",
-      "flowPaymentType",
-      "flowPaymentDirection",
-      "flowSort",
-      "includeBoard",
-      "boardStage",
-      "boardPage",
-      "boardPageSize",
-    ].forEach((key) => params.delete(key));
-    params.set("context", data.context);
-    if (activeViewMode?.key) params.set("view", activeViewMode.key);
-    return `/api/admin/coordination/operation/dashboard?${params.toString()}`;
-  }, [activeViewMode?.key, data.context, searchParams]);
   const flowEndpoint = useMemo(() => {
     const params = new URLSearchParams();
     params.set("context", data.context);
@@ -1181,17 +1144,8 @@ export default function OperationCoordinationWorkspace({
     data.cycle.id,
     searchParams,
   ]);
-  const initialDashboardShell = useMemo(
-    () =>
-      initialDashboard && activeViewMode?.key === initialViewModeKey.current
-        ? initialDashboard
-        : mapCoordinationDashboardShell(data, {
-            modeKey: activeViewMode?.key,
-          }),
-    [activeViewMode?.key, data, initialDashboard],
-  );
-  const handleDashboardResult = useCallback((result: unknown) => {
-    const source = coordinationDashboardResponseSource(result);
+  const handleBoardResult = useCallback((result: unknown) => {
+    const source = coordinationReadResponseSource(result);
     if (!source) return;
     const boardResult = source as {
       boardKey?: string;
@@ -1394,14 +1348,14 @@ export default function OperationCoordinationWorkspace({
         ).trim();
         throw new Error(serverError || "Không thể tải lại board.");
       }
-      handleDashboardResult(result);
+      handleBoardResult(result);
       setBoardRefreshedAt(new Date());
     } catch (refreshError) {
       setError(refreshError instanceof Error ? refreshError.message : "Không thể tải lại board.");
     } finally {
       setIsBoardRefreshing(false);
     }
-  }, [data.context, data.cycle.id, doneRange, handleDashboardResult, isBoardRefreshing]);
+  }, [data.context, data.cycle.id, doneRange, handleBoardResult, isBoardRefreshing]);
   const refreshActiveData = useCallback(async () => {
     if (isBoardRefreshing) return;
     if (!activeCoreFlow?.key) {
@@ -1485,7 +1439,7 @@ export default function OperationCoordinationWorkspace({
       );
       const result = await response.json().catch(() => null);
       if (!response.ok) throw new Error("Không thể tải thêm board.");
-      const source = coordinationDashboardResponseSource(result);
+      const source = coordinationReadResponseSource(result);
       if (kind === "technical") {
         const board = (source as {
           board?: CoordinationDashboardDTO["technicalIssueBoard"];
@@ -1553,7 +1507,7 @@ export default function OperationCoordinationWorkspace({
       );
       const result = await response.json().catch(() => null);
       if (!response.ok) throw new Error("Không thể tải lịch sử Done.");
-      const source = coordinationDashboardResponseSource(result) as {
+      const source = coordinationReadResponseSource(result) as {
         board?: CoordinationDashboardDTO["technicalIssueBoard"] |
           CoordinationDashboardDTO["mediaBoard"];
       };
@@ -1599,7 +1553,6 @@ export default function OperationCoordinationWorkspace({
 
     const params = new URLSearchParams(searchParams.toString());
     params.set("context", data.context);
-    params.set("dashboardVersion", "2");
     params.set("view", "technical-issue-flow");
     const technicalBoardEndpoint =
       `/api/admin/coordination/operation/boards/technical-issue?taskId=${encodeURIComponent(data.cycle.id)}&pageSize=10`;
@@ -1608,11 +1561,11 @@ export default function OperationCoordinationWorkspace({
     try {
       const response = await fetch(technicalBoardEndpoint, { cache: "no-store" });
       const result = await response.json().catch(() => null);
-      if (response.ok) handleDashboardResult(result);
+      if (response.ok) handleBoardResult(result);
     } finally {
       setBoardRefreshedAt(new Date());
     }
-  }, [data.context, data.cycle.id, handleDashboardResult, router, searchParams]);
+  }, [data.context, data.cycle.id, handleBoardResult, router, searchParams]);
   const activeStageByWorkspaceKey = useMemo(() => {
     const entries =
       activeCoreFlow?.stages.flatMap((stage) => [
@@ -1947,9 +1900,6 @@ export default function OperationCoordinationWorkspace({
               <Plus className="h-4 w-4" /> Thêm khoản thu / chi
             </button>
           ) : null}
-          <DashboardCustomizeButton
-            onClick={() => setDashboardCustomizationRequest((request) => request + 1)}
-          />
         </div>
       }
     >
@@ -1962,23 +1912,6 @@ export default function OperationCoordinationWorkspace({
           }}
         />
         {adHocWorkCreate.modal}
-        <AsyncBusinessListDashboard
-          endpoint={dashboardEndpoint}
-          preferInitialData
-          initialData={initialDashboardShell}
-          widgets={
-            isPaymentCollectionFlow
-              ? PAYMENT_DASHBOARD_WIDGETS
-              : activeCoreFlow?.key === "technical-issue-flow"
-                ? TECHNICAL_DASHBOARD_WIDGETS
-                : SPACE_DASHBOARD_WIDGETS
-          }
-          storageKey={`admin-dashboard:${data.context.toLowerCase()}-space:${activeCoreFlow?.key ?? activeViewMode?.key ?? "default"}`}
-           customizationRequest={dashboardCustomizationRequest}
-           showCustomizationTrigger={false}
-           cashFlowPeriods={isPaymentCollectionFlow}
-           onResult={handleDashboardResult}
-         />
         <section className="min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-300/80 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.055)]">
           <div className="border-b border-slate-200 px-5 py-4">
             {activeViewMode ? (
@@ -2158,21 +2091,49 @@ export default function OperationCoordinationWorkspace({
                   </button>
                 </form>
                 {isMediaFlowMode && isMediaPostCreateOpen ? (
-                  <MediaPostCreateForm
-                    onCancel={() => setIsMediaPostCreateOpen(false)}
-                    onCreated={async (result) => {
-                      setIsMediaPostCreateOpen(false);
-                      if (result.media.errors.length) {
-                        setError(`Đã tạo bài nhưng ${result.media.errors.length} ảnh chưa sao chép được. Mở bài post để kiểm tra.`);
-                      }
-                      const stageKey = result.coordination.stageKey;
-                      if (normalizeStageKey(stageKey) === normalizeStageKey(activeFlowListStage)) {
-                        await loadFlowItems(stageKey, 1, true);
-                      } else {
-                        changeFlowListStage(stageKey);
-                      }
+                  <form
+                    className="mt-4 grid min-w-0 gap-2 border-t border-sky-100 pt-4 md:grid-cols-[minmax(280px,1fr)_auto_auto]"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      if (isMediaPostCreating) return;
+                      setIsMediaPostCreating(true);
+                      setError(null);
+                      void createMediaPostAction({ brief: mediaPostBrief })
+                        .then(async (result) => {
+                          setMediaPostBrief("");
+                          setIsMediaPostCreateOpen(false);
+                          const stageKey = result.coordination.stageKey;
+                          if (normalizeStageKey(stageKey) === normalizeStageKey(activeFlowListStage)) {
+                            await loadFlowItems(stageKey, 1, true);
+                          } else {
+                            changeFlowListStage(stageKey);
+                          }
+                        })
+                        .catch((createError) => setError(createError instanceof Error ? createError.message : "Không thể tạo Media Post."))
+                        .finally(() => setIsMediaPostCreating(false));
                     }}
-                  />
+                  >
+                    <input
+                      value={mediaPostBrief}
+                      onChange={(event) => setMediaPostBrief(event.target.value)}
+                      placeholder="Brief / yêu cầu nội dung (không bắt buộc)"
+                      className="h-9 min-w-0 rounded-md border border-sky-100 bg-white px-3 text-sm outline-none focus:border-violet-300"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isMediaPostCreating}
+                      className="h-9 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white disabled:opacity-50"
+                    >
+                      {isMediaPostCreating ? "Đang tạo..." : "Tạo ngay"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsMediaPostCreateOpen(false)}
+                      className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600"
+                    >
+                      Hủy
+                    </button>
+                  </form>
                 ) : null}
                 {error ? <p className="mt-3 text-sm font-medium text-red-600">{error}</p> : null}
               </div>
@@ -3127,14 +3088,14 @@ export function PaymentCollectionBoard({ items }: { items: PaymentBoardItem[] })
         onStatus: (completed, total) => {
           progress.update({
             percent: 85 + Math.round((completed / Math.max(1, total)) * 10),
-            message: `Đang đồng bộ dashboard (${completed}/${total}).`,
+            message: `Đang đồng bộ dữ liệu (${completed}/${total}).`,
           });
         },
       });
       setBoardItems((current) => current.map((candidate) => candidate.id === item.id
         ? { ...candidate, stage: nextStage, status: reviewing ? candidate.status : "PAID" }
         : candidate));
-      progress.update({ percent: 90, message: "Đã cập nhật Payment, đang đồng bộ dashboard." });
+      progress.update({ percent: 90, message: "Đã cập nhật Payment, đang đồng bộ dữ liệu." });
       window.setTimeout(() => progress.hide(), 900);
     } catch (error) {
       progress.update({ message: error instanceof Error ? error.message : "Không thể cập nhật Payment." });
@@ -3725,7 +3686,7 @@ function TechnicalIssueBoardView({
       { id: "validate", label: "Kiểm tra thông tin xử lý", detail: `${item.summary} · ${technicalBoardStageLabel(moveRequest.targetStage)}`, status: "done" },
       { id: "move", label: "Cập nhật TI và Workspace", detail: "Đang ghi nhận action và chuyển stage.", status: "running" },
       { id: "additional", label: "Tạo Technical Issue bổ sung", detail: normalizedAdditionalIssues.length ? `${normalizedAdditionalIssues.length} TI mới` : "Không có TI bổ sung.", status: normalizedAdditionalIssues.length ? "pending" : "skipped" },
-      { id: "sync", label: "Đồng bộ board và số liệu", detail: "Cập nhật projection, timeline và dashboard.", status: "pending" },
+      { id: "sync", label: "Đồng bộ board và số liệu", detail: "Cập nhật projection, timeline và dữ liệu board.", status: "pending" },
     ];
     progress.show({
       title: "Đang chuyển trạng thái TI",
@@ -3823,7 +3784,7 @@ function TechnicalIssueBoardView({
           toStage: targetStage,
         });
         moveProgressSteps = moveProgressSteps.map((step) => step.id === "sync" ? { ...step, status: "running" } : step);
-        progress.update({ message: "Đã cập nhật card. Dashboard đang đồng bộ nền.", percent: 90, steps: moveProgressSteps });
+        progress.update({ message: "Đã cập nhật card. Board đang đồng bộ nền.", percent: 90, steps: moveProgressSteps });
         window.setTimeout(() => progress.hide(), 1000);
       } catch (error) {
         moveProgressSteps = moveProgressSteps.map((step) => step.status === "running" ? { ...step, status: "error" } : step);

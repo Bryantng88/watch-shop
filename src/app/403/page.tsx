@@ -12,7 +12,7 @@ export default function ForbiddenPage() {
                         href="/admin"
                         className="px-4 py-2 rounded bg-black text-white text-sm"
                     >
-                        Quay về Dashboard
+                        Quay về trang Admin
                     </a>
 
                     <a

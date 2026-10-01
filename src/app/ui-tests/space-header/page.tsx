@@ -104,7 +104,7 @@ export default function SpaceHeaderPrototypePage() {
                 <div className="flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
                   <button className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-violet-200 hover:text-violet-700">
                     <SlidersHorizontal className="h-4 w-4" />
-                    Tùy chỉnh dashboard
+                    Tùy chỉnh hiển thị
                   </button>
                   <button className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-violet-700">
                     <Plus className="h-4 w-4" />
@@ -136,7 +136,7 @@ export default function SpaceHeaderPrototypePage() {
               </div>
               <button className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-semibold">
                 <SlidersHorizontal className="h-4 w-4" />
-                Tùy chỉnh dashboard
+                Tùy chỉnh hiển thị
               </button>
             </div>
           </div>

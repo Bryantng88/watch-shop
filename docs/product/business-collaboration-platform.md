@@ -10,7 +10,7 @@
 6. [Activity](#6-activity)
 7. [Workflow](#7-workflow)
 8. [Workspace Template](#8-workspace-template)
-9. [Space Dashboard](#9-space-dashboard)
+9. [Space Reporting](#9-space-reporting)
 10. [Bao cao](#10-bao-cao)
 11. [Nguyen tac bat bien](#11-nguyen-tac-bat-bien)
 12. [Future Vision](#12-future-vision)
@@ -107,7 +107,7 @@ Space Management
       +--> Workflow
       |
       v
-Dashboard / Report / Notification
+Report / Notification
 ```
 
 ---
@@ -396,17 +396,18 @@ Vi du:
 
 ### Y nghia san pham
 
-Workspace Template giup nen tang mo rong sang nhieu phong ban ma khong phu thuoc vao mot nganh cu the. Moi phong ban co the co cac loai viec lap lai rieng, nhung deu dung chung triết ly Space Management: Workspace, Item, Activity, Workflow, Dashboard, Report.
+Workspace Template giup nen tang mo rong sang nhieu phong ban ma khong phu thuoc vao mot nganh cu the. Moi phong ban co the co cac loai viec lap lai rieng, nhung deu dung chung triết ly Space Management: Workspace, Item, Activity, Workflow va Report.
 
 ---
 
-## 9. Space Dashboard
+## 9. Space Reporting
 
-Space Dashboard khong query truc tiep Business.
+Bao cao Space khong nam trong man hinh nghiep vu Space.
 
-Dashboard chi query Space Management.
+Man hinh nghiep vu chi hien thi du lieu can de xu ly Workspace, Item, Activity
+va Workflow. KPI, chart va tong hop xu huong duoc gom vao muc Bao cao rieng.
 
-Dashboard tra loi cac cau hoi van hanh:
+Bao cao Space tra loi cac cau hoi van hanh:
 
 - Dang nghen o dau?
 - Workspace nao can xu ly?
@@ -416,11 +417,11 @@ Dashboard tra loi cac cau hoi van hanh:
 - Ai dang co nhieu viec can phan hoi?
 - Activity nao dang tao nhieu feedback?
 
-### Dashboard khong phai bao cao nghiep vu chuyen sau
+### Bao cao Space khong phai bao cao nghiep vu chuyen sau
 
-Space Dashboard khong thay the dashboard doanh thu, ton kho, san pham, marketing performance hay CSKH chuyen sau. Cac dashboard chuyen sau thuoc ve Business Domain tuong ung.
+Bao cao Space khong thay the bao cao doanh thu, ton kho, san pham, marketing performance hay CSKH chuyen sau. Cac bao cao chuyen sau thuoc ve Business Domain tuong ung.
 
-Space Dashboard chi nhin cac tin hieu da di qua lop Space Management.
+Bao cao Space chi nhin cac tin hieu da di qua lop Space Management.
 
 ### Vi du man hinh Space Management mong muon
 
@@ -529,9 +530,9 @@ Space Management la lop cong tac va theo doi, khong phai dieu kien ton tai cua B
 
 Khong moi hanh dong nghiep vu deu can vao Space Management.
 
-13. Space Dashboard chi doc Space Management.
+13. Bao cao Space chi doc Space Management.
 
-Space Dashboard khong lay tat ca du lieu truc tiep tu Business Domain de tranh bien thanh dashboard nghiep vu tong hop.
+Bao cao Space khong lay tat ca du lieu truc tiep tu Business Domain de tranh bien thanh man hinh tong hop nghiep vu.
 
 14. Bao cao Space Management duoc xay dung tu Binding, Activity va Workflow.
 
@@ -585,7 +586,7 @@ Moi domain moi co the dong gop:
 - Business Events rieng
 - Workspace Templates rieng
 - Workflow rieng
-- Space Dashboard rieng theo nhu cau
+- Bao cao Space rieng theo nhu cau
 
 Nhung tat ca van tuan theo cung mot ngon ngu san pham:
 
@@ -606,7 +607,7 @@ Workspace
       +--> Workflow
       |
       v
-Dashboard / Report / Notification
+Report / Notification
 ```
 
 ### Trai nghiem san pham mong muon
@@ -641,6 +642,6 @@ Khong tu tra loi cac cau hoi sau. Day la danh sach van de can thao luan trong ca
 - Business Feedback nen co nhung loai nao trong giai doan dau?
 - Notification nao la bat buoc, notification nao nen de nguoi dung cau hinh?
 - Workflow co can SLA rieng cho tung buoc khong?
-- Space Dashboard giai doan dau can uu tien chi so nao?
+- Bao cao Space giai doan dau can uu tien chi so nao?
 - Bao cao Space Management nen theo Space cycle, Workspace Template, nguoi phu trach, hay phong ban?
 - Khi mo rong sang domain khac ngoai Watch, can quy uoc nao de giu trai nghiem nhat quan?

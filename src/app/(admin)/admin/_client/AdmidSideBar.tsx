@@ -59,14 +59,6 @@ const DESKTOP_SIDEBAR_STORAGE_KEY = "admin-sidebar:expanded";
 
 const NAV: NavEntry[] = [
     {
-        type: "item",
-        href: "/admin/dashboard",
-        label: "Dashboard",
-        icon: LayoutDashboard,
-        exact: true,
-        permission: PERMISSIONS.DASHBOARD_VIEW,
-    },
-    {
         type: "group",
         label: "Business",
         defaultOpen: true,
@@ -113,6 +105,13 @@ const NAV: NavEntry[] = [
         label: "Báo cáo",
         defaultOpen: true,
         children: [
+            {
+                type: "item",
+                href: "/admin/reports/overview",
+                label: "Tổng quan",
+                icon: LayoutDashboard,
+                permission: PERMISSIONS.DASHBOARD_VIEW,
+            },
             {
                 type: "item",
                 href: "/admin/reports/finance",

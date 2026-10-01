@@ -366,7 +366,7 @@ Payment, Media, Technical, Shipment, and generic Blueprint flows.
 The shared list follows these additional invariants:
 
 - refreshed server `flowItems` and pagination replace the client copy;
-- a dashboard shell loaded with `includeFlowItems: false` is not an
+- a legacy Workspace shell loaded with `includeFlowItems: false` is not an
   authoritative empty flow result and must never replace a list loaded from the
   dedicated flow endpoint;
 - optimistic hidden IDs live only until authoritative items arrive;

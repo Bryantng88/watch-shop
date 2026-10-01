@@ -52,24 +52,11 @@ import TaskQuickCreateModal, {
   type TaskUserOption,
 } from "@/domains/task/ui/quick-create/TaskQuickCreateModal";
 import {
-  AsyncBusinessListDashboard,
   BusinessListShell,
-  type BusinessListDashboardWidgetKey,
 } from "@/domains/shared/ui/business-list";
 import { QuickOrderFromWatchModal } from "@/domains/order/ui/quick-order";
 import MediaBrowserDialog from "@/components/media/MediaBrowserDialog";
 import { repairWatchInlineMediaAction } from "./inline-repair/watch-inline-repair.actions";
-
-const WATCH_DASHBOARD_WIDGETS: BusinessListDashboardWidgetKey[] = [
-  "overview",
-  "value-trend",
-  "status-breakdown",
-  "recent-activity",
-  "watch-media",
-  "watch-service",
-  "watch-readiness",
-  "watch-aging",
-];
 
 // Temporary maintenance surface. Set to "0" after legacy INLINE references
 // have been repaired and the production media migration is complete.
@@ -393,8 +380,6 @@ export default function WatchListClient(props: WatchListClientProps) {
   const [inlineRepairRow, setInlineRepairRow] = useState<WatchRow | null>(null);
   const [inlineRepairSubmitting, setInlineRepairSubmitting] = useState(false);
   const [quickMediaRow, setQuickMediaRow] = useState<WatchRow | null>(null);
-  const [dashboardCustomizationRequest, setDashboardCustomizationRequest] =
-    useState(0);
 
   /**
    * URL state and server props must be synced separately.
@@ -1678,20 +1663,6 @@ export default function WatchListClient(props: WatchListClientProps) {
             next.set("page", "1");
             void loadList(next, { meta: "full" });
           }}
-          onCustomizeDashboard={() =>
-            setDashboardCustomizationRequest((request) => request + 1)
-          }
-        />
-      }
-      dashboard={
-        <AsyncBusinessListDashboard
-          endpoint={`/api/admin/watches/dashboard?segment=${
-            params.get("segment") === "WOMEN" ? "WOMEN" : "MEN"
-          }`}
-          widgets={WATCH_DASHBOARD_WIDGETS}
-          storageKey="admin-dashboard:watch-list"
-          customizationRequest={dashboardCustomizationRequest}
-          showCustomizationTrigger={false}
         />
       }
       filters={
