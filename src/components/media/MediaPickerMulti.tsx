@@ -59,8 +59,8 @@ type Props = {
 };
 
 type PreviewState = {
-    src: string;
-    label?: string | null;
+    items: PickedMediaItem[];
+    activeKey: string;
 } | null;
 
 function dedupeItems(items: PickedMediaItem[]) {
@@ -127,11 +127,47 @@ function getLabel(item: PickedMediaItem) {
 function ImagePreviewDialog({
     preview,
     onClose,
+    onNavigate,
 }: {
     preview: PreviewState;
     onClose: () => void;
+    onNavigate: (key: string) => void;
 }) {
-    if (!preview?.src) return null;
+    const activeIndex = preview
+        ? preview.items.findIndex((item) => getItemKey(item) === preview.activeKey)
+        : -1;
+    const activeItem = preview && activeIndex >= 0 ? preview.items[activeIndex] : null;
+    const src = activeItem ? getImageSrc(activeItem) : "";
+    const label = activeItem ? getLabel(activeItem) : null;
+    const canGoPrevious = activeIndex > 0;
+    const canGoNext = Boolean(preview && activeIndex >= 0 && activeIndex < preview.items.length - 1);
+
+    const goToIndex = React.useCallback((index: number) => {
+        const item = preview?.items[index];
+        if (item) onNavigate(getItemKey(item));
+    }, [onNavigate, preview]);
+
+    React.useEffect(() => {
+        if (!activeItem) return;
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                onClose();
+            } else if (event.key === "ArrowLeft" && canGoPrevious) {
+                event.preventDefault();
+                goToIndex(activeIndex - 1);
+            } else if (event.key === "ArrowRight" && canGoNext) {
+                event.preventDefault();
+                goToIndex(activeIndex + 1);
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [activeIndex, activeItem, canGoNext, canGoPrevious, goToIndex, onClose]);
+
+    if (!preview || !activeItem || !src) return null;
 
     return (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 p-4">
@@ -150,16 +186,35 @@ function ImagePreviewDialog({
                     Close
                 </button>
                 <img
-                    src={preview.src}
-                    alt={preview.label ?? "Preview"}
+                    src={src}
+                    alt={label ?? "Preview"}
                     className="max-h-[82vh] w-full rounded-2xl object-contain"
                 />
 
-                {preview.label ? (
-                    <div className="truncate px-2 py-2 text-xs font-medium text-slate-600">
-                        {preview.label}
+                <div className="flex items-center gap-3 px-2 py-2">
+                    <button
+                        type="button"
+                        disabled={!canGoPrevious}
+                        onClick={() => goToIndex(activeIndex - 1)}
+                        className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                        ← Trước
+                    </button>
+                    <div className="min-w-0 flex-1 truncate text-xs font-medium text-slate-600">
+                        {label}
                     </div>
-                ) : null}
+                    <div className="shrink-0 text-xs tabular-nums text-slate-500">
+                        {activeIndex + 1}/{preview.items.length}
+                    </div>
+                    <button
+                        type="button"
+                        disabled={!canGoNext}
+                        onClick={() => goToIndex(activeIndex + 1)}
+                        className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                        Tiếp →
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -473,14 +528,18 @@ export default function MediaPickerMulti({
         [chosenItems, hideSelectedFromChosen, selectedKeySet],
     );
 
-    const handlePreview = React.useCallback((item: PickedMediaItem) => {
+    const handlePreview = React.useCallback((item: PickedMediaItem, items: PickedMediaItem[]) => {
         const src = getImageSrc(item);
         if (!src) return;
 
         setPreview({
-            src,
-            label: getLabel(item),
+            items: [...items],
+            activeKey: getItemKey(item),
         });
+    }, []);
+
+    const handlePreviewNavigate = React.useCallback((activeKey: string) => {
+        setPreview((current) => current ? { ...current, activeKey } : null);
     }, []);
 
     const handlePreviewClose = React.useCallback(() => {
@@ -630,6 +689,7 @@ export default function MediaPickerMulti({
             <ImagePreviewDialog
                 preview={preview}
                 onClose={handlePreviewClose}
+                onNavigate={handlePreviewNavigate}
             />
 
             {(title || description) ? (
@@ -722,7 +782,7 @@ export default function MediaPickerMulti({
                 onToggleSelect={handleToggleSelect}
                 onRemoveChosen={handleRemoveChosen}
                 maxFinalSelection={maxFinalSelection}
-                onPreview={handlePreview}
+                onPreview={(item) => handlePreview(item, visibleChosenItems)}
                 onPreviewClose={handlePreviewClose}
                 managementSelectedKeys={managementSelectedKeys}
                 onToggleManagement={handleToggleManagement}
@@ -733,7 +793,7 @@ export default function MediaPickerMulti({
                 items={selectedItems}
                 onRemove={handleRemoveSelected}
                 onReorder={onSelectedChange}
-                onPreview={handlePreview}
+                onPreview={(item) => handlePreview(item, selectedItems)}
                 onPreviewClose={handlePreviewClose}
                 title={selectedTitle}
                 description={selectedDescription}
