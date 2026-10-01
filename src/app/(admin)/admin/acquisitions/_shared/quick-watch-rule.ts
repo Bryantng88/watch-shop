@@ -90,6 +90,7 @@ const STRAP_RULES: Rule[] = [
 const CASE_MATERIAL_RULES: Rule[] = [
     { code: "TWO_TONE", label: "Two-tone", aliases: ["two tone", "2 tone", "demi", "thep vang", "vo thep vang"] },
     { code: "TITANIUM", label: "Titanium", aliases: ["titanium", "titani", "vo titanium", "case titanium"] },
+    { code: "TUNGSTEN", label: "Tungsten", aliases: ["tungsten", "vonfram", "wolfram", "vo tungsten", "case tungsten"] },
     { code: "GOLD", label: "Vàng", aliases: ["vang 18k", "vang 14k", "solid gold", "vo vang", "case gold"] },
     { code: "SILVER", label: "Bạc", aliases: ["silver case", "vo bac", "case silver", "bac khoi"] },
     { code: "STAINLESS_STEEL", label: "Thép", aliases: ["stainless steel", "vo thep", "case steel", "vo inox"] },

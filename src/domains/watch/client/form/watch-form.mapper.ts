@@ -74,6 +74,7 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
             title: s(detail?.title),
             slug: s(detail?.slug),
             brandId: s(detail?.brand?.id),
+            brandName: s(detail?.brand?.name),
             vendorId: s(detail?.vendor?.id),
             categoryId: s(detail?.category?.id),
             gender: s(detail?.watch?.gender || "MEN"),

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { MediaObjectAvailability } from "@prisma/client";
-import { prisma } from "@/server/db/client";
+import { prisma, type DB } from "@/server/db/client";
 import { S3_BUCKET } from "@/server/s3";
 import { normalizeKey } from "@/server/lib/storage-key";
 import { mediaStorage } from "../storage";
@@ -55,12 +55,12 @@ export async function registerExistingMediaObject(input: {
   sourceMediaObjectId?: string | null;
   derivativeVariant?: string | null;
   derivativeRecipeHash?: string | null;
-}) {
+}, db: DB = prisma) {
   const storageKey = normalizeKey(input.storageKey);
   const metadata = await mediaStorage.stat(storageKey);
   if (!metadata) throw new Error(`Media object does not exist on NAS: ${storageKey}`);
 
-  return prisma.mediaObject.upsert({
+  return db.mediaObject.upsert({
     where: { storageKey },
     create: {
       bucket: S3_BUCKET,

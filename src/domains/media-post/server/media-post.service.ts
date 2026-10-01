@@ -17,6 +17,23 @@ import { bindMedia } from "@/domains/media/application/media-binding.service";
 import { ingestSelectedMedia } from "@/domains/media/application/media-ingest.service";
 import { prisma, type DB } from "@/server/db/client";
 import { normalizeKey } from "@/server/lib/storage-key";
+import { mediaStorage } from "@/domains/media/storage";
+import { mediaPathPolicy } from "@/domains/media/core/media-path.policy";
+import { registerExistingMediaObject } from "@/domains/media/application/media-ingest.service";
+import type {
+  MediaPostThemeFilters,
+  MediaPostThemeSelection,
+  MediaPostThemeWatchCandidate,
+} from "../shared/media-post-theme.types";
+import { MEDIA_POST_UNCLASSIFIED_FILTER } from "../shared/media-post-theme.types";
+import {
+  MEDIA_POST_AUDIENCE_OPTIONS,
+  MEDIA_POST_CASE_SHAPE_OPTIONS,
+  MEDIA_POST_MOVEMENT_OPTIONS,
+  MEDIA_POST_SITE_CHANNEL_OPTIONS,
+  MEDIA_POST_STOCK_OPTIONS,
+  MEDIA_POST_STYLE_OPTIONS,
+} from "../shared/media-post-theme.options";
 import { updateBusinessBindingMetadata } from "@/domains/task/server/business-binding.repo";
 import { getQueueItemWorkflowState } from "@/domains/task/server/business-binding-workflow.service";
 
@@ -125,7 +142,7 @@ export function mediaPostAutoTitle(sequence: number, now = new Date()) {
   return `post_${String(Math.max(1, sequence)).padStart(2, "0")} ngày ${day.label}`;
 }
 
-export async function createMediaPost(input: {
+export type CreateMediaPostInput = {
   brief?: string | null;
   caption?: string | null;
   contentJson?: Prisma.InputJsonValue | null;
@@ -135,23 +152,23 @@ export async function createMediaPost(input: {
   assignedToUserId?: string | null;
   postTargetIds?: string[];
   watchIds?: string[];
-}) {
+};
+
+async function createMediaPostRecord(tx: Prisma.TransactionClient, input: CreateMediaPostInput) {
   const createdAt = new Date();
   const postDay = mediaPostDay(createdAt);
-
-  return runBusinessEventTransaction(async (tx, delivery) => {
-    await tx.$queryRaw<Array<{ locked: number }>>`
+  await tx.$queryRaw<Array<{ locked: number }>>`
       SELECT 1::int AS locked
       FROM (
         SELECT pg_advisory_xact_lock(hashtext(${`media-post-title:${postDay.key}`})::bigint)
       ) AS advisory_lock
     `;
-    const postsCreatedToday = await tx.mediaPost.count({
-      where: { createdAt: { gte: postDay.start, lt: postDay.end } },
-    });
-    const title = mediaPostAutoTitle(postsCreatedToday + 1, createdAt);
-    const post = await tx.mediaPost.create({
-      data: {
+  const postsCreatedToday = await tx.mediaPost.count({
+    where: { createdAt: { gte: postDay.start, lt: postDay.end } },
+  });
+  const title = mediaPostAutoTitle(postsCreatedToday + 1, createdAt);
+  return tx.mediaPost.create({
+    data: {
         refNo: newRefNo(),
         title,
         createdAt,
@@ -168,9 +185,14 @@ export async function createMediaPost(input: {
         watches: input.watchIds?.length
           ? { create: [...new Set(input.watchIds)].map((watchId, sortOrder) => ({ watchId, sortOrder })) }
           : undefined,
-      },
-      include: { targets: true, watches: true },
-    });
+    },
+    include: { targets: true, watches: true },
+  });
+}
+
+export async function createMediaPost(input: CreateMediaPostInput) {
+  return runBusinessEventTransaction(async (tx, delivery) => {
+    const post = await createMediaPostRecord(tx, input);
     await delivery.emit({
       eventKey: "media.post.created",
       targetType: "MEDIA_POST",
@@ -180,6 +202,267 @@ export async function createMediaPost(input: {
     });
     return post;
   });
+}
+
+function optionValues(options: ReadonlyArray<readonly [string, string]>) {
+  return new Set(options.map(([value]) => value));
+}
+
+const themeFilterValues = {
+  movementType: optionValues(MEDIA_POST_MOVEMENT_OPTIONS),
+  caseShape: optionValues(MEDIA_POST_CASE_SHAPE_OPTIONS),
+  style: optionValues(MEDIA_POST_STYLE_OPTIONS),
+  stockStage: optionValues(MEDIA_POST_STOCK_OPTIONS),
+  audienceSegment: optionValues(MEDIA_POST_AUDIENCE_OPTIONS),
+  siteChannel: optionValues(MEDIA_POST_SITE_CHANNEL_OPTIONS),
+};
+
+export function normalizeMediaPostThemeSelections(selections: MediaPostThemeSelection[]) {
+  const normalized = selections.map((selection) => ({
+    watchId: String(selection.watchId).trim(),
+    sourceGalleryKey: normalizeKey(selection.sourceGalleryKey),
+  }));
+  if (normalized.some((selection) => !selection.watchId || !selection.sourceGalleryKey)) {
+    throw new Error("Watch và ảnh Gallery là bắt buộc.");
+  }
+  if (new Set(normalized.map((selection) => selection.watchId)).size !== normalized.length) {
+    throw new Error("Không được chọn trùng watch trong một Media Post.");
+  }
+  if (new Set(normalized.map((selection) => selection.sourceGalleryKey)).size !== normalized.length) {
+    throw new Error("Không được chọn trùng ảnh Gallery trong một Media Post.");
+  }
+  return normalized;
+}
+
+export async function cleanupCopiedMediaPostFiles(
+  keys: string[],
+  deleteFile: (key: string) => Promise<void> = (key) => mediaStorage.delete(key),
+) {
+  const results = await Promise.allSettled(keys.map((key) => deleteFile(key)));
+  return results.filter((result) => result.status === "rejected").length;
+}
+
+export async function createMediaPostWithGallerySelections(
+  input: CreateMediaPostInput & { selections: MediaPostThemeSelection[] },
+) {
+  const selections = normalizeMediaPostThemeSelections(input.selections);
+  if (!selections.length) throw new Error("Cần chọn ít nhất một watch cho bài theo chủ đề.");
+
+  const copiedKeys: string[] = [];
+  let drainConsumers: (() => Promise<void>) | null = null;
+  let committed: { post: Awaited<ReturnType<typeof createMediaPostRecord>>; media: {
+    copied: Array<{ watchId: string; sourceGalleryKey: string; mediaPostKey: string }>;
+    errors: Array<{ watchId: string; message: string }>;
+  } };
+
+  try {
+    committed = await runBusinessEventTransaction(async (tx, delivery) => {
+      const watches = await tx.watch.findMany({
+        where: { id: { in: selections.map((selection) => selection.watchId) } },
+        select: {
+          id: true,
+          product: { select: { productImage: { where: { role: "GALLERY" }, select: { fileKey: true } } } },
+        },
+      });
+      const allowedByWatch = new Map(watches.map((watch) => [
+        watch.id,
+        new Set(watch.product.productImage.map((image) => normalizeKey(image.fileKey))),
+      ]));
+      for (const selection of selections) {
+        if (!allowedByWatch.get(selection.watchId)?.has(selection.sourceGalleryKey)) {
+          throw new Error(`Ảnh đã chọn không thuộc Gallery của watch ${selection.watchId}.`);
+        }
+      }
+
+      const post = await createMediaPostRecord(tx, {
+        ...input,
+        watchIds: selections.map((selection) => selection.watchId),
+      });
+      const copied = [] as Array<{ watchId: string; sourceGalleryKey: string; mediaPostKey: string }>;
+      for (let sortOrder = 0; sortOrder < selections.length; sortOrder += 1) {
+        const selection = selections[sortOrder];
+        try {
+          const sourceObject = await registerExistingMediaObject(
+            { storageKey: selection.sourceGalleryKey },
+            tx,
+          );
+          const filename = selection.sourceGalleryKey.split("/").pop() || `watch-${sortOrder + 1}.jpg`;
+          const destinationKey = mediaPathPolicy.postOriginal({
+            postId: post.id,
+            mediaObjectId: randomUUID(),
+            filename,
+          });
+          await mediaStorage.copy(selection.sourceGalleryKey, destinationKey);
+          copiedKeys.push(destinationKey);
+          const copiedObject = await registerExistingMediaObject({
+            storageKey: destinationKey,
+            originalFileName: filename,
+            sourceMediaObjectId: sourceObject.id,
+          }, tx);
+          await bindMedia({
+            mediaObjectId: copiedObject.id,
+            ownerType: MediaOwnerType.MEDIA_POST,
+            ownerId: post.id,
+            role: MediaRole.SOCIAL,
+            sortOrder,
+            audienceSegment: AudienceSegment.UNISEX,
+            pipelineKey: null,
+            lifecycle: MediaBindingLifecycle.SELECTED,
+          }, tx);
+          copied.push({ ...selection, mediaPostKey: destinationKey });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Không thể sao chép ảnh Gallery.";
+          throw new Error(`Watch ${selection.watchId}: ${message}`, { cause: error });
+        }
+      }
+
+      await delivery.emit({
+        eventKey: "media.post.created",
+        targetType: "MEDIA_POST",
+        targetId: post.id,
+        actorUserId: input.createdByUserId ?? null,
+        payload: { refNo: post.refNo, title: post.title, targetIds: post.targets.map((item) => item.postTargetId) },
+      });
+      await delivery.emit({
+        eventKey: "media.post.watch.gallery.copied",
+        targetType: "MEDIA_POST",
+        targetId: post.id,
+        actorUserId: input.createdByUserId ?? null,
+        payload: { copied, errors: [] },
+      });
+      return { post, media: { copied, errors: [] } };
+    }, {
+      deferConsumers(work) {
+        drainConsumers = work;
+      },
+    });
+  } catch (error) {
+    const cleanupFailures = await cleanupCopiedMediaPostFiles(copiedKeys);
+    if (cleanupFailures && error instanceof Error) {
+      error.message = `${error.message} Cleanup thất bại với ${cleanupFailures} file.`;
+    }
+    throw error;
+  }
+
+  const drain = drainConsumers as (() => Promise<void>) | null;
+  if (drain) await drain();
+  return committed;
+}
+
+export function validateMediaPostThemeFilters(filters: MediaPostThemeFilters) {
+  for (const [field, allowed] of Object.entries(themeFilterValues)) {
+    const value = filters[field as keyof typeof themeFilterValues];
+    const permitsUnclassified = field === "movementType" || field === "caseShape" || field === "style";
+    if (value && value !== MEDIA_POST_UNCLASSIFIED_FILTER && !allowed.has(String(value))) {
+      throw new Error(`Giá trị bộ lọc ${field} không hợp lệ.`);
+    }
+    if (value === MEDIA_POST_UNCLASSIFIED_FILTER && !permitsUnclassified) {
+      throw new Error(`Bộ lọc ${field} không hỗ trợ giá trị chưa phân loại.`);
+    }
+  }
+  for (const [field, value] of [["priceMin", filters.priceMin], ["priceMax", filters.priceMax]] as const) {
+    if (value != null && (!Number.isFinite(value) || Number(value) < 0)) {
+      throw new Error(`${field} phải là số không âm.`);
+    }
+  }
+  if (filters.priceMin != null && filters.priceMax != null && filters.priceMin > filters.priceMax) {
+    throw new Error("Giá từ không được lớn hơn giá đến.");
+  }
+  return filters;
+}
+
+export function effectiveMediaPostPrice(price: { salePrice: unknown; listPrice: unknown } | null) {
+  return price?.salePrice ?? price?.listPrice ?? null;
+}
+
+export function buildMediaPostThemeWatchWhere(filters: MediaPostThemeFilters): Prisma.WatchWhereInput {
+  validateMediaPostThemeFilters(filters);
+  const query = String(filters.query ?? "").trim();
+  const priceMin = Number.isFinite(filters.priceMin) ? Number(filters.priceMin) : null;
+  const priceMax = Number.isFinite(filters.priceMax) ? Number(filters.priceMax) : null;
+  return {
+    ...(query ? { OR: [
+      { product: { title: { contains: query, mode: "insensitive" } } },
+      { product: { sku: { contains: query, mode: "insensitive" } } },
+      { product: { brand: { name: { contains: query, mode: "insensitive" } } } },
+      { watchSpecV2: { model: { contains: query, mode: "insensitive" } } },
+      { watchSpecV2: { referenceNumber: { contains: query, mode: "insensitive" } } },
+    ] } : {}),
+    ...(filters.movementType ? { movementType: filters.movementType === MEDIA_POST_UNCLASSIFIED_FILTER ? null : filters.movementType as never } : {}),
+    ...(filters.style ? { style: filters.style === MEDIA_POST_UNCLASSIFIED_FILTER ? null : filters.style as never } : {}),
+    ...(filters.stockStage ? { stockStage: filters.stockStage as never } : {}),
+    ...(filters.siteChannel ? { siteChannel: filters.siteChannel as never } : {}),
+    ...(filters.audienceSegment ? { audienceSegment: filters.audienceSegment as never } : {}),
+    ...(filters.caseShape ? {
+      watchSpecV2: filters.caseShape === MEDIA_POST_UNCLASSIFIED_FILTER
+        ? { is: { caseShape: null } }
+        : { caseShape: filters.caseShape as never },
+    } : {}),
+    ...((priceMin !== null || priceMax !== null) ? { AND: [{ OR: [
+      { watchPrice: { salePrice: {
+        ...(priceMin !== null ? { gte: priceMin } : {}),
+        ...(priceMax !== null ? { lte: priceMax } : {}),
+      } } },
+      { watchPrice: { salePrice: null, listPrice: {
+        ...(priceMin !== null ? { gte: priceMin } : {}),
+        ...(priceMax !== null ? { lte: priceMax } : {}),
+      } } },
+    ] }] } : {}),
+    product: {
+      ...(filters.brandId ? { brandId: filters.brandId } : {}),
+      ...(filters.publishedOnly ? { publishedAt: { not: null } } : {}),
+      productImage: { some: { role: "GALLERY" } },
+    },
+  };
+}
+
+export async function listMediaPostThemeWatchCandidates(
+  filters: MediaPostThemeFilters,
+): Promise<MediaPostThemeWatchCandidate[]> {
+  const rows = await prisma.watch.findMany({
+    where: buildMediaPostThemeWatchWhere(filters),
+    select: {
+      id: true,
+      movementType: true,
+      style: true,
+      watchPrice: { select: { salePrice: true, listPrice: true } },
+      watchSpecV2: { select: { caseShape: true } },
+      product: {
+        select: {
+          id: true,
+          title: true,
+          sku: true,
+          brandId: true,
+          brand: { select: { name: true } },
+          productImage: {
+            where: { role: "GALLERY" },
+            orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+            select: { fileKey: true, sortOrder: true },
+          },
+        },
+      },
+    },
+    orderBy: [{ updatedAt: "desc" }],
+    take: 60,
+  });
+
+  return rows.map((row) => ({
+    watchId: row.id,
+    productId: row.product.id,
+    title: row.product.title,
+    sku: row.product.sku,
+    brandId: row.product.brandId,
+    brandName: row.product.brand?.name ?? null,
+    price: effectiveMediaPostPrice(row.watchPrice)?.toString() ?? null,
+    movementType: row.movementType ?? null,
+    caseShape: row.watchSpecV2?.caseShape ?? null,
+    style: row.style ?? null,
+    gallery: row.product.productImage.map((image) => ({
+      key: image.fileKey,
+      url: `/api/media/sign?key=${encodeURIComponent(image.fileKey)}`,
+      sortOrder: image.sortOrder,
+    })),
+  }));
 }
 
 export async function selectMediaForPost(input: {

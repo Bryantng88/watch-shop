@@ -3045,6 +3045,7 @@ enum BrandStatus {
 enum CaseMaterial {
   STAINLESS_STEEL
   TITANIUM
+  TUNGSTEN
   CERAMIC
   CARBON
   GOLD
@@ -3723,6 +3724,7 @@ enum ServiceRequestStatus_New {
 enum WatchCaseMaterialFamily {
   STAINLESS_STEEL
   TITANIUM
+  TUNGSTEN
   CERAMIC
   CARBON
   GOLD

@@ -18,7 +18,7 @@ const movementLabels: Record<NonNullable<PublicCatalogQuery["movement"]>, string
   KINETIC: "Kinetic", MECHAQUARTZ: "Mechaquartz", SPRING_DRIVE: "Spring Drive", HYBRID: "Hybrid",
 };
 const materialLabels: Record<NonNullable<PublicCatalogQuery["caseMaterial"]>, string> = {
-  STAINLESS_STEEL: "Thép không gỉ", TITANIUM: "Titanium", CERAMIC: "Ceramic", CARBON: "Carbon",
+  STAINLESS_STEEL: "Thép không gỉ", TITANIUM: "Titanium", TUNGSTEN: "Tungsten", CERAMIC: "Ceramic", CARBON: "Carbon",
   GOLD: "Vàng", PLATINUM: "Platinum", SILVER: "Bạc", BRASS: "Đồng thau", OTHER: "Khác",
 };
 

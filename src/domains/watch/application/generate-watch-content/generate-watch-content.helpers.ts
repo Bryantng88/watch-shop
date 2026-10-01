@@ -107,6 +107,7 @@ function materialLabel(value?: string | null) {
   const map: Record<string, string> = {
     STAINLESS_STEEL: "thép không gỉ",
     TITANIUM: "titanium",
+    TUNGSTEN: "tungsten",
     CERAMIC: "ceramic",
     CARBON: "carbon",
     GOLD: "vàng",
@@ -187,7 +188,7 @@ export function buildTitleDescriptor(values: WatchFormValues) {
 
 export function buildPostTitle(values: WatchFormValues) {
   const year = clean(values.basic.yearText);
-  const brand = clean(values.spec.specBrand);
+  const brand = clean(values.spec.specBrand || values.basic.brandName);
   const model = clean(values.spec.model);
   const nickname = clean(values.spec.nickname);
   const reference = clean(values.spec.referenceNumber);
@@ -286,7 +287,11 @@ export function buildHashTags(values: WatchFormValues) {
     hashtag(values.header.sku),
     "#vintagewatch",
     hashtag(values.basic.style),
-    hashtag(values.spec.specBrand || values.basic.title.split(" ")[0]),
+    hashtag(
+      values.spec.specBrand ||
+        values.basic.brandName ||
+        values.basic.title.split(" ")[0],
+    ),
   ].filter(Boolean);
 
   return Array.from(new Set(tags)).join(" ");
@@ -337,7 +342,11 @@ export function buildPostText(input: {
 export function buildWatchContentWarnings(values: WatchFormValues) {
   const warnings: WatchContentGenerationWarning[] = [];
 
-  if (!clean(values.spec.specBrand) && !clean(values.basic.title)) {
+  if (
+    !clean(values.spec.specBrand) &&
+    !clean(values.basic.brandName) &&
+    !clean(values.basic.title)
+  ) {
     pushMissing(warnings, "brand", "Chưa có brand/title để tạo title.");
   }
 

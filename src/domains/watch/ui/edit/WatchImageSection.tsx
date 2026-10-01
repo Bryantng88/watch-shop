@@ -390,12 +390,25 @@ export default function WatchImageSection({
     };
 
     const handleQuickPublish = async (nextPublished: boolean) => {
-        if (publishPending || isFormDirty) return;
+        if (publishPending) return;
+
+        if (nextPublished && !currentCoverKey) {
+            await dialog.alert({
+                title: "Chưa thể đưa lên storefront",
+                message: "Cần xác nhận một ảnh Cover storefront trước khi bật hiển thị.",
+                tone: "warning",
+            });
+            return;
+        }
+
+        const unsavedNotice = isFormDirty
+            ? " Form đang có thay đổi chưa lưu; storefront sẽ dùng dữ liệu đã lưu gần nhất."
+            : "";
         const confirmed = await dialog.confirm({
             title: nextPublished ? "Đưa Watch lên storefront?" : "Ẩn Watch khỏi storefront?",
             message: nextPublished
-                ? `Watch sẽ hiển thị ngay với title, spec và Cover hiện tại. Giá: ${effectiveShowPrice ? "hiển thị" : "Liên hệ"}. Content và gallery có thể bổ sung sau.`
-                : "Watch sẽ được ẩn khỏi storefront. Dữ liệu title, spec, content và gallery vẫn được giữ nguyên.",
+                ? `Watch sẽ hiển thị ngay với title, spec và Cover đã lưu. Giá: ${effectiveShowPrice ? "hiển thị" : "Liên hệ"}. Content và gallery có thể bổ sung sau.${unsavedNotice}`
+                : `Watch sẽ được ẩn khỏi storefront. Dữ liệu title, spec, content và gallery vẫn được giữ nguyên.${unsavedNotice}`,
             confirmText: nextPublished ? "Đưa lên storefront" : "Ẩn khỏi storefront",
             cancelText: "Hủy",
         });
@@ -823,7 +836,7 @@ export default function WatchImageSection({
                                 role="switch"
                                 aria-checked={quickPublished}
                                 onClick={() => void handleQuickPublish(!quickPublished)}
-                                disabled={publishPending || isFormDirty || (!quickPublished && !currentCoverKey)}
+                                disabled={publishPending}
                                 className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold shadow-sm disabled:cursor-not-allowed disabled:opacity-50 ${quickPublished ? "bg-emerald-600 text-white hover:bg-emerald-700" : "bg-slate-200 text-slate-700 hover:bg-slate-300"}`}
                             >
                                 <span className={`relative h-5 w-9 rounded-full transition ${quickPublished ? "bg-white/30" : "bg-slate-400"}`}>
@@ -832,7 +845,7 @@ export default function WatchImageSection({
                                 {publishPending ? "Đang cập nhật..." : quickPublished ? "Đang hiển thị storefront" : "Đang ẩn storefront"}
                             </button>
                             <span className="text-xs text-slate-600">
-                                {isFormDirty ? "Hãy lưu title, spec và lựa chọn hiển thị giá trước." : "Không yêu cầu content hoặc đủ gallery; cần title, spec và Cover."}
+                                {isFormDirty ? "Có thay đổi chưa lưu; khi bấm switch bạn vẫn có thể tiếp tục bằng dữ liệu đã lưu gần nhất." : "Không yêu cầu content hoặc đủ gallery; cần title, spec và Cover."}
                             </span>
                         </div>
                     </div> : null}

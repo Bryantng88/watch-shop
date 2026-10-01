@@ -101,6 +101,7 @@ const MATERIAL_MAP: Record<string, string> = {
     GOLD_PLATED: "mạ vàng",
     TWO_TONE: "2 tông màu",
     TITANIUM: "titanium",
+    TUNGSTEN: "tungsten",
     SILVER: "bạc",
 };
 

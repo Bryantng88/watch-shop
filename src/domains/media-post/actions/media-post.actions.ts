@@ -2,8 +2,49 @@
 
 import { MediaRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { createMediaPost, removeMediaFromPost, reorderMediaPostAssets, saveMediaPostWorkProgress, selectMediaForPost, updateMediaPostContent } from "@/domains/media-post/server";
+import { createMediaPost, createMediaPostWithGallerySelections, listMediaPostThemeWatchCandidates, removeMediaFromPost, reorderMediaPostAssets, saveMediaPostWorkProgress, selectMediaForPost, updateMediaPostContent } from "@/domains/media-post/server";
 import { requirePermission } from "@/server/auth/requirePermission";
+import type { MediaPostThemeDefinition, MediaPostThemeFilters, MediaPostThemeSelection } from "../shared/media-post-theme.types";
+
+export async function searchMediaPostThemeWatchesAction(filters: MediaPostThemeFilters) {
+  await requirePermission("MEDIA_VIEW");
+  const items = await listMediaPostThemeWatchCandidates(filters);
+  if (items.length) return { items, suggestion: null };
+
+  const removable: Array<{
+    keys: Array<keyof MediaPostThemeFilters>;
+    label: string;
+  }> = [
+    { keys: ["style"], label: "Phong cách" },
+    { keys: ["stockStage"], label: "Tình trạng kho" },
+    { keys: ["audienceSegment"], label: "Phân khúc" },
+    { keys: ["siteChannel"], label: "Kênh sản phẩm" },
+    { keys: ["caseShape"], label: "Form vỏ" },
+    { keys: ["movementType"], label: "Bộ máy" },
+    { keys: ["priceMin", "priceMax"], label: "Khoảng giá" },
+    { keys: ["publishedOnly"], label: "Chỉ watch đang storefront" },
+    { keys: ["query"], label: "Từ khóa" },
+  ];
+
+  for (const candidate of removable) {
+    if (!candidate.keys.some((key) => Boolean(filters[key]))) continue;
+    const nextFilters = { ...filters };
+    for (const key of candidate.keys) delete nextFilters[key];
+    const relaxedItems = await listMediaPostThemeWatchCandidates(nextFilters);
+    if (relaxedItems.length) {
+      return {
+        items,
+        suggestion: {
+          label: candidate.label,
+          count: relaxedItems.length,
+          filters: nextFilters,
+        },
+      };
+    }
+  }
+
+  return { items, suggestion: null };
+}
 
 export async function createMediaPostAction(input: {
   brief?: string | null;
@@ -12,18 +53,39 @@ export async function createMediaPostAction(input: {
   assignedToUserId?: string | null;
   postTargetIds?: string[];
   watchIds?: string[];
+  watchSelections?: MediaPostThemeSelection[];
+  theme?: MediaPostThemeDefinition | null;
 }) {
   const auth = await requirePermission("PRODUCT_UPDATE");
-  const post = await createMediaPost({
+  const watchIds = input.watchSelections?.length
+    ? input.watchSelections.map((selection) => selection.watchId)
+    : input.watchIds;
+  const createInput = {
     ...input,
+    watchIds,
+    contentJson: input.theme ? {
+      hook: null,
+      body: null,
+      hashtags: null,
+      theme: input.theme,
+      watchSnapshot: input.watchSelections ?? [],
+    } : undefined,
     scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null,
     createdByUserId: auth.userId,
-  });
+  };
+  const created = input.watchSelections?.length
+    ? await createMediaPostWithGallerySelections({
+        ...createInput,
+        selections: input.watchSelections,
+      })
+    : { post: await createMediaPost(createInput), media: { copied: [], errors: [] } };
+  const { post, media } = created;
   revalidatePath("/admin/coordination/media");
   return {
     ok: true as const,
     postId: post.id,
     refNo: post.refNo,
+    media,
     coordination: {
       flowKey: "media-production-flow" as const,
       stageKey: "photography" as const,
