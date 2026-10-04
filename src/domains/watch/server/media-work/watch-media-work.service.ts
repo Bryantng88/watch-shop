@@ -798,7 +798,11 @@ export async function markWatchMediaAssetAttachedFromWatch(
       {
         watch: toWatchEventSnapshot(watch),
         actorUserId: input.actorUserId ?? null,
-        sourceId: `media-intake:gallery:${watch.id}`,
+        // A watch may legitimately re-enter Media Processing after an older
+        // media workflow was completed. Include this intake occurrence in the
+        // event identity so the outbox does not deduplicate the reopen against
+        // the watch's first gallery intake.
+        sourceId: `media-intake:gallery:${watch.id}:${attachedAt}`,
         note: input.note ?? null,
         mediaSource: "GALLERY",
         intakeRoute: "DIRECT_TO_MEDIA_PROCESSING",
