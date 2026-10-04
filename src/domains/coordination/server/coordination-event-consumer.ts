@@ -446,9 +446,17 @@ async function shouldKeepCurrentMediaStage(input: {
   targetId: string;
   targetWorkTypeKey: string;
   eventKey: string;
+  metadataJson?: unknown;
 }) {
   if (normalizeTargetType(input.targetType) !== "WATCH") return false;
   if (EXPLICIT_MEDIA_REGRESSION_EVENTS.has(normalizeEventKey(input.eventKey))) {
+    return false;
+  }
+  const eventMetadata = asRecord(input.metadataJson);
+  if (
+    normalizeMatchKey(eventMetadata.intakeRoute) === "direct to media processing" &&
+    normalizeMatchKey(eventMetadata.sourceAction) === "attach media asset"
+  ) {
     return false;
   }
 
@@ -1564,6 +1572,7 @@ export async function consumeBusinessEventForCoordination(
       targetId: canonicalTargetId,
       targetWorkTypeKey: route.workTypeKey,
       eventKey,
+      metadataJson: input.metadataJson,
     })
   ) {
     return skipped("MEDIA_STAGE_REGRESSION_REQUIRES_EXPLICIT_ACTION", route, resolvedScope);
