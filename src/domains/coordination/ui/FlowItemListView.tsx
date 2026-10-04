@@ -1522,6 +1522,11 @@ export default function FlowItemListView({
         </table>
       </div>
       <BusinessEntityPreviewModal
+        reviewContext={activeStage.toLowerCase().includes("media")
+          ? "MEDIA"
+          : activeStage.toLowerCase().includes("service") || activeStage.toLowerCase().includes("technical")
+            ? "SERVICE"
+            : "WATCH"}
         open={previewState.open}
         preview={previewState.preview}
         loading={previewState.loading}

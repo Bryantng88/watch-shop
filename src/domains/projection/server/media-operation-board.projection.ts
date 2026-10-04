@@ -26,7 +26,7 @@ import type {
 } from "./projection.types";
 
 export const MEDIA_OPERATION_BOARD_PROJECTION_KEY = "media-operation-board";
-export const MEDIA_OPERATION_BOARD_PROJECTION_VERSION = 12;
+export const MEDIA_OPERATION_BOARD_PROJECTION_VERSION = 13;
 const MEDIA_OPERATION_BOARD_EVENTS = [
   "watch.created",
   "watch.media.photoshoot.requested",
@@ -184,7 +184,73 @@ export async function buildMediaOperationBoardRow(
   const binding = bindings
     .filter((row) => mediaStage(row.taskItem?.note, row.metadataJson))
     .sort((left, right) => mediaBindingRank(right) - mediaBindingRank(left))[0];
+  const watch = await client.watch.findUnique({
+    where: { id: input.watchId },
+    select: {
+      id: true,
+      productId: true,
+      updatedAt: true,
+      saleStage: true,
+      isContentDownloaded: true,
+      isImageDownloaded: true,
+      product: {
+        select: {
+          title: true,
+          sku: true,
+          primaryImageUrl: true,
+          postTargets: {
+            orderBy: { createdAt: "asc" },
+            select: {
+              postTarget: {
+                select: { id: true, name: true, platform: true },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+  if (!watch) return null;
   if (!binding?.taskItemId) {
+    if (watch.isContentDownloaded && watch.isImageDownloaded) {
+      const data: MediaOperationBoardProjection = {
+        id: watch.id,
+        targetType: "WATCH",
+        productId: watch.productId,
+        bindingId: `legacy-media-done:${watch.id}`,
+        workspaceTaskItemId: "",
+        title: watch.product?.title ?? "Watch",
+        sku: watch.product?.sku ?? null,
+        imageUrl: watch.product?.primaryImageUrl ?? null,
+        stage: "DONE",
+        workflowKey: null,
+        workflowState: "DONE",
+        reshootNote: null,
+        mediaWorkProgress: null,
+        postTargets: mapProductPostTargets(watch.product),
+        manualTransitions: [],
+        commentCount: 0,
+        mentionedMeCount: 0,
+        unreadMentionCount: 0,
+        updatedAt: watch.updatedAt.toISOString(),
+        lastUpdatedBy: { label: "Hệ thống", avatarUrl: null, isSystem: true },
+        workspaceId: "legacy-media-done",
+      };
+      await upsertProjectionRecord(db, {
+        projectionKey: MEDIA_OPERATION_BOARD_PROJECTION_KEY,
+        projectionVersion: MEDIA_OPERATION_BOARD_PROJECTION_VERSION,
+        rowKey: watch.id,
+        workspaceId: null,
+        entityType: "WATCH",
+        entityId: watch.id,
+        status: "DONE",
+        searchText: [data.title, data.sku].filter(Boolean).join(" ").toLowerCase(),
+        sortAt: watch.updatedAt,
+        sourceUpdatedAt: watch.updatedAt,
+        dataJson: data,
+      });
+      return data;
+    }
     await deleteProjectionRecords(db, {
       projectionKey: MEDIA_OPERATION_BOARD_PROJECTION_KEY,
       projectionVersion: MEDIA_OPERATION_BOARD_PROJECTION_VERSION,
@@ -192,43 +258,14 @@ export async function buildMediaOperationBoardRow(
     });
     return null;
   }
-  const [watch, activities] = await Promise.all([
-    client.watch.findUnique({
-      where: { id: input.watchId },
-      select: {
-        id: true,
-        productId: true,
-        updatedAt: true,
-        saleStage: true,
-        isContentDownloaded: true,
-        isImageDownloaded: true,
-        product: {
-          select: {
-            title: true,
-            sku: true,
-            primaryImageUrl: true,
-            postTargets: {
-              orderBy: { createdAt: "asc" },
-              select: {
-                postTarget: {
-                  select: { id: true, name: true, platform: true },
-                },
-              },
-            },
-          },
-        },
-      },
-    }),
-    client.taskItemActivity.findMany({
+  const activities = await client.taskItemActivity.findMany({
       where: { taskItemId: binding.taskItemId },
       select: {
         sourceType: true,
         metadataJson: true,
         _count: { select: { replies: true } },
       },
-    }),
-  ]);
-  if (!watch) return null;
+    });
   const stage = mediaStage(binding.taskItem?.note, binding.metadataJson, watch);
   if (!stage) return null;
   let commentCount = 0;
@@ -484,7 +521,8 @@ async function rebuild(
   if (!targetId) {
     await deleteProjectionRecords(db, { projectionKey: MEDIA_OPERATION_BOARD_PROJECTION_KEY });
   }
-  const rows = await client.taskExecution.findMany({
+  const [executionRows, legacyDoneWatches] = await Promise.all([
+    client.taskExecution.findMany({
     where: {
       targetType: { in: [TaskExecutionTargetType.WATCH, TaskExecutionTargetType.MEDIA_POST] },
       actionType: { not: TaskExecutionActionType.CANCELLED },
@@ -493,7 +531,28 @@ async function rebuild(
     distinct: ["targetType", "targetId"],
     select: { targetId: true, targetType: true },
     take: context.scope.limit ? Math.max(1, Math.min(10000, context.scope.limit)) : undefined,
-  });
+    }),
+    client.watch.findMany({
+      where: {
+        isContentDownloaded: true,
+        isImageDownloaded: true,
+        ...(targetId ? { id: targetId } : {}),
+      },
+      select: { id: true },
+      take: context.scope.limit ? Math.max(1, Math.min(10000, context.scope.limit)) : undefined,
+    }),
+  ]);
+  const rows = [
+    ...executionRows,
+    ...legacyDoneWatches.map((watch) => ({
+      targetId: watch.id,
+      targetType: TaskExecutionTargetType.WATCH,
+    })),
+  ].filter((row, index, all) =>
+    all.findIndex((candidate) =>
+      candidate.targetType === row.targetType && candidate.targetId === row.targetId
+    ) === index
+  );
   let applied = 0;
   for (let index = 0; index < rows.length; index += 8) {
     const built = await Promise.all(

@@ -1903,6 +1903,7 @@ export default function WatchListClient(props: WatchListClientProps) {
       ) : null}
 
       <BusinessEntityPreviewModal
+        reviewContext="WATCH"
         open={previewState.open}
         preview={previewState.preview}
         loading={previewState.loading}

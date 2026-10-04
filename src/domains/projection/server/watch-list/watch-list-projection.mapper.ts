@@ -70,6 +70,34 @@ function mapMediaStatus(row: WatchRow, source: WatchListProjectionSourceRow) {
   const publishState = workflowState(publish);
   const mediaState = workflowState(media);
   const photographyState = workflowState(photography);
+  const reopenedState = [
+    photography ? { kind: "photography" as const, row: photography, state: photographyState } : null,
+    media ? { kind: "media" as const, row: media, state: mediaState } : null,
+    publish ? { kind: "publish" as const, row: publish, state: publishState } : null,
+  ]
+    .filter((item): item is NonNullable<typeof item> => Boolean(item))
+    .filter((item) => !isDone(item.state) && !isCancelled(item.state))
+    .sort((a, b) => clean(b.row.updatedAt).localeCompare(clean(a.row.updatedAt)))[0] ?? null;
+  const publishUpdatedAt = clean(publish?.updatedAt);
+
+  // A new/returned workflow is authoritative over the historical "posted"
+  // flags. This is how a previously completed watch can legitimately re-enter
+  // Photography or Media Processing without erasing its publish history.
+  if (reopenedState && (!publishUpdatedAt || clean(reopenedState.row.updatedAt) > publishUpdatedAt)) {
+    if (reopenedState.kind === "photography") {
+      return ["FEEDBACK", "RECALLED", "BLOCKED"].includes(reopenedState.state)
+        ? { status: "NEEDS_REWORK" as const, label: "Cần chụp lại" }
+        : { status: "PHOTOSHOOT" as const, label: "Đang chụp hình" };
+    }
+    if (reopenedState.kind === "media") {
+      return ["FEEDBACK", "RECALLED", "BLOCKED"].includes(reopenedState.state)
+        ? { status: "NEEDS_REWORK" as const, label: "Cần xử lý lại" }
+        : { status: "MEDIA_PROCESSING" as const, label: "Đang xử lý media" };
+    }
+    if (["CONTENT_FEEDBACK", "IMAGE_FEEDBACK", "RECALLED", "BLOCKED"].includes(reopenedState.state)) {
+      return { status: "NEEDS_REWORK" as const, label: "Cần xử lý lại" };
+    }
+  }
 
   if (row.isPosted || isDone(publishState)) {
     return { status: "POSTED" as const, label: "Đã hoàn tất" };

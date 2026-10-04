@@ -2790,6 +2790,11 @@ export function QueueWorkQueue({
         )}
       </div>
       <BusinessEntityPreviewModal
+        reviewContext={String(workspaceWorkTypeKey ?? "").toLowerCase().includes("media")
+          ? "MEDIA"
+          : String(workspaceWorkTypeKey ?? "").toLowerCase().includes("service") || String(workspaceWorkTypeKey ?? "").toLowerCase().includes("technical")
+            ? "SERVICE"
+            : "WATCH"}
         open={previewState.open}
         preview={previewState.preview}
         loading={previewState.loading}

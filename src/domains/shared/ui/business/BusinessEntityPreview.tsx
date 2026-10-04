@@ -4,7 +4,11 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+    AlertTriangle,
+    CheckCircle2,
+    CircleDollarSign,
     ExternalLink,
+    FileText,
     ImageIcon,
     Loader2,
     Pencil,
@@ -12,6 +16,7 @@ import {
     Send,
     X,
     ZoomIn,
+    Wrench,
 } from "lucide-react";
 import type {
     BusinessEntityPreview,
@@ -27,6 +32,7 @@ import { ActivityViewModelFeed } from "@/domains/task/ui/task-work/activity/Acti
 import { markTaskItemMentionsReadAction } from "@/domains/task/actions/task.actions";
 import type { TaskItemActivityViewModel } from "@/domains/task/server/activity";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
+import { WatchServiceIntakeModal } from "@/domains/service/ui/quick-service";
 
 async function loadBusinessEntityPreview(type: BusinessEntityType, id: string) {
     const query = new URLSearchParams({ type, id, activityMode: "DISCUSSION" });
@@ -38,6 +44,179 @@ async function loadBusinessEntityPreview(type: BusinessEntityType, id: string) {
     const result = await response.json().catch(() => null);
     if (!response.ok) throw new Error(result?.error || "Không thể tải xem nhanh.");
     return (result?.preview ?? null) as BusinessEntityPreview | null;
+}
+
+function money(value?: number | null) {
+    if (value == null) return "-";
+    return `${new Intl.NumberFormat("vi-VN").format(Math.round(value))}đ`;
+}
+
+function reviewLabel(status?: string | null) {
+    const labels: Record<string, string> = {
+        DRAFT: "Bản nháp",
+        SUBMITTED: "Chờ duyệt",
+        APPROVED: "Đã duyệt",
+        REJECTED: "Bị trả về",
+    };
+    return labels[String(status ?? "DRAFT")] ?? String(status ?? "-");
+}
+
+function serviceLabel(stage: string, ready: boolean) {
+    if (stage === "NOT_ASSESSED") return "Chưa có service";
+    if (stage === "NOT_REQUIRED") return "Không cần service";
+    if (stage === "DONE") return "Đã hoàn tất service";
+    return ready ? "Sẵn sàng" : stage;
+}
+
+function WatchDecisionPanel({
+    preview,
+    reviewContext = "WATCH",
+    onDecisionChanged,
+}: {
+    preview: BusinessEntityPreview;
+    reviewContext?: "WATCH" | "MEDIA" | "SERVICE" | "PRICING" | "CONTENT";
+    onDecisionChanged?: () => void;
+}) {
+    const snapshot = preview.watchDecision;
+    const [serviceIntakeOpen, setServiceIntakeOpen] = useState(false);
+    if (!snapshot) return null;
+    const rows = [
+        {
+            key: "service",
+            icon: Wrench,
+            label: "Service",
+            value: snapshot.service.requestStatus || serviceLabel(snapshot.service.stage, snapshot.service.ready),
+            detail: snapshot.service.openIssueCount ? `${snapshot.service.openIssueCount} vấn đề đang mở` : snapshot.service.requestRef,
+            ready: snapshot.service.ready,
+            neutral: snapshot.service.stage === "NOT_ASSESSED",
+        },
+        {
+            key: "pricing",
+            icon: CircleDollarSign,
+            label: "Giá bán",
+            value: money(snapshot.pricing.salePrice),
+            detail: snapshot.pricing.canDiscount
+                ? `Có thể giảm tối đa ${money(snapshot.pricing.maxDiscountAmount)}`
+                : snapshot.pricing.ready ? `Biên lợi nhuận ${snapshot.pricing.marginPercent?.toFixed(1) ?? "-"}%` : "Chưa đủ dữ liệu giá",
+            ready: snapshot.pricing.ready,
+            neutral: false,
+        },
+        {
+            key: "media",
+            icon: ImageIcon,
+            label: "Media",
+            value: `${snapshot.media.galleryCount} ảnh · ${snapshot.media.hasCover ? "Có cover" : "Thiếu cover"}`,
+            detail: reviewLabel(snapshot.media.reviewStatus),
+            ready: snapshot.media.ready,
+            neutral: false,
+        },
+        {
+            key: "content",
+            icon: FileText,
+            label: "Content",
+            value: snapshot.content.hasContent ? reviewLabel(snapshot.content.reviewStatus) : "Chưa có nội dung",
+            detail: null,
+            ready: snapshot.content.ready,
+            neutral: false,
+        },
+    ];
+    const editHref = `/admin/watches/${snapshot.productId}/edit`;
+    const mediaHref = `${editHref}?mode=media&focus=image&entryPoint=WATCH_QUICK_REVIEW`;
+    const contentHref = `${editHref}?mode=media&focus=content&entryPoint=WATCH_QUICK_REVIEW`;
+    const serviceActive = Boolean(snapshot.service.requestStatus) || ["PENDING", "IN_SERVICE"].includes(snapshot.service.stage);
+
+    return (
+        <section className="overflow-hidden rounded-xl border border-violet-200 bg-violet-50/40">
+            <div className="flex items-start justify-between gap-4 border-b border-violet-100 bg-white px-4 py-3">
+                <div>
+                    <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-violet-600">Review Watch</div>
+                    <div className="mt-1 text-sm font-bold text-slate-950">Tình trạng hiện tại</div>
+                    <div className="mt-0.5 text-xs text-slate-600">
+                        {snapshot.decision.blockers.length
+                            ? `${snapshot.decision.blockers.length} hạng mục cần chú ý. User chọn nghiệp vụ cần xử lý.`
+                            : "Các hạng mục hiện đã sẵn sàng."}
+                    </div>
+                </div>
+                <div className="shrink-0 text-right">
+                    <div className="text-lg font-black text-violet-700">{snapshot.progress}%</div>
+                    <div className="text-[10px] font-semibold text-slate-400">sẵn sàng</div>
+                </div>
+            </div>
+            <div className="grid sm:grid-cols-2">
+                {rows.map((row) => {
+                    const Icon = row.icon;
+                    return (
+                        <div key={row.key} className="flex min-w-0 gap-3 border-b border-r border-violet-100 bg-white/70 px-4 py-3">
+                            <div className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg ${row.neutral ? "bg-slate-100 text-slate-500" : row.ready ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"}`}>
+                                <Icon className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
+                                    {row.label}
+                                    {row.neutral ? null : row.ready ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />}
+                                </div>
+                                <div className="mt-0.5 truncate text-sm font-semibold text-slate-900">{row.value}</div>
+                                {row.detail ? <div className="mt-0.5 truncate text-[11px] text-slate-500">{row.detail}</div> : null}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+            {snapshot.decision.warnings.length ? (
+                <div className="border-t border-violet-100 px-4 py-2.5 text-xs text-amber-700">
+                    {snapshot.decision.warnings[0]}
+                </div>
+            ) : null}
+            <div className="border-t border-violet-100 bg-white px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span className="text-xs font-semibold text-slate-500">Thao tác</span>
+                    <div className="flex flex-wrap justify-end gap-2">
+                        {reviewContext !== "SERVICE" ? (
+                            <>
+                            {serviceActive && snapshot.service.requestId ? (
+                                <Link
+                                    href={`/admin/services/${snapshot.service.requestId}`}
+                                    className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-amber-500 px-3 text-xs font-bold text-white hover:bg-amber-600"
+                                >
+                                    <Wrench className="h-3.5 w-3.5" /> Mở service
+                                </Link>
+                            ) : <button
+                                type="button"
+                                onClick={() => setServiceIntakeOpen(true)}
+                                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-amber-500 px-3 text-xs font-bold text-white hover:bg-amber-600"
+                            >
+                                <Wrench className="h-3.5 w-3.5" />
+                                Đưa vào service
+                            </button>}
+                            </>
+                        ) : null}
+                        {reviewContext !== "PRICING" ? (
+                            <Link href={editHref} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-50">
+                                <CircleDollarSign className="h-3.5 w-3.5" /> Điều chỉnh giá
+                            </Link>
+                        ) : null}
+                        {reviewContext !== "MEDIA" ? (
+                            <Link href={mediaHref} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-50">
+                                <ImageIcon className="h-3.5 w-3.5" /> Xử lý media
+                            </Link>
+                        ) : null}
+                        {reviewContext !== "CONTENT" ? (
+                            <Link href={contentHref} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-50">
+                                <FileText className="h-3.5 w-3.5" /> Xử lý content
+                            </Link>
+                        ) : null}
+                    </div>
+                </div>
+            </div>
+            <WatchServiceIntakeModal
+                open={serviceIntakeOpen}
+                productId={snapshot.productId}
+                watchLabel={preview.title || preview.refNo || snapshot.productId}
+                onClose={() => setServiceIntakeOpen(false)}
+                onCompleted={() => onDecisionChanged?.()}
+            />
+        </section>
+    );
 }
 
 function PreviewUserAvatar({
@@ -645,6 +824,7 @@ export function BusinessEntityPreviewModal({
     onClose,
     onActivityChanged,
     onAction,
+    reviewContext = "WATCH",
 }: {
     open: boolean;
     preview?: BusinessEntityPreview | null;
@@ -653,6 +833,7 @@ export function BusinessEntityPreviewModal({
     onClose: () => void;
     onActivityChanged?: (reason?: "COMMENT" | "READ") => void;
     onAction?: (action: BusinessEntityPreviewAction) => void;
+    reviewContext?: "WATCH" | "MEDIA" | "SERVICE" | "PRICING" | "CONTENT";
 }) {
     const [imageOpen, setImageOpen] = useState(false);
 
@@ -785,6 +966,7 @@ export function BusinessEntityPreviewModal({
                               ) : null}
                             </section>
 
+                            <WatchDecisionPanel preview={preview} reviewContext={reviewContext} onDecisionChanged={() => onActivityChanged?.()} />
                             <TechnicalIssueEditPanel preview={preview} />
                             <DoneTechnicalIssueCostPanel preview={preview} onSaved={() => onActivityChanged?.()} />
 

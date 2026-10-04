@@ -1,3 +1,6 @@
+import type { WatchDecisionSnapshot } from "@/domains/watch/server/decision";
+import type { TaskItemActivityViewModel } from "@/domains/task/server/activity";
+
 export type BusinessEntityType =
     | "WATCH"
     | "ORDER"
@@ -70,6 +73,7 @@ export type BusinessEntityPreview = {
     activity?: BusinessEntityPreviewActivity;
     sections?: BusinessEntityPreviewSection[];
     actions?: BusinessEntityPreviewAction[];
+    watchDecision?: WatchDecisionSnapshot;
     costCorrection?: { actualCost: string; missing: boolean };
     edit?: {
         kind: "TECHNICAL_ISSUE";
@@ -100,4 +104,3 @@ export type BusinessEntityPreview = {
         vendorOptions: Array<{ id: string; name: string }>;
     };
 };
-import type { TaskItemActivityViewModel } from "@/domains/task/server/activity";

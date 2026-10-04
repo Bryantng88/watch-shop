@@ -22,6 +22,7 @@ import {
 import { perfStep } from "@/lib/server-perf";
 import { resolveProductDisplayImage } from "@/domains/shared/media/server/display-image";
 import { ensureTechnicalIssuePaymentTx } from "@/domains/payment/server/service-issue-payment.service";
+import { getWatchDecisionSnapshot } from "@/domains/watch/server/decision";
 
 type ProductPreviewImageSource = {
     primaryImageUrl?: string | null;
@@ -187,14 +188,17 @@ export async function getBusinessEntityPreviewAction(input: {
         if (!row) return null;
 
         const product = row.product;
-        const activity = await loadPreviewActivity({
-            auth,
-            type: "WATCH",
-            targetId: row.id,
-            activityMode: input.activityMode,
-            canRead: canReadActivity,
-            canEdit: canEditActivity,
-        });
+        const [activity, watchDecision] = await Promise.all([
+            loadPreviewActivity({
+                auth,
+                type: "WATCH",
+                targetId: row.id,
+                activityMode: input.activityMode,
+                canRead: canReadActivity,
+                canEdit: canEditActivity,
+            }),
+            getWatchDecisionSnapshot(row.id),
+        ]);
 
         return {
             type: "WATCH",
@@ -204,6 +208,7 @@ export async function getBusinessEntityPreviewAction(input: {
             status: row.saleStage,
             imageUrl: imageUrlFromProduct(product),
             activity,
+            watchDecision: watchDecision ?? undefined,
             href: `/admin/watches/${product?.id}/edit`, facts: [
                 { label: "Brand", value: product?.brand?.name || "-" },
                 { label: "Product status", value: product?.status || "-" },

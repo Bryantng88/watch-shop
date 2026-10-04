@@ -1690,7 +1690,7 @@ model Watch {
   legacyVariantId             String?           @unique
   acquisitionId               String?
   saleStage                   WatchSaleStage    @default(DRAFT)
-  serviceStage                WatchServiceStage @default(NOT_REQUIRED)
+  serviceStage                WatchServiceStage @default(NOT_ASSESSED)
   serviceExpectedWorkingDays  Int?
   serviceExpectedCompletionAt DateTime?         @db.Timestamp(6)
   stockStage                  WatchStockStage   @default(IN_STOCK)
@@ -3805,6 +3805,7 @@ enum WatchSaleStage {
 }
 
 enum WatchServiceStage {
+  NOT_ASSESSED
   NOT_REQUIRED
   PENDING
   IN_SERVICE

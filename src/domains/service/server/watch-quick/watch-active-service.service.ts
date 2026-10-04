@@ -550,7 +550,7 @@ function mapQuickService(row: any) {
       createdAt: issue.createdAt ?? null,
       updatedAt: issue.updatedAt ?? null,
       isConfirmed: issue.isConfirmed ?? false,
-      vendorNameSnap: issue.vendorNameSnap ?? issue.Vendor?.name ?? null,
+      vendorNameSnap: issue.vendorNameSnap ?? issue.vendor?.name ?? null,
       serviceCatalogName: issue.serviceCatalog?.name ?? null,
       supplyCatalogName: issue.SupplyCatalog?.name ?? null,
       partName: issue.MechanicalPartCatalog?.name ?? null,
@@ -582,7 +582,7 @@ async function getQuickServiceById(serviceRequestId: string) {
           { createdAt: "desc" },
         ],
         include: {
-          Vendor: { select: { id: true, name: true } },
+          vendor: { select: { id: true, name: true } },
           serviceCatalog: { select: { id: true, name: true, code: true } },
           SupplyCatalog: { select: { id: true, name: true, code: true } },
           MechanicalPartCatalog: { select: { id: true, name: true, code: true } },

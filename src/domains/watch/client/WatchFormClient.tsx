@@ -434,6 +434,8 @@ export default function WatchFormClient({
     if (!isMediaMode) return;
     if (focus === "cover") {
       setActiveMediaSection("cover");
+    } else if (focus === "content") {
+      setActiveMediaSection("content");
     } else if (focus === "image" || focus === "gallery") {
       setActiveMediaSection("image");
     }
