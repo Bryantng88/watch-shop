@@ -46,26 +46,47 @@ The default Docker executable is:
 If the NAS uses a different path, set the repository variable
 `WATCHSHOP_DOCKER_BIN` to the correct absolute path.
 
-## 2. Register a dedicated runner
+## 2. Build the runner container
+
+QNAP's host libraries can be older than the minimum required by the official
+GitHub runner. This NAS therefore runs the official runner binaries inside the
+repository's Ubuntu-based image instead of executing them directly on the host.
+The image contains system compatibility packages and the Docker client; the
+runner archive still comes directly from GitHub and must have its published
+SHA-256 verified. The client reaches the NAS Docker daemon through its socket.
+
+Build `ops/deployment/nas-runner.Dockerfile` on the NAS as
+`watch-shop-actions-runner:local`. The container needs these mounts:
+
+```text
+/share/WatchShop/actions-runner -> /runner
+/share -> /share
+/var/run/docker.sock -> /var/run/docker.sock
+```
+
+Run it as the dedicated runner account's numeric UID/GID and add the numeric
+group that owns `/var/run/docker.sock`. Do not run it as a privileged container.
+
+## 3. Register a dedicated runner
 
 In GitHub, open the repository and go to **Settings > Actions > Runners > New
 self-hosted runner**. Select Linux and the NAS CPU architecture, then run the
 exact download and configuration commands GitHub displays while signed in as
 the dedicated NAS account.
 
-During configuration:
+Run `config.sh` once inside the runner image with the short-lived registration
+token supplied by GitHub. During configuration:
 
 - give the runner a recognizable name such as `watch-shop-nas-production`;
 - add the custom label `watch-shop-production`;
 - use a dedicated runner work directory;
-- install it as a persistent service if the QNAP environment supports the
-  generated service command. Otherwise, arrange for `run.sh` to start at NAS
-  boot under the dedicated account.
+- keep the runner work directory inside `/runner` so it persists on the NAS;
+- configure Container Station to restart the runner container automatically.
 
 Registration tokens are short-lived. Generate one from GitHub only when the NAS
 is ready. Never paste the token into source files or chat.
 
-## 3. Configure GitHub production protection
+## 4. Configure GitHub production protection
 
 Create an Environment named `production` under **Settings > Environments** and:
 
@@ -86,7 +107,7 @@ variables > Actions > Variables** only when the defaults do not match the NAS:
 
 These values are paths, not credentials.
 
-## 4. Validate before the first deployment
+## 5. Validate before the first deployment
 
 From an interactive shell running as the runner account, verify:
 
@@ -100,7 +121,7 @@ test -r /share/WatchShop/app/.env.build
 The workflow also requires GNU `bash`, `git`, `tar`, `find`, `sort`, `tail`,
 `cut`, and `mktemp` on the runner host.
 
-## 5. Release
+## 6. Release
 
 Make sure the intended commit is the current `origin/main`, then create and push
 an annotated production tag:

@@ -21,6 +21,9 @@ container_name="watch-shop-app-1"
 [[ "$release_tag" == production-* ]] || die "RELEASE_TAG must match production-*"
 [[ "$keep_releases" =~ ^[1-9][0-9]*$ ]] || die "WATCHSHOP_KEEP_RELEASES must be a positive integer"
 [[ "$release_root" == /* && "$release_root" != "/" ]] || die "WATCHSHOP_RELEASE_ROOT must be a safe absolute path"
+if [[ ! -x "$docker_bin" ]] && command -v docker >/dev/null 2>&1; then
+  docker_bin="$(command -v docker)"
+fi
 [[ -x "$docker_bin" ]] || die "Docker executable not found at $docker_bin"
 [[ -f "$config_dir/.env.production" ]] || die "Missing $config_dir/.env.production"
 [[ -f "$config_dir/.env.build" ]] || die "Missing $config_dir/.env.build"
