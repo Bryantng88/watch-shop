@@ -1,0 +1,48 @@
+name: Deploy production to NAS
+
+on:
+  push:
+    tags:
+      - "production-*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing production-* tag to deploy"
+        required: true
+        type: string
+      confirmation:
+        description: "Type DEPLOY to confirm"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: watch-shop-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy approved release
+    if: github.event_name == 'push' || inputs.confirmation == 'DEPLOY'
+    environment: production
+    runs-on: [self-hosted, linux, watch-shop-production]
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out the release
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.release_tag || github.ref }}
+
+      - name: Deploy on the NAS
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+          WATCHSHOP_CONFIG_DIR: ${{ vars.WATCHSHOP_CONFIG_DIR }}
+          WATCHSHOP_RELEASE_ROOT: ${{ vars.WATCHSHOP_RELEASE_ROOT }}
+          WATCHSHOP_DOCKER_BIN: ${{ vars.WATCHSHOP_DOCKER_BIN }}
+          WATCHSHOP_KEEP_RELEASES: ${{ vars.WATCHSHOP_KEEP_RELEASES }}
+        run: bash ops/deployment/deploy-production-runner.sh
