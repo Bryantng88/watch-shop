@@ -651,7 +651,7 @@ export default function MediaBrowserDialog({
                                         Ảnh
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                                    <div className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-2.5">
                                         {items.map((item) => {
                                             const disabled = disabledKeySet.has(item.key);
                                             const selected =
@@ -679,7 +679,7 @@ export default function MediaBrowserDialog({
                                                         )
                                                     }
                                                     className={cx(
-                                                        "relative overflow-hidden rounded-2xl border text-left transition",
+                                                        "relative overflow-hidden rounded-xl border text-left transition",
                                                         disabled && "cursor-not-allowed opacity-45",
                                                         selected
                                                             ? "border-slate-900 ring-1 ring-slate-900"
@@ -705,25 +705,25 @@ export default function MediaBrowserDialog({
                                                     </div>
 
                                                     {selected ? (
-                                                        <div className="absolute left-2 top-2 flex h-7 min-w-7 items-center justify-center rounded-full bg-slate-900 px-2 text-xs font-semibold text-white shadow">
+                                                        <div className="absolute left-1.5 top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-slate-900 px-1.5 text-[11px] font-semibold text-white shadow">
                                                             {selectionMode ===
                                                                 "multiple" &&
                                                                 selectedIndex >= 0 ? (
                                                                 selectedIndex + 1
                                                             ) : (
-                                                                <Check className="h-4 w-4" />
+                                                                <Check className="h-3.5 w-3.5" />
                                                             )}
                                                         </div>
                                                     ) : null}
 
                                                     {disabled && !selected ? (
-                                                        <div className="absolute left-2 top-2 rounded-full bg-amber-100 px-2 py-1 text-[11px] font-semibold text-amber-800 ring-1 ring-amber-200">
+                                                        <div className="absolute left-1.5 top-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 ring-1 ring-amber-200">
                                                             Đã chọn
                                                         </div>
                                                     ) : null}
 
-                                                    <div className="border-t border-slate-100 px-3 py-2">
-                                                        <div className="truncate text-xs text-slate-500">
+                                                    <div className="border-t border-slate-100 px-2 py-1.5">
+                                                        <div className="truncate text-[11px] text-slate-500">
                                                             {item.key}
                                                         </div>
                                                     </div>
