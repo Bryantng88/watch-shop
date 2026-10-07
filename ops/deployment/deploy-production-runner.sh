@@ -127,7 +127,13 @@ mapfile -t old_releases < <(
 )
 for old_release in "${old_releases[@]}"; do
   [[ "$old_release" == "$release_root"/release-* ]] || die "Refusing to remove unexpected path: $old_release"
-  [[ "$old_release" == "$release_dir" ]] || rm -rf -- "$old_release"
+  [[ "$old_release" == "$release_dir" ]] && continue
+
+  if ! rm -rf -- "$old_release"; then
+    log "WARNING: Could not fully remove old release $old_release; check its ownership and permissions"
+  elif [[ -e "$old_release" ]]; then
+    log "WARNING: Old release still exists after cleanup: $old_release"
+  fi
 done
 
 log "Production deployed successfully: $release_tag ($tag_commit), image watch-shop:$image_tag"
