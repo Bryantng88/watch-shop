@@ -6,7 +6,7 @@ import { getCurrentUserPermissions } from "@/server/auth/requirePermission";
 import { redirect } from "next/navigation";
 import { PERMISSIONS } from "@/constants/permissions";
 import { parseAcquisitionListSearchParams } from "@/domains/acquisition/shared/search-params";
-import { getListVendors } from "../vendors/_server/vendor.repo";
+import { getListVendors, type VendorOptions } from "../vendors/_server/vendor.repo";
 import { resolveAcquisitionListScope } from "@/domains/acquisition/server/acquisition-access.service";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
@@ -59,7 +59,7 @@ export default async function AcquisitionListPage({
         getListVendors(),
     ]);
 
-    const vendorOptions = (vendors ?? []).map((vendor) => ({
+    const vendorOptions = (vendors ?? []).map((vendor: VendorOptions) => ({
         id: String(vendor.id),
         name: String(vendor.name ?? "-"),
     }));
