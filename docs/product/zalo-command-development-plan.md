@@ -5,6 +5,15 @@ Last updated: 2026-10-06
 Target repository: Watch Shop  
 Target branch for implementation work: create one feature branch per milestone
 
+Milestone 0 continuation artifacts:
+
+- `docs/architecture/decisions/ADR-004-zalo-command-channel-boundary.md`
+- `docs/product/zalo-command-implementation-tickets.md`
+
+ADR-004 remains proposed until the owner approves its architecture and access
+control gates. Implementation tickets that depend on those decisions must not
+start before approval.
+
 ## 1. Purpose
 
 This document defines the preliminary plan for turning the existing Zalo
