@@ -91,6 +91,10 @@ export default function SharpMediaDialog({
 
   if (!open) return null;
   const completed = Object.values(states).filter((state) => state.status === "done").length;
+  const activeImage = images.find((item) => item.key === activeKey) ?? null;
+  const activeState = activeKey ? states[activeKey] : undefined;
+  const activePreviewKey = activeState?.result?.storageKey ?? activeImage?.key;
+  const activePreviewSrc = activePreviewKey ? resolveMediaPreviewSrc(activePreviewKey) : null;
 
   const updatePreset = (next: Preset | ((current: Preset) => Preset)) => {
     const value = typeof next === "function" ? next(preset) : next;
@@ -152,6 +156,13 @@ export default function SharpMediaDialog({
     // High-resolution Sharp pipelines can use a large amount of memory. Run
     // one item at a time so two images cannot exhaust the app container.
     await worker();
+    setRunning(false);
+  };
+
+  const runActivePreview = async () => {
+    if (!activeKey || running) return;
+    setRunning(true);
+    await processOne(activeKey);
     setRunning(false);
   };
 
@@ -223,11 +234,74 @@ export default function SharpMediaDialog({
                 <option value="landscape">Ngang · 5:4</option>
               </select>
             </label>
+            <div className="space-y-3 rounded-xl border border-slate-200 bg-white px-3 py-3">
+              <div>
+                <span className="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Căn vùng crop ngang
+                  <span className="rounded-md bg-violet-50 px-2 py-1 text-violet-700">{preset.cropOffsetX}</span>
+                </span>
+                <p className="mt-1 text-[11px] leading-4 text-slate-500">Chủ thể lệch trái thì chọn “Lấy vùng trái” để đưa chủ thể về giữa ảnh kết quả.</p>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {([[-100, "Lấy vùng trái"], [0, "Giữa"], [100, "Lấy vùng phải"]] as const).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    disabled={running}
+                    onClick={() => updatePreset((current) => ({ ...current, cropOffsetX: value }))}
+                    className={`rounded-lg border px-2 py-2 text-[11px] font-semibold ${preset.cropOffsetX === value ? "border-violet-500 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="range"
+                min="-100"
+                max="100"
+                step="1"
+                value={preset.cropOffsetX}
+                onChange={(event) => updatePreset((current) => ({ ...current, cropOffsetX: Number(event.target.value) }))}
+                disabled={running}
+                aria-label="Tinh chỉnh vùng crop ngang"
+                className="w-full accent-violet-600"
+              />
+              <div className="flex justify-between text-[10px] font-medium text-slate-400"><span>← Trái</span><span>Giữa</span><span>Phải →</span></div>
+            </div>
+            <div className="space-y-3 rounded-xl border border-slate-200 bg-white px-3 py-3">
+              <span className="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Căn vùng crop dọc
+                <span className="rounded-md bg-violet-50 px-2 py-1 text-violet-700">{preset.cropOffsetY}</span>
+              </span>
+              <div className="grid grid-cols-3 gap-1.5">
+                {([[-100, "Lấy phía trên"], [0, "Giữa"], [100, "Lấy phía dưới"]] as const).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    disabled={running}
+                    onClick={() => updatePreset((current) => ({ ...current, cropOffsetY: value }))}
+                    className={`rounded-lg border px-2 py-2 text-[11px] font-semibold ${preset.cropOffsetY === value ? "border-violet-500 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="range"
+                min="-100"
+                max="100"
+                step="1"
+                value={preset.cropOffsetY}
+                onChange={(event) => updatePreset((current) => ({ ...current, cropOffsetY: Number(event.target.value) }))}
+                disabled={running}
+                aria-label="Tinh chỉnh vùng crop dọc"
+                className="w-full accent-violet-600"
+              />
+              <div className="flex justify-between text-[10px] font-medium text-slate-400"><span>↑ Trên</span><span>Giữa</span><span>Dưới ↓</span></div>
+            </div>
             {([
               { key: "zoom", label: "Zoom", min: 100, max: 250, suffix: "%" },
               { key: "rotation", label: "Xoay", min: -180, max: 180, suffix: "°" },
-              { key: "cropOffsetX", label: "Căn crop ngang", min: -100, max: 100, suffix: "" },
-              { key: "cropOffsetY", label: "Căn crop dọc", min: -100, max: 100, suffix: "" },
               { key: "brightness", label: "Độ sáng toàn ảnh", min: -20, max: 40, suffix: "%" },
               { key: "saturation", label: "Saturation", min: 70, max: 130, suffix: "%" },
               { key: "contrast", label: "Tương phản", min: -20, max: 30, suffix: "%" },
@@ -264,6 +338,45 @@ export default function SharpMediaDialog({
           </aside>
 
           <div className="min-h-0 overflow-y-auto pr-1">
+            {activeImage && activePreviewSrc ? (
+              <div className="mb-5 grid gap-4 rounded-2xl border border-violet-200 bg-violet-50/40 p-4 md:grid-cols-[minmax(0,320px)_1fr]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreviewZoom(100);
+                    setLargePreview({ src: activePreviewSrc, name: activeImage.name || "Gallery" });
+                  }}
+                  className="group relative aspect-square overflow-hidden rounded-xl bg-slate-100"
+                  aria-label={`Xem lớn ảnh đang chỉnh ${activeImage.name || "Gallery"}`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={activePreviewSrc} alt={activeImage.name || "Gallery"} className="h-full w-full object-contain" />
+                  <span className="absolute bottom-2 right-2 rounded-full bg-slate-950/70 p-2 text-white"><ZoomIn className="h-4 w-4" /></span>
+                </button>
+                <div className="flex min-w-0 flex-col justify-center">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-violet-700">Ảnh đang chỉnh</div>
+                  <div className="mt-1 truncate text-sm font-semibold text-slate-900">{activeImage.name || activeImage.key}</div>
+                  <p className="mt-2 text-xs leading-5 text-slate-600">
+                    {activeState?.status === "done"
+                      ? "Đây là preview Sharp chính xác. Có thể bấm vào ảnh để phóng lớn kiểm tra."
+                      : "Chọn vị trí crop rồi tạo preview ảnh này để kiểm tra kết quả chính xác trước khi áp dụng."}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void runActivePreview()}
+                    disabled={running || activeState?.status === "processing" || unavailable.has(activeImage.key)}
+                    className="mt-3 inline-flex w-fit items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+                  >
+                    {activeState?.status === "processing" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    {activeState?.status === "processing"
+                      ? "Đang tạo preview..."
+                      : activeState?.status === "done"
+                        ? "Tạo lại preview ảnh này"
+                        : "Tạo preview ảnh này"}
+                  </button>
+                </div>
+              </div>
+            ) : null}
             <div className="mb-3 flex items-center justify-between gap-3">
               <span className="text-sm font-semibold text-slate-800">Đã chọn {selected.size}/{images.length} ảnh</span>
               <button type="button" disabled={running} onClick={() => setSelected(selected.size === images.length - unavailable.size ? new Set() : new Set(keys.filter((key) => !unavailable.has(key))))} className="text-xs font-semibold text-violet-700">{selected.size === images.length - unavailable.size ? "Bỏ chọn tất cả" : "Chọn tất cả"}</button>
