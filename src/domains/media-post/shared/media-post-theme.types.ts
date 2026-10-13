@@ -8,6 +8,7 @@ export type MediaPostThemeFilters = {
   movementType?: string;
   caseShape?: string;
   style?: string;
+  complication?: string;
   stockStage?: string;
   siteChannel?: string;
   audienceSegment?: string;
@@ -31,6 +32,7 @@ export type MediaPostThemeWatchCandidate = {
   movementType: string | null;
   caseShape: string | null;
   style: string | null;
+  complications: string[];
   gallery: MediaPostThemeGalleryImage[];
 };
 

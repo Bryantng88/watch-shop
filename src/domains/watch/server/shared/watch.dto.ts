@@ -78,6 +78,7 @@ export type UpsertWatchSpecInput = {
     goldTreatment?: WatchGoldTreatment | null;
     goldColors?: WatchGoldColorV2[];
     goldKarat?: number | null;
+    goldWeightGrams?: number | string | null;
     materialNote?: string | null;
 
     dialColor?: string | null;

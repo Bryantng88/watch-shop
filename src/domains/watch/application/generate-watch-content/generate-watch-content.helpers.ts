@@ -170,6 +170,7 @@ export function buildTitleDescriptor(values: WatchFormValues) {
   const dial = clean(values.spec.dialColor);
 
   const hasComplication =
+    values.spec.complicationNames?.length > 0 ||
     clean(values.spec.model).toLowerCase().includes("date") ||
     clean(values.spec.nickname).toLowerCase().includes("date") ||
     clean(values.basic.title).toLowerCase().includes("date");
@@ -188,7 +189,7 @@ export function buildTitleDescriptor(values: WatchFormValues) {
 
 export function buildPostTitle(values: WatchFormValues) {
   const year = clean(values.basic.yearText);
-  const brand = clean(values.spec.specBrand || values.basic.brandName);
+  const brand = clean(values.basic.brandName || values.spec.specBrand);
   const model = clean(values.spec.model);
   const nickname = clean(values.spec.nickname);
   const reference = clean(values.spec.referenceNumber);

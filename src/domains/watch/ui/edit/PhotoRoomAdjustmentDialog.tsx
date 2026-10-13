@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import Image from "next/image";
 
@@ -10,6 +10,7 @@ import {
   type PhotoRoomOrientationDegrees,
 } from "@/domains/watch/shared/photoroom-adjustment";
 import { Dialog, DialogFooter, FieldLabel, Select } from "./shared";
+import { useSharpLivePreview } from "@/domains/media/client/useSharpLivePreview";
 
 type Props = {
   open: boolean;
@@ -93,46 +94,19 @@ export default function PhotoRoomAdjustmentDialog({
   onSubmitLocal,
 }: Props) {
   const [value, setValue] = useState<PhotoRoomAdjustment>(initialValue ?? DEFAULT_PHOTOROOM_ADJUSTMENT);
-  const [exactPreviewSrc, setExactPreviewSrc] = useState<string | null>(null);
-  const [exactPreviewPending, setExactPreviewPending] = useState(false);
-  const exactPreviewUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (open) setValue(initialValue ?? DEFAULT_PHOTOROOM_ADJUSTMENT);
   }, [initialValue, open]);
 
-  useEffect(() => {
-    if (!open || !productId || !localPreviewStorageKey || !localBaseAdjustment) return;
-    const controller = new AbortController();
-    setExactPreviewPending(true);
-    const timer = window.setTimeout(async () => {
-      try {
-        const response = await fetch(`/api/admin/watches/${productId}/storefront-image/sharp/preview`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ storageKey: localPreviewStorageKey, adjustment: value, baseAdjustment: localBaseAdjustment }),
-          signal: controller.signal,
-        });
-        if (!response.ok) return;
-        const nextUrl = URL.createObjectURL(await response.blob());
-        if (exactPreviewUrlRef.current) URL.revokeObjectURL(exactPreviewUrlRef.current);
-        exactPreviewUrlRef.current = nextUrl;
-        setExactPreviewSrc(nextUrl);
-      } catch (error) {
-        if (!(error instanceof DOMException && error.name === "AbortError")) setExactPreviewSrc(null);
-      } finally {
-        if (!controller.signal.aborted) setExactPreviewPending(false);
-      }
-    }, 550);
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
-  }, [localBaseAdjustment, localPreviewStorageKey, open, productId, value]);
-
-  useEffect(() => () => {
-    if (exactPreviewUrlRef.current) URL.revokeObjectURL(exactPreviewUrlRef.current);
-  }, []);
+  const exactPreview = useSharpLivePreview({
+    enabled: Boolean(open && productId && localPreviewStorageKey && localBaseAdjustment),
+    url: productId ? `/api/admin/watches/${productId}/storefront-image/sharp/preview` : null,
+    body: { storageKey: localPreviewStorageKey, adjustment: value, baseAdjustment: localBaseAdjustment },
+    delay: 550,
+  });
+  const exactPreviewSrc = exactPreview.src;
+  const exactPreviewPending = exactPreview.pending;
 
   const update = <K extends keyof PhotoRoomAdjustment>(key: K, next: PhotoRoomAdjustment[K]) =>
     setValue((current) => ({ ...current, [key]: next }));

@@ -23,6 +23,7 @@ export async function getAdminWatchRow(db: DB, productId: string) {
               createdAt: "asc",
             },
           },
+          watchSpec: { include: { Complication: true } },
         },
       },
       watchSpecV2: true,
@@ -62,6 +63,7 @@ export async function getAdminEditWatchDetail(db: DB, productId: string) {
             include: { postTarget: true },
             orderBy: { createdAt: "asc" },
           },
+          watchSpec: { include: { Complication: true } },
         },
       },
       watchSpecV2: true,
@@ -163,6 +165,7 @@ export async function getAdminWatchMediaEditDetail(db: DB, productId: string) {
               createdAt: "asc",
             },
           },
+          watchSpec: { include: { Complication: true } },
           productImage: {
             orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
             select: {

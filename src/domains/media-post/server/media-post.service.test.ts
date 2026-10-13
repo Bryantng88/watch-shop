@@ -81,6 +81,18 @@ test("Media Post theme query combines filters and keeps sale-price fallback expl
   ] }]);
 });
 
+test("Media Post theme query filters through the existing WatchSpec complication relation", () => {
+  const where = buildMediaPostThemeWatchWhere({ complication: "Chronograph" });
+  assert.deepEqual(where.product, {
+    productImage: { some: { role: "GALLERY" } },
+    watchSpec: { Complication: { some: { name: "Chronograph" } } },
+  });
+  assert.throws(
+    () => validateMediaPostThemeFilters({ complication: "Not a complication" }),
+    /complication/,
+  );
+});
+
 test("Media Post theme query only filters null classifications when requested", () => {
   const unrestricted = buildMediaPostThemeWatchWhere({});
   assert.equal("movementType" in unrestricted, false);

@@ -118,6 +118,7 @@ export type WatchDetailModel = {
         goldTreatment?: WatchGoldTreatment | null;
         goldColors?: WatchGoldColorV2[];
         goldKarat?: number | null;
+        goldWeightGrams?: string | null;
 
         dialColor?: string | null;
         dialFinish?: string | null; // ✅ thêm
@@ -137,6 +138,7 @@ export type WatchDetailModel = {
 
         buckleType?: string | null;
         materialNote?: string | null;
+        complications?: Array<{ id: string; name: string }>;
 
         boxIncluded?: boolean | null;
         bookletIncluded?: boolean | null;

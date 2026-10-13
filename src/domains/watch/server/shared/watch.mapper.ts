@@ -231,6 +231,7 @@ export function mapWatchDetail(row: any): WatchDetailModel {
                 goldTreatment: row.watchSpecV2.goldTreatment ?? null,
                 goldColors: row.watchSpecV2.goldColors ?? [],
                 goldKarat: row.watchSpecV2.goldKarat ?? null,
+                goldWeightGrams: decimalToString(row.watchSpecV2.goldWeightGrams),
                 dialColor: row.watchSpecV2.dialColor ?? null,
                 dialFinish: row.watchSpecV2.dialFinish ?? null,
                 crystal: row.watchSpecV2.crystal ?? null,
@@ -245,6 +246,7 @@ export function mapWatchDetail(row: any): WatchDetailModel {
                 materialNote: row.watchSpecV2.materialNote ?? null,
                 bookletIncluded: row.watchSpecV2.bookletIncluded ?? null,
                 cardIncluded: row.watchSpecV2.cardIncluded ?? null,
+                complications: row.product?.watchSpec?.Complication ?? [],
             }
             : null,
 

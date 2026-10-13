@@ -24,6 +24,7 @@ import {
 } from "@/domains/strap/client/strap.actions";
 import type { StrapListProjectionRow } from "@/domains/projection/server/strap-list";
 import { suggestWatchSpecWithOpenAIAction } from "../../client/form/watch-ai-spec.actions";
+import { complications } from "@/constants/constants";
 
 export type SimpleOption = {
   id: string;
@@ -127,9 +128,14 @@ const GOLD_TREATMENT_OPTIONS = [
   "GOLD_FILLED",
 ].map((value) => ({ value, label: value }));
 
-const GOLD_COLOR_OPTIONS = ["YELLOW", "WHITE", "ROSE", "MIXED"];
+const GOLD_COLOR_OPTIONS = [
+  { value: "YELLOW", label: "Yellow gold" },
+  { value: "ROSE", label: "Pink / Rose gold" },
+  { value: "WHITE", label: "White gold" },
+  { value: "MIXED", label: "Mixed gold" },
+];
 
-const GOLD_KARAT_OPTIONS = ["8", "9", "10", "14", "18"].map((value) => ({
+const GOLD_KARAT_OPTIONS = ["10", "14", "18"].map((value) => ({
   value,
   label: `${value}K`,
 }));
@@ -276,6 +282,8 @@ export default function WatchBasicSection({
   const materialProfile = spec.materialProfile || "SINGLE_MATERIAL";
   const isBimetal = materialProfile === "BIMETAL";
   const isCoated = materialProfile === "COATED";
+  const isSolidGold = spec.primaryCaseMaterial === "GOLD";
+  const hasGoldMaterial = isSolidGold || spec.secondaryCaseMaterial === "GOLD" || isCoated;
   const generatedTitle = buildWatchTitleFromForm(
     buildTitlePreviewValues(values, spec),
     brands,
@@ -340,6 +348,8 @@ export default function WatchBasicSection({
         );
         if (matchedBrand) {
           basicPatch.brandId = matchedBrand.id;
+          basicPatch.brandName = matchedBrand.name;
+          specPatch.specBrand = matchedBrand.name;
           setSuggestedBrandName("");
           filled += 1;
         } else {
@@ -366,6 +376,10 @@ export default function WatchBasicSection({
       }
       if (!spec.goldColors.length && suggestion.goldColors.length) {
         specPatch.goldColors = suggestion.goldColors;
+        filled += 1;
+      }
+      if (!spec.complicationNames.length && suggestion.complicationNames.length) {
+        specPatch.complicationNames = suggestion.complicationNames;
         filled += 1;
       }
       if (Object.keys(basicPatch).length) onChange(basicPatch);
@@ -537,7 +551,9 @@ export default function WatchBasicSection({
               onBrandsChange={onBrandsChange}
               onChange={(brandId) => {
                 setSuggestedBrandName("");
-                onChange({ brandId });
+                const nextBrandName = brands.find((brand) => brand.id === brandId)?.name ?? "";
+                onChange({ brandId, brandName: nextBrandName });
+                onSpecChange({ specBrand: nextBrandName });
               }}
               onSuggestionHandled={() => setSuggestedBrandName("")}
             />
@@ -621,6 +637,22 @@ export default function WatchBasicSection({
               label="Collectible"
               onChange={(isCollectible) => onChange({ isCollectible })}
             />
+          </div>
+
+          <div className="md:col-span-3">
+            <FieldLabel>Complication</FieldLabel>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {Array.from(new Set([...complications, ...spec.complicationNames])).map((name) => {
+                const checked = spec.complicationNames.includes(name);
+                return (
+                  <Toggle key={name} checked={checked} label={name} onChange={(next) =>
+                    onSpecChange({ complicationNames: next
+                      ? [...spec.complicationNames, name]
+                      : spec.complicationNames.filter((item) => item !== name) })
+                  } />
+                );
+              })}
+            </div>
           </div>
         </FormSection>
 
@@ -847,9 +879,13 @@ export default function WatchBasicSection({
             <FieldLabel>Chất liệu chính</FieldLabel>
             <Select
               value={spec.primaryCaseMaterial}
-              onChange={(event) =>
-                onSpecChange({ primaryCaseMaterial: event.target.value })
-              }
+              onChange={(event) => {
+                const primaryCaseMaterial = event.target.value;
+                onSpecChange({
+                  primaryCaseMaterial,
+                  ...(primaryCaseMaterial === "GOLD" ? { goldTreatment: "SOLID_GOLD" } : {}),
+                });
+              }}
               options={MATERIAL_OPTIONS}
               placeholder="Chọn chất liệu"
             />
@@ -864,12 +900,13 @@ export default function WatchBasicSection({
 
                 onSpecChange({
                   materialProfile: next,
-                  ...(next === "SINGLE_MATERIAL"
+                  ...(next === "SINGLE_MATERIAL" && spec.primaryCaseMaterial !== "GOLD"
                     ? {
                         secondaryCaseMaterial: "",
                         goldTreatment: "",
                         goldColors: [],
                         goldKarat: "",
+                        goldWeightGrams: "",
                       }
                     : {}),
                   ...(next === "BIMETAL"
@@ -897,6 +934,7 @@ export default function WatchBasicSection({
                   onChange={(event) =>
                     onSpecChange({
                       secondaryCaseMaterial: event.target.value,
+                      ...(event.target.value === "GOLD" ? { goldTreatment: "SOLID_GOLD" } : {}),
                     })
                   }
                   options={MATERIAL_OPTIONS}
@@ -918,8 +956,13 @@ export default function WatchBasicSection({
             ) : null}
           </div>
 
-          {isCoated ? (
+          {hasGoldMaterial ? (
             <>
+              {isSolidGold ? (
+                <div className="md:col-span-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">
+                  Solid gold · khai báo màu, tuổi vàng và khối lượng phần vàng để phục vụ định giá.
+                </div>
+              ) : null}
               <div>
                 <FieldLabel>Tuổi vàng</FieldLabel>
                 <Select
@@ -936,19 +979,19 @@ export default function WatchBasicSection({
                 <FieldLabel>Màu vàng</FieldLabel>
                 <div className="flex flex-wrap gap-2">
                   {GOLD_COLOR_OPTIONS.map((color) => {
-                    const checked = spec.goldColors.includes(color);
+                    const checked = spec.goldColors.includes(color.value);
 
                     return (
                       <Toggle
-                        key={color}
+                        key={color.value}
                         checked={checked}
-                        label={color}
+                        label={color.label}
                         onChange={(next) => {
                           const current = spec.goldColors || [];
                           onSpecChange({
                             goldColors: next
-                              ? [...current, color]
-                              : current.filter((item) => item !== color),
+                              ? [...current, color.value]
+                              : current.filter((item) => item !== color.value),
                           });
                         }}
                       />
@@ -956,6 +999,19 @@ export default function WatchBasicSection({
                   })}
                 </div>
               </div>
+              {isSolidGold ? <div>
+                <FieldLabel>Trọng lượng vàng (g)</FieldLabel>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  inputMode="decimal"
+                  value={spec.goldWeightGrams}
+                  onChange={(event) => onSpecChange({ goldWeightGrams: event.target.value })}
+                  placeholder="Khối lượng riêng phần vàng"
+                />
+                <p className="mt-1 text-[11px] text-slate-500">Không phải tổng trọng lượng đồng hồ.</p>
+              </div> : null}
             </>
           ) : null}
         </FormSection>

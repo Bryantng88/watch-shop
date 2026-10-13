@@ -14,6 +14,30 @@ const MAX_SOURCE_BYTES = 30 * 1024 * 1024;
 export type GallerySharpPreset = SharpImagePreset;
 export const processGalleryImageWithSharp = processImageWithSharp;
 
+export async function previewWatchGalleryWithSharpApplication(input: {
+  productId: string;
+  storageKey: string;
+  preset?: Partial<GallerySharpPreset> | null;
+}) {
+  const productId = String(input.productId ?? "").trim();
+  const storageKey = String(input.storageKey ?? "").trim();
+  if (!productId || !storageKey) throw new Error("Thiếu Watch hoặc ảnh Gallery nguồn.");
+  const knownSource = await prisma.mediaObject.findUnique({
+    where: { storageKey },
+    select: { sourceMediaObject: { select: { storageKey: true } } },
+  });
+  const prepared = await prepareWatchMediaSource({
+    productId,
+    storageKey: knownSource?.sourceMediaObject?.storageKey ?? storageKey,
+  });
+  if (prepared.source.bytes.byteLength > MAX_SOURCE_BYTES) throw new Error("Ảnh nguồn vượt quá giới hạn xử lý 30 MB.");
+  return processImageWithSharp(
+    prepared.source.bytes,
+    normalizeSharpImagePreset(input.preset),
+    { maxDimension: 720, quality: 82 },
+  );
+}
+
 export async function processWatchGalleryWithSharpApplication(input: {
   productId: string;
   storageKey: string;
