@@ -15,6 +15,7 @@ export async function searchMediaPostThemeWatchesAction(filters: MediaPostThemeF
     keys: Array<keyof MediaPostThemeFilters>;
     label: string;
   }> = [
+    { keys: ["complication"], label: "Complication" },
     { keys: ["style"], label: "Phong cách" },
     { keys: ["stockStage"], label: "Tình trạng kho" },
     { keys: ["audienceSegment"], label: "Phân khúc" },

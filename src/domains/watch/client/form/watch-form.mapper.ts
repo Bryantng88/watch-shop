@@ -115,6 +115,7 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
                 ? detail.spec.goldColors.map((x: any) => String(x))
                 : [],
             goldKarat: s(detail?.spec?.goldKarat),
+            goldWeightGrams: s(detail?.spec?.goldWeightGrams),
             braceletType: s(detail?.spec?.braceletType),
             strapMaterialText: s(detail?.spec?.strapMaterialText),
             strapComponentSource: s(detail?.spec?.strapComponentSource),
@@ -123,6 +124,9 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
             dialFinish: s(detail?.spec?.dialFinish),
             buckleType: s(detail?.spec?.buckleType),
             materialNote: s(detail?.spec?.materialNote),
+            complicationNames: Array.isArray(detail?.spec?.complications)
+                ? detail.spec.complications.map((item: any) => s(item?.name ?? item)).filter(Boolean)
+                : [],
         },
 
         content: {

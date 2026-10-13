@@ -24,6 +24,7 @@ import {
   MEDIA_POST_STOCK_OPTIONS,
   MEDIA_POST_STYLE_OPTIONS,
 } from "../shared/media-post-theme.options";
+import { complications } from "@/constants/constants";
 
 type CreateResult = Awaited<ReturnType<typeof createMediaPostAction>>;
 
@@ -189,6 +190,7 @@ export default function MediaPostCreateForm({
               {MEDIA_POST_CASE_SHAPE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select></label>
             <label className="space-y-1.5"><span className="text-xs font-semibold text-slate-600">Phong cách</span><select className={`${inputClass} w-full`} value={filters.style ?? ""} onChange={(event) => setFilters((current) => ({ ...current, style: event.target.value }))}><option value="">Tất cả phong cách</option><option value={MEDIA_POST_UNCLASSIFIED_FILTER}>Chưa phân loại</option>{MEDIA_POST_STYLE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+            <label className="space-y-1.5"><span className="text-xs font-semibold text-slate-600">Complication</span><select className={`${inputClass} w-full`} value={filters.complication ?? ""} onChange={(event) => setFilters((current) => ({ ...current, complication: event.target.value }))}><option value="">Tất cả complication</option>{complications.map((name) => <option key={name} value={name}>{name}</option>)}</select></label>
             <label className="space-y-1.5"><span className="text-xs font-semibold text-slate-600">Tình trạng kho</span><select className={`${inputClass} w-full`} value={filters.stockStage ?? ""} onChange={(event) => setFilters((current) => ({ ...current, stockStage: event.target.value }))}><option value="">Tất cả trạng thái</option>{MEDIA_POST_STOCK_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
             <label className="space-y-1.5"><span className="text-xs font-semibold text-slate-600">Phân khúc</span><select className={`${inputClass} w-full`} value={filters.audienceSegment ?? ""} onChange={(event) => setFilters((current) => ({ ...current, audienceSegment: event.target.value }))}><option value="">Tất cả phân khúc</option>{MEDIA_POST_AUDIENCE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
             <label className="space-y-1.5"><span className="text-xs font-semibold text-slate-600">Kênh sản phẩm</span><select className={`${inputClass} w-full`} value={filters.siteChannel ?? ""} onChange={(event) => setFilters((current) => ({ ...current, siteChannel: event.target.value }))}><option value="">Tất cả kênh</option>{MEDIA_POST_SITE_CHANNEL_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
@@ -250,6 +252,7 @@ export default function MediaPostCreateForm({
                           <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-medium text-slate-600">
                             {watch.brandName ? <span className="rounded-md bg-slate-100 px-2 py-1">{watch.brandName}</span> : null}
                             {watch.movementType ? <span className="rounded-md bg-slate-100 px-2 py-1">{watch.movementType}</span> : null}
+                            {watch.complications.map((name) => <span key={name} className="rounded-md bg-amber-50 px-2 py-1 text-amber-800">{name}</span>)}
                             <span className="rounded-md bg-emerald-50 px-2 py-1 text-emerald-700">{money(watch.price)}</span>
                           </div>
                           <button type="button" onClick={() => setExpandedWatchId(expanded ? null : watch.watchId)} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-violet-700">

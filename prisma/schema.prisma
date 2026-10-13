@@ -1927,6 +1927,7 @@ model WatchSpecV2 {
   goldTreatment         WatchGoldTreatment?
   goldColors            WatchGoldColorV2[]       @default([])
   goldKarat             Int?                     @db.SmallInt
+  goldWeightGrams       Decimal?                 @db.Decimal(12, 3)
   materialNote          String?
 
   // Dial / crystal / movement

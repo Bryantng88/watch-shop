@@ -111,6 +111,11 @@ function buildSpecSnapshot(input: {
     calibre?: string | null;
     yearText?: string | null;
     conditionGrade?: string | null;
+    goldKarat?: number | string | null;
+    goldTreatment?: string | null;
+    goldColors?: string[] | null;
+    goldWeightGrams?: unknown;
+    complicationNames?: string[] | null;
 }) {
     return {
         brand: normalizeText(input.brand),
@@ -123,6 +128,11 @@ function buildSpecSnapshot(input: {
         calibre: normalizeText(input.calibre),
         yearText: normalizeText(input.yearText),
         conditionGrade: normalizeText(input.conditionGrade),
+        goldKarat: normalizeText(input.goldKarat == null ? null : String(input.goldKarat)),
+        goldTreatment: normalizeText(input.goldTreatment),
+        goldColors: [...new Set(input.goldColors ?? [])].sort(),
+        goldWeightGrams: normalizeText(input.goldWeightGrams == null ? null : String(input.goldWeightGrams)),
+        complicationNames: [...new Set(input.complicationNames ?? [])].sort(),
     };
 }
 
@@ -403,6 +413,10 @@ export async function submitWatchFormApplication(
     if (!productId) {
         throw new Error("Thiếu productId khi lưu watch.");
     }
+    const goldWeightGrams = String(values.spec.goldWeightGrams ?? "").trim();
+    if (goldWeightGrams && (!Number.isFinite(Number(goldWeightGrams)) || Number(goldWeightGrams) < 0)) {
+        throw new Error("Trọng lượng vàng phải là số không âm.");
+    }
     const current = await prisma.watch.findUnique({
         where: { productId },
         include: {
@@ -412,6 +426,7 @@ export async function submitWatchFormApplication(
                         where: { role: "GALLERY" as any },
                         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
                     },
+                    watchSpec: { include: { Complication: true } },
                 },
             },
             watchSpecV2: true,
@@ -451,6 +466,11 @@ export async function submitWatchFormApplication(
         calibre: current.watchSpecV2?.calibre,
         yearText: current.yearText,
         conditionGrade: current.conditionGrade,
+        goldKarat: current.watchSpecV2?.goldKarat,
+        goldTreatment: current.watchSpecV2?.goldTreatment,
+        goldColors: current.watchSpecV2?.goldColors,
+        goldWeightGrams: current.watchSpecV2?.goldWeightGrams,
+        complicationNames: current.product.watchSpec?.Complication.map((item) => item.name),
     });
 
     const saveIntent = String((values as any).saveIntent ?? "NORMAL").toUpperCase();
@@ -471,6 +491,11 @@ export async function submitWatchFormApplication(
         calibre: values.spec.calibre,
         yearText: values.basic.yearText,
         conditionGrade: values.basic.conditionGrade,
+        goldKarat: values.spec.goldKarat,
+        goldTreatment: values.spec.primaryCaseMaterial === "GOLD" ? "SOLID_GOLD" : values.spec.goldTreatment,
+        goldColors: values.spec.goldColors,
+        goldWeightGrams: values.spec.goldWeightGrams,
+        complicationNames: values.spec.complicationNames,
     });
     const beforeImageKeys = normalizeImageKeys(
         current.product.productImage.map((x: any) => ({ key: x.fileKey })),
@@ -633,11 +658,14 @@ export async function submitWatchFormApplication(
                 WatchFormEnums.WatchCaseMaterialFamily,
             ),
             goldTreatment: pickEnumOrNull(
-                values.spec.goldTreatment,
+                values.spec.primaryCaseMaterial === "GOLD" ? "SOLID_GOLD" : values.spec.goldTreatment,
                 WatchFormEnums.WatchGoldTreatment,
             ),
             goldColors: pickGoldColors(values.spec.goldColors),
             goldKarat: values.spec.goldKarat ? Number(values.spec.goldKarat) : null,
+            goldWeightGrams: values.spec.primaryCaseMaterial === "GOLD"
+                ? toDecimal(goldWeightGrams)
+                : null,
             braceletType: pickEnumOrNull(
                 values.spec.braceletType,
                 WatchFormEnums.Strap,
@@ -656,6 +684,29 @@ export async function submitWatchFormApplication(
             where: { watchId: current.id },
             create: { watchId: current.id, ...specData },
             update: specData,
+        });
+
+        const complicationNames = Array.from(new Set(
+            (values.spec.complicationNames ?? []).map((name) => String(name).trim()).filter(Boolean),
+        ));
+        const complications = complicationNames.length
+            ? await tx.complication.findMany({
+                where: { name: { in: complicationNames } },
+                select: { id: true, name: true },
+            })
+            : [];
+        if (complications.length !== complicationNames.length) {
+            throw new Error("Có complication không hợp lệ.");
+        }
+        await tx.watchSpec.upsert({
+            where: { productId },
+            create: {
+                productId,
+                Complication: { connect: complications.map(({ id }) => ({ id })) },
+            },
+            update: {
+                Complication: { set: complications.map(({ id }) => ({ id })) },
+            },
         });
 
         await tx.watchContent.upsert({

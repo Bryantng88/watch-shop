@@ -63,6 +63,7 @@ export type WatchFormValues = {
         goldTreatment: string;
         goldColors: string[];
         goldKarat: string;
+        goldWeightGrams: string;
         braceletType: string;
         strapMaterialText: string;
         waterResistance: string;
@@ -70,6 +71,7 @@ export type WatchFormValues = {
         dialFinish: string;
         buckleType: string;
         materialNote: string;
+        complicationNames: string[];
     };
 
     content: {

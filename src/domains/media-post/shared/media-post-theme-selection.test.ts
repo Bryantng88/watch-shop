@@ -18,6 +18,7 @@ const watch: MediaPostThemeWatchCandidate = {
   movementType: null,
   caseShape: null,
   style: null,
+  complications: [],
   gallery: [
     { key: "gallery/first.jpg", url: "/first", sortOrder: 0 },
     { key: "gallery/second.jpg", url: "/second", sortOrder: 1 },

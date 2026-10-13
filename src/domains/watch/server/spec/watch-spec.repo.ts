@@ -44,6 +44,7 @@ export async function upsertWatchSpecRepo(
       goldTreatment: input.goldTreatment ?? null,
       goldColors: input.goldColors ?? [],
       goldKarat: input.goldKarat ?? null,
+      goldWeightGrams: toDecimal(input.goldWeightGrams),
       materialNote: input.materialNote ?? null,
 
       dialColor: input.dialColor ?? null,
@@ -101,6 +102,9 @@ export async function upsertWatchSpecRepo(
         : {}),
       ...(input.goldColors !== undefined ? { goldColors: input.goldColors } : {}),
       ...(input.goldKarat !== undefined ? { goldKarat: input.goldKarat } : {}),
+      ...(input.goldWeightGrams !== undefined
+        ? { goldWeightGrams: toDecimal(input.goldWeightGrams) }
+        : {}),
       ...(input.materialNote !== undefined
         ? { materialNote: input.materialNote }
         : {}),

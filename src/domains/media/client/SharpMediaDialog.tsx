@@ -5,6 +5,7 @@ import { Check, Loader2, RotateCcw, Sparkles, X, ZoomIn, ZoomOut } from "lucide-
 
 import type { PickedMediaItem } from "@/components/media/MediaPickerMulti";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
+import { useSharpLivePreview } from "./useSharpLivePreview";
 
 type Preset = {
   brightness: number;
@@ -61,6 +62,7 @@ export default function SharpMediaDialog({
   const [preset, setPreset] = useState<Preset>(DEFAULT_PRESET);
   const [presetsByKey, setPresetsByKey] = useState<Record<string, Preset>>({});
   const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [presetScope, setPresetScope] = useState<"active" | "selected">("selected");
   const [running, setRunning] = useState(false);
   const [applying, setApplying] = useState(false);
   const [largePreview, setLargePreview] = useState<{ src: string; name: string } | null>(null);
@@ -89,47 +91,48 @@ export default function SharpMediaDialog({
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [largePreview]);
 
-  if (!open) return null;
   const completed = Object.values(states).filter((state) => state.status === "done").length;
   const activeImage = images.find((item) => item.key === activeKey) ?? null;
   const activeState = activeKey ? states[activeKey] : undefined;
   const activePreviewKey = activeState?.result?.storageKey ?? activeImage?.key;
   const activePreviewSrc = activePreviewKey ? resolveMediaPreviewSrc(activePreviewKey) : null;
+  const exactPreviewUrl = processUrl.includes("/watches/") ? `${processUrl}/preview` : null;
+  const livePreview = useSharpLivePreview({
+    enabled: Boolean(open && activeKey && exactPreviewUrl && !running),
+    url: exactPreviewUrl,
+    body: { storageKey: activeKey, preset },
+  });
+  const renderedPreviewSrc = livePreview.src || activePreviewSrc;
+
+  if (!open) return null;
 
   const updatePreset = (next: Preset | ((current: Preset) => Preset)) => {
     const value = typeof next === "function" ? next(preset) : next;
     setPreset(value);
     if (!activeKey) return;
-    setPresetsByKey((presets) => ({ ...presets, [activeKey]: value }));
-    // Only this image's preview becomes stale. Other completed previews
-    // must survive while the operator tunes images one by one.
+    const targets = presetScope === "selected" ? Array.from(selected) : [activeKey];
+    setPresetsByKey((presets) => Object.fromEntries([
+      ...Object.entries(presets),
+      ...targets.map((key) => [key, value] as const),
+    ]));
     setStates((items) => {
-      if (!items[activeKey]) return items;
       const copy = { ...items };
-      delete copy[activeKey];
+      targets.forEach((key) => delete copy[key]);
       return copy;
     });
   };
 
   const resetPreset = () => {
-    setPreset(DEFAULT_PRESET);
-    if (!activeKey) return;
-    setPresetsByKey((presets) => ({ ...presets, [activeKey]: DEFAULT_PRESET }));
-    setStates((items) => {
-      if (!items[activeKey]) return items;
-      const copy = { ...items };
-      delete copy[activeKey];
-      return copy;
-    });
+    updatePreset(DEFAULT_PRESET);
   };
 
-  const processOne = async (key: string) => {
+  const processOne = async (key: string, presetSnapshot = presetsByKey[key] ?? (key === activeKey ? preset : DEFAULT_PRESET)) => {
     setStates((current) => ({ ...current, [key]: { status: "processing" } }));
     try {
       const response = await fetch(processUrl, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ storageKey: key, preset: presetsByKey[key] ?? (key === activeKey ? preset : DEFAULT_PRESET) }),
+        body: JSON.stringify({ storageKey: key, preset: presetSnapshot }),
       });
       const json = await response.json().catch(() => ({}));
       if (!response.ok || !json?.data?.storageKey) throw new Error(json?.error || "Sharp không trả về ảnh Gallery.");
@@ -146,11 +149,12 @@ export default function SharpMediaDialog({
     const queue = Array.from(selected).filter((key) => states[key]?.status !== "done");
     if (!queue.length) return;
     setRunning(true);
+    const snapshots = Object.fromEntries(queue.map((key) => [key, presetsByKey[key] ?? (key === activeKey ? preset : DEFAULT_PRESET)]));
     let cursor = 0;
     const worker = async () => {
       while (cursor < queue.length) {
         const key = queue[cursor++];
-        await processOne(key);
+        await processOne(key, snapshots[key]);
       }
     };
     // High-resolution Sharp pipelines can use a large amount of memory. Run
@@ -338,19 +342,28 @@ export default function SharpMediaDialog({
           </aside>
 
           <div className="min-h-0 overflow-y-auto pr-1">
-            {activeImage && activePreviewSrc ? (
+            {activeImage && renderedPreviewSrc ? (
               <div className="mb-5 grid gap-4 rounded-2xl border border-violet-200 bg-violet-50/40 p-4 md:grid-cols-[minmax(0,320px)_1fr]">
                 <button
                   type="button"
                   onClick={() => {
                     setPreviewZoom(100);
-                    setLargePreview({ src: activePreviewSrc, name: activeImage.name || "Gallery" });
+                    setLargePreview({ src: renderedPreviewSrc, name: activeImage.name || "Gallery" });
                   }}
                   className="group relative aspect-square overflow-hidden rounded-xl bg-slate-100"
                   aria-label={`Xem lớn ảnh đang chỉnh ${activeImage.name || "Gallery"}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={activePreviewSrc} alt={activeImage.name || "Gallery"} className="h-full w-full object-contain" />
+                  <img
+                    src={renderedPreviewSrc}
+                    alt={activeImage.name || "Gallery"}
+                    className="h-full w-full object-contain transition-transform"
+                    style={!livePreview.src && activeState?.status !== "done" ? {
+                      transform: `rotate(${preset.rotation}deg) scale(${preset.zoom / 100}) translate(${preset.cropOffsetX / 4}%, ${preset.cropOffsetY / 4}%)`,
+                      filter: `brightness(${100 + preset.brightness}%) saturate(${preset.saturation}%) contrast(${100 + preset.contrast}%)`,
+                    } : undefined}
+                  />
+                  {livePreview.pending ? <span className="absolute inset-x-2 bottom-2 rounded-lg bg-slate-950/70 px-2 py-1 text-[11px] font-semibold text-white">Sharp đang cập nhật…</span> : null}
                   <span className="absolute bottom-2 right-2 rounded-full bg-slate-950/70 p-2 text-white"><ZoomIn className="h-4 w-4" /></span>
                 </button>
                 <div className="flex min-w-0 flex-col justify-center">
@@ -381,18 +394,22 @@ export default function SharpMediaDialog({
               <span className="text-sm font-semibold text-slate-800">Đã chọn {selected.size}/{images.length} ảnh</span>
               <button type="button" disabled={running} onClick={() => setSelected(selected.size === images.length - unavailable.size ? new Set() : new Set(keys.filter((key) => !unavailable.has(key))))} className="text-xs font-semibold text-violet-700">{selected.size === images.length - unavailable.size ? "Bỏ chọn tất cả" : "Chọn tất cả"}</button>
             </div>
+            <div className="mb-4 inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1 text-xs font-semibold">
+              <button type="button" onClick={() => setPresetScope("active")} className={`rounded-lg px-3 py-2 ${presetScope === "active" ? "bg-white text-violet-700 shadow-sm" : "text-slate-500"}`}>Chỉ ảnh đang chỉnh</button>
+              <button type="button" onClick={() => setPresetScope("selected")} className={`rounded-lg px-3 py-2 ${presetScope === "selected" ? "bg-white text-violet-700 shadow-sm" : "text-slate-500"}`}>Áp dụng cho {selected.size} ảnh đã chọn</button>
+            </div>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
               {images.map((item) => {
                 const state = states[item.key] ?? { status: "idle" as const };
                 const resultKey = state.result?.storageKey;
                 const src = resolveMediaPreviewSrc(resultKey || item.key) || undefined;
-                const active = selected.has(item.key);
+                const checked = selected.has(item.key);
+                const isEditing = activeKey === item.key;
                 return (
-                  <div key={item.key} className={`relative overflow-hidden rounded-2xl border bg-white ${active ? "border-violet-400 ring-2 ring-violet-100" : "border-slate-200"}`}>
+                  <div key={item.key} className={`relative overflow-hidden rounded-2xl border bg-white ${isEditing ? "border-violet-500 ring-2 ring-violet-100" : checked ? "border-violet-200" : "border-slate-200"}`}>
                     <button type="button" disabled={running} onClick={() => {
                       setActiveKey(item.key);
                       setPreset(presetsByKey[item.key] ?? DEFAULT_PRESET);
-                      setSelected((current) => { const next = new Set(current); if (next.has(item.key)) next.delete(item.key); else next.add(item.key); return next; });
                     }} className="relative block aspect-square w-full overflow-hidden bg-slate-100">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
@@ -414,9 +431,10 @@ export default function SharpMediaDialog({
                         }}
                         className="h-full w-full object-cover"
                       />
-                      <span className={`absolute left-2 top-2 grid h-6 w-6 place-items-center rounded-full ${active ? "bg-violet-600 text-white" : "bg-white/90 text-slate-400"}`}>{active ? <Check className="h-4 w-4" /> : null}</span>
+                      {isEditing ? <span className="absolute bottom-2 left-2 rounded-md bg-violet-600 px-2 py-1 text-[10px] font-bold text-white">Đang chỉnh</span> : null}
                       {state.status === "processing" ? <span className="absolute inset-0 grid place-items-center bg-slate-950/45 text-white"><Loader2 className="h-7 w-7 animate-spin" /></span> : null}
                     </button>
+                    <button type="button" disabled={running || unavailable.has(item.key)} onClick={() => setSelected((current) => { const next = new Set(current); if (next.has(item.key)) next.delete(item.key); else next.add(item.key); return next; })} className={`absolute left-2 top-2 grid h-7 w-7 place-items-center rounded-full shadow ${checked ? "bg-violet-600 text-white" : "bg-white text-slate-400"}`} aria-label={checked ? "Bỏ chọn ảnh" : "Chọn ảnh"}>{checked ? <Check className="h-4 w-4" /> : null}</button>
                     {src ? (
                       <button
                         type="button"

@@ -32,7 +32,11 @@ export function normalizeSharpImagePreset(value?: Partial<SharpImagePreset> | nu
   };
 }
 
-export async function processImageWithSharp(source: Uint8Array, preset: SharpImagePreset) {
+export async function processImageWithSharp(
+  source: Uint8Array,
+  preset: SharpImagePreset,
+  options: { maxDimension?: number; quality?: number } = {},
+) {
   const contrast = preset.contrast / 100;
   const metal = preset.metalEnhance / 100;
   const rotated = await sharp(source)
@@ -65,7 +69,7 @@ export async function processImageWithSharp(source: Uint8Array, preset: SharpIma
 
   let pipeline = sharp(rotated.data)
     .extract({ left, top, width: cropWidth, height: cropHeight })
-    .resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: "inside", withoutEnlargement: true })
+    .resize({ width: options.maxDimension ?? MAX_DIMENSION, height: options.maxDimension ?? MAX_DIMENSION, fit: "inside", withoutEnlargement: true })
     .modulate({ brightness: 1 + preset.brightness / 100, saturation: preset.saturation / 100 });
   if (preset.contrast !== 0 || preset.metalEnhance > 0) {
     const gain = 1 + contrast + metal * 0.35;
@@ -74,5 +78,5 @@ export async function processImageWithSharp(source: Uint8Array, preset: SharpIma
   if (preset.sharpen > 0 || preset.metalEnhance > 0) {
     pipeline = pipeline.sharpen({ sigma: 0.35 + preset.sharpen / 12 + metal * 0.5 });
   }
-  return pipeline.jpeg({ quality: 92, chromaSubsampling: "4:4:4" }).toBuffer();
+  return pipeline.jpeg({ quality: options.quality ?? 92, chromaSubsampling: "4:4:4" }).toBuffer();
 }

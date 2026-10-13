@@ -4,6 +4,7 @@ import sharp from "sharp";
 import { z } from "zod";
 
 import { PERMISSIONS } from "@/constants/permissions";
+import { complications } from "@/constants/constants";
 import { mediaStorage } from "@/domains/media/storage";
 import { requirePermission } from "@/server/auth/requirePermission";
 
@@ -39,6 +40,7 @@ const aiSpecSchema = z.object({
   dialFinish: nullableString,
   buckleType: nullableString,
   materialNote: nullableString,
+  complicationNames: z.array(z.string()),
   confidenceNotes: z.array(z.string()),
 });
 
@@ -75,6 +77,7 @@ const jsonSchema = {
     dialFinish: { type: ["string", "null"] },
     buckleType: { type: ["string", "null"] },
     materialNote: { type: ["string", "null"] },
+    complicationNames: { type: "array", items: { type: "string" } },
     confidenceNotes: { type: "array", items: { type: "string" } },
   },
   required: [
@@ -84,7 +87,7 @@ const jsonSchema = {
     "primaryCaseMaterial", "secondaryCaseMaterial", "goldTreatment",
     "goldColors", "goldKarat", "braceletType", "strapMaterialText",
     "waterResistance", "powerReserve", "dialFinish", "buckleType",
-    "materialNote", "confidenceNotes",
+    "materialNote", "complicationNames", "confidenceNotes",
   ],
 } as const;
 
@@ -180,6 +183,7 @@ export async function suggestWatchSpecWithOpenAIAction(input: {
     yearText: input.current.basic.yearText,
     movementType: input.current.basic.movementType,
     style: input.current.basic.style,
+    availableComplications: complications,
     spec: input.current.spec,
   };
 
@@ -205,6 +209,7 @@ export async function suggestWatchSpecWithOpenAIAction(input: {
         "Use visible evidence, supplied current facts, and web research. You may use a catalog specification only when the matched reference or model variant is strong; add a Vietnamese confidenceNotes warning for every inferred, approximate, or conflicting value.",
         "Never fabricate a reference, calibre, year, or dimension. Return null when identification is insufficient or conflicting. Keep dimensions as numeric strings without units.",
         `Enum values must come from: ${JSON.stringify(ALLOWED_VALUES)}.`,
+        "For complicationNames, return only values listed in availableComplications.",
         "confidenceNotes must be short Vietnamese warnings for every uncertain or inferred value.",
       ].join(" "),
       input: [{

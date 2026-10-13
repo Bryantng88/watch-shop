@@ -36,6 +36,7 @@ import {
 } from "../shared/media-post-theme.options";
 import { updateBusinessBindingMetadata } from "@/domains/task/server/business-binding.repo";
 import { getQueueItemWorkflowState } from "@/domains/task/server/business-binding-workflow.service";
+import { complications } from "@/constants/constants";
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -350,6 +351,9 @@ export async function createMediaPostWithGallerySelections(
 }
 
 export function validateMediaPostThemeFilters(filters: MediaPostThemeFilters) {
+  if (filters.complication && !complications.some((name) => name === filters.complication)) {
+    throw new Error("Giá trị bộ lọc complication không hợp lệ.");
+  }
   for (const [field, allowed] of Object.entries(themeFilterValues)) {
     const value = filters[field as keyof typeof themeFilterValues];
     const permitsUnclassified = field === "movementType" || field === "caseShape" || field === "style";
@@ -412,6 +416,9 @@ export function buildMediaPostThemeWatchWhere(filters: MediaPostThemeFilters): P
       ...(filters.brandId ? { brandId: filters.brandId } : {}),
       ...(filters.publishedOnly ? { publishedAt: { not: null } } : {}),
       productImage: { some: { role: "GALLERY" } },
+      ...(filters.complication ? {
+        watchSpec: { Complication: { some: { name: filters.complication } } },
+      } : {}),
     },
   };
 }
@@ -434,6 +441,7 @@ export async function listMediaPostThemeWatchCandidates(
           sku: true,
           brandId: true,
           brand: { select: { name: true } },
+          watchSpec: { select: { Complication: { select: { name: true } } } },
           productImage: {
             where: { role: "GALLERY" },
             orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
@@ -457,6 +465,7 @@ export async function listMediaPostThemeWatchCandidates(
     movementType: row.movementType ?? null,
     caseShape: row.watchSpecV2?.caseShape ?? null,
     style: row.style ?? null,
+    complications: row.product.watchSpec?.Complication.map((item) => item.name) ?? [],
     gallery: row.product.productImage.map((image) => ({
       key: image.fileKey,
       url: `/api/media/sign?key=${encodeURIComponent(image.fileKey)}`,
