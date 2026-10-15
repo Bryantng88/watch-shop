@@ -20,6 +20,23 @@ import { prisma } from "@/server/db/client";
 const MAX_SOURCE_BYTES = 30 * 1024 * 1024;
 const DERIVATIVE_VARIANT = "media-post-sharp";
 
+type SharpSource = { id: string; storageKey: string; sourceMediaObjectId: string | null };
+
+async function resolveRootMediaObject(source: SharpSource) {
+  let root = source;
+  const visited = new Set([root.id]);
+  while (root.sourceMediaObjectId && !visited.has(root.sourceMediaObjectId)) {
+    visited.add(root.sourceMediaObjectId);
+    const parent: SharpSource | null = await prisma.mediaObject.findUnique({
+      where: { id: root.sourceMediaObjectId },
+      select: { id: true, storageKey: true, sourceMediaObjectId: true },
+    });
+    if (!parent) break;
+    root = parent;
+  }
+  return root;
+}
+
 async function ensureDraftBinding(mediaPostId: string, mediaObjectId: string) {
   const active = await prisma.mediaBinding.findFirst({
     where: {
@@ -66,17 +83,7 @@ export async function processMediaPostImageWithSharp(input: {
     select: { id: true, storageKey: true, sourceMediaObjectId: true },
   });
   if (!registeredSource) throw new Error("Không đăng ký được ảnh nguồn trong Media Core.");
-  let root: { id: string; storageKey: string; sourceMediaObjectId: string | null } = registeredSource;
-  const visited = new Set([root.id]);
-  while (root.sourceMediaObjectId && !visited.has(root.sourceMediaObjectId)) {
-    visited.add(root.sourceMediaObjectId);
-    const parent: { id: string; storageKey: string; sourceMediaObjectId: string | null } | null = await prisma.mediaObject.findUnique({
-      where: { id: root.sourceMediaObjectId },
-      select: { id: true, storageKey: true, sourceMediaObjectId: true },
-    });
-    if (!parent) break;
-    root = parent;
-  }
+  const root = await resolveRootMediaObject(registeredSource);
 
   const existing = await prisma.mediaObject.findFirst({
     where: {
@@ -110,4 +117,34 @@ export async function processMediaPostImageWithSharp(input: {
   });
   await ensureDraftBinding(post.id, derivative.id);
   return { storageKey: derivative.storageKey, sourceStorageKey: root.storageKey, cached: false, preset };
+}
+
+export async function previewMediaPostImageWithSharp(input: {
+  mediaPostId: string;
+  storageKey: string;
+  preset?: Partial<SharpImagePreset> | null;
+}) {
+  const mediaPostId = String(input.mediaPostId ?? "").trim();
+  const storageKey = String(input.storageKey ?? "").trim();
+  if (!mediaPostId || !storageKey) throw new Error("Thiếu Media Post hoặc ảnh nguồn.");
+
+  const [post, registeredSource] = await Promise.all([
+    prisma.mediaPost.findUnique({ where: { id: mediaPostId }, select: { id: true } }),
+    prisma.mediaObject.findUnique({
+      where: { storageKey },
+      select: { id: true, storageKey: true, sourceMediaObjectId: true },
+    }),
+  ]);
+  if (!post) throw new Error("Không tìm thấy Media Post.");
+
+  const sourceKey = registeredSource
+    ? (await resolveRootMediaObject(registeredSource)).storageKey
+    : storageKey;
+  const source = await mediaStorage.read(sourceKey);
+  if (source.bytes.byteLength > MAX_SOURCE_BYTES) throw new Error("Ảnh nguồn vượt quá giới hạn xử lý 30 MB.");
+  return processImageWithSharp(
+    source.bytes,
+    normalizeSharpImagePreset(input.preset),
+    { maxDimension: 720, quality: 82 },
+  );
 }
