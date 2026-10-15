@@ -123,7 +123,7 @@ export async function getVendorPricingImage(token: string, itemId: string) {
   const item = await prisma.vendorAcquisitionPricingItem.findFirst({
     where: {
       id: itemId,
-      request: { tokenHash: hashToken(normalized), status: { in: ["OPEN", "SUBMITTED"] } },
+      request: { tokenHash: hashToken(normalized), status: "OPEN", expiresAt: { gt: new Date() } },
     },
     select: {
       imageStorageKey: true,
@@ -133,6 +133,40 @@ export async function getVendorPricingImage(token: string, itemId: string) {
   const key = normalizeKey(item?.imageMediaObject?.storageKey ?? item?.imageStorageKey ?? null);
   if (!key || item?.imageMediaObject?.availability === "DELETED") return null;
   return key;
+}
+
+export async function revokeVendorPricingRequest(input: {
+  requestId: string;
+  actorUserId?: string | null;
+  deferConsumers?: BusinessEventDispatchOptions["deferConsumers"];
+}) {
+  const requestId = String(input.requestId ?? "").trim();
+  if (!requestId) throw new Error("Thiếu yêu cầu báo giá.");
+
+  return runBusinessEventTransaction(async (tx, delivery) => {
+    const current = await tx.vendorAcquisitionPricingRequest.findUnique({
+      where: { id: requestId },
+      select: { id: true, status: true, vendorId: true },
+    });
+    if (!current) throw new Error("Không tìm thấy yêu cầu báo giá.");
+    if (current.status === "SUBMITTED") throw new Error("Báo giá đã được xác nhận nên không thể thu hồi.");
+    if (current.status === "REVOKED") return { id: current.id, status: current.status };
+
+    const revokedAt = new Date();
+    const request = await tx.vendorAcquisitionPricingRequest.update({
+      where: { id: current.id },
+      data: { status: "REVOKED", revokedAt },
+      select: { id: true, status: true },
+    });
+    await delivery.emit({
+      eventKey: "vendor_acquisition_pricing_request.revoked",
+      targetType: "VENDOR_ACQUISITION_PRICING_REQUEST",
+      targetId: request.id,
+      actorUserId: input.actorUserId ?? null,
+      payload: { vendorId: current.vendorId, revokedAt: revokedAt.toISOString() },
+    });
+    return request;
+  }, { deferConsumers: input.deferConsumers });
 }
 
 export type SubmitVendorPricingInput = {

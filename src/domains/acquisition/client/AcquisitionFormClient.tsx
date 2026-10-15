@@ -343,7 +343,8 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
     ]);
     const [submitting, setSubmitting] = useState(false);
     const [creatingVendorLink, setCreatingVendorLink] = useState(false);
-    const [vendorLink, setVendorLink] = useState<string | null>(null);
+    const [revokingVendorLink, setRevokingVendorLink] = useState(false);
+    const [vendorLink, setVendorLink] = useState<{ id: string; url: string } | null>(null);
     const submitLockRef = useRef(false);
     const createdAcquisitionIdRef = useRef<string | null>(null);
     const [createdAcquisition, setCreatedAcquisition] = useState<{ id: string; type: string; audienceSegment: "MEN" | "WOMEN" } | null>(null);
@@ -479,15 +480,33 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
             });
             const json = await response.json().catch(() => null);
             if (!response.ok) throw new Error(json?.error || "Không thể tạo link vendor.");
+            const id = String(json?.data?.id ?? "").trim();
             const url = String(json?.data?.url ?? "").trim();
-            if (!url) throw new Error("Hệ thống không trả về link vendor.");
-            setVendorLink(url);
+            if (!id || !url) throw new Error("Hệ thống không trả về link vendor.");
+            setVendorLink({ id, url });
             await navigator.clipboard?.writeText(url).catch(() => undefined);
             notify.success({ title: "Đã tạo link vendor", message: "Link có hiệu lực 7 ngày và đã được sao chép." });
         } catch (error) {
             notify.error({ title: "Không thể tạo link vendor", message: getErrorMessage(error, "Có lỗi xảy ra.") });
         } finally {
             setCreatingVendorLink(false);
+        }
+    }
+
+    async function revokeVendorLink() {
+        if (!vendorLink || revokingVendorLink) return;
+        if (!window.confirm("Thu hồi link này? Vendor sẽ không thể mở ảnh hoặc gửi báo giá nữa.")) return;
+        setRevokingVendorLink(true);
+        try {
+            const response = await fetch(`/api/admin/vendor-acquisition-pricing-requests/${vendorLink.id}/revoke`, { method: "POST" });
+            const json = await response.json().catch(() => null);
+            if (!response.ok) throw new Error(json?.error || "Không thể thu hồi link vendor.");
+            setVendorLink(null);
+            notify.success({ title: "Đã thu hồi link vendor", message: "Bạn có thể tạo một link mới nếu cần." });
+        } catch (error) {
+            notify.error({ title: "Không thể thu hồi link vendor", message: getErrorMessage(error, "Có lỗi xảy ra.") });
+        } finally {
+            setRevokingVendorLink(false);
         }
     }
 
@@ -900,8 +919,11 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                         {vendorLink ? (
                             <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3">
                                 <p className="text-xs font-semibold text-emerald-800">Link vendor đã sẵn sàng</p>
-                                <input readOnly value={vendorLink} className="mt-2 h-9 w-full rounded border border-emerald-200 bg-white px-2 text-xs text-slate-700" />
-                                <button type="button" onClick={() => navigator.clipboard?.writeText(vendorLink)} className="mt-2 text-xs font-semibold text-emerald-700 hover:text-emerald-900">Sao chép lại link</button>
+                                <input readOnly value={vendorLink.url} className="mt-2 h-9 w-full rounded border border-emerald-200 bg-white px-2 text-xs text-slate-700" />
+                                <div className="mt-2 flex items-center justify-between gap-3">
+                                    <button type="button" onClick={() => navigator.clipboard?.writeText(vendorLink.url)} className="text-xs font-semibold text-emerald-700 hover:text-emerald-900">Sao chép lại link</button>
+                                    <button type="button" disabled={revokingVendorLink} onClick={() => void revokeVendorLink()} className="text-xs font-semibold text-rose-600 hover:text-rose-800 disabled:opacity-50">{revokingVendorLink ? "Đang thu hồi…" : "Thu hồi link"}</button>
+                                </div>
                             </div>
                         ) : null}
 

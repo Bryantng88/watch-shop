@@ -6,7 +6,7 @@ import { submitVendorPricingRequest } from "@/domains/acquisition/server";
 const BodySchema = z.object({
   items: z.array(z.object({
     id: z.string().min(1),
-    unitCost: z.number().positive().max(999_999_999_999),
+    unitCost: z.number().int().positive().max(9_999_999_999),
     vendorNote: z.string().max(500).nullish(),
   })).min(1).max(100),
 });

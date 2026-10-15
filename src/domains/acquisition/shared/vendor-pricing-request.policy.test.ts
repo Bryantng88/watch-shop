@@ -17,6 +17,8 @@ test("vendor pricing submission rejects missing, duplicate, and non-positive row
   assert.throws(() => resolveVendorPricingSubmission(request, [{ id: "watch-a", unitCost: 1 }]));
   assert.throws(() => resolveVendorPricingSubmission(request, [{ id: "watch-a", unitCost: 1 }, { id: "watch-a", unitCost: 2 }]));
   assert.throws(() => resolveVendorPricingSubmission(request, [{ id: "watch-a", unitCost: 1 }, { id: "watch-b", unitCost: 0 }]));
+  assert.throws(() => resolveVendorPricingSubmission(request, [{ id: "watch-a", unitCost: 1.5 }, { id: "watch-b", unitCost: 2 }]));
+  assert.throws(() => resolveVendorPricingSubmission(request, [{ id: "watch-a", unitCost: 10_000_000_000 }, { id: "watch-b", unitCost: 2 }]));
 });
 
 test("open request is exposed as expired after its deadline", () => {

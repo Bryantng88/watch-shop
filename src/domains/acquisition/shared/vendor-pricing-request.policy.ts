@@ -1,6 +1,8 @@
 export type VendorPricingRequestItem = { id: string; title: string };
 export type VendorPricingResponseItem = { id: string; unitCost: number; vendorNote?: string | null };
 
+const MAX_VND_UNIT_COST = 9_999_999_999;
+
 export function resolveVendorPricingSubmission(
   requestItems: VendorPricingRequestItem[],
   responseItems: VendorPricingResponseItem[],
@@ -16,7 +18,7 @@ export function resolveVendorPricingSubmission(
 
   const prices = requestItems.map((item) => {
     const value = Number(responses.get(item.id)?.unitCost);
-    if (!Number.isFinite(value) || value <= 0) {
+    if (!Number.isSafeInteger(value) || value <= 0 || value > MAX_VND_UNIT_COST) {
       throw new Error(`Vui lòng nhập giá hợp lệ cho ${item.title}.`);
     }
     return value;
