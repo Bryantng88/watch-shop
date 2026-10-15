@@ -84,6 +84,9 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
         if (/\/cancel$/.test(pathname)) return anyOf(PERMISSIONS.ACQUISITION_DELETE_ALL, PERMISSIONS.WATCH_ACQUISITION_DELETE, PERMISSIONS.ACCESSORY_ACQUISITION_DELETE);
         return anyOf(PERMISSIONS.ACQUISITION_UPDATE_ALL, PERMISSIONS.WATCH_ACQUISITION_UPDATE, PERMISSIONS.ACCESSORY_ACQUISITION_UPDATE);
     }
+    if (/^\/api\/admin\/vendor-acquisition-pricing-requests(\/|$)/.test(pathname)) {
+        return anyOf(PERMISSIONS.ACQUISITION_CREATE_ALL, PERMISSIONS.WATCH_ACQUISITION_CREATE);
+    }
 
     if (/^\/api\/admin\/orders(\/|$)/.test(pathname)) {
         if (/\/quick-form$/.test(pathname)) return anyOf(PERMISSIONS.ORDER_CREATE);

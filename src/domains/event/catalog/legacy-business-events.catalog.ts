@@ -24,6 +24,27 @@ export const LEGACY_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
     knownConsumers: ["timeline", "projection"],
   }),
   defineBusinessEventContract({
+    key: "vendor_acquisition_pricing_request.created",
+    label: "Vendor acquisition pricing request created",
+    targetType: "VENDOR_ACQUISITION_PRICING_REQUEST",
+    group: "Acquisition",
+    knownConsumers: ["timeline"],
+  }),
+  defineBusinessEventContract({
+    key: "vendor_acquisition_pricing_request.submitted",
+    label: "Vendor acquisition pricing request submitted",
+    targetType: "VENDOR_ACQUISITION_PRICING_REQUEST",
+    group: "Acquisition",
+    knownConsumers: ["timeline", "notification"],
+  }),
+  defineBusinessEventContract({
+    key: "vendor_acquisition_pricing_request.revoked",
+    label: "Vendor acquisition pricing request revoked",
+    targetType: "VENDOR_ACQUISITION_PRICING_REQUEST",
+    group: "Acquisition",
+    knownConsumers: ["timeline"],
+  }),
+  defineBusinessEventContract({
     key: "acquisition.updated",
     label: "Acquisition updated",
     targetType: "ACQUISITION",
