@@ -22,6 +22,7 @@ export type BusinessEventTargetType =
   | "TASK"
   | "TASK_ITEM"
   | "PURCHASE_REQUEST"
+  | "VENDOR_ACQUISITION_PRICING_REQUEST"
   | "GENERAL";
 
 export type BusinessEventLifecycle = "ACTIVE" | "DRAFT" | "DEPRECATED";
