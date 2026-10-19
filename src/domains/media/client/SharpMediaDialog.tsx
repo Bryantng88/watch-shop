@@ -5,6 +5,7 @@ import { Check, Loader2, RotateCcw, Sparkles, X, ZoomIn, ZoomOut } from "lucide-
 
 import type { PickedMediaItem } from "@/components/media/MediaPickerMulti";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
+import { resolveSharpBatchSelection } from "./sharp-batch-selection";
 import { useSharpLivePreview } from "./useSharpLivePreview";
 
 type Preset = {
@@ -91,16 +92,19 @@ export default function SharpMediaDialog({
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [largePreview]);
 
-  const completed = Object.values(states).filter((state) => state.status === "done").length;
+  const batchSelection = resolveSharpBatchSelection(selected, states);
+  const { selectedKeys, allSelectedReady } = batchSelection;
+  const completed = batchSelection.readyKeys.length;
   const activeImage = images.find((item) => item.key === activeKey) ?? null;
   const activeState = activeKey ? states[activeKey] : undefined;
   const activePreviewKey = activeState?.result?.storageKey ?? activeImage?.key;
   const activePreviewSrc = activePreviewKey ? resolveMediaPreviewSrc(activePreviewKey) : null;
-  const exactPreviewUrl = processUrl.includes("/watches/") ? `${processUrl}/preview` : null;
+  const exactPreviewUrl = `${processUrl}/preview`;
   const livePreview = useSharpLivePreview({
     enabled: Boolean(open && activeKey && exactPreviewUrl && !running),
     url: exactPreviewUrl,
     body: { storageKey: activeKey, preset },
+    delay: 900,
   });
   const renderedPreviewSrc = livePreview.src || activePreviewSrc;
 
@@ -171,9 +175,14 @@ export default function SharpMediaDialog({
   };
 
   const apply = async () => {
+    if (!allSelectedReady) {
+      window.alert(`Còn ${selectedKeys.length - completed} ảnh đã chọn chưa xử lý thành công. Hãy xử lý hoặc bỏ chọn các ảnh đó trước khi áp dụng.`);
+      return;
+    }
     const replacements = new Map<string, PickedMediaItem>();
-    for (const [sourceKey, state] of Object.entries(states)) {
-      if (state.status !== "done" || !state.result) continue;
+    for (const sourceKey of selectedKeys) {
+      const state = states[sourceKey];
+      if (!state || state.status !== "done" || !state.result) continue;
       replacements.set(sourceKey, {
         key: state.result.storageKey,
         url: resolveMediaPreviewSrc(state.result.storageKey) || null,
@@ -461,11 +470,11 @@ export default function SharpMediaDialog({
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-6 py-4">
-          <span className="text-sm text-slate-500">{running ? "Đang xử lý…" : completed ? `${completed} ảnh sẵn sàng áp dụng` : "Chưa tạo preview"}</span>
+          <span className="text-sm text-slate-500">{running ? "Đang xử lý…" : selected.size ? `${completed}/${selected.size} ảnh đã chọn sẵn sàng áp dụng` : "Chưa chọn ảnh"}</span>
           <div className="flex gap-2">
             <button type="button" onClick={onClose} disabled={running} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-40">Đóng</button>
             <button type="button" onClick={() => void run()} disabled={running || selected.size === 0} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"><Sparkles className="h-4 w-4" />{running ? "Đang xử lý" : "Tạo preview Sharp"}</button>
-            <button type="button" onClick={() => void apply()} disabled={running || applying || completed === 0} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">{applying ? "Đang áp dụng…" : applyLabel}</button>
+            <button type="button" onClick={() => void apply()} disabled={running || applying || !allSelectedReady} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">{applying ? "Đang áp dụng…" : applyLabel}</button>
           </div>
         </div>
       </div>
