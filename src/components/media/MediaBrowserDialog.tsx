@@ -26,6 +26,7 @@ export type SharedMediaProfile =
 export type SharedMediaItem = {
     key: string;
     signedUrl?: string | null;
+    thumbnailUrl?: string | null;
 };
 
 type FolderItem = {
@@ -42,6 +43,7 @@ type ContextImage = {
 type BrowseFilePayload = {
     key?: unknown;
     url?: unknown;
+    thumbnailUrl?: unknown;
 };
 type Props = {
     open: boolean;
@@ -178,6 +180,9 @@ export default function MediaBrowserDialog({
     );
     const [nextCursor, setNextCursor] = React.useState<string | null>(null);
     const [hasMore, setHasMore] = React.useState(false);
+    const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
+    const loadMoreSentinelRef = React.useRef<HTMLDivElement | null>(null);
+    const browseRequestRef = React.useRef<AbortController | null>(null);
     const [recyclePending, setRecyclePending] = React.useState(false);
     const rootPrefix = React.useMemo(
         () => getRootPrefix(profile, audienceSegment),
@@ -264,6 +269,10 @@ export default function MediaBrowserDialog({
 
     const loadItems = React.useCallback(
         async (mode: "reset" | "more" = "reset", cursor?: string | null) => {
+            if (mode === "more" && browseRequestRef.current) return;
+            if (mode === "reset") browseRequestRef.current?.abort();
+            const controller = new AbortController();
+            browseRequestRef.current = controller;
             try {
                 setLoading(true);
                 setError(null);
@@ -271,7 +280,7 @@ export default function MediaBrowserDialog({
                 const qs = new URLSearchParams({
                     profile,
                     prefix,
-                    maxKeys: "1000",
+                    maxKeys: "120",
                     _t: String(Date.now()),
                 });
                 if (audienceSegment) qs.set("segment", audienceSegment);
@@ -282,6 +291,7 @@ export default function MediaBrowserDialog({
 
                 const res = await fetch(`/api/media/browse?${qs.toString()}`, {
                     cache: "no-store",
+                    signal: controller.signal,
                 });
 
                 const json = await res.json().catch(() => ({}));
@@ -302,6 +312,10 @@ export default function MediaBrowserDialog({
                     ? json.files.map((item: BrowseFilePayload) => ({
                         key: String(item?.key ?? ""),
                         signedUrl: typeof item?.url === "string" ? item.url : null,
+                        thumbnailUrl:
+                            typeof item?.thumbnailUrl === "string"
+                                ? item.thumbnailUrl
+                                : null,
                     }))
                     : [];
                 if (mode === "more") {
@@ -331,11 +345,15 @@ export default function MediaBrowserDialog({
                 setNextCursor(json?.nextCursor ?? null);
                 setHasMore(Boolean(json?.hasMore));
             } catch (e: unknown) {
+                if (controller.signal.aborted) return;
                 setError(
                     e instanceof Error ? e.message : "Không tải được thư viện ảnh"
                 );
             } finally {
-                setLoading(false);
+                if (browseRequestRef.current === controller) {
+                    browseRequestRef.current = null;
+                    setLoading(false);
+                }
             }
         },
         [audienceSegment, profile, prefix]
@@ -345,6 +363,22 @@ export default function MediaBrowserDialog({
         if (!open) return;
         loadItems("reset");
     }, [open, prefix, profile, loadItems]);
+
+    React.useEffect(() => {
+        const sentinel = loadMoreSentinelRef.current;
+        if (!open || !sentinel || !hasMore || !nextCursor || loading) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries.some((entry) => entry.isIntersecting)) {
+                    loadItems("more", nextCursor);
+                }
+            },
+            { root: scrollContainerRef.current, rootMargin: "240px 0px" },
+        );
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, [hasMore, loadItems, loading, nextCursor, open]);
 
     function toggleKey(fileKey: string) {
         if (disabledKeySet.has(fileKey)) return;
@@ -591,7 +625,7 @@ export default function MediaBrowserDialog({
                     </div>
                 </div>
 
-                <div className="min-h-[320px] flex-1 overflow-auto p-5">
+                <div ref={scrollContainerRef} className="min-h-[320px] flex-1 overflow-auto p-5">
                     {initialLoading ? (
                         <div className="flex h-[240px] items-center justify-center text-slate-500">
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -688,13 +722,26 @@ export default function MediaBrowserDialog({
                                                 >
                                                     <div className="aspect-square bg-slate-100">
                                                         {item.signedUrl ? (
+                                                            // The NAS browser uses its own cached WebP derivative and fallback URL.
+                                                            // eslint-disable-next-line @next/next/no-img-element
                                                             <img
                                                                 src={
-                                                                    item.signedUrl
+                                                                    item.thumbnailUrl ?? item.signedUrl
                                                                 }
                                                                 alt={item.key}
                                                                 loading="lazy"
                                                                 decoding="async"
+                                                                width={320}
+                                                                height={320}
+                                                                onError={(event) => {
+                                                                    if (
+                                                                        item.signedUrl &&
+                                                                        event.currentTarget.dataset.fallback !== "original"
+                                                                    ) {
+                                                                        event.currentTarget.dataset.fallback = "original";
+                                                                        event.currentTarget.src = item.signedUrl;
+                                                                    }
+                                                                }}
                                                                 className="h-full w-full object-cover"
                                                             />
                                                         ) : (
@@ -733,7 +780,7 @@ export default function MediaBrowserDialog({
                                     </div>
 
                                     {hasMore ? (
-                                        <div className="flex justify-center pt-4">
+                                        <div ref={loadMoreSentinelRef} className="flex justify-center pt-4">
                                             <button
                                                 type="button"
                                                 onClick={() =>
