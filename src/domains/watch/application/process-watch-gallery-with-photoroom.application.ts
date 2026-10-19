@@ -1,5 +1,5 @@
 import { MediaRole } from "@prisma/client";
-import sharp from "sharp";
+import sharp, { type OverlayOptions } from "sharp";
 
 import {
   mediaRecipeHash,
@@ -49,7 +49,7 @@ async function composeGalleryImage(original: Uint8Array, cutout: Uint8Array, pre
     subject = subject.linear(1 + strength * 0.45, strength * 12).sharpen({ sigma: 0.25 + strength });
   }
   const adjustedSubject = await subject.png().toBuffer();
-  const layers: sharp.OverlayOptions[] = [];
+  const layers: OverlayOptions[] = [];
   if (preset.shadowOpacity > 0) {
     const alpha = await sharp(adjustedSubject)
       .extractChannel("alpha")
