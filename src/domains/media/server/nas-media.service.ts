@@ -10,6 +10,7 @@ import {
     normalizeKey,
     sanitizeBrowsePrefix,
 } from "@/server/lib/product-image-storage";
+import { nasBrowserThumbnailUrl } from "./nas-media-thumbnail.service";
 
 const IMAGE_EXT_RE = /\.(jpe?g|png|webp|gif|avif|bmp)$/i;
 
@@ -136,6 +137,10 @@ export async function browseMediaFolder(input: {
             sizeBytes: item.sizeBytes,
             lastModified: item.lastModified,
             url: item.url,
+            thumbnailUrl: nasBrowserThumbnailUrl({
+                key: item.key,
+                version: item.etag || String(item.lastModified || ""),
+            }),
         }));
 
     return {
