@@ -23,7 +23,6 @@ import {
   ChevronRight,
   BookOpen,
   CreditCard,
-  Filter,
   Grid2X2,
   GripVertical,
   Info,
@@ -36,11 +35,11 @@ import {
   Receipt,
   Send,
   SlidersHorizontal,
-  Workflow,
   XCircle,
   Zap,
 } from "lucide-react";
 import AdminBreadcrumbs from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
+import { operationalDomainPresentation, operationalStageIcon, operationalStagePresentation } from "@/domains/shared/ui/signals";
 import {
   loadSpaceSharingAction,
   updateSpaceSharingAction,
@@ -308,21 +307,21 @@ function stageVisual(stageKey: string | null | undefined) {
   const normalized = normalizeStageKey(stageKey);
   if (normalized.includes("photo")) {
     return {
-      Icon: Camera,
+      Icon: operationalStageIcon("PHOTOGRAPHY"),
       frame: "bg-violet-50 text-violet-700 ring-violet-100",
       description: "Chuẩn bị và chụp ảnh sản phẩm",
     };
   }
   if (normalized.includes("media-processing")) {
     return {
-      Icon: SlidersHorizontal,
+      Icon: operationalStageIcon("MEDIA_PROCESSING"),
       frame: "bg-sky-50 text-sky-700 ring-sky-100",
       description: "Chỉnh sửa và xử lý hình ảnh",
     };
   }
   if (normalized.includes("inspect")) {
     return {
-      Icon: Filter,
+      Icon: operationalStageIcon("INSPECT"),
       frame: "bg-violet-50 text-violet-700 ring-violet-100",
       description: "Tiếp nhận và kiểm tra lỗi kỹ thuật",
     };
@@ -1750,6 +1749,7 @@ export default function OperationCoordinationWorkspace({
   const canShowMediaBoard = isMediaFlowMode && Boolean(asyncMediaBoard);
   const isMediaBoardView = workTicketView === "MEDIA_BOARD" && canShowMediaBoard;
   const isOperationalBoardView = isTechnicalIssueBoardView || isMediaBoardView;
+  const HeaderDomainIcon = operationalDomainPresentation(activeCoreFlow?.key ?? activeViewMode?.key).icon;
   const technicalIssueBoardItems = useMemo(
     () => asyncTechnicalIssueBoard?.items ?? [],
     [asyncTechnicalIssueBoard?.items],
@@ -1888,7 +1888,7 @@ export default function OperationCoordinationWorkspace({
             : data.contextLabel
       }
       headerVariant="compact"
-      headerIcon={<Workflow className="h-5 w-5" />}
+      headerIcon={<HeaderDomainIcon className="h-5 w-5" />}
       meta={
         <span className="font-medium text-slate-600">Vận hành</span>
       }
@@ -3394,10 +3394,10 @@ function MediaBoardColumn({
 }
 
 function mediaStageAppearance(stage: MediaBoardStage) {
-  if (stage === "PHOTOGRAPHY") return { icon: Camera, header: "border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50/60", columnBorder: "border-amber-100", iconColor: "text-amber-600", accent: "bg-amber-400", badge: "bg-amber-50 text-amber-700 ring-amber-200", empty: "border-amber-200 bg-amber-50/30 text-amber-500" };
-  if (stage === "MEDIA_PROCESSING") return { icon: Monitor, header: "border-violet-100 bg-gradient-to-r from-violet-50 to-fuchsia-50/50", columnBorder: "border-violet-100", iconColor: "text-violet-600", accent: "bg-violet-500", badge: "bg-violet-50 text-violet-700 ring-violet-200", empty: "border-violet-200 bg-violet-50/30 text-violet-500" };
-  if (stage === "PUBLISH") return { icon: Send, header: "border-sky-100 bg-gradient-to-r from-sky-50 to-cyan-50/50", columnBorder: "border-sky-100", iconColor: "text-sky-600", accent: "bg-sky-500", badge: "bg-sky-50 text-sky-700 ring-sky-200", empty: "border-sky-200 bg-sky-50/30 text-sky-500" };
-  return { icon: CheckCircle2, header: "border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50/50", columnBorder: "border-emerald-100", iconColor: "text-emerald-600", accent: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700 ring-emerald-200", empty: "border-emerald-200 bg-emerald-50/30 text-emerald-500" };
+  if (stage === "PHOTOGRAPHY") return { icon: operationalStageIcon(stage), header: "border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50/60", columnBorder: "border-amber-100", iconColor: "text-amber-600", accent: "bg-amber-400", badge: "bg-amber-50 text-amber-700 ring-amber-200", empty: "border-amber-200 bg-amber-50/30 text-amber-500" };
+  if (stage === "MEDIA_PROCESSING") return { icon: operationalStageIcon(stage), header: "border-violet-100 bg-gradient-to-r from-violet-50 to-fuchsia-50/50", columnBorder: "border-violet-100", iconColor: "text-violet-600", accent: "bg-violet-500", badge: "bg-violet-50 text-violet-700 ring-violet-200", empty: "border-violet-200 bg-violet-50/30 text-violet-500" };
+  if (stage === "PUBLISH") return { icon: operationalStageIcon(stage), header: "border-sky-100 bg-gradient-to-r from-sky-50 to-cyan-50/50", columnBorder: "border-sky-100", iconColor: "text-sky-600", accent: "bg-sky-500", badge: "bg-sky-50 text-sky-700 ring-sky-200", empty: "border-sky-200 bg-sky-50/30 text-sky-500" };
+  return { icon: operationalStageIcon(stage), header: "border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50/50", columnBorder: "border-emerald-100", iconColor: "text-emerald-600", accent: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700 ring-emerald-200", empty: "border-emerald-200 bg-emerald-50/30 text-emerald-500" };
 }
 
 function DraggableMediaBoardCard({ item, pending, onPreview }: { item: MediaBoardItem; pending: boolean; onPreview: () => void }) {
@@ -4096,14 +4096,7 @@ function TechnicalIssueBoardStageIcon({
 }: {
   stage: TechnicalIssueBoardStage;
 }) {
-  const Icon =
-    stage === "INSPECT"
-      ? Inbox
-      : stage === "READY"
-        ? CalendarClock
-        : stage === "PROCESSING"
-          ? LoaderCircle
-          : CheckCircle2;
+  const Icon = operationalStageIcon(stage);
 
   return (
     <SoftIconBadge icon={Icon} />
@@ -4127,10 +4120,10 @@ function TechnicalIssueBoardControlStrip({
   visibleSummary: ReturnType<typeof technicalBoardSummary>;
 }) {
   const segments = [
-    { key: "INSPECT", label: "Kiểm tra", value: visibleSummary.stageCounts.INSPECT, className: "bg-blue-500" },
-    { key: "READY", label: "Chờ xử lý", value: visibleSummary.stageCounts.READY, className: "bg-violet-500" },
-    { key: "PROCESSING", label: "Xử lý", value: visibleSummary.stageCounts.PROCESSING, className: "bg-amber-500" },
-    { key: "DONE", label: "Done", value: visibleSummary.stageCounts.DONE, className: "bg-emerald-500" },
+    { key: "INSPECT", label: "Kiểm tra", value: visibleSummary.stageCounts.INSPECT, className: operationalStagePresentation("INSPECT").barClassName },
+    { key: "READY", label: "Chờ xử lý", value: visibleSummary.stageCounts.READY, className: operationalStagePresentation("READY").barClassName },
+    { key: "PROCESSING", label: "Xử lý", value: visibleSummary.stageCounts.PROCESSING, className: operationalStagePresentation("PROCESSING").barClassName },
+    { key: "DONE", label: "Done", value: visibleSummary.stageCounts.DONE, className: operationalStagePresentation("DONE").barClassName },
   ];
   return (
     <div className="flex h-11 min-w-[420px] shrink-0 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/70 px-3">

@@ -1,12 +1,13 @@
 "use client";
 
-import { Bell, Search, LogOut } from "lucide-react";
+import { ArrowLeft, Bell, Search, LogOut } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useNotifications } from "../__hooks/useNotifications";
 import type { AdminNotificationItem } from "../__hooks/useNotifications";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
+import { useAdminNavigationHistory } from "@/domains/shared/ui/navigation/AdminNavigationHistory";
 
 type AdminTopbarProps = {
     title?: string;
@@ -82,6 +83,7 @@ export default function AdminTopbar({
     const [openNotify, setOpenNotify] = useState(false);
     const boxRef = useRef<HTMLDivElement | null>(null);
     const router = useRouter();
+    const { canGoBack, goBack } = useAdminNavigationHistory();
 
     const {
         items,
@@ -109,6 +111,17 @@ export default function AdminTopbar({
     return (
         <header className="sticky top-0 z-40 shrink-0 border-b bg-white">
             <div className="mx-auto flex items-center gap-3 px-4 py-3">
+                {canGoBack ? (
+                    <button
+                        type="button"
+                        onClick={goBack}
+                        className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
+                        aria-label="Quay lại trang trước"
+                    >
+                        <ArrowLeft size={16} />
+                        <span className="hidden sm:inline">Quay lại</span>
+                    </button>
+                ) : null}
                 <h1 className="text-lg font-semibold">{title}</h1>
 
                 <div className="ml-auto flex items-center gap-2">

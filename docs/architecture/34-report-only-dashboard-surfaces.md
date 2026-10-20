@@ -34,9 +34,17 @@ rolling-deploy adapter and must delegate directly to the canonical gateway.
 
 ## Report ownership
 
-`/admin/reports/overview` is the consolidated summary surface. The historical
-`/admin/dashboard` URL redirects there. `DASHBOARD_VIEW` remains the permission
-for this report until a dedicated report permission migration is approved.
+`/admin/reports/overview` is the consolidated KPI and historical summary
+surface. `/admin/dashboard` is the operational home: it may show canonical
+open-work counters, actionable outstanding receivable/payable balances, and
+links into existing filtered queues. Those balances must explain the number of
+affected records and lead to the corresponding operational list. Historical
+financial trends, decorative charts, profitability analysis, and duplicated
+business lists remain report-only concerns. `DASHBOARD_VIEW` remains the
+permission for both surfaces until a dedicated home permission is approved.
+
+Operational-home code lives in `src/domains/admin-home`; it must consume the
+canonical list/board query gateways rather than the report summary projection.
 
 The `admin-dashboard-summary` projection and `src/domains/dashboard` are report
 infrastructure and are intentionally retained. They must not be imported by an

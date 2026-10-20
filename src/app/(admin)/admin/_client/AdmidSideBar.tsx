@@ -65,6 +65,13 @@ const NAV: NavEntry[] = [
         children: [
             {
                 type: "item",
+                href: "/admin/dashboard",
+                label: "Trang chủ",
+                icon: LayoutDashboard,
+                permission: PERMISSIONS.DASHBOARD_VIEW,
+            },
+            {
+                type: "item",
                 href: "/admin/watches",
                 label: "Sản phẩm",
                 icon: Package,
@@ -109,7 +116,7 @@ const NAV: NavEntry[] = [
                 type: "item",
                 href: "/admin/reports/overview",
                 label: "Tổng quan",
-                icon: LayoutDashboard,
+                icon: BarChart3,
                 permission: PERMISSIONS.DASHBOARD_VIEW,
             },
             {

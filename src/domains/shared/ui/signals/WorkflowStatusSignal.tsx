@@ -3,6 +3,7 @@ import {
   type VisualStatusIcon,
   type VisualStatusTone,
 } from "./VisualStatusSignal";
+import { operationalStagePresentation } from "./operational-stage-presentation";
 
 type WorkflowStatusPresentation = {
   label: string;
@@ -27,7 +28,7 @@ function workflowStatusPresentation(
     return {
       label: displayLabel || "Đã hủy",
       detail: "Đã hủy",
-      tone: "rose",
+      tone: operationalStagePresentation(normalized).tone,
       icon: "warning",
     };
   }
@@ -36,7 +37,7 @@ function workflowStatusPresentation(
     return {
       label: displayLabel || "Đã tạo đơn nháp",
       detail: "Đã tạo đơn nháp",
-      tone: "emerald",
+      tone: operationalStagePresentation(normalized).tone,
       icon: completedIcon,
     };
   }
@@ -45,7 +46,7 @@ function workflowStatusPresentation(
     return {
       label: "Đã hoàn tất",
       detail: "Đã hoàn tất",
-      tone: "emerald",
+      tone: operationalStagePresentation(normalized).tone,
       icon: completedIcon,
     };
   }
@@ -63,7 +64,7 @@ function workflowStatusPresentation(
     return {
       label: "Cần xử lý lại",
       detail: "Cần xử lý lại",
-      tone: "amber",
+      tone: operationalStagePresentation(normalized).tone,
       icon: "warning",
     };
   }
@@ -72,7 +73,7 @@ function workflowStatusPresentation(
     return {
       label: "Chờ duyệt",
       detail: "Đang chờ duyệt",
-      tone: "blue",
+      tone: operationalStagePresentation(normalized).tone,
       icon: "waiting",
     };
   }
@@ -81,16 +82,25 @@ function workflowStatusPresentation(
     return {
       label: "Đang xử lý",
       detail: "Đang xử lý",
-      tone: "blue",
+      tone: operationalStagePresentation(normalized).tone,
       icon: "waiting",
     };
   }
 
-  if (["NEW", "TODO", "PENDING", "READY"].includes(normalized)) {
+  if (normalized === "READY") {
+    return {
+      label: displayLabel || "Sẵn sàng",
+      detail: "Sẵn sàng xử lý",
+      tone: operationalStagePresentation(normalized).tone,
+      icon: "neutral",
+    };
+  }
+
+  if (["NEW", "TODO", "PENDING"].includes(normalized)) {
     return {
       label: "Chưa xử lý",
       detail: "Chờ bắt đầu",
-      tone: "slate",
+      tone: operationalStagePresentation(normalized).tone,
       icon: "neutral",
     };
   }
