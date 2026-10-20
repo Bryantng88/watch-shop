@@ -6,7 +6,6 @@ import { ensureProjectionReady } from "@/domains/projection/server/projection-re
 import type {
   OperationsDashboardAttentionItem,
   OperationsDashboardData,
-  OperationsDashboardMetric,
   OperationsDashboardQueue,
 } from "../shared/operations-dashboard.types";
 
@@ -24,7 +23,7 @@ function ageLabel(days: number) {
   return `${days} ngày`;
 }
 
-export async function getOperationsDashboardApplication(): Promise<OperationsDashboardData> {
+export async function getOperationsDashboardApplication(input: { canAssignPurchaseRequests?: boolean } = {}): Promise<OperationsDashboardData> {
   await Promise.all([
     ensureProjectionReady(prisma, "order-list"),
     ensureProjectionReady(prisma, "media-operation-board"),
@@ -32,10 +31,8 @@ export async function getOperationsDashboardApplication(): Promise<OperationsDas
   ]);
 
   const now = new Date();
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 86_400_000);
-  const [orders, processingOrders, purchaseRequestCounts, purchaseRequests, overdueRequestCount, unassignedRequestCount, media, technical, completedOrders, acquisitionPayables] = await Promise.all([
+  const [orders, purchaseRequestCounts, purchaseRequests, overdueRequestCount, unassignedRequestCount, media, technical] = await Promise.all([
     queryOrderListProjection(prisma, { view: "all", subFilter: "", paymentType: "", sort: "updatedDesc", page: 1, pageSize: 1 }),
-    queryOrderListProjection(prisma, { view: "processing", subFilter: "", paymentType: "", sort: "updatedDesc", page: 1, pageSize: 100 }),
     prisma.purchaseRequest.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.purchaseRequest.findMany({
       where: { status: { in: ["WAITING", "PROCESSING"] } },
@@ -47,12 +44,6 @@ export async function getOperationsDashboardApplication(): Promise<OperationsDas
     prisma.purchaseRequest.count({ where: { status: { in: ["WAITING", "PROCESSING"] }, assignedUserId: null } }),
     queryMediaOperationBoardProjection(prisma, { page: 1, pageSize: 100 }),
     listTechnicalIssueBoardWorkspaceProjection(prisma, { page: 1, pageSize: 100 }),
-    prisma.order.count({ where: { status: "COMPLETED", updatedAt: { gte: sevenDaysAgo } } }),
-    prisma.payment.groupBy({
-      by: ["acquisition_id"],
-      where: { type: "ACQUISITION", direction: "OUT", status: "UNPAID", acquisition_id: { not: null } },
-      _sum: { amount: true },
-    }),
   ]);
 
   const mediaActiveRows = media.rows.filter((row) => row.stage !== "DONE");
@@ -135,41 +126,21 @@ export async function getOperationsDashboardApplication(): Promise<OperationsDas
     },
   ];
 
-  const receivable = processingOrders.items.reduce((sum, order) => sum + Math.max(0, Number(order.remainingAmount ?? 0)), 0);
-  const receivableOrderCount = processingOrders.items.filter((order) => Number(order.remainingAmount ?? 0) > 0).length;
-  const payable = acquisitionPayables.reduce((sum, row) => sum + Number(row._sum.amount ?? 0), 0);
-  const payableAcquisitionCount = acquisitionPayables.length;
-  const metrics: OperationsDashboardMetric[] = [
-    { key: "receivable", label: "Tiền còn phải thu", value: receivable, valueType: "currency", helper: `${receivableOrderCount} đơn còn số dư cần đối soát`, href: "/admin/orders?view=processing&subFilter=remaining_payment", tone: "rose" },
-    { key: "payable", label: "Tiền cần phải trả", value: payable, valueType: "currency", helper: `${payableAcquisitionCount} phiếu nhập chưa thanh toán đủ`, href: "/admin/acquisitions?view=posted", tone: "amber" },
-    { key: "overdue", label: "Follow-up quá hạn", value: overdueRequestCount, valueType: "count", helper: "Yêu cầu khách hàng đã qua lịch hẹn", href: "/admin/coordination/operation?view=purchase-request-operation-flow&flowStage=purchase-request-processing", tone: "amber" },
-    { key: "unassigned", label: "Chưa có người nhận", value: unassignedRequestCount, valueType: "count", helper: "Yêu cầu mua hàng đang mở", href: "/admin/coordination/operation?view=purchase-request-operation-flow&flowStage=purchase-request-waiting", tone: "violet" },
-    { key: "completed", label: "Hoàn tất 7 ngày", value: completedOrders, valueType: "count", helper: "Đơn hàng đã hoàn tất gần đây", href: "/admin/orders?view=completed", tone: "emerald" },
-  ];
-
   const attention: OperationsDashboardAttentionItem[] = [];
   for (const request of overdueRequests.slice(0, 3)) {
     const overdueDays = Math.max(1, ageInDays(request.followUpAt, now));
-    attention.push({ id: `pr-${request.id}`, domain: "PURCHASE_REQUEST", title: request.customerName || "Yêu cầu mua hàng", reference: request.reference, reason: `Follow-up quá hạn ${overdueDays} ngày`, ageLabel: ageLabel(ageInDays(request.updatedAt, now)), ownerLabel: request.assignedUser?.name || "Chưa phân công", actionLabel: "Mở yêu cầu", href: `/admin/coordination/operation?view=purchase-request-operation-flow&flowStage=purchase-request-${String(request.status).toLowerCase()}`, tone: "rose" });
+    const isUnassigned = !request.assignedUserId;
+    attention.push({ id: `pr-${request.id}`, domain: "PURCHASE_REQUEST", title: request.customerName || "Yêu cầu mua hàng", reference: request.reference, reason: `Follow-up quá hạn ${overdueDays} ngày`, ageLabel: ageLabel(ageInDays(request.updatedAt, now)), ownerLabel: request.assignedUser?.name || "Chưa phân công", actionLabel: isUnassigned ? (input.canAssignPurchaseRequests ? "Phân công xử lý" : "Tiếp nhận yêu cầu") : "Tiếp tục xử lý", href: `/admin/coordination/operation?view=purchase-request-operation-flow&flowStage=purchase-request-${String(request.status).toLowerCase()}`, tone: "rose" });
   }
-  for (const item of technical.rows.filter((row) => Number(row.overdueDays ?? 0) > 0).slice(0, 2)) {
+  for (const item of technical.rows.filter((row) => Number(row.overdueDays ?? 0) > 0).sort((a, b) => Number(b.overdueDays ?? 0) - Number(a.overdueDays ?? 0)).slice(0, 2)) {
     attention.push({ id: `technical-${item.id}`, domain: "TECHNICAL", title: item.serviceRequest.productTitle || item.summary, reference: item.serviceRequest.refNo, reason: `Kỹ thuật quá hạn ${item.overdueDays} ngày`, ageLabel: ageLabel(ageInDays(item.updatedAt, now)), ownerLabel: "Chưa phân công", actionLabel: "Kiểm tra kỹ thuật", href: `/admin/coordination/operation?view=technical-issue-flow&flowStage=${item.stage.toLowerCase()}`, tone: "rose" });
   }
-  for (const item of media.rows.filter((row) => row.stage !== "DONE" && ageInDays(row.updatedAt, now) >= 3).slice(0, 3)) {
-    attention.push({ id: `media-${item.id}`, domain: "MEDIA", title: item.title, reference: item.sku, reason: `Không cập nhật ${ageInDays(item.updatedAt, now)} ngày`, ageLabel: ageLabel(ageInDays(item.updatedAt, now)), ownerLabel: "Chưa phân công", actionLabel: item.stage === "MEDIA_PROCESSING" ? "Xử lý ảnh" : "Mở Media", href: `/admin/coordination/operation?view=media-production-flow&flowStage=${item.stage.toLowerCase().replace("_", "-")}`, tone: "amber" });
+  for (const item of media.rows.filter((row) => row.stage !== "DONE" && ageInDays(row.updatedAt, now) >= 3).sort((a, b) => ageInDays(b.updatedAt, now) - ageInDays(a.updatedAt, now)).slice(0, 3)) {
+    attention.push({ id: `media-${item.id}`, domain: "MEDIA", title: item.title, reference: item.sku, reason: `Không cập nhật ${ageInDays(item.updatedAt, now)} ngày`, ageLabel: ageLabel(ageInDays(item.updatedAt, now)), ownerLabel: "Chưa phân công", actionLabel: "Kiểm tra tiến độ", href: `/admin/coordination/operation?view=media-production-flow&flowStage=${item.stage.toLowerCase().replace("_", "-")}`, tone: "amber" });
   }
 
-  const allStages = queues.flatMap((queue) => queue.stages.map((stage) => ({ ...stage, queueLabel: queue.label })));
-  const largestStage = allStages.reduce<(typeof allStages)[number] | null>((largest, stage) => !largest || stage.count > largest.count ? stage : largest, null);
   const totalActive = queues.reduce((sum, queue) => sum + queue.activeCount, 0);
-  const bottleneck = largestStage && largestStage.count > 0 ? {
-    label: largestStage.label,
-    count: largestStage.count,
-    queueLabel: largestStage.queueLabel,
-    href: largestStage.href,
-    share: totalActive > 0 ? Math.round((largestStage.count / totalActive) * 100) : 0,
-  } : null;
 
   const visibleAttention = attention.slice(0, 6);
-  return { generatedAt: now.toISOString(), totalActive, metrics, bottleneck, attention: visibleAttention, priorityAction: visibleAttention[0] ?? null, queues };
+  return { generatedAt: now.toISOString(), totalActive, attention: visibleAttention, priorityAction: visibleAttention[0] ?? null, queues };
 }

@@ -6,7 +6,9 @@ import { PERMISSIONS } from "@/constants/permissions";
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  await requirePermission(PERMISSIONS.DASHBOARD_VIEW);
-  const data = await getOperationsDashboardApplication();
+  const user = await requirePermission(PERMISSIONS.DASHBOARD_VIEW);
+  const data = await getOperationsDashboardApplication({
+    canAssignPurchaseRequests: user.permissions.includes(PERMISSIONS.TASK_MANAGE),
+  });
   return <OperationsDashboard data={data} />;
 }

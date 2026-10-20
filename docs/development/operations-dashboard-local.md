@@ -10,13 +10,18 @@ historical reporting under `/admin/reports/*`.
 Implemented behavior:
 
 - the admin root redirects to the operational dashboard;
-- the hero promotes the highest-priority actionable exception;
+- the light priority banner promotes the highest-priority actionable exception
+  and labels it as the first priority for today;
 - canonical counters cover Orders, Purchase Requests, Media, and Technical;
-- receivable comes from remaining Order balances;
-- payable comes from unpaid outgoing Acquisition payments;
-- queue cards link to the exact stage or warning filter;
+- the four operational queue cards sit directly below the priority banner and
+  link to the exact stage or warning filter;
 - Media highlights not-started work and items quiet for 7/30 days;
-- the backlog panel is an intervention strip, not a cross-domain percentage;
+- stale Media attention is ordered oldest-first and uses `Kiểm tra tiến độ`
+  rather than implying image processing has already started;
+- Purchase Request attention uses `TASK_MANAGE` to choose between assignment
+  and intake-oriented calls to action;
+- the open-work map provides graphical context plus the strongest warning per
+  domain; percentages are item shares, not effort estimates;
 - a non-interactive Personal Work / Google Calendar roadmap strip is present;
 - shared domain icons and stage/status colors are used by the dashboard and
   Coordination surfaces;
@@ -88,16 +93,17 @@ Also verify manually:
 
 - `Của tôi` is disabled because assignee ownership is not normalized across
   Media and Technical. Do not enable a partial or cosmetic filter.
-- Payments do not yet have a canonical due date, so receivable/payable cards
-  cannot honestly split overdue, due-today, and future balances.
+- Financial summary cards were deliberately removed from this operational
+  screen. Financial insight belongs in a dedicated view with canonical due-date
+  semantics rather than competing with daily operational actions.
 - Media insight counts currently consume canonical projection rows; if the
   board grows beyond the query window, add a projection-level aggregate rather
   than increasing UI pagination indefinitely.
 - Personal Work and Google Calendar are roadmap-only; no OAuth, task storage,
   sync, or background jobs are included.
-- The intervention strip currently shows one highest-severity warning per
-  domain. Continue UI iteration from this state rather than reintroducing
-  percentages across unlike work units.
+- The open-work map currently shows one highest-severity warning per domain.
+  Its percentage is only the share of open items; do not interpret it as work
+  effort or staffing capacity.
 
 ## Git hygiene
 

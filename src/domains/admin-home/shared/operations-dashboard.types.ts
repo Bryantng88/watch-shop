@@ -25,16 +25,6 @@ export type OperationsDashboardQueue = {
   stages: OperationsDashboardStage[];
 };
 
-export type OperationsDashboardMetric = {
-  key: "receivable" | "payable" | "overdue" | "unassigned" | "completed";
-  label: string;
-  value: number;
-  valueType: "count" | "currency";
-  helper: string;
-  href: string;
-  tone: DashboardTone;
-};
-
 export type OperationsDashboardAttentionItem = {
   id: string;
   domain: "ORDER" | "PURCHASE_REQUEST" | "MEDIA" | "TECHNICAL";
@@ -48,19 +38,9 @@ export type OperationsDashboardAttentionItem = {
   tone: DashboardTone;
 };
 
-export type OperationsDashboardBottleneck = {
-  label: string;
-  count: number;
-  queueLabel: string;
-  href: string;
-  share: number;
-};
-
 export type OperationsDashboardData = {
   generatedAt: string;
   totalActive: number;
-  metrics: OperationsDashboardMetric[];
-  bottleneck: OperationsDashboardBottleneck | null;
   attention: OperationsDashboardAttentionItem[];
   priorityAction: OperationsDashboardAttentionItem | null;
   queues: OperationsDashboardQueue[];
