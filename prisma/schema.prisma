@@ -2805,6 +2805,7 @@ model TaskItem {
 
   status   TaskStatus   @default(TODO)
   priority TaskPriority @default(MEDIUM)
+  workTypeId String?
   dueAt    DateTime?
 
   assignedToUserId String?
@@ -2832,6 +2833,7 @@ model TaskItem {
   @@index([taskId, status, sortOrder])
   @@index([status])
   @@index([priority])
+  @@index([workTypeId])
   @@index([assignedToUserId])
   @@index([dueAt])
 }

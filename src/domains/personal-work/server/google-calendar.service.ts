@@ -7,6 +7,17 @@ const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_CALENDAR_API = "https://www.googleapis.com/calendar/v3";
 const GOOGLE_CALENDAR_EVENT_SCOPE = "https://www.googleapis.com/auth/calendar.events";
 
+type GoogleCalendarEvent = {
+  id?: string;
+  summary?: string;
+  description?: string;
+  htmlLink?: string;
+  location?: string;
+  status?: string;
+  start?: { dateTime?: string; date?: string };
+  end?: { dateTime?: string; date?: string };
+};
+
 async function googleApiError(response: Response, operation: string) {
   let message = `${operation} failed (${response.status})`;
   try {
@@ -162,6 +173,7 @@ export async function syncPersonalTaskToGoogle(userId: string, taskItemId: strin
     start: { dateTime: start.toISOString(), timeZone: "Asia/Bangkok" },
     end: { dateTime: end.toISOString(), timeZone: "Asia/Bangkok" },
     status: item.status === "CANCELLED" ? "cancelled" : "confirmed",
+    extendedProperties: { private: { watchShopTaskItemId: item.id, source: "WATCH_SHOP_PERSONAL_WORK" } },
   };
   const syncHash = createHash("sha256").update(JSON.stringify(payload)).digest("hex");
   if (existing?.syncHash === syncHash) return existing;
@@ -183,4 +195,47 @@ export async function syncPersonalTaskToGoogle(userId: string, taskItemId: strin
   });
   await prisma.googleCalendarConnection.update({ where: { id: auth.connection.id }, data: { lastSyncedAt: new Date() } });
   return link;
+}
+
+export async function listPersonalGoogleCalendarEvents(userId: string) {
+  const auth = await accessToken(userId);
+  const from = new Date();
+  from.setHours(0, 0, 0, 0);
+  const to = new Date();
+  to.setDate(to.getDate() + 120);
+  const url = new URL(`${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(auth.connection.calendarId)}/events`);
+  url.searchParams.set("singleEvents", "true");
+  url.searchParams.set("orderBy", "startTime");
+  url.searchParams.set("showDeleted", "false");
+  url.searchParams.set("maxResults", "250");
+  url.searchParams.set("timeMin", from.toISOString());
+  url.searchParams.set("timeMax", to.toISOString());
+  const response = await fetch(url, {
+    headers: { authorization: `Bearer ${auth.token}` },
+    cache: "no-store",
+    signal: AbortSignal.timeout(8_000),
+  });
+  if (!response.ok) throw await googleApiError(response, "Google Calendar load");
+  const body = await response.json() as { items?: GoogleCalendarEvent[] };
+  const events = (body.items || []).filter((event) => event.id && event.status !== "cancelled" && (event.start?.dateTime || event.start?.date));
+  const eventIds = events.map((event) => event.id!);
+  const links = eventIds.length
+    ? await prisma.personalTaskCalendarLink.findMany({
+        where: { userId, calendarId: auth.connection.calendarId, eventId: { in: eventIds } },
+        select: { eventId: true, taskItemId: true },
+      })
+    : [];
+  const linkMap = new Map(links.map((link) => [link.eventId, link.taskItemId]));
+  await prisma.googleCalendarConnection.update({ where: { id: auth.connection.id }, data: { lastSyncedAt: new Date() } });
+  return events.map((event) => ({
+    id: event.id!,
+    title: event.summary?.trim() || "(Không có tiêu đề)",
+    description: event.description?.trim() || null,
+    startAt: event.start?.dateTime || event.start?.date || "",
+    endAt: event.end?.dateTime || event.end?.date || null,
+    allDay: Boolean(event.start?.date && !event.start?.dateTime),
+    htmlLink: event.htmlLink || null,
+    location: event.location?.trim() || null,
+    linkedTaskItemId: linkMap.get(event.id!) || null,
+  }));
 }
