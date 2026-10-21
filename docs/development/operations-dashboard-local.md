@@ -22,7 +22,9 @@ Implemented behavior:
   and intake-oriented calls to action;
 - the open-work map provides graphical context plus the strongest warning per
   domain; percentages are item shares, not effort estimates;
-- a non-interactive Personal Work / Google Calendar roadmap strip is present;
+- the Personal Work strip links to `/admin/personal-work`;
+- Personal Work reuses the existing `Task` / `TaskItem` core with `TaskKind.PERSONAL`, supports operational domain tags, due dates, priorities and completion;
+- Google Calendar OAuth tokens are encrypted server-side and each personal task keeps one stable event link to prevent duplicate events;
 - shared domain icons and stage/status colors are used by the dashboard and
   Coordination surfaces;
 - admin navigation remembers the previous admin URL, including query filters.
@@ -38,6 +40,7 @@ npx prisma generate
 npx prisma migrate deploy
 npm run local:seed-admin
 npm run local:seed-operations-dashboard
+npm run local:seed-personal-work
 npm run dev -- --hostname 127.0.0.1 --port 3000
 ```
 
@@ -89,6 +92,31 @@ Also verify manually:
 4. browser Back and the admin back control restore the prior query/filter;
 5. responsive layouts remain readable at laptop and wide desktop widths.
 
+## Google Calendar local configuration
+
+Create a Google OAuth web application and configure this exact callback:
+
+```text
+http://localhost:3000/api/admin/personal-work/google/callback
+```
+
+Provide these values only through the local/production secret channel:
+
+```text
+GOOGLE_CALENDAR_CLIENT_ID
+GOOGLE_CALENDAR_CLIENT_SECRET
+GOOGLE_CALENDAR_TOKEN_KEY
+APP_URL=http://localhost:3000
+```
+
+`GOOGLE_CALENDAR_TOKEN_KEY` must remain stable after deployment because stored
+access and refresh tokens are encrypted with it. Never commit these values.
+
+The initial sync contract is deliberate: the admin is the source of truth and
+explicitly creates or updates one Google event per personal task. Importing
+arbitrary Google events and background reconciliation are deferred until event
+ownership and conflict rules are approved.
+
 ## Known gaps and next decisions
 
 - `Của tôi` is disabled because assignee ownership is not normalized across
@@ -99,8 +127,8 @@ Also verify manually:
 - Media insight counts currently consume canonical projection rows; if the
   board grows beyond the query window, add a projection-level aggregate rather
   than increasing UI pagination indefinitely.
-- Personal Work and Google Calendar are roadmap-only; no OAuth, task storage,
-  sync, or background jobs are included.
+- Google Calendar is explicit outbound sync in this first slice. Background
+  reconciliation and inbound import are not included yet.
 - The open-work map currently shows one highest-severity warning per domain.
   Its percentage is only the share of open items; do not interpret it as work
   effort or staffing capacity.
