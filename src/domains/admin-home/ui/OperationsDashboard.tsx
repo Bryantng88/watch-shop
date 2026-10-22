@@ -1,11 +1,10 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  CalendarDays,
 } from "lucide-react";
 
 import type { DashboardTone, OperationsDashboardData, OperationsDashboardQueue } from "../shared";
-import { ADMIN_OPERATION_CONTENT_CLASS } from "@/domains/shared/ui/layout/admin-content";
+import { ADMIN_UI, AdminPageCanvas, AdminPageHeader } from "@/domains/shared/ui/admin-design-contract";
 import { operationalDomainPresentation, operationalStagePresentation } from "@/domains/shared/ui/signals";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +23,7 @@ const chartColors: Record<OperationsDashboardQueue["key"], string> = {
   "purchase-requests": "#f59e0b",
   media: "#8b5cf6",
   technical: "#3b82f6",
+  "personal-work": "#475569",
 };
 
 function DashboardCharts({ data }: { data: OperationsDashboardData }) {
@@ -39,7 +39,7 @@ function DashboardCharts({ data }: { data: OperationsDashboardData }) {
 
   return (
     <section className="grid gap-4 lg:grid-cols-3">
-      <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <article className="rounded-xl bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.035),0_8px_24px_rgba(15,23,42,0.035)]">
         <div><h2 className="font-bold text-slate-950">Cơ cấu việc đang mở</h2><p className="mt-0.5 text-xs text-slate-500">Tỷ trọng số mục theo từng khu vực nghiệp vụ</p></div>
         <div className="mt-5 flex flex-col items-center gap-5 sm:flex-row sm:justify-center">
           <div className="relative h-36 w-36 shrink-0 rounded-full" style={{ background: donutBackground }}>
@@ -59,7 +59,7 @@ function DashboardCharts({ data }: { data: OperationsDashboardData }) {
         </div>
       </article>
 
-      <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <article className="rounded-xl bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.035),0_8px_24px_rgba(15,23,42,0.035)]">
         <div className="flex items-start justify-between gap-4">
           <div><h2 className="font-bold text-slate-950">Nhịp hoàn tất 7 ngày</h2><p className="mt-0.5 text-xs text-slate-500">Số đơn hàng được hoàn tất theo ngày</p></div>
           <div className="text-right"><div className="text-2xl font-bold tabular-nums text-slate-950">{completionTotal}</div><div className="text-[10px] font-medium uppercase tracking-wide text-slate-400">đơn hoàn tất</div></div>
@@ -76,7 +76,7 @@ function DashboardCharts({ data }: { data: OperationsDashboardData }) {
         <p className="mt-3 text-xs leading-5 text-slate-500">{completionTotal > 0 ? `Trung bình ${(completionTotal / 7).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} đơn/ngày trong tuần gần nhất.` : "Chưa có đơn hàng hoàn tất trong 7 ngày gần nhất."}</p>
       </article>
 
-      <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <article className="rounded-xl bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.035),0_8px_24px_rgba(15,23,42,0.035)]">
         <div><h2 className="font-bold text-slate-950">Phân bố theo giai đoạn</h2><p className="mt-0.5 text-xs text-slate-500">Nhìn nhanh công việc đang tập trung ở bước nào trong từng pipeline</p></div>
         <div className="mt-5 space-y-5">
           {data.queues.map((queue) => {
@@ -99,27 +99,12 @@ function DashboardCharts({ data }: { data: OperationsDashboardData }) {
   );
 }
 
-function PersonalWorkPreviewCard() {
-  return (
-    <Link href="/admin/personal-work" className="group flex flex-col justify-between gap-4 rounded-2xl bg-slate-50 px-5 py-4 ring-1 ring-slate-900/[0.05] transition hover:bg-blue-50/50 hover:ring-blue-200 sm:flex-row sm:items-center">
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700"><CalendarDays className="h-5 w-5" /></div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2"><h2 className="text-sm font-bold text-slate-950">Việc cá nhân & Google Calendar</h2><span className="rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-700 ring-1 ring-blue-100">Mở quản lý</span></div>
-          <p className="mt-1 text-xs leading-5 text-slate-500">Theo dõi việc riêng, lịch hẹn và nhắc việc ngay trong trung tâm điều hành.</p>
-        </div>
-      </div>
-      <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-blue-700">Mở công việc <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" /></span>
-    </Link>
-  );
-}
-
 function QueueCard({ queue }: { queue: OperationsDashboardQueue }) {
   const visual = operationalDomainPresentation(queue.key);
   const Icon = visual.icon;
   return (
-    <article className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex items-start justify-between gap-4 bg-white p-5">
+    <article className="flex flex-col overflow-hidden rounded-xl bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_7px_20px_rgba(15,23,42,0.035)]">
+      <div className="flex items-start justify-between gap-4 p-4">
         <div className="flex min-w-0 items-start gap-3">
           <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", visual.accentClassName)}><Icon className="h-5 w-5" /></div>
           <div className="min-w-0">
@@ -130,7 +115,7 @@ function QueueCard({ queue }: { queue: OperationsDashboardQueue }) {
         <div className={cn("rounded-xl px-3 py-1.5 text-lg font-bold tabular-nums", visual.softClassName)}>{queue.activeCount}</div>
       </div>
       {queue.insights.some((insight) => insight.count > 0) ? (
-        <div className="mx-4 mt-3 rounded-xl bg-amber-50/55 px-3 py-2.5">
+        <div className="mx-3 mt-2 rounded-lg bg-amber-50/65 px-3 py-2">
           <div className="flex flex-wrap gap-x-4 gap-y-1.5">
             {queue.insights.filter((insight) => insight.count > 0).map((insight) => (
               <Link key={insight.key} href={insight.href} className={cn(
@@ -144,9 +129,9 @@ function QueueCard({ queue }: { queue: OperationsDashboardQueue }) {
           </div>
         </div>
       ) : null}
-      <div className="flex-1 divide-y divide-slate-100 px-4">
+      <div className="flex-1 divide-y divide-slate-100 px-3">
         {queue.stages.map((stage) => (
-          <Link key={stage.key} href={stage.href} className={cn("group flex items-center justify-between gap-3 px-1 py-4 transition hover:bg-slate-50/80", stage.count === 0 && "opacity-45 hover:opacity-75")}>
+          <Link key={stage.key} href={stage.href} className={cn("group flex items-center justify-between gap-3 rounded-md px-1 py-3.5", ADMIN_UI.interactiveSurface, stage.count === 0 && "opacity-45 hover:opacity-75")}>
               <span className="flex min-w-0 items-center gap-2.5 text-sm font-medium text-slate-700">
                 <span className={cn("h-2 w-2 shrink-0 rounded-full", operationalStagePresentation(stage.key).dotClassName)} />
                 <span className="truncate">{stage.label}</span>
@@ -158,8 +143,8 @@ function QueueCard({ queue }: { queue: OperationsDashboardQueue }) {
           </Link>
         ))}
       </div>
-      <div className="px-4 pb-4 pt-2">
-        <Link href={queue.href} className={cn("group/cta flex h-10 items-center justify-between rounded-lg border px-4 text-sm font-semibold shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2", visual.actionClassName)}>
+      <div className="px-3 pb-3 pt-2">
+        <Link href={queue.href} className={cn("group/cta flex h-10 items-center justify-between rounded-lg px-4 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2", visual.actionClassName)}>
           <span>{queue.actionLabel}</span>
           <span className="flex items-center gap-1.5 text-sm font-medium tabular-nums opacity-75">{queue.activeCount} việc <ArrowRight className="h-4 w-4 transition-transform group-hover/cta:translate-x-0.5" /></span>
         </Link>
@@ -171,12 +156,8 @@ function QueueCard({ queue }: { queue: OperationsDashboardQueue }) {
 export default function OperationsDashboard({ data }: { data: OperationsDashboardData }) {
   const priority = data.priorityAction;
   return (
-    <main className={ADMIN_OPERATION_CONTENT_CLASS}>
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-950">Trung tâm điều hành</h1>
-          <p className="mt-1 text-sm text-slate-500">Theo dõi công việc đang mở, ngoại lệ và tiến độ các khu vực nghiệp vụ.</p>
-        </div>
+    <AdminPageCanvas className="mx-auto w-full max-w-none min-w-0 pb-8 sm:px-4 lg:px-5 xl:px-6 2xl:px-8">
+      <AdminPageHeader title="Trung tâm điều hành" description="Theo dõi công việc đang mở, ngoại lệ và tiến độ các khu vực nghiệp vụ." meta={
         <div className="flex flex-wrap items-center justify-end gap-3">
           <div className="mr-1 flex items-baseline gap-1.5 text-slate-600"><span className="text-lg font-bold tabular-nums text-slate-950">{data.totalActive}</span><span className="text-xs font-semibold">việc đang mở</span></div>
           <span className="text-xs font-semibold text-slate-500">Phạm vi dashboard</span>
@@ -185,22 +166,22 @@ export default function OperationsDashboard({ data }: { data: OperationsDashboar
             <span className="rounded-lg bg-white px-3 py-2 text-slate-900 shadow-sm">Toàn shop</span>
           </div>
         </div>
-      </div>
+      } />
 
-      <section className="mt-2 grid gap-4 md:grid-cols-2 xl:grid-cols-4">{data.queues.map((queue) => <QueueCard key={queue.key} queue={queue} />)}</section>
+      <section className="mt-2 grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">{data.queues.map((queue) => <QueueCard key={queue.key} queue={queue} />)}</section>
 
       <section className="!mt-8 grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)]">
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+        <div className="overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035),0_8px_24px_rgba(15,23,42,0.035)]">
+          <div className="flex items-center justify-between px-5 pb-3 pt-5">
             <div><h2 className="font-bold text-slate-950">Cần ưu tiên</h2><p className="mt-0.5 text-xs text-slate-500">Xếp theo mức độ ảnh hưởng, sau đó theo thời gian tồn</p></div>
             <span className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700">{data.attention.length}</span>
           </div>
           {data.attention.length ? (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-200/60">
               {data.attention.map((item) => {
                 const isTopPriority = item.id === priority?.id;
                 return (
-                  <Link key={item.id} href={item.href} className={cn("group grid gap-3 px-5 transition sm:grid-cols-[100px_minmax(0,1fr)_auto] sm:items-center", isTopPriority ? "border-l-2 border-amber-400 bg-gradient-to-r from-amber-50/80 via-amber-50/30 to-transparent py-[18px] hover:from-amber-50 hover:via-amber-50/45" : "py-4 hover:bg-slate-50")}>
+                  <Link key={item.id} href={item.href} className={cn("group grid gap-3 px-5 transition sm:grid-cols-[100px_minmax(0,1fr)_auto] sm:items-center", isTopPriority ? "border-l-2 border-amber-400 bg-gradient-to-r from-amber-50/80 via-amber-50/30 to-transparent py-[18px] hover:from-amber-50 hover:via-violet-50/45" : cn("py-4", ADMIN_UI.interactiveSurface))}>
                     <span className="flex items-center gap-2"><span className={cn("w-fit rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide", toneClass[item.tone])}>{domainLabels[item.domain]}</span>{isTopPriority ? <span className="text-[10px] font-bold tabular-nums text-amber-600">#1</span> : null}</span>
                     <span className="min-w-0">
                       {isTopPriority ? <><span className="block truncate text-base font-semibold text-slate-950">{item.reason}</span><span className="mt-1 block truncate text-xs font-medium text-slate-600">{item.title}{item.reference ? ` · ${item.reference}` : ""}</span></> : <><span className="block truncate text-sm font-semibold text-slate-900">{item.title}</span><span className={cn("mt-1 block truncate text-xs font-semibold", item.tone === "rose" ? "text-rose-700" : item.tone === "amber" ? "text-amber-700" : "text-slate-600")}>{item.reason}</span></>}
@@ -214,12 +195,12 @@ export default function OperationsDashboard({ data }: { data: OperationsDashboar
           ) : <div className="flex min-h-48 items-center justify-center px-6 text-center text-sm text-slate-500">Không có ngoại lệ quá hạn trong dữ liệu hiện tại.</div>}
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 px-5 py-4">
+        <div className="overflow-hidden rounded-2xl bg-slate-50/80 shadow-[0_1px_2px_rgba(15,23,42,0.025),0_8px_24px_rgba(15,23,42,0.03)]">
+          <div className="px-5 pb-3 pt-5">
             <h2 className="font-bold text-slate-950">Tín hiệu cần can thiệp</h2>
             <p className="mt-0.5 text-xs text-slate-500">Cảnh báo nổi bật cần kiểm tra theo từng khu vực</p>
           </div>
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-200/60">
             {data.queues.map((queue) => {
               const warnings = queue.insights.filter((insight) => insight.count > 0);
               const visual = operationalDomainPresentation(queue.key);
@@ -227,7 +208,7 @@ export default function OperationsDashboard({ data }: { data: OperationsDashboar
               const primaryWarning = warnings.find((insight) => insight.severity === "risk") ?? warnings[0];
               const targetHref = primaryWarning?.href ?? queue.href;
               return (
-                <Link key={queue.key} href={targetHref} className="group flex items-center gap-3 px-5 py-4 transition hover:bg-slate-50/80">
+                <Link key={queue.key} href={targetHref} className={cn("group flex items-center gap-3 px-5 py-4", ADMIN_UI.interactiveSurface)}>
                   <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", visual.softClassName)}><Icon className="h-4 w-4" /></span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-slate-800">{visual.label}</span>
@@ -241,9 +222,8 @@ export default function OperationsDashboard({ data }: { data: OperationsDashboar
         </div>
       </section>
 
-      <section className="mt-5"><PersonalWorkPreviewCard /></section>
       <DashboardCharts data={data} />
       <div className="mt-5 text-right text-xs text-slate-400">Cập nhật lúc {new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(data.generatedAt))}</div>
-    </main>
+    </AdminPageCanvas>
   );
 }

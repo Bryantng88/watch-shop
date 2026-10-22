@@ -1628,18 +1628,20 @@ model User {
   completedTasks Task[] @relation("TaskCompletedBy")
   cancelledTasks Task[] @relation("TaskCancelledBy")
 
-  raisedWorkCases           WorkCase[]                 @relation("WorkCaseRaisedBy")
-  assignedWorkCases         WorkCase[]                 @relation("WorkCaseAssignedTo")
-  workCaseActivities        WorkCaseActivity[]
-  taskExecution             TaskExecution[]
-  assignedTaskItems         TaskItem[]                 @relation("TaskItemAssignedTo")
-  taskItems                 TaskItem[]
-  taskItemActivities        TaskItemActivity[]         @relation("TaskItemActivityActor")
-  activityReplies           TaskItemActivityReply[]    @relation("TaskItemActivityReplyActor")
-  googleCalendarConnection  GoogleCalendarConnection?
-  personalCalendarLinks     PersonalTaskCalendarLink[]
-  assignedPurchaseRequests  PurchaseRequest[]          @relation("PurchaseRequestAssignee")
-  purchaseRequestActivities PurchaseRequestActivity[]  @relation("PurchaseRequestActivityActor")
+  raisedWorkCases            WorkCase[]                 @relation("WorkCaseRaisedBy")
+  assignedWorkCases          WorkCase[]                 @relation("WorkCaseAssignedTo")
+  workCaseActivities         WorkCaseActivity[]
+  taskExecution              TaskExecution[]
+  assignedTaskItems          TaskItem[]                 @relation("TaskItemAssignedTo")
+  taskItems                  TaskItem[]
+  taskItemActivities         TaskItemActivity[]         @relation("TaskItemActivityActor")
+  activityReplies            TaskItemActivityReply[]    @relation("TaskItemActivityReplyActor")
+  googleCalendarConnection   GoogleCalendarConnection?
+  personalCalendarLinks      PersonalTaskCalendarLink[]
+  receivedPersonalTaskShares PersonalTaskShare[]        @relation("PersonalTaskShareRecipient")
+  grantedPersonalTaskShares  PersonalTaskShare[]        @relation("PersonalTaskShareActor")
+  assignedPurchaseRequests   PurchaseRequest[]          @relation("PurchaseRequestAssignee")
+  purchaseRequestActivities  PurchaseRequestActivity[]  @relation("PurchaseRequestActivityActor")
 
   @@index([isActive])
 }
@@ -2803,10 +2805,10 @@ model TaskItem {
   title  String
   note   String?
 
-  status   TaskStatus   @default(TODO)
-  priority TaskPriority @default(MEDIUM)
+  status     TaskStatus   @default(TODO)
+  priority   TaskPriority @default(MEDIUM)
   workTypeId String?
-  dueAt    DateTime?
+  dueAt      DateTime?
 
   assignedToUserId String?
   startedAt        DateTime?
@@ -2825,6 +2827,7 @@ model TaskItem {
   checklists     TaskItemChecklist[]
   activities     TaskItemActivity[]
   calendarLinks  PersonalTaskCalendarLink[]
+  personalShares PersonalTaskShare[]
 
   userId String?
   User   User?   @relation(fields: [userId], references: [id])
@@ -2836,6 +2839,30 @@ model TaskItem {
   @@index([workTypeId])
   @@index([assignedToUserId])
   @@index([dueAt])
+}
+
+enum PersonalTaskShareAccess {
+  VIEWER
+  EDITOR
+}
+
+model PersonalTaskShare {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  taskItemId     String
+  userId         String
+  accessLevel    PersonalTaskShareAccess @default(VIEWER)
+  sharedByUserId String?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  taskItem     TaskItem @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
+  user         User     @relation("PersonalTaskShareRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  sharedByUser User?    @relation("PersonalTaskShareActor", fields: [sharedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([taskItemId, userId])
+  @@index([userId, accessLevel])
+  @@index([sharedByUserId])
 }
 
 model GoogleCalendarConnection {

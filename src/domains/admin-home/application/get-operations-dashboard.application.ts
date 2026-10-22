@@ -23,7 +23,7 @@ function ageLabel(days: number) {
   return `${days} ngày`;
 }
 
-export async function getOperationsDashboardApplication(input: { canAssignPurchaseRequests?: boolean } = {}): Promise<OperationsDashboardData> {
+export async function getOperationsDashboardApplication(input: { canAssignPurchaseRequests?: boolean; userId?: string | null } = {}): Promise<OperationsDashboardData> {
   await Promise.all([
     ensureProjectionReady(prisma, "order-list"),
     ensureProjectionReady(prisma, "media-operation-board"),
@@ -31,10 +31,12 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
   ]);
 
   const now = new Date();
+  const todayEnd = new Date(now);
+  todayEnd.setHours(23, 59, 59, 999);
   const trendStart = new Date(now);
   trendStart.setDate(trendStart.getDate() - 6);
   trendStart.setHours(0, 0, 0, 0);
-  const [orders, purchaseRequestCounts, purchaseRequests, overdueRequestCount, unassignedRequestCount, media, technical, completedOrders] = await Promise.all([
+  const [orders, purchaseRequestCounts, purchaseRequests, overdueRequestCount, unassignedRequestCount, media, technical, completedOrders, personalItems] = await Promise.all([
     queryOrderListProjection(prisma, { view: "all", subFilter: "", paymentType: "", sort: "updatedDesc", page: 1, pageSize: 1 }),
     prisma.purchaseRequest.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.purchaseRequest.findMany({
@@ -48,6 +50,13 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
     queryMediaOperationBoardProjection(prisma, { page: 1, pageSize: 100 }),
     listTechnicalIssueBoardWorkspaceProjection(prisma, { page: 1, pageSize: 100 }),
     prisma.order.findMany({ where: { status: "COMPLETED", updatedAt: { gte: trendStart } }, select: { updatedAt: true } }),
+    input.userId ? prisma.taskItem.findMany({
+      where: {
+        task: { kind: "PERSONAL", OR: [{ createdByUserId: input.userId }, { assignedToUserId: input.userId }] },
+        status: { notIn: ["DONE", "CANCELLED"] },
+      },
+      select: { dueAt: true },
+    }) : Promise.resolve([]),
   ]);
 
   const mediaActiveRows = media.rows.filter((row) => row.stage !== "DONE");
@@ -56,6 +65,10 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
   const mediaVeryStale = mediaActiveRows.filter((row) => ageInDays(row.updatedAt, now) >= 30).length;
   const technicalOverdue = technical.rows.filter((row) => Number(row.overdueDays ?? 0) > 0).length;
   const overdueRequests = purchaseRequests.filter((request) => request.followUpAt && request.followUpAt < now);
+  const personalOverdue = personalItems.filter((item) => item.dueAt && item.dueAt < now).length;
+  const personalDueToday = personalItems.filter((item) => item.dueAt && item.dueAt >= now && item.dueAt <= todayEnd).length;
+  const personalUpcoming = personalItems.filter((item) => item.dueAt && item.dueAt > todayEnd).length;
+  const personalUnscheduled = personalItems.filter((item) => !item.dueAt).length;
 
   const purchase = new Map(purchaseRequestCounts.map((row) => [String(row.status), row._count._all]));
   const orderCounts = orders.counts;
@@ -126,6 +139,24 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
         { key: "inspect", label: "Kiểm tra", actionLabel: "Kiểm tra", count: count(technical.totals, "INSPECT"), href: "/admin/coordination/operation?view=technical-issue-flow&flowStage=inspect" },
         { key: "ready", label: "Sẵn sàng xử lý", actionLabel: "Bắt đầu", count: count(technical.totals, "READY"), href: "/admin/coordination/operation?view=technical-issue-flow&flowStage=ready" },
         { key: "processing", label: "Đang xử lý", actionLabel: "Tiếp tục", count: count(technical.totals, "PROCESSING"), href: "/admin/coordination/operation?view=technical-issue-flow&flowStage=processing" },
+      ],
+    },
+    {
+      key: "personal-work",
+      label: "Việc cá nhân",
+      description: "Công việc riêng, lịch hẹn và nhắc việc đã kết nối Google Calendar.",
+      href: "/admin/personal-work",
+      activeCount: personalItems.length,
+      actionLabel: "Quản lý công việc",
+      insights: [
+        { key: "overdue", label: "Quá hạn", count: personalOverdue, href: "/admin/personal-work", severity: "risk" },
+        { key: "today", label: "Đến hạn hôm nay", count: personalDueToday, href: "/admin/personal-work", severity: "attention" },
+      ],
+      stages: [
+        { key: "personal-overdue", label: "Quá hạn", actionLabel: "Xử lý", count: personalOverdue, href: "/admin/personal-work" },
+        { key: "personal-today", label: "Hôm nay", actionLabel: "Mở lịch", count: personalDueToday, href: "/admin/personal-work" },
+        { key: "personal-upcoming", label: "Sắp tới", actionLabel: "Xem", count: personalUpcoming, href: "/admin/personal-work" },
+        { key: "personal-unscheduled", label: "Chưa xếp lịch", actionLabel: "Xếp lịch", count: personalUnscheduled, href: "/admin/personal-work" },
       ],
     },
   ];

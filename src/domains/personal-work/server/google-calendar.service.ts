@@ -126,10 +126,10 @@ export async function exchangeGoogleCalendarCode(userId: string, code: string) {
   });
 }
 
-async function accessToken(userId: string) {
+async function accessToken(userId: string, forceRefresh = false) {
   const connection = await prisma.googleCalendarConnection.findUnique({ where: { userId } });
   if (!connection) throw new Error("Google Calendar chưa được kết nối");
-  if (!connection.tokenExpiresAt || connection.tokenExpiresAt.getTime() > Date.now() + 60_000) {
+  if (!forceRefresh && (!connection.tokenExpiresAt || connection.tokenExpiresAt.getTime() > Date.now() + 60_000)) {
     return { connection, token: decryptCalendarToken(connection.accessTokenCipher) };
   }
   if (!connection.refreshTokenCipher) throw new Error("Kết nối Google Calendar đã hết hạn; vui lòng kết nối lại");
@@ -157,9 +157,35 @@ async function accessToken(userId: string) {
   return { connection: next, token: refreshed.access_token };
 }
 
+async function fetchGoogleWithTokenRetry(
+  userId: string,
+  input: string | URL,
+  init: RequestInit = {},
+) {
+  let auth = await accessToken(userId);
+  const request = (token: string) => fetch(input, {
+    ...init,
+    headers: { ...init.headers, authorization: `Bearer ${token}` },
+  });
+  let response = await request(auth.token);
+  if (response.status === 401 && auth.connection.refreshTokenCipher) {
+    auth = await accessToken(userId, true);
+    response = await request(auth.token);
+  }
+  return { auth, response };
+}
+
 export async function syncPersonalTaskToGoogle(userId: string, taskItemId: string) {
   const item = await prisma.taskItem.findFirst({
-    where: { id: taskItemId, task: { kind: "PERSONAL", OR: [{ createdByUserId: userId }, { assignedToUserId: userId }] } },
+    where: {
+      id: taskItemId,
+      task: { kind: "PERSONAL" },
+      OR: [
+        { task: { createdByUserId: userId } },
+        { task: { assignedToUserId: userId } },
+        { personalShares: { some: { userId } } },
+      ],
+    },
     include: { task: { select: { id: true, title: true } } },
   });
   if (!item) throw new Error("Không tìm thấy công việc cá nhân");
@@ -180,9 +206,9 @@ export async function syncPersonalTaskToGoogle(userId: string, taskItemId: strin
   const endpoint = existing
     ? `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(auth.connection.calendarId)}/events/${encodeURIComponent(existing.eventId)}`
     : `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(auth.connection.calendarId)}/events`;
-  const response = await fetch(endpoint, {
+  const { response } = await fetchGoogleWithTokenRetry(userId, endpoint, {
     method: existing ? "PUT" : "POST",
-    headers: { authorization: `Bearer ${auth.token}`, "content-type": "application/json" },
+    headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
     cache: "no-store",
   });
@@ -197,28 +223,63 @@ export async function syncPersonalTaskToGoogle(userId: string, taskItemId: strin
   return link;
 }
 
-export async function listPersonalGoogleCalendarEvents(userId: string) {
+export async function syncPersonalTaskToGoogleIfLinked(userId: string, taskItemId: string) {
+  const link = await prisma.personalTaskCalendarLink.findUnique({
+    where: { userId_taskItemId: { userId, taskItemId } },
+    select: { id: true },
+  });
+  if (link) await syncPersonalTaskToGoogle(userId, taskItemId);
+}
+
+export async function deletePersonalTaskFromGoogle(userId: string, taskItemId: string) {
+  const link = await prisma.personalTaskCalendarLink.findUnique({
+    where: { userId_taskItemId: { userId, taskItemId } },
+  });
+  if (!link) return;
   const auth = await accessToken(userId);
+  const endpoint = `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(link.calendarId)}/events/${encodeURIComponent(link.eventId)}`;
+  const { response } = await fetchGoogleWithTokenRetry(userId, endpoint, { method: "DELETE", cache: "no-store" });
+  if (!response.ok && response.status !== 404 && response.status !== 410) {
+    throw await googleApiError(response, "Google Calendar delete");
+  }
+  await prisma.personalTaskCalendarLink.delete({ where: { id: link.id } });
+  await prisma.googleCalendarConnection.update({ where: { id: auth.connection.id }, data: { lastSyncedAt: new Date() } });
+}
+
+export async function listPersonalGoogleCalendarEvents(userId: string) {
+  let auth = await accessToken(userId);
   const from = new Date();
+  from.setFullYear(from.getFullYear() - 1);
   from.setHours(0, 0, 0, 0);
   const to = new Date();
-  to.setDate(to.getDate() + 120);
-  const url = new URL(`${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(auth.connection.calendarId)}/events`);
-  url.searchParams.set("singleEvents", "true");
-  url.searchParams.set("orderBy", "startTime");
-  url.searchParams.set("showDeleted", "false");
-  url.searchParams.set("maxResults", "250");
-  url.searchParams.set("timeMin", from.toISOString());
-  url.searchParams.set("timeMax", to.toISOString());
-  const response = await fetch(url, {
-    headers: { authorization: `Bearer ${auth.token}` },
-    cache: "no-store",
-    signal: AbortSignal.timeout(8_000),
-  });
-  if (!response.ok) throw await googleApiError(response, "Google Calendar load");
-  const body = await response.json() as { items?: GoogleCalendarEvent[] };
-  const events = (body.items || []).filter((event) => event.id && event.status !== "cancelled" && (event.start?.dateTime || event.start?.date));
-  const eventIds = events.map((event) => event.id!);
+  to.setFullYear(to.getFullYear() + 1);
+  to.setHours(23, 59, 59, 999);
+
+  const events: GoogleCalendarEvent[] = [];
+  let pageToken: string | undefined;
+  do {
+    const url = new URL(`${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(auth.connection.calendarId)}/events`);
+    url.searchParams.set("singleEvents", "true");
+    url.searchParams.set("orderBy", "startTime");
+    url.searchParams.set("showDeleted", "false");
+    url.searchParams.set("maxResults", "250");
+    url.searchParams.set("timeMin", from.toISOString());
+    url.searchParams.set("timeMax", to.toISOString());
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+    const result = await fetchGoogleWithTokenRetry(userId, url, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(8_000),
+    });
+    const response = result.response;
+    auth = result.auth;
+    if (!response.ok) throw await googleApiError(response, "Google Calendar load");
+    const body = await response.json() as { items?: GoogleCalendarEvent[]; nextPageToken?: string };
+    events.push(...(body.items || []));
+    pageToken = body.nextPageToken;
+  } while (pageToken && events.length < 2_000);
+
+  const visibleEvents = events.filter((event) => event.id && event.status !== "cancelled" && (event.start?.dateTime || event.start?.date));
+  const eventIds = visibleEvents.map((event) => event.id!);
   const links = eventIds.length
     ? await prisma.personalTaskCalendarLink.findMany({
         where: { userId, calendarId: auth.connection.calendarId, eventId: { in: eventIds } },
@@ -227,7 +288,7 @@ export async function listPersonalGoogleCalendarEvents(userId: string) {
     : [];
   const linkMap = new Map(links.map((link) => [link.eventId, link.taskItemId]));
   await prisma.googleCalendarConnection.update({ where: { id: auth.connection.id }, data: { lastSyncedAt: new Date() } });
-  return events.map((event) => ({
+  return visibleEvents.map((event) => ({
     id: event.id!,
     title: event.summary?.trim() || "(Không có tiêu đề)",
     description: event.description?.trim() || null,

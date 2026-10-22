@@ -1,5 +1,6 @@
 export const PERSONAL_WORK_DOMAINS = [
   { key: "GENERAL", label: "Cá nhân" },
+  { key: "WORK", label: "Công việc" },
   { key: "MEDIA", label: "Media" },
   { key: "TECHNICAL", label: "Technical" },
   { key: "SALES", label: "Sales" },
@@ -12,6 +13,11 @@ export type PersonalWorkDomain = (typeof PERSONAL_WORK_DOMAINS)[number]["key"];
 export const PERSONAL_WORK_TYPES = {
   GENERAL: [
     { key: "REMINDER", label: "Nhắc việc" },
+  ],
+  WORK: [
+    { key: "GENERAL_TASK", label: "Công việc chung" },
+    { key: "MEETING", label: "Họp" },
+    { key: "PLANNING", label: "Kế hoạch" },
     { key: "ADMIN", label: "Việc hành chính" },
   ],
   MEDIA: [
@@ -41,12 +47,7 @@ export const PERSONAL_WORK_TYPES = {
   ],
 } as const satisfies Record<PersonalWorkDomain, readonly { key: string; label: string }[]>;
 
-export type PersonalWorkTargetType =
-  | "WATCH"
-  | "ORDER"
-  | "PURCHASE_REQUEST"
-  | "ACQUISITION"
-  | "SERVICE_REQUEST";
+export type PersonalWorkTargetType = "WATCH" | "ORDER" | "PURCHASE_REQUEST" | "ACQUISITION" | "SERVICE_REQUEST";
 
 export type PersonalWorkTarget = {
   type: PersonalWorkTargetType;
@@ -69,6 +70,21 @@ export type PersonalWorkItem = {
   target: PersonalWorkTarget | null;
   tags: string[];
   calendar: { synced: boolean; htmlLink: string | null; lastSyncedAt: string | null };
+  access: "OWNER" | "EDITOR" | "VIEWER";
+  owner: PersonalWorkUser;
+  sharedWith: PersonalWorkShare[];
+};
+
+export type PersonalWorkUser = {
+  id: string;
+  name: string | null;
+  email: string;
+  avatarUrl: string | null;
+};
+
+export type PersonalWorkShare = {
+  user: PersonalWorkUser;
+  accessLevel: "VIEWER" | "EDITOR";
 };
 
 export type PersonalCalendarEvent = {
@@ -85,6 +101,8 @@ export type PersonalCalendarEvent = {
 
 export type PersonalWorkPageData = {
   items: PersonalWorkItem[];
+  currentUserId: string;
+  availableUsers: PersonalWorkUser[];
   calendar: {
     configured: boolean;
     connected: boolean;
