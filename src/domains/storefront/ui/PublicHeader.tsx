@@ -121,7 +121,7 @@ export default function PublicHeader({ logo }: { logo?: { url: string; alt: stri
   };
   const menu = navigation[language];
   const estimatedTotal = items.reduce((total, item) => total + (Number(item.priceAmount) || 0), 0);
-  if (pathname === "/" || pathname.startsWith("/stories"))
+  if (pathname === "/" || pathname.startsWith("/stories") || pathname.startsWith("/products"))
     return (
       <header className="vg-header">
         <Link className="vg-logo storefront-focus" href="/" aria-label="Vintic — Trang chủ">
@@ -141,7 +141,23 @@ export default function PublicHeader({ logo }: { logo?: { url: string; alt: stri
           )}
         </Link>
         <nav aria-label="Điều hướng chính">
-          <Link href="/products">Đồng hồ</Link>
+          <div className="vg-header-shop">
+            <Link href="/products">{locale === "en" ? "Watches" : "Đồng hồ"}</Link>
+            <details>
+              <summary aria-label={locale === "en" ? "Watch collections" : "Danh mục đồng hồ"}>
+                <ChevronDown size={12} />
+              </summary>
+              <div className="vg-header-shop-menu">
+                <MobileMenuGroup group={menu.men} />
+                <MobileMenuGroup group={menu.women} />
+                {[menu.service, menu.consign].map((item) => (
+                  <Link key={item.href} href={item.href}>
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            </details>
+          </div>
           <Link href="/#collections">Bộ sưu tập</Link>
           <Link href="/#about">Về Vintic</Link>
           <Link href="/stories">Chuyện đồng hồ</Link>
