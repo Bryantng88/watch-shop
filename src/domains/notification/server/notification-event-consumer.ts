@@ -245,6 +245,46 @@ async function enrichNotificationEvent(
             .join(", ") || "Chưa có Watch";
     }
 
+    if (
+        event.targetType === "ORDER" &&
+        event.eventKey === "order.created"
+    ) {
+        const order = await client.order.findUnique({
+            where: { id: event.targetId },
+            select: {
+                refNo: true,
+                customerName: true,
+                shipPhone: true,
+                subtotal: true,
+                shippingAmount: true,
+                status: true,
+                paymentStatus: true,
+                hasShipment: true,
+                orderItem: { select: { title: true, quantity: true } },
+                shipments: { select: { status: true }, orderBy: { createdAt: "asc" } },
+            },
+        });
+        enriched.orderRef = clean(order?.refNo) || clean(enriched.refNo) || event.targetId;
+        enriched.customerName = clean(order?.customerName) || "Chưa cung cấp";
+        enriched.phone = clean(order?.shipPhone) || "Chưa cung cấp";
+        enriched.orderStatus = clean(order?.status) || clean(enriched.toStatus);
+        enriched.paymentStatus = clean(order?.paymentStatus) || "UNPAID";
+        const totalAmount = Number(order?.subtotal || 0) + Number(order?.shippingAmount || 0);
+        enriched.totalAmount = totalAmount;
+        enriched.orderTotal = `${totalAmount.toLocaleString("vi-VN")} VND`;
+        enriched.itemSummary = order?.orderItem
+            .map((item) => `${clean(item.title)}${item.quantity > 1 ? ` ×${item.quantity}` : ""}`)
+            .filter(Boolean)
+            .join(", ") || "Chưa có sản phẩm";
+        enriched.watchTitles = enriched.itemSummary;
+        enriched.deliverySummary = order?.hasShipment
+            ? order.shipments.length
+                ? order.shipments.map((shipment) => clean(shipment.status)).filter(Boolean).join(", ")
+                : "Chờ tạo vận đơn"
+            : "Nhận tại cửa hàng";
+        enriched.route = `/admin/orders/${encodeURIComponent(event.targetId)}`;
+    }
+
     return { ...event, metadataJson: enriched as Prisma.JsonObject };
 }
 

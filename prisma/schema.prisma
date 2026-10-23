@@ -612,58 +612,58 @@ model Order {
 }
 
 model PurchaseRequest {
-  id                       String                           @id @default(dbgenerated("(gen_random_uuid())::text"))
-  reference                String                           @unique
-  status                   PurchaseRequestStatus            @default(WAITING)
-  outcome                  PurchaseRequestOutcome?
-  channel                  String
-  externalRequestId        String?
-  requestKey               String                           @unique
-  requestHash              String
-  fingerprintHash          String
-  customerName             String
-  customerEmail            String?
-  emailVerificationStatus  String                           @default("NOT_SENT")
-  emailVerificationTokenHash String?                        @unique
-  emailVerificationExpiresAt DateTime?                      @db.Timestamptz(6)
-  emailVerificationSentAt DateTime?                         @db.Timestamptz(6)
-  emailVerifiedAt          DateTime?                        @db.Timestamptz(6)
-  emailDeliveryFailedAt    DateTime?                        @db.Timestamptz(6)
-  emailVerificationAttemptedAt DateTime?                    @db.Timestamptz(6)
-  emailVerificationSendCount Int                            @default(0)
-  emailVerificationWindowStartedAt DateTime?                @db.Timestamptz(6)
-  phone                    String
-  normalizedPhone          String
-  contactPreference        PurchaseRequestContactPreference @default(PHONE)
-  contactHandle            String?
-  address                  String?
-  city                     String?
-  district                 String?
-  ward                     String?
-  customerNote             String?
-  processingNote           String?
-  completionReason         String?
-  assignedUserId           String?
-  followUpAt               DateTime?                        @db.Timestamptz(6)
-  processingStartedAt      DateTime?                        @db.Timestamptz(6)
-  completedAt              DateTime?                        @db.Timestamptz(6)
-  convertedAt              DateTime?                        @db.Timestamptz(6)
-  analyticsAnonymousIdHash String?
-  analyticsSessionIdHash   String?
-  analyticsSource          String?
-  analyticsMedium          String?
-  analyticsCampaign        String?
-  analyticsLandingPath     String?
-  analyticsIsInternal      Boolean                          @default(false)
-  orderId                  String?                          @unique
-  createdAt                DateTime                         @default(now())
-  updatedAt                DateTime                         @updatedAt
-  items                    PurchaseRequestItem[]
-  activities               PurchaseRequestActivity[]
-  ingressReceipts          PurchaseRequestIngressReceipt[]
-  order                    Order?                           @relation(fields: [orderId], references: [id], onDelete: SetNull)
-  assignedUser             User?                            @relation("PurchaseRequestAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
-  analyticsEvents          StorefrontAnalyticsEvent[]
+  id                               String                           @id @default(dbgenerated("(gen_random_uuid())::text"))
+  reference                        String                           @unique
+  status                           PurchaseRequestStatus            @default(WAITING)
+  outcome                          PurchaseRequestOutcome?
+  channel                          String
+  externalRequestId                String?
+  requestKey                       String                           @unique
+  requestHash                      String
+  fingerprintHash                  String
+  customerName                     String
+  customerEmail                    String?
+  emailVerificationStatus          String                           @default("NOT_SENT")
+  emailVerificationTokenHash       String?                          @unique
+  emailVerificationExpiresAt       DateTime?                        @db.Timestamptz(6)
+  emailVerificationSentAt          DateTime?                        @db.Timestamptz(6)
+  emailVerifiedAt                  DateTime?                        @db.Timestamptz(6)
+  emailDeliveryFailedAt            DateTime?                        @db.Timestamptz(6)
+  emailVerificationAttemptedAt     DateTime?                        @db.Timestamptz(6)
+  emailVerificationSendCount       Int                              @default(0)
+  emailVerificationWindowStartedAt DateTime?                        @db.Timestamptz(6)
+  phone                            String
+  normalizedPhone                  String
+  contactPreference                PurchaseRequestContactPreference @default(PHONE)
+  contactHandle                    String?
+  address                          String?
+  city                             String?
+  district                         String?
+  ward                             String?
+  customerNote                     String?
+  processingNote                   String?
+  completionReason                 String?
+  assignedUserId                   String?
+  followUpAt                       DateTime?                        @db.Timestamptz(6)
+  processingStartedAt              DateTime?                        @db.Timestamptz(6)
+  completedAt                      DateTime?                        @db.Timestamptz(6)
+  convertedAt                      DateTime?                        @db.Timestamptz(6)
+  analyticsAnonymousIdHash         String?
+  analyticsSessionIdHash           String?
+  analyticsSource                  String?
+  analyticsMedium                  String?
+  analyticsCampaign                String?
+  analyticsLandingPath             String?
+  analyticsIsInternal              Boolean                          @default(false)
+  orderId                          String?                          @unique
+  createdAt                        DateTime                         @default(now())
+  updatedAt                        DateTime                         @updatedAt
+  items                            PurchaseRequestItem[]
+  activities                       PurchaseRequestActivity[]
+  ingressReceipts                  PurchaseRequestIngressReceipt[]
+  order                            Order?                           @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  assignedUser                     User?                            @relation("PurchaseRequestAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  analyticsEvents                  StorefrontAnalyticsEvent[]
 
   @@unique([channel, externalRequestId], map: "PurchaseRequest_channel_external_key")
   @@index([status, createdAt(sort: Desc)])
@@ -1628,16 +1628,20 @@ model User {
   completedTasks Task[] @relation("TaskCompletedBy")
   cancelledTasks Task[] @relation("TaskCancelledBy")
 
-  raisedWorkCases           WorkCase[]                @relation("WorkCaseRaisedBy")
-  assignedWorkCases         WorkCase[]                @relation("WorkCaseAssignedTo")
-  workCaseActivities        WorkCaseActivity[]
-  taskExecution             TaskExecution[]
-  assignedTaskItems         TaskItem[]                @relation("TaskItemAssignedTo")
-  taskItems                 TaskItem[]
-  taskItemActivities        TaskItemActivity[]        @relation("TaskItemActivityActor")
-  activityReplies           TaskItemActivityReply[]   @relation("TaskItemActivityReplyActor")
-  assignedPurchaseRequests  PurchaseRequest[]         @relation("PurchaseRequestAssignee")
-  purchaseRequestActivities PurchaseRequestActivity[] @relation("PurchaseRequestActivityActor")
+  raisedWorkCases            WorkCase[]                 @relation("WorkCaseRaisedBy")
+  assignedWorkCases          WorkCase[]                 @relation("WorkCaseAssignedTo")
+  workCaseActivities         WorkCaseActivity[]
+  taskExecution              TaskExecution[]
+  assignedTaskItems          TaskItem[]                 @relation("TaskItemAssignedTo")
+  taskItems                  TaskItem[]
+  taskItemActivities         TaskItemActivity[]         @relation("TaskItemActivityActor")
+  activityReplies            TaskItemActivityReply[]    @relation("TaskItemActivityReplyActor")
+  googleCalendarConnection   GoogleCalendarConnection?
+  personalCalendarLinks      PersonalTaskCalendarLink[]
+  receivedPersonalTaskShares PersonalTaskShare[]        @relation("PersonalTaskShareRecipient")
+  grantedPersonalTaskShares  PersonalTaskShare[]        @relation("PersonalTaskShareActor")
+  assignedPurchaseRequests   PurchaseRequest[]          @relation("PurchaseRequestAssignee")
+  purchaseRequestActivities  PurchaseRequestActivity[]  @relation("PurchaseRequestActivityActor")
 
   @@index([isActive])
 }
@@ -2312,6 +2316,11 @@ enum TaskStatus {
   CANCELLED
 }
 
+enum TaskProgressMode {
+  MANUAL
+  CHECKLIST
+}
+
 enum ActivitySourceType {
   BUSINESS_EVENT
   DISCUSSION
@@ -2801,9 +2810,13 @@ model TaskItem {
   title  String
   note   String?
 
-  status   TaskStatus   @default(TODO)
-  priority TaskPriority @default(MEDIUM)
-  dueAt    DateTime?
+  status          TaskStatus       @default(TODO)
+  priority        TaskPriority     @default(MEDIUM)
+  workTypeId      String?
+  dueAt           DateTime?
+  estimatedDays    Int             @default(1)
+  progressPercent Int              @default(0)
+  progressMode    TaskProgressMode @default(MANUAL)
 
   assignedToUserId String?
   startedAt        DateTime?
@@ -2816,11 +2829,13 @@ model TaskItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  task           Task                @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  assignedToUser User?               @relation("TaskItemAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  task           Task                       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  assignedToUser User?                      @relation("TaskItemAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
   executions     TaskExecution[]
   checklists     TaskItemChecklist[]
   activities     TaskItemActivity[]
+  calendarLinks  PersonalTaskCalendarLink[]
+  personalShares PersonalTaskShare[]
 
   userId String?
   User   User?   @relation(fields: [userId], references: [id])
@@ -2829,8 +2844,77 @@ model TaskItem {
   @@index([taskId, status, sortOrder])
   @@index([status])
   @@index([priority])
+  @@index([workTypeId])
   @@index([assignedToUserId])
   @@index([dueAt])
+}
+
+enum PersonalTaskShareAccess {
+  VIEWER
+  EDITOR
+}
+
+model PersonalTaskShare {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  taskItemId     String
+  userId         String
+  accessLevel    PersonalTaskShareAccess @default(VIEWER)
+  sharedByUserId String?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  taskItem     TaskItem @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
+  user         User     @relation("PersonalTaskShareRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  sharedByUser User?    @relation("PersonalTaskShareActor", fields: [sharedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([taskItemId, userId])
+  @@index([userId, accessLevel])
+  @@index([sharedByUserId])
+}
+
+model GoogleCalendarConnection {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  userId             String    @unique
+  googleAccountEmail String?
+  calendarId         String    @default("primary")
+  accessTokenCipher  String    @db.Text
+  refreshTokenCipher String?   @db.Text
+  tokenExpiresAt     DateTime?
+  scope              String?   @db.Text
+  connectedAt        DateTime  @default(now())
+  lastSyncedAt       DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  user  User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  links PersonalTaskCalendarLink[]
+
+  @@index([tokenExpiresAt])
+}
+
+model PersonalTaskCalendarLink {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  userId        String
+  taskItemId    String
+  connectionId  String
+  calendarId    String   @default("primary")
+  eventId       String
+  eventHtmlLink String?
+  lastSyncedAt  DateTime @default(now())
+  syncHash      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskItem   TaskItem                 @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
+  connection GoogleCalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, taskItemId])
+  @@unique([connectionId, calendarId, eventId])
+  @@index([taskItemId])
 }
 
 model TaskItemActivity {

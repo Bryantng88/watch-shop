@@ -1,0 +1,2 @@
+ALTER TABLE "TaskItem"
+ADD COLUMN "estimatedDays" INTEGER NOT NULL DEFAULT 1;

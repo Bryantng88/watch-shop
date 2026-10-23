@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import AdminTopbar from "./AdminTopBar";
 import AdminSidebar from "./AdmidSideBar";
+import { AdminNavigationHistoryProvider } from "@/domains/shared/ui/navigation/AdminNavigationHistory";
 
 type AdminShellUser = {
     permissions: string[];
@@ -30,6 +31,7 @@ export default function AdminShell({ user, children }: AdminShellProps) {
     }
 
     return (
+        <AdminNavigationHistoryProvider>
         <div className="grid h-screen overflow-hidden bg-slate-50 lg:grid-cols-[76px_minmax(0,1fr)] min-[2200px]:grid-cols-[240px_minmax(0,1fr)]">
             <div className="relative z-50 hidden overflow-visible bg-[#11191f] lg:block">
                 <AdminSidebar
@@ -59,5 +61,6 @@ export default function AdminShell({ user, children }: AdminShellProps) {
                 </main>
             </div>
         </div>
+        </AdminNavigationHistoryProvider>
     );
 }

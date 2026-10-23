@@ -19,6 +19,7 @@ import {
     PanelLeftOpen,
     BarChart3,
     ChartNoAxesCombined,
+    CalendarCheck2,
 } from "lucide-react";
 
 import ActiveLink from "./AdminActiveLink";
@@ -65,6 +66,13 @@ const NAV: NavEntry[] = [
         children: [
             {
                 type: "item",
+                href: "/admin/dashboard",
+                label: "Trang chủ",
+                icon: LayoutDashboard,
+                permission: PERMISSIONS.DASHBOARD_VIEW,
+            },
+            {
+                type: "item",
                 href: "/admin/watches",
                 label: "Sản phẩm",
                 icon: Package,
@@ -98,6 +106,13 @@ const NAV: NavEntry[] = [
                 icon: Workflow,
                 permission: PERMISSIONS.TASK_VIEW,
             },
+            {
+                type: "item",
+                href: "/admin/personal-work",
+                label: "Việc cá nhân",
+                icon: CalendarCheck2,
+                permission: PERMISSIONS.TASK_VIEW,
+            },
         ],
     },
     {
@@ -109,7 +124,7 @@ const NAV: NavEntry[] = [
                 type: "item",
                 href: "/admin/reports/overview",
                 label: "Tổng quan",
-                icon: LayoutDashboard,
+                icon: BarChart3,
                 permission: PERMISSIONS.DASHBOARD_VIEW,
             },
             {

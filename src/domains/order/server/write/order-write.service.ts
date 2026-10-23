@@ -626,7 +626,9 @@ export async function createOrderWithItems(
   });
   if ("idempotentReplay" in result && result.idempotentReplay) return result;
   await publishOrderMutation({
-    eventKey: result.status === OrderStatus.POSTED ? "order.posted" : "order.created",
+    // Creation has one semantic event regardless of whether the command also
+    // posts immediately. Later lifecycle posting remains order.posted.
+    eventKey: "order.created",
     orderId: result.id,
     refNo: result.refNo,
     fromStatus: null,

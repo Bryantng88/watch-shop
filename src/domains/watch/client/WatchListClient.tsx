@@ -22,6 +22,8 @@ import React from "react";
 import { WatchListToolbar } from "../ui/list";
 import WatchListFilters from "../ui/list/WatchListFilters";
 import WatchListTable from "../ui/list/WatchListTable";
+import WatchSelectionPanel from "../ui/list/WatchSelectionPanel";
+import InternalPurchaseRequestModal from "../ui/list/InternalPurchaseRequestModal";
 import BuyBackWatchModal from "../ui/buy-back/BuyBackWatchModal";
 import AcquisitionCreatedDialog from "@/domains/acquisition/ui/navigation/AcquisitionCreatedDialog";
 import { buildWatchWorkCaseSource } from "@/domains/work-case/utils/work-case-source";
@@ -62,6 +64,7 @@ import { repairWatchInlineMediaAction } from "./inline-repair/watch-inline-repai
 // have been repaired and the production media migration is complete.
 const WATCH_INLINE_REPAIR_ENABLED =
   process.env.NEXT_PUBLIC_WATCH_INLINE_REPAIR !== "0";
+const WATCH_SELECTION_STORAGE_KEY = "watch-list:selection:v1";
 
 type WatchListClientProps = Partial<WatchListPageProps> & {
   initialResult?: WatchListResult;
@@ -353,12 +356,6 @@ export default function WatchListClient(props: WatchListClientProps) {
     [sp],
   );
   const urlKey = useMemo(() => paramsKey(urlParams), [urlParams]);
-  const selectionScopeKey = useMemo(() => {
-    const next = new URLSearchParams(urlParams.toString());
-    next.delete("page");
-    return paramsKey(next);
-  }, [urlParams]);
-
   const [params, setParams] = useState(urlParams);
   const [listData, setListData] = useState<WatchListResult>(() =>
     dataFromProps(props),
@@ -369,6 +366,10 @@ export default function WatchListClient(props: WatchListClientProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedRowsById, setSelectedRowsById] = useState<Record<string, WatchRow>>({});
+  const [selectionHydrated, setSelectionHydrated] = useState(false);
+  const [selectionPanelOpen, setSelectionPanelOpen] = useState(false);
+  const [bulkMenuOpen, setBulkMenuOpen] = useState(false);
+  const [purchaseRequestOpen, setPurchaseRequestOpen] = useState(false);
   const [photoshootSubmitting, setPhotoshootSubmitting] = useState(false);
   const [mediaReviewSubmitting, setMediaReviewSubmitting] = useState(false);
   const [mediaRowSubmittingId, setMediaRowSubmittingId] = useState<
@@ -394,9 +395,23 @@ export default function WatchListClient(props: WatchListClientProps) {
   }, [urlKey, urlParams]);
 
   useEffect(() => {
-    setSelectedIds([]);
-    setSelectedRowsById({});
-  }, [selectionScopeKey]);
+    try {
+      const stored = JSON.parse(window.sessionStorage.getItem(WATCH_SELECTION_STORAGE_KEY) || "null");
+      if (stored && Array.isArray(stored.ids) && stored.rows && typeof stored.rows === "object") {
+        setSelectedIds(stored.ids.map(String));
+        setSelectedRowsById(stored.rows);
+      }
+    } catch {
+      window.sessionStorage.removeItem(WATCH_SELECTION_STORAGE_KEY);
+    } finally {
+      setSelectionHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!selectionHydrated) return;
+    window.sessionStorage.setItem(WATCH_SELECTION_STORAGE_KEY, JSON.stringify({ ids: selectedIds, rows: selectedRowsById }));
+  }, [selectedIds, selectedRowsById, selectionHydrated]);
 
   useEffect(() => {
     setListData(dataFromProps({
@@ -698,6 +713,13 @@ export default function WatchListClient(props: WatchListClientProps) {
     );
   }
 
+  function clearSelection() {
+    setSelectedIds([]);
+    setSelectedRowsById({});
+    setSelectionPanelOpen(false);
+    setBulkMenuOpen(false);
+  }
+
   async function requestSelectedPhotoshoot() {
     if (!photoshootEligibleRows.length || photoshootSubmitting) return;
 
@@ -781,7 +803,7 @@ export default function WatchListClient(props: WatchListClientProps) {
         title: "Đã gửi sang Photoshoot",
         message: `${sentCount} watch được gửi, ${skippedCount} watch bỏ qua.`,
       });
-      setSelectedIds([]);
+      clearSelection();
 
       const next = new URLSearchParams(params.toString());
       await loadList(next, { meta: "lite" });
@@ -891,7 +913,7 @@ export default function WatchListClient(props: WatchListClientProps) {
         title: "Đã gửi sang Xử lý Media",
         message: `${sent} watch được gửi duyệt, ${skipped} watch bỏ qua.`,
       });
-      setSelectedIds([]);
+      clearSelection();
 
       const next = new URLSearchParams(params.toString());
       await loadList(next, { meta: "lite" });
@@ -1267,7 +1289,7 @@ export default function WatchListClient(props: WatchListClientProps) {
         title: "Đã xử lý Space Media",
         message: `${completed} watch được đưa vào luồng, ${skipped} watch bỏ qua.`,
       });
-      setSelectedIds([]);
+      clearSelection();
       await loadList(new URLSearchParams(params.toString()), { meta: "lite" });
     } finally {
       setMediaReviewSubmitting(false);
@@ -1682,27 +1704,24 @@ export default function WatchListClient(props: WatchListClientProps) {
     >
       {selectedRows.length && !duplicateView ? (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet-200 bg-violet-50/70 px-4 py-3 shadow-sm">
-          <div className="text-sm text-slate-700">
-            Đã chọn{" "}
-            <span className="font-bold text-violet-700">
-              {selectedRows.length}
-            </span>{" "}
-            watch
+          <div className="flex items-center gap-3 text-sm text-slate-700">
+            <span>Đã chọn <strong className="text-violet-700">{selectedRows.length}</strong> watch</span>
+            <button type="button" onClick={() => setSelectionPanelOpen(true)} className="font-semibold text-violet-700 underline decoration-violet-300 underline-offset-4 hover:text-violet-900">Xem đã chọn</button>
           </div>
           <div className="flex items-center gap-2">
+            <span className="hidden text-xs font-medium text-slate-500 lg:inline">Tick đầu bảng chỉ chọn trang hiện tại</span>
+            <div className="relative">
+              <button type="button" onClick={() => setBulkMenuOpen((open) => !open)} className="inline-flex h-9 items-center rounded-lg bg-violet-600 px-4 text-sm font-semibold text-white transition hover:bg-violet-700">Thao tác ({selectedRows.length}) ▾</button>
+              {bulkMenuOpen ? (
+                <div className="absolute right-0 top-11 z-30 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                  <button type="button" onClick={() => { setBulkMenuOpen(false); void sendSelectedToMediaSpace(); }} disabled={mediaReviewSubmitting || photoshootSubmitting} className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-800 hover:bg-violet-50 hover:text-violet-700 disabled:opacity-40">Đưa vào Space Media</button>
+                  <button type="button" onClick={() => { setBulkMenuOpen(false); setPurchaseRequestOpen(true); }} disabled={selectedRows.length > 20} className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-800 hover:bg-amber-50 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-40">Tạo yêu cầu xử lý đơn hàng{selectedRows.length > 20 ? " (tối đa 20)" : ""}</button>
+                </div>
+              ) : null}
+            </div>
             <button
               type="button"
-              onClick={() => void sendSelectedToMediaSpace()}
-              disabled={mediaReviewSubmitting || photoshootSubmitting}
-              className="inline-flex h-9 items-center rounded-lg bg-violet-600 px-4 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-violet-300"
-            >
-              {mediaReviewSubmitting
-                ? "Đang xử lý..."
-                : `Đưa vào Space Media (${selectedRows.length})`}
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedIds([])}
+              onClick={clearSelection}
               disabled={mediaReviewSubmitting || photoshootSubmitting}
               className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-semibold text-slate-500 transition hover:bg-white hover:text-slate-800"
             >
@@ -1910,6 +1929,26 @@ export default function WatchListClient(props: WatchListClientProps) {
         error={previewState.error}
         onClose={previewState.closePreview}
         onActivityChanged={previewState.refreshPreview}
+      />
+      <WatchSelectionPanel
+        open={selectionPanelOpen}
+        rows={selectedRows}
+        onClose={() => setSelectionPanelOpen(false)}
+        onRemove={(id) => onToggleOne(id, false)}
+        onClear={clearSelection}
+      />
+      <InternalPurchaseRequestModal
+        open={purchaseRequestOpen}
+        rows={selectedRows}
+        onClose={() => setPurchaseRequestOpen(false)}
+        onCreated={(request) => {
+          setPurchaseRequestOpen(false);
+          clearSelection();
+          notify.success({
+            title: "Đã tạo yêu cầu xử lý đơn hàng",
+            message: `${request.reference} đã được tạo và thông báo cho admin.`,
+          });
+        }}
       />
       {quickMediaRow ? (
         <div

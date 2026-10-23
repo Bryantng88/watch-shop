@@ -1,12 +1,13 @@
 "use client";
 
-import { Bell, Search, LogOut } from "lucide-react";
+import { ArrowLeft, Bell, Search, LogOut } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useNotifications } from "../__hooks/useNotifications";
 import type { AdminNotificationItem } from "../__hooks/useNotifications";
-import { resolveMediaPreviewSrc } from "@/lib/media-profile";
+import { useAdminNavigationHistory } from "@/domains/shared/ui/navigation/AdminNavigationHistory";
+import { AdminUserAvatar } from "@/domains/shared/ui/admin-design-contract";
 
 type AdminTopbarProps = {
     title?: string;
@@ -17,25 +18,8 @@ type AdminTopbarProps = {
     };
 };
 
-function initials(label?: string | null) {
-    const words = String(label || "User").trim().split(/\s+/).filter(Boolean);
-    return words.slice(0, 2).map((word) => word.charAt(0).toUpperCase()).join("");
-}
-
 function TopbarAvatar({ user }: { user?: AdminTopbarProps["user"] }) {
-    const label = user?.name || "User";
-    const src = resolveMediaPreviewSrc(user?.avatarUrl);
-
-    return (
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
-            {src ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={src} alt={label} className="h-full w-full object-cover" />
-            ) : (
-                initials(label)
-            )}
-        </span>
-    );
+    return <AdminUserAvatar user={user ?? { name: "User" }} />;
 }
 function metadataRecord(value: unknown): Record<string, unknown> {
     return value && typeof value === "object" && !Array.isArray(value)
@@ -82,6 +66,7 @@ export default function AdminTopbar({
     const [openNotify, setOpenNotify] = useState(false);
     const boxRef = useRef<HTMLDivElement | null>(null);
     const router = useRouter();
+    const { canGoBack, goBack } = useAdminNavigationHistory();
 
     const {
         items,
@@ -109,6 +94,17 @@ export default function AdminTopbar({
     return (
         <header className="sticky top-0 z-40 shrink-0 border-b bg-white">
             <div className="mx-auto flex items-center gap-3 px-4 py-3">
+                {canGoBack ? (
+                    <button
+                        type="button"
+                        onClick={goBack}
+                        className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
+                        aria-label="Quay lại trang trước"
+                    >
+                        <ArrowLeft size={16} />
+                        <span className="hidden sm:inline">Quay lại</span>
+                    </button>
+                ) : null}
                 <h1 className="text-lg font-semibold">{title}</h1>
 
                 <div className="ml-auto flex items-center gap-2">

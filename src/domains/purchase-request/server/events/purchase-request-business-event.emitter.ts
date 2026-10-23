@@ -14,6 +14,7 @@ export function emitPurchaseRequestBusinessEvent(db: DB, input: {
   actorUserId?: string | null;
   customerEmail?: string;
   failureCode?: string;
+  source?: string;
 }) {
   return recordBusinessEvent(db, {
     eventKey: input.eventKey,
@@ -28,7 +29,7 @@ export function emitPurchaseRequestBusinessEvent(db: DB, input: {
       productIds: input.productIds,
       addedItemCount: input.addedItemCount,
       occurredAt: input.occurredAt.toISOString(),
-      source: "STOREFRONT_PURCHASE_REQUEST",
+      source: input.source ?? "STOREFRONT_PURCHASE_REQUEST",
       actorUserId: input.actorUserId ?? null,
       customerEmail: input.customerEmail,
       failureCode: input.failureCode,

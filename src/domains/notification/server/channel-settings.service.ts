@@ -40,6 +40,12 @@ function booleanFromForm(value: FormDataEntryValue | null) {
 }
 
 function defaultZaloTemplatesForEvent(eventKey: string) {
+    if (eventKey === "order.created") {
+        return {
+            titleTemplate: "🛒 Đơn hàng mới {{orderRef}}",
+            messageTemplate: "Khách: {{customerName}}\nLiên hệ: {{phone}}\nWatch: {{itemSummary}}\nTổng tiền: {{orderTotal}}\nThanh toán: {{paymentStatus}}\nGiao hàng: {{deliverySummary}}\nMở xử lý: {{route}}",
+        };
+    }
     if (eventKey === "task.item.activity.commented") {
         return {
             titleTemplate: "👤 User ({{actorName}}) vừa tạo 1 thảo luận mới:",

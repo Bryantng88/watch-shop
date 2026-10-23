@@ -189,13 +189,14 @@ export function buildTitleDescriptor(values: WatchFormValues) {
 
 export function buildPostTitle(values: WatchFormValues) {
   const year = clean(values.basic.yearText);
-  const brand = clean(values.basic.brandName || values.spec.specBrand);
+  const baseTitle = clean(values.basic.title);
+  const titleWithoutYear = baseTitle.replace(/^\s*(?:18|19|20)\d{2}s?\s+/i, "");
+  const inferredBrand = clean(titleWithoutYear.split(/\s+/)[0]);
+  const brand = clean(values.basic.brandName || values.spec.specBrand || inferredBrand);
   const model = clean(values.spec.model);
   const nickname = clean(values.spec.nickname);
   const reference = clean(values.spec.referenceNumber);
   const movement = movementLabel(values.basic.movementType);
-  const baseTitle = clean(values.basic.title);
-
   return (
     [year, brand, model, reference, nickname, movement]
       .filter(Boolean)
