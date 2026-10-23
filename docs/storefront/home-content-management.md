@@ -99,11 +99,12 @@ instance, plus publication conflicts, withdrawn watches and unpublished stories.
 
 ## Catalog gallery refresh
 
-The catalog uses a compact text-only heading, one short description, and collection
-tabs. It intentionally does not load a Hero image or display a consultation CTA,
-so the product grid appears higher on desktop and mobile. Existing Hero settings
-remain available separately; `/api/public/storefront/catalog-hero` still resolves
-only the active Hero without exposing NAS/S3 paths or signed URLs.
+The catalog uses a short heading and description with an optional selected Hero
+photograph on the right. CSS masks fade its outer background into the white page;
+the image stays sharp without blur or an all-over white overlay. The compact
+responsive header keeps products near the top. No Hero produces a text-only header.
+The existing Hero manager controls the image and focal point, served through
+`/api/public/storefront/catalog-hero` without exposing NAS/S3 paths or signed URLs.
 
 Filters, search, sort and pagination retain their catalog contracts. Active filter
 chips can be removed independently. Refining a query resets `page` and `cursor`

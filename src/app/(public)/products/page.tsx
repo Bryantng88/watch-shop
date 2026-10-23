@@ -3,8 +3,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 
-import { publicCatalogQuerySchema, type PublicCatalogQuery } from "@/domains/storefront/contracts";
 import {
+  publicCatalogQuerySchema,
+  type PublicCatalogQuery,
+} from "@/domains/storefront/contracts";
+import {
+  getActiveStorefrontHero,
   getPublicCatalogFacets,
   listPublicWatches,
 } from "@/domains/storefront/server";
@@ -35,7 +39,8 @@ function scalarSearchParams(raw: RawSearchParams) {
 function pageHref(raw: RawSearchParams, page: number) {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(scalarSearchParams(raw))) {
-    if (key !== "cursor" && key !== "page" && value !== "") params.set(key, String(value));
+    if (key !== "cursor" && key !== "page" && value !== "")
+      params.set(key, String(value));
   }
   if (page > 1) params.set("page", String(page));
   return `/products?${params.toString()}#catalog`;
@@ -43,7 +48,9 @@ function pageHref(raw: RawSearchParams, page: number) {
 
 function visiblePages(current: number, total: number) {
   const pages = new Set([1, total, current - 1, current, current + 1]);
-  return [...pages].filter((page) => page >= 1 && page <= total).sort((a, b) => a - b);
+  return [...pages]
+    .filter((page) => page >= 1 && page <= total)
+    .sort((a, b) => a - b);
 }
 
 export default async function ProductsPage({
@@ -52,7 +59,8 @@ export default async function ProductsPage({
   searchParams: Promise<RawSearchParams>;
 }) {
   const raw = await searchParams;
-  const locale = (await cookies()).get("vintic-locale")?.value === "en" ? "en" : "vi";
+  const locale =
+    (await cookies()).get("vintic-locale")?.value === "en" ? "en" : "vi";
   const parsed = publicCatalogQuerySchema.safeParse(scalarSearchParams(raw));
   const invalidFilters = !parsed.success;
   const parsedQuery: PublicCatalogQuery = parsed.success
@@ -62,25 +70,36 @@ export default async function ProductsPage({
     parsedQuery.audience || parsedQuery.collection
       ? parsedQuery
       : { ...parsedQuery, audience: "MEN", collection: "STANDARD" };
-  const [result, facets] = await Promise.all([
+  const [result, facets, hero] = await Promise.all([
     listPublicWatches(query),
     getPublicCatalogFacets(),
+    getActiveStorefrontHero(),
   ]);
   const search = new URLSearchParams(scalarSearchParams(raw)).toString();
   const refinements = [
     ...(query.q
-      ? [{ key: "q", label: `“${query.q}”`, href: catalogRefinementHref(search, { q: undefined }) }]
+      ? [
+          {
+            key: "q",
+            label: `“${query.q}”`,
+            href: catalogRefinementHref(search, { q: undefined }),
+          },
+        ]
       : []),
     ...(query.brand
       ? [
           {
             key: "brand",
-            label: facets.brands.find((b) => b.slug === query.brand)?.name || query.brand,
+            label:
+              facets.brands.find((b) => b.slug === query.brand)?.name ||
+              query.brand,
             href: catalogRefinementHref(search, { brand: undefined }),
           },
         ]
       : []),
-    ...(["style", "size", "movement", "caseMaterial", "strapType"] as const).flatMap((key) =>
+    ...(
+      ["style", "size", "movement", "caseMaterial", "strapType"] as const
+    ).flatMap((key) =>
       query[key]
         ? [
             {
@@ -103,7 +122,10 @@ export default async function ProductsPage({
           {
             key: "price",
             label: locale === "en" ? "Price range" : "Khoảng giá",
-            href: catalogRefinementHref(search, { priceMin: undefined, priceMax: undefined }),
+            href: catalogRefinementHref(search, {
+              priceMin: undefined,
+              priceMax: undefined,
+            }),
           },
         ]
       : []),
@@ -151,10 +173,12 @@ export default async function ProductsPage({
         <span aria-hidden>/</span>
         <span>{locale === "en" ? "Watches" : "Đồng hồ"}</span>
       </nav>
-      <CatalogBanner title={title} />
+      <CatalogBanner title={title} hero={hero} />
       <nav
         className="vgc-categories"
-        aria-label={locale === "en" ? "Watch collections" : "Bộ sưu tập đồng hồ"}
+        aria-label={
+          locale === "en" ? "Watch collections" : "Bộ sưu tập đồng hồ"
+        }
       >
         {tabs.map((tab) => (
           <Link
@@ -190,7 +214,10 @@ export default async function ProductsPage({
         >
           <CatalogFilters query={query} facets={facets} />
         </aside>
-        <section id="catalog" aria-label={locale === "en" ? "Watch catalog" : "Danh sách đồng hồ"}>
+        <section
+          id="catalog"
+          aria-label={locale === "en" ? "Watch catalog" : "Danh sách đồng hồ"}
+        >
           <div className="vgc-toolbar">
             <p className="vgc-count" aria-live="polite">
               <strong>{result.pageInfo.totalItems}</strong>{" "}
@@ -201,7 +228,9 @@ export default async function ProductsPage({
           {refinements.length ? (
             <div
               className="vgc-refinements"
-              aria-label={locale === "en" ? "Active filters" : "Bộ lọc đang chọn"}
+              aria-label={
+                locale === "en" ? "Active filters" : "Bộ lọc đang chọn"
+              }
             >
               {refinements.map((filter) => (
                 <Link
@@ -222,14 +251,20 @@ export default async function ProductsPage({
           {result.items.length ? (
             <div className="vgc-grid">
               {result.items.map((watch, index) => (
-                <PublicWatchCardView key={watch.productId} watch={watch} priority={index === 0} />
+                <PublicWatchCardView
+                  key={watch.productId}
+                  watch={watch}
+                  priority={index === 0}
+                />
               ))}
             </div>
           ) : (
             <div className="vgc-empty">
               <p className="vgc-kicker">Vintic / Selection</p>
               <h2>
-                {locale === "en" ? "No matching watches found." : "Chưa tìm thấy chiếc phù hợp."}
+                {locale === "en"
+                  ? "No matching watches found."
+                  : "Chưa tìm thấy chiếc phù hợp."}
               </h2>
               <p>
                 {locale === "en"
@@ -245,28 +280,38 @@ export default async function ProductsPage({
           {result.pageInfo.totalPages > 1 ? (
             <nav
               className="vgc-pagination"
-              aria-label={locale === "en" ? "Catalog pagination" : "Phân trang đồng hồ"}
+              aria-label={
+                locale === "en" ? "Catalog pagination" : "Phân trang đồng hồ"
+              }
             >
               {currentPage > 1 ? (
-                <Link href={pageHref(raw, currentPage - 1)} className="vgc-page-direction">
+                <Link
+                  href={pageHref(raw, currentPage - 1)}
+                  className="vgc-page-direction"
+                >
                   {locale === "en" ? "← Previous" : "← Trang trước"}
                 </Link>
               ) : null}
-              {visiblePages(currentPage, result.pageInfo.totalPages).map((page, index, pages) => (
-                <span key={page} className="contents">
-                  {index > 0 && page - pages[index - 1] > 1 ? (
-                    <span className="vgc-page-gap">…</span>
-                  ) : null}
-                  <Link
-                    href={pageHref(raw, page)}
-                    aria-current={page === currentPage ? "page" : undefined}
-                  >
-                    {page}
-                  </Link>
-                </span>
-              ))}
+              {visiblePages(currentPage, result.pageInfo.totalPages).map(
+                (page, index, pages) => (
+                  <span key={page} className="contents">
+                    {index > 0 && page - pages[index - 1] > 1 ? (
+                      <span className="vgc-page-gap">…</span>
+                    ) : null}
+                    <Link
+                      href={pageHref(raw, page)}
+                      aria-current={page === currentPage ? "page" : undefined}
+                    >
+                      {page}
+                    </Link>
+                  </span>
+                ),
+              )}
               {currentPage < result.pageInfo.totalPages ? (
-                <Link href={pageHref(raw, currentPage + 1)} className="vgc-page-direction">
+                <Link
+                  href={pageHref(raw, currentPage + 1)}
+                  className="vgc-page-direction"
+                >
                   {locale === "en" ? "Next →" : "Trang sau →"}
                 </Link>
               ) : null}

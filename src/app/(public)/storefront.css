@@ -685,10 +685,46 @@
   color: #7c7c7c;
   margin: 0 0 14px;
 }
-/* A compact heading keeps the catalog imagery in focus. */
+/* Fade the selected photograph into the page, keeping the watch itself crisp. */
 .vgc-intro {
+  position: relative;
+  isolation: isolate;
   padding: 28px 0 20px;
 }
+.vgc-intro--with-image {
+  min-height: 172px;
+  display: flex;
+  align-items: center;
+  padding: 24px 0 30px;
+}
+.vgc-intro-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 52%;
+}
+.vgc-intro:not(.vgc-intro--with-image) .vgc-intro-copy {
+  max-width: none;
+}
+.vgc-intro-art {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  inset: -12px -1px 0 auto;
+  width: 53%;
+  overflow: hidden;
+  mask-image:
+    linear-gradient(to right, transparent, #000 40%, #000 88%, transparent),
+    linear-gradient(to bottom, transparent, #000 18%, #000 60%, transparent);
+  mask-composite: intersect;
+  -webkit-mask-image:
+    linear-gradient(to right, transparent, #000 40%, #000 88%, transparent),
+    linear-gradient(to bottom, transparent, #000 18%, #000 60%, transparent);
+  -webkit-mask-composite: source-in;
+}
+.vgc-intro-art img {
+  object-fit: cover;
+}
+
 .vgc-intro h1 {
   font-family: inherit;
   font-size: clamp(30px, 2.8vw, 40px);
@@ -846,7 +882,8 @@
 .vgc-card-link:hover h2 {
   color: #702d32;
 }
-.storefront-card:not(.storefront-card--has-hover):hover .storefront-card-cover-image {
+.storefront-card:not(.storefront-card--has-hover):hover
+  .storefront-card-cover-image {
   opacity: 1;
 }
 .vgc-search-tools {
@@ -1144,6 +1181,23 @@
   }
   .vgc-intro {
     padding: 24px 0 16px;
+  }
+  .vgc-intro--with-image {
+    min-height: 155px;
+    padding: 24px 0;
+  }
+  .vgc-intro--with-image .vgc-intro-copy {
+    max-width: 63%;
+  }
+  .vgc-intro-art {
+    width: 64%;
+    right: -6.8%;
+    mask-image:
+      linear-gradient(to right, transparent, #000 65%),
+      linear-gradient(to bottom, transparent, #000 20%, #000 55%, transparent);
+    -webkit-mask-image:
+      linear-gradient(to right, transparent, #000 65%),
+      linear-gradient(to bottom, transparent, #000 20%, #000 55%, transparent);
   }
   .vgc-intro h1 {
     font-size: 30px;
