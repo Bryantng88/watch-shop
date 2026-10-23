@@ -99,11 +99,11 @@ instance, plus publication conflicts, withdrawn watches and unpublished stories.
 
 ## Catalog gallery refresh
 
-The catalog replaces the rotating tinted banner and orange CTA with a static white
-introduction, optional explicitly selected Hero image, a small consultation link,
-and collection tabs. The existing Hero manager still controls that image. It is
-served through `/api/public/storefront/catalog-hero`, which resolves only the active
-Hero and does not expose NAS/S3 paths or signed URLs in the public page.
+The catalog uses a compact text-only heading, one short description, and collection
+tabs. It intentionally does not load a Hero image or display a consultation CTA,
+so the product grid appears higher on desktop and mobile. Existing Hero settings
+remain available separately; `/api/public/storefront/catalog-hero` still resolves
+only the active Hero without exposing NAS/S3 paths or signed URLs.
 
 Filters, search, sort and pagination retain their catalog contracts. Active filter
 chips can be removed independently. Refining a query resets `page` and `cursor`

@@ -5,7 +5,6 @@ import { cookies } from "next/headers";
 
 import { publicCatalogQuerySchema, type PublicCatalogQuery } from "@/domains/storefront/contracts";
 import {
-  getActiveStorefrontHero,
   getPublicCatalogFacets,
   listPublicWatches,
 } from "@/domains/storefront/server";
@@ -63,10 +62,9 @@ export default async function ProductsPage({
     parsedQuery.audience || parsedQuery.collection
       ? parsedQuery
       : { ...parsedQuery, audience: "MEN", collection: "STANDARD" };
-  const [result, facets, hero] = await Promise.all([
+  const [result, facets] = await Promise.all([
     listPublicWatches(query),
     getPublicCatalogFacets(),
-    getActiveStorefrontHero(),
   ]);
   const search = new URLSearchParams(scalarSearchParams(raw)).toString();
   const refinements = [
@@ -135,15 +133,15 @@ export default async function ProductsPage({
   const title =
     query.collection === "COLLECTIBLE"
       ? locale === "en"
-        ? "Collectible watches."
-        : "Đồng hồ sưu tầm."
+        ? "Collectible watches"
+        : "Đồng hồ sưu tầm"
       : query.audience === "WOMEN"
         ? locale === "en"
-          ? "Watches for her."
-          : "Đồng hồ nữ."
+          ? "Watches for her"
+          : "Đồng hồ nữ"
         : locale === "en"
-          ? "Curated watches."
-          : "Đồng hồ tuyển chọn.";
+          ? "Watches"
+          : "Đồng hồ";
   const currentPage = Math.min(query.page, result.pageInfo.totalPages);
 
   return (
@@ -153,7 +151,7 @@ export default async function ProductsPage({
         <span aria-hidden>/</span>
         <span>{locale === "en" ? "Watches" : "Đồng hồ"}</span>
       </nav>
-      <CatalogBanner hero={hero} title={title} />
+      <CatalogBanner title={title} />
       <nav
         className="vgc-categories"
         aria-label={locale === "en" ? "Watch collections" : "Bộ sưu tập đồng hồ"}
