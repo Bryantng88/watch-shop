@@ -18,6 +18,47 @@ const toneClass: Record<DashboardTone, string> = {
 };
 
 const domainLabels = { ORDER: "Đơn hàng", PURCHASE_REQUEST: "Yêu cầu", MEDIA: "Media", TECHNICAL: "Technical" };
+const chartColors: Record<OperationsDashboardQueue["key"], string> = {
+  orders: "#64748b", "purchase-requests": "#f59e0b", media: "#8b5cf6",
+  technical: "#3b82f6", "personal-work": "#475569",
+};
+
+function DashboardCharts({ data }: { data: OperationsDashboardData }) {
+  let cursor = 0;
+  const stops = data.queues.map((queue) => {
+    const start = cursor;
+    cursor += data.totalActive ? (queue.activeCount / data.totalActive) * 100 : 0;
+    return `${chartColors[queue.key]} ${start}% ${cursor}%`;
+  });
+  const completionTotal = data.completionTrend.reduce((sum, item) => sum + item.count, 0);
+  const completionMax = Math.max(1, ...data.completionTrend.map((item) => item.count));
+
+  return (
+    <section className="grid gap-4 lg:grid-cols-3">
+      <article className="rounded-xl bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.035),0_8px_24px_rgba(15,23,42,0.035)]">
+        <div><h2 className="font-bold text-slate-950">Cơ cấu việc đang mở</h2><p className="mt-0.5 text-xs text-slate-500">Tỷ trọng số mục theo từng khu vực nghiệp vụ</p></div>
+        <div className="mt-5 flex flex-col items-center gap-5 sm:flex-row sm:justify-center">
+          <div className="relative h-36 w-36 shrink-0 rounded-full" style={{ background: data.totalActive ? `conic-gradient(${stops.join(", ")})` : "#e2e8f0" }}>
+            <div className="absolute inset-5 flex flex-col items-center justify-center rounded-full bg-white shadow-inner"><span className="text-2xl font-bold tabular-nums text-slate-950">{data.totalActive}</span><span className="text-[11px] font-medium text-slate-500">việc đang mở</span></div>
+          </div>
+          <div className="grid w-full gap-2.5">{data.queues.map((queue) => <div key={queue.key} className="flex items-center justify-between gap-4 text-xs"><span className="flex min-w-0 items-center gap-2 text-slate-600"><span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: chartColors[queue.key] }} /><span className="truncate">{operationalDomainPresentation(queue.key).label}</span></span><span className="font-semibold tabular-nums text-slate-800">{queue.activeCount}</span></div>)}</div>
+        </div>
+      </article>
+
+      <article className="rounded-xl bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.035),0_8px_24px_rgba(15,23,42,0.035)]">
+        <div className="flex items-start justify-between gap-4"><div><h2 className="font-bold text-slate-950">Nhịp hoàn tất 7 ngày</h2><p className="mt-0.5 text-xs text-slate-500">Số đơn hàng được hoàn tất theo ngày</p></div><div className="text-right"><div className="text-2xl font-bold tabular-nums text-slate-950">{completionTotal}</div><div className="text-[10px] font-medium uppercase tracking-wide text-slate-400">đơn hoàn tất</div></div></div>
+        <div className="mt-6 flex h-40 items-end gap-2 border-b border-slate-100 px-1 pb-2">{data.completionTrend.map((item) => <div key={item.date} className="group flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2"><span className="text-[10px] font-semibold tabular-nums text-slate-500 opacity-0 transition group-hover:opacity-100">{item.count}</span><div className="w-full max-w-9 rounded-t-md bg-emerald-400/80 transition-colors group-hover:bg-emerald-500" style={{ height: item.count ? `${Math.max(12, (item.count / completionMax) * 100)}%` : "3px" }} title={`${item.label}: ${item.count} đơn`} /><span className="text-[10px] font-medium capitalize text-slate-400">{item.label}</span></div>)}</div>
+        <p className="mt-3 text-xs leading-5 text-slate-500">{completionTotal > 0 ? `Trung bình ${(completionTotal / 7).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} đơn/ngày trong tuần gần nhất.` : "Chưa có đơn hàng hoàn tất trong 7 ngày gần nhất."}</p>
+      </article>
+
+      <article className="rounded-xl bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.035),0_8px_24px_rgba(15,23,42,0.035)]">
+        <div><h2 className="font-bold text-slate-950">Phân bố theo giai đoạn</h2><p className="mt-0.5 text-xs text-slate-500">Nhìn nhanh công việc đang tập trung ở bước nào trong từng pipeline</p></div>
+        <div className="mt-5 space-y-5">{data.queues.map((queue) => { const total = queue.stages.reduce((sum, stage) => sum + stage.count, 0); return <div key={queue.key}><div className="mb-2 flex items-center justify-between gap-3 text-xs"><span className="font-semibold text-slate-700">{operationalDomainPresentation(queue.key).label}</span><span className="tabular-nums text-slate-400">{total} mục</span></div><div className="flex h-2.5 overflow-hidden rounded-full bg-slate-100">{queue.stages.filter((stage) => stage.count > 0).map((stage) => <div key={stage.key} className={cn("h-full", operationalStagePresentation(stage.key).dotClassName)} style={{ width: `${total ? (stage.count / total) * 100 : 0}%` }} title={`${stage.label}: ${stage.count}`} />)}</div><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">{queue.stages.map((stage) => <span key={stage.key} className="inline-flex items-center gap-1.5 text-[11px] text-slate-500"><span className={cn("h-1.5 w-1.5 rounded-full", operationalStagePresentation(stage.key).dotClassName)} />{stage.label} <strong className="font-semibold text-slate-700">{stage.count}</strong></span>)}</div></div>; })}</div>
+      </article>
+    </section>
+  );
+}
+
 function QueueCard({ queue }: { queue: OperationsDashboardQueue }) {
   const visual = operationalDomainPresentation(queue.key);
   const Icon = visual.icon;
@@ -141,6 +182,7 @@ export default function OperationsDashboard({ data }: { data: OperationsDashboar
         </div>
       </section>
 
+      <DashboardCharts data={data} />
       <div className="mt-5 text-right text-xs text-slate-400">Cập nhật lúc {new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(data.generatedAt))}</div>
     </AdminPageCanvas>
   );

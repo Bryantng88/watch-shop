@@ -39,7 +39,8 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
 
   const now = new Date();
   const today = bangkokDayBounds(now);
-  const [orders, purchaseRequestCounts, purchaseRequests, overdueRequestCount, unassignedRequestCount, media, mediaInsights, technical, technicalInsights, personalItems] = await Promise.all([
+  const trendStart = new Date(today.start.getTime() - 6 * 86_400_000);
+  const [orders, purchaseRequestCounts, purchaseRequests, overdueRequestCount, unassignedRequestCount, media, mediaInsights, technical, technicalInsights, completedOrders, personalItems] = await Promise.all([
     queryOrderListProjection(prisma, { view: "all", subFilter: "", paymentType: "", sort: "updatedDesc", page: 1, pageSize: 1 }),
     prisma.purchaseRequest.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.purchaseRequest.findMany({
@@ -54,6 +55,10 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
     queryMediaOperationBoardInsightCounts(prisma, now),
     listTechnicalIssueBoardWorkspaceProjection(prisma, { page: 1, pageSize: 100 }),
     queryTechnicalIssueBoardInsightCounts(prisma, now),
+    prisma.order.findMany({
+      where: { status: "COMPLETED", updatedAt: { gte: trendStart, lt: today.end } },
+      select: { updatedAt: true },
+    }),
     input.userId ? prisma.taskItem.findMany({
       where: {
         task: { kind: "PERSONAL" },
@@ -179,6 +184,23 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
   }
 
   const totalActive = queues.reduce((sum, queue) => sum + queue.activeCount, 0);
+  const dateKey = (date: Date) => new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(date);
+  const completedByDate = new Map<string, number>();
+  for (const order of completedOrders) {
+    const key = dateKey(order.updatedAt);
+    completedByDate.set(key, (completedByDate.get(key) ?? 0) + 1);
+  }
+  const completionTrend = Array.from({ length: 7 }, (_, index) => {
+    const dayStart = new Date(trendStart.getTime() + index * 86_400_000);
+    const key = dateKey(dayStart);
+    return {
+      date: key,
+      label: new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Bangkok", weekday: "short" }).format(dayStart),
+      count: completedByDate.get(key) ?? 0,
+    };
+  });
   const visibleAttention = attention.slice(0, 6);
-  return { generatedAt: now.toISOString(), totalActive, attention: visibleAttention, priorityAction: visibleAttention[0] ?? null, queues };
+  return { generatedAt: now.toISOString(), totalActive, completionTrend, attention: visibleAttention, priorityAction: visibleAttention[0] ?? null, queues };
 }
