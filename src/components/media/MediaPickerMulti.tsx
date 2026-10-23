@@ -61,6 +61,7 @@ type Props = {
 type PreviewState = {
     items: PickedMediaItem[];
     activeKey: string;
+    source: "chosen" | "selected";
 } | null;
 
 function dedupeItems(items: PickedMediaItem[]) {
@@ -128,10 +129,12 @@ function ImagePreviewDialog({
     preview,
     onClose,
     onNavigate,
+    onToggleSelection,
 }: {
     preview: PreviewState;
     onClose: () => void;
     onNavigate: (key: string) => void;
+    onToggleSelection: (item: PickedMediaItem, source: "chosen" | "selected") => void;
 }) {
     const activeIndex = preview
         ? preview.items.findIndex((item) => getItemKey(item) === preview.activeKey)
@@ -148,7 +151,7 @@ function ImagePreviewDialog({
     }, [onNavigate, preview]);
 
     React.useEffect(() => {
-        if (!activeItem) return;
+        if (!activeItem || !preview) return;
 
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === "Escape") {
@@ -160,12 +163,15 @@ function ImagePreviewDialog({
             } else if (event.key === "ArrowRight" && canGoNext) {
                 event.preventDefault();
                 goToIndex(activeIndex + 1);
+            } else if (event.code === "Space") {
+                event.preventDefault();
+                onToggleSelection(activeItem, preview.source);
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [activeIndex, activeItem, canGoNext, canGoPrevious, goToIndex, onClose]);
+    }, [activeIndex, activeItem, canGoNext, canGoPrevious, goToIndex, onClose, onToggleSelection, preview]);
 
     if (!preview || !activeItem || !src) return null;
 
@@ -206,6 +212,15 @@ function ImagePreviewDialog({
                     <div className="shrink-0 text-xs tabular-nums text-slate-500">
                         {activeIndex + 1}/{preview.items.length}
                     </div>
+                    <button
+                        type="button"
+                        onClick={() => onToggleSelection(activeItem, preview.source)}
+                        className={preview.source === "chosen"
+                            ? "rounded-full bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                            : "rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100"}
+                    >
+                        {preview.source === "chosen" ? "Chọn ảnh" : "Bỏ chọn"}
+                    </button>
                     <button
                         type="button"
                         disabled={!canGoNext}
@@ -528,13 +543,14 @@ export default function MediaPickerMulti({
         [chosenItems, hideSelectedFromChosen, selectedKeySet],
     );
 
-    const handlePreview = React.useCallback((item: PickedMediaItem, items: PickedMediaItem[]) => {
+    const handlePreview = React.useCallback((item: PickedMediaItem, items: PickedMediaItem[], source: "chosen" | "selected") => {
         const src = getImageSrc(item);
         if (!src) return;
 
         setPreview({
             items: [...items],
             activeKey: getItemKey(item),
+            source,
         });
     }, []);
 
@@ -595,6 +611,17 @@ export default function MediaPickerMulti({
             selectedKeySet,
         ]
     );
+    const handlePreviewToggleSelection = React.useCallback((item: PickedMediaItem, source: "chosen" | "selected") => {
+        handleToggleSelect(item);
+        setPreview((current) => {
+            if (!current) return null;
+            const nextItems = current.items.filter((candidate) => getItemKey(candidate) !== getItemKey(item));
+            if (!nextItems.length) return null;
+            const currentIndex = current.items.findIndex((candidate) => getItemKey(candidate) === getItemKey(item));
+            const nextItem = nextItems[Math.min(Math.max(currentIndex, 0), nextItems.length - 1)];
+            return nextItem ? { items: nextItems, activeKey: getItemKey(nextItem), source } : null;
+        });
+    }, [handleToggleSelect]);
     const handleRemoveChosen = React.useCallback(
         (key: string) => {
             setPreview(null);
@@ -690,6 +717,7 @@ export default function MediaPickerMulti({
                 preview={preview}
                 onClose={handlePreviewClose}
                 onNavigate={handlePreviewNavigate}
+                onToggleSelection={handlePreviewToggleSelection}
             />
 
             {(title || description) ? (
@@ -782,7 +810,7 @@ export default function MediaPickerMulti({
                 onToggleSelect={handleToggleSelect}
                 onRemoveChosen={handleRemoveChosen}
                 maxFinalSelection={maxFinalSelection}
-                onPreview={(item) => handlePreview(item, visibleChosenItems)}
+                onPreview={(item) => handlePreview(item, visibleChosenItems, "chosen")}
                 onPreviewClose={handlePreviewClose}
                 managementSelectedKeys={managementSelectedKeys}
                 onToggleManagement={handleToggleManagement}
@@ -793,7 +821,7 @@ export default function MediaPickerMulti({
                 items={selectedItems}
                 onRemove={handleRemoveSelected}
                 onReorder={onSelectedChange}
-                onPreview={(item) => handlePreview(item, selectedItems)}
+                onPreview={(item) => handlePreview(item, selectedItems, "selected")}
                 onPreviewClose={handlePreviewClose}
                 title={selectedTitle}
                 description={selectedDescription}

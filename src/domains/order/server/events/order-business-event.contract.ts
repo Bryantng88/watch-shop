@@ -19,6 +19,6 @@ export const ORDER_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] =
       label: key.split(".").join(" "),
       targetType: "ORDER",
       group: "Order",
-      knownConsumers: ["timeline", "projection"],
+      knownConsumers: ["timeline", "projection", "notification"],
     }),
   );

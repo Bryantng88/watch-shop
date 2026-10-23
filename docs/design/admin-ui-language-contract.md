@@ -117,6 +117,13 @@ mappings.
   `Được chia sẻ`, `Tất cả`. `Tất cả` means all records the current user may
   access, never an implicit bypass of private-record permissions.
 
+- User identity is represented by `AdminUserAvatar`; compact groups use
+  `AdminUserAvatarStack`, while contexts that communicate ownership or sharing
+  use `AdminUserInlineList` so each visible avatar retains its user name. Prefer the stored
+  avatar, fall back to initials, keep the full name in an accessible label and
+  tooltip, and add visible name text only when it resolves ambiguity or is
+  required to complete the action.
+
 ### Modals and floating layers
 
 - Use a restrained overlay, white surface, 16px-equivalent radius, and one
@@ -150,6 +157,9 @@ Canonical tokens include page and section typography, metadata and numeric
 values, flat and elevated surfaces, badges, interactive hover/focus treatment,
 form controls, and primary/secondary/compact actions. Add a shared token before
 introducing a repeated local visual rule.
+
+- `AdminUserAvatar`, `AdminUserAvatarStack`, and `AdminUserInlineList` provide
+  canonical user identity and compact multi-user presentation.
 
 The primitives intentionally stay small. Domain components own data and
 behavior; shared UI owns repeatable presentation. Do not grow this module into

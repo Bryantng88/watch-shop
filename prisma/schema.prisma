@@ -2316,6 +2316,11 @@ enum TaskStatus {
   CANCELLED
 }
 
+enum TaskProgressMode {
+  MANUAL
+  CHECKLIST
+}
+
 enum ActivitySourceType {
   BUSINESS_EVENT
   DISCUSSION
@@ -2805,10 +2810,12 @@ model TaskItem {
   title  String
   note   String?
 
-  status     TaskStatus   @default(TODO)
-  priority   TaskPriority @default(MEDIUM)
-  workTypeId String?
-  dueAt      DateTime?
+  status          TaskStatus       @default(TODO)
+  priority        TaskPriority     @default(MEDIUM)
+  workTypeId      String?
+  dueAt           DateTime?
+  progressPercent Int              @default(0)
+  progressMode    TaskProgressMode @default(MANUAL)
 
   assignedToUserId String?
   startedAt        DateTime?

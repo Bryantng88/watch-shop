@@ -4,6 +4,7 @@ import {
   PersonalTaskShareAccess,
   TaskKind,
   TaskStatus,
+  TaskProgressMode,
   type Prisma,
   type TaskPriority,
 } from "@prisma/client";
@@ -36,7 +37,7 @@ type PersonalWorkInput = {
   priority?: TaskPriority;
   domain?: PersonalWorkDomain;
   workType?: string | null;
-  target?: PersonalWorkTarget | null;
+  targets?: PersonalWorkTarget[];
   tags?: string[];
 };
 
@@ -245,6 +246,12 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
           select: { targetType: true, targetId: true, metadataJson: true },
           orderBy: { createdAt: "desc" },
         },
+        activities: {
+          include: { actorUser: { select: { id: true, name: true, email: true, avatarUrl: true } } },
+          orderBy: { occurredAt: "desc" },
+          take: 20,
+        },
+        checklists: { orderBy: { sortOrder: "asc" } },
       },
       orderBy: [{ isDone: "asc" }, { dueAt: "asc" }, { createdAt: "desc" }],
     }),
@@ -284,7 +291,19 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
         completedAt: item.completedAt?.toISOString() ?? null,
         domain,
         workType: item.workTypeId,
-        target: item.executions.map(targetFromExecution).find(Boolean) ?? null,
+        targets: item.executions
+          .map(targetFromExecution)
+          .filter((target): target is PersonalWorkTarget => Boolean(target)),
+        progressPercent: item.progressPercent,
+        progressMode: item.progressMode,
+        activities: item.activities.map((activity) => ({
+          id: activity.id,
+          title: activity.title,
+          body: activity.body,
+          occurredAt: activity.occurredAt.toISOString(),
+          actor: activity.actorUser,
+        })),
+        checklist: item.checklists.map((entry) => ({ id: entry.id, title: entry.title, isDone: entry.isDone })),
         tags: names.filter((name) => name.toUpperCase() !== domain),
         calendar: {
           synced: Boolean(calendar),
@@ -320,7 +339,16 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
   if (!title) throw new Error("Vui lòng nhập nội dung công việc");
   const domain = normalizePersonalDomain(input.domain);
   const workType = normalizeWorkType(input.workType, domain);
-  const target = await resolvePersonalWorkTarget(domain, input.target);
+  const resolvedTargets = await Promise.all(
+    (input.targets || []).map((target) => resolvePersonalWorkTarget(domain, target)),
+  );
+  const targets = [
+    ...new Map(
+      resolvedTargets
+        .filter((target): target is PersonalWorkTarget => Boolean(target))
+        .map((target) => [`${target.type}:${target.id}`, target]),
+    ).values(),
+  ];
   return prisma.$transaction(async (tx) => {
     const taskResult = await createTask(tx, { kind: TaskKind.PERSONAL }, auth);
     const item = await createTaskItemRepo(tx, {
@@ -340,7 +368,7 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
       targetId: item.id,
       names: [domain, ...(input.tags || [])],
     });
-    if (target) {
+    for (const target of targets) {
       await createBusinessBinding(tx, {
         taskId: taskResult.task.id,
         taskItemId: item.id,
@@ -446,18 +474,39 @@ export async function updatePersonalWorkItem(
     status?: TaskStatus;
     domain?: PersonalWorkDomain;
     tags?: string[];
+    targets?: PersonalWorkTarget[];
+    progressPercent?: number;
+    progressMode?: TaskProgressMode;
+    updateBody?: string | null;
   },
   auth: unknown,
 ) {
   const current = await assertPersonalWorkAccess(input.id, auth, "EDIT");
   const status = input.status;
-  await prisma.taskItem.update({
-    where: { id: input.id },
-    data: {
+  const progressPercent = input.progressPercent === undefined
+    ? undefined
+    : Math.max(0, Math.min(100, Math.round(input.progressPercent)));
+  const resolvedTargets = input.targets
+    ? [
+        ...new Map(
+          (await Promise.all(
+            input.targets.map((target) => resolvePersonalWorkTarget(normalizePersonalDomain(input.domain), target)),
+          ))
+            .filter((target): target is PersonalWorkTarget => Boolean(target))
+            .map((target) => [`${target.type}:${target.id}`, target]),
+        ).values(),
+      ]
+    : null;
+  await prisma.$transaction(async (tx) => {
+    await tx.taskItem.update({
+      where: { id: input.id },
+      data: {
       ...(input.title !== undefined ? { title: input.title.trim() } : {}),
       ...(input.note !== undefined ? { note: input.note?.trim() || null } : {}),
       ...(input.dueAt !== undefined ? { dueAt: input.dueAt ? new Date(input.dueAt) : null } : {}),
       ...(input.priority ? { priority: input.priority } : {}),
+      ...(progressPercent !== undefined ? { progressPercent } : {}),
+      ...(input.progressMode ? { progressMode: input.progressMode } : {}),
       ...(status
         ? {
             status,
@@ -466,7 +515,39 @@ export async function updatePersonalWorkItem(
             startedAt: status === TaskStatus.IN_PROGRESS ? new Date() : undefined,
           }
         : {}),
-    },
+      },
+    });
+    if (input.updateBody?.trim() || status || progressPercent !== undefined) {
+      await tx.taskItemActivity.create({
+        data: {
+          taskItemId: input.id,
+          sourceType: "DISCUSSION",
+          actorUserId: current.userId,
+          title: input.updateBody?.trim() ? "Cập nhật tiến độ" : "Cập nhật công việc",
+          body: input.updateBody?.trim() || null,
+          metadataJson: {
+            ...(status ? { status } : {}),
+            ...(progressPercent !== undefined ? { progressPercent } : {}),
+          },
+        },
+      });
+    }
+    if (resolvedTargets) {
+      await tx.taskExecution.updateMany({
+        where: { taskItemId: input.id, metadataJson: { path: ["source"], equals: "PERSONAL_WORK" } },
+        data: { actionType: "CANCELLED" },
+      });
+      for (const target of resolvedTargets) {
+        await createBusinessBinding(tx, {
+          taskId: current.taskId,
+          taskItemId: current.id,
+          targetType: target.type,
+          targetId: target.id,
+          metadataJson: bindingMetadata(target),
+          createdByUserId: current.userId,
+        });
+      }
+    }
   });
   if (input.domain || input.tags) {
     await setTargetTagsRepo(prisma, {

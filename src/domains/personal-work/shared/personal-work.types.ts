@@ -67,12 +67,30 @@ export type PersonalWorkItem = {
   completedAt: string | null;
   domain: PersonalWorkDomain;
   workType: string | null;
-  target: PersonalWorkTarget | null;
+  targets: PersonalWorkTarget[];
+  progressPercent: number;
+  progressMode: "MANUAL" | "CHECKLIST";
+  activities: PersonalWorkActivity[];
+  checklist: PersonalWorkChecklistItem[];
   tags: string[];
   calendar: { synced: boolean; htmlLink: string | null; lastSyncedAt: string | null };
   access: "OWNER" | "EDITOR" | "VIEWER";
   owner: PersonalWorkUser;
   sharedWith: PersonalWorkShare[];
+};
+
+export type PersonalWorkActivity = {
+  id: string;
+  title: string;
+  body: string | null;
+  occurredAt: string;
+  actor: PersonalWorkUser | null;
+};
+
+export type PersonalWorkChecklistItem = {
+  id: string;
+  title: string;
+  isDone: boolean;
 };
 
 export type PersonalWorkUser = {

@@ -245,6 +245,36 @@ async function enrichNotificationEvent(
             .join(", ") || "Chưa có Watch";
     }
 
+    if (
+        event.targetType === "ORDER" &&
+        ["order.created", "order.posted"].includes(event.eventKey)
+    ) {
+        const order = await client.order.findUnique({
+            where: { id: event.targetId },
+            select: {
+                refNo: true,
+                customerName: true,
+                shipPhone: true,
+                subtotal: true,
+                shippingAmount: true,
+                status: true,
+                paymentStatus: true,
+                orderItem: { select: { title: true, quantity: true } },
+            },
+        });
+        enriched.orderRef = clean(order?.refNo) || clean(enriched.refNo) || event.targetId;
+        enriched.customerName = clean(order?.customerName) || "Chưa cung cấp";
+        enriched.phone = clean(order?.shipPhone) || "Chưa cung cấp";
+        enriched.orderStatus = clean(order?.status) || clean(enriched.toStatus);
+        enriched.paymentStatus = clean(order?.paymentStatus) || "UNPAID";
+        enriched.totalAmount = Number(order?.subtotal || 0) + Number(order?.shippingAmount || 0);
+        enriched.watchTitles = order?.orderItem
+            .map((item) => `${clean(item.title)}${item.quantity > 1 ? ` ×${item.quantity}` : ""}`)
+            .filter(Boolean)
+            .join(", ") || "Chưa có sản phẩm";
+        enriched.route = `/admin/orders/${encodeURIComponent(event.targetId)}`;
+    }
+
     return { ...event, metadataJson: enriched as Prisma.JsonObject };
 }
 

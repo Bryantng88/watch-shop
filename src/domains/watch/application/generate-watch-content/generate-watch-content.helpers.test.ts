@@ -57,3 +57,22 @@ test("generated title and hashtags use the product brand when spec brand is empt
   );
   assert.match(buildHashTags(values), /#Seiko/);
 });
+
+test("generated title retains the brand from the canonical product title when brand snapshots are temporarily empty", () => {
+  const values = {
+    basic: {
+      title: "1990s Seiko Alba V33F-6A10 Quartz",
+      brandName: "",
+      yearText: "1990s",
+      movementType: "QUARTZ",
+    },
+    spec: {
+      specBrand: "",
+      model: "Alba",
+      referenceNumber: "V33F-6A10",
+      nickname: "",
+    },
+  } as WatchFormValues;
+
+  assert.equal(buildPostTitle(values), "1990s Seiko Alba V33F-6A10 quartz");
+});

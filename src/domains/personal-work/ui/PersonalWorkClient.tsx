@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import {
   ADMIN_DOMAIN_TONE,
+  AdminUserAvatar,
+  AdminUserInlineList,
   AdminFlatToolbar,
   AdminPageCanvas,
   AdminPageHeader,
@@ -149,7 +151,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [targetType, setTargetType] = useState<PersonalWorkTargetType | "">("");
   const [targetQuery, setTargetQuery] = useState("");
   const [targetResults, setTargetResults] = useState<PersonalWorkTarget[]>([]);
-  const [selectedTarget, setSelectedTarget] = useState<PersonalWorkTarget | null>(null);
+  const [selectedTargets, setSelectedTargets] = useState<PersonalWorkTarget[]>([]);
   const [dueAt, setDueAt] = useState(localInputDate(new Date()));
   const [message, setMessage] = useState<string | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(data.calendar.connected);
@@ -164,6 +166,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [editNote, setEditNote] = useState("");
   const [editDomain, setEditDomain] = useState<PersonalWorkDomain>("GENERAL");
   const [editDueAt, setEditDueAt] = useState("");
+  const [editStatus, setEditStatus] = useState<PersonalWorkItem["status"]>("TODO");
+  const [editProgress, setEditProgress] = useState(0);
+  const [editUpdateBody, setEditUpdateBody] = useState("");
+  const [editTargets, setEditTargets] = useState<PersonalWorkTarget[]>([]);
+  const [editTargetType, setEditTargetType] = useState<PersonalWorkTargetType | "">("");
+  const [editTargetQuery, setEditTargetQuery] = useState("");
+  const [editTargetResults, setEditTargetResults] = useState<PersonalWorkTarget[]>([]);
   const [editShares, setEditShares] = useState<PersonalWorkItem["sharedWith"]>([]);
   const [calendarCursor, setCalendarCursor] = useState(() => {
     const date = new Date();
@@ -228,7 +237,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     setTargetType(domainTargets[nextDomain][0]?.type || "");
     setTargetQuery("");
     setTargetResults([]);
-    setSelectedTarget(null);
+    setSelectedTargets([]);
   }
 
   function searchTargets() {
@@ -236,6 +245,17 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     run(async () => {
       const result = await searchPersonalWorkTargetsAction({ type: targetType, query: targetQuery });
       setTargetResults(result.items);
+    });
+  }
+
+  function searchEditTargets() {
+    if (!editTargetType) return;
+    run(async () => {
+      const result = await searchPersonalWorkTargetsAction({
+        type: editTargetType,
+        query: editTargetQuery,
+      });
+      setEditTargetResults(result.items);
     });
   }
 
@@ -255,6 +275,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     setEditNote(item.note || "");
     setEditDomain(item.domain);
     setEditDueAt(item.dueAt ? localInputDate(new Date(item.dueAt)) : "");
+    setEditStatus(item.status);
+    setEditProgress(item.progressPercent);
+    setEditUpdateBody("");
+    setEditTargets(item.targets);
+    setEditTargetType(domainTargets[item.domain][0]?.type || "");
+    setEditTargetQuery("");
+    setEditTargetResults([]);
     setEditShares(item.sharedWith);
   }
 
@@ -292,7 +319,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   title: nextTitle,
                   domain: newDomain,
                   workType,
-                  target: selectedTarget,
+                  targets: selectedTargets,
                   dueAt: dueAt ? new Date(dueAt).toISOString() : null,
                 }),
               "Đã thêm công việc",
@@ -300,7 +327,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 setTitle("");
                 setTargetQuery("");
                 setTargetResults([]);
-                setSelectedTarget(null);
+                setSelectedTargets([]);
               },
             );
           }}
@@ -382,7 +409,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   value={targetType}
                   onChange={(e) => {
                     setTargetType(e.target.value as PersonalWorkTargetType);
-                    setSelectedTarget(null);
+                    setSelectedTargets([]);
                     setTargetResults([]);
                   }}
                   className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
@@ -399,29 +426,42 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   Tìm đối tượng nghiệp vụ
                 </span>
                 <input
-                  value={selectedTarget ? selectedTarget.label : targetQuery}
+                  value={targetQuery}
                   onChange={(e) => {
-                    setSelectedTarget(null);
                     setTargetQuery(e.target.value);
                   }}
                   placeholder="Tên, SKU hoặc mã tham chiếu..."
                   className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
                 />
-                {targetResults.length > 0 && !selectedTarget && (
+                {targetResults.length > 0 && (
                   <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
                     {targetResults.map((item) => (
                       <button
                         type="button"
                         key={`${item.type}-${item.id}`}
                         onClick={() => {
-                          setSelectedTarget(item);
-                          setTargetQuery(item.label);
+                          setSelectedTargets((current) => current.some((target) => target.type === item.type && target.id === item.id) ? current : [...current, item]);
+                          setTargetQuery("");
                           setTargetResults([]);
                         }}
                         className="block w-full rounded-md px-3 py-2 text-left hover:bg-slate-50"
                       >
                         <span className="block text-sm font-medium text-slate-900">{item.label}</span>
                         {item.secondary && <span className="block text-xs text-slate-500">{item.secondary}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {selectedTargets.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {selectedTargets.map((target) => (
+                      <button
+                        type="button"
+                        key={`${target.type}:${target.id}`}
+                        onClick={() => setSelectedTargets((current) => current.filter((item) => item.type !== target.type || item.id !== target.id))}
+                        className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-rose-50 hover:text-rose-700"
+                      >
+                        {target.label} ×
                       </button>
                     ))}
                   </div>
@@ -746,16 +786,17 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                           </span>
                         ))}
                       </div>
-                      {item.target && (
+                      {item.targets.map((target) => (
                         <Link
-                          href={item.target.href}
+                          key={`${target.type}:${target.id}`}
+                          href={target.href}
                           className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-blue-700 hover:underline"
                         >
-                          {item.target.label}
-                          {item.target.secondary ? ` · ${item.target.secondary}` : ""}
+                          {target.label}
+                          {target.secondary ? ` · ${target.secondary}` : ""}
                           <ExternalLink className="h-3 w-3" />
                         </Link>
-                      )}
+                      ))}
                       <p
                         className={`mt-1 flex items-center gap-1 text-xs ${late ? "font-semibold text-amber-700" : "text-slate-500"}`}
                       >
@@ -763,6 +804,14 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                         {late ? "Quá hạn · " : ""}
                         {dueLabel(item.dueAt)}
                       </p>
+                      {item.progressPercent > 0 && item.status !== "DONE" && (
+                        <div className="mt-1.5 flex max-w-xs items-center gap-2">
+                          <div className="h-1 flex-1 overflow-hidden rounded-full bg-slate-100">
+                            <div className="h-full rounded-full bg-blue-500" style={{ width: `${item.progressPercent}%` }} />
+                          </div>
+                          <span className="text-[10px] font-semibold tabular-nums text-slate-500">{item.progressPercent}%</span>
+                        </div>
+                      )}
                       {item.access === "OWNER" && item.sharedWith.length > 0 && (
                         <div
                           className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px] text-violet-700"
@@ -773,9 +822,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                             )
                             .join(", ")}
                         >
-                          <Share2 className="h-3.5 w-3.5 shrink-0" />
                           <span className="shrink-0 text-slate-500">Chia sẻ với</span>
-                          <span className="truncate font-medium">
+                          <AdminUserInlineList users={item.sharedWith.map((share) => share.user)} />
+                          <span className="sr-only">
                             {item.sharedWith
                               .slice(0, 2)
                               .map((share) => share.user.name || share.user.email)
@@ -786,7 +835,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       )}
                       {item.access !== "OWNER" && (
                         <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-violet-700">
-                          <Share2 className="h-3.5 w-3.5 shrink-0" />
+                          <AdminUserAvatar user={item.owner} size="xs" />
                           <span className="truncate">
                             {item.owner.name || item.owner.email} đã chia sẻ với bạn
                           </span>
@@ -851,6 +900,11 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                     domain: editDomain,
                     tags: editingItem.tags,
                     dueAt: editDueAt ? new Date(editDueAt).toISOString() : null,
+                    status: editStatus,
+                    progressPercent: editProgress,
+                    progressMode: "MANUAL",
+                    updateBody: editUpdateBody,
+                    targets: editTargets,
                   });
                   if (editingItem.access === "OWNER")
                     await replacePersonalWorkSharesAction({
@@ -902,11 +956,60 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-slate-600">Trạng thái</span>
+                  <select
+                    value={editStatus}
+                    disabled={editingItem.access === "VIEWER"}
+                    onChange={(event) => setEditStatus(event.target.value as PersonalWorkItem["status"])}
+                    className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                  >
+                    <option value="TODO">Chưa bắt đầu</option>
+                    <option value="IN_PROGRESS">Đang thực hiện</option>
+                    <option value="DONE">Hoàn thành</option>
+                    <option value="CANCELLED">Hủy</option>
+                  </select>
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="flex items-center justify-between text-xs font-semibold text-slate-600">
+                    <span>Tiến độ linh hoạt</span><span>{editProgress}%</span>
+                  </span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={editProgress}
+                    disabled={editingItem.access === "VIEWER"}
+                    onChange={(event) => setEditProgress(Number(event.target.value))}
+                    className="h-11 w-full accent-blue-600"
+                  />
+                </label>
+              </div>
+              <label className="block space-y-1.5">
+                <span className="text-xs font-semibold text-slate-600">Nội dung cập nhật</span>
+                <textarea
+                  value={editUpdateBody}
+                  disabled={editingItem.access === "VIEWER"}
+                  onChange={(event) => setEditUpdateBody(event.target.value)}
+                  rows={2}
+                  placeholder="Ghi lại kết quả, vấn đề hoặc bước tiếp theo…"
+                  className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                />
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block space-y-1.5">
                   <span className="text-xs font-semibold text-slate-600">Nghiệp vụ</span>
                   <select
                     value={editDomain}
                     disabled={editingItem.access === "VIEWER"}
-                    onChange={(event) => setEditDomain(event.target.value as PersonalWorkDomain)}
+                    onChange={(event) => {
+                      const nextDomain = event.target.value as PersonalWorkDomain;
+                      setEditDomain(nextDomain);
+                      setEditTargetType(domainTargets[nextDomain][0]?.type || "");
+                      setEditTargetQuery("");
+                      setEditTargetResults([]);
+                      setEditTargets([]);
+                    }}
                     className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
                   >
                     {PERSONAL_WORK_DOMAINS.map((item) => (
@@ -927,12 +1030,108 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   />
                 </label>
               </div>
+              {domainTargets[editDomain].length > 0 && (
+                <div className="space-y-2 rounded-xl bg-slate-50 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-semibold text-slate-600">Liên kết nghiệp vụ</span>
+                    <span className="text-[11px] text-slate-400">Có thể chọn nhiều đối tượng</span>
+                  </div>
+                  {editTargets.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {editTargets.map((target) => (
+                        <button
+                          type="button"
+                          key={`${target.type}:${target.id}`}
+                          disabled={editingItem.access === "VIEWER"}
+                          onClick={() =>
+                            setEditTargets((current) =>
+                              current.filter((item) => item.type !== target.type || item.id !== target.id),
+                            )
+                          }
+                          className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-rose-50 hover:text-rose-700 disabled:cursor-default disabled:hover:bg-blue-50 disabled:hover:text-blue-700"
+                        >
+                          {target.label}{editingItem.access !== "VIEWER" ? " ×" : ""}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {editingItem.access !== "VIEWER" && (
+                    <div className="grid gap-2 sm:grid-cols-[150px_minmax(0,1fr)_auto]">
+                      <select
+                        value={editTargetType}
+                        onChange={(event) => {
+                          setEditTargetType(event.target.value as PersonalWorkTargetType);
+                          setEditTargetQuery("");
+                          setEditTargetResults([]);
+                        }}
+                        className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                      >
+                        {domainTargets[editDomain].map((item) => (
+                          <option key={item.type} value={item.type}>{item.label}</option>
+                        ))}
+                      </select>
+                      <div className="relative">
+                        <input
+                          value={editTargetQuery}
+                          onChange={(event) => setEditTargetQuery(event.target.value)}
+                          placeholder="Tên, SKU hoặc mã tham chiếu..."
+                          className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                        />
+                        {editTargetResults.length > 0 && (
+                          <div className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
+                            {editTargetResults.map((target) => (
+                              <button
+                                type="button"
+                                key={`${target.type}:${target.id}`}
+                                onClick={() => {
+                                  setEditTargets((current) =>
+                                    current.some((item) => item.type === target.type && item.id === target.id)
+                                      ? current
+                                      : [...current, target],
+                                  );
+                                  setEditTargetQuery("");
+                                  setEditTargetResults([]);
+                                }}
+                                className="block w-full rounded-md px-3 py-2 text-left hover:bg-slate-50"
+                              >
+                                <span className="block text-sm font-medium text-slate-900">{target.label}</span>
+                                {target.secondary && <span className="block text-xs text-slate-500">{target.secondary}</span>}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        disabled={pending || !editTargetType}
+                        onClick={searchEditTargets}
+                        className="h-10 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                      >
+                        Tìm
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
               {editingItem.calendar.synced && (
                 <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
                   Thay đổi sẽ được cập nhật vào sự kiện Google Calendar hiện có.
                 </p>
               )}
             </div>
+            {editingItem.activities.length > 0 && (
+              <section className="mt-4 border-t border-slate-100 pt-4">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Lịch sử cập nhật</h3>
+                <div className="mt-2 max-h-32 space-y-2 overflow-y-auto">
+                  {editingItem.activities.map((activity) => (
+                    <div key={activity.id} className="flex gap-2 text-xs text-slate-600">
+                      <span className="shrink-0 text-slate-400">{new Date(activity.occurredAt).toLocaleString("vi-VN")}</span>
+                      <span><strong className="text-slate-700">{activity.title}</strong>{activity.body ? ` · ${activity.body}` : ""}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
             {editingItem.access === "OWNER" && (
               <div className="mt-4">
                 <PersonalWorkShareEditor users={data.availableUsers} shares={editShares} onChange={setEditShares} />

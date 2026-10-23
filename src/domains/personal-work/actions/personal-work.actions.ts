@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { PersonalTaskShareAccess, TaskStatus, type TaskPriority } from "@prisma/client";
+import { PersonalTaskShareAccess, TaskProgressMode, TaskStatus, type TaskPriority } from "@prisma/client";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getAuthUserId } from "@/domains/task/server/core/task.service";
@@ -35,11 +35,11 @@ export async function createPersonalWorkAction(input: {
   priority?: TaskPriority;
   domain?: PersonalWorkDomain;
   workType?: string | null;
-  target?: PersonalWorkTarget | null;
+  targets?: PersonalWorkTarget[];
   tags?: string[];
 }) {
   const user = await auth();
-  if (input.target) await requirePermission(targetPermission[input.target.type]);
+  for (const target of input.targets || []) await requirePermission(targetPermission[target.type]);
   const item = await createPersonalWorkItem(input, user);
   refresh();
   return { ok: true, id: item.id };
@@ -68,8 +68,13 @@ export async function updatePersonalWorkAction(input: {
   status?: TaskStatus;
   domain?: PersonalWorkDomain;
   tags?: string[];
+  targets?: PersonalWorkTarget[];
+  progressPercent?: number;
+  progressMode?: TaskProgressMode;
+  updateBody?: string | null;
 }) {
   const user = await auth();
+  for (const target of input.targets || []) await requirePermission(targetPermission[target.type]);
   await updatePersonalWorkItem(input, user);
   const userId = getAuthUserId(user);
   if (userId) await syncPersonalTaskToGoogleIfLinked(userId, input.id);

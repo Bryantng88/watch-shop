@@ -1,6 +1,7 @@
 "use client";
 
 import { Share2, X } from "lucide-react";
+import { AdminUserAvatar } from "@/domains/shared/ui/admin-design-contract";
 import type { PersonalWorkShare, PersonalWorkUser } from "../shared/personal-work.types";
 
 type Props = {
@@ -46,9 +47,7 @@ export function PersonalWorkShareEditor({ users, shares, onChange, disabled }: P
         <div className="divide-y divide-slate-100">
           {shares.map((share) => (
             <div key={share.user.id} className="flex items-center gap-3 py-2.5">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">
-                {(share.user.name || share.user.email).slice(0, 1).toUpperCase()}
-              </span>
+              <AdminUserAvatar user={share.user} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-slate-900">{share.user.name || share.user.email}</p>
                 {share.user.name && <p className="truncate text-xs text-slate-500">{share.user.email}</p>}
