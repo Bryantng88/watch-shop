@@ -34,6 +34,7 @@ const nextConfig: NextConfig = {
       { source: "/", headers: publicSecurityHeaders },
       { source: "/products/:path*", headers: publicSecurityHeaders },
       { source: "/request", headers: publicSecurityHeaders },
+      { source: "/stories/:path*", headers: publicSecurityHeaders },
       { source: "/offline", headers: publicSecurityHeaders },
       { source: "/api/public/:path*", headers: [...publicSecurityHeaders, { key: "Cache-Control", value: "no-store" }] },
       { source: "/api/integrations/zalo/:path*", headers: [...publicSecurityHeaders, { key: "Cache-Control", value: "no-store" }] },

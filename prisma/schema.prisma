@@ -3829,3 +3829,19 @@ enum ShippingFeePayer {
   BUSINESS
   CUSTOMER
 }
+
+// Editorial content has separate draft and public snapshots. Product facts stay
+// in the catalog and are never copied into these snapshots.
+model StorefrontDocument {
+  id          String   @id
+  kind        String
+  draft       Json
+  published   Json?
+  revision    Int      @default(1)
+  publishedAt DateTime?
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([kind, publishedAt])
+}
