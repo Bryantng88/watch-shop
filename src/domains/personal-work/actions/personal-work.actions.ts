@@ -112,7 +112,9 @@ export async function getGoogleCalendarConnectUrlAction() {
 
 export async function syncPersonalWorkCalendarAction(taskItemId: string) {
   const user = await auth();
-  await assertPersonalWorkAccess(taskItemId, user, "VIEW");
+  // Calendar is two-way: subsequent page loads can import date changes from
+  // Google, so read-only shares must never be allowed to create a link.
+  await assertPersonalWorkAccess(taskItemId, user, "EDIT");
   const userId = getAuthUserId(user);
   if (!userId) throw new Error("Không xác định được người dùng");
   await syncPersonalTaskToGoogle(userId, taskItemId);

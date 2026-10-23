@@ -629,6 +629,41 @@ export async function queryMediaOperationBoardProjection(
   return { rows: data, totals };
 }
 
+export async function queryMediaOperationBoardInsightCounts(db: DB, now = new Date()) {
+  const client = dbOrTx(db);
+  const staleAt = new Date(now.getTime() - 7 * 86_400_000);
+  const veryStaleAt = new Date(now.getTime() - 30 * 86_400_000);
+  const rows = await client.$queryRaw<Array<{
+    notStarted: bigint;
+    stale: bigint;
+    veryStale: bigint;
+  }>>(Prisma.sql`
+    WITH latest AS (
+      SELECT DISTINCT ON ("entityId") "status", "dataJson", "updatedAt"
+      FROM "ProjectionRecord"
+      WHERE "projectionKey" = ${MEDIA_OPERATION_BOARD_PROJECTION_KEY}
+        AND "projectionVersion" = ${MEDIA_OPERATION_BOARD_PROJECTION_VERSION}
+      ORDER BY "entityId", "updatedAt" DESC
+    ), active AS (
+      SELECT *, COALESCE(NULLIF("dataJson"->>'updatedAt', '')::timestamptz, "updatedAt") AS "activityAt"
+      FROM latest
+      WHERE "status" <> 'DONE'
+    )
+    SELECT
+      COUNT(*) FILTER (
+        WHERE COALESCE(NULLIF("dataJson"#>>'{mediaWorkProgress,completed}', '')::integer, 0) <= 0
+      ) AS "notStarted",
+      COUNT(*) FILTER (WHERE "activityAt" <= ${staleAt}) AS "stale",
+      COUNT(*) FILTER (WHERE "activityAt" <= ${veryStaleAt}) AS "veryStale"
+    FROM active
+  `);
+  return {
+    notStarted: Number(rows[0]?.notStarted ?? 0),
+    stale: Number(rows[0]?.stale ?? 0),
+    veryStale: Number(rows[0]?.veryStale ?? 0),
+  };
+}
+
 export const mediaOperationBoardProjectionBuilder: ProjectionBuilder = {
   key: MEDIA_OPERATION_BOARD_PROJECTION_KEY,
   version: MEDIA_OPERATION_BOARD_PROJECTION_VERSION,

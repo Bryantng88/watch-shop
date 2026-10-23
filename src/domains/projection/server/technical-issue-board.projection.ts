@@ -572,3 +572,20 @@ export async function listTechnicalIssueBoardWorkspaceProjection(
   }
   return { rows: data, totals };
 }
+
+export async function queryTechnicalIssueBoardInsightCounts(db: DB, now = new Date()) {
+  const rows = await dbOrTx(db).$queryRaw<Array<{ overdue: bigint }>>(Prisma.sql`
+    WITH latest AS (
+      SELECT DISTINCT ON ("entityId") "status", "dataJson"
+      FROM "ProjectionRecord"
+      WHERE "projectionKey" = ${TECHNICAL_ISSUE_BOARD_PROJECTION_KEY}
+        AND "projectionVersion" = ${TECHNICAL_ISSUE_BOARD_PROJECTION_VERSION}
+      ORDER BY "entityId", "updatedAt" DESC
+    )
+    SELECT COUNT(*) AS "overdue"
+    FROM latest
+    WHERE "status" <> 'DONE'
+      AND NULLIF("dataJson"->>'expectedCompletionAt', '')::timestamptz < ${now}
+  `);
+  return { overdue: Number(rows[0]?.overdue ?? 0) };
+}

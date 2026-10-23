@@ -1,6 +1,7 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/server/db/client";
 import { decryptCalendarToken, encryptCalendarToken } from "./google-calendar-crypto";
+import { personalWorkEditAccessWhere } from "./personal-work-access";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -206,11 +207,7 @@ export async function syncPersonalTaskToGoogle(userId: string, taskItemId: strin
     where: {
       id: taskItemId,
       task: { kind: "PERSONAL" },
-      OR: [
-        { task: { createdByUserId: userId } },
-        { task: { assignedToUserId: userId } },
-        { personalShares: { some: { userId } } },
-      ],
+      ...personalWorkEditAccessWhere(userId),
     },
     include: { task: { select: { id: true, title: true } } },
   });
@@ -309,7 +306,14 @@ export async function listPersonalGoogleCalendarEvents(userId: string) {
   const eventIds = visibleEvents.map((event) => event.id!);
   const links = eventIds.length
     ? await prisma.personalTaskCalendarLink.findMany({
-        where: { userId, calendarId: auth.connection.calendarId, eventId: { in: eventIds } },
+        where: {
+          userId,
+          calendarId: auth.connection.calendarId,
+          eventId: { in: eventIds },
+          // Defend legacy links as well as the action boundary: importing a
+          // Google date is a task edit, not a view operation.
+          taskItem: personalWorkEditAccessWhere(userId),
+        },
         select: { eventId: true, taskItemId: true },
       })
     : [];

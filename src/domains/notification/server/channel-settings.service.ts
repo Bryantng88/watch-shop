@@ -40,10 +40,10 @@ function booleanFromForm(value: FormDataEntryValue | null) {
 }
 
 function defaultZaloTemplatesForEvent(eventKey: string) {
-    if (["order.created", "order.posted"].includes(eventKey)) {
+    if (eventKey === "order.created") {
         return {
             titleTemplate: "🛒 Đơn hàng mới {{orderRef}}",
-            messageTemplate: "Khách: {{customerName}}\nLiên hệ: {{phone}}\nWatch: {{watchTitles}}\nTổng tiền: {{totalAmount}} VND\nThanh toán: {{paymentStatus}}\nMở xử lý: {{route}}",
+            messageTemplate: "Khách: {{customerName}}\nLiên hệ: {{phone}}\nWatch: {{itemSummary}}\nTổng tiền: {{orderTotal}}\nThanh toán: {{paymentStatus}}\nGiao hàng: {{deliverySummary}}\nMở xử lý: {{route}}",
         };
     }
     if (eventKey === "task.item.activity.commented") {

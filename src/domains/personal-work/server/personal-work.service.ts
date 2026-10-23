@@ -14,6 +14,7 @@ import { createTaskItemRepo, setTargetTagsRepo } from "@/domains/task/server/cor
 import { hydrateTaskItemsWithTagsRepo } from "@/domains/task/server/tag/task-tag.repo";
 import { createBusinessBinding } from "@/domains/task/server/business-binding.repo";
 import { isGoogleCalendarConfigured, listPersonalGoogleCalendarEvents } from "./google-calendar.service";
+import { reconcilePersonalWorkBindings } from "./personal-work-bindings";
 import {
   PERSONAL_WORK_DOMAINS,
   PERSONAL_WORK_TYPES,
@@ -541,11 +542,23 @@ export async function updatePersonalWorkItem(
       });
     }
     if (resolvedTargets) {
-      await tx.taskExecution.updateMany({
-        where: { taskItemId: input.id, metadataJson: { path: ["source"], equals: "PERSONAL_WORK" } },
-        data: { actionType: "CANCELLED" },
+      const existingBindings = await tx.taskExecution.findMany({
+        where: {
+          taskItemId: input.id,
+          actionType: { not: "CANCELLED" },
+          metadataJson: { path: ["source"], equals: "PERSONAL_WORK" },
+        },
+        select: { id: true, targetType: true, targetId: true },
       });
-      for (const target of resolvedTargets) {
+      const { added, removed } = reconcilePersonalWorkBindings(existingBindings, resolvedTargets);
+
+      if (removed.length) {
+        await tx.taskExecution.updateMany({
+          where: { id: { in: removed.map((binding) => binding.id) } },
+          data: { actionType: "CANCELLED" },
+        });
+      }
+      for (const target of added) {
         await createBusinessBinding(tx, {
           taskId: current.taskId,
           taskItemId: current.id,
@@ -555,17 +568,34 @@ export async function updatePersonalWorkItem(
           createdByUserId: current.userId,
         });
       }
+      if (added.length || removed.length) {
+        await tx.taskItemActivity.create({
+          data: {
+            taskItemId: input.id,
+            sourceType: "DISCUSSION",
+            actorUserId: current.userId,
+            title: "Cập nhật đối tượng liên kết",
+            metadataJson: {
+              added: added.map((target) => ({ targetType: target.type, targetId: target.id })),
+              removed: removed.map((binding) => ({
+                targetType: binding.targetType,
+                targetId: binding.targetId,
+              })),
+            },
+          },
+        });
+      }
+    }
+    if (input.domain || input.tags) {
+      await setTargetTagsRepo(tx, {
+        ownerType: AppTagOwnerType.TASK,
+        ownerId: current.taskId,
+        targetType: AppTagTargetType.TASK_ITEM,
+        targetId: current.id,
+        names: [normalizePersonalDomain(input.domain), ...(input.tags || [])],
+      });
     }
   });
-  if (input.domain || input.tags) {
-    await setTargetTagsRepo(prisma, {
-      ownerType: AppTagOwnerType.TASK,
-      ownerId: current.taskId,
-      targetType: AppTagTargetType.TASK_ITEM,
-      targetId: current.id,
-      names: [normalizePersonalDomain(input.domain), ...(input.tags || [])],
-    });
-  }
 }
 
 export async function replacePersonalWorkShares(taskItemId: string, shares: ShareInput[], auth: unknown) {

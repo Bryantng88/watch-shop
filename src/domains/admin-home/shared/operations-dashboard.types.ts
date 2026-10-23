@@ -41,7 +41,6 @@ export type OperationsDashboardAttentionItem = {
 export type OperationsDashboardData = {
   generatedAt: string;
   totalActive: number;
-  completionTrend: Array<{ date: string; label: string; count: number }>;
   attention: OperationsDashboardAttentionItem[];
   priorityAction: OperationsDashboardAttentionItem | null;
   queues: OperationsDashboardQueue[];

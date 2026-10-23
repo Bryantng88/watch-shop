@@ -1,13 +1,20 @@
 import { prisma } from "@/server/db/client";
 import { queryOrderListProjection } from "@/domains/projection/server/order-list.projection";
-import { queryMediaOperationBoardProjection } from "@/domains/projection/server/media-operation-board.projection";
-import { listTechnicalIssueBoardWorkspaceProjection } from "@/domains/projection/server/technical-issue-board.projection";
+import {
+  queryMediaOperationBoardInsightCounts,
+  queryMediaOperationBoardProjection,
+} from "@/domains/projection/server/media-operation-board.projection";
+import {
+  listTechnicalIssueBoardWorkspaceProjection,
+  queryTechnicalIssueBoardInsightCounts,
+} from "@/domains/projection/server/technical-issue-board.projection";
 import { ensureProjectionReady } from "@/domains/projection/server/projection-read.service";
 import type {
   OperationsDashboardAttentionItem,
   OperationsDashboardData,
   OperationsDashboardQueue,
 } from "../shared/operations-dashboard.types";
+import { bangkokDayBounds } from "./operations-dashboard-time";
 
 function count(map: Map<string, number>, key: string) {
   return map.get(key) ?? 0;
@@ -31,12 +38,8 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
   ]);
 
   const now = new Date();
-  const todayEnd = new Date(now);
-  todayEnd.setHours(23, 59, 59, 999);
-  const trendStart = new Date(now);
-  trendStart.setDate(trendStart.getDate() - 6);
-  trendStart.setHours(0, 0, 0, 0);
-  const [orders, purchaseRequestCounts, purchaseRequests, overdueRequestCount, unassignedRequestCount, media, technical, completedOrders, personalItems] = await Promise.all([
+  const today = bangkokDayBounds(now);
+  const [orders, purchaseRequestCounts, purchaseRequests, overdueRequestCount, unassignedRequestCount, media, mediaInsights, technical, technicalInsights, personalItems] = await Promise.all([
     queryOrderListProjection(prisma, { view: "all", subFilter: "", paymentType: "", sort: "updatedDesc", page: 1, pageSize: 1 }),
     prisma.purchaseRequest.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.purchaseRequest.findMany({
@@ -48,26 +51,27 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
     prisma.purchaseRequest.count({ where: { status: { in: ["WAITING", "PROCESSING"] }, followUpAt: { lt: now } } }),
     prisma.purchaseRequest.count({ where: { status: { in: ["WAITING", "PROCESSING"] }, assignedUserId: null } }),
     queryMediaOperationBoardProjection(prisma, { page: 1, pageSize: 100 }),
+    queryMediaOperationBoardInsightCounts(prisma, now),
     listTechnicalIssueBoardWorkspaceProjection(prisma, { page: 1, pageSize: 100 }),
-    prisma.order.findMany({ where: { status: "COMPLETED", updatedAt: { gte: trendStart } }, select: { updatedAt: true } }),
+    queryTechnicalIssueBoardInsightCounts(prisma, now),
     input.userId ? prisma.taskItem.findMany({
       where: {
-        task: { kind: "PERSONAL", OR: [{ createdByUserId: input.userId }, { assignedToUserId: input.userId }] },
+        task: { kind: "PERSONAL" },
+        OR: [
+          { task: { createdByUserId: input.userId } },
+          { task: { assignedToUserId: input.userId } },
+          { personalShares: { some: { userId: input.userId } } },
+        ],
         status: { notIn: ["DONE", "CANCELLED"] },
       },
       select: { dueAt: true },
     }) : Promise.resolve([]),
   ]);
 
-  const mediaActiveRows = media.rows.filter((row) => row.stage !== "DONE");
-  const mediaNotStarted = mediaActiveRows.filter((row) => !row.mediaWorkProgress || row.mediaWorkProgress.completed <= 0).length;
-  const mediaStale = mediaActiveRows.filter((row) => ageInDays(row.updatedAt, now) >= 7).length;
-  const mediaVeryStale = mediaActiveRows.filter((row) => ageInDays(row.updatedAt, now) >= 30).length;
-  const technicalOverdue = technical.rows.filter((row) => Number(row.overdueDays ?? 0) > 0).length;
   const overdueRequests = purchaseRequests.filter((request) => request.followUpAt && request.followUpAt < now);
-  const personalOverdue = personalItems.filter((item) => item.dueAt && item.dueAt < now).length;
-  const personalDueToday = personalItems.filter((item) => item.dueAt && item.dueAt >= now && item.dueAt <= todayEnd).length;
-  const personalUpcoming = personalItems.filter((item) => item.dueAt && item.dueAt > todayEnd).length;
+  const personalOverdue = personalItems.filter((item) => item.dueAt && item.dueAt < today.start).length;
+  const personalDueToday = personalItems.filter((item) => item.dueAt && item.dueAt >= today.start && item.dueAt < today.end).length;
+  const personalUpcoming = personalItems.filter((item) => item.dueAt && item.dueAt >= today.end).length;
   const personalUnscheduled = personalItems.filter((item) => !item.dueAt).length;
 
   const purchase = new Map(purchaseRequestCounts.map((row) => [String(row.status), row._count._all]));
@@ -114,9 +118,9 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
       activeCount: count(media.totals, "PHOTOGRAPHY") + count(media.totals, "MEDIA_PROCESSING") + count(media.totals, "PUBLISH"),
       actionLabel: "Xử lý Media",
       insights: [
-        { key: "not-started", label: "Chưa bắt đầu", count: mediaNotStarted, href: "/admin/coordination/operation?view=media-production-flow&flowStage=media-processing", severity: "attention" },
-        { key: "stale", label: "Im quá 7 ngày", count: mediaStale, href: "/admin/coordination/operation?view=media-production-flow&flowStage=media-processing", severity: "attention" },
-        { key: "very-stale", label: "Kẹt quá 30 ngày", count: mediaVeryStale, href: "/admin/coordination/operation?view=media-production-flow&flowStage=media-processing", severity: "risk" },
+        { key: "not-started", label: "Chưa bắt đầu", count: mediaInsights.notStarted, href: "/admin/coordination/operation?view=media-production-flow&flowStage=media-processing", severity: "attention" },
+        { key: "stale", label: "Im quá 7 ngày", count: mediaInsights.stale, href: "/admin/coordination/operation?view=media-production-flow&flowStage=media-processing", severity: "attention" },
+        { key: "very-stale", label: "Kẹt quá 30 ngày", count: mediaInsights.veryStale, href: "/admin/coordination/operation?view=media-production-flow&flowStage=media-processing", severity: "risk" },
       ],
       stages: [
         { key: "photography", label: "Photography", actionLabel: "Chụp ảnh", count: count(media.totals, "PHOTOGRAPHY"), href: "/admin/coordination/operation?view=media-production-flow&flowStage=photography" },
@@ -132,7 +136,7 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
       activeCount: count(technical.totals, "INSPECT") + count(technical.totals, "READY") + count(technical.totals, "PROCESSING"),
       actionLabel: "Xử lý kỹ thuật",
       insights: [
-        { key: "overdue", label: "Đã quá hạn", count: technicalOverdue, href: "/admin/coordination/operation?view=technical-issue-flow&flowStage=processing", severity: "risk" },
+        { key: "overdue", label: "Đã quá hạn", count: technicalInsights.overdue, href: "/admin/coordination/operation?view=technical-issue-flow&flowStage=processing", severity: "risk" },
         { key: "waiting-inspect", label: "Chờ kiểm tra", count: count(technical.totals, "INSPECT"), href: "/admin/coordination/operation?view=technical-issue-flow&flowStage=inspect", severity: "attention" },
       ],
       stages: [
@@ -175,23 +179,6 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
   }
 
   const totalActive = queues.reduce((sum, queue) => sum + queue.activeCount, 0);
-  const dateKey = (date: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
-  const completedByDate = new Map<string, number>();
-  for (const order of completedOrders) {
-    const key = dateKey(order.updatedAt);
-    completedByDate.set(key, (completedByDate.get(key) ?? 0) + 1);
-  }
-  const completionTrend = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(trendStart);
-    date.setDate(trendStart.getDate() + index);
-    const key = dateKey(date);
-    return {
-      date: key,
-      label: new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Bangkok", weekday: "short" }).format(date),
-      count: completedByDate.get(key) ?? 0,
-    };
-  });
-
   const visibleAttention = attention.slice(0, 6);
-  return { generatedAt: now.toISOString(), totalActive, completionTrend, attention: visibleAttention, priorityAction: visibleAttention[0] ?? null, queues };
+  return { generatedAt: now.toISOString(), totalActive, attention: visibleAttention, priorityAction: visibleAttention[0] ?? null, queues };
 }
