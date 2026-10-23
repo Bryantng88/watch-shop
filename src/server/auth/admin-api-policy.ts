@@ -43,6 +43,10 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
         return publicToAuthenticatedUser();
     }
 
+    if (/^\/api\/admin\/personal-work(\/|$)/.test(pathname)) {
+        return publicToAuthenticatedUser();
+    }
+
     if (pathname === "/api/admin/analytics/internal-device" && normalizedMethod === "POST") {
         return anyOf(PERMISSIONS.REPORT_SALES_VIEW);
     }
@@ -101,6 +105,7 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
 
     if (/^\/api\/admin\/purchase-requests(\/|$)/.test(pathname)) {
         if (read) return anyOf(PERMISSIONS.ORDER_VIEW);
+        if (pathname === "/api/admin/purchase-requests" && normalizedMethod === "POST") return anyOf(PERMISSIONS.ORDER_CREATE);
         if (/\/convert$/.test(pathname)) return anyOf(PERMISSIONS.ORDER_CREATE);
         return anyOf(PERMISSIONS.ORDER_UPDATE);
     }
@@ -148,6 +153,10 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
     }
 
     if (/^\/api\/admin\/media(\/|$)/.test(pathname)) {
+        return anyOf(read ? PERMISSIONS.MEDIA_VIEW : PERMISSIONS.PRODUCT_UPDATE);
+    }
+
+    if (/^\/api\/admin\/media-posts(\/|$)/.test(pathname)) {
         return anyOf(read ? PERMISSIONS.MEDIA_VIEW : PERMISSIONS.PRODUCT_UPDATE);
     }
 
@@ -202,6 +211,7 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
 export function getAdminPagePolicy(pathname: string): AdminAccessPolicy | null {
     if (pathname === "/admin" || pathname.startsWith("/admin/dashboard")) return anyOf(PERMISSIONS.DASHBOARD_VIEW);
     if (/^\/admin\/(profile|users\/profile)(\/|$)/.test(pathname)) return publicToAuthenticatedUser();
+    if (/^\/admin\/personal-work(\/|$)/.test(pathname)) return publicToAuthenticatedUser();
     if (/^\/admin\/acquisitions\/(accessories|straps|clasps)\/new$/.test(pathname)) return anyOf(PERMISSIONS.ACCESSORY_ACQUISITION_CREATE, PERMISSIONS.ACQUISITION_CREATE_ALL);
     if (/^\/admin\/acquisitions\/(watches\/)?new$/.test(pathname)) return anyOf(PERMISSIONS.WATCH_ACQUISITION_CREATE, PERMISSIONS.ACQUISITION_CREATE_ALL);
     if (/^\/admin\/acquisitions(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.ACQUISITION_VIEW_ALL, PERMISSIONS.WATCH_ACQUISITION_VIEW, PERMISSIONS.ACCESSORY_ACQUISITION_VIEW);

@@ -16,8 +16,8 @@ export const PURCHASE_REQUEST_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] 
     label: "Yêu cầu mua hàng được tạo",
     targetType: "PURCHASE_REQUEST",
     group: "Purchase Request",
-    producer: "storefront",
-    emitPoint: "submitPublicOrder create transaction",
+    producer: "storefront/admin",
+    emitPoint: "purchase request create transaction",
     targetIdPolicy: "PurchaseRequest.id",
     knownConsumers: ["timeline", "notification"],
     payload: {

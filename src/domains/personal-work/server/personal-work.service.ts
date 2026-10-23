@@ -34,6 +34,7 @@ type PersonalWorkInput = {
   title: string;
   note?: string | null;
   dueAt?: string | null;
+  estimatedDays?: number;
   priority?: TaskPriority;
   domain?: PersonalWorkDomain;
   workType?: string | null;
@@ -288,6 +289,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
         status: item.status,
         priority: item.priority,
         dueAt: item.dueAt?.toISOString() ?? null,
+        estimatedDays: item.estimatedDays,
         completedAt: item.completedAt?.toISOString() ?? null,
         domain,
         workType: item.workTypeId,
@@ -360,6 +362,7 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
       priority: input.priority || "MEDIUM",
       workTypeId: workType,
       dueAt: input.dueAt || null,
+      estimatedDays: Math.max(1, Math.min(365, Math.round(input.estimatedDays ?? 1))),
     });
     await setTargetTagsRepo(tx, {
       ownerType: AppTagOwnerType.TASK,
@@ -470,6 +473,7 @@ export async function updatePersonalWorkItem(
     title?: string;
     note?: string | null;
     dueAt?: string | null;
+    estimatedDays?: number;
     priority?: TaskPriority;
     status?: TaskStatus;
     domain?: PersonalWorkDomain;
@@ -483,6 +487,9 @@ export async function updatePersonalWorkItem(
 ) {
   const current = await assertPersonalWorkAccess(input.id, auth, "EDIT");
   const status = input.status;
+  const estimatedDays = input.estimatedDays === undefined
+    ? undefined
+    : Math.max(1, Math.min(365, Math.round(input.estimatedDays)));
   const progressPercent = input.progressPercent === undefined
     ? undefined
     : Math.max(0, Math.min(100, Math.round(input.progressPercent)));
@@ -504,6 +511,7 @@ export async function updatePersonalWorkItem(
       ...(input.title !== undefined ? { title: input.title.trim() } : {}),
       ...(input.note !== undefined ? { note: input.note?.trim() || null } : {}),
       ...(input.dueAt !== undefined ? { dueAt: input.dueAt ? new Date(input.dueAt) : null } : {}),
+      ...(estimatedDays !== undefined ? { estimatedDays } : {}),
       ...(input.priority ? { priority: input.priority } : {}),
       ...(progressPercent !== undefined ? { progressPercent } : {}),
       ...(input.progressMode ? { progressMode: input.progressMode } : {}),

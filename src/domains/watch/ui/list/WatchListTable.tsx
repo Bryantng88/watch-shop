@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import type { WatchRow } from "./types";
 import WatchListRow from "./WatchListRow";
 import type { BusinessEntityPreview } from "@/domains/shared/business/business-entity.types";
@@ -62,6 +63,12 @@ export default function WatchListTable({
     const allChecked =
         safeItems.length > 0 &&
         safeItems.every((item) => safeSelectedIds.includes(item.id));
+    const someChecked = safeItems.some((item) => safeSelectedIds.includes(item.id));
+    const selectPageRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (selectPageRef.current) selectPageRef.current.indeterminate = someChecked && !allChecked;
+    }, [allChecked, someChecked]);
 
     return (
         <div className="relative max-w-full overflow-hidden rounded-b-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
@@ -97,9 +104,12 @@ export default function WatchListTable({
                         <tr>
                             <th className="px-4 py-3">
                                 <input
+                                    ref={selectPageRef}
                                     type="checkbox"
                                     checked={allChecked}
                                     onChange={(e) => onToggleAll?.(e.target.checked)}
+                                    aria-label="Chọn toàn bộ watch ở trang hiện tại"
+                                    title="Chọn toàn bộ watch ở trang hiện tại"
                                     className="h-4 w-4 rounded border-slate-300"
                                 />
                             </th>

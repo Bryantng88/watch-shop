@@ -132,6 +132,7 @@ export type CreateTaskItemInput = {
   priority?: TaskPriority;
   workTypeId?: string | null;
   dueAt?: Date | string | null;
+  estimatedDays?: number;
   tagNames?: string[];
 };
 
@@ -142,6 +143,7 @@ export type UpdateTaskItemInput = {
   priority?: TaskPriority;
   workTypeId?: string | null;
   dueAt?: Date | string | null;
+  estimatedDays?: number;
   status?: TaskStatus;
   tagNames?: string[];
 };

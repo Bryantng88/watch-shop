@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { PersonalTaskShareAccess, TaskProgressMode, TaskStatus, type TaskPriority } from "@prisma/client";
+import { PersonalTaskShareAccess, TaskStatus, type TaskPriority } from "@prisma/client";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getAuthUserId } from "@/domains/task/server/core/task.service";
@@ -32,6 +32,7 @@ export async function createPersonalWorkAction(input: {
   title: string;
   note?: string | null;
   dueAt?: string | null;
+  estimatedDays?: number;
   priority?: TaskPriority;
   domain?: PersonalWorkDomain;
   workType?: string | null;
@@ -64,13 +65,12 @@ export async function updatePersonalWorkAction(input: {
   title?: string;
   note?: string | null;
   dueAt?: string | null;
+  estimatedDays?: number;
   priority?: TaskPriority;
   status?: TaskStatus;
   domain?: PersonalWorkDomain;
   tags?: string[];
   targets?: PersonalWorkTarget[];
-  progressPercent?: number;
-  progressMode?: TaskProgressMode;
   updateBody?: string | null;
 }) {
   const user = await auth();

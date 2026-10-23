@@ -64,6 +64,7 @@ export type PersonalWorkItem = {
   status: "TODO" | "IN_PROGRESS" | "DONE" | "CANCELLED";
   priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
   dueAt: string | null;
+  estimatedDays: number;
   completedAt: string | null;
   domain: PersonalWorkDomain;
   workType: string | null;

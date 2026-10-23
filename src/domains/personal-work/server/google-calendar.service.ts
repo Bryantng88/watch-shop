@@ -18,6 +18,32 @@ type GoogleCalendarEvent = {
   end?: { dateTime?: string; date?: string };
 };
 
+function bangkokDateKey(date: Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function addCalendarDays(dateKey: string, days: number) {
+  const date = new Date(`${dateKey}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function calendarDayCount(startDate: string, exclusiveEndDate?: string) {
+  if (!exclusiveEndDate) return 1;
+  const start = Date.parse(`${startDate}T00:00:00Z`);
+  const end = Date.parse(`${exclusiveEndDate}T00:00:00Z`);
+  return Math.max(1, Math.min(365, Math.round((end - start) / 86_400_000)));
+}
+
+function calendarDateToStoredDate(dateKey: string) {
+  return new Date(`${dateKey}T00:00:00+07:00`);
+}
+
 async function googleApiError(response: Response, operation: string) {
   let message = `${operation} failed (${response.status})`;
   try {
@@ -191,15 +217,16 @@ export async function syncPersonalTaskToGoogle(userId: string, taskItemId: strin
   if (!item) throw new Error("Không tìm thấy công việc cá nhân");
   const auth = await accessToken(userId);
   const existing = await prisma.personalTaskCalendarLink.findUnique({ where: { userId_taskItemId: { userId, taskItemId } } });
-  const start = item.dueAt || new Date();
-  const end = new Date(start.getTime() + 30 * 60 * 1000);
+  const startDate = bangkokDateKey(item.dueAt || new Date());
+  const estimatedDays = Math.max(1, Math.min(365, item.estimatedDays || 1));
+  const endDate = addCalendarDays(startDate, estimatedDays);
   const payload = {
     summary: item.title,
     description: item.note || "Đồng bộ từ Watch Shop Admin",
-    start: { dateTime: start.toISOString(), timeZone: "Asia/Bangkok" },
-    end: { dateTime: end.toISOString(), timeZone: "Asia/Bangkok" },
+    start: { date: startDate },
+    end: { date: endDate },
     status: item.status === "CANCELLED" ? "cancelled" : "confirmed",
-    extendedProperties: { private: { watchShopTaskItemId: item.id, source: "WATCH_SHOP_PERSONAL_WORK" } },
+    extendedProperties: { private: { watchShopTaskItemId: item.id, source: "WATCH_SHOP_PERSONAL_WORK", estimatedDays: String(estimatedDays) } },
   };
   const syncHash = createHash("sha256").update(JSON.stringify(payload)).digest("hex");
   if (existing?.syncHash === syncHash) return existing;
@@ -287,6 +314,19 @@ export async function listPersonalGoogleCalendarEvents(userId: string) {
       })
     : [];
   const linkMap = new Map(links.map((link) => [link.eventId, link.taskItemId]));
+  const linkedEvents = visibleEvents.filter((event) => linkMap.has(event.id!));
+  if (linkedEvents.length) {
+    await prisma.$transaction(linkedEvents.map((event) => {
+      const startDate = event.start?.date || bangkokDateKey(new Date(event.start!.dateTime!));
+      const estimatedDays = event.start?.date
+        ? calendarDayCount(startDate, event.end?.date)
+        : 1;
+      return prisma.taskItem.update({
+        where: { id: linkMap.get(event.id!)! },
+        data: { dueAt: calendarDateToStoredDate(startDate), estimatedDays },
+      });
+    }));
+  }
   await prisma.googleCalendarConnection.update({ where: { id: auth.connection.id }, data: { lastSyncedAt: new Date() } });
   return visibleEvents.map((event) => ({
     id: event.id!,

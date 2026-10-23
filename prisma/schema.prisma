@@ -2814,6 +2814,7 @@ model TaskItem {
   priority        TaskPriority     @default(MEDIUM)
   workTypeId      String?
   dueAt           DateTime?
+  estimatedDays    Int             @default(1)
   progressPercent Int              @default(0)
   progressMode    TaskProgressMode @default(MANUAL)
 

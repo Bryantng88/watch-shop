@@ -7,11 +7,7 @@ import type {
   UpdateTaskItemInput,
 } from "../task.types";
 import { TASK_ITEM_INCLUDE, toDate } from "./task.repo.shared";
-import {
-  ensureOwnerTagsRepo,
-  listTargetTagsRepo,
-  setTargetTagsRepo,
-} from "../tag/task-tag.repo";
+import { setTargetTagsRepo } from "../tag/task-tag.repo";
 
 export async function createTaskItemRepo(db: DB, input: CreateTaskItemInput) {
   const client = dbOrTx(db);
@@ -32,6 +28,7 @@ export async function createTaskItemRepo(db: DB, input: CreateTaskItemInput) {
       priority: input.priority ?? "MEDIUM",
       workTypeId: input.workTypeId?.trim() || null,
       dueAt: toDate(input.dueAt),
+      estimatedDays: input.estimatedDays ?? 1,
       assignedToUserId: input.assignedToUserId || null,
       sortOrder: (last?.sortOrder ?? -1) + 1,
     },
@@ -66,6 +63,7 @@ export async function updateTaskItemRepo(
       ...(input.status !== undefined ? { status: input.status } : {}),
       ...(input.priority !== undefined ? { priority: input.priority } : {}),
       ...(input.dueAt !== undefined ? { dueAt: toDate(input.dueAt) } : {}),
+      ...(input.estimatedDays !== undefined ? { estimatedDays: input.estimatedDays } : {}),
       ...(input.assignedToUserId !== undefined
         ? { assignedToUserId: input.assignedToUserId || null }
         : {}),

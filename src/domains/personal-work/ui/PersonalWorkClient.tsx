@@ -91,8 +91,12 @@ const domainTargets: Record<PersonalWorkDomain, { type: PersonalWorkTargetType; 
 };
 
 function localInputDate(date: Date) {
-  const offset = date.getTimezoneOffset() * 60_000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+  return localDayKey(date);
+}
+
+function dateInputToIso(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day).toISOString();
 }
 
 function dueLabel(value: string | null) {
@@ -101,8 +105,6 @@ function dueLabel(value: string | null) {
     weekday: "short",
     day: "2-digit",
     month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
   }).format(new Date(value));
 }
 
@@ -125,6 +127,12 @@ function localDayKey(date: Date) {
 
 function eventDayKey(value: string, allDay: boolean) {
   return allDay ? value.slice(0, 10) : localDayKey(new Date(value));
+}
+
+function addCalendarDayKey(value: string, days: number) {
+  const date = new Date(`${value}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
 function monthCells(cursor: Date) {
@@ -153,6 +161,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [targetResults, setTargetResults] = useState<PersonalWorkTarget[]>([]);
   const [selectedTargets, setSelectedTargets] = useState<PersonalWorkTarget[]>([]);
   const [dueAt, setDueAt] = useState(localInputDate(new Date()));
+  const [estimatedDays, setEstimatedDays] = useState(1);
   const [message, setMessage] = useState<string | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(data.calendar.connected);
   const [selectedCalendarEvent, setSelectedCalendarEvent] = useState<PersonalCalendarEvent | null>(null);
@@ -160,15 +169,15 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [calendarCreateTitle, setCalendarCreateTitle] = useState("");
   const [calendarCreateDomain, setCalendarCreateDomain] = useState<PersonalWorkDomain>("GENERAL");
   const [calendarCreateDueAt, setCalendarCreateDueAt] = useState(localInputDate(new Date()));
+  const [calendarCreateEstimatedDays, setCalendarCreateEstimatedDays] = useState(1);
   const [calendarCreateSync, setCalendarCreateSync] = useState(true);
   const [editingItem, setEditingItem] = useState<PersonalWorkItem | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editNote, setEditNote] = useState("");
+  const [editUpdateBody, setEditUpdateBody] = useState("");
   const [editDomain, setEditDomain] = useState<PersonalWorkDomain>("GENERAL");
   const [editDueAt, setEditDueAt] = useState("");
-  const [editStatus, setEditStatus] = useState<PersonalWorkItem["status"]>("TODO");
-  const [editProgress, setEditProgress] = useState(0);
-  const [editUpdateBody, setEditUpdateBody] = useState("");
+  const [editEstimatedDays, setEditEstimatedDays] = useState(1);
   const [editTargets, setEditTargets] = useState<PersonalWorkTarget[]>([]);
   const [editTargetType, setEditTargetType] = useState<PersonalWorkTargetType | "">("");
   const [editTargetQuery, setEditTargetQuery] = useState("");
@@ -205,8 +214,18 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const eventsByDay = useMemo(() => {
     const grouped = new Map<string, PersonalCalendarEvent[]>();
     for (const event of data.calendar.events) {
-      const key = eventDayKey(event.startAt, event.allDay);
-      grouped.set(key, [...(grouped.get(key) || []), event]);
+      const firstKey = eventDayKey(event.startAt, event.allDay);
+      const keys = [firstKey];
+      if (event.allDay && event.endAt) {
+        const cursor = new Date(`${firstKey}T00:00:00Z`);
+        const exclusiveEnd = new Date(`${event.endAt.slice(0, 10)}T00:00:00Z`);
+        while (keys.length < 365) {
+          cursor.setUTCDate(cursor.getUTCDate() + 1);
+          if (cursor >= exclusiveEnd) break;
+          keys.push(cursor.toISOString().slice(0, 10));
+        }
+      }
+      for (const key of keys) grouped.set(key, [...(grouped.get(key) || []), event]);
     }
     return grouped;
   }, [data.calendar.events]);
@@ -260,11 +279,10 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   }
 
   function openCalendarCreate(date: Date) {
-    const due = new Date(date);
-    due.setHours(9, 0, 0, 0);
     setCalendarCreateTitle("");
     setCalendarCreateDomain("GENERAL");
-    setCalendarCreateDueAt(localInputDate(due));
+    setCalendarCreateDueAt(localInputDate(date));
+    setCalendarCreateEstimatedDays(1);
     setCalendarCreateSync(data.calendar.connected);
     setCalendarCreateOpen(true);
   }
@@ -273,11 +291,10 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     setEditingItem(item);
     setEditTitle(item.title);
     setEditNote(item.note || "");
+    setEditUpdateBody("");
     setEditDomain(item.domain);
     setEditDueAt(item.dueAt ? localInputDate(new Date(item.dueAt)) : "");
-    setEditStatus(item.status);
-    setEditProgress(item.progressPercent);
-    setEditUpdateBody("");
+    setEditEstimatedDays(item.estimatedDays || 1);
     setEditTargets(item.targets);
     setEditTargetType(domainTargets[item.domain][0]?.type || "");
     setEditTargetQuery("");
@@ -320,7 +337,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   domain: newDomain,
                   workType,
                   targets: selectedTargets,
-                  dueAt: dueAt ? new Date(dueAt).toISOString() : null,
+                  dueAt: dueAt ? dateInputToIso(dueAt) : null,
+                  estimatedDays,
                 }),
               "Đã thêm công việc",
               () => {
@@ -335,8 +353,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
           <AdminFlatToolbar
             className={`grid w-full gap-2 ${
               newDomain === "WORK"
-                ? "md:grid-cols-[minmax(0,1fr)_160px_180px_220px_auto]"
-                : "md:grid-cols-[minmax(0,1fr)_180px_220px_auto]"
+                ? "md:grid-cols-[minmax(0,1fr)_150px_170px_210px_150px_auto]"
+                : "md:grid-cols-[minmax(0,1fr)_170px_210px_150px_auto]"
             }`}
           >
             <input
@@ -372,11 +390,33 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               </select>
             )}
             <input
-              type="datetime-local"
+              type="date"
               value={dueAt}
               onChange={(e) => setDueAt(e.target.value)}
               className="h-11 rounded-lg border border-slate-200 px-3 text-sm"
             />
+            <div className="flex min-w-0 gap-2">
+              <select
+                aria-label="Thời lượng dự kiến"
+                value={estimatedDays === 1 ? "ONE_DAY" : "MULTI_DAY"}
+                onChange={(event) => setEstimatedDays(event.target.value === "ONE_DAY" ? 1 : 2)}
+                className="h-11 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm"
+              >
+                <option value="ONE_DAY">Trong ngày</option>
+                <option value="MULTI_DAY">Nhiều ngày</option>
+              </select>
+              {estimatedDays > 1 && (
+                <input
+                  aria-label="Số ngày dự kiến"
+                  type="number"
+                  min={2}
+                  max={365}
+                  value={estimatedDays}
+                  onChange={(event) => setEstimatedDays(Math.max(2, Number(event.target.value) || 2))}
+                  className="h-11 w-20 rounded-lg border border-slate-200 px-3 text-sm"
+                />
+              )}
+            </div>
             <button
               type="submit"
               disabled={pending}
@@ -644,9 +684,25 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                                   linkedTask.status !== "DONE" &&
                                   new Date(event.startAt).getTime() < now.getTime(),
                               );
+                              const eventStartKey = eventDayKey(event.startAt, event.allDay);
+                              const eventEndKey = event.endAt?.slice(0, 10) || eventStartKey;
+                              const continuesFromPreviousDay = event.allDay && key > eventStartKey;
+                              const continuesToNextDay = event.allDay && key < eventEndKey && addCalendarDayKey(key, 1) < eventEndKey;
+                              const connectsLeft = continuesFromPreviousDay && date.getDay() !== 1;
+                              const connectsRight = continuesToNextDay && date.getDay() !== 0;
+                              const startsVisibleWeekSegment = !connectsLeft;
+                              const connectionClass = connectsLeft && connectsRight
+                                ? "-mx-2 w-[calc(100%+1rem)] rounded-none"
+                                : connectsLeft
+                                  ? "-ml-2 w-[calc(100%+0.5rem)] rounded-l-none"
+                                  : connectsRight
+                                    ? "-mr-2 w-[calc(100%+0.5rem)] rounded-r-none"
+                                    : "w-full rounded";
                               const content = (
                                 <>
-                                  <span className={`mr-1 inline-block h-1.5 w-1.5 rounded-full ${style.dot}`} />
+                                  {startsVisibleWeekSegment && (
+                                    <span className={`mr-1 inline-block h-1.5 w-1.5 rounded-full ${style.dot}`} />
+                                  )}
                                   {!event.allDay && (
                                     <span className="mr-1 text-[10px] opacity-70">
                                       {new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit" }).format(
@@ -654,7 +710,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                                       )}
                                     </span>
                                   )}
-                                  <span>{event.title}</span>
+                                  <span className={startsVisibleWeekSegment ? "truncate" : "select-none opacity-0"}>
+                                    {startsVisibleWeekSegment ? event.title : "Tiếp diễn"}
+                                  </span>
                                 </>
                               );
                               return (
@@ -666,7 +724,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                                     setSelectedCalendarEvent(event);
                                   }}
                                   title={`${calendarEventDate(event.startAt, event.allDay)} · ${event.title}`}
-                                  className={`block w-full truncate rounded border-l-2 px-1.5 py-1 text-left text-[11px] font-medium ${style.event} ${isOverdue ? "border-l-orange-400" : "border-l-transparent"}`}
+                                  className={`flex min-h-[22px] items-center overflow-hidden whitespace-nowrap px-1.5 py-1 text-left text-[11px] font-medium leading-none ${connectionClass} ${style.event} ${startsVisibleWeekSegment && isOverdue ? "border-l-2 border-l-orange-400" : "border-l-0"}`}
                                 >
                                   {content}
                                 </button>
@@ -802,16 +860,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       >
                         <Clock3 className="h-3.5 w-3.5" />
                         {late ? "Quá hạn · " : ""}
-                        {dueLabel(item.dueAt)}
+                        {dueLabel(item.dueAt)} · {item.estimatedDays === 1 ? "trong ngày" : `dự kiến ${item.estimatedDays} ngày`}
                       </p>
-                      {item.progressPercent > 0 && item.status !== "DONE" && (
-                        <div className="mt-1.5 flex max-w-xs items-center gap-2">
-                          <div className="h-1 flex-1 overflow-hidden rounded-full bg-slate-100">
-                            <div className="h-full rounded-full bg-blue-500" style={{ width: `${item.progressPercent}%` }} />
-                          </div>
-                          <span className="text-[10px] font-semibold tabular-nums text-slate-500">{item.progressPercent}%</span>
-                        </div>
-                      )}
                       {item.access === "OWNER" && item.sharedWith.length > 0 && (
                         <div
                           className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px] text-violet-700"
@@ -899,12 +949,10 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                     note: editNote,
                     domain: editDomain,
                     tags: editingItem.tags,
-                    dueAt: editDueAt ? new Date(editDueAt).toISOString() : null,
-                    status: editStatus,
-                    progressPercent: editProgress,
-                    progressMode: "MANUAL",
-                    updateBody: editUpdateBody,
+                    dueAt: editDueAt ? dateInputToIso(editDueAt) : null,
+                    estimatedDays: editEstimatedDays,
                     targets: editTargets,
+                    updateBody: editUpdateBody,
                   });
                   if (editingItem.access === "OWNER")
                     await replacePersonalWorkSharesAction({
@@ -916,7 +964,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 () => setEditingItem(null),
               );
             }}
-            className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl shadow-slate-950/15"
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl shadow-slate-950/15"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -954,37 +1002,6 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 />
               </label>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold text-slate-600">Trạng thái</span>
-                  <select
-                    value={editStatus}
-                    disabled={editingItem.access === "VIEWER"}
-                    onChange={(event) => setEditStatus(event.target.value as PersonalWorkItem["status"])}
-                    className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
-                  >
-                    <option value="TODO">Chưa bắt đầu</option>
-                    <option value="IN_PROGRESS">Đang thực hiện</option>
-                    <option value="DONE">Hoàn thành</option>
-                    <option value="CANCELLED">Hủy</option>
-                  </select>
-                </label>
-                <label className="block space-y-1.5">
-                  <span className="flex items-center justify-between text-xs font-semibold text-slate-600">
-                    <span>Tiến độ linh hoạt</span><span>{editProgress}%</span>
-                  </span>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={editProgress}
-                    disabled={editingItem.access === "VIEWER"}
-                    onChange={(event) => setEditProgress(Number(event.target.value))}
-                    className="h-11 w-full accent-blue-600"
-                  />
-                </label>
-              </div>
               <label className="block space-y-1.5">
                 <span className="text-xs font-semibold text-slate-600">Nội dung cập nhật</span>
                 <textarea
@@ -992,9 +1009,10 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   disabled={editingItem.access === "VIEWER"}
                   onChange={(event) => setEditUpdateBody(event.target.value)}
                   rows={2}
-                  placeholder="Ghi lại kết quả, vấn đề hoặc bước tiếp theo…"
-                  className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  placeholder="Ghi lại kết quả, vấn đề hoặc bước tiếp theo..."
+                  className="w-full resize-y rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 />
+                <span className="block text-[11px] text-slate-400">Mỗi lần lưu sẽ tạo một mốc mới trong lịch sử cập nhật.</span>
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block space-y-1.5">
@@ -1022,13 +1040,41 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 <label className="block space-y-1.5">
                   <span className="text-xs font-semibold text-slate-600">Thời gian</span>
                   <input
-                    type="datetime-local"
+                    type="date"
                     value={editDueAt}
                     disabled={editingItem.access === "VIEWER"}
                     onChange={(event) => setEditDueAt(event.target.value)}
                     className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm"
                   />
                 </label>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-slate-600">Thời lượng dự kiến</span>
+                  <select
+                    value={editEstimatedDays === 1 ? "ONE_DAY" : "MULTI_DAY"}
+                    disabled={editingItem.access === "VIEWER"}
+                    onChange={(event) => setEditEstimatedDays(event.target.value === "ONE_DAY" ? 1 : 2)}
+                    className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                  >
+                    <option value="ONE_DAY">Trong ngày</option>
+                    <option value="MULTI_DAY">Kéo dài nhiều ngày</option>
+                  </select>
+                </label>
+                {editEstimatedDays > 1 && (
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-semibold text-slate-600">Số ngày dự kiến</span>
+                    <input
+                      type="number"
+                      min={2}
+                      max={365}
+                      value={editEstimatedDays}
+                      disabled={editingItem.access === "VIEWER"}
+                      onChange={(event) => setEditEstimatedDays(Math.max(2, Number(event.target.value) || 2))}
+                      className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm"
+                    />
+                  </label>
+                )}
               </div>
               {domainTargets[editDomain].length > 0 && (
                 <div className="space-y-2 rounded-xl bg-slate-50 p-3">
@@ -1119,16 +1165,36 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 </p>
               )}
             </div>
-            {editingItem.activities.length > 0 && (
+            {editingItem.activities.some((activity) => activity.body) && (
               <section className="mt-4 border-t border-slate-100 pt-4">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Lịch sử cập nhật</h3>
-                <div className="mt-2 max-h-32 space-y-2 overflow-y-auto">
-                  {editingItem.activities.map((activity) => (
-                    <div key={activity.id} className="flex gap-2 text-xs text-slate-600">
-                      <span className="shrink-0 text-slate-400">{new Date(activity.occurredAt).toLocaleString("vi-VN")}</span>
-                      <span><strong className="text-slate-700">{activity.title}</strong>{activity.body ? ` · ${activity.body}` : ""}</span>
-                    </div>
-                  ))}
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Lịch sử cập nhật
+                  </h3>
+                  <span className="text-[11px] text-slate-400">
+                    {editingItem.activities.filter((activity) => activity.body).length} mốc
+                  </span>
+                </div>
+                <div className="max-h-36 space-y-2 overflow-y-auto pr-1">
+                  {editingItem.activities
+                    .filter((activity) => activity.body)
+                    .slice(0, 8)
+                    .map((activity) => (
+                      <article key={activity.id} className="rounded-lg bg-slate-50 px-3 py-2">
+                        <p className="whitespace-pre-wrap text-sm leading-5 text-slate-700">{activity.body}</p>
+                        <p className="mt-1 text-[11px] text-slate-400">
+                          {activity.actor?.name || activity.actor?.email || "Hệ thống"}
+                          {" · "}
+                          {new Intl.DateTimeFormat("vi-VN", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }).format(new Date(activity.occurredAt))}
+                        </p>
+                      </article>
+                    ))}
                 </div>
               </section>
             )}
@@ -1285,7 +1351,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   const created = await createPersonalWorkAction({
                     title: nextTitle,
                     domain: calendarCreateDomain,
-                    dueAt: new Date(calendarCreateDueAt).toISOString(),
+                    dueAt: dateInputToIso(calendarCreateDueAt),
+                    estimatedDays: calendarCreateEstimatedDays,
                   });
                   if (calendarCreateSync && data.calendar.connected) await syncPersonalWorkCalendarAction(created.id);
                 },
@@ -1342,13 +1409,37 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   <span className="text-xs font-semibold text-slate-600">Thời gian</span>
                   <input
                     required
-                    type="datetime-local"
+                    type="date"
                     value={calendarCreateDueAt}
                     onChange={(event) => setCalendarCreateDueAt(event.target.value)}
                     className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm"
                   />
                 </label>
               </div>
+              <label className="block space-y-1.5">
+                <span className="text-xs font-semibold text-slate-600">Thời lượng dự kiến</span>
+                <select
+                  value={calendarCreateEstimatedDays === 1 ? "ONE_DAY" : "MULTI_DAY"}
+                  onChange={(event) => setCalendarCreateEstimatedDays(event.target.value === "ONE_DAY" ? 1 : 2)}
+                  className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                >
+                  <option value="ONE_DAY">Trong ngày</option>
+                  <option value="MULTI_DAY">Kéo dài nhiều ngày</option>
+                </select>
+              </label>
+              {calendarCreateEstimatedDays > 1 && (
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-slate-600">Số ngày dự kiến</span>
+                  <input
+                    type="number"
+                    min={2}
+                    max={365}
+                    value={calendarCreateEstimatedDays}
+                    onChange={(event) => setCalendarCreateEstimatedDays(Math.max(2, Number(event.target.value) || 2))}
+                    className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm"
+                  />
+                </label>
+              )}
               {data.calendar.connected && (
                 <label className="flex cursor-pointer items-center gap-3 rounded-xl bg-blue-50/70 px-4 py-3 text-sm text-blue-900">
                   <input
