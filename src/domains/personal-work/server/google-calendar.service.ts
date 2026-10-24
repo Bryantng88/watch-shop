@@ -122,7 +122,11 @@ export async function exchangeGoogleCalendarCode(userId: string, code: string) {
     }),
     cache: "no-store",
   });
-  if (!response.ok) throw new Error(`Google OAuth token exchange failed (${response.status})`);
+  if (!response.ok) {
+    const failure = await response.json().catch(() => null) as { error?: string; error_description?: string } | null;
+    const detail = [failure?.error, failure?.error_description].filter(Boolean).join(": ");
+    throw new Error(`Google OAuth token exchange failed (${response.status})${detail ? `: ${detail}` : ""}`);
+  }
   const token = await response.json() as { access_token: string; refresh_token?: string; expires_in?: number; scope?: string; id_token?: string };
   const grantedScopes = new Set((token.scope || "").split(/\s+/).filter(Boolean));
   if (!grantedScopes.has(GOOGLE_CALENDAR_EVENT_SCOPE)) {

@@ -4,17 +4,20 @@ import { exchangeGoogleCalendarCode, verifyGoogleCalendarState } from "@/domains
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
+  const appOrigin = process.env.APP_URL?.trim().replace(/\/$/, "") || url.origin;
+  const redirectTo = (status: "invalid" | "connected" | "failed") =>
+    NextResponse.redirect(new URL(`/admin/personal-work?calendar=${status}`, appOrigin));
   const code = url.searchParams.get("code");
   const stateUserId = verifyGoogleCalendarState(url.searchParams.get("state") || "");
   const user = await getCurrentUser();
   if (!code || !stateUserId || !user || user.id !== stateUserId) {
-    return NextResponse.redirect(new URL("/admin/personal-work?calendar=invalid", url.origin));
+    return redirectTo("invalid");
   }
   try {
     await exchangeGoogleCalendarCode(user.id, code);
-    return NextResponse.redirect(new URL("/admin/personal-work?calendar=connected", url.origin));
+    return redirectTo("connected");
   } catch (error) {
     console.error("[personal-work] Google Calendar callback failed", error);
-    return NextResponse.redirect(new URL("/admin/personal-work?calendar=failed", url.origin));
+    return redirectTo("failed");
   }
 }
