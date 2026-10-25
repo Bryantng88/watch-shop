@@ -21,7 +21,10 @@ import { syncWatchInventoryFromOrders } from "../order-watch-sync.service";
 import { postOneOrderTx } from "../post/order-post.service";
 import { normalizeReserveType } from "../../shared/order-reserve-type";
 import { publishOrderMutation } from "../events";
-import type { BusinessEventDispatchOptions } from "@/domains/event/server/business-event.service";
+import {
+  recordBusinessEvent,
+  type BusinessEventDispatchOptions,
+} from "@/domains/event/server/business-event.service";
 import { publishShipmentMutation } from "@/domains/shipment/server/events";
 import { publishPaymentMutations } from "@/domains/payment/server";
 import { emitAcquisitionBusinessEvent } from "@/domains/acquisition/server";
@@ -653,6 +656,37 @@ export async function createOrderWithItems(
     toStatus: String(result.status),
     source: "ORDER_CREATE",
   }, runtime);
+  if ("serviceIntake" in result && Array.isArray(result.serviceIntake?.entries)) {
+    for (const entry of result.serviceIntake.entries) {
+      if (entry.emitServiceRequestCreated) {
+        await recordBusinessEvent(prisma, {
+          eventKey: "service_request.created",
+          targetType: "SERVICE_REQUEST",
+          targetId: entry.serviceRequestId,
+          payload: {
+            source: "ORDER_SERVICE_INTAKE",
+            serviceRequestId: entry.serviceRequestId,
+            orderItemId: entry.orderItemId,
+          },
+          targetAliasIds: [entry.orderItemId],
+        }, runtime);
+      }
+      if (entry.createdTechnicalIssue) {
+        await recordBusinessEvent(prisma, {
+          eventKey: "technical_issue.created",
+          targetType: "TECHNICAL_ISSUE",
+          targetId: entry.technicalIssueId,
+          payload: {
+            source: "ORDER_SERVICE_INTAKE",
+            serviceRequestId: entry.serviceRequestId,
+            technicalIssueId: entry.technicalIssueId,
+            orderItemId: entry.orderItemId,
+          },
+          targetAliasIds: [entry.serviceRequestId, entry.orderItemId],
+        }, runtime);
+      }
+    }
+  }
   if (result.tradeInAcquisitionId) {
     await emitAcquisitionBusinessEvent(prisma, {
       eventKey: "acquisition.created",

@@ -18,7 +18,7 @@ import {
 } from "@/domains/order/ui/detail";
 import { ADMIN_DETAIL_CONTENT_CLASS } from "@/domains/shared/ui/layout/admin-content";
 
-type ActionName = "post" | "verify" | "cancel";
+type ActionName = "post" | "verify" | "cancel" | "serviceIntake";
 
 export default function OrderDetailClient({ data }: { data: OrderDetailData }) {
   const notify = useNotify();
@@ -51,6 +51,14 @@ export default function OrderDetailClient({ data }: { data: OrderDetailData }) {
         confirmText: "Hủy đơn",
         loading: "Đang hủy đơn",
         success: "Đã hủy đơn và đồng bộ lại trạng thái watch.",
+      },
+      serviceIntake: {
+        url: `/api/admin/orders/${data.id}/service-intake`,
+        title: "Đồng bộ phiếu kỹ thuật?",
+        message: "Hệ thống sẽ tạo bổ sung phiếu Service, đánh giá và issue kỹ thuật cho từng dòng dịch vụ; dữ liệu đã có sẽ không bị tạo trùng.",
+        confirmText: "Đồng bộ",
+        loading: "Đang đồng bộ phiếu kỹ thuật",
+        success: "Đã đồng bộ các dòng dịch vụ sang Technical.",
       },
     }[action];
 

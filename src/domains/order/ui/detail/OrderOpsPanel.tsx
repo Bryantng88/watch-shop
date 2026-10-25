@@ -1,10 +1,10 @@
 "use client";
 
-import { CheckCircle2, Send, ShieldCheck, XCircle } from "lucide-react";
+import { CheckCircle2, ClipboardList, Send, ShieldCheck, XCircle } from "lucide-react";
 import { Button } from "@/domains/shared/ui/form/fields";
 import { SectionCard, type OrderDetailData } from "./shared";
 
-type ActionName = "post" | "verify" | "cancel";
+type ActionName = "post" | "verify" | "cancel" | "serviceIntake";
 
 export default function OrderOpsPanel({
   data,
@@ -18,6 +18,8 @@ export default function OrderOpsPanel({
   const canPost = data.status === "DRAFT" || data.status === "RESERVED";
   const canVerify = data.source === "WEB" && data.verificationStatus === "PENDING";
   const canCancel = data.status !== "CANCELLED" && data.status !== "COMPLETED";
+  const hasServiceItems = data.items.some((item) => item.kind === "SERVICE");
+  const canSyncServiceIntake = hasServiceItems && data.status !== "DRAFT" && data.status !== "CANCELLED";
   const busy = busyAction != null;
 
   return (
@@ -32,6 +34,13 @@ export default function OrderOpsPanel({
           <ShieldCheck className="mr-2 h-4 w-4" />
           {busyAction === "verify" ? "Đang xác minh..." : "Xác minh đơn web"}
         </Button>
+
+        {hasServiceItems ? (
+          <Button type="button" variant="outline" className="w-full justify-center" disabled={!canSyncServiceIntake || busy} onClick={() => onAction("serviceIntake")}>
+            <ClipboardList className="mr-2 h-4 w-4" />
+            {busyAction === "serviceIntake" ? "Đang đồng bộ..." : "Đồng bộ phiếu kỹ thuật"}
+          </Button>
+        ) : null}
 
         <Button
           type="button"

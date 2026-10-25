@@ -29,6 +29,7 @@ import {
   type OrderMutation,
 } from "../events";
 import { processBusinessEventOperation } from "@/domains/event/delivery";
+import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
 
 async function processRecordedOperations(
   events: Array<{ projectionDeliveryKey?: string | null }>,
@@ -38,6 +39,49 @@ async function processRecordedOperations(
   )]) {
     await processBusinessEventOperation(key);
   }
+}
+
+async function recordServiceIntakeEvents(
+  tx: Prisma.TransactionClient,
+  entries: Array<{
+    orderItemId: string;
+    serviceRequestId: string;
+    technicalIssueId: string;
+    emitServiceRequestCreated: boolean;
+    createdTechnicalIssue: boolean;
+  }>,
+) {
+  const events = [];
+  for (const entry of entries) {
+    if (entry.emitServiceRequestCreated) {
+      events.push(await recordBusinessEvent(tx, {
+        eventKey: "service_request.created",
+        targetType: "SERVICE_REQUEST",
+        targetId: entry.serviceRequestId,
+        payload: {
+          source: "ORDER_SERVICE_INTAKE",
+          serviceRequestId: entry.serviceRequestId,
+          orderItemId: entry.orderItemId,
+        },
+        targetAliasIds: [entry.orderItemId],
+      }));
+    }
+    if (entry.createdTechnicalIssue) {
+      events.push(await recordBusinessEvent(tx, {
+        eventKey: "technical_issue.created",
+        targetType: "TECHNICAL_ISSUE",
+        targetId: entry.technicalIssueId,
+        payload: {
+          source: "ORDER_SERVICE_INTAKE",
+          serviceRequestId: entry.serviceRequestId,
+          technicalIssueId: entry.technicalIssueId,
+          orderItemId: entry.orderItemId,
+        },
+        targetAliasIds: [entry.serviceRequestId, entry.orderItemId],
+      }));
+    }
+  }
+  return events;
 }
 function assertPositiveOrderSubtotal(order: { subtotal?: unknown; orderItem?: any[] }) {
   const subtotal = Number(order.subtotal ?? 0);
@@ -91,11 +135,11 @@ export async function postOneOrderTx(tx: Prisma.TransactionClient, orderId: stri
     })
     : null;
 
-  if (order.orderItem.some((item) => item.kind === "SERVICE")) {
-    await serviceRequestService.createFromOrderTx(tx as any, { ...order, items: order.orderItem } as any);
-  }
+  const serviceIntake = order.orderItem.some((item) => item.kind === "SERVICE")
+    ? await serviceRequestService.createFromOrderTx(tx as any, { ...order, items: order.orderItem } as any)
+    : { created: 0, skipped: 0, ids: [], entries: [] };
 
-  return { id: order.id, status: "POSTED" as const, refNo, shipment, initialPayments };
+  return { id: order.id, status: "POSTED" as const, refNo, shipment, initialPayments, serviceIntake };
 }
 
 export async function postOneOrder(orderId: string) {
@@ -124,6 +168,7 @@ export async function postOneOrder(orderId: string) {
       eventKey: "payment.created",
       })),
     ));
+    events.push(...await recordServiceIntakeEvents(tx, posted.serviceIntake.entries));
     events.push(await recordOrderMutation(tx, {
       eventKey: "order.posted",
       orderId: posted.id,
@@ -151,6 +196,7 @@ export async function postOrders(orderIds: string[]) {
     let posted = 0;
     const shipmentMutations: ShipmentMutation[] = [];
     const paymentMutations: PaymentMutation[] = [];
+    const eventsFromService: Awaited<ReturnType<typeof recordBusinessEvent>>[] = [];
     for (const order of orders) {
       const postedOrder = await postOneOrderTx(tx, order.id);
       if (postedOrder.shipment) {
@@ -174,6 +220,8 @@ export async function postOrders(orderIds: string[]) {
           eventKey: "payment.created" as const,
         })),
       );
+      const serviceEvents = await recordServiceIntakeEvents(tx, postedOrder.serviceIntake.entries);
+      eventsFromService.push(...serviceEvents);
       posted += 1;
     }
 
@@ -186,6 +234,7 @@ export async function postOrders(orderIds: string[]) {
       source: "ORDER_POST_BULK",
     }));
     const events = [
+      ...eventsFromService,
       ...await recordPaymentMutations(tx, paymentMutations),
       ...await recordShipmentMutations(tx, shipmentMutations),
       ...await recordOrderMutations(tx, orderMutations),
