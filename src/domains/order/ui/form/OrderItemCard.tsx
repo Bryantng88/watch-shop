@@ -110,7 +110,7 @@ export default function OrderItemCard({
             </div>
 
             <div className={["mt-4 grid grid-cols-1 gap-4", isWatchItem ? "md:grid-cols-2" : "md:grid-cols-3"].join(" ")}>
-                {!isWatchItem ? (
+                {!isWatchItem && item.kind !== "SERVICE" ? (
                     <OrderFormField label="Số lượng">
                         <Input
                             inputMode="numeric"
@@ -120,6 +120,13 @@ export default function OrderItemCard({
                             }
                             disabled={disabled}
                         />
+                    </OrderFormField>
+                ) : item.kind === "SERVICE" ? (
+                    <OrderFormField label="Số lượng">
+                        <Input value="1" disabled />
+                        <div className="mt-1 text-xs text-slate-500">
+                            Mỗi đồng hồ là một dòng dịch vụ riêng.
+                        </div>
                     </OrderFormField>
                 ) : null}
 
@@ -161,7 +168,11 @@ export default function OrderItemCard({
                                 onChange({ customerItemNote: event.target.value })
                             }
                             disabled={disabled}
+                            placeholder="Ví dụ: Tissot nam, mặt xanh, dây kim loại — thay pin; xước nhẹ cạnh núm."
                         />
+                        <div className="mt-1 text-xs text-slate-500">
+                            Ghi riêng từng chiếc để Technical nhận đúng đồng hồ và đúng việc.
+                        </div>
                     </OrderFormField>
                 </div>
             ) : null}

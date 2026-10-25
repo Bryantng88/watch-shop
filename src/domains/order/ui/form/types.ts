@@ -87,7 +87,7 @@ export type OrderFormItem = {
     watchStockState?: string | null;
     watchServiceState?: string | null;
     serviceCatalogId?: string | null;
-    serviceScope?: "WITH_PURCHASE" | "CUSTOMER_ITEM" | null;
+    serviceScope?: "WITH_PURCHASE" | "CUSTOMER_OWNED" | null;
     linkedOrderItemId?: string | null;
     customerItemNote?: string | null;
 };

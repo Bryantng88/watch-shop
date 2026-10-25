@@ -308,7 +308,7 @@ export default function OrderFormClient({
           listPrice: Number(service.defaultPrice || 0),
           unitPriceAgreed: Number(service.defaultPrice || 0),
           serviceCatalogId: service.id,
-          serviceScope: "CUSTOMER_ITEM",
+          serviceScope: "CUSTOMER_OWNED",
         },
       ],
     });

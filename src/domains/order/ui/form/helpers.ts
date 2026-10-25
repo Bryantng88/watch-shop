@@ -66,7 +66,8 @@ export function normalizeInitialItems(
         productStatus: it.productStatus ?? null,
         availabilityStatus: it.availabilityStatus ?? null,
         serviceCatalogId: it.serviceCatalogId ?? null,
-        serviceScope: it.serviceScope ?? null,
+        serviceScope:
+            it.serviceScope === "CUSTOMER_ITEM" ? "CUSTOMER_OWNED" : it.serviceScope ?? null,
         linkedOrderItemId: it.linkedOrderItemId ?? null,
         customerItemNote: it.customerItemNote ?? null,
     }));
@@ -184,21 +185,23 @@ export function buildOrderPayload(input: {
             productId: item.productId ?? null,
             variantId: item.variantId ?? null,
             title: item.title,
-            quantity: item.source === "WATCH_QUICK_ORDER" || input.quickMode ? 1 : Number(item.quantity || 1),
+            quantity: item.kind === "SERVICE" || item.source === "WATCH_QUICK_ORDER" || input.quickMode
+                ? 1
+                : Number(item.quantity || 1),
             listPrice: Number(item.listPrice || 0),
             unitPriceAgreed: Number(item.unitPriceAgreed || 0),
             img: item.img ?? null,
             serviceCatalogId: item.serviceCatalogId ?? null,
             serviceScope:
                 item.kind === "SERVICE"
-                    ? item.serviceScope ?? "CUSTOMER_ITEM"
+                    ? item.serviceScope ?? "CUSTOMER_OWNED"
                     : null,
             linkedOrderItemId:
                 item.kind === "SERVICE" && item.serviceScope === "WITH_PURCHASE"
                     ? item.linkedOrderItemId ?? null
                     : null,
             customerItemNote:
-                item.kind === "SERVICE" && item.serviceScope === "CUSTOMER_ITEM"
+                item.kind === "SERVICE" && (item.serviceScope ?? "CUSTOMER_OWNED") === "CUSTOMER_OWNED"
                     ? item.customerItemNote ?? null
                     : null,
             createdFromFlow: item.source === "WATCH_QUICK_ORDER" || input.quickMode
@@ -224,6 +227,16 @@ export function validateOrderForm(values: OrderFormValues) {
 
     if (!values.items.length) {
         return "Vui lòng thêm ít nhất một sản phẩm hoặc dịch vụ.";
+    }
+
+    const unidentifiedService = values.items.find(
+        (item) =>
+            item.kind === "SERVICE" &&
+            (item.serviceScope ?? "CUSTOMER_OWNED") === "CUSTOMER_OWNED" &&
+            !String(item.customerItemNote ?? "").trim(),
+    );
+    if (unidentifiedService) {
+        return `Vui lòng ghi thông tin nhận diện đồng hồ cho dịch vụ “${unidentifiedService.title}” (hãng/model, màu, giới tính hoặc đặc điểm nhận biết).`;
     }
 
     if (values.tradeIn) {

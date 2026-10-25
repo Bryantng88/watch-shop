@@ -183,7 +183,7 @@ export async function createOrderItemsRepo(db: DB, orderId: string, items: Order
       title: item.title,
       img: item.img ?? null,
       serviceCatalogId: item.serviceCatalogId ?? null,
-      serviceScope: item.serviceScope ?? null,
+      ...(item.serviceScope ? { serviceScope: item.serviceScope } : {}),
       listPrice: new Prisma.Decimal(Number(item.listPrice ?? 0)),
       kind: item.kind as any,
       unitPriceAgreed: new Prisma.Decimal(unitPriceAgreed),

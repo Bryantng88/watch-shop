@@ -162,6 +162,15 @@ function normalizePaymentMethodForReserve(rawPaymentMethod: any, reserveType: Re
     : PaymentMethod.BANK_TRANSFER;
 }
 
+function normalizeServiceScope(rawScope: unknown, kind: unknown) {
+  if (String(kind ?? "").toUpperCase() !== "SERVICE") return null;
+  const scope = String(rawScope ?? "").toUpperCase();
+  if (scope === "WITH_PURCHASE") return "WITH_PURCHASE" as const;
+  if (scope === "INTERNAL") return "INTERNAL" as const;
+  // CUSTOMER_ITEM was used by the old form but is not a Prisma ServiceScope.
+  return "CUSTOMER_OWNED" as const;
+}
+
 function assertValidReserveBusiness(input: {
   reserve?: { type?: ReserveType | string | null; amount?: number | null } | null;
   hasShipment?: boolean | null;
@@ -275,12 +284,12 @@ function normalizeCreateInput(raw: any): CreateOrderInput {
       productId: item.productId ?? null,
       variantId: item.variantId ?? null,
       title: item.title ?? "",
-      quantity: item.source === "WATCH_QUICK_ORDER" || raw.quickFlowType === "QUICK_ORDER" ? 1 : Number(item.quantity ?? 1),
+      quantity: item.kind === "SERVICE" || item.source === "WATCH_QUICK_ORDER" || raw.quickFlowType === "QUICK_ORDER" ? 1 : Number(item.quantity ?? 1),
       listPrice: Number(item.listPrice ?? 0),
       unitPriceAgreed: item.unitPriceAgreed == null ? null : Number(item.unitPriceAgreed),
       img: item.img ?? null,
       serviceCatalogId: item.serviceCatalogId ?? null,
-      serviceScope: item.serviceScope ?? null,
+      serviceScope: normalizeServiceScope(item.serviceScope, item.kind),
       linkedOrderItemId: item.linkedOrderItemId ?? null,
       customerItemNote: item.customerItemNote ?? null,
       taxRate: item.taxRate == null ? null : Number(item.taxRate),
@@ -342,6 +351,15 @@ export async function createOrderWithItems(
 ) {
   const input = normalizeCreateInput(raw);
   assertValidReserveBusiness(input);
+  const unidentifiedService = input.items.find(
+    (item) =>
+      String(item.kind) === "SERVICE" &&
+      item.serviceScope === "CUSTOMER_OWNED" &&
+      !norm(item.customerItemNote),
+  );
+  if (unidentifiedService) {
+    throw new Error(`Vui lòng ghi thông tin nhận diện đồng hồ cho dịch vụ “${unidentifiedService.title}”.`);
+  }
   if (input.tradeIn && input.tradeIn.amount <= 0) {
     throw new Error("Giá thu vào của trade-in phải lớn hơn 0.");
   }
