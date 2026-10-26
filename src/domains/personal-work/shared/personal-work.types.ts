@@ -71,6 +71,11 @@ export type PersonalWorkItem = {
   targets: PersonalWorkTarget[];
   progressPercent: number;
   progressMode: "MANUAL" | "CHECKLIST";
+  mediaGoal: {
+    targetCount: number;
+    completedCount: number;
+    completedWatchIds: string[];
+  } | null;
   activities: PersonalWorkActivity[];
   checklist: PersonalWorkChecklistItem[];
   tags: string[];

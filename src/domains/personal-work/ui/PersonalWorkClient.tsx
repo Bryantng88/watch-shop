@@ -165,6 +165,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [targetQuery, setTargetQuery] = useState("");
   const [targetResults, setTargetResults] = useState<PersonalWorkTarget[]>([]);
   const [selectedTargets, setSelectedTargets] = useState<PersonalWorkTarget[]>([]);
+  const [mediaGoalTargetCount, setMediaGoalTargetCount] = useState(2);
   const [dueAt, setDueAt] = useState(localInputDate(new Date()));
   const [estimatedDays, setEstimatedDays] = useState(1);
   const [message, setMessage] = useState<string | null>(null);
@@ -193,6 +194,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     return new Date(date.getFullYear(), date.getMonth(), 1);
   });
   const now = new Date();
+  const isMediaGoal = newDomain === "MEDIA" && workType === "IMAGE_PROCESSING";
   const todayEndMs = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
   const items = useMemo(
     () =>
@@ -341,7 +343,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   title: nextTitle,
                   domain: newDomain,
                   workType,
-                  targets: selectedTargets,
+                  targets: isMediaGoal ? [] : selectedTargets,
+                  mediaGoalTargetCount: isMediaGoal ? mediaGoalTargetCount : null,
                   dueAt: dueAt ? dateInputToIso(dueAt) : null,
                   estimatedDays,
                 }),
@@ -351,6 +354,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 setTargetQuery("");
                 setTargetResults([]);
                 setSelectedTargets([]);
+                setMediaGoalTargetCount(2);
               },
             );
           }}
@@ -446,7 +450,23 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   ))}
                 </select>
               </label>
-              {domainTargets[newDomain].length > 0 && (
+              {isMediaGoal ? (
+                <label className="space-y-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Mục tiêu tự động</span>
+                  <div className="flex h-10 items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3">
+                    <input
+                      aria-label="Số watch hoàn thành Media"
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={mediaGoalTargetCount}
+                      onChange={(event) => setMediaGoalTargetCount(Math.max(1, Math.min(100, Number(event.target.value) || 1)))}
+                      className="w-12 bg-transparent text-sm font-semibold text-emerald-800 outline-none"
+                    />
+                    <span className="text-xs font-medium text-emerald-800">watch được duyệt ảnh → tự hoàn thành</span>
+                  </div>
+                </label>
+              ) : domainTargets[newDomain].length > 0 && (
                 <>
                   <label className="space-y-1">
                 <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Liên kết tới</span>
@@ -841,6 +861,11 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
                             {PERSONAL_WORK_TYPES[item.domain].find((type) => type.key === item.workType)?.label ||
                               item.workType}
+                          </span>
+                        )}
+                        {item.mediaGoal && (
+                          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                            Media {item.mediaGoal.completedCount}/{item.mediaGoal.targetCount}
                           </span>
                         )}
                         {item.tags.map((tag) => (

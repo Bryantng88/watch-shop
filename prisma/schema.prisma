@@ -2817,6 +2817,9 @@ model TaskItem {
   estimatedDays    Int             @default(1)
   progressPercent Int              @default(0)
   progressMode    TaskProgressMode @default(MANUAL)
+  mediaGoalTargetCount    Int?
+  mediaGoalCompletedCount Int              @default(0)
+  mediaGoalStartedAt      DateTime?
 
   assignedToUserId String?
   startedAt        DateTime?
@@ -2836,6 +2839,7 @@ model TaskItem {
   activities     TaskItemActivity[]
   calendarLinks  PersonalTaskCalendarLink[]
   personalShares PersonalTaskShare[]
+  mediaGoalCompletions PersonalTaskMediaGoalCompletion[]
 
   userId String?
   User   User?   @relation(fields: [userId], references: [id])
@@ -2847,6 +2851,22 @@ model TaskItem {
   @@index([workTypeId])
   @@index([assignedToUserId])
   @@index([dueAt])
+  @@index([mediaGoalTargetCount])
+}
+
+model PersonalTaskMediaGoalCompletion {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  taskItemId String
+  watchId    String
+  eventLogId String?
+  completedAt DateTime @default(now())
+
+  taskItem TaskItem @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
+
+  @@unique([taskItemId, watchId])
+  @@index([watchId, completedAt])
+  @@index([eventLogId])
 }
 
 enum PersonalTaskShareAccess {
