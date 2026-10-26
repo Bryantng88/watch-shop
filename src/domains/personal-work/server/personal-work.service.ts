@@ -5,10 +5,11 @@ import {
   TaskKind,
   TaskStatus,
   TaskProgressMode,
+  ActivitySourceType,
   type Prisma,
   type TaskPriority,
 } from "@prisma/client";
-import { prisma } from "@/server/db/client";
+import { dbOrTx, prisma, type DB } from "@/server/db/client";
 import { createTask, getAuthUserId } from "@/domains/task/server/core/task.service";
 import { createTaskItemRepo, setTargetTagsRepo } from "@/domains/task/server/core/task.repo";
 import { hydrateTaskItemsWithTagsRepo } from "@/domains/task/server/tag/task-tag.repo";
@@ -39,6 +40,7 @@ type PersonalWorkInput = {
   priority?: TaskPriority;
   domain?: PersonalWorkDomain;
   workType?: string | null;
+  mediaGoalTargetCount?: number | null;
   targets?: PersonalWorkTarget[];
   tags?: string[];
 };
@@ -94,6 +96,15 @@ function normalizeWorkType(value: unknown, domain: PersonalWorkDomain) {
     .toUpperCase();
   const allowed = new Set<string>(PERSONAL_WORK_TYPES[domain].map((item) => item.key));
   return key && workTypeKeys.has(key) && allowed.has(key) ? key : null;
+}
+
+function normalizeMediaGoalTargetCount(value: unknown) {
+  if (value == null || value === "") return null;
+  const count = Math.round(Number(value));
+  if (!Number.isInteger(count) || count < 1 || count > 100) {
+    throw new Error("Mục tiêu Media phải từ 1 đến 100 watch.");
+  }
+  return count;
 }
 
 function bindingMetadata(target: PersonalWorkTarget): Prisma.InputJsonValue {
@@ -254,6 +265,10 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
           take: 20,
         },
         checklists: { orderBy: { sortOrder: "asc" } },
+        mediaGoalCompletions: {
+          select: { watchId: true },
+          orderBy: { completedAt: "asc" },
+        },
       },
       orderBy: [{ isDone: "asc" }, { dueAt: "asc" }, { createdAt: "desc" }],
     }),
@@ -299,6 +314,13 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
           .filter((target): target is PersonalWorkTarget => Boolean(target)),
         progressPercent: item.progressPercent,
         progressMode: item.progressMode,
+        mediaGoal: item.mediaGoalTargetCount
+          ? {
+              targetCount: item.mediaGoalTargetCount,
+              completedCount: item.mediaGoalCompletedCount,
+              completedWatchIds: item.mediaGoalCompletions.map((entry) => entry.watchId),
+            }
+          : null,
         activities: item.activities.map((activity) => ({
           id: activity.id,
           title: activity.title,
@@ -342,6 +364,9 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
   if (!title) throw new Error("Vui lòng nhập nội dung công việc");
   const domain = normalizePersonalDomain(input.domain);
   const workType = normalizeWorkType(input.workType, domain);
+  const mediaGoalTargetCount = domain === "MEDIA" && workType === "IMAGE_PROCESSING"
+    ? normalizeMediaGoalTargetCount(input.mediaGoalTargetCount)
+    : null;
   const resolvedTargets = await Promise.all(
     (input.targets || []).map((target) => resolvePersonalWorkTarget(domain, target)),
   );
@@ -364,6 +389,12 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
       workTypeId: workType,
       dueAt: input.dueAt || null,
       estimatedDays: Math.max(1, Math.min(365, Math.round(input.estimatedDays ?? 1))),
+      ...(mediaGoalTargetCount
+        ? {
+            mediaGoalTargetCount,
+            mediaGoalStartedAt: new Date(),
+          }
+        : {}),
     });
     await setTargetTagsRepo(tx, {
       ownerType: AppTagOwnerType.TASK,
@@ -384,6 +415,107 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
     }
     return item;
   });
+}
+
+export async function recordPersonalMediaGoalWatchCompletion(
+  db: DB,
+  input: { productId: string; actorUserId?: string | null; completedAt?: Date },
+) {
+  const client = dbOrTx(db);
+  const completedAt = input.completedAt ?? new Date();
+  const watch = await client.watch.findUnique({
+    where: { productId: input.productId },
+    select: { id: true, product: { select: { title: true, sku: true } } },
+  });
+  if (!watch) return { counted: 0, completedTaskIds: [] as string[] };
+
+  const candidates = await client.taskItem.findMany({
+    where: {
+      task: { kind: TaskKind.PERSONAL },
+      status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] },
+      workTypeId: "IMAGE_PROCESSING",
+      mediaGoalTargetCount: { not: null },
+      mediaGoalStartedAt: { lte: completedAt },
+      OR: [{ dueAt: null }, { dueAt: { gte: completedAt } }],
+    },
+    select: {
+      id: true,
+      taskId: true,
+      mediaGoalTargetCount: true,
+      mediaGoalCompletedCount: true,
+    },
+  });
+
+  const completedTaskIds: string[] = [];
+  for (const candidate of candidates) {
+    const targetCount = candidate.mediaGoalTargetCount;
+    if (!targetCount) continue;
+    try {
+      await client.personalTaskMediaGoalCompletion.create({
+        data: { taskItemId: candidate.id, watchId: watch.id, completedAt },
+      });
+    } catch (error) {
+      if (typeof error === "object" && error && "code" in error && error.code === "P2002") continue;
+      throw error;
+    }
+
+    const advanced = await client.taskItem.updateMany({
+      where: {
+        id: candidate.id,
+        status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] },
+        mediaGoalCompletedCount: { lt: targetCount },
+      },
+      data: { mediaGoalCompletedCount: { increment: 1 } },
+    });
+    if (!advanced.count) {
+      await client.personalTaskMediaGoalCompletion.delete({
+        where: { taskItemId_watchId: { taskItemId: candidate.id, watchId: watch.id } },
+      });
+      continue;
+    }
+
+    const updated = await client.taskItem.findUniqueOrThrow({
+      where: { id: candidate.id },
+      select: { mediaGoalCompletedCount: true, mediaGoalTargetCount: true },
+    });
+    const isComplete = Boolean(
+      updated.mediaGoalTargetCount &&
+      updated.mediaGoalCompletedCount >= updated.mediaGoalTargetCount,
+    );
+    const progressPercent = updated.mediaGoalTargetCount
+      ? Math.min(100, Math.round((updated.mediaGoalCompletedCount / updated.mediaGoalTargetCount) * 100))
+      : 0;
+    await client.taskItem.update({
+      where: { id: candidate.id },
+      data: isComplete
+        ? {
+            status: TaskStatus.DONE,
+            isDone: true,
+            completedAt,
+            progressPercent: 100,
+          }
+        : { progressPercent },
+    });
+    if (isComplete) {
+      completedTaskIds.push(candidate.id);
+    }
+    await client.taskItemActivity.create({
+      data: {
+        taskItemId: candidate.id,
+        sourceType: ActivitySourceType.SYSTEM,
+        actorUserId: input.actorUserId ?? null,
+        title: isComplete ? "Đã đạt mục tiêu Media" : "Đã ghi nhận watch hoàn thành Media",
+        body: `${watch.product.title}${watch.product.sku ? ` · ${watch.product.sku}` : ""}`,
+        metadataJson: {
+          watchId: watch.id,
+          completed: updated.mediaGoalCompletedCount,
+          target: updated.mediaGoalTargetCount,
+        },
+        occurredAt: completedAt,
+      },
+    });
+  }
+  return { counted: candidates.length, completedTaskIds };
 }
 
 export async function searchPersonalWorkTargets(input: {

@@ -19,6 +19,7 @@ import {
     type WatchReviewStatus,
     type WatchReviewTargetType,
 } from "@/domains/watch/server/events";
+import { recordPersonalMediaGoalWatchCompletion } from "@/domains/personal-work";
 import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
 import { resolveWatchStorefrontSlug } from "@/domains/watch/shared/storefront-slug";
 type ReviewTargetType = WatchReviewTargetType;
@@ -147,6 +148,12 @@ async function runApprovedSideEffects(db: DB, input: ApproveReviewInput) {
             `${input.targetType}:approve:emitApprovedEvent`,
             () => emitWatchReviewApprovedEvent(db, input),
         );
+    }
+    if (input.targetType === "IMAGE") {
+        await recordPersonalMediaGoalWatchCompletion(db, {
+            productId: input.productId,
+            actorUserId: input.userId ?? null,
+        });
     }
     await perfStep(
         WATCH_REVIEW_PERF_SCOPE,

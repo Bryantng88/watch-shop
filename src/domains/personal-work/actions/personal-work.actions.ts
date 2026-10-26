@@ -36,6 +36,7 @@ export async function createPersonalWorkAction(input: {
   priority?: TaskPriority;
   domain?: PersonalWorkDomain;
   workType?: string | null;
+  mediaGoalTargetCount?: number | null;
   targets?: PersonalWorkTarget[];
   tags?: string[];
 }) {
