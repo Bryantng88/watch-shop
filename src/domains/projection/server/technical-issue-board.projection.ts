@@ -152,6 +152,7 @@ export async function buildTechnicalIssueBoardRow(
       serviceRequest: {
         select: {
           refNo: true,
+          orderItemId: true,
           skuSnapshot: true,
           primaryImageUrlSnapshot: true,
           product: {
@@ -317,6 +318,7 @@ export async function buildTechnicalIssueBoardRow(
     },
     workspaceTaskItemId: binding.taskItemId,
     srCaseTaskItemId: srBinding?.taskItemId ?? null,
+    requestOrigin: issue.serviceRequest.orderItemId ? "CUSTOMER_ORDER" : "OTHER",
     serviceRequest: {
       refNo: issue.serviceRequest.refNo,
       productTitle: issue.serviceRequest.product?.title ?? null,

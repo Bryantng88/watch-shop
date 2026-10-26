@@ -4329,6 +4329,7 @@ function TechnicalIssueBoardCard({
 }) {
   const imageSrc = resolveMediaPreviewSrc(item.serviceRequest.imageUrl);
   const isUrgent = technicalIssuePriorityValue(item.priority) === "URGENT";
+  const isCustomerOrder = item.requestOrigin === "CUSTOMER_ORDER";
   const accent = technicalBoardAreaAccent(item.area);
   const lastUpdatedBy = item.lastUpdatedBy;
   const lastUpdatedAvatarSrc = resolveMediaPreviewSrc(lastUpdatedBy.avatarUrl);
@@ -4337,7 +4338,10 @@ function TechnicalIssueBoardCard({
   return (
     <div
       className={cn(
-        "relative w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_10px_rgba(15,23,42,0.08)] transition hover:border-violet-200 hover:shadow-[0_7px_16px_rgba(15,23,42,0.12)]",
+        "relative w-full min-w-0 max-w-full overflow-hidden rounded-xl border shadow-[0_4px_10px_rgba(15,23,42,0.08)] transition hover:shadow-[0_7px_16px_rgba(15,23,42,0.12)]",
+        isCustomerOrder
+          ? "border-amber-300 bg-amber-50/70 hover:border-amber-400"
+          : "border-slate-200 bg-white hover:border-violet-200",
         isUrgent && "border-rose-200 ring-1 ring-rose-100",
         dragging && "shadow-xl ring-2 ring-violet-200",
       )}
@@ -4423,6 +4427,12 @@ function TechnicalIssueBoardCard({
         </div>
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-1.5 px-2.5 pt-2">
+        {isCustomerOrder ? (
+          <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+            <Receipt className="h-3 w-3" aria-hidden="true" />
+            Đơn khách
+          </span>
+        ) : null}
         <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", accent.chip)}>
           {technicalAreaLabel(item.area)}
         </span>

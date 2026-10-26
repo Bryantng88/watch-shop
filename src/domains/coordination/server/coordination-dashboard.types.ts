@@ -114,6 +114,7 @@ export type CoordinationTechnicalIssueBoardItemDTO = {
   };
   workspaceTaskItemId: string | null;
   srCaseTaskItemId: string | null;
+  requestOrigin: "CUSTOMER_ORDER" | "OTHER";
   serviceRequest: {
     refNo: string | null;
     productTitle: string | null;

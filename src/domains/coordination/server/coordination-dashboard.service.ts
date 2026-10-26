@@ -2117,6 +2117,7 @@ async function loadTechnicalIssueBoardLive(input: {
       serviceRequest: {
         select: {
           refNo: true,
+          orderItemId: true,
           skuSnapshot: true,
           primaryImageUrlSnapshot: true,
           product: {
@@ -2335,6 +2336,9 @@ async function loadTechnicalIssueBoardLive(input: {
               }),
         workspaceTaskItemId: binding?.taskItemId ?? null,
         srCaseTaskItemId: srCaseTaskItemIdByServiceRequestId.get(issue.serviceRequestId) ?? null,
+        requestOrigin: issue.serviceRequest?.orderItemId
+          ? "CUSTOMER_ORDER"
+          : "OTHER",
         serviceRequest: {
           refNo: issue.serviceRequest?.refNo ?? null,
           productTitle: issue.serviceRequest?.product?.title ?? null,
