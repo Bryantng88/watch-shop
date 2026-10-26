@@ -96,7 +96,12 @@ function localInputDate(date: Date) {
 
 function dateInputToIso(value: string) {
   const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, month - 1, day).toISOString();
+  return new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
+}
+
+function isPastDueDate(value: string | null, now: Date) {
+  if (!value) return false;
+  return localDayKey(new Date(value)) < localDayKey(now);
 }
 
 function dueLabel(value: string | null) {
@@ -205,7 +210,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   );
   const openCount = data.items.filter((item) => item.status !== "DONE").length;
   const overdue = data.items.filter(
-    (item) => item.status !== "DONE" && item.dueAt && new Date(item.dueAt) < now,
+    (item) => item.status !== "DONE" && isPastDueDate(item.dueAt, now),
   ).length;
   const selectedLinkedTask = selectedCalendarEvent?.linkedTaskItemId
     ? data.items.find((item) => item.id === selectedCalendarEvent.linkedTaskItemId) || null
@@ -682,7 +687,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                               const isOverdue = Boolean(
                                 linkedTask &&
                                   linkedTask.status !== "DONE" &&
-                                  new Date(event.startAt).getTime() < now.getTime(),
+                                  isPastDueDate(linkedTask.dueAt, now),
                               );
                               const eventStartKey = eventDayKey(event.startAt, event.allDay);
                               const eventEndKey = event.endAt?.slice(0, 10) || eventStartKey;
@@ -799,7 +804,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
           <div className="space-y-1 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pl-5 xl:[direction:rtl] [&>*]:[direction:ltr]">
             {items.length ? (
               items.map((item) => {
-                const late = item.status !== "DONE" && item.dueAt && new Date(item.dueAt) < now;
+                const late = item.status !== "DONE" && isPastDueDate(item.dueAt, now);
                 return (
                   <div
                     key={item.id}
