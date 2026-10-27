@@ -35,6 +35,8 @@ const DEFAULT_PRESET: Preset = {
   cropOffsetY: 0,
 };
 
+const QUICK_PRESETS = [10, 15, 20] as const;
+
 export default function SharpMediaDialog({
   open,
   processUrl,
@@ -224,6 +226,27 @@ export default function SharpMediaDialog({
 
         <div className="grid min-h-0 flex-1 gap-5 overflow-hidden p-6 lg:grid-cols-[260px_minmax(0,1fr)]">
           <aside className="min-h-0 space-y-5 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-violet-700">Preset nhanh</span>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {QUICK_PRESETS.map((brightness) => (
+                  <button
+                    key={brightness}
+                    type="button"
+                    onClick={() => updatePreset((current) => ({ ...current, brightness, saturation: 92, contrast: 5 }))}
+                    disabled={running}
+                    className={`rounded-lg border px-2 py-2 text-xs font-semibold transition disabled:opacity-40 ${
+                      preset.brightness === brightness && preset.saturation === 92 && preset.contrast === 5
+                        ? "border-violet-600 bg-violet-600 text-white"
+                        : "border-violet-200 bg-white text-violet-700 hover:border-violet-400"
+                    }`}
+                  >
+                    Sáng {brightness}%
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-[11px] leading-4 text-violet-600">Saturation 92% · Tương phản 5%</p>
+            </div>
             <label className="block rounded-xl border border-slate-200 bg-white px-3 py-3">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tỉ lệ crop</span>
               <select
