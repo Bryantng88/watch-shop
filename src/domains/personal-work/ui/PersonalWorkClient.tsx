@@ -14,7 +14,6 @@ import {
   ExternalLink,
   Filter,
   MapPin,
-  Pencil,
   RefreshCw,
   Share2,
   Trash2,
@@ -368,16 +367,18 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               return;
             }
             run(
-              () =>
-                createPersonalWorkAction({
+              async () => {
+                const created = await createPersonalWorkAction({
                   title: nextTitle,
                   domain: newDomain,
                   workType,
                   targets: selectedTargets,
                   dueAt: dueAt ? dateInputToIso(dueAt) : null,
                   estimatedDays,
-                }),
-              "Đã thêm công việc",
+                });
+                if (data.calendar.connected) await syncPersonalWorkCalendarAction(created.id);
+              },
+              data.calendar.connected ? "Đã thêm công việc vào Google Calendar" : "Đã thêm công việc",
               () => {
                 setTitle("");
                 setTargetQuery("");
@@ -930,23 +931,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       )}
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        aria-label={`Chỉnh sửa ${item.title}`}
-                        onClick={() => openTaskEdit(item)}
-                        className="rounded-md p-1.5 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-700 focus:opacity-100 group-hover:opacity-100"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                      {data.calendar.connected && item.status !== "DONE" && (
+                      {item.status !== "DONE" && (
                         <button
-                          disabled={pending}
-                          onClick={() =>
-                            run(() => syncPersonalWorkCalendarAction(item.id), "Đã đồng bộ Google Calendar")
-                          }
-                          className={`rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition ${item.calendar.synced ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "bg-blue-50 text-blue-700 hover:bg-blue-100"}`}
+                          type="button"
+                          onClick={() => openTaskEdit(item)}
+                          className="rounded-md bg-emerald-50 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700 transition hover:bg-emerald-100"
                         >
-                          {item.calendar.synced ? "Cập nhật" : "Đưa lên lịch"}
+                          Tiến độ
                         </button>
                       )}
                       <ChevronRight className="h-4 w-4 text-slate-300" />
