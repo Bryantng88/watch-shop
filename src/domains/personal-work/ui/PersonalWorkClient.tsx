@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -14,7 +14,6 @@ import {
   ExternalLink,
   Filter,
   MapPin,
-  Pencil,
   RefreshCw,
   Share2,
   Trash2,
@@ -176,9 +175,11 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [calendarCreateDueAt, setCalendarCreateDueAt] = useState(localInputDate(new Date()));
   const [calendarCreateEstimatedDays, setCalendarCreateEstimatedDays] = useState(1);
   const [calendarCreateSync, setCalendarCreateSync] = useState(true);
+  const lastCalendarRefreshAtRef = useRef(Date.now());
   const [editingItem, setEditingItem] = useState<PersonalWorkItem | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editNote, setEditNote] = useState("");
+  const editNoteRef = useRef<HTMLTextAreaElement>(null);
   const [editUpdateBody, setEditUpdateBody] = useState("");
   const [editDomain, setEditDomain] = useState<PersonalWorkDomain>("GENERAL");
   const [editDueAt, setEditDueAt] = useState("");
@@ -240,6 +241,36 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     const timeoutId = window.setTimeout(() => setMessage(null), 5000);
     return () => window.clearTimeout(timeoutId);
   }, [message]);
+
+  useEffect(() => {
+    if (!data.calendar.connected) return;
+
+    const refreshCalendar = () => {
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (now - lastCalendarRefreshAtRef.current < 5_000) return;
+      lastCalendarRefreshAtRef.current = now;
+      router.refresh();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") refreshCalendar();
+    };
+    const intervalId = window.setInterval(refreshCalendar, 120_000);
+    window.addEventListener("focus", refreshCalendar);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshCalendar);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [data.calendar.connected, router]);
+
+  useEffect(() => {
+    const textarea = editNoteRef.current;
+    if (!editingItem || !textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.max(224, Math.min(textarea.scrollHeight, window.innerHeight * 0.55))}px`;
+  }, [editNote, editingItem]);
 
   function run(action: () => Promise<unknown>, success?: string, onSuccess?: () => void) {
     setMessage(null);
@@ -336,16 +367,18 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               return;
             }
             run(
-              () =>
-                createPersonalWorkAction({
+              async () => {
+                const created = await createPersonalWorkAction({
                   title: nextTitle,
                   domain: newDomain,
                   workType,
                   targets: selectedTargets,
                   dueAt: dueAt ? dateInputToIso(dueAt) : null,
                   estimatedDays,
-                }),
-              "Đã thêm công việc",
+                });
+                if (data.calendar.connected) await syncPersonalWorkCalendarAction(created.id);
+              },
+              data.calendar.connected ? "Đã thêm công việc vào Google Calendar" : "Đã thêm công việc",
               () => {
                 setTitle("");
                 setTargetQuery("");
@@ -898,23 +931,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       )}
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        aria-label={`Chỉnh sửa ${item.title}`}
-                        onClick={() => openTaskEdit(item)}
-                        className="rounded-md p-1.5 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-700 focus:opacity-100 group-hover:opacity-100"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                      {data.calendar.connected && item.status !== "DONE" && (
+                      {item.status !== "DONE" && (
                         <button
-                          disabled={pending}
-                          onClick={() =>
-                            run(() => syncPersonalWorkCalendarAction(item.id), "Đã đồng bộ Google Calendar")
-                          }
-                          className={`rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition ${item.calendar.synced ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "bg-blue-50 text-blue-700 hover:bg-blue-100"}`}
+                          type="button"
+                          onClick={() => openTaskEdit(item)}
+                          className="rounded-md bg-emerald-50 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700 transition hover:bg-emerald-100"
                         >
-                          {item.calendar.synced ? "Cập nhật" : "Đưa lên lịch"}
+                          Tiến độ
                         </button>
                       )}
                       <ChevronRight className="h-4 w-4 text-slate-300" />
@@ -969,7 +992,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 () => setEditingItem(null),
               );
             }}
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl shadow-slate-950/15"
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl shadow-slate-950/15"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -1000,11 +1023,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               <label className="block space-y-1.5">
                 <span className="text-xs font-semibold text-slate-600">Ghi chú</span>
                 <textarea
+                  ref={editNoteRef}
                   value={editNote}
                   disabled={editingItem.access === "VIEWER"}
                   onChange={(event) => setEditNote(event.target.value)}
-                  rows={3}
-                  className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  rows={8}
+                  placeholder="Mô tả chi tiết công việc, yêu cầu hoặc các bước cần thực hiện..."
+                  className="min-h-56 max-h-[55vh] w-full resize-y overflow-y-auto rounded-lg border border-slate-200 px-3 py-3 text-sm leading-6 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 />
               </label>
               <label className="block space-y-1.5">
