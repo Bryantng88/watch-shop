@@ -176,6 +176,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [calendarCreateDueAt, setCalendarCreateDueAt] = useState(localInputDate(new Date()));
   const [calendarCreateEstimatedDays, setCalendarCreateEstimatedDays] = useState(1);
   const [calendarCreateSync, setCalendarCreateSync] = useState(true);
+  const lastCalendarRefreshAtRef = useRef(Date.now());
   const [editingItem, setEditingItem] = useState<PersonalWorkItem | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editNote, setEditNote] = useState("");
@@ -241,6 +242,29 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     const timeoutId = window.setTimeout(() => setMessage(null), 5000);
     return () => window.clearTimeout(timeoutId);
   }, [message]);
+
+  useEffect(() => {
+    if (!data.calendar.connected) return;
+
+    const refreshCalendar = () => {
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (now - lastCalendarRefreshAtRef.current < 5_000) return;
+      lastCalendarRefreshAtRef.current = now;
+      router.refresh();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") refreshCalendar();
+    };
+    const intervalId = window.setInterval(refreshCalendar, 120_000);
+    window.addEventListener("focus", refreshCalendar);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshCalendar);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [data.calendar.connected, router]);
 
   useEffect(() => {
     const textarea = editNoteRef.current;
