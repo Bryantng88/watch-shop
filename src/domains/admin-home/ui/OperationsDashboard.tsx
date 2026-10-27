@@ -67,15 +67,15 @@ function QueueRow({ queue }: { queue: OperationsDashboardQueue }) {
     return rank[a.severity] - rank[b.severity];
   }).slice(0, 2);
   return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-4 sm:px-5">
-      <div className="flex min-w-[220px] flex-1 items-center gap-3">
-        <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", visual.softClassName)}><Icon className="h-4 w-4" /></span>
-        <span><span className="block text-sm font-semibold text-slate-950">{visual.label}</span><span className="mt-0.5 block text-xs text-slate-500">{queue.activeCount} mục đang mở</span></span>
+    <div className="grid gap-3 px-4 py-4 transition-colors hover:bg-slate-50/70 sm:px-5 lg:grid-cols-[minmax(190px,1fr)_minmax(0,2fr)_auto] lg:items-center lg:gap-6">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", visual.softClassName)}><Icon className="h-[18px] w-[18px]" /></span>
+        <span className="min-w-0"><span className="block text-sm font-semibold text-slate-950">{visual.label}</span><span className="mt-1 block text-xs text-slate-500"><strong className="font-semibold tabular-nums text-slate-700">{queue.activeCount}</strong> mục đang mở</span></span>
       </div>
-      <div className="flex min-w-[220px] flex-[2] flex-wrap items-center gap-x-4 gap-y-2">
-        {insights.length ? insights.map((insight) => <Link key={insight.key} href={insight.href} className={cn("text-sm font-medium hover:underline", insight.severity === "risk" ? "text-rose-700" : "text-amber-800")}><strong className="font-bold tabular-nums">{insight.count}</strong> {insight.label.toLocaleLowerCase("vi-VN")}</Link>) : <span className="text-sm text-slate-400">Chưa có tín hiệu cần chú ý</span>}
+      <div className="flex min-w-0 flex-wrap items-center gap-2 lg:gap-3">
+        {insights.length ? insights.map((insight) => <Link key={insight.key} href={insight.href} className={cn("inline-flex min-h-8 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500", insight.severity === "risk" ? "bg-rose-50 text-rose-700" : "bg-amber-50 text-amber-800")}><strong className="font-bold tabular-nums">{insight.count}</strong><span>{insight.label.toLocaleLowerCase("vi-VN")}</span></Link>) : <span className="text-sm text-slate-500">Chưa có tín hiệu cần chú ý</span>}
       </div>
-      <Link href={queue.href} className="group inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500">{queue.actionLabel}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" /></Link>
+      <Link href={queue.href} className="group inline-flex min-h-10 w-fit items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500">{queue.actionLabel}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" /></Link>
     </div>
   );
 }
