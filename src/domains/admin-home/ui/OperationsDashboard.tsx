@@ -113,6 +113,39 @@ function QueueCard({ queue }: { queue: OperationsDashboardQueue }) {
   );
 }
 
+function ImmediateSignals({ data }: { data: OperationsDashboardData }) {
+  // Prefer explicit business signals; their existing destinations open the relevant workflow.
+  const order: Array<[OperationsDashboardQueue["key"], string]> = [
+    ["personal-work", "overdue"],
+    ["purchase-requests", "overdue"],
+    ["technical", "overdue"],
+    ["purchase-requests", "unassigned"],
+    ["personal-work", "today"],
+    ["media", "very-stale"],
+    ["orders", "remaining-payment"],
+    ["orders", "awaiting-shipment"],
+  ];
+  const signals = order.flatMap(([queueKey, insightKey]) => {
+    const queue = data.queues.find((entry) => entry.key === queueKey);
+    const insight = queue?.insights.find((entry) => entry.key === insightKey);
+    return queue && insight && insight.count > 0 ? [{ queue, insight }] : [];
+  });
+  return (
+    <section className="mt-6" aria-labelledby="dashboard-immediate-title">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+        <div><h2 id="dashboard-immediate-title" className="text-lg font-bold text-slate-950">Cần chú ý hôm nay</h2><p className="mt-1 text-sm text-slate-500">Việc quá hạn, cần phân công và các tín hiệu cần kiểm tra.</p></div>
+      </div>
+      {signals.length ? <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">{signals.slice(0, 4).map(({queue, insight}, index) => (
+        <Link key={`${queue.key}-${insight.key}`} href={insight.href} className={cn("group flex min-h-36 flex-col rounded-xl border p-4 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500", index === 0 ? "border-amber-200 bg-amber-50/60 hover:bg-amber-50" : "border-slate-200 bg-white hover:border-slate-300")}>
+          <span className="text-xs font-semibold text-slate-500">{operationalDomainPresentation(queue.key).label}</span>
+          <span className="mt-3 text-lg font-bold text-slate-950"><span className="tabular-nums">{insight.count}</span> {insight.label.toLocaleLowerCase("vi-VN")}</span>
+          <span className="mt-auto flex items-center gap-1 pt-4 text-sm font-semibold text-slate-700">Mở khu vực xử lý <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" /></span>
+        </Link>
+      ))}</div> : <div className="rounded-xl border border-slate-200 bg-white px-5 py-6 text-sm text-slate-500">Hiện không có tín hiệu cần chú ý trong dữ liệu được theo dõi.</div>}
+    </section>
+  );
+}
+
 export default function OperationsDashboard({ data }: { data: OperationsDashboardData }) {
   const priority = data.priorityAction;
   return (
@@ -128,12 +161,12 @@ export default function OperationsDashboard({ data }: { data: OperationsDashboar
         </div>
       } />
 
-      <section className="mt-2 grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">{data.queues.map((queue) => <QueueCard key={queue.key} queue={queue} />)}</section>
+      <ImmediateSignals data={data} />
 
       <section className="!mt-8 grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)]">
         <div className="overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035),0_8px_24px_rgba(15,23,42,0.035)]">
           <div className="flex items-center justify-between px-5 pb-3 pt-5">
-            <div><h2 className="font-bold text-slate-950">Cần ưu tiên</h2><p className="mt-0.5 text-xs text-slate-500">Xếp theo mức độ ảnh hưởng, sau đó theo thời gian tồn</p></div>
+            <div><h2 className="font-bold text-slate-950">Cần ưu tiên</h2><p className="mt-0.5 text-xs text-slate-500">Các mục ngoại lệ được ghi nhận trong từng quy trình</p></div>
             <span className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700">{data.attention.length}</span>
           </div>
           {data.attention.length ? (
@@ -152,7 +185,7 @@ export default function OperationsDashboard({ data }: { data: OperationsDashboar
                 );
               })}
             </div>
-          ) : <div className="flex min-h-48 items-center justify-center px-6 text-center text-sm text-slate-500">Không có ngoại lệ quá hạn trong dữ liệu hiện tại.</div>}
+          ) : <div className="flex min-h-48 items-center justify-center px-6 text-center text-sm text-slate-500">Không có mục ưu tiên trong dữ liệu hiện tại.</div>}
         </div>
 
         <div className="overflow-hidden rounded-2xl bg-slate-50/80 shadow-[0_1px_2px_rgba(15,23,42,0.025),0_8px_24px_rgba(15,23,42,0.03)]">
@@ -182,7 +215,9 @@ export default function OperationsDashboard({ data }: { data: OperationsDashboar
         </div>
       </section>
 
-      <DashboardCharts data={data} />
+      <section className="mt-8" aria-labelledby="dashboard-queues-title"><div className="mb-3"><h2 id="dashboard-queues-title" className="text-lg font-bold text-slate-950">Khu vực xử lý</h2><p className="mt-1 text-sm text-slate-500">Theo dõi công việc theo từng quy trình.</p></div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">{data.queues.map((queue) => <QueueCard key={queue.key} queue={queue} />)}</div></section>
+
+      <div className="mt-8"><DashboardCharts data={data} /></div>
       <div className="mt-5 text-right text-xs text-slate-400">Cập nhật lúc {new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(data.generatedAt))}</div>
     </AdminPageCanvas>
   );
