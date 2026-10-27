@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -179,6 +179,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [editingItem, setEditingItem] = useState<PersonalWorkItem | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editNote, setEditNote] = useState("");
+  const editNoteRef = useRef<HTMLTextAreaElement>(null);
   const [editUpdateBody, setEditUpdateBody] = useState("");
   const [editDomain, setEditDomain] = useState<PersonalWorkDomain>("GENERAL");
   const [editDueAt, setEditDueAt] = useState("");
@@ -240,6 +241,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     const timeoutId = window.setTimeout(() => setMessage(null), 5000);
     return () => window.clearTimeout(timeoutId);
   }, [message]);
+
+  useEffect(() => {
+    const textarea = editNoteRef.current;
+    if (!editingItem || !textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.max(224, Math.min(textarea.scrollHeight, window.innerHeight * 0.55))}px`;
+  }, [editNote, editingItem]);
 
   function run(action: () => Promise<unknown>, success?: string, onSuccess?: () => void) {
     setMessage(null);
@@ -969,7 +977,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 () => setEditingItem(null),
               );
             }}
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl shadow-slate-950/15"
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl shadow-slate-950/15"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -1000,11 +1008,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               <label className="block space-y-1.5">
                 <span className="text-xs font-semibold text-slate-600">Ghi chú</span>
                 <textarea
+                  ref={editNoteRef}
                   value={editNote}
                   disabled={editingItem.access === "VIEWER"}
                   onChange={(event) => setEditNote(event.target.value)}
-                  rows={3}
-                  className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  rows={8}
+                  placeholder="Mô tả chi tiết công việc, yêu cầu hoặc các bước cần thực hiện..."
+                  className="min-h-56 max-h-[55vh] w-full resize-y overflow-y-auto rounded-lg border border-slate-200 px-3 py-3 text-sm leading-6 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 />
               </label>
               <label className="block space-y-1.5">
