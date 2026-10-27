@@ -114,40 +114,40 @@ function QueueCard({ queue }: { queue: OperationsDashboardQueue }) {
 }
 
 function ImmediateSignals({ data }: { data: OperationsDashboardData }) {
-  // Prefer explicit business signals; their existing destinations open the relevant workflow.
-  const order: Array<[OperationsDashboardQueue["key"], string]> = [
-    ["personal-work", "overdue"],
-    ["purchase-requests", "overdue"],
-    ["technical", "overdue"],
-    ["purchase-requests", "unassigned"],
-    ["personal-work", "today"],
-    ["media", "very-stale"],
-    ["orders", "remaining-payment"],
-    ["orders", "awaiting-shipment"],
+  const definitions: Array<{ queue: OperationsDashboardQueue["key"]; key: string; heading: string; description: string; action: string; urgent?: boolean }> = [
+    { queue: "purchase-requests", key: "overdue", heading: "Khách cần được liên hệ", description: "Yêu cầu đã quá lịch follow-up.", action: "Theo dõi khách hàng", urgent: true },
+    { queue: "technical", key: "overdue", heading: "Kỹ thuật đã quá hạn", description: "Kiểm tra tiến độ các hạng mục đang trễ.", action: "Mở khu vực kỹ thuật", urgent: true },
+    { queue: "personal-work", key: "overdue", heading: "Việc cá nhân quá hạn", description: "Xem lại các công việc chưa hoàn tất.", action: "Mở việc cá nhân", urgent: true },
+    { queue: "purchase-requests", key: "unassigned", heading: "Khách đang chờ tiếp nhận", description: "Yêu cầu mua hàng chưa có người nhận.", action: "Xem yêu cầu chờ" },
+    { queue: "personal-work", key: "today", heading: "Việc đến hạn hôm nay", description: "Những việc cá nhân cần theo dõi hôm nay.", action: "Mở việc cá nhân" },
+    { queue: "media", key: "very-stale", heading: "Media cần kiểm tra", description: "Đồng hồ chưa được cập nhật quá 30 ngày.", action: "Kiểm tra Media" },
+    { queue: "orders", key: "remaining-payment", heading: "Đơn còn phải thu", description: "Kiểm tra tình trạng thanh toán của đơn hàng.", action: "Theo dõi đơn hàng" },
+    { queue: "orders", key: "awaiting-shipment", heading: "Đơn đang chờ giao", description: "Kiểm tra các đơn chờ tạo hoặc giao hàng.", action: "Mở đơn hàng" },
   ];
-  const signals = order.flatMap(([queueKey, insightKey]) => {
-    const queue = data.queues.find((entry) => entry.key === queueKey);
-    const insight = queue?.insights.find((entry) => entry.key === insightKey);
-    return queue && insight && insight.count > 0 ? [{ queue, insight }] : [];
+  const signals = definitions.flatMap((definition) => {
+    const queue = data.queues.find((entry) => entry.key === definition.queue);
+    const insight = queue?.insights.find((entry) => entry.key === definition.key);
+    return queue && insight && insight.count > 0 ? [{ definition, queue, insight }] : [];
   });
   return (
     <section className="mt-6" aria-labelledby="dashboard-immediate-title">
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-        <div><h2 id="dashboard-immediate-title" className="text-lg font-bold text-slate-950">Cần chú ý hôm nay</h2><p className="mt-1 text-sm text-slate-500">Việc quá hạn, cần phân công và các tín hiệu cần kiểm tra.</p></div>
-      </div>
-      {signals.length ? <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">{signals.slice(0, 4).map(({queue, insight}, index) => (
-        <Link key={`${queue.key}-${insight.key}`} href={insight.href} className={cn("group flex min-h-36 flex-col rounded-xl border p-4 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500", index === 0 ? "border-amber-200 bg-amber-50/60 hover:bg-amber-50" : "border-slate-200 bg-white hover:border-slate-300")}>
-          <span className="text-xs font-semibold text-slate-500">{operationalDomainPresentation(queue.key).label}</span>
-          <span className="mt-3 text-lg font-bold text-slate-950"><span className="tabular-nums">{insight.count}</span> {insight.label.toLocaleLowerCase("vi-VN")}</span>
-          <span className="mt-auto flex items-center gap-1 pt-4 text-sm font-semibold text-slate-700">Mở khu vực xử lý <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" /></span>
-        </Link>
+      <div className="mb-4"><h2 id="dashboard-immediate-title" className="text-lg font-bold text-slate-950">Cần can thiệp</h2><p className="mt-1 text-sm text-slate-500">Bắt đầu với các việc quá hạn, khách đang chờ và những điểm cần kiểm tra.</p></div>
+      {signals.length ? <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{signals.slice(0, 4).map(({definition, queue, insight}) => (
+        <article key={`${queue.key}-${insight.key}`} className="flex min-h-[196px] flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-[0_2px_4px_rgba(15,23,42,0.04),0_8px_24px_rgba(15,23,42,0.035)]">
+          <div className="flex items-start justify-between gap-3"><span className={cn("rounded-md px-2 py-1 text-xs font-bold", definition.urgent ? "bg-rose-50 text-rose-700" : "bg-amber-50 text-amber-800")}>{definition.urgent ? "Quá hạn" : "Cần chú ý"}</span><span className="text-xs font-medium text-slate-500">{operationalDomainPresentation(queue.key).label}</span></div>
+          <h3 className="mt-4 text-base font-bold text-slate-950">{definition.heading}</h3>
+          <p className="mt-1 text-sm leading-5 text-slate-600"><strong className="font-bold text-slate-950">{insight.count}</strong> {insight.label.toLocaleLowerCase("vi-VN")} · {definition.description}</p>
+          <Link href={insight.href} className="group mt-5 flex min-h-11 items-center justify-between gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2"><span>{definition.action}</span><ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" /></Link>
+        </article>
       ))}</div> : <div className="rounded-xl border border-slate-200 bg-white px-5 py-6 text-sm text-slate-500">Hiện không có tín hiệu cần chú ý trong dữ liệu được theo dõi.</div>}
+      {signals.length > 4 ? <p className="mt-3 text-xs text-slate-500">Còn {signals.length - 4} tín hiệu khác trong mục “Tín hiệu cần can thiệp” bên dưới.</p> : null}
     </section>
   );
 }
 
 export default function OperationsDashboard({ data }: { data: OperationsDashboardData }) {
-  const priority = data.priorityAction;
+  const personalOverdue = data.queues.find((queue) => queue.key === "personal-work")?.insights.find((insight) => insight.key === "overdue");
+  const unassigned = data.queues.find((queue) => queue.key === "purchase-requests")?.insights.find((insight) => insight.key === "unassigned");
   return (
     <AdminPageCanvas className="mx-auto w-full max-w-none min-w-0 pb-8 sm:px-4 lg:px-5 xl:px-6 2xl:px-8">
       <AdminPageHeader title="Trung tâm điều hành" description="Theo dõi công việc đang mở, ngoại lệ và tiến độ các khu vực nghiệp vụ." meta={
@@ -166,21 +166,22 @@ export default function OperationsDashboard({ data }: { data: OperationsDashboar
       <section className="!mt-8 grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)]">
         <div className="overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035),0_8px_24px_rgba(15,23,42,0.035)]">
           <div className="flex items-center justify-between px-5 pb-3 pt-5">
-            <div><h2 className="font-bold text-slate-950">Cần ưu tiên</h2><p className="mt-0.5 text-xs text-slate-500">Các mục ngoại lệ được ghi nhận trong từng quy trình</p></div>
-            <span className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700">{data.attention.length}</span>
+            <div><h2 className="font-bold text-slate-950">Bắt đầu xử lý</h2><p className="mt-0.5 text-xs text-slate-500">Các mục cụ thể cần theo dõi trong từng quy trình</p></div>
+
           </div>
-          {data.attention.length ? (
+          {data.attention.length || (personalOverdue?.count ?? 0) > 0 || (unassigned?.count ?? 0) > 0 ? (
             <div className="divide-y divide-slate-200/60">
+              {[personalOverdue, unassigned].filter((insight) => insight && insight.count > 0).map((insight) => insight ? <Link key={insight.key} href={insight.href} className="group flex flex-wrap items-center justify-between gap-4 px-5 py-4 transition hover:bg-slate-50"><span><span className="block text-sm font-bold text-slate-950">{insight.count} {insight.label.toLocaleLowerCase("vi-VN")}</span><span className="mt-1 block text-xs text-slate-500">{insight === personalOverdue ? "Việc cá nhân cần xem lại" : "Yêu cầu mua hàng đang chờ tiếp nhận"}</span></span><span className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800 group-hover:bg-slate-100">{insight === personalOverdue ? "Mở việc cá nhân" : "Mở yêu cầu chờ"}<ArrowRight className="h-4 w-4" /></span></Link> : null)}
               {data.attention.map((item) => {
-                const isTopPriority = item.id === priority?.id;
+                const isTopPriority = false;
                 return (
                   <Link key={item.id} href={item.href} className={cn("group grid gap-3 px-5 transition sm:grid-cols-[100px_minmax(0,1fr)_auto] sm:items-center", isTopPriority ? "border-l-2 border-amber-400 bg-gradient-to-r from-amber-50/80 via-amber-50/30 to-transparent py-[18px] hover:from-amber-50 hover:via-violet-50/45" : cn("py-4", ADMIN_UI.interactiveSurface))}>
-                    <span className="flex items-center gap-2"><span className={cn("w-fit rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide", toneClass[item.tone])}>{domainLabels[item.domain]}</span>{isTopPriority ? <span className="text-[10px] font-bold tabular-nums text-amber-600">#1</span> : null}</span>
+                    <span className="flex items-center gap-2"><span className={cn("w-fit rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide", toneClass[item.tone])}>{domainLabels[item.domain]}</span></span>
                     <span className="min-w-0">
                       {isTopPriority ? <><span className="block truncate text-base font-semibold text-slate-950">{item.reason}</span><span className="mt-1 block truncate text-xs font-medium text-slate-600">{item.title}{item.reference ? ` · ${item.reference}` : ""}</span></> : <><span className="block truncate text-sm font-semibold text-slate-900">{item.title}</span><span className={cn("mt-1 block truncate text-xs font-semibold", item.tone === "rose" ? "text-rose-700" : item.tone === "amber" ? "text-amber-700" : "text-slate-600")}>{item.reason}</span></>}
                       <span className="mt-0.5 block truncate text-xs text-slate-400">{item.ownerLabel}</span>
                     </span>
-                    <span className={cn("flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold transition", isTopPriority ? "border-amber-200 bg-white text-amber-800 group-hover:bg-amber-50" : "border-transparent bg-slate-100 text-slate-700 group-hover:border-slate-200 group-hover:bg-slate-200")}><span className="hidden lg:inline">{item.actionLabel}</span><ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" /></span>
+                    <span className={cn("flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold transition", isTopPriority ? "border-slate-900 bg-slate-900 text-white group-hover:bg-slate-700" : "border-slate-300 bg-white text-slate-800 group-hover:bg-slate-100")}><span>{item.actionLabel}</span><ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" /></span>
                   </Link>
                 );
               })}
