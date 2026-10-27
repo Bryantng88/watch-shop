@@ -88,9 +88,9 @@ export async function updatePersonalWorkAction(input: {
 
 export async function addPersonalWorkChecklistItemAction(input: { taskItemId: string; title: string }) {
   const user = await auth();
-  await addPersonalWorkChecklistItem(input.taskItemId, input.title, user);
+  const item = await addPersonalWorkChecklistItem(input.taskItemId, input.title, user);
   refresh();
-  return { ok: true };
+  return { ok: true, item: { id: item.id, title: item.title, isDone: item.isDone } };
 }
 
 export async function togglePersonalWorkChecklistItemAction(input: {

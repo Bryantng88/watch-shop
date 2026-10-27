@@ -32,6 +32,7 @@ type NotifyApi = {
 type ToastBusPayload = {
     kind: ToastKind;
     input: NotifyInput;
+    id?: string;
 };
 
 const TOAST_PUSH_EVENT = "app:toast:push";
@@ -124,9 +125,9 @@ export function AppToastProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const push = useCallback(
-        (kind: ToastKind, input: NotifyInput) => {
+        (kind: ToastKind, input: NotifyInput, requestedId?: string) => {
             const normalized = normalizeInput(input);
-            const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+            const id = requestedId || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
             const item: ToastItem = {
                 id,
                 kind,
@@ -151,7 +152,7 @@ export function AppToastProvider({ children }: { children: React.ReactNode }) {
             const customEvent = event as CustomEvent<ToastBusPayload>;
             const detail = customEvent.detail;
             if (!detail) return;
-            push(detail.kind, detail.input);
+            push(detail.kind, detail.input, detail.id);
         };
 
         const onDismiss = (event: Event) => {

@@ -33,6 +33,7 @@ export const notify = {
     warning(input: NotifyInput) {
         return dispatchToast("warning", input);
     },
+    /** @deprecated Use inline pending feedback or AppProgressProvider. */
     loading(input: NotifyInput) {
         return dispatchToast("info", input);
     },
