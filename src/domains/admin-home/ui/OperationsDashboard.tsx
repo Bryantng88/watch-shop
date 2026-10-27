@@ -59,57 +59,24 @@ function DashboardCharts({ data }: { data: OperationsDashboardData }) {
   );
 }
 
-function QueueCard({ queue }: { queue: OperationsDashboardQueue }) {
+function QueueRow({ queue }: { queue: OperationsDashboardQueue }) {
   const visual = operationalDomainPresentation(queue.key);
   const Icon = visual.icon;
+  const insights = queue.insights.filter((insight) => insight.count > 0).sort((a, b) => {
+    const rank = { risk: 0, attention: 1, neutral: 2 };
+    return rank[a.severity] - rank[b.severity];
+  }).slice(0, 2);
   return (
-    <article className="flex flex-col overflow-hidden rounded-xl bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_7px_20px_rgba(15,23,42,0.035)]">
-      <div className="flex items-start justify-between gap-4 p-4">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", visual.accentClassName)}><Icon className="h-5 w-5" /></div>
-          <div className="min-w-0">
-            <h2 className="text-sm font-bold text-slate-950">{queue.label}</h2>
-            <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{queue.description}</p>
-          </div>
-        </div>
-        <div className={cn("rounded-xl px-3 py-1.5 text-lg font-bold tabular-nums", visual.softClassName)}>{queue.activeCount}</div>
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-4 sm:px-5">
+      <div className="flex min-w-[220px] flex-1 items-center gap-3">
+        <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", visual.softClassName)}><Icon className="h-4 w-4" /></span>
+        <span><span className="block text-sm font-semibold text-slate-950">{visual.label}</span><span className="mt-0.5 block text-xs text-slate-500">{queue.activeCount} mục đang mở</span></span>
       </div>
-      {queue.insights.some((insight) => insight.count > 0) ? (
-        <div className="mx-3 mt-2 rounded-lg bg-amber-50/65 px-3 py-2">
-          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-            {queue.insights.filter((insight) => insight.count > 0).map((insight) => (
-              <Link key={insight.key} href={insight.href} className={cn(
-                "group/insight inline-flex items-center gap-1.5 text-xs font-medium transition hover:text-slate-950",
-                insight.severity === "risk" ? "text-rose-700" : insight.severity === "attention" ? "text-amber-800" : "text-slate-600",
-              )}>
-                <span className="font-bold tabular-nums">{insight.count}</span> {insight.label}
-                <ArrowRight className="h-3 w-3 opacity-40 transition group-hover/insight:translate-x-0.5 group-hover/insight:opacity-100" />
-              </Link>
-            ))}
-          </div>
-        </div>
-      ) : null}
-      <div className="flex-1 divide-y divide-slate-100 px-3">
-        {queue.stages.map((stage) => (
-          <Link key={stage.key} href={stage.href} className={cn("group flex items-center justify-between gap-3 rounded-md px-1 py-3.5", ADMIN_UI.interactiveSurface, stage.count === 0 && "opacity-45 hover:opacity-75")}>
-              <span className="flex min-w-0 items-center gap-2.5 text-sm font-medium text-slate-700">
-                <span className={cn("h-2 w-2 shrink-0 rounded-full", operationalStagePresentation(stage.key).dotClassName)} />
-                <span className="truncate">{stage.label}</span>
-              </span>
-              <span className={cn("flex shrink-0 items-center gap-1 text-xs font-semibold tabular-nums transition group-hover:text-slate-950", stage.count > 0 ? "text-slate-700" : "text-slate-400")}>
-                {stage.count > 0 ? `${stage.actionLabel} · ${stage.count}` : "Xem"}
-                <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
-              </span>
-          </Link>
-        ))}
+      <div className="flex min-w-[220px] flex-[2] flex-wrap items-center gap-x-4 gap-y-2">
+        {insights.length ? insights.map((insight) => <Link key={insight.key} href={insight.href} className={cn("text-sm font-medium hover:underline", insight.severity === "risk" ? "text-rose-700" : "text-amber-800")}><strong className="font-bold tabular-nums">{insight.count}</strong> {insight.label.toLocaleLowerCase("vi-VN")}</Link>) : <span className="text-sm text-slate-400">Chưa có tín hiệu cần chú ý</span>}
       </div>
-      <div className="px-3 pb-3 pt-2">
-        <Link href={queue.href} className={cn("group/cta flex h-10 items-center justify-between rounded-lg px-4 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2", visual.actionClassName)}>
-          <span>{queue.actionLabel}</span>
-          <span className="flex items-center gap-1.5 text-sm font-medium tabular-nums opacity-75">{queue.activeCount} việc <ArrowRight className="h-4 w-4 transition-transform group-hover/cta:translate-x-0.5" /></span>
-        </Link>
-      </div>
-    </article>
+      <Link href={queue.href} className="group inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500">{queue.actionLabel}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" /></Link>
+    </div>
   );
 }
 
@@ -216,7 +183,7 @@ export default function OperationsDashboard({ data }: { data: OperationsDashboar
         </div>
       </section>
 
-      <section className="mt-8" aria-labelledby="dashboard-queues-title"><div className="mb-3"><h2 id="dashboard-queues-title" className="text-lg font-bold text-slate-950">Khu vực xử lý</h2><p className="mt-1 text-sm text-slate-500">Theo dõi công việc theo từng quy trình.</p></div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">{data.queues.map((queue) => <QueueCard key={queue.key} queue={queue} />)}</div></section>
+      <section className="mt-8" aria-labelledby="dashboard-queues-title"><div className="mb-3"><h2 id="dashboard-queues-title" className="text-lg font-bold text-slate-950">Khu vực xử lý</h2><p className="mt-1 text-sm text-slate-500">Theo dõi công việc theo từng quy trình.</p></div><div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035),0_8px_24px_rgba(15,23,42,0.035)] divide-y divide-slate-100">{data.queues.map((queue) => <QueueRow key={queue.key} queue={queue} />)}</div></section>
 
       <div className="mt-8"><DashboardCharts data={data} /></div>
       <div className="mt-5 text-right text-xs text-slate-400">Cập nhật lúc {new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(data.generatedAt))}</div>
