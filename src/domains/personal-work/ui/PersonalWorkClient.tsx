@@ -163,7 +163,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const appDialog = useAppDialog();
   const checklistMutation = useUiMutation();
   const [pending, startTransition] = useTransition();
-  const [view, setView] = useState<"TODAY" | "UPCOMING" | "ALL" | "DONE">("TODAY");
+  const [view, setView] = useState<"TODAY" | "UPCOMING" | "ALL" | "DONE">("ALL");
   const [scope, setScope] = useState<"MINE" | "SHARED" | "ALL">("MINE");
   const [domain, setDomain] = useState<PersonalWorkDomain | "ALL">("ALL");
   const [title, setTitle] = useState("");
