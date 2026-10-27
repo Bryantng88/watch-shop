@@ -66,6 +66,9 @@ export async function assertPersonalWorkAccess(
     select: {
       id: true,
       taskId: true,
+      status: true,
+      progressMode: true,
+      checklistLockedAt: true,
       task: { select: { createdByUserId: true, assignedToUserId: true } },
       personalShares: { where: { userId }, select: { accessLevel: true }, take: 1 },
     },
@@ -299,6 +302,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
           .filter((target): target is PersonalWorkTarget => Boolean(target)),
         progressPercent: item.progressPercent,
         progressMode: item.progressMode,
+        checklistLockedAt: item.checklistLockedAt?.toISOString() || null,
         activities: item.activities.map((activity) => ({
           id: activity.id,
           title: activity.title,
@@ -488,6 +492,9 @@ export async function updatePersonalWorkItem(
 ) {
   const current = await assertPersonalWorkAccess(input.id, auth, "EDIT");
   const status = input.status;
+  if (status === TaskStatus.DONE && current.progressMode === TaskProgressMode.CHECKLIST && !current.checklistLockedAt) {
+    throw new Error("Hãy hoàn thành toàn bộ đầu việc và xác nhận hoàn thành");
+  }
   const estimatedDays = input.estimatedDays === undefined
     ? undefined
     : Math.max(1, Math.min(365, Math.round(input.estimatedDays)));
@@ -595,6 +602,121 @@ export async function updatePersonalWorkItem(
         names: [normalizePersonalDomain(input.domain), ...(input.tags || [])],
       });
     }
+  });
+}
+
+function checklistProgress(total: number, done: number) {
+  return total > 0 ? Math.round((done / total) * 100) : 0;
+}
+
+async function updateChecklistProgress(tx: Prisma.TransactionClient, taskItemId: string) {
+  const [total, done, item] = await Promise.all([
+    tx.taskItemChecklist.count({ where: { taskItemId } }),
+    tx.taskItemChecklist.count({ where: { taskItemId, isDone: true } }),
+    tx.taskItem.findUniqueOrThrow({ where: { id: taskItemId }, select: { status: true, startedAt: true } }),
+  ]);
+  const progressPercent = checklistProgress(total, done);
+  await tx.taskItem.update({
+    where: { id: taskItemId },
+    data: {
+      progressMode: TaskProgressMode.CHECKLIST,
+      progressPercent,
+      ...(progressPercent > 0 && item.status === TaskStatus.TODO
+        ? { status: TaskStatus.IN_PROGRESS, startedAt: item.startedAt || new Date() }
+        : {}),
+    },
+  });
+  return { total, done, progressPercent };
+}
+
+function assertChecklistOpen(item: { status: TaskStatus; checklistLockedAt: Date | null }) {
+  if (item.status === TaskStatus.DONE || item.checklistLockedAt) {
+    throw new Error("Danh sách đầu việc đã được khóa sau khi hoàn thành");
+  }
+  if (item.status === TaskStatus.CANCELLED) throw new Error("Công việc đã bị hủy");
+}
+
+export async function addPersonalWorkChecklistItem(taskItemId: string, title: string, auth: unknown) {
+  const current = await assertPersonalWorkAccess(taskItemId, auth, "EDIT");
+  assertChecklistOpen(current);
+  const normalizedTitle = title.trim();
+  if (!normalizedTitle) throw new Error("Vui lòng nhập tên đầu việc");
+  if (normalizedTitle.length > 500) throw new Error("Tên đầu việc không được vượt quá 500 ký tự");
+  return prisma.$transaction(async (tx) => {
+    const last = await tx.taskItemChecklist.findFirst({
+      where: { taskItemId },
+      orderBy: { sortOrder: "desc" },
+      select: { sortOrder: true },
+    });
+    const checklist = await tx.taskItemChecklist.create({
+      data: { taskItemId, title: normalizedTitle, sortOrder: (last?.sortOrder || 0) + 1 },
+    });
+    await updateChecklistProgress(tx, taskItemId);
+    return checklist;
+  });
+}
+
+export async function setPersonalWorkChecklistItemDone(
+  taskItemId: string,
+  checklistItemId: string,
+  isDone: boolean,
+  auth: unknown,
+) {
+  const current = await assertPersonalWorkAccess(taskItemId, auth, "EDIT");
+  assertChecklistOpen(current);
+  return prisma.$transaction(async (tx) => {
+    const result = await tx.taskItemChecklist.updateMany({
+      where: { id: checklistItemId, taskItemId },
+      data: { isDone, doneAt: isDone ? new Date() : null },
+    });
+    if (!result.count) throw new Error("Không tìm thấy đầu việc");
+    return updateChecklistProgress(tx, taskItemId);
+  });
+}
+
+export async function deletePersonalWorkChecklistItem(taskItemId: string, checklistItemId: string, auth: unknown) {
+  const current = await assertPersonalWorkAccess(taskItemId, auth, "EDIT");
+  assertChecklistOpen(current);
+  return prisma.$transaction(async (tx) => {
+    const result = await tx.taskItemChecklist.deleteMany({ where: { id: checklistItemId, taskItemId } });
+    if (!result.count) throw new Error("Không tìm thấy đầu việc");
+    return updateChecklistProgress(tx, taskItemId);
+  });
+}
+
+export async function finalizePersonalWorkChecklist(taskItemId: string, auth: unknown) {
+  const current = await assertPersonalWorkAccess(taskItemId, auth, "EDIT");
+  assertChecklistOpen(current);
+  return prisma.$transaction(async (tx) => {
+    const [total, done] = await Promise.all([
+      tx.taskItemChecklist.count({ where: { taskItemId } }),
+      tx.taskItemChecklist.count({ where: { taskItemId, isDone: true } }),
+    ]);
+    if (total === 0) throw new Error("Hãy thêm ít nhất một đầu việc trước khi hoàn thành");
+    if (done !== total) throw new Error(`Còn ${total - done} đầu việc chưa hoàn thành`);
+    const completedAt = new Date();
+    await tx.taskItem.update({
+      where: { id: taskItemId },
+      data: {
+        status: TaskStatus.DONE,
+        isDone: true,
+        progressMode: TaskProgressMode.CHECKLIST,
+        progressPercent: 100,
+        completedAt,
+        checklistLockedAt: completedAt,
+      },
+    });
+    await tx.taskItemActivity.create({
+      data: {
+        taskItemId,
+        sourceType: "DISCUSSION",
+        actorUserId: current.userId,
+        title: "Xác nhận hoàn thành",
+        body: `Đã hoàn thành ${total}/${total} đầu việc và khóa danh sách.`,
+        metadataJson: { status: TaskStatus.DONE, progressPercent: 100, checklistLocked: true },
+      },
+    });
+    return { total, done };
   });
 }
 

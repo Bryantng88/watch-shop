@@ -28,12 +28,16 @@ import {
   AdminPageHeader,
 } from "@/domains/shared/ui/admin-design-contract";
 import {
+  addPersonalWorkChecklistItemAction,
   createPersonalWorkAction,
+  deletePersonalWorkChecklistItemAction,
   deletePersonalWorkAction,
+  finalizePersonalWorkChecklistAction,
   getGoogleCalendarConnectUrlAction,
   replacePersonalWorkSharesAction,
   searchPersonalWorkTargetsAction,
   syncPersonalWorkCalendarAction,
+  togglePersonalWorkChecklistItemAction,
   updatePersonalWorkAction,
 } from "../actions/personal-work.actions";
 import {
@@ -177,6 +181,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [calendarCreateSync, setCalendarCreateSync] = useState(true);
   const lastCalendarRefreshAtRef = useRef(Date.now());
   const [editingItem, setEditingItem] = useState<PersonalWorkItem | null>(null);
+  const editingItemId = editingItem?.id;
   const [editTitle, setEditTitle] = useState("");
   const [editNote, setEditNote] = useState("");
   const editNoteRef = useRef<HTMLTextAreaElement>(null);
@@ -189,6 +194,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [editTargetQuery, setEditTargetQuery] = useState("");
   const [editTargetResults, setEditTargetResults] = useState<PersonalWorkTarget[]>([]);
   const [editShares, setEditShares] = useState<PersonalWorkItem["sharedWith"]>([]);
+  const [newChecklistTitle, setNewChecklistTitle] = useState("");
   const [calendarCursor, setCalendarCursor] = useState(() => {
     const date = new Date();
     return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -272,6 +278,12 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     textarea.style.height = `${Math.max(224, Math.min(textarea.scrollHeight, window.innerHeight * 0.55))}px`;
   }, [editNote, editingItem]);
 
+  useEffect(() => {
+    if (!editingItemId) return;
+    const refreshed = data.items.find((item) => item.id === editingItemId);
+    if (refreshed) setEditingItem(refreshed);
+  }, [data.items, editingItemId]);
+
   function run(action: () => Promise<unknown>, success?: string, onSuccess?: () => void) {
     setMessage(null);
     startTransition(async () => {
@@ -336,6 +348,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     setEditTargetQuery("");
     setEditTargetResults([]);
     setEditShares(item.sharedWith);
+    setNewChecklistTitle("");
   }
 
   return (
@@ -847,9 +860,11 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       aria-label="Đánh dấu hoàn thành"
                       disabled={pending || item.access === "VIEWER"}
                       onClick={() =>
-                        run(() =>
-                          updatePersonalWorkAction({ id: item.id, status: item.status === "DONE" ? "TODO" : "DONE" }),
-                        )
+                        item.progressMode === "CHECKLIST" && item.status !== "DONE"
+                          ? openTaskEdit(item)
+                          : run(() =>
+                              updatePersonalWorkAction({ id: item.id, status: item.status === "DONE" ? "TODO" : "DONE" }),
+                            )
                       }
                       className={`flex h-7 w-7 items-center justify-center rounded-full border transition ${item.status === "DONE" ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 bg-white text-transparent hover:border-emerald-400 hover:text-emerald-500"}`}
                     >
@@ -900,6 +915,19 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                         {late ? "Quá hạn · " : ""}
                         {dueLabel(item.dueAt)} · {item.estimatedDays === 1 ? "trong ngày" : `dự kiến ${item.estimatedDays} ngày`}
                       </p>
+                      {item.progressMode === "CHECKLIST" && item.checklist.length > 0 && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <div className="h-1.5 w-28 overflow-hidden rounded-full bg-slate-100">
+                            <div
+                              className="h-full rounded-full bg-emerald-500 transition-all"
+                              style={{ width: `${item.progressPercent}%` }}
+                            />
+                          </div>
+                          <span className="text-[11px] font-medium text-slate-500">
+                            {item.checklist.filter((entry) => entry.isDone).length}/{item.checklist.length} đầu việc
+                          </span>
+                        </div>
+                      )}
                       {item.access === "OWNER" && item.sharedWith.length > 0 && (
                         <div
                           className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px] text-violet-700"
@@ -937,7 +965,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                           onClick={() => openTaskEdit(item)}
                           className="rounded-md bg-emerald-50 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700 transition hover:bg-emerald-100"
                         >
-                          Tiến độ
+                          {item.progressPercent}%
                         </button>
                       )}
                       <ChevronRight className="h-4 w-4 text-slate-300" />
@@ -1032,6 +1060,119 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   className="min-h-56 max-h-[55vh] w-full resize-y overflow-y-auto rounded-lg border border-slate-200 px-3 py-3 text-sm leading-6 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 />
               </label>
+              <section className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900">Các đầu việc</h3>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {editingItem.checklist.filter((item) => item.isDone).length}/{editingItem.checklist.length} hoàn thành
+                    </p>
+                  </div>
+                  <span className="text-lg font-bold text-emerald-700">{editingItem.progressPercent}%</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all"
+                    style={{ width: `${editingItem.progressPercent}%` }}
+                  />
+                </div>
+                {editingItem.checklist.length > 0 && (
+                  <div className="space-y-2">
+                    {editingItem.checklist.map((entry) => (
+                      <div key={entry.id} className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 shadow-sm ring-1 ring-slate-100">
+                        <button
+                          type="button"
+                          disabled={pending || editingItem.access === "VIEWER" || Boolean(editingItem.checklistLockedAt)}
+                          aria-label={entry.isDone ? `Mở lại ${entry.title}` : `Hoàn thành ${entry.title}`}
+                          onClick={() =>
+                            run(
+                              () => togglePersonalWorkChecklistItemAction({
+                                taskItemId: editingItem.id,
+                                checklistItemId: entry.id,
+                                isDone: !entry.isDone,
+                              }),
+                              entry.isDone ? "Đã mở lại đầu việc" : "Đã hoàn thành đầu việc",
+                            )
+                          }
+                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${entry.isDone ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 text-transparent"} disabled:cursor-default`}
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </button>
+                        <span className={`min-w-0 flex-1 text-sm ${entry.isDone ? "text-slate-400 line-through" : "text-slate-700"}`}>
+                          {entry.title}
+                        </span>
+                        {!editingItem.checklistLockedAt && editingItem.access !== "VIEWER" && (
+                          <button
+                            type="button"
+                            disabled={pending}
+                            aria-label={`Xóa ${entry.title}`}
+                            onClick={() =>
+                              run(
+                                () => deletePersonalWorkChecklistItemAction({
+                                  taskItemId: editingItem.id,
+                                  checklistItemId: entry.id,
+                                }),
+                                "Đã xóa đầu việc",
+                              )
+                            }
+                            className="rounded-md p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {!editingItem.checklistLockedAt && editingItem.access !== "VIEWER" && editingItem.status !== "DONE" && (
+                  <div className="flex gap-2">
+                    <input
+                      value={newChecklistTitle}
+                      maxLength={500}
+                      onChange={(event) => setNewChecklistTitle(event.target.value)}
+                      placeholder="Thêm đầu việc mới..."
+                      className="h-10 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    />
+                    <button
+                      type="button"
+                      disabled={pending || !newChecklistTitle.trim()}
+                      onClick={() => {
+                        const title = newChecklistTitle.trim();
+                        if (!title) return;
+                        run(
+                          () => addPersonalWorkChecklistItemAction({ taskItemId: editingItem.id, title }),
+                          "Đã thêm đầu việc",
+                          () => setNewChecklistTitle(""),
+                        );
+                      }}
+                      className="rounded-lg bg-white px-4 text-sm font-semibold text-blue-700 ring-1 ring-slate-200 hover:bg-blue-50 disabled:opacity-50"
+                    >
+                      Thêm
+                    </button>
+                  </div>
+                )}
+                {editingItem.checklistLockedAt ? (
+                  <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
+                    Đã xác nhận hoàn thành. Danh sách đầu việc đã được khóa.
+                  </p>
+                ) : editingItem.checklist.length > 0 && editingItem.checklist.every((item) => item.isDone) && editingItem.access !== "VIEWER" ? (
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => {
+                      if (!window.confirm("Xác nhận công việc đã hoàn thành? Sau bước này bạn sẽ không thể thêm, xóa hoặc đổi trạng thái đầu việc.")) return;
+                      run(
+                        () => finalizePersonalWorkChecklistAction(editingItem.id),
+                        "Đã xác nhận hoàn thành và khóa danh sách đầu việc",
+                        () => setEditingItem(null),
+                      );
+                    }}
+                    className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                  >
+                    Xác nhận hoàn thành công việc
+                  </button>
+                ) : null}
+              </section>
               <label className="block space-y-1.5">
                 <span className="text-xs font-semibold text-slate-600">Nội dung cập nhật</span>
                 <textarea
