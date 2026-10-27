@@ -6,10 +6,14 @@ import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getAuthUserId } from "@/domains/task/server/core/task.service";
 import {
+  addPersonalWorkChecklistItem,
   assertPersonalWorkAccess,
   createPersonalWorkItem,
+  deletePersonalWorkChecklistItem,
+  finalizePersonalWorkChecklist,
   replacePersonalWorkShares,
   searchPersonalWorkTargets,
+  setPersonalWorkChecklistItemDone,
   updatePersonalWorkItem,
 } from "../server/personal-work.service";
 import {
@@ -78,6 +82,43 @@ export async function updatePersonalWorkAction(input: {
   await updatePersonalWorkItem(input, user);
   const userId = getAuthUserId(user);
   if (userId) await syncPersonalTaskToGoogleIfLinked(userId, input.id);
+  refresh();
+  return { ok: true };
+}
+
+export async function addPersonalWorkChecklistItemAction(input: { taskItemId: string; title: string }) {
+  const user = await auth();
+  await addPersonalWorkChecklistItem(input.taskItemId, input.title, user);
+  refresh();
+  return { ok: true };
+}
+
+export async function togglePersonalWorkChecklistItemAction(input: {
+  taskItemId: string;
+  checklistItemId: string;
+  isDone: boolean;
+}) {
+  const user = await auth();
+  await setPersonalWorkChecklistItemDone(input.taskItemId, input.checklistItemId, input.isDone, user);
+  refresh();
+  return { ok: true };
+}
+
+export async function deletePersonalWorkChecklistItemAction(input: {
+  taskItemId: string;
+  checklistItemId: string;
+}) {
+  const user = await auth();
+  await deletePersonalWorkChecklistItem(input.taskItemId, input.checklistItemId, user);
+  refresh();
+  return { ok: true };
+}
+
+export async function finalizePersonalWorkChecklistAction(taskItemId: string) {
+  const user = await auth();
+  await finalizePersonalWorkChecklist(taskItemId, user);
+  const userId = getAuthUserId(user);
+  if (userId) await syncPersonalTaskToGoogleIfLinked(userId, taskItemId);
   refresh();
   return { ok: true };
 }

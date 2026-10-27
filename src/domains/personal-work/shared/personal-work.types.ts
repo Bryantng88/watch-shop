@@ -71,6 +71,7 @@ export type PersonalWorkItem = {
   targets: PersonalWorkTarget[];
   progressPercent: number;
   progressMode: "MANUAL" | "CHECKLIST";
+  checklistLockedAt: string | null;
   activities: PersonalWorkActivity[];
   checklist: PersonalWorkChecklistItem[];
   tags: string[];

@@ -2821,6 +2821,7 @@ model TaskItem {
   assignedToUserId String?
   startedAt        DateTime?
   completedAt      DateTime?
+  checklistLockedAt DateTime?
   cancelledAt      DateTime?
 
   isDone    Boolean @default(false)
