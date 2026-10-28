@@ -8,7 +8,7 @@ type ProgressMetricProps = {
   label?: string;
   semantic?: "completion" | "ratio";
   size?: "sm" | "md";
-  layout?: "stacked" | "inline";
+  layout?: "stacked" | "inline" | "compact";
   className?: string;
 };
 
@@ -39,7 +39,7 @@ export function ProgressMetric({
       className={cn("inline-flex min-w-0 gap-2", layout === "inline" ? "flex-row items-center" : "flex-col", size === "md" ? "w-full max-w-sm" : "w-full max-w-xs", className)}
     >
       <span className={cn("flex min-w-0 items-center justify-between gap-3", layout === "inline" && "order-last shrink-0")}>
-        {caption ? <span className="truncate text-xs font-bold text-slate-900">{caption}</span> : layout === "stacked" ? <span /> : null}
+        {caption ? <span className="truncate text-xs font-bold text-slate-900">{caption}</span> : layout === "compact" && hasFraction ? <span className="text-[10px] font-semibold tabular-nums text-slate-700">{numerator}/{denominator}</span> : layout !== "inline" ? <span /> : null}
         <strong className={cn("inline-flex min-w-10 shrink-0 items-center justify-center rounded-md px-2 py-1.5 text-[10px] font-extrabold tabular-nums", isComplete ? "bg-emerald-100 text-emerald-800" : "bg-blue-50 text-blue-700")}>{normalized}%</strong>
       </span>
       <span className={cn("flex min-w-0 items-center gap-2.5", layout === "inline" && "flex-1")}>
@@ -49,7 +49,7 @@ export function ProgressMetric({
             style={{ width: `${normalized}%` }}
           />
         </span>
-        {hasFraction ? <span className="shrink-0 whitespace-nowrap text-[10px] font-medium tabular-nums text-slate-500"><strong className="font-semibold text-slate-700">{numerator}/{denominator}</strong> {fractionLabel}</span> : null}
+        {hasFraction && layout !== "compact" ? <span className="shrink-0 whitespace-nowrap text-[10px] font-medium tabular-nums text-slate-500"><strong className="font-semibold text-slate-700">{numerator}/{denominator}</strong> {fractionLabel}</span> : null}
       </span>
     </span>
   );

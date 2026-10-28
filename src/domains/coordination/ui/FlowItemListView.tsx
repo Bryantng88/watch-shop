@@ -16,6 +16,7 @@ import type { CoordinationFlowListItemDTO } from "../server/coordination-dashboa
 import { cn } from "@/lib/utils";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 import { WorkflowStatusSignal } from "@/domains/shared/ui/signals";
+import { ProgressMetric } from "@/domains/shared/ui/progress";
 import {
   applyQueueItemManualTransitionsAction,
   submitOperationalBlueprintActionAction,
@@ -1179,36 +1180,14 @@ export default function FlowItemListView({
                   ) : null}
                   {showProgressColumn ? <td className="px-4 py-3">
                     {item.mediaWorkProgress?.total ? (
-                      <div className="w-36">
-                        <div className="mb-1.5 flex items-center justify-between text-[11px] font-semibold">
-                          <span className={item.mediaWorkProgress.completed >= item.mediaWorkProgress.total ? "text-emerald-700" : "text-blue-700"}>
-                            {item.mediaWorkProgress.completed}/{item.mediaWorkProgress.total}
-                          </span>
-                          <span className="text-slate-400">
-                            {Math.round((item.mediaWorkProgress.completed / item.mediaWorkProgress.total) * 100)}%
-                          </span>
-                        </div>
-                        <div className="h-1 overflow-hidden rounded-full bg-slate-100">
-                          <div
-                            className={cn(
-                              "h-full rounded-full transition-[width]",
-                              item.mediaWorkProgress.completed >= item.mediaWorkProgress.total
-                                ? "bg-emerald-500"
-                                : "bg-blue-500",
-                            )}
-                            style={{
-                              width: `${Math.min(
-                                100,
-                                Math.round(
-                                  (item.mediaWorkProgress.completed /
-                                    item.mediaWorkProgress.total) *
-                                    100,
-                                ),
-                              )}%`,
-                            }}
-                          />
-                        </div>
-                      </div>
+                      <ProgressMetric
+                        value={(item.mediaWorkProgress.completed / item.mediaWorkProgress.total) * 100}
+                        numerator={item.mediaWorkProgress.completed}
+                        denominator={item.mediaWorkProgress.total}
+                        layout="compact"
+                        className="w-36"
+                        label={`Tiến độ Media: ${item.mediaWorkProgress.completed}/${item.mediaWorkProgress.total} đầu việc`}
+                      />
                     ) : <span className="text-xs text-slate-400">-</span>}
                   </td> : null}
                   {showPublishChannels ? (
