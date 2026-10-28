@@ -83,6 +83,20 @@ Every accepted interaction must produce visible feedback in the same render:
 Do not wait for `router.refresh()`, a toast, or a server response before
 acknowledging the click.
 
+## Route navigation
+
+Sidebar navigation uses `AdminActiveLink` and Next.js `useLinkStatus` to show a
+spinner on the destination item and an indeterminate top loading bar. Keep this
+feedback visible until navigation commits or is cancelled; never hide it after
+a fixed delay. Cached navigation that commits immediately needs no artificial
+loading delay. Preserve modified-click and new-tab behavior.
+
+Use `Link.onNavigate` for navigation side effects such as closing the mobile
+menu. Do not detect accepted navigation from a wrapper's bubbling click handler:
+Next.js may already have prevented the event's browser default by that point.
+Do not use the application mutation-progress modal or a loading toast for
+ordinary route changes.
+
 ## Optimistic updates
 
 Use an optimistic update when the provisional state is obvious and safely
