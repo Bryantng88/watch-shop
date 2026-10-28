@@ -2868,6 +2868,13 @@ model PersonalWorkCategory {
   @@unique([userId, key])
 }
 
+model PersonalWorkDefaultColor {
+  key String @id
+  color String
+  updatedByUserId String
+  updatedAt DateTime @updatedAt
+}
+
 enum PersonalTaskShareAccess {
   VIEWER
   EDITOR

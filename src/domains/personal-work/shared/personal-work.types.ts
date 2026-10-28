@@ -138,6 +138,7 @@ export type PersonalCalendarEvent = {
 };
 
 export type PersonalWorkPageData = {
+  canManageDefaultCategories: boolean;
   categories: PersonalWorkCategory[];
   items: PersonalWorkItem[];
   currentUserId: string;

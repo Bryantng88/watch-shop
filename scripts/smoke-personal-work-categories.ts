@@ -31,6 +31,20 @@ async function main() {
   const other = await prisma.user.create({
     data: { email: `category-other-${id}@system.local` },
   });
+  const admin = await prisma.user.create({
+    data: {
+      email: `category-admin-${id}@system.local`,
+      roles: {
+        connectOrCreate: {
+          where: { name: "ADMIN" },
+          create: { name: "ADMIN" },
+        },
+      },
+    },
+  });
+  const originalDefault = await prisma.personalWorkDefaultColor.findUnique({
+    where: { key: "GENERAL" },
+  });
   let taskId: string | undefined;
   let itemId: string | undefined;
   try {
@@ -41,16 +55,42 @@ async function main() {
     await assert.rejects(
       savePersonalCategory({ label: "Bad color", color: "red" }, owner),
     );
+    await assert.rejects(
+      savePersonalCategory(
+        { key: "GENERAL", label: "Cannot rename default", color: "#123456" },
+        owner,
+      ),
+    );
+    await assert.rejects(
+      savePersonalCategory(
+        { key: "GENERAL", label: "Cá nhân", color: "#123456" },
+        { ...owner, roles: ["ADMIN"] },
+      ),
+    );
     await savePersonalCategory(
       { key: "GENERAL", label: "Cannot rename default", color: "#123456" },
-      owner,
+      admin,
     );
     assert.equal((await listPersonalCategories(owner.id))[0].label, "Cá nhân");
     assert.equal((await listPersonalCategories(owner.id))[0].color, "#123456");
-    assert.notEqual(
-      (await listPersonalCategories(other.id))[0].color,
-      "#123456",
+    await prisma.personalWorkCategory.create({
+      data: {
+        userId: owner.id,
+        key: "GENERAL",
+        label: "Legacy override",
+        color: "#ffffff",
+      },
+    });
+    assert.equal((await listPersonalCategories(owner.id))[0].color, "#123456");
+    assert.equal(
+      (await getPersonalWorkPageData(owner)).canManageDefaultCategories,
+      false,
     );
+    assert.equal(
+      (await getPersonalWorkPageData(admin)).canManageDefaultCategories,
+      true,
+    );
+    assert.equal((await listPersonalCategories(other.id))[0].color, "#123456");
     await savePersonalCategory(
       { label: "Smoke study", color: "#00aa88" },
       owner,
@@ -58,6 +98,12 @@ async function main() {
     const custom = (await listPersonalCategories(owner.id)).find(
       (c) => c.label === "Smoke study",
     )!;
+    assert.equal(
+      (await listPersonalCategories(other.id)).some(
+        (c) => c.key === custom.key,
+      ),
+      false,
+    );
     await assert.rejects(
       savePersonalCategory({ label: "smoke STUDY", color: "#00aa88" }, owner),
     );
@@ -165,6 +211,19 @@ async function main() {
       "PASS: category CRUD, persistent colors, protected defaults, tenant isolation, invalid replacement rollback, and task reassignment",
     );
   } finally {
+    if (originalDefault) {
+      await prisma.personalWorkDefaultColor.updateMany({
+        where: { key: "GENERAL", updatedByUserId: admin.id },
+        data: {
+          color: originalDefault.color,
+          updatedByUserId: originalDefault.updatedByUserId,
+        },
+      });
+    } else {
+      await prisma.personalWorkDefaultColor.deleteMany({
+        where: { key: "GENERAL", updatedByUserId: admin.id },
+      });
+    }
     if (itemId)
       await prisma.appTagLink.deleteMany({ where: { targetId: itemId } });
     if (taskId) {
@@ -172,7 +231,7 @@ async function main() {
       await prisma.appTag.deleteMany({ where: { ownerId: taskId } });
     }
     await prisma.user.deleteMany({
-      where: { id: { in: [owner.id, other.id] } },
+      where: { id: { in: [owner.id, other.id, admin.id] } },
     });
     await prisma.$disconnect();
   }

@@ -15,7 +15,7 @@ import { hydrateTaskItemsWithTagsRepo } from "@/domains/task/server/tag/task-tag
 import { createBusinessBinding } from "@/domains/task/server/business-binding.repo";
 import { isGoogleCalendarConfigured, listPersonalGoogleCalendarEvents } from "./google-calendar.service";
 import { reconcilePersonalWorkBindings } from "./personal-work-bindings";
-import { categoryFromRow, listPersonalCategories, resolvePersonalCategory, defaultPersonalCategories, mergePersonalCategories } from "./personal-work-categories.service";
+import { categoryFromRow, listPersonalCategories, resolvePersonalCategory, defaultPersonalCategories, mergePersonalCategories, canManageDefaultCategories } from "./personal-work-categories.service";
 import {
   PERSONAL_WORK_DOMAINS,
   PERSONAL_WORK_TYPES,
@@ -229,7 +229,7 @@ export function normalizePersonalDomain(value: unknown): PersonalWorkDomain {
 export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWorkPageData> {
   const userId = getAuthUserId(auth);
   if (!userId) throw new Error("Không xác định được người dùng");
-  const [items, connection, availableUsers, categories] = await Promise.all([
+  const [items, connection, availableUsers, categories, canManageDefaults] = await Promise.all([
     prisma.taskItem.findMany({
       where: {
         ...personalTaskAccessWhere(userId),
@@ -271,11 +271,12 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
       orderBy: [{ name: "asc" }, { email: "asc" }],
     }),
     listPersonalCategories(userId),
+    canManageDefaultCategories(userId),
   ]);
   const tagged = await hydrateTaskItemsWithTagsRepo(prisma, items);
   const ownerIds = [...new Set(items.map(item => item.task.createdByUserId || item.task.assignedToUserId).filter((id): id is string => Boolean(id)))];
   const ownerCategoryRows = await prisma.personalWorkCategory.findMany({ where: { userId: { in: ownerIds } } });
-  const ownerCategories = new Map(ownerIds.map(id => [id, mergePersonalCategories(ownerCategoryRows.filter(row => row.userId === id))]));
+  const ownerCategories = new Map(ownerIds.map(id => [id, mergePersonalCategories(ownerCategoryRows.filter(row => row.userId === id), categories.filter(c => c.isDefault))]));
   let calendarEvents: Awaited<ReturnType<typeof listPersonalGoogleCalendarEvents>> = [];
   let calendarLoadError: string | null = null;
   if (connection) {
@@ -286,6 +287,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
     }
   }
   return {
+    canManageDefaultCategories: canManageDefaults,
     categories,
     items: tagged.map((item) => {
       const names = item.tags.map((tag) => tag.name);

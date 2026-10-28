@@ -19,6 +19,7 @@ import {
   MapPin,
   RefreshCw,
   Share2,
+  Settings2,
   Trash2,
   X,
 } from "lucide-react";
@@ -423,8 +424,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         }
       />
 
-      <div className="flex justify-end"><button type="button" onClick={() => setCategoryManagerOpen(true)} className="mb-3 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Quản lý loại công việc</button></div>
-      {categoryManagerOpen && <PersonalWorkCategoryManager categories={data.categories} onClose={() => setCategoryManagerOpen(false)} />}
+      {categoryManagerOpen && <PersonalWorkCategoryManager categories={data.categories} canManageDefaults={data.canManageDefaultCategories} onClose={() => setCategoryManagerOpen(false)} />}
 
       <section className="grid gap-5 border-b border-slate-100 pb-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <form
@@ -903,6 +903,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 ))}
               </select>
               </label>
+              <button type="button" aria-label="Quản lý loại công việc" title="Quản lý loại công việc" onClick={() => setCategoryManagerOpen(true)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">
+                <Settings2 className="h-4 w-4" />
+              </button>
             </div>
           </div>
           <div className="space-y-1 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pl-5 xl:[direction:rtl] [&>*]:[direction:ltr]">

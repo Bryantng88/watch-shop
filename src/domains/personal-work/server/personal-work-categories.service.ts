@@ -45,19 +45,33 @@ function authId(auth: unknown) {
 }
 
 export async function listPersonalCategories(userId: string) {
-  const rows = await prisma.personalWorkCategory.findMany({
-    where: { userId },
-    orderBy: { createdAt: "asc" },
+  const [rows, globalColors] = await Promise.all([
+    prisma.personalWorkCategory.findMany({
+      where: { userId },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.personalWorkDefaultColor.findMany(),
+  ]);
+  return mergePersonalCategories(rows, globalColors);
+}
+
+export async function canManageDefaultCategories(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isActive: true, roles: { select: { name: true } } },
   });
-  return mergePersonalCategories(rows);
+  return Boolean(
+    user?.isActive && user.roles.some((role) => role.name === "ADMIN"),
+  );
 }
 
 export function mergePersonalCategories(
   rows: { key: string; label: string; color: string }[],
+  globalColors: { key: string; color: string }[] = [],
 ) {
   const defaults = defaultPersonalCategories().map((c) => ({
     ...c,
-    color: rows.find((r) => r.key === c.key)?.color ?? c.color,
+    color: globalColors.find((r) => r.key === c.key)?.color ?? c.color,
   }));
   return [
     ...defaults,
@@ -95,7 +109,21 @@ export async function savePersonalCategory(
   const defaultCategory = defaultPersonalCategories().find(
     (c) => c.key === key,
   );
-  if (input.key && !defaultCategory) await resolvePersonalCategory(userId, key);
+  if (defaultCategory) {
+    if (!(await canManageDefaultCategories(userId)))
+      throw new Error("Chỉ admin được đổi màu loại công việc mặc định");
+    await prisma.personalWorkDefaultColor.upsert({
+      where: { key },
+      create: {
+        key,
+        color: input.color.toLowerCase(),
+        updatedByUserId: userId,
+      },
+      update: { color: input.color.toLowerCase(), updatedByUserId: userId },
+    });
+    return;
+  }
+  if (input.key) await resolvePersonalCategory(userId, key);
   const duplicates = await listPersonalCategories(userId);
   if (
     duplicates.some(
@@ -110,11 +138,11 @@ export async function savePersonalCategory(
     create: {
       userId,
       key,
-      label: defaultCategory?.label ?? label,
+      label,
       color: input.color.toLowerCase(),
     },
     update: {
-      label: defaultCategory?.label ?? label,
+      label,
       color: input.color.toLowerCase(),
     },
   });
