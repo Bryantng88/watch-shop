@@ -966,15 +966,6 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                         {late ? "Quá hạn · " : ""}
                         {dueLabel(item.dueAt)} · {item.estimatedDays === 1 ? "trong ngày" : `dự kiến ${item.estimatedDays} ngày`}
                       </p>
-                      {item.progressMode === "CHECKLIST" && item.checklist.length > 0 && (
-                        <ProgressMetric
-                          value={item.progressPercent}
-                          numerator={item.checklist.filter((entry) => entry.isDone).length}
-                          denominator={item.checklist.length}
-                          className="mt-2 max-w-[190px]"
-                          label={`Tiến độ ${item.title}: ${item.progressPercent}%`}
-                        />
-                      )}
                       {item.access === "OWNER" && item.sharedWith.length > 0 && (
                         <div
                           className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px] text-violet-700"
@@ -1005,7 +996,17 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center justify-end gap-3">
+                      {item.progressMode === "CHECKLIST" && item.checklist.length > 0 && (
+                        <ProgressMetric
+                          value={item.progressPercent}
+                          numerator={item.checklist.filter((entry) => entry.isDone).length}
+                          denominator={item.checklist.length}
+                          layout="inline"
+                          className="max-w-[210px]"
+                          label={`Tiến độ ${item.title}: ${item.progressPercent}%`}
+                        />
+                      )}
                       <ChevronRight className="h-4 w-4 text-slate-300" />
                     </div>
                   </div>
