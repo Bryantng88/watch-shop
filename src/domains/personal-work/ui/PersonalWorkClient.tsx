@@ -14,7 +14,6 @@ import {
   Circle,
   Clock3,
   ExternalLink,
-  Filter,
   Loader2,
   MapPin,
   RefreshCw,
@@ -881,7 +880,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 <select
                   value={scope}
                   onChange={(event) => setScope(event.target.value as "MINE" | "SHARED" | "ALL")}
-                  className="h-8 w-28 truncate rounded-lg border-0 bg-slate-100/80 pl-2 pr-5 text-xs font-medium text-slate-700 outline-none ring-0 transition-colors hover:bg-slate-200/70 focus:ring-2 focus:ring-blue-400/30"
+                  className="h-8 w-20 truncate rounded-lg border-0 bg-slate-100/80 pl-2 pr-5 text-xs font-medium text-slate-700 outline-none ring-0 transition-colors hover:bg-slate-200/70 focus:ring-2 focus:ring-blue-400/30"
                 >
                   <option value="MINE">Của tôi</option>
                   <option value="SHARED">Được chia sẻ</option>
@@ -889,7 +888,6 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 </select>
               </label>
               <label className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-slate-400" />
               <select
                 aria-label="Loại công việc"
                 value={domain}
