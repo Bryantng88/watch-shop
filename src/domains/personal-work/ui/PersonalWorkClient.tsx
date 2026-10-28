@@ -854,8 +854,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         )}
 
         <section className="min-w-0 bg-transparent xl:flex xl:h-[766px] xl:flex-col xl:overflow-hidden xl:border-l xl:border-slate-100">
-          <div className="flex min-h-[56px] flex-wrap items-center justify-between gap-3 px-1 py-2 xl:ml-5 xl:shrink-0">
-            <div className="flex flex-wrap items-center gap-3">
+          <div className="flex min-h-[56px] flex-nowrap items-center justify-between gap-2 overflow-x-auto whitespace-nowrap px-1 py-2 xl:ml-5 xl:shrink-0">
+            <div className="flex shrink-0 items-center">
               <div className="flex gap-1 rounded-lg bg-slate-100/80 p-1">
                 {(
                   [
@@ -868,20 +868,20 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   <button
                     key={key}
                     onClick={() => setView(key)}
-                    className={`rounded-md px-3 py-1.5 text-xs font-medium ${view === key ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                    className={`rounded-md px-2 py-1.5 text-xs font-medium ${view === key ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
                   >
                     {label}
                   </button>
                 ))}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <label className="flex items-center">
                 <span className="sr-only">Phạm vi công việc</span>
                 <select
                   value={scope}
                   onChange={(event) => setScope(event.target.value as "MINE" | "SHARED" | "ALL")}
-                  className="h-8 rounded-lg border-0 bg-slate-100/80 px-3 text-xs font-medium text-slate-700 outline-none ring-0 transition-colors hover:bg-slate-200/70 focus:ring-2 focus:ring-blue-400/30"
+                  className="h-8 w-28 truncate rounded-lg border-0 bg-slate-100/80 pl-2 pr-5 text-xs font-medium text-slate-700 outline-none ring-0 transition-colors hover:bg-slate-200/70 focus:ring-2 focus:ring-blue-400/30"
                 >
                   <option value="MINE">Của tôi</option>
                   <option value="SHARED">Được chia sẻ</option>
@@ -891,11 +891,12 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               <label className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-slate-400" />
               <select
+                aria-label="Loại công việc"
                 value={domain}
                 onChange={(e) => setDomain(e.target.value as PersonalWorkDomain | "ALL")}
-                className="h-8 rounded-lg border-0 bg-slate-100/80 px-3 text-xs font-medium text-slate-700 outline-none ring-0"
+                className="h-8 w-32 truncate rounded-lg border-0 bg-slate-100/80 pl-2 pr-5 text-xs font-medium text-slate-700 outline-none ring-0"
               >
-                <option value="ALL">Tất cả loại công việc</option>
+                <option value="ALL">Tất cả loại</option>
                 {filterCategories.map((item) => (
                   <option key={item.key} value={item.key}>
                     {item.label}
