@@ -1491,16 +1491,22 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
 
       {selectedDay && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/25 p-4 backdrop-blur-[1px]" onMouseDown={() => setSelectedDay(null)} onKeyDown={event => {if(event.key === "Escape") setSelectedDay(null);}}>
-          <section role="dialog" aria-modal="true" aria-labelledby="calendar-day-title" onMouseDown={event => event.stopPropagation()} className="flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between gap-3 border-b border-slate-100 p-4"><div><h2 id="calendar-day-title" className="font-semibold text-slate-950">{calendarEventDate(selectedDay, true)}</h2><p className="mt-1 text-xs text-slate-500">{eventsByDay.get(selectedDay)?.length || 0} lịch · Chọn để xem chi tiết</p></div><button autoFocus type="button" aria-label="Đóng danh sách lịch trong ngày" onClick={() => setSelectedDay(null)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X className="h-4 w-4" /></button></div>
-            <div className="space-y-1 overflow-y-auto p-3">
+          <section role="dialog" aria-modal="true" aria-labelledby="calendar-day-title" onMouseDown={event => event.stopPropagation()} className="flex max-h-[75vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-xl shadow-slate-950/10">
+            <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-4">
+              <div className="flex items-baseline gap-2.5"><h2 id="calendar-day-title" className="text-sm font-semibold text-slate-950">{calendarEventDate(selectedDay, true)}</h2><span className="text-xs text-slate-400">{eventsByDay.get(selectedDay)?.length || 0} lịch</span></div>
+              <button autoFocus type="button" aria-label="Đóng danh sách lịch trong ngày" onClick={() => setSelectedDay(null)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-800"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="divide-y divide-slate-100 overflow-y-auto px-3 pb-3">
               {(eventsByDay.get(selectedDay) || []).map(event => {
                 const item = event.linkedTaskItemId ? itemMap.get(event.linkedTaskItemId) : undefined;
                 const share = item ? calendarShareLabel(item) : null;
-                return <button type="button" key={event.id} onClick={() => openCalendarEvent(event)} className="block w-full rounded-lg p-3 text-left hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500" style={item ? personalCategoryStyle(item.category.color) : personalCategoryStyle("#0ea5e9")}>
-                  <span className={`block truncate text-sm font-semibold ${item?.status === "DONE" ? "text-slate-400 line-through" : "text-slate-900"}`}>{event.title}</span>
-                  <span className="mt-1 block text-xs text-slate-500">{event.allDay ? "Cả ngày" : calendarEventDate(event.startAt, false)}{item ? ` · ${item.category.label}` : " · Google Calendar"}</span>
-                  {share && <span className="mt-1 flex items-center gap-1 text-xs text-violet-700"><Share2 className="h-3 w-3" />{share}</span>}
+                return <button type="button" key={event.id} onClick={() => openCalendarEvent(event)} title={`${event.title}${share ? ` · ${share}` : ""}`} className="group flex min-h-11 w-full items-center gap-2.5 rounded-md px-2 text-left transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{backgroundColor:item?.category.color || "#0ea5e9"}} />
+                  {!event.allDay && <span className="shrink-0 text-[11px] tabular-nums text-slate-400">{new Intl.DateTimeFormat("vi-VN", {hour:"2-digit",minute:"2-digit"}).format(new Date(event.startAt))}</span>}
+                  <span className={`min-w-0 flex-1 truncate text-sm font-medium ${item?.status === "DONE" ? "text-slate-400 line-through" : "text-slate-800"}`}>{event.title}</span>
+                  {share && <Share2 aria-label={share} className="h-3 w-3 shrink-0 text-violet-500" />}
+                  <span className="max-w-20 shrink-0 truncate text-[10px] text-slate-400">{item?.category.label || "Google"}</span>
+                  <ChevronRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-slate-300 group-hover:text-slate-500" />
                 </button>;
               })}
             </div>
