@@ -9,7 +9,7 @@ export type OperationsDashboardStage = {
 };
 
 export type OperationsDashboardQueue = {
-  key: "orders" | "purchase-requests" | "media" | "technical" | "personal-work";
+  key: "orders" | "purchase-requests" | "media" | "technical" | "payments" | "personal-work";
   label: string;
   description: string;
   href: string;
