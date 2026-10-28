@@ -147,6 +147,11 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const router = useRouter();
   const appDialog = useAppDialog();
   const checklistMutation = useUiMutation();
+  const calendarCreateMutation = useUiMutation();
+  const calendarSyncMutation = useUiMutation();
+  const calendarCreating = calendarCreateMutation.isPending("calendar:create");
+  const [calendarCreateError, setCalendarCreateError] = useState<string | null>(null);
+  const [calendarSyncFailures, setCalendarSyncFailures] = useState<Record<string, {id:string;title:string}>>({});
   const [pending, startTransition] = useTransition();
   const [view, setView] = useState<"TODAY" | "UPCOMING" | "ALL" | "DONE">("ALL");
   const [scope, setScope] = useState<"MINE" | "SHARED" | "ALL">("MINE");
@@ -303,6 +308,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   }
 
   function openCalendarCreate(date: Date) {
+    setCalendarCreateError(null);
     setCalendarCreateTitle("");
     setCalendarCreateDomain("GENERAL");
     setCalendarCategoryKey("GENERAL");
@@ -310,6 +316,23 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     setCalendarCreateEstimatedDays(1);
     setCalendarCreateSync(data.calendar.connected);
     setCalendarCreateOpen(true);
+  }
+
+  function syncCreatedCalendarTask(task: {id:string;title:string}) {
+    void calendarSyncMutation.run({
+      key: `calendar-sync:${task.id}`,
+      action: () => syncPersonalWorkCalendarAction(task.id),
+      onSuccess: () => {
+        setCalendarSyncFailures(current => {
+          const remaining = {...current};
+          delete remaining[task.id];
+          return remaining;
+        });
+        router.refresh();
+      },
+      onError: () => setCalendarSyncFailures(current => ({...current, [task.id]:task})),
+      errorMessage: `Công việc “${task.title}” đã được lưu, nhưng chưa đồng bộ Google Calendar. Bạn có thể thử đồng bộ lại.`,
+    });
   }
 
   function openCalendarEvent(event: PersonalCalendarEvent) {
@@ -640,6 +663,12 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
       {message && (
         <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">{message}</div>
       )}
+      {Object.values(calendarSyncFailures).map(task => (
+        <div key={task.id} role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <span>Đã lưu “{task.title}”. Chưa đồng bộ Google Calendar.</span>
+          <AsyncActionButton type="button" pending={calendarSyncMutation.isPending(`calendar-sync:${task.id}`)} pendingLabel="Đang đồng bộ…" onClick={() => syncCreatedCalendarTask(task)} className="rounded-md px-2 py-1 font-semibold hover:bg-amber-100">Thử đồng bộ lại</AsyncActionButton>
+        </div>
+      ))}
 
       <div
         className={`grid items-start gap-5 ${data.calendar.connected && calendarOpen ? "xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,0.85fr)]" : "grid-cols-1"}`}
@@ -1407,6 +1436,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 </p>
               )}
               {editingItem.calendar.htmlLink && <a href={editingItem.calendar.htmlLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:underline">Mở trong Google <ExternalLink className="h-3.5 w-3.5" /></a>}
+              {data.calendar.connected && !editingItem.calendar.synced && editingItem.access !== "VIEWER" && <AsyncActionButton type="button" pending={calendarSyncMutation.isPending(`calendar-sync:${editingItem.id}`)} pendingLabel="Đang đồng bộ…" onClick={() => syncCreatedCalendarTask(editingItem)} className="rounded-lg px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">Đồng bộ Google Calendar</AsyncActionButton>}
             </div>
             {editingItem.activities.some((activity) => activity.body) && (
               <section className="mt-4 border-t border-slate-100 pt-4">
@@ -1585,51 +1615,60 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
       {calendarCreateOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/25 p-4 backdrop-blur-[1px]"
-          onMouseDown={() => setCalendarCreateOpen(false)}
+          onMouseDown={() => {if(!calendarCreating) setCalendarCreateOpen(false);}}
         >
           <form
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="calendar-create-title"
+            aria-busy={calendarCreating}
             onMouseDown={(event) => event.stopPropagation()}
             onSubmit={(event) => {
               event.preventDefault();
               const nextTitle = calendarCreateTitle.trim();
               if (!nextTitle) {
-                setMessage("Vui lòng nhập nội dung công việc cần làm");
+                setCalendarCreateError("Vui lòng nhập nội dung công việc cần làm");
                 return;
               }
-              run(
-                async () => {
-                  const created = await createPersonalWorkAction({
-                    title: nextTitle,
-                    domain: calendarCreateDomain,
-                    categoryKey: calendarCategoryKey,
-                    dueAt: dateInputToIso(calendarCreateDueAt),
-                    estimatedDays: calendarCreateEstimatedDays,
-                  });
-                  if (calendarCreateSync && data.calendar.connected) await syncPersonalWorkCalendarAction(created.id);
+              const syncToGoogle = calendarCreateSync && data.calendar.connected;
+              setCalendarCreateError(null);
+              void calendarCreateMutation.run({
+                key: "calendar:create",
+                action: () => createPersonalWorkAction({
+                  title: nextTitle,
+                  domain: calendarCreateDomain,
+                  categoryKey: calendarCategoryKey,
+                  dueAt: dateInputToIso(calendarCreateDueAt),
+                  estimatedDays: calendarCreateEstimatedDays,
+                }),
+                onSuccess: (created) => {
+                  setCalendarCreateOpen(false);
+                  setCalendarCreateTitle("");
+                  router.refresh();
+                  if (syncToGoogle) syncCreatedCalendarTask({id:created.id,title:nextTitle});
                 },
-                calendarCreateSync && data.calendar.connected
-                  ? "Đã tạo việc và đồng bộ Google Calendar"
-                  : "Đã tạo công việc",
-                () => setCalendarCreateOpen(false),
-              );
+                onError: (error) => setCalendarCreateError(error instanceof Error ? error.message : "Không thể tạo công việc. Vui lòng thử lại."),
+                successMessage: "Đã tạo công việc",
+              });
             }}
             className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl shadow-slate-950/15"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600">Tạo từ Calendar</p>
-                <h2 className="mt-1 text-xl font-bold text-slate-950">Thêm công việc</h2>
+                <h2 id="calendar-create-title" className="mt-1 text-xl font-bold text-slate-950">Thêm công việc</h2>
               </div>
               <button
                 type="button"
                 aria-label="Đóng"
+                disabled={calendarCreating}
                 onClick={() => setCalendarCreateOpen(false)}
                 className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="mt-5 space-y-4">
+            <fieldset disabled={calendarCreating} className="mt-5 min-w-0 space-y-4">
               <label className="block space-y-1.5">
                 <span className="text-xs font-semibold text-slate-600">Việc cần làm</span>
                 <input
@@ -1707,22 +1746,25 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   </span>
                 </label>
               )}
-            </div>
+            </fieldset>
+            {calendarCreateError && <p role="alert" className="mt-3 text-sm text-rose-600">{calendarCreateError}</p>}
             <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
+                disabled={calendarCreating}
                 onClick={() => setCalendarCreateOpen(false)}
                 className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
               >
                 Hủy
               </button>
-              <button
+              <AsyncActionButton
                 type="submit"
-                disabled={pending}
-                className="rounded-lg bg-slate-950 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                pending={calendarCreating}
+                pendingLabel="Đang tạo…"
+                className="w-40 rounded-lg bg-slate-950 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
               >
-                {pending ? "Đang tạo..." : "Tạo công việc"}
-              </button>
+                Tạo công việc
+              </AsyncActionButton>
             </div>
           </form>
         </div>
