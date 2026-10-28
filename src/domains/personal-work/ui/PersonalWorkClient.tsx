@@ -905,7 +905,11 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 return (
                   <div
                     key={item.id}
-                    className="group grid gap-2 px-1 py-3 transition-colors hover:bg-slate-100/60 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center"
+                    onClick={(event) => {
+                      if ((event.target as HTMLElement).closest("button, a, input, select, textarea")) return;
+                      openTaskEdit(item);
+                    }}
+                    className="group grid cursor-pointer gap-2 px-1 py-3 transition-colors hover:bg-slate-100/60 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center"
                   >
                     <button
                       aria-label="Đánh dấu hoàn thành"
@@ -923,11 +927,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                     </button>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p
-                          className={`truncate text-sm font-semibold ${item.status === "DONE" ? "text-slate-400 line-through" : "text-slate-950"}`}
+                        <button
+                          type="button"
+                          onClick={() => openTaskEdit(item)}
+                          className={`truncate rounded-sm text-left text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 ${item.status === "DONE" ? "text-slate-400 line-through" : "text-slate-950"}`}
                         >
                           {item.title}
-                        </p>
+                        </button>
                         {item.access !== "OWNER" && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">
                             <Share2 className="h-3 w-3" /> {item.access === "EDITOR" ? "Có thể sửa" : "Chỉ xem"}
