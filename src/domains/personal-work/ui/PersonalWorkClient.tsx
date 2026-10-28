@@ -29,6 +29,7 @@ import {
   AdminFlatToolbar,
   AdminPageCanvas,
   AdminPageHeader,
+  ProgressMetric,
 } from "@/domains/shared/ui/admin-design-contract";
 import {
   addPersonalWorkChecklistItemAction,
@@ -56,7 +57,7 @@ import {
 import { PersonalWorkShareEditor } from "./PersonalWorkShareEditor";
 
 const domainStyle: Record<PersonalWorkDomain, string> = {
-  GENERAL: ADMIN_DOMAIN_TONE.GENERAL.soft,
+  GENERAL: "bg-fuchsia-50 text-fuchsia-700",
   WORK: ADMIN_DOMAIN_TONE.WORK.soft,
   MEDIA: ADMIN_DOMAIN_TONE.MEDIA.soft,
   TECHNICAL: ADMIN_DOMAIN_TONE.TECHNICAL.soft,
@@ -120,7 +121,8 @@ function dueLabel(value: string | null) {
 }
 
 function calendarEventDate(value: string, allDay: boolean) {
-  const date = allDay ? new Date(`${value}T00:00:00`) : new Date(value);
+  const date = allDay ? new Date(`${value.slice(0, 10)}T00:00:00`) : new Date(value);
+  if (Number.isNaN(date.getTime())) return "Không xác định ngày";
   return new Intl.DateTimeFormat(
     "vi-VN",
     allDay
@@ -228,9 +230,35 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     ? data.items.find((item) => item.id === selectedCalendarEvent.linkedTaskItemId) || null
     : null;
   const calendarDays = useMemo(() => monthCells(calendarCursor), [calendarCursor]);
+  const visibleCalendarEvents = useMemo(() => {
+    const linkedTaskIds = new Set(
+      data.calendar.events.flatMap((event) => event.linkedTaskItemId ? [event.linkedTaskItemId] : []),
+    );
+    const localTaskEvents: PersonalCalendarEvent[] = data.items
+      .filter((item) => item.dueAt && !linkedTaskIds.has(item.id))
+      .flatMap((item): PersonalCalendarEvent[] => {
+        const dueAt = item.dueAt as string;
+        const startAt = dueAt.slice(0, 10);
+        const endAt = new Date(`${startAt}T00:00:00Z`);
+        if (Number.isNaN(endAt.getTime())) return [];
+        endAt.setUTCDate(endAt.getUTCDate() + Math.max(1, item.estimatedDays));
+        return [{
+          id: `local-task:${item.id}`,
+          title: item.title,
+          description: item.note,
+          startAt,
+          endAt: endAt.toISOString().slice(0, 10),
+          allDay: true,
+          htmlLink: item.calendar.htmlLink,
+          location: null,
+          linkedTaskItemId: item.id,
+        }];
+      });
+    return [...data.calendar.events, ...localTaskEvents];
+  }, [data.calendar.events, data.items]);
   const eventsByDay = useMemo(() => {
     const grouped = new Map<string, PersonalCalendarEvent[]>();
-    for (const event of data.calendar.events) {
+    for (const event of visibleCalendarEvents) {
       const firstKey = eventDayKey(event.startAt, event.allDay);
       const keys = [firstKey];
       if (event.allDay && event.endAt) {
@@ -245,7 +273,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
       for (const key of keys) grouped.set(key, [...(grouped.get(key) || []), event]);
     }
     return grouped;
-  }, [data.calendar.events]);
+  }, [visibleCalendarEvents]);
 
   useEffect(() => {
     if (!message) return;
@@ -700,8 +728,10 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               </div>
             </div>
             {data.calendar.loadError ? (
-              <div className="px-5 py-4 text-sm text-amber-700">{data.calendar.loadError}</div>
-            ) : (
+              <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                Không thể tải dữ liệu mới từ Google Calendar. Bạn vẫn có thể xem và thao tác trên lịch hiện tại.
+              </div>
+            ) : null}
               <div className="overflow-x-auto rounded-xl border border-slate-200/80">
                 <div className="min-w-[640px]">
                   <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/70">
@@ -730,7 +760,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                           onKeyDown={(event) => {
                             if (event.key === "Enter" || event.key === " ") openCalendarCreate(date);
                           }}
-                          className={`min-h-28 cursor-pointer border-b border-r border-slate-100 p-2 transition-colors hover:bg-blue-50/30 ${outsideMonth ? "bg-slate-50/50" : "bg-white"}`}
+                          className={`min-h-28 cursor-pointer border-b border-r border-slate-100 p-2 transition-colors hover:bg-blue-50/30 ${outsideMonth ? "bg-slate-50/50" : "bg-white"} ${isToday ? "relative z-10 !bg-blue-50/40 ring-2 ring-inset ring-blue-500/70" : ""}`}
                         >
                           <div className="mb-1.5 flex items-center justify-between">
                             <span
@@ -753,6 +783,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                                   linkedTask.status !== "DONE" &&
                                   isPastDueDate(linkedTask.dueAt, now),
                               );
+                              const isDone = linkedTask?.status === "DONE";
                               const eventStartKey = eventDayKey(event.startAt, event.allDay);
                               const eventEndKey = event.endAt?.slice(0, 10) || eventStartKey;
                               const continuesFromPreviousDay = event.allDay && key > eventStartKey;
@@ -779,7 +810,10 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                                       )}
                                     </span>
                                   )}
-                                  <span className={startsVisibleWeekSegment ? "truncate" : "select-none opacity-0"}>
+                                  {startsVisibleWeekSegment && linkedTask?.domain === "GENERAL" && (
+                                    <span className="mr-1 rounded bg-fuchsia-100 px-1 py-0.5 text-[9px] font-bold text-fuchsia-700">Cá nhân</span>
+                                  )}
+                                  <span className={startsVisibleWeekSegment ? `truncate ${isDone ? "text-slate-500 line-through decoration-slate-400/80 decoration-1" : ""}` : "select-none opacity-0"}>
                                     {startsVisibleWeekSegment ? event.title : "Tiếp diễn"}
                                   </span>
                                 </>
@@ -792,8 +826,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                                     clickEvent.stopPropagation();
                                     setSelectedCalendarEvent(event);
                                   }}
-                                  title={`${calendarEventDate(event.startAt, event.allDay)} · ${event.title}`}
-                                  className={`flex min-h-[22px] items-center overflow-hidden whitespace-nowrap px-1.5 py-1 text-left text-[11px] font-medium leading-none ${connectionClass} ${style.event} ${startsVisibleWeekSegment && isOverdue ? "border-l-2 border-l-orange-400" : "border-l-0"}`}
+                                  title={`${isDone ? "Đã hoàn thành · " : ""}${calendarEventDate(event.startAt, event.allDay)} · ${event.title}`}
+                                  className={`flex min-h-[22px] items-center overflow-hidden whitespace-nowrap px-1.5 py-1 text-left text-[11px] font-medium leading-none ${connectionClass} ${style.event} ${isDone ? "opacity-65 saturate-50" : ""} ${startsVisibleWeekSegment && isOverdue ? "border-l-2 border-l-orange-400" : "border-l-0"}`}
                                 >
                                   {content}
                                 </button>
@@ -809,7 +843,6 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   </div>
                 </div>
               </div>
-            )}
           </section>
         )}
 
@@ -934,17 +967,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                         {dueLabel(item.dueAt)} · {item.estimatedDays === 1 ? "trong ngày" : `dự kiến ${item.estimatedDays} ngày`}
                       </p>
                       {item.progressMode === "CHECKLIST" && item.checklist.length > 0 && (
-                        <div className="mt-2 flex items-center gap-2">
-                          <div className="h-1.5 w-28 overflow-hidden rounded-full bg-slate-100">
-                            <div
-                              className="h-full rounded-full bg-emerald-500 transition-all"
-                              style={{ width: `${item.progressPercent}%` }}
-                            />
-                          </div>
-                          <span className="text-[11px] font-medium text-slate-500">
-                            {item.checklist.filter((entry) => entry.isDone).length}/{item.checklist.length} đầu việc
-                          </span>
-                        </div>
+                        <ProgressMetric
+                          value={item.progressPercent}
+                          numerator={item.checklist.filter((entry) => entry.isDone).length}
+                          denominator={item.checklist.length}
+                          className="mt-2 max-w-[190px]"
+                          label={`Tiến độ ${item.title}: ${item.progressPercent}%`}
+                        />
                       )}
                       {item.access === "OWNER" && item.sharedWith.length > 0 && (
                         <div
@@ -977,15 +1006,6 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       )}
                     </div>
                     <div className="flex items-center gap-1.5">
-                      {item.status !== "DONE" && (
-                        <button
-                          type="button"
-                          onClick={() => openTaskEdit(item)}
-                          className="rounded-md bg-emerald-50 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700 transition hover:bg-emerald-100"
-                        >
-                          {item.progressPercent}%
-                        </button>
-                      )}
                       <ChevronRight className="h-4 w-4 text-slate-300" />
                     </div>
                   </div>
@@ -1086,12 +1106,12 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       {editingItem.checklist.filter((item) => item.isDone).length}/{editingItem.checklist.length} hoàn thành
                     </p>
                   </div>
-                  <span className="text-lg font-bold text-emerald-700">{editingItem.progressPercent}%</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-                  <div
-                    className="h-full rounded-full bg-emerald-500 transition-all"
-                    style={{ width: `${editingItem.progressPercent}%` }}
+                  <ProgressMetric
+                    value={editingItem.progressPercent}
+                    numerator={editingItem.checklist.filter((entry) => entry.isDone).length}
+                    denominator={editingItem.checklist.length}
+                    className="max-w-[210px]"
+                    label={`Tiến độ ${editingItem.title}: ${editingItem.progressPercent}%`}
                   />
                 </div>
                 {editingItem.checklist.length > 0 && (

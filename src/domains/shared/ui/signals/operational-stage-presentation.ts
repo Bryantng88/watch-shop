@@ -35,6 +35,9 @@ export function operationalStageSignal(value?: string | null): OperationalStageS
   if (["DONE", "COMPLETED", "APPROVED", "PUBLISHED", "DELIVERED", "SETTLED"].includes(stage)) return "done";
   if (["REJECTED", "FAILED", "ERROR", "CANCELLED", "CANCELED", "OVERDUE", "REMAINING_PAYMENT", "DELIVERED_REMAINING"].includes(stage)) return "risk";
   if (["NEED_ACTION", "NEEDS_REWORK", "RETURNED", "FEEDBACK", "PENDING_REVIEW", "WAITING_REVIEW"].includes(stage)) return "attention";
+  if (["PAYMENT_OUT"].includes(stage)) return "attention";
+  if (["PAYMENT_UNCLASSIFIED"].includes(stage)) return "risk";
+  if (["PAYMENT_IN"].includes(stage)) return "active";
   if (["PROCESSING", "IN_PROGRESS", "ACTIVE", "MEDIA_PROCESSING", "SHIPPING", "SHIPPED"].includes(stage)) return "active";
   if (["READY", "PUBLISH", "READY_TO_PUBLISH", "READY_TO_POST"].includes(stage)) return "ready";
   return "queued";

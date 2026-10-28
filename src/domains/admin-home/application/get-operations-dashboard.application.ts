@@ -40,7 +40,7 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
   const now = new Date();
   const today = bangkokDayBounds(now);
   const trendStart = new Date(today.start.getTime() - 6 * 86_400_000);
-  const [orders, purchaseRequestCounts, purchaseRequests, overdueRequestCount, unassignedRequestCount, media, mediaInsights, technical, technicalInsights, completedOrders, personalItems] = await Promise.all([
+  const [orders, purchaseRequestCounts, purchaseRequests, overdueRequestCount, unassignedRequestCount, media, mediaInsights, technical, technicalInsights, paymentCounts, completedOrders, personalItems] = await Promise.all([
     queryOrderListProjection(prisma, { view: "all", subFilter: "", paymentType: "", sort: "updatedDesc", page: 1, pageSize: 1 }),
     prisma.purchaseRequest.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.purchaseRequest.findMany({
@@ -55,6 +55,7 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
     queryMediaOperationBoardInsightCounts(prisma, now),
     listTechnicalIssueBoardWorkspaceProjection(prisma, { page: 1, pageSize: 100 }),
     queryTechnicalIssueBoardInsightCounts(prisma, now),
+    prisma.payment.groupBy({ by: ["status", "direction"], _count: { _all: true } }),
     prisma.order.findMany({
       where: { status: "COMPLETED", updatedAt: { gte: trendStart, lt: today.end } },
       select: { updatedAt: true },
@@ -80,6 +81,11 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
   const personalUnscheduled = personalItems.filter((item) => !item.dueAt).length;
 
   const purchase = new Map(purchaseRequestCounts.map((row) => [String(row.status), row._count._all]));
+  const unpaidPayments = paymentCounts.filter((row) => String(row.status) === "UNPAID");
+  const unpaidPaymentCount = unpaidPayments.reduce((sum, row) => sum + row._count._all, 0);
+  const unpaidIncomingCount = unpaidPayments.filter((row) => String(row.direction) === "IN").reduce((sum, row) => sum + row._count._all, 0);
+  const unpaidOutgoingCount = unpaidPayments.filter((row) => String(row.direction) === "OUT").reduce((sum, row) => sum + row._count._all, 0);
+  const unpaidUnclassifiedCount = unpaidPayments.filter((row) => !row.direction).reduce((sum, row) => sum + row._count._all, 0);
   const orderCounts = orders.counts;
   const queues: OperationsDashboardQueue[] = [
     {
@@ -148,6 +154,23 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
         { key: "inspect", label: "Kiểm tra", actionLabel: "Kiểm tra", count: count(technical.totals, "INSPECT"), href: "/admin/coordination/operation?view=technical-issue-flow&flowStage=inspect" },
         { key: "ready", label: "Sẵn sàng xử lý", actionLabel: "Bắt đầu", count: count(technical.totals, "READY"), href: "/admin/coordination/operation?view=technical-issue-flow&flowStage=ready" },
         { key: "processing", label: "Đang xử lý", actionLabel: "Tiếp tục", count: count(technical.totals, "PROCESSING"), href: "/admin/coordination/operation?view=technical-issue-flow&flowStage=processing" },
+      ],
+    },
+    {
+      key: "payments",
+      label: "Thanh toán cần xử lý",
+      description: "Các khoản thu, chi đang chờ kiểm tra và đối soát.",
+      href: "/admin/coordination/operation?context=PAYMENT&view=payment-flow&flowStage=payment-review",
+      activeCount: unpaidPaymentCount,
+      actionLabel: "Xử lý thanh toán",
+      insights: [
+        { key: "unpaid-incoming", label: "Khoản thu chờ đối soát", count: unpaidIncomingCount, href: "/admin/coordination/operation?context=PAYMENT&view=payment-flow&flowStage=payment-review&flowPaymentDirection=IN", severity: "risk" },
+        { key: "unpaid-outgoing", label: "Khoản chi chờ xử lý", count: unpaidOutgoingCount, href: "/admin/coordination/operation?context=PAYMENT&view=payment-flow&flowStage=payment-review&flowPaymentDirection=OUT", severity: "attention" },
+      ],
+      stages: [
+        { key: "payment-in", label: "Chờ thu / đối soát", actionLabel: "Đối soát", count: unpaidIncomingCount, href: "/admin/coordination/operation?context=PAYMENT&view=payment-flow&flowStage=payment-review&flowPaymentDirection=IN" },
+        { key: "payment-out", label: "Chờ chi / xác nhận", actionLabel: "Xử lý", count: unpaidOutgoingCount, href: "/admin/coordination/operation?context=PAYMENT&view=payment-flow&flowStage=payment-review&flowPaymentDirection=OUT" },
+        { key: "payment-unclassified", label: "Chưa phân loại", actionLabel: "Kiểm tra", count: unpaidUnclassifiedCount, href: "/admin/coordination/operation?context=PAYMENT&view=payment-flow&flowStage=payment-review" },
       ],
     },
     {
