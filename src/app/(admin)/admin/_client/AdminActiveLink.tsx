@@ -53,6 +53,7 @@ export default function ActiveLink({
     return (
         <Link
             href={href}
+            aria-label={label}
             title={title}
             onNavigate={onNavigate}
             onClick={(event) => {
