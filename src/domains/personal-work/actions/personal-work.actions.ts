@@ -23,6 +23,19 @@ import {
   syncPersonalTaskToGoogleIfLinked,
 } from "../server/google-calendar.service";
 import type { PersonalWorkDomain, PersonalWorkTarget, PersonalWorkTargetType } from "../shared/personal-work.types";
+import { savePersonalCategory, deletePersonalCategory } from "../server/personal-work-categories.service";
+
+export async function savePersonalWorkCategoryAction(input: {key?:string;label:string;color:string}) {
+  await savePersonalCategory(input, await auth());
+  refresh();
+  return {ok:true};
+}
+
+export async function deletePersonalWorkCategoryAction(input: {key:string;replacementKey:string}) {
+  await deletePersonalCategory(input, await auth());
+  refresh();
+  return {ok:true};
+}
 
 async function auth() {
   return requirePermission(PERMISSIONS.TASK_VIEW);
@@ -39,6 +52,7 @@ export async function createPersonalWorkAction(input: {
   estimatedDays?: number;
   priority?: TaskPriority;
   domain?: PersonalWorkDomain;
+  categoryKey?: string;
   workType?: string | null;
   targets?: PersonalWorkTarget[];
   tags?: string[];
@@ -73,6 +87,7 @@ export async function updatePersonalWorkAction(input: {
   priority?: TaskPriority;
   status?: TaskStatus;
   domain?: PersonalWorkDomain;
+  categoryKey?: string;
   tags?: string[];
   targets?: PersonalWorkTarget[];
   updateBody?: string | null;

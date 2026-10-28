@@ -1637,6 +1637,7 @@ model User {
   taskItemActivities         TaskItemActivity[]         @relation("TaskItemActivityActor")
   activityReplies            TaskItemActivityReply[]    @relation("TaskItemActivityReplyActor")
   googleCalendarConnection   GoogleCalendarConnection?
+  personalWorkCategories     PersonalWorkCategory[]
   personalCalendarLinks      PersonalTaskCalendarLink[]
   receivedPersonalTaskShares PersonalTaskShare[]        @relation("PersonalTaskShareRecipient")
   grantedPersonalTaskShares  PersonalTaskShare[]        @relation("PersonalTaskShareActor")
@@ -2813,6 +2814,8 @@ model TaskItem {
   status          TaskStatus       @default(TODO)
   priority        TaskPriority     @default(MEDIUM)
   workTypeId      String?
+  personalCategoryId String?
+  personalCategory PersonalWorkCategory? @relation(fields: [personalCategoryId], references: [id], onDelete: SetNull)
   dueAt           DateTime?
   estimatedDays    Int             @default(1)
   progressPercent Int              @default(0)
@@ -2846,8 +2849,23 @@ model TaskItem {
   @@index([status])
   @@index([priority])
   @@index([workTypeId])
+  @@index([personalCategoryId])
   @@index([assignedToUserId])
   @@index([dueAt])
+}
+
+model PersonalWorkCategory {
+  id String @id @default(cuid())
+  userId String
+  key String
+  label String
+  color String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items TaskItem[]
+
+  @@unique([userId, key])
 }
 
 enum PersonalTaskShareAccess {

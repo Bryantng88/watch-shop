@@ -1,5 +1,7 @@
 "use client";
 
+import { PersonalWorkCategoryManager } from "./PersonalWorkCategoryManager";
+
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -23,7 +25,6 @@ import {
 import { useAppDialog } from "@/domains/shared/feedback";
 import { AsyncActionButton, useUiMutation } from "@/domains/shared/ui/mutation";
 import {
-  ADMIN_DOMAIN_TONE,
   AdminUserAvatar,
   AdminUserInlineList,
   AdminFlatToolbar,
@@ -45,7 +46,7 @@ import {
   updatePersonalWorkAction,
 } from "../actions/personal-work.actions";
 import {
-  PERSONAL_WORK_DOMAINS,
+  personalCategoryStyle,
   PERSONAL_WORK_TYPES,
   type PersonalCalendarEvent,
   type PersonalWorkDomain,
@@ -55,26 +56,6 @@ import {
   type PersonalWorkTargetType,
 } from "../shared/personal-work.types";
 import { PersonalWorkShareEditor } from "./PersonalWorkShareEditor";
-
-const domainStyle: Record<PersonalWorkDomain, string> = {
-  GENERAL: "bg-fuchsia-50 text-fuchsia-700",
-  WORK: ADMIN_DOMAIN_TONE.WORK.soft,
-  MEDIA: ADMIN_DOMAIN_TONE.MEDIA.soft,
-  TECHNICAL: ADMIN_DOMAIN_TONE.TECHNICAL.soft,
-  SALES: ADMIN_DOMAIN_TONE.SALES.soft,
-  ORDER: ADMIN_DOMAIN_TONE.ORDER.soft,
-  ACQUISITION: ADMIN_DOMAIN_TONE.ACQUISITION.soft,
-};
-
-const calendarDomainStyle: Record<PersonalWorkDomain, { event: string; dot: string }> = {
-  GENERAL: { event: "bg-slate-100 text-slate-700 hover:bg-slate-200", dot: ADMIN_DOMAIN_TONE.GENERAL.dot },
-  WORK: { event: "bg-indigo-50 text-indigo-800 hover:bg-indigo-100", dot: ADMIN_DOMAIN_TONE.WORK.dot },
-  MEDIA: { event: "bg-violet-50 text-violet-800 hover:bg-violet-100", dot: ADMIN_DOMAIN_TONE.MEDIA.dot },
-  TECHNICAL: { event: "bg-blue-50 text-blue-800 hover:bg-blue-100", dot: ADMIN_DOMAIN_TONE.TECHNICAL.dot },
-  SALES: { event: "bg-emerald-50 text-emerald-800 hover:bg-emerald-100", dot: ADMIN_DOMAIN_TONE.SALES.dot },
-  ORDER: { event: "bg-amber-50 text-amber-800 hover:bg-amber-100", dot: ADMIN_DOMAIN_TONE.ORDER.dot },
-  ACQUISITION: { event: "bg-rose-50 text-rose-800 hover:bg-rose-100", dot: ADMIN_DOMAIN_TONE.ACQUISITION.dot },
-};
 
 const externalCalendarStyle = {
   event: "bg-sky-50 text-sky-800 hover:bg-sky-100",
@@ -167,7 +148,11 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [pending, startTransition] = useTransition();
   const [view, setView] = useState<"TODAY" | "UPCOMING" | "ALL" | "DONE">("ALL");
   const [scope, setScope] = useState<"MINE" | "SHARED" | "ALL">("MINE");
-  const [domain, setDomain] = useState<PersonalWorkDomain | "ALL">("ALL");
+  const [domain, setDomain] = useState<string>("ALL");
+  const [newCategoryKey, setNewCategoryKey] = useState("GENERAL");
+  const [editCategoryKey, setEditCategoryKey] = useState("GENERAL");
+  const [calendarCategoryKey, setCalendarCategoryKey] = useState("GENERAL");
+  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [newDomain, setNewDomain] = useState<PersonalWorkDomain>("GENERAL");
   const [workType, setWorkType] = useState<string>(PERSONAL_WORK_TYPES.GENERAL[0].key);
@@ -189,6 +174,27 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const lastCalendarRefreshAtRef = useRef(Date.now());
   const [editingItem, setEditingItem] = useState<PersonalWorkItem | null>(null);
   const editingItemId = editingItem?.id;
+  const editCategories = editingItem?.access === "OWNER"
+    ? data.categories
+    : [...data.categories.filter(c => c.isDefault), ...(editingItem && !editingItem.category.isDefault ? [editingItem.category] : [])];
+  const filterCategories = [...new Map(
+    [...data.categories, ...data.items.map(item => item.category)].map(c => [c.key, c]),
+  ).values()];
+  useEffect(() => {
+    if (!data.categories.some(c => c.key === newCategoryKey)) {
+      setNewCategoryKey("GENERAL");
+      setNewDomain("GENERAL");
+      setWorkType("REMINDER");
+      setSelectedTargets([]);
+    }
+    if (!data.categories.some(c => c.key === calendarCategoryKey)) {
+      setCalendarCategoryKey("GENERAL");
+      setCalendarCreateDomain("GENERAL");
+    }
+  }, [data.categories, newCategoryKey, calendarCategoryKey]);
+  useEffect(() => {
+    if (domain !== "ALL" && !data.categories.some(c => c.key === domain) && !data.items.some(item => item.category.key === domain)) setDomain("ALL");
+  }, [data.categories, data.items, domain]);
   const [editTitle, setEditTitle] = useState("");
   const [editNote, setEditNote] = useState("");
   const editNoteRef = useRef<HTMLTextAreaElement>(null);
@@ -213,7 +219,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
       data.items.filter((item) => {
         if (scope === "MINE" && item.access !== "OWNER") return false;
         if (scope === "SHARED" && item.access === "OWNER") return false;
-        if (domain !== "ALL" && item.domain !== domain) return false;
+        if (domain !== "ALL" && item.category.key !== domain) return false;
         if (view === "DONE") return item.status === "DONE";
         if (item.status === "DONE") return false;
         if (view === "TODAY") return !item.dueAt || new Date(item.dueAt).getTime() <= todayEndMs;
@@ -362,6 +368,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   function openCalendarCreate(date: Date) {
     setCalendarCreateTitle("");
     setCalendarCreateDomain("GENERAL");
+    setCalendarCategoryKey("GENERAL");
     setCalendarCreateDueAt(localInputDate(date));
     setCalendarCreateEstimatedDays(1);
     setCalendarCreateSync(data.calendar.connected);
@@ -374,6 +381,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     setEditNote(item.note || "");
     setEditUpdateBody("");
     setEditDomain(item.domain);
+    setEditCategoryKey(item.category.key);
     setEditDueAt(item.dueAt ? localInputDate(new Date(item.dueAt)) : "");
     setEditEstimatedDays(item.estimatedDays || 1);
     setEditTargets(item.targets);
@@ -415,6 +423,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         }
       />
 
+      <div className="flex justify-end"><button type="button" onClick={() => setCategoryManagerOpen(true)} className="mb-3 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Quản lý loại công việc</button></div>
+      {categoryManagerOpen && <PersonalWorkCategoryManager categories={data.categories} onClose={() => setCategoryManagerOpen(false)} />}
+
       <section className="grid gap-5 border-b border-slate-100 pb-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <form
           className="flex h-full min-w-0 flex-col justify-center px-1"
@@ -430,6 +441,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 const created = await createPersonalWorkAction({
                   title: nextTitle,
                   domain: newDomain,
+                  categoryKey: newCategoryKey,
                   workType,
                   targets: selectedTargets,
                   dueAt: dueAt ? dateInputToIso(dueAt) : null,
@@ -462,11 +474,11 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               className="h-11 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             />
             <select
-              value={newDomain}
-              onChange={(e) => changeDomain(e.target.value as PersonalWorkDomain)}
+              value={newCategoryKey}
+              onChange={(e) => { setNewCategoryKey(e.target.value); changeDomain(data.categories.find(c => c.key === e.target.value)?.domain || "GENERAL"); }}
               className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm"
             >
-              {PERSONAL_WORK_DOMAINS.map((item) => (
+              {data.categories.map((item) => (
                 <option key={item.key} value={item.key}>
                   {item.label}
                 </option>
@@ -692,7 +704,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               <div>
                 <h2 className="text-sm font-semibold text-slate-950">Lịch Google của tôi</h2>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  Lịch cá nhân và công việc đã liên kết trên cùng một dòng thời gian.
+                  Màu nền theo nhóm · Sọc cam: quá hạn · Gạch ngang: đã xong.
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -777,7 +789,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                               const linkedTask = event.linkedTaskItemId
                                 ? data.items.find((item) => item.id === event.linkedTaskItemId)
                                 : null;
-                              const style = linkedTask ? calendarDomainStyle[linkedTask.domain] : externalCalendarStyle;
+                              const category = linkedTask?.category;
                               const isOverdue = Boolean(
                                 linkedTask &&
                                   linkedTask.status !== "DONE" &&
@@ -800,18 +812,12 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                                     : "w-full rounded";
                               const content = (
                                 <>
-                                  {startsVisibleWeekSegment && (
-                                    <span className={`mr-1 inline-block h-1.5 w-1.5 rounded-full ${style.dot}`} />
-                                  )}
                                   {!event.allDay && (
                                     <span className="mr-1 text-[10px] opacity-70">
                                       {new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit" }).format(
                                         new Date(event.startAt),
                                       )}
                                     </span>
-                                  )}
-                                  {startsVisibleWeekSegment && linkedTask?.domain === "GENERAL" && (
-                                    <span className="mr-1 rounded bg-fuchsia-100 px-1 py-0.5 text-[9px] font-bold text-fuchsia-700">Cá nhân</span>
                                   )}
                                   <span className={startsVisibleWeekSegment ? `truncate ${isDone ? "text-slate-500 line-through decoration-slate-400/80 decoration-1" : ""}` : "select-none opacity-0"}>
                                     {startsVisibleWeekSegment ? event.title : "Tiếp diễn"}
@@ -827,7 +833,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                                     setSelectedCalendarEvent(event);
                                   }}
                                   title={`${isDone ? "Đã hoàn thành · " : ""}${calendarEventDate(event.startAt, event.allDay)} · ${event.title}`}
-                                  className={`flex min-h-[22px] items-center overflow-hidden whitespace-nowrap px-1.5 py-1 text-left text-[11px] font-medium leading-none ${connectionClass} ${style.event} ${isDone ? "opacity-65 saturate-50" : ""} ${startsVisibleWeekSegment && isOverdue ? "border-l-2 border-l-orange-400" : "border-l-0"}`}
+                                  style={category ? personalCategoryStyle(category.color) : undefined}
+                                  className={`flex min-h-[22px] items-center overflow-hidden whitespace-nowrap px-1.5 py-1 text-left text-[11px] font-medium leading-none ${connectionClass} ${category ? "hover:brightness-95" : externalCalendarStyle.event} ${isDone ? "opacity-65 saturate-50" : ""} ${startsVisibleWeekSegment && isOverdue ? "border-l-2 border-l-orange-400" : "border-l-0"}`}
                                 >
                                   {content}
                                 </button>
@@ -888,8 +895,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 onChange={(e) => setDomain(e.target.value as PersonalWorkDomain | "ALL")}
                 className="h-8 rounded-lg border-0 bg-slate-100/80 px-3 text-xs font-medium text-slate-700 outline-none ring-0"
               >
-                <option value="ALL">Tất cả nghiệp vụ</option>
-                {PERSONAL_WORK_DOMAINS.map((item) => (
+                <option value="ALL">Tất cả loại công việc</option>
+                {filterCategories.map((item) => (
                   <option key={item.key} value={item.key}>
                     {item.label}
                   </option>
@@ -939,8 +946,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                             <Share2 className="h-3 w-3" /> {item.access === "EDITOR" ? "Có thể sửa" : "Chỉ xem"}
                           </span>
                         )}
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${domainStyle[item.domain]}`}>
-                          {PERSONAL_WORK_DOMAINS.find((domain) => domain.key === item.domain)?.label}
+                        <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={personalCategoryStyle(item.category.color)}>
+                          {item.category.label}
                         </span>
                         {item.workType && (
                           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
@@ -1049,6 +1056,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                     title: nextTitle,
                     note: editNote,
                     domain: editDomain,
+                    categoryKey: editCategoryKey,
                     tags: editingItem.tags,
                     dueAt: editDueAt ? dateInputToIso(editDueAt) : null,
                     estimatedDays: editEstimatedDays,
@@ -1294,12 +1302,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold text-slate-600">Nghiệp vụ</span>
+                  <span className="text-xs font-semibold text-slate-600">Nhóm công việc</span>
                   <select
-                    value={editDomain}
+                    value={editCategoryKey}
                     disabled={editingItem.access === "VIEWER"}
                     onChange={(event) => {
-                      const nextDomain = event.target.value as PersonalWorkDomain;
+                      setEditCategoryKey(event.target.value);
+                      const nextDomain = editCategories.find(c => c.key === event.target.value)?.domain || "GENERAL";
                       setEditDomain(nextDomain);
                       setEditTargetType(domainTargets[nextDomain][0]?.type || "");
                       setEditTargetQuery("");
@@ -1308,7 +1317,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                     }}
                     className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
                   >
-                    {PERSONAL_WORK_DOMAINS.map((item) => (
+                    {editCategories.map((item) => (
                       <option key={item.key} value={item.key}>
                         {item.label}
                       </option>
@@ -1554,6 +1563,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 <X className="h-5 w-5" />
               </button>
             </div>
+            {selectedLinkedTask && <span className="mt-3 inline-block rounded px-2 py-1 text-xs font-semibold" style={personalCategoryStyle(selectedLinkedTask.category.color)}>{selectedLinkedTask.category.label}</span>}
             <div className="mt-5 space-y-3 text-sm text-slate-600">
               <p className="flex items-start gap-2">
                 <Clock3 className="mt-0.5 h-4 w-4 text-slate-400" />
@@ -1629,6 +1639,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   const created = await createPersonalWorkAction({
                     title: nextTitle,
                     domain: calendarCreateDomain,
+                    categoryKey: calendarCategoryKey,
                     dueAt: dateInputToIso(calendarCreateDueAt),
                     estimatedDays: calendarCreateEstimatedDays,
                   });
@@ -1670,13 +1681,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold text-slate-600">Nghiệp vụ</span>
+                  <span className="text-xs font-semibold text-slate-600">Nhóm công việc</span>
                   <select
-                    value={calendarCreateDomain}
-                    onChange={(event) => setCalendarCreateDomain(event.target.value as PersonalWorkDomain)}
+                    value={calendarCategoryKey}
+                    onChange={(event) => {setCalendarCategoryKey(event.target.value);setCalendarCreateDomain(data.categories.find(c=>c.key===event.target.value)?.domain || "GENERAL");}}
                     className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
                   >
-                    {PERSONAL_WORK_DOMAINS.map((item) => (
+                    {data.categories.map((item) => (
                       <option key={item.key} value={item.key}>
                         {item.label}
                       </option>
