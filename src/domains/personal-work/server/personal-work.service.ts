@@ -13,7 +13,7 @@ import { createTask, getAuthUserId } from "@/domains/task/server/core/task.servi
 import { createTaskItemRepo, setTargetTagsRepo } from "@/domains/task/server/core/task.repo";
 import { hydrateTaskItemsWithTagsRepo } from "@/domains/task/server/tag/task-tag.repo";
 import { createBusinessBinding } from "@/domains/task/server/business-binding.repo";
-import { isGoogleCalendarConfigured, listPersonalGoogleCalendarEvents } from "./google-calendar.service";
+import { isGoogleCalendarConfigured } from "./google-calendar.service";
 import { reconcilePersonalWorkBindings } from "./personal-work-bindings";
 import { categoryFromRow, listPersonalCategories, resolvePersonalCategory, defaultPersonalCategories, mergePersonalCategories, canManageDefaultCategories } from "./personal-work-categories.service";
 import {
@@ -277,15 +277,6 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
   const ownerIds = [...new Set(items.map(item => item.task.createdByUserId || item.task.assignedToUserId).filter((id): id is string => Boolean(id)))];
   const ownerCategoryRows = await prisma.personalWorkCategory.findMany({ where: { userId: { in: ownerIds } } });
   const ownerCategories = new Map(ownerIds.map(id => [id, mergePersonalCategories(ownerCategoryRows.filter(row => row.userId === id), categories.filter(c => c.isDefault))]));
-  let calendarEvents: Awaited<ReturnType<typeof listPersonalGoogleCalendarEvents>> = [];
-  let calendarLoadError: string | null = null;
-  if (connection) {
-    try {
-      calendarEvents = await listPersonalGoogleCalendarEvents(userId);
-    } catch (error) {
-      calendarLoadError = error instanceof Error ? error.message : "Không thể tải Google Calendar";
-    }
-  }
   return {
     canManageDefaultCategories: canManageDefaults,
     categories,
@@ -345,8 +336,8 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
       connected: Boolean(connection),
       accountEmail: connection?.googleAccountEmail ?? null,
       lastSyncedAt: connection?.lastSyncedAt?.toISOString() ?? null,
-      events: calendarEvents,
-      loadError: calendarLoadError,
+      events: [],
+      loadError: null,
     },
   };
 }

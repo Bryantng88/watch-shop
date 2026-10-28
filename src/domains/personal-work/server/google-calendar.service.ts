@@ -275,6 +275,7 @@ export async function deletePersonalTaskFromGoogle(userId: string, taskItemId: s
 }
 
 export async function listPersonalGoogleCalendarEvents(userId: string) {
+  const syncStartedAt = new Date();
   let auth = await accessToken(userId);
   const from = new Date();
   from.setFullYear(from.getFullYear() - 1);
@@ -329,9 +330,15 @@ export async function listPersonalGoogleCalendarEvents(userId: string) {
       const estimatedDays = event.start?.date
         ? calendarDayCount(startDate, event.end?.date)
         : 1;
-      return prisma.taskItem.update({
-        where: { id: linkMap.get(event.id!)! },
-        data: { dueAt: calendarDateToStoredDate(startDate), estimatedDays },
+      const dueAt = calendarDateToStoredDate(startDate);
+      return prisma.taskItem.updateMany({
+        where: {
+          id: linkMap.get(event.id!)!,
+          status: { not: "CANCELLED" },
+          updatedAt: { lte: syncStartedAt },
+          AND: [personalWorkEditAccessWhere(userId), { OR: [{ dueAt: { not: dueAt } }, { dueAt: null }, { estimatedDays: { not: estimatedDays } }] }],
+        },
+        data: { dueAt, estimatedDays },
       });
     }));
   }

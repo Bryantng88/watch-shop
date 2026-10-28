@@ -1,5 +1,7 @@
 "use client";
 
+import { usePersonalCalendar } from "./use-personal-calendar";
+import { buildPersonalCalendarEvents, groupCalendarEvents, calendarShareLabel, calendarDayKey } from "../shared/personal-calendar";
 import { PersonalWorkCategoryManager } from "./PersonalWorkCategoryManager";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -120,7 +122,7 @@ function localDayKey(date: Date) {
 }
 
 function eventDayKey(value: string, allDay: boolean) {
-  return allDay ? value.slice(0, 10) : localDayKey(new Date(value));
+  return calendarDayKey(value, allDay);
 }
 
 function addCalendarDayKey(value: string, days: number) {
@@ -171,14 +173,17 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [calendarCreateDueAt, setCalendarCreateDueAt] = useState(localInputDate(new Date()));
   const [calendarCreateEstimatedDays, setCalendarCreateEstimatedDays] = useState(1);
   const [calendarCreateSync, setCalendarCreateSync] = useState(true);
-  const lastCalendarRefreshAtRef = useRef(Date.now());
+  const calendar = usePersonalCalendar(data);
+  const workItems = calendar.items;
+  const itemMap = useMemo(() => new Map(workItems.map(item => [item.id, item])), [workItems]);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<PersonalWorkItem | null>(null);
   const editingItemId = editingItem?.id;
   const editCategories = editingItem?.access === "OWNER"
     ? data.categories
     : [...data.categories.filter(c => c.isDefault), ...(editingItem && !editingItem.category.isDefault ? [editingItem.category] : [])];
   const filterCategories = [...new Map(
-    [...data.categories, ...data.items.map(item => item.category)].map(c => [c.key, c]),
+    [...data.categories, ...workItems.map(item => item.category)].map(c => [c.key, c]),
   ).values()];
   useEffect(() => {
     if (!data.categories.some(c => c.key === newCategoryKey)) {
@@ -193,8 +198,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     }
   }, [data.categories, newCategoryKey, calendarCategoryKey]);
   useEffect(() => {
-    if (domain !== "ALL" && !data.categories.some(c => c.key === domain) && !data.items.some(item => item.category.key === domain)) setDomain("ALL");
-  }, [data.categories, data.items, domain]);
+    if (domain !== "ALL" && !data.categories.some(c => c.key === domain) && !workItems.some(item => item.category.key === domain)) setDomain("ALL");
+  }, [data.categories, workItems, domain]);
   const [editTitle, setEditTitle] = useState("");
   const [editNote, setEditNote] = useState("");
   const editNoteRef = useRef<HTMLTextAreaElement>(null);
@@ -216,7 +221,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const todayEndMs = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
   const items = useMemo(
     () =>
-      data.items.filter((item) => {
+      workItems.filter((item) => {
         if (scope === "MINE" && item.access !== "OWNER") return false;
         if (scope === "SHARED" && item.access === "OWNER") return false;
         if (domain !== "ALL" && item.category.key !== domain) return false;
@@ -226,89 +231,21 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         if (view === "UPCOMING") return Boolean(item.dueAt && new Date(item.dueAt).getTime() > todayEndMs);
         return true;
       }),
-    [data.items, domain, scope, view, todayEndMs],
+    [workItems, domain, scope, view, todayEndMs],
   );
-  const openCount = data.items.filter((item) => item.status !== "DONE").length;
-  const overdue = data.items.filter(
+  const openCount = workItems.filter((item) => item.status !== "DONE").length;
+  const overdue = workItems.filter(
     (item) => item.status !== "DONE" && isPastDueDate(item.dueAt, now),
   ).length;
-  const selectedLinkedTask = selectedCalendarEvent?.linkedTaskItemId
-    ? data.items.find((item) => item.id === selectedCalendarEvent.linkedTaskItemId) || null
-    : null;
   const calendarDays = useMemo(() => monthCells(calendarCursor), [calendarCursor]);
-  const visibleCalendarEvents = useMemo(() => {
-    const linkedTaskIds = new Set(
-      data.calendar.events.flatMap((event) => event.linkedTaskItemId ? [event.linkedTaskItemId] : []),
-    );
-    const localTaskEvents: PersonalCalendarEvent[] = data.items
-      .filter((item) => item.dueAt && !linkedTaskIds.has(item.id))
-      .flatMap((item): PersonalCalendarEvent[] => {
-        const dueAt = item.dueAt as string;
-        const startAt = dueAt.slice(0, 10);
-        const endAt = new Date(`${startAt}T00:00:00Z`);
-        if (Number.isNaN(endAt.getTime())) return [];
-        endAt.setUTCDate(endAt.getUTCDate() + Math.max(1, item.estimatedDays));
-        return [{
-          id: `local-task:${item.id}`,
-          title: item.title,
-          description: item.note,
-          startAt,
-          endAt: endAt.toISOString().slice(0, 10),
-          allDay: true,
-          htmlLink: item.calendar.htmlLink,
-          location: null,
-          linkedTaskItemId: item.id,
-        }];
-      });
-    return [...data.calendar.events, ...localTaskEvents];
-  }, [data.calendar.events, data.items]);
-  const eventsByDay = useMemo(() => {
-    const grouped = new Map<string, PersonalCalendarEvent[]>();
-    for (const event of visibleCalendarEvents) {
-      const firstKey = eventDayKey(event.startAt, event.allDay);
-      const keys = [firstKey];
-      if (event.allDay && event.endAt) {
-        const cursor = new Date(`${firstKey}T00:00:00Z`);
-        const exclusiveEnd = new Date(`${event.endAt.slice(0, 10)}T00:00:00Z`);
-        while (keys.length < 365) {
-          cursor.setUTCDate(cursor.getUTCDate() + 1);
-          if (cursor >= exclusiveEnd) break;
-          keys.push(cursor.toISOString().slice(0, 10));
-        }
-      }
-      for (const key of keys) grouped.set(key, [...(grouped.get(key) || []), event]);
-    }
-    return grouped;
-  }, [visibleCalendarEvents]);
+  const visibleCalendarEvents = useMemo(() => buildPersonalCalendarEvents(workItems, calendar.events), [workItems, calendar.events]);
+  const eventsByDay = useMemo(() => groupCalendarEvents(visibleCalendarEvents, calendarDays.map(localDayKey)), [visibleCalendarEvents, calendarDays]);
 
   useEffect(() => {
     if (!message) return;
     const timeoutId = window.setTimeout(() => setMessage(null), 5000);
     return () => window.clearTimeout(timeoutId);
   }, [message]);
-
-  useEffect(() => {
-    if (!data.calendar.connected) return;
-
-    const refreshCalendar = () => {
-      if (document.visibilityState !== "visible") return;
-      const now = Date.now();
-      if (now - lastCalendarRefreshAtRef.current < 5_000) return;
-      lastCalendarRefreshAtRef.current = now;
-      router.refresh();
-    };
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") refreshCalendar();
-    };
-    const intervalId = window.setInterval(refreshCalendar, 120_000);
-    window.addEventListener("focus", refreshCalendar);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener("focus", refreshCalendar);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [data.calendar.connected, router]);
 
   useEffect(() => {
     const textarea = editNoteRef.current;
@@ -319,9 +256,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
 
   useEffect(() => {
     if (!editingItemId) return;
-    const refreshed = data.items.find((item) => item.id === editingItemId);
-    if (refreshed) setEditingItem(refreshed);
-  }, [data.items, editingItemId]);
+    const refreshed = workItems.find((item) => item.id === editingItemId);
+    setEditingItem(refreshed || null);
+  }, [workItems, editingItemId]);
 
   function run(action: () => Promise<unknown>, success?: string, onSuccess?: () => void) {
     setMessage(null);
@@ -373,6 +310,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     setCalendarCreateEstimatedDays(1);
     setCalendarCreateSync(data.calendar.connected);
     setCalendarCreateOpen(true);
+  }
+
+  function openCalendarEvent(event: PersonalCalendarEvent) {
+    setSelectedDay(null);
+    const item = event.linkedTaskItemId ? itemMap.get(event.linkedTaskItemId) : null;
+    if (item) { setSelectedCalendarEvent(null); openTaskEdit(item); }
+    else setSelectedCalendarEvent(event);
   }
 
   function openTaskEdit(item: PersonalWorkItem) {
@@ -665,11 +609,14 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               )}
             </div>
           </button>
-          <button
-            disabled={pending || !data.calendar.configured}
+          <AsyncActionButton
+            pending={data.calendar.connected ? calendar.loading : pending}
+            title={calendar.lastSyncedAt ? `Cập nhật lịch: ${new Date(calendar.lastSyncedAt).toLocaleString("vi-VN")}` : undefined}
+            pendingLabel={data.calendar.connected ? "Đang tải lịch…" : "Đang kết nối…"}
+            disabled={!data.calendar.configured}
             onClick={() =>
               data.calendar.connected
-                ? run(async () => undefined, "Đã tải lại Google Calendar")
+                ? void calendar.reload()
                 : run(async () => {
                     const result = await getGoogleCalendarConnectUrlAction();
                     window.location.assign(result.url);
@@ -686,7 +633,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 <ExternalLink className="h-4 w-4" /> Kết nối Google Calendar
               </>
             )}
-          </button>
+          </AsyncActionButton>
         </aside>
       </section>
 
@@ -738,9 +685,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 </button>
               </div>
             </div>
-            {data.calendar.loadError ? (
-              <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                Không thể tải dữ liệu mới từ Google Calendar. Bạn vẫn có thể xem và thao tác trên lịch hiện tại.
+            {calendar.error ? (
+              <div role="status" className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                {calendar.error}
               </div>
             ) : null}
               <div className="overflow-x-auto rounded-xl border border-slate-200/80">
@@ -769,6 +716,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                           aria-label={`Tạo việc ngày ${key}`}
                           onClick={() => openCalendarCreate(date)}
                           onKeyDown={(event) => {
+                            if (event.target !== event.currentTarget) return;
                             if (event.key === "Enter" || event.key === " ") openCalendarCreate(date);
                           }}
                           className={`min-h-28 cursor-pointer border-b border-r border-slate-100 p-2 transition-colors hover:bg-blue-50/30 ${outsideMonth ? "bg-slate-50/50" : "bg-white"} ${isToday ? "relative z-10 !bg-blue-50/40 ring-2 ring-inset ring-blue-500/70" : ""}`}
@@ -786,7 +734,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                           <div className="space-y-1">
                             {dayEvents.slice(0, 3).map((event) => {
                               const linkedTask = event.linkedTaskItemId
-                                ? data.items.find((item) => item.id === event.linkedTaskItemId)
+                                ? itemMap.get(event.linkedTaskItemId)
                                 : null;
                               const category = linkedTask?.category;
                               const isOverdue = Boolean(
@@ -829,18 +777,19 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                                   key={event.id}
                                   onClick={(clickEvent) => {
                                     clickEvent.stopPropagation();
-                                    setSelectedCalendarEvent(event);
+                                    openCalendarEvent(event);
                                   }}
-                                  title={`${isDone ? "Đã hoàn thành · " : ""}${calendarEventDate(event.startAt, event.allDay)} · ${event.title}`}
+                                  title={`${isDone ? "Đã hoàn thành · " : ""}${calendarEventDate(event.startAt, event.allDay)} · ${event.title}${linkedTask && calendarShareLabel(linkedTask) ? ` · ${calendarShareLabel(linkedTask)}` : ""}`}
                                   style={category ? personalCategoryStyle(category.color) : undefined}
                                   className={`flex min-h-[22px] items-center overflow-hidden whitespace-nowrap px-1.5 py-1 text-left text-[11px] font-medium leading-none ${connectionClass} ${category ? "hover:brightness-95" : externalCalendarStyle.event} ${isDone ? "opacity-65 saturate-50" : ""} ${startsVisibleWeekSegment && isOverdue ? "border-l-2 border-l-orange-400" : "border-l-0"}`}
                                 >
                                   {content}
+                                  {startsVisibleWeekSegment && linkedTask && calendarShareLabel(linkedTask) && <Share2 aria-label={calendarShareLabel(linkedTask)!} className="ml-1 h-3 w-3 shrink-0 text-violet-600" />}
                                 </button>
                               );
                             })}
                             {dayEvents.length > 3 && (
-                              <p className="px-1 text-[9px] font-medium text-slate-500">+{dayEvents.length - 3} lịch</p>
+                              <button type="button" aria-label={`Xem tất cả ${dayEvents.length} lịch ngày ${key}`} onClick={(event) => {event.stopPropagation();setSelectedDay(key);}} className="rounded px-1 py-1 text-[10px] font-semibold text-blue-700 hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">+{dayEvents.length - 3} lịch</button>
                             )}
                           </div>
                         </div>
@@ -1043,6 +992,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
           onMouseDown={() => setEditingItem(null)}
         >
           <form
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="personal-task-detail-title"
             onMouseDown={(event) => event.stopPropagation()}
             onSubmit={(event) => {
               event.preventDefault();
@@ -1080,7 +1032,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600">Công việc cá nhân</p>
-                <h2 className="mt-1 text-xl font-bold text-slate-950">Chỉnh sửa công việc</h2>
+                <h2 id="personal-task-detail-title" className="mt-1 text-xl font-bold text-slate-950">{editingItem.access === "VIEWER" ? "Chi tiết công việc" : "Chỉnh sửa công việc"}</h2>
+                {calendarShareLabel(editingItem) && <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-700"><Share2 className="h-3.5 w-3.5 shrink-0" />{calendarShareLabel(editingItem)}</p>}
               </div>
               <button
                 type="button"
@@ -1453,6 +1406,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   Thay đổi sẽ được cập nhật vào sự kiện Google Calendar hiện có.
                 </p>
               )}
+              {editingItem.calendar.htmlLink && <a href={editingItem.calendar.htmlLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:underline">Mở trong Google <ExternalLink className="h-3.5 w-3.5" /></a>}
             </div>
             {editingItem.activities.some((activity) => activity.body) && (
               <section className="mt-4 border-t border-slate-100 pt-4">
@@ -1501,9 +1455,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               {editingItem.access === "OWNER" ? <button
                 type="button"
                 disabled={pending}
-                onClick={() => {
-                  if (!window.confirm("Xóa công việc này? Sự kiện đã liên kết trên Google Calendar cũng sẽ bị xóa."))
-                    return;
+                onClick={async () => {
+                  const confirmed = await appDialog.confirm({title:"Xóa công việc?",message:"Task sẽ bị xóa khỏi lịch và danh sách của những người được chia sẻ. Sự kiện liên kết trong Google Calendar của bạn cũng sẽ bị xóa.",confirmText:"Xóa công việc",tone:"danger"});
+                  if (!confirmed) return;
                   run(
                     () => deletePersonalWorkAction(editingItem.id),
                     "Đã xóa công việc",
@@ -1535,6 +1489,25 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         </div>
       )}
 
+      {selectedDay && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/25 p-4 backdrop-blur-[1px]" onMouseDown={() => setSelectedDay(null)} onKeyDown={event => {if(event.key === "Escape") setSelectedDay(null);}}>
+          <section role="dialog" aria-modal="true" aria-labelledby="calendar-day-title" onMouseDown={event => event.stopPropagation()} className="flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-100 p-4"><div><h2 id="calendar-day-title" className="font-semibold text-slate-950">{calendarEventDate(selectedDay, true)}</h2><p className="mt-1 text-xs text-slate-500">{eventsByDay.get(selectedDay)?.length || 0} lịch · Chọn để xem chi tiết</p></div><button autoFocus type="button" aria-label="Đóng danh sách lịch trong ngày" onClick={() => setSelectedDay(null)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X className="h-4 w-4" /></button></div>
+            <div className="space-y-1 overflow-y-auto p-3">
+              {(eventsByDay.get(selectedDay) || []).map(event => {
+                const item = event.linkedTaskItemId ? itemMap.get(event.linkedTaskItemId) : undefined;
+                const share = item ? calendarShareLabel(item) : null;
+                return <button type="button" key={event.id} onClick={() => openCalendarEvent(event)} className="block w-full rounded-lg p-3 text-left hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500" style={item ? personalCategoryStyle(item.category.color) : personalCategoryStyle("#0ea5e9")}>
+                  <span className={`block truncate text-sm font-semibold ${item?.status === "DONE" ? "text-slate-400 line-through" : "text-slate-900"}`}>{event.title}</span>
+                  <span className="mt-1 block text-xs text-slate-500">{event.allDay ? "Cả ngày" : calendarEventDate(event.startAt, false)}{item ? ` · ${item.category.label}` : " · Google Calendar"}</span>
+                  {share && <span className="mt-1 flex items-center gap-1 text-xs text-violet-700"><Share2 className="h-3 w-3" />{share}</span>}
+                </button>;
+              })}
+            </div>
+          </section>
+        </div>
+      )}
+
       {selectedCalendarEvent && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/25 p-4 backdrop-blur-[1px]"
@@ -1550,7 +1523,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600">
-                  {selectedLinkedTask ? "Công việc đã liên kết" : "Sự kiện Google Calendar"}
+                  Sự kiện Google Calendar
                 </p>
                 <h2 id="calendar-event-title" className="mt-1 text-xl font-bold text-slate-950">
                   {selectedCalendarEvent.title}
@@ -1565,7 +1538,6 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            {selectedLinkedTask && <span className="mt-3 inline-block rounded px-2 py-1 text-xs font-semibold" style={personalCategoryStyle(selectedLinkedTask.category.color)}>{selectedLinkedTask.category.label}</span>}
             <div className="mt-5 space-y-3 text-sm text-slate-600">
               <p className="flex items-start gap-2">
                 <Clock3 className="mt-0.5 h-4 w-4 text-slate-400" />
@@ -1589,24 +1561,6 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               )}
             </div>
             <div className="mt-6 flex flex-wrap justify-end gap-2">
-              {selectedLinkedTask &&
-                selectedLinkedTask.status !== "DONE" &&
-                selectedLinkedTask.access !== "VIEWER" && (
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() =>
-                    run(
-                      () => updatePersonalWorkAction({ id: selectedLinkedTask.id, status: "DONE" }),
-                      "Đã hoàn thành công việc",
-                      () => setSelectedCalendarEvent(null),
-                    )
-                  }
-                  className="rounded-lg bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100"
-                >
-                  Đánh dấu hoàn thành
-                </button>
-              )}
               {selectedCalendarEvent.htmlLink && (
                 <a
                   href={selectedCalendarEvent.htmlLink}
