@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState, useTransition, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type MouseEvent } from "react";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -272,6 +272,7 @@ export default function FlowItemListView({
   onReloadRequested,
 }: Props) {
   const previewState = useBusinessEntityPreview();
+  const mediaTriggers = useRef(new Map<string, () => void>());
   const progress = useAppProgress();
   const transitionFeedback = useManualTransitionFeedback();
   const [isActionPending, startActionTransition] = useTransition();
@@ -1443,6 +1444,10 @@ export default function FlowItemListView({
                       <OpenTargetAction
                         queueItem={item as TaskItemQueueItem}
                         transition={primaryAction}
+                        triggerRef={mediaOpenTransition ? activate => {
+                          if (activate) mediaTriggers.current.set(item.targetId, activate);
+                          else mediaTriggers.current.delete(item.targetId);
+                        } : undefined}
                         onActivate={previewState.closePreview}
                         onRefreshRequested={onReloadRequested}
                         onTransitionApplied={(outcome) => reconcileModalTransition(item, outcome)}
@@ -1501,6 +1506,7 @@ export default function FlowItemListView({
         </table>
       </div>
       <BusinessEntityPreviewModal
+        onProcessMedia={previewState.preview?.type === "WATCH" && activeStage === "media-processing" ? () => mediaTriggers.current.get(previewState.preview!.id)?.() : undefined}
         reviewContext={activeStage.toLowerCase().includes("media")
           ? "MEDIA"
           : activeStage.toLowerCase().includes("service") || activeStage.toLowerCase().includes("technical")

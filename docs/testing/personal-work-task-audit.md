@@ -85,8 +85,14 @@ distinct from final gallery selection (`ATTACHED`/`APPROVED`/`PUBLISHED` and
 current ProductImage rows). Missing, quarantined and deleted assets are excluded
 from both lists, including stale legacy references. The unselected count uses
 the intersection by storage key; a separate cover cannot distort the count.
-Photo quality remains a human decision. Select photos opens the existing watch
-gallery picker rather than adding another gallery-write path.
+Photo quality remains a human decision. The single Xử lý media action reuses
+the list's existing OpenTargetAction on Media Processing, including its exact
+workspace binding/state and embedded route; other entry points use the existing
+watch Media route. There is no separate Select photos action or gallery-write
+path. Quick preview follows the admin UI language contract: flat metadata,
+hairline section dividers, domain tones, shared avatar, one primary Media action
+and secondary service/pricing/content actions. Shoot planning uses useUiMutation
+and AsyncActionButton for scoped pending state and duplicate-submission guards.
 
 Create Media task schedules a standalone personal MEDIA / PHOTOGRAPHY item for
 the current owner on the selected Bangkok date. One open session is reused;
