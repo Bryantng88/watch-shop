@@ -24,7 +24,9 @@ export function AsyncActionButton({
       className={`inline-flex items-center justify-center gap-2 ${className || ""}`}
     >
       {pending ? <Loader2 aria-hidden="true" className="h-4 w-4 shrink-0 animate-spin" /> : null}
-      <span>{pending && pendingLabel !== undefined ? pendingLabel : children}</span>
+      <span className="inline-flex min-w-0 items-center justify-center gap-2">
+        {pending && pendingLabel !== undefined ? pendingLabel : children}
+      </span>
     </button>
   );
 }
