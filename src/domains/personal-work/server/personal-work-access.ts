@@ -4,7 +4,7 @@ export const personalWorkScopeWhere: Prisma.TaskItemWhereInput = {
   OR: [{ personalOwnerUserId: { not: null } }, { task: { kind: "PERSONAL" } }],
 };
 
-function ownedWhere(userId: string): Prisma.TaskItemWhereInput {
+export function personalWorkOwnerAccessWhere(userId: string): Prisma.TaskItemWhereInput {
   return { OR: [
     { personalOwnerUserId: userId },
     { task: { kind: "PERSONAL", OR: [{ createdByUserId: userId }, { assignedToUserId: userId }] } },
@@ -12,7 +12,7 @@ function ownedWhere(userId: string): Prisma.TaskItemWhereInput {
 }
 
 export function personalWorkViewAccessWhere(userId: string): Prisma.TaskItemWhereInput {
-  return { AND: [personalWorkScopeWhere, { OR: [ownedWhere(userId), { personalShares: { some: { userId } } }] }] };
+  return { AND: [personalWorkScopeWhere, { OR: [personalWorkOwnerAccessWhere(userId), { personalShares: { some: { userId } } }] }] };
 }
 
 export function isPersonalWorkOwner(item: {
@@ -31,7 +31,7 @@ export function personalWorkTagOwner(item: { taskId: string | null; personalOwne
 
 export function personalWorkEditAccessWhere(userId: string): Prisma.TaskItemWhereInput {
   return {
-    AND: [personalWorkScopeWhere, { OR: [ownedWhere(userId),
+    AND: [personalWorkScopeWhere, { OR: [personalWorkOwnerAccessWhere(userId),
       { personalShares: { some: { userId, accessLevel: PersonalTaskShareAccess.EDITOR } } },
     ] }],
   };

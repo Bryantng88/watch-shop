@@ -77,6 +77,55 @@ to roll back an image.
   they verify a null parent, unchanged original item IDs and unchanged parent
   count. No Google requests are sent.
 
-Photo pool-versus-selected review and scheduling watches into a daily personal
-photoshoot are separate UI/business actions; this audit establishes the direct
-work/owner model they should use rather than adding another parent container.
+## Watch photo review and daily shoot planning
+
+Watch quick preview now separates Pool and Selected, with counts, selected
+checkmarks and a full-size viewer. Pool membership (`SELECTED` lifecycle) is
+distinct from final gallery selection (`ATTACHED`/`APPROVED`/`PUBLISHED` and
+current ProductImage rows). Missing, quarantined and deleted assets are excluded
+from both lists, including stale legacy references. The unselected count uses
+the intersection by storage key; a separate cover cannot distort the count.
+Photo quality remains a human decision. Select photos opens the existing watch
+gallery picker rather than adding another gallery-write path.
+
+Create Media task schedules a standalone personal MEDIA / PHOTOGRAPHY item for
+the current owner on the selected Bangkok date. One open session is reused;
+multiple sessions require a choice. Other media subtypes, other owners and
+closed sessions are not silently reused. Existing hours, notes, progress and
+shares are preserved. Watch bindings are idempotent, with per-watch shooting
+instructions and private activity. A day-scoped transaction lock prevents
+concurrent duplicate creation; a row lock and second scope check protect against
+concurrent task edits. No weekly parent, Google request or business pipeline
+transition is needed to plan the work. The receipt links directly to that item.
+Private personal bindings/activities cannot become the context or content of
+the global watch discussion.
+
+## Responsiveness findings
+
+Personal forms write directly to DB and refresh server data; checklist changes
+also use optimistic UI with rollback. Some linked-calendar mutations still wait
+for Google sync. Business Media mutations have durable events and consumers,
+and workspace callers wait for projection delivery before refreshing. Event
+creation itself is not evidence of a bottleneck; these are different paths.
+
+Previously the watch preview waited for activity/mention-user reads alongside
+its metadata. The watch UI now requests metadata first and discussion separately,
+with independent loading/error state. Switching or closing previews aborts stale
+requests. Thumbnail strips use the existing versioned 320px WebP thumbnail route,
+with original-image fallback on thumbnail failure; full-size originals load on
+opening the viewer. Per-request Server-Timing exposes metadata and activity time.
+Read-only target searches no longer trigger a full personal-page refresh.
+
+Validation adds `npm run personal-work:smoke-photoshoot`: concurrent creation,
+same-day reuse, duplicate watch prevention, changed instructions, retained hours,
+owner/date/status guards, multiple-session selection, private activity isolation,
+zero business events/parent tasks and no network requests. Synthetic users and
+their exact records are cleaned; a baseline digest verifies original personal
+rows remain unchanged. Run DB fixture suites sequentially because their global
+baseline checks intentionally detect other fixture mutations too.
+
+Chrome verification uses controlled photo bytes on the real popup and holds
+discussion for five seconds: photos/tabs/viewer remain usable first. Real server
+actions append to an exact fixture session, preserve its schedule/note, and the
+receipt opens the edit form. The fixture is removed and original owner item IDs
+remain unchanged. This proves request independence, not production NAS latency.

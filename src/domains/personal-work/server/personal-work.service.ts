@@ -6,7 +6,7 @@ import {
   type Prisma,
   type TaskPriority,
 } from "@prisma/client";
-import { prisma } from "@/server/db/client";
+import { prisma, withDbTransaction, type DB } from "@/server/db/client";
 import { getAuthUserId } from "@/server/auth/auth-user-id";
 import { hydrateTaskItemsWithTagsRepo, setTargetTagsRepo } from "@/domains/task/server/tag/task-tag.repo";
 import { personalWorkScopeWhere, personalWorkViewAccessWhere, isPersonalWorkOwner, personalWorkTagOwner } from "./personal-work-access";
@@ -334,7 +334,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
   };
 }
 
-export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unknown) {
+export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unknown, db: DB = prisma) {
   const userId = getAuthUserId(auth);
   if (!userId) throw new Error("Không xác định được người dùng");
   const title = input.title.trim();
@@ -353,7 +353,7 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
         .map((target) => [`${target.type}:${target.id}`, target]),
     ).values(),
   ];
-  return prisma.$transaction(async (tx) => {
+  return withDbTransaction(db, async (tx) => {
     const item = await tx.taskItem.create({
       data: {
         title, note: input.note?.trim() || null,

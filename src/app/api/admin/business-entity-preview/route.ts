@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import type { BusinessEntityType } from "@/domains/shared/business/business-entity.types";
-import { getBusinessEntityPreviewAction } from "@/domains/shared/business/business-entity-preview.actions";
+import { getBusinessEntityPreviewAction, getBusinessEntityPreviewActivityAction } from "@/domains/shared/business/business-entity-preview.actions";
 import { addTaskItemDiscussionAction } from "@/domains/task/actions/task.actions";
 
 const BUSINESS_ENTITY_TYPES = new Set<BusinessEntityType>([
@@ -28,8 +28,13 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const preview = await getBusinessEntityPreviewAction({ type, id, activityMode });
-    return NextResponse.json({ preview });
+    const started = performance.now();
+    if (request.nextUrl.searchParams.get("activityOnly") === "1") {
+      const activity = await getBusinessEntityPreviewActivityAction({ type, id });
+      return NextResponse.json({ activity }, { headers: { "Server-Timing": `activity;dur=${(performance.now() - started).toFixed(1)}` } });
+    }
+    const preview = await getBusinessEntityPreviewAction({ type, id, activityMode, deferActivity: type === "WATCH" && request.nextUrl.searchParams.get("deferActivity") === "1" });
+    return NextResponse.json({ preview }, { headers: { "Server-Timing": `preview;dur=${(performance.now() - started).toFixed(1)}` } });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Không thể tải xem nhanh." },

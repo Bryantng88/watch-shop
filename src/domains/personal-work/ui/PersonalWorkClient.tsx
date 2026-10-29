@@ -9,7 +9,7 @@ import { calendarScheduleInput, scheduleDate, scheduleTime } from "../shared/per
 import { buildPersonalCalendarEvents, groupCalendarEvents, calendarShareLabel, calendarDayKey } from "../shared/personal-calendar";
 import { PersonalWorkCategoryManager } from "./PersonalWorkCategoryManager";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -277,14 +277,14 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
     setEditingItem(refreshed || null);
   }, [workItems, editingItemId]);
 
-  function run(action: () => Promise<unknown>, success?: string, onSuccess?: () => void) {
+  function run(action: () => Promise<unknown>, success?: string, onSuccess?: () => void, refresh = true) {
     setMessage(null);
     startTransition(async () => {
       try {
         await action();
         onSuccess?.();
         if (success) setMessage(success);
-        router.refresh();
+        if (refresh) router.refresh();
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Không thể xử lý yêu cầu");
       }
@@ -305,7 +305,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
     run(async () => {
       const result = await searchPersonalWorkTargetsAction({ type: targetType, query: targetQuery });
       setTargetResults(result.items);
-    });
+    }, undefined, undefined, false);
   }
 
   function searchEditTargets() {
@@ -316,7 +316,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
         query: editTargetQuery,
       });
       setEditTargetResults(result.items);
-    });
+    }, undefined, undefined, false);
   }
 
   function openCalendarCreate(date: Date) {
@@ -357,7 +357,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
     else setSelectedCalendarEvent(event);
   }
 
-  function openTaskEdit(item: PersonalWorkItem) {
+  const openTaskEdit = useCallback((item: PersonalWorkItem) => {
     setEditingItem(item);
     setEditTitle(item.title);
     setEditNote(item.note || "");
@@ -378,7 +378,13 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
     setEditTargetResults([]);
     setEditShares(item.sharedWith);
     setNewChecklistTitle("");
-  }
+  }, []);
+  const openedWork = useRef<string | null>(null);
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("work");
+    const item = id && workItems.find(candidate => candidate.id === id);
+    if (item && openedWork.current !== id) { openedWork.current = id; openTaskEdit(item); }
+  }, [workItems, openTaskEdit]);
 
   function setOptimisticChecklist(checklist: PersonalWorkItem["checklist"]) {
     setEditingItem((current) => {

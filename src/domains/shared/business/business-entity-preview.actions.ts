@@ -10,7 +10,7 @@ import {
     getTaskItemActivityViewModels,
 } from "@/domains/task/server/activity";
 import { resolveWorkspaceCapabilities } from "@/domains/blueprint/shared/workspace-capabilities";
-import { getAuthUserId } from "@/domains/task/server/core/task.service";
+import { getAuthUserId } from "@/server/auth/auth-user-id";
 import type {
     BusinessEntityPreview,
     BusinessEntityType,
@@ -23,7 +23,9 @@ import { perfStep } from "@/lib/server-perf";
 import { resolveProductDisplayImage } from "@/domains/shared/media/server/display-image";
 import { ensureTechnicalIssuePaymentTx } from "@/domains/payment/server/service-issue-payment.service";
 import { getWatchDecisionSnapshot } from "@/domains/watch/server/decision";
-import { buildWatchPreviewImages } from "./watch-preview-images";
+import { buildWatchMediaReviewImages } from "./watch-preview-images";
+import { listWatchMediaPool } from "@/domains/media/application/media-command.service";
+import { nasBrowserThumbnailUrl } from "@/domains/media/server/nas-media-thumbnail.service";
 
 type ProductPreviewImageSource = {
     primaryImageUrl?: string | null;
@@ -95,6 +97,7 @@ async function loadPreviewActivity(input: {
             targetId: input.targetId,
             actionType: { not: TaskExecutionActionType.CANCELLED },
             taskItemId: { not: null },
+            taskItem: { personalOwnerUserId: null, task: { kind: { not: "PERSONAL" } } },
         },
         orderBy: { createdAt: "desc" },
         select: {
@@ -148,10 +151,18 @@ async function loadPreviewActivity(input: {
     };
 }
 
+export async function getBusinessEntityPreviewActivityAction(input: { type: BusinessEntityType; id: string }) {
+    const auth = await requirePermission(PERMISSIONS.TASK_VIEW);
+    if (!Object.hasOwn(PREVIEW_TASK_TARGET, input.type) || !input.id?.trim()) throw new Error("Ngữ cảnh xem nhanh không hợp lệ");
+    return loadPreviewActivity({ auth, type: input.type, targetId: input.id.trim(), activityMode: "DISCUSSION",
+        canRead: authHasPermission(auth, PERMISSIONS.ACTIVITY_READ), canEdit: authHasPermission(auth, PERMISSIONS.ACTIVITY_EDIT) });
+}
+
 export async function getBusinessEntityPreviewAction(input: {
     type: BusinessEntityType;
     id: string;
     activityMode?: "ALL" | "DISCUSSION";
+    deferActivity?: boolean;
 }): Promise<BusinessEntityPreview | null> {
     const auth = await requirePermission("TASK_VIEW");
     const canReadActivity = authHasPermission(auth, PERMISSIONS.ACTIVITY_READ);
@@ -189,8 +200,8 @@ export async function getBusinessEntityPreviewAction(input: {
         if (!row) return null;
 
         const product = row.product;
-        const [activity, watchDecision, galleryImages, galleryBindings] = await Promise.all([
-            loadPreviewActivity({
+        const [activity, watchDecision, galleryImages, pool] = await Promise.all([
+            input.deferActivity ? Promise.resolve(undefined) : loadPreviewActivity({
                 auth,
                 type: "WATCH",
                 targetId: row.id,
@@ -202,14 +213,15 @@ export async function getBusinessEntityPreviewAction(input: {
             prisma.productImage.findMany({
                 where: { productId: row.productId, role: { in: ["GALLERY", "COVER"] } },
                 orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-                select: { fileKey: true, role: true, alt: true },
+                select: { fileKey: true, role: true, alt: true, updatedAt: true },
             }),
-            prisma.mediaBinding.findMany({
-                where: { ownerType: "WATCH", ownerId: row.id, role: { in: ["GALLERY", "COVER"] }, lifecycle: { in: ["ATTACHED", "APPROVED", "PUBLISHED"] } },
-                orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-                select: { role: true, mediaObject: { select: { storageKey: true, availability: true, originalFileName: true } } },
-            }),
+            listWatchMediaPool({ productId: row.productId, watchId: row.id }),
         ]);
+        const photos = buildWatchMediaReviewImages({ cover: product?.storefrontImageKey, fallback: product?.primaryImageUrl, title: product?.title || "Watch", images: galleryImages, pool });
+        const versions = new Map([...galleryImages.map(image => [image.fileKey, image.updatedAt.toISOString()] as const), ...pool.map(image => [image.fileKey, image.version] as const)]);
+        const withThumbnail = (image: import("./business-entity.types").BusinessPreviewImage) => ({ ...image,
+            thumbnailUrl: !/^(https?:|\/)/.test(image.id) ? nasBrowserThumbnailUrl({ key: image.id, version: versions.get(image.id) }) : image.url,
+        });
 
         return {
             type: "WATCH",
@@ -218,8 +230,13 @@ export async function getBusinessEntityPreviewAction(input: {
             subtitle: product?.sku ? `SKU: ${product.sku}` : compactId(row.id),
             status: row.saleStage,
             imageUrl: imageUrlFromProduct(product),
-            images: buildWatchPreviewImages({ cover: product?.storefrontImageKey, fallback: product?.primaryImageUrl, title: product?.title || "Watch", images: galleryImages, bindings: galleryBindings }),
+            images: photos.selected.map(withThumbnail),
+            mediaReview: { pool: photos.pool.map(withThumbnail), selected: photos.selected.map(withThumbnail), unselectedCount: photos.unselectedCount,
+                selectionHref: `/admin/watches/${row.productId}/edit?mode=media&focus=gallery&entryPoint=WATCH_QUICK_REVIEW`,
+                canSelect: authHasPermission(auth, PERMISSIONS.PRODUCT_UPDATE), canSchedule: authHasPermission(auth, PERMISSIONS.PRODUCT_VIEW),
+            },
             activity,
+            activityDeferred: Boolean(input.deferActivity && canReadActivity),
             watchDecision: watchDecision ?? undefined,
             href: `/admin/watches/${product?.id}/edit`, facts: [
                 { label: "Brand", value: product?.brand?.name || "-" },

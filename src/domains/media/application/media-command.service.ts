@@ -199,11 +199,12 @@ export async function attachIngestedWatchMedia(
   return results;
 }
 
-export async function listSelectedWatchMedia(input: {
+export async function listWatchMediaPool(input: {
   productId: string;
   role?: MediaRole;
+  watchId?: string;
 }) {
-  const watch = await prisma.watch.findUnique({
+  const watch = input.watchId ? { id: input.watchId } : await prisma.watch.findUnique({
     where: { productId: input.productId },
     select: { id: true },
   });
@@ -215,6 +216,9 @@ export async function listSelectedWatchMedia(input: {
             select: {
               storageKey: true,
               originalFileName: true,
+              availability: true,
+              etag: true,
+              updatedAt: true,
             },
           },
         },
@@ -230,7 +234,7 @@ export async function listSelectedWatchMedia(input: {
         key: { startsWith: `products/edit/chosen/watch/${input.productId}/pool/` },
       },
       orderBy: [{ sortOrder: "asc" }, { updatedAt: "asc" }],
-      select: { key: true, fileName: true, sortOrder: true },
+      select: { key: true, fileName: true, sortOrder: true, updatedAt: true },
     });
     return legacyPool.map((asset) => ({
       key: asset.key,
@@ -238,6 +242,9 @@ export async function listSelectedWatchMedia(input: {
       url: `/api/media/sign?key=${encodeURIComponent(asset.key)}`,
       name: asset.fileName || fileName(asset.key),
       sortOrder: asset.sortOrder,
+      lifecycle: "SELECTED" as const,
+      availability: "UNVERIFIED" as const,
+      version: asset.updatedAt.toISOString(),
     }));
   }
   return bindings.map((binding) => ({
@@ -248,5 +255,13 @@ export async function listSelectedWatchMedia(input: {
       binding.mediaObject.originalFileName ??
       fileName(binding.mediaObject.storageKey),
     sortOrder: binding.sortOrder,
+    lifecycle: binding.lifecycle,
+    availability: binding.mediaObject.availability,
+    version: binding.mediaObject.etag || binding.mediaObject.updatedAt.toISOString(),
   }));
+}
+
+// Compatibility name: SELECTED bindings are pool membership, not final gallery selection.
+export async function listSelectedWatchMedia(input: { productId: string; role?: MediaRole }) {
+  return (await listWatchMediaPool(input)).filter(image => !["MISSING", "QUARANTINED", "DELETED"].includes(image.availability));
 }

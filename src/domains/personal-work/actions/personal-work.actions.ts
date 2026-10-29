@@ -25,6 +25,8 @@ import {
 } from "../server/google-calendar.service";
 import type { PersonalWorkDomain, PersonalWorkTarget, PersonalWorkTargetType } from "../shared/personal-work.types";
 import { savePersonalCategory, deletePersonalCategory } from "../server/personal-work-categories.service";
+import { listPersonalPhotoshootPlans, schedulePersonalWatchPhotoshoot } from "../server/personal-photoshoot.service";
+import type { PersonalPhotoshootInput } from "../shared/personal-photoshoot";
 
 export async function savePersonalWorkCategoryAction(input: {key?:string;label:string;color:string}) {
   await savePersonalCategory(input, await auth());
@@ -186,4 +188,16 @@ export async function updateGoogleCalendarEventAction(input: import("../shared/g
   const userId = getAuthUserId(await auth());
   if (!userId) throw new Error("Không xác định được người dùng");
   return updatePersonalGoogleCalendarEvent(userId, input);
+}
+
+export async function listPersonalPhotoshootPlansAction(date: string) {
+  return listPersonalPhotoshootPlans(date, await auth());
+}
+
+export async function schedulePersonalWatchPhotoshootAction(input: PersonalPhotoshootInput) {
+  const user = await auth();
+  await requirePermission(PERMISSIONS.PRODUCT_VIEW);
+  const result = await schedulePersonalWatchPhotoshoot(input, user);
+  refresh();
+  return result;
 }

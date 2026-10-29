@@ -38,6 +38,7 @@ export const PERSONAL_WORK_TYPES = {
     { key: "ADMIN", label: "Việc hành chính" },
   ],
   MEDIA: [
+    { key: "PHOTOGRAPHY", label: "Chụp ảnh" },
     { key: "IMAGE_PROCESSING", label: "Xử lý ảnh" },
     { key: "CONTENT_REVIEW", label: "Kiểm tra nội dung" },
     { key: "MEDIA_POST", label: "Tạo Media Post" },

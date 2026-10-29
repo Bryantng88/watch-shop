@@ -34,17 +34,20 @@ import type { TaskItemActivityViewModel } from "@/domains/task/server/activity";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 import { WatchServiceIntakeModal } from "@/domains/service/ui/quick-service";
 import { WatchPreviewGallery } from "./WatchPreviewGallery";
+import { WatchMediaReview } from "./WatchMediaReview";
 
-async function loadBusinessEntityPreview(type: BusinessEntityType, id: string) {
+async function loadBusinessEntityPreview(type: BusinessEntityType, id: string, signal: AbortSignal, activityOnly = false) {
     const query = new URLSearchParams({ type, id, activityMode: "DISCUSSION" });
+    if (type === "WATCH") query.set(activityOnly ? "activityOnly" : "deferActivity", "1");
     const response = await fetch(`/api/admin/business-entity-preview?${query.toString()}`, {
         method: "GET",
         headers: { Accept: "application/json" },
         cache: "no-store",
+        signal,
     });
     const result = await response.json().catch(() => null);
     if (!response.ok) throw new Error(result?.error || "Không thể tải xem nhanh.");
-    return (result?.preview ?? null) as BusinessEntityPreview | null;
+    return (activityOnly ? { activity: result?.activity } : result?.preview ?? null) as BusinessEntityPreview | null;
 }
 
 function money(value?: number | null) {
@@ -967,7 +970,9 @@ export function BusinessEntityPreviewModal({
                               ) : null}
                             </section>
 
-                            {preview.type === "WATCH" && preview.images && <WatchPreviewGallery key={`${preview.id}:${preview.images.map(image => image.id).join("|")}`} images={preview.images} title={preview.title} />}
+                            {preview.type === "WATCH" && (preview.mediaReview ? <WatchMediaReview key={preview.id} watchId={preview.id} title={preview.title} media={preview.mediaReview} onSelect={onClose} /> : preview.images && <WatchPreviewGallery images={preview.images} title={preview.title} />)}
+                            {preview.activityLoading && <Loader2 aria-label="Đang tải trao đổi" className="h-4 w-4 animate-spin text-slate-400" />}
+                            {preview.activityError && <p role="alert" className="text-xs text-rose-600">{preview.activityError}</p>}
                             <WatchDecisionPanel preview={preview} reviewContext={reviewContext} onDecisionChanged={() => onActivityChanged?.()} />
                             <TechnicalIssueEditPanel preview={preview} />
                             <DoneTechnicalIssueCostPanel preview={preview} onSaved={() => onActivityChanged?.()} />
@@ -1160,67 +1165,36 @@ export function useBusinessEntityPreview() {
     const [loading, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
     const requestVersionRef = useRef(0);
+    const controller = useRef<AbortController | null>(null);
+    useEffect(() => () => { requestVersionRef.current++; controller.current?.abort(); }, []);
 
-    function openPreview(seed: BusinessEntityPreview) {
-        const requestVersion = requestVersionRef.current + 1;
-        requestVersionRef.current = requestVersion;
-        setOpen(true);
-        setPreview(seed);
+    function load(seed: BusinessEntityPreview) {
+        const version = ++requestVersionRef.current;
+        controller.current?.abort();
+        const abort = new AbortController();
+        controller.current = abort;
         setError(null);
-
         startTransition(async () => {
             try {
-                const live = await loadBusinessEntityPreview(seed.type, seed.id);
-                if (requestVersion !== requestVersionRef.current) return;
-
-                if (live) {
-                    const mergedActions = [...(seed.actions ?? []), ...(live.actions ?? [])]
-                        .filter((action, index, all) => all.findIndex((candidate) => candidate.href === action.href && candidate.command === action.command && candidate.label === action.label) === index);
-                    setPreview({
-                        ...live,
-                        href: live.href ?? seed.href,
-                        sections: live.sections?.length ? live.sections : seed.sections,
-                        actions: mergedActions,
+                const live = await loadBusinessEntityPreview(seed.type, seed.id, abort.signal);
+                if (version !== requestVersionRef.current || !live) return;
+                const actions = [...(seed.actions ?? []), ...(live.actions ?? [])]
+                    .filter((action, index, all) => all.findIndex(candidate => candidate.href === action.href && candidate.command === action.command && candidate.label === action.label) === index);
+                setPreview({ ...live, href: live.href ?? seed.href, sections: live.sections?.length ? live.sections : seed.sections, actions, activityLoading: Boolean(live.activityDeferred) });
+                // Discussion is independent: do not hold the metadata transition open.
+                if (live.activityDeferred) void loadBusinessEntityPreview(seed.type, seed.id, abort.signal, true)
+                    .then(result => {
+                        if (version === requestVersionRef.current) setPreview(current => current && ({ ...current, activity: result?.activity, activityLoading: false, activityError: null }));
+                    }).catch(failure => {
+                        if (version === requestVersionRef.current) setPreview(current => current && ({ ...current, activityLoading: false, activityError: failure instanceof Error ? failure.message : "Không thể tải trao đổi" }));
                     });
-                }
-            } catch (err: unknown) {
-                if (requestVersion !== requestVersionRef.current) return;
-                setError(err instanceof Error ? err.message : "Không thể tải preview.");
+            } catch (failure) {
+                if (version === requestVersionRef.current) setError(failure instanceof Error ? failure.message : "Không thể tải xem nhanh");
             }
         });
     }
-
-    function closePreview() {
-        requestVersionRef.current += 1;
-        setOpen(false);
-        setError(null);
-    }
-
-    function refreshPreview() {
-        if (!preview) return;
-        const current = preview;
-        const requestVersion = requestVersionRef.current + 1;
-        requestVersionRef.current = requestVersion;
-
-        startTransition(async () => {
-            try {
-                const live = await loadBusinessEntityPreview(current.type, current.id);
-                if (requestVersion !== requestVersionRef.current) return;
-                if (live) setPreview(live);
-            } catch (err: unknown) {
-                if (requestVersion !== requestVersionRef.current) return;
-                setError(err instanceof Error ? err.message : "Không thể tải lại preview.");
-            }
-        });
-    }
-
-    return {
-        open,
-        preview,
-        loading,
-        error,
-        openPreview,
-        refreshPreview,
-        closePreview,
-    };
+    function openPreview(seed: BusinessEntityPreview) { setOpen(true); setPreview(seed); load(seed); }
+    function closePreview() { requestVersionRef.current++; controller.current?.abort(); setOpen(false); setError(null); }
+    function refreshPreview() { if (preview) load(preview); }
+    return { open, preview, loading, error, openPreview, refreshPreview, closePreview };
 }

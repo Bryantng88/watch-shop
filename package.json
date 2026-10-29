@@ -65,6 +65,7 @@
     "personal-work:smoke-categories": "tsx scripts/smoke-personal-work-categories.ts",
     "personal-work:smoke-calendar": "tsx scripts/smoke-personal-calendar.ts",
     "personal-work:smoke-standalone": "tsx scripts/smoke-personal-work-standalone.ts",
+    "personal-work:smoke-photoshoot": "tsx scripts/smoke-personal-photoshoot.ts",
     "personal-work:smoke-schedule": "tsx scripts/smoke-personal-work-schedule.ts",
     "check:personal-work-boundary": "node scripts/check-personal-work-boundary.mjs",
     "local:seed-watch-ai-media": "tsx scripts/seed-local-watch-ai-media.ts",

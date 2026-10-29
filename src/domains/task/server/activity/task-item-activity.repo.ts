@@ -151,6 +151,7 @@ type BusinessTargetActivityQuery = {
 
 function businessTargetActivityWhere(input: BusinessTargetActivityQuery) {
   return {
+    taskItem: { personalOwnerUserId: null, task: { kind: { not: "PERSONAL" } } },
     AND: [
       { metadataJson: { path: ["targetType"], equals: input.targetType } },
       { metadataJson: { path: ["targetId"], equals: input.targetId } },
