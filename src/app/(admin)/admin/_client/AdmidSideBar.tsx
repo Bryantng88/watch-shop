@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from "react";
-import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
 import {
     LayoutDashboard,
     Package,
@@ -24,8 +23,6 @@ import {
 
 import ActiveLink from "./AdminActiveLink";
 import { PERMISSIONS } from "@/constants/permissions";
-import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
-import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 
 type Props = {
     user: {
@@ -173,11 +170,6 @@ const NAV: NavEntry[] = [
     },
 ];
 
-function isCurrentRoute(pathname: string, item: NavItem) {
-    if (item.exact) return pathname === item.href;
-    return pathname === item.href || pathname.startsWith(`${item.href}/`);
-}
-
 function canAccess(user: Props["user"], item: NavItem) {
     // ADMIN is a system-level bypass. Navigation must not disappear during a
     // permission-catalog migration just because the persisted role still has
@@ -225,23 +217,12 @@ export default function AdminSidebar({
     variant = "desktop",
 }: Props) {
     const isMobile = variant === "mobile";
-    const pathname = usePathname();
-    const progress = useAppProgress();
-    const notify = useNotify();
     const [open, setOpen] = useState(false);
     const [desktopExpanded, setDesktopExpanded] = useState(false);
     const [loggingOut, setLoggingOut] = useState(false);
     const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
         () => new Set(),
     );
-    const hideTimerRef = useRef<number | null>(null);
-
-    useEffect(() => {
-        return () => {
-            if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
-        };
-    }, []);
-
     useEffect(() => {
         if (isMobile) return;
         setDesktopExpanded(window.localStorage.getItem(DESKTOP_SIDEBAR_STORAGE_KEY) === "true");
@@ -260,40 +241,6 @@ export default function AdminSidebar({
             return next;
         });
     }, []);
-
-    const handleMenuSwitch = useCallback(
-        (item: NavItem, event: React.MouseEvent) => {
-            if (
-                event.metaKey ||
-                event.ctrlKey ||
-                event.shiftKey ||
-                event.altKey ||
-                event.defaultPrevented ||
-                isCurrentRoute(pathname, item)
-            ) {
-                return;
-            }
-
-            if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
-
-            progress.show({
-                title: "Đang chuyển menu",
-                message: `Đang mở ${item.label}.`,
-            });
-
-            notify.info({
-                title: "Đang chuyển menu",
-                message: item.label,
-            });
-
-            if (isMobile) setOpen(false);
-
-            hideTimerRef.current = window.setTimeout(() => {
-                progress.hide();
-            }, 1200);
-        },
-        [isMobile, notify, pathname, progress],
-    );
 
     const handleLogout = useCallback(async () => {
         if (loggingOut) return;
@@ -317,10 +264,11 @@ export default function AdminSidebar({
             <div
                 key={item.href}
                 className="group relative"
-                onClick={(event) => handleMenuSwitch(item, event)}
             >
                 <ActiveLink
                     href={item.href}
+                    label={item.label}
+                    onNavigate={() => { if (isMobile) setOpen(false); }}
                     exact={item.exact}
                     expanded={!isMobile && desktopExpanded}
                 >

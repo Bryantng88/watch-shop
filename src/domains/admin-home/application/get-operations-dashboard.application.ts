@@ -1,5 +1,9 @@
 import { prisma } from "@/server/db/client";
-import { queryOrderListProjection } from "@/domains/projection/server/order-list.projection";
+import { queryOrderListProjection, queryOrderStageStatistics } from "@/domains/projection/server/order-list.projection";
+import { queryProjectionStageStatistics, queryOpenOperationStageStatistics, queryStageThroughput } from "@/domains/projection/server/operation-stage-statistics.query";
+import { MEDIA_OPERATION_BOARD_PROJECTION_KEY, MEDIA_OPERATION_BOARD_PROJECTION_VERSION } from "@/domains/projection/server/media-operation-board.projection";
+import { TECHNICAL_ISSUE_BOARD_PROJECTION_KEY, TECHNICAL_ISSUE_BOARD_PROJECTION_VERSION } from "@/domains/projection/server/technical-issue-board.projection";
+import { stageMetrics } from "./stage-insights";
 import {
   queryMediaOperationBoardInsightCounts,
   queryMediaOperationBoardProjection,
@@ -40,7 +44,7 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
   const now = new Date();
   const today = bangkokDayBounds(now);
   const trendStart = new Date(today.start.getTime() - 6 * 86_400_000);
-  const [orders, purchaseRequestCounts, purchaseRequests, overdueRequestCount, unassignedRequestCount, media, mediaInsights, technical, technicalInsights, paymentCounts, completedOrders, personalItems] = await Promise.all([
+  const [orders, purchaseRequestCounts, purchaseRequests, overdueRequestCount, unassignedRequestCount, media, mediaInsights, technical, technicalInsights, paymentCounts, completedOrders, personalItems, orderStats, mediaStats, technicalStats, openStats, throughput] = await Promise.all([
     queryOrderListProjection(prisma, { view: "all", subFilter: "", paymentType: "", sort: "updatedDesc", page: 1, pageSize: 1 }),
     prisma.purchaseRequest.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.purchaseRequest.findMany({
@@ -72,6 +76,11 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
       },
       select: { dueAt: true },
     }) : Promise.resolve([]),
+    queryOrderStageStatistics(prisma, now),
+    queryProjectionStageStatistics(prisma, MEDIA_OPERATION_BOARD_PROJECTION_KEY, MEDIA_OPERATION_BOARD_PROJECTION_VERSION, now),
+    queryProjectionStageStatistics(prisma, TECHNICAL_ISSUE_BOARD_PROJECTION_KEY, TECHNICAL_ISSUE_BOARD_PROJECTION_VERSION, now),
+    queryOpenOperationStageStatistics(prisma, { now, todayStart: today.start, todayEnd: today.end, userId: input.userId ?? null }),
+    queryStageThroughput(prisma, now),
   ]);
 
   const overdueRequests = purchaseRequests.filter((request) => request.followUpAt && request.followUpAt < now);
@@ -225,5 +234,23 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
     };
   });
   const visibleAttention = attention.slice(0, 6);
+  const statistics = [
+    ...orderStats.map(row => ({ ...row, queueKey: "orders" })),
+    ...mediaStats.map(row => ({ ...row, queueKey: "media" })),
+    ...technicalStats.map(row => ({ ...row, queueKey: "technical" })),
+    ...openStats,
+  ];
+  for (const queue of queues) {
+    for (const stage of queue.stages) {
+      stage.metrics = stageMetrics(
+        statistics.find(row => row.queueKey === queue.key && row.stageKey === stage.key),
+        throughput.find(row => row.queueKey === queue.key && row.stageKey === stage.key) ??
+          (["media", "purchase-requests"].includes(queue.key) ? {
+            queueKey: queue.key, stageKey: stage.key, completedCount: BigInt(0),
+            averageHandlingHours: null, cohortCount: BigInt(0), cohortCompletedCount: BigInt(0),
+          } : undefined),
+      );
+    }
+  }
   return { generatedAt: now.toISOString(), totalActive, completionTrend, attention: visibleAttention, priorityAction: visibleAttention[0] ?? null, queues };
 }

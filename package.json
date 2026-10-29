@@ -62,6 +62,8 @@
     "storefront:seed-acceptance": "tsx scripts/seed-storefront-acceptance.ts",
     "storefront:import-staging-subset": "tsx scripts/import-staging-storefront-subset.ts",
     "local:seed-admin": "tsx scripts/seed-local-admin.ts",
+    "personal-work:smoke-categories": "tsx scripts/smoke-personal-work-categories.ts",
+    "personal-work:smoke-calendar": "tsx scripts/smoke-personal-calendar.ts",
     "local:seed-watch-ai-media": "tsx scripts/seed-local-watch-ai-media.ts",
     "local:seed-operations-dashboard": "tsx scripts/seed-local-operations-dashboard.ts",
     "local:seed-personal-work": "tsx scripts/seed-local-personal-work.ts",

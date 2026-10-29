@@ -1,0 +1,1 @@
+ALTER TABLE "TaskItem" ADD COLUMN "scheduledEndAt" TIMESTAMP(3);

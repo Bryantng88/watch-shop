@@ -7,7 +7,9 @@ import type { OperationsDashboardData, OperationsDashboardQueue } from "../share
 import { AdminPageCanvas, AdminPageHeader } from "@/domains/shared/ui/admin-design-contract";
 import { operationalDomainPresentation, operationalStagePresentation } from "@/domains/shared/ui/signals";
 import { cn } from "@/lib/utils";
-import { QueueStageNavigator } from "./QueueStageNavigator";
+import { QueueStageSummary } from "./QueueStageSummary";
+import { StageConcentrationInsights } from "./StageConcentrationInsights";
+import styles from "./OperationsDashboard.module.css";
 
 const chartColors: Record<OperationsDashboardQueue["key"], string> = {
   orders: "#64748b", "purchase-requests": "#f59e0b", media: "#8b5cf6",
@@ -58,9 +60,14 @@ function QueueRow({ queue }: { queue: OperationsDashboardQueue }) {
     return rank[a.severity] - rank[b.severity];
   });
   const primaryInsight = insights[0];
+  const dominantStage = [...queue.stages].sort((a, b) => b.count - a.count)[0];
+  const share = dominantStage?.count > 0 && queue.activeCount > 0
+    ? Math.round(dominantStage.count / queue.activeCount * 100)
+    : null;
+  const insightText = primaryInsight ? `${primaryInsight.count} ${primaryInsight.label.toLocaleLowerCase("vi-VN")}` : null;
 
   return (
-    <div className="group grid gap-3 px-4 py-4 transition-colors hover:bg-slate-50/80 sm:px-5 lg:grid-cols-[minmax(190px,1.05fr)_100px_minmax(260px,1.35fr)_minmax(220px,1fr)_150px] lg:items-center lg:gap-5">
+    <div className={cn(styles.queueRow, "group grid px-4 py-4 transition-colors hover:bg-slate-50/80 sm:px-5")}>
       <div className="flex min-w-0 items-center gap-3">
         <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", visual.softClassName)}>
           <Icon className="h-[18px] w-[18px]" />
@@ -77,16 +84,18 @@ function QueueRow({ queue }: { queue: OperationsDashboardQueue }) {
       </div>
 
       <div className="min-w-0">
-        <QueueStageNavigator stages={queue.stages} />
-      </div>
-
-      <div className="min-w-0">
-        {primaryInsight ? (
-          <Link href={primaryInsight.href} className={cn("inline-flex max-w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500", primaryInsight.severity === "risk" ? "bg-rose-50 text-rose-700" : primaryInsight.severity === "attention" ? "bg-amber-50 text-amber-800" : "bg-slate-100 text-slate-700")}>
-            <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", primaryInsight.severity === "risk" ? "bg-rose-500" : primaryInsight.severity === "attention" ? "bg-amber-500" : "bg-slate-400")} />
-            <span className="truncate"><strong className="tabular-nums">{primaryInsight.count}</strong> {primaryInsight.label.toLocaleLowerCase("vi-VN")}</span>
-          </Link>
-        ) : <span className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-700"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />Ổn định</span>}
+        <QueueStageSummary stages={queue.stages} activeCount={queue.activeCount} />
+        <div className={styles.queueInsight}>
+          {share !== null && <Link href={dominantStage.href} title={`${dominantStage.count}/${queue.activeCount} việc mở ở ${dominantStage.label}`} className="shrink-0 text-slate-500 hover:underline">
+            <span className="tabular-nums">{share}%</span> ở {dominantStage.label}
+          </Link>}
+          {share !== null && primaryInsight && <span aria-hidden="true" className="text-slate-300">·</span>}
+          {primaryInsight ? (
+            <Link href={primaryInsight.href} title={insightText ?? undefined} className={cn("min-w-0 truncate hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500", primaryInsight.severity === "risk" ? "text-rose-600" : primaryInsight.severity === "attention" ? "text-amber-700" : "text-slate-500")}>
+              {insightText}
+            </Link>
+          ) : share === null ? <span className="text-slate-500">Chưa có cảnh báo</span> : null}
+        </div>
       </div>
 
       <Link href={queue.href} className="inline-flex min-h-9 w-fit items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 lg:ml-auto">
@@ -99,7 +108,7 @@ function QueueRow({ queue }: { queue: OperationsDashboardQueue }) {
 export default function OperationsDashboard({ data }: { data: OperationsDashboardData }) {
   return (
     <AdminPageCanvas className="mx-auto w-full max-w-none min-w-0 pb-8 sm:px-4 lg:px-5 xl:px-6 2xl:px-8">
-      <AdminPageHeader title="Trung tâm điều hành" description="Theo dõi công việc đang mở, ngoại lệ và tiến độ các khu vực nghiệp vụ." meta={
+      <AdminPageHeader title="Trung tâm điều hành" description="Theo dõi khối lượng việc đang mở, điểm tập trung và ngoại lệ cần xử lý." meta={
         <div className="flex flex-wrap items-center justify-end gap-3">
           <div className="mr-1 flex items-baseline gap-1.5 text-slate-600"><span className="text-lg font-bold tabular-nums text-slate-950">{data.totalActive}</span><span className="text-xs font-semibold">việc đang mở</span></div>
           <span className="text-xs font-semibold text-slate-500">Phạm vi dashboard</span>
@@ -112,11 +121,10 @@ export default function OperationsDashboard({ data }: { data: OperationsDashboar
 
       <section className="!mt-6" aria-label="Khu vực xử lý">
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035),0_10px_30px_rgba(15,23,42,0.04)]">
-          <div className="hidden border-b border-slate-200 bg-slate-100/80 px-5 py-3 text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-500 lg:grid lg:grid-cols-[minmax(190px,1.05fr)_100px_minmax(260px,1.35fr)_minmax(220px,1fr)_150px] lg:gap-5">
+          <div className={cn(styles.queueHeader, "border-b border-slate-200 bg-slate-100/80 px-5 py-3 text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-500")}>
             <span>Khu vực nghiệp vụ</span>
             <span>Khối lượng</span>
-            <span className="text-center">Stage tập trung</span>
-            <span>Cần chú ý nhất</span>
+            <span>Việc chờ theo giai đoạn</span>
             <span className="text-right">Thao tác</span>
           </div>
           <div className="divide-y divide-slate-100">
@@ -125,6 +133,7 @@ export default function OperationsDashboard({ data }: { data: OperationsDashboar
         </div>
       </section>
 
+      <StageConcentrationInsights queues={data.queues} />
       <div className="mt-8"><DashboardCharts data={data} /></div>
       <div className="mt-5 text-right text-xs text-slate-400">Cập nhật lúc {new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(data.generatedAt))}</div>
     </AdminPageCanvas>

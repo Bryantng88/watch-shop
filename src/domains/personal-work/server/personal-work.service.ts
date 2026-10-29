@@ -13,8 +13,10 @@ import { createTask, getAuthUserId } from "@/domains/task/server/core/task.servi
 import { createTaskItemRepo, setTargetTagsRepo } from "@/domains/task/server/core/task.repo";
 import { hydrateTaskItemsWithTagsRepo } from "@/domains/task/server/tag/task-tag.repo";
 import { createBusinessBinding } from "@/domains/task/server/business-binding.repo";
-import { isGoogleCalendarConfigured, listPersonalGoogleCalendarEvents } from "./google-calendar.service";
+import { isGoogleCalendarConfigured } from "./google-calendar.service";
 import { reconcilePersonalWorkBindings } from "./personal-work-bindings";
+import { validatePersonalSchedule } from "../shared/personal-work-schedule";
+import { categoryFromRow, listPersonalCategories, resolvePersonalCategory, defaultPersonalCategories, mergePersonalCategories, canManageDefaultCategories } from "./personal-work-categories.service";
 import {
   PERSONAL_WORK_DOMAINS,
   PERSONAL_WORK_TYPES,
@@ -35,9 +37,11 @@ type PersonalWorkInput = {
   title: string;
   note?: string | null;
   dueAt?: string | null;
+  scheduledEndAt?: string | null;
   estimatedDays?: number;
   priority?: TaskPriority;
   domain?: PersonalWorkDomain;
+  categoryKey?: string;
   workType?: string | null;
   targets?: PersonalWorkTarget[];
   tags?: string[];
@@ -69,6 +73,9 @@ export async function assertPersonalWorkAccess(
       status: true,
       progressMode: true,
       checklistLockedAt: true,
+      workTypeId: true,
+      dueAt: true,
+      scheduledEndAt: true,
       task: { select: { createdByUserId: true, assignedToUserId: true } },
       personalShares: { where: { userId }, select: { accessLevel: true }, take: 1 },
     },
@@ -226,13 +233,14 @@ export function normalizePersonalDomain(value: unknown): PersonalWorkDomain {
 export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWorkPageData> {
   const userId = getAuthUserId(auth);
   if (!userId) throw new Error("Không xác định được người dùng");
-  const [items, connection, availableUsers] = await Promise.all([
+  const [items, connection, availableUsers, categories, canManageDefaults] = await Promise.all([
     prisma.taskItem.findMany({
       where: {
         ...personalTaskAccessWhere(userId),
         status: { not: TaskStatus.CANCELLED },
       },
       include: {
+        personalCategory: true,
         task: {
           select: {
             createdByUserId: true,
@@ -266,21 +274,19 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
       select: { id: true, name: true, email: true, avatarUrl: true },
       orderBy: [{ name: "asc" }, { email: "asc" }],
     }),
+    listPersonalCategories(userId),
+    canManageDefaultCategories(userId),
   ]);
   const tagged = await hydrateTaskItemsWithTagsRepo(prisma, items);
-  let calendarEvents: Awaited<ReturnType<typeof listPersonalGoogleCalendarEvents>> = [];
-  let calendarLoadError: string | null = null;
-  if (connection) {
-    try {
-      calendarEvents = await listPersonalGoogleCalendarEvents(userId);
-    } catch (error) {
-      calendarLoadError = error instanceof Error ? error.message : "Không thể tải Google Calendar";
-    }
-  }
+  const ownerIds = [...new Set(items.map(item => item.task.createdByUserId || item.task.assignedToUserId).filter((id): id is string => Boolean(id)))];
+  const ownerCategoryRows = await prisma.personalWorkCategory.findMany({ where: { userId: { in: ownerIds } } });
+  const ownerCategories = new Map(ownerIds.map(id => [id, mergePersonalCategories(ownerCategoryRows.filter(row => row.userId === id), categories.filter(c => c.isDefault))]));
   return {
+    canManageDefaultCategories: canManageDefaults,
+    categories,
     items: tagged.map((item) => {
       const names = item.tags.map((tag) => tag.name);
-      const domain = normalizePersonalDomain(names.find((name) => domainKeys.has(name.toUpperCase())));
+      const domain = item.personalCategory ? categoryFromRow(item.personalCategory).domain : normalizePersonalDomain(names.find((name) => domainKeys.has(name.toUpperCase())));
       const calendar = item.calendarLinks[0];
       const owned = item.task.createdByUserId === userId || item.task.assignedToUserId === userId;
       const share = item.personalShares.find((entry) => entry.userId === userId);
@@ -293,9 +299,11 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
         status: item.status,
         priority: item.priority,
         dueAt: item.dueAt?.toISOString() ?? null,
+        scheduledEndAt: item.scheduledEndAt?.toISOString() ?? null,
         estimatedDays: item.estimatedDays,
         completedAt: item.completedAt?.toISOString() ?? null,
         domain,
+        category: item.personalCategory ? categoryFromRow(item.personalCategory) : (ownerCategories.get(owner.id)?.find(c => c.key === domain) ?? defaultPersonalCategories().find(c => c.key === domain)!),
         workType: item.workTypeId,
         targets: item.executions
           .map(targetFromExecution)
@@ -311,7 +319,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
           actor: activity.actorUser,
         })),
         checklist: item.checklists.map((entry) => ({ id: entry.id, title: entry.title, isDone: entry.isDone })),
-        tags: names.filter((name) => name.toUpperCase() !== domain),
+        tags: names.filter((name) => !domainKeys.has(name.toUpperCase())),
         calendar: {
           synced: Boolean(calendar),
           htmlLink: calendar?.eventHtmlLink ?? null,
@@ -333,8 +341,8 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
       connected: Boolean(connection),
       accountEmail: connection?.googleAccountEmail ?? null,
       lastSyncedAt: connection?.lastSyncedAt?.toISOString() ?? null,
-      events: calendarEvents,
-      loadError: calendarLoadError,
+      events: [],
+      loadError: null,
     },
   };
 }
@@ -344,8 +352,10 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
   if (!userId) throw new Error("Không xác định được người dùng");
   const title = input.title.trim();
   if (!title) throw new Error("Vui lòng nhập nội dung công việc");
-  const domain = normalizePersonalDomain(input.domain);
-  const workType = normalizeWorkType(input.workType, domain);
+  const schedule = validatePersonalSchedule(input.dueAt, input.scheduledEndAt);
+  const category = await resolvePersonalCategory(userId, input.categoryKey || normalizePersonalDomain(input.domain));
+  const domain = category.domain;
+  const workType = category.id ? null : normalizeWorkType(input.workType, domain);
   const resolvedTargets = await Promise.all(
     (input.targets || []).map((target) => resolvePersonalWorkTarget(domain, target)),
   );
@@ -369,6 +379,11 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
       dueAt: input.dueAt || null,
       estimatedDays: Math.max(1, Math.min(365, Math.round(input.estimatedDays ?? 1))),
     });
+    if (category.id || schedule.scheduledEndAt) await tx.taskItem.update({ where: { id: item.id }, data: {
+      personalCategoryId: category.id,
+      scheduledEndAt: schedule.scheduledEndAt,
+      ...(schedule.estimatedDays !== undefined ? { estimatedDays: schedule.estimatedDays } : {}),
+    } });
     await setTargetTagsRepo(tx, {
       ownerType: AppTagOwnerType.TASK,
       ownerId: taskResult.task.id,
@@ -386,7 +401,7 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
         createdByUserId: userId,
       });
     }
-    return item;
+    return { ...item, scheduledEndAt: schedule.scheduledEndAt, ...(schedule.estimatedDays !== undefined ? { estimatedDays: schedule.estimatedDays } : {}) };
   });
 }
 
@@ -478,10 +493,13 @@ export async function updatePersonalWorkItem(
     title?: string;
     note?: string | null;
     dueAt?: string | null;
+    scheduledEndAt?: string | null;
+    workType?: string | null;
     estimatedDays?: number;
     priority?: TaskPriority;
     status?: TaskStatus;
     domain?: PersonalWorkDomain;
+    categoryKey?: string;
     tags?: string[];
     targets?: PersonalWorkTarget[];
     progressPercent?: number;
@@ -491,11 +509,22 @@ export async function updatePersonalWorkItem(
   auth: unknown,
 ) {
   const current = await assertPersonalWorkAccess(input.id, auth, "EDIT");
+  const scheduleChanged = input.dueAt !== undefined || input.scheduledEndAt !== undefined;
+  const nextStart = input.dueAt === undefined ? current.dueAt : input.dueAt;
+  const nextEnd = input.scheduledEndAt !== undefined ? input.scheduledEndAt :
+    input.dueAt !== undefined && current.scheduledEndAt && current.dueAt && nextStart
+      ? new Date(new Date(nextStart).getTime() + current.scheduledEndAt.getTime() - current.dueAt.getTime())
+      : nextStart ? current.scheduledEndAt : null;
+  const schedule = validatePersonalSchedule(nextStart, nextEnd);
+  const ownerId = current.task.createdByUserId || current.task.assignedToUserId;
+  const category = input.categoryKey !== undefined
+    ? await resolvePersonalCategory(ownerId || current.userId, input.categoryKey)
+    : input.domain !== undefined ? await resolvePersonalCategory(ownerId || current.userId, normalizePersonalDomain(input.domain)) : undefined;
   const status = input.status;
   if (status === TaskStatus.DONE && current.progressMode === TaskProgressMode.CHECKLIST && !current.checklistLockedAt) {
     throw new Error("Hãy hoàn thành toàn bộ đầu việc và xác nhận hoàn thành");
   }
-  const estimatedDays = input.estimatedDays === undefined
+  const estimatedDays = schedule.estimatedDays !== undefined ? schedule.estimatedDays : input.estimatedDays === undefined
     ? undefined
     : Math.max(1, Math.min(365, Math.round(input.estimatedDays)));
   const progressPercent = input.progressPercent === undefined
@@ -505,7 +534,7 @@ export async function updatePersonalWorkItem(
     ? [
         ...new Map(
           (await Promise.all(
-            input.targets.map((target) => resolvePersonalWorkTarget(normalizePersonalDomain(input.domain), target)),
+            input.targets.map((target) => resolvePersonalWorkTarget(category?.domain ?? normalizePersonalDomain(input.domain), target)),
           ))
             .filter((target): target is PersonalWorkTarget => Boolean(target))
             .map((target) => [`${target.type}:${target.id}`, target]),
@@ -516,9 +545,10 @@ export async function updatePersonalWorkItem(
     await tx.taskItem.update({
       where: { id: input.id },
       data: {
+      ...(scheduleChanged ? { dueAt: schedule.dueAt, scheduledEndAt: schedule.scheduledEndAt } : {}),
+      ...(category ? { personalCategoryId: category.id, workTypeId: category.id ? null : normalizeWorkType(input.workType ?? current.workTypeId, category.domain) } : {}),
       ...(input.title !== undefined ? { title: input.title.trim() } : {}),
       ...(input.note !== undefined ? { note: input.note?.trim() || null } : {}),
-      ...(input.dueAt !== undefined ? { dueAt: input.dueAt ? new Date(input.dueAt) : null } : {}),
       ...(estimatedDays !== undefined ? { estimatedDays } : {}),
       ...(input.priority ? { priority: input.priority } : {}),
       ...(progressPercent !== undefined ? { progressPercent } : {}),
@@ -593,13 +623,13 @@ export async function updatePersonalWorkItem(
         });
       }
     }
-    if (input.domain || input.tags) {
+    if (input.domain || input.tags || category) {
       await setTargetTagsRepo(tx, {
         ownerType: AppTagOwnerType.TASK,
         ownerId: current.taskId,
         targetType: AppTagTargetType.TASK_ITEM,
         targetId: current.id,
-        names: [normalizePersonalDomain(input.domain), ...(input.tags || [])],
+        names: [category?.domain ?? normalizePersonalDomain(input.domain), ...(input.tags || [])],
       });
     }
   });

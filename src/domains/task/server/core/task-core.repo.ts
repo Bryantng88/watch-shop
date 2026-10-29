@@ -207,15 +207,19 @@ export async function findActivePeriodTaskRepo(
     kind: TaskKind;
     periodType: TaskPeriod;
     periodKey: string;
+    ownerUserId?: string;
   },
 ) {
   const client = dbOrTx(db);
+
+  if (input.kind === TaskKind.PERSONAL && !input.ownerUserId) throw new Error("Personal period tasks require an owner");
 
   return client.task.findFirst({
     where: {
       kind: input.kind,
       periodType: input.periodType,
       periodKey: input.periodKey,
+      ...(input.kind === TaskKind.PERSONAL ? { createdByUserId: input.ownerUserId } : {}),
       status: {
         notIn: [TaskStatus.DONE, TaskStatus.CANCELLED],
       },

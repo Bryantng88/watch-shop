@@ -2,6 +2,7 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/server/db/client";
 import { decryptCalendarToken, encryptCalendarToken } from "./google-calendar-crypto";
 import { personalWorkEditAccessWhere } from "./personal-work-access";
+import { scheduleDayCount } from "../shared/personal-work-schedule";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -224,8 +225,8 @@ export async function syncPersonalTaskToGoogle(userId: string, taskItemId: strin
   const payload = {
     summary: item.title,
     description: item.note || "Đồng bộ từ Watch Shop Admin",
-    start: { date: startDate },
-    end: { date: endDate },
+    start: item.scheduledEndAt && item.dueAt ? { dateTime: item.dueAt.toISOString(), timeZone: "Asia/Bangkok" } : { date: startDate },
+    end: item.scheduledEndAt ? { dateTime: item.scheduledEndAt.toISOString(), timeZone: "Asia/Bangkok" } : { date: endDate },
     status: item.status === "CANCELLED" ? "cancelled" : "confirmed",
     extendedProperties: { private: { watchShopTaskItemId: item.id, source: "WATCH_SHOP_PERSONAL_WORK", estimatedDays: String(estimatedDays) } },
   };
@@ -275,6 +276,7 @@ export async function deletePersonalTaskFromGoogle(userId: string, taskItemId: s
 }
 
 export async function listPersonalGoogleCalendarEvents(userId: string) {
+  const syncStartedAt = new Date();
   let auth = await accessToken(userId);
   const from = new Date();
   from.setFullYear(from.getFullYear() - 1);
@@ -326,12 +328,20 @@ export async function listPersonalGoogleCalendarEvents(userId: string) {
   if (linkedEvents.length) {
     await prisma.$transaction(linkedEvents.map((event) => {
       const startDate = event.start?.date || bangkokDateKey(new Date(event.start!.dateTime!));
+      const dueAt = event.start?.dateTime ? new Date(event.start.dateTime) : calendarDateToStoredDate(startDate);
+      const scheduledEndAt = event.start?.dateTime
+        ? new Date(event.end?.dateTime || new Date(dueAt.getTime() + 3600000).toISOString()) : null;
       const estimatedDays = event.start?.date
         ? calendarDayCount(startDate, event.end?.date)
-        : 1;
-      return prisma.taskItem.update({
-        where: { id: linkMap.get(event.id!)! },
-        data: { dueAt: calendarDateToStoredDate(startDate), estimatedDays },
+        : scheduledEndAt ? scheduleDayCount(dueAt, scheduledEndAt) : 1;
+      return prisma.taskItem.updateMany({
+        where: {
+          id: linkMap.get(event.id!)!,
+          status: { not: "CANCELLED" },
+          updatedAt: { lte: syncStartedAt },
+          AND: [personalWorkEditAccessWhere(userId), { OR: [{ dueAt: { not: dueAt } }, { dueAt: null }, { estimatedDays: { not: estimatedDays } }, { scheduledEndAt: { not: scheduledEndAt } }, ...(scheduledEndAt ? [{ scheduledEndAt: null }] : [])] }],
+        },
+        data: { dueAt, scheduledEndAt, estimatedDays },
       });
     }));
   }

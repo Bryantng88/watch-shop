@@ -56,6 +56,7 @@ import {
 import { useCoalescedRouterRefresh } from "@/domains/shared/ui/transitions/use-coalesced-router-refresh";
 import { waitForOperationProjectionDeliveries } from "@/domains/coordination/ui/operation-delivery.client";
 import { MediaPostItemIcon } from "@/domains/shared/ui/icons/DomainSignalIcon";
+import { ProgressMetric } from "@/domains/shared/ui/progress";
 
 export type UserSummary = {
   id: string;
@@ -649,33 +650,15 @@ function QueueProgressCell({ progress }: { progress: QueueRowProgress }) {
   const total = 4;
   const completed = Math.max(0, Math.min(progress.completed, total));
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
-  const done = completed >= total && total > 0;
-
   return (
-    <div className="min-w-[150px]" title={`${completed}/${total}`}>
-      <div className="flex items-center justify-between gap-3">
-        <span
-          className={cn(
-            "text-xs font-semibold",
-            done ? "text-emerald-700" : "text-blue-700",
-          )}
-        >
-          {completed}/{total}
-        </span>
-        <span className="text-[11px] font-medium text-slate-400">
-          {percent}%
-        </span>
-      </div>
-      <div className="mt-1 h-1 overflow-hidden rounded-full bg-slate-200">
-        <div
-          className={cn(
-            "h-full rounded-full transition-all duration-300 ease-out",
-            done ? "bg-emerald-500" : "bg-blue-500",
-          )}
-          style={{ width: `${percent}%` }}
-        />
-      </div>
-    </div>
+    <ProgressMetric
+      value={percent}
+      numerator={completed}
+      denominator={total}
+      layout="compact"
+      className="min-w-[150px] max-w-[170px]"
+      label={`Tiến độ Media: ${completed}/${total} đầu việc, ${percent}%`}
+    />
   );
 }
 

@@ -10,6 +10,23 @@ export const PERSONAL_WORK_DOMAINS = [
 
 export type PersonalWorkDomain = (typeof PERSONAL_WORK_DOMAINS)[number]["key"];
 
+export const PERSONAL_WORK_COLORS: Record<PersonalWorkDomain, string> = {
+  GENERAL: "#64748b", WORK: "#6366f1", MEDIA: "#8b5cf6", TECHNICAL: "#3b82f6",
+  SALES: "#10b981", ORDER: "#f59e0b", ACQUISITION: "#f43f5e",
+};
+
+export type PersonalWorkCategory = {
+  key: string;
+  label: string;
+  color: string;
+  domain: PersonalWorkDomain;
+  isDefault: boolean;
+};
+
+export function personalCategoryStyle(color: string) {
+  return { backgroundColor: `${color}18`, color: "#0f172a" };
+}
+
 export const PERSONAL_WORK_TYPES = {
   GENERAL: [
     { key: "REMINDER", label: "Nhắc việc" },
@@ -64,9 +81,11 @@ export type PersonalWorkItem = {
   status: "TODO" | "IN_PROGRESS" | "DONE" | "CANCELLED";
   priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
   dueAt: string | null;
+  scheduledEndAt?: string | null;
   estimatedDays: number;
   completedAt: string | null;
   domain: PersonalWorkDomain;
+  category: PersonalWorkCategory;
   workType: string | null;
   targets: PersonalWorkTarget[];
   progressPercent: number;
@@ -120,6 +139,8 @@ export type PersonalCalendarEvent = {
 };
 
 export type PersonalWorkPageData = {
+  canManageDefaultCategories: boolean;
+  categories: PersonalWorkCategory[];
   items: PersonalWorkItem[];
   currentUserId: string;
   availableUsers: PersonalWorkUser[];

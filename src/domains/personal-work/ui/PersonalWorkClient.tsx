@@ -1,5 +1,13 @@
 "use client";
 
+import { usePersonalCalendar } from "./use-personal-calendar";
+import createStyles from "./PersonalWorkCreate.module.css";
+import { PersonalWorkTimeFields } from "./PersonalWorkTimeFields";
+import { PersonalCalendarPreview } from "./PersonalCalendarPreview";
+import { calendarScheduleInput, scheduleDate, scheduleTime } from "../shared/personal-work-schedule";
+import { buildPersonalCalendarEvents, groupCalendarEvents, calendarShareLabel, calendarDayKey } from "../shared/personal-calendar";
+import { PersonalWorkCategoryManager } from "./PersonalWorkCategoryManager";
+
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -12,18 +20,17 @@ import {
   Circle,
   Clock3,
   ExternalLink,
-  Filter,
   Loader2,
   MapPin,
   RefreshCw,
   Share2,
+  Settings2,
   Trash2,
   X,
 } from "lucide-react";
 import { useAppDialog } from "@/domains/shared/feedback";
 import { AsyncActionButton, useUiMutation } from "@/domains/shared/ui/mutation";
 import {
-  ADMIN_DOMAIN_TONE,
   AdminUserAvatar,
   AdminUserInlineList,
   AdminFlatToolbar,
@@ -45,7 +52,7 @@ import {
   updatePersonalWorkAction,
 } from "../actions/personal-work.actions";
 import {
-  PERSONAL_WORK_DOMAINS,
+  personalCategoryStyle,
   PERSONAL_WORK_TYPES,
   type PersonalCalendarEvent,
   type PersonalWorkDomain,
@@ -55,26 +62,6 @@ import {
   type PersonalWorkTargetType,
 } from "../shared/personal-work.types";
 import { PersonalWorkShareEditor } from "./PersonalWorkShareEditor";
-
-const domainStyle: Record<PersonalWorkDomain, string> = {
-  GENERAL: "bg-fuchsia-50 text-fuchsia-700",
-  WORK: ADMIN_DOMAIN_TONE.WORK.soft,
-  MEDIA: ADMIN_DOMAIN_TONE.MEDIA.soft,
-  TECHNICAL: ADMIN_DOMAIN_TONE.TECHNICAL.soft,
-  SALES: ADMIN_DOMAIN_TONE.SALES.soft,
-  ORDER: ADMIN_DOMAIN_TONE.ORDER.soft,
-  ACQUISITION: ADMIN_DOMAIN_TONE.ACQUISITION.soft,
-};
-
-const calendarDomainStyle: Record<PersonalWorkDomain, { event: string; dot: string }> = {
-  GENERAL: { event: "bg-slate-100 text-slate-700 hover:bg-slate-200", dot: ADMIN_DOMAIN_TONE.GENERAL.dot },
-  WORK: { event: "bg-indigo-50 text-indigo-800 hover:bg-indigo-100", dot: ADMIN_DOMAIN_TONE.WORK.dot },
-  MEDIA: { event: "bg-violet-50 text-violet-800 hover:bg-violet-100", dot: ADMIN_DOMAIN_TONE.MEDIA.dot },
-  TECHNICAL: { event: "bg-blue-50 text-blue-800 hover:bg-blue-100", dot: ADMIN_DOMAIN_TONE.TECHNICAL.dot },
-  SALES: { event: "bg-emerald-50 text-emerald-800 hover:bg-emerald-100", dot: ADMIN_DOMAIN_TONE.SALES.dot },
-  ORDER: { event: "bg-amber-50 text-amber-800 hover:bg-amber-100", dot: ADMIN_DOMAIN_TONE.ORDER.dot },
-  ACQUISITION: { event: "bg-rose-50 text-rose-800 hover:bg-rose-100", dot: ADMIN_DOMAIN_TONE.ACQUISITION.dot },
-};
 
 const externalCalendarStyle = {
   event: "bg-sky-50 text-sky-800 hover:bg-sky-100",
@@ -101,22 +88,19 @@ function localInputDate(date: Date) {
   return localDayKey(date);
 }
 
-function dateInputToIso(value: string) {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
-}
-
 function isPastDueDate(value: string | null, now: Date) {
   if (!value) return false;
   return localDayKey(new Date(value)) < localDayKey(now);
 }
 
-function dueLabel(value: string | null) {
+function dueLabel(value: string | null, timed = false) {
   if (!value) return "Chưa có lịch";
   return new Intl.DateTimeFormat("vi-VN", {
     weekday: "short",
     day: "2-digit",
     month: "2-digit",
+    timeZone: "Asia/Bangkok",
+    ...(timed ? { hour: "2-digit" as const, minute: "2-digit" as const } : {}),
   }).format(new Date(value));
 }
 
@@ -139,7 +123,7 @@ function localDayKey(date: Date) {
 }
 
 function eventDayKey(value: string, allDay: boolean) {
-  return allDay ? value.slice(0, 10) : localDayKey(new Date(value));
+  return calendarDayKey(value, allDay);
 }
 
 function addCalendarDayKey(value: string, days: number) {
@@ -160,14 +144,24 @@ function monthCells(cursor: Date) {
   });
 }
 
-export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
+export function PersonalWorkClient({ data, localCalendar = false }: { data: PersonalWorkPageData; localCalendar?: boolean }) {
+  const calendarAvailable = data.calendar.connected || localCalendar;
   const router = useRouter();
   const appDialog = useAppDialog();
   const checklistMutation = useUiMutation();
+  const calendarCreateMutation = useUiMutation();
+  const calendarSyncMutation = useUiMutation();
+  const calendarCreating = calendarCreateMutation.isPending("calendar:create");
+  const [calendarCreateError, setCalendarCreateError] = useState<string | null>(null);
+  const [calendarSyncFailures, setCalendarSyncFailures] = useState<Record<string, {id:string;title:string}>>({});
   const [pending, startTransition] = useTransition();
   const [view, setView] = useState<"TODAY" | "UPCOMING" | "ALL" | "DONE">("ALL");
   const [scope, setScope] = useState<"MINE" | "SHARED" | "ALL">("MINE");
-  const [domain, setDomain] = useState<PersonalWorkDomain | "ALL">("ALL");
+  const [domain, setDomain] = useState<string>("ALL");
+  const [newCategoryKey, setNewCategoryKey] = useState("GENERAL");
+  const [editCategoryKey, setEditCategoryKey] = useState("GENERAL");
+  const [calendarCategoryKey, setCalendarCategoryKey] = useState("GENERAL");
+  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [newDomain, setNewDomain] = useState<PersonalWorkDomain>("GENERAL");
   const [workType, setWorkType] = useState<string>(PERSONAL_WORK_TYPES.GENERAL[0].key);
@@ -176,25 +170,58 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [targetResults, setTargetResults] = useState<PersonalWorkTarget[]>([]);
   const [selectedTargets, setSelectedTargets] = useState<PersonalWorkTarget[]>([]);
   const [dueAt, setDueAt] = useState(localInputDate(new Date()));
+  const [quickStartTime, setQuickStartTime] = useState("09:00");
+  const [quickEndTime, setQuickEndTime] = useState("10:00");
   const [estimatedDays, setEstimatedDays] = useState(1);
   const [message, setMessage] = useState<string | null>(null);
-  const [calendarOpen, setCalendarOpen] = useState(data.calendar.connected);
+  const [calendarOpen, setCalendarOpen] = useState(calendarAvailable);
   const [selectedCalendarEvent, setSelectedCalendarEvent] = useState<PersonalCalendarEvent | null>(null);
   const [calendarCreateOpen, setCalendarCreateOpen] = useState(false);
   const [calendarCreateTitle, setCalendarCreateTitle] = useState("");
   const [calendarCreateDomain, setCalendarCreateDomain] = useState<PersonalWorkDomain>("GENERAL");
   const [calendarCreateDueAt, setCalendarCreateDueAt] = useState(localInputDate(new Date()));
+  const [calendarStartTime, setCalendarStartTime] = useState("09:00");
+  const [calendarEndTime, setCalendarEndTime] = useState("10:00");
+  const [calendarWorkType, setCalendarWorkType] = useState<string>(PERSONAL_WORK_TYPES.GENERAL[0].key);
   const [calendarCreateEstimatedDays, setCalendarCreateEstimatedDays] = useState(1);
   const [calendarCreateSync, setCalendarCreateSync] = useState(true);
-  const lastCalendarRefreshAtRef = useRef(Date.now());
+  const calendar = usePersonalCalendar(data);
+  const workItems = calendar.items;
+  const itemMap = useMemo(() => new Map(workItems.map(item => [item.id, item])), [workItems]);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<PersonalWorkItem | null>(null);
   const editingItemId = editingItem?.id;
+  const editCategories = editingItem?.access === "OWNER"
+    ? data.categories
+    : [...data.categories.filter(c => c.isDefault), ...(editingItem && !editingItem.category.isDefault ? [editingItem.category] : [])];
+  const filterCategories = [...new Map(
+    [...data.categories, ...workItems.map(item => item.category)].map(c => [c.key, c]),
+  ).values()];
+  useEffect(() => {
+    if (!data.categories.some(c => c.key === newCategoryKey)) {
+      setNewCategoryKey("GENERAL");
+      setNewDomain("GENERAL");
+      setWorkType("REMINDER");
+      setSelectedTargets([]);
+    }
+    if (!data.categories.some(c => c.key === calendarCategoryKey)) {
+      setCalendarCategoryKey("GENERAL");
+      setCalendarCreateDomain("GENERAL");
+    }
+  }, [data.categories, newCategoryKey, calendarCategoryKey]);
+  useEffect(() => {
+    if (domain !== "ALL" && !data.categories.some(c => c.key === domain) && !workItems.some(item => item.category.key === domain)) setDomain("ALL");
+  }, [data.categories, workItems, domain]);
   const [editTitle, setEditTitle] = useState("");
   const [editNote, setEditNote] = useState("");
   const editNoteRef = useRef<HTMLTextAreaElement>(null);
   const [editUpdateBody, setEditUpdateBody] = useState("");
   const [editDomain, setEditDomain] = useState<PersonalWorkDomain>("GENERAL");
   const [editDueAt, setEditDueAt] = useState("");
+  const [editStartTime, setEditStartTime] = useState("");
+  const [editEndTime, setEditEndTime] = useState("");
+  const [editWorkType, setEditWorkType] = useState("");
+  const [editScheduleError, setEditScheduleError] = useState<string | null>(null);
   const [editEstimatedDays, setEditEstimatedDays] = useState(1);
   const [editTargets, setEditTargets] = useState<PersonalWorkTarget[]>([]);
   const [editTargetType, setEditTargetType] = useState<PersonalWorkTargetType | "">("");
@@ -210,99 +237,31 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const todayEndMs = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
   const items = useMemo(
     () =>
-      data.items.filter((item) => {
+      workItems.filter((item) => {
         if (scope === "MINE" && item.access !== "OWNER") return false;
         if (scope === "SHARED" && item.access === "OWNER") return false;
-        if (domain !== "ALL" && item.domain !== domain) return false;
+        if (domain !== "ALL" && item.category.key !== domain) return false;
         if (view === "DONE") return item.status === "DONE";
         if (item.status === "DONE") return false;
         if (view === "TODAY") return !item.dueAt || new Date(item.dueAt).getTime() <= todayEndMs;
         if (view === "UPCOMING") return Boolean(item.dueAt && new Date(item.dueAt).getTime() > todayEndMs);
         return true;
       }),
-    [data.items, domain, scope, view, todayEndMs],
+    [workItems, domain, scope, view, todayEndMs],
   );
-  const openCount = data.items.filter((item) => item.status !== "DONE").length;
-  const overdue = data.items.filter(
+  const openCount = workItems.filter((item) => item.status !== "DONE").length;
+  const overdue = workItems.filter(
     (item) => item.status !== "DONE" && isPastDueDate(item.dueAt, now),
   ).length;
-  const selectedLinkedTask = selectedCalendarEvent?.linkedTaskItemId
-    ? data.items.find((item) => item.id === selectedCalendarEvent.linkedTaskItemId) || null
-    : null;
   const calendarDays = useMemo(() => monthCells(calendarCursor), [calendarCursor]);
-  const visibleCalendarEvents = useMemo(() => {
-    const linkedTaskIds = new Set(
-      data.calendar.events.flatMap((event) => event.linkedTaskItemId ? [event.linkedTaskItemId] : []),
-    );
-    const localTaskEvents: PersonalCalendarEvent[] = data.items
-      .filter((item) => item.dueAt && !linkedTaskIds.has(item.id))
-      .flatMap((item): PersonalCalendarEvent[] => {
-        const dueAt = item.dueAt as string;
-        const startAt = dueAt.slice(0, 10);
-        const endAt = new Date(`${startAt}T00:00:00Z`);
-        if (Number.isNaN(endAt.getTime())) return [];
-        endAt.setUTCDate(endAt.getUTCDate() + Math.max(1, item.estimatedDays));
-        return [{
-          id: `local-task:${item.id}`,
-          title: item.title,
-          description: item.note,
-          startAt,
-          endAt: endAt.toISOString().slice(0, 10),
-          allDay: true,
-          htmlLink: item.calendar.htmlLink,
-          location: null,
-          linkedTaskItemId: item.id,
-        }];
-      });
-    return [...data.calendar.events, ...localTaskEvents];
-  }, [data.calendar.events, data.items]);
-  const eventsByDay = useMemo(() => {
-    const grouped = new Map<string, PersonalCalendarEvent[]>();
-    for (const event of visibleCalendarEvents) {
-      const firstKey = eventDayKey(event.startAt, event.allDay);
-      const keys = [firstKey];
-      if (event.allDay && event.endAt) {
-        const cursor = new Date(`${firstKey}T00:00:00Z`);
-        const exclusiveEnd = new Date(`${event.endAt.slice(0, 10)}T00:00:00Z`);
-        while (keys.length < 365) {
-          cursor.setUTCDate(cursor.getUTCDate() + 1);
-          if (cursor >= exclusiveEnd) break;
-          keys.push(cursor.toISOString().slice(0, 10));
-        }
-      }
-      for (const key of keys) grouped.set(key, [...(grouped.get(key) || []), event]);
-    }
-    return grouped;
-  }, [visibleCalendarEvents]);
+  const visibleCalendarEvents = useMemo(() => buildPersonalCalendarEvents(workItems, calendar.events), [workItems, calendar.events]);
+  const eventsByDay = useMemo(() => groupCalendarEvents(visibleCalendarEvents, calendarDays.map(localDayKey)), [visibleCalendarEvents, calendarDays]);
 
   useEffect(() => {
     if (!message) return;
     const timeoutId = window.setTimeout(() => setMessage(null), 5000);
     return () => window.clearTimeout(timeoutId);
   }, [message]);
-
-  useEffect(() => {
-    if (!data.calendar.connected) return;
-
-    const refreshCalendar = () => {
-      if (document.visibilityState !== "visible") return;
-      const now = Date.now();
-      if (now - lastCalendarRefreshAtRef.current < 5_000) return;
-      lastCalendarRefreshAtRef.current = now;
-      router.refresh();
-    };
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") refreshCalendar();
-    };
-    const intervalId = window.setInterval(refreshCalendar, 120_000);
-    window.addEventListener("focus", refreshCalendar);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener("focus", refreshCalendar);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [data.calendar.connected, router]);
 
   useEffect(() => {
     const textarea = editNoteRef.current;
@@ -313,9 +272,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
 
   useEffect(() => {
     if (!editingItemId) return;
-    const refreshed = data.items.find((item) => item.id === editingItemId);
-    if (refreshed) setEditingItem(refreshed);
-  }, [data.items, editingItemId]);
+    const refreshed = workItems.find((item) => item.id === editingItemId);
+    setEditingItem(refreshed || null);
+  }, [workItems, editingItemId]);
 
   function run(action: () => Promise<unknown>, success?: string, onSuccess?: () => void) {
     setMessage(null);
@@ -360,12 +319,41 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   }
 
   function openCalendarCreate(date: Date) {
+    setCalendarCreateError(null);
     setCalendarCreateTitle("");
     setCalendarCreateDomain("GENERAL");
+    setCalendarCategoryKey("GENERAL");
     setCalendarCreateDueAt(localInputDate(date));
+    setCalendarStartTime("09:00");
+    setCalendarEndTime("10:00");
+    setCalendarWorkType(PERSONAL_WORK_TYPES.GENERAL[0].key);
     setCalendarCreateEstimatedDays(1);
     setCalendarCreateSync(data.calendar.connected);
     setCalendarCreateOpen(true);
+  }
+
+  function syncCreatedCalendarTask(task: {id:string;title:string}) {
+    void calendarSyncMutation.run({
+      key: `calendar-sync:${task.id}`,
+      action: () => syncPersonalWorkCalendarAction(task.id),
+      onSuccess: () => {
+        setCalendarSyncFailures(current => {
+          const remaining = {...current};
+          delete remaining[task.id];
+          return remaining;
+        });
+        router.refresh();
+      },
+      onError: () => setCalendarSyncFailures(current => ({...current, [task.id]:task})),
+      errorMessage: `Công việc “${task.title}” đã được lưu, nhưng chưa đồng bộ Google Calendar. Bạn có thể thử đồng bộ lại.`,
+    });
+  }
+
+  function openCalendarEvent(event: PersonalCalendarEvent) {
+    setSelectedDay(null);
+    const item = event.linkedTaskItemId ? itemMap.get(event.linkedTaskItemId) : null;
+    if (item) { setSelectedCalendarEvent(null); openTaskEdit(item); }
+    else setSelectedCalendarEvent(event);
   }
 
   function openTaskEdit(item: PersonalWorkItem) {
@@ -374,8 +362,15 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     setEditNote(item.note || "");
     setEditUpdateBody("");
     setEditDomain(item.domain);
-    setEditDueAt(item.dueAt ? localInputDate(new Date(item.dueAt)) : "");
-    setEditEstimatedDays(item.estimatedDays || 1);
+    setEditCategoryKey(item.category.key);
+    setEditDueAt(item.dueAt ? scheduleDate(item.dueAt) : "");
+    setEditStartTime(item.scheduledEndAt && item.dueAt ? scheduleTime(item.dueAt) : "");
+    setEditEndTime(item.scheduledEndAt ? scheduleTime(item.scheduledEndAt) : "");
+    setEditWorkType(item.workType || PERSONAL_WORK_TYPES[item.domain][0].key);
+    setEditScheduleError(null);
+    setEditEstimatedDays(item.scheduledEndAt && item.dueAt
+      ? Math.round((Date.parse(`${scheduleDate(item.scheduledEndAt)}T00:00:00Z`) - Date.parse(`${scheduleDate(item.dueAt)}T00:00:00Z`)) / 86400000) + 1
+      : item.estimatedDays || 1);
     setEditTargets(item.targets);
     setEditTargetType(domainTargets[item.domain][0]?.type || "");
     setEditTargetQuery("");
@@ -415,6 +410,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         }
       />
 
+      {categoryManagerOpen && <PersonalWorkCategoryManager categories={data.categories} canManageDefaults={data.canManageDefaultCategories} onClose={() => setCategoryManagerOpen(false)} />}
+
       <section className="grid gap-5 border-b border-slate-100 pb-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <form
           className="flex h-full min-w-0 flex-col justify-center px-1"
@@ -430,9 +427,10 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 const created = await createPersonalWorkAction({
                   title: nextTitle,
                   domain: newDomain,
+                  categoryKey: newCategoryKey,
                   workType,
                   targets: selectedTargets,
-                  dueAt: dueAt ? dateInputToIso(dueAt) : null,
+                  ...(dueAt ? calendarScheduleInput(dueAt, quickStartTime, quickEndTime, estimatedDays) : { dueAt: null, scheduledEndAt: null }),
                   estimatedDays,
                 });
                 if (data.calendar.connected) await syncPersonalWorkCalendarAction(created.id);
@@ -448,11 +446,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
           }}
         >
           <AdminFlatToolbar
-            className={`grid w-full gap-2 ${
-              newDomain === "WORK"
-                ? "md:grid-cols-[minmax(0,1fr)_150px_170px_210px_150px_auto]"
-                : "md:grid-cols-[minmax(0,1fr)_170px_210px_150px_auto]"
-            }`}
+            className={createStyles.toolbar}
           >
             <input
               required
@@ -462,11 +456,11 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               className="h-11 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             />
             <select
-              value={newDomain}
-              onChange={(e) => changeDomain(e.target.value as PersonalWorkDomain)}
+              value={newCategoryKey}
+              onChange={(e) => { setNewCategoryKey(e.target.value); changeDomain(data.categories.find(c => c.key === e.target.value)?.domain || "GENERAL"); }}
               className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm"
             >
-              {PERSONAL_WORK_DOMAINS.map((item) => (
+              {data.categories.map((item) => (
                 <option key={item.key} value={item.key}>
                   {item.label}
                 </option>
@@ -492,6 +486,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               onChange={(e) => setDueAt(e.target.value)}
               className="h-11 rounded-lg border border-slate-200 px-3 text-sm"
             />
+            <PersonalWorkTimeFields compact start={quickStartTime} end={quickEndTime} onChange={(start, end) => { setQuickStartTime(start); setQuickEndTime(end); }} />
             <div className="flex min-w-0 gap-2">
               <select
                 aria-label="Thời lượng dự kiến"
@@ -623,7 +618,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             type="button"
             aria-expanded={calendarOpen}
             aria-controls="personal-google-calendar-agenda"
-            onClick={() => data.calendar.connected && setCalendarOpen((open) => !open)}
+            onClick={() => calendarAvailable && setCalendarOpen((open) => !open)}
             className="flex w-full items-start justify-between gap-3 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
           >
             <div className="flex gap-3">
@@ -631,9 +626,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 <CalendarDays className="h-5 w-5" />
               </span>
               <div>
-                <h2 className="font-semibold text-slate-950">Google Calendar</h2>
+                <h2 className="font-semibold text-slate-950">{localCalendar && !data.calendar.connected ? "Lịch công việc" : "Google Calendar"}</h2>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  {data.calendar.connected
+                  {localCalendar && !data.calendar.connected ? "Theo dõi công việc trên lịch" : data.calendar.connected
                     ? data.calendar.accountEmail || "Đã kết nối"
                     : data.calendar.configured
                       ? "Chưa kết nối tài khoản"
@@ -647,18 +642,21 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   ĐÃ KẾT NỐI
                 </span>
               )}
-              {data.calendar.connected && (
+              {calendarAvailable && (
                 <ChevronDown
                   className={`h-4 w-4 text-slate-400 transition-transform ${calendarOpen ? "rotate-180" : ""}`}
                 />
               )}
             </div>
           </button>
-          <button
-            disabled={pending || !data.calendar.configured}
+          {(!localCalendar || data.calendar.connected) && <AsyncActionButton
+            pending={data.calendar.connected ? calendar.loading : pending}
+            title={calendar.lastSyncedAt ? `Cập nhật lịch: ${new Date(calendar.lastSyncedAt).toLocaleString("vi-VN")}` : undefined}
+            pendingLabel={data.calendar.connected ? "Đang tải lịch…" : "Đang kết nối…"}
+            disabled={!data.calendar.configured}
             onClick={() =>
               data.calendar.connected
-                ? run(async () => undefined, "Đã tải lại Google Calendar")
+                ? void calendar.reload()
                 : run(async () => {
                     const result = await getGoogleCalendarConnectUrlAction();
                     window.location.assign(result.url);
@@ -675,24 +673,30 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 <ExternalLink className="h-4 w-4" /> Kết nối Google Calendar
               </>
             )}
-          </button>
+          </AsyncActionButton>}
         </aside>
       </section>
 
       {message && (
         <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">{message}</div>
       )}
+      {Object.values(calendarSyncFailures).map(task => (
+        <div key={task.id} role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <span>Đã lưu “{task.title}”. Chưa đồng bộ Google Calendar.</span>
+          <AsyncActionButton type="button" pending={calendarSyncMutation.isPending(`calendar-sync:${task.id}`)} pendingLabel="Đang đồng bộ…" onClick={() => syncCreatedCalendarTask(task)} className="rounded-md px-2 py-1 font-semibold hover:bg-amber-100">Thử đồng bộ lại</AsyncActionButton>
+        </div>
+      ))}
 
       <div
-        className={`grid items-start gap-5 ${data.calendar.connected && calendarOpen ? "xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,0.85fr)]" : "grid-cols-1"}`}
+        className={`grid items-start gap-5 ${calendarAvailable && calendarOpen ? "xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,0.85fr)]" : "grid-cols-1"}`}
       >
-        {data.calendar.connected && calendarOpen && (
+        {calendarAvailable && calendarOpen && (
           <section id="personal-google-calendar-agenda" className="min-w-0 overflow-hidden bg-white">
             <div className="flex min-h-[56px] flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-2">
               <div>
-                <h2 className="text-sm font-semibold text-slate-950">Lịch Google của tôi</h2>
+                <h2 className="text-sm font-semibold text-slate-950">{data.calendar.connected ? "Lịch Google của tôi" : "Lịch công việc"}</h2>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  Lịch cá nhân và công việc đã liên kết trên cùng một dòng thời gian.
+                  Màu nền theo nhóm · Sọc cam: quá hạn · Gạch ngang: đã xong.
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -727,9 +731,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 </button>
               </div>
             </div>
-            {data.calendar.loadError ? (
-              <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                Không thể tải dữ liệu mới từ Google Calendar. Bạn vẫn có thể xem và thao tác trên lịch hiện tại.
+            {calendar.error ? (
+              <div role="status" className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                {calendar.error}
               </div>
             ) : null}
               <div className="overflow-x-auto rounded-xl border border-slate-200/80">
@@ -758,6 +762,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                           aria-label={`Tạo việc ngày ${key}`}
                           onClick={() => openCalendarCreate(date)}
                           onKeyDown={(event) => {
+                            if (event.target !== event.currentTarget) return;
                             if (event.key === "Enter" || event.key === " ") openCalendarCreate(date);
                           }}
                           className={`min-h-28 cursor-pointer border-b border-r border-slate-100 p-2 transition-colors hover:bg-blue-50/30 ${outsideMonth ? "bg-slate-50/50" : "bg-white"} ${isToday ? "relative z-10 !bg-blue-50/40 ring-2 ring-inset ring-blue-500/70" : ""}`}
@@ -775,9 +780,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                           <div className="space-y-1">
                             {dayEvents.slice(0, 3).map((event) => {
                               const linkedTask = event.linkedTaskItemId
-                                ? data.items.find((item) => item.id === event.linkedTaskItemId)
+                                ? itemMap.get(event.linkedTaskItemId)
                                 : null;
-                              const style = linkedTask ? calendarDomainStyle[linkedTask.domain] : externalCalendarStyle;
+                              const category = linkedTask?.category;
                               const isOverdue = Boolean(
                                 linkedTask &&
                                   linkedTask.status !== "DONE" &&
@@ -800,18 +805,10 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                                     : "w-full rounded";
                               const content = (
                                 <>
-                                  {startsVisibleWeekSegment && (
-                                    <span className={`mr-1 inline-block h-1.5 w-1.5 rounded-full ${style.dot}`} />
-                                  )}
-                                  {!event.allDay && (
+                                  {!event.allDay && key === eventStartKey && (
                                     <span className="mr-1 text-[10px] opacity-70">
-                                      {new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit" }).format(
-                                        new Date(event.startAt),
-                                      )}
+                                      {scheduleTime(event.startAt)}
                                     </span>
-                                  )}
-                                  {startsVisibleWeekSegment && linkedTask?.domain === "GENERAL" && (
-                                    <span className="mr-1 rounded bg-fuchsia-100 px-1 py-0.5 text-[9px] font-bold text-fuchsia-700">Cá nhân</span>
                                   )}
                                   <span className={startsVisibleWeekSegment ? `truncate ${isDone ? "text-slate-500 line-through decoration-slate-400/80 decoration-1" : ""}` : "select-none opacity-0"}>
                                     {startsVisibleWeekSegment ? event.title : "Tiếp diễn"}
@@ -819,22 +816,26 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                                 </>
                               );
                               return (
+                                <PersonalCalendarPreview key={event.id} event={event} item={linkedTask}>
                                 <button
                                   type="button"
                                   key={event.id}
+                                  data-task-item-id={linkedTask?.id}
                                   onClick={(clickEvent) => {
                                     clickEvent.stopPropagation();
-                                    setSelectedCalendarEvent(event);
+                                    openCalendarEvent(event);
                                   }}
-                                  title={`${isDone ? "Đã hoàn thành · " : ""}${calendarEventDate(event.startAt, event.allDay)} · ${event.title}`}
-                                  className={`flex min-h-[22px] items-center overflow-hidden whitespace-nowrap px-1.5 py-1 text-left text-[11px] font-medium leading-none ${connectionClass} ${style.event} ${isDone ? "opacity-65 saturate-50" : ""} ${startsVisibleWeekSegment && isOverdue ? "border-l-2 border-l-orange-400" : "border-l-0"}`}
+                                  style={category ? personalCategoryStyle(category.color) : undefined}
+                                  className={`flex min-h-[22px] items-center overflow-hidden whitespace-nowrap px-1.5 py-1 text-left text-[11px] font-medium leading-none ${connectionClass} ${category ? "hover:brightness-95" : externalCalendarStyle.event} ${isDone ? "opacity-65 saturate-50" : ""} ${startsVisibleWeekSegment && isOverdue ? "border-l-2 border-l-orange-400" : "border-l-0"}`}
                                 >
                                   {content}
+                                  {startsVisibleWeekSegment && linkedTask && calendarShareLabel(linkedTask) && <Share2 aria-label={calendarShareLabel(linkedTask)!} className="ml-1 h-3 w-3 shrink-0 text-violet-600" />}
                                 </button>
+                                </PersonalCalendarPreview>
                               );
                             })}
                             {dayEvents.length > 3 && (
-                              <p className="px-1 text-[9px] font-medium text-slate-500">+{dayEvents.length - 3} lịch</p>
+                              <button type="button" aria-label={`Xem tất cả ${dayEvents.length} lịch ngày ${key}`} onClick={(event) => {event.stopPropagation();setSelectedDay(key);}} className="rounded px-1 py-1 text-[10px] font-semibold text-blue-700 hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">+{dayEvents.length - 3} lịch</button>
                             )}
                           </div>
                         </div>
@@ -847,8 +848,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         )}
 
         <section className="min-w-0 bg-transparent xl:flex xl:h-[766px] xl:flex-col xl:overflow-hidden xl:border-l xl:border-slate-100">
-          <div className="flex min-h-[56px] flex-wrap items-center justify-between gap-3 px-1 py-2 xl:ml-5 xl:shrink-0">
-            <div className="flex flex-wrap items-center gap-3">
+          <div className="flex min-h-[56px] flex-nowrap items-center justify-between gap-2 overflow-x-auto whitespace-nowrap px-1 py-2 xl:ml-5 xl:shrink-0">
+            <div className="flex shrink-0 items-center">
               <div className="flex gap-1 rounded-lg bg-slate-100/80 p-1">
                 {(
                   [
@@ -861,20 +862,20 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   <button
                     key={key}
                     onClick={() => setView(key)}
-                    className={`rounded-md px-3 py-1.5 text-xs font-medium ${view === key ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                    className={`rounded-md px-2 py-1.5 text-xs font-medium ${view === key ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
                   >
                     {label}
                   </button>
                 ))}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <label className="flex items-center">
                 <span className="sr-only">Phạm vi công việc</span>
                 <select
                   value={scope}
                   onChange={(event) => setScope(event.target.value as "MINE" | "SHARED" | "ALL")}
-                  className="h-8 rounded-lg border-0 bg-slate-100/80 px-3 text-xs font-medium text-slate-700 outline-none ring-0 transition-colors hover:bg-slate-200/70 focus:ring-2 focus:ring-blue-400/30"
+                  className="h-8 w-20 truncate rounded-lg border-0 bg-slate-100/80 pl-2 pr-5 text-xs font-medium text-slate-700 outline-none ring-0 transition-colors hover:bg-slate-200/70 focus:ring-2 focus:ring-blue-400/30"
                 >
                   <option value="MINE">Của tôi</option>
                   <option value="SHARED">Được chia sẻ</option>
@@ -882,20 +883,23 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 </select>
               </label>
               <label className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-slate-400" />
               <select
+                aria-label="Loại công việc"
                 value={domain}
                 onChange={(e) => setDomain(e.target.value as PersonalWorkDomain | "ALL")}
-                className="h-8 rounded-lg border-0 bg-slate-100/80 px-3 text-xs font-medium text-slate-700 outline-none ring-0"
+                className="h-8 w-32 truncate rounded-lg border-0 bg-slate-100/80 pl-2 pr-5 text-xs font-medium text-slate-700 outline-none ring-0"
               >
-                <option value="ALL">Tất cả nghiệp vụ</option>
-                {PERSONAL_WORK_DOMAINS.map((item) => (
+                <option value="ALL">Tất cả loại</option>
+                {filterCategories.map((item) => (
                   <option key={item.key} value={item.key}>
                     {item.label}
                   </option>
                 ))}
               </select>
               </label>
+              <button type="button" aria-label="Quản lý loại công việc" title="Quản lý loại công việc" onClick={() => setCategoryManagerOpen(true)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">
+                <Settings2 className="h-4 w-4" />
+              </button>
             </div>
           </div>
           <div className="space-y-1 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pl-5 xl:[direction:rtl] [&>*]:[direction:ltr]">
@@ -905,7 +909,11 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 return (
                   <div
                     key={item.id}
-                    className="group grid gap-2 px-1 py-3 transition-colors hover:bg-slate-100/60 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center"
+                    onClick={(event) => {
+                      if ((event.target as HTMLElement).closest("button, a, input, select, textarea")) return;
+                      openTaskEdit(item);
+                    }}
+                    className="group grid cursor-pointer gap-2 px-1 py-3 transition-colors hover:bg-slate-100/60 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center"
                   >
                     <button
                       aria-label="Đánh dấu hoàn thành"
@@ -923,18 +931,20 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                     </button>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p
-                          className={`truncate text-sm font-semibold ${item.status === "DONE" ? "text-slate-400 line-through" : "text-slate-950"}`}
+                        <button
+                          type="button"
+                          onClick={() => openTaskEdit(item)}
+                          className={`truncate rounded-sm text-left text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 ${item.status === "DONE" ? "text-slate-400 line-through" : "text-slate-950"}`}
                         >
                           {item.title}
-                        </p>
+                        </button>
                         {item.access !== "OWNER" && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">
                             <Share2 className="h-3 w-3" /> {item.access === "EDITOR" ? "Có thể sửa" : "Chỉ xem"}
                           </span>
                         )}
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${domainStyle[item.domain]}`}>
-                          {PERSONAL_WORK_DOMAINS.find((domain) => domain.key === item.domain)?.label}
+                        <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={personalCategoryStyle(item.category.color)}>
+                          {item.category.label}
                         </span>
                         {item.workType && (
                           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
@@ -964,17 +974,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       >
                         <Clock3 className="h-3.5 w-3.5" />
                         {late ? "Quá hạn · " : ""}
-                        {dueLabel(item.dueAt)} · {item.estimatedDays === 1 ? "trong ngày" : `dự kiến ${item.estimatedDays} ngày`}
+                        {dueLabel(item.dueAt, Boolean(item.scheduledEndAt))} · {item.estimatedDays === 1 ? "trong ngày" : `dự kiến ${item.estimatedDays} ngày`}
                       </p>
-                      {item.progressMode === "CHECKLIST" && item.checklist.length > 0 && (
-                        <ProgressMetric
-                          value={item.progressPercent}
-                          numerator={item.checklist.filter((entry) => entry.isDone).length}
-                          denominator={item.checklist.length}
-                          className="mt-2 max-w-[190px]"
-                          label={`Tiến độ ${item.title}: ${item.progressPercent}%`}
-                        />
-                      )}
                       {item.access === "OWNER" && item.sharedWith.length > 0 && (
                         <div
                           className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px] text-violet-700"
@@ -1005,7 +1006,17 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center justify-end gap-3">
+                      {item.progressMode === "CHECKLIST" && item.checklist.length > 0 && (
+                        <ProgressMetric
+                          value={item.progressPercent}
+                          numerator={item.checklist.filter((entry) => entry.isDone).length}
+                          denominator={item.checklist.length}
+                          layout="inline"
+                          className="max-w-[210px]"
+                          label={`Tiến độ ${item.title}: ${item.progressPercent}%`}
+                        />
+                      )}
                       <ChevronRight className="h-4 w-4 text-slate-300" />
                     </div>
                   </div>
@@ -1027,12 +1038,24 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
           onMouseDown={() => setEditingItem(null)}
         >
           <form
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="personal-task-detail-title"
             onMouseDown={(event) => event.stopPropagation()}
             onSubmit={(event) => {
               event.preventDefault();
               const nextTitle = editTitle.trim();
               if (!nextTitle) {
                 setMessage("Vui lòng nhập nội dung công việc cần làm");
+                return;
+              }
+              let editedSchedule;
+              try {
+                if (!editDueAt && (editStartTime || editEndTime)) throw new Error("Vui lòng chọn ngày bắt đầu");
+                editedSchedule = editDueAt ? calendarScheduleInput(editDueAt, editStartTime, editEndTime, editEstimatedDays) : { dueAt: null, scheduledEndAt: null };
+                setEditScheduleError(null);
+              } catch (error) {
+                setEditScheduleError(error instanceof Error ? error.message : "Thời gian không hợp lệ");
                 return;
               }
               run(
@@ -1042,8 +1065,10 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                     title: nextTitle,
                     note: editNote,
                     domain: editDomain,
+                    categoryKey: editCategoryKey,
+                    workType: editWorkType,
                     tags: editingItem.tags,
-                    dueAt: editDueAt ? dateInputToIso(editDueAt) : null,
+                    ...editedSchedule,
                     estimatedDays: editEstimatedDays,
                     targets: editTargets,
                     updateBody: editUpdateBody,
@@ -1063,7 +1088,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600">Công việc cá nhân</p>
-                <h2 className="mt-1 text-xl font-bold text-slate-950">Chỉnh sửa công việc</h2>
+                <h2 id="personal-task-detail-title" className="mt-1 text-xl font-bold text-slate-950">{editingItem.access === "VIEWER" ? "Chi tiết công việc" : "Chỉnh sửa công việc"}</h2>
+                {calendarShareLabel(editingItem) && <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-700"><Share2 className="h-3.5 w-3.5 shrink-0" />{calendarShareLabel(editingItem)}</p>}
               </div>
               <button
                 type="button"
@@ -1287,13 +1313,15 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold text-slate-600">Nghiệp vụ</span>
+                  <span className="text-xs font-semibold text-slate-600">Nhóm công việc</span>
                   <select
-                    value={editDomain}
+                    value={editCategoryKey}
                     disabled={editingItem.access === "VIEWER"}
                     onChange={(event) => {
-                      const nextDomain = event.target.value as PersonalWorkDomain;
+                      setEditCategoryKey(event.target.value);
+                      const nextDomain = editCategories.find(c => c.key === event.target.value)?.domain || "GENERAL";
                       setEditDomain(nextDomain);
+                      setEditWorkType(PERSONAL_WORK_TYPES[nextDomain][0].key);
                       setEditTargetType(domainTargets[nextDomain][0]?.type || "");
                       setEditTargetQuery("");
                       setEditTargetResults([]);
@@ -1301,7 +1329,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                     }}
                     className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
                   >
-                    {PERSONAL_WORK_DOMAINS.map((item) => (
+                    {editCategories.map((item) => (
                       <option key={item.key} value={item.key}>
                         {item.label}
                       </option>
@@ -1309,7 +1337,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   </select>
                 </label>
                 <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold text-slate-600">Thời gian</span>
+                  <span className="text-xs font-semibold text-slate-600">Ngày bắt đầu</span>
                   <input
                     type="date"
                     value={editDueAt}
@@ -1319,6 +1347,16 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   />
                 </label>
               </div>
+              {editCategories.find(category => category.key === editCategoryKey)?.isDefault && PERSONAL_WORK_TYPES[editDomain].length > 1 && (
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-slate-600">Loại công việc</span>
+                  <select aria-label="Loại công việc" value={editWorkType} disabled={editingItem.access === "VIEWER"} onChange={event => setEditWorkType(event.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm">
+                    {PERSONAL_WORK_TYPES[editDomain].map(type => <option key={type.key} value={type.key}>{type.label}</option>)}
+                  </select>
+                </label>
+              )}
+              <PersonalWorkTimeFields start={editStartTime} end={editEndTime} disabled={editingItem.access === "VIEWER"} onChange={(start, end) => { setEditStartTime(start); setEditEndTime(end); }} />
+              {editScheduleError && <p role="alert" className="text-xs text-rose-600">{editScheduleError}</p>}
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block space-y-1.5">
                   <span className="text-xs font-semibold text-slate-600">Thời lượng dự kiến</span>
@@ -1435,6 +1473,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   Thay đổi sẽ được cập nhật vào sự kiện Google Calendar hiện có.
                 </p>
               )}
+              {editingItem.calendar.htmlLink && <a href={editingItem.calendar.htmlLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:underline">Mở trong Google <ExternalLink className="h-3.5 w-3.5" /></a>}
+              {data.calendar.connected && !editingItem.calendar.synced && editingItem.access !== "VIEWER" && <AsyncActionButton type="button" pending={calendarSyncMutation.isPending(`calendar-sync:${editingItem.id}`)} pendingLabel="Đang đồng bộ…" onClick={() => syncCreatedCalendarTask(editingItem)} className="rounded-lg px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">Đồng bộ Google Calendar</AsyncActionButton>}
             </div>
             {editingItem.activities.some((activity) => activity.body) && (
               <section className="mt-4 border-t border-slate-100 pt-4">
@@ -1483,9 +1523,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               {editingItem.access === "OWNER" ? <button
                 type="button"
                 disabled={pending}
-                onClick={() => {
-                  if (!window.confirm("Xóa công việc này? Sự kiện đã liên kết trên Google Calendar cũng sẽ bị xóa."))
-                    return;
+                onClick={async () => {
+                  const confirmed = await appDialog.confirm({title:"Xóa công việc?",message:"Task sẽ bị xóa khỏi lịch và danh sách của những người được chia sẻ. Sự kiện liên kết trong Google Calendar của bạn cũng sẽ bị xóa.",confirmText:"Xóa công việc",tone:"danger"});
+                  if (!confirmed) return;
                   run(
                     () => deletePersonalWorkAction(editingItem.id),
                     "Đã xóa công việc",
@@ -1517,6 +1557,31 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         </div>
       )}
 
+      {selectedDay && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/25 p-4 backdrop-blur-[1px]" onMouseDown={() => setSelectedDay(null)} onKeyDown={event => {if(event.key === "Escape") setSelectedDay(null);}}>
+          <section role="dialog" aria-modal="true" aria-labelledby="calendar-day-title" onMouseDown={event => event.stopPropagation()} className="flex max-h-[75vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-xl shadow-slate-950/10">
+            <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-4">
+              <div className="flex items-baseline gap-2.5"><h2 id="calendar-day-title" className="text-sm font-semibold text-slate-950">{calendarEventDate(selectedDay, true)}</h2><span className="text-xs text-slate-400">{eventsByDay.get(selectedDay)?.length || 0} lịch</span></div>
+              <button autoFocus type="button" aria-label="Đóng danh sách lịch trong ngày" onClick={() => setSelectedDay(null)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-800"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="divide-y divide-slate-100 overflow-y-auto px-3 pb-3">
+              {(eventsByDay.get(selectedDay) || []).map(event => {
+                const item = event.linkedTaskItemId ? itemMap.get(event.linkedTaskItemId) : undefined;
+                const share = item ? calendarShareLabel(item) : null;
+                return <PersonalCalendarPreview key={event.id} event={event} item={item}><button type="button" data-task-item-id={item?.id} onClick={() => openCalendarEvent(event)} className="group flex min-h-11 w-full items-center gap-2.5 rounded-md px-2 text-left transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{backgroundColor:item?.category.color || "#0ea5e9"}} />
+                  {!event.allDay && <span className="shrink-0 text-[11px] tabular-nums text-slate-400">{scheduleTime(event.startAt)}</span>}
+                  <span className={`min-w-0 flex-1 truncate text-sm font-medium ${item?.status === "DONE" ? "text-slate-400 line-through" : "text-slate-800"}`}>{event.title}</span>
+                  {share && <Share2 aria-label={share} className="h-3 w-3 shrink-0 text-violet-500" />}
+                  <span className="max-w-20 shrink-0 truncate text-[10px] text-slate-400">{item?.category.label || "Google"}</span>
+                  <ChevronRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-slate-300 group-hover:text-slate-500" />
+                </button></PersonalCalendarPreview>;
+              })}
+            </div>
+          </section>
+        </div>
+      )}
+
       {selectedCalendarEvent && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/25 p-4 backdrop-blur-[1px]"
@@ -1532,7 +1597,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600">
-                  {selectedLinkedTask ? "Công việc đã liên kết" : "Sự kiện Google Calendar"}
+                  Sự kiện Google Calendar
                 </p>
                 <h2 id="calendar-event-title" className="mt-1 text-xl font-bold text-slate-950">
                   {selectedCalendarEvent.title}
@@ -1570,24 +1635,6 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               )}
             </div>
             <div className="mt-6 flex flex-wrap justify-end gap-2">
-              {selectedLinkedTask &&
-                selectedLinkedTask.status !== "DONE" &&
-                selectedLinkedTask.access !== "VIEWER" && (
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() =>
-                    run(
-                      () => updatePersonalWorkAction({ id: selectedLinkedTask.id, status: "DONE" }),
-                      "Đã hoàn thành công việc",
-                      () => setSelectedCalendarEvent(null),
-                    )
-                  }
-                  className="rounded-lg bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100"
-                >
-                  Đánh dấu hoàn thành
-                </button>
-              )}
               {selectedCalendarEvent.htmlLink && (
                 <a
                   href={selectedCalendarEvent.htmlLink}
@@ -1606,50 +1653,69 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
       {calendarCreateOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/25 p-4 backdrop-blur-[1px]"
-          onMouseDown={() => setCalendarCreateOpen(false)}
+          onMouseDown={() => {if(!calendarCreating) setCalendarCreateOpen(false);}}
         >
           <form
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="calendar-create-title"
+            aria-busy={calendarCreating}
+            style={{ maxHeight: "calc(100dvh - 32px)", overflowY: "auto" }}
             onMouseDown={(event) => event.stopPropagation()}
             onSubmit={(event) => {
               event.preventDefault();
               const nextTitle = calendarCreateTitle.trim();
               if (!nextTitle) {
-                setMessage("Vui lòng nhập nội dung công việc cần làm");
+                setCalendarCreateError("Vui lòng nhập nội dung công việc cần làm");
                 return;
               }
-              run(
-                async () => {
-                  const created = await createPersonalWorkAction({
-                    title: nextTitle,
-                    domain: calendarCreateDomain,
-                    dueAt: dateInputToIso(calendarCreateDueAt),
-                    estimatedDays: calendarCreateEstimatedDays,
-                  });
-                  if (calendarCreateSync && data.calendar.connected) await syncPersonalWorkCalendarAction(created.id);
+              const syncToGoogle = calendarCreateSync && data.calendar.connected;
+              let schedule;
+              try {
+                schedule = calendarScheduleInput(calendarCreateDueAt, calendarStartTime, calendarEndTime, calendarCreateEstimatedDays);
+              } catch (error) {
+                setCalendarCreateError(error instanceof Error ? error.message : "Thời gian không hợp lệ");
+                return;
+              }
+              setCalendarCreateError(null);
+              void calendarCreateMutation.run({
+                key: "calendar:create",
+                action: () => createPersonalWorkAction({
+                  title: nextTitle,
+                  domain: calendarCreateDomain,
+                  categoryKey: calendarCategoryKey,
+                  workType: calendarWorkType,
+                  ...schedule,
+                  estimatedDays: calendarCreateEstimatedDays,
+                }),
+                onSuccess: (created) => {
+                  setCalendarCreateOpen(false);
+                  setCalendarCreateTitle("");
+                  router.refresh();
+                  if (syncToGoogle) syncCreatedCalendarTask({id:created.id,title:nextTitle});
                 },
-                calendarCreateSync && data.calendar.connected
-                  ? "Đã tạo việc và đồng bộ Google Calendar"
-                  : "Đã tạo công việc",
-                () => setCalendarCreateOpen(false),
-              );
+                onError: (error) => setCalendarCreateError(error instanceof Error ? error.message : "Không thể tạo công việc. Vui lòng thử lại."),
+                successMessage: "Đã tạo công việc",
+              });
             }}
             className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl shadow-slate-950/15"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600">Tạo từ Calendar</p>
-                <h2 className="mt-1 text-xl font-bold text-slate-950">Thêm công việc</h2>
+                <h2 id="calendar-create-title" className="mt-1 text-xl font-bold text-slate-950">Thêm công việc</h2>
               </div>
               <button
                 type="button"
                 aria-label="Đóng"
+                disabled={calendarCreating}
                 onClick={() => setCalendarCreateOpen(false)}
                 className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="mt-5 space-y-4">
+            <fieldset disabled={calendarCreating} className="mt-5 min-w-0 space-y-4">
               <label className="block space-y-1.5">
                 <span className="text-xs font-semibold text-slate-600">Việc cần làm</span>
                 <input
@@ -1663,13 +1729,18 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold text-slate-600">Nghiệp vụ</span>
+                  <span className="text-xs font-semibold text-slate-600">Nhóm công việc</span>
                   <select
-                    value={calendarCreateDomain}
-                    onChange={(event) => setCalendarCreateDomain(event.target.value as PersonalWorkDomain)}
+                    value={calendarCategoryKey}
+                    onChange={(event) => {
+                      const nextDomain = data.categories.find(c => c.key === event.target.value)?.domain || "GENERAL";
+                      setCalendarCategoryKey(event.target.value);
+                      setCalendarCreateDomain(nextDomain);
+                      setCalendarWorkType(PERSONAL_WORK_TYPES[nextDomain][0].key);
+                    }}
                     className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
                   >
-                    {PERSONAL_WORK_DOMAINS.map((item) => (
+                    {data.categories.map((item) => (
                       <option key={item.key} value={item.key}>
                         {item.label}
                       </option>
@@ -1677,7 +1748,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   </select>
                 </label>
                 <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold text-slate-600">Thời gian</span>
+                  <span className="text-xs font-semibold text-slate-600">Ngày bắt đầu</span>
                   <input
                     required
                     type="date"
@@ -1687,6 +1758,15 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   />
                 </label>
               </div>
+              {data.categories.find(category => category.key === calendarCategoryKey)?.isDefault && PERSONAL_WORK_TYPES[calendarCreateDomain].length > 1 && (
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-slate-600">Loại công việc</span>
+                  <select aria-label="Loại công việc" value={calendarWorkType} onChange={event => setCalendarWorkType(event.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm">
+                    {PERSONAL_WORK_TYPES[calendarCreateDomain].map(type => <option key={type.key} value={type.key}>{type.label}</option>)}
+                  </select>
+                </label>
+              )}
+              <PersonalWorkTimeFields start={calendarStartTime} end={calendarEndTime} onChange={(start, end) => { setCalendarStartTime(start); setCalendarEndTime(end); }} />
               <label className="block space-y-1.5">
                 <span className="text-xs font-semibold text-slate-600">Thời lượng dự kiến</span>
                 <select
@@ -1727,22 +1807,25 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   </span>
                 </label>
               )}
-            </div>
+            </fieldset>
+            {calendarCreateError && <p role="alert" className="mt-3 text-sm text-rose-600">{calendarCreateError}</p>}
             <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
+                disabled={calendarCreating}
                 onClick={() => setCalendarCreateOpen(false)}
                 className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
               >
                 Hủy
               </button>
-              <button
+              <AsyncActionButton
                 type="submit"
-                disabled={pending}
-                className="rounded-lg bg-slate-950 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                pending={calendarCreating}
+                pendingLabel="Đang tạo…"
+                className="w-40 rounded-lg bg-slate-950 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
               >
-                {pending ? "Đang tạo..." : "Tạo công việc"}
-              </button>
+                Tạo công việc
+              </AsyncActionButton>
             </div>
           </form>
         </div>

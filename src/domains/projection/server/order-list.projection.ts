@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import type { StageStatisticsRow } from "./operation-stage-statistics.query";
 
 import type { BusinessEventDispatchContext } from "@/domains/event/dispatcher/business-event-consumer.types";
 import { ORDER_BUSINESS_EVENT_KEYS } from "@/domains/order/server/events/order-business-event.contract";
@@ -423,6 +424,25 @@ function orderBy(sort: OrderSearchInput["sort"]) {
   if (sort === "createdDesc") return Prisma.sql`("dataJson"->>'createdAt')::timestamptz DESC`;
   if (sort === "createdAsc") return Prisma.sql`("dataJson"->>'createdAt')::timestamptz ASC`;
   return Prisma.sql`"sortAt" DESC NULLS LAST`;
+}
+
+export async function queryOrderStageStatistics(db: DB, now: Date) {
+  const filters: Array<OrderSearchInput & { key: string }> = [
+    { key: "need-action", view: "need_action", subFilter: "" },
+    { key: "remaining-payment", view: "processing", subFilter: "remaining_payment" },
+    { key: "awaiting-shipment", view: "processing", subFilter: "awaiting_shipment" },
+  ];
+  const queries = filters.map(filter => Prisma.sql`
+    SELECT ${filter.key}::text AS "stageKey", COUNT(*) AS count,
+      (AVG(GREATEST(0, EXTRACT(EPOCH FROM (${now}::timestamptz - NULLIF("dataJson"->>'updatedAt', '')::timestamptz)) / 3600))
+        FILTER (WHERE NULLIF("dataJson"->>'updatedAt', '') IS NOT NULL))::double precision AS "averageIdleHours",
+      (MAX(GREATEST(0, EXTRACT(EPOCH FROM (${now}::timestamptz - NULLIF("dataJson"->>'updatedAt', '')::timestamptz)) / 3600))
+        FILTER (WHERE NULLIF("dataJson"->>'updatedAt', '') IS NOT NULL))::double precision AS "oldestIdleHours",
+      COUNT(*) FILTER (WHERE NULLIF("dataJson"->>'updatedAt', '')::timestamptz <= ${new Date(now.getTime() - 7 * 86400000)}) AS "staleCount",
+      NULL::bigint AS "stepsDone", NULL::bigint AS "stepsTotal", 0::bigint AS "stepsSampleCount"
+    FROM "ProjectionRecord" WHERE ${Prisma.join(whereConditions(filter), " AND ")}
+  `);
+  return dbOrTx(db).$queryRaw<StageStatisticsRow[]>(Prisma.join(queries, " UNION ALL "));
 }
 
 async function summarizeFilteredOrders(db: DB, input: OrderSearchInput) {

@@ -7,5 +7,5 @@ export const dynamic = "force-dynamic";
 
 export default async function PersonalWorkPage() {
   const user = await requirePermission(PERMISSIONS.TASK_VIEW);
-  return <PersonalWorkClient data={await getPersonalWorkPageData(user)} />;
+  return <PersonalWorkClient data={await getPersonalWorkPageData(user)} localCalendar={process.env.NODE_ENV === "development"} />;
 }

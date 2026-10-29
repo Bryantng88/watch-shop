@@ -6,6 +6,7 @@ export type OperationsDashboardStage = {
   count: number;
   href: string;
   actionLabel: string;
+  metrics?: Array<{ label: string; value: string; detail: string }>;
 };
 
 export type OperationsDashboardQueue = {
