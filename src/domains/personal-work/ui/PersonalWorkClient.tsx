@@ -1,6 +1,10 @@
 "use client";
 
 import { usePersonalCalendar } from "./use-personal-calendar";
+import createStyles from "./PersonalWorkCreate.module.css";
+import { PersonalWorkTimeFields } from "./PersonalWorkTimeFields";
+import { PersonalCalendarPreview } from "./PersonalCalendarPreview";
+import { calendarScheduleInput, scheduleDate, scheduleTime } from "../shared/personal-work-schedule";
 import { buildPersonalCalendarEvents, groupCalendarEvents, calendarShareLabel, calendarDayKey } from "../shared/personal-calendar";
 import { PersonalWorkCategoryManager } from "./PersonalWorkCategoryManager";
 
@@ -84,22 +88,19 @@ function localInputDate(date: Date) {
   return localDayKey(date);
 }
 
-function dateInputToIso(value: string) {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
-}
-
 function isPastDueDate(value: string | null, now: Date) {
   if (!value) return false;
   return localDayKey(new Date(value)) < localDayKey(now);
 }
 
-function dueLabel(value: string | null) {
+function dueLabel(value: string | null, timed = false) {
   if (!value) return "Chưa có lịch";
   return new Intl.DateTimeFormat("vi-VN", {
     weekday: "short",
     day: "2-digit",
     month: "2-digit",
+    timeZone: "Asia/Bangkok",
+    ...(timed ? { hour: "2-digit" as const, minute: "2-digit" as const } : {}),
   }).format(new Date(value));
 }
 
@@ -143,7 +144,8 @@ function monthCells(cursor: Date) {
   });
 }
 
-export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
+export function PersonalWorkClient({ data, localCalendar = false }: { data: PersonalWorkPageData; localCalendar?: boolean }) {
+  const calendarAvailable = data.calendar.connected || localCalendar;
   const router = useRouter();
   const appDialog = useAppDialog();
   const checklistMutation = useUiMutation();
@@ -168,14 +170,19 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [targetResults, setTargetResults] = useState<PersonalWorkTarget[]>([]);
   const [selectedTargets, setSelectedTargets] = useState<PersonalWorkTarget[]>([]);
   const [dueAt, setDueAt] = useState(localInputDate(new Date()));
+  const [quickStartTime, setQuickStartTime] = useState("09:00");
+  const [quickEndTime, setQuickEndTime] = useState("10:00");
   const [estimatedDays, setEstimatedDays] = useState(1);
   const [message, setMessage] = useState<string | null>(null);
-  const [calendarOpen, setCalendarOpen] = useState(data.calendar.connected);
+  const [calendarOpen, setCalendarOpen] = useState(calendarAvailable);
   const [selectedCalendarEvent, setSelectedCalendarEvent] = useState<PersonalCalendarEvent | null>(null);
   const [calendarCreateOpen, setCalendarCreateOpen] = useState(false);
   const [calendarCreateTitle, setCalendarCreateTitle] = useState("");
   const [calendarCreateDomain, setCalendarCreateDomain] = useState<PersonalWorkDomain>("GENERAL");
   const [calendarCreateDueAt, setCalendarCreateDueAt] = useState(localInputDate(new Date()));
+  const [calendarStartTime, setCalendarStartTime] = useState("09:00");
+  const [calendarEndTime, setCalendarEndTime] = useState("10:00");
+  const [calendarWorkType, setCalendarWorkType] = useState<string>(PERSONAL_WORK_TYPES.GENERAL[0].key);
   const [calendarCreateEstimatedDays, setCalendarCreateEstimatedDays] = useState(1);
   const [calendarCreateSync, setCalendarCreateSync] = useState(true);
   const calendar = usePersonalCalendar(data);
@@ -211,6 +218,10 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [editUpdateBody, setEditUpdateBody] = useState("");
   const [editDomain, setEditDomain] = useState<PersonalWorkDomain>("GENERAL");
   const [editDueAt, setEditDueAt] = useState("");
+  const [editStartTime, setEditStartTime] = useState("");
+  const [editEndTime, setEditEndTime] = useState("");
+  const [editWorkType, setEditWorkType] = useState("");
+  const [editScheduleError, setEditScheduleError] = useState<string | null>(null);
   const [editEstimatedDays, setEditEstimatedDays] = useState(1);
   const [editTargets, setEditTargets] = useState<PersonalWorkTarget[]>([]);
   const [editTargetType, setEditTargetType] = useState<PersonalWorkTargetType | "">("");
@@ -313,6 +324,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     setCalendarCreateDomain("GENERAL");
     setCalendarCategoryKey("GENERAL");
     setCalendarCreateDueAt(localInputDate(date));
+    setCalendarStartTime("09:00");
+    setCalendarEndTime("10:00");
+    setCalendarWorkType(PERSONAL_WORK_TYPES.GENERAL[0].key);
     setCalendarCreateEstimatedDays(1);
     setCalendarCreateSync(data.calendar.connected);
     setCalendarCreateOpen(true);
@@ -349,8 +363,14 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     setEditUpdateBody("");
     setEditDomain(item.domain);
     setEditCategoryKey(item.category.key);
-    setEditDueAt(item.dueAt ? localInputDate(new Date(item.dueAt)) : "");
-    setEditEstimatedDays(item.estimatedDays || 1);
+    setEditDueAt(item.dueAt ? scheduleDate(item.dueAt) : "");
+    setEditStartTime(item.scheduledEndAt && item.dueAt ? scheduleTime(item.dueAt) : "");
+    setEditEndTime(item.scheduledEndAt ? scheduleTime(item.scheduledEndAt) : "");
+    setEditWorkType(item.workType || PERSONAL_WORK_TYPES[item.domain][0].key);
+    setEditScheduleError(null);
+    setEditEstimatedDays(item.scheduledEndAt && item.dueAt
+      ? Math.round((Date.parse(`${scheduleDate(item.scheduledEndAt)}T00:00:00Z`) - Date.parse(`${scheduleDate(item.dueAt)}T00:00:00Z`)) / 86400000) + 1
+      : item.estimatedDays || 1);
     setEditTargets(item.targets);
     setEditTargetType(domainTargets[item.domain][0]?.type || "");
     setEditTargetQuery("");
@@ -410,7 +430,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   categoryKey: newCategoryKey,
                   workType,
                   targets: selectedTargets,
-                  dueAt: dueAt ? dateInputToIso(dueAt) : null,
+                  ...(dueAt ? calendarScheduleInput(dueAt, quickStartTime, quickEndTime, estimatedDays) : { dueAt: null, scheduledEndAt: null }),
                   estimatedDays,
                 });
                 if (data.calendar.connected) await syncPersonalWorkCalendarAction(created.id);
@@ -426,11 +446,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
           }}
         >
           <AdminFlatToolbar
-            className={`grid w-full gap-2 ${
-              newDomain === "WORK"
-                ? "md:grid-cols-[minmax(0,1fr)_150px_170px_210px_150px_auto]"
-                : "md:grid-cols-[minmax(0,1fr)_170px_210px_150px_auto]"
-            }`}
+            className={createStyles.toolbar}
           >
             <input
               required
@@ -470,6 +486,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               onChange={(e) => setDueAt(e.target.value)}
               className="h-11 rounded-lg border border-slate-200 px-3 text-sm"
             />
+            <PersonalWorkTimeFields compact start={quickStartTime} end={quickEndTime} onChange={(start, end) => { setQuickStartTime(start); setQuickEndTime(end); }} />
             <div className="flex min-w-0 gap-2">
               <select
                 aria-label="Thời lượng dự kiến"
@@ -601,7 +618,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             type="button"
             aria-expanded={calendarOpen}
             aria-controls="personal-google-calendar-agenda"
-            onClick={() => data.calendar.connected && setCalendarOpen((open) => !open)}
+            onClick={() => calendarAvailable && setCalendarOpen((open) => !open)}
             className="flex w-full items-start justify-between gap-3 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
           >
             <div className="flex gap-3">
@@ -609,9 +626,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 <CalendarDays className="h-5 w-5" />
               </span>
               <div>
-                <h2 className="font-semibold text-slate-950">Google Calendar</h2>
+                <h2 className="font-semibold text-slate-950">{localCalendar && !data.calendar.connected ? "Lịch công việc" : "Google Calendar"}</h2>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  {data.calendar.connected
+                  {localCalendar && !data.calendar.connected ? "Theo dõi công việc trên lịch" : data.calendar.connected
                     ? data.calendar.accountEmail || "Đã kết nối"
                     : data.calendar.configured
                       ? "Chưa kết nối tài khoản"
@@ -625,14 +642,14 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   ĐÃ KẾT NỐI
                 </span>
               )}
-              {data.calendar.connected && (
+              {calendarAvailable && (
                 <ChevronDown
                   className={`h-4 w-4 text-slate-400 transition-transform ${calendarOpen ? "rotate-180" : ""}`}
                 />
               )}
             </div>
           </button>
-          <AsyncActionButton
+          {(!localCalendar || data.calendar.connected) && <AsyncActionButton
             pending={data.calendar.connected ? calendar.loading : pending}
             title={calendar.lastSyncedAt ? `Cập nhật lịch: ${new Date(calendar.lastSyncedAt).toLocaleString("vi-VN")}` : undefined}
             pendingLabel={data.calendar.connected ? "Đang tải lịch…" : "Đang kết nối…"}
@@ -656,7 +673,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 <ExternalLink className="h-4 w-4" /> Kết nối Google Calendar
               </>
             )}
-          </AsyncActionButton>
+          </AsyncActionButton>}
         </aside>
       </section>
 
@@ -671,13 +688,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
       ))}
 
       <div
-        className={`grid items-start gap-5 ${data.calendar.connected && calendarOpen ? "xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,0.85fr)]" : "grid-cols-1"}`}
+        className={`grid items-start gap-5 ${calendarAvailable && calendarOpen ? "xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,0.85fr)]" : "grid-cols-1"}`}
       >
-        {data.calendar.connected && calendarOpen && (
+        {calendarAvailable && calendarOpen && (
           <section id="personal-google-calendar-agenda" className="min-w-0 overflow-hidden bg-white">
             <div className="flex min-h-[56px] flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-2">
               <div>
-                <h2 className="text-sm font-semibold text-slate-950">Lịch Google của tôi</h2>
+                <h2 className="text-sm font-semibold text-slate-950">{data.calendar.connected ? "Lịch Google của tôi" : "Lịch công việc"}</h2>
                 <p className="mt-0.5 text-xs text-slate-500">
                   Màu nền theo nhóm · Sọc cam: quá hạn · Gạch ngang: đã xong.
                 </p>
@@ -788,11 +805,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                                     : "w-full rounded";
                               const content = (
                                 <>
-                                  {!event.allDay && (
+                                  {!event.allDay && key === eventStartKey && (
                                     <span className="mr-1 text-[10px] opacity-70">
-                                      {new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit" }).format(
-                                        new Date(event.startAt),
-                                      )}
+                                      {scheduleTime(event.startAt)}
                                     </span>
                                   )}
                                   <span className={startsVisibleWeekSegment ? `truncate ${isDone ? "text-slate-500 line-through decoration-slate-400/80 decoration-1" : ""}` : "select-none opacity-0"}>
@@ -801,20 +816,22 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                                 </>
                               );
                               return (
+                                <PersonalCalendarPreview key={event.id} event={event} item={linkedTask}>
                                 <button
                                   type="button"
                                   key={event.id}
+                                  data-task-item-id={linkedTask?.id}
                                   onClick={(clickEvent) => {
                                     clickEvent.stopPropagation();
                                     openCalendarEvent(event);
                                   }}
-                                  title={`${isDone ? "Đã hoàn thành · " : ""}${calendarEventDate(event.startAt, event.allDay)} · ${event.title}${linkedTask && calendarShareLabel(linkedTask) ? ` · ${calendarShareLabel(linkedTask)}` : ""}`}
                                   style={category ? personalCategoryStyle(category.color) : undefined}
                                   className={`flex min-h-[22px] items-center overflow-hidden whitespace-nowrap px-1.5 py-1 text-left text-[11px] font-medium leading-none ${connectionClass} ${category ? "hover:brightness-95" : externalCalendarStyle.event} ${isDone ? "opacity-65 saturate-50" : ""} ${startsVisibleWeekSegment && isOverdue ? "border-l-2 border-l-orange-400" : "border-l-0"}`}
                                 >
                                   {content}
                                   {startsVisibleWeekSegment && linkedTask && calendarShareLabel(linkedTask) && <Share2 aria-label={calendarShareLabel(linkedTask)!} className="ml-1 h-3 w-3 shrink-0 text-violet-600" />}
                                 </button>
+                                </PersonalCalendarPreview>
                               );
                             })}
                             {dayEvents.length > 3 && (
@@ -957,7 +974,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       >
                         <Clock3 className="h-3.5 w-3.5" />
                         {late ? "Quá hạn · " : ""}
-                        {dueLabel(item.dueAt)} · {item.estimatedDays === 1 ? "trong ngày" : `dự kiến ${item.estimatedDays} ngày`}
+                        {dueLabel(item.dueAt, Boolean(item.scheduledEndAt))} · {item.estimatedDays === 1 ? "trong ngày" : `dự kiến ${item.estimatedDays} ngày`}
                       </p>
                       {item.access === "OWNER" && item.sharedWith.length > 0 && (
                         <div
@@ -1032,6 +1049,15 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 setMessage("Vui lòng nhập nội dung công việc cần làm");
                 return;
               }
+              let editedSchedule;
+              try {
+                if (!editDueAt && (editStartTime || editEndTime)) throw new Error("Vui lòng chọn ngày bắt đầu");
+                editedSchedule = editDueAt ? calendarScheduleInput(editDueAt, editStartTime, editEndTime, editEstimatedDays) : { dueAt: null, scheduledEndAt: null };
+                setEditScheduleError(null);
+              } catch (error) {
+                setEditScheduleError(error instanceof Error ? error.message : "Thời gian không hợp lệ");
+                return;
+              }
               run(
                 async () => {
                   await updatePersonalWorkAction({
@@ -1040,8 +1066,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                     note: editNote,
                     domain: editDomain,
                     categoryKey: editCategoryKey,
+                    workType: editWorkType,
                     tags: editingItem.tags,
-                    dueAt: editDueAt ? dateInputToIso(editDueAt) : null,
+                    ...editedSchedule,
                     estimatedDays: editEstimatedDays,
                     targets: editTargets,
                     updateBody: editUpdateBody,
@@ -1294,6 +1321,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       setEditCategoryKey(event.target.value);
                       const nextDomain = editCategories.find(c => c.key === event.target.value)?.domain || "GENERAL";
                       setEditDomain(nextDomain);
+                      setEditWorkType(PERSONAL_WORK_TYPES[nextDomain][0].key);
                       setEditTargetType(domainTargets[nextDomain][0]?.type || "");
                       setEditTargetQuery("");
                       setEditTargetResults([]);
@@ -1309,7 +1337,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   </select>
                 </label>
                 <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold text-slate-600">Thời gian</span>
+                  <span className="text-xs font-semibold text-slate-600">Ngày bắt đầu</span>
                   <input
                     type="date"
                     value={editDueAt}
@@ -1319,6 +1347,16 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   />
                 </label>
               </div>
+              {editCategories.find(category => category.key === editCategoryKey)?.isDefault && PERSONAL_WORK_TYPES[editDomain].length > 1 && (
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-slate-600">Loại công việc</span>
+                  <select aria-label="Loại công việc" value={editWorkType} disabled={editingItem.access === "VIEWER"} onChange={event => setEditWorkType(event.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm">
+                    {PERSONAL_WORK_TYPES[editDomain].map(type => <option key={type.key} value={type.key}>{type.label}</option>)}
+                  </select>
+                </label>
+              )}
+              <PersonalWorkTimeFields start={editStartTime} end={editEndTime} disabled={editingItem.access === "VIEWER"} onChange={(start, end) => { setEditStartTime(start); setEditEndTime(end); }} />
+              {editScheduleError && <p role="alert" className="text-xs text-rose-600">{editScheduleError}</p>}
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block space-y-1.5">
                   <span className="text-xs font-semibold text-slate-600">Thời lượng dự kiến</span>
@@ -1530,14 +1568,14 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               {(eventsByDay.get(selectedDay) || []).map(event => {
                 const item = event.linkedTaskItemId ? itemMap.get(event.linkedTaskItemId) : undefined;
                 const share = item ? calendarShareLabel(item) : null;
-                return <button type="button" key={event.id} onClick={() => openCalendarEvent(event)} title={`${event.title}${share ? ` · ${share}` : ""}`} className="group flex min-h-11 w-full items-center gap-2.5 rounded-md px-2 text-left transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">
+                return <PersonalCalendarPreview key={event.id} event={event} item={item}><button type="button" data-task-item-id={item?.id} onClick={() => openCalendarEvent(event)} className="group flex min-h-11 w-full items-center gap-2.5 rounded-md px-2 text-left transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">
                   <span className="h-2 w-2 shrink-0 rounded-full" style={{backgroundColor:item?.category.color || "#0ea5e9"}} />
-                  {!event.allDay && <span className="shrink-0 text-[11px] tabular-nums text-slate-400">{new Intl.DateTimeFormat("vi-VN", {hour:"2-digit",minute:"2-digit"}).format(new Date(event.startAt))}</span>}
+                  {!event.allDay && <span className="shrink-0 text-[11px] tabular-nums text-slate-400">{scheduleTime(event.startAt)}</span>}
                   <span className={`min-w-0 flex-1 truncate text-sm font-medium ${item?.status === "DONE" ? "text-slate-400 line-through" : "text-slate-800"}`}>{event.title}</span>
                   {share && <Share2 aria-label={share} className="h-3 w-3 shrink-0 text-violet-500" />}
                   <span className="max-w-20 shrink-0 truncate text-[10px] text-slate-400">{item?.category.label || "Google"}</span>
                   <ChevronRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-slate-300 group-hover:text-slate-500" />
-                </button>;
+                </button></PersonalCalendarPreview>;
               })}
             </div>
           </section>
@@ -1622,6 +1660,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             aria-modal="true"
             aria-labelledby="calendar-create-title"
             aria-busy={calendarCreating}
+            style={{ maxHeight: "calc(100dvh - 32px)", overflowY: "auto" }}
             onMouseDown={(event) => event.stopPropagation()}
             onSubmit={(event) => {
               event.preventDefault();
@@ -1631,6 +1670,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 return;
               }
               const syncToGoogle = calendarCreateSync && data.calendar.connected;
+              let schedule;
+              try {
+                schedule = calendarScheduleInput(calendarCreateDueAt, calendarStartTime, calendarEndTime, calendarCreateEstimatedDays);
+              } catch (error) {
+                setCalendarCreateError(error instanceof Error ? error.message : "Thời gian không hợp lệ");
+                return;
+              }
               setCalendarCreateError(null);
               void calendarCreateMutation.run({
                 key: "calendar:create",
@@ -1638,7 +1684,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   title: nextTitle,
                   domain: calendarCreateDomain,
                   categoryKey: calendarCategoryKey,
-                  dueAt: dateInputToIso(calendarCreateDueAt),
+                  workType: calendarWorkType,
+                  ...schedule,
                   estimatedDays: calendarCreateEstimatedDays,
                 }),
                 onSuccess: (created) => {
@@ -1685,7 +1732,12 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   <span className="text-xs font-semibold text-slate-600">Nhóm công việc</span>
                   <select
                     value={calendarCategoryKey}
-                    onChange={(event) => {setCalendarCategoryKey(event.target.value);setCalendarCreateDomain(data.categories.find(c=>c.key===event.target.value)?.domain || "GENERAL");}}
+                    onChange={(event) => {
+                      const nextDomain = data.categories.find(c => c.key === event.target.value)?.domain || "GENERAL";
+                      setCalendarCategoryKey(event.target.value);
+                      setCalendarCreateDomain(nextDomain);
+                      setCalendarWorkType(PERSONAL_WORK_TYPES[nextDomain][0].key);
+                    }}
                     className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
                   >
                     {data.categories.map((item) => (
@@ -1696,7 +1748,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   </select>
                 </label>
                 <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold text-slate-600">Thời gian</span>
+                  <span className="text-xs font-semibold text-slate-600">Ngày bắt đầu</span>
                   <input
                     required
                     type="date"
@@ -1706,6 +1758,15 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   />
                 </label>
               </div>
+              {data.categories.find(category => category.key === calendarCategoryKey)?.isDefault && PERSONAL_WORK_TYPES[calendarCreateDomain].length > 1 && (
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-slate-600">Loại công việc</span>
+                  <select aria-label="Loại công việc" value={calendarWorkType} onChange={event => setCalendarWorkType(event.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm">
+                    {PERSONAL_WORK_TYPES[calendarCreateDomain].map(type => <option key={type.key} value={type.key}>{type.label}</option>)}
+                  </select>
+                </label>
+              )}
+              <PersonalWorkTimeFields start={calendarStartTime} end={calendarEndTime} onChange={(start, end) => { setCalendarStartTime(start); setCalendarEndTime(end); }} />
               <label className="block space-y-1.5">
                 <span className="text-xs font-semibold text-slate-600">Thời lượng dự kiến</span>
                 <select

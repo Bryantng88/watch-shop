@@ -2817,6 +2817,7 @@ model TaskItem {
   personalCategoryId String?
   personalCategory PersonalWorkCategory? @relation(fields: [personalCategoryId], references: [id], onDelete: SetNull)
   dueAt           DateTime?
+  scheduledEndAt  DateTime?
   estimatedDays    Int             @default(1)
   progressPercent Int              @default(0)
   progressMode    TaskProgressMode @default(MANUAL)

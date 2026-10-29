@@ -48,6 +48,18 @@ fixtures it needs.
 For a remote disposable database, verify the project/database identity first,
 then set `ALLOW_REMOTE_STOREFRONT_TEST_DB=1` only for that test process.
 
+## Optional local admin auto-login
+
+Set `LOCAL_AUTO_LOGIN=true` in the machine-local `.env.local` and restart the
+development server. Opening `/login` signs in the existing active
+`admin@system.local` ADMIN account and opens `/admin/dashboard`. No password is
+stored or reset. Remove the flag or set it to `false` to use password login.
+
+This requires development mode, loopback request hosts and clients, same-origin
+POST requests, and loopback local/test databases in both `DATABASE_URL` and
+`DIRECT_URL`. Production and remote databases cannot enable it. A missing or
+inactive local admin falls back to the regular login form.
+
 ## Assertions
 
 - first submission creates one waiting Purchase Request and no Order;

@@ -1,0 +1,24 @@
+﻿.toolbar {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.toolbar > input:not([type="date"]) { flex: 1 1 160px; min-width: 140px; }
+.toolbar > select { width: 116px; min-width: 0; }
+.toolbar > input[type="date"] { width: 144px; min-width: 0; }
+.toolbar > div:not(.times) { flex: 0 1 126px; }
+.toolbar > input, .toolbar > select, .toolbar > button, .toolbar > div > select, .toolbar > div > input { height: 36px; font-size: 12px; }
+.toolbar > button { padding-inline: 14px; margin-left: auto; }
+.times { display: flex; align-items: center; gap: 7px; flex: 0 0 auto; }
+.times > label { font-size: 11px; white-space: nowrap; gap: 4px; }
+.range { display: flex; align-items: center; gap: 3px; }
+.range::before { content: none; }
+.timeLabel { display: block; }
+.timeLabel + .timeLabel::before { content: "–"; color: #94a3b8; margin-right: 3px; }
+.timeLabel input { width: 104px; height: 36px; padding-inline: 6px; font-size: 12px; }
+@media (max-width: 640px) {
+  .toolbar > input:not([type="date"]) { flex-basis: 100%; }
+  .toolbar > button { flex: 1; }
+}

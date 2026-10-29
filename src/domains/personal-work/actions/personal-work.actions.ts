@@ -49,6 +49,7 @@ export async function createPersonalWorkAction(input: {
   title: string;
   note?: string | null;
   dueAt?: string | null;
+  scheduledEndAt?: string | null;
   estimatedDays?: number;
   priority?: TaskPriority;
   domain?: PersonalWorkDomain;
@@ -83,6 +84,8 @@ export async function updatePersonalWorkAction(input: {
   title?: string;
   note?: string | null;
   dueAt?: string | null;
+  scheduledEndAt?: string | null;
+  workType?: string | null;
   estimatedDays?: number;
   priority?: TaskPriority;
   status?: TaskStatus;

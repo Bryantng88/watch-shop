@@ -61,6 +61,15 @@ const event: PersonalCalendarEvent = {
   location: null,
   linkedTaskItemId: "task",
 };
+test("timed tasks retain hours and explicit exclusive ends across days", () => {
+  const events = buildPersonalCalendarEvents([item({ dueAt: "2026-10-28T16:00:00Z", scheduledEndAt: "2026-10-28T18:00:00Z", estimatedDays: 2 })], []);
+  assert.equal(events[0].allDay, false);
+  assert.equal(events[0].startAt, "2026-10-28T16:00:00Z");
+  assert.equal(events[0].endAt, "2026-10-28T18:00:00Z");
+  assert.deepEqual([...groupCalendarEvents(events, ["2026-10-28", "2026-10-29", "2026-10-30"]).keys()], ["2026-10-28", "2026-10-29"]);
+  const midnightEnd = { ...events[0], endAt: "2026-10-28T17:00:00Z" };
+  assert.deepEqual([...groupCalendarEvents([midnightEnd], ["2026-10-28", "2026-10-29"]).keys()], ["2026-10-28"]);
+});
 test("linked Google event uses current task title/date once, with Bangkok midnight preserved", () => {
   const events = buildPersonalCalendarEvents([item()], [event]);
   assert.equal(events.length, 1);

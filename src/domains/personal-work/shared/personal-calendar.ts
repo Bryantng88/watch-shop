@@ -29,16 +29,17 @@ export function buildPersonalCalendarEvents(
       .filter((item) => item.dueAt && item.status !== "CANCELLED")
       .map((item) => {
         const original = linked.get(item.id);
-        const startAt = calendarDayKey(item.dueAt!);
-        const end = new Date(`${startAt}T00:00:00Z`);
+        const allDay = !item.scheduledEndAt;
+        const startAt = allDay ? calendarDayKey(item.dueAt!) : item.dueAt!;
+        const end = new Date(`${calendarDayKey(item.dueAt!)}T00:00:00Z`);
         end.setUTCDate(end.getUTCDate() + Math.max(1, item.estimatedDays));
         return {
           id: original?.id || `local-task:${item.id}`,
           title: item.title,
           description: item.note,
           startAt,
-          endAt: end.toISOString().slice(0, 10),
-          allDay: true,
+          endAt: item.scheduledEndAt || end.toISOString().slice(0, 10),
+          allDay,
           htmlLink: item.calendar.htmlLink || original?.htmlLink || null,
           location: original?.location || null,
           linkedTaskItemId: item.id,
@@ -53,13 +54,15 @@ export function groupCalendarEvents(
   const grouped = new Map<string, PersonalCalendarEvent[]>();
   for (const event of events) {
     const start = calendarDayKey(event.startAt, event.allDay);
+    const lastTimedDay = !event.allDay && event.endAt && Date.parse(event.endAt) > Date.parse(event.startAt)
+      ? calendarDayKey(new Date(Date.parse(event.endAt) - 1).toISOString()) : start;
     for (const day of visibleDays) {
       if (
         day < start ||
-        (!event.allDay && day !== start) ||
+        (!event.allDay && day > lastTimedDay) ||
         (event.allDay && event.endAt
           ? day >= event.endAt.slice(0, 10)
-          : day !== start)
+          : event.allDay && day !== start)
       )
         continue;
       const entries = grouped.get(day) || [];

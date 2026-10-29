@@ -336,6 +336,7 @@ export async function createTask(db: DB, input: CreateTaskInput, auth: any) {
     kind,
     periodType: period.periodType!,
     periodKey: period.periodKey!,
+    ownerUserId: kind === TaskKind.PERSONAL ? userId : undefined,
   });
 
   if (existing) {
