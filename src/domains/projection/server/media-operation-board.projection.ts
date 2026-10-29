@@ -211,7 +211,7 @@ export async function buildMediaOperationBoardRow(
     },
   });
   if (!watch) return null;
-  if (!binding?.taskItemId) {
+  if (!binding?.taskItemId || !binding.taskId) {
     if (watch.isContentDownloaded && watch.isImageDownloaded) {
       const data: MediaOperationBoardProjection = {
         id: watch.id,
@@ -385,7 +385,7 @@ export async function buildMediaPostOperationBoardRow(
     .filter((row) => mediaStage(row.taskItem?.note, row.metadataJson))
     .sort((left, right) => mediaBindingRank(right) - mediaBindingRank(left))[0];
   const entityId = `MEDIA_POST:${input.mediaPostId}`;
-  if (!binding?.taskItemId) {
+  if (!binding?.taskItemId || !binding.taskId) {
     await deleteProjectionRecords(db, {
       projectionKey: MEDIA_OPERATION_BOARD_PROJECTION_KEY,
       projectionVersion: MEDIA_OPERATION_BOARD_PROJECTION_VERSION,

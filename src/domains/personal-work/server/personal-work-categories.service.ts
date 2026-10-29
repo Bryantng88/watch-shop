@@ -1,9 +1,10 @@
-﻿import { randomUUID } from "node:crypto";
-import { AppTagOwnerType, AppTagTargetType } from "@prisma/client";
-import { setTargetTagsRepo } from "@/domains/task/server/core/task.repo";
+import { personalWorkTagOwner } from "./personal-work-access";
+import { randomUUID } from "node:crypto";
+import { AppTagTargetType } from "@prisma/client";
+import { setTargetTagsRepo } from "@/domains/task/server/tag/task-tag.repo";
 import { hydrateTaskItemsWithTagsRepo } from "@/domains/task/server/tag/task-tag.repo";
 import { prisma } from "@/server/db/client";
-import { getAuthUserId } from "@/domains/task/server/core/task.service";
+import { getAuthUserId } from "@/server/auth/auth-user-id";
 import {
   PERSONAL_WORK_DOMAINS,
   PERSONAL_WORK_COLORS,
@@ -174,7 +175,7 @@ export async function deletePersonalCategory(
       throw new Error("Loại thay thế không tồn tại");
     const affected = await tx.taskItem.findMany({
       where: { personalCategoryId: row.id },
-      select: { id: true, taskId: true },
+      select: { id: true, taskId: true, personalOwnerUserId: true },
     });
     const tagged = await hydrateTaskItemsWithTagsRepo(tx, affected);
     const defaultKeys = new Set<string>(
@@ -182,8 +183,7 @@ export async function deletePersonalCategory(
     );
     for (const item of tagged) {
       await setTargetTagsRepo(tx, {
-        ownerType: AppTagOwnerType.TASK,
-        ownerId: item.taskId,
+        ...personalWorkTagOwner(item),
         targetType: AppTagTargetType.TASK_ITEM,
         targetId: item.id,
         names: [

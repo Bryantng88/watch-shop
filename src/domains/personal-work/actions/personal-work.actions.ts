@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { PersonalTaskShareAccess, TaskStatus, type TaskPriority } from "@prisma/client";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
-import { getAuthUserId } from "@/domains/task/server/core/task.service";
+import { getAuthUserId } from "@/server/auth/auth-user-id";
 import {
   addPersonalWorkChecklistItem,
   assertPersonalWorkAccess,
@@ -17,6 +17,7 @@ import {
   updatePersonalWorkItem,
 } from "../server/personal-work.service";
 import {
+  updatePersonalGoogleCalendarEvent,
   deletePersonalTaskFromGoogle,
   googleCalendarAuthorizationUrl,
   syncPersonalTaskToGoogle,
@@ -179,4 +180,10 @@ export async function syncPersonalWorkCalendarAction(taskItemId: string) {
   await syncPersonalTaskToGoogle(userId, taskItemId);
   refresh();
   return { ok: true };
+}
+
+export async function updateGoogleCalendarEventAction(input: import("../shared/google-event-edit").GoogleEventEditInput) {
+  const userId = getAuthUserId(await auth());
+  if (!userId) throw new Error("Không xác định được người dùng");
+  return updatePersonalGoogleCalendarEvent(userId, input);
 }

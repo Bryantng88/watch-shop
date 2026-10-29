@@ -96,6 +96,14 @@ export function usePersonalCalendar(data: PersonalWorkPageData) {
       request.current = null;
     };
   }, [data.calendar.connected, data.currentUserId, reload]);
+  const updateEvent = useCallback((event: PersonalCalendarEvent) => {
+    request.current?.abort();
+    request.current = null;
+    setLoading(false);
+    setEventSnapshot(previous => ({ userId: latest.current.currentUserId,
+      events: previous.userId === latest.current.currentUserId
+        ? previous.events.map(item => item.id === event.id ? event : item) : [event] }));
+  }, []);
   return {
     // A route refresh after a mutation is newer than an in-flight calendar read.
     // Never replace that authoritative task snapshot with a late response.
@@ -108,6 +116,7 @@ export function usePersonalCalendar(data: PersonalWorkPageData) {
     loading: data.calendar.connected && loading,
     error,
     reload,
+    updateEvent,
     lastSyncedAt,
   };
 }

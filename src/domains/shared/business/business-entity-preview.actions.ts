@@ -23,6 +23,7 @@ import { perfStep } from "@/lib/server-perf";
 import { resolveProductDisplayImage } from "@/domains/shared/media/server/display-image";
 import { ensureTechnicalIssuePaymentTx } from "@/domains/payment/server/service-issue-payment.service";
 import { getWatchDecisionSnapshot } from "@/domains/watch/server/decision";
+import { buildWatchPreviewImages } from "./watch-preview-images";
 
 type ProductPreviewImageSource = {
     primaryImageUrl?: string | null;
@@ -188,7 +189,7 @@ export async function getBusinessEntityPreviewAction(input: {
         if (!row) return null;
 
         const product = row.product;
-        const [activity, watchDecision] = await Promise.all([
+        const [activity, watchDecision, galleryImages, galleryBindings] = await Promise.all([
             loadPreviewActivity({
                 auth,
                 type: "WATCH",
@@ -198,6 +199,16 @@ export async function getBusinessEntityPreviewAction(input: {
                 canEdit: canEditActivity,
             }),
             getWatchDecisionSnapshot(row.id),
+            prisma.productImage.findMany({
+                where: { productId: row.productId, role: { in: ["GALLERY", "COVER"] } },
+                orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+                select: { fileKey: true, role: true, alt: true },
+            }),
+            prisma.mediaBinding.findMany({
+                where: { ownerType: "WATCH", ownerId: row.id, role: { in: ["GALLERY", "COVER"] }, lifecycle: { in: ["ATTACHED", "APPROVED", "PUBLISHED"] } },
+                orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+                select: { role: true, mediaObject: { select: { storageKey: true, availability: true, originalFileName: true } } },
+            }),
         ]);
 
         return {
@@ -207,6 +218,7 @@ export async function getBusinessEntityPreviewAction(input: {
             subtitle: product?.sku ? `SKU: ${product.sku}` : compactId(row.id),
             status: row.saleStage,
             imageUrl: imageUrlFromProduct(product),
+            images: buildWatchPreviewImages({ cover: product?.storefrontImageKey, fallback: product?.primaryImageUrl, title: product?.title || "Watch", images: galleryImages, bindings: galleryBindings }),
             activity,
             watchDecision: watchDecision ?? undefined,
             href: `/admin/watches/${product?.id}/edit`, facts: [

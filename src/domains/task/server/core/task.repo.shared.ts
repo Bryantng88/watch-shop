@@ -9,12 +9,10 @@ import type {
   CompleteRelatedTasksInput,
   CreateTaskInput,
   TaskDomainLinksInput,
-  CreateTaskItemInput,
   EnsureSystemTaskInput,
   FindOpenRelatedTasksInput,
   TaskDueKey,
   TaskListFilters,
-  TaskViewKey,
   UpdateTaskInput,
 } from "../task.types";
 
@@ -246,16 +244,15 @@ export function assignedTaskItemWhere(userId: string): Prisma.TaskWhereInput {
   };
 }
 
-export function applyTaskRowAccess(
-  task: any,
+export function applyTaskRowAccess<T extends {
+  kind: TaskKind; createdByUserId: string | null; assignedToUserId: string | null;
+  taskItems?: Array<{ id: string; assignedToUserId: string | null }>;
+}>(
+  task: T,
   currentUserId: string,
   canViewAll = false,
 ) {
-  const isSharedTask = [
-    TaskKind.OPERATION,
-    TaskKind.BUSINESS,
-    TaskKind.SERVICE,
-  ].includes(task.kind);
+  const isSharedTask = isSharedTaskKind(task.kind);
 
   const isOwner =
     canViewAll ||
@@ -263,17 +260,17 @@ export function applyTaskRowAccess(
     task.assignedToUserId === currentUserId ||
     task.createdByUserId === currentUserId;
   if (isOwner) {
-    return { ...task, rowAccess: "OWNER", visibleTaskItemIds: null };
+    return { ...task, rowAccess: "OWNER" as const, visibleTaskItemIds: null };
   }
 
   const visibleTaskItems = (task.taskItems ?? []).filter(
-    (item: any) => item.assignedToUserId === currentUserId,
+    item => item.assignedToUserId === currentUserId,
   );
 
   return {
     ...task,
-    rowAccess: "TASK_ITEM_ASSIGNEE",
-    visibleTaskItemIds: visibleTaskItems.map((item: any) => item.id),
+    rowAccess: "TASK_ITEM_ASSIGNEE" as const,
+    visibleTaskItemIds: visibleTaskItems.map(item => item.id),
   };
 }
 
@@ -282,10 +279,11 @@ export function buildAccessWhere(
   canViewAll: boolean,
 ): Prisma.TaskWhereInput {
   if (canViewAll) {
-    return {};
+    return { kind: { not: TaskKind.PERSONAL } };
   }
 
   return {
+    kind: { not: TaskKind.PERSONAL },
     OR: [
       { kind: { in: SHARED_TASK_KINDS } },
       { createdByUserId: userId },

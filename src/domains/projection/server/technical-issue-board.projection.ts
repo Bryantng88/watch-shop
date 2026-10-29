@@ -180,7 +180,7 @@ export async function buildTechnicalIssueBoardRow(
       taskItem: { select: { note: true } },
     },
   });
-  if (!binding) return null;
+  if (!binding?.taskId) return null;
 
   const [srBinding, startedEvent, activities, createdEvent, latestIssueEvent] = await Promise.all([
     client.taskExecution.findFirst({

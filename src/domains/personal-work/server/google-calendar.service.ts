@@ -2,6 +2,8 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/server/db/client";
 import { decryptCalendarToken, encryptCalendarToken } from "./google-calendar-crypto";
 import { personalWorkEditAccessWhere } from "./personal-work-access";
+import { validateGoogleEventEdit, type GoogleEventEditInput } from "../shared/google-event-edit";
+import type { PersonalCalendarEvent } from "../shared/personal-work.types";
 import { scheduleDayCount } from "../shared/personal-work-schedule";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -11,6 +13,13 @@ const GOOGLE_CALENDAR_EVENT_SCOPE = "https://www.googleapis.com/auth/calendar.ev
 
 type GoogleCalendarEvent = {
   id?: string;
+  etag?: string;
+  locked?: boolean;
+  eventType?: string;
+  organizer?: { self?: boolean };
+  guestsCanModify?: boolean;
+  recurringEventId?: string;
+  extendedProperties?: { private?: Record<string, string> };
   summary?: string;
   description?: string;
   htmlLink?: string;
@@ -211,7 +220,6 @@ export async function syncPersonalTaskToGoogle(userId: string, taskItemId: strin
   const item = await prisma.taskItem.findFirst({
     where: {
       id: taskItemId,
-      task: { kind: "PERSONAL" },
       ...personalWorkEditAccessWhere(userId),
     },
     include: { task: { select: { id: true, title: true } } },
@@ -346,15 +354,51 @@ export async function listPersonalGoogleCalendarEvents(userId: string) {
     }));
   }
   await prisma.googleCalendarConnection.update({ where: { id: auth.connection.id }, data: { lastSyncedAt: new Date() } });
-  return visibleEvents.map((event) => ({
-    id: event.id!,
+  return visibleEvents.map(event => calendarEventDto(event, linkMap.get(event.id!) || null));
+}
+
+function canEditGoogleEvent(event: GoogleCalendarEvent) {
+  return event.status !== "cancelled" && !event.locked && (!event.eventType || event.eventType === "default") &&
+    (event.organizer?.self === true || event.guestsCanModify === true);
+}
+
+function calendarEventDto(event: GoogleCalendarEvent, linkedTaskItemId: string | null = null): PersonalCalendarEvent {
+  return {
+    id: event.id!, etag: event.etag,
+    canEdit: !linkedTaskItemId && !event.extendedProperties?.private?.watchShopTaskItemId && canEditGoogleEvent(event),
+    recurring: Boolean(event.recurringEventId),
     title: event.summary?.trim() || "(Không có tiêu đề)",
-    description: event.description?.trim() || null,
+    description: event.description || null,
     startAt: event.start?.dateTime || event.start?.date || "",
     endAt: event.end?.dateTime || event.end?.date || null,
     allDay: Boolean(event.start?.date && !event.start?.dateTime),
     htmlLink: event.htmlLink || null,
-    location: event.location?.trim() || null,
-    linkedTaskItemId: linkMap.get(event.id!) || null,
-  }));
+    location: event.location || null,
+    linkedTaskItemId,
+  };
+}
+
+export async function updatePersonalGoogleCalendarEvent(userId: string, input: GoogleEventEditInput) {
+  const payload = validateGoogleEventEdit(input);
+  const auth = await accessToken(userId);
+  // Resolve the calendar exclusively from the authenticated user's connection.
+  const endpoint = `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(auth.connection.calendarId)}/events/${encodeURIComponent(input.id)}`;
+  const link = await prisma.personalTaskCalendarLink.findFirst({
+    where: { userId, calendarId: auth.connection.calendarId, eventId: input.id }, select: { id: true },
+  });
+  if (link) throw new Error("Hãy chỉnh sửa sự kiện này trong công việc đã liên kết");
+  const currentResponse = await fetchGoogleWithTokenRetry(userId, endpoint, { cache: "no-store", signal: AbortSignal.timeout(10000) });
+  if (currentResponse.response.status === 404 || currentResponse.response.status === 410) throw new Error("Sự kiện không còn tồn tại. Vui lòng tải lại lịch");
+  if (!currentResponse.response.ok) throw await googleApiError(currentResponse.response, "Google Calendar load");
+  const current = await currentResponse.response.json() as GoogleCalendarEvent;
+  if (!canEditGoogleEvent(current) || current.extendedProperties?.private?.watchShopTaskItemId) throw new Error("Bạn không có quyền chỉnh sửa sự kiện này tại đây");
+  if (!current.etag || current.etag !== input.etag) throw new Error("Sự kiện đã thay đổi trên Google. Hãy tải lại lịch trước khi sửa");
+  const { response } = await fetchGoogleWithTokenRetry(userId, endpoint, {
+    method: "PATCH", headers: { "content-type": "application/json", "If-Match": current.etag },
+    body: JSON.stringify(payload), cache: "no-store", signal: AbortSignal.timeout(10000),
+  });
+  if (response.status === 412) throw new Error("Sự kiện vừa được thay đổi. Hãy tải lại lịch trước khi sửa");
+  if (response.status === 403) throw new Error("Google không cho phép chỉnh sửa sự kiện này");
+  if (!response.ok) throw await googleApiError(response, "Google Calendar update");
+  return calendarEventDto(await response.json() as GoogleCalendarEvent);
 }

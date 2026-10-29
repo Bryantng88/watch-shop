@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { TaskKind } from "@prisma/client";
+import Link from "next/link";
 import { createTaskAction, updateTaskAction } from "../../actions/task.actions";
 import type { TaskWithRelations } from "../../server/core/task.repo";
 import type {
@@ -45,8 +46,6 @@ function hasBusinessContext(context?: TaskQuickCreateContext | null) {
 
 export default function TaskQuickCreateModal({
   open,
-  users,
-  currentUserId,
   context,
   editTask,
   onClose,
@@ -66,7 +65,7 @@ export default function TaskQuickCreateModal({
   const [description, setDescription] = useState("");
   const [kind, setKind] = useState<TaskKind>(TaskKind.BUSINESS);
   const [error, setError] = useState<string | null>(null);
-  const [existingTask, setExistingTask] = useState<TaskWithRelations | null>(null);
+  const [existingTask, setExistingTask] = useState<{ id: string; title: string } | null>(null);
 
   const isEdit = Boolean(editTask);
   const lockedBusiness = hasBusinessContext(context);
@@ -81,7 +80,7 @@ export default function TaskQuickCreateModal({
     setExistingTask(null);
     setTitle(editTask?.title ?? context?.titlePreset ?? "");
     setDescription(editTask?.description ?? context?.descriptionPreset ?? "");
-    setKind((editTask as any)?.kind ?? context?.kind ?? defaultKindFromContext(context));
+    setKind(editTask?.kind ?? context?.kind ?? defaultKindFromContext(context));
   }, [open, editTask, context]);
 
   const links = useMemo<TaskDomainLinksInput>(
@@ -132,16 +131,16 @@ export default function TaskQuickCreateModal({
 
         const result = await createTaskAction(payload);
 
-        if ((result as any)?.wasExistingPeriodTask) {
-          setExistingTask((result as any).task as TaskWithRelations);
+        if (result.wasExistingPeriodTask) {
+          setExistingTask(result.task);
           setError("Task cho nhóm và tuần này đã tồn tại. Hãy mở task đó để tạo Task Item.");
           return;
         }
 
         onSaved?.();
         onClose();
-      } catch (err: any) {
-        setError(err?.message || "Không thể lưu task");
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Không thể lưu task");
       }
     });
   }
@@ -194,12 +193,13 @@ export default function TaskQuickCreateModal({
               disabled={lockedBusiness || isEdit}
               className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm outline-none disabled:bg-slate-100 disabled:text-slate-400"
             >
-              {Object.values(TaskKind).map((item) => (
+              {Object.values(TaskKind).filter(item => item !== TaskKind.PERSONAL).map((item) => (
                 <option key={item} value={item}>
                   {TASK_KIND_LABEL[item]}
                 </option>
               ))}
             </select>
+            {!lockedBusiness && !isEdit && <p className="mt-2 text-xs text-slate-500">Việc cá nhân được tạo độc lập tại <Link href="/admin/personal-work" onClick={onClose} className="font-semibold text-blue-600">Công việc của tôi</Link>.</p>}
 
             {lockedBusiness ? (
               <p className="mt-1 text-xs text-slate-400">

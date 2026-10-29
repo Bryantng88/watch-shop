@@ -45,7 +45,7 @@ export async function createTaskItemRepo(db: DB, input: CreateTaskItemInput) {
     });
   }
 
-  return item;
+  return { ...item, taskId: input.taskId };
 }
 
 export async function updateTaskItemRepo(
@@ -71,7 +71,7 @@ export async function updateTaskItemRepo(
     include: TASK_ITEM_INCLUDE,
   });
 
-  if (input.tagNames !== undefined) {
+  if (input.tagNames !== undefined && item.taskId) {
     await setTargetTagsRepo(db, {
       ownerType: AppTagOwnerType.TASK,
       ownerId: item.taskId,
@@ -102,7 +102,7 @@ export async function moveTaskItemRepo(
     },
   });
 
-  if (!current) throw new Error("Task item không tồn tại.");
+  if (!current?.taskId) throw new Error("Task item không tồn tại.");
 
   if (current.taskId === input.toTaskId) {
     throw new Error("Task item đang nằm trong task này rồi.");

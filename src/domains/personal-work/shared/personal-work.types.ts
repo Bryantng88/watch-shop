@@ -127,6 +127,9 @@ export type PersonalWorkShare = {
 };
 
 export type PersonalCalendarEvent = {
+  etag?: string;
+  canEdit?: boolean;
+  recurring?: boolean;
   id: string;
   title: string;
   description: string | null;

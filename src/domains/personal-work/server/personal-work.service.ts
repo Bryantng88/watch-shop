@@ -1,18 +1,15 @@
 import {
-  AppTagOwnerType,
   AppTagTargetType,
   PersonalTaskShareAccess,
-  TaskKind,
   TaskStatus,
   TaskProgressMode,
   type Prisma,
   type TaskPriority,
 } from "@prisma/client";
 import { prisma } from "@/server/db/client";
-import { createTask, getAuthUserId } from "@/domains/task/server/core/task.service";
-import { createTaskItemRepo, setTargetTagsRepo } from "@/domains/task/server/core/task.repo";
-import { hydrateTaskItemsWithTagsRepo } from "@/domains/task/server/tag/task-tag.repo";
-import { createBusinessBinding } from "@/domains/task/server/business-binding.repo";
+import { getAuthUserId } from "@/server/auth/auth-user-id";
+import { hydrateTaskItemsWithTagsRepo, setTargetTagsRepo } from "@/domains/task/server/tag/task-tag.repo";
+import { personalWorkScopeWhere, personalWorkViewAccessWhere, isPersonalWorkOwner, personalWorkTagOwner } from "./personal-work-access";
 import { isGoogleCalendarConfigured } from "./google-calendar.service";
 import { reconcilePersonalWorkBindings } from "./personal-work-bindings";
 import { validatePersonalSchedule } from "../shared/personal-work-schedule";
@@ -27,11 +24,6 @@ import {
 } from "../shared/personal-work.types";
 
 const domainKeys = new Set<string>(PERSONAL_WORK_DOMAINS.map((item) => item.key));
-const workTypeKeys = new Set<string>(
-  Object.values(PERSONAL_WORK_TYPES)
-    .flat()
-    .map((item) => item.key),
-);
 
 type PersonalWorkInput = {
   title: string;
@@ -49,15 +41,6 @@ type PersonalWorkInput = {
 
 type ShareInput = { userId: string; accessLevel: PersonalTaskShareAccess };
 
-const personalTaskAccessWhere = (userId: string): Prisma.TaskItemWhereInput => ({
-  task: { kind: TaskKind.PERSONAL },
-  OR: [
-    { task: { createdByUserId: userId } },
-    { task: { assignedToUserId: userId } },
-    { personalShares: { some: { userId } } },
-  ],
-});
-
 export async function assertPersonalWorkAccess(
   taskItemId: string,
   auth: unknown,
@@ -66,22 +49,25 @@ export async function assertPersonalWorkAccess(
   const userId = getAuthUserId(auth);
   if (!userId) throw new Error("Không xác định được người dùng");
   const item = await prisma.taskItem.findFirst({
-    where: { id: taskItemId, task: { kind: TaskKind.PERSONAL } },
+    where: { id: taskItemId, ...personalWorkScopeWhere },
     select: {
       id: true,
       taskId: true,
+      personalOwnerUserId: true,
       status: true,
       progressMode: true,
+      startedAt: true,
+      personalCategoryId: true,
       checklistLockedAt: true,
       workTypeId: true,
       dueAt: true,
       scheduledEndAt: true,
-      task: { select: { createdByUserId: true, assignedToUserId: true } },
+      task: { select: { kind: true, createdByUserId: true, assignedToUserId: true } },
       personalShares: { where: { userId }, select: { accessLevel: true }, take: 1 },
     },
   });
   if (!item) throw new Error("Không tìm thấy công việc cá nhân");
-  const owned = item.task.createdByUserId === userId || item.task.assignedToUserId === userId;
+  const owned = isPersonalWorkOwner(item, userId);
   const sharedAccess = item.personalShares[0]?.accessLevel;
   if (required === "OWNER" && !owned) throw new Error("Chỉ chủ sở hữu mới có thể thực hiện thao tác này");
   if (required === "EDIT" && !owned && sharedAccess !== PersonalTaskShareAccess.EDITOR)
@@ -102,8 +88,7 @@ function normalizeWorkType(value: unknown, domain: PersonalWorkDomain) {
   const key = String(value || "")
     .trim()
     .toUpperCase();
-  const allowed = new Set<string>(PERSONAL_WORK_TYPES[domain].map((item) => item.key));
-  return key && workTypeKeys.has(key) && allowed.has(key) ? key : null;
+  return PERSONAL_WORK_TYPES[domain].some(item => item.key === key) ? key : null;
 }
 
 function bindingMetadata(target: PersonalWorkTarget): Prisma.InputJsonValue {
@@ -236,13 +221,15 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
   const [items, connection, availableUsers, categories, canManageDefaults] = await Promise.all([
     prisma.taskItem.findMany({
       where: {
-        ...personalTaskAccessWhere(userId),
+        ...personalWorkViewAccessWhere(userId),
         status: { not: TaskStatus.CANCELLED },
       },
       include: {
         personalCategory: true,
+        personalOwner: { select: { id: true, name: true, email: true, avatarUrl: true } },
         task: {
           select: {
+            kind: true,
             createdByUserId: true,
             assignedToUserId: true,
             createdByUser: { select: { id: true, name: true, email: true, avatarUrl: true } },
@@ -278,7 +265,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
     canManageDefaultCategories(userId),
   ]);
   const tagged = await hydrateTaskItemsWithTagsRepo(prisma, items);
-  const ownerIds = [...new Set(items.map(item => item.task.createdByUserId || item.task.assignedToUserId).filter((id): id is string => Boolean(id)))];
+  const ownerIds = [...new Set(items.map(item => item.personalOwnerUserId || item.task?.createdByUserId || item.task?.assignedToUserId).filter((id): id is string => Boolean(id)))];
   const ownerCategoryRows = await prisma.personalWorkCategory.findMany({ where: { userId: { in: ownerIds } } });
   const ownerCategories = new Map(ownerIds.map(id => [id, mergePersonalCategories(ownerCategoryRows.filter(row => row.userId === id), categories.filter(c => c.isDefault))]));
   return {
@@ -288,9 +275,9 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
       const names = item.tags.map((tag) => tag.name);
       const domain = item.personalCategory ? categoryFromRow(item.personalCategory).domain : normalizePersonalDomain(names.find((name) => domainKeys.has(name.toUpperCase())));
       const calendar = item.calendarLinks[0];
-      const owned = item.task.createdByUserId === userId || item.task.assignedToUserId === userId;
+      const owned = isPersonalWorkOwner(item, userId);
       const share = item.personalShares.find((entry) => entry.userId === userId);
-      const owner = item.task.createdByUser || item.task.assignedToUser;
+      const owner = item.personalOwner || item.task?.createdByUser || item.task?.assignedToUser;
       if (!owner) throw new Error("Công việc cá nhân chưa có chủ sở hữu");
       return {
         id: item.id,
@@ -367,41 +354,32 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
     ).values(),
   ];
   return prisma.$transaction(async (tx) => {
-    const taskResult = await createTask(tx, { kind: TaskKind.PERSONAL }, auth);
-    const item = await createTaskItemRepo(tx, {
-      taskId: taskResult.task.id,
-      title,
-      note: input.note?.trim() || null,
-      ownerUserId: userId,
-      assignedToUserId: userId,
-      priority: input.priority || "MEDIUM",
-      workTypeId: workType,
-      dueAt: input.dueAt || null,
-      estimatedDays: Math.max(1, Math.min(365, Math.round(input.estimatedDays ?? 1))),
+    const item = await tx.taskItem.create({
+      data: {
+        title, note: input.note?.trim() || null,
+        personalOwnerUserId: userId, assignedToUserId: userId,
+        priority: input.priority || "MEDIUM", workTypeId: workType,
+        personalCategoryId: category.id, dueAt: schedule.dueAt, scheduledEndAt: schedule.scheduledEndAt,
+        estimatedDays: schedule.estimatedDays ?? Math.max(1, Math.min(365, Math.round(input.estimatedDays ?? 1))),
+      },
     });
-    if (category.id || schedule.scheduledEndAt) await tx.taskItem.update({ where: { id: item.id }, data: {
-      personalCategoryId: category.id,
-      scheduledEndAt: schedule.scheduledEndAt,
-      ...(schedule.estimatedDays !== undefined ? { estimatedDays: schedule.estimatedDays } : {}),
-    } });
     await setTargetTagsRepo(tx, {
-      ownerType: AppTagOwnerType.TASK,
-      ownerId: taskResult.task.id,
+      ...personalWorkTagOwner(item),
       targetType: AppTagTargetType.TASK_ITEM,
       targetId: item.id,
       names: [domain, ...(input.tags || [])],
     });
     for (const target of targets) {
-      await createBusinessBinding(tx, {
-        taskId: taskResult.task.id,
+      await tx.taskExecution.create({ data: {
+        taskId: null,
         taskItemId: item.id,
         targetType: target.type,
         targetId: target.id,
         metadataJson: bindingMetadata(target),
-        createdByUserId: userId,
-      });
+        createdByUserId: userId, actionType: "LINKED",
+      } });
     }
-    return { ...item, scheduledEndAt: schedule.scheduledEndAt, ...(schedule.estimatedDays !== undefined ? { estimatedDays: schedule.estimatedDays } : {}) };
+    return item;
   });
 }
 
@@ -509,6 +487,11 @@ export async function updatePersonalWorkItem(
   auth: unknown,
 ) {
   const current = await assertPersonalWorkAccess(input.id, auth, "EDIT");
+  if (input.title !== undefined && !input.title.trim()) throw new Error("Tên công việc không được để trống");
+  const needsContext = input.categoryKey !== undefined || input.domain !== undefined || input.tags !== undefined || input.targets !== undefined || input.workType !== undefined;
+  const [tagged] = needsContext ? await hydrateTaskItemsWithTagsRepo(prisma, [current]) : [];
+  const currentDomain = current.personalCategoryId ? "GENERAL" : normalizePersonalDomain(tagged?.tags.find(tag => domainKeys.has(tag.name.toUpperCase()))?.name);
+  const retainedTags = tagged?.tags.filter(tag => !domainKeys.has(tag.name.toUpperCase())).map(tag => tag.name) ?? [];
   const scheduleChanged = input.dueAt !== undefined || input.scheduledEndAt !== undefined;
   const nextStart = input.dueAt === undefined ? current.dueAt : input.dueAt;
   const nextEnd = input.scheduledEndAt !== undefined ? input.scheduledEndAt :
@@ -516,7 +499,7 @@ export async function updatePersonalWorkItem(
       ? new Date(new Date(nextStart).getTime() + current.scheduledEndAt.getTime() - current.dueAt.getTime())
       : nextStart ? current.scheduledEndAt : null;
   const schedule = validatePersonalSchedule(nextStart, nextEnd);
-  const ownerId = current.task.createdByUserId || current.task.assignedToUserId;
+  const ownerId = current.personalOwnerUserId || current.task?.createdByUserId || current.task?.assignedToUserId;
   const category = input.categoryKey !== undefined
     ? await resolvePersonalCategory(ownerId || current.userId, input.categoryKey)
     : input.domain !== undefined ? await resolvePersonalCategory(ownerId || current.userId, normalizePersonalDomain(input.domain)) : undefined;
@@ -534,7 +517,7 @@ export async function updatePersonalWorkItem(
     ? [
         ...new Map(
           (await Promise.all(
-            input.targets.map((target) => resolvePersonalWorkTarget(category?.domain ?? normalizePersonalDomain(input.domain), target)),
+            input.targets.map((target) => resolvePersonalWorkTarget(category?.domain ?? currentDomain, target)),
           ))
             .filter((target): target is PersonalWorkTarget => Boolean(target))
             .map((target) => [`${target.type}:${target.id}`, target]),
@@ -546,7 +529,8 @@ export async function updatePersonalWorkItem(
       where: { id: input.id },
       data: {
       ...(scheduleChanged ? { dueAt: schedule.dueAt, scheduledEndAt: schedule.scheduledEndAt } : {}),
-      ...(category ? { personalCategoryId: category.id, workTypeId: category.id ? null : normalizeWorkType(input.workType ?? current.workTypeId, category.domain) } : {}),
+      ...(category ? { personalCategoryId: category.id } : {}),
+      ...(category || input.workType !== undefined ? { workTypeId: (category ? category.id : current.personalCategoryId) ? null : normalizeWorkType(input.workType ?? current.workTypeId, category?.domain ?? currentDomain) } : {}),
       ...(input.title !== undefined ? { title: input.title.trim() } : {}),
       ...(input.note !== undefined ? { note: input.note?.trim() || null } : {}),
       ...(estimatedDays !== undefined ? { estimatedDays } : {}),
@@ -558,7 +542,8 @@ export async function updatePersonalWorkItem(
             status,
             isDone: status === TaskStatus.DONE,
             completedAt: status === TaskStatus.DONE ? new Date() : null,
-            startedAt: status === TaskStatus.IN_PROGRESS ? new Date() : undefined,
+            cancelledAt: status === TaskStatus.CANCELLED ? new Date() : null,
+            startedAt: status === TaskStatus.IN_PROGRESS ? current.startedAt || new Date() : undefined,
           }
         : {}),
       },
@@ -596,14 +581,14 @@ export async function updatePersonalWorkItem(
         });
       }
       for (const target of added) {
-        await createBusinessBinding(tx, {
+        await tx.taskExecution.create({ data: {
           taskId: current.taskId,
           taskItemId: current.id,
           targetType: target.type,
           targetId: target.id,
           metadataJson: bindingMetadata(target),
-          createdByUserId: current.userId,
-        });
+          createdByUserId: current.userId, actionType: "LINKED",
+        } });
       }
       if (added.length || removed.length) {
         await tx.taskItemActivity.create({
@@ -625,11 +610,10 @@ export async function updatePersonalWorkItem(
     }
     if (input.domain || input.tags || category) {
       await setTargetTagsRepo(tx, {
-        ownerType: AppTagOwnerType.TASK,
-        ownerId: current.taskId,
+        ...personalWorkTagOwner(current),
         targetType: AppTagTargetType.TASK_ITEM,
         targetId: current.id,
-        names: [category?.domain ?? normalizePersonalDomain(input.domain), ...(input.tags || [])],
+        names: [category?.domain ?? currentDomain, ...(input.tags ?? retainedTags)],
       });
     }
   });

@@ -33,6 +33,7 @@ import { markTaskItemMentionsReadAction } from "@/domains/task/actions/task.acti
 import type { TaskItemActivityViewModel } from "@/domains/task/server/activity";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 import { WatchServiceIntakeModal } from "@/domains/service/ui/quick-service";
+import { WatchPreviewGallery } from "./WatchPreviewGallery";
 
 async function loadBusinessEntityPreview(type: BusinessEntityType, id: string) {
     const query = new URLSearchParams({ type, id, activityMode: "DISCUSSION" });
@@ -966,6 +967,7 @@ export function BusinessEntityPreviewModal({
                               ) : null}
                             </section>
 
+                            {preview.type === "WATCH" && preview.images && <WatchPreviewGallery key={`${preview.id}:${preview.images.map(image => image.id).join("|")}`} images={preview.images} title={preview.title} />}
                             <WatchDecisionPanel preview={preview} reviewContext={reviewContext} onDecisionChanged={() => onActivityChanged?.()} />
                             <TechnicalIssueEditPanel preview={preview} />
                             <DoneTechnicalIssueCostPanel preview={preview} onSaved={() => onActivityChanged?.()} />

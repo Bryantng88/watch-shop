@@ -2071,7 +2071,7 @@ export async function addManualQueueItem(
       where: { id: taskItemId },
       select: { id: true, taskId: true },
     });
-    if (!taskItem) throw new Error("Phiếu xử lý không tồn tại.");
+    if (!taskItem?.taskId) throw new Error("Phiếu xử lý không tồn tại.");
 
     const preview = await getManualQueueTargetPreview(tx, {
       targetType,

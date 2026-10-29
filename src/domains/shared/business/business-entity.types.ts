@@ -67,6 +67,7 @@ export type BusinessEntityPreview = {
     subtitle?: string | null;
     status?: string | null;
     imageUrl?: string | null;
+    images?: Array<{ id: string; url: string; alt: string; label: string }>;
     href?: string | null;
     facts?: BusinessEntityFact[];
     notes?: BusinessEntityPreviewNote[];

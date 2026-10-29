@@ -49,7 +49,7 @@ export async function syncTechnicalIssueToTasks(
         select: { taskId: true },
     });
 
-    for (const row of executionTasks) taskIds.add(row.taskId);
+    for (const row of executionTasks) if (row.taskId) taskIds.add(row.taskId);
 
     const srTasks = await db.task.findMany({
         where: {

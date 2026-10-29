@@ -13,9 +13,7 @@ async function main() {
   const { buildPersonalCalendarEvents } = await import("../src/domains/personal-work/shared/personal-calendar");
   const originalFetch = globalThis.fetch;
   const users: string[] = [];
-  const fixtureTasks: string[] = [];
   const fixtureItems: string[] = [];
-  let taskId: string | undefined;
   let itemId: string | undefined;
   try {
     const owner = await prisma.user.create({ data: { email: `schedule-${randomUUID()}@system.local` } });
@@ -23,15 +21,15 @@ async function main() {
     const viewer = await prisma.user.create({ data: { email: `schedule-viewer-${randomUUID()}@system.local` } });
     users.push(viewer.id);
     const created = await createPersonalWorkItem({ title: "Schedule smoke", categoryKey: "WORK", workType: "MEETING", dueAt: "2026-10-29T02:00:00Z", scheduledEndAt: "2026-10-29T03:00:00Z" }, owner);
-    taskId = created.taskId;
     itemId = created.id;
-    fixtureTasks.push(taskId);
     fixtureItems.push(itemId);
-    assert.equal((await prisma.task.findUniqueOrThrow({ where: { id: taskId } })).createdByUserId, owner.id);
+    assert.equal(created.taskId, null);
+    assert.equal(created.personalOwnerUserId, owner.id);
     const otherItem = await createPersonalWorkItem({ title: "Schedule owner isolation", categoryKey: "WORK", workType: "MEETING" }, viewer);
-    fixtureTasks.push(otherItem.taskId);
     fixtureItems.push(otherItem.id);
-    assert.notEqual(otherItem.taskId, taskId);
+    assert.equal(otherItem.taskId, null);
+    assert.equal(otherItem.personalOwnerUserId, viewer.id);
+    assert.equal(await prisma.task.count({ where: { createdByUserId: { in: users } } }), 0);
     assert.equal((await getPersonalWorkPageData(owner)).items.length, 1);
     assert.equal(created.scheduledEndAt?.toISOString(), "2026-10-29T03:00:00.000Z");
     assert.equal(created.workTypeId, "MEETING");
@@ -77,11 +75,9 @@ async function main() {
   } finally {
     globalThis.fetch = originalFetch;
     await prisma.appTagLink.deleteMany({ where: { targetId: { in: fixtureItems } } });
+    await prisma.taskExecution.deleteMany({ where: { taskItemId: { in: fixtureItems } } });
     await prisma.taskItem.deleteMany({ where: { id: { in: fixtureItems }, assignedToUserId: { in: users } } });
-    const emptyFixtureTasks = await prisma.task.findMany({ where: { id: { in: fixtureTasks }, createdByUserId: { in: users }, taskItems: { none: {} } }, select: { id: true } });
-    const safeTaskIds = emptyFixtureTasks.map(task => task.id);
-    await prisma.task.deleteMany({ where: { id: { in: safeTaskIds }, createdByUserId: { in: users }, taskItems: { none: {} } } });
-    await prisma.appTag.deleteMany({ where: { ownerId: { in: safeTaskIds } } });
+    await prisma.appTag.deleteMany({ where: { ownerType: "GENERAL", ownerId: { in: users } } });
     await prisma.user.deleteMany({ where: { id: { in: users } } });
     await prisma.$disconnect();
   }
