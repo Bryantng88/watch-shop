@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-
 import type { PublicWatchCard } from "../contracts";
 import { useStorefrontLocale } from "./StorefrontLocale";
 import { formatStorefrontWatchMoney } from "../shared/locale.utils";
@@ -13,39 +12,61 @@ function tagLabel(tag: string | null) {
   if (tag === "NEW") return "New";
   return tag;
 }
-
-export default function PublicWatchCardView({ watch }: { watch: PublicWatchCard }) {
+export default function PublicWatchCardView({
+  watch,
+  priority = false,
+}: {
+  watch: PublicWatchCard;
+  priority?: boolean;
+}) {
   const { locale, vndPerUsd } = useStorefrontLocale();
   return (
-    <article className="storefront-card group min-w-0">
-      <Link href={`/products/${watch.slug}`} className="storefront-focus block">
-        <div className="relative aspect-[3/4] overflow-hidden bg-[#efede8]">
+    <article
+      className={`storefront-card vgc-card${watch.hoverImage ? " storefront-card--has-hover" : ""}`}
+    >
+      <Link href={`/products/${watch.slug}`} className="storefront-focus vgc-card-link">
+        <div className="vgc-card-media">
           <Image
             src={watch.image.url}
             alt={watch.image.alt}
             fill
-            sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 25vw"
-            className="storefront-card-image storefront-card-cover-image object-cover"
+            priority={priority}
+            sizes="(max-width: 639px) 45vw, (max-width: 1023px) 30vw, (max-width: 1279px) 25vw, 20vw"
+            className="storefront-card-image storefront-card-cover-image"
           />
-          {watch.hoverImage ? <Image src={watch.hoverImage.url} alt="" fill sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 25vw" className="storefront-card-hover-image object-cover" /> : null}
-          {watch.availability !== "AVAILABLE" ? (
-            <div className="absolute inset-x-0 top-1/2 flex -translate-y-1/2 items-center justify-center bg-[#f8f5ee]/65 px-5 py-2.5 text-[#393631] shadow-[0_1px_8px_rgba(35,31,26,0.04)]">
-              <span className={`text-[9px] uppercase tracking-[0.34em] ${watch.availability === "SOLD" ? "font-semibold" : "font-medium"}`}>
-                {watch.availability === "SOLD" ? "Out of stock" : "Hold"}
-              </span>
-            </div>
+          {watch.hoverImage ? (
+            <Image
+              src={watch.hoverImage.url}
+              alt=""
+              fill
+              sizes="(max-width: 639px) 45vw, (max-width: 1023px) 30vw, 20vw"
+              className="storefront-card-hover-image"
+            />
           ) : null}
-          {tagLabel(watch.tag) ? (
-            <span className="absolute bottom-3 right-3 rounded-full bg-[#3f4d58] px-3 py-1 text-[9px] uppercase tracking-[0.12em] text-white">
-              {tagLabel(watch.tag)}
+          {tagLabel(watch.tag) ? <span className="vgc-card-tag">{tagLabel(watch.tag)}</span> : null}
+          {watch.availability !== "AVAILABLE" ? (
+            <span className="vgc-card-status">
+              {watch.availability === "SOLD" ? (locale === "en" ? "Sold" : "Đã bán") : "Hold"}
             </span>
           ) : null}
         </div>
-        <div className="pt-4">
-          <p className="text-[10px] uppercase tracking-[0.16em] text-[#858079]">{watch.brand ?? "Tuyển chọn"}</p>
-          <h2 className="mt-2 line-clamp-2 min-h-10 text-sm font-normal leading-5 text-[#4f4c48] sm:text-[15px]">{watch.title}</h2>
-          <p className="mt-2 text-sm font-semibold tabular-nums text-[#31302e]">
-            {watch.price.mode === "SHOW" ? formatStorefrontWatchMoney(watch.price.amount, locale, vndPerUsd, watch.isCollectible) : locale === "en" ? "Contact" : "Liên hệ"}
+        <div className="vgc-card-copy">
+          <p className="vgc-card-brand">
+            {watch.brand || (locale === "en" ? "Vintic Selects" : "Tuyển chọn")}
+          </p>
+          <h2>{watch.title}</h2>
+          <p className="vgc-card-price">
+            {watch.price.mode === "SHOW"
+              ? formatStorefrontWatchMoney(
+                  watch.price.amount,
+                  locale,
+                  vndPerUsd,
+                  watch.isCollectible,
+                )
+              : locale === "en"
+                ? "Contact"
+                : "Liên hệ"}
+            <span aria-hidden>↗</span>
           </p>
         </div>
       </Link>

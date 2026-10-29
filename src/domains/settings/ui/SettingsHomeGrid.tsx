@@ -14,6 +14,13 @@ type SettingsCard = {
 
 const SETTINGS_CARDS: SettingsCard[] = [
   {
+    title: "Quản lý Storefront",
+    description: "Bố cục Home, ảnh, đồng hồ nổi bật, chuyện đồng hồ và xuất bản nội dung.",
+    href: "/admin/settings/storefront",
+    icon: Settings,
+    badge: "Storefront",
+  },
+  {
     title: "Hero storefront",
     description: "Quản lý thư viện và chọn ảnh hero đang hiển thị trên trang đồng hồ.",
     href: "/admin/settings/storefront-hero",
@@ -31,7 +38,8 @@ export default function SettingsHomeGrid() {
         </div>
         <h1 className="mt-3 text-2xl font-semibold text-slate-950">Cấu hình hệ thống</h1>
         <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">
-          Đây là nơi quản lý các danh mục và cấu hình dùng chung. Các phần này là dữ liệu nền cho nghiệp vụ, không phải dữ liệu vận hành hằng ngày.
+          Đây là nơi quản lý các danh mục và cấu hình dùng chung. Các phần này là dữ liệu nền cho
+          nghiệp vụ, không phải dữ liệu vận hành hằng ngày.
         </p>
       </div>
 
@@ -49,7 +57,9 @@ export default function SettingsHomeGrid() {
                   <Icon className="h-5 w-5" />
                 </div>
                 {item.badge ? (
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">{item.badge}</span>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
+                    {item.badge}
+                  </span>
                 ) : null}
               </div>
               <div className="mt-4">
