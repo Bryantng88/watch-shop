@@ -460,3 +460,6 @@ bun-debug.log*
 
 
 /generated/prisma
+
+# Disposable full-application preview credentials and database state
+.watch-shop-preview/
