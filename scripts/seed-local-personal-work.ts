@@ -1,4 +1,5 @@
 import { PrismaClient, TaskPriority } from "@prisma/client";
+import { prisma as domainPrisma } from "../src/server/db/client";
 import { personalWorkViewAccessWhere } from "../src/domains/personal-work/server/personal-work-access";
 import { createPersonalWorkItem } from "../src/domains/personal-work/server/personal-work.service";
 
@@ -33,4 +34,6 @@ async function main() {
   console.log(`Seeded ${rows.length} personal work items for ${user.email}.`);
 }
 
-main().finally(() => prisma.$disconnect());
+main().finally(async () => {
+  await Promise.all([prisma.$disconnect(), domainPrisma.$disconnect()]);
+});

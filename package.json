@@ -72,7 +72,8 @@
     "local:seed-operations-dashboard": "tsx scripts/seed-local-operations-dashboard.ts",
     "local:seed-personal-work": "tsx scripts/seed-local-personal-work.ts",
     "storefront:seed-acceptance-media": "tsx scripts/seed-storefront-acceptance-media.ts",
-    "gen": "prisma generate"
+    "gen": "prisma generate",
+    "preview:local": "node scripts/local-preview.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
