@@ -574,7 +574,7 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
   const client = dbOrTx(db);
   const item = await perfStep("task-item-detail-repo", "taskItemFindUnique", () =>
     client.taskItem.findUnique({
-      where: { id },
+      where: { id, personalOwnerUserId: null, task: { kind: { not: "PERSONAL" } } },
       include: {
         assignedToUser: { select: USER_SELECT },
         User: { select: USER_SELECT },
@@ -612,7 +612,8 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
     }),
   );
 
-  if (!item) return null;
+  if (!item?.task || !item.taskId) return null;
+  const workspaceTaskId = item.taskId;
 
   const workspaceSharedUserIds = shareUserIdsFromNoteLine(item.note, "sharedUserIds");
   const taskScopeNotes = [
@@ -646,7 +647,7 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
   const [queueItems, sharedUsers] = await Promise.all([
     perfStep("task-item-detail-repo", "queueItems", () =>
       listQueueItemsForTaskItemDetail(db, {
-        taskId: item.taskId,
+        taskId: workspaceTaskId,
         taskItemId: item.id,
         note: item.note,
       }),
@@ -673,7 +674,7 @@ export async function getTaskItemDetailPageRepo(db: DB, id: string) {
   );
   const serviceRequestWorkspaceLinks =
     await resolveTechnicalIssueServiceRequestWorkspaceLinks(db, {
-      taskId: item.taskId,
+      taskId: workspaceTaskId,
       queueItems,
     });
 

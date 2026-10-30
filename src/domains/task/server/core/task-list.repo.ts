@@ -1,6 +1,6 @@
-import { Prisma, TaskKind, TaskStatus } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
-import type { TaskListFilters, TaskViewKey } from "../task.types";
+import type { TaskListFilters } from "../task.types";
 import {
   TASK_EXECUTION_INCLUDE,
   USER_SELECT,
@@ -57,7 +57,7 @@ export async function listTaskRowsRepo(
   const canViewAll = Boolean(input.canViewAll);
 
   const where: Prisma.TaskWhereInput = {
-    AND: [buildViewWhere(view, input.userId), buildFilterWhere(input.filters)],
+    AND: [buildAccessWhere(input.userId, canViewAll), buildViewWhere(view, input.userId), buildFilterWhere(input.filters)],
   };
 
   const rows = await perfStep("task-list-repo", "taskFindMany", () =>
@@ -145,81 +145,7 @@ export async function getTaskForWorkPanelRepo(
   return applyTaskRowAccess(withTags, input.userId, Boolean(input.canViewAll));
 }
 
-export async function countTaskViewsForListRepo(
-  db: DB,
-  input: { userId: string; kind?: TaskKind | "ALL" },
-) {
-  const totalStartedAt = perfNow();
-  const client = dbOrTx(db);
-  const userId = input.userId;
-  const openWhere: Prisma.TaskWhereInput = {
-    status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] },
-  };
-  const kindWhere: Prisma.TaskWhereInput =
-    input.kind && input.kind !== "ALL" ? { kind: input.kind } : {};
-
-  const [mine, assigned, delegated, all] = await Promise.all([
-    perfStep("task-list-repo", "countViewMine", () =>
-      client.task.count({
-        where: { AND: [buildViewWhere("mine", userId), openWhere, kindWhere] },
-      }),
-    ),
-    perfStep("task-list-repo", "countViewAssigned", () =>
-      client.task.count({
-        where: { AND: [buildViewWhere("assigned", userId), openWhere, kindWhere] },
-      }),
-    ),
-    perfStep("task-list-repo", "countViewDelegated", () =>
-      client.task.count({
-        where: { AND: [buildViewWhere("delegated", userId), openWhere, kindWhere] },
-      }),
-    ),
-    perfStep("task-list-repo", "countViewAll", () =>
-      client.task.count({
-        where: { AND: [buildViewWhere("all", userId), openWhere, kindWhere] },
-      }),
-    ),
-  ]);
-
-  perfLog("task-list-repo", "viewCountsTotal", totalStartedAt);
-  return { mine, assigned, delegated, all };
-}
-
-export async function countTaskKindsForListRepo(
-  db: DB,
-  input: { userId: string; view?: TaskViewKey },
-) {
-  const totalStartedAt = perfNow();
-  const client = dbOrTx(db);
-  const baseWhere: Prisma.TaskWhereInput = {
-    AND: [
-      buildViewWhere(input.view || "all", input.userId),
-      { status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] } },
-    ],
-  };
-
-  const rows = await perfStep("task-list-repo", "kindGroupBy", () =>
-    client.task.groupBy({
-      by: ["kind"],
-      where: baseWhere,
-      _count: { _all: true },
-    }),
-  );
-
-  const countByKind = new Map(rows.map((row) => [row.kind, row._count._all]));
-  const all = rows.reduce((sum, row) => sum + row._count._all, 0);
-
-  const result = {
-    kind_ALL: all,
-    kind_OPERATION: countByKind.get(TaskKind.OPERATION) ?? 0,
-    kind_BUSINESS: countByKind.get(TaskKind.BUSINESS) ?? 0,
-    kind_SERVICE: countByKind.get(TaskKind.SERVICE) ?? 0,
-    kind_PERSONAL: countByKind.get(TaskKind.PERSONAL) ?? 0,
-    kind_FREE: countByKind.get(TaskKind.FREE) ?? 0,
-  };
-  perfLog("task-list-repo", "kindCountsTotal", totalStartedAt);
-  return result;
-}
+export { countTaskViewsRepo as countTaskViewsForListRepo, countTaskKindsRepo as countTaskKindsForListRepo } from "./task-count.repo";
 
 export async function listAssignableUsersForTaskListRepo(db: DB) {
   return perfStep("task-list-repo", "assignableUsersFindMany", () =>

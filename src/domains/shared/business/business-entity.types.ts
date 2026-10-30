@@ -59,6 +59,16 @@ export type BusinessEntityPreviewActivity = {
     }>;
 };
 
+export type BusinessPreviewImage = { id: string; url: string; alt: string; label: string; thumbnailUrl?: string; selected?: boolean };
+export type WatchPreviewMediaReview = {
+    pool: BusinessPreviewImage[];
+    selected: BusinessPreviewImage[];
+    unselectedCount: number;
+    selectionHref: string;
+    canSelect: boolean;
+    canSchedule: boolean;
+};
+
 export type BusinessEntityPreview = {
     type: BusinessEntityType;
     id: string;
@@ -67,6 +77,11 @@ export type BusinessEntityPreview = {
     subtitle?: string | null;
     status?: string | null;
     imageUrl?: string | null;
+    images?: BusinessPreviewImage[];
+    mediaReview?: WatchPreviewMediaReview;
+    activityDeferred?: boolean;
+    activityLoading?: boolean;
+    activityError?: string | null;
     href?: string | null;
     facts?: BusinessEntityFact[];
     notes?: BusinessEntityPreviewNote[];

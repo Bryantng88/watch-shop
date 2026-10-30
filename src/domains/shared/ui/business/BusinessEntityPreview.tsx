@@ -33,17 +33,22 @@ import { markTaskItemMentionsReadAction } from "@/domains/task/actions/task.acti
 import type { TaskItemActivityViewModel } from "@/domains/task/server/activity";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 import { WatchServiceIntakeModal } from "@/domains/service/ui/quick-service";
+import { WatchPreviewGallery } from "./WatchPreviewGallery";
+import { WatchMediaReview } from "./WatchMediaReview";
+import { ADMIN_UI, ADMIN_DOMAIN_TONE, AdminUserAvatar } from "@/domains/shared/ui/admin-design-contract";
 
-async function loadBusinessEntityPreview(type: BusinessEntityType, id: string) {
+async function loadBusinessEntityPreview(type: BusinessEntityType, id: string, signal: AbortSignal, activityOnly = false) {
     const query = new URLSearchParams({ type, id, activityMode: "DISCUSSION" });
+    if (type === "WATCH") query.set(activityOnly ? "activityOnly" : "deferActivity", "1");
     const response = await fetch(`/api/admin/business-entity-preview?${query.toString()}`, {
         method: "GET",
         headers: { Accept: "application/json" },
         cache: "no-store",
+        signal,
     });
     const result = await response.json().catch(() => null);
     if (!response.ok) throw new Error(result?.error || "Không thể tải xem nhanh.");
-    return (result?.preview ?? null) as BusinessEntityPreview | null;
+    return (activityOnly ? { activity: result?.activity } : result?.preview ?? null) as BusinessEntityPreview | null;
 }
 
 function money(value?: number | null) {
@@ -126,28 +131,27 @@ function WatchDecisionPanel({
     const serviceActive = Boolean(snapshot.service.requestStatus) || ["PENDING", "IN_SERVICE"].includes(snapshot.service.stage);
 
     return (
-        <section className="overflow-hidden rounded-xl border border-violet-200 bg-violet-50/40">
-            <div className="flex items-start justify-between gap-4 border-b border-violet-100 bg-white px-4 py-3">
+        <section className="space-y-3 border-t border-slate-100 pt-4">
+            <div className="flex items-start justify-between gap-4">
                 <div>
-                    <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-violet-600">Review Watch</div>
-                    <div className="mt-1 text-sm font-bold text-slate-950">Tình trạng hiện tại</div>
-                    <div className="mt-0.5 text-xs text-slate-600">
+                    <div className={ADMIN_UI.sectionTitle}>Tình trạng hiện tại</div>
+                    <div className={ADMIN_UI.sectionDescription}>
                         {snapshot.decision.blockers.length
-                            ? `${snapshot.decision.blockers.length} hạng mục cần chú ý. User chọn nghiệp vụ cần xử lý.`
+                            ? `${snapshot.decision.blockers.length} hạng mục cần chú ý`
                             : "Các hạng mục hiện đã sẵn sàng."}
                     </div>
                 </div>
                 <div className="shrink-0 text-right">
-                    <div className="text-lg font-black text-violet-700">{snapshot.progress}%</div>
-                    <div className="text-[10px] font-semibold text-slate-400">sẵn sàng</div>
+                    <div className={ADMIN_UI.metricValue}>{snapshot.progress}%</div>
+                    <div className={ADMIN_UI.metadata}>sẵn sàng</div>
                 </div>
             </div>
-            <div className="grid sm:grid-cols-2">
+            <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
                 {rows.map((row) => {
                     const Icon = row.icon;
                     return (
-                        <div key={row.key} className="flex min-w-0 gap-3 border-b border-r border-violet-100 bg-white/70 px-4 py-3">
-                            <div className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg ${row.neutral ? "bg-slate-100 text-slate-500" : row.ready ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"}`}>
+                        <div key={row.key} className="flex min-w-0 gap-2.5">
+                            <div className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg ${row.key === "service" ? ADMIN_DOMAIN_TONE.TECHNICAL.soft : row.key === "pricing" ? ADMIN_DOMAIN_TONE.SALES.soft : ADMIN_DOMAIN_TONE.MEDIA.soft}`}>
                                 <Icon className="h-4 w-4" />
                             </div>
                             <div className="min-w-0">
@@ -155,35 +159,34 @@ function WatchDecisionPanel({
                                     {row.label}
                                     {row.neutral ? null : row.ready ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />}
                                 </div>
-                                <div className="mt-0.5 truncate text-sm font-semibold text-slate-900">{row.value}</div>
-                                {row.detail ? <div className="mt-0.5 truncate text-[11px] text-slate-500">{row.detail}</div> : null}
+                                <div className={`mt-0.5 truncate ${ADMIN_UI.rowTitle} tabular-nums`}>{row.value}</div>
+                                {row.detail ? <div className={`mt-0.5 truncate ${ADMIN_UI.metadata}`}>{row.detail}</div> : null}
                             </div>
                         </div>
                     );
                 })}
             </div>
             {snapshot.decision.warnings.length ? (
-                <div className="border-t border-violet-100 px-4 py-2.5 text-xs text-amber-700">
+                <div className="flex items-start gap-2 text-xs leading-5 text-amber-700">
                     {snapshot.decision.warnings[0]}
                 </div>
             ) : null}
-            <div className="border-t border-violet-100 bg-white px-4 py-3">
+            <div className="pt-1">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                    <span className="text-xs font-semibold text-slate-500">Thao tác</span>
                     <div className="flex flex-wrap justify-end gap-2">
                         {reviewContext !== "SERVICE" ? (
                             <>
                             {serviceActive && snapshot.service.requestId ? (
                                 <Link
                                     href={`/admin/services/${snapshot.service.requestId}`}
-                                    className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-amber-500 px-3 text-xs font-bold text-white hover:bg-amber-600"
+                                    className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100"
                                 >
                                     <Wrench className="h-3.5 w-3.5" /> Mở service
                                 </Link>
                             ) : <button
                                 type="button"
                                 onClick={() => setServiceIntakeOpen(true)}
-                                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-amber-500 px-3 text-xs font-bold text-white hover:bg-amber-600"
+                                className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100"
                             >
                                 <Wrench className="h-3.5 w-3.5" />
                                 Đưa vào service
@@ -191,17 +194,17 @@ function WatchDecisionPanel({
                             </>
                         ) : null}
                         {reviewContext !== "PRICING" ? (
-                            <Link href={editHref} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-50">
+                            <Link href={editHref} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">
                                 <CircleDollarSign className="h-3.5 w-3.5" /> Điều chỉnh giá
                             </Link>
                         ) : null}
-                        {reviewContext !== "MEDIA" ? (
-                            <Link href={mediaHref} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-50">
+                        {reviewContext !== "MEDIA" && !preview.mediaReview ? (
+                            <Link href={mediaHref} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">
                                 <ImageIcon className="h-3.5 w-3.5" /> Xử lý media
                             </Link>
                         ) : null}
                         {reviewContext !== "CONTENT" ? (
-                            <Link href={contentHref} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-50">
+                            <Link href={contentHref} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">
                                 <FileText className="h-3.5 w-3.5" /> Xử lý content
                             </Link>
                         ) : null}
@@ -575,7 +578,6 @@ function BusinessEntityActivityPanel({
     const viewer = activity.mentionableUsers?.find(
         (user) => user.id === activity.viewerUserId,
     );
-    const viewerInitial = viewer?.label.trim().slice(0, 1).toUpperCase() || "?";
     const viewerAvatarUrl = resolveMediaPreviewSrc(viewer?.avatarUrl);
     function addMention(user: { id: string; label: string }) {
         setBody((current) => current.replace(/(?:^|\s)@([^@\s]*)$/, (match) => `${match.startsWith(" ") ? " " : ""}@${user.label} `));
@@ -650,34 +652,22 @@ function BusinessEntityActivityPanel({
     }
 
     return (
-        <section className="rounded-xl border border-slate-200 bg-white p-4">
+        <section className="border-t border-slate-100 pt-4">
             <div>
                 <div className="text-sm font-semibold text-slate-950">Trao đổi nghiệp vụ</div>
                 <div className="mt-0.5 text-xs text-slate-500">Ưu tiên comment, reply và mention trong đúng ngữ cảnh.</div>
             </div>
             {activity.discussionEnabled ? (
-                <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+                <div className="mt-3">
                     <div className="flex items-start gap-2.5">
-                        <span
-                            title={viewer?.label || "Người đang thao tác"}
-                            className="relative grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-slate-900 text-xs font-bold text-white ring-2 ring-white"
-                        >
-                            {viewerAvatarUrl ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                    src={viewerAvatarUrl}
-                                    alt={viewer?.label || "Người đang thao tác"}
-                                    className="h-full w-full object-cover"
-                                />
-                            ) : viewerInitial}
-                        </span>
+                        <AdminUserAvatar user={{ name: viewer?.label || null, avatarUrl: viewerAvatarUrl }} />
                         <textarea
                             value={body}
                             onChange={(event) => updateBody(event.target.value)}
                             rows={2}
                             disabled={submitting}
                             placeholder="Thêm trao đổi về nghiệp vụ này..."
-                            className="min-h-[68px] flex-1 resize-y rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
+                            className="min-h-[68px] flex-1 resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                         />
                     </div>
                     {mentionMatches.length ? (
@@ -721,7 +711,7 @@ function BusinessEntityActivityPanel({
                     Lịch sử
                 </button>
             </div>
-            <div className="mt-4 [&>div]:!space-y-5 [&_article]:border-slate-200/80 [&_article]:shadow-[0_3px_12px_rgba(15,23,42,0.045)]">
+            <div className="mt-3 [&>div]:!space-y-3 [&_article]:rounded-none [&_article]:border-0 [&_article]:border-b [&_article]:border-slate-100 [&_article]:shadow-none">
                 {historyLoading ? (
                     <div className="flex items-center justify-center gap-2 py-8 text-sm text-slate-500">
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -824,6 +814,7 @@ export function BusinessEntityPreviewModal({
     onClose,
     onActivityChanged,
     onAction,
+    onProcessMedia,
     reviewContext = "WATCH",
 }: {
     open: boolean;
@@ -833,6 +824,7 @@ export function BusinessEntityPreviewModal({
     onClose: () => void;
     onActivityChanged?: (reason?: "COMMENT" | "READ") => void;
     onAction?: (action: BusinessEntityPreviewAction) => void;
+    onProcessMedia?: () => void;
     reviewContext?: "WATCH" | "MEDIA" | "SERVICE" | "PRICING" | "CONTENT";
 }) {
     const [imageOpen, setImageOpen] = useState(false);
@@ -854,7 +846,7 @@ export function BusinessEntityPreviewModal({
             onClick={onClose}
         >
             <div
-                className={`flex max-h-[90vh] w-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.24)] ${
+                className={`flex max-h-[90vh] w-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl shadow-slate-950/15 ${
                     preview?.type === "TECHNICAL_ISSUE" ? "max-w-4xl" : "max-w-3xl"
                 }`}
                 onClick={(event) => event.stopPropagation()}
@@ -873,13 +865,13 @@ export function BusinessEntityPreviewModal({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                        aria-label="Đóng xem nhanh" className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-blue-200"
                     >
                         <X className="h-5 w-5" />
                     </button>
                 </div>
 
-                <div className="overflow-y-auto p-5">
+                <div className="overflow-y-auto px-5 py-4">
                     {loading && !preview ? (
                         <div className="flex h-40 items-center justify-center text-slate-500">
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -896,9 +888,9 @@ export function BusinessEntityPreviewModal({
                                     <Loader2 className="h-3.5 w-3.5 animate-spin" /> Đang cập nhật dữ liệu mới nhất…
                                 </div>
                             ) : null}
-                            <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-                              <div className="flex items-center gap-4 p-4">
-                                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                            <section className={preview.type === "WATCH" ? "space-y-3" : "overflow-hidden rounded-xl border border-slate-200 bg-white"}>
+                              <div className={preview.type === "WATCH" ? "flex items-center gap-3" : "flex items-center gap-4 p-4"}>
+                                <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-50">
                                     {preview.imageUrl ? (
                                         <button type="button" onClick={() => setImageOpen(true)} className="group/image relative h-full w-full cursor-zoom-in" aria-label="Phóng lớn ảnh">
                                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -912,7 +904,7 @@ export function BusinessEntityPreviewModal({
 
                                 <div className="min-w-0 flex-1">
                                     <div className="flex flex-wrap items-center gap-2">
-                                        <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-violet-600">
+                                        <div className={`${ADMIN_DOMAIN_TONE.MEDIA.soft} rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide`}>
                                             {typeLabel(preview.type)}
                                         </div>
                                         {preview.status ? (
@@ -936,13 +928,13 @@ export function BusinessEntityPreviewModal({
                               </div>
 
                               {preview.facts?.length ? (
-                                <div className="grid grid-cols-2 border-t border-slate-200 bg-slate-50/60 sm:grid-cols-3">
+                                <div className={preview.type === "WATCH" ? "flex flex-wrap gap-x-6 gap-y-2 border-b border-slate-100 pb-4" : "grid grid-cols-2 border-t border-slate-200 bg-slate-50/60 sm:grid-cols-3"}>
                                     {preview.facts.map((fact) => (
                                         <div
                                             key={fact.label}
-                                            className="min-w-0 border-b border-r border-slate-200/70 px-4 py-3 last:border-b-0"
+                                            className={preview.type === "WATCH" ? "min-w-0" : "min-w-0 border-b border-r border-slate-200/70 px-4 py-3 last:border-b-0"}
                                         >
-                                            <div className="truncate text-[9px] font-bold uppercase tracking-[0.08em] text-slate-400">{fact.label}</div>
+                                            <div className={ADMIN_UI.metadata}>{fact.label}</div>
                                             {fact.href ? (
                                                 <Link
                                                     href={fact.href}
@@ -966,6 +958,9 @@ export function BusinessEntityPreviewModal({
                               ) : null}
                             </section>
 
+                            {preview.type === "WATCH" && (preview.mediaReview ? <WatchMediaReview key={preview.id} watchId={preview.id} title={preview.title} media={preview.mediaReview} onSelect={onClose} onProcessMedia={onProcessMedia} /> : preview.images && <WatchPreviewGallery images={preview.images} title={preview.title} />)}
+                            {preview.activityLoading && <Loader2 aria-label="Đang tải trao đổi" className="h-4 w-4 animate-spin text-slate-400" />}
+                            {preview.activityError && <p role="alert" className="text-xs text-rose-600">{preview.activityError}</p>}
                             <WatchDecisionPanel preview={preview} reviewContext={reviewContext} onDecisionChanged={() => onActivityChanged?.()} />
                             <TechnicalIssueEditPanel preview={preview} />
                             <DoneTechnicalIssueCostPanel preview={preview} onSaved={() => onActivityChanged?.()} />
@@ -1127,7 +1122,7 @@ export function BusinessEntityPreviewModal({
                             {preview.href && !preview.actions?.some((action) => action.href === preview.href) ? (
                                 <Link
                                     href={preview.href}
-                                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800"
+                                    className={`inline-flex h-10 items-center justify-center gap-2 px-3 text-sm ${ADMIN_UI.secondaryAction}`}
                                 >
                                     Mở trang chi tiết
                                     <ExternalLink className="h-4 w-4" />
@@ -1158,67 +1153,36 @@ export function useBusinessEntityPreview() {
     const [loading, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
     const requestVersionRef = useRef(0);
+    const controller = useRef<AbortController | null>(null);
+    useEffect(() => () => { requestVersionRef.current++; controller.current?.abort(); }, []);
 
-    function openPreview(seed: BusinessEntityPreview) {
-        const requestVersion = requestVersionRef.current + 1;
-        requestVersionRef.current = requestVersion;
-        setOpen(true);
-        setPreview(seed);
+    function load(seed: BusinessEntityPreview) {
+        const version = ++requestVersionRef.current;
+        controller.current?.abort();
+        const abort = new AbortController();
+        controller.current = abort;
         setError(null);
-
         startTransition(async () => {
             try {
-                const live = await loadBusinessEntityPreview(seed.type, seed.id);
-                if (requestVersion !== requestVersionRef.current) return;
-
-                if (live) {
-                    const mergedActions = [...(seed.actions ?? []), ...(live.actions ?? [])]
-                        .filter((action, index, all) => all.findIndex((candidate) => candidate.href === action.href && candidate.command === action.command && candidate.label === action.label) === index);
-                    setPreview({
-                        ...live,
-                        href: live.href ?? seed.href,
-                        sections: live.sections?.length ? live.sections : seed.sections,
-                        actions: mergedActions,
+                const live = await loadBusinessEntityPreview(seed.type, seed.id, abort.signal);
+                if (version !== requestVersionRef.current || !live) return;
+                const actions = [...(seed.actions ?? []), ...(live.actions ?? [])]
+                    .filter((action, index, all) => all.findIndex(candidate => candidate.href === action.href && candidate.command === action.command && candidate.label === action.label) === index);
+                setPreview({ ...live, href: live.href ?? seed.href, sections: live.sections?.length ? live.sections : seed.sections, actions, activityLoading: Boolean(live.activityDeferred) });
+                // Discussion is independent: do not hold the metadata transition open.
+                if (live.activityDeferred) void loadBusinessEntityPreview(seed.type, seed.id, abort.signal, true)
+                    .then(result => {
+                        if (version === requestVersionRef.current) setPreview(current => current && ({ ...current, activity: result?.activity, activityLoading: false, activityError: null }));
+                    }).catch(failure => {
+                        if (version === requestVersionRef.current) setPreview(current => current && ({ ...current, activityLoading: false, activityError: failure instanceof Error ? failure.message : "Không thể tải trao đổi" }));
                     });
-                }
-            } catch (err: unknown) {
-                if (requestVersion !== requestVersionRef.current) return;
-                setError(err instanceof Error ? err.message : "Không thể tải preview.");
+            } catch (failure) {
+                if (version === requestVersionRef.current) setError(failure instanceof Error ? failure.message : "Không thể tải xem nhanh");
             }
         });
     }
-
-    function closePreview() {
-        requestVersionRef.current += 1;
-        setOpen(false);
-        setError(null);
-    }
-
-    function refreshPreview() {
-        if (!preview) return;
-        const current = preview;
-        const requestVersion = requestVersionRef.current + 1;
-        requestVersionRef.current = requestVersion;
-
-        startTransition(async () => {
-            try {
-                const live = await loadBusinessEntityPreview(current.type, current.id);
-                if (requestVersion !== requestVersionRef.current) return;
-                if (live) setPreview(live);
-            } catch (err: unknown) {
-                if (requestVersion !== requestVersionRef.current) return;
-                setError(err instanceof Error ? err.message : "Không thể tải lại preview.");
-            }
-        });
-    }
-
-    return {
-        open,
-        preview,
-        loading,
-        error,
-        openPreview,
-        refreshPreview,
-        closePreview,
-    };
+    function openPreview(seed: BusinessEntityPreview) { setOpen(true); setPreview(seed); load(seed); }
+    function closePreview() { requestVersionRef.current++; controller.current?.abort(); setOpen(false); setError(null); }
+    function refreshPreview() { if (preview) load(preview); }
+    return { open, preview, loading, error, openPreview, refreshPreview, closePreview };
 }

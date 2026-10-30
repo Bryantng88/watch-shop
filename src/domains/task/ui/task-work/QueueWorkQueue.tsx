@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useImperativeHandle, useMemo, useRef, useState, useTransition, type ReactNode, type Ref } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -1010,6 +1010,7 @@ export function OpenTargetAction({
   iconClassName = "h-3.5 w-3.5",
   iconOnly = false,
   onActivate,
+  triggerRef,
   onTransitionApplied,
   onRefreshRequested,
 }: {
@@ -1019,6 +1020,7 @@ export function OpenTargetAction({
   iconClassName?: string;
   iconOnly?: boolean;
   onActivate?: () => void;
+  triggerRef?: Ref<() => void>;
   onTransitionApplied?: (outcome: WorkspaceTransitionOutcome) => void;
   onRefreshRequested?: () => void | Promise<void>;
 }) {
@@ -1072,6 +1074,16 @@ export function OpenTargetAction({
     return () => window.removeEventListener("message", handleMessage);
   }, [onRefreshRequested, onTransitionApplied, open, queueItem.id, scheduleRefresh]);
 
+  const activate = () => {
+    if (!href) return;
+    onActivate?.();
+    transitionAppliedRef.current = false;
+    setTargetDirty(false);
+    if (modal) setOpen(true);
+    else router.push(href);
+  };
+  useImperativeHandle(triggerRef, () => activate);
+
   if (!href) return null;
 
   const confirmTargetLeave = async () => {
@@ -1108,12 +1120,7 @@ export function OpenTargetAction({
     <>
       <button
         type="button"
-        onClick={() => {
-          onActivate?.();
-          transitionAppliedRef.current = false;
-          setTargetDirty(false);
-          setOpen(true);
-        }}
+        onClick={activate}
         className={className}
         title={iconOnly ? "Xem ảnh hiện có" : undefined}
         aria-label={iconOnly ? "Xem ảnh hiện có" : undefined}

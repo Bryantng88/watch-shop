@@ -16,7 +16,7 @@ async function main() {
     await prisma.$transaction(async tx => {
       // Session-private fixtures shadow public tables only for this transaction.
       await tx.$executeRawUnsafe("SET LOCAL TIME ZONE 'UTC'");
-      await tx.$executeRawUnsafe('CREATE TEMP TABLE "TaskItem" (id text, note text, "taskId" text, status text, "dueAt" timestamp, "updatedAt" timestamp) ON COMMIT DROP');
+      await tx.$executeRawUnsafe('CREATE TEMP TABLE "TaskItem" (id text, note text, "taskId" text, "personalOwnerUserId" text, status text, "dueAt" timestamp, "updatedAt" timestamp) ON COMMIT DROP');
       await tx.$executeRawUnsafe('CREATE TEMP TABLE "TaskExecution" ("taskItemId" text, "targetType" text, "actionType" text, "metadataJson" jsonb) ON COMMIT DROP');
       await tx.$executeRawUnsafe('CREATE TEMP TABLE "PurchaseRequest" ("createdAt" timestamp, "processingStartedAt" timestamptz, "completedAt" timestamptz, outcome text, status text, "updatedAt" timestamptz) ON COMMIT DROP');
       await tx.$executeRawUnsafe('CREATE TEMP TABLE "ProjectionRecord" ("entityId" text, status text, "dataJson" jsonb, "projectionKey" text, "projectionVersion" int, "updatedAt" timestamptz) ON COMMIT DROP');
@@ -83,6 +83,14 @@ async function main() {
       const visible = await queryOpenOperationStageStatistics(tx, input);
       assert.equal(Number(visible.find(row => row.stageKey === "personal-today")?.count), 2);
       assert.equal(Number(visible.find(row => row.stageKey === "personal-today")?.averageIdleHours), 36);
+      await tx.$executeRawUnsafe("SET LOCAL TIME ZONE 'UTC'");
+      await tx.$executeRaw`INSERT INTO "TaskItem" (id, "personalOwnerUserId", status, "dueAt", "updatedAt") VALUES
+        ('standalone-mine', 'owner', 'TODO', ${now}, ${at(3)}),
+        ('standalone-private', 'other', 'TODO', ${now}, ${at(20)})`;
+      await tx.$executeRawUnsafe("SET LOCAL TIME ZONE 'Asia/Bangkok'");
+      const withStandalone = await queryOpenOperationStageStatistics(tx, input);
+      assert.equal(Number(withStandalone.find(row => row.stageKey === "personal-today")?.count), 3);
+      assert.equal(Number(withStandalone.find(row => row.stageKey === "personal-today")?.averageIdleHours), 48);
       assert.equal((await queryOpenOperationStageStatistics(tx, { ...input, userId: null })).some(row => row.queueKey === "personal-work"), false);
       console.log("PASS: >100-row full aggregates, latest-entity deduplication, real checklist progress, independent throughput/cohort windows, waiting-stage exit, cancellation/future/invalid interval guards, personal owner/share scope and anonymous isolation; session-private fixtures only");
     }, { timeout: 30000 });

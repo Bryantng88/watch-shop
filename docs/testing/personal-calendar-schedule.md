@@ -28,9 +28,10 @@ shows a compact portal preview with group, work type, time range, status, checkl
 count and a short note. Escape closes it; clicking the event opens task detail.
 Preview interactions do not trigger the underlying day's create handler.
 
-Personal period tasks are selected by creator as well as kind/period. Different
-users must never share a PERSONAL parent just because they create work in the
-same week. Business/team period-task lookup retains its existing behavior.
+New personal work is standalone and has a direct owner; creation no longer uses
+weekly parent tasks. Existing PERSONAL parents remain only as historical
+references with their previous creator/assignee access semantics preserved.
+See `personal-work-task-audit.md` for migration and compatibility details.
 
 Verification:
 

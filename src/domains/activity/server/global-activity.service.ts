@@ -369,7 +369,7 @@ export async function listGlobalActivity(input: GlobalActivityQuery) {
           ),
       taskItemId: row.taskItemId,
       taskItemTitle: row.taskItem.title,
-      workspaceTitle: row.taskItem.task.title,
+      workspaceTitle: row.taskItem.task?.title ?? row.taskItem.title,
       actor: {
         id: row.actorUser?.id ?? null,
         label: actorLabel(row.actorUser),

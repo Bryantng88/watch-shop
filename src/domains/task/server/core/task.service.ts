@@ -1,3 +1,5 @@
+import { authCanViewAllTasks } from "../task-auth";
+import { getAuthUserId } from "@/server/auth/auth-user-id";
 import { TaskKind, TaskPeriod, TaskStatus, type TaskPriority } from "@prisma/client";
 import type { DB } from "@/server/db/client";
 import {
@@ -53,32 +55,9 @@ function omitTaskAccessFields<T extends TaskItemAccessShape>(item: T) {
   };
 }
 
-export function getAuthUserId(auth: any): string | null {
-  return auth?.user?.id ?? auth?.id ?? auth?.userId ?? null;
-}
+export { getAuthUserId } from "@/server/auth/auth-user-id";
 
-export function authCanViewAllTasks(auth: any): boolean {
-  const roles = auth?.roles ?? auth?.user?.roles ?? [];
-  const roleName = String(
-    auth?.user?.role ??
-    auth?.role ??
-    auth?.user?.role?.name ??
-    auth?.role?.name ??
-    auth?.roleName ??
-    "",
-  ).toUpperCase();
-
-  const permissions =
-    auth?.permissions ?? auth?.user?.permissions ?? auth?.role?.permissions ?? [];
-
-  return (
-    roleName === "ADMIN" ||
-    (Array.isArray(roles) &&
-      roles.map((item) => String(item ?? "").toUpperCase()).includes("ADMIN")) ||
-    (Array.isArray(permissions) &&
-      (permissions.includes("TASK_VIEW_ALL") || permissions.includes("ADMIN")))
-  );
-}
+export { authCanViewAllTasks } from "../task-auth";
 
 function authShareGroups(auth: unknown) {
   const authRecord = auth && typeof auth === "object" ? auth as Record<string, unknown> : {};
@@ -127,12 +106,6 @@ function getIsoWeekInfo(date = new Date()) {
     start: monday,
     end: sunday,
   };
-}
-
-function formatDateVN(date: Date) {
-  return `${String(date.getUTCDate()).padStart(2, "0")}/${String(
-    date.getUTCMonth() + 1,
-  ).padStart(2, "0")}/${date.getUTCFullYear()}`;
 }
 
 function normalizeTaskPeriod(
@@ -191,13 +164,14 @@ function buildPeriodTaskTitle(kind: TaskKind, periodKey: string) {
   return `${taskKindLabel(kind)} tuần ${week}`;
 }
 
-async function assertCanAccessTask(db: DB, id: string, auth: any) {
+async function assertCanAccessTask(db: DB, id: string, auth: unknown) {
   const userId = getAuthUserId(auth);
   assertUser(userId);
 
   const task = await getTaskByIdRepo(db, id);
   if (!task) throw new Error("Không tìm thấy task");
 
+  if (task.kind === TaskKind.PERSONAL) throw new Error("Personal work is managed independently");
   if (authCanViewAllTasks(auth)) return task;
 
   if (task.createdByUserId !== userId && task.assignedToUserId !== userId) {
@@ -229,7 +203,7 @@ function assertCanAccessTaskItemDetail(item: TaskItemAccessShape, auth: unknown)
 
 export async function getTaskListPageData(
   db: DB,
-  input: { auth: any; filters: TaskListFilters },
+  input: { auth: unknown; filters: TaskListFilters },
 ) {
   const userId = getAuthUserId(input.auth);
   assertUser(userId);
@@ -286,7 +260,7 @@ export async function getTaskItemListPageData(
   };
 }
 
-export async function getTaskDetail(db: DB, id: string, auth: any) {
+export async function getTaskDetail(db: DB, id: string, auth: unknown) {
   return assertCanAccessTask(db, id, auth);
 }
 
@@ -303,11 +277,12 @@ export async function getTaskItemDetail(
   return omitTaskAccessFields(item);
 }
 
-export async function createTask(db: DB, input: CreateTaskInput, auth: any) {
+export async function createTask(db: DB, input: CreateTaskInput, auth: unknown) {
   const userId = getAuthUserId(auth);
   assertUser(userId);
 
   const kind = input.kind ?? TaskKind.BUSINESS;
+  if (kind === TaskKind.PERSONAL) throw new Error("Create personal work through the personal-work service");
 
   if (kind === TaskKind.FREE) {
     if (!input.title?.trim()) {
@@ -336,7 +311,6 @@ export async function createTask(db: DB, input: CreateTaskInput, auth: any) {
     kind,
     periodType: period.periodType!,
     periodKey: period.periodKey!,
-    ownerUserId: kind === TaskKind.PERSONAL ? userId : undefined,
   });
 
   if (existing) {
@@ -354,8 +328,7 @@ export async function createTask(db: DB, input: CreateTaskInput, auth: any) {
     ...period,
     source: input.source ?? "MANUAL",
     createdByUserId: userId,
-    assignedToUserId:
-      kind === TaskKind.PERSONAL ? userId : input.assignedToUserId ?? userId,
+    assignedToUserId: input.assignedToUserId ?? userId,
     priority: "MEDIUM",
     dueAt: null,
   });
@@ -409,7 +382,7 @@ export async function ensureSystemTask(db: DB, input: EnsureSystemTaskInput) {
   return ensureSystemTaskRepo(db, input);
 }
 
-export async function updateTask(db: DB, id: string, input: UpdateTaskInput, auth: any) {
+export async function updateTask(db: DB, id: string, input: UpdateTaskInput, auth: unknown) {
   const userId = getAuthUserId(auth);
   assertUser(userId);
 
@@ -420,14 +393,12 @@ export async function updateTask(db: DB, id: string, input: UpdateTaskInput, aut
   }
 
   const nextInput = { ...input };
+  if (nextInput.kind === TaskKind.PERSONAL) throw new Error("Personal work does not use a parent task");
 
   if (nextInput.kind) {
     Object.assign(nextInput, normalizeTaskPeriod(nextInput.kind, nextInput));
   }
 
-  if (nextInput.kind === TaskKind.PERSONAL) {
-    nextInput.assignedToUserId = userId;
-  }
 
   return updateTaskRepo(db, id, nextInput);
 }
@@ -436,7 +407,7 @@ export async function changeTaskStatus(
   db: DB,
   id: string,
   status: TaskStatus,
-  auth: any,
+  auth: unknown,
 ) {
   const userId = getAuthUserId(auth);
   assertUser(userId);
@@ -486,7 +457,7 @@ export async function findOpenRelatedTasks(db: DB, input: FindOpenRelatedTasksIn
   return findOpenRelatedTasksRepo(db, input);
 }
 
-export async function completeTasksByIds(db: DB, ids: string[], auth: any) {
+export async function completeTasksByIds(db: DB, ids: string[], auth: unknown) {
   const userId = getAuthUserId(auth);
   assertUser(userId);
 
@@ -515,7 +486,7 @@ export async function completeTasksByIds(db: DB, ids: string[], auth: any) {
   });
 }
 
-export async function getTaskQuickCreateData(db: DB, auth: any) {
+export async function getTaskQuickCreateData(db: DB, auth: unknown) {
   const userId = getAuthUserId(auth);
   assertUser(userId);
 

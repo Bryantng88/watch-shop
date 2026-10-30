@@ -102,7 +102,7 @@ export async function buildCoordinationWorkspaceSummaryRow(db: DB, taskItemId: s
     select: taskItemSelect,
   });
 
-  if (!row || row.status === TaskStatus.CANCELLED) {
+  if (!row || !row.taskId || row.status === TaskStatus.CANCELLED) {
     await deleteProjectionRecords(db, {
       projectionKey: COORDINATION_WORKSPACE_SUMMARY_PROJECTION_KEY,
       rowKeys: [taskItemId],
@@ -112,6 +112,7 @@ export async function buildCoordinationWorkspaceSummaryRow(db: DB, taskItemId: s
 
   const data: StoredRow = {
     ...row,
+    taskId: row.taskId,
     dueAt: row.dueAt?.toISOString() ?? null,
     updatedAt: row.updatedAt.toISOString(),
     createdAt: row.createdAt.toISOString(),

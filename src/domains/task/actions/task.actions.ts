@@ -70,6 +70,7 @@ import {
 import type { BusinessBindingTargetType } from "../server/business-binding.types";
 import { isCoreWorkspaceBlueprint } from "../shared/workspace-flow-policy";
 import { getProjectionDeliveryStatus } from "@/domains/projection/server";
+import { requireWorkspaceTaskItem } from "../server/workspace-task-item";
 import { getTaskItemDetailPageRepo } from "../server/core/task-item-detail.repo";
 
 function authActorLabel(auth: unknown) {
@@ -312,6 +313,8 @@ async function assertWorkspaceCreationAllowed(input: {
   note?: string | null;
   allowDuplicateBlueprint?: boolean;
 }) {
+  const parent = await prisma.task.findUnique({ where: { id: input.taskId }, select: { kind: true } });
+  if (!parent || parent.kind === "PERSONAL") throw new Error("Personal work is created independently");
   const existingItems = await prisma.taskItem.findMany({
     where: {
       taskId: input.taskId,
@@ -608,6 +611,7 @@ export async function updateTaskItemAction(
   const cleanItemId = String(itemId || "").trim();
   if (!cleanItemId) throw new Error("Missing checklist item id");
 
+  const scope = await requireWorkspaceTaskItem(prisma, cleanItemId);
   const item = await updateTaskItemRepo(prisma, cleanItemId, input);
 
   let tags: Awaited<ReturnType<typeof setTargetTagsRepo>> = [];
@@ -615,14 +619,14 @@ export async function updateTaskItemAction(
   if (Array.isArray(input.tagNames)) {
     tags = await setTargetTagsRepo(prisma, {
       ownerType: AppTagOwnerType.TASK,
-      ownerId: item.taskId,
+      ownerId: scope.taskId,
       targetType: AppTagTargetType.TASK_ITEM,
       targetId: item.id,
       names: input.tagNames,
     });
   }
 
-  await syncTaskStatusFromChecklistRepo(prisma, item.taskId);
+  await syncTaskStatusFromChecklistRepo(prisma, scope.taskId);
 
   revalidatePath("/admin/tasks");
   revalidatePath(`/admin/tasks/${item.taskId}`);
@@ -710,6 +714,8 @@ export async function updateTaskItemSharingAction(input: {
   });
 
   if (!item) throw new Error("Phiếu xử lý không tồn tại.");
+  if (!item.task || !item.taskId) throw new Error("Personal work uses explicit personal shares");
+  await requireWorkspaceTaskItem(prisma, item.id);
   if (
     !canViewAll &&
     actorUserId !== item.userId &&
@@ -743,11 +749,12 @@ export async function changeTaskItemStatusAction(
   const cleanItemId = String(itemId || "").trim();
   if (!cleanItemId) throw new Error("Missing task item id");
 
+  const scope = await requireWorkspaceTaskItem(prisma, cleanItemId);
   const item = await setTaskItemStatusRepo(prisma, {
     itemId: cleanItemId,
     status,
   });
-  await syncTaskStatusFromChecklistRepo(prisma, item.taskId);
+  await syncTaskStatusFromChecklistRepo(prisma, scope.taskId);
 
   revalidatePath("/admin/tasks");
   revalidatePath(`/admin/tasks/${item.taskId}`);
@@ -766,12 +773,13 @@ export async function changeTaskItemDoneAction(
   const cleanItemId = String(itemId || "").trim();
   if (!cleanItemId) throw new Error("Missing checklist item id");
 
+  const scope = await requireWorkspaceTaskItem(prisma, cleanItemId);
   const item = await setTaskItemDoneRepo(prisma, {
     itemId: cleanItemId,
     isDone,
   });
 
-  await syncTaskStatusFromChecklistRepo(prisma, item.taskId);
+  await syncTaskStatusFromChecklistRepo(prisma, scope.taskId);
 
   revalidatePath("/admin/tasks");
   revalidatePath(`/admin/tasks/${item.taskId}`);
@@ -787,6 +795,7 @@ export async function deleteTaskItemAction(itemId: string) {
   const cleanItemId = String(itemId || "").trim();
   if (!cleanItemId) throw new Error("Missing checklist item id");
 
+  await requireWorkspaceTaskItem(prisma, cleanItemId);
   const taskItem = await prisma.taskItem.findUnique({
     where: { id: cleanItemId },
     select: { taskId: true },
@@ -818,6 +827,7 @@ export async function createTaskItemChecklistAction(input: {
   if (!taskItemId) throw new Error("Missing taskItemId");
   if (!title) throw new Error("Vui lòng nhập checklist.");
 
+  await requireWorkspaceTaskItem(prisma, taskItemId);
   const checklist = await createTaskItemChecklistRepo(prisma, {
     taskItemId,
     title,
@@ -842,6 +852,7 @@ export async function changeTaskItemChecklistDoneAction(
 
   if (!row) throw new Error("Checklist không tồn tại.");
 
+  const scope = await requireWorkspaceTaskItem(prisma, row.taskItemId);
   const checklist = await updateTaskItemChecklistRepo(prisma, cleanId, {
     isDone,
     actorUserId: auth.userId,
@@ -852,7 +863,7 @@ export async function changeTaskItemChecklistDoneAction(
     row.taskItemId,
     auth.userId,
   );
-  await syncTaskStatusFromChecklistRepo(prisma, row.taskItem.taskId);
+  await syncTaskStatusFromChecklistRepo(prisma, scope.taskId);
 
   revalidatePath("/admin/tasks");
   revalidatePath("/admin/task-items");
@@ -902,13 +913,14 @@ export async function updateTaskItemChecklistTitleAction(
 
   const existing = await prisma.taskItemChecklist.findUnique({
     where: { id: cleanId },
-    select: { id: true },
+    select: { id: true, taskItemId: true },
   });
 
   if (!existing) {
     return { ok: true, checklist: null, alreadyDeleted: true };
   }
 
+  await requireWorkspaceTaskItem(prisma, existing.taskItemId);
   const checklist = await updateTaskItemChecklistRepo(prisma, cleanId, {
     title: cleanTitle,
   });
@@ -924,13 +936,14 @@ export async function deleteTaskItemChecklistAction(checklistId: string) {
 
   const existing = await prisma.taskItemChecklist.findUnique({
     where: { id: cleanId },
-    select: { id: true },
+    select: { id: true, taskItemId: true },
   });
 
   if (!existing) {
     return { ok: true, checklist: null, alreadyDeleted: true };
   }
 
+  await requireWorkspaceTaskItem(prisma, existing.taskItemId);
   const checklist = await deleteTaskItemChecklistRepo(prisma, cleanId);
 
   return { ok: true, checklist, alreadyDeleted: false };
@@ -948,6 +961,9 @@ export async function moveTaskItemAction(input: {
   if (!itemId) throw new Error("Missing taskItemId");
   if (!toTaskId) throw new Error("Vui lòng chọn task đích.");
 
+  await requireWorkspaceTaskItem(prisma, itemId);
+  const target = await prisma.task.findUnique({ where: { id: toTaskId }, select: { kind: true } });
+  if (!target || target.kind === "PERSONAL") throw new Error("Personal work cannot be moved into a parent task");
   const result = await moveTaskItemRepo(prisma, { itemId, toTaskId });
 
   await Promise.all([
@@ -1029,7 +1045,8 @@ export async function addTaskItemActivityReplyAction(input: {
     },
   });
 
-  if (!activity?.taskItem) throw new Error("Activity không tồn tại.");
+  if (!activity?.taskItem?.task || activity.taskItem.task.kind === "PERSONAL") throw new Error("Activity không tồn tại.");
+  const workspaceTask = activity.taskItem.task;
   if (!resolveWorkspaceCapabilities({ note: activity.taskItem.note }).discussion) {
     throw new Error("Workspace này không bật trao đổi.");
   }
@@ -1097,7 +1114,7 @@ export async function addTaskItemActivityReplyAction(input: {
       .filter((user) => user.id !== getAuthUserId(auth))
       .map((user) => upsertTaskNotification(prisma, {
         userId: user.id,
-        taskId: activity.taskItem.task.id,
+        taskId: workspaceTask.id,
         type: "DISCUSSION_MENTION",
         title: `${actorName} đã nhắc đến bạn`,
         message: body,
@@ -1164,7 +1181,8 @@ export async function addTaskItemDiscussionAction(input: {
     },
   });
 
-  if (!taskItem) throw new Error("Workspace không tồn tại.");
+  if (!taskItem?.task || taskItem.task.kind === "PERSONAL") throw new Error("Workspace không tồn tại.");
+  const workspaceTask = taskItem.task;
   if (!resolveWorkspaceCapabilities({ note: taskItem.note }).discussion) {
     throw new Error("Workspace này không bật trao đổi.");
   }
@@ -1210,7 +1228,7 @@ export async function addTaskItemDiscussionAction(input: {
       watchTitle,
       contextTitle: activityContextLabel(targetType),
       route: "/admin/coordination/operation",
-      taskId: taskItem.task.id,
+      taskId: workspaceTask.id,
       taskTitle: taskItem.task.title,
       periodKey: taskItem.task.periodKey,
       activityId: activity.id,
@@ -1231,7 +1249,7 @@ export async function addTaskItemDiscussionAction(input: {
     .filter((user) => user.id !== getAuthUserId(auth))
     .map((user) => upsertTaskNotification(prisma, {
       userId: user.id,
-      taskId: taskItem.task.id,
+      taskId: workspaceTask.id,
       type: "DISCUSSION_MENTION",
       title: `${actorName} đã nhắc đến bạn`,
       message: body,
@@ -1265,7 +1283,7 @@ export async function markTaskItemMentionsReadAction(input: {
     where: { id: taskItemId },
     select: { id: true, note: true, userId: true, assignedToUserId: true, task: { select: { id: true, createdByUserId: true, assignedToUserId: true } } },
   });
-  if (!taskItem) return { ok: true, updated: 0 };
+  if (!taskItem?.task) return { ok: true, updated: 0 };
   const activities = await prisma.taskItemActivity.findMany({
     where: { taskItemId },
     select: { id: true, metadataJson: true, replies: { select: { id: true, metadataJson: true } } },
@@ -1333,9 +1351,11 @@ export async function applyQueueItemManualTransitionAction(input: {
 
   const bindingAccess = await prisma.taskExecution.findUnique({
     where: { id: bindingId },
-    select: { targetType: true, targetId: true },
+    select: { targetType: true, targetId: true, taskId: true, taskItemId: true },
   });
   if (!bindingAccess) throw new Error("BINDING_NOT_FOUND");
+  if (bindingAccess.taskItemId) await requireWorkspaceTaskItem(prisma, bindingAccess.taskItemId);
+  else if (!bindingAccess.taskId) throw new Error("WORKSPACE_SCOPE_REQUIRED");
   await requireOperationalPermission(bindingAccess.targetType, bindingAccess.targetId);
 
   const actorUserId = getAuthUserId(auth);
@@ -1465,6 +1485,7 @@ export async function addPhotoshootReshootNoteAction(input: {
     },
   });
   if (!binding?.taskItemId) throw new Error("Không tìm thấy Photoshoot item.");
+  await requireWorkspaceTaskItem(prisma, binding.taskItemId);
   if (!/workTypeKey:\s*photography/i.test(String(binding.taskItem?.note ?? ""))) {
     throw new Error("Item không thuộc Photoshoot Workspace.");
   }

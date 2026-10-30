@@ -1633,6 +1633,7 @@ model User {
   workCaseActivities         WorkCaseActivity[]
   taskExecution              TaskExecution[]
   assignedTaskItems          TaskItem[]                 @relation("TaskItemAssignedTo")
+  personalWorkItems          TaskItem[]                 @relation("PersonalWorkOwner")
   taskItems                  TaskItem[]
   taskItemActivities         TaskItemActivity[]         @relation("TaskItemActivityActor")
   activityReplies            TaskItemActivityReply[]    @relation("TaskItemActivityReplyActor")
@@ -2807,7 +2808,8 @@ model Task {
 
 model TaskItem {
   id     String  @id @default(dbgenerated("(gen_random_uuid())::text"))
-  taskId String
+  taskId String?
+  personalOwnerUserId String?
   title  String
   note   String?
 
@@ -2834,7 +2836,8 @@ model TaskItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  task           Task                       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task           Task?                      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  personalOwner User?                       @relation("PersonalWorkOwner", fields: [personalOwnerUserId], references: [id], onDelete: Restrict)
   assignedToUser User?                      @relation("TaskItemAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
   executions     TaskExecution[]
   checklists     TaskItemChecklist[]
@@ -2847,6 +2850,7 @@ model TaskItem {
 
   @@index([taskId])
   @@index([taskId, status, sortOrder])
+  @@index([personalOwnerUserId, status, dueAt])
   @@index([status])
   @@index([priority])
   @@index([workTypeId])
@@ -3015,7 +3019,7 @@ model TaskItemChecklist {
 model TaskExecution {
   id String @id @default(dbgenerated("(gen_random_uuid())::text"))
 
-  taskId String
+  taskId String?
 
   targetType      TaskExecutionTargetType
   targetId        String
@@ -3028,7 +3032,7 @@ model TaskExecution {
   serviceRequestId String?
   technicalIssueId String?
   taskItemId       String?
-  task             Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task             Task?           @relation(fields: [taskId], references: [id], onDelete: Cascade)
   createdByUser    User?           @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
   taskItem         TaskItem?       @relation(fields: [taskItemId], references: [id], onDelete: SetNull)
   serviceRequest   ServiceRequest? @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)

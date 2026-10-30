@@ -1,0 +1,70 @@
+import assert from "node:assert/strict";
+import { randomUUID, createHash } from "node:crypto";
+import { loadEnvConfig } from "@next/env";
+loadEnvConfig(process.cwd());
+const database = new URL(process.env.DATABASE_URL || "");
+if (!["localhost", "127.0.0.1", "[::1]"].includes(database.hostname) || !/(local|test)/i.test(database.pathname)) throw new Error("Photoshoot smoke requires a loopback test DB");
+
+async function main() {
+  const { prisma } = await import("../src/server/db/client");
+  const { schedulePersonalWatchPhotoshoot: schedule, listPersonalPhotoshootPlans: plans } = await import("../src/domains/personal-work/server/personal-photoshoot.service");
+  const { createPersonalWorkItem } = await import("../src/domains/personal-work/server/personal-work.service");
+  const { personalWorkScopeWhere } = await import("../src/domains/personal-work/server/personal-work-access");
+  const { personalPhotoshootDay } = await import("../src/domains/personal-work/shared/personal-photoshoot");
+  const { listBusinessTargetActivitiesRepo } = await import("../src/domains/task/server/activity/task-item-activity.repo");
+  const users: string[] = [];
+  const originalFetch = globalThis.fetch;
+  const baseline = await prisma.taskItem.findMany({ where: personalWorkScopeWhere, orderBy: { id: "asc" } });
+  const digest = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+  try {
+    globalThis.fetch = async () => { throw new Error("No external requests permitted"); };
+    for (let i = 0; i < 2; i++) users.push((await prisma.user.create({ data: { email: `photo-${randomUUID()}@system.local` } })).id);
+    const [owner, other] = users.map(id => ({ id }));
+    const watches = await prisma.watch.findMany({ take: 2, select: { id: true } });
+    assert.equal(watches.length, 2, "Two read-only local watch references required");
+    assert.throws(() => personalPhotoshootDay("2026-02-30"));
+    assert.equal(personalPhotoshootDay("2026-10-29").start.toISOString(), "2026-10-28T17:00:00.000Z");
+    const date = "2034-04-05";
+    const results = await Promise.all(watches.map(watch => schedule({ watchId: watch.id, date }, owner)));
+    assert.equal(results[0].id, results[1].id, "Concurrent creates must share one item");
+    const id = results[0].id;
+    assert.equal((await plans(date, owner))[0].watchCount, 2);
+    assert.equal((await schedule({ watchId: watches[0].id, date }, owner)).outcome, "ALREADY_LINKED");
+    assert.equal((await schedule({ watchId: watches[0].id, date, note: "Rear angle" }, owner)).outcome, "UPDATED");
+    const privateNote = await prisma.taskItemActivity.create({ data: { taskItemId: id, actorUserId: owner.id, sourceType: "DISCUSSION", title: "Private fixture", body: "Private note", metadataJson: { targetType: "WATCH", targetId: watches[0].id } } });
+    const businessNotes = await listBusinessTargetActivitiesRepo(prisma, { targetType: "WATCH", targetId: watches[0].id, take: 100 });
+    assert.equal(businessNotes.some(note => note.id === privateNote.id), false, "Private personal activity cannot become a public watch discussion");
+    await prisma.taskItem.update({ where: { id }, data: { title: "Existing photo session", note: "Keep this", dueAt: new Date(`${date}T09:00:00+07:00`), scheduledEndAt: new Date(`${date}T11:00:00+07:00`), progressPercent: 25 } });
+    await schedule({ watchId: watches[0].id, date }, owner);
+    const preserved = await prisma.taskItem.findUniqueOrThrow({ where: { id } });
+    assert.equal(preserved.taskId, null);
+    assert.equal(preserved.note, "Keep this");
+    assert.equal(preserved.progressPercent, 25);
+    assert.equal(preserved.scheduledEndAt?.toISOString(), "2034-04-05T04:00:00.000Z");
+    await assert.rejects(schedule({ watchId: watches[0].id, date, taskItemId: id }, other));
+    await assert.rejects(schedule({ watchId: watches[0].id, date: "2034-04-06", taskItemId: id }, owner));
+    const second = await createPersonalWorkItem({ title: "Second session", domain: "MEDIA", workType: "PHOTOGRAPHY", dueAt: `${date}T13:00:00+07:00` }, owner);
+    await assert.rejects(schedule({ watchId: watches[0].id, date }, owner));
+    assert.equal((await schedule({ watchId: watches[0].id, date, taskItemId: second.id }, owner)).id, second.id);
+    await prisma.taskItem.update({ where: { id: second.id }, data: { status: "DONE", isDone: true } });
+    await assert.rejects(schedule({ watchId: watches[1].id, date, taskItemId: second.id }, owner));
+    const next = await schedule({ watchId: watches[0].id, date: "2034-04-06" }, owner);
+    assert.notEqual(next.id, id);
+    assert.equal(await prisma.task.count({ where: { createdByUserId: { in: users } } }), 0);
+    assert.equal(await prisma.businessEventLog.count({ where: { actorUserId: { in: users } } }), 0, "Planning a personal shoot does not mutate the business workflow");
+    assert.equal(await prisma.taskExecution.count({ where: { taskItemId: id, targetType: "WATCH", actionType: { not: "CANCELLED" } } }), 2);
+    console.log("Photoshoot smoke passed: concurrent day reuse, idempotency, note update, preserved schedule, owner/date/status guards, explicit multiple-session selection, standalone records, no network");
+  } finally {
+    globalThis.fetch = originalFetch;
+    const items = await prisma.taskItem.findMany({ where: { personalOwnerUserId: { in: users } }, select: { id: true } });
+    const ids = items.map(item => item.id);
+    await prisma.taskExecution.deleteMany({ where: { taskItemId: { in: ids } } });
+    await prisma.appTagLink.deleteMany({ where: { targetType: "TASK_ITEM", targetId: { in: ids } } });
+    await prisma.taskItem.deleteMany({ where: { id: { in: ids }, personalOwnerUserId: { in: users } } });
+    await prisma.appTag.deleteMany({ where: { ownerType: "GENERAL", ownerId: { in: users } } });
+    await prisma.user.deleteMany({ where: { id: { in: users } } });
+    assert.equal(digest(await prisma.taskItem.findMany({ where: personalWorkScopeWhere, orderBy: { id: "asc" } })), digest(baseline), "Original personal work must remain unchanged");
+    await prisma.$disconnect();
+  }
+}
+main().catch(error => { console.error(error); process.exitCode = 1; });

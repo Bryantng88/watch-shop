@@ -1,4 +1,5 @@
 import { PrismaClient, TaskPriority } from "@prisma/client";
+import { personalWorkViewAccessWhere } from "../src/domains/personal-work/server/personal-work-access";
 import { createPersonalWorkItem } from "../src/domains/personal-work/server/personal-work.service";
 
 const prisma = new PrismaClient();
@@ -12,7 +13,7 @@ async function main() {
     select: { id: true, email: true, name: true },
   });
   if (!user) throw new Error("Run npm run local:seed-admin first");
-  const existing = await prisma.taskItem.count({ where: { task: { kind: "PERSONAL", createdByUserId: user.id } } });
+  const existing = await prisma.taskItem.count({ where: personalWorkViewAccessWhere(user.id) });
   if (existing) {
     console.log(`Personal work seed skipped: ${existing} item(s) already exist.`);
     return;

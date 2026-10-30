@@ -1,3 +1,4 @@
+import { personalWorkViewAccessWhere } from "@/domains/personal-work/server/personal-work-access";
 import { prisma } from "@/server/db/client";
 import { queryOrderListProjection, queryOrderStageStatistics } from "@/domains/projection/server/order-list.projection";
 import { queryProjectionStageStatistics, queryOpenOperationStageStatistics, queryStageThroughput } from "@/domains/projection/server/operation-stage-statistics.query";
@@ -66,12 +67,7 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
     }),
     input.userId ? prisma.taskItem.findMany({
       where: {
-        task: { kind: "PERSONAL" },
-        OR: [
-          { task: { createdByUserId: input.userId } },
-          { task: { assignedToUserId: input.userId } },
-          { personalShares: { some: { userId: input.userId } } },
-        ],
+        ...personalWorkViewAccessWhere(input.userId),
         status: { notIn: ["DONE", "CANCELLED"] },
       },
       select: { dueAt: true },

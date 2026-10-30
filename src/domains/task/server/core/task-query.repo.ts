@@ -148,6 +148,7 @@ async function getTaskProgressSummaryMap(db: DB, taskIds: string[]) {
   ]);
 
   for (const row of totalRows) {
+    if (!row.taskId) continue;
     map.set(row.taskId, {
       total: row._count._all,
       done: 0,
@@ -156,6 +157,7 @@ async function getTaskProgressSummaryMap(db: DB, taskIds: string[]) {
   }
 
   for (const row of doneRows) {
+    if (!row.taskId) continue;
     const current = map.get(row.taskId) ?? { total: 0, done: 0, percent: 0 };
     current.done = row._count._all;
     map.set(row.taskId, current);
@@ -207,6 +209,7 @@ export async function listTasksRepo(
 
   const where: Prisma.TaskWhereInput = {
     AND: [
+      buildAccessWhere(input.userId, canViewAll),
       buildViewWhere(view, input.userId),
       buildFilterWhere(input.filters),
     ],
@@ -329,7 +332,7 @@ function buildTaskItemAccessWhere(
 function buildTaskItemFilterWhere(
   filters: TaskItemListFilters,
 ): Prisma.TaskItemWhereInput {
-  const AND: Prisma.TaskItemWhereInput[] = [];
+  const AND: Prisma.TaskItemWhereInput[] = [{ personalOwnerUserId: null, task: { kind: { not: TaskKind.PERSONAL } } }];
 
   const q = String(filters.q || "").trim();
   if (q) {
@@ -464,70 +467,7 @@ export async function listTaskOptionsForTaskItemRepo(
     take: Math.min(200, Math.max(20, Number(input.limit || 100))),
   });
 }
-export async function countTaskViewsRepo(
-  db: DB,
-  input: { userId: string; canViewAll?: boolean; kind?: TaskKind | "ALL" },
-) {
-  const client = dbOrTx(db);
-  const userId = input.userId;
-
-  const openWhere: Prisma.TaskWhereInput = {
-    status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] },
-  };
-
-  const kindWhere: Prisma.TaskWhereInput =
-    input.kind && input.kind !== "ALL" ? { kind: input.kind } : {};
-
-  const [mine, assigned, delegated, all] = await Promise.all([
-    client.task.count({
-      where: { AND: [buildViewWhere("mine", userId), openWhere, kindWhere] },
-    }),
-    client.task.count({
-      where: { AND: [buildViewWhere("assigned", userId), openWhere, kindWhere] },
-    }),
-    client.task.count({
-      where: { AND: [buildViewWhere("delegated", userId), openWhere, kindWhere] },
-    }),
-    client.task.count({
-      where: { AND: [buildViewWhere("all", userId), openWhere, kindWhere] },
-    }),
-  ]);
-
-  return { mine, assigned, delegated, all };
-}
-
-export async function countTaskKindsRepo(
-  db: DB,
-  input: { userId: string; canViewAll?: boolean; view?: TaskViewKey },
-) {
-  const client = dbOrTx(db);
-  const userId = input.userId;
-
-  const baseWhere: Prisma.TaskWhereInput = {
-    AND: [
-      buildViewWhere(input.view || "all", userId),
-      { status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] } },
-    ],
-  };
-
-  const rows = await client.task.groupBy({
-    by: ["kind"],
-    where: baseWhere,
-    _count: { _all: true },
-  });
-
-  const countByKind = new Map(rows.map((row) => [row.kind, row._count._all]));
-  const all = rows.reduce((sum, row) => sum + row._count._all, 0);
-
-  return {
-    kind_ALL: all,
-    kind_OPERATION: countByKind.get(TaskKind.OPERATION) ?? 0,
-    kind_BUSINESS: countByKind.get(TaskKind.BUSINESS) ?? 0,
-    kind_SERVICE: countByKind.get(TaskKind.SERVICE) ?? 0,
-    kind_PERSONAL: countByKind.get(TaskKind.PERSONAL) ?? 0,
-    kind_FREE: countByKind.get(TaskKind.FREE) ?? 0,
-  };
-}
+export { countTaskViewsRepo, countTaskKindsRepo } from "./task-count.repo";
 
 export async function countTaskDueBucketsRepo(
   db: DB,
@@ -536,6 +476,7 @@ export async function countTaskDueBucketsRepo(
   const client = dbOrTx(db);
   const base: Prisma.TaskWhereInput = {
     AND: [
+      buildAccessWhere(input.userId, Boolean(input.canViewAll)),
       buildViewWhere(input.view || "all", input.userId),
       { status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] } },
     ],
@@ -591,7 +532,7 @@ export async function getTaskByIdRepo(db: DB, id: string) {
 export async function getTaskItemDetailRepo(db: DB, id: string) {
   const client = dbOrTx(db);
   const item = await client.taskItem.findUnique({
-    where: { id },
+    where: { id, personalOwnerUserId: null, task: { kind: { not: TaskKind.PERSONAL } } },
     include: {
       assignedToUser: { select: USER_SELECT },
       checklists: {

@@ -2,13 +2,14 @@
 
 import { usePersonalCalendar } from "./use-personal-calendar";
 import createStyles from "./PersonalWorkCreate.module.css";
+import { GoogleCalendarEventDialog } from "./GoogleCalendarEventDialog";
 import { PersonalWorkTimeFields } from "./PersonalWorkTimeFields";
 import { PersonalCalendarPreview } from "./PersonalCalendarPreview";
 import { calendarScheduleInput, scheduleDate, scheduleTime } from "../shared/personal-work-schedule";
 import { buildPersonalCalendarEvents, groupCalendarEvents, calendarShareLabel, calendarDayKey } from "../shared/personal-calendar";
 import { PersonalWorkCategoryManager } from "./PersonalWorkCategoryManager";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -21,7 +22,6 @@ import {
   Clock3,
   ExternalLink,
   Loader2,
-  MapPin,
   RefreshCw,
   Share2,
   Settings2,
@@ -50,6 +50,7 @@ import {
   syncPersonalWorkCalendarAction,
   togglePersonalWorkChecklistItemAction,
   updatePersonalWorkAction,
+  updateGoogleCalendarEventAction,
 } from "../actions/personal-work.actions";
 import {
   personalCategoryStyle,
@@ -276,14 +277,14 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
     setEditingItem(refreshed || null);
   }, [workItems, editingItemId]);
 
-  function run(action: () => Promise<unknown>, success?: string, onSuccess?: () => void) {
+  function run(action: () => Promise<unknown>, success?: string, onSuccess?: () => void, refresh = true) {
     setMessage(null);
     startTransition(async () => {
       try {
         await action();
         onSuccess?.();
         if (success) setMessage(success);
-        router.refresh();
+        if (refresh) router.refresh();
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Không thể xử lý yêu cầu");
       }
@@ -304,7 +305,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
     run(async () => {
       const result = await searchPersonalWorkTargetsAction({ type: targetType, query: targetQuery });
       setTargetResults(result.items);
-    });
+    }, undefined, undefined, false);
   }
 
   function searchEditTargets() {
@@ -315,7 +316,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
         query: editTargetQuery,
       });
       setEditTargetResults(result.items);
-    });
+    }, undefined, undefined, false);
   }
 
   function openCalendarCreate(date: Date) {
@@ -356,7 +357,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
     else setSelectedCalendarEvent(event);
   }
 
-  function openTaskEdit(item: PersonalWorkItem) {
+  const openTaskEdit = useCallback((item: PersonalWorkItem) => {
     setEditingItem(item);
     setEditTitle(item.title);
     setEditNote(item.note || "");
@@ -377,7 +378,13 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
     setEditTargetResults([]);
     setEditShares(item.sharedWith);
     setNewChecklistTitle("");
-  }
+  }, []);
+  const openedWork = useRef<string | null>(null);
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("work");
+    const item = id && workItems.find(candidate => candidate.id === id);
+    if (item && openedWork.current !== id) { openedWork.current = id; openTaskEdit(item); }
+  }, [workItems, openTaskEdit]);
 
   function setOptimisticChecklist(checklist: PersonalWorkItem["checklist"]) {
     setEditingItem((current) => {
@@ -1582,73 +1589,13 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
         </div>
       )}
 
-      {selectedCalendarEvent && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/25 p-4 backdrop-blur-[1px]"
-          onMouseDown={() => setSelectedCalendarEvent(null)}
-        >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="calendar-event-title"
-            onMouseDown={(event) => event.stopPropagation()}
-            className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl shadow-slate-950/15"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600">
-                  Sự kiện Google Calendar
-                </p>
-                <h2 id="calendar-event-title" className="mt-1 text-xl font-bold text-slate-950">
-                  {selectedCalendarEvent.title}
-                </h2>
-              </div>
-              <button
-                type="button"
-                aria-label="Đóng"
-                onClick={() => setSelectedCalendarEvent(null)}
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="mt-5 space-y-3 text-sm text-slate-600">
-              <p className="flex items-start gap-2">
-                <Clock3 className="mt-0.5 h-4 w-4 text-slate-400" />
-                <span>
-                  {calendarEventDate(selectedCalendarEvent.startAt, selectedCalendarEvent.allDay)}
-                  {selectedCalendarEvent.endAt
-                    ? ` – ${calendarEventDate(selectedCalendarEvent.endAt, selectedCalendarEvent.allDay)}`
-                    : ""}
-                </span>
-              </p>
-              {selectedCalendarEvent.location && (
-                <p className="flex items-start gap-2">
-                  <MapPin className="mt-0.5 h-4 w-4 text-slate-400" />
-                  <span>{selectedCalendarEvent.location}</span>
-                </p>
-              )}
-              {selectedCalendarEvent.description && (
-                <p className="whitespace-pre-wrap rounded-xl bg-slate-50 px-4 py-3 leading-6 text-slate-700">
-                  {selectedCalendarEvent.description}
-                </p>
-              )}
-            </div>
-            <div className="mt-6 flex flex-wrap justify-end gap-2">
-              {selectedCalendarEvent.htmlLink && (
-                <a
-                  href={selectedCalendarEvent.htmlLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-                >
-                  Mở trong Google <ExternalLink className="h-4 w-4" />
-                </a>
-              )}
-            </div>
-          </section>
-        </div>
-      )}
+      {selectedCalendarEvent && <GoogleCalendarEventDialog
+        key={`${selectedCalendarEvent.id}:${selectedCalendarEvent.etag || ""}`}
+        event={selectedCalendarEvent}
+        saveEvent={updateGoogleCalendarEventAction}
+        onClose={() => setSelectedCalendarEvent(null)}
+        onSaved={updated => { calendar.updateEvent(updated); setSelectedCalendarEvent(null); setMessage("Đã lưu thay đổi lên Google Calendar"); void calendar.reload(); }}
+      />}
 
       {calendarCreateOpen && (
         <div

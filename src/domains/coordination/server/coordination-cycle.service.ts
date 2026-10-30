@@ -370,7 +370,7 @@ async function listWorkTicketsForCycle(
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
 
-  return items.filter((item) => {
+  return items.map(item => ({ ...item, taskId: input.taskId })).filter((item) => {
     const workTypeKey = getWorkTypeKeyFromTicketNote(item.note);
     if (!workTypeKey) return true;
     return activeWorkTypeKeys.has(workTypeKey);
@@ -476,7 +476,7 @@ export async function ensureWorkTickets(
           },
         });
 
-        existingByTitle.set(technicalWorkspace.title, createdItem);
+        existingByTitle.set(technicalWorkspace.title, { ...createdItem, taskId: input.taskId });
         existingTitles.add(technicalWorkspace.title);
         createdCount += 1;
       }
@@ -541,7 +541,7 @@ export async function ensureWorkTickets(
           },
         });
 
-        existingByTitle.set(paymentWorkspace.title, createdItem);
+        existingByTitle.set(paymentWorkspace.title, { ...createdItem, taskId: input.taskId });
         existingTitles.add(paymentWorkspace.title);
         createdCount += 1;
       }
@@ -599,7 +599,7 @@ export async function ensureWorkTickets(
             sortOrder: shipmentWorkspace.sortOrder,
           },
         });
-        existingByTitle.set(shipmentWorkspace.title, createdItem);
+        existingByTitle.set(shipmentWorkspace.title, { ...createdItem, taskId: input.taskId });
         existingTitles.add(shipmentWorkspace.title);
         createdCount += 1;
       }
@@ -638,7 +638,7 @@ export async function ensureWorkTickets(
       },
     });
 
-    existingByTitle.set(workType.title, createdItem);
+    existingByTitle.set(workType.title, { ...createdItem, taskId: input.taskId });
     existingTitles.add(workType.title);
     createdCount += 1;
   }
@@ -673,7 +673,7 @@ export async function ensureWorkTickets(
             sortOrder: workspace.sortOrder,
           },
         });
-        existingByTitle.set(workspace.title, createdItem);
+        existingByTitle.set(workspace.title, { ...createdItem, taskId: input.taskId });
         createdCount += 1;
       }
     }
@@ -695,11 +695,12 @@ const UNIFIED_OPERATION_CONTEXTS: CoordinationContext[] = [
 ];
 
 async function listAllWorkTicketsForTask(db: DB, taskId: string) {
-  return dbOrTx(db).taskItem.findMany({
+  const items = await dbOrTx(db).taskItem.findMany({
     where: { taskId, status: { not: TaskStatus.CANCELLED } },
     select: COORDINATION_WORK_TICKET_SELECT,
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
+  return items.map(item => ({ ...item, taskId }));
 }
 
 export async function ensureUnifiedOperationWorkTickets(db: DB, taskId: string) {

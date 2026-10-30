@@ -61,10 +61,10 @@ export async function queryOpenOperationStageStatistics(db: DB, input: { now: Da
         WHEN i."dueAt" AT TIME ZONE 'UTC' < ${input.todayStart} THEN 'personal-overdue'
         WHEN i."dueAt" AT TIME ZONE 'UTC' < ${input.todayEnd} THEN 'personal-today'
         ELSE 'personal-upcoming' END, i."updatedAt" AT TIME ZONE 'UTC'
-      FROM "TaskItem" i JOIN "Task" t ON t.id = i."taskId"
-      WHERE t.kind = 'PERSONAL' AND i.status NOT IN ('DONE', 'CANCELLED')
+      FROM "TaskItem" i LEFT JOIN "Task" t ON t.id = i."taskId"
+      WHERE (i."personalOwnerUserId" IS NOT NULL OR t.kind = 'PERSONAL') AND i.status NOT IN ('DONE', 'CANCELLED')
         AND ${input.userId}::text IS NOT NULL
-        AND (t."createdByUserId" = ${input.userId} OR t."assignedToUserId" = ${input.userId}
+        AND (i."personalOwnerUserId" = ${input.userId} OR (t.kind = 'PERSONAL' AND (t."createdByUserId" = ${input.userId} OR t."assignedToUserId" = ${input.userId}))
           OR EXISTS (SELECT 1 FROM "PersonalTaskShare" s WHERE s."taskItemId" = i.id AND s."userId" = ${input.userId}))
     )
     SELECT queue_key AS "queueKey", stage_key AS "stageKey", COUNT(*) AS count,
