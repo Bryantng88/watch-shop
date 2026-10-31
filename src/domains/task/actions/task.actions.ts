@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { Prisma, TaskExecutionActionType, TaskExecutionTargetType, TaskStatus, TaskPriority, TaskKind } from "@prisma/client";
-import { requirePermission } from "@/server/auth/requirePermission";
+import { requirePermission, requireAnyPermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
+import { isMediaProductionTransitionAllowed } from "@/server/auth/media-production-policy";
 import { prisma } from "@/server/db/client";
 import { upsertTaskNotification } from "@/domains/notification/notification.repo";
 import {
@@ -1341,7 +1342,7 @@ export async function applyQueueItemManualTransitionAction(input: {
   toState?: string | null;
   note?: string | null;
 }) {
-  const auth = await getTaskAuth();
+  const auth = await requireAnyPermission([PERMISSIONS.TASK_VIEW, PERMISSIONS.MEDIA_PRODUCTION_UPDATE]);
   const bindingId = String(input.bindingId ?? "").trim();
   const actionKey = String(input.actionKey ?? "").trim();
   const toState = String(input.toState ?? "").trim();
@@ -1356,7 +1357,8 @@ export async function applyQueueItemManualTransitionAction(input: {
   if (!bindingAccess) throw new Error("BINDING_NOT_FOUND");
   if (bindingAccess.taskItemId) await requireWorkspaceTaskItem(prisma, bindingAccess.taskItemId);
   else if (!bindingAccess.taskId) throw new Error("WORKSPACE_SCOPE_REQUIRED");
-  await requireOperationalPermission(bindingAccess.targetType, bindingAccess.targetId);
+  const mediaOnly = !auth.roles.includes("ADMIN") && !auth.permissions.includes(PERMISSIONS.TASK_VIEW);
+  if (!mediaOnly) await requireOperationalPermission(bindingAccess.targetType, bindingAccess.targetId);
 
   const actorUserId = getAuthUserId(auth);
   if (!actorUserId) throw new Error("AUTHENTICATED_ACTOR_REQUIRED");
@@ -1370,6 +1372,9 @@ export async function applyQueueItemManualTransitionAction(input: {
     note: input.note ?? null,
   };
   const resolvedTransition = await resolveManualWorkflowAction(prisma, transitionInput);
+  if (mediaOnly && !isMediaProductionTransitionAllowed(auth.permissions, bindingAccess.targetType, (resolvedTransition.applied ? resolvedTransition.workflowKey : null))) {
+    throw new Error("FORBIDDEN");
+  }
 
   let serviceActionResult: ServiceOperationActionAdapterResult | null = null;
   if (

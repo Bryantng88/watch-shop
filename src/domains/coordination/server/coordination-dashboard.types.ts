@@ -171,6 +171,7 @@ export type CoordinationUserSummaryDTO = {
 };
 
 export type CoordinationDashboardDTO = {
+  mediaProductionOnly?: boolean;
   context: CoordinationContext;
   contextLabel: string;
   spaceLabel: string;

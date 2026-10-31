@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { redactWatchFinancials } from "@/server/auth/media-production-policy";
 
 import WatchFormClient from "@/domains/watch/client/WatchFormClient";
 import {
@@ -13,7 +14,7 @@ import {
     listWatchEditOptions,
     listWatchMediaEditOptions,
 } from "@/domains/watch/server/detail/watch-edit-options.repo";
-import { requirePermission } from "@/server/auth/requirePermission";
+import { requirePermission, requireAnyPermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
 import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
 
@@ -134,7 +135,7 @@ export default async function WatchEditPage({
             : "";
 
     const user = await perfStep("watch-edit-page", "requirePermission", () =>
-        requirePermission(PERMISSIONS.PRODUCT_UPDATE),
+        isEmbeddedMediaMode ? requireAnyPermission([PERMISSIONS.PRODUCT_UPDATE, PERMISSIONS.MEDIA_PRODUCTION_UPDATE]) : requirePermission(PERMISSIONS.PRODUCT_UPDATE),
     );
 
     const [detail, options, mediaWorkspaceContext] = isEmbeddedMediaMode
@@ -196,7 +197,8 @@ export default async function WatchEditPage({
     return (
         <div className="mx-auto w-full max-w-[1600px] px-4 py-6 lg:px-6">
             <WatchFormClient
-                detail={serialize(detail)}
+                mediaProductionOnly={!hasAdmin(user) && !normalizeAuthValues(user.permissions).includes(PERMISSIONS.PRODUCT_UPDATE)}
+                detail={serialize(canViewCost(user) ? detail : redactWatchFinancials(detail))}
                 brands={serialize(editOptions.brands)}
                 vendors={serialize(editOptions.vendors)}
                 categories={serialize(editOptions.categories)}

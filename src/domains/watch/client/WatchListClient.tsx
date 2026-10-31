@@ -67,6 +67,7 @@ const WATCH_INLINE_REPAIR_ENABLED =
 const WATCH_SELECTION_STORAGE_KEY = "watch-list:selection:v1";
 
 type WatchListClientProps = Partial<WatchListPageProps> & {
+  readOnly?: boolean;
   initialResult?: WatchListResult;
   vendors?: { id: string; name: string }[];
   brands?: { id: string; name: string }[];
@@ -1659,6 +1660,7 @@ export default function WatchListClient(props: WatchListClientProps) {
     <BusinessListShell
       header={
         <WatchListToolbar
+          readOnly={props.readOnly}
           audienceSegment={params.get("segment") === "WOMEN" ? "WOMEN" : "MEN"}
           onAudienceSegmentChange={(segment) => {
             const next = new URLSearchParams(params.toString());
@@ -1702,7 +1704,7 @@ export default function WatchListClient(props: WatchListClientProps) {
         />
       }
     >
-      {selectedRows.length && !duplicateView ? (
+      {!props.readOnly && selectedRows.length && !duplicateView ? (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet-200 bg-violet-50/70 px-4 py-3 shadow-sm">
           <div className="flex items-center gap-3 text-sm text-slate-700">
             <span>Đã chọn <strong className="text-violet-700">{selectedRows.length}</strong> watch</span>
@@ -1732,6 +1734,7 @@ export default function WatchListClient(props: WatchListClientProps) {
       ) : null}
       <div className={loading ? "opacity-60 transition" : "transition"}>
         <WatchListTable
+          readOnly={props.readOnly}
           items={displayRows}
           total={listData.total}
           selectedIds={selectedIds}
@@ -1739,21 +1742,21 @@ export default function WatchListClient(props: WatchListClientProps) {
           onToggleOne={onToggleOne}
           onToggleAll={onToggleAll}
           onView={onView}
-          onEdit={onEdit}
-          onDelete={duplicateView ? permanentlyDeleteDuplicateWatch : onDelete}
-          onService={onService}
-          onMedia={sendWatchToMediaSpace}
+          onEdit={props.readOnly ? undefined : onEdit}
+          onDelete={props.readOnly ? undefined : duplicateView ? permanentlyDeleteDuplicateWatch : onDelete}
+          onService={props.readOnly ? undefined : onService}
+          onMedia={props.readOnly ? undefined : sendWatchToMediaSpace}
           mediaSubmittingId={mediaRowSubmittingId}
-          onConfirmDuplicate={duplicateView ? undefined : confirmDuplicateWatch}
+          onConfirmDuplicate={props.readOnly ? undefined : duplicateView ? undefined : confirmDuplicateWatch}
           duplicateSubmittingId={duplicateSubmittingId}
-          onRestoreDuplicate={duplicateView ? restoreDuplicateWatch : undefined}
-          onQuickOrder={onQuickOrder}
-          onConsign={onConsign}
-          onBuyBack={onBuyBack}
-          onRaiseCase={openWorkCaseFromWatch}
-          onCreateTask={onCreateTask}
-          onPreview={previewState.openPreview}
-          onRepairInline={
+          onRestoreDuplicate={props.readOnly ? undefined : duplicateView ? restoreDuplicateWatch : undefined}
+          onQuickOrder={props.readOnly ? undefined : onQuickOrder}
+          onConsign={props.readOnly ? undefined : onConsign}
+          onBuyBack={props.readOnly ? undefined : onBuyBack}
+          onRaiseCase={props.readOnly ? undefined : openWorkCaseFromWatch}
+          onCreateTask={props.readOnly ? undefined : onCreateTask}
+          onPreview={props.readOnly ? undefined : previewState.openPreview}
+          onRepairInline={props.readOnly ? undefined :
             WATCH_INLINE_REPAIR_ENABLED ? setInlineRepairRow : undefined
           }
         />

@@ -3,11 +3,11 @@
 import { MediaRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { createMediaPost, createMediaPostWithGallerySelections, listMediaPostThemeWatchCandidates, removeMediaFromPost, reorderMediaPostAssets, saveMediaPostWorkProgress, selectMediaForPost, updateMediaPostContent } from "@/domains/media-post/server";
-import { requirePermission } from "@/server/auth/requirePermission";
+import { requirePermission, requireAnyPermission } from "@/server/auth/requirePermission";
 import type { MediaPostThemeDefinition, MediaPostThemeFilters, MediaPostThemeSelection } from "../shared/media-post-theme.types";
 
 export async function searchMediaPostThemeWatchesAction(filters: MediaPostThemeFilters) {
-  await requirePermission("MEDIA_VIEW");
+  await requireAnyPermission(["MEDIA_VIEW", "MEDIA_PRODUCTION_VIEW"]);
   const items = await listMediaPostThemeWatchCandidates(filters);
   if (items.length) return { items, suggestion: null };
 
@@ -57,7 +57,7 @@ export async function createMediaPostAction(input: {
   watchSelections?: MediaPostThemeSelection[];
   theme?: MediaPostThemeDefinition | null;
 }) {
-  const auth = await requirePermission("PRODUCT_UPDATE");
+  const auth = await requirePermission("MEDIA_PRODUCTION_UPDATE");
   const watchIds = input.watchSelections?.length
     ? input.watchSelections.map((selection) => selection.watchId)
     : input.watchIds;
@@ -99,7 +99,7 @@ export async function removeMediaFromPostAction(input: {
   mediaPostId: string;
   storageKey: string;
 }) {
-  await requirePermission("PRODUCT_UPDATE");
+  await requirePermission("MEDIA_PRODUCTION_UPDATE");
   await removeMediaFromPost(input);
   revalidatePath(`/admin/media-posts/${input.mediaPostId}`);
   revalidatePath("/admin/coordination/media");
@@ -112,7 +112,7 @@ export async function selectMediaForPostAction(input: {
   role?: MediaRole;
   sortOrder?: number;
 }) {
-  const auth = await requirePermission("PRODUCT_UPDATE");
+  const auth = await requirePermission("MEDIA_PRODUCTION_UPDATE");
   const result = await selectMediaForPost({ ...input, actorUserId: auth.userId });
   revalidatePath("/admin/coordination/media");
   return {
@@ -133,7 +133,7 @@ export async function updateMediaPostContentAction(input: {
   hashtags?: string | null;
   postTargetIds?: string[];
 }) {
-  const auth = await requirePermission("PRODUCT_UPDATE");
+  const auth = await requirePermission("MEDIA_PRODUCTION_UPDATE");
   const post = await updateMediaPostContent({ ...input, actorUserId: auth.userId });
   const contentDone = Boolean(input.title.trim() && (input.hook?.trim() || input.caption?.trim() || input.body?.trim()));
   const progress = await saveMediaPostWorkProgress({ mediaPostId: input.mediaPostId, parts: { content: contentDone }, actorUserId: auth.userId });
@@ -146,7 +146,7 @@ export async function reorderMediaPostAssetsAction(input: {
   mediaPostId: string;
   storageKeys: string[];
 }) {
-  const auth = await requirePermission("PRODUCT_UPDATE");
+  const auth = await requirePermission("MEDIA_PRODUCTION_UPDATE");
   await reorderMediaPostAssets(input);
   const progress = await saveMediaPostWorkProgress({ mediaPostId: input.mediaPostId, parts: { image: input.storageKeys.length > 0 }, actorUserId: auth.userId });
   revalidatePath(`/admin/media-posts/${input.mediaPostId}`);

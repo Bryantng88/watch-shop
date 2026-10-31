@@ -2,11 +2,11 @@ import { notFound } from "next/navigation";
 import AdminBreadcrumbs from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
 import MediaPostEditor from "@/domains/media-post/ui/MediaPostEditor";
 import { getMediaPostMediaWorkContext, listMediaPostAssets } from "@/domains/media-post/server";
-import { requirePermission } from "@/server/auth/requirePermission";
+import { requireAnyPermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
 
 export default async function MediaPostPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ embedded?: string }> }) {
-  await requirePermission("MEDIA_VIEW");
+  await requireAnyPermission(["MEDIA_VIEW", "MEDIA_PRODUCTION_VIEW"]);
   const { id } = await params;
   const [post, assets, workContext, postTargets] = await Promise.all([
     prisma.mediaPost.findUnique({

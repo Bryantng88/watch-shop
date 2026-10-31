@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { redactWatchFinancials } from "@/server/auth/media-production-policy";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
 import {
@@ -149,24 +150,26 @@ export default async function WatchDetailPage({
     const user = await requirePermission(PERMISSIONS.PRODUCT_VIEW);
     const { id } = await params;
 
+    const mediaOnly = user.roles.includes("MEDIA") && !hasAdmin(user) && !user.permissions.includes(PERMISSIONS.PRODUCT_UPDATE);
     const [detail, serviceProjection, tradeHistory, mediaWorkspace] =
         await Promise.all([
             getWatchEditDetail(id),
-            getWatchServiceProjectionDetail(id),
-            getWatchTradeHistoryDetail(id),
+            mediaOnly ? Promise.resolve(null) : getWatchServiceProjectionDetail(id),
+            mediaOnly ? Promise.resolve({}) : getWatchTradeHistoryDetail(id),
             getActiveWatchMediaWorkspace(id),
         ]);
 
     if (!detail) notFound();
     const mayViewCost = canViewCost(user);
     const mayEditPrice = canEditPrice(user);
-    const safeDetail = mayViewCost ? detail : scrubSensitivePrice(detail);
+    const safeDetail = mayViewCost ? detail : redactWatchFinancials(scrubSensitivePrice(detail));
     const safeTradeHistory = mayViewCost
         ? tradeHistory
         : scrubTradeFinancials(tradeHistory);
 
     return (
         <WatchDetailUiProposal
+            readOnly={mediaOnly}
             detail={serialize(safeDetail)}
             service={serialize(serviceProjection)}
             tradeHistory={serialize(safeTradeHistory)}

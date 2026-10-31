@@ -37,7 +37,7 @@ type Props = {
     canReviewContent?: boolean;
     onChange: (patch: Partial<WatchFormValues["content"]>) => void;
     onStorefrontSlugChange?: (slug: string) => void;
-    onOpenSpecModal: () => void;
+    onOpenSpecModal?: () => void;
     onReviewStatusChange?: (next: ReviewStatusChange) => void;
     onBeforeSubmitReview?: (target: "content" | "image") => Promise<boolean>;
     isFormDirty?: boolean;
@@ -338,7 +338,7 @@ export default function WatchContentSection({
                                     ))}
                                 </div>
 
-                                <Button
+                                {onOpenSpecModal && <Button
                                     type="button"
                                     variant="outline"
                                     disabled={locked}
@@ -346,7 +346,7 @@ export default function WatchContentSection({
                                     className="mt-3 border-amber-200 bg-white/80 text-amber-800 hover:bg-white"
                                 >
                                     Bổ sung spec & vật liệu
-                                </Button>
+                                </Button>}
                             </div>
                         </div>
                     </div>

@@ -43,6 +43,7 @@ type SimpleOption = {
 };
 
 type Props = {
+  mediaProductionOnly?: boolean;
   detail: {
     taskSummary?: {
       watchImage?: number | null;
@@ -354,6 +355,7 @@ function useUnsavedChangesGuard({
 }
 
 export default function WatchFormClient({
+  mediaProductionOnly = false,
   detail,
   brands = [],
   categories = [],
@@ -410,7 +412,7 @@ export default function WatchFormClient({
   });
   const [activeMediaSection, setActiveMediaSection] = useState<
     "basic" | "content" | "image" | "cover"
-  >("basic");
+  >(mediaProductionOnly ? "content" : "basic");
 
   const [afterSaveOpen, setAfterSaveOpen] = useState(false);
   const [afterSaveMode, setAfterSaveMode] = useState<AfterSaveMode>("normal");
@@ -427,7 +429,7 @@ export default function WatchFormClient({
   const fromPhotoshootWorkspace =
     searchParams.get("from") === "photoshoot-workspace";
   const embedded = searchParams.get("embedded") === "1";
-  const viewMode = searchParams.get("mode") || "full";
+  const viewMode = mediaProductionOnly ? "media" : searchParams.get("mode") || "full";
   const isMediaMode = viewMode === "media";
 
   useEffect(() => {
@@ -1816,7 +1818,7 @@ export default function WatchFormClient({
       isFormDirty={isDirty}
       onChange={updateContent}
       onStorefrontSlugChange={(slug) => updateBasic({ slug })}
-      onOpenSpecModal={() => setSpecModalOpen(true)}
+      onOpenSpecModal={mediaProductionOnly ? undefined : () => setSpecModalOpen(true)}
       onBeforeSubmitReview={saveBeforeReview}
       onReviewStatusChange={(next) => handleReviewStatusChange("content", next)}
       watchId={values.watchId}
@@ -1831,6 +1833,7 @@ export default function WatchFormClient({
   const imageSection = (
     <>
       <WatchImageSection
+        canManageStorefront={!mediaProductionOnly}
         sectionMode={isMediaMode && activeMediaSection === "cover" ? "cover" : isMediaMode ? "gallery" : "combined"}
         watchTitle={values.basic.title}
         storefrontSlug={values.basic.slug}
@@ -1894,7 +1897,7 @@ export default function WatchFormClient({
           inlineImage={inlineImage}
           pending={pending}
           message=""
-          onSubmit={fromMediaWorkspace ? saveMediaWorkspaceDraft : onSubmit}
+          onSubmit={fromMediaWorkspace || mediaProductionOnly ? saveMediaWorkspaceDraft : onSubmit}
           onBack={handleBack}
           canReviewContent={canReviewContent}
           hideBack={false}
@@ -1905,6 +1908,7 @@ export default function WatchFormClient({
             { label: values.basic.title || "Edit" },
           ]}
           onChange={(patch) => {
+            if (mediaProductionOnly) return;
             setFormValues((prev) => ({
               ...prev,
               ...patch,
@@ -1951,7 +1955,7 @@ export default function WatchFormClient({
                   done: mediaWorkDone.cover || Boolean(values.media.coverImage),
                   icon: Images,
                 },
-              ].map((item) => {
+              ].filter((item) => !mediaProductionOnly || item.key !== "basic").map((item) => {
                 const Icon = item.icon;
                 const active = activeMediaSection === item.key;
 
@@ -2040,7 +2044,7 @@ export default function WatchFormClient({
         inlineImage={inlineImage}
         pending={pending}
         message=""
-        onSubmit={fromMediaWorkspace ? saveMediaWorkspaceDraft : onSubmit}
+        onSubmit={fromMediaWorkspace || mediaProductionOnly ? saveMediaWorkspaceDraft : onSubmit}
         onBack={handleBack}
         canReviewContent={canReviewContent}
         hideSubmit={fromMediaWorkspace}
@@ -2072,6 +2076,7 @@ export default function WatchFormClient({
           <div ref={contentRef}>{contentSection}</div>
 
           <WatchImageSection
+            canManageStorefront={!mediaProductionOnly}
             watchTitle={values.basic.title}
             storefrontSlug={values.basic.slug}
             contentReviewStatus={values.contentReviewStatus}

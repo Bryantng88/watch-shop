@@ -8,6 +8,7 @@ const activityCodes = [
 ] as const;
 const expectedRolePermissions: Record<string, readonly string[]> = {
   ADMIN: catalogCodes,
+  MEDIA: [PERMISSIONS.PRODUCT_VIEW, PERMISSIONS.MEDIA_PRODUCTION_VIEW, PERMISSIONS.MEDIA_PRODUCTION_UPDATE],
   SALE: [
     PERMISSIONS.ACCESSORY_ACQUISITION_VIEW,
     PERMISSIONS.ACCESSORY_ACQUISITION_CREATE,
@@ -114,6 +115,9 @@ async function main() {
       code.includes("ACQUISITION") && !saleAcquisitionAllowlist.has(code),
     )
     .map((code) => ({ role: "SALE", forbidden: code }));
+  forbiddenRoleDrift.push(...(roleByName.get("MEDIA")?.permissions ?? [])
+    .filter((permission) => !expectedRolePermissions.MEDIA.includes(permission.code))
+    .map((permission) => ({ role: "MEDIA", forbidden: permission.code })));
   const result = {
     ok: missingCatalogCodes.length === 0 && roleDrift.length === 0 && expectedRoleDrift.length === 0 && forbiddenRoleDrift.length === 0 && retiredPermissions.length === 0,
     catalogCount: catalogCodes.length,

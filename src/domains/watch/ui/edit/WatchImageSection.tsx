@@ -37,6 +37,7 @@ type MediaItemWithAliases = PickedMediaItem & {
 };
 
 type Props = {
+    canManageStorefront?: boolean;
     sectionMode?: "combined" | "gallery" | "cover";
     poolImages: PickedMediaItem[];
     galleryImages: PickedMediaItem[];
@@ -125,6 +126,7 @@ export default function WatchImageSection({
     imageReviewStatus,
     imageReviewNote,
     canReviewContent = false,
+    canManageStorefront = true,
     onReviewStatusChange,
     onBeforeSubmitReview,
     isFormDirty,
@@ -816,7 +818,7 @@ export default function WatchImageSection({
                                 </div>
                             ))}
                         </div>
-                        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-amber-200/70 pt-3">
+                        {canManageStorefront && <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-amber-200/70 pt-3">
                             <button
                                 type="button"
                                 role="switch"
@@ -847,7 +849,7 @@ export default function WatchImageSection({
                             <span className="text-xs text-slate-600">
                                 {isFormDirty ? "Có thay đổi chưa lưu; khi bấm switch bạn vẫn có thể tiếp tục bằng dữ liệu đã lưu gần nhất." : "Không yêu cầu content hoặc đủ gallery; cần title, spec và Cover."}
                             </span>
-                        </div>
+                        </div>}
                     </div> : null}
 
                     {showGallery ? <div

@@ -17,7 +17,7 @@ import { prisma } from "@/server/db/client";
 import { getProjectionDeliveryStatus } from "@/domains/projection/server";
 
 export async function loadWatchMediaPoolAction(input: { productId: string }) {
-  await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+  await requirePermission(PERMISSIONS.MEDIA_PRODUCTION_UPDATE);
   return listSelectedWatchMedia({ productId: input.productId });
 }
 
@@ -25,7 +25,7 @@ export async function requestWatchPhotoshootAction(input: {
   watchIds: string[];
   note?: string | null;
 }) {
-  const user = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+  const user = await requirePermission(PERMISSIONS.MEDIA_PRODUCTION_UPDATE);
 
   await ensureOperationSpace(prisma, {
     context: "MEDIA",
@@ -57,7 +57,7 @@ export async function markWatchMediaAssetAttachedAction(input: {
   taskItemId?: string | null;
   note?: string | null;
 }) {
-  const user = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+  const user = await requirePermission(PERMISSIONS.MEDIA_PRODUCTION_UPDATE);
 
   const result = await prisma.$transaction((tx) =>
     markWatchMediaAssetAttachedFromQueueItem(
@@ -88,7 +88,7 @@ export async function markWatchMediaAssetAttachedFromWatchAction(input: {
   origin?: "WATCH_LIST" | "WATCH_DETAIL";
 }) {
   const startedAt = Date.now();
-  const user = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+  const user = await requirePermission(PERMISSIONS.MEDIA_PRODUCTION_UPDATE);
   const authorizedAt = Date.now();
 
   const result = await prisma.$transaction((tx) =>
@@ -118,7 +118,7 @@ export async function markWatchMediaAssetAttachedFromWatchAction(input: {
 export async function getWatchMediaIntakeStatusAction(input: {
   projectionDeliveryKey: string;
 }) {
-  await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+  await requirePermission(PERMISSIONS.MEDIA_PRODUCTION_UPDATE);
   const projectionDeliveryKey = String(input.projectionDeliveryKey ?? "").trim();
   if (!projectionDeliveryKey) return null;
 
@@ -148,7 +148,7 @@ export async function saveWatchMediaWorkDraftFromWatchAction(input: {
   };
   note?: string | null;
 }) {
-  const user = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+  const user = await requirePermission(PERMISSIONS.MEDIA_PRODUCTION_UPDATE);
 
   const bindingId = String(input.bindingId ?? "").trim();
   const result = bindingId

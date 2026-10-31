@@ -19,7 +19,7 @@ export default function LoginForm({ localAutoLogin = false }: { localAutoLogin?:
                     credentials: "same-origin",
                 });
                 if (!response.ok) throw new Error("Không thể tự đăng nhập local. Bạn vẫn có thể đăng nhập bằng mật khẩu.");
-                if (!controller.signal.aborted) window.location.replace("/admin/dashboard");
+                if (!controller.signal.aborted) window.location.replace("/admin");
             } catch (cause) {
                 if (!controller.signal.aborted) {
                     setError(cause instanceof Error ? cause.message : "Không thể tự đăng nhập local.");
@@ -46,7 +46,7 @@ export default function LoginForm({ localAutoLogin = false }: { localAutoLogin?:
             return;
         }
 
-        window.location.href = "/admin/dashboard";
+        window.location.href = "/admin";
     }
 
     return (

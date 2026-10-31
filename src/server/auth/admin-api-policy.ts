@@ -35,6 +35,10 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
         return publicToAuthenticatedUser();
     }
 
+    if (["/api/media/browse", "/api/media/thumbnail", "/api/media/batches/latest", "/api/media/assets"].includes(pathname) && read) {
+        return anyOf(PERMISSIONS.MEDIA_VIEW, PERMISSIONS.MEDIA_PRODUCTION_VIEW);
+    }
+
     if (/^\/api\/media(\/|$)/.test(pathname)) {
         return anyOf(read ? PERMISSIONS.MEDIA_VIEW : PERMISSIONS.PRODUCT_UPDATE);
     }
@@ -69,6 +73,9 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
     }
 
     if (/^\/api\/admin\/watches(\/|$)/.test(pathname)) {
+        if (/\/(gallery\/(sharp(\/preview)?|photoroom)|storefront-image(\/(sharp(\/preview)?|photoroom))?|media-pool\/dispose)$/.test(pathname)) {
+            return anyOf(PERMISSIONS.MEDIA_PRODUCTION_UPDATE);
+        }
         if (read) return anyOf(PERMISSIONS.PRODUCT_VIEW);
         if (/\/(content-review|image-review|content-draft|image-draft)$/.test(pathname)) return anyOf(PERMISSIONS.PRODUCT_APPROVE);
         if (/\/quick-order$/.test(pathname)) return anyOf(PERMISSIONS.ORDER_CREATE);
@@ -157,11 +164,12 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
     }
 
     if (/^\/api\/admin\/media-posts(\/|$)/.test(pathname)) {
-        return anyOf(read ? PERMISSIONS.MEDIA_VIEW : PERMISSIONS.PRODUCT_UPDATE);
+        return anyOf(read ? PERMISSIONS.MEDIA_PRODUCTION_VIEW : PERMISSIONS.MEDIA_PRODUCTION_UPDATE, read ? PERMISSIONS.MEDIA_VIEW : PERMISSIONS.PRODUCT_UPDATE);
     }
 
     if (/^\/api\/admin\/task-items\/manual-transition$/.test(pathname)) {
         return anyOf(
+            PERMISSIONS.MEDIA_PRODUCTION_UPDATE,
             PERMISSIONS.TASK_MANAGE,
             PERMISSIONS.PAYMENT_UPDATE_ALL,
             PERMISSIONS.ORDER_PAYMENT_UPDATE,
@@ -173,6 +181,9 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
             PERMISSIONS.SERVICE_UPDATE,
             PERMISSIONS.PRODUCT_UPDATE,
         );
+    }
+    if (read && ["/api/admin/coordination/operation/boards/media-operation", "/api/admin/coordination/operation/flows/media-production-flow"].includes(pathname)) {
+        return anyOf(PERMISSIONS.TASK_VIEW, PERMISSIONS.MEDIA_PRODUCTION_VIEW);
     }
     if (/^\/api\/admin\/coordination(\/|$)/.test(pathname)) {
         if (/\/activity$/.test(pathname)) return anyOf(PERMISSIONS.TASK_VIEW, PERMISSIONS.ACTIVITY_READ);
@@ -209,12 +220,14 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
 }
 
 export function getAdminPagePolicy(pathname: string): AdminAccessPolicy | null {
-    if (pathname === "/admin" || pathname.startsWith("/admin/dashboard")) return anyOf(PERMISSIONS.DASHBOARD_VIEW);
+    if (pathname === "/admin") return publicToAuthenticatedUser();
+    if (pathname.startsWith("/admin/dashboard")) return anyOf(PERMISSIONS.DASHBOARD_VIEW);
     if (/^\/admin\/(profile|users\/profile)(\/|$)/.test(pathname)) return publicToAuthenticatedUser();
     if (/^\/admin\/personal-work(\/|$)/.test(pathname)) return publicToAuthenticatedUser();
     if (/^\/admin\/acquisitions\/(accessories|straps|clasps)\/new$/.test(pathname)) return anyOf(PERMISSIONS.ACCESSORY_ACQUISITION_CREATE, PERMISSIONS.ACQUISITION_CREATE_ALL);
     if (/^\/admin\/acquisitions\/(watches\/)?new$/.test(pathname)) return anyOf(PERMISSIONS.WATCH_ACQUISITION_CREATE, PERMISSIONS.ACQUISITION_CREATE_ALL);
     if (/^\/admin\/acquisitions(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.ACQUISITION_VIEW_ALL, PERMISSIONS.WATCH_ACQUISITION_VIEW, PERMISSIONS.ACCESSORY_ACQUISITION_VIEW);
+    if (/^\/admin\/watches\/[^/]+\/media$/.test(pathname)) return anyOf(PERMISSIONS.MEDIA_PRODUCTION_VIEW);
     if (pathname === "/admin/watches/new") return anyOf(PERMISSIONS.PRODUCT_CREATE);
     if (/^\/admin\/watches\/[^/]+\/edit$/.test(pathname)) return anyOf(PERMISSIONS.PRODUCT_UPDATE);
     if (/^\/admin\/watches(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.PRODUCT_VIEW);
@@ -226,7 +239,8 @@ export function getAdminPagePolicy(pathname: string): AdminAccessPolicy | null {
     if (/^\/admin\/shipments(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.SHIPMENT_VIEW);
     if (/^\/admin\/(services|catalogs\/technical)(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.SERVICE_VIEW);
     if (/^\/admin\/media(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.MEDIA_VIEW);
-    if (/^\/admin\/media-posts\/[^/]+$/.test(pathname)) return anyOf(PERMISSIONS.MEDIA_VIEW);
+    if (/^\/admin\/media-posts\/[^/]+$/.test(pathname)) return anyOf(PERMISSIONS.MEDIA_VIEW, PERMISSIONS.MEDIA_PRODUCTION_VIEW);
+    if (pathname === "/admin/coordination/media") return anyOf(PERMISSIONS.TASK_VIEW, PERMISSIONS.MEDIA_PRODUCTION_VIEW);
     if (/^\/admin\/straps(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.ACCESSORY_VIEW);
     if (/^\/admin\/(tasks|task-items|work-cases|workflows|coordination)(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.TASK_VIEW);
     if (/^\/admin\/activity(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.ACTIVITY_READ);
