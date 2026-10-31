@@ -7,7 +7,7 @@ import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 export const maxDuration = 120;
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requirePermissionApi(PERMISSIONS.PRODUCT_UPDATE);
+  const auth = await requirePermissionApi(PERMISSIONS.MEDIA_PRODUCTION_UPDATE);
   if (auth instanceof Response) return auth;
   try {
     const { id } = await params;

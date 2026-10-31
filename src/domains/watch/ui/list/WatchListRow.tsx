@@ -40,6 +40,7 @@ type WatchRowAction = {
 };
 
 type Props = {
+    readOnly?: boolean;
     product: WatchRow;
     checked: boolean;
     canViewCost?: boolean;
@@ -318,6 +319,7 @@ export default function WatchListRow({
     mediaSubmitting = false,
     onConfirmDuplicate,
     duplicateSubmitting = false,
+    readOnly = false,
     onRestoreDuplicate,
     onQuickOrder,
     onConsign,
@@ -540,7 +542,7 @@ export default function WatchListRow({
             separatorBefore: true,
             onClick: onDelete,
         },
-        adHocWork.action,
+        !readOnly && adHocWork.action,
     ].filter(Boolean) as WatchRowAction[];
 
     return (
@@ -730,7 +732,7 @@ export default function WatchListRow({
                 />
             </td>
         </tr>
-        {adHocWork.modal}
+        {!readOnly && adHocWork.modal}
         </>
     );
 }

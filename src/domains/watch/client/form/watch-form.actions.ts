@@ -2,7 +2,7 @@
 
 import { after } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { requirePermission } from "@/server/auth/requirePermission";
+import { requireAnyPermission } from "@/server/auth/requirePermission";
 
 import type { WatchFormValues } from "./watch-form.types";
 import { submitWatchFormApplication } from "../../application";
@@ -33,10 +33,13 @@ function authHasRole(auth: any, role: string) {
 }
 
 export async function submitWatchForm(values: WatchFormValues) {
-    const auth = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+    const auth = await requireAnyPermission([PERMISSIONS.PRODUCT_UPDATE, PERMISSIONS.MEDIA_PRODUCTION_UPDATE]);
+    const canEditProduct = authHasRole(auth, "ADMIN") || authHasPermission(auth, PERMISSIONS.PRODUCT_UPDATE);
+    if (!canEditProduct && values.saveIntent !== "MEDIA_WORKSPACE") throw new Error("FORBIDDEN");
 
     return submitWatchFormApplication(values, {
         userId: getAuthUserId(auth),
+        canEditProduct,
         canReviewContent: authHasPermission(
             auth,
             PERMISSIONS.PRODUCT_APPROVE

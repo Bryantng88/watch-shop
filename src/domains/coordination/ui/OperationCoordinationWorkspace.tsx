@@ -740,7 +740,7 @@ export default function OperationCoordinationWorkspace({
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [workTicketView, setWorkTicketView] = useState<"LIST" | "TI_BOARD" | "MEDIA_BOARD">(() =>
-    (searchParams.get("view") ?? data.viewConfig.defaultModeKey) === "technical-issue-flow"
+    data.mediaProductionOnly ? "MEDIA_BOARD" : (searchParams.get("view") ?? data.viewConfig.defaultModeKey) === "technical-issue-flow"
       ? "TI_BOARD"
       : (searchParams.get("view") ?? data.viewConfig.defaultModeKey) === "media-production-flow"
         ? "LIST"
@@ -1999,12 +1999,12 @@ export default function OperationCoordinationWorkspace({
                         <span>Tạo việc</span>
                       </button>
                     ) : null}
-                    <SpaceSharingEditor
+                    {!data.mediaProductionOnly && <SpaceSharingEditor
                       taskId={data.cycle.id}
                       context={data.context}
                       activeCoreFlow={activeCoreFlow}
                       sharing={data.spaceSharing}
-                    />
+                    />}
                     {isTechnicalIssueFlowMode ? (
                       <button
                         type="button"
@@ -2122,12 +2122,12 @@ export default function OperationCoordinationWorkspace({
                   : "Tìm item, mã tham chiếu, đối tượng..."}
                 onSearchChange={setFilterQuery}
                 activeView={isTechnicalIssueBoardView ? "TI_BOARD" : isMediaBoardView ? "MEDIA_BOARD" : "LIST"}
-                onViewChange={changeWorkTicketView}
+                onViewChange={(value) => { if (!data.mediaProductionOnly) changeWorkTicketView(value); }}
                 viewOptions={[
                   ...(isMediaFlowMode
                     ? [{ value: "MEDIA_BOARD", label: "Board Media", icon: <Grid2X2 className="h-4 w-4" />, disabled: !canShowMediaBoard }]
                     : [{ value: "TI_BOARD", label: "Board TI", icon: <Grid2X2 className="h-4 w-4" />, disabled: !canShowTechnicalIssueBoard }]),
-                  { value: "LIST", label: "List", icon: <List className="h-4 w-4" /> },
+                  ...(!data.mediaProductionOnly ? [{ value: "LIST", label: "List", icon: <List className="h-4 w-4" /> }] : []),
                 ]}
                 selectFilters={[
                   ...(isTaskItemListMode ? [] : [{
@@ -2578,6 +2578,7 @@ export default function OperationCoordinationWorkspace({
             />
           ) : isMediaBoardView ? (
             <MediaProductionBoardView
+              mediaProductionOnly={data.mediaProductionOnly}
               items={visibleMediaBoardItems}
               columnPagination={asyncMediaBoard?.columnPagination ?? {}}
               loadingColumn={loadingBoardColumn}
@@ -3111,6 +3112,7 @@ type MediaBoardItem = NonNullable<CoordinationDashboardDTO["mediaBoard"]>["items
 type MediaBoardStage = MediaBoardItem["stage"];
 
 function MediaProductionBoardView({
+  mediaProductionOnly = false,
   items,
   columnPagination,
   loadingColumn,
@@ -3121,6 +3123,7 @@ function MediaProductionBoardView({
   onDoneRangeChange,
   onReloadRequested,
 }: {
+  mediaProductionOnly?: boolean;
   items: MediaBoardItem[];
   columnPagination: NonNullable<CoordinationDashboardDTO["mediaBoard"]>["columnPagination"];
   loadingColumn: string | null;
@@ -3292,6 +3295,10 @@ function MediaProductionBoardView({
                 onPreview={(item) => {
                   if (item.targetType === "MEDIA_POST") {
                     mediaBoardRouter.push(`/admin/media-posts/${item.id}`);
+                    return;
+                  }
+                  if (mediaProductionOnly) {
+                    mediaBoardRouter.push(`/admin/watches/${item.productId ?? item.id}/media?mode=media&embedded=1`);
                     return;
                   }
                   previewState.openPreview({

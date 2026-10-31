@@ -45,6 +45,7 @@ type SubmitWatchFormContext = {
     userId?: string | null;
     canReviewContent: boolean;
     canEditPrice?: boolean;
+    canEditProduct?: boolean;
     deferConsumers?: (work: () => Promise<void>) => void;
 };
 
@@ -413,7 +414,9 @@ export async function submitWatchFormApplication(
     if (!productId) {
         throw new Error("Thiếu productId khi lưu watch.");
     }
-    const goldWeightGrams = String(values.spec.goldWeightGrams ?? "").trim();
+    const mediaOnly = context.canEditProduct === false;
+    if (mediaOnly && values.saveIntent !== "MEDIA_WORKSPACE") throw new Error("FORBIDDEN");
+    const goldWeightGrams = mediaOnly ? "" : String(values.spec.goldWeightGrams ?? "").trim();
     if (goldWeightGrams && (!Number.isFinite(Number(goldWeightGrams)) || Number(goldWeightGrams) < 0)) {
         throw new Error("Trọng lượng vàng phải là số không âm.");
     }
@@ -439,7 +442,7 @@ export async function submitWatchFormApplication(
         throw new Error("Không tìm thấy watch.");
     }
 
-    const nextTitle = textOrUndefined(values.basic.title) ?? current.product.title;
+    const nextTitle = mediaOnly ? current.product.title : textOrUndefined(values.basic.title) ?? current.product.title;
     const storefrontSlug = resolveWatchStorefrontSlug({
         title: nextTitle,
         productId,
@@ -518,7 +521,7 @@ export async function submitWatchFormApplication(
     // pool, not a transfer that consumes or deletes the source originals.
     const remainingPoolImages = mediaChanges.pool;
     const contentChanged = !sameJson(beforeContent, afterContent);
-    const specChanged = !sameJson(beforeSpec, afterSpec);
+    const specChanged = !mediaOnly && !sameJson(beforeSpec, afterSpec);
     const imagesChanged = saveIntent === "SUBMIT_CONTENT"
         ? false
         : mediaChanges.galleryChanged;
@@ -554,160 +557,164 @@ export async function submitWatchFormApplication(
     }
 
     await prisma.$transaction(async (tx) => {
-        const brand = values.basic.brandId
-            ? await tx.brand.findUnique({
-                where: { id: values.basic.brandId },
-                select: { id: true, name: true },
-            })
-            : null;
+        let postTargetsResult: { changed: boolean; postTargetIds: string[] } = { changed: false, postTargetIds: [] };
+        if (!mediaOnly) {
+            const brand = values.basic.brandId
+                ? await tx.brand.findUnique({
+                    where: { id: values.basic.brandId },
+                    select: { id: true, name: true },
+                })
+                : null;
 
-        if (values.basic.brandId && !brand) {
-            throw new Error("Brand không hợp lệ.");
-        }
+            if (values.basic.brandId && !brand) {
+                throw new Error("Brand không hợp lệ.");
+            }
 
-        const safeSku = await resolveSubmittedWatchSku(tx, {
-            productId,
-            submittedSku: values.header.sku,
-            currentBrandId: current.product.brandId ?? null,
-            nextBrandId: values.basic.brandId || null,
-            brandName: brand?.name ?? values.spec.specBrand ?? null,
-        });
+            const safeSku = await resolveSubmittedWatchSku(tx, {
+                productId,
+                submittedSku: values.header.sku,
+                currentBrandId: current.product.brandId ?? null,
+                nextBrandId: values.basic.brandId || null,
+                brandName: brand?.name ?? values.spec.specBrand ?? null,
+            });
 
-        await tx.product.update({
-            where: { id: productId },
-            data: {
-                title: nextTitle,
-                slug: storefrontSlug,
-                sku: safeSku,
-                brand: values.basic.brandId
-                    ? { connect: { id: values.basic.brandId } }
-                    : { disconnect: true },
-                vendor: values.basic.vendorId
-                    ? { connect: { id: values.basic.vendorId } }
-                    : { disconnect: true },
-                productCategory: values.basic.categoryId
-                    ? { connect: { id: values.basic.categoryId } }
-                    : { disconnect: true },
-            },
-        });
+            await tx.product.update({
+                where: { id: productId },
+                data: {
+                    title: nextTitle,
+                    slug: storefrontSlug,
+                    sku: safeSku,
+                    brand: values.basic.brandId
+                        ? { connect: { id: values.basic.brandId } }
+                        : { disconnect: true },
+                    vendor: values.basic.vendorId
+                        ? { connect: { id: values.basic.vendorId } }
+                        : { disconnect: true },
+                    productCategory: values.basic.categoryId
+                        ? { connect: { id: values.basic.categoryId } }
+                        : { disconnect: true },
+                },
+            });
 
-        const postTargetsResult = await syncProductPostTargets(tx, {
-            productId,
-            postTargetIds: values.basic.postTargetIds ?? [],
-        });
+            postTargetsResult = await syncProductPostTargets(tx, {
+                productId,
+                postTargetIds: values.basic.postTargetIds ?? [],
+            });
 
-        await tx.watch.update({
-            where: { id: current.id },
-            data: {
-                gender: pickEnumOrUndefined(values.basic.gender, WatchFormEnums.Gender),
-                style: pickEnumOrNull(values.basic.style, WatchFormEnums.WatchStyle),
-                isCollectible: Boolean(values.basic.isCollectible),
-                siteChannel: pickEnumOrUndefined(
-                    values.basic.siteChannel,
-                    WatchFormEnums.WatchSiteChannel,
+            await tx.watch.update({
+                where: { id: current.id },
+                data: {
+                    gender: pickEnumOrUndefined(values.basic.gender, WatchFormEnums.Gender),
+                    style: pickEnumOrNull(values.basic.style, WatchFormEnums.WatchStyle),
+                    isCollectible: Boolean(values.basic.isCollectible),
+                    siteChannel: pickEnumOrUndefined(
+                        values.basic.siteChannel,
+                        WatchFormEnums.WatchSiteChannel,
+                    ),
+                    conditionGrade: values.basic.conditionGrade || null,
+                    movementType: pickEnumOrNull(
+                        values.basic.movementType,
+                        WatchFormEnums.MovementType,
+                    ),
+                    movementCalibre: values.basic.movementCalibre || null,
+                    serialNumber: values.basic.serialNumber || null,
+                    yearText: values.basic.yearText || null,
+                    specStatus: normalizeSpecStatusForSubmit(values.specStatus),
+                },
+            });
+
+            const specData = {
+                brand: brand?.name ?? null,
+                model: values.spec.model || null,
+                referenceNumber: values.spec.referenceNumber || null,
+                nickname: values.spec.nickname || null,
+                strapSetType: pickEnumOrNull(
+                    values.spec.strapSetType,
+                    WatchFormEnums.WatchStrapSetType,
                 ),
-                conditionGrade: values.basic.conditionGrade || null,
+                strapComponentSource: pickEnumOrNull(
+                    values.spec.strapComponentSource,
+                    WatchFormEnums.WatchStrapComponentSource,
+                ),
+                caseShape: pickEnumOrNull(values.spec.caseShape, WatchFormEnums.CaseType),
+                caseSizeMM: toDecimal(values.spec.caseSizeMM),
+                lugToLugMM: toDecimal(values.spec.lugToLugMM),
+                thicknessMM: toDecimal(values.spec.thicknessMM),
+                crystal: pickEnumOrNull(values.spec.crystal, WatchFormEnums.Glass),
+                dialColor: values.spec.dialColor || null,
+                dialFinish: values.spec.dialFinish || null,
                 movementType: pickEnumOrNull(
                     values.basic.movementType,
                     WatchFormEnums.MovementType,
                 ),
-                movementCalibre: values.basic.movementCalibre || null,
-                serialNumber: values.basic.serialNumber || null,
-                yearText: values.basic.yearText || null,
-                specStatus: normalizeSpecStatusForSubmit(values.specStatus),
-            },
-        });
+                calibre: values.spec.calibre || null,
+                materialProfile: pickEnumOrDefault(
+                    values.spec.materialProfile,
+                    WatchFormEnums.WatchMaterialProfile,
+                    WatchFormEnums.WatchMaterialProfile.SINGLE_MATERIAL,
+                ),
+                primaryCaseMaterial: pickEnumOrDefault(
+                    values.spec.primaryCaseMaterial,
+                    WatchFormEnums.WatchCaseMaterialFamily,
+                    WatchFormEnums.WatchCaseMaterialFamily.STAINLESS_STEEL,
+                ),
+                secondaryCaseMaterial: pickEnumOrNull(
+                    values.spec.secondaryCaseMaterial,
+                    WatchFormEnums.WatchCaseMaterialFamily,
+                ),
+                goldTreatment: pickEnumOrNull(
+                    values.spec.primaryCaseMaterial === "GOLD" ? "SOLID_GOLD" : values.spec.goldTreatment,
+                    WatchFormEnums.WatchGoldTreatment,
+                ),
+                goldColors: pickGoldColors(values.spec.goldColors),
+                goldKarat: values.spec.goldKarat ? Number(values.spec.goldKarat) : null,
+                goldWeightGrams: values.spec.primaryCaseMaterial === "GOLD"
+                    ? toDecimal(goldWeightGrams)
+                    : null,
+                braceletType: pickEnumOrNull(
+                    values.spec.braceletType,
+                    WatchFormEnums.Strap,
+                ),
+                strapMaterialText: values.spec.strapMaterialText || null,
+                waterResistance: values.spec.waterResistance || null,
+                powerReserve: values.spec.powerReserve || null,
+                buckleType: values.spec.buckleType || null,
+                boxIncluded: Boolean((values.spec as any).boxIncluded),
+                bookletIncluded: Boolean((values.spec as any).bookletIncluded),
+                cardIncluded: Boolean((values.spec as any).cardIncluded),
+                materialNote: values.spec.materialNote || null,
+            };
 
-        const specData = {
-            brand: brand?.name ?? null,
-            model: values.spec.model || null,
-            referenceNumber: values.spec.referenceNumber || null,
-            nickname: values.spec.nickname || null,
-            strapSetType: pickEnumOrNull(
-                values.spec.strapSetType,
-                WatchFormEnums.WatchStrapSetType,
-            ),
-            strapComponentSource: pickEnumOrNull(
-                values.spec.strapComponentSource,
-                WatchFormEnums.WatchStrapComponentSource,
-            ),
-            caseShape: pickEnumOrNull(values.spec.caseShape, WatchFormEnums.CaseType),
-            caseSizeMM: toDecimal(values.spec.caseSizeMM),
-            lugToLugMM: toDecimal(values.spec.lugToLugMM),
-            thicknessMM: toDecimal(values.spec.thicknessMM),
-            crystal: pickEnumOrNull(values.spec.crystal, WatchFormEnums.Glass),
-            dialColor: values.spec.dialColor || null,
-            dialFinish: values.spec.dialFinish || null,
-            movementType: pickEnumOrNull(
-                values.basic.movementType,
-                WatchFormEnums.MovementType,
-            ),
-            calibre: values.spec.calibre || null,
-            materialProfile: pickEnumOrDefault(
-                values.spec.materialProfile,
-                WatchFormEnums.WatchMaterialProfile,
-                WatchFormEnums.WatchMaterialProfile.SINGLE_MATERIAL,
-            ),
-            primaryCaseMaterial: pickEnumOrDefault(
-                values.spec.primaryCaseMaterial,
-                WatchFormEnums.WatchCaseMaterialFamily,
-                WatchFormEnums.WatchCaseMaterialFamily.STAINLESS_STEEL,
-            ),
-            secondaryCaseMaterial: pickEnumOrNull(
-                values.spec.secondaryCaseMaterial,
-                WatchFormEnums.WatchCaseMaterialFamily,
-            ),
-            goldTreatment: pickEnumOrNull(
-                values.spec.primaryCaseMaterial === "GOLD" ? "SOLID_GOLD" : values.spec.goldTreatment,
-                WatchFormEnums.WatchGoldTreatment,
-            ),
-            goldColors: pickGoldColors(values.spec.goldColors),
-            goldKarat: values.spec.goldKarat ? Number(values.spec.goldKarat) : null,
-            goldWeightGrams: values.spec.primaryCaseMaterial === "GOLD"
-                ? toDecimal(goldWeightGrams)
-                : null,
-            braceletType: pickEnumOrNull(
-                values.spec.braceletType,
-                WatchFormEnums.Strap,
-            ),
-            strapMaterialText: values.spec.strapMaterialText || null,
-            waterResistance: values.spec.waterResistance || null,
-            powerReserve: values.spec.powerReserve || null,
-            buckleType: values.spec.buckleType || null,
-            boxIncluded: Boolean((values.spec as any).boxIncluded),
-            bookletIncluded: Boolean((values.spec as any).bookletIncluded),
-            cardIncluded: Boolean((values.spec as any).cardIncluded),
-            materialNote: values.spec.materialNote || null,
-        };
+            await tx.watchSpecV2.upsert({
+                where: { watchId: current.id },
+                create: { watchId: current.id, ...specData },
+                update: specData,
+            });
 
-        await tx.watchSpecV2.upsert({
-            where: { watchId: current.id },
-            create: { watchId: current.id, ...specData },
-            update: specData,
-        });
+            const complicationNames = Array.from(new Set(
+                (values.spec.complicationNames ?? []).map((name) => String(name).trim()).filter(Boolean),
+            ));
+            const complications = complicationNames.length
+                ? await tx.complication.findMany({
+                    where: { name: { in: complicationNames } },
+                    select: { id: true, name: true },
+                })
+                : [];
+            if (complications.length !== complicationNames.length) {
+                throw new Error("Có complication không hợp lệ.");
+            }
+            await tx.watchSpec.upsert({
+                where: { productId },
+                create: {
+                    productId,
+                    Complication: { connect: complications.map(({ id }) => ({ id })) },
+                },
+                update: {
+                    Complication: { set: complications.map(({ id }) => ({ id })) },
+                },
+            });
 
-        const complicationNames = Array.from(new Set(
-            (values.spec.complicationNames ?? []).map((name) => String(name).trim()).filter(Boolean),
-        ));
-        const complications = complicationNames.length
-            ? await tx.complication.findMany({
-                where: { name: { in: complicationNames } },
-                select: { id: true, name: true },
-            })
-            : [];
-        if (complications.length !== complicationNames.length) {
-            throw new Error("Có complication không hợp lệ.");
-        }
-        await tx.watchSpec.upsert({
-            where: { productId },
-            create: {
-                productId,
-                Complication: { connect: complications.map(({ id }) => ({ id })) },
-            },
-            update: {
-                Complication: { set: complications.map(({ id }) => ({ id })) },
-            },
-        });
+        } // Product identity, specification and target changes require PRODUCT_UPDATE.
 
         await tx.watchContent.upsert({
             where: { watchId: current.id },
@@ -857,7 +864,7 @@ export async function submitWatchFormApplication(
         );
     }
 
-    const pricingResult = context.canEditPrice
+    const pricingResult = !mediaOnly && context.canEditPrice
         ? await prisma.$transaction(async (tx) => {
             const result = await updateWatchPricingWithDiff(productId, {
                 salePrice: values.pricing.salePrice,

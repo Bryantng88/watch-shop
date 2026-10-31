@@ -146,6 +146,7 @@ export default async function WatchesPage({
 
     return (
         <WatchListClient
+            readOnly={user.roles.includes("MEDIA") && !isAdmin && !user.permissions.includes(PERMISSIONS.PRODUCT_UPDATE)}
             initialResult={serialize(initialResult)}
             vendors={serialize(vendors)}
             canViewCost={canViewCost}

@@ -7,6 +7,7 @@ import {
 } from "@/domains/shared/ui/business-list";
 
 type Props = {
+    readOnly?: boolean;
     audienceSegment?: "MEN" | "WOMEN";
     onAudienceSegmentChange?: (segment: "MEN" | "WOMEN") => void;
     selectedCount: number;
@@ -22,6 +23,7 @@ type Props = {
 };
 
 export default function WatchListToolbar({
+    readOnly = false,
     audienceSegment = "MEN",
     onAudienceSegmentChange,
     selectedCount,
@@ -94,7 +96,7 @@ export default function WatchListToolbar({
                     <ArchiveRestore className="h-4 w-4" />
                     {duplicateView ? "Về danh sách Watch" : "Watch trùng"}
                 </button>
-                {showSelectionActions && selectedCount > 0 ? <div className="relative">
+                {!readOnly && showSelectionActions && selectedCount > 0 ? <div className="relative">
                     <button
                         type="button"
                         onClick={() => setIsActionMenuOpen((value) => !value)}
@@ -152,7 +154,7 @@ export default function WatchListToolbar({
                         </div>
                     ) : null}
                 </div> : null}
-                {showSelectionActions && selectedCount > 0 ? <div className="inline-flex h-12 items-center gap-3 rounded-2xl bg-slate-50 px-4">
+                {!readOnly && showSelectionActions && selectedCount > 0 ? <div className="inline-flex h-12 items-center gap-3 rounded-2xl bg-slate-50 px-4">
                     <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">
                         Đã chọn
                     </div>

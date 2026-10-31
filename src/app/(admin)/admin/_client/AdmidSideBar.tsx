@@ -105,6 +105,13 @@ const NAV: NavEntry[] = [
             },
             {
                 type: "item",
+                href: "/admin/coordination/media",
+                label: "Sản xuất media",
+                icon: Workflow,
+                permissionsAny: [PERMISSIONS.MEDIA_PRODUCTION_VIEW, PERMISSIONS.TASK_VIEW],
+            },
+            {
+                type: "item",
                 href: "/admin/personal-work",
                 label: "Việc cá nhân",
                 icon: CalendarCheck2,

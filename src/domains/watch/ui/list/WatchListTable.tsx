@@ -6,6 +6,7 @@ import WatchListRow from "./WatchListRow";
 import type { BusinessEntityPreview } from "@/domains/shared/business/business-entity.types";
 
 type Props = {
+    readOnly?: boolean;
     items?: WatchRow[];
     total?: number;
     selectedIds?: string[];
@@ -37,6 +38,7 @@ export default function WatchListTable({
     total,
     selectedIds = [],
     canViewCost = true,
+    readOnly = false,
     onToggleOne,
     onToggleAll,
     onView,
@@ -145,6 +147,7 @@ export default function WatchListTable({
                                 <WatchListRow
                                     key={item.id}
                                     product={item}
+                                    readOnly={readOnly}
                                     checked={safeSelectedIds.includes(item.id)}
                                     canViewCost={canViewCost}
                                     onCheckedChange={(checked) =>

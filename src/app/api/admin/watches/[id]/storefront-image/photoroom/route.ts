@@ -53,7 +53,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requirePermissionApi(PERMISSIONS.PRODUCT_UPDATE);
+  const auth = await requirePermissionApi(PERMISSIONS.MEDIA_PRODUCTION_UPDATE);
   if (auth instanceof Response) return auth;
 
   const { id } = await params;

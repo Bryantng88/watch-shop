@@ -89,6 +89,7 @@ export default function WatchDetailUiProposal({
   live = false,
   canEditPrice = false,
   canEditMedia = false,
+  readOnly = false,
   mediaWorkspace,
 }: {
   detail: RecordValue;
@@ -98,6 +99,7 @@ export default function WatchDetailUiProposal({
   live?: boolean;
   canEditPrice?: boolean;
   canEditMedia?: boolean;
+  readOnly?: boolean;
   mediaWorkspace?: RecordValue;
 }) {
   const [mediaOpen, setMediaOpen] = useState(false);
@@ -140,7 +142,7 @@ export default function WatchDetailUiProposal({
     mediaQuery.set("workspaceBindingId", String(workspace.bindingId));
   }
   if (workspace.state) mediaQuery.set("workspaceState", String(workspace.state));
-  const mediaHref = `${detailHref}/edit?${mediaQuery.toString()}`;
+  const mediaHref = `${detailHref}/${readOnly ? "media" : "edit"}?${mediaQuery.toString()}`;
 
   const summary = record(tradeHistory.costSummary);
   const acquisitionCost = number(summary.acquisitionAmount);
@@ -368,9 +370,10 @@ export default function WatchDetailUiProposal({
                     {[text(brand.name, ""), values.spec.model, values.spec.referenceNumber].filter(Boolean).join(" · ") || "Chưa đủ thông tin nhận diện"}
                   </p>
                 </div>
-                <Link href={editHref} className="inline-flex h-10 items-center gap-2 rounded-lg bg-slate-950 px-4 text-xs font-bold text-white transition hover:bg-slate-800">
+                {readOnly && <Link href={mediaHref} className="inline-flex h-10 items-center gap-2 rounded-lg bg-violet-600 px-4 text-xs font-bold text-white">Sản xuất media</Link>}
+                {!readOnly && <Link href={editHref} className="inline-flex h-10 items-center gap-2 rounded-lg bg-slate-950 px-4 text-xs font-bold text-white transition hover:bg-slate-800">
                   <Pencil className="h-4 w-4" /> Chỉnh thông tin
-                </Link>
+                </Link>}
               </div>
 
               <div className="mt-auto grid grid-cols-2 gap-x-4 border-t border-slate-100 pt-5 sm:grid-cols-4">
@@ -402,7 +405,7 @@ export default function WatchDetailUiProposal({
             ))}
           </nav>
 
-          {live && (
+          {live && !readOnly && (
             <div className="flex flex-wrap items-center justify-end gap-1.5">
               <button type="button" onClick={() => setMediaOpen(true)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-violet-200 px-2.5 text-xs font-semibold text-violet-700"><Camera className="h-3.5 w-3.5" /> Xử lý Media</button>
               <button type="button" title={latestServiceRequest ? "Xem Service Request gần nhất và thao tác" : "Tạo Service cho Watch"} onClick={() => openRelatedPreview("SERVICE", latestServiceRequest, "Service Request")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-700"><Wrench className="h-3.5 w-3.5" /> Service</button>
@@ -526,7 +529,7 @@ export default function WatchDetailUiProposal({
             </section>
           </div>
 
-          <aside className="space-y-4 xl:sticky xl:top-[76px]">
+          {!readOnly && <aside className="space-y-4 xl:sticky xl:top-[76px]">
             <ServiceCard
               projection={service as Parameters<typeof ServiceCard>[0]["projection"]}
               productId={values.productId}
@@ -579,7 +582,7 @@ export default function WatchDetailUiProposal({
               <div className="mt-3 flex items-start gap-2 text-[10px] leading-4 text-slate-400"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Checklist chỉ hiện vấn đề cần hành động, không lặp lại toàn bộ tiến độ.</div>
             </section>
 
-          </aside>
+          </aside>}
         </div>
       </div>
       <BusinessEntityPreviewModal

@@ -1,9 +1,10 @@
+import { canReadMediaCoordinationQuery } from "@/server/auth/media-production-policy";
 import { NextRequest, NextResponse } from "next/server";
 
 import { getCoordinationFlowPage } from "@/domains/coordination/server";
 import type { CoordinationContext } from "@/domains/coordination/server";
 import { getSpaceViewConfig } from "@/domains/space-management/server/space-view.config";
-import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
+import { requireAnyPermissionApi } from "@/server/auth/requirePermissionApi";
 import { prisma } from "@/server/db/client";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +28,7 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ flowKey: string }> },
 ) {
-  const auth = await requirePermissionApi("TASK_VIEW");
+  const auth = await requireAnyPermissionApi(["TASK_VIEW", "MEDIA_PRODUCTION_VIEW"]);
   if (auth instanceof NextResponse) return auth;
 
   const requestedContext = request.nextUrl.searchParams.get("context") ?? "OPERATION";
@@ -35,6 +36,9 @@ export async function GET(
     ? requestedContext as CoordinationContext
     : "OPERATION";
   const { flowKey } = await context.params;
+  if (!canReadMediaCoordinationQuery(auth, "flow", flowKey, request.nextUrl.searchParams.get("context"))) {
+    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+  }
   const mode = getSpaceViewConfig(coordinationContext).modes.find(
     (item) => item.key === flowKey && item.coreFlowKey,
   );

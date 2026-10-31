@@ -743,7 +743,8 @@ function canViewTicket(
       .some((permission) => permissions.includes(permission));
   }
   const requiredPermission = permissionByShareGroup[shareGroupKey];
-  return Boolean(requiredPermission && authPermissions(auth).includes(requiredPermission));
+  return Boolean(requiredPermission && (authPermissions(auth).includes(requiredPermission) ||
+    (shareGroupKey === "media" && authPermissions(auth).includes("MEDIA_PRODUCTION_VIEW"))));
 }
 
 function buildQueueSummary(input: {
