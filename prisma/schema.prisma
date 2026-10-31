@@ -1605,6 +1605,7 @@ model TechnicalDetailCatalog {
 }
 
 model User {
+  personalCodexRuns PersonalCodexRun[] @relation("PersonalCodexRequester")
   id           String   @id @default(dbgenerated("(gen_random_uuid())::text"))
   email        String   @unique
   passwordHash String?
@@ -2807,6 +2808,7 @@ model Task {
 }
 
 model TaskItem {
+  codexRuns PersonalCodexRun[]
   id     String  @id @default(dbgenerated("(gen_random_uuid())::text"))
   taskId String?
   personalOwnerUserId String?
@@ -3943,4 +3945,42 @@ enum WatchPostStage {
 enum ShippingFeePayer {
   BUSINESS
   CUSTOMER
+}
+
+
+enum PersonalCodexRunStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  TIMED_OUT
+}
+
+model PersonalCodexRun {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+  taskItemId String
+  taskItem TaskItem @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
+  requestedByUserId String?
+  requestedBy User? @relation("PersonalCodexRequester", fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  status PersonalCodexRunStatus @default(QUEUED)
+  activeTaskItemId String? @unique
+  fingerprint String
+  prompt String
+  repository String
+  baseBranch String @default("main")
+  attempt Int @default(0)
+  leaseToken String?
+  workerId String?
+  leaseExpiresAt DateTime?
+  startedAt DateTime?
+  finishedAt DateTime?
+  summary String?
+  errorCode String?
+  resultUrl String?
+  commitSha String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status, createdAt])
+  @@index([taskItemId, createdAt])
 }

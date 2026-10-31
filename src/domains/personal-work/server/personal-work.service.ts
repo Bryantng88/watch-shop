@@ -1,3 +1,6 @@
+import { publicRunSelect } from "./codex/personal-codex.service";
+import { codexExecutionReadiness } from "./codex/codex-config";
+import { googleCalendarReadiness } from "./google-calendar-config";
 import {
   AppTagTargetType,
   PersonalTaskShareAccess,
@@ -226,6 +229,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
       },
       include: {
         personalCategory: true,
+        codexRuns: { orderBy: { createdAt: "desc" }, take: 5, select: publicRunSelect },
         personalOwner: { select: { id: true, name: true, email: true, avatarUrl: true } },
         task: {
           select: {
@@ -281,6 +285,8 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
       if (!owner) throw new Error("Công việc cá nhân chưa có chủ sở hữu");
       return {
         id: item.id,
+        codexRuns: item.codexRuns.map(run => ({ ...run, createdAt: run.createdAt.toISOString(), startedAt: run.startedAt?.toISOString() ?? null, finishedAt: run.finishedAt?.toISOString() ?? null })),
+        codexRun: item.codexRuns[0] ? { ...item.codexRuns[0], createdAt: item.codexRuns[0].createdAt.toISOString(), startedAt: item.codexRuns[0].startedAt?.toISOString() ?? null, finishedAt: item.codexRuns[0].finishedAt?.toISOString() ?? null } : null,
         title: item.title,
         note: item.note,
         status: item.status,
@@ -321,10 +327,12 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
         sharedWith: item.personalShares.map((entry) => ({ user: entry.user, accessLevel: entry.accessLevel })),
       };
     }),
+    codex: { ...codexExecutionReadiness(), canDispatch: Boolean(await prisma.user.findFirst({ where: { id: userId, isActive: true, roles: { some: { name: "ADMIN" } } }, select: { id: true } })) },
     currentUserId: userId,
     availableUsers,
     calendar: {
       configured: isGoogleCalendarConfigured(),
+      configurationIssue: googleCalendarReadiness().reason,
       connected: Boolean(connection),
       accountEmail: connection?.googleAccountEmail ?? null,
       lastSyncedAt: connection?.lastSyncedAt?.toISOString() ?? null,
