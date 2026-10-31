@@ -1,0 +1,68 @@
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { prisma } from "@/server/db/client";
+import { createPersonalWorkItem } from "@/domains/personal-work/server/personal-work.service";
+import { requestPersonalCodexRun, claimPersonalCodexRun, heartbeatPersonalCodexRun, finishPersonalCodexRun, cancelPersonalCodexRun } from "@/domains/personal-work/server/codex/personal-codex.service";
+import { authenticateCodexWorker } from "@/domains/personal-work/server/codex/codex-config";
+
+async function main() {
+  for (const key of ["DATABASE_URL", "DIRECT_URL"]) {
+    const url = new URL(process.env[key] || "");
+    assert.ok(["127.0.0.1", "localhost"].includes(url.hostname));
+    assert.equal(url.pathname, "/personal_codex_test");
+  }
+  assert.notEqual(process.env.NODE_ENV, "production");
+  process.env.PERSONAL_CODEX_ENABLED = "1";
+  process.env.PERSONAL_CODEX_ENVIRONMENT = "staging";
+  process.env.PERSONAL_CODEX_WORKER_TOKEN = `synthetic-${randomUUID()}`;
+  const role = await prisma.role.upsert({ where: { name: "ADMIN" }, create: { name: "ADMIN" }, update: {} });
+  const owner = await prisma.user.create({ data: { email: `codex-owner-${randomUUID()}@example.invalid`, roles: { connect: { id: role.id } } } });
+  const other = await prisma.user.create({ data: { email: `codex-other-${randomUUID()}@example.invalid`, roles: { connect: { id: role.id } } } });
+  const editor = await prisma.user.create({ data: { email: `codex-editor-${randomUUID()}@example.invalid` } });
+  const auth = { id: owner.id };
+  const item = await createPersonalWorkItem({ title: "Synthetic Codex instruction", tags: ["codex"] }, auth);
+  await prisma.personalTaskShare.create({ data: { taskItemId: item.id, userId: editor.id, accessLevel: "EDITOR" } });
+  await assert.rejects(requestPersonalCodexRun(item.id, { id: other.id }), /OWNER/);
+  await assert.rejects(requestPersonalCodexRun(item.id, { id: editor.id }), /ADMIN/);
+  assert.ok(authenticateCodexWorker(`Bearer ${process.env.PERSONAL_CODEX_WORKER_TOKEN}`));
+  assert.equal(authenticateCodexWorker("Bearer wrong"), false);
+  const duplicate = await Promise.all(Array.from({ length: 8 }, () => requestPersonalCodexRun(item.id, auth)));
+  assert.equal(new Set(duplicate.map(run => run.id)).size, 1);
+  const claims = await Promise.all([claimPersonalCodexRun("worker-1"), claimPersonalCodexRun("worker-2")]);
+  const claimed = claims.find(Boolean)!;
+  assert.equal(claims.filter(Boolean).length, 1);
+  assert.equal(claimed.id, duplicate[0].id);
+  assert.equal(await heartbeatPersonalCodexRun(claimed.id, "wrong-lease"), false);
+  assert.equal(await finishPersonalCodexRun({ id: claimed.id, leaseToken: "wrong-lease", status: "SUCCEEDED" }), false);
+  assert.equal(await heartbeatPersonalCodexRun(claimed.id, claimed.leaseToken), true);
+  await assert.rejects(finishPersonalCodexRun({ id: claimed.id, leaseToken: claimed.leaseToken, status: "SUCCEEDED", resultUrl: "https://evil.invalid" }), /INVALID_RESULT_URL/);
+  assert.equal(await finishPersonalCodexRun({ id: claimed.id, leaseToken: claimed.leaseToken, status: "SUCCEEDED", summary: "Synthetic result", resultUrl: "https://github.com/Bryantng88/watch-shop/pull/123" }), true);
+  assert.equal(await finishPersonalCodexRun({ id: claimed.id, leaseToken: claimed.leaseToken, status: "SUCCEEDED" }), false);
+  assert.equal(await prisma.taskItemActivity.count({ where: { sourceId: claimed.id } }), 1);
+  assert.equal((await prisma.taskItem.findUniqueOrThrow({ where: { id: item.id } })).status, "TODO");
+  assert.equal((await requestPersonalCodexRun(item.id, auth)).id, claimed.id);
+  const retry = await requestPersonalCodexRun(item.id, auth, true);
+  assert.notEqual(retry.id, claimed.id);
+  const next = await claimPersonalCodexRun("worker-1");
+  assert.ok(next);
+  await assert.rejects(cancelPersonalCodexRun(next.id, { id: other.id }), /OWNER/);
+  await cancelPersonalCodexRun(next.id, auth);
+  assert.equal(await heartbeatPersonalCodexRun(next.id, next.leaseToken), false);
+  assert.equal(await finishPersonalCodexRun({ id: next.id, leaseToken: next.leaseToken, status: "SUCCEEDED" }), false);
+  await requestPersonalCodexRun(item.id, auth, true);
+  const abandoned = await claimPersonalCodexRun("worker-1");
+  assert.ok(abandoned);
+  await prisma.personalCodexRun.update({ where: { id: abandoned.id }, data: { leaseExpiresAt: new Date(Date.now() - 1000) } });
+  assert.equal(await claimPersonalCodexRun("worker-2"), null);
+  assert.equal((await prisma.personalCodexRun.findUniqueOrThrow({ where: { id: abandoned.id } })).status, "TIMED_OUT");
+  assert.equal(await finishPersonalCodexRun({ id: abandoned.id, leaseToken: abandoned.leaseToken, status: "SUCCEEDED" }), false);
+  await requestPersonalCodexRun(item.id, auth, true);
+  await prisma.taskItem.update({ where: { id: item.id }, data: { status: "DONE" } });
+  assert.equal(await claimPersonalCodexRun("worker-3"), null);
+  const untagged = await createPersonalWorkItem({ title: "No Codex tag" }, auth);
+  await assert.rejects(requestPersonalCodexRun(untagged.id, auth), /TAG_REQUIRED/);
+  process.env.PERSONAL_CODEX_ENVIRONMENT = "production";
+  await assert.rejects(requestPersonalCodexRun(untagged.id, auth), /NOT_CONFIGURED/);
+  console.log("PASS: concurrency/idempotency, owner/admin boundary, worker auth, leases, completion, cancellation, expiry, retry, finished-task and production guards");
+}
+main().catch(error => { console.error(error instanceof Error ? error.message : error); process.exitCode = 1; }).finally(() => prisma.$disconnect());

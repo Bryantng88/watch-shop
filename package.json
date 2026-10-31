@@ -64,6 +64,8 @@
     "local:seed-admin": "tsx scripts/seed-local-admin.ts",
     "personal-work:smoke-categories": "tsx scripts/smoke-personal-work-categories.ts",
     "personal-work:smoke-calendar": "tsx scripts/smoke-personal-calendar.ts",
+    "personal-work:smoke-codex": "node --import tsx scripts/smoke-personal-codex.ts",
+    "personal-work:check-integrations": "node --import tsx scripts/check-personal-calendar-configuration.ts",
     "personal-work:smoke-standalone": "tsx scripts/smoke-personal-work-standalone.ts",
     "personal-work:smoke-photoshoot": "tsx scripts/smoke-personal-photoshoot.ts",
     "personal-work:smoke-schedule": "tsx scripts/smoke-personal-work-schedule.ts",

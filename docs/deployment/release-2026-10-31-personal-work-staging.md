@@ -116,3 +116,16 @@ records and atomic claiming, an authenticated executor with scoped repository
 access, retries/timeouts/cancellation, status/log/result/PR links written back to
 the item, approval boundaries, and end-to-end staging verification. This release
 preparation neither implements nor simulates those capabilities.
+
+
+## Follow-up implementation in this PR
+
+The original rollout above did not contain a Codex executor. This PR now also
+prepares a staging-only execution queue, an isolated Codex CLI worker, run
+status/result history, and explicit Google Calendar OAuth callback readiness.
+See [the follow-up staging handoff](personal-work-codex-calendar-staging.md).
+The follow-up source has been tested locally but has not been applied to the
+live NAS. Real Codex execution from the current Cloud environment is blocked by
+its HTTP destination policy; NAS SSH access and real Google OAuth configuration
+are not yet available in that environment. No real Codex run or Google consent
+is claimed by the mocked/unit/database/HTTP validation.
