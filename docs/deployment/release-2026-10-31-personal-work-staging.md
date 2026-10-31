@@ -1,6 +1,6 @@
 # Personal-work staging rollout
 
-Status: **live staging applications updated; operator-authenticated acceptance pending**.
+Status: **live staging applications updated; operator-authenticated acceptance confirmed**.
 Source: `62d0fa51770ee585fa26e72beabc8727dbb1f2d8`.
 PR #28 was reviewed but not merged or included. It adds preview tooling, not a
 Codex executor. Production has not been changed.
@@ -68,8 +68,10 @@ database restore.
 - Health/readiness return 404 through admin ingress by the existing allowlist
   policy; internal health/readiness return 200. Access rules were not widened.
 - The existing storefront product listing returns 200 after the rollout.
-- Operator login with an existing live staging account remains pending. Actual
-  authenticated acceptance has passed on the isolated clone, as described above.
+- The operator confirmed successful login with an existing live staging account
+  and successful opening of the personal-work page. The confirmation did not
+  specify which ingress path was used; automated ingress checks passed on both.
+  Authenticated acceptance also passed on the isolated clone, as described above.
 - The isolated validation application and database were stopped after testing;
   no live volume was deleted or live database restored/reset.
 
