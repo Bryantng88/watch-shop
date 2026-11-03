@@ -4009,3 +4009,39 @@ model OrderCodexProposal {
  @@index([orderId,requestedByUserId,createdAt])
  @@index([status,createdAt])
 }
+
+// Staging sales intake: no order/customer/product mutation is permitted by this queue.
+model SalesCodexIntake {
+  id                String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  requestedByUserId String
+  requestKey        String   @unique
+  requestText       String
+  routingJson       Json
+  status            String   @default("QUEUED")
+  lookupsJson       Json     @default("[]")
+  planJson          Json?
+  resultJson        Json?
+  errorCode         String?
+  leaseToken        String?
+  leaseExpiresAt    DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([requestedByUserId, createdAt])
+  @@index([status, createdAt])
+}
+
+// One active follow-up per customer/watch/kind, shared across requests and users.
+model SalesCodexFollowup {
+  id           String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  businessKey  String   @unique
+  customerId   String
+  productId    String
+  kind         String
+  taskItemId   String   @unique
+  intakeId     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([customerId, productId])
+}

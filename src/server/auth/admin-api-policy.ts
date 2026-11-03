@@ -89,6 +89,8 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
         return anyOf(PERMISSIONS.ACQUISITION_UPDATE_ALL, PERMISSIONS.WATCH_ACQUISITION_UPDATE, PERMISSIONS.ACCESSORY_ACQUISITION_UPDATE);
     }
 
+    if (/^\/api\/admin\/sales-intake(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.TASK_MANAGE);
+
     if (/^\/api\/admin\/orders(\/|$)/.test(pathname)) {
         if (/\/quick-form$/.test(pathname)) return anyOf(PERMISSIONS.ORDER_CREATE);
         if (/\/shipments\/active$/.test(pathname)) return anyOf(PERMISSIONS.SHIPMENT_VIEW);

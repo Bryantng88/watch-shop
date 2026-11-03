@@ -1,0 +1,136 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "lookup",
+        "finish"
+      ]
+    },
+    "tool": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "customers.search",
+        "watches.search",
+        "watches.detail",
+        "accessories.search",
+        "work.open",
+        null
+      ]
+    },
+    "query": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "productId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "customerId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "plan": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "summary": {
+              "type": "string"
+            },
+            "questions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "leads": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "customerId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "productId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "followups": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "VERIFY_ACCESSORY",
+                            "SOURCE_ACCESSORY",
+                            "TECHNICAL_CHECK",
+                            "CHECK_AVAILABILITY",
+                            "SALES_FOLLOWUP"
+                          ]
+                        },
+                        "description": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "description"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "key",
+                  "customerId",
+                  "productId",
+                  "followups"
+                ]
+              }
+            }
+          },
+          "required": [
+            "summary",
+            "questions",
+            "leads"
+          ]
+        }
+      ]
+    }
+  },
+  "required": [
+    "type",
+    "tool",
+    "query",
+    "productId",
+    "customerId",
+    "plan"
+  ]
+}

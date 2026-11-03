@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 RUN ln -s /usr/local/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/bin/codex /usr/local/bin/codex-linux-sandbox
 RUN mkdir -p /opt/worker /work/repo /work/runs /work/results /var/lib/codex/auth /run/worker \
  && chown -R node:node /work /var/lib/codex /run/worker
-COPY worker.mjs container-start.mjs order-worker.mjs order-plan-schema.json /opt/worker/
+COPY worker.mjs container-start.mjs order-worker.mjs order-plan-schema.json sales-worker.mjs sales-intake-protocol.mjs sales-turn-schema.json /opt/worker/
 ENV HOME=/home/node CODEX_HOME=/var/lib/codex/auth
 USER node
 WORKDIR /work/repo
