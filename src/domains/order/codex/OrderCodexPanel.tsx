@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import {departments,departmentLabels,workflowPlanSchema,type WorkflowPlan} from './workflow-plan';
 type Proposal={id:string;status:string;revision:number;planJson:unknown;errorCode:string|null;createdTaskIds:unknown};
 type Person={id:string;name:string|null};
+function localDateInput(value:string|null){if(!value)return '';const d=new Date(value);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);}
 export default function OrderCodexPanel({orderId}:{orderId:string}){
  const [text,setText]=useState('');const [row,setRow]=useState<Proposal|null>(null);const [plan,setPlan]=useState<WorkflowPlan|null>(null);const [people,setPeople]=useState<Person[]>([]);const [busy,setBusy]=useState(false);const [error,setError]=useState('');const current=useRef<Proposal|null>(null);const key=useRef<string|null>(null);
  async function load(){const r=await fetch(`/api/admin/orders/${orderId}/codex`,{cache:'no-store'});const d=await r.json();if(!r.ok)throw Error(d.error||'Không tải được đề xuất');const latest=d.proposals[0] as Proposal|undefined;setPeople(d.people);setRow(latest||null);if(latest&&(latest.id!==current.current?.id||latest.status!==current.current?.status)){const parsed=workflowPlanSchema.safeParse(latest.planJson);setPlan(parsed.success?parsed.data:null);}current.current=latest||null;}
@@ -33,12 +34,12 @@ export default function OrderCodexPanel({orderId}:{orderId:string}){
  <input aria-label={`Tên việc bước ${i+1}`} disabled={!editable} className="w-full rounded border p-2 font-medium" value={s.title} onChange={e=>change(i,'title',e.target.value)}/>
  <div className="grid gap-2 md:grid-cols-3"><select aria-label={`Bộ phận bước ${i+1}`} disabled={!editable} className="rounded border p-2 text-sm" value={s.department} onChange={e=>change(i,'department',e.target.value)}>{departments.map(d=><option key={d} value={d}>{departmentLabels[d]}</option>)}</select>
  <select aria-label={`Phụ trách bước ${i+1}`} disabled={!editable} className="rounded border p-2 text-sm" value={s.assignedToUserId||''} onChange={e=>change(i,'assignedToUserId',e.target.value||null)}><option value="">Chưa giao — hàng đợi bộ phận</option>{people.map(p=><option key={p.id} value={p.id}>{p.name||'Nhân viên'}</option>)}</select>
- <input aria-label={`Hạn ISO bước ${i+1}`} disabled={!editable} placeholder="Hạn ISO, ví dụ 2026-11-06T17:00:00+07:00" className="rounded border p-2 text-xs" value={s.dueAt||''} onChange={e=>change(i,'dueAt',e.target.value||null)}/></div>
+ <input aria-label={`Hạn bước ${i+1}`} type="datetime-local" disabled={!editable} className="rounded border p-2 text-xs" value={localDateInput(s.dueAt)} onChange={e=>change(i,'dueAt',e.target.value?new Date(e.target.value).toISOString():null)}/></div>
  <textarea aria-label={`Chi tiết bước ${i+1}`} disabled={!editable} className="w-full rounded border p-2 text-sm" value={s.description} onChange={e=>change(i,'description',e.target.value)}/>
  <label className="block text-xs">Chờ các bước (mã cách nhau bằng dấu phẩy): <input disabled={!editable} className="rounded border p-1" value={s.dependsOn.join(', ')} onChange={e=>change(i,'dependsOn',e.target.value.split(',').map(v=>v.trim()).filter(Boolean))}/></label>
  </div>)}
  {row?.status==='DRAFT'&&<button type="button" onClick={()=>send('approve')} disabled={busy||plan.questions.length>0} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm text-white disabled:opacity-50">Duyệt và tạo {plan.steps.length} công việc</button>}
  </div>}
- {row?.status==='APPLIED'&&<div role="status" className="rounded-lg bg-emerald-50 p-3 text-sm">Đã tạo {tasks.length} công việc, không tạo lại khi tải trang.<p className="mt-2">Xem tại các bảng điều phối theo bộ phận:</p><div className="flex flex-wrap gap-3">{departments.map(d=><a key={d} href={`/admin/coordination/${d==='PAYMENT'?'operation':d.toLowerCase()}`} className="underline">{departmentLabels[d]}</a>)}</div></div>}
+ {row?.status==='APPLIED'&&<div role="status" className="rounded-lg bg-emerald-50 p-3 text-sm">Đã tạo {tasks.length} công việc, không tạo lại khi tải trang.<p className="mt-2">Xem tại các bảng điều phối theo bộ phận:</p><div className="flex flex-wrap gap-3">{departments.map(d=><a key={d} href={`/admin/coordination/${d.toLowerCase()}`} className="underline">{departmentLabels[d]}</a>)}</div></div>}
  </section>
 }

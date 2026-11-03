@@ -63,6 +63,7 @@ test("decision links use current detail or the dedicated media mode, never the r
   parts.content.ready = false;
   const actions = buildWatchDecision(parts).decision.allowedActions;
   for (const action of actions) {
+    assert.ok(action.href);
     const url = new URL(action.href, "https://example.test");
     if (action.key === "OPEN_MEDIA" || action.key === "OPEN_CONTENT") {
       assert.equal(url.searchParams.get("mode"), "media");

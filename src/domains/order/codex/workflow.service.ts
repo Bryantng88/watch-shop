@@ -13,7 +13,7 @@ async function actor(userId:string){
  return user;
 }
 async function orderContext(orderId:string){
- const o=await prisma.order.findUnique({where:{id:orderId},select:{id:true,refNo:true,status:true,paymentStatus:true,updatedAt:true,orderItem:{take:20,select:{productTitle:true,quantity:true}}}});
+ const o=await prisma.order.findUnique({where:{id:orderId},select:{id:true,refNo:true,status:true,paymentStatus:true,updatedAt:true,orderItem:{take:20,select:{title:true,quantity:true}}}});
  if(!o)throw new WorkflowError('Không tìm thấy đơn hàng.',404);
  if(['CANCELLED','COMPLETED'].includes(o.status))throw new WorkflowError('Không tạo luồng mới cho đơn đã đóng.');
  return o;
@@ -47,10 +47,11 @@ export async function approveOrderWorkflow(orderId:string,userId:string,input:un
   const ids=[...new Set(data.plan.steps.flatMap(s=>s.assignedToUserId?[s.assignedToUserId]:[]))];
   if(await tx.user.count({where:{id:{in:ids},isActive:true}})!==ids.length)throw new WorkflowError('Người phụ trách không còn hoạt động.');
   const locked=await tx.orderCodexProposal.updateMany({where:{id:row.id,status:'DRAFT',revision:data.revision},data:{status:'APPLYING',revision:{increment:1}}});if(locked.count!==1)throw new WorkflowError('Đề xuất đang được duyệt.',409);
-  const created: string[]=[];const kinds={SALES:'BUSINESS',TECHNICAL:'SERVICE',MEDIA:'BUSINESS',PAYMENT:'OPERATION',OPERATION:'OPERATION'} as const;
+  const created: string[]=[];const kinds={SALES:'BUSINESS',TECHNICAL:'SERVICE',MEDIA:'BUSINESS',PAYMENT:'BUSINESS',OPERATION:'OPERATION'} as const;
+  const names={SALES:'Bán hàng',TECHNICAL:'Kỹ thuật',MEDIA:'Media',PAYMENT:'Thanh toán',OPERATION:'Vận hành'};
   for(const step of data.plan.steps){
-   let space=await tx.task.findFirst({where:{description:'Coordination Space '+step.department,status:{not:'CANCELLED'}},select:{id:true},orderBy:{createdAt:'asc'}});
-   if(!space)space=await tx.task.create({data:{title:'Điều phối '+step.department,description:'Coordination Space '+step.department,kind:kinds[step.department],source:'SYSTEM'},select:{id:true}});
+   let space=await tx.task.findFirst({where:{kind:kinds[step.department],periodType:null,periodKey:null,status:{not:'CANCELLED'},OR:[{title:names[step.department]},{description:'Coordination Space '+step.department}]},select:{id:true},orderBy:{createdAt:'desc'}});
+   if(!space)space=await tx.task.create({data:{title:names[step.department],description:'Coordination Space '+step.department,kind:kinds[step.department],source:'SYSTEM'},select:{id:true}});
    const depends=step.dependsOn.map(key=>{const idx=data.plan.steps.findIndex(s=>s.key===key);return `${data.plan.steps[idx].title} (${created[idx]})`;});
    const item=await tx.taskItem.create({data:{taskId:space.id,title:step.title,note:[step.description,'Đơn hàng: '+orderId,'Đề xuất Codex đã duyệt: '+row.id,depends.length?'Chỉ thực hiện sau: '+depends.join('; '):'', 'Thứ tự phụ thuộc là chỉ dẫn; chưa tự khóa hoặc chuyển bước.'].filter(Boolean).join('\n'),assignedToUserId:step.assignedToUserId,userId,priority:'MEDIUM',dueAt:step.dueAt?new Date(step.dueAt):null},select:{id:true}});
    await tx.taskExecution.create({data:{taskId:space.id,taskItemId:item.id,targetType:'ORDER',targetId:orderId,actionType:'LINKED',createdByUserId:userId,metadataJson:{orderCodexProposalId:row.id,stepKey:step.key,department:step.department,dependsOn:step.dependsOn}}});

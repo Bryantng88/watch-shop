@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';import {prisma} from '@/server/db/client
 (async()=>{
  const u=new URL(process.env.DATABASE_URL!);if(!['127.0.0.1','localhost'].includes(u.hostname)||u.pathname!=='/personal_codex_test')throw Error('ISOLATED_TEST_DB_REQUIRED');
  Object.assign(process.env,{ORDER_CODEX_ENABLED:'1',PERSONAL_CODEX_ENABLED:'1',PERSONAL_CODEX_ENVIRONMENT:'staging',PERSONAL_CODEX_WORKER_TOKEN:'synthetic-worker-api-token-at-least-32-chars'});
+ await prisma.role.upsert({where:{name:'ADMIN'},create:{name:'ADMIN'},update:{}});
  const owner=await prisma.user.create({data:{email:randomUUID()+'@example.invalid',roles:{connect:{name:'ADMIN'}}}});const other=await prisma.user.create({data:{email:randomUUID()+'@example.invalid',roles:{connect:{name:'ADMIN'}}}});const staff=await prisma.user.create({data:{email:randomUUID()+'@example.invalid'}});
  const order=await prisma.order.create({data:{shipPhone:'synthetic',shipAddress:'synthetic',shipCity:'synthetic',subtotal:0,hasShipment:false}});
  const before=await prisma.taskItem.count();

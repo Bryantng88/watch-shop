@@ -11,7 +11,7 @@ export async function runOrderWorkflowWorker(){
   ({run}=await api('claim',{workerId:config.workerId}));if(!run){await sleep(5000);continue;}
   if(!/^[a-f0-9-]{36}$/.test(run.id))throw Error('INVALID_RUN');
   const directory='/work/order-runs/'+run.id;const output='/work/results/order-'+run.id+'.json';await mkdir(directory,{recursive:true,mode:0o700});await mkdir('/work/results',{recursive:true,mode:0o700});
-  const args=codexArguments(directory,output).map(a=>a.startsWith('permissions.staging-worker=')?a.replace('extends=":workspace"','extends=":read-only"'):a);args.splice(args.length-1,0,'--skip-git-repo-check','--output-schema','/opt/worker/order-plan-schema.json');
+  const args=codexArguments(directory,output).map(a=>a.startsWith('permissions.staging-worker=')?a.replace('extends=":workspace"','extends=":read-only"').replace('filesystem={','filesystem={"/work/repo"="deny","/work/runs"="deny",'):a);args.splice(args.length-1,0,'--skip-git-repo-check','--output-schema','/opt/worker/order-plan-schema.json');
   const env=Object.fromEntries(['PATH','HOME','CODEX_HOME','LANG','LC_ALL','TMPDIR','SSL_CERT_FILE','SSL_CERT_DIR','NODE_EXTRA_CA_CERTS'].filter(k=>process.env[k]).map(k=>[k,process.env[k]]));
   const rc=await new Promise((resolve,reject)=>{
    child=spawn('codex',args,{cwd:directory,env,detached:true,stdio:['pipe','ignore','ignore']});
