@@ -7,4 +7,6 @@ if (process.env.PERSONAL_CODEX_PUBLISH_DRAFT_PRS === '1' && !process.env.GH_TOKE
 }
 const { runWorker } = await import('./worker.mjs');
 console.log('Isolated staging Codex worker started.');
-await runWorker();
+const loops=[runWorker()];
+if(process.env.ORDER_CODEX_WORKER==='1'){const {runOrderWorkflowWorker}=await import('./order-worker.mjs');loops.push(runOrderWorkflowWorker());}
+await Promise.all(loops);

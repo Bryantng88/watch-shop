@@ -557,6 +557,7 @@ model ProjectionRecord {
 }
 
 model Order {
+  codexWorkflowProposals OrderCodexProposal[]
   id                   String         @id @default(dbgenerated("(gen_random_uuid())::text"))
   refNo                String?        @unique(map: "Order_orderCode_key")
   customerId           String?
@@ -1605,6 +1606,7 @@ model TechnicalDetailCatalog {
 }
 
 model User {
+  orderCodexProposals OrderCodexProposal[]
   personalCodexRuns PersonalCodexRun[] @relation("PersonalCodexRequester")
   id           String   @id @default(dbgenerated("(gen_random_uuid())::text"))
   email        String   @unique
@@ -3983,4 +3985,27 @@ model PersonalCodexRun {
   updatedAt DateTime @updatedAt
   @@index([status, createdAt])
   @@index([taskItemId, createdAt])
+}
+
+model OrderCodexProposal {
+ id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+ orderId String
+ order Order @relation(fields:[orderId],references:[id],onDelete:Cascade)
+ requestedByUserId String
+ requestedBy User @relation(fields:[requestedByUserId],references:[id],onDelete:Restrict)
+ requestKey String @unique
+ requestText String
+ contextJson Json
+ orderVersion DateTime
+ status String @default("QUEUED")
+ planJson Json?
+ createdTaskIds Json?
+ leaseToken String?
+ leaseExpiresAt DateTime?
+ errorCode String?
+ revision Int @default(0)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([orderId,requestedByUserId,createdAt])
+ @@index([status,createdAt])
 }
