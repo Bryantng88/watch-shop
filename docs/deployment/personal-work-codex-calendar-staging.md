@@ -58,6 +58,13 @@ The web application now has durable queued/running/completed/failed/cancelled/
 timeout records. Adding `codex` to a new personal task or to an existing task
 can queue it when configured. Only an active ADMIN who owns the personal task
 can dispatch; sharing editor access or being a different ADMIN is insufficient.
+The quick-create form, calendar-create dialog and task details expose a tag field
+and a `codex` checkbox. Tags are comma-separated; removing a tag preserves the
+others. The field shows configuration readiness even before a Codex tag exists.
+Saving a newly added Codex tag can enqueue work when the owner/admin and staging
+guards pass; the form explains this before saving. Configuration readiness does
+not establish that an authenticated worker is running.
+
 Existing tagged tasks are not bulk-dispatched on deployment. Their owner can
 use **Gửi Codex thực hiện**. An explicit retry creates a new auditable run.
 
