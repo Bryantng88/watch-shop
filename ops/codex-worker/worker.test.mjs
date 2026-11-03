@@ -15,7 +15,10 @@ test('worker never stages credentials or production workflows even if the agent 
 });
 test('Codex invocation preserves sandboxing and never inherits the worker credential environment', () => {
  const args=codexArguments('/worker/run','/worker/result.txt');
- assert.ok(args.includes('workspace-write'));
+ assert.ok(args.includes('default_permissions="staging-worker"'));
+ assert.ok(args.some(arg=>arg.includes('"/var/lib/codex/auth/auth.json"="deny"')));
+ assert.ok(args.some(arg=>arg.includes('"/proc"="deny"')));
+ assert.equal(args.includes('--sandbox'),false);
  assert.ok(args.includes('shell_environment_policy.inherit="none"'));
  assert.equal(args.some(arg=>arg.includes('dangerously-bypass')),false);
 });

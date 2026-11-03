@@ -26,12 +26,12 @@ export function validateChangedPaths(paths) {
 }
 
 export function codexArguments(directory, outputFile) {
-  return ["--ask-for-approval", "never", "exec", "--ignore-user-config", "--sandbox", "workspace-write", "--ephemeral", "--json", "--output-last-message", outputFile, "-c", 'shell_environment_policy.inherit="none"', "-c", "sandbox_workspace_write.network_access=false", "-C", directory, "-"];
+  return ["--ask-for-approval", "never", "exec", "--ignore-user-config", "--ephemeral", "--json", "--output-last-message", outputFile, "-c", 'default_permissions="staging-worker"', "-c", "permissions.staging-worker={extends=\":workspace\",filesystem={\"/var/lib/codex/auth/auth.json\"=\"deny\",\"/var/lib/codex/auth/sessions\"=\"deny\",\"/var/lib/codex/auth/log\"=\"deny\",\"/run/worker\"=\"deny\",\"/proc\"=\"deny\",\"/work/results\"=\"deny\"},network={enabled=false}}", "-c", 'shell_environment_policy.inherit="none"', "-C", directory, "-"];
 }
 
 function childEnvironment() {
-  const allowed = ["PATH", "HOME", "LANG", "LC_ALL", "TMPDIR", "SYSTEMROOT", "OPENAI_API_KEY", "CODEX_HOME", "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "NODE_EXTRA_CA_CERTS", "SSL_CERT_FILE", "SSL_CERT_DIR"];
-  const keys = [...new Set([...allowed, ...Object.keys(process.env).filter(key => /^(OPENAI_|CODEX_|OIC_)/.test(key))])];
+  const allowed = ["PATH", "HOME", "LANG", "LC_ALL", "TMPDIR", "SYSTEMROOT", "CODEX_HOME", "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "NODE_EXTRA_CA_CERTS", "SSL_CERT_FILE", "SSL_CERT_DIR"];
+  const keys = allowed;
   return Object.fromEntries(keys.filter(key => process.env[key] !== undefined).map(key => [key, process.env[key]]));
 }
 function sanitized(text) {
