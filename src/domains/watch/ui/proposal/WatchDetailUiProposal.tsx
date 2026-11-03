@@ -132,7 +132,6 @@ export default function WatchDetailUiProposal({
     [text(brand.name, ""), values.spec.model].filter(Boolean).join(" ") ||
     "Watch";
   const detailHref = `/admin/watches/${values.productId}`;
-  const editHref = `${detailHref}/edit?returnTo=${encodeURIComponent(detailHref)}`;
   const workspace = record(mediaWorkspace);
   const mediaQuery = new URLSearchParams({ embedded: "1", mode: "media", returnTo: detailHref });
   if (workspace.bindingId) {
@@ -368,9 +367,7 @@ export default function WatchDetailUiProposal({
                     {[text(brand.name, ""), values.spec.model, values.spec.referenceNumber].filter(Boolean).join(" · ") || "Chưa đủ thông tin nhận diện"}
                   </p>
                 </div>
-                <Link href={editHref} className="inline-flex h-10 items-center gap-2 rounded-lg bg-slate-950 px-4 text-xs font-bold text-white transition hover:bg-slate-800">
-                  <Pencil className="h-4 w-4" /> Chỉnh thông tin
-                </Link>
+
               </div>
 
               <div className="mt-auto grid grid-cols-2 gap-x-4 border-t border-slate-100 pt-5 sm:grid-cols-4">

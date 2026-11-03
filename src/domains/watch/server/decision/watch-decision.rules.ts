@@ -18,7 +18,9 @@ const STATUS_LABEL: Record<WatchDecisionStatus, string> = {
 };
 
 function action(key: string, label: string, productId: string, tone: WatchDecisionAction["tone"] = "primary") {
-  return { key, label, href: `/admin/watches/${productId}/edit`, tone } satisfies WatchDecisionAction;
+  return { key, label, href: ["OPEN_MEDIA", "OPEN_CONTENT"].includes(key)
+    ? `/admin/watches/${productId}/edit?mode=media&focus=${key === "OPEN_CONTENT" ? "content" : "image"}`
+    : `/admin/watches/${productId}`, tone } satisfies WatchDecisionAction;
 }
 
 export function buildWatchDecision(parts: SnapshotParts): Pick<WatchDecisionSnapshot, "progress" | "decision"> {
