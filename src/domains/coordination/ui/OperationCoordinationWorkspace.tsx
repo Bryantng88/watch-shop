@@ -84,6 +84,7 @@ import type { CoordinationDashboardDTO } from "../server/coordination-dashboard.
 import { isCoreWorkspaceBlueprint } from "@/domains/task/shared/workspace-flow-policy";
 import WatchSearchPicker, { type WatchSearchResult } from "@/domains/watch/ui/search/WatchSearchPicker";
 import FlowItemListView from "./FlowItemListView";
+import TechnicalIssueListView from "./TechnicalIssueListView";
 import { useAdHocWorkCreate } from "@/domains/task/ui/ad-hoc-work/AdHocWorkRowAction";
 import { createMediaPostAction } from "@/domains/media-post/actions";
 import MediaPostCreateForm from "@/domains/media-post/ui/MediaPostCreateForm";
@@ -3488,6 +3489,9 @@ function TechnicalIssueBoardView({
 }) {
   const progress = useAppProgress();
   const previewState = useBusinessEntityPreview();
+  const layoutParams = useSearchParams();
+  const [layout, setLayout] = useState<"board" | "list">(layoutParams.get("tiLayout") === "list" ? "list" : "board");
+  useEffect(() => { setLayout(layoutParams.get("tiLayout") === "list" ? "list" : "board"); }, [layoutParams]);
   const [overStage, setOverStage] = useState<TechnicalIssueBoardStage | null>(null);
   const [moveRequest, setMoveRequest] = useState<TechnicalIssueBoardMoveRequest | null>(null);
   const [moveValues, setMoveValues] = useState<Record<string, TechnicalBoardFieldValue>>({});
@@ -3805,6 +3809,38 @@ function TechnicalIssueBoardView({
 
   return (
     <div className="min-w-0 max-w-full border-t border-slate-200 bg-slate-50/80 px-3 py-4 sm:px-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <span className="text-xs font-semibold text-slate-600">Theo dõi và xử lý TI</span>
+        <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1" aria-label="Cách hiển thị TI">
+          {([{ key: "board", label: "Board", icon: Grid2X2 }, { key: "list", label: "List", icon: List }] as const).map(option => <button key={option.key} type="button" aria-pressed={layout === option.key} onClick={() => {
+            setLayout(option.key);
+            const url = new URL(window.location.href);
+            if (option.key === "list") url.searchParams.set("tiLayout", "list");
+            else url.searchParams.delete("tiLayout");
+            window.history.replaceState(null, "", url.toString());
+          }} className={cn("inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold", layout === option.key ? "bg-violet-100 text-violet-800" : "text-slate-500 hover:bg-slate-50")}><option.icon className="h-3.5 w-3.5" />{option.label}</button>)}
+        </div>
+      </div>
+      {layout === "list" ? <TechnicalIssueListView
+        items={visibleItems}
+        pagination={columnPagination}
+        loadingColumn={loadingColumn}
+        focusedIssueId={focusedIssueId}
+        pending={isMovePending || isCostApprovalPending}
+        priorityPendingIssueId={isPriorityPending ? priorityIssueId : null}
+        doneRange={doneRange}
+        onDoneRangeChange={onDoneRangeChange}
+        onLoadMore={onLoadMore}
+        onPreview={item => previewState.openPreview({ type: "TECHNICAL_ISSUE", id: item.id, refNo: item.serviceRequest.refNo, title: item.summary, subtitle: item.serviceRequest.refNo ? `SR: ${item.serviceRequest.refNo}` : null, status: item.executionStatus, imageUrl: item.serviceRequest.imageUrl })}
+        onMove={requestTechnicalIssueMove}
+        onTogglePriority={togglePriority}
+        moveOptions={item => columns.flatMap(column => {
+          const action = technicalBoardActionForMove({ from: item.stage, to: column.key, actions });
+          return action && item.workspaceTaskItemId ? [{ stage: column.key, label: action.label }] : [];
+        })}
+        areaLabel={technicalAreaLabel}
+        ownerLabel={technicalOwnerLabel}
+      /> : (
       <div className="max-w-full overflow-x-auto overscroll-x-contain pb-2">
           <div className="grid w-full min-w-[960px] grid-cols-4 gap-3">
             {columns.map((column) => {
@@ -3840,6 +3876,7 @@ function TechnicalIssueBoardView({
             })}
           </div>
         </div>
+      )}
       <TechnicalIssueBoardMoveModal
         request={moveRequest}
         values={moveValues}
