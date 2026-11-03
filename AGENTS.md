@@ -84,6 +84,17 @@ contents of production environment files.
 See `docs/deployment/github-actions-nas-runner.md` for runner setup, security,
 release operation, and emergency controls.
 
+## Staging deployment
+
+Before staging infrastructure or deployment work, read
+`docs/deployment/staging-deployment-runbook.md`,
+`docs/deployment/personal-work-codex-calendar-staging.md` and
+`ops/codex-worker/README.qnap.md`. Preserve current staging runtime env (including
+OAuth and Codex flags/token), worker volumes and private ingress. There is no
+checked-in staging deploy workflow yet; production deploy scripts are not a
+staging shortcut. Verify the current state instead of assuming another chat's
+local scratch files or historical container IPs still exist.
+
 ## Codex Cloud
 
 - Codex Cloud works from repository state available through GitHub; it cannot
