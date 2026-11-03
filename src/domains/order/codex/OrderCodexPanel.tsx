@@ -40,6 +40,6 @@ export default function OrderCodexPanel({orderId}:{orderId:string}){
  </div>)}
  {row?.status==='DRAFT'&&<button type="button" onClick={()=>send('approve')} disabled={busy||plan.questions.length>0} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm text-white disabled:opacity-50">Duyệt và tạo {plan.steps.length} công việc</button>}
  </div>}
- {row?.status==='APPLIED'&&<div role="status" className="rounded-lg bg-emerald-50 p-3 text-sm">Đã tạo {tasks.length} công việc, không tạo lại khi tải trang.<p className="mt-2">Xem tại các bảng điều phối theo bộ phận:</p><div className="flex flex-wrap gap-3">{departments.map(d=><a key={d} href={`/admin/coordination/${d.toLowerCase()}${d==='OPERATION'?'?view=ad-hoc-work':''}`} className="underline">{departmentLabels[d]}</a>)}</div></div>}
+ {row?.status==='APPLIED'&&<div role="status" className="rounded-lg bg-emerald-50 p-3 text-sm">Đã tạo {tasks.length} công việc, không tạo lại khi tải trang.<p className="mt-2">Xem tại các bảng điều phối theo bộ phận:</p><div className="flex flex-wrap gap-3">{departments.map(d=><a key={d} href={`/admin/coordination/${['PAYMENT','OPERATION'].includes(d)?'operation?view=ad-hoc-work':d.toLowerCase()}`} className="underline">{departmentLabels[d]}</a>)}</div></div>}
  </section>
 }
