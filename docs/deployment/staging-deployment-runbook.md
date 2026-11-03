@@ -80,6 +80,14 @@ The owner's dedicated fine-grained GitHub token expires 2026-12-03. Renew privat
 
 Production promotion is separate: merge reviewed code through normal PRs, verify origin/main and checks, obtain explicit authorization for the exact annotated production tag, push that tag and let the user approve the production Environment. Do not turn the worker into a production executor by changing its staging guard.
 
+## Order proposal extension (2026-11-03)
+
+Read order-codex-workflow-staging.md for the order-detail prototype. Preserve ORDER_CODEX_ENABLED=1 on the staging admin and ORDER_CODEX_WORKER=1 on its worker in addition to the existing Personal Codex settings. The separate durable OrderCodexProposal queue must not be treated as a code-change job: it only returns a JSON plan, and a separate same-origin ADMIN approval creates tasks. No code PR is produced for order planning. Both queues must be idle before stopping the worker.
+
+Feature source revision c6c14a3d adds migration 20261103110000_order_codex_proposals (82 migrations total), a reviewed task planner and operation ad-hoc routing. NAS release assets/approved backup are in /share/CACHEDEV1_DATA/homes/user/.staging-deploy/order-proposals-20261103. This backup remains on NAS and was not restored into the synthetic test database. The new admin image is watch-shop:order-proposals-c6c14a3d; the worker image is watch-shop-codex-worker:order-proposals-20261103. Verify live image IDs/revision labels, not these mutable names alone.
+
+The pre-feature admin and worker were retained stopped with suffix -rollback-order-20261103; an intermediate admin is retained with suffix -rollback-order-3bb26dc0. To disable the whole order feature, stop the upgraded worker, restore the pre-feature admin/worker canonical names, start them and validate/reload the two admin proxies. Keep the additive table, proposal/task audit history and dedicated auth/work/secrets volumes. Do not accidentally use the older rollback-codex snapshot which predates Personal Codex activation. No storefront/production release was performed.
+
 ## Prompt for a new chat
 
 > Read AGENTS.md and docs/deployment/staging-deployment-runbook.md from PR #32 / branch codex/staging-worker-chatgpt-20261103 (if absent on main, fetch that branch first). Also read docs/deployment/personal-work-codex-calendar-staging.md and ops/codex-worker/README.qnap.md. Continue the requested staging deployment at commit <SHA>. First verify live state read-only; preserve existing staging OAuth/AUTH_SECRET/encryption keys, Codex flags/token and worker auth/work/secrets volumes. Use the existing Windows SSH identity without reading it. Do not change production, SSH or ingress. Propose the concrete release/rollback before activation; do not assume local scratch files from another chat exist.
