@@ -1015,6 +1015,20 @@
         }
       ],
       "comment": "Observed bubblewrap mount flags; kernel namespace capability checks still enforced"
+    },
+    {
+      "names": [
+        "mount"
+      ],
+      "action": "SCMP_ACT_ALLOW",
+      "args": [
+        {
+          "index": 3,
+          "value": 2134054,
+          "op": "SCMP_CMP_EQ"
+        }
+      ],
+      "comment": "Observed on real persistent worktree volume: NOSUID NODEV REMOUNT BIND SILENT RELATIME"
     }
   ]
 }
