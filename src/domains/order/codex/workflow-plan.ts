@@ -1,7 +1,8 @@
 import { z } from 'zod';
 export const departments = ['SALES','TECHNICAL','MEDIA','PAYMENT','OPERATION'] as const;
 export const departmentLabels: Record<string,string> = {SALES:'Sales',TECHNICAL:'Kỹ thuật',MEDIA:'Media',PAYMENT:'Kế toán',OPERATION:'Vận hành / giao nhận'};
-export const workflowStepSchema = z.object({key:z.string().regex(/^[a-z][a-z0-9-]{0,29}$/),title:z.string().trim().min(1).max(180),department:z.enum(departments),description:z.string().max(2000),dependsOn:z.array(z.string().max(30)).max(12),dueAt:z.string().datetime({offset:true}).nullable(),assignedToUserId:z.string().max(100).nullable()}).strict();
+const controlMarker=/(?:workTypeKey|workspaceKind|workspaceDefinition\w*|blueprint\w*|coreFlow\w*|sharedUserIds|systemShareGroupKey|operationWorkspaceRole|flowStage\w*|paymentWorkspaceRole|serviceOperationRole)\s*:/i;
+export const workflowStepSchema = z.object({key:z.string().regex(/^[a-z][a-z0-9-]{0,29}$/),title:z.string().trim().min(1).max(180).refine(v=>!controlMarker.test(v),"Tên việc chứa chỉ thị hệ thống không hợp lệ"),department:z.enum(departments),description:z.string().max(2000).refine(v=>!controlMarker.test(v),"Chi tiết chứa chỉ thị hệ thống không hợp lệ"),dependsOn:z.array(z.string().max(30)).max(12),dueAt:z.string().datetime({offset:true}).nullable(),assignedToUserId:z.string().max(100).nullable()}).strict();
 export const workflowPlanSchema=z.object({summary:z.string().min(1).max(2000),questions:z.array(z.string().max(500)).max(10),steps:z.array(workflowStepSchema).min(1).max(12)}).strict().superRefine((p,ctx)=>{
  const keys=new Map(p.steps.map((s,i)=>[s.key,i]));
  if(keys.size!==p.steps.length)ctx.addIssue({code:'custom',message:'Mã bước bị trùng'});
