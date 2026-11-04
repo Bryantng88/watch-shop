@@ -103,6 +103,11 @@ checked-in staging deploy workflow yet; production deploy scripts are not a
 staging shortcut. Verify the current state instead of assuming another chat's
 local scratch files or historical container IPs still exist.
 
+For the Product customer assistant live pilot, also read
+`docs/deployment/customer-assistant-staging.md`. Chat prepares a draft; one
+explicit approval may create real technical issues/tasks on staging. Preserve
+the separate local simulation and do not infer production authorization.
+
 ## Codex Cloud
 
 - Codex Cloud works from repository state available through GitHub; it cannot

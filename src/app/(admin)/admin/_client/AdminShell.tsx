@@ -17,11 +17,12 @@ type AdminShellUser = {
 
 type AdminShellProps = {
     assistantSimulation?: boolean;
+    assistantLive?: boolean;
     user: AdminShellUser;
     children: ReactNode;
 };
 
-export default function AdminShell({ user, children, assistantSimulation = false }: AdminShellProps) {
+export default function AdminShell({ user, children, assistantSimulation = false, assistantLive = false }: AdminShellProps) {
     const searchParams = useSearchParams();
     const isEmbedded = searchParams.get("embedded") === "1";
 
@@ -64,7 +65,7 @@ export default function AdminShell({ user, children, assistantSimulation = false
                 </main>
             </div>
         </div>
-        {assistantSimulation && <AiAssistant key={user.id} userId={user.id} canManage={!!user.roles?.includes("ADMIN") || user.permissions.includes("TASK_MANAGE")} />}
+        {(assistantSimulation || assistantLive) && <AiAssistant key={`${user.id}:${assistantLive?"live":"simulation"}`} userId={user.id} live={assistantLive} canManage={!!user.roles?.includes("ADMIN") || user.permissions.includes("TASK_MANAGE")} />}
         </AdminNavigationHistoryProvider>
     );
 }

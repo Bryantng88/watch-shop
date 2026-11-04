@@ -1,0 +1,37 @@
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { prisma as p } from "../src/server/db/client";
+import { PERMISSIONS } from "../src/constants/permissions";
+import { ensureOperationSpace } from "../src/domains/coordination/server/operation-space.service";
+import { sendAssistant,assistantWorker,approveAssistant,cancelAssistant,listAssistant,recordConditionOutcome } from "../src/domains/ai-assistant/server/service";
+async function main(){
+ const url=new URL(process.env.DATABASE_URL||"");assert.ok(["127.0.0.1","localhost"].includes(url.hostname));assert.equal(url.pathname,"/personal_codex_test");assert.equal(process.env.CUSTOMER_AI_ENABLED,"1");
+ const suffix=randomUUID();for(const code of Object.values(PERMISSIONS))await p.permission.upsert({where:{code},create:{code},update:{}});
+ const role=await p.role.upsert({where:{name:"ADMIN"},create:{name:"ADMIN",permissions:{connect:Object.values(PERMISSIONS).map(code=>({code}))}},update:{permissions:{set:Object.values(PERMISSIONS).map(code=>({code}))}}});
+ const owner=await p.user.create({data:{email:`assistant-${suffix}@example.invalid`,name:`Owner ${suffix}`,roles:{connect:{id:role.id}}}}),other=await p.user.create({data:{email:`assistant-other-${suffix}@example.invalid`,name:`Receiver ${suffix}`,roles:{connect:{id:role.id}}}}),staff=await p.user.create({data:{email:`assistant-staff-${suffix}@example.invalid`,name:"No permissions"}});
+ await ensureOperationSpace(p,{context:"OPERATION",provisionWorkTickets:false});
+ const customer=await p.customer.create({data:{name:`Customer ${suffix}`}}),product=await p.product.create({data:{type:"WATCH",sku:`ASSISTANT-${suffix}`,title:"Synthetic watch",watch:{create:{saleStage:"READY",stockStage:"IN_STOCK"}}}}),catalog=await p.technicalDetailCatalog.create({data:{code:`AI-${suffix}`,name:`Pressure check ${suffix}`,area:"GENERAL"}});
+ await assert.rejects(sendAssistant(staff.id,{requestKey:randomUUID(),text:"test"}));
+ const key=randomUUID();const sent=await sendAssistant(owner.id,{requestKey:key,text:"Khách cần kiểm tra và tìm mắt dây",productId:product.id});assert.equal((await sendAssistant(owner.id,{requestKey:key,text:"Khách cần kiểm tra và tìm mắt dây",productId:product.id})).id,sent.id);
+ process.env.CUSTOMER_AI_MAX_TURNS_PER_HOUR="1";await assert.rejects(sendAssistant(owner.id,{requestKey:randomUUID(),text:"Over hourly quota"}));delete process.env.CUSTOMER_AI_MAX_TURNS_PER_HOUR;
+ await assert.rejects(sendAssistant(other.id,{id:sent.id,requestKey:randomUUID(),text:"cross owner"}));
+ const claim=await assistantWorker("claim",{}) as {run:{id:string;leaseToken:string}};assert.equal(claim.run.id,sent.id);const run=claim.run;
+ for(const lookup of [{tool:"customers.search",query:customer.id},{tool:"watches.search",query:product.sku!},{tool:"watches.detail",productId:product.id},{tool:"work.open",customerId:customer.id,productId:product.id},{tool:"people.search",query:other.id},{tool:"technical.catalog",query:catalog.id}])await assistantWorker("lookup",{...run,lookup});
+ await assert.rejects(assistantWorker("lookup",{...run,lookup:{tool:"sql",query:"select"}}));
+ const plan={customerId:customer.id,productId:product.id,conditions:[{key:"c1",requirement:"Kiểm tra chống nước",expected:"Xác minh đạt hay không",kind:"TECHNICAL",assigneeUserId:other.id,technicalDetailId:catalog.id},{key:"c2",requirement:"Tìm mắt dây phù hợp",expected:"Xác minh nguồn; chưa đặt mua",kind:"TASK",assigneeUserId:other.id,technicalDetailId:null}]};
+ const before={issues:await p.technicalIssue.count(),tasks:await p.taskItem.count()};
+ await assistantWorker("finish",{...run,reply:"Mình sẽ giao hai việc sau khi bạn duyệt.",plan});
+ assert.equal(await p.technicalIssue.count(),before.issues);assert.equal(await p.taskItem.count(),before.tasks);const preview=(await listAssistant(owner.id)).conversations.find(c=>c.id===run.id)!;assert.equal(preview.runStatus,"DRAFT");assert.equal(preview.customerRequest!.conditions.length,2);
+ await assert.rejects(approveAssistant(other.id,run.id,preview.revision,()=>{}));await assert.rejects(approveAssistant(owner.id,run.id,preview.revision-1,()=>{}));
+ await p.user.update({where:{id:other.id},data:{isActive:false}});await assert.rejects(approveAssistant(owner.id,run.id,preview.revision,()=>{}));assert.equal(await p.technicalIssue.count(),before.issues);await p.user.update({where:{id:other.id},data:{isActive:true}});
+ const oldProduct=await p.product.findUniqueOrThrow({where:{id:product.id}});await p.product.update({where:{id:product.id},data:{title:"Changed after lookup"}});await assert.rejects(approveAssistant(owner.id,run.id,preview.revision,()=>{}));assert.equal(await p.technicalIssue.count(),before.issues);await p.product.update({where:{id:product.id},data:{title:oldProduct.title,updatedAt:oldProduct.updatedAt}});
+ const deferred:(()=>Promise<void>)[]=[];const [approved,replay]=await Promise.all([approveAssistant(owner.id,run.id,preview.revision,fn=>deferred.push(fn)),approveAssistant(owner.id,run.id,preview.revision,fn=>deferred.push(fn))]);
+ assert.equal(approved.customerRequest!.status,"TRACKING");assert.deepEqual(approved.customerRequest!.conditions.map(c=>c.linkedRef),replay.customerRequest!.conditions.map(c=>c.linkedRef));
+ assert.equal(await p.technicalIssue.count(),before.issues+1);assert.equal(await p.taskItem.count({where:{assignedToUserId:other.id,title:"Tìm mắt dây phù hợp"}}),1);
+ const issue=await p.technicalIssue.findUniqueOrThrow({where:{id:approved.customerRequest!.conditions[0].linkedRef}});assert.equal(issue.technicianId,other.id);assert.equal(issue.technicalDetailCatalogId,catalog.id);
+ assert.equal(await p.order.count({where:{customerId:customer.id}}),0);assert.equal(await p.reservation.count({where:{productId:product.id}}),0);
+ await recordConditionOutcome(owner.id,run.id,"c1","Không đạt","Synthetic fail result");const updated=(await listAssistant(owner.id)).conversations.find(c=>c.id===run.id)!;assert.equal(updated.customerRequest!.conditions[0].outcome,"Không đạt");
+ const canceled=await sendAssistant(owner.id,{requestKey:randomUUID(),text:"Cancel fixture",productId:product.id});const claimed=await assistantWorker("claim",{}) as {run:{id:string;leaseToken:string}};assert.equal(claimed.run.id,canceled.id);await cancelAssistant(owner.id,canceled.id);await assert.rejects(assistantWorker("finish",{...claimed.run,reply:"late",plan}));
+ console.log("PASS assistant: permission/ownership, scripted model lookups, no writes before approval, concurrent idempotent approval, real technical issue+assigned task, separate condition outcome, cancellation fence, no orders/reservations. CLI execution was scripted, not real.");
+}
+main().catch(e=>{console.error(e instanceof Error?e.stack:"Assistant smoke failed");process.exitCode=1;}).finally(()=>p.$disconnect());

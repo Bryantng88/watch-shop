@@ -21,7 +21,7 @@ An empty conversation follows the current supported product screen. After discus
 
 Chat UX never replaces server-side authorization. Future live reads/writes must check the requesting user's scope and permissions; worker/Codex account privileges do not become user privileges. Previewing and approving must name the actual target and recipients. Local prototype controls are not authorization infrastructure.
 
-Keep simulation visibly labelled but concise. Sample text/rules must not be described as real model inference, verified directory lookup, real technical classification or executed work. No business writes, external AI calls, notifications, NAS changes or deployment are authorized by this UX contract.
+Keep simulation visibly labelled but concise. Sample text/rules must not be described as real model inference, verified directory lookup, real technical classification or executed work. Simulation never writes business data. The separately authorized staging live flow may create technical issues and assigned tasks only after the requester explicitly approves the complete review once; chat and draft generation remain read-only. See [staging live boundary and rollout](../deployment/customer-assistant-staging.md). This UX contract alone does not authorize deployment, NAS changes or production writes.
 
 ## Review acceptance
 

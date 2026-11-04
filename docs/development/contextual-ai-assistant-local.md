@@ -1,3 +1,5 @@
+Live staging implementation and rollout: [customer assistant staging](../deployment/customer-assistant-staging.md). Local remains simulation; enabling a real worker is a separate guarded deployment.
+
 Interaction changes MUST follow [the chat-first contract](../design/ai-assistant-interaction-contract.md). No embedded draft forms, including forms hidden in Edit/Details. Missing facts are gathered through chat; incomplete legacy drafts cannot display an actionable approval.
 
 # Current prototype scope: Products only

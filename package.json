@@ -75,7 +75,10 @@
     "local:seed-personal-work": "tsx scripts/seed-local-personal-work.ts",
     "storefront:seed-acceptance-media": "tsx scripts/seed-storefront-acceptance-media.ts",
     "gen": "prisma generate",
-    "storefront:smoke-content": "node --import tsx --test src/domains/storefront/content/content.test.ts"
+    "storefront:smoke-content": "node --import tsx --test src/domains/storefront/content/content.test.ts",
+    "customer-assistant:check": "node --import tsx scripts/check-customer-assistant-configuration.ts",
+    "customer-assistant:smoke": "node --import tsx scripts/smoke-customer-assistant.ts",
+    "customer-assistant:smoke-http": "node --import tsx scripts/smoke-customer-assistant-http.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

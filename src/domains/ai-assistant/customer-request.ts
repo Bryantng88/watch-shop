@@ -1,4 +1,4 @@
-export type Condition = { id: string; requirement: string; expected: string; kind: "TECHNICAL" | "TASK"; assignee: string; progress: string; outcome: string; result: string; linkedRef?: string };
+export type Condition = { id: string; requirement: string; expected: string; kind: "TECHNICAL" | "TASK"; assignee: string; progress: string; outcome: string; result: string; linkedRef?: string; linkedHref?: string };
 export type CustomerRequest = { id: string; reference: string; customer: string; watch: string; owner: string; original: string; status: "DRAFT" | "TRACKING"; conditions: Condition[]; decision: string; reviewReady?: boolean };
 export function isCustomerRequest(value: unknown): value is CustomerRequest {
   if (!value || typeof value !== "object") return false;

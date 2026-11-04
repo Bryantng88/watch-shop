@@ -7,6 +7,7 @@ RUN ln -s /usr/local/lib/node_modules/@openai/codex/node_modules/@openai/codex-l
 RUN mkdir -p /opt/worker /work/repo /work/runs /work/results /var/lib/codex/auth /run/worker \
  && chown -R node:node /work /var/lib/codex /run/worker
 COPY worker.mjs container-start.mjs order-worker.mjs order-plan-schema.json sales-worker.mjs sales-intake-protocol.mjs sales-turn-schema.json /opt/worker/
+COPY customer-assistant-worker.mjs customer-assistant-protocol.mjs customer-turn-schema.json /opt/worker/
 ENV HOME=/home/node CODEX_HOME=/var/lib/codex/auth
 USER node
 WORKDIR /work/repo

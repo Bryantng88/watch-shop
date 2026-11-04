@@ -1606,6 +1606,7 @@ model TechnicalDetailCatalog {
 }
 
 model User {
+  customerAssistantConversations CustomerAssistantConversation[]
   orderCodexProposals OrderCodexProposal[]
   personalCodexRuns PersonalCodexRun[] @relation("PersonalCodexRequester")
   id           String   @id @default(dbgenerated("(gen_random_uuid())::text"))
@@ -4048,6 +4049,28 @@ model SalesCodexFollowup {
 
 // Editorial content has separate draft and public snapshots. Product facts stay
 // in the catalog and are never copied into these snapshots.
+model CustomerAssistantConversation {
+  id              String   @id @default(uuid())
+  ownerId         String
+  owner           User @relation(fields: [ownerId], references: [id], onDelete: Restrict, map: "CustomerAssistantConversation_owner_fkey")
+  firstRequestKey String   @unique
+  status          String   @default("QUEUED")
+  revision        Int      @default(1)
+  approvedRevision Int?
+  approvedAt      DateTime?
+  state           Json
+  evidence        Json     @default("[]")
+  plan            Json?
+  leaseToken      String?
+  leaseExpiresAt  DateTime?
+  errorCode       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([ownerId, updatedAt])
+  @@index([status, createdAt])
+}
+
 model StorefrontDocument {
   id          String   @id
   kind        String

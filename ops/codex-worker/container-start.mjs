@@ -10,4 +10,5 @@ console.log('Isolated staging Codex worker started.');
 const loops=[runWorker()];
 if(process.env.ORDER_CODEX_WORKER==='1'){const {runOrderWorkflowWorker}=await import('./order-worker.mjs');loops.push(runOrderWorkflowWorker());}
 if(process.env.SALES_CODEX_WORKER==='1'){const {runSalesIntakeWorker}=await import('./sales-worker.mjs');loops.push(runSalesIntakeWorker());}
+if(process.env.CUSTOMER_AI_WORKER==='1'){const {runCustomerAssistantWorker}=await import('./customer-assistant-worker.mjs');loops.push(runCustomerAssistantWorker());}
 await Promise.all(loops);
