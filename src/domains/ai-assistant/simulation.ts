@@ -1,7 +1,8 @@
+import { isCustomerRequest, type CustomerRequest } from "./customer-request";
 export type Context = { kind: string; label: string; href: string; id?: string };
 export type Step = { id: string; title: string; department: string; assignee: string; description: string; dependsOn: string[] };
 export type Message = { id: string; role: "user" | "assistant"; text: string };
-export type Conversation = { id: string; title: string; context: Context | null; messages: Message[]; steps: Step[]; approved: boolean; tasks: (Step & { status: string })[]; updatedAt: string };
+export type Conversation = { id: string; title: string; context: Context | null; messages: Message[]; steps: Step[]; approved: boolean; tasks: (Step & { status: string })[]; customerRequest?: CustomerRequest; updatedAt: string };
 export type Scenario = "normal" | "clarify" | "error" | "denied";
 export function isProductContext(context: Context | null | undefined) {
   return !!context && /^\/admin\/(watches|products)(\/|$)/.test(context.href);
@@ -43,6 +44,6 @@ export function readConversations(raw: string | null): Conversation[] {
   try {
     const parsed: unknown = JSON.parse(raw || "[]");
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((c): c is Conversation => Boolean(c && typeof c === "object" && typeof c.id === "string" && typeof c.title === "string" && typeof c.updatedAt === "string" && Array.isArray(c.messages) && c.messages.length <= 40 && c.messages.every((m: Message) => typeof m.id === "string" && ["user", "assistant"].includes(m.role) && typeof m.text === "string") && Array.isArray(c.steps) && Array.isArray(c.tasks) && [...c.steps, ...c.tasks].every((s: Step) => typeof s.id === "string" && typeof s.title === "string" && typeof s.department === "string" && typeof s.assignee === "string" && typeof s.description === "string" && Array.isArray(s.dependsOn)) && typeof c.approved === "boolean" && (c.context === null || (typeof c.context?.label === "string" && typeof c.context?.href === "string" && c.context.href.startsWith("/admin/"))))).slice(0, 20);
+    return parsed.filter((c): c is Conversation => Boolean(c && typeof c === "object" && typeof c.id === "string" && typeof c.title === "string" && typeof c.updatedAt === "string" && Array.isArray(c.messages) && c.messages.length <= 40 && c.messages.every((m: Message) => typeof m.id === "string" && ["user", "assistant"].includes(m.role) && typeof m.text === "string") && Array.isArray(c.steps) && Array.isArray(c.tasks) && [...c.steps, ...c.tasks].every((s: Step) => typeof s.id === "string" && typeof s.title === "string" && typeof s.department === "string" && typeof s.assignee === "string" && typeof s.description === "string" && Array.isArray(s.dependsOn)) && typeof c.approved === "boolean" && (c.customerRequest === undefined || isCustomerRequest(c.customerRequest)) && (c.context === null || (typeof c.context?.label === "string" && typeof c.context?.href === "string" && c.context.href.startsWith("/admin/"))))).slice(0, 20);
   } catch { return []; }
 }
