@@ -21,7 +21,15 @@ export function collectCustomerRequest(text: string, watch: string, previous?: C
     {pattern:/kiểm tra (?:bộ )?máy/i,key:"Kiểm tra máy",kind:"TECHNICAL" as const,expected:"Ghi kết quả kiểm tra tình trạng máy và điều cần xử lý."},
     {pattern:/mắt\s*dây/i,key:"Xác minh nguồn mắt dây phù hợp",kind:"TASK" as const,expected:"Xác minh nguồn và tương thích mắt dây; chưa đặt mua hoặc cam kết giá."},
   ];
-  for(const d of definitions)if(d.pattern.test(text)&&!r.conditions.some(c=>c.requirement===d.key))r.conditions.push({...condition(d.kind),requirement:d.key,expected:d.expected});
+  for(const d of definitions) {
+    const removing = new RegExp(`(?:bỏ|không cần)[^,;.\\n]{0,35}(?:${d.pattern.source})`,"iu").test(text);
+    if(removing){r.conditions=r.conditions.filter(c=>c.requirement!==d.key);continue;}
+    if(d.pattern.test(text)&&!r.conditions.some(c=>c.requirement===d.key))r.conditions.push({...condition(d.kind),requirement:d.key,expected:d.expected});
+    if(d.pattern.test(text)&&/chuyển|đổi/iu.test(text)){
+      const kind=/sang task/iu.test(text)?"TASK":/sang phiếu kỹ thuật/iu.test(text)?"TECHNICAL":undefined;
+      if(kind)r.conditions=r.conditions.map(c=>c.requirement===d.key?{...c,kind}:c);
+    }
+  }
   // Deliberately bounded local script, not model inference or directory lookup.
   const clauses=text.replace(/khách(?: hàng)?\s+\S+/iu,"").split(/[,;.\n]/);
   for(const c of r.conditions){
@@ -34,6 +42,9 @@ export function collectCustomerRequest(text: string, watch: string, previous?: C
     const name=direct || (mentioned.length===1?mentioned[0]:undefined);
     if(name)c.assignee=demoPeople[name];
   }
+  const bulk=text.match(/(?:giao|chuyển)[^,;.\n]*(?:tất cả|cả hai|hết)[^,;.\n]*(?:cho|sang)\s+(Minh|An|Linh|Hà)(?=\s|[.!?]|$)/iu)?.[1];
+  const bulkName=(Object.keys(demoPeople) as (keyof typeof demoPeople)[]).find(name=>name.toLocaleLowerCase()===bulk?.toLocaleLowerCase());
+  if(bulkName)r.conditions=r.conditions.map(c=>({...c,assignee:demoPeople[bulkName]}));
   const missing=[];
   if(!r.customer)missing.push("khách tên hoặc mã gì");if(!r.watch)missing.push("watch có SKU nào");
   if(!r.conditions.length)missing.push("điều kiện khách cần đáp ứng là gì (bản mẫu hỗ trợ kiểm tra chống nước/máy và tìm mắt dây)");

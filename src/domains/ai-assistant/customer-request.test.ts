@@ -16,6 +16,16 @@ test("approval requires customer/watch/owner, conditions and recipients; no refe
  r.customer="Khách demo";r.watch="SKU-DEMO";assert.equal(validateCustomerRequest(r),null);
  r.conditions[0].assignee="";assert.ok(validateCustomerRequest(r));assert.throws(()=>approveCustomerRequest(r));
 });
+test("draft assignments and conditions can be changed through chat without form entry",()=>{
+ const first=collectCustomerRequest("Khách Anh muốn mua SKU DEMO-001 nếu chống nước ổn và có mắt dây. Minh kiểm tra, An tìm mắt dây.","").request;
+ const edited=collectCustomerRequest("Giao mắt dây cho Minh", "",first).request;
+ assert.ok(edited.conditions.every(c=>c.assignee.startsWith("Minh")));
+ const removed=collectCustomerRequest("Bỏ chống nước", "",edited).request;
+ assert.equal(removed.conditions.length,1);assert.match(removed.conditions[0].requirement,/mắt dây/);
+ const both=collectCustomerRequest("Giao cả hai cho Hà", "",first).request;
+ assert.ok(both.conditions.every(c=>c.assignee.startsWith("Hà")));
+ assert.equal(first.conditions.length,2);assert.match(first.conditions[1].assignee,/An/);
+});
 test("approval creates stable mock references per condition and is idempotent",()=>{
  const r=draftCustomerRequest("Mẫu","SKU");r.customer="Khách mẫu";const approved=approveCustomerRequest(r);
  assert.match(approved.reference,/^YC-MAU-/);assert.match(approved.conditions[0].linkedRef!,/^KT-MAU-/);assert.match(approved.conditions[1].linkedRef!,/^TASK-MAU-/);
