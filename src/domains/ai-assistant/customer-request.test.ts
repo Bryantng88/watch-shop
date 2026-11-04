@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";import { test } from "node:test";
-import { draftCustomerRequest, approveCustomerRequest, requestSummary, validateCustomerRequest } from "./customer-request";
+import { collectCustomerRequest, draftCustomerRequest, approveCustomerRequest, requestSummary, validateCustomerRequest } from "./customer-request";
 import { newConversation, pageContext, readConversations } from "./simulation";
+test("complete sample chat becomes one review summary without entering form fields",()=>{
+ const {request:r,question}=collectCustomerRequest("Khách Anh muốn mua watch SKU DEMO-001 nếu chống nước ổn và có thêm hai mắt dây. Minh kiểm tra, An tìm mắt dây.","");
+ assert.equal(question,"");assert.equal(r.customer,"Anh");assert.equal(r.watch,"DEMO-001");assert.equal(r.reviewReady,true);assert.equal(r.conditions.length,2);
+ assert.equal(r.conditions[0].kind,"TECHNICAL");assert.match(r.conditions[0].assignee,/Minh/);assert.equal(r.conditions[1].kind,"TASK");assert.match(r.conditions[1].assignee,/An/);assert.equal(r.status,"DRAFT");
+});
+test("missing facts are collected through successive messages without inventing recipients or unrelated conditions",()=>{
+ const first=collectCustomerRequest("Khách Bình muốn mua nếu chống nước đạt.","");assert.equal(first.request.reviewReady,false);assert.match(first.question,/SKU/);assert.equal(first.request.conditions.length,1);assert.equal(first.request.conditions[0].assignee,"");
+ const second=collectCustomerRequest("SKU ABC-123. Quang kiểm tra.","",first.request);assert.equal(second.request.watch,"ABC-123");assert.ok(second.question);assert.equal(second.request.conditions[0].assignee,"");
+ const third=collectCustomerRequest("Minh kiểm tra chống nước.","",second.request);assert.equal(third.question,"");assert.equal(third.request.reviewReady,true);assert.equal(third.request.customer,"Bình");assert.equal(third.request.conditions.length,1);
+});
 test("approval requires customer/watch/owner, conditions and recipients; no references exist before review",()=>{
  const r=draftCustomerRequest("Yêu cầu mẫu");assert.ok(validateCustomerRequest(r));assert.ok(r.conditions.every(c=>!c.linkedRef));
  r.customer="Khách demo";r.watch="SKU-DEMO";assert.equal(validateCustomerRequest(r),null);
