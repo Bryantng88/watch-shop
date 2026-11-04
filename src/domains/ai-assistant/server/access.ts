@@ -13,7 +13,7 @@ export async function assistantActor(db:DB,id:string){
  if(!customerAssistantReady())throw new AssistantError("Trợ lý Codex chưa bật cho staging.",503);
  const user=await db.user.findFirst({where:{id,isActive:true},select:{id:true,name:true,roles:{select:{name:true,permissions:{select:{code:true}}}}}});
  const permissions=new Set(expandPermissions(user?.roles.flatMap(r=>r.permissions.map(p=>p.code))||[]));const admin=!!user?.roles.some(r=>r.name==="ADMIN");
- if(!user||(!admin&&!["TASK_VIEW","TASK_MANAGE","PRODUCT_VIEW","CUSTOMER_VIEW"].every(p=>permissions.has(p))))throw new AssistantError("Bạn chưa có quyền dùng trợ lý khách hàng.",403);
+ if(!user)throw new AssistantError("Tài khoản không còn hoạt động hoặc không thể sử dụng Ben.",403);
  return {...user,permissions,admin};
 }
 export async function assistantRecipient(db:DB,id:string,technical=false){

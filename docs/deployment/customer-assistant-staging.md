@@ -103,3 +103,28 @@ instructions. The worker supplies this identity on every model invocation,
 including lookup rounds and resumed history. Addressing Ben does not identify a
 customer or assignee. Existing history is preserved; old messages are not rewritten.
 Deploy web and worker together to apply both the display name and model identity.
+
+### Free conversation and current-user authorization
+
+Any active authenticated account may chat with Ben. This does not grant business
+access. Server-owned capabilities enumerate allowed lookups and action types;
+the server rechecks current permissions before cache reads, lookups, completion
+and approval. Task reads reuse the existing task-item detail authorization policy.
+Permission-denied lookups return a safe explanation, not data. Revoked access
+also redacts saved assistant messages, cards and linked work on history refresh.
+Current-user identity comes from the application session; worker credentials
+never substitute for requester authority.
+
+Live chat has no visible context selector/product pin or 38-message cutoff.
+Full messages remain in the existing conversation JSON. Worker input uses the
+last 12 messages and bounded older user notes, explicitly untrusted and not
+evidence or approval. Fresh lookups remain necessary for business actions.
+Approved requests are archived in the server-owned JSON by approval revision;
+old approval replays do not dispatch again, and later chat can prepare a new
+request with a fresh explicit approval. No database migration or new secret is
+needed. Deploy app and worker from the same revision and preserve all volumes.
+
+Ben's worker instructions contain only the owner's stated facts: Ben was a
+beloved cat who has died. Explain simply if asked; do not volunteer the story,
+embellish it, or claim the cat is alive. An invalid model format receives at most
+one strict-format correction; invalid tool calls are never executed.

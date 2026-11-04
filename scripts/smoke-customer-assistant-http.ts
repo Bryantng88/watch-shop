@@ -12,7 +12,7 @@ async function main(){
  const cookie=(id:string)=>"auth_token="+createAuthToken(id);
  async function api(method:string,body?:unknown,id=ownerId,origin=base){const r=await fetch(base+"/api/admin/customer-assistant",{method,headers:{...(id?{cookie:cookie(id)}:{}),origin,"content-type":"application/json"},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,body:await r.json()};}
  async function worker(op:string,body:unknown,authorized=true){const r=await fetch(base+"/api/internal/customer-assistant/"+op,{method:"POST",headers:{"content-type":"application/json",...(authorized?{authorization:"Bearer "+process.env.PERSONAL_CODEX_WORKER_TOKEN}:{})},body:JSON.stringify(body)});return {status:r.status,body:await r.json()};}
- assert.equal((await api("GET",undefined,"")).status,401);assert.equal((await api("GET",undefined,staffId)).status,403);assert.equal((await worker("claim",{},false)).status,401);
+ assert.equal((await api("GET",undefined,"")).status,401);assert.equal((await api("GET",undefined,staffId)).status,200);assert.equal((await worker("claim",{},false)).status,401);
  const first={action:"send",requestKey:randomUUID(),text:"Khách muốn mua nếu xác minh mắt dây",productId:product.id};assert.equal((await api("POST",first,ownerId,"https://wrong.invalid")).status,403);assert.equal((await api("POST",{...first,sql:"forbidden"})).status,400);
  const sent=await api("POST",first);assert.equal(sent.status,200);const id=sent.body.id;assert.equal((await api("POST",first)).body.id,id);
  let run=(await worker("claim",{})).body.run;assert.equal(run.id,id);assert.equal((await worker("finish",{...run,reply:"Bạn muốn giao công việc cho ai?",plan:null})).status,200);

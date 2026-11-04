@@ -17,7 +17,7 @@ This contract governs all business-assistant UI and future extensions. It applie
 
 ## Context, permissions and simulation
 
-An empty conversation follows the current supported product screen. After discussion starts, keep the product context pinned; changing pages must not silently retarget work. Other business contexts remain disabled until explicitly brought into scope.
+Live Ben is a free conversation. Users do not choose or manage a context. Screen information is an optional server-authorized hint, never a product lock. The worker resolves the current intent, asks about ambiguous references and can switch topics. Business operations remain limited to implemented, authorized tools; free discussion does not add new tools or permissions. Approved work is retained separately from later messages and never silently modified or dispatched again.
 
 Chat UX never replaces server-side authorization. Future live reads/writes must check the requesting user's scope and permissions; worker/Codex account privileges do not become user privileges. Previewing and approving must name the actual target and recipients. Local prototype controls are not authorization infrastructure.
 

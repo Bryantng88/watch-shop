@@ -24,3 +24,13 @@ test('Ben identity is supplied on every lookup round and resumed conversation',a
  assert.equal(prompts.length,2);
  for(const prompt of prompts){assert.ok(prompt.startsWith('You are Ben,'));assert.ok(prompt.includes('not naming a customer, employee or task recipient'));assert.ok(prompt.includes('not a human employee'));}
 });
+
+test('Ben has a factual, unprompted-story prohibition and free chat never bypasses server capabilities',async()=>{
+ let supplied='';await runCustomerConversation({id:'r',text:'synthetic chat'},{execute:async prompt=>{supplied=prompt;return finish},api:async()=>({accepted:true})});
+ for(const text of ["beloved cat who has died","Do not bring this up unprompted","no user-selected or pinned context","allowedLookups","Server checks remain authoritative"]){assert.ok(supplied.includes(text),text)}
+});
+test('malformed lookup receives one bounded format repair, never an invalid API call',async()=>{
+ const calls=[];let attempt=0;await runCustomerConversation({id:'r',text:'synthetic'},{execute:async prompt=>{if(attempt++===0)return {...finish,type:'lookup',tool:'watches.search',query:'fixture',reply:'invalid mixed reply'};assert.ok(prompt.includes('FORMAT CORRECTION'));return finish},api:async op=>{calls.push(op);return {accepted:true}}});
+ assert.equal(attempt,2);assert.deepEqual(calls,['finish']);
+ let executions=0;await assert.rejects(runCustomerConversation({id:'r',text:'synthetic'},{execute:async()=>{executions++;return {...finish,sql:'forbidden'}},api:async()=>{throw Error('must not execute')}}),/INVALID_CUSTOMER_TURN/);assert.equal(executions,2);
+});

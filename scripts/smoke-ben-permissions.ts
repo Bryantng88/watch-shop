@@ -1,0 +1,46 @@
+import assert from "node:assert/strict";
+import {randomUUID} from "node:crypto";
+import {prisma as p} from "../src/server/db/client";
+import {sendAssistant,assistantWorker,approveAssistant,listAssistant} from "../src/domains/ai-assistant/server/service";
+async function main(){
+ const db=new URL(process.env.DATABASE_URL||"");assert.ok(["127.0.0.1","localhost"].includes(db.hostname));assert.equal(db.pathname,"/personal_codex_test");
+ const suffix=randomUUID(),adminRole=await p.role.findUniqueOrThrow({where:{name:"ADMIN"}});
+ const admin=await p.user.create({data:{email:`ben-admin-${suffix}@example.invalid`,name:"Synthetic Ben administrator",roles:{connect:{id:adminRole.id}}}});
+ const role=await p.role.create({data:{name:`ben-reader-${suffix}`,permissions:{connect:["PRODUCT_VIEW","CUSTOMER_VIEW","TASK_VIEW"].map(code=>({code}))}}});
+ const reader=await p.user.create({data:{email:`ben-reader-${suffix}@example.invalid`,name:"Synthetic limited reader",roles:{connect:{id:role.id}}}});
+ const customer=await p.customer.create({data:{name:`Synthetic restricted customer ${suffix}`}});
+ const sent=await sendAssistant(reader.id,{requestKey:randomUUID(),text:"Tra cứu thông tin được phép"});
+ const run=(await assistantWorker("claim",{})) as {run:{id:string;leaseToken:string;text:string}};assert.equal(run.run.id,sent.id);
+ const capabilities=JSON.parse(run.run.text).requester;assert.equal(capabilities.canCreateTasks,false);assert.equal(capabilities.canCreateTechnical,false);
+ const lookup={tool:"customers.search",query:customer.id};await assistantWorker("lookup",{...run.run,lookup});
+ await p.role.update({where:{id:role.id},data:{permissions:{disconnect:{code:"CUSTOMER_VIEW"}}}});
+ const denied=await assistantWorker("lookup",{...run.run,lookup}) as {evidence:{result:Record<string,unknown>}};assert.equal(denied.evidence.result.accessDenied,true);assert.equal(denied.evidence.result.matches,undefined);
+ await assistantWorker("finish",{...run.run,reply:"MUST NOT EXPOSE REVOKED DATA",plan:null});
+ const view=(await listAssistant(reader.id,sent.id)).conversations[0];assert.ok(!JSON.stringify(view).includes("MUST NOT EXPOSE"));assert.ok(!JSON.stringify(view).includes(customer.name));
+ const product=await p.product.create({data:{type:"WATCH",sku:`BEN-ACL-${suffix}`,title:"Synthetic Ben ACL watch",watch:{create:{saleStage:"READY",stockStage:"IN_STOCK"}}}});
+ const privateTask=await p.task.create({data:{kind:"OPERATION",title:`Private fixture ${suffix}`,createdByUserId:admin.id}});
+ const privateItem=await p.taskItem.create({data:{taskId:privateTask.id,title:"Private task must not reach reader",userId:admin.id,assignedToUserId:admin.id}});
+ await p.taskExecution.create({data:{taskId:privateTask.id,taskItemId:privateItem.id,targetType:"WATCH",targetId:product.id,actionType:"LINKED"}});
+ const scope=await sendAssistant(reader.id,{requestKey:randomUUID(),text:"Kiểm công việc"});const scoped=(await assistantWorker("claim",{})) as typeof run;
+ await assistantWorker("lookup",{...scoped.run,lookup:{tool:"watches.search",query:product.sku!}});
+ const visible=await assistantWorker("lookup",{...scoped.run,lookup:{tool:"work.open",productId:product.id,customerId:null}}) as {evidence:{result:{openWatchWork:{id:string}[]}}};assert.ok(!visible.evidence.result.openWatchWork.some(r=>r.id===privateItem.id));
+ await assistantWorker("finish",{...scoped.run,reply:"Đã kiểm tra phần được phép.",plan:null});
+ const action=await sendAssistant(admin.id,{requestKey:randomUUID(),text:"Giao một việc synthetic"});const actionRun=(await assistantWorker("claim",{})) as typeof run;
+ const workProduct=await p.product.create({data:{type:"WATCH",sku:`BEN-FREE-${suffix}`,title:"Synthetic free conversation watch",watch:{create:{saleStage:"READY",stockStage:"IN_STOCK"}}}});
+ for(const request of [{tool:"watches.search",query:workProduct.sku!},{tool:"watches.detail",productId:workProduct.id},{tool:"work.open",productId:workProduct.id,customerId:null},{tool:"people.search",query:admin.id}])await assistantWorker("lookup",{...actionRun.run,lookup:request});
+ const plan={customerId:null,productId:workProduct.id,conditions:[{key:"c1",kind:"TASK",requirement:"Synthetic standalone approval",expected:"No purchase or message",assigneeUserId:admin.id,technicalDetailId:null}]};
+ await assistantWorker("finish",{...actionRun.run,reply:"Đề xuất",plan});let draft=(await listAssistant(admin.id,action.id)).conversations[0];const approvedRevision=draft.revision;
+ await approveAssistant(admin.id,action.id,approvedRevision,()=>{});const count=await p.taskItem.count({where:{title:plan.conditions[0].requirement}});assert.equal(count,1);
+ await sendAssistant(admin.id,{id:action.id,requestKey:randomUUID(),text:"Giờ nói chuyện chủ đề khác, không giao thêm việc.",productId:product.id});const next=(await assistantWorker("claim",{})) as typeof run;assert.equal(next.run.id,action.id);const input=JSON.parse(next.run.text);assert.equal(input.alreadyApproved,false);assert.equal(input.approvedRequests.length,1);
+ await assistantWorker("finish",{...next.run,reply:"Mình có thể trao đổi chủ đề khác.",plan:null});draft=(await listAssistant(admin.id,action.id)).conversations[0];assert.equal(draft.approvedRequests?.length,1);assert.equal(draft.customerRequest,undefined);
+ await approveAssistant(admin.id,action.id,approvedRevision,()=>{});assert.equal(await p.taskItem.count({where:{title:plan.conditions[0].requirement}}),1);
+ const raw=await p.customerAssistantConversation.findUniqueOrThrow({where:{id:action.id}});const state=raw.state as {messages:unknown[];turnTimes:string[]};state.messages.push(...Array.from({length:100},()=>({id:randomUUID(),role:"user",text:"Synthetic earlier chat"})));state.turnTimes=[];await p.customerAssistantConversation.update({where:{id:action.id},data:{state:state as never}});
+ await sendAssistant(admin.id,{id:action.id,requestKey:randomUUID(),text:"Tiếp tục sau nhiều tin nhắn"});const long=(await assistantWorker("claim",{})) as typeof run;assert.equal(JSON.parse(long.run.text).messages.length,12);await assistantWorker("finish",{...long.run,reply:"Vẫn tiếp tục trò chuyện.",plan:null});
+ assert.ok((await listAssistant(admin.id,action.id)).conversations[0].messages.length>100);
+ // Forged/stale plans remain denied even when a caller has read permission.
+ const forged=await sendAssistant(reader.id,{requestKey:randomUUID(),text:"Synthetic unauthorized action"});const forgedRun=(await assistantWorker("claim",{})) as typeof run;
+ await assistantWorker("finish",{...forgedRun.run,reply:"Không đủ quyền",plan});assert.equal((await listAssistant(reader.id,forged.id)).conversations[0].customerRequest,undefined);
+ await p.customerAssistantConversation.update({where:{id:forged.id},data:{status:"DRAFT",plan,revision:{increment:1}}});const row=await p.customerAssistantConversation.findUniqueOrThrow({where:{id:forged.id}});await assert.rejects(approveAssistant(reader.id,forged.id,row.revision,()=>{}),/chưa có quyền/);
+ console.log("PASS Ben: active-user chat, explicit capabilities, revoke-before-cache/finish, scoped tasks, forbidden plan/approval, topic switch after approval, stale replay idempotence, long conversation with bounded worker history.");
+}
+main().catch(e=>{console.error(e instanceof Error?e.message:"Ben permissions smoke failed");process.exitCode=1}).finally(()=>p.$disconnect());
