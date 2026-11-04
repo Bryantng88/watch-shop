@@ -1,3 +1,7 @@
+# Current prototype scope: Products only
+
+Context is temporarily enabled only for `/admin/watches` and `/admin/products`, including detail pages. Other screens show an inactive-context message and a link to Products. An already-started product conversation keeps its pinned product when navigating elsewhere. Empty product conversations follow the current screen; older non-product conversations remain stored but are hidden from this scoped history. The standalone local Sales AI entry is removed. No worker/production changes.
+
 # Contextual AI assistant: phase 1
 
 Local UI prototype only. No Codex calls, business-data lookups, task writes or notifications. The existing staging worker and production are unchanged.

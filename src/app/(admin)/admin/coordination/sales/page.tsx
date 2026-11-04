@@ -1,6 +1,5 @@
 import SalesIntakePanel from "@/domains/sales-intake/ui/SalesIntakePanel";
 import { localSalesSimulationEnabled } from "@/domains/sales-intake/local-simulation";
-import AssistantEntry from "@/domains/ai-assistant/AssistantEntry";
 import { intakeActor, salesIntakeReady } from "@/domains/sales-intake/server/intake-access";
 import OperationCoordinationWorkspace from "@/domains/coordination/ui/OperationCoordinationWorkspace";
 import { getCoordinationDashboard } from "@/domains/coordination/server/coordination-dashboard.service";
@@ -44,5 +43,5 @@ export default async function SalesCoordinationPage(props: PageProps) {
   if (salesIntakeReady()) {
     try { await intakeActor(prisma, auth.id); mayUseIntake = true; } catch { /* Preserve the existing Sales page for other users. */ }
   }
-  return <>{simulation ? <AssistantEntry /> : mayUseIntake && <SalesIntakePanel />}<OperationCoordinationWorkspace data={data} /></>;
+  return <>{!simulation && mayUseIntake && <SalesIntakePanel />}<OperationCoordinationWorkspace data={data} /></>;
 }

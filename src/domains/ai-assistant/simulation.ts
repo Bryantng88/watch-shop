@@ -3,14 +3,15 @@ export type Step = { id: string; title: string; department: string; assignee: st
 export type Message = { id: string; role: "user" | "assistant"; text: string };
 export type Conversation = { id: string; title: string; context: Context | null; messages: Message[]; steps: Step[]; approved: boolean; tasks: (Step & { status: string })[]; updatedAt: string };
 export type Scenario = "normal" | "clarify" | "error" | "denied";
-const sections: Record<string, string> = { orders: "Đơn hàng", watches: "Đồng hồ", customers: "Khách hàng", acquisitions: "Phiếu nhập", "technical-issues": "Phiếu kỹ thuật", "personal-work": "Việc cá nhân", dashboard: "Tổng quan", coordination: "Điều phối công việc" };
-const teams: Record<string, string> = { sales: "Sales", technical: "Kỹ thuật", operation: "Vận hành", media: "Media" };
+export function isProductContext(context: Context | null | undefined) {
+  return !!context && /^\/admin\/(watches|products)(\/|$)/.test(context.href);
+}
 export function pageContext(pathname: string): Context {
   const parts = pathname.split("/").filter(Boolean), section = parts[1];
-  const label = sections[section] || "Màn hình nghiệp vụ";
-  if (section === "coordination") return { kind: "list", label: teams[parts[2]] || label, href: pathname };
+  if (!isProductContext({kind:"",label:"",href:pathname})) return { kind: "unsupported", label: "Chưa bật ngữ cảnh ở màn hình này", href: pathname };
+  const label = "Sản phẩm";
   const id = parts[2];
-  if (id && !["new", "create", "edit"].includes(id) && sections[section]) return { kind: section, label: `${label} · ${decodeURIComponent(id).slice(0, 48)}`, id, href: pathname };
+  if (id && !["new", "create", "edit"].includes(id)) return { kind: section, label: `${label} · ${decodeURIComponent(id).slice(0, 48)}`, id, href: pathname };
   return { kind: "list", label, href: pathname };
 }
 export function newConversation(context: Context | null): Conversation {
