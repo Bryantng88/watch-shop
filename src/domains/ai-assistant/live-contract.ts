@@ -14,6 +14,7 @@ export const assistantLookupSchema=z.discriminatedUnion("tool",[
  z.object({tool:z.literal("people.search"),query:z.string().trim().min(2).max(100)}).strict(),
  z.object({tool:z.literal("technical.catalog"),query:z.string().trim().min(2).max(100)}).strict(),
  z.object({tool:z.literal("watches.detail"),productId:id}).strict(),
+ z.object({tool:z.literal("watches.images"),productId:id}).strict(),
  z.object({tool:z.literal("work.open"),productId:id,customerId:id.nullable()}).strict(),
 ]);
 export type AssistantLookup=z.infer<typeof assistantLookupSchema>;

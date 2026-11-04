@@ -9,3 +9,8 @@ test('pre-order work lookup accepts a null customer without weakening other look
  assert.deepEqual(validateCustomerTurn({...finish,type:'lookup',tool:'work.open',productId:'watch',customerId:null,reply:null}).lookup,{tool:'work.open',productId:'watch',customerId:null});
  assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'work.open',productId:'watch',customerId:'',reply:null}));
 });
+test('image lookup accepts only a product ID, never model URLs or extra arguments',()=>{
+ assert.deepEqual(validateCustomerTurn({...finish,type:'lookup',tool:'watches.images',productId:'watch',reply:null}).lookup,{tool:'watches.images',productId:'watch'});
+ assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'watches.images',productId:'watch',query:'https://evil.test',reply:null}));
+ assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'watches.images',productId:'watch',reply:null,url:'https://evil.test'}));
+});

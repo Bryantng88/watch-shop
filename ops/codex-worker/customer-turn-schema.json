@@ -18,6 +18,7 @@
         "customers.search",
         "watches.search",
         "watches.detail",
+        "watches.images",
         "accessories.search",
         "work.open",
         "people.search",

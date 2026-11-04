@@ -16,12 +16,18 @@ async function main(){
  process.env.CUSTOMER_AI_MAX_TURNS_PER_HOUR="1";await assert.rejects(sendAssistant(owner.id,{requestKey:randomUUID(),text:"Over hourly quota"}));delete process.env.CUSTOMER_AI_MAX_TURNS_PER_HOUR;
  await assert.rejects(sendAssistant(other.id,{id:sent.id,requestKey:randomUUID(),text:"cross owner"}));
  const claim=await assistantWorker("claim",{}) as {run:{id:string;leaseToken:string}};assert.equal(claim.run.id,sent.id);const run=claim.run;
+ await assert.rejects(assistantWorker("lookup",{...run,lookup:{tool:"watches.images",productId:product.id}}));
+ await p.productImage.createMany({data:[{productId:product.id,fileKey:"fixture/public.jpg",role:"INLINE",isForAdmin:true},{productId:product.id,fileKey:"fixture/hidden.jpg",role:"GALLERY",isForAdmin:false}]});
  for(const lookup of [{tool:"customers.search",query:customer.id},{tool:"watches.search",query:product.sku!},{tool:"watches.detail",productId:product.id},{tool:"work.open",customerId:customer.id,productId:product.id},{tool:"people.search",query:other.id},{tool:"technical.catalog",query:catalog.id}])await assistantWorker("lookup",{...run,lookup});
  await assert.rejects(assistantWorker("lookup",{...run,lookup:{tool:"sql",query:"select"}}));
+ const images=await assistantWorker("lookup",{...run,lookup:{tool:"watches.images",productId:product.id}}) as {evidence:{result:{imageCount:number}}};assert.equal(images.evidence.result.imageCount,1);
  const plan={customerId:customer.id,productId:product.id,conditions:[{key:"c1",requirement:"Kiểm tra chống nước",expected:"Xác minh đạt hay không",kind:"TECHNICAL",assigneeUserId:other.id,technicalDetailId:catalog.id},{key:"c2",requirement:"Tìm mắt dây phù hợp",expected:"Xác minh nguồn; chưa đặt mua",kind:"TASK",assigneeUserId:other.id,technicalDetailId:null}]};
  const before={issues:await p.technicalIssue.count(),tasks:await p.taskItem.count()};
  await assistantWorker("finish",{...run,reply:"Mình sẽ giao hai việc sau khi bạn duyệt.",plan});
  assert.equal(await p.technicalIssue.count(),before.issues);assert.equal(await p.taskItem.count(),before.tasks);const preview=(await listAssistant(owner.id)).conversations.find(c=>c.id===run.id)!;assert.equal(preview.runStatus,"DRAFT");assert.equal(preview.customerRequest!.conditions.length,2);
+ const card=preview.messages.at(-1)!.products![0];assert.equal(card.id,product.id);assert.equal(card.images.length,1);assert.equal(card.images[0].src,"/api/media/sign?key=fixture%2Fpublic.jpg");
+ await assert.rejects(listAssistant(other.id,run.id));
+ await p.productImage.updateMany({where:{productId:product.id},data:{isForAdmin:false}});assert.equal((await listAssistant(owner.id,run.id)).conversations[0].messages.at(-1)!.products![0].images.length,0);
  await assert.rejects(approveAssistant(other.id,run.id,preview.revision,()=>{}));await assert.rejects(approveAssistant(owner.id,run.id,preview.revision-1,()=>{}));
  await p.user.update({where:{id:other.id},data:{isActive:false}});await assert.rejects(approveAssistant(owner.id,run.id,preview.revision,()=>{}));assert.equal(await p.technicalIssue.count(),before.issues);await p.user.update({where:{id:other.id},data:{isActive:true}});
  const oldProduct=await p.product.findUniqueOrThrow({where:{id:product.id}});await p.product.update({where:{id:product.id},data:{title:"Changed after lookup"}});await assert.rejects(approveAssistant(owner.id,run.id,preview.revision,()=>{}));assert.equal(await p.technicalIssue.count(),before.issues);await p.product.update({where:{id:product.id},data:{title:oldProduct.title,updatedAt:oldProduct.updatedAt}});

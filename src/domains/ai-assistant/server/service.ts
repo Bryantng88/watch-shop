@@ -9,6 +9,7 @@ import { ensureTaskItemReferenceBinding } from "@/domains/task/server/business-b
 import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
 import { assistantLookupSchema, assistantPlanSchema, hasUniqueEvidence, planHasEvidence, type AssistantPlan, type Evidence } from "../live-contract";
 import { newConversation, type Conversation } from "../simulation";
+import { assistantProductCards } from "./product-images";
 import type { CustomerRequest } from "../customer-request";
 import { AssistantError, assistantActor, assistantRecipient } from "./access";
 
@@ -34,6 +35,8 @@ async function linkedRequest(db:DB,r:CustomerRequest,canReadTechnical:boolean){
 async function dto(row:CustomerAssistantConversation,canReadTechnical?:boolean,refreshLinks=true){
  const s=structuredClone(state(row));if(canReadTechnical===undefined){const actor=await assistantActor(prisma,row.ownerId);canReadTechnical=actor.admin||actor.permissions.has("SERVICE_VIEW");}
  if(refreshLinks&&row.approvedAt&&s.customerRequest)s.customerRequest=await linkedRequest(prisma,s.customerRequest,canReadTechnical);
+ const cards=await assistantProductCards(prisma,s.messages.flatMap(m=>m.imageProductIds||[]));
+ for(const m of s.messages){delete m.products;if(m.role==="assistant"&&m.imageProductIds)m.products=m.imageProductIds.flatMap(id=>cards.filter(c=>c.id===id));}
  return {...s,updatedAt:row.updatedAt.toISOString(),revision:row.revision,runStatus:row.status,errorCode:row.errorCode,approved:!!row.approvedAt};
 }
 export async function listAssistant(userId:string,id?:string){const actor=await assistantActor(prisma,userId);const rows=id?[await owned(prisma,id,userId)]:await prisma.customerAssistantConversation.findMany({where:{ownerId:userId},orderBy:{updatedAt:"desc"},take:20});return {partial:!!id,conversations:await Promise.all(rows.map(row=>dto(row,actor.admin||actor.permissions.has("SERVICE_VIEW"),!!id)))};}
@@ -75,10 +78,13 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    if(operation==="heartbeat"){await tx.customerAssistantConversation.update({where:{id},data:{leaseExpiresAt:new Date(Date.now()+120000)}});return {active:true};}
    if(operation==="lookup"){
      const request=assistantLookupSchema.parse(body.lookup),entries=evidence(row);const prior=entries.find(e=>JSON.stringify(e.request)===JSON.stringify(request));if(prior)return {evidence:prior};if(entries.length>=16)throw new AssistantError("Đã hết lượt tra cứu.");
-     if("productId" in request&&!hasUniqueEvidence(entries,"watches.search",request.productId))throw new AssistantError("Cần xác minh watch trước.");
+     if(request.tool==="watches.images"&&!entries.some(e=>e.request.tool==="watches.search"&&Array.isArray(e.result.matches)&&(e.result.matches as {id:string}[]).some(m=>m.id===request.productId)))throw new AssistantError("Cần tra cứu watch trước khi xem ảnh.");
+     if("productId" in request&&request.tool!=="watches.images"&&!hasUniqueEvidence(entries,"watches.search",request.productId))throw new AssistantError("Cần xác minh watch trước.");
      if("customerId" in request&&request.customerId&&!hasUniqueEvidence(entries,"customers.search",request.customerId))throw new AssistantError("Cần xác minh khách trước.");
      let result:Record<string,unknown>;
-     if(request.tool==="people.search"){
+     if(request.tool==="watches.images"){
+       const cards=await assistantProductCards(tx,[request.productId]);const card=cards[0];result=card?{productId:card.id,title:card.title,sku:card.sku,imageCount:card.images.length,displayedInChat:true}:{productId:request.productId,imageCount:0,displayedInChat:false};
+     }else if(request.tool==="people.search"){
        const people=await tx.user.findMany({where:{isActive:true,OR:[{id:request.query},{name:{contains:request.query,mode:"insensitive"}}],roles:{some:{OR:[{name:"ADMIN"},{permissions:{some:{code:{in:["TASK_VIEW","TASK_MANAGE"]}}}}]}}},select:{id:true,name:true,roles:{select:{name:true,permissions:{where:{code:{in:["SERVICE_UPDATE","TASK_VIEW","TASK_MANAGE"]}},select:{code:true}}}}},take:7,orderBy:{id:"asc"}});
        result={matches:people.slice(0,6).map(p=>({id:p.id,name:p.name,canTechnical:p.roles.some(r=>r.name==="ADMIN"||r.permissions.some(p=>p.code==="SERVICE_UPDATE"))})),truncated:people.length>6};
      }else if(request.tool==="technical.catalog"){
@@ -98,6 +104,7 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    if(plan)reply="Mình đề xuất giao các việc bên dưới. Bạn duyệt trước khi thực hiện nhé.";
    if(row.approvedAt&&body.plan)reply="Các việc đã giao không tự sửa qua chat. Bạn mở phiếu/task liên quan để thực hiện thay đổi theo luồng hiện có nhé.";
    const s=state(row);const next=message(s,failed?"Codex chưa hoàn tất lượt này. Bạn có thể nhắn lại để thử tiếp; chưa giao thêm việc.":reply);
+   if(!failed){const ids=evidence(row).flatMap(e=>e.request.tool==="watches.images"&&Number(e.result.imageCount)>0?[e.request.productId]:[]);if(ids.length)next.messages[next.messages.length-1].imageProductIds=[...new Set(ids)].slice(0,6);}
    if(!row.approvedAt){if(request&&plan){next.customerRequest=request;next.pinnedProductId=plan.productId;next.context={kind:"watches",label:request.watch,id:plan.productId,href:`/admin/watches/${plan.productId}`};}else delete next.customerRequest;}
    await tx.customerAssistantConversation.update({where:{id},data:{state:json(next),status:row.approvedAt?"APPLIED":failed?"FAILED":plan?"DRAFT":"NEEDS_INFO",plan:row.approvedAt?undefined:plan?json(plan):Prisma.DbNull,errorCode:failed?"GENERATION_FAILED":null,leaseToken:null,leaseExpiresAt:null}});return {accepted:true};
  });

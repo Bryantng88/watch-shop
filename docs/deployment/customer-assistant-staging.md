@@ -78,3 +78,20 @@ Disabling UI or rolling back images does **not** undo real approved issues/tasks
 Local automated testing uses an isolated loopback personal_codex_test database with synthetic fixtures, never a NAS data copy. Source/contract tests, read-only worker protocol tests, exact migration SQL in a rolled-back temporary schema, transaction smoke and authenticated HTTP smoke cover the chat/approval boundary. The model's outputs in these tests are scripted, not live CLI calls. Existing Linux-only worker lifecycle tests were not claimed as Windows successes. See the PR for final command results. Actual ChatGPT-authenticated CLI and visual browser acceptance are staging checks above, not inferred from a healthy build.
 
 Customer-optional follow-up: deploy app and updated customer worker/schema together. No new migration is required for nullable customerId in the JSON plan. A profile is a reference, not a prerequisite to pre-order work; no profile or order is automatically created.
+
+### Product photos in chat
+
+The customer worker supports the bounded read-only `watches.images(productId)`
+lookup after a product appears in this turn's `watches.search` evidence. Photo
+browsing can show multiple search candidates; this does not satisfy or weaken
+unique-watch evidence required for approving work. A successful reply attaches
+up to six product cards with up to four admin-visible INLINE/GALLERY photos each.
+Only product IDs are stored in messages; the server refreshes titles and image
+sources from ProductImage when loading history. Model-generated image URLs are
+never rendered. Photos use the application's existing authenticated media route.
+The worker receives photo metadata, not pixels, and must not claim visual analysis.
+
+Deploy the updated web app **and customer worker** from the same PR revision to
+use this lookup. No migration or new credentials are needed. Local verification
+uses synthetic database/image metadata and a scripted model; actual storage reads
+and a real Codex photo conversation still need staging acceptance.
