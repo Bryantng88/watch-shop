@@ -1,5 +1,4 @@
 import { prisma } from "@/server/db/client";
-import { mediaStorage } from "@/domains/media/storage";
 
 export async function getActiveStorefrontHero() {
   const hero = await prisma.storefrontHeroImage.findFirst({
@@ -7,8 +6,6 @@ export async function getActiveStorefrontHero() {
     orderBy: { updatedAt: "desc" },
     select: {
       id: true,
-      storageKey: true,
-      derivativeKey: true,
       altText: true,
       width: true,
       height: true,
@@ -17,7 +14,5 @@ export async function getActiveStorefrontHero() {
       overlayOpacity: true,
     },
   });
-  if (!hero) return null;
-  const signed = await mediaStorage.sign(hero.derivativeKey || hero.storageKey, 600);
-  return { ...hero, url: signed };
+  return hero ? { ...hero, url: "/api/public/storefront/catalog-hero" } : null;
 }

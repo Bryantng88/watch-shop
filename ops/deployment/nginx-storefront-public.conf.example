@@ -13,6 +13,8 @@ server {
     proxy_send_timeout 20s;
 
     location = / { proxy_pass http://127.0.0.1:3000; include proxy_params; }
+    location = /stories { proxy_pass http://127.0.0.1:3000; include proxy_params; }
+    location ^~ /stories/ { proxy_pass http://127.0.0.1:3000; include proxy_params; }
     location = /request { proxy_pass http://127.0.0.1:3000; include proxy_params; }
     location = /offline { proxy_pass http://127.0.0.1:3000; include proxy_params; }
     location = /manifest.webmanifest { proxy_pass http://127.0.0.1:3000; include proxy_params; }
