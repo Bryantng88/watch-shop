@@ -2,8 +2,19 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { validateSalesTurn, runSalesIntakeConversation } from './sales-intake-protocol.mjs';
 import { salesCodexArguments } from './sales-worker.mjs';
+import { readFileSync } from 'node:fs';
 const lookup = (tool='customers.search', extra={}) => ({ type:'lookup', tool, query:'Customer fixture', productId:null, customerId:null, plan:null, ...extra });
 const finish = plan => ({ type:'finish', tool:null, query:null, productId:null, customerId:null, plan });
+
+test('CLI schema enforces the server lead-key format and bounded plan fields', () => {
+ const schema=JSON.parse(readFileSync(new URL('./sales-turn-schema.json',import.meta.url),'utf8'));
+ const plan=schema.properties.plan.anyOf.find(s=>s.type==='object');
+ const key=new RegExp(plan.properties.leads.items.properties.key.pattern);
+ for(const value of ['l1','customer-2'])assert.ok(key.test(value));
+ for(const value of ['1','Customer A','a'.repeat(31),'972ef8e2-e459-4bf8-8785-d59aac747d3d'])assert.equal(key.test(value),false);
+ assert.equal(plan.properties.summary.maxLength,1500);assert.equal(plan.properties.leads.maxItems,3);
+ assert.equal(plan.properties.leads.items.properties.followups.maxItems,5);
+});
 
 test('lookup protocol rejects writes, extra fields, unused arguments and wrong finish shape', () => {
  for (const turn of [lookup('orders.create'), {...lookup(),sql:'select * from customer'}, lookup('customers.search',{productId:'p'}), {...finish({}),query:'hidden command'}, lookup('work.open',{query:null,productId:'p',customerId:null})]) assert.throws(()=>validateSalesTurn(turn));

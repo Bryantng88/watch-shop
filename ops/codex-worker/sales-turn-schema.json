@@ -51,13 +51,18 @@
           "additionalProperties": false,
           "properties": {
             "summary": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 1500,
+              "minLength": 1
             },
             "questions": {
               "type": "array",
               "items": {
-                "type": "string"
-              }
+                "type": "string",
+                "maxLength": 1500,
+                "minLength": 1
+              },
+              "maxItems": 10
             },
             "leads": {
               "type": "array",
@@ -66,7 +71,8 @@
                 "additionalProperties": false,
                 "properties": {
                   "key": {
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]{0,29}$"
                   },
                   "customerId": {
                     "type": [
@@ -97,14 +103,18 @@
                           ]
                         },
                         "description": {
-                          "type": "string"
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 1500
                         }
                       },
                       "required": [
                         "kind",
                         "description"
                       ]
-                    }
+                    },
+                    "minItems": 1,
+                    "maxItems": 5
                   }
                 },
                 "required": [
@@ -113,7 +123,8 @@
                   "productId",
                   "followups"
                 ]
-              }
+              },
+              "maxItems": 3
             }
           },
           "required": [

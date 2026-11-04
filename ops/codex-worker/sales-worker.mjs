@@ -57,9 +57,10 @@ export async function runSalesIntakeWorker() {
           return JSON.parse(text);
         };
         await runSalesIntakeConversation(run, { api, execute, assertActive });
-      } catch {
+      } catch (error) {
         if (run && active && !stopping) await api('finish', { id: run.id, leaseToken: run.leaseToken, failed: true }).catch(() => {});
-        console.error('Sales intake did not complete. Inspect request status; no business text or secrets logged.');
+        const code = typeof error?.message === 'string' && /^(?:SALES_[A-Z0-9_]+|INVALID_SALES_[A-Z0-9_]+)$/.test(error.message) ? error.message : 'SALES_EXECUTION_FAILED';
+        console.error('Sales intake did not complete: ' + code + '. No business text or secrets logged.');
       } finally {
         clearInterval(heartbeat); clearTimeout(deadline);
         await heartbeatWork?.catch(() => {});
