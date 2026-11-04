@@ -16,6 +16,10 @@ export function pageContext(pathname: string): Context {
 export function newConversation(context: Context | null): Conversation {
   return { id: crypto.randomUUID(), title: "Trao đổi mới", context, messages: [], steps: [], approved: false, tasks: [], updatedAt: new Date().toISOString() };
 }
+export function followScreenWhileEmpty(conversation: Conversation, current: Context): Conversation {
+  if (!conversation.context || conversation.messages.length || conversation.steps.length || conversation.approved) return conversation;
+  return { ...conversation, context: current };
+}
 export function sampleSteps(): Step[] {
   return [
     { id: "s1", title: "Xác minh yêu cầu và tình trạng", department: "TECHNICAL", assignee: "technical", description: "Kiểm tra tình trạng và điều kiện cần đáp ứng; ghi nhận kết quả để các bộ phận phối hợp.", dependsOn: [] },

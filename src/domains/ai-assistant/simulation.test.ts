@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { pageContext, newConversation, sampleSteps, removeStep, simulateReply, readConversations } from "./simulation";
+import { followScreenWhileEmpty, pageContext, newConversation, sampleSteps, removeStep, simulateReply, readConversations } from "./simulation";
+
+test("empty chats follow navigation; a sent message pins context and explicit free chat stays free", () => {
+  const empty=newConversation(pageContext("/admin/dashboard")), watch=pageContext("/admin/watches");
+  assert.equal(followScreenWhileEmpty(empty,watch).context?.href,"/admin/watches");
+  const sent={...empty,messages:[{id:"m1",role:"user" as const,text:"Tóm tắt"}]};
+  assert.equal(followScreenWhileEmpty(sent,watch).context?.href,"/admin/dashboard");
+  assert.equal(followScreenWhileEmpty(newConversation(null),watch).context,null);
+});
 
 test("detail context is pinned; list pages never imply a selected business record", () => {
   assert.equal(pageContext("/admin/orders/abc-123").id, "abc-123");

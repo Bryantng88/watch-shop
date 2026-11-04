@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Sparkles, X, Plus, History, Send, Square, Trash2, Check, ArrowRight } from "lucide-react";
-import { newConversation, pageContext, readConversations, removeStep, simulateReply, type Conversation, type Scenario, type Step } from "./simulation";
+import { followScreenWhileEmpty, newConversation, pageContext, readConversations, removeStep, simulateReply, type Conversation, type Scenario, type Step } from "./simulation";
 
 const departments = { TECHNICAL: "Kỹ thuật", OPERATION: "Vận hành", SALES: "Sales", MEDIA: "Media" };
 const people = { technical: "Minh · Kỹ thuật (mẫu)", operation: "An · Vận hành (mẫu)", sales: "Linh · Sales (mẫu)", media: "Hà · Media (mẫu)" };
@@ -14,7 +14,8 @@ export default function AiAssistant({ userId, canManage }: { userId: string; can
   const [open, setOpen] = useState(false), [history, setHistory] = useState(false), [chats, setChats] = useState<Conversation[]>([]), [selected, setSelected] = useState("");
   const [ready, setReady] = useState(false), [input, setInput] = useState(""), [busy, setBusy] = useState(false), [scenario, setScenario] = useState<Scenario>("normal"), [notice, setNotice] = useState("");
   const launcher = useRef<HTMLButtonElement>(null), textarea = useRef<HTMLTextAreaElement>(null), bottom = useRef<HTMLDivElement>(null), panel = useRef<HTMLElement>(null), generation = useRef(0);
-  const chat = chats.find(c => c.id === selected);
+  const storedChat = chats.find(c => c.id === selected);
+  const chat = storedChat ? followScreenWhileEmpty(storedChat, current) : undefined;
   useEffect(() => { let rows: Conversation[] = []; try { rows = readConversations(localStorage.getItem(storageKey)); } catch { setNotice("Trình duyệt đang chặn lưu trữ. Lịch sử chỉ giữ trong tab hiện tại."); } setChats(rows); setSelected(rows[0]?.id || ""); setReady(true); }, [storageKey]);
   useEffect(() => { if (ready) { try { localStorage.setItem(storageKey, JSON.stringify(chats.slice(0, 20))); } catch { setNotice("Không lưu được lịch sử trên trình duyệt. Bạn vẫn có thể tiếp tục trong tab này."); } } }, [chats, ready, storageKey]);
   useEffect(() => { const show = () => setOpen(true); window.addEventListener("open-local-ai-assistant", show); return () => window.removeEventListener("open-local-ai-assistant", show); }, []);
@@ -29,7 +30,7 @@ export default function AiAssistant({ userId, canManage }: { userId: string; can
     const c = chat || create();
     if (c.messages.length >= 38) { setNotice("Cuộc trao đổi đã đủ dài. Hãy tạo trao đổi mới để tiếp tục."); return; }
     const token = ++generation.current; setBusy(true); setInput(""); setNotice("");
-    update(c.id, row => ({ ...row, title: row.messages.length ? row.title : text.slice(0, 65), messages: [...row.messages, { id: crypto.randomUUID(), role: "user", text }] }));
+    update(c.id, row => ({ ...row, context: c.context, title: row.messages.length ? row.title : text.slice(0, 65), messages: [...row.messages, { id: crypto.randomUUID(), role: "user", text }] }));
     await new Promise(resolve => setTimeout(resolve, 1200));
     if (token !== generation.current) return;
     const reply = c.approved ? { text: `Phương án này đã được bạn xác nhận. Tiến độ mẫu hiện tại: ${c.tasks.map(t => `${t.title}: ${t.status}`).join("; ")}. Bạn có thể đổi tiến độ trong các thẻ bên dưới. Để đề xuất một đợt công việc khác, hãy tạo cuộc trao đổi mới.`, steps: [] } : simulateReply(text, scenario, c.context, c.messages.some(m => m.role === "assistant"));
