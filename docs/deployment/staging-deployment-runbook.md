@@ -2,6 +2,8 @@
 
 This is the entry point for a new Codex chat operating staging. Read AGENTS.md first. This runbook documents the NAS staging deployment; it does not authorize a production release. Snapshot last verified: 2026-11-03. Recheck live metadata before changing anything.
 
+Latest combined release record (2026-11-04): [PR #18/#31/#35 staging release](staging-combined-pr18-pr31-pr35-20261104.md). It records the integrated app/worker sources, proxy mount change, migrations, backup, rollback and live acceptance. Recheck current metadata before using any historical container identifiers.
+
 ## Where this documentation lives
 
 The staging Calendar/Codex design is in personal-work-codex-calendar-staging.md. Worker runtime details are in ../../ops/codex-worker/README.qnap.md. PR #32 contains the worker runtime and this handoff and depends on PR #29. Until those changes are merged, a chat on main will not automatically have them. Fetch/read PR #32's branch codex/staging-worker-chatgpt-20261103, including this file; do not assume local scratch files exist on another computer.
@@ -91,3 +93,4 @@ The pre-feature admin and worker were retained stopped with suffix -rollback-ord
 ## Prompt for a new chat
 
 > Read AGENTS.md and docs/deployment/staging-deployment-runbook.md from PR #32 / branch codex/staging-worker-chatgpt-20261103 (if absent on main, fetch that branch first). Also read docs/deployment/personal-work-codex-calendar-staging.md and ops/codex-worker/README.qnap.md. Continue the requested staging deployment at commit <SHA>. First verify live state read-only; preserve existing staging OAuth/AUTH_SECRET/encryption keys, Codex flags/token and worker auth/work/secrets volumes. Use the existing Windows SSH identity without reading it. Do not change production, SSH or ingress. Propose the concrete release/rollback before activation; do not assume local scratch files from another chat exist.
+
