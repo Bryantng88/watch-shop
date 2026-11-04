@@ -157,6 +157,7 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    const s=state(row);delete s.turnReadScope;delete s.permissionRequest;delete s.permissionRequestScope;
    if(revoked||s.permissionDenied){support=s.messages.filter(m=>m.role==="user").at(-1)?.text.slice(0,1000);}
    if(!failed&&support){
+    plan=undefined;request=undefined;
     reply=(revoked?"Quyền của bạn đã thay đổi trong lúc xử lý.":"Yêu cầu này nằm ngoài phạm vi quyền hạn hiện tại của bạn.")+" "+LONG_SUPPORT_OFFER;
     if(await permissionContact(tx)){s.permissionRequest={summary:support,revision:row.revision};s.permissionRequestScope=revoked?{permissions:[],taskIds:[]}:{permissions:required,taskIds:scopedTaskIds};}
     else reply+=" Hiện chưa thể tạo công việc qua Ben; bạn liên hệ Long trực tiếp nhé.";
