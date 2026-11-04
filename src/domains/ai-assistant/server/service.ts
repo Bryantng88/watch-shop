@@ -32,21 +32,33 @@ async function visibleTask(db:DB,id:string,actor:Actor){
  if(!item)return null;
  try{authorizeTaskItemDetail(item,{user:{id:actor.id},roles:actor.roles.map(r=>r.name),permissions:[...actor.permissions]});return {id:item.id,status:item.status};}catch{return null;}
 }
+async function authorizedHistory(db:DB,s:State,actor:Actor){
+ const messages=readableMessages(s,actor);
+ if(hasAssistantPermission(actor,"TASK_VIEW_ALL"))return messages;
+ const ids=[...new Set(messages.flatMap(m=>m.requiredTaskIds||[]))].slice(0,1000);
+ const readable=new Set<string>();
+ if(hasAssistantPermission(actor,"TASK_VIEW")&&ids.length){
+  const rows=await db.taskItem.findMany({where:{id:{in:ids}},select:{id:true,note:true,userId:true,assignedToUserId:true,task:{select:{kind:true,createdByUserId:true,assignedToUserId:true}}}});
+  for(const item of rows){try{authorizeTaskItemDetail(item,{user:{id:actor.id},roles:actor.roles.map(r=>r.name),permissions:[...actor.permissions]});readable.add(item.id);}catch{/* No task data leaves this authorization boundary. */}}
+ }
+ return messages.map(m=>m.role==="assistant"&&m.requiredTaskIds?.some(id=>!readable.has(id))?{id:m.id,role:m.role,text:"Nội dung công việc này không còn nằm trong phạm vi được phép của bạn.",requiredPermissions:[]}:m);
+}
 function readableRequest(r:CustomerRequest,actor:Actor){return hasAssistantPermission(actor,"PRODUCT_VIEW")&&hasAssistantPermission(actor,"TASK_VIEW")&&(hasAssistantPermission(actor,"CUSTOMER_VIEW")||r.customer==="Chưa gắn hồ sơ khách");}
 async function linkedRequest(db:DB,r:CustomerRequest,actor:Actor){
  const canReadTechnical=hasAssistantPermission(actor,"SERVICE_VIEW");
  const request=structuredClone(r);if(!hasAssistantPermission(actor,"CUSTOMER_VIEW"))request.customer="Hồ sơ khách ngoài quyền truy cập hiện tại";const labels:Record<string,string>={OPEN:"Chờ tiếp nhận",TODO:"Chờ tiếp nhận",READY:"Sẵn sàng",IN_PROGRESS:"Đang xử lý",PROCESSING:"Đang xử lý",DONE:"Hoàn tất",COMPLETED:"Hoàn tất",CANCELLED:"Đã hủy",CANCELED:"Đã hủy"};
  for(const c of request.conditions){
   if(c.kind==="TECHNICAL"){
-   if(!canReadTechnical){c.progress="Không có quyền xem phiếu kỹ thuật";c.result="";delete c.linkedHref;delete c.linkedRef;continue;}
+   if(!canReadTechnical){c.progress="Không có quyền xem phiếu kỹ thuật";c.requirement="Phiếu kỹ thuật ngoài quyền truy cập hiện tại";c.expected="";c.result="";delete c.linkedHref;delete c.linkedRef;continue;}
+   if(!c.linkedRef)continue;
    const issue=await db.technicalIssue.findUnique({where:{id:c.linkedRef!},select:{executionStatus:true,resolutionNote:true,serviceRequestId:true}});
    if(issue){c.progress=labels[issue.executionStatus]||issue.executionStatus;c.result=c.result||issue.resolutionNote||"";c.linkedHref="/admin/services/issues-board?serviceRequestId="+encodeURIComponent(issue.serviceRequestId);}else c.progress="Không tìm thấy phiếu liên quan";
-  }else{const item=await visibleTask(db,c.linkedRef!,actor);if(item){c.progress=labels[item.status]||item.status;c.linkedHref="/admin/coordination/operation?view=ad-hoc-work";}else {c.progress="Công việc ngoài quyền truy cập hiện tại";c.result="";delete c.linkedHref;delete c.linkedRef;}}
+  }else{if(!c.linkedRef)continue;const item=await visibleTask(db,c.linkedRef!,actor);if(item){c.progress=labels[item.status]||item.status;c.linkedHref="/admin/coordination/operation?view=ad-hoc-work";}else {c.progress="Công việc ngoài quyền truy cập hiện tại";c.result="";delete c.linkedHref;delete c.linkedRef;}}
  }return request;
 }
-async function dto(row:CustomerAssistantConversation,_canReadTechnical?:boolean,_refreshLinks=true){
+async function dto(row:CustomerAssistantConversation,_canReadTechnical?:boolean,_refreshLinks?:boolean){
  const actor=await assistantActor(prisma,row.ownerId),s=structuredClone(state(row));
- s.context=null;s.messages=readableMessages(s,actor);
+ s.context=null;delete s.pinnedProductId;delete s.turnKeys;delete s.turnTimes;s.messages=await authorizedHistory(prisma,s,actor);
  const canReadWork=hasAssistantPermission(actor,"PRODUCT_VIEW")&&hasAssistantPermission(actor,"TASK_VIEW");
  if(!canReadWork){delete s.customerRequest;s.approvedRequests=[];}
  else {
@@ -87,7 +99,7 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    const previousRequest=hasAssistantPermission(actor,"PRODUCT_VIEW")&&hasAssistantPermission(actor,"TASK_VIEW")&&currentState.customerRequest&&readableRequest(currentState.customerRequest,actor)?await linkedRequest(tx,currentState.customerRequest,actor):null;
    const approvedRequests=hasAssistantPermission(actor,"PRODUCT_VIEW")&&hasAssistantPermission(actor,"TASK_VIEW")?await Promise.all((currentState.approvedRequests||[]).filter(r=>readableRequest(r.request,actor)).slice(-8).map(async r=>{const r2=await linkedRequest(tx,r.request,actor);return {revision:r.revision,reference:r2.reference,watch:r2.watch,conditions:r2.conditions.map(c=>({requirement:c.requirement.slice(0,250),progress:c.progress,outcome:c.outcome}))}})):[];
    const token=randomUUID();await tx.customerAssistantConversation.update({where:{id:row.id},data:{status:"RUNNING",leaseToken:token,leaseExpiresAt:new Date(Date.now()+120000)}});
-   return {run:{id:row.id,leaseToken:token,text:JSON.stringify({...workerHistory(currentState,actor),screenProductHint:hasAssistantPermission(actor,"PRODUCT_VIEW")?currentState.pinnedProductId:null,previousRequest:previousRequest?{...previousRequest,original:undefined}:null,approvedRequests,alreadyApproved:!!row.approvedAt,requester:{id:row.ownerId,name:actor.name,...capabilities}}),referenceTime:new Date().toISOString(),timeZone:"Asia/Ho_Chi_Minh"}};
+   return {run:{id:row.id,leaseToken:token,text:JSON.stringify({...workerHistory({...currentState,messages:await authorizedHistory(tx,currentState,actor)},actor),screenProductHint:hasAssistantPermission(actor,"PRODUCT_VIEW")?currentState.pinnedProductId:null,previousRequest:previousRequest?{...previousRequest,original:undefined}:null,approvedRequests,alreadyApproved:!!row.approvedAt,requester:{id:row.ownerId,name:actor.name,...capabilities}}),referenceTime:new Date().toISOString(),timeZone:"Asia/Ho_Chi_Minh"}};
  });
  const id=String(body.id||""),token=String(body.leaseToken||"");
  if(!/^[a-f0-9-]{36}$/.test(id)||!/^[a-f0-9-]{36}$/.test(token))throw new AssistantError("Lượt xử lý không hợp lệ.");
@@ -117,7 +129,9 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    if(operation!=="finish")throw new AssistantError("Lệnh không hợp lệ.");
    const failed=body.failed===true;let reply=typeof body.reply==="string"?body.reply.trim().slice(0,1500):"";if(!reply&&!failed)throw new AssistantError("Thiếu câu trả lời.");
    const actor=await assistantActor(tx,row.ownerId);
-   const revoked=evidence(row).some(e=>!lookupAllowed(actor,e.request.tool));
+   const scopedTaskIds=[...new Set(evidence(row).flatMap(e=>e.request.tool==="work.open"?(e.result.openWatchWork as {id:string}[]||[]).map(t=>t.id):[]))];
+   const scopeRevoked=!hasAssistantPermission(actor,"TASK_VIEW_ALL")&&(await Promise.all(scopedTaskIds.map(id=>visibleTask(tx,id,actor)))).some(t=>!t);
+   const revoked=scopeRevoked||evidence(row).some(e=>!lookupAllowed(actor,e.request.tool));
    if(revoked)reply="Quyền của bạn đã thay đổi trong lúc xử lý. Mình chưa thể trả dữ liệu hoặc thực hiện thao tác đó; bạn có thể tiếp tục trao đổi.";
    let plan:AssistantPlan|undefined,request:CustomerRequest|undefined;
    if(!failed&&!revoked&&!row.approvedAt&&body.plan){plan=assistantPlanSchema.parse(body.plan);const denied=planDeniedReason(actor,plan);
@@ -129,6 +143,7 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    if(row.approvedAt&&body.plan)reply="Các việc đã giao không tự sửa qua chat. Bạn mở phiếu/task liên quan để thực hiện thay đổi theo luồng hiện có nhé.";
    const s=state(row);const required=[...new Set(evidence(row).flatMap(e=>LOOKUP_PERMISSIONS[e.request.tool]||[]))];
    const next=message(s,failed?"Codex chưa hoàn tất lượt này. Bạn có thể nhắn lại để thử tiếp; chưa giao thêm việc.":reply,revoked?[]:required);
+   if(!failed&&!revoked&&scopedTaskIds.length)next.messages[next.messages.length-1].requiredTaskIds=scopedTaskIds;
    if(!failed&&!revoked&&hasAssistantPermission(actor,"PRODUCT_VIEW")){const ids=evidence(row).flatMap(e=>e.request.tool==="watches.images"&&Number(e.result.imageCount)>0?[e.request.productId]:[]);if(ids.length)next.messages[next.messages.length-1].imageProductIds=[...new Set(ids)].slice(0,6);}
    if(!row.approvedAt){if(request&&plan){next.customerRequest=request;next.context=null;}else delete next.customerRequest;}
    await tx.customerAssistantConversation.update({where:{id},data:{state:json(next),status:row.approvedAt?"APPLIED":failed?"FAILED":plan?"DRAFT":"NEEDS_INFO",plan:row.approvedAt?undefined:plan?json(plan):Prisma.DbNull,errorCode:failed?"GENERATION_FAILED":null,leaseToken:null,leaseExpiresAt:null}});return {accepted:true};
@@ -170,13 +185,13 @@ export async function approveAssistant(userId:string,id:string,revision:number,d
        const serviceId=await getOrCreateActiveWatchServiceTx(tx,plan.productId,userId,register);
        const issue=await createTechnicalIssue({serviceRequestId:serviceId,technicalDetailCatalogId:catalog.id,area:catalog.area,summary:c.requirement,note,technicianId:person.id,actorUserId:userId,issueType:"CHECK",actionMode:"INTERNAL",deferConsumers:register},tx);
        r.conditions[i].linkedRef=issue.id;r.conditions[i].progress=issue.executionStatus;
-       await tx.notification.create({data:{userId:person.id,type:`CUSTOMER_AI_${id}_${c.key}`,title:"Yêu cầu kỹ thuật từ khách hàng",message:c.requirement,metadata:{customerAssistantId:id,technicalIssueId:issue.id,route:`/admin/services/issues-board?serviceRequestId=${serviceId}`}}});
+       await tx.notification.create({data:{userId:person.id,type:`CUSTOMER_AI_${id}_${revision}_${c.key}`,title:"Yêu cầu kỹ thuật từ khách hàng",message:c.requirement,metadata:{customerAssistantId:id,technicalIssueId:issue.id,route:`/admin/services/issues-board?serviceRequestId=${serviceId}`}}});
      }else if(space){
        const item=await tx.taskItem.create({data:{taskId:space.task.id,title:c.requirement,note:["workTypeKey: ad-hoc-work","blueprintKey: ad-hoc-work","blueprintSource: REGISTRY","workspaceKind: STANDALONE_WORKSPACE","operationWorkspaceRole: AD_HOC_WORK","ownerType: USER","workspaceType: ad-hoc-work","shareGroupKey: operation","itemLabel: Việc phát sinh","defaultView: items","identityTargetType: WATCH",`requestDetail: ${c.expected.replace(/[\r\n]/g," ")}`,note].join("\n"),userId,assignedToUserId:person.id,workTypeId:"ad-hoc-work"}});
        await ensureTaskItemReferenceBinding(tx,{taskId:space.task.id,taskItemId:item.id,targetType:"WATCH",targetId:plan.productId,actionType:"LINKED",createdByUserId:userId,metadataJson:{source:"CUSTOMER_AI",customerAssistantId:id,customerId:plan.customerId,workTypeKey:"ad-hoc-work",targetTitle:String(now.title||r.watch),targetRef:r.watch,targetHref:`/admin/watches/${plan.productId}`,intakeNote:c.expected}});
        await tx.taskItemActivity.create({data:{taskItemId:item.id,actorUserId:userId,sourceType:"SYSTEM",sourceId:id,title:"Giao việc sau khi duyệt yêu cầu khách hàng",body:c.expected}});
        await recordBusinessEvent(tx,{eventKey:"task.item.created",targetType:"TASK_ITEM",targetId:item.id,actorUserId:userId,payload:{taskId:space.task.id,taskItemId:item.id,taskItemTitle:item.title,assignedToUserId:person.id,workspaceKind:"STANDALONE_WORKSPACE",operationWorkspaceRole:"AD_HOC_WORK",workTypeKey:"ad-hoc-work"}},{deferConsumers:register});
-       await tx.notification.create({data:{userId:person.id,taskId:space.task.id,type:`CUSTOMER_AI_${id}_${c.key}`,title:"Công việc từ yêu cầu khách hàng",message:c.requirement,metadata:{customerAssistantId:id,taskItemId:item.id,route:"/admin/coordination/operation?view=ad-hoc-work"}}});r.conditions[i].linkedRef=item.id;r.conditions[i].progress=item.status;
+       await tx.notification.create({data:{userId:person.id,taskId:space.task.id,type:`CUSTOMER_AI_${id}_${revision}_${c.key}`,title:"Công việc từ yêu cầu khách hàng",message:c.requirement,metadata:{customerAssistantId:id,taskItemId:item.id,route:"/admin/coordination/operation?view=ad-hoc-work"}}});r.conditions[i].linkedRef=item.id;r.conditions[i].progress=item.status;
      }
    }
    const next=archiveApproved({...state(row),customerRequest:r,approved:true},revision);const updated=await tx.customerAssistantConversation.update({where:{id},data:{approvedAt:new Date(),approvedRevision:revision,status:"APPLIED",state:json(message(next,"Đã giao các phiếu/task theo bản bạn duyệt. Bạn có thể mở công việc liên quan để theo dõi."))}});return {row:updated,work};

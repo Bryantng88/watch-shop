@@ -16,7 +16,7 @@ async function main(){
  process.env.CUSTOMER_AI_MAX_TURNS_PER_HOUR="1";await assert.rejects(sendAssistant(owner.id,{requestKey:randomUUID(),text:"Over hourly quota"}));delete process.env.CUSTOMER_AI_MAX_TURNS_PER_HOUR;
  await assert.rejects(sendAssistant(other.id,{id:sent.id,requestKey:randomUUID(),text:"cross owner"}));
  const claim=await assistantWorker("claim",{}) as {run:{id:string;leaseToken:string}};assert.equal(claim.run.id,sent.id);const run=claim.run;
- await assert.rejects(assistantWorker("lookup",{...run,lookup:{tool:"watches.images",productId:product.id}}));
+ const fenced=await assistantWorker("lookup",{...run,lookup:{tool:"watches.images",productId:product.id}}) as {evidence:{result:{lookupRejected:boolean}}};assert.equal(fenced.evidence.result.lookupRejected,true);
  await p.productImage.createMany({data:[{productId:product.id,fileKey:"fixture/public.jpg",role:"INLINE",isForAdmin:true},{productId:product.id,fileKey:"fixture/hidden.jpg",role:"GALLERY",isForAdmin:false}]});
  for(const lookup of [{tool:"customers.search",query:customer.id},{tool:"watches.search",query:product.sku!},{tool:"watches.detail",productId:product.id},{tool:"work.open",customerId:customer.id,productId:product.id},{tool:"people.search",query:other.id},{tool:"technical.catalog",query:catalog.id}])await assistantWorker("lookup",{...run,lookup});
  await assert.rejects(assistantWorker("lookup",{...run,lookup:{tool:"sql",query:"select"}}));

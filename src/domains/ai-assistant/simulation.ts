@@ -2,7 +2,7 @@ import { isCustomerRequest, type CustomerRequest } from "./customer-request";
 export type Context = { kind: string; label: string; href: string; id?: string };
 export type Step = { id: string; title: string; department: string; assignee: string; description: string; dependsOn: string[] };
 export type ProductCard = { id:string; title:string; sku:string|null; images:{src:string;alt:string}[] };
-export type Message = { id: string; role: "user" | "assistant"; text: string; imageProductIds?:string[]; products?:ProductCard[]; requiredPermissions?:string[] };
+export type Message = { id: string; role: "user" | "assistant"; text: string; imageProductIds?:string[]; products?:ProductCard[]; requiredPermissions?:string[]; requiredTaskIds?:string[] };
 export type Conversation = { id: string; title: string; context: Context | null; messages: Message[]; steps: Step[]; approved: boolean; tasks: (Step & { status: string })[]; customerRequest?: CustomerRequest; approvedRequests?:{revision:number;request:CustomerRequest}[]; capabilities?:{canCreateTasks:boolean;canCreateTechnical:boolean}; updatedAt: string; revision?:number; runStatus?:string; errorCode?:string|null };
 export type Scenario = "normal" | "clarify" | "error" | "denied";
 export function isProductContext(context: Context | null | undefined) {
