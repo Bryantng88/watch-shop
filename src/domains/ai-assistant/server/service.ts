@@ -76,7 +76,7 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    if(operation==="lookup"){
      const request=assistantLookupSchema.parse(body.lookup),entries=evidence(row);const prior=entries.find(e=>JSON.stringify(e.request)===JSON.stringify(request));if(prior)return {evidence:prior};if(entries.length>=16)throw new AssistantError("Đã hết lượt tra cứu.");
      if("productId" in request&&!hasUniqueEvidence(entries,"watches.search",request.productId))throw new AssistantError("Cần xác minh watch trước.");
-     if("customerId" in request&&!hasUniqueEvidence(entries,"customers.search",request.customerId))throw new AssistantError("Cần xác minh khách trước.");
+     if("customerId" in request&&request.customerId&&!hasUniqueEvidence(entries,"customers.search",request.customerId))throw new AssistantError("Cần xác minh khách trước.");
      let result:Record<string,unknown>;
      if(request.tool==="people.search"){
        const people=await tx.user.findMany({where:{isActive:true,OR:[{id:request.query},{name:{contains:request.query,mode:"insensitive"}}],roles:{some:{OR:[{name:"ADMIN"},{permissions:{some:{code:{in:["TASK_VIEW","TASK_MANAGE"]}}}}]}}},select:{id:true,name:true,roles:{select:{name:true,permissions:{where:{code:{in:["SERVICE_UPDATE","TASK_VIEW","TASK_MANAGE"]}},select:{code:true}}}}},take:7,orderBy:{id:"asc"}});
@@ -92,7 +92,7 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    const failed=body.failed===true;let reply=typeof body.reply==="string"?body.reply.trim().slice(0,1500):"";if(!reply&&!failed)throw new AssistantError("Thiếu câu trả lời.");
    let plan:AssistantPlan|undefined,request:CustomerRequest|undefined;
    if(!failed&&!row.approvedAt&&body.plan){plan=assistantPlanSchema.parse(body.plan);const pinned=state(row).pinnedProductId;
-     if((pinned&&plan.productId!==pinned)||!planHasEvidence(plan,evidence(row))){plan=undefined;reply="Mình chưa xác minh đủ khách, watch, danh mục hoặc người nhận. Bạn cho mình mã cụ thể để tránh chọn nhầm nhé.";}
+     if((pinned&&plan.productId!==pinned)||!planHasEvidence(plan,evidence(row))){plan=undefined;reply="Mình chưa xác minh đủ watch, danh mục hoặc người nhận (và hồ sơ khách nếu có gắn). Bạn cho mình thông tin cụ thể để tránh chọn nhầm nhé.";}
      else request=await requestFromPlan(tx,row,plan);
    }
    if(plan)reply="Mình đề xuất giao các việc bên dưới. Bạn duyệt trước khi thực hiện nhé.";
@@ -103,9 +103,9 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
  });
 }
 async function requestFromPlan(tx:DB,row:CustomerAssistantConversation,plan:AssistantPlan):Promise<CustomerRequest>{
- const customer=await tx.customer.findUniqueOrThrow({where:{id:plan.customerId},select:{name:true}}),product=await tx.product.findUniqueOrThrow({where:{id:plan.productId},select:{sku:true,title:true}}),actor=await assistantActor(tx,row.ownerId);
+ const customer=plan.customerId?await tx.customer.findUniqueOrThrow({where:{id:plan.customerId},select:{name:true}}):null,product=await tx.product.findUniqueOrThrow({where:{id:plan.productId},select:{sku:true,title:true}}),actor=await assistantActor(tx,row.ownerId);
  const conditions=[];for(const c of plan.conditions){const person=await assistantRecipient(tx,c.assigneeUserId,c.kind==="TECHNICAL");if(!person)throw new AssistantError("Người nhận không còn hợp lệ.");conditions.push({id:c.key,requirement:c.requirement,expected:c.expected,kind:c.kind,assignee:person.name||`Nhân viên ${person.id.slice(0,8)}`,progress:"Chưa giao",outcome:"Chưa xác minh",result:""});}
- return {id:row.id,reference:"",customer:customer.name,watch:product.sku||product.title,owner:actor.name||"Bạn",original:state(row).messages.filter(m=>m.role==="user").map(m=>m.text).join("\n"),status:"DRAFT",conditions,decision:"Chưa quyết định",reviewReady:true};
+ return {id:row.id,reference:"",customer:customer?.name||"Chưa gắn hồ sơ khách",watch:product.sku||product.title,owner:actor.name||"Bạn",original:state(row).messages.filter(m=>m.role==="user").map(m=>m.text).join("\n"),status:"DRAFT",conditions,decision:"Chưa quyết định",reviewReady:true};
 }
 
 export async function approveAssistant(userId:string,id:string,revision:number,defer:(work:()=>Promise<void>)=>void){
@@ -117,8 +117,10 @@ export async function approveAssistant(userId:string,id:string,revision:number,d
    await tx.$queryRaw`SELECT "id" FROM "Product" WHERE "id"=${plan.productId} FOR UPDATE`;
    const detail=entries.find(e=>e.request.tool==="watches.detail"),now=await executeIntakeLookup(tx,{tool:"watches.detail",productId:plan.productId});
    if(!detail||["version","watchVersion","activeReservations"].some(k=>now[k]!==detail.result[k]))throw new AssistantError("Watch đã thay đổi sau khi tra cứu. Nhắn lại để Codex cập nhật phương án.",409);
+   if(plan.customerId){
    const observed=entries.filter(e=>e.request.tool==="customers.search").flatMap(e=>e.result.matches as {id:string;version:string}[]||[]).find(c=>c.id===plan.customerId),customer=await tx.customer.findUnique({where:{id:plan.customerId},select:{updatedAt:true}});
    if(!customer||customer.updatedAt.toISOString()!==observed?.version)throw new AssistantError("Khách đã thay đổi sau khi tra cứu. Cần cập nhật đề xuất.",409);
+   }
    if(Number(now.activeReservations)>0||now.stockStage!=="IN_STOCK")throw new AssistantError("Watch không ở trạng thái sẵn trong kho hoặc đang có giữ hàng. Cần đối chiếu trước khi giao thêm việc.",409);
    const open=await executeIntakeLookup(tx,{tool:"work.open",productId:plan.productId,customerId:plan.customerId});if(open.truncated||(open.openWatchWork as unknown[]).length||await tx.technicalIssue.count({where:{serviceRequest:{productId:plan.productId},executionStatus:{notIn:["DONE","CANCELED"]}}}))throw new AssistantError("Watch đã có việc hoặc phiếu kỹ thuật đang mở. Cần đối chiếu trước khi giao thêm.",409);
    const work:(()=>Promise<void>)[]=[];const register=(fn:()=>Promise<void>)=>work.push(fn);const r=await requestFromPlan(tx,row,plan);r.status="TRACKING";r.reference=`YC-${row.id.slice(0,8).toUpperCase()}`;
@@ -126,7 +128,7 @@ export async function approveAssistant(userId:string,id:string,revision:number,d
    if(plan.conditions.some(c=>c.kind==="TASK")&&!space)throw new AssistantError("Chưa có không gian Vận hành cho task. Quản trị cần khởi tạo qua luồng hiện có.",409);
    for(const [i,c] of plan.conditions.entries()){
      const person=await assistantRecipient(tx,c.assigneeUserId,c.kind==="TECHNICAL");if(!person)throw new AssistantError("Người nhận đã thay đổi hoặc thiếu quyền.",409);
-     const note=`Yêu cầu khách hàng ${r.reference}\n${c.expected}\nKhách: ${plan.customerId}`;
+     const note=`Yêu cầu khách hàng ${r.reference}\n${c.expected}\n${plan.customerId?`Khách: ${plan.customerId}`:"Yêu cầu trước đơn hàng; chưa gắn hồ sơ khách."}`;
      if(c.kind==="TECHNICAL"){
        if(!actor.admin&&!["SERVICE_VIEW","SERVICE_CREATE"].every(p=>actor.permissions.has(p)))throw new AssistantError("Bạn thiếu quyền tạo yêu cầu kỹ thuật.",403);
        const catalog=await tx.technicalDetailCatalog.findFirst({where:{id:c.technicalDetailId!,isActive:true}});const seen=entries.filter(e=>e.request.tool==="technical.catalog").flatMap(e=>e.result.matches as {id:string;updatedAt:string}[]||[]).find(m=>m.id===c.technicalDetailId);

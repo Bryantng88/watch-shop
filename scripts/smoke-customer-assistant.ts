@@ -32,6 +32,23 @@ async function main(){
  assert.equal(await p.order.count({where:{customerId:customer.id}}),0);assert.equal(await p.reservation.count({where:{productId:product.id}}),0);
  await recordConditionOutcome(owner.id,run.id,"c1","Không đạt","Synthetic fail result");const updated=(await listAssistant(owner.id)).conversations.find(c=>c.id===run.id)!;assert.equal(updated.customerRequest!.conditions[0].outcome,"Không đạt");
  const canceled=await sendAssistant(owner.id,{requestKey:randomUUID(),text:"Cancel fixture",productId:product.id});const claimed=await assistantWorker("claim",{}) as {run:{id:string;leaseToken:string}};assert.equal(claimed.run.id,canceled.id);await cancelAssistant(owner.id,canceled.id);await assert.rejects(assistantWorker("finish",{...claimed.run,reply:"late",plan}));
+ // Pre-order request with an unregistered prospect: no customer row is needed.
+ const prospectWatch=await p.product.create({data:{type:"WATCH",sku:`PROSPECT-${suffix}`,title:"Prospect fixture watch",watch:{create:{saleStage:"READY",stockStage:"IN_STOCK"}}}});
+ const customerCount=await p.customer.count();
+ const prospect=await sendAssistant(owner.id,{requestKey:randomUUID(),text:"Khách mới chưa có hồ sơ muốn mua nếu thêm mắt dây và kiểm tra sơ qua; giao người nhận đã chọn",productId:prospectWatch.id});
+ const prospectRun=(await assistantWorker("claim",{}) as {run:{id:string;leaseToken:string}}).run;assert.equal(prospectRun.id,prospect.id);
+ for(const lookup of [{tool:"watches.search",query:prospectWatch.sku!},{tool:"watches.detail",productId:prospectWatch.id},{tool:"work.open",productId:prospectWatch.id,customerId:null},{tool:"people.search",query:other.id},{tool:"technical.catalog",query:catalog.id}])await assistantWorker("lookup",{...prospectRun,lookup});
+ const prospectPlan={...plan,customerId:null,productId:prospectWatch.id};
+ const beforeProspect={tasks:await p.taskItem.count(),issues:await p.technicalIssue.count()};
+ await assistantWorker("finish",{...prospectRun,reply:"Chuẩn bị sản phẩm, chưa cần hồ sơ khách.",plan:prospectPlan});
+ const prospectPreview=(await listAssistant(owner.id)).conversations.find(c=>c.id===prospect.id)!;
+ assert.equal(prospectPreview.runStatus,"DRAFT");assert.equal(prospectPreview.customerRequest!.customer,"Chưa gắn hồ sơ khách");
+ assert.equal(await p.taskItem.count(),beforeProspect.tasks);assert.equal(await p.technicalIssue.count(),beforeProspect.issues);
+ const prospectApproved=await approveAssistant(owner.id,prospect.id,prospectPreview.revision,()=>{});
+ assert.equal(prospectApproved.customerRequest!.status,"TRACKING");assert.equal(await p.technicalIssue.count(),beforeProspect.issues+1);
+ const prospectReplay=await approveAssistant(owner.id,prospect.id,prospectPreview.revision,()=>{});
+ assert.deepEqual(prospectApproved.customerRequest!.conditions.map(c=>c.linkedRef),prospectReplay.customerRequest!.conditions.map(c=>c.linkedRef));
+ assert.equal(await p.customer.count(),customerCount);assert.equal(await p.order.count({where:{orderItem:{some:{productId:prospectWatch.id}}}}),0);
  console.log("PASS assistant: permission/ownership, scripted model lookups, no writes before approval, concurrent idempotent approval, real technical issue+assigned task, separate condition outcome, cancellation fence, no orders/reservations. CLI execution was scripted, not real.");
 }
 main().catch(e=>{console.error(e instanceof Error?e.stack:"Assistant smoke failed");process.exitCode=1;}).finally(()=>p.$disconnect());

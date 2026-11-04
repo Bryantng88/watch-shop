@@ -1,3 +1,12 @@
 import assert from "node:assert/strict";import {test} from "node:test";import {assistantPlanSchema,assistantLookupSchema,hasUniqueEvidence,planHasEvidence,type Evidence} from "./live-contract";
 test("assistant plan rejects arbitrary fields, duplicate work and technical classification without catalog",()=>{const c={key:"c1",requirement:"Check",expected:"Report",kind:"TECHNICAL",assigneeUserId:"u",technicalDetailId:"catalog"};const plan={customerId:"customer",productId:"watch",conditions:[c]};assert.ok(assistantPlanSchema.safeParse(plan).success);for(const invalid of [{...plan,sql:"select"},{...plan,conditions:[{...c,technicalDetailId:null}]},{...plan,conditions:[c,{...c,key:"c2"}]}])assert.equal(assistantPlanSchema.safeParse(invalid).success,false);assert.equal(assistantLookupSchema.safeParse({tool:"orders.create",query:"x"}).success,false);});
 test("ambiguous identity cannot become unique just by requerying a picked ID",()=>{const e:Evidence[]=[{request:{tool:"people.search",query:"Minh"},result:{matches:[{id:"u1"},{id:"u2"}],truncated:false}},{request:{tool:"people.search",query:"u1"},result:{matches:[{id:"u1"}],truncated:false}}];assert.equal(hasUniqueEvidence(e,"people.search","u1"),false);assert.equal(planHasEvidence({customerId:"c",productId:"p",conditions:[{key:"c1",requirement:"Check",expected:"Report",kind:"TASK",assigneeUserId:"u1",technicalDetailId:null}]},e),false);});
+
+test("pre-order preparation accepts no customer profile but still requires watch, work and recipient evidence",()=>{
+ const plan={customerId:null,productId:"p",conditions:[{key:"c1",requirement:"Tìm mắt dây",expected:"Xác minh tương thích",kind:"TASK" as const,assigneeUserId:"u",technicalDetailId:null}]};
+ const evidence:Evidence[]=[{request:{tool:"watches.search",query:"SKU"},result:{matches:[{id:"p"}],truncated:false}},{request:{tool:"watches.detail",productId:"p"},result:{id:"p"}},{request:{tool:"work.open",productId:"p",customerId:null},result:{}},{request:{tool:"people.search",query:"staff"},result:{matches:[{id:"u"}],truncated:false}}];
+ assert.ok(assistantPlanSchema.safeParse(plan).success);assert.equal(planHasEvidence(plan,evidence),true);
+ assert.equal(planHasEvidence({...plan,customerId:"invented"},evidence),false);
+ assert.equal(planHasEvidence(plan,evidence.filter(e=>e.request.tool!=="work.open")),false);
+ assert.equal(planHasEvidence(plan,evidence.filter(e=>e.request.tool!=="people.search")),false);
+});
