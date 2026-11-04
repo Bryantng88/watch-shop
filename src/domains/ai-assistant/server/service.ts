@@ -49,16 +49,16 @@ async function linkedRequest(db:DB,r:CustomerRequest,actor:Actor){
  const request=structuredClone(r);if(!hasAssistantPermission(actor,"CUSTOMER_VIEW"))request.customer="Hồ sơ khách ngoài quyền truy cập hiện tại";const labels:Record<string,string>={OPEN:"Chờ tiếp nhận",TODO:"Chờ tiếp nhận",READY:"Sẵn sàng",IN_PROGRESS:"Đang xử lý",PROCESSING:"Đang xử lý",DONE:"Hoàn tất",COMPLETED:"Hoàn tất",CANCELLED:"Đã hủy",CANCELED:"Đã hủy"};
  for(const c of request.conditions){
   if(c.kind==="TECHNICAL"){
-   if(!canReadTechnical){c.progress="Không có quyền xem phiếu kỹ thuật";c.requirement="Phiếu kỹ thuật ngoài quyền truy cập hiện tại";c.expected="";c.result="";delete c.linkedHref;delete c.linkedRef;continue;}
+   if(!canReadTechnical){c.progress="Không có quyền xem phiếu kỹ thuật";c.requirement="Phiếu kỹ thuật ngoài quyền truy cập hiện tại";c.expected="";c.assignee="";c.outcome="Chưa xác minh";c.result="";delete c.linkedHref;delete c.linkedRef;continue;}
    if(!c.linkedRef)continue;
    const issue=await db.technicalIssue.findUnique({where:{id:c.linkedRef!},select:{executionStatus:true,resolutionNote:true,serviceRequestId:true}});
    if(issue){c.progress=labels[issue.executionStatus]||issue.executionStatus;c.result=c.result||issue.resolutionNote||"";c.linkedHref="/admin/services/issues-board?serviceRequestId="+encodeURIComponent(issue.serviceRequestId);}else c.progress="Không tìm thấy phiếu liên quan";
-  }else{if(!c.linkedRef)continue;const item=await visibleTask(db,c.linkedRef!,actor);if(item){c.progress=labels[item.status]||item.status;c.linkedHref="/admin/coordination/operation?view=ad-hoc-work";}else {c.progress="Công việc ngoài quyền truy cập hiện tại";c.result="";delete c.linkedHref;delete c.linkedRef;}}
+  }else{if(!c.linkedRef)continue;const item=await visibleTask(db,c.linkedRef!,actor);if(item){c.progress=labels[item.status]||item.status;c.linkedHref="/admin/coordination/operation?view=ad-hoc-work";}else {c.progress="Công việc ngoài quyền truy cập hiện tại";c.requirement="Công việc ngoài quyền truy cập hiện tại";c.expected="";c.assignee="";c.outcome="Chưa xác minh";c.result="";delete c.linkedHref;delete c.linkedRef;}}
  }return request;
 }
-async function dto(row:CustomerAssistantConversation,_canReadTechnical?:boolean,_refreshLinks?:boolean){
+async function dto(row:CustomerAssistantConversation){
  const actor=await assistantActor(prisma,row.ownerId),s=structuredClone(state(row));
- s.context=null;delete s.pinnedProductId;delete s.turnKeys;delete s.turnTimes;s.messages=await authorizedHistory(prisma,s,actor);
+ s.context=null;delete s.pinnedProductId;delete s.turnKeys;delete s.turnTimes;delete s.turnReadScope;s.messages=await authorizedHistory(prisma,s,actor);
  const canReadWork=hasAssistantPermission(actor,"PRODUCT_VIEW")&&hasAssistantPermission(actor,"TASK_VIEW");
  if(!canReadWork){delete s.customerRequest;s.approvedRequests=[];}
  else {
@@ -69,7 +69,7 @@ async function dto(row:CustomerAssistantConversation,_canReadTechnical?:boolean,
  for(const m of s.messages){delete m.products;if(m.role==="assistant"&&m.imageProductIds)m.products=m.imageProductIds.flatMap(id=>cards.filter(c=>c.id===id));}
  return {...s,updatedAt:row.updatedAt.toISOString(),revision:row.revision,runStatus:row.status,errorCode:row.errorCode,approved:!!row.approvedAt,capabilities:assistantCapabilities(actor)};
 }
-export async function listAssistant(userId:string,id?:string){const actor=await assistantActor(prisma,userId);const rows=id?[await owned(prisma,id,userId)]:await prisma.customerAssistantConversation.findMany({where:{ownerId:userId},orderBy:{updatedAt:"desc"},take:20});return {partial:!!id,conversations:await Promise.all(rows.map(row=>dto(row,actor.admin||actor.permissions.has("SERVICE_VIEW"),!!id)))};}
+export async function listAssistant(userId:string,id?:string){await assistantActor(prisma,userId);const rows=id?[await owned(prisma,id,userId)]:await prisma.customerAssistantConversation.findMany({where:{ownerId:userId},orderBy:{updatedAt:"desc"},take:20});return {partial:!!id,conversations:await Promise.all(rows.map(row=>dto(row)))};}
 export async function sendAssistant(userId:string,input:{id?:string;requestKey:string;text:string;productId?:string|null}){
  const sender=await assistantActor(prisma,userId);
  const id=await transaction(async tx=>{
@@ -98,8 +98,12 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    const currentState=state(row),capabilities=assistantCapabilities(actor);
    const previousRequest=hasAssistantPermission(actor,"PRODUCT_VIEW")&&hasAssistantPermission(actor,"TASK_VIEW")&&currentState.customerRequest&&readableRequest(currentState.customerRequest,actor)?await linkedRequest(tx,currentState.customerRequest,actor):null;
    const approvedRequests=hasAssistantPermission(actor,"PRODUCT_VIEW")&&hasAssistantPermission(actor,"TASK_VIEW")?await Promise.all((currentState.approvedRequests||[]).filter(r=>readableRequest(r.request,actor)).slice(-8).map(async r=>{const r2=await linkedRequest(tx,r.request,actor);return {revision:r.revision,reference:r2.reference,watch:r2.watch,conditions:r2.conditions.map(c=>({requirement:c.requirement.slice(0,250),progress:c.progress,outcome:c.outcome}))}})):[];
-   const token=randomUUID();await tx.customerAssistantConversation.update({where:{id:row.id},data:{status:"RUNNING",leaseToken:token,leaseExpiresAt:new Date(Date.now()+120000)}});
-   return {run:{id:row.id,leaseToken:token,text:JSON.stringify({...workerHistory({...currentState,messages:await authorizedHistory(tx,currentState,actor)},actor),screenProductHint:hasAssistantPermission(actor,"PRODUCT_VIEW")?currentState.pinnedProductId:null,previousRequest:previousRequest?{...previousRequest,original:undefined}:null,approvedRequests,alreadyApproved:!!row.approvedAt,requester:{id:row.ownerId,name:actor.name,...capabilities}}),referenceTime:new Date().toISOString(),timeZone:"Asia/Ho_Chi_Minh"}};
+   const history=await authorizedHistory(tx,currentState,actor);
+   const requests=[...(previousRequest?[previousRequest]:[]),...await Promise.all((currentState.approvedRequests||[]).filter(r=>readableRequest(r.request,actor)).slice(-8).map(r=>linkedRequest(tx,r.request,actor)))];
+   // A model may repeat any supplied business information without doing a new lookup.
+   const turnReadScope={permissions:[...new Set([...history.slice(-12).flatMap(m=>m.role==="assistant"?m.requiredPermissions||[]:[]),...requests.flatMap(r=>["PRODUCT_VIEW","TASK_VIEW",...(r.customer!=="Chưa gắn hồ sơ khách"?["CUSTOMER_VIEW"]:[]),...(r.conditions.some(c=>c.kind==="TECHNICAL"&&c.linkedRef)?["SERVICE_VIEW"]:[])])])],taskIds:[...new Set([...history.slice(-12).flatMap(m=>m.requiredTaskIds||[]),...requests.flatMap(r=>r.conditions.filter(c=>c.kind==="TASK"&&c.linkedRef).map(c=>c.linkedRef!))])]};
+   const token=randomUUID();await tx.customerAssistantConversation.update({where:{id:row.id},data:{state:json({...currentState,turnReadScope}),status:"RUNNING",leaseToken:token,leaseExpiresAt:new Date(Date.now()+120000)}});
+   return {run:{id:row.id,leaseToken:token,text:JSON.stringify({...workerHistory({...currentState,messages:history},actor),screenProductHint:hasAssistantPermission(actor,"PRODUCT_VIEW")?currentState.pinnedProductId:null,previousRequest:previousRequest?{...previousRequest,original:undefined}:null,approvedRequests,alreadyApproved:!!row.approvedAt,requester:{id:row.ownerId,name:actor.name,...capabilities}}),referenceTime:new Date().toISOString(),timeZone:"Asia/Ho_Chi_Minh"}};
  });
  const id=String(body.id||""),token=String(body.leaseToken||"");
  if(!/^[a-f0-9-]{36}$/.test(id)||!/^[a-f0-9-]{36}$/.test(token))throw new AssistantError("Lượt xử lý không hợp lệ.");
@@ -129,9 +133,11 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    if(operation!=="finish")throw new AssistantError("Lệnh không hợp lệ.");
    const failed=body.failed===true;let reply=typeof body.reply==="string"?body.reply.trim().slice(0,1500):"";if(!reply&&!failed)throw new AssistantError("Thiếu câu trả lời.");
    const actor=await assistantActor(tx,row.ownerId);
-   const scopedTaskIds=[...new Set(evidence(row).flatMap(e=>e.request.tool==="work.open"?(e.result.openWatchWork as {id:string}[]||[]).map(t=>t.id):[]))];
+   const inherited=state(row).turnReadScope||{permissions:[],taskIds:[]};
+   const required=[...new Set([...inherited.permissions,...evidence(row).flatMap(e=>LOOKUP_PERMISSIONS[e.request.tool]||[])])];
+   const scopedTaskIds=[...new Set([...inherited.taskIds,...evidence(row).flatMap(e=>e.request.tool==="work.open"?(e.result.openWatchWork as {id:string}[]||[]).map(t=>t.id):[])])];
    const scopeRevoked=!hasAssistantPermission(actor,"TASK_VIEW_ALL")&&(await Promise.all(scopedTaskIds.map(id=>visibleTask(tx,id,actor)))).some(t=>!t);
-   const revoked=scopeRevoked||evidence(row).some(e=>!lookupAllowed(actor,e.request.tool));
+   const revoked=scopeRevoked||required.some(p=>!hasAssistantPermission(actor,p));
    if(revoked)reply="Quyền của bạn đã thay đổi trong lúc xử lý. Mình chưa thể trả dữ liệu hoặc thực hiện thao tác đó; bạn có thể tiếp tục trao đổi.";
    let plan:AssistantPlan|undefined,request:CustomerRequest|undefined;
    if(!failed&&!revoked&&!row.approvedAt&&body.plan){plan=assistantPlanSchema.parse(body.plan);const denied=planDeniedReason(actor,plan);
@@ -141,7 +147,7 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    }
    if(plan)reply="Mình đề xuất giao các việc bên dưới. Bạn duyệt trước khi thực hiện nhé.";
    if(row.approvedAt&&body.plan)reply="Các việc đã giao không tự sửa qua chat. Bạn mở phiếu/task liên quan để thực hiện thay đổi theo luồng hiện có nhé.";
-   const s=state(row);const required=[...new Set(evidence(row).flatMap(e=>LOOKUP_PERMISSIONS[e.request.tool]||[]))];
+   const s=state(row);delete s.turnReadScope;
    const next=message(s,failed?"Codex chưa hoàn tất lượt này. Bạn có thể nhắn lại để thử tiếp; chưa giao thêm việc.":reply,revoked?[]:required);
    if(!failed&&!revoked&&scopedTaskIds.length)next.messages[next.messages.length-1].requiredTaskIds=scopedTaskIds;
    if(!failed&&!revoked&&hasAssistantPermission(actor,"PRODUCT_VIEW")){const ids=evidence(row).flatMap(e=>e.request.tool==="watches.images"&&Number(e.result.imageCount)>0?[e.request.productId]:[]);if(ids.length)next.messages[next.messages.length-1].imageProductIds=[...new Set(ids)].slice(0,6);}

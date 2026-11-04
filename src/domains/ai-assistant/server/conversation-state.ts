@@ -2,15 +2,15 @@ import type { CustomerRequest } from "../customer-request";
 import type { Conversation, Message } from "../simulation";
 import { hasAssistantPermission, type AssistantAuthority } from "../capabilities";
 export type ApprovedRequest = { revision: number; request: CustomerRequest };
-export type AssistantState = Conversation & { turnKeys?: string[]; turnTimes?: string[]; pinnedProductId?: string | null; approvedRequests?: ApprovedRequest[] };
+export type AssistantState = Conversation & { turnKeys?: string[]; turnTimes?: string[]; pinnedProductId?: string | null; approvedRequests?: ApprovedRequest[]; turnReadScope?: { permissions: string[]; taskIds: string[] } };
 const LEGACY_PERMISSIONS = ["PRODUCT_VIEW", "CUSTOMER_VIEW", "TASK_VIEW", "TASK_MANAGE", "SERVICE_VIEW", "ACCESSORY_VIEW"];
 export function readableMessages(s: AssistantState, actor: AssistantAuthority): Message[] {
   return s.messages.map(m => {
     const required = m.requiredPermissions ?? (m.role === "assistant" ? LEGACY_PERMISSIONS : []);
     if (m.role === "assistant" && ((!m.requiredPermissions && !actor.admin) || !required.every(p => hasAssistantPermission(actor, p)))) {
-      return { id: m.id, role: m.role, text: "Nội dung nghiệp vụ này không còn nằm trong quyền truy cập hiện tại của bạn.", requiredPermissions: required };
+      return { id: m.id, role: m.role, text: "Nội dung nghiệp vụ này không còn nằm trong quyền truy cập hiện tại của bạn.", requiredPermissions: [] };
     }
-    return { ...m, products: undefined, ...(!hasAssistantPermission(actor, "PRODUCT_VIEW") ? { imageProductIds: undefined } : {}) };
+    return { ...m, requiredPermissions: required, products: undefined, ...(!hasAssistantPermission(actor, "PRODUCT_VIEW") ? { imageProductIds: undefined } : {}) };
   });
 }
 export function workerHistory(s: AssistantState, actor: AssistantAuthority) {
