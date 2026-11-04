@@ -31,6 +31,12 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
     const normalizedMethod = method.toUpperCase();
     const read = READ_METHODS.has(normalizedMethod);
 
+    // Ben permits conversation for active authenticated users. Each lookup,
+    // approval and outcome is authorized again by the conversation service.
+    if (pathname === "/api/admin/customer-assistant" && ["GET", "POST"].includes(normalizedMethod)) {
+        return publicToAuthenticatedUser();
+    }
+
     if (pathname === "/api/media/sign" && read) {
         return publicToAuthenticatedUser();
     }
