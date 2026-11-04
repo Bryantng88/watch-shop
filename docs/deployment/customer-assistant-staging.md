@@ -95,3 +95,11 @@ Deploy the updated web app **and customer worker** from the same PR revision to
 use this lookup. No migration or new credentials are needed. Local verification
 uses synthetic database/image metadata and a scripted model; actual storage reads
 and a real Codex photo conversation still need staging acceptance.
+
+### Assistant identity: Ben
+
+Ben is the fixed user-facing name in the launcher, panel and customer worker
+instructions. The worker supplies this identity on every model invocation,
+including lookup rounds and resumed history. Addressing Ben does not identify a
+customer or assignee. Existing history is preserved; old messages are not rewritten.
+Deploy web and worker together to apply both the display name and model identity.

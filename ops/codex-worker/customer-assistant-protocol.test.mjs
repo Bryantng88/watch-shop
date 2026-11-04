@@ -14,3 +14,13 @@ test('image lookup accepts only a product ID, never model URLs or extra argument
  assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'watches.images',productId:'watch',query:'https://evil.test',reply:null}));
  assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'watches.images',productId:'watch',reply:null,url:'https://evil.test'}));
 });
+
+test('Ben identity is supplied on every lookup round and resumed conversation',async()=>{
+ const prompts=[];let calls=0;
+ await runCustomerConversation({id:'r',text:JSON.stringify({messages:[{role:'user',text:'Ben ơi, xem đồng hồ giúp mình'}],alreadyApproved:true})},{
+  execute:async prompt=>{prompts.push(prompt);return calls++===0?{...finish,type:'lookup',tool:'watches.search',query:'Seiko',reply:null}:finish;},
+  api:async op=>op==='lookup'?{evidence:{request:{tool:'watches.search',query:'Seiko'},result:{matches:[]}}}:{accepted:true}
+ });
+ assert.equal(prompts.length,2);
+ for(const prompt of prompts){assert.ok(prompt.startsWith('You are Ben,'));assert.ok(prompt.includes('not naming a customer, employee or task recipient'));assert.ok(prompt.includes('not a human employee'));}
+});
