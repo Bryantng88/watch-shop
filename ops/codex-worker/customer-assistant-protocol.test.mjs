@@ -27,10 +27,17 @@ test('Ben identity is supplied on every lookup round and resumed conversation',a
 
 test('Ben has a factual, unprompted-story prohibition and free chat never bypasses server capabilities',async()=>{
  let supplied='';await runCustomerConversation({id:'r',text:'synthetic chat'},{execute:async prompt=>{supplied=prompt;return finish},api:async()=>({accepted:true})});
- for(const text of ["beloved cat who has died","Do not bring this up unprompted","no user-selected or pinned context","allowedLookups","Server checks remain authoritative"]){assert.ok(supplied.includes(text),text)}
+ for(const text of ["a cat Long deeply loves","Do not bring this up unprompted","no user-selected or pinned context","allowedLookups","Server checks remain authoritative"]){assert.ok(supplied.includes(text),text)}
 });
 test('malformed lookup receives one bounded format repair, never an invalid API call',async()=>{
  const calls=[];let attempt=0;await runCustomerConversation({id:'r',text:'synthetic'},{execute:async prompt=>{if(attempt++===0)return {...finish,type:'lookup',tool:'watches.search',query:'fixture',reply:'invalid mixed reply'};assert.ok(prompt.includes('FORMAT CORRECTION'));return finish},api:async op=>{calls.push(op);return {accepted:true}}});
  assert.equal(attempt,2);assert.deepEqual(calls,['finish']);
  let executions=0;await assert.rejects(runCustomerConversation({id:'r',text:'synthetic'},{execute:async()=>{executions++;return {...finish,sql:'forbidden'}},api:async()=>{throw Error('must not execute')}}),/INVALID_CUSTOMER_TURN/);assert.equal(executions,2);
+});
+
+test('permission support is a draft with no chosen recipient or business plan',async()=>{
+ const offer={...finish,permissionRequest:'Cần Long xem xét quyền giao việc'};const calls=[];
+ await runCustomerConversation({id:'r',text:'synthetic'},{execute:async()=>offer,api:async(op,body)=>{calls.push([op,body.permissionRequest]);return {accepted:true}}});
+ assert.deepEqual(calls,[['finish',offer.permissionRequest]]);
+ assert.throws(()=>validateCustomerTurn({...offer,plan:{}}));assert.throws(()=>validateCustomerTurn({...offer,type:'lookup'}));assert.throws(()=>validateCustomerTurn({...offer,assigneeUserId:'evil'}));
 });

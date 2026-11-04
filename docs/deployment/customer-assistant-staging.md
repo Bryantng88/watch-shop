@@ -124,7 +124,28 @@ old approval replays do not dispatch again, and later chat can prepare a new
 request with a fresh explicit approval. No database migration or new secret is
 needed. Deploy app and worker from the same revision and preserve all volumes.
 
-Ben's worker instructions contain only the owner's stated facts: Ben was a
-beloved cat who has died. Explain simply if asked; do not volunteer the story,
-embellish it, or claim the cat is alive. An invalid model format receives at most
+Ben is named after a cat Long deeply loves. Long created the entire project.
+Explain simply if asked without mentioning death/loss, inventing details,
+sentimental storytelling or claiming the cat is physically alive. An invalid model format receives at most
 one strict-format correction; invalid tool calls are never executed.
+
+### Permission support for Long
+
+When an action exceeds user permissions, recommend contacting Long and offer a
+permission-support task. The worker only drafts a concise issue summary. One
+explicit approval creates a normal ad-hoc task assigned to Long, with activity
+and an internal notification. Chat agreement alone does not create work.
+
+Set CUSTOMER_AI_PERMISSION_CONTACT_USER_ID on the admin app to the verified
+Long account ID. The server requires that exact account to be active with ADMIN
+role; names/chat claims never establish identity. Missing/invalid configuration
+fails closed and recommends direct contact. Preserve other env and worker volumes;
+deploy app and worker together. No new credential or migration is needed.
+
+This narrow route is available to active chat users without TASK_MANAGE, but
+never grants permissions or executes the original blocked action. It accepts
+only conversation ID and review revision, derives the requester from the session,
+rechecks ownership and source-data scope, and serializes/idempotently creates
+one task per revision. Each requester may have at most three open support tasks.
+It exposes confirmation references rather than private task IDs/content; sensitive
+summaries are hidden and approval rejected if source access is revoked.

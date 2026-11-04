@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {prisma as p} from '../src/server/db/client';
+import {sendAssistant,assistantWorker,approvePermissionSupport,listAssistant} from '../src/domains/ai-assistant/server/service';
+async function main(){
+ const db=new URL(process.env.DATABASE_URL||'');assert.equal(db.hostname,'127.0.0.1');assert.equal(db.pathname,'/personal_codex_test');
+ const suffix=randomUUID(),adminRole=await p.role.findUniqueOrThrow({where:{name:'ADMIN'}});
+ const long=await p.user.create({data:{name:'Synthetic configured Long',email:`long-${suffix}@example.invalid`,roles:{connect:{id:adminRole.id}}}});
+ const requester=await p.user.create({data:{name:'Synthetic unprivileged requester',email:`ask-${suffix}@example.invalid`}}),other=await p.user.create({data:{name:'Long',email:`impostor-${suffix}@example.invalid`}});
+ process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID=long.id;
+ const draft=async()=>{const sent=await sendAssistant(requester.id,{requestKey:randomUUID(),text:'Cần Long xem xét quyền giao việc'});const c=await assistantWorker('claim',{}) as {run:{id:string;leaseToken:string;text:string}};assert.equal(c.run.id,sent.id);assert.equal(JSON.parse(c.run.text).requester.permissionSupportAvailable,true);await assistantWorker('finish',{...c.run,reply:'Liên hệ Long',permissionRequest:'Cần Long xem xét quyền giao việc',plan:null});return (await listAssistant(requester.id,sent.id)).conversations[0];};
+ const first=await draft();assert.equal(await p.taskItem.count({where:{userId:requester.id}}),0);assert.ok(first.permissionRequest);assert.ok(!JSON.stringify(first).includes(long.id));
+ await assert.rejects(approvePermissionSupport(other.id,first.id,first.revision!,()=>{}),/quyền/);
+ await Promise.all([approvePermissionSupport(requester.id,first.id,first.revision!,()=>{}),approvePermissionSupport(requester.id,first.id,first.revision!,()=>{})]);
+ const items=await p.taskItem.findMany({where:{userId:requester.id}});assert.equal(items.length,1);assert.equal(items[0].assignedToUserId,long.id);assert.equal(items[0].status,'TODO');assert.ok(items[0].title.includes('Quyền hạn'));assert.equal(await p.notification.count({where:{userId:long.id,type:`BEN_PERMISSION_${first.id}_${first.revision}`}}),1);
+ assert.equal((await p.user.findUniqueOrThrow({where:{id:requester.id},include:{roles:true}})).roles.length,0);
+ const done=(await listAssistant(requester.id,first.id)).conversations[0];assert.equal(done.permissionRequest,undefined);assert.equal(done.permissionRequests?.length,1);assert.ok(!JSON.stringify(done).includes(items[0].id));
+ const stale=await draft();await sendAssistant(requester.id,{id:stale.id,requestKey:randomUUID(),text:'Đổi ý, chỉ trò chuyện thôi'});await assert.rejects(approvePermissionSupport(requester.id,stale.id,stale.revision!,()=>{}),/thay đổi/);const cancelRun=await assistantWorker('claim',{}) as {run:{id:string;leaseToken:string}};await assistantWorker('finish',{...cancelRun.run,reply:'Được nhé',plan:null});assert.equal((await listAssistant(requester.id,stale.id)).conversations[0].permissionRequest,undefined);
+ const inactive=await draft();await p.user.update({where:{id:long.id},data:{isActive:false}});await assert.rejects(approvePermissionSupport(requester.id,inactive.id,inactive.revision!,()=>{}),/liên hệ Long/);await p.user.update({where:{id:long.id},data:{isActive:true}});
+ await approvePermissionSupport(requester.id,inactive.id,inactive.revision!,()=>{});const third=await draft();await approvePermissionSupport(requester.id,third.id,third.revision!,()=>{});const fourth=await draft();await assert.rejects(approvePermissionSupport(requester.id,fourth.id,fourth.revision!,()=>{}),/3 yêu cầu/);
+ const role=await p.role.create({data:{name:`support-reader-${suffix}`,permissions:{connect:{code:'CUSTOMER_VIEW'}}}});await p.user.update({where:{id:requester.id},data:{roles:{connect:{id:role.id}}}});const customer=await p.customer.create({data:{name:`Synthetic protected support detail ${suffix}`}});
+ const scoped=await sendAssistant(requester.id,{requestKey:randomUUID(),text:'Hỗ trợ quyền giao việc sau khi tra cứu'});const run=await assistantWorker('claim',{}) as {run:{id:string;leaseToken:string}};await assistantWorker('lookup',{...run.run,lookup:{tool:'customers.search',query:customer.id}});await assistantWorker('finish',{...run.run,reply:'Hỗ trợ',plan:null,permissionRequest:customer.name});const scopedDraft=(await listAssistant(requester.id,scoped.id)).conversations[0];assert.ok(scopedDraft.permissionRequest);
+ await p.role.update({where:{id:role.id},data:{permissions:{disconnect:{code:'CUSTOMER_VIEW'}}}});assert.ok(!JSON.stringify(await listAssistant(requester.id,scoped.id)).includes(customer.name));await assert.rejects(approvePermissionSupport(requester.id,scoped.id,scopedDraft.revision!,()=>{}),/Quyền đã thay đổi/);
+ await p.user.update({where:{id:requester.id},data:{isActive:false}});await assert.rejects(approvePermissionSupport(requester.id,fourth.id,fourth.revision!,()=>{}),/hoạt động/);
+ console.log('PASS Long permission support: no writes before approval, fixed configured admin, ownership, concurrent replay, no permission grants, no raw task IDs, stale review, inactive contact, quota, scope revocation and inactive requester.');
+}
+main().catch(e=>{console.error(e instanceof Error?e.message:'Support smoke failed');process.exitCode=1}).finally(()=>p.$disconnect());

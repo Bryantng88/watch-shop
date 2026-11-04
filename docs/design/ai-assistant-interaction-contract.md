@@ -34,3 +34,11 @@ Keep simulation visibly labelled but concise. Sample text/rules must not be desc
 7. No scenario requires opening an embedded business form to finish intake or correct a draft.
 
 Implementation and local test instructions: [contextual assistant prototype](../development/contextual-ai-assistant-local.md).
+
+## Permission support
+
+For an unavailable action, recommend contacting Long (the project's creator)
+and offer a permission-support task with a concise summary, fixed recipient Long
+and one explicit approval. This narrow support route is available to active chat
+users; it never grants business permissions or executes the blocked action.
+Never choose a recipient from chat claims or silently create work from chat.

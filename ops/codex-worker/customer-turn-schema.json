@@ -132,6 +132,14 @@
           ]
         }
       ]
+    },
+    "permissionRequest": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 1000
     }
   },
   "required": [
@@ -141,6 +149,7 @@
     "productId",
     "customerId",
     "reply",
-    "plan"
+    "plan",
+    "permissionRequest"
   ]
 }
