@@ -9,11 +9,21 @@ export function condition(kind: Condition["kind"] = "TASK"): Condition {
   return { id: crypto.randomUUID(), requirement: "", expected: "", kind, assignee: "", progress: "Chờ tiếp nhận", outcome: "Chưa xác minh", result: "" };
 }
 const demoPeople = { Minh: "Minh · Kỹ thuật (mẫu)", An: "An · Vận hành (mẫu)", Linh: "Linh · Sales (mẫu)", Hà: "Hà · Media (mẫu)" };
+export function customerRequestQuestion(r: CustomerRequest): string {
+  if (!r.customer.trim() || /^(khách(?: hàng)?|chưa rõ|chưa xác định|[-.]+)$/iu.test(r.customer.trim())) return "Bạn chưa cung cấp thông tin khách hàng. Khách tên hoặc mã gì?";
+  if (!r.watch.trim() || /^(watch này|đồng hồ này|chưa rõ|[-.]+)$/iu.test(r.watch.trim())) return "Yêu cầu này dành cho watch nào? Bạn cho mình SKU nhé.";
+  if (!r.owner.trim()) return "Ai là người phụ trách theo dõi yêu cầu của khách?";
+  if (!r.conditions.length || r.conditions.some(c=>!c.requirement.trim())) return "Khách cần đáp ứng điều kiện gì trước khi mua?";
+  const unassigned=r.conditions.filter(c=>!c.assignee.trim());
+  if(unassigned.length) return `Ai sẽ nhận việc ${unassigned.map(c=>c.requirement.toLowerCase()).join(", ")}? Bạn nhắn tên người nhận nhé (bản mẫu: Minh, An, Linh, Hà).`;
+  if(r.conditions.some(c=>!c.expected.trim()))return "Bạn muốn nhận lại kết quả gì sau khi xử lý điều kiện này?";
+  return "";
+}
 export function collectCustomerRequest(text: string, watch: string, previous?: CustomerRequest) {
   if (previous?.status === "TRACKING") return { request: previous, question: "" };
   const r: CustomerRequest = previous ? { ...previous, conditions: previous.conditions.map(c=>({...c})), original: previous.original+"\n"+text } : { ...draftCustomerRequest(text,watch), conditions:[], reviewReady:false };
   const customer=text.match(/khách(?: hàng)?\s+(?:tên\s+)?(.+?)(?=\s+(?:muốn|cần|đang|quan tâm|sẽ|mua|hỏi|nếu|về)(?:\s|$)|[,;.\n]|$)/iu)?.[1]?.trim();
-  if(customer && !/^(muốn|cần|mua|hỏi|này)(?:\s|$)/i.test(customer))r.customer=customer;
+  if(customer && !/^(muốn|cần|mua|hỏi|này|có|của|với|về|hàng|yêu cầu|thông tin)(?:\s|$)/i.test(customer))r.customer=customer;
   const sku=text.match(/\bSKU\s*[:#]?\s*([a-z0-9][a-z0-9._-]{2,})/i)?.[1]?.replace(/[._-]+$/,"");
   if(sku)r.watch=sku;else if(!r.watch)r.watch=watch;
   const definitions=[
@@ -45,13 +55,9 @@ export function collectCustomerRequest(text: string, watch: string, previous?: C
   const bulk=text.match(/(?:giao|chuyển)[^,;.\n]*(?:tất cả|cả hai|hết)[^,;.\n]*(?:cho|sang)\s+(Minh|An|Linh|Hà)(?=\s|[.!?]|$)/iu)?.[1];
   const bulkName=(Object.keys(demoPeople) as (keyof typeof demoPeople)[]).find(name=>name.toLocaleLowerCase()===bulk?.toLocaleLowerCase());
   if(bulkName)r.conditions=r.conditions.map(c=>({...c,assignee:demoPeople[bulkName]}));
-  const missing=[];
-  if(!r.customer)missing.push("khách tên hoặc mã gì");if(!r.watch)missing.push("watch có SKU nào");
-  if(!r.conditions.length)missing.push("điều kiện khách cần đáp ứng là gì (bản mẫu hỗ trợ kiểm tra chống nước/máy và tìm mắt dây)");
-  const unassigned=r.conditions.filter(c=>!c.assignee);
-  if(unassigned.length)missing.push(`ai nhận ${unassigned.map(c=>c.requirement.toLowerCase()).join(", ")} (người mẫu: Minh, An, Linh, Hà; ví dụ “Minh kiểm tra, An tìm mắt dây”)`);
-  if(!missing.length)r.reviewReady=true;
-  return {request:r,question:missing.length?"Mình cần biết thêm: "+missing.join("; ")+"? Bạn trả lời ngay trong chat nhé.":""};
+  const question=customerRequestQuestion(r);
+  r.reviewReady=!question;
+  return {request:r,question};
 }
 export function draftCustomerRequest(original: string, watch = ""): CustomerRequest {
   return { id: crypto.randomUUID(), reference: "", customer: "", watch, owner: "Bạn · người nhận yêu cầu", original, status: "DRAFT", decision: "Chưa quyết định", conditions: [
@@ -60,10 +66,7 @@ export function draftCustomerRequest(original: string, watch = ""): CustomerRequ
   ] };
 }
 export function validateCustomerRequest(r: CustomerRequest): string | null {
-  if (!r.customer.trim() || !r.watch.trim() || !r.owner.trim()) return "Điền khách hàng, watch cụ thể và người phụ trách bán hàng.";
-  if (!r.conditions.length) return "Cần ít nhất một điều kiện mua.";
-  if (r.conditions.some(c => !c.requirement.trim() || !c.expected.trim() || !c.assignee)) return "Mỗi điều kiện cần nội dung, kết quả mong đợi và người nhận.";
-  return null;
+  return customerRequestQuestion(r) || null;
 }
 export function approveCustomerRequest(r: CustomerRequest): CustomerRequest {
   if (r.status === "TRACKING") return r;

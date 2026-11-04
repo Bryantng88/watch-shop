@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";import { test } from "node:test";
-import { collectCustomerRequest, draftCustomerRequest, approveCustomerRequest, requestSummary, validateCustomerRequest } from "./customer-request";
+import { collectCustomerRequest, customerRequestQuestion, draftCustomerRequest, approveCustomerRequest, requestSummary, validateCustomerRequest } from "./customer-request";
 import { newConversation, pageContext, readConversations } from "./simulation";
+test("contract: missing customer is asked in chat; stale ready flags never authorize a blank review",()=>{
+ const starter=collectCustomerRequest("Ghi nhận yêu cầu khách hàng có điều kiện","");assert.equal(starter.request.customer,"");assert.match(starter.question,/chưa cung cấp thông tin khách hàng/);
+ for(const ready of [undefined,true,false]){
+  const legacy={...draftCustomerRequest("Cũ","SKU-DEMO"),customer:"   ",reviewReady:ready};
+  assert.match(customerRequestQuestion(legacy),/khách hàng/);assert.throws(()=>approveCustomerRequest(legacy));
+  const resumed=collectCustomerRequest("Khách Bình","",legacy);assert.equal(resumed.question,"");assert.equal(resumed.request.watch,"SKU-DEMO");assert.equal(resumed.request.conditions.length,2);
+ }
+});
 test("complete sample chat becomes one review summary without entering form fields",()=>{
  const {request:r,question}=collectCustomerRequest("Khách Anh muốn mua watch SKU DEMO-001 nếu chống nước ổn và có thêm hai mắt dây. Minh kiểm tra, An tìm mắt dây.","");
  assert.equal(question,"");assert.equal(r.customer,"Anh");assert.equal(r.watch,"DEMO-001");assert.equal(r.reviewReady,true);assert.equal(r.conditions.length,2);

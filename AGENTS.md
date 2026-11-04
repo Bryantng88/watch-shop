@@ -17,6 +17,14 @@ the Codex desktop app, the CLI, and IDE integrations.
 - Use repository files and scripts as the source of truth. Ask before changing
   architecture, production data, deployment policy, or access controls.
 
+## AI assistant UX
+
+Before changing assistant/chat interactions, read
+`docs/design/ai-assistant-interaction-contract.md`.
+Keep conversation as the primary input/correction flow, ask missing facts in chat,
+and show a compact review with one explicit approval only when complete. Do not
+embed business forms, including large forms hidden under Edit/Details accordions.
+
 ## Verification
 
 Run checks appropriate to the files changed. The normal application checks are:

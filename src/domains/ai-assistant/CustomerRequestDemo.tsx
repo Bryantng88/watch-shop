@@ -6,6 +6,7 @@ export default function CustomerRequestDemo({request:r,onChange,canManage,busy=f
   const [error,setError]=useState("");const [editing,setEditing]=useState<string|null>(null);const tracking=r.status==="TRACKING";
   function edit(id:string,change:Partial<Condition>){onChange({...r,conditions:r.conditions.map(c=>c.id===id?{...c,...change}:c)});}
   function approve(){if(!canManage){setError("Bạn chưa có quyền giao việc trong tình huống này.");return;}if(validateCustomerRequest(r)){setError("Còn thiếu thông tin. Nhắn thêm khách, SKU hoặc người nhận ở ô chat nhé.");return;}onChange(approveCustomerRequest(r));}
+  if(!tracking && validateCustomerRequest(r)) return null;
   return <section aria-label="Yêu cầu khách hàng mẫu" className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
     <div className="mb-3 flex items-center justify-between gap-2"><p className="text-sm font-semibold text-slate-900">Khách {r.customer} · {r.watch}</p><span className="shrink-0 text-[10px] text-slate-400">MẪU</span></div>
     <div className="space-y-3">{r.conditions.map(c=><div key={c.id} className="text-sm">
