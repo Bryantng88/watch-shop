@@ -11,3 +11,4 @@ export * from "./acquisition-watch-title.helper";
 export * from "./acquisition-edit.service";
 export * from "./acquisition-buyback.service";
 export * from "./acquisition-access.service";
+export * from "./vendor-pricing-request.service";

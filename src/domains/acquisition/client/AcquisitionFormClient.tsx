@@ -9,6 +9,7 @@ import {
     ChevronRight,
     ClipboardCheck,
     FileText,
+    Link2,
     Loader2,
     PackagePlus,
     Plus,
@@ -341,6 +342,9 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
         createEmptyWatchLine("MEN"),
     ]);
     const [submitting, setSubmitting] = useState(false);
+    const [creatingVendorLink, setCreatingVendorLink] = useState(false);
+    const [revokingVendorLink, setRevokingVendorLink] = useState(false);
+    const [vendorLink, setVendorLink] = useState<{ id: string; url: string } | null>(null);
     const submitLockRef = useRef(false);
     const createdAcquisitionIdRef = useRef<string | null>(null);
     const [createdAcquisition, setCreatedAcquisition] = useState<{ id: string; type: string; audienceSegment: "MEN" | "WOMEN" } | null>(null);
@@ -374,6 +378,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
         setAudienceSegment("MEN");
         setNotes("");
         setWatchLines([createEmptyWatchLine("MEN")]);
+        setVendorLink(null);
     }
 
     function updateLine(id: string, next: AcquisitionWatchLine) {
@@ -438,6 +443,71 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                 { id: "event", label: "Dong bo Watch List projection", status: "done" },
             ],
         });
+    }
+
+    async function createVendorLink() {
+        if (creatingVendorLink || submitting) return;
+        if (type !== "PURCHASE") {
+            notify.warning({ title: "Chỉ áp dụng cho phiếu mua", message: "Link vendor chưa áp dụng cho Trade-in." });
+            return;
+        }
+        if (!vendorId) {
+            notify.warning({ title: "Chưa chọn vendor", message: "Vui lòng chọn vendor trước khi tạo link." });
+            return;
+        }
+        const items = watchLines.filter((line) => line.imageKey || line.quickInput.trim());
+        if (!items.length) {
+            notify.warning({ title: "Chưa có watch", message: "Hãy chọn ảnh hoặc nhập mô tả cho ít nhất một watch." });
+            return;
+        }
+
+        setCreatingVendorLink(true);
+        try {
+            const response = await fetch("/api/admin/vendor-acquisition-pricing-requests", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    vendorId,
+                    currency,
+                    notes: notes.trim() || null,
+                    expiresInDays: 7,
+                    items: items.map((line, index) => ({
+                        title: line.quickInput.trim() || `Đồng hồ #${index + 1}`,
+                        audienceSegment: line.audienceSegment,
+                        imageStorageKey: line.imageKey,
+                    })),
+                }),
+            });
+            const json = await response.json().catch(() => null);
+            if (!response.ok) throw new Error(json?.error || "Không thể tạo link vendor.");
+            const id = String(json?.data?.id ?? "").trim();
+            const url = String(json?.data?.url ?? "").trim();
+            if (!id || !url) throw new Error("Hệ thống không trả về link vendor.");
+            setVendorLink({ id, url });
+            await navigator.clipboard?.writeText(url).catch(() => undefined);
+            notify.success({ title: "Đã tạo link vendor", message: "Link có hiệu lực 7 ngày và đã được sao chép." });
+        } catch (error) {
+            notify.error({ title: "Không thể tạo link vendor", message: getErrorMessage(error, "Có lỗi xảy ra.") });
+        } finally {
+            setCreatingVendorLink(false);
+        }
+    }
+
+    async function revokeVendorLink() {
+        if (!vendorLink || revokingVendorLink) return;
+        if (!window.confirm("Thu hồi link này? Vendor sẽ không thể mở ảnh hoặc gửi báo giá nữa.")) return;
+        setRevokingVendorLink(true);
+        try {
+            const response = await fetch(`/api/admin/vendor-acquisition-pricing-requests/${vendorLink.id}/revoke`, { method: "POST" });
+            const json = await response.json().catch(() => null);
+            if (!response.ok) throw new Error(json?.error || "Không thể thu hồi link vendor.");
+            setVendorLink(null);
+            notify.success({ title: "Đã thu hồi link vendor", message: "Bạn có thể tạo một link mới nếu cần." });
+        } catch (error) {
+            notify.error({ title: "Không thể thu hồi link vendor", message: getErrorMessage(error, "Có lỗi xảy ra.") });
+        } finally {
+            setRevokingVendorLink(false);
+        }
     }
 
     async function submit() {
@@ -833,6 +903,29 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                             Luu phieu nhap
                         </button>
+
+                        {type === "PURCHASE" ? (
+                            <button
+                                type="button"
+                                disabled={submitting || creatingVendorLink}
+                                onClick={createVendorLink}
+                                className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-violet-200 bg-violet-50 px-4 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {creatingVendorLink ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+                                Tạo link để vendor nhập giá
+                            </button>
+                        ) : null}
+
+                        {vendorLink ? (
+                            <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3">
+                                <p className="text-xs font-semibold text-emerald-800">Link vendor đã sẵn sàng</p>
+                                <input readOnly value={vendorLink.url} className="mt-2 h-9 w-full rounded border border-emerald-200 bg-white px-2 text-xs text-slate-700" />
+                                <div className="mt-2 flex items-center justify-between gap-3">
+                                    <button type="button" onClick={() => navigator.clipboard?.writeText(vendorLink.url)} className="text-xs font-semibold text-emerald-700 hover:text-emerald-900">Sao chép lại link</button>
+                                    <button type="button" disabled={revokingVendorLink} onClick={() => void revokeVendorLink()} className="text-xs font-semibold text-rose-600 hover:text-rose-800 disabled:opacity-50">{revokingVendorLink ? "Đang thu hồi…" : "Thu hồi link"}</button>
+                                </div>
+                            </div>
+                        ) : null}
 
                         <button
                             type="button"
