@@ -40,7 +40,7 @@ Do not fetch Cloud private keys or introduce API credentials. Reuse the current 
 
 Limits: 3 pending requests per requester, 38 stored messages before a new conversation is required, default 30 user turns/hour, 16 lookups/turn, 15-minute worker deadline and fenced 120-second renewable lease. Active polling refreshes the selected conversation, not all historic linked work. Closing a panel preserves the run/history; Cancel explicitly revokes the run token.
 
-Actor needs TASK_VIEW, TASK_MANAGE, PRODUCT_VIEW, CUSTOMER_VIEW (with normal permission implications), or ADMIN. Technical reads/creation additionally require SERVICE_VIEW/SERVICE_CREATE; technical recipients must be active and able to update service work. Ordinary task recipients must be active and able to view tasks. Accessory lookups require ACCESSORY_VIEW. Worker account identity is not an authorization bypass for the requester.
+An active authenticated actor may chat without business permissions. Each business lookup requires its corresponding view permission. Task creation requires PRODUCT_VIEW, TASK_VIEW and TASK_MANAGE; technical creation requires PRODUCT_VIEW, TASK_VIEW and SERVICE_CREATE. Linking a customer additionally requires CUSTOMER_VIEW. Normal permission implications and the existing ADMIN policy apply. Technical reads/creation additionally require SERVICE_VIEW/SERVICE_CREATE; technical recipients must be active and able to update service work. Ordinary task recipients must be active and able to view tasks. Accessory lookups require ACCESSORY_VIEW. Worker account identity is not an authorization bypass for the requester.
 
 ## Controlled rollout
 

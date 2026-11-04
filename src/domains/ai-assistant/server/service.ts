@@ -97,10 +97,10 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    if(operation==="lookup"){
      const request=assistantLookupSchema.parse(body.lookup),entries=evidence(row),actor=await assistantActor(tx,row.ownerId);
      if(!lookupAllowed(actor,request.tool))return {evidence:{request,result:{accessDenied:true,reason:"Tài khoản hiện tại không có quyền thực hiện thao tác này. Không có dữ liệu nghiệp vụ được đọc."}}};
-     const prior=entries.find(e=>JSON.stringify(e.request)===JSON.stringify(request));if(prior)return {evidence:prior};if(entries.length>=16)throw new AssistantError("Đã hết lượt tra cứu.");
-     if(request.tool==="watches.images"&&!entries.some(e=>e.request.tool==="watches.search"&&Array.isArray(e.result.matches)&&(e.result.matches as {id:string}[]).some(m=>m.id===request.productId)))throw new AssistantError("Cần tra cứu watch trước khi xem ảnh.");
-     if("productId" in request&&request.tool!=="watches.images"&&!hasUniqueEvidence(entries,"watches.search",request.productId))throw new AssistantError("Cần xác minh watch trước.");
-     if("customerId" in request&&request.customerId&&!hasUniqueEvidence(entries,"customers.search",request.customerId))throw new AssistantError("Cần xác minh khách trước.");
+     const prior=entries.find(e=>JSON.stringify(e.request)===JSON.stringify(request));if(!prior&&entries.length>=16)throw new AssistantError("Đã hết lượt tra cứu.");
+     if(request.tool==="watches.images"&&!entries.some(e=>e.request.tool==="watches.search"&&Array.isArray(e.result.matches)&&(e.result.matches as {id:string}[]).some(m=>m.id===request.productId)))return {evidence:{request,result:{lookupRejected:true,reason:"Cần tìm sản phẩm trước khi xem ảnh; chỉ dùng ID có trong kết quả tìm kiếm."}}};
+     if("productId" in request&&request.tool!=="watches.images"&&!hasUniqueEvidence(entries,"watches.search",request.productId))return {evidence:{request,result:{lookupRejected:true,reason:"Chưa xác định duy nhất đồng hồ. Nếu đang hỏi danh sách, trả danh sách tìm được; nếu cần thao tác cụ thể, hỏi lại người dùng để xác định watch. Không tự chọn một ID."}}};
+     if("customerId" in request&&request.customerId&&!hasUniqueEvidence(entries,"customers.search",request.customerId))return {evidence:{request,result:{lookupRejected:true,reason:"Chưa xác định duy nhất hồ sơ khách. Hỏi lại nếu cần gắn hồ sơ; không tự chọn khách."}}};
      let result:Record<string,unknown>;
      if(request.tool==="watches.images"){
        const cards=await assistantProductCards(tx,[request.productId]);const card=cards[0];result=card?{productId:card.id,title:card.title,sku:card.sku,imageCount:card.images.length,displayedInChat:true}:{productId:request.productId,imageCount:0,displayedInChat:false};
@@ -112,7 +112,7 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
      }else{
        const actor=await assistantActor(tx,row.ownerId);if(request.tool==="accessories.search"&&!actor.admin&&!actor.permissions.has("ACCESSORY_VIEW"))result={matches:[],truncated:false,accessDenied:true};else {result=await executeIntakeLookup(tx,request);if(request.tool==="work.open")result={...result,followups:[],openWatchWork:(await Promise.all((result.openWatchWork as {id:string}[]).map(item=>visibleTask(tx,item.id,actor)))).filter((item):item is NonNullable<typeof item>=>!!item),caution:"Only visible tasks are shown; the server rechecks all conflicts privately at approval."};}
      }
-     const entry={request,result};await tx.customerAssistantConversation.update({where:{id},data:{evidence:json([...entries,entry])}});return {evidence:entry};
+     const entry={request,result};await tx.customerAssistantConversation.update({where:{id},data:{evidence:json(prior?entries.map(e=>e===prior?entry:e):[...entries,entry])}});return {evidence:entry};
    }
    if(operation!=="finish")throw new AssistantError("Lệnh không hợp lệ.");
    const failed=body.failed===true;let reply=typeof body.reply==="string"?body.reply.trim().slice(0,1500):"";if(!reply&&!failed)throw new AssistantError("Thiếu câu trả lời.");
