@@ -5,8 +5,10 @@ import type { ReactNode } from "react";
 import AdminTopbar from "./AdminTopBar";
 import AdminSidebar from "./AdmidSideBar";
 import { AdminNavigationHistoryProvider } from "@/domains/shared/ui/navigation/AdminNavigationHistory";
+import AiAssistant from "@/domains/ai-assistant/AiAssistant";
 
 type AdminShellUser = {
+    id: string;
     permissions: string[];
     name?: string | null;
     roles?: string[];
@@ -14,11 +16,12 @@ type AdminShellUser = {
 };
 
 type AdminShellProps = {
+    assistantSimulation?: boolean;
     user: AdminShellUser;
     children: ReactNode;
 };
 
-export default function AdminShell({ user, children }: AdminShellProps) {
+export default function AdminShell({ user, children, assistantSimulation = false }: AdminShellProps) {
     const searchParams = useSearchParams();
     const isEmbedded = searchParams.get("embedded") === "1";
 
@@ -61,6 +64,7 @@ export default function AdminShell({ user, children }: AdminShellProps) {
                 </main>
             </div>
         </div>
+        {assistantSimulation && <AiAssistant key={user.id} userId={user.id} canManage={!!user.roles?.includes("ADMIN") || user.permissions.includes("TASK_MANAGE")} />}
         </AdminNavigationHistoryProvider>
     );
 }

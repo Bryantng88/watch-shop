@@ -100,7 +100,7 @@ const NAV: NavEntry[] = [
             {
                 type: "item",
                 href: "/admin/coordination/sales",
-                label: "Sales · Tư vấn AI",
+                label: "Sales",
                 icon: MessageSquare,
                 permissionsAll: [PERMISSIONS.TASK_VIEW, PERMISSIONS.TASK_MANAGE, PERMISSIONS.PRODUCT_VIEW, PERMISSIONS.CUSTOMER_VIEW],
             },
