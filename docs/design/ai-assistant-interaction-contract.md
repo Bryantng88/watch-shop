@@ -137,7 +137,8 @@ page permissions resolve this into currentScreen, bound to the current message.
 Authorized existing order/watch detail may include only verified ID and order
 reference/SKU, never contacts, amounts, payment data, costs or unsaved fields.
 Other detail routes report only their section, not private entity IDs. Unknown,
-denied, missing or unsupported hints yield no screen snapshot. Never use old
+denied, missing or unsupported hints yield no screen snapshot; invalid optional
+route metadata is discarded rather than blocking ordinary chat. Never use old
 history or a prior navigation as proof of the current screen.
 
 This is a snapshot at send time, not live screen tracking, a context lock, evidence,
