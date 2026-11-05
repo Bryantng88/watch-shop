@@ -32,7 +32,7 @@ export default function AiAssistant({ userId, canManage, live = false, fullPage 
   const [assignedOpen,setAssignedOpen]=useState(false);
   const [ready, setReady] = useState(false), [input, setInput] = useState(""), [busy, setBusy] = useState(false), [scenario, setScenario] = useState<Scenario>("normal"), [notice, setNotice] = useState("");
   const launcher = useRef<HTMLButtonElement>(null), textarea = useRef<HTMLTextAreaElement>(null), bottom = useRef<HTMLDivElement>(null), panel = useRef<HTMLElement>(null), generation = useRef(0);
-  const liveSelected=useRef("");const liveSequence=useRef(0);const livePending=useRef(false);const liveTracking=useRef(false);const liveSubmitting=useRef(false);const liveDrafts=useRef(new Set<string>());const liveRequestKey=useRef<{id:string;text:string;key:string}|null>(null);
+  const liveSelected=useRef("");const liveSequence=useRef(0);const livePending=useRef(false);const liveTracking=useRef(false);const liveSubmitting=useRef(false);const liveDrafts=useRef(new Set<string>());const liveRequestKey=useRef<{id:string;text:string;key:string;screenPath:string}|null>(null);
   useEffect(()=>{liveSelected.current=selected;},[selected]);
   const refreshLive=useCallback(async(preferred?:string)=>{
     const sequence=++liveSequence.current;const active=preferred||liveSelected.current;const target=active&&!liveDrafts.current.has(active)?"?id="+encodeURIComponent(active):"";const response=await fetch("/api/admin/customer-assistant"+target,{cache:"no-store"});const data=await response.json();if(!response.ok)throw Error(data.error||"Không tải được cuộc trao đổi.");if(sequence!==liveSequence.current)return;
@@ -63,9 +63,9 @@ export default function AiAssistant({ userId, canManage, live = false, fullPage 
     const c = chat || create();
     if(live){
       setBusy(true);setNotice("");liveSubmitting.current=true;liveSequence.current++;
-      if(!liveRequestKey.current||liveRequestKey.current.id!==c.id||liveRequestKey.current.text!==text)liveRequestKey.current={id:c.id,text,key:crypto.randomUUID()};
+      if(!liveRequestKey.current||liveRequestKey.current.id!==c.id||liveRequestKey.current.text!==text||liveRequestKey.current.screenPath!==pathname)liveRequestKey.current={id:c.id,text,key:crypto.randomUUID(),screenPath:pathname};
       pendingNavigation.current={requestKey:liveRequestKey.current.key,conversationId:c.id};
-      try{const row=await livePost({action:"send",...(c.revision?{id:c.id}:{}),requestKey:liveRequestKey.current.key,text,productId:isProductContext(current)?current.id||null:null}) as Conversation;if(pendingNavigation.current)pendingNavigation.current.conversationId=row.id;liveDrafts.current.delete(c.id);liveRequestKey.current=null;setInput("");liveSelected.current=row.id;setSelected(row.id);setChats(rows=>[row,...rows.filter(r=>r.id!==c.id&&r.id!==row.id)]);}
+      try{const row=await livePost({action:"send",...(c.revision?{id:c.id}:{}),requestKey:liveRequestKey.current.key,text,screenPath:pathname,productId:isProductContext(current)?current.id||null:null}) as Conversation;if(pendingNavigation.current)pendingNavigation.current.conversationId=row.id;liveDrafts.current.delete(c.id);liveRequestKey.current=null;setInput("");liveSelected.current=row.id;setSelected(row.id);setChats(rows=>[row,...rows.filter(r=>r.id!==c.id&&r.id!==row.id)]);}
       catch(e){pendingNavigation.current=null;setNotice(e instanceof Error?e.message:"Không gửi được tin nhắn.");}
       finally{liveSubmitting.current=false;setBusy(false);await refreshLive(liveSelected.current||undefined).catch(e=>setNotice(e.message));}return;
     }

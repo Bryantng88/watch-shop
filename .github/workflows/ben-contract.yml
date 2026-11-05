@@ -24,5 +24,5 @@ jobs:
       - run: npm ci
       - run: node --import tsx --test src/domains/ai-assistant/*.test.ts src/domains/ai-assistant/server/*.test.ts
       - run: node --test ops/codex-worker/worker.test.mjs ops/codex-worker/worker.integration.test.mjs ops/codex-worker/sales-intake-protocol.test.mjs ops/codex-worker/customer-assistant-protocol.test.mjs tests/pwa/ben-service-worker.test.mjs
-      - run: npx eslint src/domains/ai-assistant scripts/smoke-ben-navigation.ts scripts/smoke-ben-navigation-real.ts
+      - run: npx eslint src/domains/ai-assistant scripts/smoke-ben-*.ts src/app/api/admin/customer-assistant/route.ts
       - run: npx tsc --noEmit

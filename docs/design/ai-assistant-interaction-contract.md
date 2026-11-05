@@ -118,3 +118,31 @@ order rules, without collecting payment or creating shipment. Only the explicit
 Current permissions, evidence, stock and duplicate-order checks run again inside
 the canonical creation transaction. Replays do not create another order. Created
 order links belong in the separate assigned-request view.
+
+## Reference prices and current screen
+
+Ben-only watch search/detail projections expose WatchPrice.salePrice (selling) and
+listPrice (list), VND currency, update time and REFERENCE_ONLY usage under
+PRODUCT_VIEW. Preserve decimal strings. Missing/non-positive selling prices mean
+NOT_SET, never free; do not silently substitute list price. Fetch fresh evidence
+for each new price question. Never select costs, minimum prices or internal notes,
+even for ADMIN; normal cost permissions do not add a cost/margin tool to Ben.
+Price lookup does not establish stock, agreement, a discount or an order. Gather
+an agreed amount or the user's explicit adoption of a displayed reference before
+an order review; retain one explicit approval before any DRAFT/HOLD write.
+
+The browser sends only pathname with each message, not query/hash, page title,
+DOM, screenshot, form contents or another tab. Server-owned labels and canonical
+page permissions resolve this into currentScreen, bound to the current message.
+Authorized existing order/watch detail may include only verified ID and order
+reference/SKU, never contacts, amounts, payment data, costs or unsaved fields.
+Other detail routes report only their section, not private entity IDs. Unknown,
+denied, missing or unsupported hints yield no screen snapshot. Never use old
+history or a prior navigation as proof of the current screen.
+
+This is a snapshot at send time, not live screen tracking, a context lock, evidence,
+an instruction or approval. Users may discuss unrelated topics. Recheck permissions
+at claim/finish and redact replies if rights are revoked. Navigating between pages
+or tabs and sending another message replaces/clears the old hint. Reload does not
+replay navigation. Full business reads/actions still need their authorized tools;
+identifying an order screen does not grant an order-read or payment tool.

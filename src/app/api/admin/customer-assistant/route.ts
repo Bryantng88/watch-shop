@@ -1,3 +1,4 @@
+import {screenPathSchema} from "@/domains/ai-assistant/server/current-screen";
 import { after, NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUserPermissions } from "@/server/auth/requirePermission";
@@ -5,7 +6,7 @@ import { approveAssistantOrder, approvePermissionSupport, approveAssistant, canc
 import { AssistantError } from "@/domains/ai-assistant/server/access";
 const uuid=z.string().uuid();
 const command=z.discriminatedUnion("action",[
- z.object({action:z.literal("send"),id:uuid.optional(),requestKey:uuid,text:z.string().trim().min(1).max(4000),productId:z.string().min(1).max(100).nullable().optional()}).strict(),
+ z.object({action:z.literal("send"),id:uuid.optional(),requestKey:uuid,text:z.string().trim().min(1).max(4000),productId:z.string().min(1).max(100).nullable().optional(),screenPath:screenPathSchema.nullable().optional()}).strict(),
  z.object({action:z.literal("cancel"),id:uuid}).strict(),
  z.object({action:z.literal("permission-support"),id:uuid,revision:z.number().int().min(1)}).strict(),
  z.object({action:z.literal("approve-order"),id:uuid,revision:z.number().int().min(1)}).strict(),
