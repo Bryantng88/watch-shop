@@ -62,6 +62,15 @@ conversation, once. Reload/history/another tab, cancellation, closing the panel,
 submission failure or a newer message cannot replay automatic navigation. A normal
 authorized link remains available if automatic navigation does not happen.
 
+Ben window visibility is controlled by the user. Navigation, replies and changes
+of admin screen must not close or reopen the panel. Keep one assistant instance
+across admin routes, including transitions to/from the dedicated Ben page, so the
+selected conversation and unsent input survive client navigation. Opening the
+dedicated Ben route is an explicit request to show chat; leaving it keeps Ben open
+as a panel. Remember only the open/closed UI preference per tab and authenticated
+account in sessionStorage; do not persist live messages or pending navigation there.
+Reload may restore visibility, never automatic navigation.
+
 New assistant tools must document intent shape, trusted source binding, permission
 checks, side effects/approval, result codes, failure wording and browser/replay
 behavior before implementation. Acceptance needs server/protocol/client boundary
