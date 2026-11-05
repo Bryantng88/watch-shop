@@ -245,18 +245,19 @@ export async function approveAssistantOrder(userId:string,id:string,revision:num
  let updated:CustomerAssistantConversation|undefined;
  class Replay extends Error{}
  try{
-  await createOrderWithItems({customerId:plan.customerId,customerName:plan.customerName,shipPhone:plan.phone,hasShipment:plan.hasShipment,shipAddress:plan.address,shipCity:plan.city,shipDistrict:plan.district,shipWard:plan.ward,paymentMethod:plan.paymentMethod,notes:plan.notes,status:"DRAFT",source:"ADMIN",verificationStatus:"VERIFIED",reserve:{type:"NONE"},items:snapshot.orderDraft.items.map(i=>({kind:"PRODUCT",productId:i.id,title:i.title,quantity:1,listPrice:i.price,unitPriceAgreed:i.price}))},{deferConsumers:defer},{
+  await createOrderWithItems({customerId:plan.customerId,customerName:plan.customerName,shipPhone:plan.phone,hasShipment:plan.hasShipment,shipAddress:plan.address,shipCity:plan.city,shipDistrict:plan.district,shipWard:plan.ward,paymentMethod:plan.paymentMethod,notes:plan.notes,status:"DRAFT",source:"ADMIN",verificationStatus:"VERIFIED",reserve:{type:"NONE"},items:snapshot.orderDraft.items.map(i=>({kind:"PRODUCT",productId:i.id,title:i.title,quantity:1,listPrice:0,unitPriceAgreed:i.price}))},{deferConsumers:defer},{
    preserveCustomerProfile:true,actorUserId:userId,
    beforeCreate:async tx=>{
     await lock(tx,id);const current=await owned(tx,id,userId),currentActor=await assistantActor(tx,userId),s=state(current);
     if(s.createdOrders?.some(o=>o.revision===revision)){updated=current;throw new Replay();}
     if(current.revision!==revision||current.status!=="DRAFT"||s.orderDraft?.revision!==revision||JSON.stringify(assistantOrderSchema.parse(s.orderDraft.plan))!==JSON.stringify(plan))throw new AssistantError("Bản đơn đã thay đổi. Hãy xem lại trước khi tạo.",409);
     if(orderDeniedPermission(currentActor,plan))throw new AssistantError("Quyền của bạn đã thay đổi; chưa tạo đơn.",403);
+    if(plan.customerId)await tx.$queryRaw`SELECT "id" FROM "Customer" WHERE "id"=${plan.customerId} FOR UPDATE`;
+    if(!plan.customerId&&plan.phone)await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`ben-customer-phone:${plan.phone}`}, 0))`;
     for(const productId of plan.items.map(i=>i.productId).sort()){
      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`order-product:${productId}`}, 0))`;
      await tx.$queryRaw`SELECT "id" FROM "Product" WHERE "id"=${productId} FOR UPDATE`;
     }
-    if(plan.customerId)await tx.$queryRaw`SELECT "id" FROM "Customer" WHERE "id"=${plan.customerId} FOR UPDATE`;
     await prepareOrder(tx,plan,revision,evidence(current));
    },
    afterCreate:async(tx,result)=>{
