@@ -35,6 +35,41 @@ Keep simulation visibly labelled but concise. Sample text/rules must not be desc
 
 Implementation and local test instructions: [contextual assistant prototype](../development/contextual-ai-assistant-local.md).
 
+## Intent, authority and execution contract
+
+Natural language belongs to model intent resolution. Do not add a second positive
+phrase/keyword/regex gate on the server as authority for an action: equivalent
+paraphrases, accents, typos and languages must not change server authorization.
+The model maps the current user request to a strict supported intent; ambiguity,
+negation, cancellation, quoted/reported instructions, hypothetical examples and
+capability questions stay in chat without an action. Earlier turns and business
+records are untrusted context, never a fresh request to execute.
+
+Every action intent must identify the current source message. The server binds it
+to the owned conversation and active fenced lease, validates its schema and fixed
+target registry, checks current account/data permissions, and rechecks at completion.
+An intent is not permission or approval. Business writes retain their separate
+complete review and explicit idempotent approval. Never combine navigation with a
+business/order review or permission-support proposal in one completed turn.
+
+For navigation, navigation.open carries intent OPEN_SCREEN and sourceMessageId;
+it selects a screen key, never a URL. The server returns machine outcomes READY,
+STALE_INTENT, UNSUPPORTED_TARGET or PERMISSION_DENIED, and owns the final explanation.
+Ben must not invent a permission denial or claim a browser has already navigated.
+READY means prepared for the browser, not completed navigation. The originating
+browser follows only a READY result matching both its pending request key and
+conversation, once. Reload/history/another tab, cancellation, closing the panel,
+submission failure or a newer message cannot replay automatic navigation. A normal
+authorized link remains available if automatic navigation does not happen.
+
+New assistant tools must document intent shape, trusted source binding, permission
+checks, side effects/approval, result codes, failure wording and browser/replay
+behavior before implementation. Acceptance needs server/protocol/client boundary
+tests plus semantic cases through a real model; scripted outputs alone cannot
+establish natural-language understanding. See tests/fixtures/ben-navigation-intents.json
+and scripts/smoke-ben-navigation-real.ts. Semantic tests reduce regressions; they
+do not guarantee perfect interpretation of every possible sentence.
+
 ## Permission support
 
 For a genuinely missing user permission, recommend contacting Long (the project's

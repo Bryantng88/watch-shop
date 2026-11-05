@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import ProductPhotoCard from "./ProductPhotoCard";
 import BenAvatar from "./BenAvatar";
+import {takeNavigation,type PendingNavigation} from "./navigation-client";
 import { usePathname, useRouter } from "next/navigation";
 import { X, Plus, History, Send, Square, Trash2, Check, ArrowRight } from "lucide-react";
 import { followScreenWhileEmpty, isProductContext, newConversation, pageContext, readConversations, simulateReply, type Conversation, type Scenario } from "./simulation";
@@ -17,7 +18,7 @@ const people = { technical: "Minh · Kỹ thuật (mẫu)", operation: "An · V�
 const field = "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400";
 
 export default function AiAssistant({ userId, canManage, live = false, fullPage = false }: { userId: string; canManage: boolean; live?:boolean; fullPage?:boolean }) {
-  const router=useRouter();const pendingNavigation=useRef<string|null>(null);
+  const router=useRouter();const pendingNavigation=useRef<PendingNavigation|null>(null);
   const pathname = usePathname(), current = pageContext(pathname), storageKey = `watchshop:ai-demo:v1:${userId}`;
   const [open, setOpen] = useState(fullPage), [history, setHistory] = useState(false), [chats, setChats] = useState<Conversation[]>([]), [selected, setSelected] = useState("");
   const [assignedOpen,setAssignedOpen]=useState(false);
@@ -27,7 +28,7 @@ export default function AiAssistant({ userId, canManage, live = false, fullPage 
   useEffect(()=>{liveSelected.current=selected;},[selected]);
   const refreshLive=useCallback(async(preferred?:string)=>{
     const sequence=++liveSequence.current;const active=preferred||liveSelected.current;const target=active&&!liveDrafts.current.has(active)?"?id="+encodeURIComponent(active):"";const response=await fetch("/api/admin/customer-assistant"+target,{cache:"no-store"});const data=await response.json();if(!response.ok)throw Error(data.error||"Không tải được cuộc trao đổi.");if(sequence!==liveSequence.current)return;
-    const rows=data.conversations as Conversation[];const navigationMessage=rows.find(r=>r.id===(preferred||liveSelected.current))?.messages.at(-1);if(pendingNavigation.current&&navigationMessage?.navigationRequestKey===pendingNavigation.current&&navigationMessage.navigation){pendingNavigation.current=null;if(!fullPage)setOpen(false);router.push(navigationMessage.navigation.href);}
+    const rows=data.conversations as Conversation[];const navigation=takeNavigation(pendingNavigation.current,rows.find(r=>r.id===(preferred||liveSelected.current)));if(navigation){pendingNavigation.current=null;if(!fullPage)setOpen(false);router.push(navigation.href);}
     const id=preferred||liveSelected.current||rows[0]?.id||"";liveSelected.current=id;setSelected(id);livePending.current=rows.some(r=>["QUEUED","RUNNING"].includes(r.runStatus||""));liveTracking.current=rows.some(r=>r.id===id&&r.approved);setBusy(liveSubmitting.current||rows.some(r=>r.id===id&&["QUEUED","RUNNING"].includes(r.runStatus||"")));setChats(current=>data.partial?current.map(r=>rows.find(row=>row.id===r.id)||r).concat(rows.filter(row=>!current.some(r=>r.id===row.id))):[...current.filter(r=>liveDrafts.current.has(r.id)),...rows]);
   },[router,fullPage]);
   async function livePost(body:unknown){const response=await fetch("/api/admin/customer-assistant",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});const data=await response.json();if(!response.ok)throw Error(data.error||"Chưa thực hiện được yêu cầu.");return data;}
@@ -46,7 +47,7 @@ export default function AiAssistant({ userId, canManage, live = false, fullPage 
   useEffect(()=>{setAssignedOpen(false);},[selected]);
   useEffect(() => { bottom.current?.scrollIntoView({ block: "nearest" }); }, [chat?.messages.length, busy]);
   useEffect(() => () => { generation.current++; }, []);
-  function close() { if(fullPage)return; setOpen(false); launcher.current?.focus(); }
+  function close() { if(fullPage)return; pendingNavigation.current=null; setOpen(false); launcher.current?.focus(); }
   function create(context = live ? null : current) { pendingNavigation.current=null; const c = newConversation(context); if(live)liveDrafts.current.add(c.id); liveRequestKey.current=null; setChats(rows => [c, ...rows].slice(0, 20)); setSelected(c.id); setHistory(false); setAssignedOpen(false); setInput(""); setNotice(""); return c; }
   function update(id: string, fn: (c: Conversation) => Conversation) { setChats(rows => rows.map(c => c.id === id ? { ...fn(c), updatedAt: new Date().toISOString() } : c).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt))); }
   async function send(value = input) {
@@ -55,9 +56,9 @@ export default function AiAssistant({ userId, canManage, live = false, fullPage 
     if(live){
       setBusy(true);setNotice("");liveSubmitting.current=true;liveSequence.current++;
       if(!liveRequestKey.current||liveRequestKey.current.id!==c.id||liveRequestKey.current.text!==text)liveRequestKey.current={id:c.id,text,key:crypto.randomUUID()};
-      pendingNavigation.current=liveRequestKey.current.key;
-      try{const row=await livePost({action:"send",...(c.revision?{id:c.id}:{}),requestKey:liveRequestKey.current.key,text,productId:isProductContext(current)?current.id||null:null}) as Conversation;liveDrafts.current.delete(c.id);liveRequestKey.current=null;setInput("");liveSelected.current=row.id;setSelected(row.id);setChats(rows=>[row,...rows.filter(r=>r.id!==c.id&&r.id!==row.id)]);}
-      catch(e){setNotice(e instanceof Error?e.message:"Không gửi được tin nhắn.");}
+      pendingNavigation.current={requestKey:liveRequestKey.current.key,conversationId:c.id};
+      try{const row=await livePost({action:"send",...(c.revision?{id:c.id}:{}),requestKey:liveRequestKey.current.key,text,productId:isProductContext(current)?current.id||null:null}) as Conversation;if(pendingNavigation.current)pendingNavigation.current.conversationId=row.id;liveDrafts.current.delete(c.id);liveRequestKey.current=null;setInput("");liveSelected.current=row.id;setSelected(row.id);setChats(rows=>[row,...rows.filter(r=>r.id!==c.id&&r.id!==row.id)]);}
+      catch(e){pendingNavigation.current=null;setNotice(e instanceof Error?e.message:"Không gửi được tin nhắn.");}
       finally{liveSubmitting.current=false;setBusy(false);await refreshLive(liveSelected.current||undefined).catch(e=>setNotice(e.message));}return;
     }
     if (c.messages.length >= 38) { setNotice("Cuộc trao đổi đã đủ dài. Hãy tạo trao đổi mới để tiếp tục."); return; }

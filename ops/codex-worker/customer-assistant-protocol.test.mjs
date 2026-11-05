@@ -51,7 +51,16 @@ test('draft order format cannot request posting, payment writes or mix approvals
 });
 
 test('navigation uses a bounded key query and cannot carry business fields or URLs as extra fields',()=>{
- assert.deepEqual(validateCustomerTurn({...finish,type:'lookup',tool:'navigation.open',query:'personal-work',reply:null}).lookup,{tool:'navigation.open',query:'personal-work'});
+ assert.deepEqual(validateCustomerTurn({...finish,type:'lookup',tool:'navigation.open',query:'personal-work',reply:null,navigationIntent:{type:'OPEN_SCREEN',sourceMessageId:'message'}}).lookup,{tool:'navigation.open',query:'personal-work',intent:{type:'OPEN_SCREEN',sourceMessageId:'message'}});
  assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'navigation.open',query:'watches',productId:'watch',reply:null}));
  assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'navigation.open',query:'watches',reply:null,href:'https://evil.test'}));
+});
+
+test('navigation requires structured current-user intent; stale or invented source never reaches the API',async()=>{
+ const lookup={...finish,type:'lookup',tool:'navigation.open',query:'watches',reply:null};
+ assert.throws(()=>validateCustomerTurn(lookup),/INVALID_CUSTOMER_NAVIGATION/);
+ for(const intent of [{type:'DELETE',sourceMessageId:'current'},{type:'OPEN_SCREEN',sourceMessageId:''},{type:'OPEN_SCREEN',sourceMessageId:'current',href:'/admin/watches'}])assert.throws(()=>validateCustomerTurn({...lookup,navigationIntent:intent}));
+ const calls=[];let attempts=0;
+ await assert.rejects(runCustomerConversation({id:'r',text:JSON.stringify({currentUserMessage:{id:'current',text:'Navigate'}})},{execute:async()=>{attempts++;return {...lookup,navigationIntent:{type:'OPEN_SCREEN',sourceMessageId:'old'}}},api:async op=>{calls.push(op)}}),/INVALID_CUSTOMER_NAVIGATION_SOURCE/);
+ assert.equal(attempts,2);assert.deepEqual(calls,[]);
 });
