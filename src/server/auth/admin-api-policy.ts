@@ -219,6 +219,7 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
 }
 
 export function getAdminPagePolicy(pathname: string): AdminAccessPolicy | null {
+    if (pathname === "/admin/ben") return publicToAuthenticatedUser();
     if (pathname === "/admin" || pathname.startsWith("/admin/dashboard")) return anyOf(PERMISSIONS.DASHBOARD_VIEW);
     if (/^\/admin\/(profile|users\/profile)(\/|$)/.test(pathname)) return publicToAuthenticatedUser();
     if (/^\/admin\/personal-work(\/|$)/.test(pathname)) return publicToAuthenticatedUser();

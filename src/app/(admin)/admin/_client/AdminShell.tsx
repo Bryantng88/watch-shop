@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import AdminTopbar from "./AdminTopBar";
 import AdminSidebar from "./AdmidSideBar";
@@ -24,6 +24,8 @@ type AdminShellProps = {
 
 export default function AdminShell({ user, children, assistantSimulation = false, assistantLive = false }: AdminShellProps) {
     const searchParams = useSearchParams();
+    const pathname = usePathname();
+    if (pathname === "/admin/ben") return <main className="min-h-[100dvh] bg-slate-100">{children}{assistantLive ? <AiAssistant userId={user.id} live fullPage canManage={!!user.roles?.includes("ADMIN") || user.permissions.includes("TASK_MANAGE")} /> : <p className="p-6">Ben chưa được bật ở môi trường này.</p>}</main>;
     const isEmbedded = searchParams.get("embedded") === "1";
 
     if (isEmbedded) {
