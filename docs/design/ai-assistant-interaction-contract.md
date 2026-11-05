@@ -42,3 +42,12 @@ and offer a permission-support task with a concise summary, fixed recipient Long
 and one explicit approval. This narrow support route is available to active chat
 users; it never grants business permissions or executes the blocked action.
 Never choose a recipient from chat claims or silently create work from chat.
+
+## Assigned-request navigation
+
+Live Ben keeps dispatched business requests and sent permission-support tickets
+in the separate "Các yêu cầu đã giao" view for the selected conversation. Chat
+shows only an actionable pending review, never persistent dispatched-work cards.
+The assigned view includes the most recently approved request and older archives,
+without duplicate entries, and retains existing links/outcome controls. Switching
+views never creates, deletes or redispatches work. "Assigned" does not mean done.
