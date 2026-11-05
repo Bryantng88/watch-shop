@@ -8,6 +8,7 @@ export const assistantPlanSchema=z.object({customerId:id.nullable(),productId:id
 });
 export type AssistantPlan=z.infer<typeof assistantPlanSchema>;
 export const assistantLookupSchema=z.discriminatedUnion("tool",[
+ z.object({tool:z.literal("navigation.open"),query:z.string().trim().min(2).max(100)}).strict(),
  z.object({tool:z.literal("customers.search"),query:z.string().trim().min(2).max(100)}).strict(),
  z.object({tool:z.literal("watches.search"),query:z.string().trim().min(2).max(100)}).strict(),
  z.object({tool:z.literal("accessories.search"),query:z.string().trim().min(2).max(100)}).strict(),

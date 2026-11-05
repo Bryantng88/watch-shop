@@ -3,6 +3,7 @@ import type { AssistantPlan } from "./live-contract";
 
 export type AssistantAuthority = { admin: boolean; permissions: ReadonlySet<string> };
 export const LOOKUP_PERMISSIONS: Readonly<Record<string, readonly string[]>> = {
+  "navigation.open": [],
   "customers.search": ["CUSTOMER_VIEW"],
   "watches.search": ["PRODUCT_VIEW"],
   "watches.detail": ["PRODUCT_VIEW"],

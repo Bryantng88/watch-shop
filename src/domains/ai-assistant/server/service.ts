@@ -1,3 +1,4 @@
+import { availableScreens, navigationTarget, isNavigationRequest } from "../navigation";
 import { randomUUID } from "node:crypto";
 import { Prisma, type CustomerAssistantConversation } from "@prisma/client";
 import { prisma, type DB, type Tx } from "@/server/db/client";
@@ -71,7 +72,7 @@ async function dto(row:CustomerAssistantConversation){
   s.approvedRequests=await Promise.all((s.approvedRequests||[]).filter(r=>readableRequest(r.request,actor)).map(async r=>({...r,request:await linkedRequest(prisma,r.request,actor)})));
  }
  const cards=hasAssistantPermission(actor,"PRODUCT_VIEW")?await assistantProductCards(prisma,s.messages.flatMap(m=>m.imageProductIds||[])):[];
- for(const m of s.messages){delete m.products;if(m.role==="assistant"&&m.imageProductIds)m.products=m.imageProductIds.flatMap(id=>cards.filter(c=>c.id===id));}
+ for(const m of s.messages){delete m.navigation;if(m.role==="assistant"&&m.navigationKey){const target=navigationTarget(m.navigationKey,actor);if(target)m.navigation=target;}delete m.products;if(m.role==="assistant"&&m.imageProductIds)m.products=m.imageProductIds.flatMap(id=>cards.filter(c=>c.id===id));}
  return {...s,updatedAt:row.updatedAt.toISOString(),revision:row.revision,runStatus:row.status,errorCode:row.errorCode,approved:!!row.approvedAt,capabilities:assistantCapabilities(actor)};
 }
 export async function listAssistant(userId:string,id?:string){await assistantActor(prisma,userId);const rows=id?[await owned(prisma,id,userId)]:await prisma.customerAssistantConversation.findMany({where:{ownerId:userId},orderBy:{updatedAt:"desc"},take:20});return {partial:!!id,conversations:await Promise.all(rows.map(row=>dto(row)))};}
@@ -110,7 +111,7 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    // A model may repeat any supplied business information without doing a new lookup.
    const turnReadScope={permissions:[...new Set([...(supportScope?.permissions||[]),...history.slice(-12).flatMap(m=>m.role==="assistant"?m.requiredPermissions||[]:[]),...requests.flatMap(r=>["PRODUCT_VIEW","TASK_VIEW",...(r.customer!=="Chưa gắn hồ sơ khách"?["CUSTOMER_VIEW"]:[]),...(r.conditions.some(c=>c.kind==="TECHNICAL"&&c.linkedRef)?["SERVICE_VIEW"]:[])])])],taskIds:[...new Set([...(supportScope?.taskIds||[]),...history.slice(-12).flatMap(m=>m.requiredTaskIds||[]),...requests.flatMap(r=>r.conditions.filter(c=>c.kind==="TASK"&&c.linkedRef).map(c=>c.linkedRef!))])]};
    const token=randomUUID();await tx.customerAssistantConversation.update({where:{id:row.id},data:{state:json({...currentState,turnReadScope}),status:"RUNNING",leaseToken:token,leaseExpiresAt:new Date(Date.now()+120000)}});
-   return {run:{id:row.id,leaseToken:token,text:JSON.stringify({...workerHistory({...currentState,messages:history},actor),screenProductHint:hasAssistantPermission(actor,"PRODUCT_VIEW")?currentState.pinnedProductId:null,previousRequest:previousRequest?{...previousRequest,original:undefined}:null,approvedRequests,alreadyApproved:!!row.approvedAt,pendingPermissionRequest,permissionRequests:currentState.permissionRequests||[],requester:{id:row.ownerId,name:actor.name,...capabilities,permissionSupportAvailable:!!await permissionContact(tx)}}),referenceTime:new Date().toISOString(),timeZone:"Asia/Ho_Chi_Minh"}};
+   return {run:{id:row.id,leaseToken:token,text:JSON.stringify({...workerHistory({...currentState,messages:history},actor),screenProductHint:hasAssistantPermission(actor,"PRODUCT_VIEW")?currentState.pinnedProductId:null,previousRequest:previousRequest?{...previousRequest,original:undefined}:null,approvedRequests,alreadyApproved:!!row.approvedAt,pendingPermissionRequest,permissionRequests:currentState.permissionRequests||[],requester:{id:row.ownerId,name:actor.name,...capabilities,navigationScreens:availableScreens(actor),permissionSupportAvailable:!!await permissionContact(tx)}}),referenceTime:new Date().toISOString(),timeZone:"Asia/Ho_Chi_Minh"}};
  });
  const id=String(body.id||""),token=String(body.leaseToken||"");
  if(!/^[a-f0-9-]{36}$/.test(id)||!/^[a-f0-9-]{36}$/.test(token))throw new AssistantError("Lượt xử lý không hợp lệ.");
@@ -125,7 +126,11 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
      if("productId" in request&&request.tool!=="watches.images"&&!hasUniqueEvidence(entries,"watches.search",request.productId))return {evidence:{request,result:{lookupRejected:true,reason:"Chưa xác định duy nhất đồng hồ. Nếu đang hỏi danh sách, trả danh sách tìm được; nếu cần thao tác cụ thể, hỏi lại người dùng để xác định watch. Không tự chọn một ID."}}};
      if("customerId" in request&&request.customerId&&!hasUniqueEvidence(entries,"customers.search",request.customerId))return {evidence:{request,result:{lookupRejected:true,reason:"Chưa xác định duy nhất hồ sơ khách. Hỏi lại nếu cần gắn hồ sơ; không tự chọn khách."}}};
      let result:Record<string,unknown>;
-     if(request.tool==="watches.images"){
+     if(request.tool==="navigation.open"){
+       const latest=state(row).messages.filter(m=>m.role==="user").at(-1);
+       const target=navigationTarget(request.query,actor);
+       result=latest&&isNavigationRequest(latest.text)&&target?{navigationKey:target.key,label:target.label,allowed:true}:{allowed:false,reason:"Màn hình không được hỗ trợ, bạn không có quyền hoặc chưa có yêu cầu điều hướng rõ ràng."};
+     }else if(request.tool==="watches.images"){
        const cards=await assistantProductCards(tx,[request.productId]);const card=cards[0];result=card?{productId:card.id,title:card.title,sku:card.sku,imageCount:card.images.length,displayedInChat:true}:{productId:request.productId,imageCount:0,displayedInChat:false};
      }else if(request.tool==="people.search"){
        const people=await tx.user.findMany({where:{isActive:true,OR:[{id:request.query},{name:{contains:request.query,mode:"insensitive"}}],roles:{some:{OR:[{name:"ADMIN"},{permissions:{some:{code:{in:["TASK_VIEW","TASK_MANAGE"]}}}}]}}},select:{id:true,name:true,roles:{select:{name:true,permissions:{where:{code:{in:["SERVICE_UPDATE","TASK_VIEW","TASK_MANAGE"]}},select:{code:true}}}}},take:7,orderBy:{id:"asc"}});
@@ -163,6 +168,7 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
     else reply+=" Hiện chưa thể tạo công việc qua Ben; bạn liên hệ Long trực tiếp nhé.";
    }
    const next=message(s,failed?"Codex chưa hoàn tất lượt này. Bạn có thể nhắn lại để thử tiếp; chưa giao thêm việc.":reply,revoked||support?[]:required);
+   if(!failed&&!revoked&&!support&&!plan){const entry=[...evidence(row)].reverse().find(e=>e.request.tool==="navigation.open"&&e.result.allowed===true);if(entry&&entry.request.tool==="navigation.open"&&navigationTarget(entry.request.query,actor)){const m=next.messages[next.messages.length-1];m.navigationKey=entry.request.query;m.navigationRequestKey=s.messages.filter(m=>m.role==="user").at(-1)?.id;}}
    if(!failed&&!revoked&&!support&&scopedTaskIds.length)next.messages[next.messages.length-1].requiredTaskIds=scopedTaskIds;
    if(!failed&&!revoked&&hasAssistantPermission(actor,"PRODUCT_VIEW")){const ids=evidence(row).flatMap(e=>e.request.tool==="watches.images"&&Number(e.result.imageCount)>0?[e.request.productId]:[]);if(ids.length)next.messages[next.messages.length-1].imageProductIds=[...new Set(ids)].slice(0,6);}
    if(!row.approvedAt){if(request&&plan){next.customerRequest=request;next.context=null;}else delete next.customerRequest;}

@@ -15,6 +15,7 @@
         "null"
       ],
       "enum": [
+        "navigation.open",
         "customers.search",
         "watches.search",
         "watches.detail",

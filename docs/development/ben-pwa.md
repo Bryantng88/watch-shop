@@ -32,3 +32,25 @@ before this PR; it does not enable Ben in production or change worker permission
 
 Automated checks cover manifest/icon references and network-only worker behavior.
 Actual installation, OS UI and WebKit/Android keyboard behavior require devices.
+
+## Navigation from chat
+
+Users can ask “Ben mở danh sách đồng hồ”, “vào công việc của tôi”, or “mở bảng
+kỹ thuật”. The worker receives only the authorized screen registry and selects
+an exact key through navigation.open. The server checks the canonical page policy,
+the latest user's navigation intent and permissions again when finishing/loading.
+Only fixed view pages are supported; no external/model URL, form submission,
+creation action or business write is a navigation destination. Ambiguous targets
+must be clarified in chat. Product-detail navigation is not part of this registry.
+
+The active browser follows a successful navigation once, matched to the message
+request key submitted in that browser. Reloading/history do not automatically
+replay navigation; a normal link remains for reopening. Cancel, new conversation
+and history selection clear the pending automatic navigation. PWA manifest scope
+covers /admin/ so authorized admin destinations can remain in the installed app;
+the service worker still only handles /admin/ben and caches no business data.
+
+Deploy the updated web and customer worker/schema together for navigation. No
+migration or new credentials are required. Device acceptance: try a permitted
+screen, a forbidden screen, an ambiguous request, cancellation, reload/history,
+and a return to Ben; verify no task/order is created by navigation.

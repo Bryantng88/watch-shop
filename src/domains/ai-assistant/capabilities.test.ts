@@ -8,8 +8,8 @@ test("only the exact authenticated Ben conversation endpoint admits chat without
  for(const method of ["GET","POST"])assert.equal(isAdminAccessAllowed(getAdminApiPolicy("/api/admin/customer-assistant",method),new Set()),true);
  for(const [path,method] of [["/api/admin/customer-assistant/arbitrary","POST"],["/api/admin/customer-assistant","DELETE"],["/api/admin/not-a-route","GET"],["/api/admin/watches","POST"]])assert.equal(isAdminAccessAllowed(getAdminApiPolicy(path,method),new Set()),false);
 });
-test("chat permission does not grant any tool or action",()=>{
- assert.deepEqual(assistantCapabilities(actor()).allowedLookups,[]);
+test("chat allows navigation but does not grant business tools or actions",()=>{
+ assert.deepEqual(assistantCapabilities(actor()).allowedLookups,["navigation.open"]);
  assert.ok(planDeniedReason(actor(),plan));
  assert.equal(lookupAllowed(actor(),"orders.create"),false);
 });

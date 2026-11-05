@@ -41,3 +41,8 @@ test('permission support is a draft with no chosen recipient or business plan',a
  assert.deepEqual(calls,[['finish',offer.permissionRequest]]);
  assert.throws(()=>validateCustomerTurn({...offer,plan:{}}));assert.throws(()=>validateCustomerTurn({...offer,type:'lookup'}));assert.throws(()=>validateCustomerTurn({...offer,assigneeUserId:'evil'}));
 });
+test('navigation uses a bounded key query and cannot carry business fields or URLs as extra fields',()=>{
+ assert.deepEqual(validateCustomerTurn({...finish,type:'lookup',tool:'navigation.open',query:'personal-work',reply:null}).lookup,{tool:'navigation.open',query:'personal-work'});
+ assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'navigation.open',query:'watches',productId:'watch',reply:null}));
+ assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'navigation.open',query:'watches',reply:null,href:'https://evil.test'}));
+});

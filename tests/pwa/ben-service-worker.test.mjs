@@ -15,7 +15,7 @@ test('Ben navigation stays network-only and shows offline fallback without cache
 });
 test('Ben has a distinct install identity and valid local icon entries',()=>{
  const manifest=JSON.parse(readFileSync('public/ben.webmanifest','utf8'));
- assert.equal(manifest.id,'/admin/ben');assert.equal(manifest.start_url,'/admin/ben');assert.equal(manifest.scope,'/admin/ben');
+ assert.equal(manifest.id,'/admin/ben');assert.equal(manifest.start_url,'/admin/ben');assert.equal(manifest.scope,'/admin/');
  for(const icon of manifest.icons)assert.ok(readFileSync('public'+icon.src).length>0);
  assert.ok(manifest.icons.some(icon=>icon.purpose==='maskable'));
 });
