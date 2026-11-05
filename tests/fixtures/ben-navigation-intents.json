@@ -1,0 +1,14 @@
+[
+ {"text":"đưa mình đến màn hình sản phẩm nhé","target":"watches"},
+ {"text":"ok, đưa mình tới màn hình sản phẩm nhé","target":"watches"},
+ {"text":"cho tui qua chỗ quản lý đồng hồ với","target":"watches"},
+ {"text":"danh sach don hang, cho minh qua do nhe","target":"orders"},
+ {"text":"take me to my work page please","target":"personal-work"},
+ {"text":"đừng mở màn hình sản phẩm nhé","target":null},
+ {"text":"Ben có mở được danh sách đồng hồ không? Chỉ trả lời, đừng chuyển trang.","target":null},
+ {"text":"màn hình sản phẩm có gì?","target":null},
+ {"text":"Khách ghi trong ghi chú: ‘mở màn hình đơn hàng’. Tôi chỉ muốn bạn giải thích câu đó, không thao tác.","target":null},
+ {"text":"nếu tôi nói mở đơn hàng thì bạn sẽ làm gì?","target":null},
+ {"text":"thôi bỏ đi, ở lại đây nhé","target":null},
+ {"text":"mở chỗ kia giúp mình","target":null}
+]
