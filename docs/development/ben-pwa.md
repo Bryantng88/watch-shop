@@ -1,6 +1,6 @@
 # Ben avatar and PWA starter
 
-This branch builds on PR40's authenticated Ben chat. Merge the dependency chain
+This branch includes PR42 (1b0250e5), preserving its verified identity/permissions and explicitly approved draft-order workflow, on top of PR40's authenticated Ben chat. Merge the dependency chain
 before this PR; it does not enable Ben in production or change worker permissions.
 
 - Avatar source is the user-approved cartoon of Ben. Assets are bundled under

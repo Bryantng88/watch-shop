@@ -141,6 +141,220 @@
       ],
       "minLength": 1,
       "maxLength": 1000
+    },
+    "orderPlan": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "customerId": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300
+            },
+            "phone": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300
+            },
+            "address": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300
+            },
+            "city": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300
+            },
+            "district": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300
+            },
+            "ward": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300
+            },
+            "customerName": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "hasShipment": {
+              "type": "boolean"
+            },
+            "paymentMethod": {
+              "type": "string",
+              "enum": [
+                "BANK_TRANSFER",
+                "CASH",
+                "MOMO",
+                "CREDIT_CARD",
+                "PAYPAL"
+              ]
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 1000
+            },
+            "items": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 6,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "productId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "unitPriceAgreed": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9999999999
+                  }
+                },
+                "required": [
+                  "productId",
+                  "unitPriceAgreed"
+                ]
+              }
+            }
+          },
+          "required": [
+            "customerId",
+            "phone",
+            "address",
+            "city",
+            "district",
+            "ward",
+            "customerName",
+            "hasShipment",
+            "paymentMethod",
+            "notes",
+            "items"
+          ]
+        }
+      ]
+    },
+    "missingPermission": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "ACCESSORY_ACQUISITION_APPROVE",
+        "ACCESSORY_ACQUISITION_CREATE",
+        "ACCESSORY_ACQUISITION_DELETE",
+        "ACCESSORY_ACQUISITION_UPDATE",
+        "ACCESSORY_ACQUISITION_VIEW",
+        "ACCESSORY_CREATE",
+        "ACCESSORY_DELETE",
+        "ACCESSORY_UPDATE",
+        "ACCESSORY_VIEW",
+        "ACQUISITION_APPROVE_ALL",
+        "ACQUISITION_CREATE_ALL",
+        "ACQUISITION_DELETE_ALL",
+        "ACQUISITION_PAYMENT_CREATE",
+        "ACQUISITION_PAYMENT_DELETE",
+        "ACQUISITION_PAYMENT_UPDATE",
+        "ACQUISITION_PAYMENT_VIEW",
+        "ACQUISITION_UPDATE_ALL",
+        "ACQUISITION_VIEW_ALL",
+        "ACTIVITY_EDIT",
+        "ACTIVITY_READ",
+        "CUSTOMER_CREATE",
+        "CUSTOMER_DELETE",
+        "CUSTOMER_UPDATE",
+        "CUSTOMER_VIEW",
+        "DASHBOARD_VIEW",
+        "MEDIA_VIEW",
+        "ORDER_APPROVE",
+        "ORDER_CREATE",
+        "ORDER_DELETE",
+        "ORDER_PAYMENT_CREATE",
+        "ORDER_PAYMENT_DELETE",
+        "ORDER_PAYMENT_UPDATE",
+        "ORDER_PAYMENT_VIEW",
+        "ORDER_UPDATE",
+        "ORDER_VIEW",
+        "PAYMENT_CREATE_ALL",
+        "PAYMENT_DELETE_ALL",
+        "PAYMENT_UPDATE_ALL",
+        "PAYMENT_VIEW_ALL",
+        "PRODUCT_APPROVE",
+        "PRODUCT_COST_VIEW",
+        "PRODUCT_CREATE",
+        "PRODUCT_DELETE",
+        "PRODUCT_PRICE_EDIT",
+        "PRODUCT_UPDATE",
+        "PRODUCT_VIEW",
+        "REPORT_FINANCE_VIEW",
+        "REPORT_SALES_VIEW",
+        "REPORT_VIEW",
+        "SERVICE_CREATE",
+        "SERVICE_DELETE",
+        "SERVICE_PAYMENT_CREATE",
+        "SERVICE_PAYMENT_DELETE",
+        "SERVICE_PAYMENT_UPDATE",
+        "SERVICE_PAYMENT_VIEW",
+        "SERVICE_UPDATE",
+        "SERVICE_VIEW",
+        "SHIPMENT_APPROVE",
+        "SHIPMENT_CREATE",
+        "SHIPMENT_DELETE",
+        "SHIPMENT_PAYMENT_CREATE",
+        "SHIPMENT_PAYMENT_DELETE",
+        "SHIPMENT_PAYMENT_UPDATE",
+        "SHIPMENT_PAYMENT_VIEW",
+        "SHIPMENT_UPDATE",
+        "SHIPMENT_VIEW",
+        "SYSTEM_JOB_VIEW",
+        "TASK_MANAGE",
+        "TASK_VIEW",
+        "USER_CREATE",
+        "USER_DELETE",
+        "USER_MANAGE",
+        "USER_UPDATE",
+        "USER_VIEW",
+        "WATCH_ACQUISITION_APPROVE",
+        "WATCH_ACQUISITION_CREATE",
+        "WATCH_ACQUISITION_DELETE",
+        "WATCH_ACQUISITION_UPDATE",
+        "WATCH_ACQUISITION_VIEW",
+        "WORK_CASE_MANAGE",
+        null
+      ]
+    },
+    "unsupportedCapability": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 300
     }
   },
   "required": [
@@ -151,6 +365,9 @@
     "customerId",
     "reply",
     "plan",
-    "permissionRequest"
+    "permissionRequest",
+    "orderPlan",
+    "missingPermission",
+    "unsupportedCapability"
   ]
 }

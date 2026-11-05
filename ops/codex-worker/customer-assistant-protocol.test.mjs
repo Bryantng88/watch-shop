@@ -41,6 +41,15 @@ test('permission support is a draft with no chosen recipient or business plan',a
  assert.deepEqual(calls,[['finish',offer.permissionRequest]]);
  assert.throws(()=>validateCustomerTurn({...offer,plan:{}}));assert.throws(()=>validateCustomerTurn({...offer,type:'lookup'}));assert.throws(()=>validateCustomerTurn({...offer,assigneeUserId:'evil'}));
 });
+
+test('draft order format cannot request posting, payment writes or mix approvals',()=>{
+ const order={customerId:null,customerName:'Synthetic customer',phone:null,hasShipment:false,address:null,city:null,district:null,ward:null,paymentMethod:'CASH',notes:null,items:[{productId:'watch',unitPriceAgreed:2000000}]};
+ assert.ok(validateCustomerTurn({...finish,orderPlan:order}).orderPlan);
+ for(const invalid of [{...order,status:'POSTED'},{...order,items:[{productId:'watch',unitPriceAgreed:0}]},{...order,hasShipment:true},{...order,paymentMethod:'COD'}])assert.throws(()=>validateCustomerTurn({...finish,orderPlan:invalid}),/INVALID_CUSTOMER_ORDER/);
+ assert.throws(()=>validateCustomerTurn({...finish,orderPlan:order,permissionRequest:'Support'}));
+ assert.throws(()=>validateCustomerTurn({...finish,unsupportedCapability:'Not supported',permissionRequest:'Support'}));
+});
+
 test('navigation uses a bounded key query and cannot carry business fields or URLs as extra fields',()=>{
  assert.deepEqual(validateCustomerTurn({...finish,type:'lookup',tool:'navigation.open',query:'personal-work',reply:null}).lookup,{tool:'navigation.open',query:'personal-work'});
  assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'navigation.open',query:'watches',productId:'watch',reply:null}));

@@ -32,6 +32,8 @@ export function planDeniedReason(actor: AssistantAuthority, plan: AssistantPlan)
 export function assistantCapabilities(actor: AssistantAuthority) {
   return {
     allowedLookups: Object.keys(LOOKUP_PERMISSIONS).filter(tool => lookupAllowed(actor, tool)),
+    supportedActions:["CREATE_TASK","CREATE_TECHNICAL","CREATE_DRAFT_ORDER"],
+    canCreateOrders:["ORDER_CREATE","PRODUCT_VIEW"].every(p=>hasAssistantPermission(actor,p)),
     canCreateTasks: ["PRODUCT_VIEW", "TASK_VIEW", "TASK_MANAGE"].every(p => hasAssistantPermission(actor, p)),
     canCreateTechnical: ["PRODUCT_VIEW", "TASK_VIEW", "SERVICE_CREATE"].every(p => hasAssistantPermission(actor, p)),
     taskScope: hasAssistantPermission(actor, "TASK_VIEW_ALL") ? "all non-personal tasks" : "only tasks visible in the existing task workflow",

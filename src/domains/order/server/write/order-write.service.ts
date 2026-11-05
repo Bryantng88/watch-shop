@@ -29,7 +29,7 @@ import { publishShipmentMutation } from "@/domains/shipment/server/events";
 import { publishPaymentMutations } from "@/domains/payment/server";
 import { emitAcquisitionBusinessEvent } from "@/domains/acquisition/server";
 
-async function resolveCustomer(tx: Prisma.TransactionClient, input: CreateOrderInput) {
+async function resolveCustomer(tx: Prisma.TransactionClient, input: CreateOrderInput, preserveProfile=false) {
   const shipPhone = norm(input.shipPhone);
   const address = {
     city: norm(input.shipCity),
@@ -41,14 +41,14 @@ async function resolveCustomer(tx: Prisma.TransactionClient, input: CreateOrderI
   if (input.customerId) {
     const existing = await findCustomerByIdRepo(tx as any, input.customerId);
     if (!existing) return null;
-    await updateCustomerAddressRepo(tx as any, existing.id, address);
+    if(!preserveProfile)await updateCustomerAddressRepo(tx as any, existing.id, address);
     return existing.id;
   }
 
   if (!shipPhone) return null;
   const existing = await findCustomerByPhoneRepo(tx as any, shipPhone);
   if (existing) {
-    await updateCustomerAddressRepo(tx as any, existing.id, address);
+    if(!preserveProfile)await updateCustomerAddressRepo(tx as any, existing.id, address);
     return existing.id;
   }
 
@@ -348,9 +348,16 @@ async function assertTradeInWatchBelongsToCustomer(
   }
 }
 
+export type OrderCreateHooks={
+  beforeCreate:(tx:Prisma.TransactionClient)=>Promise<void>;
+  afterCreate:(tx:Prisma.TransactionClient,result:{id:string;refNo?:string|null})=>Promise<void>;
+  preserveCustomerProfile?:boolean;
+  actorUserId?:string;
+};
 export async function createOrderWithItems(
   raw: any,
   runtime?: BusinessEventDispatchOptions,
+  hooks?:OrderCreateHooks,
 ) {
   const input = normalizeCreateInput(raw);
   assertValidReserveBusiness(input);
@@ -369,7 +376,7 @@ export async function createOrderWithItems(
   if (!input.customerName) throw new Error("Thiếu tên khách hàng");
   if (!input.items.length) throw new Error("Phải có ít nhất 1 dòng sản phẩm / dịch vụ");
 
-  const result = await prisma.$transaction(async (tx) => {
+  const createInTx = async (tx:Prisma.TransactionClient) => {
     const purchaseRequest = input.purchaseRequestId
       ? await tx.purchaseRequest.findUnique({ where: { id: input.purchaseRequestId }, include: { items: true } })
       : null;
@@ -451,7 +458,7 @@ export async function createOrderWithItems(
       }
     }
 
-    const customerId = await resolveCustomer(tx, input);
+    const customerId = await resolveCustomer(tx, input,hooks?.preserveCustomerProfile);
     const strictActiveOnly = input.quickFlowType === "QUICK_ORDER" ? false : true;
 
     const rawProductItems = input.items
@@ -638,6 +645,12 @@ export async function createOrderWithItems(
       inventoryOutcomes,
       tradeInAcquisitionId,
     });
+  };
+  const result=await prisma.$transaction(async tx=>{
+    await hooks?.beforeCreate(tx);
+    const created=await createInTx(tx);
+    await hooks?.afterCreate(tx,created);
+    return created;
   }, {
     // Creating and immediately posting an order performs inventory, payment,
     // shipment and service writes. The default 5s interactive-transaction
@@ -655,6 +668,7 @@ export async function createOrderWithItems(
     fromStatus: null,
     toStatus: String(result.status),
     source: "ORDER_CREATE",
+    actorUserId:hooks?.actorUserId,
   }, runtime);
   if ("serviceIntake" in result && Array.isArray(result.serviceIntake?.entries)) {
     for (const entry of result.serviceIntake.entries) {

@@ -1,4 +1,9 @@
 import { availableScreens, navigationTarget, isNavigationRequest } from "../navigation";
+import {assistantOrderSchema,orderDeniedPermission,orderPermissions} from "../order-contract";
+import {prepareOrder} from "./order-draft";
+import {createOrderWithItems} from "@/domains/order/server/write/order-write.service";
+import {PERMISSIONS} from "@/constants/permissions";
+import {accountQuestion,accountReply,requesterIdentity} from "../account";
 import { randomUUID } from "node:crypto";
 import { Prisma, type CustomerAssistantConversation } from "@prisma/client";
 import { prisma, type DB, type Tx } from "@/server/db/client";
@@ -65,6 +70,7 @@ async function linkedRequest(db:DB,r:CustomerRequest,actor:Actor){
 async function dto(row:CustomerAssistantConversation){
  const actor=await assistantActor(prisma,row.ownerId),s=structuredClone(state(row));
  s.context=null;delete s.pinnedProductId;delete s.turnKeys;delete s.turnTimes;delete s.turnReadScope;delete s.permissionTaskIds;delete s.permissionDenied;if(!await supportScopeVisible(prisma,s,actor))delete s.permissionRequest;delete s.permissionRequestScope;s.messages=await authorizedHistory(prisma,s,actor);
+ if(!hasAssistantPermission(actor,"ORDER_VIEW")||!hasAssistantPermission(actor,"PRODUCT_VIEW")){delete s.orderDraft;s.createdOrders=[];}else if(s.orderDraft?.plan.customerId&&!hasAssistantPermission(actor,"CUSTOMER_VIEW"))delete s.orderDraft;
  const canReadWork=hasAssistantPermission(actor,"PRODUCT_VIEW")&&hasAssistantPermission(actor,"TASK_VIEW");
  if(!canReadWork){delete s.customerRequest;s.approvedRequests=[];}
  else {
@@ -78,20 +84,22 @@ async function dto(row:CustomerAssistantConversation){
 export async function listAssistant(userId:string,id?:string){await assistantActor(prisma,userId);const rows=id?[await owned(prisma,id,userId)]:await prisma.customerAssistantConversation.findMany({where:{ownerId:userId},orderBy:{updatedAt:"desc"},take:20});return {partial:!!id,conversations:await Promise.all(rows.map(row=>dto(row)))};}
 export async function sendAssistant(userId:string,input:{id?:string;requestKey:string;text:string;productId?:string|null}){
  const sender=await assistantActor(prisma,userId);
+ const identityQuestion=accountQuestion(input.text);
  const id=await transaction(async tx=>{
    let row=input.id?await owned(tx,input.id,userId):await tx.customerAssistantConversation.findUnique({where:{firstRequestKey:input.requestKey}});
    if(row){await lock(tx,row.id);row=await owned(tx,row.id,userId);let s=state(row);if(s.messages.some(m=>m.id===input.requestKey)){if(s.messages.find(m=>m.id===input.requestKey)?.text!==input.text)throw new AssistantError("Mã tin nhắn đã được dùng với nội dung khác.",409);return row.id;}
      if(["QUEUED","RUNNING"].includes(row.status))throw new AssistantError("Đang xử lý tin trước. Bạn có thể hủy hoặc đợi kết quả.",409);
      await quota(tx,userId);
      if(row.approvedAt){s=archiveApproved(s,row.approvedRevision);delete s.customerRequest;s.approved=false;}
-     const next={...s,permissionDenied:false,pinnedProductId:hasAssistantPermission(sender,"PRODUCT_VIEW")?input.productId||null:null,messages:[...s.messages,{id:input.requestKey,role:"user",text:input.text}],turnKeys:[],turnTimes:[...(s.turnTimes||[]).filter(t=>new Date(t).getTime()>Date.now()-3600000),new Date().toISOString()]};
-     await tx.customerAssistantConversation.update({where:{id:row.id},data:{state:json(next),status:"QUEUED",revision:{increment:1},evidence:[],plan:Prisma.DbNull,approvedAt:null,approvedRevision:null,errorCode:null,leaseToken:null,leaseExpiresAt:null}});return row.id;
+     let next:State={...s,permissionDenied:false,pinnedProductId:hasAssistantPermission(sender,"PRODUCT_VIEW")?input.productId||null:null,messages:[...s.messages,{id:input.requestKey,role:"user",text:input.text}],turnKeys:[],turnTimes:[...(s.turnTimes||[]).filter(t=>new Date(t).getTime()>Date.now()-3600000),new Date().toISOString()]};
+     if(identityQuestion){const actor=await assistantActor(tx,userId);delete next.orderDraft;delete next.permissionRequest;delete next.permissionRequestScope;next=message(next,accountReply(actor,actor.id===process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID),[]);}
+     await tx.customerAssistantConversation.update({where:{id:row.id},data:{state:json(next),status:identityQuestion?"NEEDS_INFO":"QUEUED",revision:{increment:1},evidence:[],plan:Prisma.DbNull,approvedAt:null,approvedRevision:null,errorCode:null,leaseToken:null,leaseExpiresAt:null}});return row.id;
    }
    if(await tx.customerAssistantConversation.count({where:{ownerId:userId,status:{in:["QUEUED","RUNNING"]}}})>=3)throw new AssistantError("Bạn đang có 3 yêu cầu chờ.",429);
    await quota(tx,userId);
    if(input.productId&&hasAssistantPermission(sender,"PRODUCT_VIEW")&&!await tx.product.findFirst({where:{id:input.productId,type:"WATCH"},select:{id:true}}))throw new AssistantError("Không tìm thấy watch đang xem.");
-   const s=newConversation(null);s.messages=[{id:input.requestKey,role:"user",text:input.text}];s.title=input.text.slice(0,65);
-   const created=await tx.customerAssistantConversation.create({data:{id:s.id,ownerId:userId,firstRequestKey:input.requestKey,state:json({...s,turnKeys:[input.requestKey],turnTimes:[new Date().toISOString()],pinnedProductId:hasAssistantPermission(sender,"PRODUCT_VIEW")?input.productId||null:null})}});return created.id;
+   let s=newConversation(null);s.messages=[{id:input.requestKey,role:"user",text:input.text}];s.title=input.text.slice(0,65);if(identityQuestion){const actor=await assistantActor(tx,userId);delete s.orderDraft;delete s.permissionRequest;s=message(s,accountReply(actor,actor.id===process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID),[]);}
+   const created=await tx.customerAssistantConversation.create({data:{id:s.id,ownerId:userId,firstRequestKey:input.requestKey,...(identityQuestion?{status:"NEEDS_INFO"}:{}),state:json({...s,turnKeys:[input.requestKey],turnTimes:[new Date().toISOString()],pinnedProductId:hasAssistantPermission(sender,"PRODUCT_VIEW")?input.productId||null:null})}});return created.id;
  });return dto(await owned(prisma,id,userId));
 }
 export async function cancelAssistant(userId:string,id:string){await assistantActor(prisma,userId);return transaction(async tx=>{await lock(tx,id);const row=await owned(tx,id,userId);if(["QUEUED","RUNNING"].includes(row.status))await tx.customerAssistantConversation.update({where:{id},data:{status:row.approvedAt?"APPLIED":"CANCELLED",leaseToken:null,leaseExpiresAt:null,plan:row.approvedAt?undefined:Prisma.DbNull,state:json(message(state(row),"Đã hủy lượt xử lý. Không giao thêm công việc."))}});return {ok:true};});}
@@ -101,17 +109,19 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    const expired=await tx.customerAssistantConversation.findMany({where:{status:"RUNNING",leaseExpiresAt:{lt:new Date()}},take:20});for(const r of expired)await tx.customerAssistantConversation.update({where:{id:r.id},data:{status:r.approvedAt?"APPLIED":"FAILED",errorCode:"LEASE_EXPIRED",leaseToken:null}});
    const row=await tx.customerAssistantConversation.findFirst({where:{status:"QUEUED"},orderBy:{updatedAt:"asc"}});if(!row)return {run:null};
    let actor:Awaited<ReturnType<typeof assistantActor>>;try{actor=await assistantActor(tx,row.ownerId);}catch{await tx.customerAssistantConversation.update({where:{id:row.id},data:{status:row.approvedAt?"APPLIED":"FAILED",errorCode:"REQUESTER_UNAUTHORIZED"}});return {run:null};}
-   const currentState=state(row),capabilities=assistantCapabilities(actor);
+   const currentState=state(row);
    const previousRequest=hasAssistantPermission(actor,"PRODUCT_VIEW")&&hasAssistantPermission(actor,"TASK_VIEW")&&currentState.customerRequest&&readableRequest(currentState.customerRequest,actor)?await linkedRequest(tx,currentState.customerRequest,actor):null;
    const approvedRequests=hasAssistantPermission(actor,"PRODUCT_VIEW")&&hasAssistantPermission(actor,"TASK_VIEW")?await Promise.all((currentState.approvedRequests||[]).filter(r=>readableRequest(r.request,actor)).slice(-8).map(async r=>{const r2=await linkedRequest(tx,r.request,actor);return {revision:r.revision,reference:r2.reference,watch:r2.watch,conditions:r2.conditions.map(c=>({requirement:c.requirement.slice(0,250),progress:c.progress,outcome:c.outcome}))}})):[];
    const history=await authorizedHistory(tx,currentState,actor);
+   const pendingOrder=hasAssistantPermission(actor,"ORDER_VIEW")&&hasAssistantPermission(actor,"PRODUCT_VIEW")&&(!currentState.orderDraft?.plan.customerId||hasAssistantPermission(actor,"CUSTOMER_VIEW"))?currentState.orderDraft:null;
+   const createdOrders=hasAssistantPermission(actor,"ORDER_VIEW")?currentState.createdOrders||[]:[];
    const pendingPermissionRequest=await supportScopeVisible(tx,currentState,actor)?currentState.permissionRequest:null;
    const supportScope=pendingPermissionRequest?currentState.permissionRequestScope:undefined;
    const requests=[...(previousRequest?[previousRequest]:[]),...await Promise.all((currentState.approvedRequests||[]).filter(r=>readableRequest(r.request,actor)).slice(-8).map(r=>linkedRequest(tx,r.request,actor)))];
    // A model may repeat any supplied business information without doing a new lookup.
-   const turnReadScope={permissions:[...new Set([...(supportScope?.permissions||[]),...history.slice(-12).flatMap(m=>m.role==="assistant"?m.requiredPermissions||[]:[]),...requests.flatMap(r=>["PRODUCT_VIEW","TASK_VIEW",...(r.customer!=="Chưa gắn hồ sơ khách"?["CUSTOMER_VIEW"]:[]),...(r.conditions.some(c=>c.kind==="TECHNICAL"&&c.linkedRef)?["SERVICE_VIEW"]:[])])])],taskIds:[...new Set([...(supportScope?.taskIds||[]),...history.slice(-12).flatMap(m=>m.requiredTaskIds||[]),...requests.flatMap(r=>r.conditions.filter(c=>c.kind==="TASK"&&c.linkedRef).map(c=>c.linkedRef!))])]};
+   const turnReadScope={permissions:[...new Set([...(pendingOrder?["ORDER_VIEW","PRODUCT_VIEW",...(pendingOrder.plan.customerId?["CUSTOMER_VIEW"]:[])]:[]),...(createdOrders.length?["ORDER_VIEW"]:[]),...(supportScope?.permissions||[]),...history.slice(-12).flatMap(m=>m.role==="assistant"?m.requiredPermissions||[]:[]),...requests.flatMap(r=>["PRODUCT_VIEW","TASK_VIEW",...(r.customer!=="Chưa gắn hồ sơ khách"?["CUSTOMER_VIEW"]:[]),...(r.conditions.some(c=>c.kind==="TECHNICAL"&&c.linkedRef)?["SERVICE_VIEW"]:[])])])],taskIds:[...new Set([...(supportScope?.taskIds||[]),...history.slice(-12).flatMap(m=>m.requiredTaskIds||[]),...requests.flatMap(r=>r.conditions.filter(c=>c.kind==="TASK"&&c.linkedRef).map(c=>c.linkedRef!))])]};
    const token=randomUUID();await tx.customerAssistantConversation.update({where:{id:row.id},data:{state:json({...currentState,turnReadScope}),status:"RUNNING",leaseToken:token,leaseExpiresAt:new Date(Date.now()+120000)}});
-   return {run:{id:row.id,leaseToken:token,text:JSON.stringify({...workerHistory({...currentState,messages:history},actor),screenProductHint:hasAssistantPermission(actor,"PRODUCT_VIEW")?currentState.pinnedProductId:null,previousRequest:previousRequest?{...previousRequest,original:undefined}:null,approvedRequests,alreadyApproved:!!row.approvedAt,pendingPermissionRequest,permissionRequests:currentState.permissionRequests||[],requester:{id:row.ownerId,name:actor.name,...capabilities,navigationScreens:availableScreens(actor),permissionSupportAvailable:!!await permissionContact(tx)}}),referenceTime:new Date().toISOString(),timeZone:"Asia/Ho_Chi_Minh"}};
+   return {run:{id:row.id,leaseToken:token,text:JSON.stringify({...workerHistory({...currentState,messages:history},actor),screenProductHint:hasAssistantPermission(actor,"PRODUCT_VIEW")?currentState.pinnedProductId:null,previousRequest:previousRequest?{...previousRequest,original:undefined}:null,approvedRequests,alreadyApproved:!!row.approvedAt,pendingOrder,createdOrders,pendingPermissionRequest,permissionRequests:currentState.permissionRequests||[],requester:{navigationScreens:availableScreens(actor),...requesterIdentity(actor,actor.id===process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID),permissionSupportAvailable:!!await permissionContact(tx)&&actor.id!==process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID}}),referenceTime:new Date().toISOString(),timeZone:"Asia/Ho_Chi_Minh"}};
  });
  const id=String(body.id||""),token=String(body.leaseToken||"");
  if(!/^[a-f0-9-]{36}$/.test(id)||!/^[a-f0-9-]{36}$/.test(token))throw new AssistantError("Lượt xử lý không hợp lệ.");
@@ -159,20 +169,30 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    }
    if(plan)reply="Mình đề xuất giao các việc bên dưới. Bạn duyệt trước khi thực hiện nhé.";
    if(row.approvedAt&&body.plan)reply="Các việc đã giao không tự sửa qua chat. Bạn mở phiếu/task liên quan để thực hiện thay đổi theo luồng hiện có nhé.";
-   const s=state(row);delete s.turnReadScope;delete s.permissionRequest;delete s.permissionRequestScope;
+   const s=state(row);delete s.turnReadScope;delete s.permissionRequest;delete s.permissionRequestScope;delete s.orderDraft;
+   let orderDraft:State["orderDraft"];
+   const missingPermission=typeof body.missingPermission==="string"&&Object.values(PERMISSIONS).includes(body.missingPermission as typeof PERMISSIONS[keyof typeof PERMISSIONS])&&!hasAssistantPermission(actor,body.missingPermission);
+   let verifiedDenial=!!s.permissionDenied||revoked||!!(body.plan&&!plan);
+   if(!failed&&!revoked&&body.orderPlan){if(body.plan||support)throw new AssistantError("Mỗi lượt chỉ có một bản duyệt.");const order=assistantOrderSchema.parse(body.orderPlan),denied=orderDeniedPermission(actor,order);if(denied){verifiedDenial=true;support=s.messages.filter(m=>m.role==="user").at(-1)?.text.slice(0,1000);}else{try{orderDraft=await prepareOrder(tx,order,row.revision,evidence(row));}catch(error){if(error instanceof AssistantError)reply=error.message;else throw error;}}}
    if(revoked||s.permissionDenied){support=s.messages.filter(m=>m.role==="user").at(-1)?.text.slice(0,1000);}
    if(!failed&&support){
-    plan=undefined;request=undefined;
+    plan=undefined;request=undefined;orderDraft=undefined;
+    const contact=await permissionContact(tx);
+    if(!verifiedDenial&&!missingPermission){support=undefined;reply=(actor.id===process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID?"Bạn đang đăng nhập là Long. ":"")+"Ben chưa hỗ trợ thao tác này qua chat; đây là giới hạn của Ben, không có nghĩa tài khoản của bạn thiếu quyền. Bạn có thể mở màn hình chức năng tương ứng để xử lý.";}
+    else if(actor.id===process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID){support=undefined;reply="Bạn đang đăng nhập là Long. Ben không tạo yêu cầu quyền hạn gửi cho chính bạn. "+(actor.admin?"Bạn có thể kiểm tra và điều chỉnh quyền ở màn hình quản trị.":"Tài khoản hiện tại chưa có quyền thực hiện thao tác này; cần kiểm tra cấu hình phân quyền.");}
+    if(support){
     reply=(revoked?"Quyền của bạn đã thay đổi trong lúc xử lý.":"Yêu cầu này nằm ngoài phạm vi quyền hạn hiện tại của bạn.")+" "+LONG_SUPPORT_OFFER;
-    if(await permissionContact(tx)){s.permissionRequest={summary:support,revision:row.revision};s.permissionRequestScope=revoked?{permissions:[],taskIds:[]}:{permissions:required,taskIds:scopedTaskIds};}
+    if(contact){s.permissionRequest={summary:support,revision:row.revision};s.permissionRequestScope=revoked?{permissions:[],taskIds:[]}:{permissions:required,taskIds:scopedTaskIds};}
     else reply+=" Hiện chưa thể tạo công việc qua Ben; bạn liên hệ Long trực tiếp nhé.";
+    }
    }
-   const next=message(s,failed?"Codex chưa hoàn tất lượt này. Bạn có thể nhắn lại để thử tiếp; chưa giao thêm việc.":reply,revoked||support?[]:required);
-   if(!failed&&!revoked&&!support&&!plan){const entry=[...evidence(row)].reverse().find(e=>e.request.tool==="navigation.open"&&e.result.allowed===true);if(entry&&entry.request.tool==="navigation.open"&&navigationTarget(entry.request.query,actor)){const m=next.messages[next.messages.length-1];m.navigationKey=entry.request.query;m.navigationRequestKey=s.messages.filter(m=>m.role==="user").at(-1)?.id;}}
+   if(orderDraft){s.orderDraft=orderDraft;plan=undefined;request=undefined;reply="Mình đã chuẩn bị đơn nháp bên dưới. Bạn kiểm tra và duyệt trước khi tạo; đơn nháp sẽ giữ đồng hồ theo quy tắc hệ thống.";}
+   const next=message(s,failed?"Codex chưa hoàn tất lượt này. Bạn có thể nhắn lại để thử tiếp; chưa giao thêm việc.":reply,revoked||support?[]:orderDraft?[...new Set([...required,...orderPermissions(orderDraft.plan)])]:required);
+   if(!failed&&!revoked&&!support&&!plan&&!orderDraft&&!body.orderPlan){const entry=[...evidence(row)].reverse().find(e=>e.request.tool==="navigation.open"&&e.result.allowed===true);if(entry&&entry.request.tool==="navigation.open"&&navigationTarget(entry.request.query,actor)){const m=next.messages[next.messages.length-1];m.navigationKey=entry.request.query;m.navigationRequestKey=s.messages.filter(m=>m.role==="user").at(-1)?.id;}}
    if(!failed&&!revoked&&!support&&scopedTaskIds.length)next.messages[next.messages.length-1].requiredTaskIds=scopedTaskIds;
    if(!failed&&!revoked&&hasAssistantPermission(actor,"PRODUCT_VIEW")){const ids=evidence(row).flatMap(e=>e.request.tool==="watches.images"&&Number(e.result.imageCount)>0?[e.request.productId]:[]);if(ids.length)next.messages[next.messages.length-1].imageProductIds=[...new Set(ids)].slice(0,6);}
    if(!row.approvedAt){if(request&&plan){next.customerRequest=request;next.context=null;}else delete next.customerRequest;}
-   await tx.customerAssistantConversation.update({where:{id},data:{state:json(next),status:row.approvedAt?"APPLIED":failed?"FAILED":plan?"DRAFT":"NEEDS_INFO",plan:row.approvedAt?undefined:plan?json(plan):Prisma.DbNull,errorCode:failed?"GENERATION_FAILED":null,leaseToken:null,leaseExpiresAt:null}});return {accepted:true};
+   await tx.customerAssistantConversation.update({where:{id},data:{state:json(next),status:row.approvedAt?"APPLIED":failed?"FAILED":plan||orderDraft?"DRAFT":"NEEDS_INFO",plan:row.approvedAt?undefined:plan?json(plan):Prisma.DbNull,errorCode:failed?"GENERATION_FAILED":null,leaseToken:null,leaseExpiresAt:null}});return {accepted:true};
  });
 }
 async function requestFromPlan(tx:DB,row:CustomerAssistantConversation,plan:AssistantPlan):Promise<CustomerRequest>{
@@ -223,13 +243,45 @@ export async function approveAssistant(userId:string,id:string,revision:number,d
    const next=archiveApproved({...state(row),customerRequest:r,approved:true},revision);const updated=await tx.customerAssistantConversation.update({where:{id},data:{approvedAt:new Date(),approvedRevision:revision,status:"APPLIED",state:json(message(next,"Đã giao các phiếu/task theo bản bạn duyệt. Bạn có thể mở công việc liên quan để theo dõi."))}});return {row:updated,work};
  });for(const fn of completed.work)defer(fn);return dto(completed.row);
 }
+export async function approveAssistantOrder(userId:string,id:string,revision:number,defer:(work:()=>Promise<void>)=>void){
+ const initial=await owned(prisma,id,userId),actor=await assistantActor(prisma,userId),snapshot=state(initial);
+ if(snapshot.createdOrders?.some(o=>o.revision===revision))return dto(initial);
+ if(initial.revision!==revision||initial.status!=="DRAFT"||snapshot.orderDraft?.revision!==revision)throw new AssistantError("Bản đơn đã thay đổi. Hãy xem lại trước khi tạo.",409);
+ const plan=assistantOrderSchema.parse(snapshot.orderDraft.plan),denied=orderDeniedPermission(actor,plan);if(denied)throw new AssistantError("Tài khoản chưa có quyền tạo đơn nháp này.",403);
+ let updated:CustomerAssistantConversation|undefined;
+ class Replay extends Error{}
+ try{
+  await createOrderWithItems({customerId:plan.customerId,customerName:plan.customerName,shipPhone:plan.phone,hasShipment:plan.hasShipment,shipAddress:plan.address,shipCity:plan.city,shipDistrict:plan.district,shipWard:plan.ward,paymentMethod:plan.paymentMethod,notes:plan.notes,status:"DRAFT",source:"ADMIN",verificationStatus:"VERIFIED",reserve:{type:"NONE"},items:snapshot.orderDraft.items.map(i=>({kind:"PRODUCT",productId:i.id,title:i.title,quantity:1,listPrice:0,unitPriceAgreed:i.price}))},{deferConsumers:defer},{
+   preserveCustomerProfile:true,actorUserId:userId,
+   beforeCreate:async tx=>{
+    await lock(tx,id);const current=await owned(tx,id,userId),currentActor=await assistantActor(tx,userId),s=state(current);
+    if(s.createdOrders?.some(o=>o.revision===revision)){updated=current;throw new Replay();}
+    if(current.revision!==revision||current.status!=="DRAFT"||s.orderDraft?.revision!==revision||JSON.stringify(assistantOrderSchema.parse(s.orderDraft.plan))!==JSON.stringify(plan))throw new AssistantError("Bản đơn đã thay đổi. Hãy xem lại trước khi tạo.",409);
+    if(orderDeniedPermission(currentActor,plan))throw new AssistantError("Quyền của bạn đã thay đổi; chưa tạo đơn.",403);
+    if(plan.customerId)await tx.$queryRaw`SELECT "id" FROM "Customer" WHERE "id"=${plan.customerId} FOR UPDATE`;
+    if(!plan.customerId&&plan.phone)await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`ben-customer-phone:${plan.phone}`}, 0))`;
+    for(const productId of plan.items.map(i=>i.productId).sort()){
+     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`order-product:${productId}`}, 0))`;
+     await tx.$queryRaw`SELECT "id" FROM "Product" WHERE "id"=${productId} FOR UPDATE`;
+    }
+    await prepareOrder(tx,plan,revision,evidence(current));
+   },
+   afterCreate:async(tx,result)=>{
+    const current=await owned(tx,id,userId),s=state(current);s.createdOrders=[...(s.createdOrders||[]),{revision,id:result.id,reference:result.refNo||result.id}];delete s.orderDraft;
+    updated=await tx.customerAssistantConversation.update({where:{id},data:{state:json(message(s,`Đã tạo đơn nháp ${result.refNo||result.id}. Đồng hồ được giữ theo quy tắc đơn hàng; chưa ghi nhận thu tiền hay giao hàng.`,["ORDER_VIEW"])),status:"NEEDS_INFO",plan:Prisma.DbNull}});
+   },
+  });
+ }catch(error){if(!(error instanceof Replay))throw error;}
+ if(!updated)throw new AssistantError("Chưa xác nhận được kết quả. Hãy tải lại cuộc trao đổi.",409);
+ return dto(updated);
+}
 export async function approvePermissionSupport(userId:string,id:string,revision:number,defer:(work:()=>Promise<void>)=>void){
  const completed=await transaction(async tx=>{
   await lock(tx,id);const row=await owned(tx,id,userId),actor=await assistantActor(tx,userId),s=state(row);
   if(s.permissionRequests?.some(r=>r.revision===revision))return {row,work:[]};
   if(["QUEUED","RUNNING"].includes(row.status)||row.revision!==revision||s.permissionRequest?.revision!==revision)throw new AssistantError("Bản yêu cầu hỗ trợ đã thay đổi. Hãy xem lại trước khi gửi.",409);
   if(!await supportScopeVisible(tx,s,actor))throw new AssistantError("Quyền đã thay đổi. Hãy nhắn lại để chuẩn bị yêu cầu hỗ trợ phù hợp.",403);
-  const contact=await permissionContact(tx);if(!contact)throw new AssistantError("Hiện chưa thể tạo công việc cho Long. Bạn liên hệ Long trực tiếp nhé.",409);
+  const contact=await permissionContact(tx);if(actor.id===process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID)throw new AssistantError("Bạn là Long; không tạo yêu cầu quyền hạn gửi cho chính mình.",409);if(!contact)throw new AssistantError("Hiện chưa thể tạo công việc cho Long. Bạn liên hệ Long trực tiếp nhé.",409);
   // Serialize the small per-requester support quota across different conversations.
   await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id"=${userId} FOR UPDATE`;
   if(await tx.taskItem.count({where:{userId,title:SUPPORT_TITLE,status:{notIn:["DONE","CANCELLED"]}}})>=3)throw new AssistantError("Bạn đã có 3 yêu cầu quyền hạn đang chờ. Hãy trao đổi với Long về các yêu cầu đó trước.",429);
