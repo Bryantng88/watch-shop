@@ -11,3 +11,8 @@ test("verified Long/admin capabilities include canonical app permissions and sup
  const admin={...user,admin:true,roles:[{name:"ADMIN"}],permissions:new Set<string>()};const identity=requesterIdentity(admin,true);
  assert.ok(identity.permissions.includes("ORDER_CREATE"));assert.equal(identity.isLong,true);assert.ok(accountReply(admin,true).includes("người tạo ra toàn bộ dự án"));
 });
+
+test("specialized roles receive their actual non-order rights",()=>{
+ const media={...user,roles:[{name:"MEDIA"}],permissions:new Set(["MEDIA_VIEW"])};assert.ok(accountReply(media,false).includes("media"));
+ const users={...user,roles:[{name:"STAFF"}],permissions:new Set(["USER_CREATE"])};assert.ok(accountReply(users,false).includes("t\u1ea1o ng\u01b0\u1eddi d\u00f9ng"));
+});
