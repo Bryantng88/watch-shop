@@ -86,6 +86,8 @@ lookup after a product appears in this turn's `watches.search` evidence. Photo
 browsing can show multiple search candidates; this does not satisfy or weaken
 unique-watch evidence required for approving work. A successful reply attaches
 up to six product cards with up to four admin-visible INLINE/GALLERY photos each.
+Cards use one fixed-size main photo beside the title/SKU, thumbnail selection and
+a full-size image link, rather than expanding every photo in the conversation.
 Only product IDs are stored in messages; the server refreshes titles and image
 sources from ProductImage when loading history. Model-generated image URLs are
 never rendered. Photos use the application's existing authenticated media route.
