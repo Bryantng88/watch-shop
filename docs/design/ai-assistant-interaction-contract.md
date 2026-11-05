@@ -35,6 +35,50 @@ Keep simulation visibly labelled but concise. Sample text/rules must not be desc
 
 Implementation and local test instructions: [contextual assistant prototype](../development/contextual-ai-assistant-local.md).
 
+## Intent, authority and execution contract
+
+Natural language belongs to model intent resolution. Do not add a second positive
+phrase/keyword/regex gate on the server as authority for an action: equivalent
+paraphrases, accents, typos and languages must not change server authorization.
+The model maps the current user request to a strict supported intent; ambiguity,
+negation, cancellation, quoted/reported instructions, hypothetical examples and
+capability questions stay in chat without an action. Earlier turns and business
+records are untrusted context, never a fresh request to execute.
+
+Every action intent must identify the current source message. The server binds it
+to the owned conversation and active fenced lease, validates its schema and fixed
+target registry, checks current account/data permissions, and rechecks at completion.
+An intent is not permission or approval. Business writes retain their separate
+complete review and explicit idempotent approval. Never combine navigation with a
+business/order review or permission-support proposal in one completed turn.
+
+For navigation, navigation.open carries intent OPEN_SCREEN and sourceMessageId;
+it selects a screen key, never a URL. The server returns machine outcomes READY,
+STALE_INTENT, UNSUPPORTED_TARGET or PERMISSION_DENIED, and owns the final explanation.
+Ben must not invent a permission denial or claim a browser has already navigated.
+READY means prepared for the browser, not completed navigation. The originating
+browser follows only a READY result matching both its pending request key and
+conversation, once. Reload/history/another tab, cancellation, closing the panel,
+submission failure or a newer message cannot replay automatic navigation. A normal
+authorized link remains available if automatic navigation does not happen.
+
+Ben window visibility is controlled by the user. Navigation, replies and changes
+of admin screen must not close or reopen the panel. Keep one assistant instance
+across admin routes, including transitions to/from the dedicated Ben page, so the
+selected conversation and unsent input survive client navigation. Opening the
+dedicated Ben route is an explicit request to show chat; leaving it keeps Ben open
+as a panel. Remember only the open/closed UI preference per tab and authenticated
+account in sessionStorage; do not persist live messages or pending navigation there.
+Reload may restore visibility, never automatic navigation.
+
+New assistant tools must document intent shape, trusted source binding, permission
+checks, side effects/approval, result codes, failure wording and browser/replay
+behavior before implementation. Acceptance needs server/protocol/client boundary
+tests plus semantic cases through a real model; scripted outputs alone cannot
+establish natural-language understanding. See tests/fixtures/ben-navigation-intents.json
+and scripts/smoke-ben-navigation-real.ts. Semantic tests reduce regressions; they
+do not guarantee perfect interpretation of every possible sentence.
+
 ## Permission support
 
 For a genuinely missing user permission, recommend contacting Long (the project's
@@ -74,3 +118,39 @@ order rules, without collecting payment or creating shipment. Only the explicit
 Current permissions, evidence, stock and duplicate-order checks run again inside
 the canonical creation transaction. Replays do not create another order. Created
 order links belong in the separate assigned-request view.
+
+## Reference prices and current screen
+
+Ben-only watch search/detail projections expose WatchPrice.salePrice (selling) and
+listPrice (list), VND currency, update time and REFERENCE_ONLY usage under
+PRODUCT_VIEW. Preserve decimal strings. Missing/non-positive selling prices mean
+NOT_SET, never free; do not silently substitute list price. Fetch fresh evidence
+for each new price question. Never select costs, minimum prices or internal notes,
+even for ADMIN; normal cost permissions do not add a cost/margin tool to Ben.
+Price lookup does not establish stock, agreement, a discount or an order. Gather
+an agreed amount or the user's explicit adoption of a displayed reference before
+an order review; retain one explicit approval before any DRAFT/HOLD write.
+
+The browser sends only pathname with each message, not query/hash, page title,
+DOM, screenshot, form contents or another tab. Server-owned labels and canonical
+page permissions resolve this into currentScreen, bound to the current message.
+Authorized existing order/watch detail may include only verified ID and order
+reference/SKU, never contacts, amounts, payment data, costs or unsaved fields.
+Other detail routes report only their section, not private entity IDs. Unknown,
+denied, missing or unsupported hints yield no screen snapshot; invalid optional
+route metadata is discarded rather than blocking ordinary chat. Never use old
+history or a prior navigation as proof of the current screen.
+
+This is a snapshot at send time, not live screen tracking, a context lock, evidence,
+an instruction or approval. Users may discuss unrelated topics. Recheck permissions
+at claim/finish and redact replies if rights are revoked. Navigating between pages
+or tabs and sending another message replaces/clears the old hint. Reload does not
+replay navigation. Full business reads/actions still need their authorized tools;
+identifying an order screen does not grant an order-read or payment tool.
+
+The dedicated /admin/ben route is named "Ben mở riêng". This identifies the chat
+view, not hardware: desktop and mobile may both open it. Never infer "phone" or
+another app/tab's current page from this mode. Older already-open clients that
+omit screenPath may recover only this fixed route from a same-origin Referer;
+discard query/hash and do not overwrite explicit/null client metadata. Referrer
+never grants permissions or selects a business record.

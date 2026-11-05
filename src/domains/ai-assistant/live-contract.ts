@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { navigationIntentSchema } from "./navigation";
 const id=z.string().trim().min(1).max(100);
 const text=z.string().trim().min(1).max(1500).refine(s=>!/(?:blueprint\w*|workTypeKey|workspaceKind|sharedUserIds|operationWorkspaceRole|systemShareGroupKey)\s*:/i.test(s),"Không được chèn cấu hình workflow.");
 export const assistantPlanSchema=z.object({customerId:id.nullable(),productId:id,conditions:z.array(z.object({key:z.string().regex(/^[a-z][a-z0-9-]{0,29}$/),requirement:text,expected:text,kind:z.enum(["TECHNICAL","TASK"]),assigneeUserId:id,technicalDetailId:id.nullable()}).strict()).min(1).max(8)}).strict().superRefine((p,ctx)=>{
@@ -8,7 +9,7 @@ export const assistantPlanSchema=z.object({customerId:id.nullable(),productId:id
 });
 export type AssistantPlan=z.infer<typeof assistantPlanSchema>;
 export const assistantLookupSchema=z.discriminatedUnion("tool",[
- z.object({tool:z.literal("navigation.open"),query:z.string().trim().min(2).max(100)}).strict(),
+ z.object({tool:z.literal("navigation.open"),query:z.string().trim().min(2).max(100),intent:navigationIntentSchema}).strict(),
  z.object({tool:z.literal("customers.search"),query:z.string().trim().min(2).max(100)}).strict(),
  z.object({tool:z.literal("watches.search"),query:z.string().trim().min(2).max(100)}).strict(),
  z.object({tool:z.literal("accessories.search"),query:z.string().trim().min(2).max(100)}).strict(),

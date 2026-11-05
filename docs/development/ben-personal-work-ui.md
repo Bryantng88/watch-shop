@@ -1,10 +1,10 @@
 # Ben personal-work visual refresh
 
-This UI-only branch starts from PR41 at 788133ab (including PR42). It replaces
+This UI-only branch includes PR46 at c53dbd48 (and its PR41–45 dependencies). It replaces
 heavy purple bubbles and the yellow staging row with pale lavender user messages,
 white assistant cards, blue borders, a small staging label, chat/work navigation,
 a visible current-screen link, a bounded auto-growing composer and editable quick
-prompts. The account, order approval, task approval and navigation protocols stay
+prompts. The account, order approval, task approval, reference prices, current-screen hints, persistent window and structured navigation protocols stay
 unchanged. The Work tab shows actual requests/orders in the selected conversation,
 not a fabricated daily summary. No attachment/microphone feature is implied.
 

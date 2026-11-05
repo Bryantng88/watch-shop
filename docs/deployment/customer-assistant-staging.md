@@ -178,3 +178,27 @@ Replayed approvals and competing drafts cannot create duplicate watch orders.
 Verification: account/order-contract unit tests, worker protocol tests,
 scripts/smoke-ben-order-draft.ts on an isolated loopback personal_codex_test DB,
 and authenticated HTTP tests. All write probes must use synthetic fixtures.
+
+### Selling-price references and current-screen hints
+
+Deploy app and customer worker instructions together. Browser reload is needed
+for the new optional send.screenPath field. No migration, new flag or credential.
+Keep all existing env/OAuth/Calendar settings, worker volumes and private ingress.
+
+Only Ben's watch search/detail results gain the bounded reference-price projection;
+legacy Sales intake lookups and order-write commands are unchanged. PRODUCT_VIEW
+permits salePrice/listPrice; no costs/minimums/notes are selected even for ADMIN.
+Prices stay decimal strings with VND, update time and REFERENCE_ONLY usage.
+
+screenPath is pathname only. Resolve canonical page policy and minimal existing
+order/watch identity on claim; include its read permissions in the finish/history
+redaction scope. Raw screenHint never appears in public conversation DTOs. Each
+new message replaces or clears it. It is a client-route snapshot, not a screenshot,
+live tracking, automatic context selection or business-tool evidence.
+
+Regression: scripts/smoke-ben-prices-screen.ts on an isolated loopback
+personal_codex_test DB. Real-model acceptance: scripts/smoke-ben-prices-screen-real.ts
+with BEN_REAL_PRICE_SCREEN_EVAL=1 and the separate synthetic fixture worker. It
+checks fresh/missing prices, current order/screen changes, missing hints and no
+cost disclosure or business writes. Never use production/staging business data
+for the model acceptance fixtures.

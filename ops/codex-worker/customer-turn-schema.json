@@ -355,6 +355,34 @@
         "null"
       ],
       "maxLength": 300
+    },
+    "navigationIntent": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "OPEN_SCREEN"
+              ]
+            },
+            "sourceMessageId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          "required": [
+            "type",
+            "sourceMessageId"
+          ]
+        }
+      ]
     }
   },
   "required": [
@@ -368,6 +396,7 @@
     "permissionRequest",
     "orderPlan",
     "missingPermission",
-    "unsupportedCapability"
+    "unsupportedCapability",
+    "navigationIntent"
   ]
 }

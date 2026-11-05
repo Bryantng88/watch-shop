@@ -54,3 +54,25 @@ Deploy the updated web and customer worker/schema together for navigation. No
 migration or new credentials are required. Device acceptance: try a permitted
 screen, a forbidden screen, an ambiguous request, cancellation, reload/history,
 and a return to Ben; verify no task/order is created by navigation.
+
+### Structured navigation contract v2
+
+Navigation no longer depends on server natural-language regexes. The claim payload
+advertises interactionContractVersion=2 and currentUserMessage. The worker emits
+navigationIntent={type:OPEN_SCREEN,sourceMessageId} only for a clear current request,
+and sends it as lookup.intent with an exact registered screen key. Both worker and
+server reject stale/missing source binding. App and worker must deploy together;
+there is no legacy fallback that silently restores phrase matching.
+
+The server owns navigation result codes and reply text, rechecks current rights at
+finish, and rejects mixed navigation/business-review finishes. READY only prepares
+navigation; it is not a browser completion claim. Browser request/conversation
+binding and one-time consumption are tested separately from model interpretation.
+
+Ben interaction contract CI runs unit, protocol, browser-boundary and PWA tests on
+relevant PR changes, without credentials or DB access. Before releasing changed
+intent behavior, also run scripts/smoke-ben-navigation.ts against the isolated
+loopback personal_codex_test DB, plus scripts/smoke-ben-navigation-real.ts with
+BEN_REAL_NAVIGATION_EVAL=1 and its private fixture worker. This uses the shared
+paraphrase/negative fixture corpus and checks zero order/task writes. Never point
+it at staging/production data or supply live business records to the model.

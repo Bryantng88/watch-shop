@@ -6,6 +6,7 @@ import ProductPhotoCard from "./ProductPhotoCard";
 import BenMessage from "./BenMessage";
 import BenScreenContext from "./BenScreenContext";
 import BenAvatar from "./BenAvatar";
+import {takeNavigation,type PendingNavigation} from "./navigation-client";
 import { usePathname, useRouter } from "next/navigation";
 import { X, Plus, History, Send, Square, Trash2, Check, ArrowRight } from "lucide-react";
 import { followScreenWhileEmpty, isProductContext, newConversation, pageContext, readConversations, simulateReply, type Conversation, type Scenario } from "./simulation";
@@ -19,19 +20,27 @@ const people = { technical: "Minh · Kỹ thuật (mẫu)", operation: "An · V�
 const field = "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400";
 
 export default function AiAssistant({ userId, canManage, live = false, fullPage = false }: { userId: string; canManage: boolean; live?:boolean; fullPage?:boolean }) {
-  const router=useRouter();const pendingNavigation=useRef<string|null>(null);
+  const router=useRouter();const pendingNavigation=useRef<PendingNavigation|null>(null);
   const pathname = usePathname(), current = pageContext(pathname), storageKey = `watchshop:ai-demo:v1:${userId}`;
   const [open, setOpen] = useState(fullPage), [history, setHistory] = useState(false), [chats, setChats] = useState<Conversation[]>([]), [selected, setSelected] = useState("");
+  const visibilityKey=`watchshop:ben-window:${userId}:${live?"live":"simulation"}`;
+  const setWindowOpen=useCallback((value:boolean)=>{
+    setOpen(value);
+    try{sessionStorage.setItem(visibilityKey,value?"open":"closed");}catch{/* In-memory visibility still works when storage is unavailable. */}
+  },[visibilityKey]);
+  useEffect(()=>{
+    try{if(fullPage){setWindowOpen(true);}else{setOpen(sessionStorage.getItem(visibilityKey)==="open");}}catch{if(fullPage)setOpen(true);}
+  },[fullPage,visibilityKey,setWindowOpen]);
   const [assignedOpen,setAssignedOpen]=useState(false);
   const [ready, setReady] = useState(false), [input, setInput] = useState(""), [busy, setBusy] = useState(false), [scenario, setScenario] = useState<Scenario>("normal"), [notice, setNotice] = useState("");
   const launcher = useRef<HTMLButtonElement>(null), textarea = useRef<HTMLTextAreaElement>(null), bottom = useRef<HTMLDivElement>(null), panel = useRef<HTMLElement>(null), generation = useRef(0);
-  const liveSelected=useRef("");const liveSequence=useRef(0);const livePending=useRef(false);const liveTracking=useRef(false);const liveSubmitting=useRef(false);const liveDrafts=useRef(new Set<string>());const liveRequestKey=useRef<{id:string;text:string;key:string}|null>(null);
+  const liveSelected=useRef("");const liveSequence=useRef(0);const livePending=useRef(false);const liveTracking=useRef(false);const liveSubmitting=useRef(false);const liveDrafts=useRef(new Set<string>());const liveRequestKey=useRef<{id:string;text:string;key:string;screenPath:string}|null>(null);
   useEffect(()=>{liveSelected.current=selected;},[selected]);
   const refreshLive=useCallback(async(preferred?:string)=>{
     const sequence=++liveSequence.current;const active=preferred||liveSelected.current;const target=active&&!liveDrafts.current.has(active)?"?id="+encodeURIComponent(active):"";const response=await fetch("/api/admin/customer-assistant"+target,{cache:"no-store"});const data=await response.json();if(!response.ok)throw Error(data.error||"Không tải được cuộc trao đổi.");if(sequence!==liveSequence.current)return;
-    const rows=data.conversations as Conversation[];const navigationMessage=rows.find(r=>r.id===(preferred||liveSelected.current))?.messages.at(-1);if(pendingNavigation.current&&navigationMessage?.navigationRequestKey===pendingNavigation.current&&navigationMessage.navigation){pendingNavigation.current=null;if(!fullPage)setOpen(false);router.push(navigationMessage.navigation.href);}
+    const rows=data.conversations as Conversation[];const navigation=takeNavigation(pendingNavigation.current,rows.find(r=>r.id===(preferred||liveSelected.current)));if(navigation){pendingNavigation.current=null;router.push(navigation.href);}
     const id=preferred||liveSelected.current||rows[0]?.id||"";liveSelected.current=id;setSelected(id);livePending.current=rows.some(r=>["QUEUED","RUNNING"].includes(r.runStatus||""));liveTracking.current=rows.some(r=>r.id===id&&r.approved);setBusy(liveSubmitting.current||rows.some(r=>r.id===id&&["QUEUED","RUNNING"].includes(r.runStatus||"")));setChats(current=>data.partial?current.map(r=>rows.find(row=>row.id===r.id)||r).concat(rows.filter(row=>!current.some(r=>r.id===row.id))):[...current.filter(r=>liveDrafts.current.has(r.id)),...rows]);
-  },[router,fullPage]);
+  },[router]);
   async function livePost(body:unknown){const response=await fetch("/api/admin/customer-assistant",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});const data=await response.json();if(!response.ok)throw Error(data.error||"Chưa thực hiện được yêu cầu.");return data;}
   useEffect(()=>{if(!live)return;const sequenceRef=liveSequence;let disposed=false;const load=()=>refreshLive().catch(e=>{if(!disposed)setNotice(e.message);});void load();const timer=setInterval(()=>{if(livePending.current||(open&&liveTracking.current))void load();},5000);return()=>{disposed=true;sequenceRef.current++;clearInterval(timer);};},[live,open,refreshLive]);
   useEffect(()=>{const el=textarea.current;if(el){el.style.height="auto";el.style.height=Math.min(el.scrollHeight,144)+"px";}},[input,open,history,assignedOpen]);
@@ -44,12 +53,12 @@ export default function AiAssistant({ userId, canManage, live = false, fullPage 
   const scopeEnabled = live || isProductContext(current) || (!!chat?.messages.length && isProductContext(chat.context));
   useEffect(() => { if(live){setReady(true);return;} let rows: Conversation[] = []; try { rows = readConversations(localStorage.getItem(storageKey)); } catch { setNotice("Trình duyệt đang chặn lưu trữ. Lịch sử chỉ giữ trong tab hiện tại."); } setChats(rows); setSelected(rows.find(c => isProductContext(c.context))?.id || ""); setReady(true); }, [storageKey,live]);
   useEffect(() => { if (ready && !live) { try { localStorage.setItem(storageKey, JSON.stringify(chats.slice(0, 20))); } catch { setNotice("Không lưu được lịch sử trên trình duyệt. Bạn vẫn có thể tiếp tục trong tab này."); } } }, [chats, ready, storageKey,live]);
-  useEffect(() => { const show = () => setOpen(true); window.addEventListener("open-local-ai-assistant", show); return () => window.removeEventListener("open-local-ai-assistant", show); }, []);
+  useEffect(() => { const show = () => setWindowOpen(true); window.addEventListener("open-local-ai-assistant", show); return () => window.removeEventListener("open-local-ai-assistant", show); }, [setWindowOpen]);
   useEffect(() => { if (open) textarea.current?.focus(); }, [open, history,assignedOpen]);
   useEffect(()=>{setAssignedOpen(false);},[selected]);
   useEffect(() => { bottom.current?.scrollIntoView({ block: "nearest" }); }, [chat?.messages.length, busy]);
   useEffect(() => () => { generation.current++; }, []);
-  function close() { if(fullPage)return; setOpen(false); launcher.current?.focus(); }
+  function close() { if(fullPage)return; pendingNavigation.current=null; setWindowOpen(false); launcher.current?.focus(); }
   function create(context = live ? null : current) { pendingNavigation.current=null; const c = newConversation(context); if(live)liveDrafts.current.add(c.id); liveRequestKey.current=null; setChats(rows => [c, ...rows].slice(0, 20)); setSelected(c.id); setHistory(false); setAssignedOpen(false); setInput(""); setNotice(""); return c; }
   function update(id: string, fn: (c: Conversation) => Conversation) { setChats(rows => rows.map(c => c.id === id ? { ...fn(c), updatedAt: new Date().toISOString() } : c).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt))); }
   async function send(value = input) {
@@ -57,10 +66,10 @@ export default function AiAssistant({ userId, canManage, live = false, fullPage 
     const c = chat || create();
     if(live){
       setBusy(true);setNotice("");liveSubmitting.current=true;liveSequence.current++;
-      if(!liveRequestKey.current||liveRequestKey.current.id!==c.id||liveRequestKey.current.text!==text)liveRequestKey.current={id:c.id,text,key:crypto.randomUUID()};
-      pendingNavigation.current=liveRequestKey.current.key;
-      try{const row=await livePost({action:"send",...(c.revision?{id:c.id}:{}),requestKey:liveRequestKey.current.key,text,productId:isProductContext(current)?current.id||null:null}) as Conversation;liveDrafts.current.delete(c.id);liveRequestKey.current=null;setInput("");liveSelected.current=row.id;setSelected(row.id);setChats(rows=>[row,...rows.filter(r=>r.id!==c.id&&r.id!==row.id)]);}
-      catch(e){setNotice(e instanceof Error?e.message:"Không gửi được tin nhắn.");}
+      if(!liveRequestKey.current||liveRequestKey.current.id!==c.id||liveRequestKey.current.text!==text||liveRequestKey.current.screenPath!==pathname)liveRequestKey.current={id:c.id,text,key:crypto.randomUUID(),screenPath:pathname};
+      pendingNavigation.current={requestKey:liveRequestKey.current.key,conversationId:c.id};
+      try{const row=await livePost({action:"send",...(c.revision?{id:c.id}:{}),requestKey:liveRequestKey.current.key,text,screenPath:pathname,productId:isProductContext(current)?current.id||null:null}) as Conversation;if(pendingNavigation.current)pendingNavigation.current.conversationId=row.id;liveDrafts.current.delete(c.id);liveRequestKey.current=null;setInput("");liveSelected.current=row.id;setSelected(row.id);setChats(rows=>[row,...rows.filter(r=>r.id!==c.id&&r.id!==row.id)]);}
+      catch(e){pendingNavigation.current=null;setNotice(e instanceof Error?e.message:"Không gửi được tin nhắn.");}
       finally{liveSubmitting.current=false;setBusy(false);await refreshLive(liveSelected.current||undefined).catch(e=>setNotice(e.message));}return;
     }
     if (c.messages.length >= 38) { setNotice("Cuộc trao đổi đã đủ dài. Hãy tạo trao đổi mới để tiếp tục."); return; }
@@ -80,8 +89,8 @@ export default function AiAssistant({ userId, canManage, live = false, fullPage 
   async function approvePermissionLive(){if(!chat?.permissionRequest)return;setBusy(true);liveSubmitting.current=true;try{await livePost({action:"permission-support",id:chat.id,revision:chat.permissionRequest.revision});await refreshLive(chat.id);}catch(e){setNotice(e instanceof Error?e.message:"Chưa gửi được yêu cầu cho Long.");}finally{liveSubmitting.current=false;setBusy(false);}}
   async function updateLiveRequest(request:NonNullable<Conversation["customerRequest"]>,requestRevision?:number){const original=requestRevision!==undefined?chat?.approvedRequests?.find(r=>r.revision===requestRevision)?.request:chat?.customerRequest;if(!original)return;const changed=request.conditions.find(c=>{const old=original.conditions.find(o=>o.id===c.id);return old&&(old.outcome!==c.outcome||old.result!==c.result);});if(!changed)return;setBusy(true);try{await livePost({action:"outcome",id:chat!.id,requestRevision,conditionId:changed.id,outcome:changed.outcome,result:changed.result});await refreshLive(chat!.id);}catch(e){setNotice(e instanceof Error?e.message:"Chưa lưu kết quả.");}finally{setBusy(false);}}
   return <>
-    {!fullPage && <button ref={launcher} type="button" aria-label="Mở Ben" aria-expanded={open} onClick={() => setOpen(v => !v)} className="fixed bottom-5 right-5 z-[60] flex items-center gap-2 rounded-full bg-blue-700 px-4 py-2.5 font-semibold text-white shadow-xl hover:bg-blue-800"><BenAvatar /><span>Ben</span><span className="rounded bg-white/20 px-1.5 text-[10px]">{live?"CODEX":"MẪU"}</span></button>}
-    {open && <>{!fullPage&&<button aria-label="Đóng Ben" onClick={close} className="fixed inset-0 z-[65] bg-slate-950/30 sm:hidden" />}
+    {!fullPage && <button ref={launcher} type="button" aria-label="Mở Ben" aria-expanded={open} onClick={() => {if(open)close();else setWindowOpen(true);}} className="fixed bottom-5 right-5 z-[60] flex items-center gap-2 rounded-full bg-blue-700 px-4 py-2.5 font-semibold text-white shadow-xl hover:bg-blue-800"><BenAvatar /><span>Ben</span><span className="rounded bg-white/20 px-1.5 text-[10px]">{live?"CODEX":"MẪU"}</span></button>}
+    {(open || fullPage) && <>{!fullPage&&<button aria-label="Đóng Ben" onClick={close} className="fixed inset-0 z-[65] bg-slate-950/30 sm:hidden" />}
     <aside ref={panel} aria-label="Ben · Hỗ trợ công việc" onKeyDown={event => { if (event.key === "Escape") close(); if (event.key === "Tab" && window.innerWidth < 640) { const nodes = panel.current?.querySelectorAll<HTMLElement>('button:not(:disabled), textarea, input, select, a[href]'); if (!nodes?.length) return; const first = nodes[0], last = nodes[nodes.length - 1]; if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); } else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); } } }} className={fullPage ? "fixed inset-0 z-[70] mx-auto flex h-[100dvh] w-full max-w-3xl flex-col bg-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-xl" : "fixed inset-y-0 right-0 z-[70] flex w-full flex-col border-l border-slate-200 bg-white shadow-2xl sm:w-[540px] lg:w-[600px] xl:w-[640px]"}>
       <header className="flex items-center justify-between border-b-0 border-blue-100 px-5 py-4"><div className="flex items-center gap-3"><BenAvatar /><div><h2 className="font-semibold text-slate-950">Ben</h2><p className="text-xs text-slate-500"><span className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${busy?"bg-blue-500":"bg-emerald-500"}`}/>{busy?"Đang xử lý…":"Cùng bạn xử lý công việc"}</p></div></div><div className="flex gap-1">{live&&!fullPage&&<Link href="/admin/ben" className="self-center rounded-lg px-2 text-xs text-indigo-700">Mở riêng</Link>}<button disabled={busy} aria-label="Lịch sử trao đổi" onClick={() => {setAssignedOpen(false);setHistory(v => !v);}} className="rounded-lg p-2 hover:bg-slate-100"><History size={19}/></button><button disabled={busy || (!live && !isProductContext(current))} aria-label="Trao đổi mới" onClick={() => create()} className="rounded-lg p-2 hover:bg-slate-100"><Plus size={19}/></button>{!fullPage&&<button aria-label="Đóng Ben" onClick={close} className="rounded-lg p-2 hover:bg-slate-100"><X size={20}/></button>}</div></header>
       <div className="flex items-center gap-2 px-5 pb-3 text-[11px] text-slate-500"><span className="rounded border border-blue-100 bg-blue-50 px-1.5 py-0.5 font-medium text-blue-700">{live?"STAGING":"GIẢ LẬP"}</span><span>{live?"Tra cứu · Đề xuất · Bạn quyết định":"Không gọi AI hoặc tạo việc thật"}</span></div>
