@@ -22,5 +22,6 @@ export function navigationTarget(key: string, actor: AssistantAuthority) {
 }
 export function availableScreens(actor: AssistantAuthority) { return BEN_SCREENS.filter(screen => navigationTarget(screen.key, actor)); }
 export function isNavigationRequest(text: string) {
-  return /(?:mở|vào|chuyển|đi tới|đi đến|tới trang|đến trang|điều hướng|open|navigate|go to)/iu.test(text);
+  const normalized = text.normalize("NFC").replace(/\s+/g, " ").trim();
+  return /(?:mở|vào|chuyển|đi tới|đi đến|(?:tới|đến) (?:trang|màn hình)|(?:đưa|dẫn) (?:mình|tôi|em|anh|tớ|ta|bạn) (?:đến|tới|sang|vào)|điều hướng|open|navigate|go to)/iu.test(normalized);
 }

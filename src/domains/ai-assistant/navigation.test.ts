@@ -18,3 +18,8 @@ test("mentioning a screen alone is not a navigation request",()=>{
  assert.equal(isNavigationRequest("Danh sách đồng hồ có bao nhiêu chiếc?"),false);
  assert.equal(isNavigationRequest("Ben mở công việc của tôi đi"),true);
 });
+
+test("natural Vietnamese navigation requests from staging are recognized",()=>{
+ for(const text of ["đưa mình đến màn hình sản phẩm nhé", "ok, đưa mình tới màn hình sản phẩm nhé", "Ben dẫn tôi sang trang đơn hàng", "tới màn hình công việc của tôi", "đưa   mình\nđến màn hình sản phẩm", "đưa mình đến màn hình sản phẩm".normalize("NFD")])assert.equal(isNavigationRequest(text),true,text);
+ for(const text of ["màn hình sản phẩm có gì", "đồng hồ này là của mình", "đến hôm nay còn bao nhiêu chiếc", "Ben có hỗ trợ điều này không"])assert.equal(isNavigationRequest(text),false,text);
+});
