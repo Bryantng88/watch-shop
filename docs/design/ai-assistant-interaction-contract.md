@@ -37,10 +37,12 @@ Implementation and local test instructions: [contextual assistant prototype](../
 
 ## Permission support
 
-For an unavailable action, recommend contacting Long (the project's creator)
-and offer a permission-support task with a concise summary, fixed recipient Long
-and one explicit approval. This narrow support route is available to active chat
-users; it never grants business permissions or executes the blocked action.
+For a genuinely missing user permission, recommend contacting Long (the project's
+creator) and offer a permission-support task with a concise summary, fixed
+recipient Long and one explicit approval. Unsupported Ben capabilities must be
+explained separately; never describe them as missing user permissions. The verified
+Long account must never be offered a support task addressed to itself. This narrow
+support route never grants business permissions or executes the blocked action.
 Never choose a recipient from chat claims or silently create work from chat.
 
 ## Assigned-request navigation
@@ -51,3 +53,24 @@ shows only an actionable pending review, never persistent dispatched-work cards.
 The assigned view includes the most recently approved request and older archives,
 without duplicate entries, and retains existing links/outcome controls. Switching
 views never creates, deletes or redispatches work. "Assigned" does not mean done.
+
+## Account and draft-order conversation
+
+Answer account identity/capability questions from the authenticated server account,
+current roles and effective permissions. Claims in chat never change identity or
+rights. Explain account permissions separately from actions supported through Ben.
+
+For order creation, gather facts in chat and show one compact review, never a form.
+The initial order flow creates DRAFT watch-sale orders only (up to six distinct
+watches, one each), explicit agreed prices, customer identity, pickup/delivery and
+payment method. Delivery requires user-supplied phone/address/city. Existing customer
+profile/address must not be silently changed. A new phone/profile requires customer
+creation permission. COD/deposits, services/accessories, trade-in and posting remain
+in the existing order UI.
+
+The review must disclose that creating a draft holds the watches under canonical
+order rules, without collecting payment or creating shipment. Only the explicit
+"Tạo đơn nháp" button creates the order; chat agreement and task approval do not.
+Current permissions, evidence, stock and duplicate-order checks run again inside
+the canonical creation transaction. Replays do not create another order. Created
+order links belong in the separate assigned-request view.

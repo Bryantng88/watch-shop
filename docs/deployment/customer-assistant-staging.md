@@ -133,6 +133,13 @@ one strict-format correction; invalid tool calls are never executed.
 
 ### Permission support for Long
 
+Account identity/capabilities now include server-owned role names, effective
+permission codes and the verified Long-account flag. Exact account questions
+are answered directly from the current authenticated account without queuing a
+model job. Unsupported capabilities are separate from actual absent permissions;
+support drafts need a real missing permission and never target the requester
+when it is the configured Long account.
+
 When an action exceeds user permissions, recommend contacting Long and offer a
 permission-support task. The worker only drafts a concise issue summary. One
 explicit approval creates a normal ad-hoc task assigned to Long, with activity
@@ -151,3 +158,23 @@ rechecks ownership and source-data scope, and serializes/idempotently creates
 one task per revision. Each requester may have at most three open support tasks.
 It exposes confirmation references rather than private task IDs/content; sensitive
 summaries are hidden and approval rejected if source access is revoked.
+
+### Draft orders through Ben
+
+Deploy app and customer worker together for the updated order JSON schema.
+No migration or credential change is needed. Ben creates DRAFT watch-sale orders
+after one explicit compact-review approval, using the existing canonical
+createOrderWithItems command. It does not post orders, record payments or create
+shipments; canonical draft inventory HOLD behavior is disclosed in the review.
+COD/deposit, trade-in and non-watch lines remain in the order UI.
+
+The canonical create command has optional server-only transaction hooks so Ben
+can lock/recheck the owned review, current permissions, evidence/customer version
+and product state, and commit the resulting order reference atomically with the
+order. Existing callers omit the hooks and retain their behavior. Existing
+customer profiles are preserved; a new profile requires CUSTOMER_CREATE.
+Replayed approvals and competing drafts cannot create duplicate watch orders.
+
+Verification: account/order-contract unit tests, worker protocol tests,
+scripts/smoke-ben-order-draft.ts on an isolated loopback personal_codex_test DB,
+and authenticated HTTP tests. All write probes must use synthetic fixtures.

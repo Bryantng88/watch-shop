@@ -1,13 +1,14 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUserPermissions } from "@/server/auth/requirePermission";
-import { approvePermissionSupport, approveAssistant, cancelAssistant, listAssistant, recordConditionOutcome, sendAssistant } from "@/domains/ai-assistant/server/service";
+import { approveAssistantOrder, approvePermissionSupport, approveAssistant, cancelAssistant, listAssistant, recordConditionOutcome, sendAssistant } from "@/domains/ai-assistant/server/service";
 import { AssistantError } from "@/domains/ai-assistant/server/access";
 const uuid=z.string().uuid();
 const command=z.discriminatedUnion("action",[
  z.object({action:z.literal("send"),id:uuid.optional(),requestKey:uuid,text:z.string().trim().min(1).max(4000),productId:z.string().min(1).max(100).nullable().optional()}).strict(),
  z.object({action:z.literal("cancel"),id:uuid}).strict(),
  z.object({action:z.literal("permission-support"),id:uuid,revision:z.number().int().min(1)}).strict(),
+ z.object({action:z.literal("approve-order"),id:uuid,revision:z.number().int().min(1)}).strict(),
  z.object({action:z.literal("approve"),id:uuid,revision:z.number().int().min(1)}).strict(),
  z.object({action:z.literal("outcome"),id:uuid,conditionId:z.string().min(1).max(30),requestRevision:z.number().int().min(1).optional(),outcome:z.enum(["Chưa xác minh","Đạt","Không đạt","Cần khách xác nhận"]),result:z.string().max(1500)}).strict(),
 ]);
@@ -19,6 +20,7 @@ async function handle(req:NextRequest){try{
  if(c.action==="send")return NextResponse.json(await sendAssistant(user.id,c));
  if(c.action==="cancel")return NextResponse.json(await cancelAssistant(user.id,c.id));
  if(c.action==="permission-support")return NextResponse.json(await approvePermissionSupport(user.id,c.id,c.revision,work=>after(work)));
+ if(c.action==="approve-order")return NextResponse.json(await approveAssistantOrder(user.id,c.id,c.revision,work=>after(work)));
  if(c.action==="approve")return NextResponse.json(await approveAssistant(user.id,c.id,c.revision,work=>after(work)));
  return NextResponse.json(await recordConditionOutcome(user.id,c.id,c.conditionId,c.outcome,c.result,c.requestRevision));
  }catch(e){return NextResponse.json({error:e instanceof AssistantError?e.message:"Chưa xác nhận được kết quả. Hãy tải lại cuộc trao đổi để kiểm tra trước khi thử lại."},{status:e instanceof AssistantError?e.status:e instanceof z.ZodError||e instanceof SyntaxError?400:500});}}
