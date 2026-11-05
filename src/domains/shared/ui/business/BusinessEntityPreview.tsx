@@ -125,9 +125,9 @@ function WatchDecisionPanel({
             neutral: false,
         },
     ];
-    const editHref = `/admin/watches/${snapshot.productId}/edit`;
-    const mediaHref = `${editHref}?mode=media&focus=image&entryPoint=WATCH_QUICK_REVIEW`;
-    const contentHref = `${editHref}?mode=media&focus=content&entryPoint=WATCH_QUICK_REVIEW`;
+    const editHref = `/admin/watches/${snapshot.productId}`;
+    const mediaHref = `${editHref}/edit?mode=media&focus=image&entryPoint=WATCH_QUICK_REVIEW`;
+    const contentHref = `${editHref}/edit?mode=media&focus=content&entryPoint=WATCH_QUICK_REVIEW`;
     const serviceActive = Boolean(snapshot.service.requestStatus) || ["PENDING", "IN_SERVICE"].includes(snapshot.service.stage);
 
     return (

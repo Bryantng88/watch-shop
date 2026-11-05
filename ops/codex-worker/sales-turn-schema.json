@@ -1,0 +1,147 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "lookup",
+        "finish"
+      ]
+    },
+    "tool": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "customers.search",
+        "watches.search",
+        "watches.detail",
+        "accessories.search",
+        "work.open",
+        null
+      ]
+    },
+    "query": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "productId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "customerId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "plan": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "summary": {
+              "type": "string",
+              "maxLength": 1500,
+              "minLength": 1
+            },
+            "questions": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 1500,
+                "minLength": 1
+              },
+              "maxItems": 10
+            },
+            "leads": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]{0,29}$"
+                  },
+                  "customerId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "productId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "followups": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "VERIFY_ACCESSORY",
+                            "SOURCE_ACCESSORY",
+                            "TECHNICAL_CHECK",
+                            "CHECK_AVAILABILITY",
+                            "SALES_FOLLOWUP"
+                          ]
+                        },
+                        "description": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 1500
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "description"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 5
+                  }
+                },
+                "required": [
+                  "key",
+                  "customerId",
+                  "productId",
+                  "followups"
+                ]
+              },
+              "maxItems": 3
+            }
+          },
+          "required": [
+            "summary",
+            "questions",
+            "leads"
+          ]
+        }
+      ]
+    }
+  },
+  "required": [
+    "type",
+    "tool",
+    "query",
+    "productId",
+    "customerId",
+    "plan"
+  ]
+}

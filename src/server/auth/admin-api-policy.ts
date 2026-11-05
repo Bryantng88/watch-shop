@@ -51,6 +51,8 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
         return anyOf(PERMISSIONS.REPORT_SALES_VIEW);
     }
 
+    if (/^\/api\/admin\/storefront(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.PRODUCT_UPDATE);
+
     if (pathname === "/api/admin/settings/storefront-hero") {
         return anyOf(PERMISSIONS.PRODUCT_UPDATE);
     }
@@ -88,6 +90,8 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
         if (/\/cancel$/.test(pathname)) return anyOf(PERMISSIONS.ACQUISITION_DELETE_ALL, PERMISSIONS.WATCH_ACQUISITION_DELETE, PERMISSIONS.ACCESSORY_ACQUISITION_DELETE);
         return anyOf(PERMISSIONS.ACQUISITION_UPDATE_ALL, PERMISSIONS.WATCH_ACQUISITION_UPDATE, PERMISSIONS.ACCESSORY_ACQUISITION_UPDATE);
     }
+
+    if (/^\/api\/admin\/sales-intake(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.TASK_MANAGE);
 
     if (/^\/api\/admin\/orders(\/|$)/.test(pathname)) {
         if (/\/quick-form$/.test(pathname)) return anyOf(PERMISSIONS.ORDER_CREATE);
@@ -235,6 +239,7 @@ export function getAdminPagePolicy(pathname: string): AdminAccessPolicy | null {
     if (pathname === "/admin/users/new") return anyOf(PERMISSIONS.USER_CREATE, PERMISSIONS.USER_MANAGE);
     if (pathname === "/admin/users/roles") return anyOf(PERMISSIONS.USER_MANAGE);
     if (/^\/admin\/users(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.USER_VIEW, PERMISSIONS.USER_MANAGE);
+    if (/^\/admin\/settings\/storefront(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.PRODUCT_UPDATE);
     if (pathname === "/admin/settings/storefront-hero") return anyOf(PERMISSIONS.PRODUCT_UPDATE);
     if (/^\/admin\/settings(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.TASK_VIEW);
     if (/^\/admin\/customers(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.CUSTOMER_VIEW);

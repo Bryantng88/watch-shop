@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import WatchFormClient from "@/domains/watch/client/WatchFormClient";
 import {
@@ -126,6 +126,8 @@ export default async function WatchEditPage({
     const startedAt = perfNow();
     const { id } = await params;
     const query = await searchParams;
+    // The retired full-page editor must never render, including bookmarked URLs.
+    if (query.mode !== "media") redirect(`/admin/watches/${encodeURIComponent(id)}`);
     const isEmbeddedMediaMode =
         query.embedded === "1" && query.mode === "media";
     const workspaceBindingId =

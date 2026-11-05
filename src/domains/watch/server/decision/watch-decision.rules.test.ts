@@ -54,3 +54,22 @@ test("đã publish không được che các blocker hiện tại", () => {
   assert.equal(result.decision.status, "NEEDS_PRICING");
   assert.match(result.decision.warnings[0], /đang hiển thị trên storefront/);
 });
+
+test("decision links use current detail or the dedicated media mode, never the retired editor", () => {
+  const parts = readyParts();
+  parts.service.ready = false;
+  parts.pricing.ready = false;
+  parts.media.ready = false;
+  parts.content.ready = false;
+  const actions = buildWatchDecision(parts).decision.allowedActions;
+  for (const action of actions) {
+    assert.ok(action.href);
+    const url = new URL(action.href, "https://example.test");
+    if (action.key === "OPEN_MEDIA" || action.key === "OPEN_CONTENT") {
+      assert.equal(url.searchParams.get("mode"), "media");
+      assert.equal(url.searchParams.get("focus"), action.key === "OPEN_CONTENT" ? "content" : "image");
+    } else {
+      assert.equal(url.pathname, "/admin/watches/product-1");
+    }
+  }
+});

@@ -1,0 +1,72 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "summary": {
+      "type": "string"
+    },
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "department": {
+            "type": "string",
+            "enum": [
+              "SALES",
+              "TECHNICAL",
+              "MEDIA",
+              "PAYMENT",
+              "OPERATION"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "dependsOn": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dueAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "assignedToUserId": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "department",
+          "description",
+          "dependsOn",
+          "dueAt",
+          "assignedToUserId"
+        ]
+      }
+    }
+  },
+  "required": [
+    "summary",
+    "questions",
+    "steps"
+  ]
+}

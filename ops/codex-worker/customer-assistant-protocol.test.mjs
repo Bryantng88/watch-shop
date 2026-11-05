@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';import {test} from 'node:test';
+import {runCustomerConversation,validateCustomerTurn} from './customer-assistant-protocol.mjs';import {customerCodexArguments} from './customer-assistant-worker.mjs';
+const finish={type:'finish',tool:null,query:null,productId:null,customerId:null,reply:'Bạn muốn giao công việc cho ai?',plan:null};
+test('missing information stays chat, never calls a business write',async()=>{const calls=[];await runCustomerConversation({id:'r',text:'fixture'},{execute:async()=>finish,api:async(op,body)=>{calls.push([op,body.plan]);return{accepted:true}}});assert.deepEqual(calls,[['finish',null]]);});
+test('write tools and injected fields are rejected; two-character recipient search is allowed',()=>{assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'orders.create',reply:null}));assert.throws(()=>validateCustomerTurn({...finish,sql:'select'}));assert.deepEqual(validateCustomerTurn({...finish,type:'lookup',tool:'people.search',query:'An',reply:null}).lookup,{tool:'people.search',query:'An'});});
+test('read-only CLI keeps credential and other-workspace denies and no network',()=>{const args=customerCodexArguments('/work/customer-runs/r','/work/results/r.json').join(' ');for(const value of ['/run/worker','/proc','/work/repo','/work/runs','/work/order-runs','/work/sales-runs','/work/results','extends=":read-only"','network={enabled=false}'])assert.ok(args.includes(value));assert.equal(args.includes('dangerously-bypass'),false);});
+test('lost lease and duplicate lookup never finish a proposal',async()=>{let calls=0;await assert.rejects(runCustomerConversation({id:'r',text:'fixture'},{execute:async()=>({...finish,type:'lookup',tool:'people.search',query:'An',reply:null}),api:async()=>{calls++;return{evidence:{}}}}),/REPEATED_LOOKUP/);assert.equal(calls,1);});
+test('pre-order work lookup accepts a null customer without weakening other lookup fields',()=>{
+ assert.deepEqual(validateCustomerTurn({...finish,type:'lookup',tool:'work.open',productId:'watch',customerId:null,reply:null}).lookup,{tool:'work.open',productId:'watch',customerId:null});
+ assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'work.open',productId:'watch',customerId:'',reply:null}));
+});
+test('image lookup accepts only a product ID, never model URLs or extra arguments',()=>{
+ assert.deepEqual(validateCustomerTurn({...finish,type:'lookup',tool:'watches.images',productId:'watch',reply:null}).lookup,{tool:'watches.images',productId:'watch'});
+ assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'watches.images',productId:'watch',query:'https://evil.test',reply:null}));
+ assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'watches.images',productId:'watch',reply:null,url:'https://evil.test'}));
+});
+
+test('Ben identity is supplied on every lookup round and resumed conversation',async()=>{
+ const prompts=[];let calls=0;
+ await runCustomerConversation({id:'r',text:JSON.stringify({messages:[{role:'user',text:'Ben ơi, xem đồng hồ giúp mình'}],alreadyApproved:true})},{
+  execute:async prompt=>{prompts.push(prompt);return calls++===0?{...finish,type:'lookup',tool:'watches.search',query:'Seiko',reply:null}:finish;},
+  api:async op=>op==='lookup'?{evidence:{request:{tool:'watches.search',query:'Seiko'},result:{matches:[]}}}:{accepted:true}
+ });
+ assert.equal(prompts.length,2);
+ for(const prompt of prompts){assert.ok(prompt.startsWith('You are Ben,'));assert.ok(prompt.includes('not naming a customer, employee or task recipient'));assert.ok(prompt.includes('not a human employee'));}
+});

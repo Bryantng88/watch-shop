@@ -238,7 +238,7 @@ export async function getBusinessEntityPreviewAction(input: {
             activity,
             activityDeferred: Boolean(input.deferActivity && canReadActivity),
             watchDecision: watchDecision ?? undefined,
-            href: `/admin/watches/${product?.id}/edit`, facts: [
+            href: `/admin/watches/${product?.id}`, facts: [
                 { label: "Brand", value: product?.brand?.name || "-" },
                 { label: "Product status", value: product?.status || "-" },
                 { label: "Sale stage", value: row.saleStage || "-" },

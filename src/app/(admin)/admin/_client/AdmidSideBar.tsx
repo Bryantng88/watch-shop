@@ -19,6 +19,7 @@ import {
     BarChart3,
     ChartNoAxesCombined,
     CalendarCheck2,
+    MessageSquare,
 } from "lucide-react";
 
 import ActiveLink from "./AdminActiveLink";
@@ -95,6 +96,13 @@ const NAV: NavEntry[] = [
                 label: "Đơn hàng",
                 icon: ClipboardList,
                 permission: PERMISSIONS.ORDER_VIEW,
+            },
+            {
+                type: "item",
+                href: "/admin/coordination/sales",
+                label: "Sales",
+                icon: MessageSquare,
+                permissionsAll: [PERMISSIONS.TASK_VIEW, PERMISSIONS.TASK_MANAGE, PERMISSIONS.PRODUCT_VIEW, PERMISSIONS.CUSTOMER_VIEW],
             },
             {
                 type: "item",

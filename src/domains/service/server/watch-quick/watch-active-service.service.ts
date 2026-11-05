@@ -186,6 +186,17 @@ async function createQuickServiceRequest(client: DB, productId: string) {
   return request;
 }
 
+// Transactional adapter for approved customer-assistant requests. Reuses the
+// same service creation rules/events; caller owns atomicity and product locking.
+export async function getOrCreateActiveWatchServiceTx(client: DB, productId: string, actorUserId: string, deferConsumers: (work: () => Promise<void>) => void) {
+  const existing = await findActiveServiceRequest(client, productId);
+  if (existing) return existing.id;
+  const created = await createQuickServiceRequest(client, productId);
+  await ensureAssessment(client, created.id);
+  await recordBusinessEvent(client, { eventKey: "service_request.created", targetType: "SERVICE_REQUEST", targetId: created.id, actorUserId, payload: { source: "approved-customer-assistant", productId, serviceRequestId: created.id }, targetAliasIds: [productId] }, { deferConsumers });
+  return created.id;
+}
+
 async function getOrCreateActiveServiceRequestId(
   productId: string,
   eventInput?: {

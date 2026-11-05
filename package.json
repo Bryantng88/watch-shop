@@ -64,6 +64,8 @@
     "local:seed-admin": "tsx scripts/seed-local-admin.ts",
     "personal-work:smoke-categories": "tsx scripts/smoke-personal-work-categories.ts",
     "personal-work:smoke-calendar": "tsx scripts/smoke-personal-calendar.ts",
+    "personal-work:smoke-codex": "node --import tsx scripts/smoke-personal-codex.ts",
+    "personal-work:check-integrations": "node --import tsx scripts/check-personal-calendar-configuration.ts",
     "personal-work:smoke-standalone": "tsx scripts/smoke-personal-work-standalone.ts",
     "personal-work:smoke-photoshoot": "tsx scripts/smoke-personal-photoshoot.ts",
     "personal-work:smoke-schedule": "tsx scripts/smoke-personal-work-schedule.ts",
@@ -72,7 +74,11 @@
     "local:seed-operations-dashboard": "tsx scripts/seed-local-operations-dashboard.ts",
     "local:seed-personal-work": "tsx scripts/seed-local-personal-work.ts",
     "storefront:seed-acceptance-media": "tsx scripts/seed-storefront-acceptance-media.ts",
-    "gen": "prisma generate"
+    "gen": "prisma generate",
+    "storefront:smoke-content": "node --import tsx --test src/domains/storefront/content/content.test.ts",
+    "customer-assistant:check": "node --import tsx scripts/check-customer-assistant-configuration.ts",
+    "customer-assistant:smoke": "node --import tsx scripts/smoke-customer-assistant.ts",
+    "customer-assistant:smoke-http": "node --import tsx scripts/smoke-customer-assistant-http.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

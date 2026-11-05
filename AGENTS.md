@@ -17,6 +17,14 @@ the Codex desktop app, the CLI, and IDE integrations.
 - Use repository files and scripts as the source of truth. Ask before changing
   architecture, production data, deployment policy, or access controls.
 
+## AI assistant UX
+
+Before changing assistant/chat interactions, read
+`docs/design/ai-assistant-interaction-contract.md`.
+Keep conversation as the primary input/correction flow, ask missing facts in chat,
+and show a compact review with one explicit approval only when complete. Do not
+embed business forms, including large forms hidden under Edit/Details accordions.
+
 ## Verification
 
 Run checks appropriate to the files changed. The normal application checks are:
@@ -83,6 +91,22 @@ contents of production environment files.
 
 See `docs/deployment/github-actions-nas-runner.md` for runner setup, security,
 release operation, and emergency controls.
+
+## Staging deployment
+
+Before staging infrastructure or deployment work, read
+`docs/deployment/staging-deployment-runbook.md`,
+`docs/deployment/personal-work-codex-calendar-staging.md` and
+`ops/codex-worker/README.qnap.md`. Preserve current staging runtime env (including
+OAuth and Codex flags/token), worker volumes and private ingress. There is no
+checked-in staging deploy workflow yet; production deploy scripts are not a
+staging shortcut. Verify the current state instead of assuming another chat's
+local scratch files or historical container IPs still exist.
+
+For the Product customer assistant live pilot, also read
+`docs/deployment/customer-assistant-staging.md`. Chat prepares a draft; one
+explicit approval may create real technical issues/tasks on staging. Preserve
+the separate local simulation and do not infer production authorization.
 
 ## Codex Cloud
 

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 
+import { readHome } from "@/domains/storefront/content/service";
 import PublicFooter from "@/domains/storefront/ui/PublicFooter";
 import PublicHeader from "@/domains/storefront/ui/PublicHeader";
 import { StorefrontCartProvider } from "@/domains/storefront/ui/StorefrontCart";
@@ -26,19 +27,35 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { themeColor: "#252525", width: "device-width", initialScale: 1 };
 
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {
-  const [initialItems, rate, cookieStore] = await Promise.all([loadStorefrontCartItems(), getStorefrontUsdRate(), cookies()]);
+  const [initialItems, rate, cookieStore, home] = await Promise.all([
+    loadStorefrontCartItems(),
+    getStorefrontUsdRate(),
+    cookies(),
+    readHome(),
+  ]);
   const locale = cookieStore.get("vintic-locale")?.value === "en" ? "en" : "vi";
   return (
-    <StorefrontLocaleProvider value={{ locale, vndPerUsd: rate.vndPerUsd, rateSource: rate.source }}>
-    <StorefrontCartProvider initialItems={initialItems}>
-      <div className="storefront-surface min-h-screen bg-white text-[#252525]">
-        <PwaRuntime />
-        <StorefrontAnalyticsRuntime />
-        <PublicHeader />
-        <main>{children}</main>
-        <PublicFooter />
-      </div>
-    </StorefrontCartProvider>
+    <StorefrontLocaleProvider
+      value={{ locale, vndPerUsd: rate.vndPerUsd, rateSource: rate.source }}
+    >
+      <StorefrontCartProvider initialItems={initialItems}>
+        <div className="storefront-surface min-h-screen bg-white text-[#252525]">
+          <PwaRuntime />
+          <StorefrontAnalyticsRuntime />
+          <PublicHeader
+            logo={
+              home.general.logo.key
+                ? {
+                    url: "/api/public/storefront/media/home/logo",
+                    alt: home.general.logo.alt || "Vintic",
+                  }
+                : undefined
+            }
+          />
+          <main>{children}</main>
+          <PublicFooter />
+        </div>
+      </StorefrontCartProvider>
     </StorefrontLocaleProvider>
   );
 }

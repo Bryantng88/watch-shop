@@ -1,5 +1,6 @@
 "use client";
 
+import OrderCodexPanel from "@/domains/order/codex/OrderCodexPanel";
 import { useState } from "react";
 
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
@@ -20,7 +21,7 @@ import { ADMIN_DETAIL_CONTENT_CLASS } from "@/domains/shared/ui/layout/admin-con
 
 type ActionName = "post" | "verify" | "cancel" | "serviceIntake";
 
-export default function OrderDetailClient({ data }: { data: OrderDetailData }) {
+export default function OrderDetailClient({ data, codexEnabled = false }: { data: OrderDetailData; codexEnabled?: boolean }) {
   const notify = useNotify();
   const dialog = useAppDialog();
   const progress = useAppProgress();
@@ -96,6 +97,7 @@ export default function OrderDetailClient({ data }: { data: OrderDetailData }) {
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">
           <OrderItemsPanel data={data} />
+          {codexEnabled && <OrderCodexPanel orderId={data.id} />}
           <OrderCustomerPanel data={data} />
           <OrderTimelinePanel data={data} />
           <OrderNotesPanel data={data} />
