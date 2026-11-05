@@ -8,7 +8,7 @@ async function main(){
  const customer=await p.customer.create({data:{name:`HTTP customer ${suffix}`}}),product=await p.product.create({data:{type:"WATCH",sku:`HTTP-AI-${suffix}`,title:"HTTP synthetic watch",watch:{create:{saleStage:"READY",stockStage:"IN_STOCK"}}}});
  const catalog=await p.technicalDetailCatalog.create({data:{code:`HTTP-AI-${suffix}`,name:`HTTP pressure check ${suffix}`,area:"GENERAL"}});
  process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID=otherId;
- child=spawn(process.execPath,["node_modules/next/dist/bin/next","start","--hostname","127.0.0.1","--port","3002"],{env:process.env,stdio:["ignore","pipe","pipe"],windowsHide:true,detached:process.platform!=="win32"});child.stdout!.on("data",v=>logs+=v);child.stderr!.on("data",v=>logs+=v);
+ child=spawn(process.execPath,process.env.BEN_HTTP_STANDALONE_ENTRY?[process.env.BEN_HTTP_STANDALONE_ENTRY]:["node_modules/next/dist/bin/next","start","--hostname","127.0.0.1","--port","3002"],{env:{...process.env,PORT:"3002",HOSTNAME:"127.0.0.1"},stdio:["ignore","pipe","pipe"],windowsHide:true,detached:process.platform!=="win32"});child.stdout!.on("data",v=>logs+=v);child.stderr!.on("data",v=>logs+=v);
  let ready=false;for(let i=0;i<90;i++){try{const r=await fetch(base+"/api/health");if(r.status===200){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,300));}assert.ok(ready,"Test app ready");
  const cookie=(id:string)=>"auth_token="+createAuthToken(id);
  async function api(method:string,body?:unknown,id=ownerId,origin=base){const r=await fetch(base+"/api/admin/customer-assistant",{method,headers:{...(id?{cookie:cookie(id)}:{}),origin,"content-type":"application/json"},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,body:await r.json()};}
