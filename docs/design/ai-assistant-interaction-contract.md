@@ -147,3 +147,10 @@ at claim/finish and redact replies if rights are revoked. Navigating between pag
 or tabs and sending another message replaces/clears the old hint. Reload does not
 replay navigation. Full business reads/actions still need their authorized tools;
 identifying an order screen does not grant an order-read or payment tool.
+
+The dedicated /admin/ben route is named "Ben mở riêng". This identifies the chat
+view, not hardware: desktop and mobile may both open it. Never infer "phone" or
+another app/tab's current page from this mode. Older already-open clients that
+omit screenPath may recover only this fixed route from a same-origin Referer;
+discard query/hash and do not overwrite explicit/null client metadata. Referrer
+never grants permissions or selects a business record.
