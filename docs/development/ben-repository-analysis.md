@@ -38,7 +38,10 @@ This task does not deploy, provision the credential or modify production.
 - repository.pullRequests: fifteen current open PR titles/head/base SHAs. PR heads
   are separate refs, not proof that their code is in the pinned snapshot.
 
-Reads use immutable Git tree/blob SHAs and a fixed GitHub origin/repository. The
+Reads walk immutable Git trees non-recursively and fetch blobs from a fixed GitHub
+origin/repository. They do not download the repository-wide recursive tree (which
+contains over 22,000 tracked files). Each lookup has a 12-second budget, at most
+16 GETs, bounded directory responses and a maximum 12-component path. The
 first repository read pins the conversation snapshot; later configured SHAs do not
 silently retarget it. Start a new conversation to review a newly configured SHA.
 Timeouts, response sizes, lookup counts, extensions and path roots are bounded.

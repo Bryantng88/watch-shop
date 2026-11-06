@@ -11,10 +11,10 @@ function safeCode(text:string){
 }
 export async function readRepository(request:RepositoryLookup,commit:string,token:string,fetcher:typeof fetch=fetch):Promise<Record<string,unknown>>{
  if(!sha(commit)||!token)throw Error("REPOSITORY_UNAVAILABLE");
- let calls=0;
+ let calls=0;const deadline=Date.now()+12000;
  async function get(resource:string){
-  if(++calls>3)throw Error("REPOSITORY_REQUEST_LIMIT");
-  const response=await fetcher(`https://api.github.com/repos/${BEN_REPOSITORY}/${resource}`,{method:"GET",headers:{Authorization:`Bearer ${token}`,Accept:"application/vnd.github+json","User-Agent":"Watch-Shop-Ben-ReadOnly","X-GitHub-Api-Version":"2022-11-28"},redirect:"error",signal:AbortSignal.timeout(4500),cache:"no-store"});
+  if(++calls>16||Date.now()>=deadline)throw Error("REPOSITORY_REQUEST_LIMIT");
+  const response=await fetcher(`https://api.github.com/repos/${BEN_REPOSITORY}/${resource}`,{method:"GET",headers:{Authorization:`Bearer ${token}`,Accept:"application/vnd.github+json","User-Agent":"Watch-Shop-Ben-ReadOnly","X-GitHub-Api-Version":"2022-11-28"},redirect:"error",signal:AbortSignal.timeout(Math.max(1,Math.min(4500,deadline-Date.now()))),cache:"no-store"});
   if(!response.ok)throw Error("REPOSITORY_UNAVAILABLE");
   if(Number(response.headers.get("content-length"))>4000000)throw Error("REPOSITORY_RESPONSE_LIMIT");
   const reader=response.body?.getReader();if(!reader)throw Error("REPOSITORY_UNAVAILABLE");let length=0;const chunks:Uint8Array[]=[];
@@ -34,14 +34,17 @@ export async function readRepository(request:RepositoryLookup,commit:string,toke
  if(request.tool==="repository.info")return {...base,treeSha:revision.tree.sha,subject:safeCode(String(revision.message||"").split("\n")[0]).slice(0,200),note:"Operator-pinned source snapshot. Not proof of the current deployed revision. No edits, commands, branches, PR writes or deployment are available."};
  const match=request.tool==="repository.file"?/^(.+?)(?::(\d+)-(\d+))?$/.exec(request.query):null;
  const path=match?match[1]:request.query;if(!allowedRepositoryPath(path,request.tool==="repository.tree"))throw Error("REPOSITORY_PATH_DENIED");
- const tree=await get(`git/trees/${revision.tree.sha}?recursive=1`);if(tree.truncated||!Array.isArray(tree.tree)||tree.tree.length>20000)throw Error("REPOSITORY_TREE_LIMIT");
- const entries=tree.tree as GitEntry[];
+ const segments=path?path.split("/"):[];if(segments.length>12)throw Error("REPOSITORY_PATH_DENIED");
+ const directories=request.tool==="repository.tree"?segments:segments.slice(0,-1);let treeSha=revision.tree.sha;
+ async function listTree(treeId:string):Promise<GitEntry[]>{const tree=await get(`git/trees/${treeId}`);if(tree.truncated||!Array.isArray(tree.tree)||tree.tree.length>10000)throw Error("REPOSITORY_TREE_LIMIT");return tree.tree;}
+ for(const directory of directories){const parent=await listTree(treeSha);const child=parent.find(e=>e.path===directory&&e.type==="tree"&&["040000","40000"].includes(e.mode));if(!child||!sha(child.sha))throw Error("REPOSITORY_PATH_DENIED");treeSha=child.sha;}
+ const entries=await listTree(treeSha);
  if(request.tool==="repository.tree"){
   const prefix=path?path+"/":"";
-  const matches=entries.filter(e=>e.path.startsWith(prefix)&&!e.path.slice(prefix.length).includes("/")&&allowedRepositoryPath(e.path,e.type==="tree")&&(e.type==="tree"||e.type==="blob"&&["100644","100755"].includes(e.mode)));
+  const matches=entries.map(e=>({...e,path:prefix+e.path})).filter(e=>!e.path.slice(prefix.length).includes("/")&&allowedRepositoryPath(e.path,e.type==="tree")&&(e.type==="tree"||e.type==="blob"&&["100644","100755"].includes(e.mode)));
   return {...base,path,entries:matches.slice(0,60).map(e=>({path:e.path,type:e.type,size:e.size})),truncated:matches.length>60};
  }
- const entry=entries.find(e=>e.path===path);if(!entry||entry.type!=="blob"||!["100644","100755"].includes(entry.mode)||!sha(entry.sha)||typeof entry.size!=="number"||entry.size>80000)throw Error("REPOSITORY_FILE_UNAVAILABLE");
+ const entry=entries.find(e=>e.path===segments[segments.length-1]);if(!entry||entry.type!=="blob"||!["100644","100755"].includes(entry.mode)||!sha(entry.sha)||typeof entry.size!=="number"||entry.size>80000)throw Error("REPOSITORY_FILE_UNAVAILABLE");
  const blob=await get(`git/blobs/${entry.sha}`);if(blob.encoding!=="base64"||typeof blob.content!=="string"||blob.size>80000)throw Error("REPOSITORY_FILE_UNAVAILABLE");
  const bytes=Buffer.from(blob.content,"base64");if(bytes.length>80000)throw Error("REPOSITORY_FILE_UNAVAILABLE");
  const text=safeCode(bytes.toString("utf8"));if(text.includes("\0"))throw Error("REPOSITORY_FILE_UNAVAILABLE");
