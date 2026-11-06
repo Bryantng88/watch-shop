@@ -207,7 +207,7 @@ export async function executeCodeJob(config, run, { api, github, command }) {
     (await sandbox([
       'node',
       '-e',
-      'process.stdout.write("BEN_NODE_PROBE")',
+      'require("node:fs").writeSync(1,"BEN_NODE_PROBE")',
     ])) !== 'BEN_NODE_PROBE'
   )
     throw Error('CODE_NODE_RUNTIME_UNAVAILABLE');
@@ -325,7 +325,7 @@ export async function executeCodeJob(config, run, { api, github, command }) {
   );
   if (
     (await sandbox(
-      ['node', '-e', 'process.stdout.write("BEN_NODE_PROBE")'],
+      ['node', '-e', 'require("node:fs").writeSync(1,"BEN_NODE_PROBE")'],
       false,
       true
     )) !== 'BEN_NODE_PROBE'
