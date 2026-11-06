@@ -154,3 +154,24 @@ another app/tab's current page from this mode. Older already-open clients that
 omit screenPath may recover only this fixed route from a same-origin Referer;
 discard query/hash and do not overwrite explicit/null client metadata. Referrer
 never grants permissions or selects a business record.
+
+## Reviewed repository code jobs
+
+For verified Long only, a fresh successful pinned repository.file read may produce
+a strict codePlan {title, request}. The server binds the draft to that owned
+conversation revision and configured source SHA/ref/PR base. Chat remains read-only;
+no business/customer identity is required for a coding request. A compact code
+review exposes one explicit Start action, which idempotently queues a separate
+code worker. Code plans cannot accompany business/order/navigation proposals.
+
+The worker edits an isolated checkout and reports independently executed named
+checks, immutable commit and draft PR. Chat output is never execution evidence.
+Merge and staging deploy each require their own explicit exact-commit command;
+no free-text statement, history replay or poll can authorize either. Private
+leases never reach browsers. Current active Long authority is rechecked on
+claims/heartbeats/completion. Revoked, expired or cancelled work cannot publish
+a successful API result. Uncertain remote mutations require operator reconciliation.
+Capabilities default off; unsupported/unconfigured execution must be explained
+as unavailable rather than a successful action. The browser displays authoritative
+job state and links, never autonomously replays commands. Production is excluded.
+See [code execution and staging integration](../development/ben-code-execution.md).

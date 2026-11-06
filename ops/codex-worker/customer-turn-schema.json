@@ -388,6 +388,33 @@
           ]
         }
       ]
+    },
+    "codePlan": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 160
+            },
+            "request": {
+              "type": "string",
+              "minLength": 20,
+              "maxLength": 4000
+            }
+          },
+          "required": [
+            "title",
+            "request"
+          ]
+        }
+      ]
     }
   },
   "required": [
@@ -402,6 +429,7 @@
     "orderPlan",
     "missingPermission",
     "unsupportedCapability",
-    "navigationIntent"
+    "navigationIntent",
+    "codePlan"
   ]
 }

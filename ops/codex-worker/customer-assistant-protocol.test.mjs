@@ -71,3 +71,7 @@ test('repository tools are bounded read requests and reject executable/write-sha
  assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'repository.push',query:'main',reply:null}));
  assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'repository.file',query:'src/file.ts',productId:'watch',reply:null}));
 });
+test('coding work is a draft only and cannot mix with business orders or navigation',()=>{
+ const codePlan={title:'Remember list filters',request:'Persist the selected filters after a browser reload.'};assert.deepEqual(validateCustomerTurn({...finish,codePlan}).codePlan,codePlan);
+ assert.throws(()=>validateCustomerTurn({...finish,codePlan:{...codePlan,command:'rm -rf'}}));assert.throws(()=>validateCustomerTurn({...finish,codePlan,plan:{anything:true}}));assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'repository.info',reply:null,codePlan}));
+});

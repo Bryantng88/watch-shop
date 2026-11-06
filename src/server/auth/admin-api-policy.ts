@@ -28,6 +28,7 @@ export function isAdminAccessAllowed(
 }
 
 export function getAdminApiPolicy(pathname: string, method: string): AdminAccessPolicy | null {
+    if (pathname === "/api/admin/ben-code" && method === "POST") return publicToAuthenticatedUser();
     const normalizedMethod = method.toUpperCase();
     const read = READ_METHODS.has(normalizedMethod);
 

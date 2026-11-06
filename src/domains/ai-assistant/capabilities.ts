@@ -1,3 +1,4 @@
+import { codeEnabled } from "./code-contract";
 import { canReadRepository } from "./repository-access";
 import { expandPermissions } from "@/server/auth/permission-implications";
 import type { AssistantPlan } from "./live-contract";
@@ -34,6 +35,9 @@ export function planDeniedReason(actor: AssistantAuthority, plan: AssistantPlan)
 }
 export function assistantCapabilities(actor: AssistantAuthority) {
   return {
+    canRunCode:codeEnabled(actor),
+    canMergeCode:codeEnabled(actor)&&process.env.BEN_CODE_MERGE_ENABLED==="1",
+    canDeployCode:codeEnabled(actor)&&(process.env.BEN_CODE_RELEASE_TOKEN?.length||0)>=32&&process.env.BEN_CODE_RELEASE_ENABLED==="1"&&/^[a-f0-9]{64}$/.test(process.env.BEN_CODE_RELEASE_HANDLER_SHA256||""),
     canReadCode:canReadRepository(actor),
     allowedLookups: Object.keys(LOOKUP_PERMISSIONS).filter(tool => lookupAllowed(actor, tool)),
     supportedActions:["CREATE_TASK","CREATE_TECHNICAL","CREATE_DRAFT_ORDER"],
