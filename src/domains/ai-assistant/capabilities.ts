@@ -1,8 +1,10 @@
+import { canReadRepository } from "./repository-access";
 import { expandPermissions } from "@/server/auth/permission-implications";
 import type { AssistantPlan } from "./live-contract";
 
-export type AssistantAuthority = { admin: boolean; permissions: ReadonlySet<string> };
+export type AssistantAuthority = { id?:string; admin: boolean; permissions: ReadonlySet<string> };
 export const LOOKUP_PERMISSIONS: Readonly<Record<string, readonly string[]>> = {
+  "repository.info": [], "repository.history": [], "repository.tree": [], "repository.file": [], "repository.pullRequests": [],
   "navigation.open": [],
   "customers.search": ["CUSTOMER_VIEW"],
   "watches.search": ["PRODUCT_VIEW"],
@@ -17,6 +19,7 @@ export function hasAssistantPermission(actor: AssistantAuthority, permission: st
   return actor.admin || expandPermissions(actor.permissions).has(permission);
 }
 export function lookupAllowed(actor: AssistantAuthority, tool: string) {
+  if(tool.startsWith("repository.")&&!canReadRepository(actor))return false;
   const required = LOOKUP_PERMISSIONS[tool];
   return !!required && required.every(code => hasAssistantPermission(actor, code)) &&
     (tool !== "people.search" || hasAssistantPermission(actor,"TASK_MANAGE") || hasAssistantPermission(actor,"SERVICE_CREATE"));
@@ -31,6 +34,7 @@ export function planDeniedReason(actor: AssistantAuthority, plan: AssistantPlan)
 }
 export function assistantCapabilities(actor: AssistantAuthority) {
   return {
+    canReadCode:canReadRepository(actor),
     allowedLookups: Object.keys(LOOKUP_PERMISSIONS).filter(tool => lookupAllowed(actor, tool)),
     supportedActions:["CREATE_TASK","CREATE_TECHNICAL","CREATE_DRAFT_ORDER"],
     canCreateOrders:["ORDER_CREATE","PRODUCT_VIEW"].every(p=>hasAssistantPermission(actor,p)),

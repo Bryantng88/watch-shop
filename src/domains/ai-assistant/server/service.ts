@@ -1,3 +1,5 @@
+import { canReadRepository, BEN_REPOSITORY } from "../repository-access";
+import { readRepository, isRepositoryLookup } from "./repository-reader";
 import {withWatchReferencePrices} from "./reference-prices";
 import {resolveCurrentScreen,screenPathSchema} from "./current-screen";
 import { availableScreens, navigationTarget, resolveNavigation } from "../navigation";
@@ -71,6 +73,7 @@ async function linkedRequest(db:DB,r:CustomerRequest,actor:Actor){
 }
 async function dto(row:CustomerAssistantConversation){
  const actor=await assistantActor(prisma,row.ownerId),s=structuredClone(state(row));
+ delete s.turnRepositoryAccess;if(!canReadRepository(actor))delete s.repositorySnapshot;
  s.context=null;delete s.pinnedProductId;delete s.turnKeys;delete s.turnTimes;delete s.turnReadScope;delete s.permissionTaskIds;delete s.permissionDenied;if(!await supportScopeVisible(prisma,s,actor))delete s.permissionRequest;delete s.permissionRequestScope;s.messages=await authorizedHistory(prisma,s,actor);
  if(!hasAssistantPermission(actor,"ORDER_VIEW")||!hasAssistantPermission(actor,"PRODUCT_VIEW")){delete s.orderDraft;s.createdOrders=[];}else if(s.orderDraft?.plan.customerId&&!hasAssistantPermission(actor,"CUSTOMER_VIEW"))delete s.orderDraft;
  const canReadWork=hasAssistantPermission(actor,"PRODUCT_VIEW")&&hasAssistantPermission(actor,"TASK_VIEW");
@@ -125,8 +128,8 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    const requests=[...(previousRequest?[previousRequest]:[]),...await Promise.all((currentState.approvedRequests||[]).filter(r=>readableRequest(r.request,actor)).slice(-8).map(r=>linkedRequest(tx,r.request,actor)))];
    // A model may repeat any supplied business information without doing a new lookup.
    const turnReadScope={permissions:[...new Set([...screenPermissions,...(pendingOrder?["ORDER_VIEW","PRODUCT_VIEW",...(pendingOrder.plan.customerId?["CUSTOMER_VIEW"]:[])]:[]),...(createdOrders.length?["ORDER_VIEW"]:[]),...(supportScope?.permissions||[]),...history.slice(-12).flatMap(m=>m.role==="assistant"?m.requiredPermissions||[]:[]),...requests.flatMap(r=>["PRODUCT_VIEW","TASK_VIEW",...(r.customer!=="Chưa gắn hồ sơ khách"?["CUSTOMER_VIEW"]:[]),...(r.conditions.some(c=>c.kind==="TECHNICAL"&&c.linkedRef)?["SERVICE_VIEW"]:[])])])],taskIds:[...new Set([...(supportScope?.taskIds||[]),...history.slice(-12).flatMap(m=>m.requiredTaskIds||[]),...requests.flatMap(r=>r.conditions.filter(c=>c.kind==="TASK"&&c.linkedRef).map(c=>c.linkedRef!))])]};
-   const token=randomUUID();await tx.customerAssistantConversation.update({where:{id:row.id},data:{state:json({...currentState,turnReadScope}),status:"RUNNING",leaseToken:token,leaseExpiresAt:new Date(Date.now()+120000)}});
-   return {run:{id:row.id,leaseToken:token,text:JSON.stringify({interactionContractVersion:2,currentScreen,...workerHistory({...currentState,messages:history},actor),currentUserMessage:currentState.messages.filter(m=>m.role==="user").at(-1),screenProductHint:hasAssistantPermission(actor,"PRODUCT_VIEW")?currentState.pinnedProductId:null,previousRequest:previousRequest?{...previousRequest,original:undefined}:null,approvedRequests,alreadyApproved:!!row.approvedAt,pendingOrder,createdOrders,pendingPermissionRequest,permissionRequests:currentState.permissionRequests||[],requester:{navigationScreens:availableScreens(actor),...requesterIdentity(actor,actor.id===process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID),permissionSupportAvailable:!!await permissionContact(tx)&&actor.id!==process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID}}),referenceTime:new Date().toISOString(),timeZone:"Asia/Ho_Chi_Minh"}};
+   const token=randomUUID();await tx.customerAssistantConversation.update({where:{id:row.id},data:{state:json({...currentState,turnReadScope,turnRepositoryAccess:history.slice(-12).some(m=>m.repositoryAccess)}),status:"RUNNING",leaseToken:token,leaseExpiresAt:new Date(Date.now()+120000)}});
+   return {run:{id:row.id,leaseToken:token,text:JSON.stringify({interactionContractVersion:2,currentScreen,...workerHistory({...currentState,messages:history},actor),currentUserMessage:currentState.messages.filter(m=>m.role==="user").at(-1),screenProductHint:hasAssistantPermission(actor,"PRODUCT_VIEW")?currentState.pinnedProductId:null,previousRequest:previousRequest?{...previousRequest,original:undefined}:null,approvedRequests,alreadyApproved:!!row.approvedAt,pendingOrder,createdOrders,pendingPermissionRequest,permissionRequests:currentState.permissionRequests||[],requester:{repositoryRead:canReadRepository(actor)?{repository:BEN_REPOSITORY,commitSha:currentState.repositorySnapshot||process.env.BEN_REPOSITORY_COMMIT,readOnly:true}:null,navigationScreens:availableScreens(actor),...requesterIdentity(actor,actor.id===process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID),permissionSupportAvailable:!!await permissionContact(tx)&&actor.id!==process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID}}),referenceTime:new Date().toISOString(),timeZone:"Asia/Ho_Chi_Minh"}};
  });
  const id=String(body.id||""),token=String(body.leaseToken||"");
  if(!/^[a-f0-9-]{36}$/.test(id)||!/^[a-f0-9-]{36}$/.test(token))throw new AssistantError("Lượt xử lý không hợp lệ.");
@@ -135,6 +138,18 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    if(operation==="heartbeat"){await tx.customerAssistantConversation.update({where:{id},data:{leaseExpiresAt:new Date(Date.now()+120000)}});return {active:true};}
    if(operation==="lookup"){
      const request=assistantLookupSchema.parse(body.lookup),entries=evidence(row),actor=await assistantActor(tx,row.ownerId);
+     if(isRepositoryLookup(request)){
+       if(!canReadRepository(actor)){
+         if(entries.length>=16)throw new AssistantError("Đã hết lượt tra cứu.");
+         const entry={request,result:{accessDenied:true,code:"REPOSITORY_ACCESS_DENIED",reason:"Chỉ tài khoản Long được cấu hình mới có quyền đọc repo; tính năng phải được bật riêng."}};
+         await tx.customerAssistantConversation.update({where:{id},data:{evidence:json([...entries,entry])}});return {evidence:entry};
+       }
+       if(entries.length>=16)throw new AssistantError("Đã hết lượt tra cứu.");
+       const snapshot=state(row).repositorySnapshot||process.env.BEN_REPOSITORY_COMMIT!;
+       let result:Record<string,unknown>;
+       try{result=await readRepository(request,snapshot,process.env.BEN_GITHUB_READ_TOKEN!);}catch{result={repository:BEN_REPOSITORY,commitSha:snapshot,readOnly:true,lookupRejected:true,reason:"Không đọc được phần mã được yêu cầu: kiểm tra cấu hình, quyền GitHub, đường dẫn hoặc giới hạn nội dung. Không có thao tác ghi nào được thực hiện."};}
+       const entry={request,result};await tx.customerAssistantConversation.update({where:{id},data:{state:json({...state(row),repositorySnapshot:snapshot}),evidence:json([...entries,entry])}});return {evidence:entry};
+     }
      if(!lookupAllowed(actor,request.tool)){await tx.customerAssistantConversation.update({where:{id},data:{state:json({...state(row),permissionDenied:true})}});return {evidence:{request,result:{accessDenied:true,reason:"Tài khoản hiện tại không có quyền thực hiện thao tác này. Không có dữ liệu nghiệp vụ được đọc."}}};}
      const prior=entries.find(e=>JSON.stringify(e.request)===JSON.stringify(request));if(!prior&&entries.length>=16)throw new AssistantError("Đã hết lượt tra cứu.");
      if(request.tool==="watches.images"&&!entries.some(e=>e.request.tool==="watches.search"&&Array.isArray(e.result.matches)&&(e.result.matches as {id:string}[]).some(m=>m.id===request.productId)))return {evidence:{request,result:{lookupRejected:true,reason:"Cần tìm sản phẩm trước khi xem ảnh; chỉ dùng ID có trong kết quả tìm kiếm."}}};
@@ -162,6 +177,16 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    if(body.failed!==true&&navigationEntry&&(body.plan||body.orderPlan||body.permissionRequest||body.missingPermission||body.unsupportedCapability))throw new AssistantError("Navigation must be completed separately from business reviews or permission requests.");
    const failed=body.failed===true;let reply=typeof body.reply==="string"?body.reply.trim().slice(0,1500):"";if(!reply&&!failed)throw new AssistantError("Thiếu câu trả lời.");
    const actor=await assistantActor(tx,row.ownerId);
+   const repositoryEntries=evidence(row).filter(e=>e.request.tool.startsWith("repository."));
+   const codeScope=repositoryEntries.length>0||state(row).turnRepositoryAccess;
+   if(repositoryEntries.length||(codeScope&&!canReadRepository(actor))){
+     const permitted=canReadRepository(actor),s=state(row);delete s.turnRepositoryAccess;delete s.orderDraft;delete s.permissionRequest;delete s.permissionRequestScope;delete s.customerRequest;
+     const hasRead=repositoryEntries.some(e=>!e.result.lookupRejected&&!e.result.accessDenied);
+     const mixed=body.plan||body.orderPlan||body.permissionRequest||evidence(row).some(e=>e.request.tool==="navigation.open");
+     const next=message(s,!permitted?"Hiện tài khoản hoặc cấu hình chưa cho phép đọc repository. Mình chưa thể trả nội dung repo.":failed?"Lượt đọc repo chưa hoàn tất. Chưa có code nào được sửa.":mixed?"Bước này chỉ đọc và phân tích code. Mình chưa sửa mã, tạo đơn, giao việc hay điều hướng từ phân tích này.":!hasRead?"Mình chưa đọc được mã nguồn nên chưa thể xác nhận nguyên nhân hoặc phạm vi sửa. Cần kiểm tra cấu hình GitHub và đường dẫn được phép.":reply,[]);
+     if(permitted){const m=next.messages[next.messages.length-1];m.repositoryAccess=true;m.repositorySources=repositoryEntries.filter(e=>typeof e.result.commitSha==="string"&&!e.result.lookupRejected).slice(-6).map(e=>({commitSha:String(e.result.commitSha),...(typeof e.result.path==="string"?{path:e.result.path}:{}),...(typeof e.result.url==="string"?{url:e.result.url,startLine:Number(e.result.startLine),endLine:Number(e.result.endLine)}:{})}));}
+     await tx.customerAssistantConversation.update({where:{id},data:{state:json(next),status:failed?"FAILED":"NEEDS_INFO",plan:Prisma.DbNull,errorCode:failed?"GENERATION_FAILED":null,leaseToken:null,leaseExpiresAt:null}});return {accepted:true};
+   }
    const inherited=state(row).turnReadScope||{permissions:[],taskIds:[]};
    const required=[...new Set([...inherited.permissions,...evidence(row).flatMap(e=>LOOKUP_PERMISSIONS[e.request.tool]||[])])];
    const scopedTaskIds=[...new Set([...inherited.taskIds,...evidence(row).flatMap(e=>e.request.tool==="work.open"?(e.result.openWatchWork as {id:string}[]||[]).map(t=>t.id):[])])];
@@ -199,6 +224,8 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    if(navigationResult&&!revoked)reply=navigationResult.reason;
    const next=message(s,failed?"Codex chưa hoàn tất lượt này. Bạn có thể nhắn lại để thử tiếp; chưa giao thêm việc.":reply,revoked||support?[]:orderDraft?[...new Set([...required,...orderPermissions(orderDraft.plan)])]:required);
    if(navigationResult&&!revoked&&navigationEntry?.request.tool==="navigation.open"){const m=next.messages[next.messages.length-1];m.navigationResult={code:navigationResult.code};if(navigationResult.allowed){m.navigationKey=navigationEntry!.request.query;m.navigationRequestKey=s.messages.filter(m=>m.role==="user").at(-1)?.id;}}
+   if(codeScope&&canReadRepository(actor))next.messages[next.messages.length-1].repositoryAccess=true;
+   delete next.turnRepositoryAccess;
    if(!failed&&!revoked&&!support&&scopedTaskIds.length)next.messages[next.messages.length-1].requiredTaskIds=scopedTaskIds;
    if(!failed&&!revoked&&hasAssistantPermission(actor,"PRODUCT_VIEW")){const ids=evidence(row).flatMap(e=>e.request.tool==="watches.images"&&Number(e.result.imageCount)>0?[e.request.productId]:[]);if(ids.length)next.messages[next.messages.length-1].imageProductIds=[...new Set(ids)].slice(0,6);}
    if(!row.approvedAt){if(request&&plan){next.customerRequest=request;next.context=null;}else delete next.customerRequest;}

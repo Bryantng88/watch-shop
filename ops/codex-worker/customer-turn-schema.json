@@ -15,6 +15,11 @@
         "null"
       ],
       "enum": [
+        "repository.info",
+        "repository.history",
+        "repository.tree",
+        "repository.file",
+        "repository.pullRequests",
         "navigation.open",
         "customers.search",
         "watches.search",

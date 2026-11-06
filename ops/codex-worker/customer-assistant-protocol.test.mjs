@@ -64,3 +64,10 @@ test('navigation requires structured current-user intent; stale or invented sour
  await assert.rejects(runCustomerConversation({id:'r',text:JSON.stringify({currentUserMessage:{id:'current',text:'Navigate'}})},{execute:async()=>{attempts++;return {...lookup,navigationIntent:{type:'OPEN_SCREEN',sourceMessageId:'old'}}},api:async op=>{calls.push(op)}}),/INVALID_CUSTOMER_NAVIGATION_SOURCE/);
  assert.equal(attempts,2);assert.deepEqual(calls,[]);
 });
+test('repository tools are bounded read requests and reject executable/write-shaped arguments',()=>{
+ assert.deepEqual(validateCustomerTurn({...finish,type:'lookup',tool:'repository.info',reply:null}).lookup,{tool:'repository.info'});
+ assert.deepEqual(validateCustomerTurn({...finish,type:'lookup',tool:'repository.tree',query:'',reply:null}).lookup,{tool:'repository.tree',query:''});
+ assert.deepEqual(validateCustomerTurn({...finish,type:'lookup',tool:'repository.file',query:'src/example.ts:1-80',reply:null}).lookup,{tool:'repository.file',query:'src/example.ts:1-80'});
+ assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'repository.push',query:'main',reply:null}));
+ assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'repository.file',query:'src/file.ts',productId:'watch',reply:null}));
+});
