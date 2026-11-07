@@ -27,12 +27,6 @@ export function productionBenReady(env: Readonly<Record<string, string | undefin
   }
 }
 
-export function customerAssistantVisible(actor: { id: string; roles: string[] }) {
-  return customerAssistantReady() &&
-    (process.env.BEN_CUSTOMER_ENVIRONMENT !== "production" ||
-      (actor.id === process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID && actor.roles.includes("ADMIN")));
-}
-
 export function authenticateProductionBenWorker(authorization: string | null) {
   if (!productionBenReady() || !authorization?.startsWith("Bearer ")) return false;
   const hash = (value: string) => createHash("sha256").update(value).digest();
@@ -52,8 +46,6 @@ export async function assistantActor(db:DB,id:string){
  const user=await db.user.findFirst({where:{id,isActive:true},select:{id:true,name:true,roles:{select:{name:true,permissions:{select:{code:true}}}}}});
  const permissions=new Set(expandPermissions(user?.roles.flatMap(r=>r.permissions.map(p=>p.code))||[]));const admin=!!user?.roles.some(r=>r.name==="ADMIN");
  if(!user)throw new AssistantError("Tài khoản không còn hoạt động hoặc không thể sử dụng Ben.",403);
- if(process.env.BEN_CUSTOMER_ENVIRONMENT==="production"&&(!admin||id!==process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID))
-  throw new AssistantError("Ben production chỉ dành cho Long có ADMIN.",403);
  return {...user,permissions,admin};
 }
 export async function assistantRecipient(db:DB,id:string,technical=false){

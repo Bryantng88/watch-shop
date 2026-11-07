@@ -160,13 +160,13 @@ Live acceptance requires the release integration on main, the operator-approved
 exact SHA, configured checks, and the existing protected production Environment.
 Stop acceptance at the pending Environment approval. The normal chat runtime
 still requires its separately configured staging environment.
-## Long-only production pilot
+## Production chat and privileged Git access
 
 Set `BEN_CUSTOMER_ENVIRONMENT=production`, `CUSTOMER_AI_ENABLED=1`, and
 `CUSTOMER_AI_PERMISSION_CONTACT_USER_ID` to the verified active Long ADMIN
 in the production database. Set `BEN_PRODUCTION_DATABASE_USER` to the
 production database URL's decoded username using the protected config.
-The app checks that user and the known production database host and admin origin.
+The app checks the database account, host and admin origin. Active admin-area users can chat with Ben and use business tools under their existing permissions. Repository access and production release approval require the configured Long account with ADMIN.
 
 Create a dedicated `BEN_CUSTOMER_WORKER_TOKEN` and mount the matching secret
 read-only at `/run/worker/ben-customer-production-token` in a separate customer
