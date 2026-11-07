@@ -11,6 +11,7 @@ die() {
 }
 
 release_tag="${RELEASE_TAG:-}"
+expected_release_sha="${EXPECTED_RELEASE_SHA:-}"
 config_dir="${WATCHSHOP_CONFIG_DIR:-/share/WatchShop/app}"
 release_root="${WATCHSHOP_RELEASE_ROOT:-/share/WatchShop/releases}"
 docker_bin="${WATCHSHOP_DOCKER_BIN:-/share/CACHEDEV1_DATA/.qpkg/container-station/bin/docker}"
@@ -35,6 +36,11 @@ main_commit="$(git rev-parse origin/main)"
 
 [[ "$head_commit" == "$tag_commit" ]] || die "Checked-out commit does not match $release_tag"
 [[ "$tag_commit" == "$main_commit" ]] || die "$release_tag must point to the current origin/main commit"
+if [[ -n "$expected_release_sha" ]]; then
+  [[ "$expected_release_sha" =~ ^[0-9a-f]{40}$ ]] || die "Expected release SHA must be a full commit SHA"
+  approved_commit="$(git rev-parse --verify "${expected_release_sha}^{commit}")" || die "Expected release SHA cannot be resolved"
+  [[ "$tag_commit" == "$approved_commit" ]] || die "Release tag does not match the approved SHA"
+fi
 
 short_commit="$(git rev-parse --short=8 "$tag_commit")"
 image_tag="release-$short_commit"
