@@ -130,3 +130,33 @@ approved staging release with the REAL reviewed handler/backup/health receipt.
 These real NAS/GitHub/model/device steps have not been performed in Cloud.
 Disable code/merge/release flags to stop new work; preserve receipts/history and
 reconcile any in-flight remote mutation before replacing executors.
+## Production release approval
+
+The production button is available for a completed Ben job with a recorded merge
+into main. The active account must be the configured Long and have ADMIN.
+The confirmation displays the full merge SHA. The server verifies the same
+conversation owner and job, checks the current main SHA and the configured
+required GitHub Actions checks, then creates an annotated production tag.
+The tag is deterministic for the SHA. Repeating the request returns the
+existing tag when it points to that commit. A conflicting tag requires
+operator reconciliation.
+
+Configure the app privately after reviewing the production Environment and
+tag rules:
+
+- `BEN_PRODUCTION_RELEASE_ENABLED=1`
+- `BEN_PRODUCTION_GITHUB_TOKEN` with repository-scoped Contents write and
+  Checks read access. Use a dedicated release credential in the server only.
+- `BEN_PRODUCTION_REQUIRED_CHECKS` as a comma-separated list of the exact
+  required GitHub Actions check names for the merge commit on main.
+
+The tag starts the existing deployment workflow. Open the returned GitHub
+Actions link to see the actual run state. Long approves the production
+Environment there. The NAS runner checks the event SHA, release tag and
+current main again before deployment. The response confirms tag creation.
+GitHub reports whether a run has started and reached environment approval.
+
+Live acceptance requires the release integration on main, the operator-approved
+exact SHA, configured checks, and the existing protected production Environment.
+Stop acceptance at the pending Environment approval. The normal chat runtime
+still requires its separately configured staging environment.

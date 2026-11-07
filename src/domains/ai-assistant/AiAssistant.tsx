@@ -86,7 +86,34 @@ export default function AiAssistant({ userId, canManage, live = false, fullPage 
     update(c.id, row => ({ ...row, ...(request ? { customerRequest: request } : {}), messages: [...row.messages, { id: crypto.randomUUID(), role: "assistant", text: reply.text }], steps: request ? [] : row.approved ? row.steps : reply.steps.length ? reply.steps : row.steps })); setBusy(false);
   }
   async function cancel() { pendingNavigation.current=null; if(live&&chat){try{await livePost({action:"cancel",id:chat.id});await refreshLive(chat!.id);}catch(e){setNotice(e instanceof Error?e.message:"Không hủy được lượt xử lý.");}return;} generation.current++; setBusy(false); if (chat) update(chat.id, c => ({ ...c, messages: [...c.messages, { id: crypto.randomUUID(), role: "assistant", text: "Đã hủy lượt trả lời giả lập. Không tạo hoặc thay đổi công việc." }] })); }
-  async function codeAction(action:'approve'|'cancel'|'merge'|'deploy',input:{revision?:number;jobId?:string;sha?:string}){if(!chat)return;setBusy(true);liveSubmitting.current=true;try{const r=await fetch('/api/admin/ben-code',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action,id:chat.id,...input})});const data=await r.json();if(!r.ok)throw Error(data.error||'Không thực hiện được thao tác.');await refreshLive(chat.id);}catch(e){setNotice(e instanceof Error?e.message:'Cần tải lại để kiểm tra.');}finally{liveSubmitting.current=false;setBusy(false);}}
+  const [productionRelease, setProductionRelease] = useState<{ conversationId: string; workflowUrl: string }>();
+  async function codeAction(
+    action: 'approve' | 'cancel' | 'merge' | 'deploy' | 'deploy-production',
+    input: { revision?: number; jobId?: string; sha?: string }
+  ) {
+    if (!chat) return;
+    setBusy(true);
+    liveSubmitting.current = true;
+    try {
+      const response = await fetch('/api/admin/ben-code', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action, id: chat.id, ...input }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw Error(data.error || 'Không thực hiện được thao tác.');
+      if (action === 'deploy-production') {
+        setProductionRelease({ conversationId: chat.id, workflowUrl: data.workflowUrl });
+        setNotice('Đã xác nhận tag production. Mở GitHub Actions để kiểm tra và duyệt lượt chạy.');
+      }
+      await refreshLive(chat.id);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Cần tải lại để kiểm tra.');
+    } finally {
+      liveSubmitting.current = false;
+      setBusy(false);
+    }
+  }
   async function approveOrderLive(){if(!chat?.orderDraft)return;setBusy(true);liveSubmitting.current=true;try{await livePost({action:"approve-order",id:chat.id,revision:chat.orderDraft.revision});await refreshLive(chat.id);}finally{liveSubmitting.current=false;setBusy(false);}}
   async function approveLive(){if(!chat?.revision)return;setBusy(true);liveSubmitting.current=true;try{await livePost({action:"approve",id:chat.id,revision:chat.revision});await refreshLive(chat!.id);}finally{liveSubmitting.current=false;setBusy(false);}}
   async function approvePermissionLive(){if(!chat?.permissionRequest)return;setBusy(true);liveSubmitting.current=true;try{await livePost({action:"permission-support",id:chat.id,revision:chat.permissionRequest.revision});await refreshLive(chat.id);}catch(e){setNotice(e instanceof Error?e.message:"Chưa gửi được yêu cầu cho Long.");}finally{liveSubmitting.current=false;setBusy(false);}}
@@ -105,7 +132,8 @@ export default function AiAssistant({ userId, canManage, live = false, fullPage 
         {!scopeEnabled && <div className="mb-4 rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm"><strong>Đang tập trung vào Sản phẩm</strong><p className="my-2">Ngữ cảnh của các màn hình khác tạm tắt. Mở danh sách hoặc chi tiết sản phẩm để bắt đầu trao đổi.</p><Link href="/admin/watches" className="font-semibold text-indigo-700 underline">Mở Sản phẩm</Link></div>}
         {scopeEnabled && !chat?.messages.length && <div className="space-y-5 py-5"><h3 className="text-2xl font-semibold tracking-tight text-slate-900">Chào bạn, Ben đây.</h3><p className="text-sm leading-6 text-slate-500">Bạn muốn xử lý việc gì hôm nay? Mình sẽ cùng bạn làm rõ và chuẩn bị đề xuất để bạn duyệt.</p><div className="space-y-2">{["Ghi nhận yêu cầu khách hàng có điều kiện", "Tóm tắt tình hình sản phẩm", "Đề xuất công việc phối hợp liên phòng ban"].map(text => <button key={text} disabled={!ready || !scopeEnabled} onClick={() => void send(text)} className="flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left text-sm hover:border-indigo-300 hover:bg-indigo-50">{text}<ArrowRight size={16}/></button>)}</div></div>}
         <div className="space-y-5" aria-live="polite">{chat?.messages.map(m => <div key={m.id} className={m.role==="user"?"ml-10 flex justify-end":"flex items-start gap-2"}>{m.role==="assistant"&&<span className="mt-1 shrink-0 [&_img]:h-7 [&_img]:w-7"><BenAvatar/></span>}<div className={m.role==="user"?"max-w-full whitespace-pre-wrap break-words rounded-2xl rounded-br-md bg-violet-100/80 px-4 py-3 text-sm leading-6 text-slate-900":"min-w-0 flex-1 rounded-2xl rounded-tl-md border border-blue-100/80 bg-white px-4 py-3.5 text-slate-800 shadow-sm"}>{m.role==="assistant"?<BenMessage text={m.text}/>:m.text}{live&&m.role==="assistant"&&m.repositorySources&&<RepositorySources sources={m.repositorySources}/>} {live&&m.navigation&&<Link href={m.navigation.href} className="mt-3 inline-flex rounded-lg border border-blue-200 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50">Mở {m.navigation.label} →</Link>}{live&&m.role==="assistant"&&m.products?.map(product=><ProductPhotoCard key={product.id} product={product}/>)}</div></div>)}{busy&&<p role="status" className="animate-pulse pl-9 text-xs text-blue-700">{live?"Ben đang xử lý…":"Đang chuẩn bị câu trả lời mẫu…"}</p>}</div>
-        {live&&chat&&<CodeJobPanel draft={chat.codeDraft?.revision===chat.revision?chat.codeDraft:undefined} job={chat.codeJob} busy={busy} canRun={!!chat.capabilities?.canRunCode} canMerge={!!chat.capabilities?.canMergeCode} canDeploy={!!chat.capabilities?.canDeployCode} onCommand={(action,input)=>{void codeAction(action,input);}}/>}
+        {productionRelease&&productionRelease.conversationId===chat?.id&&chat.capabilities?.canDeployProduction&&<a className="text-sm underline" href={productionRelease.workflowUrl} target="_blank" rel="noopener noreferrer">Mở GitHub Actions production</a>}
+        {live&&chat&&<CodeJobPanel draft={chat.codeDraft?.revision===chat.revision?chat.codeDraft:undefined} job={chat.codeJob} busy={busy} canRun={!!chat.capabilities?.canRunCode} canMerge={!!chat.capabilities?.canMergeCode} canDeploy={!!chat.capabilities?.canDeployCode} canDeployProduction={!!chat.capabilities?.canDeployProduction} onCommand={(action,input)=>{void codeAction(action,input);}}/>}
         {live&&chat?.orderDraft&&chat.runStatus==="DRAFT"&&<OrderDraftReview draft={chat.orderDraft} busy={busy} canCreate={!!chat.capabilities?.canCreateOrders} onApprove={approveOrderLive} onEdit={()=>{setInput("");textarea.current?.focus();}}/>}
         {live&&chat?.permissionRequest&&<section className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50 p-4"><h3 className="text-sm font-semibold">Nhờ Long hỗ trợ quyền hạn</h3><p className="mt-2 whitespace-pre-wrap text-sm">{chat.permissionRequest.summary}</p><p className="mt-2 text-xs text-slate-600">Long sẽ xem xét yêu cầu. Quyền của bạn và công việc đang bị chặn chưa thay đổi.</p><button type="button" disabled={busy} onClick={()=>void approvePermissionLive()} className="mt-3 rounded-lg bg-indigo-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">Tạo công việc cho Long</button></section>}
         {missingQuestion && lastAssistant !== missingQuestion && <p role="status" className="mt-4 rounded-2xl bg-slate-100 p-3.5 text-sm text-slate-800">{missingQuestion}</p>}

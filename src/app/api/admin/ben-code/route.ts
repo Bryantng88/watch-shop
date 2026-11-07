@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getCurrentUserPermissions } from '@/server/auth/requirePermission';
 import { AssistantError } from '@/domains/ai-assistant/server/access';
 import { codeCommand } from '@/domains/ai-assistant/server/code-jobs';
+import { requestProductionRelease } from '@/domains/ai-assistant/server/production-release';
 const command = z.discriminatedUnion('action', [
   z
     .object({
@@ -20,7 +21,7 @@ const command = z.discriminatedUnion('action', [
     .strict(),
   z
     .object({
-      action: z.enum(['merge', 'deploy']),
+      action: z.enum(['merge', 'deploy', 'deploy-production']),
       id: z.string().uuid(),
       jobId: z.string().uuid(),
       sha: z.string().regex(/^[a-f0-9]{40}$/),
@@ -40,6 +41,10 @@ export async function POST(req: NextRequest) {
     const raw = await req.text();
     if (raw.length > 2000) throw new AssistantError('Yêu cầu quá dài.');
     const c = command.parse(JSON.parse(raw));
+    if (c.action === 'deploy-production')
+      return NextResponse.json(
+        await requestProductionRelease(user.id, c.id, c.jobId, c.sha),
+      );
     return NextResponse.json(await codeCommand(user.id, c.id, c.action, c));
   } catch (e) {
     return NextResponse.json(
@@ -49,7 +54,7 @@ export async function POST(req: NextRequest) {
             ? e.message
             : 'Chưa xác nhận được thao tác; tải lại để đối chiếu.',
       },
-      { status: e instanceof AssistantError ? e.status : 400 }
+      { status: e instanceof AssistantError ? e.status : 400 },
     );
   }
 }

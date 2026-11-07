@@ -22,6 +22,7 @@ export default function CodeJobPanel({
   canRun,
   canMerge,
   canDeploy,
+  canDeployProduction,
   onCommand,
 }: {
   draft?: CodeDraft;
@@ -30,9 +31,10 @@ export default function CodeJobPanel({
   canRun: boolean;
   canMerge: boolean;
   canDeploy: boolean;
+  canDeployProduction: boolean;
   onCommand: (
-    action: 'approve' | 'cancel' | 'merge' | 'deploy',
-    input: { revision?: number; jobId?: string; sha?: string }
+    action: 'approve' | 'cancel' | 'merge' | 'deploy' | 'deploy-production',
+    input: { revision?: number; jobId?: string; sha?: string },
   ) => void;
 }) {
   return (
@@ -99,7 +101,7 @@ export default function CodeJobPanel({
           )}
           <div className="mt-3 flex flex-wrap gap-2">
             {['QUEUED', 'RUNNING', 'MERGE_QUEUED', 'DEPLOY_QUEUED'].includes(
-              job.status
+              job.status,
             ) && (
               <button
                 type="button"
@@ -137,6 +139,28 @@ export default function CodeJobPanel({
                 Deploy staging @ {(job.mergedSha || job.headSha)?.slice(0, 8)}
               </button>
             )}
+            {canDeployProduction &&
+              job.mergedSha &&
+              ['MERGED', 'DEPLOYED'].includes(job.status) && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        `Tạo tag production cho commit ${job.mergedSha}? GitHub sẽ yêu cầu phê duyệt môi trường production.`,
+                      )
+                    )
+                      onCommand('deploy-production', {
+                        jobId: job.id,
+                        sha: job.mergedSha,
+                      });
+                  }}
+                  className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-700"
+                >
+                  Deploy production @ {job.mergedSha.slice(0, 8)}
+                </button>
+              )}
           </div>
           {job.status === 'PR_OPEN' && !canMerge && (
             <p className="mt-2 text-xs text-slate-500">Merge chưa được bật.</p>
