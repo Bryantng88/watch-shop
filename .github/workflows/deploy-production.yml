@@ -10,6 +10,10 @@ on:
         description: "Existing production-* tag to deploy"
         required: true
         type: string
+      expected_sha:
+        description: "Approved full commit SHA when dispatching from Ben"
+        required: false
+        type: string
       confirmation:
         description: "Type DEPLOY to confirm"
         required: true
@@ -40,6 +44,7 @@ jobs:
       - name: Deploy on the NAS
         shell: bash
         env:
+          EXPECTED_RELEASE_SHA: ${{ inputs.expected_sha || (github.event_name == 'push' && github.sha) || '' }}
           RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
           WATCHSHOP_CONFIG_DIR: ${{ vars.WATCHSHOP_CONFIG_DIR }}
           WATCHSHOP_RELEASE_ROOT: ${{ vars.WATCHSHOP_RELEASE_ROOT }}

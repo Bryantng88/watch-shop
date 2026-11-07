@@ -1,5 +1,8 @@
 "use client";
 
+import PersonalWorkTagsField, { parsePersonalWorkTags } from "./PersonalWorkTagsField";
+import PersonalCodexPanel from "./PersonalCodexPanel";
+
 import { usePersonalCalendar } from "./use-personal-calendar";
 import createStyles from "./PersonalWorkCreate.module.css";
 import { GoogleCalendarEventDialog } from "./GoogleCalendarEventDialog";
@@ -164,6 +167,9 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
   const [calendarCategoryKey, setCalendarCategoryKey] = useState("GENERAL");
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const [title, setTitle] = useState("");
+  const [newTags, setNewTags] = useState("");
+  const [editTags, setEditTags] = useState("");
+  const [calendarTags, setCalendarTags] = useState("");
   const [newDomain, setNewDomain] = useState<PersonalWorkDomain>("GENERAL");
   const [workType, setWorkType] = useState<string>(PERSONAL_WORK_TYPES.GENERAL[0].key);
   const [targetType, setTargetType] = useState<PersonalWorkTargetType | "">("");
@@ -322,6 +328,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
   function openCalendarCreate(date: Date) {
     setCalendarCreateError(null);
     setCalendarCreateTitle("");
+    setCalendarTags("");
     setCalendarCreateDomain("GENERAL");
     setCalendarCategoryKey("GENERAL");
     setCalendarCreateDueAt(localInputDate(date));
@@ -360,6 +367,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
   const openTaskEdit = useCallback((item: PersonalWorkItem) => {
     setEditingItem(item);
     setEditTitle(item.title);
+    setEditTags(item.tags.join(", "));
     setEditNote(item.note || "");
     setEditUpdateBody("");
     setEditDomain(item.domain);
@@ -433,6 +441,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               async () => {
                 const created = await createPersonalWorkAction({
                   title: nextTitle,
+                  tags: parsePersonalWorkTags(newTags),
                   domain: newDomain,
                   categoryKey: newCategoryKey,
                   workType,
@@ -445,6 +454,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               data.calendar.connected ? "Đã thêm công việc vào Google Calendar" : "Đã thêm công việc",
               () => {
                 setTitle("");
+                setNewTags("");
                 setTargetQuery("");
                 setTargetResults([]);
                 setSelectedTargets([]);
@@ -524,6 +534,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               Thêm việc
             </button>
           </AdminFlatToolbar>
+          <div className="mt-3"><PersonalWorkTagsField value={newTags} onChange={setNewTags} configuration={data.codex} /></div>
           {newDomain !== "GENERAL" && newDomain !== "WORK" && (
             <div className="mt-3 grid gap-3 rounded-lg bg-slate-50 p-3 md:grid-cols-[220px_180px_minmax(0,1fr)_auto]">
               <label className="space-y-1">
@@ -639,7 +650,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                     ? data.calendar.accountEmail || "Đã kết nối"
                     : data.calendar.configured
                       ? "Chưa kết nối tài khoản"
-                      : "Chưa cấu hình OAuth"}
+                      : data.calendar.configurationIssue || "Chưa cấu hình OAuth"}
                 </p>
               </div>
             </div>
@@ -1074,7 +1085,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                     domain: editDomain,
                     categoryKey: editCategoryKey,
                     workType: editWorkType,
-                    tags: editingItem.tags,
+                    tags: parsePersonalWorkTags(editTags),
                     ...editedSchedule,
                     estimatedDays: editEstimatedDays,
                     targets: editTargets,
@@ -1119,6 +1130,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                   className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 />
               </label>
+              <PersonalWorkTagsField value={editTags} onChange={setEditTags} disabled={editingItem.access === "VIEWER"} configuration={data.codex} />
               <label className="block space-y-1.5">
                 <span className="text-xs font-semibold text-slate-600">Ghi chú</span>
                 <textarea
@@ -1483,6 +1495,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               {editingItem.calendar.htmlLink && <a href={editingItem.calendar.htmlLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:underline">Mở trong Google <ExternalLink className="h-3.5 w-3.5" /></a>}
               {data.calendar.connected && !editingItem.calendar.synced && editingItem.access !== "VIEWER" && <AsyncActionButton type="button" pending={calendarSyncMutation.isPending(`calendar-sync:${editingItem.id}`)} pendingLabel="Đang đồng bộ…" onClick={() => syncCreatedCalendarTask(editingItem)} className="rounded-lg px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">Đồng bộ Google Calendar</AsyncActionButton>}
             </div>
+            <PersonalCodexPanel item={editingItem} configuration={data.codex} />
             {editingItem.activities.some((activity) => activity.body) && (
               <section className="mt-4 border-t border-slate-100 pt-4">
                 <div className="mb-2 flex items-center justify-between gap-3">
@@ -1629,6 +1642,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                 key: "calendar:create",
                 action: () => createPersonalWorkAction({
                   title: nextTitle,
+                  tags: parsePersonalWorkTags(calendarTags),
                   domain: calendarCreateDomain,
                   categoryKey: calendarCategoryKey,
                   workType: calendarWorkType,
@@ -1663,6 +1677,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               </button>
             </div>
             <fieldset disabled={calendarCreating} className="mt-5 min-w-0 space-y-4">
+              <PersonalWorkTagsField value={calendarTags} onChange={setCalendarTags} configuration={data.codex} />
               <label className="block space-y-1.5">
                 <span className="text-xs font-semibold text-slate-600">Việc cần làm</span>
                 <input

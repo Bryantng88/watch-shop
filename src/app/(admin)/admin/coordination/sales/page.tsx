@@ -1,3 +1,7 @@
+import SalesIntakePanel from "@/domains/sales-intake/ui/SalesIntakePanel";
+import { localSalesSimulationEnabled } from "@/domains/sales-intake/local-simulation";
+import { customerAssistantReady } from "@/domains/ai-assistant/server/access";
+import { intakeActor, salesIntakeReady } from "@/domains/sales-intake/server/intake-access";
 import OperationCoordinationWorkspace from "@/domains/coordination/ui/OperationCoordinationWorkspace";
 import { getCoordinationDashboard } from "@/domains/coordination/server/coordination-dashboard.service";
 import { requirePermission } from "@/server/auth/requirePermission";
@@ -35,5 +39,10 @@ export default async function SalesCoordinationPage(props: PageProps) {
 
   perfLog("coordination-sales-page", "totalBeforeRender", totalStartedAt);
 
-  return <OperationCoordinationWorkspace data={data} />;
+  const simulation = localSalesSimulationEnabled();
+  let mayUseIntake = simulation;
+  if (salesIntakeReady()) {
+    try { await intakeActor(prisma, auth.id); mayUseIntake = true; } catch { /* Preserve the existing Sales page for other users. */ }
+  }
+  return <>{!simulation && !customerAssistantReady() && mayUseIntake && <SalesIntakePanel />}<OperationCoordinationWorkspace data={data} /></>;
 }

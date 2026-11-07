@@ -1,3 +1,5 @@
+import { orderCodexReady } from "@/domains/order/codex/workflow.service";
+import {getCurrentUserPermissions} from "@/server/auth/requirePermission";
 import { getAdminOrderDetail } from "@/domains/order/server";
 import OrderDetailClient from "@/domains/order/client/OrderDetailClient";
 import type { OrderDetailData } from "@/domains/order/ui/detail/shared";
@@ -13,5 +15,6 @@ export default async function OrderDetailPage({
 
     const clientData = serializeForClient(data) as OrderDetailData;
 
-    return <OrderDetailClient data={clientData} />;
+    const {user}=await getCurrentUserPermissions();
+    return <OrderDetailClient data={clientData} codexEnabled={orderCodexReady() && Boolean(user?.roles.includes("ADMIN"))} />;
 }

@@ -1,0 +1,30 @@
+name: Ben interaction contract
+on:
+  pull_request:
+    paths:
+      - 'src/domains/ai-assistant/**'
+      - 'src/app/api/admin/ben-code/**'
+      - 'src/app/api/internal/ben-code/**'
+      - 'ops/codex-worker/**'
+      - 'scripts/smoke-ben-*.ts'
+      - 'tests/**'
+      - 'docs/design/ai-assistant-interaction-contract.md'
+      - '.github/workflows/ben-contract.yml'
+      - 'package*.json'
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node --import tsx --test src/domains/ai-assistant/*.test.ts src/domains/ai-assistant/server/*.test.ts
+      - run: node --test ops/codex-worker/worker.test.mjs ops/codex-worker/worker.integration.test.mjs ops/codex-worker/sales-intake-protocol.test.mjs ops/codex-worker/customer-assistant-protocol.test.mjs ops/codex-worker/ben-code-worker.test.mjs ops/codex-worker/ben-staging-release.test.mjs tests/pwa/ben-service-worker.test.mjs
+      - run: npx eslint src/domains/ai-assistant scripts/smoke-ben-*.ts src/app/api/admin/customer-assistant/route.ts src/app/api/admin/ben-code src/app/api/internal/ben-code
+      - run: npx tsc --noEmit

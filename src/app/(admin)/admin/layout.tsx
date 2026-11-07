@@ -5,6 +5,8 @@ import { AppToastProvider } from "@/domains/shared/feedback/AppToastProvider";
 import { AppDialogProvider } from "@/domains/shared/feedback/AppDialogProvider";
 import { AppProgressProvider } from "@/domains/shared/feedback/AppProgressProvider";
 import { perfLog, perfNow, perfStep } from "@/lib/server-perf";
+import { localSalesSimulationEnabled } from "@/domains/sales-intake/local-simulation";
+import { customerAssistantReady } from "@/domains/ai-assistant/server/access";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
     const totalStartedAt = perfNow();
@@ -27,7 +29,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <AppDialogProvider>
                 <AppProgressProvider>
                     <AdminShell
+                        assistantSimulation={localSalesSimulationEnabled()}
+                        assistantLive={customerAssistantReady()}
                         user={{
+                            id: user.id,
                             permissions,
                             name: user.name,
                             roles: user.roles,

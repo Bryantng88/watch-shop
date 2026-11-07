@@ -557,6 +557,7 @@ model ProjectionRecord {
 }
 
 model Order {
+  codexWorkflowProposals OrderCodexProposal[]
   id                   String         @id @default(dbgenerated("(gen_random_uuid())::text"))
   refNo                String?        @unique(map: "Order_orderCode_key")
   customerId           String?
@@ -1605,6 +1606,9 @@ model TechnicalDetailCatalog {
 }
 
 model User {
+  customerAssistantConversations CustomerAssistantConversation[]
+  orderCodexProposals OrderCodexProposal[]
+  personalCodexRuns PersonalCodexRun[] @relation("PersonalCodexRequester")
   id           String   @id @default(dbgenerated("(gen_random_uuid())::text"))
   email        String   @unique
   passwordHash String?
@@ -2807,6 +2811,7 @@ model Task {
 }
 
 model TaskItem {
+  codexRuns PersonalCodexRun[]
   id     String  @id @default(dbgenerated("(gen_random_uuid())::text"))
   taskId String?
   personalOwnerUserId String?
@@ -3943,4 +3948,139 @@ enum WatchPostStage {
 enum ShippingFeePayer {
   BUSINESS
   CUSTOMER
+}
+
+
+enum PersonalCodexRunStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  TIMED_OUT
+}
+
+model PersonalCodexRun {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+  taskItemId String
+  taskItem TaskItem @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
+  requestedByUserId String?
+  requestedBy User? @relation("PersonalCodexRequester", fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  status PersonalCodexRunStatus @default(QUEUED)
+  activeTaskItemId String? @unique
+  fingerprint String
+  prompt String
+  repository String
+  baseBranch String @default("main")
+  attempt Int @default(0)
+  leaseToken String?
+  workerId String?
+  leaseExpiresAt DateTime?
+  startedAt DateTime?
+  finishedAt DateTime?
+  summary String?
+  errorCode String?
+  resultUrl String?
+  commitSha String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status, createdAt])
+  @@index([taskItemId, createdAt])
+}
+
+model OrderCodexProposal {
+ id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+ orderId String
+ order Order @relation(fields:[orderId],references:[id],onDelete:Cascade)
+ requestedByUserId String
+ requestedBy User @relation(fields:[requestedByUserId],references:[id],onDelete:Restrict)
+ requestKey String @unique
+ requestText String
+ contextJson Json
+ orderVersion DateTime
+ status String @default("QUEUED")
+ planJson Json?
+ createdTaskIds Json?
+ leaseToken String?
+ leaseExpiresAt DateTime?
+ errorCode String?
+ revision Int @default(0)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([orderId,requestedByUserId,createdAt])
+ @@index([status,createdAt])
+}
+
+// Staging sales intake: no order/customer/product mutation is permitted by this queue.
+model SalesCodexIntake {
+  id                String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  requestedByUserId String
+  requestKey        String   @unique
+  requestText       String
+  routingJson       Json
+  status            String   @default("QUEUED")
+  lookupsJson       Json     @default("[]")
+  planJson          Json?
+  resultJson        Json?
+  errorCode         String?
+  leaseToken        String?
+  leaseExpiresAt    DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([requestedByUserId, createdAt])
+  @@index([status, createdAt])
+}
+
+// One active follow-up per customer/watch/kind, shared across requests and users.
+model SalesCodexFollowup {
+  id           String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  businessKey  String   @unique
+  customerId   String
+  productId    String
+  kind         String
+  taskItemId   String   @unique
+  intakeId     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([customerId, productId])
+}
+
+// Editorial content has separate draft and public snapshots. Product facts stay
+// in the catalog and are never copied into these snapshots.
+model CustomerAssistantConversation {
+  id              String   @id @default(uuid())
+  ownerId         String
+  owner           User @relation(fields: [ownerId], references: [id], onDelete: Restrict, map: "CustomerAssistantConversation_owner_fkey")
+  firstRequestKey String   @unique
+  status          String   @default("QUEUED")
+  revision        Int      @default(1)
+  approvedRevision Int?
+  approvedAt      DateTime?
+  state           Json
+  evidence        Json     @default("[]")
+  plan            Json?
+  leaseToken      String?
+  leaseExpiresAt  DateTime?
+  errorCode       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([ownerId, updatedAt])
+  @@index([status, createdAt])
+}
+
+model StorefrontDocument {
+  id          String   @id
+  kind        String
+  draft       Json
+  published   Json?
+  revision    Int      @default(1)
+  publishedAt DateTime?
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([kind, publishedAt])
 }

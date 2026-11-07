@@ -1,3 +1,4 @@
+import { googleCalendarReadiness, requireGoogleCalendarRedirectUri } from "./google-calendar-config";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/server/db/client";
 import { decryptCalendarToken, encryptCalendarToken } from "./google-calendar-crypto";
@@ -81,8 +82,7 @@ function config() {
 }
 
 export function isGoogleCalendarConfigured() {
-  const value = config();
-  return Boolean(value.clientId && value.clientSecret);
+  return googleCalendarReadiness().ready;
 }
 
 export function createGoogleCalendarState(userId: string) {
@@ -109,7 +109,7 @@ export function googleCalendarAuthorizationUrl(userId: string) {
   if (!value.clientId) throw new Error("Google Calendar OAuth chưa được cấu hình");
   const url = new URL(GOOGLE_AUTH_URL);
   url.searchParams.set("client_id", value.clientId);
-  url.searchParams.set("redirect_uri", `${value.appUrl}/api/admin/personal-work/google/callback`);
+  url.searchParams.set("redirect_uri", requireGoogleCalendarRedirectUri());
   url.searchParams.set("response_type", "code");
   url.searchParams.set("access_type", "offline");
   url.searchParams.set("prompt", "consent");
@@ -127,7 +127,7 @@ export async function exchangeGoogleCalendarCode(userId: string, code: string) {
       code,
       client_id: value.clientId,
       client_secret: value.clientSecret,
-      redirect_uri: `${value.appUrl}/api/admin/personal-work/google/callback`,
+      redirect_uri: requireGoogleCalendarRedirectUri(),
       grant_type: "authorization_code",
     }),
     cache: "no-store",

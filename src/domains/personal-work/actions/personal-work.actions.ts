@@ -1,5 +1,9 @@
 "use server";
 
+import { prisma } from "@/server/db/client";
+import { hydrateTaskItemsWithTagsRepo } from "@/domains/task/server/tag/task-tag.repo";
+import { codexExecutionReadiness } from "../server/codex/codex-config";
+import { requestPersonalCodexRun, cancelPersonalCodexRun } from "../server/codex/personal-codex.service";
 import { revalidatePath } from "next/cache";
 import { PersonalTaskShareAccess, TaskStatus, type TaskPriority } from "@prisma/client";
 import { requirePermission } from "@/server/auth/requirePermission";
@@ -64,6 +68,7 @@ export async function createPersonalWorkAction(input: {
   const user = await auth();
   for (const target of input.targets || []) await requirePermission(targetPermission[target.type]);
   const item = await createPersonalWorkItem(input, user);
+  if (codexExecutionReadiness().ready && user.roles.includes("ADMIN") && input.tags?.some(tag => tag.trim().toLowerCase() === "codex")) await requestPersonalCodexRun(item.id, user);
   refresh();
   return { ok: true, id: item.id };
 }
@@ -100,7 +105,11 @@ export async function updatePersonalWorkAction(input: {
 }) {
   const user = await auth();
   for (const target of input.targets || []) await requirePermission(targetPermission[target.type]);
+  const addingCodexTag = codexExecutionReadiness().ready && user.roles.includes("ADMIN") && input.tags?.some(tag => tag.trim().toLowerCase() === "codex");
+  const tagOwner = addingCodexTag ? await assertPersonalWorkAccess(input.id, user, "EDIT") : null;
+  const previousTags = addingCodexTag ? await hydrateTaskItemsWithTagsRepo(prisma, [{ id: input.id }]) : [];
   await updatePersonalWorkItem(input, user);
+  if (addingCodexTag && tagOwner?.access === "OWNER" && !previousTags[0]?.tags.some(tag => tag.name.trim().toLowerCase() === "codex")) await requestPersonalCodexRun(input.id, user);
   const userId = getAuthUserId(user);
   if (userId) await syncPersonalTaskToGoogleIfLinked(userId, input.id);
   refresh();
@@ -200,4 +209,16 @@ export async function schedulePersonalWatchPhotoshootAction(input: PersonalPhoto
   const result = await schedulePersonalWatchPhotoshoot(input, user);
   refresh();
   return result;
+}
+
+export async function requestPersonalCodexRunAction(input: { taskItemId: string; retry?: boolean }) {
+  const run = await requestPersonalCodexRun(input.taskItemId, await auth(), Boolean(input.retry));
+  refresh();
+  return { ok: true, runId: run.id };
+}
+
+export async function cancelPersonalCodexRunAction(runId: string) {
+  await cancelPersonalCodexRun(runId, await auth());
+  refresh();
+  return { ok: true };
 }

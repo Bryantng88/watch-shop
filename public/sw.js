@@ -1,7 +1,7 @@
 const CACHE_NAME = "watch-shop-shell-v2";
 const OFFLINE_URL = "/offline";
 const PRECACHE = [OFFLINE_URL, "/vintic-v.svg", "/storefront-maskable.svg"];
-const isPublicDocument = (pathname) => pathname === "/" || pathname === "/request" || pathname === "/offline" || pathname.startsWith("/products");
+const isPublicDocument = (pathname) => pathname === "/" || pathname === "/request" || pathname === "/offline" || pathname.startsWith("/products") || pathname.startsWith("/stories");
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE)).then(() => self.skipWaiting()));

@@ -1,0 +1,27 @@
+[Unit]
+Description=Watch Shop isolated staging personal-work Codex worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=watchshop-codex
+Group=watchshop-codex
+WorkingDirectory=/opt/watch-shop-codex
+EnvironmentFile=/etc/watch-shop-codex/staging-worker.env
+Environment=HOME=/var/lib/watch-shop-codex
+Environment=CODEX_HOME=/var/lib/watch-shop-codex/auth
+ExecStart=/usr/bin/node /opt/watch-shop-codex/worker.mjs
+Restart=on-failure
+RestartSec=10
+KillMode=control-group
+TimeoutStopSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/watch-shop-codex
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

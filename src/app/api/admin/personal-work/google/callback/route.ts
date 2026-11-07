@@ -16,8 +16,8 @@ export async function GET(request: Request) {
   try {
     await exchangeGoogleCalendarCode(user.id, code);
     return redirectTo("connected");
-  } catch (error) {
-    console.error("[personal-work] Google Calendar callback failed", error);
+  } catch {
+    console.error("[personal-work] Google Calendar callback failed; inspect OAuth configuration and consent settings");
     return redirectTo("failed");
   }
 }

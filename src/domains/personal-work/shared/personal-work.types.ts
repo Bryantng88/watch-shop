@@ -75,7 +75,13 @@ export type PersonalWorkTarget = {
   href: string;
 };
 
+export type PersonalCodexRun = {
+  id: string; status: "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED" | "CANCELLED" | "TIMED_OUT"; attempt: number; summary: string | null; errorCode: string | null; resultUrl: string | null; commitSha: string | null; createdAt: string; startedAt: string | null; finishedAt: string | null;
+};
+
 export type PersonalWorkItem = {
+  codexRun?: PersonalCodexRun | null;
+  codexRuns?: PersonalCodexRun[];
   id: string;
   title: string;
   note: string | null;
@@ -143,6 +149,7 @@ export type PersonalCalendarEvent = {
 };
 
 export type PersonalWorkPageData = {
+  codex?: { ready: boolean; reason: string | null; canDispatch: boolean };
   canManageDefaultCategories: boolean;
   categories: PersonalWorkCategory[];
   items: PersonalWorkItem[];
@@ -150,6 +157,7 @@ export type PersonalWorkPageData = {
   availableUsers: PersonalWorkUser[];
   calendar: {
     configured: boolean;
+    configurationIssue?: string | null;
     connected: boolean;
     accountEmail: string | null;
     lastSyncedAt: string | null;

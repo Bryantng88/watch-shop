@@ -304,7 +304,7 @@ async function notifyReviewRejected(db: DB, input: {
             message: normalizeBusinessFeedbackMessage(input.note),
             priority: "NORMAL",
             metadata: {
-                route: `/admin/watches/${input.productId}/edit`,
+                route: `/admin/watches/${input.productId}/edit?mode=media&focus=${input.targetType === "CONTENT" ? "content" : "image"}`,
                 productId: input.productId,
                 targetType: input.targetType,
             },
