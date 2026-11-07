@@ -160,3 +160,25 @@ Live acceptance requires the release integration on main, the operator-approved
 exact SHA, configured checks, and the existing protected production Environment.
 Stop acceptance at the pending Environment approval. The normal chat runtime
 still requires its separately configured staging environment.
+## Long-only production pilot
+
+Set `BEN_CUSTOMER_ENVIRONMENT=production`, `CUSTOMER_AI_ENABLED=1`, and
+`CUSTOMER_AI_PERMISSION_CONTACT_USER_ID` to the verified active Long ADMIN
+in the production database. Set `BEN_PRODUCTION_DATABASE_USER` to the
+production database URL's decoded username using the protected config.
+The app checks that user and the known production database host and admin origin.
+
+Create a dedicated `BEN_CUSTOMER_WORKER_TOKEN` and mount the matching secret
+read-only at `/run/worker/ben-customer-production-token` in a separate customer
+worker. Start that worker with `node /opt/worker/customer-assistant-worker.mjs`
+and `BEN_CUSTOMER_ENVIRONMENT=production`. It expects the app at
+`http://127.0.0.1:3000` in a shared network namespace. Reattach the worker
+after app replacement. Provision its own auth and work volumes. Keep the
+reviewed sandbox profile, no published ports, and block internal routes at
+ingress. Verify this topology before enabling the app flags.
+
+For the production release token, also grant Actions read. The production
+panel displays the current main SHA for an explicit review. The server
+rejects a SHA with a successful or active production workflow and rechecks
+main and required checks before tagging. Test with a fresh approved SHA
+and stop at the GitHub Environment approval.

@@ -30,6 +30,7 @@ export function codeEnabled(
   env: Readonly<Record<string, string | undefined>> = process.env
 ) {
   return (
+    env.BEN_CUSTOMER_ENVIRONMENT !== "production" &&
     canReadRepository(actor, env) &&
     env.BEN_CODE_ENABLED === '1' &&
     (env.BEN_CODE_WORKER_TOKEN?.length || 0) >= 32 &&
