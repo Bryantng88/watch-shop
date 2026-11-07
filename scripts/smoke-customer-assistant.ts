@@ -50,6 +50,8 @@ async function main(){
  const prospectPreview=(await listAssistant(owner.id)).conversations.find(c=>c.id===prospect.id)!;
  assert.equal(prospectPreview.runStatus,"DRAFT");assert.equal(prospectPreview.customerRequest!.customer,"Chưa gắn hồ sơ khách");
  assert.equal(await p.taskItem.count(),beforeProspect.tasks);assert.equal(await p.technicalIssue.count(),beforeProspect.issues);
+ // A stock transition after review does not invalidate a work assignment.
+ await p.watch.update({where:{productId:prospectWatch.id},data:{stockStage:"RESERVED"}});
  const prospectApproved=await approveAssistant(owner.id,prospect.id,prospectPreview.revision,()=>{});
  assert.equal(prospectApproved.customerRequest!.status,"TRACKING");assert.equal(await p.technicalIssue.count(),beforeProspect.issues+1);
  const prospectReplay=await approveAssistant(owner.id,prospect.id,prospectPreview.revision,()=>{});

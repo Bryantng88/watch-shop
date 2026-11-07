@@ -255,13 +255,12 @@ export async function approveAssistant(userId:string,id:string,revision:number,d
    if(row.status!=="DRAFT"||row.revision!==revision)throw new AssistantError("Bản đề xuất đã thay đổi. Hãy xem bản mới trước khi duyệt.",409);
    const plan=assistantPlanSchema.parse(row.plan),entries=evidence(row),denied=planDeniedReason(actor,plan);if(denied)throw new AssistantError(denied,403);if(!planHasEvidence(plan,entries))throw new AssistantError("Thiếu dữ liệu xác minh.",409);
    await tx.$queryRaw`SELECT "id" FROM "Product" WHERE "id"=${plan.productId} FOR UPDATE`;
-   const detail=entries.find(e=>e.request.tool==="watches.detail"),now=await executeIntakeLookup(tx,{tool:"watches.detail",productId:plan.productId});
-   if(!detail||["version","watchVersion","activeReservations"].some(k=>now[k]!==detail.result[k]))throw new AssistantError("Watch đã thay đổi sau khi tra cứu. Nhắn lại để Codex cập nhật phương án.",409);
+   const detail=entries.find(e=>e.request.tool==="watches.detail"&&e.request.productId===plan.productId),now=await executeIntakeLookup(tx,{tool:"watches.detail",productId:plan.productId});
+   if(!detail||now.id!==plan.productId||["sku","title"].some(k=>now[k]!==detail.result[k]))throw new AssistantError("Thông tin nhận diện đồng hồ đã thay đổi. Nhắn lại để Ben cập nhật đề xuất.",409);
    if(plan.customerId){
    const observed=entries.filter(e=>e.request.tool==="customers.search").flatMap(e=>e.result.matches as {id:string;version:string}[]||[]).find(c=>c.id===plan.customerId),customer=await tx.customer.findUnique({where:{id:plan.customerId},select:{updatedAt:true}});
    if(!customer||customer.updatedAt.toISOString()!==observed?.version)throw new AssistantError("Khách đã thay đổi sau khi tra cứu. Cần cập nhật đề xuất.",409);
    }
-   if(Number(now.activeReservations)>0||now.stockStage!=="IN_STOCK")throw new AssistantError("Watch không ở trạng thái sẵn trong kho hoặc đang có giữ hàng. Cần đối chiếu trước khi giao thêm việc.",409);
    const open=await executeIntakeLookup(tx,{tool:"work.open",productId:plan.productId,customerId:plan.customerId});if(open.truncated||(open.openWatchWork as unknown[]).length||await tx.technicalIssue.count({where:{serviceRequest:{productId:plan.productId},executionStatus:{notIn:["DONE","CANCELED"]}}}))throw new AssistantError("Watch đã có việc hoặc phiếu kỹ thuật đang mở. Cần đối chiếu trước khi giao thêm.",409);
    const work:(()=>Promise<void>)[]=[];const register=(fn:()=>Promise<void>)=>work.push(fn);const r=await requestFromPlan(tx,row,plan);r.status="TRACKING";r.reference=`YC-${row.id.slice(0,8).toUpperCase()}-${revision}`;
    const space=plan.conditions.some(c=>c.kind==="TASK")?await resolveOperationSpace(tx,{context:"OPERATION"}):null;
