@@ -47,27 +47,7 @@ export async function publishProductionTag(
   fetchGitHub: typeof fetch = fetch,
 ) {
   await authorize();
-  const token = process.env.BEN_PRODUCTION_GITHUB_TOKEN!;
-  async function github(path: string, body?: object) {
-    return fetchGitHub(`https://api.github.com/repos/${repository}/${path}`, {
-      method: body ? 'POST' : 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github+json',
-        'User-Agent': 'Watch-Shop-Ben-Production',
-      },
-      body: body ? JSON.stringify(body) : undefined,
-      redirect: 'error',
-      cache: 'no-store',
-      signal: AbortSignal.timeout(10000),
-    });
-  }
-  async function read(path: string) {
-    const response = await github(path);
-    if (!response.ok)
-      throw new AssistantError('GitHub chưa xác nhận được bản phát hành.', 502);
-    return response.json();
-  }
+  const { github, read } = productionGitHub(fetchGitHub);
   const commit = await read('commits/main');
   if (commit.sha !== sha)
     throw new AssistantError(
@@ -148,4 +128,74 @@ export async function publishProductionTag(
       502,
     );
   return { tag, workflowUrl };
+}
+
+function productionGitHub(fetchGitHub: typeof fetch = fetch) {
+  const token = process.env.BEN_PRODUCTION_GITHUB_TOKEN!;
+  async function github(path: string, body?: object) {
+    return fetchGitHub(`https://api.github.com/repos/${repository}/${path}`, {
+      method: body ? 'POST' : 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'User-Agent': 'Watch-Shop-Ben-Production',
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      redirect: 'error',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(10000),
+    });
+  }
+  async function read(path: string) {
+    const response = await github(path);
+    if (!response.ok)
+      throw new AssistantError('GitHub chưa xác nhận được bản phát hành.', 502);
+    return response.json();
+  }
+  return { github, read };
+}
+
+async function authorizeProductionMain(userId: string) {
+  const actor = await assistantActor(prisma, userId);
+  if (
+    process.env.BEN_CUSTOMER_ENVIRONMENT !== 'production' ||
+    !canRequestProduction(actor)
+  )
+    throw new AssistantError(
+      'Chỉ Long có ADMIN được phát hành production khi tính năng đã bật.',
+      403,
+    );
+}
+
+export async function reviewProductionMain(userId: string) {
+  await authorizeProductionMain(userId);
+  const { read } = productionGitHub();
+  const commit = await read('commits/main');
+  const sha = gitSha.parse(commit.sha);
+  return { sha };
+}
+
+export async function releaseProductionMain(userId: string, sha: string) {
+  const authorize = () => authorizeProductionMain(userId);
+  await authorize();
+  const { read } = productionGitHub();
+  const runs = await read(
+    `actions/workflows/deploy-production.yml/runs?head_sha=${gitSha.parse(sha)}&per_page=100`,
+  );
+  if (!Array.isArray(runs.workflow_runs) || runs.total_count > 100)
+    throw new AssistantError(
+      'Cần đối chiếu lịch sử phát hành trên GitHub.',
+      409,
+    );
+  if (
+    runs.workflow_runs.some(
+      (run: { status: string; conclusion: string | null }) =>
+        run.conclusion === 'success' || run.status !== 'completed',
+    )
+  )
+    throw new AssistantError(
+      'SHA này đã triển khai hoặc có lượt chạy đang chờ trên GitHub.',
+      409,
+    );
+  return publishProductionTag(sha, authorize);
 }

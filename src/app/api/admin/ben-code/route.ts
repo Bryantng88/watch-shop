@@ -3,8 +3,19 @@ import { z } from 'zod';
 import { getCurrentUserPermissions } from '@/server/auth/requirePermission';
 import { AssistantError } from '@/domains/ai-assistant/server/access';
 import { codeCommand } from '@/domains/ai-assistant/server/code-jobs';
-import { requestProductionRelease } from '@/domains/ai-assistant/server/production-release';
+import {
+  requestProductionRelease,
+  reviewProductionMain,
+  releaseProductionMain,
+} from '@/domains/ai-assistant/server/production-release';
 const command = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('production-main-preview') }).strict(),
+  z
+    .object({
+      action: z.literal('deploy-production-main'),
+      sha: z.string().regex(/^[a-f0-9]{40}$/),
+    })
+    .strict(),
   z
     .object({
       action: z.literal('approve'),
@@ -41,6 +52,10 @@ export async function POST(req: NextRequest) {
     const raw = await req.text();
     if (raw.length > 2000) throw new AssistantError('Yêu cầu quá dài.');
     const c = command.parse(JSON.parse(raw));
+    if (c.action === 'production-main-preview')
+      return NextResponse.json(await reviewProductionMain(user.id));
+    if (c.action === 'deploy-production-main')
+      return NextResponse.json(await releaseProductionMain(user.id, c.sha));
     if (c.action === 'deploy-production')
       return NextResponse.json(
         await requestProductionRelease(user.id, c.id, c.jobId, c.sha),

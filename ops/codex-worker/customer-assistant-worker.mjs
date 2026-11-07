@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'node:url';
 import { spawn } from 'node:child_process';
 import { mkdir, readFile, rm } from 'node:fs/promises';
 import { codexArguments, validateWorkerConfiguration } from './worker.mjs';
@@ -11,13 +12,22 @@ export function customerCodexArguments(directory, output) {
   return args;
 }
 export async function runCustomerAssistantWorker() {
-  const config = validateWorkerConfiguration();
+  const production = process.env.BEN_CUSTOMER_ENVIRONMENT === 'production';
+  let token = process.env.PERSONAL_CODEX_WORKER_TOKEN;
+  let config;
+  if (production) {
+    token = (await readFile('/run/worker/ben-customer-production-token', 'utf8')).trim();
+    if (token.length < 32) throw Error('CUSTOMER_WORKER_TOKEN_REQUIRED');
+    config = { appUrl: 'http://127.0.0.1:3000', workerId: 'production-ben' };
+  } else {
+    config = validateWorkerConfiguration();
+  }
   let stopping = false, child;
   const kill = () => { if (child?.pid) try { process.kill(-child.pid, 'SIGKILL'); } catch {} };
   const stop = () => { stopping = true; kill(); };
   process.once('SIGTERM', stop); process.once('SIGINT', stop);
   const api = async (operation, body) => {
-    const response = await fetch(config.appUrl + '/api/internal/customer-assistant/' + operation, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + process.env.PERSONAL_CODEX_WORKER_TOKEN }, body: JSON.stringify(body), signal: AbortSignal.timeout(20000), redirect: 'error' });
+    const response = await fetch(config.appUrl + '/api/internal/customer-assistant/' + operation, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token }, body: JSON.stringify(body), signal: AbortSignal.timeout(20000), redirect: 'error' });
     if (!response.ok) throw Error('CUSTOMER_WORKER_API_' + response.status);
     return response.json();
   };
@@ -70,4 +80,11 @@ export async function runCustomerAssistantWorker() {
       if (!stopping) await sleep(5000);
     }
   } finally { process.removeListener('SIGTERM', stop); process.removeListener('SIGINT', stop); stop(); }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  runCustomerAssistantWorker().catch(() => {
+    console.error('Customer assistant worker could not start.');
+    process.exitCode = 1;
+  });
 }
