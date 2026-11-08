@@ -175,3 +175,16 @@ Capabilities default off; unsupported/unconfigured execution must be explained
 as unavailable rather than a successful action. The browser displays authoritative
 job state and links, never autonomously replays commands. Production is excluded.
 See [code execution and staging integration](../development/ben-code-execution.md).
+
+## Tìm đồng hồ trong kho bằng ảnh
+
+`BEN_IMAGE_SEARCH_ENABLED=1` mở đính kèm ảnh cho người có quyền xem sản phẩm.
+Triển khai app và customer worker cùng phiên bản trước khi bật cờ. Mỗi lượt
+nhận một ảnh JPG, PNG hoặc WebP tĩnh tối đa 4 MB. Server giải mã và thu nhỏ,
+bỏ metadata, rồi chuyển ảnh cho worker qua lượt xử lý riêng. Ảnh gửi không
+xuất hiện trong API lịch sử. App xóa dữ liệu ảnh khi hoàn tất, hủy hoặc hết
+lease. Worker xóa file tạm khi dọn lượt.
+
+Worker đính kèm ảnh vào Codex để đọc dấu hiệu nhìn thấy. Ben tra kho theo
+logo, chữ và mã đọc được, trả ứng viên có dữ liệu tra cứu hoặc hỏi thêm góc
+chụp. Lượt có ảnh chỉ dùng tra cứu đồng hồ và không sinh đề xuất ghi dữ liệu.

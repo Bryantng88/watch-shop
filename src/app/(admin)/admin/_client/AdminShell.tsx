@@ -18,11 +18,12 @@ type AdminShellUser = {
 type AdminShellProps = {
     assistantSimulation?: boolean;
     assistantLive?: boolean;
+    assistantImageSearch?: boolean;
     user: AdminShellUser;
     children: ReactNode;
 };
 
-export default function AdminShell({ user, children, assistantSimulation = false, assistantLive = false }: AdminShellProps) {
+export default function AdminShell({ user, children, assistantSimulation = false, assistantLive = false, assistantImageSearch = false }: AdminShellProps) {
     const searchParams = useSearchParams();
     const pathname = usePathname();
     const isBen = pathname === "/admin/ben";
@@ -64,7 +65,7 @@ export default function AdminShell({ user, children, assistantSimulation = false
             </div>
         </div>)}
         <div hidden={isEmbedded || (isBen && !assistantLive)}>
-        {(assistantSimulation || assistantLive) && <AiAssistant key={`${user.id}:${assistantLive?"live":"simulation"}`} userId={user.id} live={assistantLive} fullPage={isBen && assistantLive} canManage={!!user.roles?.includes("ADMIN") || user.permissions.includes("TASK_MANAGE")} />}
+        {(assistantSimulation || assistantLive) && <AiAssistant key={`${user.id}:${assistantLive?"live":"simulation"}`} userId={user.id} live={assistantLive} imageSearch={assistantImageSearch} fullPage={isBen && assistantLive} canManage={!!user.roles?.includes("ADMIN") || user.permissions.includes("TASK_MANAGE")} />}
         </div>
         </AdminNavigationHistoryProvider>
     );

@@ -11,7 +11,8 @@ import BenScreenContext from "./BenScreenContext";
 import BenAvatar from "./BenAvatar";
 import {takeNavigation,type PendingNavigation} from "./navigation-client";
 import { usePathname, useRouter } from "next/navigation";
-import { X, Plus, History, Send, Square, Trash2, Check, ArrowRight } from "lucide-react";
+import { MAX_BEN_IMAGE_BYTES } from "./image-search";
+import { ImagePlus, X, Plus, History, Send, Square, Trash2, Check, ArrowRight } from "lucide-react";
 import { followScreenWhileEmpty, isProductContext, newConversation, pageContext, readConversations, simulateReply, type Conversation, type Scenario } from "./simulation";
 import { assignedRequests } from "./assigned-requests";
 import OrderDraftReview from "./OrderDraftReview";
@@ -22,7 +23,7 @@ const departments = { TECHNICAL: "Kỹ thuật", OPERATION: "Vận hành", SALES
 const people = { technical: "Minh · Kỹ thuật (mẫu)", operation: "An · Vận hành (mẫu)", sales: "Linh · Sales (mẫu)", media: "Hà · Media (mẫu)" };
 const field = "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400";
 
-export default function AiAssistant({ userId, canManage, live = false, fullPage = false }: { userId: string; canManage: boolean; live?:boolean; fullPage?:boolean }) {
+export default function AiAssistant({ userId, canManage, live = false, fullPage = false, imageSearch = false }: { userId: string; canManage: boolean; live?:boolean; fullPage?:boolean; imageSearch?:boolean }) {
   const router=useRouter();const pendingNavigation=useRef<PendingNavigation|null>(null);
   const pathname = usePathname(), current = pageContext(pathname), storageKey = `watchshop:ai-demo:v1:${userId}`;
   const [open, setOpen] = useState(fullPage), [history, setHistory] = useState(false), [chats, setChats] = useState<Conversation[]>([]), [selected, setSelected] = useState("");
@@ -34,10 +35,11 @@ export default function AiAssistant({ userId, canManage, live = false, fullPage 
   useEffect(()=>{
     try{if(fullPage){setWindowOpen(true);}else{setOpen(sessionStorage.getItem(visibilityKey)==="open");}}catch{if(fullPage)setOpen(true);}
   },[fullPage,visibilityKey,setWindowOpen]);
+  const [attachment,setAttachment]=useState<{chatId:string;file:File}>();
   const [assignedOpen,setAssignedOpen]=useState(false);
   const [ready, setReady] = useState(false), [input, setInput] = useState(""), [busy, setBusy] = useState(false), [scenario, setScenario] = useState<Scenario>("normal"), [notice, setNotice] = useState("");
   const launcher = useRef<HTMLButtonElement>(null), textarea = useRef<HTMLTextAreaElement>(null), bottom = useRef<HTMLDivElement>(null), panel = useRef<HTMLElement>(null), generation = useRef(0);
-  const liveSelected=useRef("");const liveSequence=useRef(0);const livePending=useRef(false);const liveTracking=useRef(false);const liveSubmitting=useRef(false);const liveDrafts=useRef(new Set<string>());const liveRequestKey=useRef<{id:string;text:string;key:string;screenPath:string}|null>(null);
+  const liveSelected=useRef("");const liveSequence=useRef(0);const livePending=useRef(false);const liveTracking=useRef(false);const liveSubmitting=useRef(false);const liveDrafts=useRef(new Set<string>());const liveRequestKey=useRef<{id:string;text:string;key:string;screenPath:string;image?:File}|null>(null);
   useEffect(()=>{liveSelected.current=selected;},[selected]);
   const refreshLive=useCallback(async(preferred?:string)=>{
     const sequence=++liveSequence.current;const active=preferred||liveSelected.current;const target=active&&!liveDrafts.current.has(active)?"?id="+encodeURIComponent(active):"";const response=await fetch("/api/admin/customer-assistant"+target,{cache:"no-store"});const data=await response.json();if(!response.ok)throw Error(data.error||"Không tải được cuộc trao đổi.");if(sequence!==liveSequence.current)return;
@@ -64,15 +66,24 @@ export default function AiAssistant({ userId, canManage, live = false, fullPage 
   function close() { if(fullPage)return; pendingNavigation.current=null; setWindowOpen(false); launcher.current?.focus(); }
   function create(context = live ? null : current) { pendingNavigation.current=null; const c = newConversation(context); if(live)liveDrafts.current.add(c.id); liveRequestKey.current=null; setChats(rows => [c, ...rows].slice(0, 20)); setSelected(c.id); setHistory(false); setAssignedOpen(false); setInput(""); setNotice(""); return c; }
   function update(id: string, fn: (c: Conversation) => Conversation) { setChats(rows => rows.map(c => c.id === id ? { ...fn(c), updatedAt: new Date().toISOString() } : c).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt))); }
+  const selectedImage=live&&imageSearch&&attachment?.chatId===(chat?.id||"")?attachment.file:undefined;
   async function send(value = input) {
-    const text = value.trim(); if (!text || busy || !ready || !scopeEnabled) return;
+    const image=selectedImage;
+    const text=value.trim()||(image?"Tìm đồng hồ trong kho từ ảnh mình gửi.":""); if (!text || busy || !ready || !scopeEnabled) return;
     const c = chat || create();
     if(live){
       setBusy(true);setNotice("");liveSubmitting.current=true;liveSequence.current++;
-      if(!liveRequestKey.current||liveRequestKey.current.id!==c.id||liveRequestKey.current.text!==text||liveRequestKey.current.screenPath!==pathname)liveRequestKey.current={id:c.id,text,key:crypto.randomUUID(),screenPath:pathname};
-      pendingNavigation.current={requestKey:liveRequestKey.current.key,conversationId:c.id};
-      try{const row=await livePost({action:"send",...(c.revision?{id:c.id}:{}),requestKey:liveRequestKey.current.key,text,screenPath:pathname,productId:isProductContext(current)?current.id||null:null}) as Conversation;if(pendingNavigation.current)pendingNavigation.current.conversationId=row.id;liveDrafts.current.delete(c.id);liveRequestKey.current=null;setInput("");liveSelected.current=row.id;setSelected(row.id);setChats(rows=>[row,...rows.filter(r=>r.id!==c.id&&r.id!==row.id)]);}
-      catch(e){pendingNavigation.current=null;setNotice(e instanceof Error?e.message:"Không gửi được tin nhắn.");}
+      if(!liveRequestKey.current||liveRequestKey.current.id!==c.id||liveRequestKey.current.text!==text||liveRequestKey.current.screenPath!==pathname||liveRequestKey.current.image!==image)liveRequestKey.current={id:c.id,text,key:crypto.randomUUID(),screenPath:pathname,image};
+      pendingNavigation.current=image?null:{requestKey:liveRequestKey.current.key,conversationId:c.id};
+      try{
+        const imageBase64=image?await new Promise<string>((resolve,reject)=>{
+          const reader=new FileReader();
+          reader.onerror=()=>reject(Error("Không đọc được ảnh đã chọn."));
+          reader.onload=()=>typeof reader.result==="string"?resolve(reader.result.split(",",2)[1]):reject(Error("Không đọc được ảnh đã chọn."));
+          reader.readAsDataURL(image);
+        }):undefined;
+        const row=await livePost({action:"send",...(imageBase64?{imageBase64}:{}),...(c.revision?{id:c.id}:{}),requestKey:liveRequestKey.current.key,text,screenPath:pathname,productId:isProductContext(current)?current.id||null:null}) as Conversation;if(pendingNavigation.current)pendingNavigation.current.conversationId=row.id;liveDrafts.current.delete(c.id);liveRequestKey.current=null;setInput("");setAttachment(undefined);liveSelected.current=row.id;setSelected(row.id);setChats(rows=>[row,...rows.filter(r=>r.id!==c.id&&r.id!==row.id)]);}
+      catch(e){pendingNavigation.current=null;if(image)setAttachment({chatId:c.id,file:image});setNotice(e instanceof Error?e.message:"Không gửi được tin nhắn.");}
       finally{liveSubmitting.current=false;setBusy(false);await refreshLive(liveSelected.current||undefined).catch(e=>setNotice(e.message));}return;
     }
     if (c.messages.length >= 38) { setNotice("Cuộc trao đổi đã đủ dài. Hãy tạo trao đổi mới để tiếp tục."); return; }
@@ -144,7 +155,12 @@ export default function AiAssistant({ userId, canManage, live = false, fullPage 
         {!live&&chat?.approved && !chat.customerRequest && <section className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><h3 className="flex items-center gap-2 font-semibold text-emerald-900"><Check size={18}/>Đã duyệt phương án mẫu</h3><p className="mt-1 text-xs text-emerald-800">Không có việc thật trong hàng đợi nghiệp vụ.</p>{chat.tasks.map((s, i) => <div key={s.id} className="mt-3 rounded-lg bg-white p-3 text-sm"><strong>{i + 1}. {s.title}</strong><p className="mt-1 text-xs text-slate-500">{departments[s.department as keyof typeof departments]} · {people[s.assignee as keyof typeof people]}</p><label className="mt-2 block text-xs">Tiến độ mẫu<select aria-label={`Tiến độ ${s.title}`} className={field} value={s.status} onChange={e => update(chat.id, c => ({ ...c, tasks: c.tasks.map(t => t.id === s.id ? { ...t, status: e.target.value } : t) }))}>{["Chờ tiếp nhận (mẫu)", "Đang xử lý (mẫu)", "Cần phản hồi (mẫu)", "Hoàn tất (mẫu)"].map(status => <option key={status}>{status}</option>)}</select></label></div>)}</section>}
         <div ref={bottom}/>
       </div>
-      <footer className="space-y-3 border-t border-blue-100 bg-white px-4 py-3 sm:px-5">{!history&&!assignedOpen&&<div className="flex gap-2 overflow-x-auto pb-1">{[{label:"Việc của tôi",text:"Mở công việc của tôi"},{label:"Tìm đồng hồ",text:"Mình muốn tìm đồng hồ "},{label:"Tạo yêu cầu",text:"Mình cần tạo yêu cầu "}].map(action=><button type="button" key={action.label} disabled={busy||!ready||!scopeEnabled} onClick={()=>{setInput(action.text);textarea.current?.focus();}} className="shrink-0 rounded-full border border-blue-100 bg-white px-3 py-1.5 text-xs text-slate-600 hover:bg-blue-50 disabled:opacity-40">{action.label}</button>)}</div>}{!live&&<label className="flex items-center justify-between gap-2 text-xs text-slate-500">Kịch bản giả lập<select aria-label="Kịch bản trợ lý" disabled={busy} value={scenario} onChange={e => setScenario(e.target.value as Scenario)} className="rounded border px-2 py-1"><option value="normal">Bình thường</option><option value="clarify">Hỏi lại trước khi đề xuất</option><option value="error">Lỗi xử lý</option><option value="denied">Không đủ quyền</option></select></label>}{notice && <p role="status" className="rounded bg-amber-50 p-2 text-xs text-amber-900">{notice}</p>}<form onSubmit={e => { e.preventDefault(); void send(); }} className="flex items-end gap-2 rounded-2xl border border-blue-200 bg-white p-2 focus-within:ring-2 focus-within:ring-blue-100"><textarea ref={textarea} aria-label="Tin nhắn cho Ben" maxLength={4000} rows={1} value={input} disabled={busy || !scopeEnabled} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send(); } }} placeholder="Nhắn cho Ben…" className="max-h-36 min-h-10 flex-1 resize-none rounded-xl border-0 bg-transparent px-2 py-2 text-sm leading-6 outline-none"/>{busy ? <button type="button" aria-label="Hủy lượt trả lời" onClick={cancel} className="rounded-xl bg-slate-900 p-3 text-white"><Square size={18}/></button> : <button type="submit" aria-label="Gửi tin nhắn" disabled={!input.trim() || !ready || !scopeEnabled} className="rounded-full bg-blue-600 p-3 text-white hover:bg-blue-700 disabled:opacity-40"><Send size={18}/></button>}</form><p className="text-center text-[11px] text-slate-400">{live?"Chỉ tạo việc hoặc đơn hàng sau khi bạn duyệt":"Bản giả lập · Không tạo việc thật"}</p></footer>
+      <footer className="space-y-3 border-t border-blue-100 bg-white px-4 py-3 sm:px-5">{!history&&!assignedOpen&&<div className="flex gap-2 overflow-x-auto pb-1">{[{label:"Việc của tôi",text:"Mở công việc của tôi"},{label:"Tìm đồng hồ",text:"Mình muốn tìm đồng hồ "},{label:"Tạo yêu cầu",text:"Mình cần tạo yêu cầu "}].map(action=><button type="button" key={action.label} disabled={busy||!ready||!scopeEnabled} onClick={()=>{setInput(action.text);textarea.current?.focus();}} className="shrink-0 rounded-full border border-blue-100 bg-white px-3 py-1.5 text-xs text-slate-600 hover:bg-blue-50 disabled:opacity-40">{action.label}</button>)}</div>}{!live&&<label className="flex items-center justify-between gap-2 text-xs text-slate-500">Kịch bản giả lập<select aria-label="Kịch bản trợ lý" disabled={busy} value={scenario} onChange={e => setScenario(e.target.value as Scenario)} className="rounded border px-2 py-1"><option value="normal">Bình thường</option><option value="clarify">Hỏi lại trước khi đề xuất</option><option value="error">Lỗi xử lý</option><option value="denied">Không đủ quyền</option></select></label>}{notice && <p role="status" className="rounded bg-amber-50 p-2 text-xs text-amber-900">{notice}</p>}{selectedImage&&<div className="flex items-center justify-between gap-2 text-xs"><span className="truncate">Ảnh đã chọn · {selectedImage.name}</span><button type="button" disabled={busy} onClick={()=>setAttachment(undefined)}>Bỏ ảnh</button></div>}<form onSubmit={e => { e.preventDefault(); void send(); }} className="flex items-end gap-2 rounded-2xl border border-blue-200 bg-white p-2 focus-within:ring-2 focus-within:ring-blue-100">{live&&imageSearch&&<label className="relative rounded-lg p-2 focus-within:ring-2 focus-within:ring-blue-500" title="Chọn ảnh để tìm đồng hồ"><ImagePlus size={18}/><input className="absolute inset-0 cursor-pointer opacity-0" type="file" aria-label="Chọn ảnh đồng hồ" accept="image/jpeg,image/png,image/webp" disabled={busy||!ready||!scopeEnabled} onChange={e=>{
+        const file=e.currentTarget.files?.[0];e.currentTarget.value="";
+        if(!file)return;
+        if(file.size>MAX_BEN_IMAGE_BYTES||!["image/jpeg","image/png","image/webp"].includes(file.type)){setNotice("Chọn ảnh JPG, PNG hoặc WebP tối đa 4 MB.");return;}
+        setNotice("");setAttachment({chatId:chat?.id||"",file});
+      }}/></label>}<textarea ref={textarea} aria-label="Tin nhắn cho Ben" maxLength={4000} rows={1} value={input} disabled={busy || !scopeEnabled} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send(); } }} placeholder="Nhắn cho Ben…" className="max-h-36 min-h-10 flex-1 resize-none rounded-xl border-0 bg-transparent px-2 py-2 text-sm leading-6 outline-none"/>{busy ? <button type="button" aria-label="Hủy lượt trả lời" onClick={cancel} className="rounded-xl bg-slate-900 p-3 text-white"><Square size={18}/></button> : <button type="submit" aria-label="Gửi tin nhắn" disabled={(!input.trim()&&!selectedImage) || !ready || !scopeEnabled} className="rounded-full bg-blue-600 p-3 text-white hover:bg-blue-700 disabled:opacity-40"><Send size={18}/></button>}</form><p className="text-center text-[11px] text-slate-400">{live?"Chỉ tạo việc hoặc đơn hàng sau khi bạn duyệt":"Bản giả lập · Không tạo việc thật"}</p></footer>
       </>}
     </aside></>}
   </>;

@@ -1,14 +1,16 @@
 import { pathToFileURL } from 'node:url';
+import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
-import { mkdir, readFile, rm } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { codexArguments, validateWorkerConfiguration } from './worker.mjs';
 import { runCustomerConversation } from './customer-assistant-protocol.mjs';
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-export function customerCodexArguments(directory, output) {
+export function customerCodexArguments(directory, output, imagePath) {
   const args = codexArguments(directory, output).map(arg => arg.startsWith('permissions.staging-worker=')
     ? arg.replace('extends=":workspace"', 'extends=":read-only"').replace('filesystem={', 'filesystem={"/work/repo"="deny","/work/runs"="deny","/work/order-runs"="deny","/work/sales-runs"="deny",') : arg);
   args.splice(args.length - 1, 0, '--skip-git-repo-check', '--output-schema', '/opt/worker/customer-turn-schema.json');
+  if (imagePath) args.splice(args.length - 1, 0, "--image", imagePath, "--");
   return args;
 }
 export async function runCustomerAssistantWorker() {
@@ -33,15 +35,26 @@ export async function runCustomerAssistantWorker() {
   };
   try {
     while (!stopping) {
-      let run, heartbeat, deadline, heartbeatWork, active = true, heartbeatBusy = false, output;
+      let run, heartbeat, deadline, heartbeatWork, active = true, heartbeatBusy = false, output, imagePath;
       try {
-        ({ run } = await api('claim', { workerId: config.workerId }));
+        ({ run } = await api('claim', { workerId: config.workerId, imageInput: true }));
         if (!run) { await sleep(5000); continue; }
         if (!/^[a-f0-9-]{36}$/.test(run.id)) throw Error('INVALID_CUSTOMER_RUN');
         const directory = '/work/customer-runs/' + run.id;
         output = '/work/results/customer-' + run.id + '.json';
         await mkdir(directory, { recursive: true, mode: 0o700 });
         await mkdir('/work/results', { recursive: true, mode: 0o700 });
+        if (run.imageBase64 !== undefined) {
+          const encoded = run.imageBase64;
+          if (typeof encoded !== 'string' || encoded.length > Math.ceil((512 * 1024) / 3) * 4 || !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded))
+            throw Error('CUSTOMER_IMAGE_INVALID');
+          const bytes = Buffer.from(encoded, 'base64');
+          if (bytes.length > 512 * 1024 || bytes.length < 4 || bytes[0] !== 255 || bytes[1] !== 216 || bytes.toString('base64') !== encoded)
+            throw Error('CUSTOMER_IMAGE_INVALID');
+          const path = '/work/results/customer-image-' + randomUUID() + '.jpg';
+          await writeFile(path, bytes, { mode: 0o600, flag: 'wx' });
+          imagePath = path;
+        }
         const assertActive = () => { if (stopping || !active) throw Error('CUSTOMER_LEASE_LOST'); };
         heartbeat = setInterval(() => {
           if (heartbeatBusy) return;
@@ -57,7 +70,7 @@ export async function runCustomerAssistantWorker() {
           assertActive(); await rm(output, { force: true });
           const env = Object.fromEntries(['PATH', 'HOME', 'CODEX_HOME', 'LANG', 'LC_ALL', 'TMPDIR', 'SSL_CERT_FILE', 'SSL_CERT_DIR', 'NODE_EXTRA_CA_CERTS'].filter(key => process.env[key]).map(key => [key, process.env[key]]));
           const rc = await new Promise((resolve, reject) => {
-            child = spawn('codex', customerCodexArguments(directory, output), { cwd: directory, env, detached: true, stdio: ['pipe', 'ignore', 'ignore'] });
+            child = spawn('codex', customerCodexArguments(directory, output, imagePath), { cwd: directory, env, detached: true, stdio: ['pipe', 'ignore', 'ignore'] });
             child.on('error', reject); child.on('close', resolve); child.stdin.on('error', () => {}); child.stdin.end(prompt);
           });
           child = null; assertActive();
@@ -75,6 +88,7 @@ export async function runCustomerAssistantWorker() {
         clearInterval(heartbeat); clearTimeout(deadline);
         await heartbeatWork?.catch(() => {});
         kill(); child = null;
+        if (imagePath) await rm(imagePath, { force: true }).catch(() => {});
         if (output) await rm(output, { force: true }).catch(() => {});
       }
       if (!stopping) await sleep(5000);

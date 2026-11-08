@@ -31,6 +31,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                     <AdminShell
                         assistantSimulation={localSalesSimulationEnabled()}
                         assistantLive={customerAssistantReady()}
+                        assistantImageSearch={process.env.BEN_IMAGE_SEARCH_ENABLED === "1" && (user.roles.includes("ADMIN") || permissions.includes("PRODUCT_VIEW"))}
                         user={{
                             id: user.id,
                             permissions,
