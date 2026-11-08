@@ -1,15 +1,19 @@
 "use client";
 
-import {useState} from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 import {currentMediaEditor, type MediaDraft, type MediaEditor} from "./media-editor";
 
-export default function BenMediaReview({editor}: {editor: MediaEditor}) {
+export default function BenMediaReview({editor, requestKey}: {editor: MediaEditor; requestKey?: string}) {
   const [review, setReview] = useState<{editor: MediaEditor; draft: MediaDraft}>();
   const draft = review?.editor === editor ? review.draft : undefined;
   const [pending, setPending] = useState(false);
   const [notice, setNotice] = useState("");
 
-  async function research() {
+  const consumed=useRef<string | undefined>(undefined);
+  const inFlight=useRef(false);
+  const research=useCallback(async () => {
+    if(inFlight.current)return;
+    inFlight.current=true;
     setPending(true);
     setReview(undefined);
     setNotice("");
@@ -19,9 +23,16 @@ export default function BenMediaReview({editor}: {editor: MediaEditor}) {
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Ben chưa chuẩn bị được nội dung.");
     } finally {
+      inFlight.current=false;
       setPending(false);
     }
-  }
+  },[editor]);
+
+  useEffect(()=>{
+    if(!requestKey||consumed.current===requestKey)return;
+    consumed.current=requestKey;
+    void research();
+  },[requestKey,research]);
 
   return <section aria-label="Xử lý media với Ben" className="max-h-[40dvh] shrink-0 space-y-2 overflow-y-auto rounded-xl border border-blue-100 p-3 text-sm">
     <p className="font-medium">Xử lý media · {editor.title}</p>

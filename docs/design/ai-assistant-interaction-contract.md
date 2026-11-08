@@ -211,3 +211,13 @@ bounded open work through the end of today in Asia/Ho_Chi_Minh, including
 overdue and unscheduled work, with no notes or actions. Empty results and
 truncation are distinct. Existing permission checks apply to the reply
 and its task references before delivery and history display.
+
+## Media requests from chat
+
+The worker resolves explicit requests to draft content for the open media editor
+as media.draft, with query equal to the latest user message ID. The server binds
+the request to the leased turn, the verified watch edit screen and PRODUCT_UPDATE.
+The result authorizes preparation only. Only the originating browser may start
+research, once, while the same editor is open. Historical results cannot trigger
+research. The editor supplies its inline photo and applies the draft only after
+the existing explicit review.
