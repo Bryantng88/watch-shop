@@ -15,6 +15,7 @@
         "null"
       ],
       "enum": [
+        "personalWork.today",
         "repository.info",
         "repository.history",
         "repository.tree",

@@ -75,3 +75,10 @@ test('coding work is a draft only and cannot mix with business orders or navigat
  const codePlan={title:'Remember list filters',request:'Persist the selected filters after a browser reload.'};assert.deepEqual(validateCustomerTurn({...finish,codePlan}).codePlan,codePlan);
  assert.throws(()=>validateCustomerTurn({...finish,codePlan:{...codePlan,command:'rm -rf'}}));assert.throws(()=>validateCustomerTurn({...finish,codePlan,plan:{anything:true}}));assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'repository.info',reply:null,codePlan}));
 });
+
+test('personal work lookup accepts no account or query arguments',()=>{
+ const lookup={...finish,type:'lookup',tool:'personalWork.today',reply:null};
+ assert.deepEqual(validateCustomerTurn(lookup),{type:'lookup',lookup:{tool:'personalWork.today'}});
+ assert.throws(()=>validateCustomerTurn({...lookup,query:'other-user'}));
+ assert.throws(()=>validateCustomerTurn({...lookup,customerId:'other-user'}));
+});

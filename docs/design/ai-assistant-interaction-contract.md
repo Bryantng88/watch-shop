@@ -188,3 +188,26 @@ lease. Worker xóa file tạm khi dọn lượt.
 Worker đính kèm ảnh vào Codex để đọc dấu hiệu nhìn thấy. Ben tra kho theo
 logo, chữ và mã đọc được, trả ứng viên có dữ liệu tra cứu hoặc hỏi thêm góc
 chụp. Lượt có ảnh chỉ dùng tra cứu đồng hồ và không sinh đề xuất ghi dữ liệu.
+
+## Media content draft
+
+The active same-origin media editor exposes its product and section to the Ben
+panel only while that editor is mounted. Chat sends the editor pathname as the
+existing server-verified screen hint. The explicit “Tra cứu và viết nội dung”
+control calls the existing product research action under PRODUCT_UPDATE. It
+returns a title, body, source links and uncertainty notes without changing the
+form. “Duyệt và điền vào Content” applies the displayed title and body to the
+same editor snapshot once. A different editor or changed form requires a new
+draft. Drafts stay in browser memory and cannot be replayed from chat history.
+The existing media save and publish controls retain their separate semantics.
+
+## Personal work today
+
+For a request to list today's personal work, the worker calls
+`personalWork.today` with no arguments. The leased conversation owner is
+the only account used by the server. The lookup requires TASK_VIEW and
+uses the same owner/share scope as the Personal Work page. It returns
+bounded open work through the end of today in Asia/Ho_Chi_Minh, including
+overdue and unscheduled work, with no notes or actions. Empty results and
+truncation are distinct. Existing permission checks apply to the reply
+and its task references before delivery and history display.

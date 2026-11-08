@@ -1,5 +1,7 @@
 "use client";
 
+import { currentMediaEditor, registerMediaEditor, type MediaEditor } from "@/domains/ai-assistant/media-editor";
+import { suggestWatchSpecWithOpenAIAction } from "./form/watch-ai-spec.actions";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BookOpen, Camera, ClipboardList, Images } from "lucide-react";
@@ -440,6 +442,52 @@ export default function WatchFormClient({
       setActiveMediaSection("image");
     }
   }, [focus, isMediaMode]);
+  useEffect(() => {
+    if (!isMediaMode || !values.productId) return;
+    const editor: MediaEditor = {
+      productId: values.productId,
+      title: values.basic.title,
+      sku: values.header.sku,
+      section: {basic: "Thông tin chính", content: "Content", image: "Hình ảnh", cover: "Cover storefront"}[activeMediaSection],
+      async draft() {
+        const snapshot = valuesRef.current;
+        if (snapshot.productId !== editor.productId) throw new Error("Sản phẩm đang mở đã thay đổi.");
+        const imageKeys = [
+          snapshot.media.inlineImage?.key,
+          ...snapshot.media.galleryImages.map(image => image.key),
+          ...snapshot.media.poolImages.map(image => image.key),
+        ].filter((key): key is string => Boolean(key));
+        const suggestion = await suggestWatchSpecWithOpenAIAction({
+          current: {basic: snapshot.basic, spec: snapshot.spec},
+          brandName: snapshot.basic.brandName ?? "",
+          availableBrandNames: brandOptions.map(brand => brand.name),
+          imageKeys,
+          draftContent: true,
+        });
+        const content = suggestion.contentDraft;
+        if (!content) throw new Error("Ben chưa tạo được bản nháp nội dung.");
+        let applied = false;
+        return {
+          title: content.contentTitle,
+          body: content.contentBody,
+          notes: suggestion.confidenceNotes,
+          sources: suggestion.researchSources.filter(source => source.url.startsWith("https://")),
+          apply() {
+            if (applied || valuesRef.current !== snapshot || currentMediaEditor(window.parent) !== editor) return false;
+            applied = true;
+            setValues(current => current === snapshot ? {
+              ...current,
+              content: {...current.content, titleOverride: content.contentTitle, body: content.contentBody},
+            } : current);
+            setActiveMediaSection("content");
+            return true;
+          },
+        };
+      },
+    };
+    return registerMediaEditor(editor);
+  }, [isMediaMode, values.productId, values.basic.title, values.header.sku, activeMediaSection, brandOptions]);
+
   const returnTo =
     searchParams.get("returnTo") ||
     (isMediaMode

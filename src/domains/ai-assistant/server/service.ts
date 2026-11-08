@@ -23,6 +23,7 @@ import { newConversation } from "../simulation";
 import { assistantProductCards } from "./product-images";
 import type { CustomerRequest } from "../customer-request";
 import { AssistantError, assistantActor, assistantRecipient } from "./access";
+import { personalWorkViewAccessWhere } from "@/domains/personal-work/server/personal-work-access";
 import { LOOKUP_PERMISSIONS, assistantCapabilities, hasAssistantPermission, lookupAllowed, planDeniedReason } from "../capabilities";
 import { normalizeBenImage } from "./image-search";
 import { BEN_IMAGE_LOOKUPS } from "../image-search";
@@ -45,6 +46,8 @@ async function visibleTask(db:DB,id:string,actor:Actor){
  if(!hasAssistantPermission(actor,"TASK_VIEW"))return null;
  const item=await db.taskItem.findUnique({where:{id},select:{id:true,status:true,note:true,userId:true,assignedToUserId:true,task:{select:{kind:true,createdByUserId:true,assignedToUserId:true}}}});
  if(!item)return null;
+ const personal=await db.taskItem.findFirst({where:{id,...personalWorkViewAccessWhere(actor.id)},select:{id:true}});
+ if(personal)return {id:item.id,status:item.status};
  try{authorizeTaskItemDetail(item,{user:{id:actor.id},roles:actor.roles.map(r=>r.name),permissions:[...actor.permissions]});return {id:item.id,status:item.status};}catch{return null;}
 }
 async function authorizedHistory(db:DB,s:State,actor:Actor){
@@ -54,6 +57,8 @@ async function authorizedHistory(db:DB,s:State,actor:Actor){
  const readable=new Set<string>();
  if(hasAssistantPermission(actor,"TASK_VIEW")&&ids.length){
   const rows=await db.taskItem.findMany({where:{id:{in:ids}},select:{id:true,note:true,userId:true,assignedToUserId:true,task:{select:{kind:true,createdByUserId:true,assignedToUserId:true}}}});
+  const personal=await db.taskItem.findMany({where:{id:{in:ids},...personalWorkViewAccessWhere(actor.id)},select:{id:true}});
+  for(const item of personal)readable.add(item.id);
   for(const item of rows){try{authorizeTaskItemDetail(item,{user:{id:actor.id},roles:actor.roles.map(r=>r.name),permissions:[...actor.permissions]});readable.add(item.id);}catch{/* No task data leaves this authorization boundary. */}}
  }
  return messages.map(m=>m.role==="assistant"&&m.requiredTaskIds?.some(id=>!readable.has(id))?{id:m.id,role:m.role,text:"Nội dung công việc này không còn nằm trong phạm vi được phép của bạn.",requiredPermissions:[]}:m);
@@ -182,6 +187,15 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
      if(request.tool==="navigation.open"){
        const latest=state(row).messages.filter(m=>m.role==="user").at(-1);
        result=resolveNavigation(request.query,request.intent,latest?.id,actor);
+     }else if(request.tool==="personalWork.today"){
+       const offset=7*60*60*1000, day=24*60*60*1000;
+       const start=Math.floor((Date.now()+offset)/day)*day-offset;
+       const items=await tx.taskItem.findMany({
+         where:{...personalWorkViewAccessWhere(actor.id),status:{notIn:["DONE","CANCELLED"]},OR:[{dueAt:null},{dueAt:{lt:new Date(start+day)}}]},
+         orderBy:[{dueAt:{sort:"asc",nulls:"last"}},{id:"asc"}],
+         take:13,select:{id:true,title:true,status:true,dueAt:true},
+       });
+       result={items:items.slice(0,12).map(item=>({...item,dueAt:item.dueAt?.toISOString()??null,title:item.title.slice(0,180)})),truncated:items.length>12,date:new Date(start+offset).toISOString().slice(0,10),timeZone:"Asia/Ho_Chi_Minh"};
      }else if(request.tool==="watches.images"){
        const cards=await assistantProductCards(tx,[request.productId]);const card=cards[0];result=card?{productId:card.id,title:card.title,sku:card.sku,imageCount:card.images.length,displayedInChat:true}:{productId:request.productId,imageCount:0,displayedInChat:false};
      }else if(request.tool==="people.search"){
@@ -232,7 +246,7 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    if(body.codePlan)throw new AssistantError("Cần đọc code trước khi chuẩn bị yêu cầu sửa.",409);
    const inherited=state(row).turnReadScope||{permissions:[],taskIds:[]};
    const required=[...new Set([...inherited.permissions,...evidence(row).flatMap(e=>LOOKUP_PERMISSIONS[e.request.tool]||[])])];
-   const scopedTaskIds=[...new Set([...inherited.taskIds,...evidence(row).flatMap(e=>e.request.tool==="work.open"?(e.result.openWatchWork as {id:string}[]||[]).map(t=>t.id):[])])];
+   const scopedTaskIds=[...new Set([...inherited.taskIds,...evidence(row).flatMap(e=>e.request.tool==="work.open"?(e.result.openWatchWork as {id:string}[]||[]).map(t=>t.id):e.request.tool==="personalWork.today"?(e.result.items as {id:string}[]||[]).map(t=>t.id):[])])];
    const scopeRevoked=!hasAssistantPermission(actor,"TASK_VIEW_ALL")&&(await Promise.all(scopedTaskIds.map(id=>visibleTask(tx,id,actor)))).some(t=>!t);
    const revoked=scopeRevoked||required.some(p=>!hasAssistantPermission(actor,p));
    if(revoked)reply="Quyền của bạn đã thay đổi trong lúc xử lý. Mình chưa thể trả dữ liệu hoặc thực hiện thao tác đó; bạn có thể tiếp tục trao đổi.";
