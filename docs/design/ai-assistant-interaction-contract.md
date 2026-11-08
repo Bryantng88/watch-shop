@@ -200,3 +200,14 @@ form. “Duyệt và điền vào Content” applies the displayed title and bod
 same editor snapshot once. A different editor or changed form requires a new
 draft. Drafts stay in browser memory and cannot be replayed from chat history.
 The existing media save and publish controls retain their separate semantics.
+
+## Personal work today
+
+For a request to list today's personal work, the worker calls
+`personalWork.today` with no arguments. The leased conversation owner is
+the only account used by the server. The lookup requires TASK_VIEW and
+uses the same owner/share scope as the Personal Work page. It returns
+bounded open work through the end of today in Asia/Ho_Chi_Minh, including
+overdue and unscheduled work, with no notes or actions. Empty results and
+truncation are distinct. Existing permission checks apply to the reply
+and its task references before delivery and history display.
