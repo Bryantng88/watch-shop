@@ -449,6 +449,21 @@ export default function WatchFormClient({
       title: values.basic.title,
       sku: values.header.sku,
       section: {basic: "Thông tin chính", content: "Content", image: "Hình ảnh", cover: "Cover storefront"}[activeMediaSection],
+      async inspect() {
+        const snapshot = valuesRef.current;
+        if (snapshot.productId !== editor.productId) throw new Error("Sản phẩm đang mở đã thay đổi.");
+        const key = snapshot.media.inlineImage?.key;
+        if (!key) throw new Error("Form của chiếc này chưa có ảnh inline.");
+        const result = await suggestWatchSpecWithOpenAIAction({
+          current: {basic: snapshot.basic, spec: snapshot.spec},
+          brandName: snapshot.basic.brandName ?? "",
+          availableBrandNames: [],
+          imageKeys: [key],
+          inspectInline: true,
+        });
+        if (!result.observation) throw new Error("Ben chưa đọc được chi tiết trong ảnh inline.");
+        return result.observation;
+      },
       async draft() {
         const snapshot = valuesRef.current;
         if (snapshot.productId !== editor.productId) throw new Error("Sản phẩm đang mở đã thay đổi.");
@@ -470,7 +485,7 @@ export default function WatchFormClient({
         return {
           title: content.contentTitle,
           body: content.contentBody,
-          notes: suggestion.confidenceNotes,
+          notes: suggestion.confidenceNotes.slice(0, 2),
           sources: suggestion.researchSources.filter(source => source.url.startsWith("https://")),
           apply() {
             if (applied || valuesRef.current !== snapshot || currentMediaEditor(window.parent) !== editor) return false;

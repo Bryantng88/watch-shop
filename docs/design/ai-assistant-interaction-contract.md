@@ -221,3 +221,8 @@ The result authorizes preparation only. Only the originating browser may start
 research, once, while the same editor is open. Historical results cannot trigger
 research. The editor supplies its inline photo and applies the draft only after
 the existing explicit review.
+
+Media inspection uses media.inspect with the same turn binding and permissions.
+It sends only the inline photo for visual observations. It does not run web
+research or create an editable draft. Content research keeps source links out
+of the body and separates uncertain facts from approved copy.

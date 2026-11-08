@@ -90,3 +90,9 @@ test('media draft binds to a message UUID and carries no product or write fields
  assert.throws(()=>validateCustomerTurn({...lookup,query:'watch-id'}));
  assert.throws(()=>validateCustomerTurn({...lookup,productId:'watch-id'}));
 });
+
+test('inline inspection uses the same message binding without a write plan',()=>{
+ const lookup={...finish,type:'lookup',tool:'media.inspect',query:'01a19bf6-832c-79d1-9457-a587e6de4b30',reply:null};
+ assert.deepEqual(validateCustomerTurn(lookup),{type:'lookup',lookup:{tool:'media.inspect',query:lookup.query}});
+ assert.throws(()=>validateCustomerTurn({...lookup,plan:{}}));
+});

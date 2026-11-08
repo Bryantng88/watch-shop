@@ -3,7 +3,7 @@
 import {useCallback, useEffect, useRef, useState} from "react";
 import {currentMediaEditor, type MediaDraft, type MediaEditor} from "./media-editor";
 
-export default function BenMediaReview({editor, requestKey}: {editor: MediaEditor; requestKey?: string}) {
+export default function BenMediaReview({editor, requestKey, mode}: {editor: MediaEditor; requestKey?: string; mode?: "draft" | "inspect"}) {
   const [review, setReview] = useState<{editor: MediaEditor; draft: MediaDraft}>();
   const draft = review?.editor === editor ? review.draft : undefined;
   const [pending, setPending] = useState(false);
@@ -11,15 +11,20 @@ export default function BenMediaReview({editor, requestKey}: {editor: MediaEdito
 
   const consumed=useRef<string | undefined>(undefined);
   const inFlight=useRef(false);
-  const research=useCallback(async () => {
+  const research=useCallback(async (inspect = false) => {
     if(inFlight.current)return;
     inFlight.current=true;
     setPending(true);
     setReview(undefined);
     setNotice("");
     try {
-      const result = await editor.draft();
-      if (currentMediaEditor() === editor) setReview({editor, draft: result});
+      if(inspect){
+        const observation=await editor.inspect();
+        if(currentMediaEditor()===editor)setNotice(observation);
+      }else{
+        const result=await editor.draft();
+        if(currentMediaEditor()===editor)setReview({editor,draft:result});
+      }
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Ben chưa chuẩn bị được nội dung.");
     } finally {
@@ -31,8 +36,8 @@ export default function BenMediaReview({editor, requestKey}: {editor: MediaEdito
   useEffect(()=>{
     if(!requestKey||consumed.current===requestKey)return;
     consumed.current=requestKey;
-    void research();
-  },[requestKey,research]);
+    void research(mode === "inspect");
+  },[requestKey,research,mode]);
 
   return <section aria-label="Xử lý media với Ben" className="max-h-[40dvh] shrink-0 space-y-2 overflow-y-auto rounded-xl border border-blue-100 p-3 text-sm">
     <p className="font-medium">Xử lý media · {editor.title}</p>
