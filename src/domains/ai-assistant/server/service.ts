@@ -187,6 +187,11 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
      if(request.tool==="navigation.open"){
        const latest=state(row).messages.filter(m=>m.role==="user").at(-1);
        result=resolveNavigation(request.query,request.intent,latest?.id,actor);
+     }else if(request.tool==="media.draft"){
+       const current=state(row), latest=current.messages.filter(m=>m.role==="user").at(-1);
+       const {screen}=await resolveCurrentScreen(tx,actor,current.screenHint,latest?.id);
+       const productId=screen?.entity?.kind==="WATCH"&&screen.path.endsWith("/edit")&&screen.entity.id===current.pinnedProductId?screen.entity.id:null;
+       result=productId&&latest?.id===request.query?{productId,sourceMessageId:latest.id}:{lookupRejected:true,reason:"Hãy mở Xử lý media của đúng sản phẩm rồi gửi lại yêu cầu."};
      }else if(request.tool==="personalWork.today"){
        const offset=7*60*60*1000, day=24*60*60*1000;
        const start=Math.floor((Date.now()+offset)/day)*day-offset;
@@ -210,6 +215,8 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
      const entry={request,result};await tx.customerAssistantConversation.update({where:{id},data:{evidence:json(prior?entries.map(e=>e===prior?entry:e):[...entries,entry])}});return {evidence:entry};
    }
    if(operation!=="finish")throw new AssistantError("Lệnh không hợp lệ.");
+   const mediaEntry=evidence(row).find(e=>e.request.tool==="media.draft");
+   if(body.failed!==true&&mediaEntry&&(body.plan||body.orderPlan||body.codePlan||body.permissionRequest||body.missingPermission||body.unsupportedCapability))throw new AssistantError("Media draft must be completed separately.");
    const navigationEntry=[...evidence(row)].reverse().find(e=>e.request.tool==="navigation.open");
    if(body.failed!==true&&navigationEntry&&(body.plan||body.orderPlan||body.permissionRequest||body.missingPermission||body.unsupportedCapability))throw new AssistantError("Navigation must be completed separately from business reviews or permission requests.");
    const failed=body.failed===true;let reply=typeof body.reply==="string"?body.reply.trim().slice(0,1500):"";if(!reply&&!failed)throw new AssistantError("Thiếu câu trả lời.");
@@ -279,8 +286,11 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    const navigationResult=!failed&&navigationEntry?.request.tool==="navigation.open"?resolveNavigation(navigationEntry.request.query,navigationEntry.request.intent,s.messages.filter(m=>m.role==="user").at(-1)?.id,actor):undefined;
    if(navigationResult?.allowed&&navigationEntry?.result.allowed!==true){navigationResult.allowed=false;navigationResult.code="RETRY_REQUIRED";navigationResult.reason="Yêu cầu trước chưa được chấp nhận. Bạn gửi lại yêu cầu mở màn hình nhé.";}
    if(navigationResult&&!revoked)reply=navigationResult.reason;
+   const mediaResult=!failed&&!revoked&&!navigationEntry&&mediaEntry?.result;
+   if(mediaResult)reply=typeof mediaResult.productId==="string"?"Mình sẽ dùng ảnh trong form media để tra cứu và chuẩn bị bản nháp cho bạn duyệt.":"Hãy mở Xử lý media của đúng sản phẩm rồi gửi lại yêu cầu.";
    const next=message(s,failed?"Codex chưa hoàn tất lượt này. Bạn có thể nhắn lại để thử tiếp; chưa giao thêm việc.":reply,revoked||support?[]:orderDraft?[...new Set([...required,...orderPermissions(orderDraft.plan)])]:required);
    if(navigationResult&&!revoked&&navigationEntry?.request.tool==="navigation.open"){const m=next.messages[next.messages.length-1];m.navigationResult={code:navigationResult.code};if(navigationResult.allowed){m.navigationKey=navigationEntry!.request.query;m.navigationRequestKey=s.messages.filter(m=>m.role==="user").at(-1)?.id;}}
+   if(mediaResult&&typeof mediaResult.productId==="string"&&typeof mediaResult.sourceMessageId==="string")next.messages[next.messages.length-1].mediaDraftRequest={productId:mediaResult.productId,sourceMessageId:mediaResult.sourceMessageId};
    if(codeScope&&canReadRepository(actor))next.messages[next.messages.length-1].repositoryAccess=true;
    delete next.turnRepositoryAccess;
    if(!failed&&!revoked&&!support&&scopedTaskIds.length)next.messages[next.messages.length-1].requiredTaskIds=scopedTaskIds;

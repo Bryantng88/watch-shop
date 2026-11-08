@@ -9,6 +9,7 @@ export const assistantPlanSchema=z.object({customerId:id.nullable(),productId:id
 });
 export type AssistantPlan=z.infer<typeof assistantPlanSchema>;
 export const assistantLookupSchema=z.discriminatedUnion("tool",[
+ z.object({tool:z.literal("media.draft"),query:z.string().uuid()}).strict(),
  z.object({tool:z.literal("personalWork.today")}).strict(),
  z.object({tool:z.literal("repository.info")}).strict(),
  z.object({tool:z.literal("repository.history")}).strict(),

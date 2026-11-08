@@ -15,6 +15,7 @@
         "null"
       ],
       "enum": [
+        "media.draft",
         "personalWork.today",
         "repository.info",
         "repository.history",

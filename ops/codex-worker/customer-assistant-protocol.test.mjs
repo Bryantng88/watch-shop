@@ -82,3 +82,11 @@ test('personal work lookup accepts no account or query arguments',()=>{
  assert.throws(()=>validateCustomerTurn({...lookup,query:'other-user'}));
  assert.throws(()=>validateCustomerTurn({...lookup,customerId:'other-user'}));
 });
+
+test('media draft binds to a message UUID and carries no product or write fields',()=>{
+ const source='01a19bf6-832c-79d1-9457-a587e6de4b30';
+ const lookup={...finish,type:'lookup',tool:'media.draft',query:source,reply:null};
+ assert.deepEqual(validateCustomerTurn(lookup),{type:'lookup',lookup:{tool:'media.draft',query:source}});
+ assert.throws(()=>validateCustomerTurn({...lookup,query:'watch-id'}));
+ assert.throws(()=>validateCustomerTurn({...lookup,productId:'watch-id'}));
+});
