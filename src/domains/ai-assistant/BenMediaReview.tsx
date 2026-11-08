@@ -1,65 +1,71 @@
 "use client";
 
-import {useCallback, useEffect, useRef, useState} from "react";
-import {currentMediaEditor, type MediaDraft, type MediaEditor} from "./media-editor";
+import {useCallback, useEffect, useRef, useState, type RefObject} from "react";
+import {currentMediaEditor, type MediaEditor} from "./media-editor";
 
-export default function BenMediaReview({editor, requestKey, mode}: {editor: MediaEditor; requestKey?: string; mode?: "draft" | "inspect"}) {
-  const [review, setReview] = useState<{editor: MediaEditor; draft: MediaDraft}>();
-  const draft = review?.editor === editor ? review.draft : undefined;
-  const [pending, setPending] = useState(false);
-  const [notice, setNotice] = useState("");
-
+export default function BenMediaReview({editor, requestKey, mode, insightReply}: {
+  editor: MediaEditor;
+  requestKey?: string;
+  mode?: "draft" | "inspect";
+  insightReply: RefObject<((text:string)=>void)|null>;
+}) {
+  const [asking,setAsking]=useState(false);
+  const [pending,setPending]=useState(false);
+  const [notice,setNotice]=useState("");
   const consumed=useRef<string | undefined>(undefined);
   const inFlight=useRef(false);
-  const research=useCallback(async (inspect = false) => {
-    if(inFlight.current)return;
+
+  const research=useCallback(async (inspect:boolean, insight?:string) => {
+    if(inFlight.current||currentMediaEditor()!==editor)return;
     inFlight.current=true;
     setPending(true);
-    setReview(undefined);
     setNotice("");
     try {
       if(inspect){
         const observation=await editor.inspect();
         if(currentMediaEditor()===editor)setNotice(observation);
       }else{
-        const result=await editor.draft();
-        if(currentMediaEditor()===editor)setReview({editor,draft:result});
+        const draft=await editor.draft(insight);
+        if(currentMediaEditor()===editor){
+          setNotice("Bản nháp đã sẵn sàng trong tab Content.");
+          editor.showDraft(draft);
+        }
       }
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Ben chưa chuẩn bị được nội dung.");
-    } finally {
+    }catch(error){
+      setNotice(error instanceof Error?error.message:"Ben chưa chuẩn bị được nội dung.");
+    }finally{
       inFlight.current=false;
       setPending(false);
     }
   },[editor]);
 
+  const answer=useCallback((text:string)=>{
+    insightReply.current=null;
+    setAsking(false);
+    void research(false,text);
+  },[insightReply,research]);
+
+  useEffect(()=>{
+    if(!asking)return;
+    insightReply.current=answer;
+    return ()=>{if(insightReply.current===answer)insightReply.current=null;};
+  },[asking,answer,insightReply]);
+
   useEffect(()=>{
     if(!requestKey||consumed.current===requestKey)return;
     consumed.current=requestKey;
-    void research(mode === "inspect");
+    if(mode==="inspect")void research(true);
+    else setAsking(true);
   },[requestKey,research,mode]);
 
-  return <section aria-label="Xử lý media với Ben" className="max-h-[40dvh] shrink-0 space-y-2 overflow-y-auto rounded-xl border border-blue-100 p-3 text-sm">
+  return <section aria-label="Xử lý media với Ben" className="shrink-0 space-y-1 border-y border-blue-100 px-4 py-2 text-xs">
     <p className="font-medium">Xử lý media · {editor.title}</p>
-    <p className="text-xs text-slate-500">{editor.sku} · {editor.section}</p>
-    {draft ? <>
-      <p className="font-medium">{draft.title}</p>
-      <p className="whitespace-pre-wrap break-words">{draft.body}</p>
-      {!!draft.notes.length && <p className="text-xs text-amber-800">Cần kiểm tra. {draft.notes.join(" ")}</p>}
-      <ul className="text-xs text-indigo-700">{draft.sources.map(source =>
-        <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer" className="underline">{source.title}</a></li>
-      )}</ul>
-      <div className="flex gap-2">
-        <button type="button" className="rounded-lg bg-indigo-700 px-3 py-2 text-white" onClick={() => {
-          const applied = currentMediaEditor() === editor && draft.apply();
-          setReview(undefined);
-          setNotice(applied ? "Đã điền vào tab Content. Bạn có thể lưu bản nháp trong form." : "Form đã thay đổi. Hãy tạo bản nháp mới.");
-        }}>Duyệt và điền vào Content</button>
-        <button type="button" onClick={() => setReview(undefined)}>Bỏ bản nháp</button>
-      </div>
-    </> : <button type="button" disabled={pending} onClick={() => void research()} className="rounded-lg border px-3 py-2 text-indigo-700 disabled:opacity-50">
-      {pending ? "Ben đang tra cứu…" : "Tra cứu và viết nội dung"}
+    {asking ? <div className="space-y-1">
+      <p>Ở chiếc này, bạn ấn tượng nhất điểm gì? Nhắn Ben một câu để mình chọn góc viết.</p>
+      <button type="button" onClick={()=>answer("")} className="text-indigo-700 underline">Để Ben tự chọn</button>
+    </div> : <button type="button" disabled={pending} onClick={()=>setAsking(true)} className="text-indigo-700 underline disabled:opacity-50">
+      {pending?"Ben đang xử lý…":"Tra cứu và viết nội dung"}
     </button>}
-    {notice && <p role="status" className="text-xs">{notice}</p>}
+    {notice&&<p role="status">{notice}</p>}
   </section>;
 }

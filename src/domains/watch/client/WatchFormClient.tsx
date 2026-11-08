@@ -1,6 +1,7 @@
 "use client";
 
-import { currentMediaEditor, registerMediaEditor, type MediaEditor } from "@/domains/ai-assistant/media-editor";
+import { currentMediaEditor, registerMediaEditor, type MediaDraft, type MediaEditor } from "@/domains/ai-assistant/media-editor";
+import BenContentPreview from "../ui/edit/BenContentPreview";
 import { suggestWatchSpecWithOpenAIAction } from "./form/watch-ai-spec.actions";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -410,6 +411,7 @@ export default function WatchFormClient({
       searchParams.get("mediaCoverDone") === "1" ||
       Boolean(initialValues.media.coverImage),
   });
+  const [mediaDraft, setMediaDraft] = useState<{productId: string; draft: MediaDraft}>();
   const [activeMediaSection, setActiveMediaSection] = useState<
     "basic" | "content" | "image" | "cover"
   >("basic");
@@ -464,7 +466,11 @@ export default function WatchFormClient({
         if (!result.observation) throw new Error("Ben chưa đọc được chi tiết trong ảnh inline.");
         return result.observation;
       },
-      async draft() {
+      showDraft(draft) {
+        setMediaDraft({productId: editor.productId,draft});
+        setActiveMediaSection("content");
+      },
+      async draft(insight) {
         const snapshot = valuesRef.current;
         if (snapshot.productId !== editor.productId) throw new Error("Sản phẩm đang mở đã thay đổi.");
         const imageKeys = [
@@ -478,6 +484,7 @@ export default function WatchFormClient({
           availableBrandNames: brandOptions.map(brand => brand.name),
           imageKeys,
           draftContent: true,
+          editorialInsight: insight,
         });
         const content = suggestion.contentDraft;
         if (!content) throw new Error("Ben chưa tạo được bản nháp nội dung.");
@@ -488,7 +495,7 @@ export default function WatchFormClient({
           notes: suggestion.confidenceNotes.slice(0, 2),
           sources: suggestion.researchSources.filter(source => source.url.startsWith("https://")),
           apply() {
-            if (applied || valuesRef.current !== snapshot || currentMediaEditor(window.parent) !== editor) return false;
+            if (applied || valuesRef.current !== snapshot || currentMediaEditor(window.parent)?.productId !== editor.productId) return false;
             applied = true;
             setValues(current => current === snapshot ? {
               ...current,
@@ -2077,7 +2084,10 @@ export default function WatchFormClient({
               <div ref={basicRef}>{basicSection}</div>
             ) : null}
             {activeMediaSection === "content" ? (
-              <div ref={contentRef}>{contentSection}</div>
+              <div ref={contentRef}>
+                {mediaDraft?.productId === values.productId && <BenContentPreview draft={mediaDraft.draft} onDismiss={() => setMediaDraft(undefined)} />}
+                {contentSection}
+              </div>
             ) : null}
             {activeMediaSection === "image" || activeMediaSection === "cover" ? (
               <div ref={imageRef}>{imageSection}</div>
