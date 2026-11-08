@@ -12,7 +12,8 @@ export type MediaEditor = {
   sku: string;
   section: string;
   inspect: () => Promise<string>;
-  draft: () => Promise<MediaDraft>;
+  draft: (insight?: string) => Promise<MediaDraft>;
+  showDraft: (draft: MediaDraft) => void;
 };
 
 type Entry = {source: Window; editor: MediaEditor};

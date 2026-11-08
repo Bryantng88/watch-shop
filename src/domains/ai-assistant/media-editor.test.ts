@@ -14,6 +14,7 @@ test("Ben follows the mounted same-origin media frame and drops it on pagehide",
     sku: "SKU-A",
     section: "Content",
     inspect: async () => "Mặt số sáng",
+    showDraft: () => {},
     draft: async () => { throw new Error("Unused"); },
   };
   Object.defineProperty(globalThis, "window", {value: frame, configurable: true});

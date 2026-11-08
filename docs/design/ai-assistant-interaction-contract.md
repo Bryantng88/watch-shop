@@ -232,3 +232,9 @@ evidence-led angle and a bounded brief that distinguishes visible details,
 inventory facts and exact-reference research. A separate writing pass receives
 only that brief, with one of several opening approaches. Sources and uncertainty
 notes remain outside the copy. Approval still applies the displayed text once.
+
+Before drafting, Ben asks for one optional editorial impression using the
+existing composer. The impression shapes the angle and does not establish a
+technical fact. The draft opens in the active product's Content tab with
+sources and review notes collapsed. The existing one-click approval still
+fills the form and does not save or publish it.
