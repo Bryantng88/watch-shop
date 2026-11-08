@@ -24,6 +24,8 @@ import { assistantProductCards } from "./product-images";
 import type { CustomerRequest } from "../customer-request";
 import { AssistantError, assistantActor, assistantRecipient } from "./access";
 import { LOOKUP_PERMISSIONS, assistantCapabilities, hasAssistantPermission, lookupAllowed, planDeniedReason } from "../capabilities";
+import { normalizeBenImage } from "./image-search";
+import { BEN_IMAGE_LOOKUPS } from "../image-search";
 import { archiveApproved, readableMessages, workerHistory, type AssistantState } from "./conversation-state";
 import { LONG_SUPPORT_OFFER, SUPPORT_TITLE, permissionContact, permissionSummary } from "./permission-support";
 import { authorizeTaskItemDetail } from "@/domains/task/server/core/task-item-detail.service";
@@ -36,6 +38,7 @@ async function transaction<T>(fn:(tx:Tx)=>Promise<T>):Promise<T>{for(let attempt
 async function owned(db:DB,id:string,userId:string){const row=await db.customerAssistantConversation.findFirst({where:{id,ownerId:userId}});if(!row)throw new AssistantError("Không có quyền xem cuộc trao đổi này.",403);return row;}
 async function lock(tx:Tx,id:string){await tx.$queryRaw`SELECT "id" FROM "CustomerAssistantConversation" WHERE "id"=${id} FOR UPDATE`;}
 async function quota(tx:Tx,userId:string){const since=Date.now()-3600000;const configured=Number(process.env.CUSTOMER_AI_MAX_TURNS_PER_HOUR||30);const max=Number.isInteger(configured)&&configured>=1&&configured<=100?configured:30;const rows=await tx.customerAssistantConversation.findMany({where:{ownerId:userId,updatedAt:{gte:new Date(since)}},select:{state:true},take:101});const count=rows.reduce((sum,r)=>sum+((r.state as unknown as State).turnTimes||[]).filter(t=>new Date(t).getTime()>=since).length,0);if(rows.length>100||count>=max)throw new AssistantError("Bạn đã dùng hết lượt trợ lý trong giờ này. Hãy thử lại sau.",429);}
+function withoutImage(s:State){const next={...s};delete next.pendingImage;return next;}
 function message(s:State,text:string,requiredPermissions:string[]=[]){return {...s,messages:[...s.messages,{id:randomUUID(),role:"assistant" as const,text,requiredPermissions}]};}
 type Actor=Awaited<ReturnType<typeof assistantActor>>;
 async function visibleTask(db:DB,id:string,actor:Actor){
@@ -74,7 +77,7 @@ async function linkedRequest(db:DB,r:CustomerRequest,actor:Actor){
 }
 async function dto(row:CustomerAssistantConversation){
  const actor=await assistantActor(prisma,row.ownerId),s=structuredClone(state(row));
- delete s.turnRepositoryAccess;if(!canReadRepository(actor)){delete s.repositorySnapshot;delete s.codeDraft;delete s.codeJob;s.codeJobHistory=[];}else{if(s.codeJob)s.codeJob=publicCodeJob(s.codeJob);s.codeJobHistory=s.codeJobHistory?.map(publicCodeJob);}
+ delete s.pendingImage;delete s.turnRepositoryAccess;if(!canReadRepository(actor)){delete s.repositorySnapshot;delete s.codeDraft;delete s.codeJob;s.codeJobHistory=[];}else{if(s.codeJob)s.codeJob=publicCodeJob(s.codeJob);s.codeJobHistory=s.codeJobHistory?.map(publicCodeJob);}
  s.context=null;delete s.pinnedProductId;delete s.turnKeys;delete s.turnTimes;delete s.turnReadScope;delete s.permissionTaskIds;delete s.permissionDenied;if(!await supportScopeVisible(prisma,s,actor))delete s.permissionRequest;delete s.permissionRequestScope;s.messages=await authorizedHistory(prisma,s,actor);
  if(!hasAssistantPermission(actor,"ORDER_VIEW")||!hasAssistantPermission(actor,"PRODUCT_VIEW")){delete s.orderDraft;s.createdOrders=[];}else if(s.orderDraft?.plan.customerId&&!hasAssistantPermission(actor,"CUSTOMER_VIEW"))delete s.orderDraft;
  const canReadWork=hasAssistantPermission(actor,"PRODUCT_VIEW")&&hasAssistantPermission(actor,"TASK_VIEW");
@@ -89,9 +92,12 @@ async function dto(row:CustomerAssistantConversation){
  return {...s,updatedAt:row.updatedAt.toISOString(),revision:row.revision,runStatus:row.status,errorCode:row.errorCode,approved:!!row.approvedAt,capabilities:assistantCapabilities(actor)};
 }
 export async function listAssistant(userId:string,id?:string){await assistantActor(prisma,userId);const rows=id?[await owned(prisma,id,userId)]:await prisma.customerAssistantConversation.findMany({where:{ownerId:userId},orderBy:{updatedAt:"desc"},take:20});return {partial:!!id,conversations:await Promise.all(rows.map(row=>dto(row)))};}
-export async function sendAssistant(userId:string,input:{id?:string;requestKey:string;text:string;productId?:string|null;screenPath?:string|null}){
+export async function sendAssistant(userId:string,input:{id?:string;requestKey:string;text:string;productId?:string|null;screenPath?:string|null;imageBase64?:string}){
  const sender=await assistantActor(prisma,userId);
- const identityQuestion=accountQuestion(input.text);
+ if(input.imageBase64!==undefined&&(process.env.BEN_IMAGE_SEARCH_ENABLED!=="1"||!hasAssistantPermission(sender,"PRODUCT_VIEW")))
+   throw new AssistantError("Tài khoản chưa được phép tìm đồng hồ bằng ảnh.",403);
+ const image=input.imageBase64!==undefined?await normalizeBenImage(input.imageBase64):undefined;
+ const identityQuestion=!image&&accountQuestion(input.text);
  const screenPath=screenPathSchema.safeParse(input.screenPath);const screenHint=screenPath.success?{pathname:screenPath.data,requestKey:input.requestKey,receivedAt:new Date().toISOString()}:null;
  const id=await transaction(async tx=>{
    let row=input.id?await owned(tx,input.id,userId):await tx.customerAssistantConversation.findUnique({where:{firstRequestKey:input.requestKey}});
@@ -99,7 +105,7 @@ export async function sendAssistant(userId:string,input:{id?:string;requestKey:s
      if(["QUEUED","RUNNING"].includes(row.status))throw new AssistantError("Đang xử lý tin trước. Bạn có thể hủy hoặc đợi kết quả.",409);
      await quota(tx,userId);
      if(row.approvedAt){s=archiveApproved(s,row.approvedRevision);delete s.customerRequest;s.approved=false;}
-     let next:State={...s,screenHint,permissionDenied:false,pinnedProductId:hasAssistantPermission(sender,"PRODUCT_VIEW")?input.productId||null:null,messages:[...s.messages,{id:input.requestKey,role:"user",text:input.text}],turnKeys:[],turnTimes:[...(s.turnTimes||[]).filter(t=>new Date(t).getTime()>Date.now()-3600000),new Date().toISOString()]};
+     let next:State={...withoutImage(s),...(image?{pendingImage:image}:{}),screenHint,permissionDenied:false,pinnedProductId:hasAssistantPermission(sender,"PRODUCT_VIEW")?input.productId||null:null,messages:[...s.messages,{id:input.requestKey,role:"user",text:input.text}],turnKeys:[],turnTimes:[...(s.turnTimes||[]).filter(t=>new Date(t).getTime()>Date.now()-3600000),new Date().toISOString()]};
      if(identityQuestion){const actor=await assistantActor(tx,userId);delete next.orderDraft;delete next.permissionRequest;delete next.permissionRequestScope;next=message(next,accountReply(actor,actor.id===process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID),[]);}
      await tx.customerAssistantConversation.update({where:{id:row.id},data:{state:json(next),status:identityQuestion?"NEEDS_INFO":"QUEUED",revision:{increment:1},evidence:[],plan:Prisma.DbNull,approvedAt:null,approvedRevision:null,errorCode:null,leaseToken:null,leaseExpiresAt:null}});return row.id;
    }
@@ -107,17 +113,31 @@ export async function sendAssistant(userId:string,input:{id?:string;requestKey:s
    await quota(tx,userId);
    if(input.productId&&hasAssistantPermission(sender,"PRODUCT_VIEW")&&!await tx.product.findFirst({where:{id:input.productId,type:"WATCH"},select:{id:true}}))throw new AssistantError("Không tìm thấy watch đang xem.");
    let s=newConversation(null);s.messages=[{id:input.requestKey,role:"user",text:input.text}];s.title=input.text.slice(0,65);if(identityQuestion){const actor=await assistantActor(tx,userId);delete s.orderDraft;delete s.permissionRequest;s=message(s,accountReply(actor,actor.id===process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID),[]);}
-   const created=await tx.customerAssistantConversation.create({data:{id:s.id,ownerId:userId,firstRequestKey:input.requestKey,...(identityQuestion?{status:"NEEDS_INFO"}:{}),state:json({...s,screenHint,turnKeys:[input.requestKey],turnTimes:[new Date().toISOString()],pinnedProductId:hasAssistantPermission(sender,"PRODUCT_VIEW")?input.productId||null:null})}});return created.id;
+   const created=await tx.customerAssistantConversation.create({data:{id:s.id,ownerId:userId,firstRequestKey:input.requestKey,...(identityQuestion?{status:"NEEDS_INFO"}:{}),state:json({...s,...(image?{pendingImage:image}:{}),screenHint,turnKeys:[input.requestKey],turnTimes:[new Date().toISOString()],pinnedProductId:hasAssistantPermission(sender,"PRODUCT_VIEW")?input.productId||null:null})}});return created.id;
  });return dto(await owned(prisma,id,userId));
 }
-export async function cancelAssistant(userId:string,id:string){await assistantActor(prisma,userId);return transaction(async tx=>{await lock(tx,id);const row=await owned(tx,id,userId);if(["QUEUED","RUNNING"].includes(row.status))await tx.customerAssistantConversation.update({where:{id},data:{status:row.approvedAt?"APPLIED":"CANCELLED",leaseToken:null,leaseExpiresAt:null,plan:row.approvedAt?undefined:Prisma.DbNull,state:json(message(state(row),"Đã hủy lượt xử lý. Không giao thêm công việc."))}});return {ok:true};});}
+export async function cancelAssistant(userId:string,id:string){await assistantActor(prisma,userId);return transaction(async tx=>{await lock(tx,id);const row=await owned(tx,id,userId);if(["QUEUED","RUNNING"].includes(row.status))await tx.customerAssistantConversation.update({where:{id},data:{status:row.approvedAt?"APPLIED":"CANCELLED",leaseToken:null,leaseExpiresAt:null,plan:row.approvedAt?undefined:Prisma.DbNull,state:json(message(withoutImage(state(row)),"Đã hủy lượt xử lý. Không giao thêm công việc."))}});return {ok:true};});}
 async function leased(tx:Tx,id:string,token:string){const row=await tx.customerAssistantConversation.findFirst({where:{id,leaseToken:token,status:"RUNNING",leaseExpiresAt:{gt:new Date()}}});if(!row)throw new AssistantError("Lượt xử lý đã hết hiệu lực.",409);await assistantActor(tx,row.ownerId);return row;}
 export async function assistantWorker(operation:string,body:Record<string,unknown>){
  if(operation==="claim")return transaction(async tx=>{
-   const expired=await tx.customerAssistantConversation.findMany({where:{status:"RUNNING",leaseExpiresAt:{lt:new Date()}},take:20});for(const r of expired)await tx.customerAssistantConversation.update({where:{id:r.id},data:{status:r.approvedAt?"APPLIED":"FAILED",errorCode:"LEASE_EXPIRED",leaseToken:null}});
+   const expired=await tx.customerAssistantConversation.findMany({where:{status:"RUNNING",leaseExpiresAt:{lt:new Date()}},take:20});for(const r of expired)await tx.customerAssistantConversation.update({where:{id:r.id},data:{status:r.approvedAt?"APPLIED":"FAILED",errorCode:"LEASE_EXPIRED",leaseToken:null,state:json(withoutImage(state(r)))}});
    const row=await tx.customerAssistantConversation.findFirst({where:{status:"QUEUED"},orderBy:{updatedAt:"asc"}});if(!row)return {run:null};
-   let actor:Awaited<ReturnType<typeof assistantActor>>;try{actor=await assistantActor(tx,row.ownerId);}catch{await tx.customerAssistantConversation.update({where:{id:row.id},data:{status:row.approvedAt?"APPLIED":"FAILED",errorCode:"REQUESTER_UNAUTHORIZED"}});return {run:null};}
+   let actor:Awaited<ReturnType<typeof assistantActor>>;try{actor=await assistantActor(tx,row.ownerId);}catch{await tx.customerAssistantConversation.update({where:{id:row.id},data:{status:row.approvedAt?"APPLIED":"FAILED",errorCode:"REQUESTER_UNAUTHORIZED",state:json(withoutImage(state(row)))}});return {run:null};}
    const currentState=state(row);
+   if(currentState.pendingImage && (process.env.BEN_IMAGE_SEARCH_ENABLED!=="1" || !hasAssistantPermission(actor,"PRODUCT_VIEW") || body.imageInput!==true)){
+     const next=message(withoutImage(currentState),"Ben chưa thể xử lý ảnh trong lượt này. Bạn có thể tìm bằng tên hoặc mã đồng hồ.");
+     await tx.customerAssistantConversation.update({where:{id:row.id},data:{status:"FAILED",errorCode:"IMAGE_UNAVAILABLE",state:json(next)}});
+     return {run:null};
+   }
+   if(currentState.pendingImage){
+     const token=randomUUID();
+     await tx.customerAssistantConversation.update({where:{id:row.id},data:{status:"RUNNING",leaseToken:token,leaseExpiresAt:new Date(Date.now()+120000)}});
+     return {run:{id:row.id,leaseToken:token,imageBase64:currentState.pendingImage,text:JSON.stringify({
+       currentUserMessage:currentState.messages.filter(m=>m.role==="user").at(-1),
+       requester:{allowedLookups:BEN_IMAGE_LOOKUPS},
+       imageSearch:true,
+     })}};
+   }
    const {screen:currentScreen,permissions:screenPermissions}=await resolveCurrentScreen(tx,actor,currentState.screenHint,currentState.messages.filter(m=>m.role==="user").at(-1)?.id);
    const previousRequest=hasAssistantPermission(actor,"PRODUCT_VIEW")&&hasAssistantPermission(actor,"TASK_VIEW")&&currentState.customerRequest&&readableRequest(currentState.customerRequest,actor)?await linkedRequest(tx,currentState.customerRequest,actor):null;
    const approvedRequests=hasAssistantPermission(actor,"PRODUCT_VIEW")&&hasAssistantPermission(actor,"TASK_VIEW")?await Promise.all((currentState.approvedRequests||[]).filter(r=>readableRequest(r.request,actor)).slice(-8).map(async r=>{const r2=await linkedRequest(tx,r.request,actor);return {revision:r.revision,reference:r2.reference,watch:r2.watch,conditions:r2.conditions.map(c=>({requirement:c.requirement.slice(0,250),progress:c.progress,outcome:c.outcome}))}})):[];
@@ -139,6 +159,8 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    if(operation==="heartbeat"){await tx.customerAssistantConversation.update({where:{id},data:{leaseExpiresAt:new Date(Date.now()+120000)}});return {active:true};}
    if(operation==="lookup"){
      const request=assistantLookupSchema.parse(body.lookup),entries=evidence(row),actor=await assistantActor(tx,row.ownerId);
+     if(state(row).pendingImage && (process.env.BEN_IMAGE_SEARCH_ENABLED!=="1" || !BEN_IMAGE_LOOKUPS.some(tool=>tool===request.tool)))
+       throw new AssistantError("Lượt tìm bằng ảnh chỉ tra cứu đồng hồ.",403);
      if(isRepositoryLookup(request)){
        if(!canReadRepository(actor)){
          if(entries.length>=16)throw new AssistantError("Đã hết lượt tra cứu.");
@@ -178,6 +200,19 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    if(body.failed!==true&&navigationEntry&&(body.plan||body.orderPlan||body.permissionRequest||body.missingPermission||body.unsupportedCapability))throw new AssistantError("Navigation must be completed separately from business reviews or permission requests.");
    const failed=body.failed===true;let reply=typeof body.reply==="string"?body.reply.trim().slice(0,1500):"";if(!reply&&!failed)throw new AssistantError("Thiếu câu trả lời.");
    const actor=await assistantActor(tx,row.ownerId);
+   if(state(row).pendingImage){
+     const allowed=process.env.BEN_IMAGE_SEARCH_ENABLED==="1"&&hasAssistantPermission(actor,"PRODUCT_VIEW");
+     const s=withoutImage(state(row));
+     delete s.orderDraft;delete s.customerRequest;delete s.permissionRequest;delete s.permissionRequestScope;delete s.codeDraft;delete s.turnReadScope;delete s.turnRepositoryAccess;
+     const matches=evidence(row).some(entry=>entry.request.tool==="watches.search"&&Array.isArray(entry.result.matches)&&entry.result.matches.length>0);
+     const next=message(s,!allowed?"Quyền xem sản phẩm đã thay đổi. Ben không thể trả kết quả.":failed?"Ben chưa phân tích được ảnh. Bạn thử gửi lại ảnh rõ hơn nhé.":!matches?"Ben chưa tìm được ứng viên trong kho. Bạn có thể gửi ảnh rõ logo, mặt số hoặc mã ở nắp đáy.":reply,allowed?["PRODUCT_VIEW"]:[]);
+     if(allowed&&!failed&&matches){
+       const ids=evidence(row).flatMap(entry=>entry.request.tool==="watches.images"&&Number(entry.result.imageCount)>0?[entry.request.productId]:[]);
+       if(ids.length)next.messages[next.messages.length-1].imageProductIds=[...new Set(ids)].slice(0,6);
+     }
+     await tx.customerAssistantConversation.update({where:{id},data:{state:json(next),status:failed?"FAILED":"NEEDS_INFO",plan:Prisma.DbNull,errorCode:failed?"GENERATION_FAILED":null,leaseToken:null,leaseExpiresAt:null}});
+     return {accepted:true};
+   }
    const repositoryEntries=evidence(row).filter(e=>e.request.tool.startsWith("repository."));
    const codeScope=repositoryEntries.length>0||state(row).turnRepositoryAccess;
    if(repositoryEntries.length||(codeScope&&!canReadRepository(actor))){

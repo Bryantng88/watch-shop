@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { prisma as p } from "../src/server/db/client";
@@ -57,6 +58,27 @@ async function main(){
  const prospectReplay=await approveAssistant(owner.id,prospect.id,prospectPreview.revision,()=>{});
  assert.deepEqual(prospectApproved.customerRequest!.conditions.map(c=>c.linkedRef),prospectReplay.customerRequest!.conditions.map(c=>c.linkedRef));
  assert.equal(await p.customer.count(),customerCount);assert.equal(await p.order.count({where:{orderItem:{some:{productId:prospectWatch.id}}}}),0);
+ // Only the authorized worker receives the image, and its turn cannot propose writes.
+ process.env.BEN_IMAGE_SEARCH_ENABLED="1";
+ const photo=(await sharp({create:{width:40,height:40,channels:3,background:"#126383"}}).png().toBuffer()).toString("base64");
+ const imageInput={requestKey:randomUUID(),text:"Tìm mẫu đồng hồ từ ảnh",imageBase64:photo};
+ await assert.rejects(sendAssistant(staff.id,imageInput),/chưa được phép/);
+ await assert.rejects(sendAssistant(owner.id,{...imageInput,imageBase64:Buffer.from("not an image").toString("base64")}),/Ảnh chưa hợp lệ/);
+ const imageChat=await sendAssistant(owner.id,imageInput);
+ assert.ok(!("pendingImage" in imageChat));
+ const imageRun=(await assistantWorker("claim",{imageInput:true}) as {run:{id:string;leaseToken:string;imageBase64:string;text:string}}).run;
+ assert.equal(imageRun.id,imageChat.id);
+ assert.equal((await sharp(Buffer.from(imageRun.imageBase64,"base64")).metadata()).format,"jpeg");
+ assert.ok(!imageRun.text.includes(imageRun.imageBase64));
+ await assert.rejects(assistantWorker("lookup",{id:imageRun.id,leaseToken:imageRun.leaseToken,lookup:{tool:"customers.search",query:"Customer"}}),/chỉ tra cứu đồng hồ/);
+ await assistantWorker("lookup",{id:imageRun.id,leaseToken:imageRun.leaseToken,lookup:{tool:"watches.search",query:product.sku!}});
+ await assistantWorker("finish",{id:imageRun.id,leaseToken:imageRun.leaseToken,reply:"Có một ứng viên từ kho.",plan});
+ const imageResult=(await listAssistant(owner.id,imageChat.id)).conversations[0];
+ assert.equal(imageResult.runStatus,"NEEDS_INFO");
+ assert.ok(!imageResult.customerRequest&&!imageResult.orderDraft&&!imageResult.codeDraft);
+ const imageRow=await p.customerAssistantConversation.findUniqueOrThrow({where:{id:imageChat.id},select:{state:true}});
+ assert.ok(!JSON.stringify(imageRow.state).includes(imageRun.imageBase64));
+ console.log("PASS image search: scope, decoder, private worker handoff, read-only result and cleanup.");
  console.log("PASS assistant: permission/ownership, scripted model lookups, no writes before approval, concurrent idempotent approval, real technical issue+assigned task, separate condition outcome, cancellation fence, no orders/reservations. CLI execution was scripted, not real.");
 }
 main().catch(e=>{console.error(e instanceof Error?e.stack:"Assistant smoke failed");process.exitCode=1;}).finally(()=>p.$disconnect());
