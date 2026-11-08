@@ -10,6 +10,7 @@ test("Ben follows the mounted same-origin media frame and drops it on pagehide",
   });
   const editor: MediaEditor = {
     productId: "watch-a",
+    session: {},
     title: "Watch A",
     sku: "SKU-A",
     section: "Content",

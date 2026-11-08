@@ -8,7 +8,7 @@ import { complications } from "@/constants/constants";
 import { mediaStorage } from "@/domains/media/storage";
 import { requirePermission } from "@/server/auth/requirePermission";
 
-import { editorialBriefJsonSchema, editorialBriefSchema, editorialCopyJsonSchema, editorialCopySchema, editorialInstructions, researchPublisher } from "./watch-editorial";
+import { editorialBriefJsonSchema, editorialBriefSchema, editorialCopyJsonSchema, editorialCopySchema, editorialInstructions, researchPublisher, eligibleEditorialFacts } from "./watch-editorial";
 import type { WatchFormValues } from "./watch-form.types";
 
 const nullableString = z.string().nullable();
@@ -221,6 +221,8 @@ export async function suggestWatchSpecWithOpenAIAction(input: {
         "For complicationNames, return only values listed in availableComplications.",
         ...(!input.draftContent ? ["confidenceNotes must be short Vietnamese warnings for every uncertain or inferred value."] : []),
         ...(input.draftContent ? [
+          "Treat the inventory title, model and reference as leads unless confirmed by a legible matching marking. Never classify an inferred model name, diameter, calibre or era as VISIBLE or INVENTORY. A similar dial or two sources for a candidate model do not establish that the photographed watch is that model.",
+          "For VISIBLE facts describe specific observable details and how they are arranged, such as contrast between scale and dial, the geometry of indices or proportion of bezel to dial. Do not pad with vague adjectives.",
           "Search from photo clues first: transcribe the dial logo, visible dial text and case-back code if legible, then try separate exact-code and brand-plus-design queries. Internal shorthand such as AP pin is not a manufacturer reference.",
           "Compare manufacturer catalogs or manuals with independent archives, specialist databases or auction records. Product listings are leads and require corroboration. Prefer multiple independent publishers over mirrors or country variants of the same site.",
           "Use the editor insight to select the angle, not as independent verification for model identity, specifications or condition. If identity is unresolved, describe visible design and say what detail would resolve it in confidenceNotes.",
@@ -269,8 +271,8 @@ export async function suggestWatchSpecWithOpenAIAction(input: {
     const { editorialBrief } = z.object({ editorialBrief: editorialBriefSchema }).parse(output);
     const allSources = extractResearchSources(payload, 40);
     const sourceUrls = new Set(allSources.map(source => source.url));
-    const facts = editorialBrief.facts.filter(fact => fact.basis !== "EXACT_REFERENCE" ||
-      new Set(fact.sourceUrls.filter(url => sourceUrls.has(url)).map(researchPublisher)).size >= 2);
+    const hasInventoryReference = Boolean(input.current.spec.referenceNumber?.trim());
+    const facts = eligibleEditorialFacts(editorialBrief.facts, hasInventoryReference, sourceUrls);
     if (!facts.length) throw new Error("Ben chưa tìm được chi tiết đủ chắc để viết. Bạn có thể bổ sung ảnh rõ mặt số hoặc nắp đáy.");
     const supportingUrls = new Set(facts.flatMap(fact => fact.sourceUrls));
     const publishers = new Set<string>();
@@ -281,7 +283,7 @@ export async function suggestWatchSpecWithOpenAIAction(input: {
       publishers.add(publisher);
       return true;
     }).slice(0, 5);
-    const brief = { angle: editorialBrief.angle, facts: facts.map(({claim,basis}) => ({claim,basis})), editorInsight: currentFacts.editorInsight };
+    const brief = { identityUnconfirmed: !hasInventoryReference, angle: editorialBrief.angle, facts: facts.map(({claim,basis}) => ({claim,basis})), editorInsight: currentFacts.editorInsight };
     const copyResponse = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },

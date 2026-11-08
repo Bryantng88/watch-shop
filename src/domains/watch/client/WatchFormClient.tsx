@@ -411,6 +411,7 @@ export default function WatchFormClient({
       searchParams.get("mediaCoverDone") === "1" ||
       Boolean(initialValues.media.coverImage),
   });
+  const mediaSession = useMemo(() => ({productId: values.productId}), [values.productId]);
   const [mediaDraft, setMediaDraft] = useState<{productId: string; draft: MediaDraft}>();
   const [activeMediaSection, setActiveMediaSection] = useState<
     "basic" | "content" | "image" | "cover"
@@ -448,6 +449,7 @@ export default function WatchFormClient({
     if (!isMediaMode || !values.productId) return;
     const editor: MediaEditor = {
       productId: values.productId,
+      session: mediaSession,
       title: values.basic.title,
       sku: values.header.sku,
       section: {basic: "Thông tin chính", content: "Content", image: "Hình ảnh", cover: "Cover storefront"}[activeMediaSection],
@@ -467,8 +469,8 @@ export default function WatchFormClient({
         return result.observation;
       },
       showDraft(draft) {
-        setMediaDraft({productId: editor.productId,draft});
-        setActiveMediaSection("content");
+        setMediaDraft(draft ? {productId: editor.productId,draft} : undefined);
+        if (draft) setActiveMediaSection("content");
       },
       async draft(insight) {
         const snapshot = valuesRef.current;
@@ -495,7 +497,7 @@ export default function WatchFormClient({
           notes: suggestion.confidenceNotes.slice(0, 2),
           sources: suggestion.researchSources.filter(source => source.url.startsWith("https://")),
           apply() {
-            if (applied || valuesRef.current !== snapshot || currentMediaEditor(window.parent)?.productId !== editor.productId) return false;
+            if (applied || valuesRef.current !== snapshot || currentMediaEditor(window.parent)?.session !== editor.session) return false;
             applied = true;
             setValues(current => current === snapshot ? {
               ...current,
@@ -508,7 +510,7 @@ export default function WatchFormClient({
       },
     };
     return registerMediaEditor(editor);
-  }, [isMediaMode, values.productId, values.basic.title, values.header.sku, activeMediaSection, brandOptions]);
+  }, [isMediaMode, values.productId, values.basic.title, values.header.sku, activeMediaSection, brandOptions, mediaSession]);
 
   const returnTo =
     searchParams.get("returnTo") ||
