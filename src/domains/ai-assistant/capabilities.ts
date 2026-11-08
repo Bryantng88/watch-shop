@@ -8,6 +8,7 @@ export type AssistantAuthority = { id?:string; admin: boolean; permissions: Read
 export const LOOKUP_PERMISSIONS: Readonly<Record<string, readonly string[]>> = {
   "repository.info": [], "repository.history": [], "repository.tree": [], "repository.file": [], "repository.pullRequests": [],
   "navigation.open": [],
+  "media.inspect": ["PRODUCT_VIEW", "PRODUCT_UPDATE"],
   "media.draft": ["PRODUCT_VIEW", "PRODUCT_UPDATE"],
   "personalWork.today": ["TASK_VIEW"],
   "customers.search": ["CUSTOMER_VIEW"],

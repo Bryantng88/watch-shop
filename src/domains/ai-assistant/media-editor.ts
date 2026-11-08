@@ -11,6 +11,7 @@ export type MediaEditor = {
   title: string;
   sku: string;
   section: string;
+  inspect: () => Promise<string>;
   draft: () => Promise<MediaDraft>;
 };
 

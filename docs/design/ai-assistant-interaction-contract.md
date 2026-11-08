@@ -221,3 +221,14 @@ The result authorizes preparation only. Only the originating browser may start
 research, once, while the same editor is open. Historical results cannot trigger
 research. The editor supplies its inline photo and applies the draft only after
 the existing explicit review.
+
+Media inspection uses media.inspect with the same turn binding and permissions.
+It sends only the inline photo for visual observations. It does not run web
+research or create an editable draft. Content research keeps source links out
+of the body and separates uncertain facts from approved copy.
+
+Media content generation separates research from copy. Research selects an
+evidence-led angle and a bounded brief that distinguishes visible details,
+inventory facts and exact-reference research. A separate writing pass receives
+only that brief, with one of several opening approaches. Sources and uncertainty
+notes remain outside the copy. Approval still applies the displayed text once.
