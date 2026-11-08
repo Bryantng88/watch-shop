@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { editorialBriefSchema, editorialCopySchema, researchPublisher } from "./watch-editorial";
+import { editorialBriefSchema, editorialCopySchema, researchPublisher, eligibleEditorialFacts } from "./watch-editorial";
 
 test("editorial briefs require a sourced basis for each fact", () => {
   const fact = { claim: "Mặt số sáng, cọc vạch thẳng.", basis: "VISIBLE", sourceUrls: [] };
@@ -20,4 +20,14 @@ test("public copy strips citations and rejects a body containing only a citation
 test("regional subdomains of the same publisher count as one source", () => {
   assert.equal(researchPublisher("https://uk.bulova.com/watch"), researchPublisher("https://www.bulova.com/watch"));
   assert.equal(researchPublisher("https://www.example.co.uk/watch"), "example.co.uk");
+});
+
+test("research cannot supply exact model specs without an inventory reference", () => {
+  const visible = { claim: "Vòng phút sát mép", basis: "VISIBLE" as const, sourceUrls: [] };
+  const candidate = { claim: "A-11 Jimmy, 37 mm", basis: "EXACT_REFERENCE" as const, sourceUrls: [
+    "https://manufacturer.example/watch", "https://archive.example/watch",
+  ] };
+  const sources = new Set(candidate.sourceUrls);
+  assert.deepEqual(eligibleEditorialFacts([visible, candidate], false, sources), [visible]);
+  assert.deepEqual(eligibleEditorialFacts([visible, candidate], true, sources), [visible, candidate]);
 });

@@ -8,12 +8,13 @@ export type MediaDraft = {
 
 export type MediaEditor = {
   productId: string;
+  session: object;
   title: string;
   sku: string;
   section: string;
   inspect: () => Promise<string>;
   draft: (insight?: string) => Promise<MediaDraft>;
-  showDraft: (draft: MediaDraft) => void;
+  showDraft: (draft?: MediaDraft) => void;
 };
 
 type Entry = {source: Window; editor: MediaEditor};
