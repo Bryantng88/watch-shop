@@ -62,7 +62,8 @@ export function PersonalCalendarPreview({ event, item, children }: {
   const typeLabel = item?.workType
     ? isPersonalEvent(item.workType)?"Sự kiện":PERSONAL_WORK_TYPES[item.domain].find(type => type.key === item.workType)?.label || item.workType
     : item ? "Chưa chọn loại việc" : "Sự kiện Google";
-  const fallbackTitle = `${event.title}\nNhóm: ${item?.category.label || "Google Calendar"}\nLoại việc: ${typeLabel}\n${eventTime(event)}`;
+  const eventOnly = !!item && isPersonalEvent(item.workType);
+  const fallbackTitle = `${event.title}\n${eventOnly ? "Sự kiện" : `Nhóm: ${item?.category.label || "Google Calendar"}\nLoại việc: ${typeLabel}`}\n${eventTime(event)}`;
   return <span ref={anchor} className={styles.anchor} onMouseEnter={open} onMouseLeave={close}
     onClickCapture={click => { if (anchor.current?.contains(click.target as Node)) { cancelClose(); setPosition(null); } }}
     onFocusCapture={open} onBlurCapture={() => { cancelClose(); setPosition(null); }}
@@ -71,14 +72,14 @@ export function PersonalCalendarPreview({ event, item, children }: {
     {position && createPortal(<aside ref={preview} id={id} role="tooltip" className={styles.preview} style={position} onMouseEnter={cancelClose} onMouseLeave={close} onClick={click => click.stopPropagation()} onMouseDown={click => click.stopPropagation()}>
       <p className={styles.title}>{event.title}</p>
       <p className={styles.subline}>
-        {item?.category.label || "Google Calendar"}{item?.workType && <> · {typeLabel}</>}
+        {eventOnly ? "Sự kiện" : <>{item?.category.label || "Google Calendar"}{item?.workType && <> · {typeLabel}</>}</>}
       </p>
       <p className={styles.time}>{eventTime(event)}</p>
       {item && <div className={styles.footer}>
         <span>{isPersonalEvent(item.workType)?personalEventLabel(item.dueAt,item.scheduledEndAt,new Date(),item.estimatedDays):statusLabels[item.status]}</span>
         {item.checklist.length > 0 && <span>· {item.checklist.filter(entry => entry.isDone).length}/{item.checklist.length} đầu việc</span>}
-        {item.priority === "URGENT" && <span className="text-rose-600">· Khẩn</span>}
-        {item.priority === "HIGH" && <span className="text-amber-700">· Ưu tiên cao</span>}
+        {!eventOnly && item.priority === "URGENT" && <span className="text-rose-600">· Khẩn</span>}
+        {!eventOnly && item.priority === "HIGH" && <span className="text-amber-700">· Ưu tiên cao</span>}
         {item.access === "VIEWER" && <span>· Chỉ xem</span>}
       </div>}
       {event.location && <p className={styles.note} title={event.location}>{event.location}</p>}

@@ -252,7 +252,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
       workItems.filter((item) => {
         if (scope === "MINE" && item.access !== "OWNER") return false;
         if (scope === "SHARED" && item.access === "OWNER") return false;
-        if (domain !== "ALL" && item.category.key !== domain) return false;
+        if (domain !== "ALL" && !isPersonalEvent(item.workType) && item.category.key !== domain) return false;
         if(view==="EVENTS")return isPersonalEvent(item.workType);
         if(isPersonalEvent(item.workType)){
           if(view==="DONE")return false;
@@ -457,9 +457,9 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                   title: nextTitle,
                   tags: parsePersonalWorkTags(newTags),
                   domain: newDomain,
-                  categoryKey: newCategoryKey,
+                  categoryKey: isPersonalEvent(workType) ? "GENERAL" : newCategoryKey,
                   workType,
-                  targets: selectedTargets,
+                  targets: isPersonalEvent(workType) ? [] : selectedTargets,
                   ...(dueAt ? personalItemScheduleInput(dueAt, quickStartTime, quickEndTime, estimatedDays,isPersonalEvent(workType)) : { dueAt: null, scheduledEndAt: null }),
                   estimatedDays,
                 });
@@ -476,10 +476,12 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
             );
           }}
         >
-          <PersonalWorkKindField event={isPersonalEvent(workType)} onChange={event=>setWorkType(event?"EVENT":PERSONAL_WORK_TYPES[newDomain][0].key)}/>
           <AdminFlatToolbar
             className={createStyles.toolbar}
           >
+            <div className={createStyles.kind}>
+              <PersonalWorkKindField event={isPersonalEvent(workType)} onChange={event=>setWorkType(event?"EVENT":PERSONAL_WORK_TYPES[newDomain][0].key)}/>
+            </div>
             <input
               required
               value={title}
@@ -487,6 +489,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               placeholder={isPersonalEvent(workType)?"Tên sự kiện...":"Việc cần làm..."}
               className="h-11 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             />
+            {!isPersonalEvent(workType) && (
             <select
               value={newCategoryKey}
               onChange={(e) => { setNewCategoryKey(e.target.value); changeDomain(data.categories.find(c => c.key === e.target.value)?.domain || "GENERAL"); }}
@@ -498,6 +501,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                 </option>
               ))}
             </select>
+            )}
             {!isPersonalEvent(workType) && newDomain === "WORK" && (
               <select
                 aria-label="Loại công việc"
@@ -520,28 +524,6 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               className="h-11 rounded-lg border border-slate-200 px-3 text-sm"
             />
             <PersonalWorkTimeFields compact start={quickStartTime} end={quickEndTime} onChange={(start, end) => { setQuickStartTime(start); setQuickEndTime(end); }} />
-            <div className="flex min-w-0 gap-2">
-              <select
-                aria-label="Thời lượng dự kiến"
-                value={estimatedDays === 1 ? "ONE_DAY" : "MULTI_DAY"}
-                onChange={(event) => setEstimatedDays(event.target.value === "ONE_DAY" ? 1 : 2)}
-                className="h-11 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm"
-              >
-                <option value="ONE_DAY">Trong ngày</option>
-                <option value="MULTI_DAY">Nhiều ngày</option>
-              </select>
-              {estimatedDays > 1 && (
-                <input
-                  aria-label="Số ngày dự kiến"
-                  type="number"
-                  min={2}
-                  max={365}
-                  value={estimatedDays}
-                  onChange={(event) => setEstimatedDays(Math.max(2, Number(event.target.value) || 2))}
-                  className="h-11 w-20 rounded-lg border border-slate-200 px-3 text-sm"
-                />
-              )}
-            </div>
             <button
               type="submit"
               disabled={pending}
@@ -550,7 +532,38 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               {isPersonalEvent(workType)?"Thêm sự kiện":"Thêm việc"}
             </button>
           </AdminFlatToolbar>
-          <div className="mt-3"><PersonalWorkTagsField allowCodex={!isPersonalEvent(workType)} value={newTags} onChange={setNewTags} configuration={data.codex} /></div>
+          <details className="mt-2 text-xs text-slate-500">
+            <summary className="w-fit cursor-pointer rounded px-1 py-1 hover:text-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">
+              Tùy chọn{newTags.trim() || estimatedDays > 1 ? " · đã thiết lập" : ""}
+            </summary>
+            <div className="mt-2 grid max-w-xl gap-3 rounded-lg border border-slate-100 bg-slate-50/60 p-3">
+              <div className="grid gap-1.5"><span>Thời lượng</span>
+                <div className="flex min-w-0 gap-2">
+                  <select
+                    aria-label="Thời lượng dự kiến"
+                    value={estimatedDays === 1 ? "ONE_DAY" : "MULTI_DAY"}
+                    onChange={(event) => setEstimatedDays(event.target.value === "ONE_DAY" ? 1 : 2)}
+                    className="h-11 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                  >
+                    <option value="ONE_DAY">Trong ngày</option>
+                    <option value="MULTI_DAY">Nhiều ngày</option>
+                  </select>
+                  {estimatedDays > 1 && (
+                    <input
+                      aria-label="Số ngày dự kiến"
+                      type="number"
+                      min={2}
+                      max={365}
+                      value={estimatedDays}
+                      onChange={(event) => setEstimatedDays(Math.max(2, Number(event.target.value) || 2))}
+                      className="h-11 w-20 rounded-lg border border-slate-200 px-3 text-sm"
+                    />
+                  )}
+                </div>
+              </div>
+              <PersonalWorkTagsField allowCodex={!isPersonalEvent(workType)} value={newTags} onChange={setNewTags} configuration={data.codex} />
+            </div>
+          </details>
           {!isPersonalEvent(workType) && newDomain !== "GENERAL" && newDomain !== "WORK" && (
             <div className="mt-3 grid gap-3 rounded-lg bg-slate-50 p-3 md:grid-cols-[220px_180px_minmax(0,1fr)_auto]">
               <label className="space-y-1">
@@ -978,9 +991,9 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                             <Share2 className="h-3 w-3" /> {item.access === "EDITOR" ? "Có thể sửa" : "Chỉ xem"}
                           </span>
                         )}
-                        <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={personalCategoryStyle(item.category.color)}>
+                        {!isPersonalEvent(item.workType) && <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={personalCategoryStyle(item.category.color)}>
                           {item.category.label}
-                        </span>
+                        </span>}
                         {item.workType && (
                           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
                             {isPersonalEvent(item.workType)?"Sự kiện":PERSONAL_WORK_TYPES[item.domain].find((type) => type.key === item.workType)?.label ||
@@ -1137,7 +1150,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
             </div>
             <div className="mt-5 space-y-4">
               <label className="block space-y-1.5">
-                <span className="text-xs font-semibold text-slate-600">{isPersonalEvent(calendarWorkType)?"Tên sự kiện":"Việc cần làm"}</span>
+                <span className="text-xs font-semibold text-slate-600">{isPersonalEvent(editWorkType)?"Tên sự kiện":"Việc cần làm"}</span>
                 <input
                   autoFocus
                   required
@@ -1348,6 +1361,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                 <span className="block text-[11px] text-slate-400">Mỗi lần lưu sẽ tạo một mốc mới trong lịch sử cập nhật.</span>
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
+                {!isPersonalEvent(editWorkType) && (
                 <label className="block space-y-1.5">
                   <span className="text-xs font-semibold text-slate-600">Nhóm công việc</span>
                   <select
@@ -1372,6 +1386,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                     ))}
                   </select>
                 </label>
+                )}
                 <label className="block space-y-1.5">
                   <span className="text-xs font-semibold text-slate-600">Ngày bắt đầu</span>
                   <input
@@ -1421,7 +1436,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                   </label>
                 )}
               </div>
-              {domainTargets[editDomain].length > 0 && (
+              {!isPersonalEvent(editWorkType) && domainTargets[editDomain].length > 0 && (
                 <div className="space-y-2 rounded-xl bg-slate-50 p-3">
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-xs font-semibold text-slate-600">Liên kết nghiệp vụ</span>
@@ -1661,7 +1676,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                   title: nextTitle,
                   tags: parsePersonalWorkTags(calendarTags),
                   domain: calendarCreateDomain,
-                  categoryKey: calendarCategoryKey,
+                  categoryKey: isPersonalEvent(calendarWorkType) ? "GENERAL" : calendarCategoryKey,
                   workType: calendarWorkType,
                   ...schedule,
                   estimatedDays: calendarCreateEstimatedDays,
@@ -1708,6 +1723,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                 />
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
+                {!isPersonalEvent(calendarWorkType) && (
                 <label className="block space-y-1.5">
                   <span className="text-xs font-semibold text-slate-600">Nhóm công việc</span>
                   <select
@@ -1727,6 +1743,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                     ))}
                   </select>
                 </label>
+                )}
                 <label className="block space-y-1.5">
                   <span className="text-xs font-semibold text-slate-600">Ngày bắt đầu</span>
                   <input

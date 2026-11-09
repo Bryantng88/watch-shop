@@ -307,3 +307,5 @@ calendar/local/Google surfaces keep their times and allow editing/cancellation.
 A point event uses a technical one-minute Google interval because Google requires
 an end, while the local item and UI retain a start-only schedule. The metadata
 round-trip preserves that distinction. Existing tasks keep their prior semantics.
+
+Events are standalone scheduled items. Never ask for task groups (personal/work/department) or task priority for an event. Event create/edit, calendar previews and Ben reviews show the event and its schedule without that task metadata. GENERAL/MEDIUM are internal compatibility defaults, not user-facing event attributes.
